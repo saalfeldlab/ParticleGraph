@@ -4427,8 +4427,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
     activity = activity.t()
 
     if has_field:
-        image_width = n_nodes_per_axis
-        model_f = Siren_Network(image_width=image_width, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
+        model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
                                         hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device, first_omega_0=omega, hidden_omega_0=omega)
         model_f.to(device=device)
         model_f.train()
@@ -4468,6 +4467,11 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
                 state_dict = torch.load(net, map_location=device)
                 model.load_state_dict(state_dict['model_state_dict'])
                 model.eval()
+
+                if has_field:
+                    net = f'./log/try_{config_file}/models/best_model_f_with_{n_runs-1}_graphs_{epoch}.pt'
+                    state_dict = torch.load(net, map_location=device)
+                    model_f.load_state_dict(state_dict['model_state_dict'])
 
                 plt.style.use('dark_background')
 
@@ -4613,6 +4617,24 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
                 plt.savefig(f"./{log_dir}/results/all/comparison_{epoch}.tif", dpi=80)
                 plt.close()
 
+                fig, ax = fig_init()
+                pred = model_f(time=file_id_ / n_frames) ** 2
+                pred = torch.reshape(pred, (n_nodes_per_axis, n_nodes_per_axis))
+                pred = to_numpy(torch.sqrt(pred))
+                pred = np.flipud(pred)
+                pred = np.rot90(pred, 1)
+                pred = np.fliplr(pred)
+                grey_values = np.reshape(pred, (n_nodes_per_axis * n_nodes_per_axis))
+                # plt.imshow(pred, cmap='grey')
+                plt.xticks([])
+                plt.yticks([])
+                plt.scatter((x[0:n_nodes_per_axis * n_nodes_per_axis, 1]), 1 - (x[0:n_nodes_per_axis * n_nodes_per_axis, 2]),
+                            c=grey_values, s=400, cmap='gray')
+                plt.xlim([0, 1])
+                plt.ylim([0, 1])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/all/field_{epoch}.tif", dpi=80)
+                plt.close()
 
     else:
 
@@ -5674,7 +5696,7 @@ if __name__ == '__main__':
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['all'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['best'], device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

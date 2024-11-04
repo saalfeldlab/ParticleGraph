@@ -3594,6 +3594,13 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     has_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
     do_tracking = training_config.do_tracking
     has_state = (config.simulation.state_type != 'discrete')
+    field_type = model_config.field_type
+    if field_type != '':
+        n_nodes = simulation_config.n_nodes
+        n_nodes_per_axis = int(np.sqrt(n_nodes))
+        has_synaptic_field = True
+    else:
+        has_synaptic_field = False
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
@@ -3607,10 +3614,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         filename = files[-1]
         filename = filename.split('/')[-1]
         filename = filename.split('graphs')[-1][1:-3]
-        best_model=[filename]
+        best_model = filename
         print(f'best model: {best_model}')
-    else:
-        net = f"./log/try_{config_file}/models/best_model_with_{n_runs-1}_graphs_{best_model}.pt"
+
+    net = f"./log/try_{config_file}/models/best_model_with_{n_runs-1}_graphs_{best_model}.pt"
 
     n_sub_population = n_particles // n_particle_types
 
@@ -3749,7 +3756,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         edge_index_, edge_attr = dense_to_sparse(adjacency)
         first_dataset = data.Data(x=x.clone().detach(), pos=x[:, 1:3].clone().detach(), edge_index=edge_index.clone().detach(), edge_attr=edge_attr.clone().detach())
         if ('modulation' in model_config.field_type) | ('visual' in model_config.field_type):
-            print('load bi movie ...')
+            print('load b_i movie ...')
             im = imread(f"graphs_data/{simulation_config.node_value_map}")
             A1 = torch.zeros((n_particles, 1), device=device)
         else:
@@ -4012,8 +4019,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     # plt.yticks([])
                     # plt.axis('off')
             elif ('visual' in field_type) & ('PDE_N' in model_config.signal_model_name):
-
                 if plot_data:
+
+                    plt.close()
+
                     im_ = im[int(it / n_frames * 256)].squeeze()
                     im_ = np.rot90(im_, 3)
                     im_ = np.reshape(im_, (n_nodes_per_axis * n_nodes_per_axis))
@@ -4023,22 +4032,34 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                         A1[:n_nodes, 0:1] = torch.tensor(im_[:, None], dtype=torch.float32, device=device)
                         A1[n_nodes:n_particles, 0:1] = 1
 
-                fig = plt.figure(figsize=(12, 4))
-                plt.subplot(121)
+                fig = plt.figure(figsize=(8, 12))
+                plt.subplot(211)
+                plt.title(r'$b_i$', fontsize=48)
                 plt.scatter(to_numpy(x0[:, 2]), to_numpy(x0[:, 1]), s=8, c=to_numpy(A1[:, 0]), cmap='viridis', vmin=0,
                             vmax=2)
-                plt.subplot(122)
-                plt.scatter(to_numpy(x0[:, 2]), to_numpy(X1[:, 1]), s=8, c=to_numpy(x[:, 6:7]), cmap='viridis', vmin=-10,
+                plt.xticks([])
+                plt.yticks([])
+                plt.subplot(212)
+                plt.title(r'$x_i$', fontsize=48)
+                plt.scatter(to_numpy(x0[:, 2]), to_numpy(x0[:, 1]), s=8, c=to_numpy(x[:, 6:7]), cmap='viridis', vmin=-10,
                             vmax=10)
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{num}.tif", dpi=80)
+                plt.close()
 
             elif 'PDE_N' in model_config.signal_model_name:
 
                 plt.close()
 
+                y,msg  = y = model(dataset, data_id=1, return_all=True)
+
+
                 plt.style.use('dark_background')
                 matplotlib.rcParams['savefig.pad_inches'] = 0
 
-                if False: #plot_data:
+                if plot_data:
                     plt.figure(figsize=(10, 10))
                     edge_colors = to_numpy(msg) / 10
                     edge_colors = np.minimum(1, edge_colors)
