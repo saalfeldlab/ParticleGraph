@@ -2496,200 +2496,296 @@ def plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
-    for epoch in epoch_list:
+    if epoch_list[0] == 'all':
 
-        net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt"
-        state_dict = torch.load(net, map_location=device)
-        model.load_state_dict(state_dict['model_state_dict'])
-        model.eval()
+        plt.rcParams['text.usetex'] = False
+        plt.rc('font', family='sans-serif')
+        plt.rc('text', usetex=False)
+        matplotlib.rcParams['savefig.pad_inches'] = 0
 
-
-        config.training.cluster_method = 'distance_plot'
-        config.training.cluster_distance_threshold = 0.1
-        alpha=0.5
-        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
-                                                                       cmap, index_particles, type_list,
-                                                                       n_particle_types, n_particles, ynorm, epoch,
-                                                                       log_dir, alpha, device)
-        print(
-            f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
-        logger.info(
-            f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
-        model.load_state_dict(state_dict['model_state_dict'])
-        model.eval()
-        config.training.cluster_method = 'distance_embedding'
-        config.training.cluster_distance_threshold = 0.01
-        alpha = 0.5
-        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
-                                                                       cmap, index_particles, type_list,
-                                                                       n_particle_types, n_particles, ynorm, epoch,
-                                                                       log_dir, alpha, device)
-        print(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
-        logger.info(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
-
+        p = [2, 1, -1]
         x = x_list[0][100].clone().detach()
         index_particles = get_index_particles(x, n_particle_types, dimension)
-        type_list = to_numpy(get_type_list(x, dimension))
         distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
         adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
         edges = adj_t.nonzero().t().contiguous()
         indexes = np.random.randint(0, edges.shape[1], 5000)
         edges = edges[:, indexes]
 
-        p = [2, 1, -1]
 
-        fig, ax = fig_init(formatx='%.3f', formaty='%.0f')
-        func_list = []
-        rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-        table_qiqj = np.zeros((10,1))
-        tmp = np.array([-2, -1, 1, 2, 4])
-        table_qiqj[tmp.astype(int)+2]=np.arange(5)[:,None]
-        qiqj_list=[]
-        for n in trange(edges.shape[1]):
-            embedding_1 = model.a[1, edges[0, n], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-            embedding_2 = model.a[1, edges[1, n], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-            qiqj = p[type_list[to_numpy(edges[0, n])].astype(int).squeeze()] * p[type_list[to_numpy(edges[1, n])].astype(int).squeeze()]
-            qiqj_list.append(qiqj)
-            type = table_qiqj[qiqj+2].astype(int).squeeze()
-            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                     rr[:, None] / max_radius, embedding_1, embedding_2), dim=1)
-            with torch.no_grad():
-                func = model.lin_edge(in_features.float())
-            func = func[:, 0]
-            func_list.append(func * ynorm)
-            plt.plot(to_numpy(rr),
-                     to_numpy(func) * to_numpy(ynorm),
-                     color=cmap.color(type), linewidth=8, alpha=0.1)
+        files = glob.glob(f"./log/try_{config_file}/models/best_model_with_1_graphs_*.pt")
+        files.sort(key=sort_key)
 
-        plt.xlabel(r'$d_{ij}$', fontsize=78)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=78)
-        plt.xlim([0, 0.02])
-        plt.ylim([-0.5E6, 0.5E6])
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/func_{config_file}_{epoch}.tif", dpi=170.7)
-        plt.close()
+        flag = True
+        file_id = 0
+        while (flag):
+            if sort_key(files[file_id])//1E7 == 2:
+                flag = False
+            file_id += 1
 
-        fig, ax = fig_init(formatx='%.3f', formaty='%.0f')
-        csv_ = []
-        csv_.append(to_numpy(rr))
-        true_func_list = []
-        for n in trange(edges.shape[1]):
-            temp = model.psi(rr, p[type_list[to_numpy(edges[0, n])].astype(int).squeeze()], p[type_list[to_numpy(edges[1, n])].astype(int).squeeze()] )
-            true_func_list.append(temp)
-            type = p[type_list[to_numpy(edges[0, n])].astype(int).squeeze()] * p[type_list[to_numpy(edges[1, n])].astype(int).squeeze()]
-            type = table_qiqj[type+2].astype(int).squeeze()
-            plt.plot(to_numpy(rr), np.array(temp.cpu()), linewidth=8, color=cmap.color(type))
-            csv_.append(to_numpy(temp.squeeze()))
-        plt.xlim([0, 0.02])
-        plt.ylim([-0.5E6, 0.5E6])
-        plt.xlabel(r'$d_{ij}$', fontsize=78)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=78)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/true_func_{config_file}_{epoch}.tif", dpi=170.7)
-        np.save(f"./{log_dir}/results/true_func_{config_file}_{epoch}.npy", csv_)
-        np.savetxt(f"./{log_dir}/results/true_func_{config_file}_{epoch}.txt", csv_)
-        plt.close()
+        file_id_list0 = np.arange(0,60)
+        file_id_list1 = np.arange(40,file_id,(file_id-40)//60)
+        file_id_list2 = np.arange(file_id, len(files), (len(files)-file_id) // 100)
+        file_id_list = np.concatenate((file_id_list0,file_id_list1, file_id_list2))
 
-        func_list = torch.stack(func_list)
-        true_func_list = torch.stack(true_func_list)
-        rmserr_list = torch.sqrt(torch.mean((func_list - true_func_list) ** 2, axis=1))
-        rmserr_list = to_numpy(rmserr_list)
-        print("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
-        logger.info("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+        for file_id_ in trange(0,len(file_id_list)-1):
+            file_id = file_id_list[file_id_]
+            if sort_key(files[file_id]) % 1E7 != 0:
+                epoch = files[file_id].split('graphs')[1][1:-3]
+                net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
+                state_dict = torch.load(net, map_location=device)
+                model.load_state_dict(state_dict['model_state_dict'])
+                model.eval()
 
-        if os.path.exists(f"./{log_dir}/results/coeff_pysrr.npy"):
-            popt_list = np.load(f"./{log_dir}/results/coeff_pysrr.npy")
+                plt.style.use('dark_background')
 
-        else:
-            print('curve fitting ...')
-            text_trap = StringIO()
-            sys.stdout = text_trap
-            popt_list = []
-            qiqj_list = np.array(qiqj_list)
-            for n in range(0,edges.shape[1],5):
-                model_pysrr, max_index, max_value = symbolic_regression(rr, func_list[n])
-                print(f'{-qiqj_list[n]}/x0**2, {model_pysrr.sympy(max_index)}')
-                logger.info(f'{-qiqj_list[n]}/x0**2, pysrr found {model_pysrr.sympy(max_index)}')
+                amax = torch.max(model.a, dim=0).values
+                amin = torch.min(model.a, dim=0).values
+                model_a = (model.a - amin) / (amax - amin)
 
-                expr = model_pysrr.sympy(max_index).as_terms()[0]
-                popt_list.append(-expr[0][1][0][0])
+                fig, ax = fig_init(fontsize=24)
+                for n in range(n_particle_types - 1, -1, -1):
+                    pos = torch.argwhere(type_list.squeeze() == n)
+                    plt.scatter(to_numpy(model_a[pos, 0]), to_numpy(model_a[pos, 1]), s=100, color=cmap.color(n),
+                                alpha=0.5)
+                plt.xlabel(r'$a_{i0}$', fontsize=78)
+                plt.ylabel(r'$a_{i1}$', fontsize=78)
+                plt.xlim([-0.1, 1.1])
+                plt.ylim([-0.1, 1.1])
 
-            np.save(f"./{log_dir}/results/coeff_pysrr.npy", popt_list)
-            np.save(f"./{log_dir}/results/qiqj.npy", qiqj_list)
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/all/embedding_{epoch}.tif", dpi=80)
+                plt.close()
 
-        qiqj_list = np.load(f"./{log_dir}/results/qiqj.npy")
-        qiqj = []
-        for n in range(0, len(qiqj_list), 5):
-            qiqj.append(qiqj_list[n])
-        qiqj_list = np.array(qiqj)
+                if False:
+                    fig, ax = fig_init(formatx='%.3f', formaty='%.0f')
+                    func_list = []
+                    rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
+                    table_qiqj = np.zeros((10, 1))
+                    tmp = np.array([-2, -1, 1, 2, 4])
+                    table_qiqj[tmp.astype(int) + 2] = np.arange(5)[:, None]
+                    qiqj_list = []
+                    for n in range(edges.shape[1]):
+                        embedding_1 = model.a[1, edges[0, n], :] * torch.ones((1000, config.graph_model.embedding_dim),
+                                                                              device=device)
+                        embedding_2 = model.a[1, edges[1, n], :] * torch.ones((1000, config.graph_model.embedding_dim),
+                                                                              device=device)
+                        qiqj = p[type_list[to_numpy(edges[0, n])].astype(int).squeeze()] * p[
+                            type_list[to_numpy(edges[1, n])].astype(int).squeeze()]
+                        qiqj_list.append(qiqj)
+                        type = table_qiqj[qiqj + 2].astype(int).squeeze()
+                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / max_radius, embedding_1, embedding_2), dim=1)
+                        with torch.no_grad():
+                            func = model.lin_edge(in_features.float())
+                        func = func[:, 0]
+                        func_list.append(func * ynorm)
+                        plt.plot(to_numpy(rr),
+                                 to_numpy(func) * to_numpy(ynorm),
+                                 color=cmap.color(type), linewidth=8, alpha=0.1)
+                    plt.xlabel('$d_{ij}$', fontsize=48)
+                    plt.ylabel('$f(a_i, d_{ij})$', fontsize=48)
+                    plt.xlim([0, 0.02])
+                    plt.ylim([-0.5E6, 0.5E6])
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/all/function_{epoch}.tif", dpi=80)
+                    plt.close()
 
-        threshold = 1
+    else:
+        for epoch in epoch_list:
 
-        fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
-        x_data = qiqj_list.squeeze()
-        y_data = popt_list.squeeze()
-        lin_fit, r_squared, relative_error, not_outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
-        plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-        plt.scatter(qiqj_list, popt_list, color='k', s=200, alpha=0.1)
-        plt.xlim([-2.5, 5])
-        plt.ylim([-2.5, 5])
-        plt.ylabel(r'Learned $q_i q_j$', fontsize=64)
-        plt.xlabel(r'True $q_i q_j$', fontsize=64)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/qiqj_{config_file}_{epoch}.tif", dpi=170)
-        plt.close()
-
-        print(f'slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)}   threshold: {threshold} ')
-        logger.info(f'slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)}   threshold: {threshold} ')
-
-        print(f'pysrr_qiqj relative error: {100*np.round(np.mean(relative_error), 2)}+/-{100*np.round(np.std(relative_error), 2)}')
-        print(f'pysrr_qiqj relative error wo outliers: {100*np.round(np.mean(relative_error[not_outliers[:, 0]]), 2)}+/-{100*np.round(np.std(relative_error[not_outliers[:, 0]]), 2)}')
-        logger.info(f'pysrr_qiqj relative error: {100*np.round(np.mean(relative_error), 2)}+/-{100*np.round(np.std(relative_error), 2)}')
-        logger.info(f'pysrr_qiqj relative error wo outliers: {100*np.round(np.mean(relative_error[not_outliers[:, 0]]), 2)}+/-{100*np.round(np.std(relative_error[not_outliers[:, 0]]), 2)}')
-
-        # qi retrieval
+            net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt"
+            state_dict = torch.load(net, map_location=device)
+            model.load_state_dict(state_dict['model_state_dict'])
+            model.eval()
 
 
-        qiqj = torch.tensor(popt_list, device=device)[:, None]
-        qiqj = qiqj[not_outliers[:, 0]]
+            config.training.cluster_method = 'distance_plot'
+            config.training.cluster_distance_threshold = 0.1
+            alpha=0.5
+            accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
+                                                                           cmap, index_particles, type_list,
+                                                                           n_particle_types, n_particles, ynorm, epoch,
+                                                                           log_dir, alpha, device)
+            print(
+                f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+            logger.info(
+                f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+            model.load_state_dict(state_dict['model_state_dict'])
+            model.eval()
+            config.training.cluster_method = 'distance_embedding'
+            config.training.cluster_distance_threshold = 0.01
+            alpha = 0.5
+            accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
+                                                                           cmap, index_particles, type_list,
+                                                                           n_particle_types, n_particles, ynorm, epoch,
+                                                                           log_dir, alpha, device)
+            print(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+            logger.info(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
-        model_qs = model_qiqj(3, device)
-        optimizer = torch.optim.Adam(model_qs.parameters(), lr=1E-2)
-        qiqj_list = []
-        loss_list = []
-        for it in trange(20000):
+            x = x_list[0][100].clone().detach()
+            index_particles = get_index_particles(x, n_particle_types, dimension)
+            type_list = to_numpy(get_type_list(x, dimension))
+            distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+            adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+            edges = adj_t.nonzero().t().contiguous()
+            indexes = np.random.randint(0, edges.shape[1], 5000)
+            edges = edges[:, indexes]
 
-            sample = np.random.randint(0, qiqj.shape[0] - 10)
-            qiqj_ = qiqj[sample:sample + 10]
+            p = [2, 1, -1]
 
-            optimizer.zero_grad()
-            qs = model_qs()
-            distance = torch.sum((qiqj_[:, None] - qs[None, :]) ** 2, dim=2)
-            result = distance.min(dim=1)
-            min_value = result.values
-            min_index = result.indices
-            loss = torch.mean(min_value) + torch.max(min_value)
-            loss.backward()
-            optimizer.step()
-            if it % 100 == 0:
-                qiqj_list.append(to_numpy(model_qs.qiqj))
-                loss_list.append(to_numpy(loss))
-        qiqj_list = np.array(qiqj_list).squeeze()
+            fig, ax = fig_init(formatx='%.3f', formaty='%.0f')
+            func_list = []
+            rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
+            table_qiqj = np.zeros((10,1))
+            tmp = np.array([-2, -1, 1, 2, 4])
+            table_qiqj[tmp.astype(int)+2]=np.arange(5)[:,None]
+            qiqj_list=[]
+            for n in trange(edges.shape[1]):
+                embedding_1 = model.a[1, edges[0, n], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                embedding_2 = model.a[1, edges[1, n], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                qiqj = p[type_list[to_numpy(edges[0, n])].astype(int).squeeze()] * p[type_list[to_numpy(edges[1, n])].astype(int).squeeze()]
+                qiqj_list.append(qiqj)
+                type = table_qiqj[qiqj+2].astype(int).squeeze()
+                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                         rr[:, None] / max_radius, embedding_1, embedding_2), dim=1)
+                with torch.no_grad():
+                    func = model.lin_edge(in_features.float())
+                func = func[:, 0]
+                func_list.append(func * ynorm)
+                plt.plot(to_numpy(rr),
+                         to_numpy(func) * to_numpy(ynorm),
+                         color=cmap.color(type), linewidth=8, alpha=0.1)
+
+            plt.xlabel(r'$d_{ij}$', fontsize=78)
+            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=78)
+            plt.xlim([0, 0.02])
+            plt.ylim([-0.5E6, 0.5E6])
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/func_{config_file}_{epoch}.tif", dpi=170.7)
+            plt.close()
+
+            fig, ax = fig_init(formatx='%.3f', formaty='%.0f')
+            csv_ = []
+            csv_.append(to_numpy(rr))
+            true_func_list = []
+            for n in trange(edges.shape[1]):
+                temp = model.psi(rr, p[type_list[to_numpy(edges[0, n])].astype(int).squeeze()], p[type_list[to_numpy(edges[1, n])].astype(int).squeeze()] )
+                true_func_list.append(temp)
+                type = p[type_list[to_numpy(edges[0, n])].astype(int).squeeze()] * p[type_list[to_numpy(edges[1, n])].astype(int).squeeze()]
+                type = table_qiqj[type+2].astype(int).squeeze()
+                plt.plot(to_numpy(rr), np.array(temp.cpu()), linewidth=8, color=cmap.color(type))
+                csv_.append(to_numpy(temp.squeeze()))
+            plt.xlim([0, 0.02])
+            plt.ylim([-0.5E6, 0.5E6])
+            plt.xlabel(r'$d_{ij}$', fontsize=78)
+            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=78)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/true_func_{config_file}_{epoch}.tif", dpi=170.7)
+            np.save(f"./{log_dir}/results/true_func_{config_file}_{epoch}.npy", csv_)
+            np.savetxt(f"./{log_dir}/results/true_func_{config_file}_{epoch}.txt", csv_)
+            plt.close()
+
+            func_list = torch.stack(func_list)
+            true_func_list = torch.stack(true_func_list)
+            rmserr_list = torch.sqrt(torch.mean((func_list - true_func_list) ** 2, axis=1))
+            rmserr_list = to_numpy(rmserr_list)
+            print("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+            logger.info("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+
+            if os.path.exists(f"./{log_dir}/results/coeff_pysrr.npy"):
+                popt_list = np.load(f"./{log_dir}/results/coeff_pysrr.npy")
+
+            else:
+                print('curve fitting ...')
+                text_trap = StringIO()
+                sys.stdout = text_trap
+                popt_list = []
+                qiqj_list = np.array(qiqj_list)
+                for n in range(0,edges.shape[1],5):
+                    model_pysrr, max_index, max_value = symbolic_regression(rr, func_list[n])
+                    print(f'{-qiqj_list[n]}/x0**2, {model_pysrr.sympy(max_index)}')
+                    logger.info(f'{-qiqj_list[n]}/x0**2, pysrr found {model_pysrr.sympy(max_index)}')
+
+                    expr = model_pysrr.sympy(max_index).as_terms()[0]
+                    popt_list.append(-expr[0][1][0][0])
+
+                np.save(f"./{log_dir}/results/coeff_pysrr.npy", popt_list)
+                np.save(f"./{log_dir}/results/qiqj.npy", qiqj_list)
+
+            qiqj_list = np.load(f"./{log_dir}/results/qiqj.npy")
+            qiqj = []
+            for n in range(0, len(qiqj_list), 5):
+                qiqj.append(qiqj_list[n])
+            qiqj_list = np.array(qiqj)
+
+            threshold = 1
+
+            fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
+            x_data = qiqj_list.squeeze()
+            y_data = popt_list.squeeze()
+            lin_fit, r_squared, relative_error, not_outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
+            plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+            plt.scatter(qiqj_list, popt_list, color='k', s=200, alpha=0.1)
+            plt.xlim([-2.5, 5])
+            plt.ylim([-2.5, 5])
+            plt.ylabel(r'Learned $q_i q_j$', fontsize=64)
+            plt.xlabel(r'True $q_i q_j$', fontsize=64)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/qiqj_{config_file}_{epoch}.tif", dpi=170)
+            plt.close()
+
+            print(f'slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)}   threshold: {threshold} ')
+            logger.info(f'slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)}   threshold: {threshold} ')
+
+            print(f'pysrr_qiqj relative error: {100*np.round(np.mean(relative_error), 2)}+/-{100*np.round(np.std(relative_error), 2)}')
+            print(f'pysrr_qiqj relative error wo outliers: {100*np.round(np.mean(relative_error[not_outliers[:, 0]]), 2)}+/-{100*np.round(np.std(relative_error[not_outliers[:, 0]]), 2)}')
+            logger.info(f'pysrr_qiqj relative error: {100*np.round(np.mean(relative_error), 2)}+/-{100*np.round(np.std(relative_error), 2)}')
+            logger.info(f'pysrr_qiqj relative error wo outliers: {100*np.round(np.mean(relative_error[not_outliers[:, 0]]), 2)}+/-{100*np.round(np.std(relative_error[not_outliers[:, 0]]), 2)}')
+
+            # qi retrieval
 
 
-        print('qi')
-        print(np.round(to_numpy(model_qs.qiqj[2].squeeze()),3), np.round(to_numpy(model_qs.qiqj[1].squeeze()),3),np.round(to_numpy(model_qs.qiqj[0].squeeze()),3) )
-        logger.info('qi')
-        logger.info(f'{np.round(to_numpy(model_qs.qiqj[2].squeeze()),3)}, {np.round(to_numpy(model_qs.qiqj[1].squeeze()),3)}, {np.round(to_numpy(model_qs.qiqj[0].squeeze()),3)}' )
+            qiqj = torch.tensor(popt_list, device=device)[:, None]
+            qiqj = qiqj[not_outliers[:, 0]]
 
-        fig, ax = fig_init()
-        plt.plot(qiqj_list[:, 0], linewidth=4)
-        plt.plot(qiqj_list[:, 1], linewidth=4)
-        plt.plot(qiqj_list[:, 2], linewidth=4)
-        plt.xlabel('iteration',fontsize=78)
-        plt.ylabel(r'$q_i$',fontsize=78)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/qi_{config_file}_{epoch}.tif", dpi=170)
+            model_qs = model_qiqj(3, device)
+            optimizer = torch.optim.Adam(model_qs.parameters(), lr=1E-2)
+            qiqj_list = []
+            loss_list = []
+            for it in trange(20000):
+
+                sample = np.random.randint(0, qiqj.shape[0] - 10)
+                qiqj_ = qiqj[sample:sample + 10]
+
+                optimizer.zero_grad()
+                qs = model_qs()
+                distance = torch.sum((qiqj_[:, None] - qs[None, :]) ** 2, dim=2)
+                result = distance.min(dim=1)
+                min_value = result.values
+                min_index = result.indices
+                loss = torch.mean(min_value) + torch.max(min_value)
+                loss.backward()
+                optimizer.step()
+                if it % 100 == 0:
+                    qiqj_list.append(to_numpy(model_qs.qiqj))
+                    loss_list.append(to_numpy(loss))
+            qiqj_list = np.array(qiqj_list).squeeze()
+
+
+            print('qi')
+            print(np.round(to_numpy(model_qs.qiqj[2].squeeze()),3), np.round(to_numpy(model_qs.qiqj[1].squeeze()),3),np.round(to_numpy(model_qs.qiqj[0].squeeze()),3) )
+            logger.info('qi')
+            logger.info(f'{np.round(to_numpy(model_qs.qiqj[2].squeeze()),3)}, {np.round(to_numpy(model_qs.qiqj[1].squeeze()),3)}, {np.round(to_numpy(model_qs.qiqj[0].squeeze()),3)}' )
+
+            fig, ax = fig_init()
+            plt.plot(qiqj_list[:, 0], linewidth=4)
+            plt.plot(qiqj_list[:, 1], linewidth=4)
+            plt.plot(qiqj_list[:, 2], linewidth=4)
+            plt.xlabel('iteration',fontsize=78)
+            plt.ylabel(r'$q_i$',fontsize=78)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/qi_{config_file}_{epoch}.tif", dpi=170)
 
 
 def plot_boids(config_file, epoch_list, log_dir, logger, device):
@@ -5680,7 +5776,6 @@ if __name__ == '__main__':
     #     config_list,epoch_list = get_figures(f)
 
 
-
     # config_list = ["cell_sequence_a","arbitrary_3_cell_sequence_b","arbitrary_3_cell_sequence_c"]
     # config_list = ["boids_9_sequence_a"]
 
@@ -5704,7 +5799,9 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N2_r1_Lorentz_v4'] #,'signal_N2_r1_Lorentz_v5']
 
-    config_list = ['signal_N2_r1_Lorentz_d']
+    # config_list = ['signal_N2_r1_Lorentz_d']
+
+    config_list = ['Coulomb_3_256']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
