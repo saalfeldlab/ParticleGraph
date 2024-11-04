@@ -1,4 +1,4 @@
-description: 'mouse_city trial1_active_1 time_step = 40 2s'
+description: 'mouse_city trial1_active_1 time_step = 20 0.5s'
 dataset: 'mouse_city_b'
 data_folder_name: '/groups/saalfeld/home/allierc/signaling/MouseCity/trial1_active_1/labels'
 
@@ -11,7 +11,7 @@ simulation:
   n_particle_types: 6
   n_frames: 36018
   delta_t: 1
-  time_step: 40
+  time_step: 10
   boundary: 'no'
   has_cell_state: True
   state_type: 'sequence'
@@ -58,7 +58,7 @@ training:
   do_tracking: True
 
   learning_rate_start: 1.0E-4
-  learning_rate_embedding_start: 1.0E-7
+  learning_rate_embedding_start: 1.0E-4
 
 
 

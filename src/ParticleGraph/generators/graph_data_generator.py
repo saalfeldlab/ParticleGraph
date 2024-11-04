@@ -905,16 +905,16 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
                                H1.clone().detach(), ID1.clone().detach()), 1)
 
         # compute connectivity rules
-        edge_index = torch.sum((x[:, None, 1:dimension + 1] - x_mesh[None, :, 1:dimension + 1]) ** 2, dim=2)
-        adj_t = ((edge_index < 0.25 ** 2) & (edge_index > 0)).float() * 1
-        edge_index = adj_t.nonzero().t().contiguous()
-        edge_f_p_list.append(to_numpy(edge_index))
-
-        # compute connectivity rules
         edge_index = torch.sum((x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
         edge_index = ((edge_index < max_radius ** 2) & (edge_index > min_radius ** 2)).float() * 1
         edge_index = edge_index.nonzero().t().contiguous()
         edge_p_p_list.append(to_numpy(edge_index))
+
+        # compute connectivity rules
+        edge_index = torch.sum((x[:, None, 1:dimension + 1] - x_mesh[None, :, 1:dimension + 1]) ** 2, dim=2)
+        adj_t = ((edge_index < 0.25 ** 2) & (edge_index > 0)).float() * 1
+        edge_index = adj_t.nonzero().t().contiguous()
+        edge_f_p_list.append(to_numpy(edge_index))
 
         x_list.append(x)
 

@@ -4617,20 +4617,22 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
                 plt.savefig(f"./{log_dir}/results/all/comparison_{epoch}.tif", dpi=80)
                 plt.close()
 
-                fig, ax = fig_init()
-                pred = model_f(time=file_id_ / len(file_id_list), enlarge=True) ** 2
-                # pred = torch.reshape(pred, (n_nodes_per_axis, n_nodes_per_axis))
-                pred = torch.reshape(pred, (640, 640))
-                pred = to_numpy(torch.sqrt(pred))
-                pred = np.flipud(pred)
-                pred = np.rot90(pred, 1)
-                pred = np.fliplr(pred)
-                plt.imshow(pred, cmap='grey')
-                plt.xticks([])
-                plt.yticks([])
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/all/field_{epoch}.tif", dpi=80)
-                plt.close()
+                if has_field:
+
+                    fig, ax = fig_init()
+                    pred = model_f(time=file_id_ / len(file_id_list), enlarge=True) ** 2
+                    # pred = torch.reshape(pred, (n_nodes_per_axis, n_nodes_per_axis))
+                    pred = torch.reshape(pred, (640, 640))
+                    pred = to_numpy(torch.sqrt(pred))
+                    pred = np.flipud(pred)
+                    pred = np.rot90(pred, 1)
+                    pred = np.fliplr(pred)
+                    plt.imshow(pred, cmap='grey')
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/all/field_{epoch}.tif", dpi=80)
+                    plt.close()
 
     else:
 
@@ -5700,9 +5702,9 @@ if __name__ == '__main__':
     #                'signal_N2_r1_Lorentz_l3','signal_N2_r1_Lorentz_l4']
     # config_list = ['boids_16_256']
 
-    config_list = ['signal_N2_r1_Lorentz_v4'] #,'signal_N2_r1_Lorentz_v5']
+    # config_list = ['signal_N2_r1_Lorentz_v4'] #,'signal_N2_r1_Lorentz_v5']
 
-    # config_list = ['signal_N2_r1_Lorentz_l3']
+    config_list = ['signal_N2_r1_Lorentz_d']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
