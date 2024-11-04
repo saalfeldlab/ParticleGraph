@@ -3600,8 +3600,15 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     files = glob.glob(f"./{log_dir}/tmp_recons/*")
     for f in files:
         os.remove(f)
-    if best_model == -1:
-        net = f"./log/try_{config_file}/models/best_model_with_{n_runs-1}_graphs.pt"
+
+    if best_model == 'best':
+        files = glob.glob(f"{log_dir}/models/*")
+        files.sort(key=sort_key)
+        filename = files[-1]
+        filename = filename.split('/')[-1]
+        filename = filename.split('graphs')[-1][1:-3]
+        best_model=[filename]
+        print(f'best model: {best_model}')
     else:
         net = f"./log/try_{config_file}/models/best_model_with_{n_runs-1}_graphs_{best_model}.pt"
 
@@ -3741,16 +3748,23 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         edge_index = torch.load(f'./graphs_data/graphs_{dataset_name}/edge_index.pt', map_location=device)
         edge_index_, edge_attr = dense_to_sparse(adjacency)
         first_dataset = data.Data(x=x.clone().detach(), pos=x[:, 1:3].clone().detach(), edge_index=edge_index.clone().detach(), edge_attr=edge_attr.clone().detach())
-        print('create graph positions ...')
-        G_first = to_networkx(first_dataset.clone().detach(), remove_self_loops=True, to_undirected=True)
-        first_positions = nx.spring_layout(G_first, weight='weight', seed=42, k=1)
-        X1_first = torch.zeros((n_particles, 2), device=device)
-        for node, pos in first_positions.items():
-            X1_first[node,:] = torch.tensor([pos[0],pos[1]], device=device)
-        print('done ...')
+        if ('modulation' in model_config.field_type) | ('visual' in model_config.field_type):
+            print('load bi movie ...')
+            im = imread(f"graphs_data/{simulation_config.node_value_map}")
+            A1 = torch.zeros((n_particles, 1), device=device)
+        else:
+            print('create graph positions ...')
+            G_first = to_networkx(first_dataset.clone().detach(), remove_self_loops=True, to_undirected=True)
+            first_positions = nx.spring_layout(G_first, weight='weight', seed=42, k=1)
+            X1_first = torch.zeros((n_particles, 2), device=device)
+            for node, pos in first_positions.items():
+                X1_first[node,:] = torch.tensor([pos[0],pos[1]], device=device)
+            print('done ...')
+
         neuron_index = torch.randint(0, n_particles, (6,))
         neuron_gt_list = []
         neuron_pred_list=[]
+
 
     if verbose:
         print(f'Test data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
@@ -3818,6 +3832,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     gloss = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
     geomloss_list=[]
     time.sleep(1)
+
     for it in trange(n_frames-1):
 
         x0 = x_list[0][it].clone().detach()
@@ -3996,6 +4011,26 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     # plt.xticks([])
                     # plt.yticks([])
                     # plt.axis('off')
+            elif ('visual' in field_type) & ('PDE_N' in model_config.signal_model_name):
+
+                if plot_data:
+                    im_ = im[int(it / n_frames * 256)].squeeze()
+                    im_ = np.rot90(im_, 3)
+                    im_ = np.reshape(im_, (n_nodes_per_axis * n_nodes_per_axis))
+                    if ('modulation' in field_type):
+                        A1[:, 0:1] = torch.tensor(im_[:, None], dtype=torch.float32, device=device)
+                    if ('visual' in field_type):
+                        A1[:n_nodes, 0:1] = torch.tensor(im_[:, None], dtype=torch.float32, device=device)
+                        A1[n_nodes:n_particles, 0:1] = 1
+
+                fig = plt.figure(figsize=(12, 4))
+                plt.subplot(121)
+                plt.scatter(to_numpy(x0[:, 2]), to_numpy(x0[:, 1]), s=8, c=to_numpy(A1[:, 0]), cmap='viridis', vmin=0,
+                            vmax=2)
+                plt.subplot(122)
+                plt.scatter(to_numpy(x0[:, 2]), to_numpy(X1[:, 1]), s=8, c=to_numpy(x[:, 6:7]), cmap='viridis', vmin=-10,
+                            vmax=10)
+
             elif 'PDE_N' in model_config.signal_model_name:
 
                 plt.close()

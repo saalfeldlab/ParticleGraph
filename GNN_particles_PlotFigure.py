@@ -5668,9 +5668,9 @@ if __name__ == '__main__':
     #                'signal_N2_r1_Lorentz_l3','signal_N2_r1_Lorentz_l4']
     # config_list = ['boids_16_256']
 
-    # config_list = ['signal_N2_r1_Lorentz_v4','signal_N2_r1_Lorentz_v5']
+    config_list = ['signal_N2_r1_Lorentz_v4'] #,'signal_N2_r1_Lorentz_v5']
 
-    config_list = ['signal_N2_r1_Lorentz_l3']
+    # config_list = ['signal_N2_r1_Lorentz_l3']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
