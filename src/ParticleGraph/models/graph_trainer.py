@@ -1225,15 +1225,19 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
             list_frame.append(k)
 
             visualize_embedding = True
-            if visualize_embedding & (((epoch < 10 ) & (N%(Niter//20) == 0)) | (N==0)):
+            if visualize_embedding & ((N%(Niter//20) == 0) | (N==0)):
                 id_list = []
+                frame_list = []
                 for k in range(n_frames):
                     ids = x_list[0][k][:, -1]
+                    frames = torch.ones_like(ids) * k
                     if k==0:
                         id_list = ids
+                        frame_list = frames
                     else:
                         id_list = torch.cat((id_list, ids), 0)
-                plot_training_mouse(config=config, id_list=id_list, dataset_name=dataset_name, log_dir=log_dir,
+                        frame_list = torch.cat((frame_list, frames), 0)
+                plot_training_mouse(config=config, id_list=id_list, frame_list=frame_list, dataset_name=dataset_name, log_dir=log_dir,
                                    epoch=epoch, N=N, model=model, n_particle_types=n_particle_types,
                                    type_stack=type_stack, ynorm=ynorm, cmap=cmap, device=device)
 

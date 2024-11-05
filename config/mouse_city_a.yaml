@@ -42,21 +42,22 @@ plotting:
   ylim: [-0.04, 0.03]
 
 training:
-  n_epochs: 40
+  n_epochs: 60
   batch_size: 1
   small_init_batch_size: True
   n_runs: 1
   sparsity: 'none'
   sparsity_freq: 4
   cluster_method: 'kmeans_auto_plot'
-  data_augmentation: False
-  data_augmentation_loop: 10
+  data_augmentation: True
+  data_augmentation_loop: 100
   learning_rate_start: 0.001
   learning_rate_embedding_start: 0.001
   fix_cluster_embedding: True
   device: 'auto'
   do_tracking: True
-
+  distance_threshold: 2.0E-4
+  epoch_distance_replace: 20
   learning_rate_start: 1.0E-4
   learning_rate_embedding_start: 1.0E-5
 
