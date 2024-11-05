@@ -514,13 +514,25 @@ def plot_training_mouse(config, id_list, dataset_name, log_dir, epoch, N, model,
     train_config = config.training
     model_config = config.graph_model
 
-    id_list = torch.stack(id_list)
+    model_a = model.a[to_numpy(id_list)]
+    type_stack = type_stack[to_numpy(id_list)]
+
+    amax = torch.max(model_a, dim=0)[0]
+    amin = torch.min(model_a, dim=0)[0]
+    model_a = (model_a - amin) / (amax - amin)
 
     fig, ax = fig_init()
     for n in range(n_particle_types):
         pos = torch.argwhere(type_stack == n).squeeze()
         if len(pos) > 0:
-            plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=1, color=cmap.color(n), alpha=0.25)
+            plt.scatter(to_numpy(model_a[pos, 0]), to_numpy(model_a[pos, 1]), s=1, color=cmap.color(n), alpha=0.25)
+
+    embedding_size = model.a.shape[0]
+    embedding_current_size = torch.unique(id_list).shape[0]
+
+    plt.text(0.05, 0.9, f'Embedding size: {embedding_size}\nCurrent size: {embedding_current_size}', fontsize=12)
+    plt.xlim([0,1])
+    plt.ylim([0,1])
     plt.xticks([])
     plt.yticks([])
     plt.tight_layout()
