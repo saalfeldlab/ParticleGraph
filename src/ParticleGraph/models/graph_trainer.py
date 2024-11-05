@@ -1052,6 +1052,8 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
     n_runs = train_config.n_runs
     has_inert_model = simulation_config.cell_inert_model_coeff > 0
     do_tracking = train_config.do_tracking
+    distance_threshold = train_config.distance_threshold
+    epoch_distance_replace = train_config.epoch_distance_replace
     has_state = (simulation_config.state_type != 'discrete')
     max_radius = simulation_config.max_radius
 
@@ -1134,7 +1136,7 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
     total_list_loss = []
 
     time.sleep(1)
-    for epoch in range(0, n_epochs + 1):
+    for epoch in range(start_epoch, n_epochs + 1):
 
         list_loss = []
         list_frame = []
@@ -1178,12 +1180,14 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
                 indices = result.indices
                 loss = torch.sum(min_value)*1E5
 
-                pos = torch.argwhere(min_value < distance_threshold)
-                if (epoch >= epoch_replace) & len(pos)>0:
-                    x_list[run][k][pos,-1] = x_list[run][k + 1][indices[pos],-1].clone().detach()
-                pos = torch.argwhere(min_value >= distance_threshold)
-                if (epoch >= epoch_replace) & len(pos)>0:
-                    x_list[run][k][pos,-1] = x_list[run][k][pos,-2].clone().detach()
+
+                if (epoch >= epoch_distance_replace):
+                    pos = torch.argwhere(min_value < distance_threshold)
+                    if len(pos)>0:
+                        x_list[run][k][pos,-1] = x_list[run][k + 1][indices[pos],-1].clone().detach()
+                    pos = torch.argwhere(min_value >= distance_threshold)
+                    if len(pos)>0:
+                        x_list[run][k][pos,-1] = x_list[run][k][pos,-2].clone().detach()
 
                 # fig = plt.figure(figsize=(8, 8))
                 # plt.scatter(to_numpy(x_next[:, 1]), to_numpy(x_next[:, 2]), s=100, c='g')
@@ -1225,7 +1229,10 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
                 id_list = []
                 for k in range(n_frames):
                     ids = x_list[0][k][:, -1]
-                    id_list.append(ids)
+                    if k==0:
+                        id_list = ids
+                    else:
+                        id_list = torch.cat((id_list, ids), 0)
                 plot_training_mouse(config=config, id_list=id_list, dataset_name=dataset_name, log_dir=log_dir,
                                    epoch=epoch, N=N, model=model, n_particle_types=n_particle_types,
                                    type_stack=type_stack, ynorm=ynorm, cmap=cmap, device=device)

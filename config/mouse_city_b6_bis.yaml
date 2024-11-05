@@ -42,7 +42,7 @@ plotting:
   ylim: [-0.04, 0.03]
 
 training:
-  n_epochs: 40
+  n_epochs: 80
   batch_size: 1
   small_init_batch_size: True
   n_runs: 1
@@ -56,6 +56,7 @@ training:
   fix_cluster_embedding: True
   device: 'auto'
   do_tracking: True
+  distance_threshold: 2.0E-4
 
   learning_rate_start: 1.0E-4
   learning_rate_embedding_start: 1.0E-6

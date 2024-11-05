@@ -514,6 +514,8 @@ def plot_training_mouse(config, id_list, dataset_name, log_dir, epoch, N, model,
     train_config = config.training
     model_config = config.graph_model
 
+    id_list = torch.stack(id_list)
+
     fig, ax = fig_init()
     for n in range(n_particle_types):
         pos = torch.argwhere(type_stack == n).squeeze()
