@@ -1,5 +1,5 @@
 description: 'mouse_city trial1_active_1 time_step = 20 0.5s  learning_rate_embedding: 1.0E-6 data_augmentation: 50'
-dataset: 'mouse_city_b'
+dataset: 'mouse_city_b_bis'
 data_folder_name: '/groups/saalfeld/home/allierc/signaling/MouseCity/trial1_active_1/labels'
 
 simulation:

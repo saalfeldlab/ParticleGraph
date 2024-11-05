@@ -1176,8 +1176,40 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
                 result = distance.min(dim=1)
                 min_value = result.values
                 indices = result.indices
-                pos = torch.argwhere(min_value < 1E-1)
                 loss = torch.sum(min_value)*1E5
+
+                pos = torch.argwhere(min_value < distance_threshold)
+                if (epoch >= epoch_replace) & len(pos)>0:
+                    x_list[run][k][pos,-1] = x_list[run][k + 1][indices[pos],-1].clone().detach()
+                pos = torch.argwhere(min_value >= distance_threshold)
+                if (epoch >= epoch_replace) & len(pos)>0:
+                    x_list[run][k][pos,-1] = x_list[run][k][pos,-2].clone().detach()
+
+                # fig = plt.figure(figsize=(8, 8))
+                # plt.scatter(to_numpy(x_next[:, 1]), to_numpy(x_next[:, 2]), s=100, c='g')
+                # a=0
+                # b=3
+                # plt.scatter(to_numpy(x[a, 1]), to_numpy(x[a, 2]), s=100, c='k', alpha=0.5)
+                # plt.scatter(to_numpy(x_pos_pred[a, 0]),to_numpy(x_pos_pred[a, 1]),s=200, c='k',alpha=0.5)
+                # plt.scatter(to_numpy(x_next[b, 1]), to_numpy(x_next[b, 2]), s=200, c='g',alpha=0.5)
+                # a=1
+                # b=4
+                # plt.scatter(to_numpy(x[a, 1]), to_numpy(x[a, 2]), s=100, c='k', alpha=0.5)
+                # plt.scatter(to_numpy(x_pos_pred[a, 0]),to_numpy(x_pos_pred[a, 1]),s=200, c='k',alpha=0.5)
+                # plt.scatter(to_numpy(x_next[b, 1]), to_numpy(x_next[b, 2]), s=200, c='g',alpha=0.5)
+                # a=2
+                # b=2
+                # plt.scatter(to_numpy(x[a, 1]), to_numpy(x[a, 2]), s=100, c='k', alpha=0.5)
+                # plt.scatter(to_numpy(x_pos_pred[a, 0]),to_numpy(x_pos_pred[a, 1]),s=200, c='k',alpha=0.5)
+                # plt.scatter(to_numpy(x_next[b, 1]), to_numpy(x_next[b, 2]), s=200, c='g',alpha=0.5)
+                # a=3
+                # b=5
+                # plt.scatter(to_numpy(x[a, 1]), to_numpy(x[a, 2]), s=100, c='k', alpha=0.5)
+                # plt.scatter(to_numpy(x_pos_pred[a, 0]),to_numpy(x_pos_pred[a, 1]),s=200, c='k',alpha=0.5)
+                # plt.scatter(to_numpy(x_next[b, 1]), to_numpy(x_next[b, 2]), s=200, c='g',alpha=0.5)
+
+
+
             else:
                 loss = (pred - y_batch).norm(2) # + model.a.norm(1) * 1E-3
 

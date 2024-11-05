@@ -902,7 +902,7 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
             ID1 = torch.arange(int(ID1[-1] + 1), int(ID1[-1] + len(N1) + 1), device=device)[:, None]
 
         x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
-                               H1.clone().detach(), ID1.clone().detach()), 1)
+                               H1.clone().detach(), ID1.clone().detach(), ID1.clone().detach()), 1)
 
         # compute connectivity rules
         edge_index = torch.sum((x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
