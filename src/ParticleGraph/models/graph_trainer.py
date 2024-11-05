@@ -3949,7 +3949,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     plt.close()
 
                 plt.figure(figsize=(10, 10))
-                plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=70, c=to_numpy(x[:, 6]), cmap='viridis', vmin=-10,vmax=10, edgecolors='k',alpha=1)
+                plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=30, c=to_numpy(x[:, 6]), cmap='viridis', vmin=-10,vmax=10, edgecolors='k',alpha=1)
                 ax = plt.gca()
                 ax.axis('off')
                 plt.xticks([])
@@ -3971,6 +3971,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=80)
                 plt.close()
+
             elif do_tracking:
                 plt.scatter(to_numpy(x0[:, 2]), to_numpy(x0[:, 1]), s=20, c='k')
                 plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=20, c='r')

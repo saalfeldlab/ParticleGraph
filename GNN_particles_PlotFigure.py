@@ -2546,8 +2546,8 @@ def plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
                     pos = torch.argwhere(type_list.squeeze() == n)
                     pos = to_numpy(pos)
                     plt.scatter(model_a[pos, 0], model_a[pos, 1], s=100, color=cmap.color(n), alpha=0.5)
-                plt.xlabel(r'$a_{i0}$', fontsize=78)
-                plt.ylabel(r'$a_{i1}$', fontsize=78)
+                plt.xlabel(r'$a_{i0}$', fontsize=48)
+                plt.ylabel(r'$a_{i1}$', fontsize=48)
                 plt.xlim([-0.1, 1.1])
                 plt.ylim([-0.1, 1.1])
 
@@ -2555,7 +2555,7 @@ def plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
                 plt.savefig(f"./{log_dir}/results/all/embedding_{epoch}.tif", dpi=80)
                 plt.close()
 
-                fig, ax = fig_init(formatx='%.3f', formaty='%.0f')
+                fig, ax = fig_init(fontsize=24)
                 func_list = []
                 rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
                 table_qiqj = np.zeros((10, 1))
@@ -5794,15 +5794,15 @@ if __name__ == '__main__':
     #                'signal_N2_r1_Lorentz_l3','signal_N2_r1_Lorentz_l4']
     # config_list = ['boids_16_256']
 
-    # config_list = ['signal_N2_r1_Lorentz_v4'] #,'signal_N2_r1_Lorentz_v5']
+    config_list = ['signal_N2_r1_Lorentz_v4','signal_N2_r1_Lorentz_v4_bis','signal_N2_r1_Lorentz_v4_ter'] #,'signal_N2_r1_Lorentz_v5']
 
     # config_list = ['signal_N2_r1_Lorentz_d']
 
-    config_list = ['Coulomb_3_256']
+    # config_list = ['Coulomb_3_256']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['all'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['best'], device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
