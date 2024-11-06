@@ -133,6 +133,7 @@ class TrainingConfig(BaseModel):
     small_init_batch_size: bool = True
     large_range: bool = False
     do_tracking: bool = False
+    ctrl_tracking: bool = False
     distance_threshold: float = 0.1
     epoch_distance_replace: int = 20
 

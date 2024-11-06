@@ -5261,6 +5261,120 @@ def plot_agents(config_file, epoch_list, log_dir, logger, device):
         # plt.savefig(f"./{log_dir}/tmp_training/particle/Fig_{epoch}_{N}.tif", dpi=87)
 
 
+def plot_mouse(config_file, epoch_list, log_dir, logger, device):
+
+
+    simulation_config = config.simulation
+    train_config = config.training
+    model_config = config.graph_model
+
+    time_step = simulation_config.time_step
+    delta_t = simulation_config.delta_t * time_step
+    dataset_name = config.dataset
+    data_augmentation = train_config.data_augmentation
+
+    n_runs = train_config.n_runs
+    cmap = CustomColorMap(config=config)
+
+    x_list = []
+    x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_0.pt', map_location=device)
+    x_list.append(x)
+    edge_p_p_list=[]
+    edge_p_p = np.load(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_0.npz')
+    edge_p_p_list.append(edge_p_p)
+    n_frames = len(x)
+    config.simulation.n_frames = n_frames
+
+    vnorm = torch.ones(1, dtype=torch.float32, device=device)
+    ynorm = torch.ones(1, dtype=torch.float32, device=device)
+    time.sleep(0.5)
+    print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
+
+    n_particles_max = 0
+    id_list = []
+    type_list = []
+    for k in range(n_frames):
+        type = x_list[0][k][:, 5]
+        type_list.append(type)
+        if k==0:
+            type_stack = type
+        else:
+            type_stack = torch.cat((type_stack, type), 0)
+        ids = x_list[0][k][:, -1]
+        id_list.append(ids)
+        n_particles_max += len(type)
+    config.simulation.n_particles_max = n_particles_max
+
+    print('Create models ...')
+    model, bc_pos, bc_dpos = choose_training_model(config, device)
+
+    net = f"./log/try_{config_file}/models/best_model_with_{n_runs-1}_graphs_{epoch_list[0]}.pt"
+    state_dict = torch.load(net,map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
+    model.eval()
+
+    check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
+
+    time.sleep(1)
+
+    for N in trange(200):
+
+        run = 0
+        k = N
+        x = x_list[run][k].clone().detach()
+        edges = edge_p_p_list[run][f'arr_{k}']
+        edges = torch.tensor(edges, dtype=torch.int64, device=device)
+        dataset = data.Data(x=x[:, :], edge_index=edges)
+
+        pred = model(dataset, data_id=run, training=True, vnorm=vnorm, phi=torch.zeros(1, device=device), has_field=False)
+
+        x_next = x_list[run][k+1]
+        x_pos_next = x_next[:,1:3].clone().detach()
+        if model_config.prediction == '2nd_derivative':
+            x_pos_pred = (x[:, 1:3] + delta_t * (x[:, 3:5] + delta_t * pred * ynorm))
+        else:
+            x_pos_pred = (x[:,1:3] + delta_t * pred * ynorm)
+
+        V = x_pos_pred - x[:, 1:3]
+
+        distance = torch.sum(bc_dpos(x_pos_pred[:, None, :] - x_pos_next[None, :, :]) ** 2, dim=2)
+        result = distance.min(dim=1)
+        min_value = result.values
+        indices = result.indices
+        loss = torch.sum(min_value)*1E5
+
+        fig = plt.figure(figsize=(8, 8))
+        ax = fig.add_subplot(2, 2, 1)
+        plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=100, c='b')
+        for n in range(len(x)):
+            plt.arrow(x=to_numpy(x[n, 1]), y=to_numpy(x[n, 2]), dx=to_numpy(V[n, 0]), dy=to_numpy(V[n, 1]), head_width=0.004, length_includes_head=True)
+        plt.scatter(to_numpy(x_next[:, 1]), to_numpy(x_next[:, 2]), s=100, c='g', alpha=0.5)
+        plt.xlim([0,1])
+        plt.ylim([0,1])
+        plt.title('GNN tracking')
+        plt.xticks([])
+        plt.yticks([])
+        ax = fig.add_subplot(2, 2, 2)
+        plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=100, color=cmap.color(to_numpy(type_list[k]).astype(int)))
+        plt.xlim([0,1])
+        plt.ylim([0,1])
+        plt.title('Yolo tracking')
+        plt.xticks([])
+        plt.yticks([])
+        ax = fig.add_subplot(2, 2, 3)
+        plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=100, color=cmap.color(to_numpy(x[:, -1]).astype(int)%6))
+        plt.xlim([0,1])
+        plt.ylim([0,1])
+        plt.title('GNN tracking')
+        plt.xticks([])
+        plt.yticks([])
+
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_recons/Fig_{N}.tif", dpi=87)
+        plt.close()
+
+
+
 def data_video_validation(config_file, epoch_list, log_dir, logger, device):
     print('')
 
@@ -5493,6 +5607,8 @@ def data_plot(config, config_file, epoch_list, device):
                 plot_gravity_continuous(config_file, epoch_list, log_dir, logger, device)
             else:
                 plot_gravity(config_file, epoch_list, log_dir, logger, device)
+        case 'PDE_M':
+                plot_mouse(config_file, epoch_list, log_dir, logger, device)
 
     match config.graph_model.mesh_model_name:
         case 'WaveMesh':
@@ -5794,11 +5910,11 @@ if __name__ == '__main__':
     #                'signal_N2_r1_Lorentz_l3','signal_N2_r1_Lorentz_l4']
     # config_list = ['boids_16_256']
 
-    config_list = ['signal_N2_r1_Lorentz_v4','signal_N2_r1_Lorentz_v4_bis','signal_N2_r1_Lorentz_v4_ter'] #,'signal_N2_r1_Lorentz_v5']
+    # config_list = ['signal_N2_r1_Lorentz_v4','signal_N2_r1_Lorentz_v4_bis','signal_N2_r1_Lorentz_v4_ter'] #,'signal_N2_r1_Lorentz_v5']
 
     # config_list = ['signal_N2_r1_Lorentz_d']
 
-    # config_list = ['Coulomb_3_256']
+    config_list = ['mouse_city_c1','mouse_city_c2']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')

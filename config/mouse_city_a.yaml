@@ -56,7 +56,7 @@ training:
   fix_cluster_embedding: True
   device: 'auto'
   do_tracking: True
-  distance_threshold: 2.0E-4
+  distance_threshold: 5.0E-4
   epoch_distance_replace: 20
   learning_rate_start: 1.0E-4
   learning_rate_embedding_start: 1.0E-5

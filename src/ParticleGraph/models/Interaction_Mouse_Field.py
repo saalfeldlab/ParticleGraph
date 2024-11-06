@@ -58,6 +58,7 @@ class Interaction_Mouse_Field(pyg.nn.MessagePassing):
         self.n_ghosts = int(train_config.n_ghosts)
         self.dimension = dimension
         self.n_particles_max = simulation_config.n_particles_max
+        self.ctrl_tracking = train_config.ctrl_tracking
 
         if train_config.large_range:
             self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
@@ -127,7 +128,11 @@ class Interaction_Mouse_Field(pyg.nn.MessagePassing):
             dpos_x_j = new_dpos_x_j
             dpos_y_j = new_dpos_y_j
 
-        in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
+        if self.ctrl_tracking:
+            in_features = torch.cat((delta_pos * 0, r[:, None] * 0, embedding_i), dim=-1)
+        else:
+            in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
+
 
         out = self.lin_edge(in_features) * field_j
 

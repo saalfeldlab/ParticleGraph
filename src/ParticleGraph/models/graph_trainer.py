@@ -1134,6 +1134,7 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
 
     total_list_loss = []
+    N_tracklets = []
 
     time.sleep(1)
     for epoch in range(start_epoch, n_epochs + 1):
@@ -1212,8 +1213,6 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
                 # plt.scatter(to_numpy(x_pos_pred[a, 0]),to_numpy(x_pos_pred[a, 1]),s=200, c='k',alpha=0.5)
                 # plt.scatter(to_numpy(x_next[b, 1]), to_numpy(x_next[b, 2]), s=200, c='g',alpha=0.5)
 
-
-
             else:
                 loss = (pred - y_batch).norm(2) # + model.a.norm(1) * 1E-3
 
@@ -1237,6 +1236,9 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
                     else:
                         id_list = torch.cat((id_list, ids), 0)
                         frame_list = torch.cat((frame_list, frames), 0)
+
+                N_tracklets.append(len(torch.unique(id_list)))
+
                 plot_training_mouse(config=config, id_list=id_list, frame_list=frame_list, dataset_name=dataset_name, log_dir=log_dir,
                                    epoch=epoch, N=N, model=model, n_particle_types=n_particle_types,
                                    type_stack=type_stack, ynorm=ynorm, cmap=cmap, device=device)
@@ -1246,6 +1248,13 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
                 plt.scatter(np.array(list_frame),  np.array(list_loss), s=5, c='k',alpha=0.07, edgecolors='none')
                 ax.set_yscale('log')
                 plt.savefig(f"./{log_dir}/tmp_training/loss/loss_{epoch}.tif")
+                plt.close()
+
+                fig = plt.figure(figsize=(5, 5))
+                plt.plot(N_tracklets, c='k')
+                plt.xlabel('Iterations')
+                plt.ylabel('N tracklets')
+                plt.savefig(f"./{log_dir}/N_tracklets.tif")
                 plt.close()
 
 
