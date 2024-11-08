@@ -7,7 +7,6 @@ simulation:
   min_radius: 0
   max_radius: 1
   n_particles: 6
-  n_interactions: 3
   n_particles_max: 0
   n_particle_types: 6
   n_frames: 36018
@@ -51,7 +50,7 @@ training:
   sparsity_freq: 4
   cluster_method: 'kmeans_auto_plot'
   data_augmentation: True
-  data_augmentation_loop: 200
+  data_augmentation_loop: 100
   learning_rate_start: 0.001
   learning_rate_embedding_start: 0.001
   fix_cluster_embedding: True
@@ -60,7 +59,7 @@ training:
   distance_threshold: 1.0E-2
   epoch_distance_replace: 1000
   learning_rate_start: 1.0E-4
-  learning_rate_embedding_start: 1.0E-4
+  learning_rate_embedding_start: 1.0E-5
 
 
 

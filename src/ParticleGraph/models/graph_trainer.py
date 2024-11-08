@@ -1181,13 +1181,14 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
                 indices = result.indices
                 loss = torch.sum(min_value)*1E5
 
-                # if (epoch >= epoch_distance_replace):
-                #     pos = torch.argwhere(min_value < distance_threshold)
-                #     if len(pos)>0:
-                #         x_list[run][k][pos,-1] = x_list[run][k + 1][indices[pos],-1].clone().detach()
-                #     pos = torch.argwhere(min_value >= distance_threshold)
-                #     if len(pos)>0:
-                #         x_list[run][k][pos,-1] = x_list[run][k][pos,-2].clone().detach()
+
+                if (epoch >= epoch_distance_replace):
+                    pos = torch.argwhere(min_value < distance_threshold)
+                    if len(pos)>0:
+                        x_list[run][k][pos,-1] = x_list[run][k + 1][indices[pos],-1].clone().detach()
+                    pos = torch.argwhere(min_value >= distance_threshold)
+                    if len(pos)>0:
+                        x_list[run][k][pos,-1] = x_list[run][k][pos,-2].clone().detach()
 
                 # fig = plt.figure(figsize=(8, 8))
                 # plt.scatter(to_numpy(x_next[:, 1]), to_numpy(x_next[:, 2]), s=100, c='g')
