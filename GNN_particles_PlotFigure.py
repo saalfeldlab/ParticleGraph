@@ -5270,6 +5270,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
 
     time_step = simulation_config.time_step
     delta_t = simulation_config.delta_t * time_step
+    data_folder_name = config.data_folder_name
     dataset_name = config.dataset
     embedding_cluster = EmbeddingCluster(config)
 
@@ -5308,91 +5309,261 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
     print('load models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
-    net = f"./log/try_{config_file}/models/best_model_with_{n_runs-1}_graphs_{epoch_list[0]}.pt"
-    state_dict = torch.load(net,map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
-    model.eval()
-
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
 
-    time.sleep(1)
 
-    print('clustering ...')
-    embedding = to_numpy(model.a.clone().detach())
+    if epoch_list[0] == 'all':
 
-    config.training.cluster_method = 'kmeans_auto_plot'
+        plt.rcParams['text.usetex'] = False
+        plt.rc('font', family='sans-serif')
+        plt.rc('text', usetex=False)
+        matplotlib.rcParams['savefig.pad_inches'] = 0
 
-    labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
-    fig = plt.figure(figsize=(10, 10))
-    for k in np.unique(labels):
-        pos = np.argwhere(labels == k)
-        plt.scatter(embedding[pos, 0], embedding[pos, 1], s=0.1, c=cmap.color(k))
-    plt.xticks([])
-    plt.yticks([])
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/clustered_embedding.tif", dpi=180)
-    plt.close()
+        files = glob.glob(f"./log/try_{config_file}/models/best_model_with_0_graphs_*.pt")
+        files.sort(key=sort_key)
 
-    labels_ =  torch.tensor(labels, dtype=torch.float32, device=device)
-    for k in range(n_frames):
-        n = x_list[0][k].shape[0]
-        x_list[0][k][:,6] = labels_[0:n]
-        labels_ = labels_[n:]
+        for file_id in trange(0,len(files)):
+            print(files[file_id], sort_key(files[file_id]), (sort_key(files[file_id]) % 1E7 != 0))
 
-    for N in trange(100,600):
+            if (sort_key(files[file_id]) % 1E7 != 0):
+                epoch = files[file_id].split('graphs')[1][1:-3]
+                print(epoch)
 
-        k = N
-        x = x_list[0][k].clone().detach()
-        edges = edge_p_p_list[0][f'arr_{k}']
-        edges = torch.tensor(edges, dtype=torch.int64, device=device)
-        dataset = data.Data(x=x[:, :], edge_index=edges)
+                net = f"./log/try_{config_file}/models/best_model_with_0_graphs_{epoch}.pt"
+                state_dict = torch.load(net, map_location=device)
+                model.load_state_dict(state_dict['model_state_dict'])
+                model.eval()
 
-        pred = model(dataset, data_id=0, training=True, vnorm=vnorm, phi=torch.zeros(1, device=device), has_field=False)
+                plt.style.use('dark_background')
 
-        x_next = x_list[0][k+1]
-        x_pos_next = x_next[:,1:3].clone().detach()
-        if model_config.prediction == '2nd_derivative':
-            x_pos_pred = (x[:, 1:3] + delta_t * (x[:, 3:5] + delta_t * pred * ynorm))
-        else:
-            x_pos_pred = (x[:,1:3] + delta_t * pred * ynorm)
+                embedding = to_numpy(model.a.clone().detach())
 
-        V = x_pos_pred - x[:, 1:3]
+                if True:
 
-        distance = torch.sum(bc_dpos(x_pos_pred[:, None, :] - x_pos_next[None, :, :]) ** 2, dim=2)
-        result = distance.min(dim=1)
-        min_value = result.values
-        indices = result.indices
-        loss = torch.sum(min_value)*1E5
+                    fig, ax = fig_init(fontsize=24)
+                    params = {'mathtext.default': 'regular'}
+                    plt.rcParams.update(params)
+                    embedding = to_numpy(model.a.clone().detach())
+                    plt.scatter(embedding[:,0], embedding[:, 1], c='w', s=1, alpha=1, edgecolor='None')
+                    plt.xlabel(r'$a_{i0}$', fontsize=48)
+                    plt.ylabel(r'$a_{i1}$', fontsize=48)
+                    plt.xlim([0.94, 1.06])
+                    plt.ylim([0.94, 1.06])
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/all/embedding_{epoch}.tif", dpi=80)
+                    plt.close()
 
-        fig = plt.figure(figsize=(10, 5))
-        ax = fig.add_subplot(1, 2, 1)
-        plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=100, c='b')
-        for n in range(len(x)):
-            plt.arrow(x=to_numpy(x[n, 1]), y=to_numpy(x[n, 2]), dx=to_numpy(V[n, 0]), dy=to_numpy(V[n, 1]), head_width=0.004, length_includes_head=True)
-        plt.scatter(to_numpy(x_next[:, 1]), to_numpy(x_next[:, 2]), s=100, c='g', alpha=0.5)
-        plt.xlim([0,1])
-        plt.ylim([0,1])
-        plt.title('GNN tracking')
-        plt.xticks([])
-        plt.yticks([])
-        # ax = fig.add_subplot(2, 2, 3)
-        # plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=100, color=cmap.color(to_numpy(type_list[k]).astype(int)))
-        # plt.xlim([0,1])
-        # plt.ylim([0,1])
-        # plt.title('Yolo tracking')
-        # plt.xticks([])
-        # plt.yticks([])
-        ax = fig.add_subplot(1, 2, 2)
-        plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=100, color=cmap.color(to_numpy(x[:, 6]).astype(int)))
-        plt.xlim([0,1])
-        plt.ylim([0,1])
-        plt.title('GNN cluster')
-        plt.xticks([])
-        plt.yticks([])
+                    fig, ax = fig_init(fontsize=24)
+                    rr = torch.tensor(np.linspace(0, 0.75, 1000)).to(device)
+                    for n in range(0,len(model.a),len(model.a)//2000):
+                        embedding_ = model.a[n] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                        in_features = torch.cat((rr[:, None] , 0 * rr[:, None],
+                                                 rr[:, None] , embedding_), dim=1)
+                        with torch.no_grad():
+                            func = model.lin_edge(in_features.float())
+                            func = func[:, 0]
+                        plt.plot(to_numpy(rr),
+                                 to_numpy(func) * to_numpy(ynorm),
+                                 c='w', linewidth=2, alpha=0.15)
+                    plt.xlabel('$d_{ij}$', fontsize=48)
+                    plt.ylabel('$f(a_i, d_{ij})$', fontsize=48)
 
+                    if 'cohort2' in data_folder_name:
+                        plt.ylim([-0.075, 0.075])
+                    else:
+                        plt.ylim([-0.05, 0.05])
+
+                    plt.tight_layout()
+
+                    plt.savefig(f"./{log_dir}/results/all/function_{epoch}.tif", dpi=80)
+                    plt.close()
+
+                else:
+
+                    fig, ax = fig_init(fontsize=24)
+                    for k in np.unique(labels):
+                        pos = np.argwhere(labels == k)
+                        plt.scatter(embedding[pos, 0], embedding[pos, 1], s=1, c=cmap.color(k), alpha=1, edgecolors='None')
+                    plt.xlabel(r'$a_{i0}$', fontsize=48)
+                    plt.ylabel(r'$a_{i1}$', fontsize=48)
+                    plt.xlim([0.94, 1.06])
+                    plt.ylim([0.94, 1.06])
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/all/clustered_embedding_{epoch}.tif", dpi=80)
+                    plt.close()
+
+                    fig, ax = fig_init(fontsize=24)
+                    rr = torch.tensor(np.linspace(0, 0.75, 1000)).to(device)
+                    for n in range(0, len(model.a), len(model.a) // 2000):
+                        embedding_ = model.a[n] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                        in_features = torch.cat((rr[:, None], 0 * rr[:, None],
+                                                 rr[:, None], embedding_), dim=1)
+                        with torch.no_grad():
+                            func = model.lin_edge(in_features.float())
+                            func = func[:, 0]
+                        plt.plot(to_numpy(rr),
+                                 to_numpy(func) * to_numpy(ynorm),
+                                 color=cmap.color(labels[n].astype(int)), linewidth=2, alpha=0.15)
+                    plt.xlabel('$d_{ij}$', fontsize=48)
+                    plt.ylabel('$f(a_i, d_{ij})$', fontsize=48)
+                    plt.ylim([-0.025, 0.025])
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/all/clustered_functions_{epoch}.tif", dpi=80)
+                    plt.close()
+
+    else:
+
+        net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{epoch_list[0]}.pt"
+        state_dict = torch.load(net, map_location=device)
+        model.load_state_dict(state_dict['model_state_dict'])
+        model.eval()
+
+        time.sleep(1)
+
+        print('clustering ...')
+        embedding = to_numpy(model.a.clone().detach())
+
+        config.training.cluster_method = 'kmeans_auto_plot'
+
+        labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
+        labels_ =  torch.tensor(labels, dtype=torch.float32, device=device)
+        for k in range(n_frames):
+            n = x_list[0][k].shape[0]
+            x_list[0][k][:,6] = labels_[0:n]
+            labels_ = labels_[n:]
+
+        plt.rcParams['text.usetex'] = False
+        plt.rc('font', family='sans-serif')
+        plt.rc('text', usetex=False)
+        matplotlib.rcParams['savefig.pad_inches'] = 0
+        plt.style.use('dark_background')
+
+        fig, ax = fig_init(fontsize=24)
+        for k in np.unique(labels):
+            pos = np.argwhere(labels == k)
+            plt.scatter(embedding[pos, 0], embedding[pos, 1], s=20, c=cmap.color(k), alpha=0.05, edgecolors='None')
+        plt.xlabel(r'$a_{i0}$', fontsize=48)
+        plt.ylabel(r'$a_{i1}$', fontsize=48)
+        # plt.xlim([0.94, 1.06])
+        # plt.ylim([0.94, 1.06])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_recons/Fig_{N}.tif", dpi=180)
+        plt.savefig(f"./{log_dir}/results/clustered_embedding_{epoch_list[0]}.tif", dpi=80)
         plt.close()
+
+        fig, ax = fig_init(fontsize=24)
+        rr = torch.tensor(np.linspace(0, 0.75, 1000)).to(device)
+        for n in range(0, len(model.a), len(model.a) // 2000):
+            embedding_ = model.a[n] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+            in_features = torch.cat((rr[:, None], 0 * rr[:, None],
+                                     rr[:, None], embedding_), dim=1)
+            with torch.no_grad():
+                func = model.lin_edge(in_features.float())
+                func = func[:, 0]
+            plt.plot(to_numpy(rr),
+                     to_numpy(func) * to_numpy(ynorm),
+                     color=cmap.color(labels[n].astype(int)), linewidth=2, alpha=0.15)
+        plt.xlabel('$d_{ij}$', fontsize=48)
+        plt.ylabel('$f(a_i, d_{ij})$', fontsize=48)
+        plt.ylim([-0.075, 0.075])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/clustered_functions_{epoch_list[0]}.tif", dpi=80)
+        plt.close()
+
+        for N in trange(0, n_frames-1):
+
+            k = N
+            x = x_list[0][k].clone().detach()
+            edges = edge_p_p_list[0][f'arr_{k}']
+            edges = torch.tensor(edges, dtype=torch.int64, device=device)
+            dataset = data.Data(x=x[:, :], edge_index=edges)
+
+            pred = model(dataset, data_id=0, training=True, vnorm=vnorm, phi=torch.zeros(1, device=device), has_field=False)
+
+            x_next = x_list[0][k+1]
+            x_pos_next = x_next[:,1:3].clone().detach()
+            if model_config.prediction == '2nd_derivative':
+                x_pos_pred = (x[:, 1:3] + delta_t * (x[:, 3:5] + delta_t * pred * ynorm))
+            else:
+                x_pos_pred = (x[:,1:3] + delta_t * pred * ynorm)
+
+            V = x_pos_pred - x[:, 1:3]
+
+            distance = torch.sum(bc_dpos(x_pos_pred[:, None, :] - x_pos_next[None, :, :]) ** 2, dim=2)
+            result = distance.min(dim=1)
+            min_value = result.values
+            indices = result.indices
+            loss = torch.sum(min_value)*1E5
+
+
+            if 'cohort2' in data_folder_name:
+
+                fig = plt.figure(figsize=(16, 5))
+                ax = fig.add_subplot(1, 2, 1)
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=100, c='b')
+                for n in range(len(x)):
+                    plt.arrow(x=to_numpy(x[n, 1]), y=to_numpy(x[n, 2]), dx=to_numpy(V[n, 0]), dy=to_numpy(V[n, 1]),
+                              head_width=0.004, length_includes_head=True)
+                plt.scatter(to_numpy(x_next[:, 1]), to_numpy(x_next[:, 2]), s=100, c='g', alpha=0.5)
+
+                plt.xlim([0, 2])
+                plt.ylim([0, 1])
+                plt.title('GNN tracking')
+                plt.xticks([])
+                plt.yticks([])
+                # ax = fig.add_subplot(2, 2, 3)
+                # plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=100, color=cmap.color(to_numpy(type_list[k]).astype(int)))
+                # plt.xlim([0,1])
+                # plt.ylim([0,1])
+                # plt.title('Yolo tracking')
+                # plt.xticks([])
+                # plt.yticks([])
+                ax = fig.add_subplot(1, 2, 2)
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=100,
+                            color=cmap.color(to_numpy(x[:, 6]).astype(int)))
+                plt.xlim([0, 2])
+                plt.ylim([0, 1])
+                plt.title('GNN cluster')
+                plt.xticks([])
+                plt.yticks([])
+
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{N}.tif", dpi=60)
+                plt.close()
+
+
+
+            else:
+
+                fig = plt.figure(figsize=(10, 5))
+                ax = fig.add_subplot(1, 2, 1)
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=100, c='b')
+                for n in range(len(x)):
+                    plt.arrow(x=to_numpy(x[n, 1]), y=to_numpy(x[n, 2]), dx=to_numpy(V[n, 0]), dy=to_numpy(V[n, 1]), head_width=0.004, length_includes_head=True)
+                plt.scatter(to_numpy(x_next[:, 1]), to_numpy(x_next[:, 2]), s=100, c='g', alpha=0.5)
+
+                plt.xlim([0,1])
+                plt.ylim([0,1])
+                plt.title('GNN tracking')
+                plt.xticks([])
+                plt.yticks([])
+                # ax = fig.add_subplot(2, 2, 3)
+                # plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=100, color=cmap.color(to_numpy(type_list[k]).astype(int)))
+                # plt.xlim([0,1])
+                # plt.ylim([0,1])
+                # plt.title('Yolo tracking')
+                # plt.xticks([])
+                # plt.yticks([])
+                ax = fig.add_subplot(1, 2, 2)
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=100, color=cmap.color(to_numpy(x[:, 6]).astype(int)))
+                plt.xlim([0,1])
+                plt.ylim([0,1])
+                plt.title('GNN cluster')
+                plt.xticks([])
+                plt.yticks([])
+
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{N}.tif", dpi=180)
+                plt.close()
 
 
 
@@ -5935,11 +6106,11 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N2_r1_Lorentz_d']
 
-    config_list = ['mouse_city_c1', 'mouse_city_c1_follow_up']
+    config_list = ['mouse_city_c4']  # , 'mouse_city_c3']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['best'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['all'], device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

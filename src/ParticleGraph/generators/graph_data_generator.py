@@ -882,7 +882,7 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
 
     for it, f in enumerate(files):
 
-        if (it%100 == 0):
+        if (it%1000 == 0):
             print(f'frame {it} ...')
 
         data = pd.read_csv(f, sep=' ', header=None)
@@ -892,6 +892,10 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
         N1 = torch.arange(len(data), dtype=torch.float32, device=device)[:, None]
         X1 = torch.tensor(data[:, 1:3], dtype=torch.float32, device=device)
         X1[:, 1] = 1-X1[:, 1]
+
+        if 'cohort2' in data_folder_name:
+            X1[:, 0] = X1[:, 0] * 2
+
         V1 = 0 * X1
         T1 = torch.tensor(data[:, 0:1], dtype=torch.float32, device=device)
         H1 = torch.tensor(data[:, 3:5], dtype=torch.float32, device=device)
@@ -919,7 +923,7 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
         x_list.append(x)
 
         # output plots
-        if visualize & (run == 0) & (it % step == 0) & (it < 5000):
+        if visualize & (run == 0) & (it % step == 0) & (it < 2000):
 
             if 'latex' in style:
                 plt.rcParams['text.usetex'] = True
@@ -934,17 +938,33 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
                 # pos = edge_index[1, pos]
                 # pos=to_numpy(pos)
 
-                fig = plt.figure(figsize=(8, 8))
-                plt.scatter(to_numpy(X1_mesh[:, 0]), to_numpy(X1_mesh[:, 1]), s=1, c='k', alpha=0.25)
-                plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=2000, c='k',alpha=0.7)
-                pos_connect = to_numpy(edge_index[1,:]).astype(int)
-                plt.scatter(to_numpy(X1_mesh[pos_connect, 0]), to_numpy(X1_mesh[pos_connect, 1]), s=100, c='r',alpha=0.1)
-                plt.xticks([])
-                plt.yticks([])
-                plt.tight_layout()
+                if 'cohort2' in data_folder_name:
+
+                    fig = plt.figure(figsize=(8, 4))
+                    plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=200, c='k', alpha=1.0)
+                    plt.xticks([])
+                    plt.yticks([])
+
+                    plt.xlim([0, 2])
+                    plt.ylim([0, 1])
+                    plt.tight_layout()
+
+                else:
+
+                    fig = plt.figure(figsize=(8, 8))
+                    # plt.scatter(to_numpy(X1_mesh[:, 0]), to_numpy(X1_mesh[:, 1]), s=1, c='k', alpha=0.25)
+                    plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=400, c='k', alpha=1.0)
+                    # pos_connect = to_numpy(edge_index[1,:]).astype(int)
+                    # plt.scatter(to_numpy(X1_mesh[pos_connect, 0]), to_numpy(X1_mesh[pos_connect, 1]), s=100, c='r',alpha=0.1)
+                    plt.xticks([])
+                    plt.yticks([])
+
+                    plt.xlim([0,1])
+                    plt.ylim([0,1])
+                    plt.tight_layout()
 
                 num = f"{it:06}"
-                plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=35)
+                plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
                 plt.close()
 
     torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
