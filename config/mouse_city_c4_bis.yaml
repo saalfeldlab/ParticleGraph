@@ -60,7 +60,7 @@ training:
   distance_threshold: 1.0E-2
   epoch_distance_replace: 1000
   learning_rate_start: 1.0E-4
-  learning_rate_embedding_start: 1.0E-5
+  learning_rate_embedding_start: 1.0E-4
 
 
 
