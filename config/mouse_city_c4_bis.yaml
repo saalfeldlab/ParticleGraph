@@ -7,7 +7,7 @@ simulation:
   min_radius: 0
   max_radius: 1
   n_particles: 6
-  n_interactions: 2
+  n_interactions: 3
   n_particles_max: 0
   n_particle_types: 6
   n_frames: 36018

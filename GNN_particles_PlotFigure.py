@@ -5369,7 +5369,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
                     plt.ylabel('$f(a_i, d_{ij})$', fontsize=48)
 
                     if 'cohort2' in data_folder_name:
-                        plt.ylim([-0.075, 0.075])
+                        plt.ylim([-0.2, 0.2])
                     else:
                         plt.ylim([-0.05, 0.05])
 
@@ -5423,10 +5423,11 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
         print('clustering ...')
         embedding = to_numpy(model.a.clone().detach())
 
-        config.training.cluster_method = 'kmeans_auto_plot'
+        config.training.cluster_method = 'kmeans'
 
-        labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
+        labels, n_clusters = embedding_cluster.get(embedding, 'kmeans')
         labels_ =  torch.tensor(labels, dtype=torch.float32, device=device)
+
         for k in range(n_frames):
             n = x_list[0][k].shape[0]
             x_list[0][k][:,6] = labels_[0:n]
@@ -5441,7 +5442,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
         fig, ax = fig_init(fontsize=24)
         for k in np.unique(labels):
             pos = np.argwhere(labels == k)
-            plt.scatter(embedding[pos, 0], embedding[pos, 1], s=20, c=cmap.color(k), alpha=0.05, edgecolors='None')
+            plt.scatter(embedding[pos, 0], embedding[pos, 1], s=1, c=cmap.color(k), alpha=1, edgecolors='None')
         plt.xlabel(r'$a_{i0}$', fontsize=48)
         plt.ylabel(r'$a_{i1}$', fontsize=48)
         # plt.xlim([0.94, 1.06])
@@ -5464,7 +5465,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
                      color=cmap.color(labels[n].astype(int)), linewidth=2, alpha=0.15)
         plt.xlabel('$d_{ij}$', fontsize=48)
         plt.ylabel('$f(a_i, d_{ij})$', fontsize=48)
-        plt.ylim([-0.075, 0.075])
+        plt.ylim([-0.2, 0.2])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/clustered_functions_{epoch_list[0]}.tif", dpi=80)
         plt.close()

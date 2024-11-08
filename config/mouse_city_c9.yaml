@@ -1,18 +1,17 @@
-description: 'mouse_city trial1_active_1 time_step = 5    10Hz   0.5s'
-dataset: 'mouse_city_c4_bis'
-data_folder_name: '/groups/saalfeld/home/allierc/signaling/MouseCity/cohort2_exp1/datasets/labels_GT/train/'
+description: 'mouse_city trial1_active_1 40Hz time_step = 20  0.5s  embedding LR 1E-4'
+dataset: 'mouse_city_c6'
+data_folder_name: '/groups/saalfeld/home/allierc/signaling/MouseCity/cohort2_exp1/prediction2/labels/'
 
 simulation:
   params: [[-1]]
   min_radius: 0
   max_radius: 1
   n_particles: 6
-  n_interactions: 2
   n_particles_max: 0
   n_particle_types: 6
   n_frames: 36018
   delta_t: 1
-  time_step: 5
+  time_step: 20
   boundary: 'no'
   has_cell_state: True
   state_type: 'sequence'
@@ -60,7 +59,7 @@ training:
   distance_threshold: 1.0E-2
   epoch_distance_replace: 1000
   learning_rate_start: 1.0E-4
-  learning_rate_embedding_start: 1.0E-5
+  learning_rate_embedding_start: 5.0E-4
 
 
 
