@@ -1035,7 +1035,6 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
 
     print(f'Training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
-    dimension = simulation_config.dimension
     n_epochs = train_config.n_epochs
     n_particle_types = simulation_config.n_particle_types
     time_step = simulation_config.time_step
@@ -1055,7 +1054,6 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
     distance_threshold = train_config.distance_threshold
     epoch_distance_replace = train_config.epoch_distance_replace
     has_state = (simulation_config.state_type != 'discrete')
-    max_radius = simulation_config.max_radius
 
     l_dir, log_dir, logger = create_log_dir(config, config_file,erase)
     print(f'Graph files N: {n_runs}')
@@ -1117,6 +1115,9 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
     logger.info(f"Total Trainable Params: {n_total_params}")
     logger.info(f'Learning rates: {lr}, {lr_embedding}')
     model.train()
+
+    coeff_entropy_loss = train_config.coeff_entropy_loss
+    entropy_loss = KoLeoLoss()
 
     net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs.pt"
     print(f'network: {net}')
@@ -1180,7 +1181,12 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
                 indices = result.indices
                 loss = torch.sum(min_value)*1E5
             else:
-                loss = (pred - y_batch).norm(2) 
+                loss = (pred - y_batch).norm(2)
+
+            if coeff_entropy_loss > 0:
+                idx = torch.randperm(len(model.a))
+                model_a = model.a[idx[0:10000]].clone().detach()
+                loss = loss + coeff_entropy_loss * entropy_loss(model_a)
                 
             loss.backward()
             optimizer.step()

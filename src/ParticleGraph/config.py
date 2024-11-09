@@ -163,6 +163,7 @@ class TrainingConfig(BaseModel):
     first_coeff_L1: float = 0
     coeff_L1: float = 0
     coeff_anneal_L1: float = 0
+    coeff_entropy_loss: float = 0
     coeff_loss1: float = 1
     coeff_loss2: float = 1
     coeff_loss3: float = 1

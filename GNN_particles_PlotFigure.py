@@ -4493,8 +4493,6 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
     else:
         has_field = False
 
-    embedding_cluster = EmbeddingCluster(config)
-
     x_list = []
     y_list = []
     for run in trange(1):
@@ -4573,6 +4571,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
                 amax = torch.max(model.a, dim=0).values
                 amin = torch.min(model.a, dim=0).values
                 model_a = (model.a - amin) / (amax - amin)
+
 
                 for n in range(n_particle_types-1,-1,-1):
                     pos = torch.argwhere(type_list == n).squeeze()
@@ -5274,6 +5273,10 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
     dataset_name = config.dataset
     embedding_cluster = EmbeddingCluster(config)
 
+
+    embedding_cluster = EmbeddingCluster(config)
+    entropy_loss = KoLeoLoss()
+
     n_runs = train_config.n_runs
     cmap = CustomColorMap(config=config)
 
@@ -5321,14 +5324,13 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
 
         files = glob.glob(f"./log/try_{config_file}/models/best_model_with_0_graphs_*.pt")
         files.sort(key=sort_key)
+        entropy_list=[]
 
-        for file_id in trange(0,len(files)):
-            print(files[file_id], sort_key(files[file_id]), (sort_key(files[file_id]) % 1E7 != 0))
+        for file_id in range(0,len(files)):
+            # print(files[file_id], sort_key(files[file_id]), (sort_key(files[file_id]) % 1E7 != 0))
 
             if (sort_key(files[file_id]) % 1E7 != 0):
                 epoch = files[file_id].split('graphs')[1][1:-3]
-                print(epoch)
-
                 net = f"./log/try_{config_file}/models/best_model_with_0_graphs_{epoch}.pt"
                 state_dict = torch.load(net, map_location=device)
                 model.load_state_dict(state_dict['model_state_dict'])
@@ -5336,14 +5338,19 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
 
                 plt.style.use('dark_background')
 
-                embedding = to_numpy(model.a.clone().detach())
-
                 if True:
+
+                    # get permutation random of model.a
+
+                    idx = torch.randperm(len(model.a))
+                    model_a = model.a[idx[0:10000]].clone().detach()
+                    entropy = entropy_loss(model_a)
+                    entropy_list.append(entropy)
 
                     fig, ax = fig_init(fontsize=24)
                     params = {'mathtext.default': 'regular'}
                     plt.rcParams.update(params)
-                    embedding = to_numpy(model.a.clone().detach())
+                    embedding = to_numpy(model.a)
                     plt.scatter(embedding[:,0], embedding[:, 1], c='w', s=1, alpha=1, edgecolor='None')
                     plt.xlabel(r'$a_{i0}$', fontsize=48)
                     plt.ylabel(r'$a_{i1}$', fontsize=48)
@@ -5352,6 +5359,12 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/results/all/embedding_{epoch}.tif", dpi=80)
                     plt.close()
+
+                    # student_output = F.normalize(model_a, eps=1E-8, p=2, dim=0)
+                    # plt.scatter(to_numpy(student_output[:, 0]), to_numpy(student_output[:, 1]), c='w', s=1, alpha=1, edgecolor='None')
+                    # I = entropy_loss.pairwise_NNs_inner(student_output)  # noqa: E741
+                    # distances = entropy_loss.pdist(student_output, student_output[I])  # BxD, BxD -> B
+                    # loss = -torch.log(distances + 1E-8).mean()
 
                     fig, ax = fig_init(fontsize=24)
                     rr = torch.tensor(np.linspace(0, 0.75, 1000)).to(device)
@@ -5410,6 +5423,16 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/results/all/clustered_functions_{epoch}.tif", dpi=80)
                     plt.close()
+
+        entropy_list = torch.stack(entropy_list)
+        entropy_list = to_numpy(entropy_list)
+        fig = plt.figure(figsize=(10, 10))
+        plt.plot(entropy_list, linewidth=1, color='w')
+        plt.xlabel('iteration', fontsize=48)
+        plt.ylabel('entropy', fontsize=48)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/entropy.tif", dpi=80)
+
 
     else:
 
@@ -5530,8 +5553,6 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_recons/Fig_{N}.tif", dpi=60)
                 plt.close()
-
-
 
             else:
 
@@ -6107,7 +6128,7 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N2_r1_Lorentz_d']
 
-    config_list = ['mouse_city_c4']  # , 'mouse_city_c3']
+    config_list = ['mouse_city_c1_bis']  # , 'mouse_city_c3']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
