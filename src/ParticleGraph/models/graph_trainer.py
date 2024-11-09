@@ -1134,7 +1134,6 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
 
     total_list_loss = []
-    N_tracklets = []
 
     time.sleep(1)
     for epoch in range(start_epoch, n_epochs + 1):
@@ -1180,42 +1179,9 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
                 min_value = result.values
                 indices = result.indices
                 loss = torch.sum(min_value)*1E5
-
-
-                if (epoch >= epoch_distance_replace):
-                    pos = torch.argwhere(min_value < distance_threshold)
-                    if len(pos)>0:
-                        x_list[run][k][pos,-1] = x_list[run][k + 1][indices[pos],-1].clone().detach()
-                    pos = torch.argwhere(min_value >= distance_threshold)
-                    if len(pos)>0:
-                        x_list[run][k][pos,-1] = x_list[run][k][pos,-2].clone().detach()
-
-                # fig = plt.figure(figsize=(8, 8))
-                # plt.scatter(to_numpy(x_next[:, 1]), to_numpy(x_next[:, 2]), s=100, c='g')
-                # a=0
-                # b=3
-                # plt.scatter(to_numpy(x[a, 1]), to_numpy(x[a, 2]), s=100, c='k', alpha=0.5)
-                # plt.scatter(to_numpy(x_pos_pred[a, 0]),to_numpy(x_pos_pred[a, 1]),s=200, c='k',alpha=0.5)
-                # plt.scatter(to_numpy(x_next[b, 1]), to_numpy(x_next[b, 2]), s=200, c='g',alpha=0.5)
-                # a=1
-                # b=4
-                # plt.scatter(to_numpy(x[a, 1]), to_numpy(x[a, 2]), s=100, c='k', alpha=0.5)
-                # plt.scatter(to_numpy(x_pos_pred[a, 0]),to_numpy(x_pos_pred[a, 1]),s=200, c='k',alpha=0.5)
-                # plt.scatter(to_numpy(x_next[b, 1]), to_numpy(x_next[b, 2]), s=200, c='g',alpha=0.5)
-                # a=2
-                # b=2
-                # plt.scatter(to_numpy(x[a, 1]), to_numpy(x[a, 2]), s=100, c='k', alpha=0.5)
-                # plt.scatter(to_numpy(x_pos_pred[a, 0]),to_numpy(x_pos_pred[a, 1]),s=200, c='k',alpha=0.5)
-                # plt.scatter(to_numpy(x_next[b, 1]), to_numpy(x_next[b, 2]), s=200, c='g',alpha=0.5)
-                # a=3
-                # b=5
-                # plt.scatter(to_numpy(x[a, 1]), to_numpy(x[a, 2]), s=100, c='k', alpha=0.5)
-                # plt.scatter(to_numpy(x_pos_pred[a, 0]),to_numpy(x_pos_pred[a, 1]),s=200, c='k',alpha=0.5)
-                # plt.scatter(to_numpy(x_next[b, 1]), to_numpy(x_next[b, 2]), s=200, c='g',alpha=0.5)
-
             else:
-                loss = (pred - y_batch).norm(2) # + model.a.norm(1) * 1E-3
-
+                loss = (pred - y_batch).norm(2) 
+                
             loss.backward()
             optimizer.step()
 
@@ -1237,8 +1203,6 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
                         id_list = torch.cat((id_list, ids), 0)
                         frame_list = torch.cat((frame_list, frames), 0)
 
-                N_tracklets.append(len(torch.unique(id_list)))
-
                 plot_training_mouse(config=config, id_list=id_list, frame_list=frame_list, dataset_name=dataset_name, log_dir=log_dir,
                                    epoch=epoch, N=N, model=model, n_particle_types=n_particle_types,
                                    type_stack=type_stack, ynorm=ynorm, cmap=cmap, device=device)
@@ -1249,14 +1213,6 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
                 ax.set_yscale('log')
                 plt.savefig(f"./{log_dir}/tmp_training/loss/loss_{epoch}.tif")
                 plt.close()
-
-                fig = plt.figure(figsize=(5, 5))
-                plt.plot(N_tracklets, c='k')
-                plt.xlabel('Iterations')
-                plt.ylabel('N tracklets')
-                plt.savefig(f"./{log_dir}/N_tracklets.tif")
-                plt.close()
-
 
                 torch.save({'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))

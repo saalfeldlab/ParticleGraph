@@ -13,9 +13,9 @@ class Interaction_Mouse_Field(pyg.nn.MessagePassing):
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
     """
-    Model learning the acceleration of particles as a function of their relative distance and relative velocities.
+    Model learning the mouse movements as a function of their relative distance.
     The interaction function is defined by a MLP self.lin_edge
-    The particle embedding is defined by a table self.a
+    The particle (mouse) embedding is defined by a table self.a
 
     Inputs
     ----------
@@ -24,7 +24,7 @@ class Interaction_Mouse_Field(pyg.nn.MessagePassing):
     Returns
     -------
     pred : float
-        the acceleration of the particles (dimension 2)
+        the velocity of the particles (mouses) (dimension 2)
     """
 
     def __init__(self, config, device, aggr_type=None, bc_dpos=None, dimension=2):
@@ -128,11 +128,7 @@ class Interaction_Mouse_Field(pyg.nn.MessagePassing):
             dpos_x_j = new_dpos_x_j
             dpos_y_j = new_dpos_y_j
 
-        if self.ctrl_tracking:
-            in_features = torch.cat((delta_pos * 0, r[:, None] * 0, embedding_i), dim=-1)
-        else:
-            in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
-
+        in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
 
         out = self.lin_edge(in_features) * field_j
 
@@ -142,17 +138,4 @@ class Interaction_Mouse_Field(pyg.nn.MessagePassing):
 
         return aggr_out  # self.lin_node(aggr_out)
 
-    def psi(self, r, p1, p2):
 
-        if (self.model == 'PDE_A') | (self.model =='PDE_A_bis')  | (self.model=='PDE_ParticleField_A'):
-            return r * (p1[0] * torch.exp(-r ** (2 * p1[1]) / (2 * self.sigma ** 2)) - p1[2] * torch.exp(-r ** (2 * p1[3]) / (2 * self.sigma ** 2)))
-        if self.model == 'PDE_B':
-            cohesion = p1[0] * 0.5E-5 * r
-            separation = -p1[2] * 1E-8 / r
-            return (cohesion + separation) * p1[1] / 500
-        if self.model == 'PDE_G':
-            psi = p1 / r ** 2
-            return psi[:, None]
-        if self.model == 'PDE_E':
-            acc = p1 * p2 / r ** 2
-            return -acc  # Elec particles

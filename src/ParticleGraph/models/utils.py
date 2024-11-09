@@ -529,7 +529,7 @@ def plot_training_mouse(config, id_list, frame_list, dataset_name, log_dir, epoc
             plt.scatter(to_numpy(model_a[pos, 0]), to_numpy(model_a[pos, 1]), s=1, color=cmap.color(n), alpha=0.25)
     embedding_size = model.a.shape[0]
     embedding_current_size = torch.unique(id_list).shape[0]
-    plt.text(0.05, 0.9, f'Embedding size: {embedding_size}\nCurrent size: {embedding_current_size}', fontsize=12)
+    plt.text(0.05, 0.9, f'Embedding size: {embedding_size}', fontsize=12)
     plt.xlim([0,1])
     plt.ylim([0,1])
     plt.xticks([])

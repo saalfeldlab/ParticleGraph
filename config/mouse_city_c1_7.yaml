@@ -1,0 +1,67 @@
+description: 'mouse_city trial1_active_1 time_step = 4 0.2s LR 1.0E-6'
+dataset: 'mouse_city_c'
+data_folder_name: '/groups/saalfeld/home/allierc/signaling/MouseCity/trial1_active_1/labels'
+
+simulation:
+  params: [[-1]]
+  min_radius: 0
+  max_radius: 1
+  n_particles: 6
+  n_particles_max: 0
+  n_particle_types: 6
+  n_frames: 36018
+  delta_t: 1
+  time_step: 4
+  boundary: 'no'
+  has_cell_state: True
+  state_type: 'sequence'
+  state_params: [ 250 ]
+  n_nodes: 400
+  n_node_types: 1
+  diffusion_coefficients: [ [ 0 ] ]
+  pos_rate: [ [ 0 ] ]
+  neg_rate: [ [ 0 ] ]
+  node_value_map: 'pattern_Null.tif'
+
+graph_model:
+  particle_model_name: 'PDE_M'
+  mesh_model_name: ''
+  prediction: 'first_derivative'
+  input_size: 5
+  output_size: 2
+  hidden_dim: 128
+  n_mp_layers: 5
+  aggr_type: 'mean'
+  embedding_dim: 2
+  update_type: 'none'
+  field_type: 'siren_with_time'
+
+plotting:
+  colormap: 'tab10'
+  arrow_length: 2
+  ylim: [-0.04, 0.03]
+
+training:
+  n_epochs: 20
+  batch_size: 1
+  small_init_batch_size: True
+  n_runs: 1
+  sparsity: 'none'
+  sparsity_freq: 4
+  cluster_method: 'kmeans_auto_plot'
+  data_augmentation: True
+  data_augmentation_loop: 100
+  learning_rate_start: 0.001
+  learning_rate_embedding_start: 0.001
+  fix_cluster_embedding: True
+  device: 'auto'
+  do_tracking: True
+  distance_threshold: 1.0E-2
+  epoch_distance_replace: 20
+  learning_rate_start: 1.0E-4
+  learning_rate_embedding_start: 1.0E-6
+
+
+
+
+
