@@ -1173,7 +1173,7 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
                 x_next = x_list[run][k + time_step]
                 x_pos_next = x_next[:,1:3].clone().detach()
                 if model_config.prediction == '2nd_derivative':
-                    x_pos_pred = (x[:, 1:3] + delta_t * time_step * (x[:, 3:5] + delta_t * pred * ynorm))
+                    x_pos_pred = (x[:, 1:3] + delta_t * time_step * (x[:, 3:5] + delta_t * time_step * pred * ynorm))
                 else:
                     x_pos_pred = (x[:,1:3] + delta_t * time_step * pred * ynorm)
                 distance = torch.sum(bc_dpos(x_pos_pred[:, None, :] - x_pos_next[None, :, :]) ** 2, dim=2)
