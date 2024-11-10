@@ -1044,6 +1044,10 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
     data_augmentation = train_config.data_augmentation
     data_augmentation_loop = train_config.data_augmentation_loop
     target_batch_size = train_config.batch_size
+    if train_config.small_init_batch_size:
+        get_batch_size = increasing_batch_size(target_batch_size)
+    else:
+        get_batch_size = constant_batch_size(target_batch_size)
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
     time_step = simulation_config.time_step
@@ -1137,14 +1141,18 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
 
     total_list_loss = []
 
-    time.sleep(1)
+
     for epoch in range(start_epoch, n_epochs + 1):
 
         list_loss = []
         list_frame = []
 
+        batch_size = get_batch_size(epoch)
+        logger.info(f'batch_size: {batch_size}')
+        print(f'batch_size: {batch_size}')
         total_loss = 0
-        Niter = n_frames * data_augmentation_loop
+        Niter = n_frames * data_augmentation_loop // batch_size
+        time.sleep(1)
 
         for N in trange(Niter):
 
@@ -1153,41 +1161,45 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
             sin_phi = torch.sin(phi)
 
             run = 0
-            k = np.random.randint(n_frames - time_step - 1)
-            x = x_list[run][k].clone().detach()
-            edges = edge_p_p_list[run][f'arr_{k}']
-            edges = torch.tensor(edges, dtype=torch.int64, device=device)
-            dataset = data.Data(x=x[:, :], edge_index=edges)
-
             optimizer.zero_grad()
 
-            pred = model(dataset, data_id=run, training=True, vnorm=vnorm, phi=phi, has_field=False)
+            loss = torch.zeros(1, dtype=torch.float32, device=device)
 
-            if data_augmentation:
-                new_x = cos_phi * pred[:, 0] - sin_phi * pred[:, 1]
-                new_y = sin_phi * pred[:, 0] + cos_phi * pred[:, 1]
-                pred[:, 0] = new_x
-                pred[:, 1] = new_y
+            for batch in range(batch_size):
 
-            if do_tracking:
-                x_next = x_list[run][k + time_step]
-                x_pos_next = x_next[:,1:3].clone().detach()
-                if model_config.prediction == '2nd_derivative':
-                    x_pos_pred = (x[:, 1:3] + delta_t * time_step * (x[:, 3:5] + delta_t * time_step * pred * ynorm))
+                k = np.random.randint(n_frames - time_step - 1)
+                x = x_list[run][k].clone().detach()
+                edges = edge_p_p_list[run][f'arr_{k}']
+                edges = torch.tensor(edges, dtype=torch.int64, device=device)
+                dataset = data.Data(x=x[:, :], edge_index=edges)
+
+                pred = model(dataset, data_id=run, training=True, vnorm=vnorm, phi=phi, has_field=False)
+
+                if data_augmentation:
+                    new_x = cos_phi * pred[:, 0] - sin_phi * pred[:, 1]
+                    new_y = sin_phi * pred[:, 0] + cos_phi * pred[:, 1]
+                    pred[:, 0] = new_x
+                    pred[:, 1] = new_y
+
+                if do_tracking:
+                    x_next = x_list[run][k + time_step]
+                    x_pos_next = x_next[:,1:3].clone().detach()
+                    if model_config.prediction == '2nd_derivative':
+                        x_pos_pred = (x[:, 1:3] + delta_t * time_step * (x[:, 3:5] + delta_t * time_step * pred * ynorm))
+                    else:
+                        x_pos_pred = (x[:,1:3] + delta_t * time_step * pred * ynorm)
+                    distance = torch.sum(bc_dpos(x_pos_pred[:, None, :] - x_pos_next[None, :, :]) ** 2, dim=2)
+                    result = distance.min(dim=1)
+                    min_value = result.values
+                    indices = result.indices
+                    loss += torch.sum(min_value)*1E5
                 else:
-                    x_pos_pred = (x[:,1:3] + delta_t * time_step * pred * ynorm)
-                distance = torch.sum(bc_dpos(x_pos_pred[:, None, :] - x_pos_next[None, :, :]) ** 2, dim=2)
-                result = distance.min(dim=1)
-                min_value = result.values
-                indices = result.indices
-                loss = torch.sum(min_value)*1E5
-            else:
-                loss = (pred - y_batch).norm(2)
+                    loss += (pred - y_batch).norm(2)
 
-            if coeff_entropy_loss > 0:
-                idx = torch.randperm(len(model.a))
-                model_a = model.a[idx[0:10000]].clone().detach()
-                loss = loss + coeff_entropy_loss * entropy_loss(model_a)
+                if coeff_entropy_loss > 0:
+                    idx = torch.randperm(len(model.a))
+                    model_a = model.a[idx[0:10000]].clone().detach()
+                    loss += coeff_entropy_loss * entropy_loss(model_a)
                 
             loss.backward()
             optimizer.step()
