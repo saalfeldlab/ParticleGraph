@@ -1135,7 +1135,7 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
     logger.info(f'{n_frames * data_augmentation_loop} iterations per epoch')
 
     Niter = n_frames * data_augmentation_loop
-    print(f'plot every {Niter // 20} iterations')
+    print(f'plot every {Niter // 20 // target_batch_size} iterations')
 
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
 

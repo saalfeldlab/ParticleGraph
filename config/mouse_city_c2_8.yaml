@@ -1,5 +1,5 @@
 
-description: 'mouse_city trial1_active_1  20Hz   time_step = 5 0.25s   batch_size = 64'
+description: 'mouse_city trial1_active_1  20Hz   time_step = 5 0.25s   batch_size = 128'
 dataset: 'mouse_city_c2'
 data_folder_name: '/groups/saalfeld/home/allierc/signaling/MouseCity/trial1_active_1/labels'
 
@@ -45,7 +45,7 @@ plotting:
 training:
   n_epochs: 20
   small_init_batch_size: False
-  batch_size: 64
+  batch_size: 128
   n_runs: 1
   sparsity: 'none'
   sparsity_freq: 4
