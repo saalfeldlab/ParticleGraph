@@ -28,6 +28,7 @@ import sys
 from scipy.stats import pearsonr
 from scipy.spatial import Voronoi, voronoi_plot_2d
 from ParticleGraph.kan import *
+from sklearn.mixture import GaussianMixture
 
 # matplotlib.use("Qt5Agg")
 
@@ -5271,10 +5272,6 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
     delta_t = simulation_config.delta_t * time_step
     data_folder_name = config.data_folder_name
     dataset_name = config.dataset
-    embedding_cluster = EmbeddingCluster(config)
-
-
-    embedding_cluster = EmbeddingCluster(config)
     entropy_loss = KoLeoLoss()
 
     n_runs = train_config.n_runs
@@ -5326,7 +5323,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
         files.sort(key=sort_key)
         entropy_list=[]
 
-        for file_id in range(0,len(files)):
+        for file_id in trange(0,len(files)):
             # print(files[file_id], sort_key(files[file_id]), (sort_key(files[file_id]) % 1E7 != 0))
 
             if (sort_key(files[file_id]) % 1E7 != 0):
@@ -5338,7 +5335,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
 
                 plt.style.use('dark_background')
 
-                if True:
+                if False:
 
                     # get permutation random of model.a
 
@@ -5393,6 +5390,8 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
 
                 else:
 
+                    embedding = to_numpy(model.a.clone().detach())
+
                     fig, ax = fig_init(fontsize=24)
                     for k in np.unique(labels):
                         pos = np.argwhere(labels == k)
@@ -5443,12 +5442,26 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
 
         time.sleep(1)
 
+        plt.rcParams['text.usetex'] = False
+        plt.rc('font', family='sans-serif')
+        plt.rc('text', usetex=False)
+        matplotlib.rcParams['savefig.pad_inches'] = 0
+        plt.style.use('dark_background')
+
         print('clustering ...')
         embedding = to_numpy(model.a.clone().detach())
 
-        config.training.cluster_method = 'kmeans'
-
-        labels, n_clusters = embedding_cluster.get(embedding, 'kmeans')
+        n_components = 2
+        gmm = GaussianMixture(
+            n_components=n_components,
+            covariance_type='full',  # Experiment with 'full', 'tied', 'diag', 'spherical'
+            init_params='kmeans',  # Use 'kmeans' or 'random'
+            reg_covar=1e-6,
+            max_iter=10000,  # Increase the number of iterations
+            random_state=42
+        )
+        gmm.fit(embedding)
+        labels = gmm.predict(embedding)
         labels_ =  torch.tensor(labels, dtype=torch.float32, device=device)
 
         for k in range(n_frames):
@@ -5456,16 +5469,10 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
             x_list[0][k][:,6] = labels_[0:n]
             labels_ = labels_[n:]
 
-        plt.rcParams['text.usetex'] = False
-        plt.rc('font', family='sans-serif')
-        plt.rc('text', usetex=False)
-        matplotlib.rcParams['savefig.pad_inches'] = 0
-        plt.style.use('dark_background')
-
         fig, ax = fig_init(fontsize=24)
         for k in np.unique(labels):
             pos = np.argwhere(labels == k)
-            plt.scatter(embedding[pos, 0], embedding[pos, 1], s=1, c=cmap.color(k), alpha=1, edgecolors='None')
+            plt.scatter(embedding[pos, 0], embedding[pos, 1], s=1, c=cmap.color(k), alpha=0.5, edgecolors='None')
         plt.xlabel(r'$a_{i0}$', fontsize=48)
         plt.ylabel(r'$a_{i1}$', fontsize=48)
         # plt.xlim([0.94, 1.06])
@@ -6128,11 +6135,11 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N2_r1_Lorentz_d']
 
-    config_list = ['mouse_city_c1_bis']  # , 'mouse_city_c3']
+    config_list = ['mouse_city_c1_5']  # , 'mouse_city_c3']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['all'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['best'], device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

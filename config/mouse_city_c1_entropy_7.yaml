@@ -1,4 +1,4 @@
-description: 'mouse_city trial1_active_1 time_step = 5 0.25s LR 1.0E-4'
+description: 'mouse_city trial1_active_1 time_step = 5 0.25s  entropy 5000'
 dataset: 'mouse_city_c'
 data_folder_name: '/groups/saalfeld/home/allierc/signaling/MouseCity/trial1_active_1/labels'
 
@@ -7,7 +7,6 @@ simulation:
   min_radius: 0
   max_radius: 1
   n_particles: 6
-  n_interactions: 4
   n_particles_max: 0
   n_particle_types: 6
   n_frames: 36018
@@ -60,7 +59,8 @@ training:
   distance_threshold: 1.0E-2
   epoch_distance_replace: 20
   learning_rate_start: 1.0E-4
-  learning_rate_embedding_start: 1.0E-4
+  learning_rate_embedding_start: 1.0E-5
+  coeff_entropy_loss: 5000
 
 
 

@@ -1064,16 +1064,16 @@ def get_type_list(x, dimension):
     type_list = x[:, 1 + 2 * dimension:2 + 2 * dimension].clone().detach()
     return type_list
 
-# Copyright (c) Meta Platforms, Inc. and affiliates.
-#
-# This source code is licensed under the Apache License, Version 2.0
-# found in the LICENSE file in the root directory of this source tree.
-
 
 
 
 class KoLeoLoss(nn.Module):
     """Kozachenko-Leonenko entropic loss regularizer from Sablayrolles et al. - 2018 - Spreading vectors for similarity search"""
+
+    # Copyright (c) Meta Platforms, Inc. and affiliates.
+    #
+    # This source code is licensed under the Apache License, Version 2.0
+    # found in the LICENSE file in the root directory of this source tree.
 
     def __init__(self):
         super().__init__()
