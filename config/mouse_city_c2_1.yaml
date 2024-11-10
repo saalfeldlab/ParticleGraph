@@ -42,7 +42,7 @@ plotting:
   ylim: [-0.04, 0.03]
 
 training:
-  n_epochs: 40
+  n_epochs: 20
   batch_size: 1
   small_init_batch_size: True
   n_runs: 1
@@ -50,7 +50,7 @@ training:
   sparsity_freq: 4
   cluster_method: 'kmeans_auto_plot'
   data_augmentation: True
-  data_augmentation_loop: 50
+  data_augmentation_loop: 25
   learning_rate_start: 0.001
   learning_rate_embedding_start: 0.001
   fix_cluster_embedding: True
