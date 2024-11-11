@@ -52,7 +52,7 @@ if __name__ == '__main__':
     else:
         action = 'training'
         best_model = None
-        config_list = ["mouse_city_c2_1"]
+        config_list = ["mouse_city_c1_test"]
         # config_list = ["signal_N2_r1_Lorentz_d"]
 
     for config_file in config_list:
