@@ -5274,8 +5274,9 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
     dataset_name = config.dataset
     time_step = simulation_config.time_step
     entropy_loss = KoLeoLoss()
-    xlim = cpnfig.plotting.xlim
+    xlim = config.plotting.xlim
     ylim = config.plotting.ylim
+    embedding_cluster = EmbeddingCluster(config)
 
     n_runs = train_config.n_runs
     cmap = CustomColorMap(config=config)
@@ -5326,7 +5327,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
         files.sort(key=sort_key)
         entropy_list=[]
 
-        for file_id in trange(0,len(files)):
+        for file_id in trange(0,len(files),2):
             # print(files[file_id], sort_key(files[file_id]), (sort_key(files[file_id]) % 1E7 != 0))
 
             if (sort_key(files[file_id]) % 1E7 != 0):
@@ -5353,7 +5354,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
                     params = {'mathtext.default': 'regular'}
                     plt.rcParams.update(params)
                     embedding = to_numpy(model.a[idx[0:n_pts]])
-                    plt.scatter(embedding[:,0], embedding[:, 1], c='w', s=0.3, alpha=1, edgecolor='None')
+                    plt.scatter(embedding[:,0], embedding[:, 1], c='w', s=0.5, alpha=1, edgecolor='None')
                     plt.xlabel(r'$a_{i0}$', fontsize=48)
                     plt.ylabel(r'$a_{i1}$', fontsize=48)
                     plt.xlim(xlim)
@@ -5401,8 +5402,8 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
                         plt.scatter(embedding[pos, 0], embedding[pos, 1], s=1, c=cmap.color(k), alpha=1, edgecolors='None')
                     plt.xlabel(r'$a_{i0}$', fontsize=48)
                     plt.ylabel(r'$a_{i1}$', fontsize=48)
-                    plt.xlim([0.94, 1.06])
-                    plt.ylim([0.94, 1.06])
+                    plt.xlim(xlim)
+                    plt.ylim(ylim)
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/results/all/clustered_embedding_{epoch}.tif", dpi=80)
                     plt.close()
@@ -5432,6 +5433,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
         plt.plot(entropy_list, linewidth=1, color='w')
         plt.xlabel('iteration', fontsize=48)
         plt.ylabel('entropy', fontsize=48)
+        plt.ylim([0,7])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/entropy.tif", dpi=80)
 
@@ -5453,8 +5455,9 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
 
         print('clustering ...')
         embedding = to_numpy(model.a.clone().detach())
+        # labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
 
-        n_components = 2
+        n_components = 3
         gmm = GaussianMixture(
             n_components=n_components,
             covariance_type='full',  # Experiment with 'full', 'tied', 'diag', 'spherical'
@@ -5465,6 +5468,9 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
         )
         gmm.fit(embedding)
         labels = gmm.predict(embedding)
+
+
+
         labels_ =  torch.tensor(labels, dtype=torch.float32, device=device)
 
         for k in range(n_frames):
@@ -5478,8 +5484,8 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
             plt.scatter(embedding[pos, 0], embedding[pos, 1], s=1, c=cmap.color(k), alpha=0.5, edgecolors='None')
         plt.xlabel(r'$a_{i0}$', fontsize=48)
         plt.ylabel(r'$a_{i1}$', fontsize=48)
-        # plt.xlim([0.94, 1.06])
-        # plt.ylim([0.94, 1.06])
+        plt.xlim(xlim)
+        plt.ylim(ylim)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/clustered_embedding_{epoch_list[0]}.tif", dpi=80)
         plt.close()
@@ -5498,12 +5504,15 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
                      color=cmap.color(labels[n].astype(int)), linewidth=2, alpha=0.15)
         plt.xlabel('$d_{ij}$', fontsize=48)
         plt.ylabel('$f(a_i, d_{ij})$', fontsize=48)
-        plt.ylim([-0.2, 0.2])
+        if 'cohort2' in data_folder_name:
+            plt.ylim([-0.2, 0.2])
+        else:
+            plt.ylim([-0.05, 0.05])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/clustered_functions_{epoch_list[0]}.tif", dpi=80)
         plt.close()
 
-        for N in trange(0, n_frames-1):
+        for N in trange(0, 400): #n_frames-1):
 
             k = N
             x = x_list[0][k].clone().detach()
@@ -5570,12 +5579,13 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
                 ax = fig.add_subplot(1, 2, 1)
                 plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=100, c='b')
                 for n in range(len(x)):
-                    plt.arrow(x=to_numpy(x[n, 1]), y=to_numpy(x[n, 2]), dx=to_numpy(V[n, 0]), dy=to_numpy(V[n, 1]), head_width=0.004, length_includes_head=True)
+                    plt.arrow(x=to_numpy(x[n, 1]), y=to_numpy(x[n, 2]), dx=to_numpy(V[n, 0]), dy=to_numpy(V[n, 1]), head_width=0.01, length_includes_head=True)
                 plt.scatter(to_numpy(x_next[:, 1]), to_numpy(x_next[:, 2]), s=100, c='g', alpha=0.5)
 
                 plt.xlim([0,1])
                 plt.ylim([0,1])
                 plt.title('GNN tracking')
+                plt.text(0.05, 0.95, f'frame = {N*time_step}', fontsize=12)
                 plt.xticks([])
                 plt.yticks([])
                 # ax = fig.add_subplot(2, 2, 3)
@@ -5594,9 +5604,8 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
                 plt.yticks([])
 
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{N}.tif", dpi=180)
+                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{N}.tif", dpi=100)
                 plt.close()
-
 
 
 def data_video_validation(config_file, epoch_list, log_dir, logger, device):
@@ -5759,9 +5768,9 @@ def data_plot(config, config_file, epoch_list, device):
 
     os.makedirs(os.path.join(log_dir, 'results'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'results/all'), exist_ok=True)
-    files = glob.glob(f"{log_dir}/results/all/*")
-    for f in files:
-        os.remove(f)
+    # files = glob.glob(f"{log_dir}/results/all/*")
+    # for f in files:
+    #     os.remove(f)
     os.makedirs(f"./{log_dir}/results/field", exist_ok=True)
     files = glob.glob(f"{log_dir}/results/field/*")
     for f in files:
@@ -6136,13 +6145,20 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N2_r1_Lorentz_v4','signal_N2_r1_Lorentz_v4_bis','signal_N2_r1_Lorentz_v4_ter'] #,'signal_N2_r1_Lorentz_v5']
 
-    # config_list = ['signal_N2_r1_Lorentz_d']
+    # config_list = ['mouse_city_c2_4']
+
+    # config_list = ['mouse_city_c1_3','mouse_city_c1_4','mouse_city_c1_5',
+    #                'mouse_city_c1_6','mouse_city_c1_7','mouse_city_c1_8', 'mouse_city_c1_9','mouse_city_c1_10',
+    #                'mouse_city_c1_11', 'mouse_city_c1_bis','mouse_city_c1_ter','mouse_city_c1_quad',
+    #                'mouse_city_c1_entropy_1', 'mouse_city_c1_entropy_2', 'mouse_city_c1_entropy_3',
+    #                'mouse_city_c1_entropy_4', 'mouse_city_c1_entropy_5', 'mouse_city_c1_entropy_6', 'mouse_city_c1_entropy_7']
 
     config_list = ['mouse_city_c2_5','mouse_city_c2_1','mouse_city_c2_2','mouse_city_c2_3','mouse_city_c2_4','mouse_city_c2_6','mouse_city_c2_7','mouse_city_c2_8']  # , 'mouse_city_c3']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         data_plot(config=config, config_file=config_file, epoch_list=['all'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['best'], device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
