@@ -1167,7 +1167,7 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
 
             for batch in range(batch_size):
 
-                k = np.random.randint(n_frames - time_step - 1)
+                k = np.random.randint(n_frames - 2)
                 x = x_list[run][k].clone().detach()
                 edges = edge_p_p_list[run][f'arr_{k}']
                 edges = torch.tensor(edges, dtype=torch.int64, device=device)
@@ -1182,12 +1182,12 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
                     pred[:, 1] = new_y
 
                 if do_tracking:
-                    x_next = x_list[run][k + time_step]
+                    x_next = x_list[run][k + 1]
                     x_pos_next = x_next[:,1:3].clone().detach()
                     if model_config.prediction == '2nd_derivative':
-                        x_pos_pred = (x[:, 1:3] + delta_t * time_step * (x[:, 3:5] + delta_t * time_step * pred * ynorm))
+                        x_pos_pred = (x[:, 1:3] + delta_t * (x[:, 3:5] + delta_t * pred * ynorm))
                     else:
-                        x_pos_pred = (x[:,1:3] + delta_t * time_step * pred * ynorm)
+                        x_pos_pred = (x[:,1:3] + delta_t * pred * ynorm)
                     distance = torch.sum(bc_dpos(x_pos_pred[:, None, :] - x_pos_next[None, :, :]) ** 2, dim=2)
                     result = distance.min(dim=1)
                     min_value = result.values

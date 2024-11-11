@@ -877,8 +877,8 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
 
     torch.save(x_mesh, f'graphs_data/graphs_{dataset_name}/x_mesh.pt')
 
-    # if time_step >1:
-    #     files = files[::time_step]
+    if time_step >1:
+        files = files[::time_step]
 
     for it, f in enumerate(files):
 
@@ -923,7 +923,7 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
         x_list.append(x)
 
         # output plots
-        if visualize & (run == 0) & (it % step == 0) & (it < 400):
+        if visualize & (run == 0) & (it % step == 0) & (it < 2000):
 
             if 'latex' in style:
                 plt.rcParams['text.usetex'] = True
