@@ -6145,15 +6145,15 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N2_r1_Lorentz_v4','signal_N2_r1_Lorentz_v4_bis','signal_N2_r1_Lorentz_v4_ter'] #,'signal_N2_r1_Lorentz_v5']
 
-    # config_list = ['mouse_city_c2_4']
+    config_list = ['mouse_city_c1_quad']
 
     # config_list = ['mouse_city_c1_3','mouse_city_c1_4','mouse_city_c1_5',
     #                'mouse_city_c1_6','mouse_city_c1_7','mouse_city_c1_8', 'mouse_city_c1_9','mouse_city_c1_10',
     #                'mouse_city_c1_11', 'mouse_city_c1_bis','mouse_city_c1_ter','mouse_city_c1_quad',
     #                'mouse_city_c1_entropy_1', 'mouse_city_c1_entropy_2', 'mouse_city_c1_entropy_3',
     #                'mouse_city_c1_entropy_4', 'mouse_city_c1_entropy_5', 'mouse_city_c1_entropy_6', 'mouse_city_c1_entropy_7']
-
-    config_list = ['mouse_city_c2_5','mouse_city_c2_1','mouse_city_c2_2','mouse_city_c2_3','mouse_city_c2_4','mouse_city_c2_6','mouse_city_c2_7','mouse_city_c2_8']  # , 'mouse_city_c3']
+    #
+    # config_list = ['mouse_city_c2_5','mouse_city_c2_1','mouse_city_c2_2','mouse_city_c2_3','mouse_city_c2_4','mouse_city_c2_6','mouse_city_c2_7','mouse_city_c2_8']  # , 'mouse_city_c3']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')

@@ -576,6 +576,9 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             if run==0:
                 X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
                 X1 = X1_mesh
+            U1 = torch.ones_like(H1, device=device)
+            U1[:,1] = 0
+
         elif ('visual' in field_type):
             if run==0:
                 X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
@@ -610,13 +613,14 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                 im_ = np.reshape(im_, (n_nodes_per_axis * n_nodes_per_axis))
                 A1[:n_nodes, 0:1] = torch.tensor(im_[:, None], dtype=torch.float32, device=device)
                 A1[n_nodes:n_particles, 0:1] = 1
+            if ('std' in field_type) & (it >= 0):
+                A1[:,0] = A1[:,0] * U1[:,0]
 
                 # plt.scatter(to_numpy(X1_mesh[:, 1]), to_numpy(X1_mesh[:, 0]), s=40, c=to_numpy(A1), cmap='grey', vmin=0,vmax=1)
 
             x = torch.concatenate(
                 (N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
-                 H1.clone().detach(), A1.clone().detach()), 1)
-
+                 H1.clone().detach(), A1.clone().detach(), U1.clone().detach()), 1)
 
             X[:, it] = H1[:, 0].clone().detach()
 
@@ -650,6 +654,11 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             H1[:, 0] = H1[:, 0] + H1[:, 1] * delta_t
             if noise_level > 0:
                 H1[:, 0] = H1[:, 0] + torch.randn(n_particles, device=device) * noise_level
+            if ('std' in field_type) & (it >= 0):
+                H1_norm = H1[:, 0] / 20
+                U1[:, 1] = (1-H1_norm)/10 + 0.5 * U1[:,0] * H1_norm
+                U1[:, 1] = torch.clamp(U1[:, 0], min=-0.1, max=0.1)
+                U1[:, 0] = torch.clamp(U1[:,0] + delta_t *  U1[:,1], min=0, max=1)
 
             # output plots
             if visualize & (run ==0) & (it % step == 0) & (it >= 0):
@@ -721,6 +730,18 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                         plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=8, c=to_numpy(A1[:, 0]), cmap='viridis', vmin=0,vmax=2)
                         plt.subplot(122)
                         plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=8, c=to_numpy(H1[:, 0]), cmap='viridis', vmin=-10,vmax=10)
+                    elif 'modulation_std' in field_type:
+                        fig = plt.figure(figsize=(12, 12))
+                        plt.subplot(221)
+                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=40, c=to_numpy(A1[:, 0]), cmap='viridis', vmin=0,vmax=2)
+                        plt.subplot(222)
+                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=40, c=to_numpy(H1[:, 0]), cmap='viridis', vmin=-10,vmax=10)
+                        plt.subplot(223)
+                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=40, c=to_numpy(U1[:, 0]), cmap='viridis', vmin=0,vmax=1)
+                        plt.text(0, 1.1, f' {np.mean(to_numpy(U1[:, 0])):0.3} +/- {np.std(to_numpy(U1[:, 0])):0.3}', fontsize=8)
+                        plt.subplot(224)
+                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=40, c=to_numpy(U1[:, 1]), cmap='viridis', vmin=-0.1,vmax=0.1)
+                        plt.text(0, 1.1, f' {np.mean(to_numpy(U1[:, 1])):0.3} +/- {np.std(to_numpy(U1[:, 1])):0.3}', fontsize=12)
                     else:
                         fig = plt.figure(figsize=(8, 8))
                         plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=80, c=to_numpy(H1[:, 0]), cmap='viridis', vmin=-10,vmax=10)
@@ -737,33 +758,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=70)
                     plt.close()
 
-                    # ax = fig.add_subplot(2, 2, 2)
-                    # plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=60, c=to_numpy(H1[:, 1]), cmap='viridis', vmin=-2.5, vmax=2.5)
-                    # plt.colorbar()
-                    # plt.xlim([-1.2, 1.2])
-                    # plt.ylim([-1.2, 1.2])
-                    # plt.xticks([])
-                    # plt.yticks([])
-                    # plt.title('du')
-                    # ax = fig.add_subplot(2, 2, 3)
-                    # plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=60, c=to_numpy(s_tanhu), cmap='viridis', vmin=-2.5, vmax=2.5)
-                    # plt.colorbar()
-                    # plt.xlim([-1.2, 1.2])
-                    # plt.ylim([-1.2, 1.2])
-                    # plt.xticks([])
-                    # plt.yticks([])
-                    # plt.title('s.tanh(u)')
-                    # ax = fig.add_subplot(2, 2, 4)
-                    # plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=60, c=to_numpy(msg), cmap='viridis', vmin=-2.5, vmax=2.5)
-                    # plt.colorbar()
-                    # plt.xlim([-1.2, 1.2])
-                    # plt.ylim([-1.2, 1.2])
-                    # plt.xticks([])
-                    # plt.yticks([])
-                    # plt.title('g.msg')
-
-
-        if (is_V2) & (run==0):
+        if (run==0):
 
             plt.figure(figsize=(10, 3))
             plt.subplot(121)
@@ -795,7 +790,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             plt.yticks(fontsize=24)
             plt.tight_layout()
             plt.savefig(f'graphs_data/graphs_{dataset_name}/signal_distribution.png', dpi=300)
-
 
         if bSave:
             x_list = np.array(x_list)
