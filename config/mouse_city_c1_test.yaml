@@ -1,4 +1,4 @@
-description: 'mouse_city trial1_active_1 time_step = 5 0.25s'
+description: 'mouse_city trial1_active_1 time_step = 5 0.25s LR 1.0E-6'
 dataset: 'mouse_city_c'
 data_folder_name: '/groups/saalfeld/home/allierc/signaling/MouseCity/trial1_active_1/labels'
 
@@ -39,10 +39,11 @@ graph_model:
 plotting:
   colormap: 'tab10'
   arrow_length: 2
-  ylim: [-0.04, 0.03]
+  xlim: [0.94, 1.06]
+  ylim: [0.94, 1.06]
 
 training:
-  n_epochs: 40
+  n_epochs: 20
   batch_size: 1
   small_init_batch_size: True
   n_runs: 1
