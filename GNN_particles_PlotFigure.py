@@ -5272,7 +5272,10 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
     delta_t = simulation_config.delta_t * time_step
     data_folder_name = config.data_folder_name
     dataset_name = config.dataset
+    time_step = simulation_config.time_step
     entropy_loss = KoLeoLoss()
+    xlim = cpnfig.plotting.xlim
+    ylim = config.plotting.ylim
 
     n_runs = train_config.n_runs
     cmap = CustomColorMap(config=config)
@@ -5335,7 +5338,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
 
                 plt.style.use('dark_background')
 
-                if False:
+                if True:
 
                     # get permutation random of model.a
 
@@ -5344,15 +5347,17 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
                     entropy = entropy_loss(model_a)
                     entropy_list.append(entropy)
 
+                    n_pts = min(40000, len(model.a))
+
                     fig, ax = fig_init(fontsize=24)
                     params = {'mathtext.default': 'regular'}
                     plt.rcParams.update(params)
-                    embedding = to_numpy(model.a)
-                    plt.scatter(embedding[:,0], embedding[:, 1], c='w', s=1, alpha=1, edgecolor='None')
+                    embedding = to_numpy(model.a[idx[0:n_pts]])
+                    plt.scatter(embedding[:,0], embedding[:, 1], c='w', s=0.3, alpha=1, edgecolor='None')
                     plt.xlabel(r'$a_{i0}$', fontsize=48)
                     plt.ylabel(r'$a_{i1}$', fontsize=48)
-                    plt.xlim([0.94, 1.06])
-                    plt.ylim([0.94, 1.06])
+                    plt.xlim(xlim)
+                    plt.ylim(ylim)
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/results/all/embedding_{epoch}.tif", dpi=80)
                     plt.close()
@@ -5374,15 +5379,13 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, device):
                             func = func[:, 0]
                         plt.plot(to_numpy(rr),
                                  to_numpy(func) * to_numpy(ynorm),
-                                 c='w', linewidth=2, alpha=0.15)
+                                 c='w', linewidth=1, alpha=0.15)
                     plt.xlabel('$d_{ij}$', fontsize=48)
                     plt.ylabel('$f(a_i, d_{ij})$', fontsize=48)
-
                     if 'cohort2' in data_folder_name:
                         plt.ylim([-0.2, 0.2])
                     else:
                         plt.ylim([-0.05, 0.05])
-
                     plt.tight_layout()
 
                     plt.savefig(f"./{log_dir}/results/all/function_{epoch}.tif", dpi=80)
@@ -6135,11 +6138,11 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N2_r1_Lorentz_d']
 
-    config_list = ['mouse_city_c1_5']  # , 'mouse_city_c3']
+    config_list = ['mouse_city_c2_5','mouse_city_c2_1','mouse_city_c2_2','mouse_city_c2_3','mouse_city_c2_4','mouse_city_c2_6','mouse_city_c2_7','mouse_city_c2_8']  # , 'mouse_city_c3']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['best'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['all'], device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
