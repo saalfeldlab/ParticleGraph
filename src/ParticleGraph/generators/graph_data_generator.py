@@ -403,6 +403,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     has_zarr = 'zarr' in simulation_config.connectivity_file
     excitation = simulation_config.excitation
     noise_level = training_config.noise_level
+    std_params = torch.tensor(simulation_config.std_params, dtype=torch.float32, device=device)
 
     field_type = model_config.field_type
     if field_type != '':
@@ -650,14 +651,16 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             if noise_level > 0:
                 H1[:, 0] = H1[:, 0] + torch.randn(n_particles, device=device) * noise_level
             if 'std' in field_type:
-                H1_norm = torch.tanh(H1[:, 0]/10)
-                U1[:, 1] = ((1-U1[:, 0])*2 - U1[:,0]*H1_norm) / 50
+                H1_norm = torch.abs(torch.tanh(H1[:, 0]/std_params[2]))
+                U1[:, 1] = ((1-U1[:, 0]) * std_params[0] + std_params[1] * U1[:,0]*H1_norm) / std_params[3]
                 U1[:, 0] = U1[:,0] + delta_t * U1[:,1]
+                U1[:, 0] = torch.relu(U1[:, 0])
 
+                # t = torch.linspace(-5, 5, 1000)
+                # s = (torch.tanh(t*4-1) + 1) / 2
                 # fig = plt.figure(figsize=(12, 12))
-                # plt.scatter(to_numpy(H1[:, 0]), to_numpy(H1_norm), c='k')
-                # plt.scatter(to_numpy(H1[:, 0]), to_numpy(U1[:, 1]), c='r')
-                # plt.scatter(to_numpy(H1[:, 0]), to_numpy(U1[:, 0]), c='g')
+                # plt.scatter(to_numpy(t), to_numpy(s), s=10, c='k')
+                # plt.xlim([-1,2])
 
 
             # output plots
@@ -735,10 +738,10 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                         plt.subplot(221)
                         plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=100, c=to_numpy(A1[:, 0]), cmap='viridis', vmin=0,vmax=2)
                         plt.subplot(222)
-                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=100, c=to_numpy(H1[:, 0]), cmap='viridis', vmin=-10,vmax=10)
+                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=100, c=to_numpy(H1[:, 0]), cmap='viridis', vmin=-5,vmax=5)
                         if 'std' in field_type:
                             plt.subplot(223)
-                            plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=100, c=to_numpy(U1[:, 0]), cmap='viridis', vmin=-2, vmax=2)
+                            plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=100, c=to_numpy(U1[:, 0]), cmap='viridis', vmin=0, vmax=1.2)
                             plt.text(0, 1.1, f' {np.mean(to_numpy(U1[:, 0])):0.3} +/- {np.std(to_numpy(U1[:, 0])):0.3}', fontsize=8)
                             plt.subplot(224)
                             plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=100, c=to_numpy(U1[:, 1]), cmap='viridis', vmin=-0.1, vmax=0.1)

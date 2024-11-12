@@ -28,6 +28,7 @@ class SimulationConfig(BaseModel):
     phi: str = 'tanh'
     tau: float = 1.0
     params: list[list[float]]
+    std_params : list[float] = [2, -2.5, 10, 50]
     cell_cycle_length: list[float] =[-1]
     cell_death_rate: list[float] = [-1]
     cell_area: list[float] = [-1]

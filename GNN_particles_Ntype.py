@@ -53,7 +53,7 @@ if __name__ == '__main__':
         action = 'generate'
         best_model = None
         # config_list = ["mouse_city_c1_quad"]
-        config_list = ["signal_N2_r1_Lorentz_p1"]
+        config_list = ["signal_N2_r1_Lorentz_p1_shuffle"]
 
     for config_file in config_list:
 

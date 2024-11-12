@@ -1,12 +1,13 @@
-description: 'synaptic network random matrix cluster embedding distance 0.2 1000 neurons 4 types phi neuron dependent lorentz std 0.03 20 runs omega 30'
-dataset: 'signal_N2_Lorentz_p4'
+description: 'synaptic network small s   1000 neurons 4 types phi neuron dependent lorentz std 0.03 20 runs omega 30'
+dataset: 'signal_N2_Lorentz_p1_shuffle'
 
 simulation:
     connectivity_file: 'random'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
     connectivity_distribution: 'Lorentz'
-    params: [[5.0,0.0,1.0,1.0],[5.0,0.0,1.2,2.0],[5.0,0.0,1.4,4.0],[5.0,0.0,1.6,8.0]]
+    params: [[4.0,0.0,0.8,1.0],[4.0,0.0,1.0,2.0],[4.0,0.0,1.2,4.0],[4.0,0.0,1.4,8.0]]
+    std_params : [2, -10, 10, 50]
     phi: 'tanh'
     tau: 1.0
     min_radius: 1.0
@@ -15,8 +16,7 @@ simulation:
     n_nodes: 1024
     n_particle_types: 4
     shuffle_particle_types: True
-    n_interactions: 4
-    n_frames: 10000
+    n_frames: 200000
     delta_t: 0.01
     dpos_init:  0
     boundary: 'no'
@@ -40,7 +40,6 @@ graph_model:
     embedding_dim: 2
     update_type: 'none'
     omega:  30.0
-
 
 plotting:
     colormap: 'tab10'

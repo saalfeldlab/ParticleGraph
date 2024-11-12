@@ -6136,7 +6136,7 @@ if __name__ == '__main__':
     #                'signal_N2_r1_Lorentz_l3','signal_N2_r1_Lorentz_l4']
     # config_list = ['boids_16_256']
 
-    config_list = ['signal_N2_r1_Lorentz_SNR1']
+    config_list = ['signal_N2_r1_Lorentz_M6_shuffle']
 
     # config_list = ['mouse_city_c1_quad']
 
