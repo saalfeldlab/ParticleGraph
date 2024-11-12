@@ -609,7 +609,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                 im_ = np.reshape(im_, (n_nodes_per_axis * n_nodes_per_axis))
                 A1[:n_nodes, 0:1] = torch.tensor(im_[:, None], dtype=torch.float32, device=device)
                 A1[n_nodes:n_particles, 0:1] = 1
-            if ('std' in field_type) & (it >= 0):
+            if ('std' in field_type):
                 A1[:,0] = A1[:,0] * U1[:,0]
 
                 # plt.scatter(to_numpy(X1_mesh[:, 1]), to_numpy(X1_mesh[:, 0]), s=40, c=to_numpy(A1), cmap='grey', vmin=0,vmax=1)

@@ -7,7 +7,7 @@ simulation:
     connectivity_init: [0,0.1]
     connectivity_distribution: 'Lorentz'
     params: [[4.0,0.0,0.8,1.0],[4.0,0.0,1.0,2.0],[4.0,0.0,1.2,4.0],[4.0,0.0,1.4,8.0]]
-    std_params : [2, -10, 10, 50]
+    std_params : [1, -10, 10, 50]
     phi: 'tanh'
     tau: 1.0
     min_radius: 1.0
