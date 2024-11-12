@@ -651,7 +651,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             if noise_level > 0:
                 H1[:, 0] = H1[:, 0] + torch.randn(n_particles, device=device) * noise_level
             if 'std' in field_type:
-                H1_norm = torch.abs(torch.tanh(H1[:, 0]/std_params[2]))
+                H1_norm = (torch.tanh(H1[:, 0]/std_params[2]))**2
                 U1[:, 1] = ((1-U1[:, 0]) * std_params[0] + std_params[1] * U1[:,0]*H1_norm) / std_params[3]
                 U1[:, 0] = U1[:,0] + delta_t * U1[:,1]
                 U1[:, 0] = torch.relu(U1[:, 0])
@@ -744,7 +744,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                             plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=100, c=to_numpy(U1[:, 0]), cmap='viridis', vmin=0, vmax=1.2)
                             plt.text(0, 1.1, f' {np.mean(to_numpy(U1[:, 0])):0.3} +/- {np.std(to_numpy(U1[:, 0])):0.3}', fontsize=8)
                             plt.subplot(224)
-                            plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=100, c=to_numpy(U1[:, 1]), cmap='viridis', vmin=-0.1, vmax=0.1)
+                            plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=100, c=to_numpy(U1[:, 1]), cmap='viridis', vmin=-0.01, vmax=0.01)
                             plt.text(0, 1.1, f' {np.mean(to_numpy(U1[:, 1])):0.3} +/- {np.std(to_numpy(U1[:, 1])):0.3}', fontsize=12)
                     if 'latex' in style:
                         plt.xlabel(r'$x$', fontsize=78)
