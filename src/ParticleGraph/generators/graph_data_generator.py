@@ -558,6 +558,9 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         # initialize particle and graph states
         X1, V1, T1, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
 
+        U1 = torch.rand_like(H1, device=device)
+        U1[:, 1] = 0
+
         if simulation_config.shuffle_particle_types:
             if first_T1 != None:
                 T1 = first_T1.clone().detach()
@@ -566,7 +569,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                 T1 = T1[index]
                 first_T1 = T1.clone().detach()
 
-
         if os.path.isfile(f'./graphs_data/graphs_{dataset_name}/X1.pt'):
             X1 = torch.load(f'./graphs_data/graphs_{dataset_name}/X1.pt', map_location=device)
 
@@ -574,8 +576,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             if run==0:
                 X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
                 X1 = X1_mesh
-            U1 = torch.rand_like(H1, device=device)
-            U1[:,1] = 0
 
         elif ('visual' in field_type):
             if run==0:

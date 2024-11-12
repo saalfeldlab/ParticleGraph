@@ -68,4 +68,4 @@ if __name__ == '__main__':
             data_test(config=config, config_file=config_file, visualize=True, style='no_ticks black', verbose=False, best_model='best', run=0, step=config.simulation.n_frames // 200, plot_data=True, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
 
-# bsub -n 4 -gpu "num=1" -q gpu_h100 "python GNN_particles_Ntype.py -o train signal_N2_r1_Lorentz_m1 5_240000"
+# bsub -n 4 -gpu "num=1" -q gpu_h100 "python GNN_particles_Ntype.py -o generate_train signal_N2_r1_Lorentz_m1 5_240000"

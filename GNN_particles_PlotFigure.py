@@ -4486,6 +4486,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
     cmap = CustomColorMap(config=config)
     dimension = config.simulation.dimension
     max_radius = config.simulation.max_radius
+    embedding_cluster = EmbeddingCluster(config)
     field_type = model_config.field_type
     if field_type != '':
         n_nodes = simulation_config.n_nodes
@@ -4497,8 +4498,15 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
     x_list = []
     y_list = []
     for run in trange(1):
-        x = np.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy')
-        y = np.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy')
+
+        if os.path.exists(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt'):
+            x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
+            y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
+            x = to_numpy(torch.stack(x))
+            y = to_numpy(torch.stack(y))
+        else:
+            x = np.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy')
+            y = np.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy')
         x_list.append(x)
         y_list.append(y)
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'))
@@ -4567,13 +4575,11 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
 
                 plt.style.use('dark_background')
 
-                fig, ax = fig_init()
-
                 amax = torch.max(model.a, dim=0).values
                 amin = torch.min(model.a, dim=0).values
                 model_a = (model.a - amin) / (amax - amin)
 
-
+                fig, ax = fig_init()
                 for n in range(n_particle_types-1,-1,-1):
                     pos = torch.argwhere(type_list == n).squeeze()
                     plt.scatter(to_numpy(model_a[pos, 0]), to_numpy(model_a[pos, 1]), s=100, color=cmap.color(n), alpha=0.5)
@@ -5851,16 +5857,10 @@ def data_plot(config, config_file, epoch_list, device):
             plot_RD_RPS(config_file=config_file, epoch_list=epoch_list, log_dir=log_dir, logger=logger, cc='viridis',
                            device=device)
 
-    if ('PDE_N2' in config.graph_model.signal_model_name):
-        plot_synaptic2(config_file, epoch_list, log_dir, logger, 'viridis', device)
-    elif ('PDE_N4' in config.graph_model.signal_model_name):
-        plot_synaptic2(config_file, epoch_list, log_dir, logger, 'viridis', device)
-    elif ('PDE_N5' in config.graph_model.signal_model_name):
-        plot_synaptic2(config_file, epoch_list, log_dir, logger, 'viridis', device)
-    elif('PDE_N3' in config.graph_model.signal_model_name):
-        plot_synaptic3(config_file, epoch_list, log_dir, logger, 'viridis', device)
-    elif 'PDE_N' in config.graph_model.signal_model_name:
+    if config.graph_model.signal_model_name == 'PDE_N':
         plot_synaptic(config_file, epoch_list, log_dir, logger, 'viridis', device)
+    elif ('PDE_N' in config.graph_model.signal_model_name):
+        plot_synaptic2(config_file, epoch_list, log_dir, logger, 'viridis', device)
 
     for handler in logger.handlers[:]:
         handler.close()
@@ -6125,27 +6125,20 @@ if __name__ == '__main__':
     # config_list = ["cell_sequence_a","arbitrary_3_cell_sequence_b","arbitrary_3_cell_sequence_c"]
     # config_list = ["boids_9_sequence_a"]
 
-    # config_list = ['signal_N2_a_r1','signal_N2_c_r1','signal_N2_d_r1','signal_N2_e_r1','signal_N2_f_r1',
-    #                'signal_N2_i_r1','signal_N2_j_r1','signal_N2_k_r1','signal_N2_l_r1','signal_N2_m_r1','signal_N2_n_r1']
-
     # config_list = ['arbitrary_3_field_video_bison']
-
-    # config_list = ['signal_N2_r1_Lorentz_a','signal_N2_r1_Lorentz_b','signal_N2_r1_Lorentz_d','signal_N2_r1_Lorentz_e',
-    #                'signal_N2_r1_Lorentz_f','signal_N2_r1_Lorentz_g','signal_N2_r1_Lorentz_i','signal_N2_r1_Lorentz_j',
-    #                'signal_N2_r1_Lorentz_m']
 
     # config_list = ['gravity_16']
     # config_list = ['boids_16_256']
     # config_list = ['arbitrary_16']
-    # config_list = ['signal_N2_r1_Lorentz_v1', 'signal_N2_r1_Lorentz_v2', 'signal_N2_r1_Lorentz_v4', 'signal_N2_r1_Lorentz_v5']
+    # config_list = ['signal_N2_r1_Lorentz_k4'] #, 'signal_N2_r1_Lorentz_v2', 'signal_N2_r1_Lorentz_v4', 'signal_N2_r1_Lorentz_v5']
     # config_list = ['signal_N2_r1_Lorentz_m5', 'signal_N2_r1_Lorentz_m6','signal_N2_r1_Lorentz_m7',
     #                'signal_N2_r1_Lorentz_m8', 'signal_N2_r1_Lorentz_m9',
     #                'signal_N2_r1_Lorentz_l3','signal_N2_r1_Lorentz_l4']
     # config_list = ['boids_16_256']
 
-    # config_list = ['signal_N2_r1_Lorentz_v4','signal_N2_r1_Lorentz_v4_bis','signal_N2_r1_Lorentz_v4_ter'] #,'signal_N2_r1_Lorentz_v5']
+    config_list = ['signal_N2_r1_Lorentz_SNR1']
 
-    config_list = ['mouse_city_c1_quad']
+    # config_list = ['mouse_city_c1_quad']
 
     # config_list = ['mouse_city_c1_3','mouse_city_c1_4','mouse_city_c1_5',
     #                'mouse_city_c1_6','mouse_city_c1_7','mouse_city_c1_8', 'mouse_city_c1_9','mouse_city_c1_10',
@@ -6157,8 +6150,8 @@ if __name__ == '__main__':
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['all'], device=device)
         data_plot(config=config, config_file=config_file, epoch_list=['best'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['all'], device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
