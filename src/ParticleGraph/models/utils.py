@@ -455,7 +455,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                 plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/{dataset_name}_function_{epoch}_{N}.tif", dpi=87)
                 plt.close()
 
-            case 'PDE_A'| 'PDE_A_bis' | 'PDE_ParticleField_A' | 'PDE_E':
+            case 'PDE_A'| 'PDE_A_bis' | 'PDE_ParticleField_A' | 'PDE_E' | 'PDE_K' | 'PDE_K1':
                 fig = plt.figure(figsize=(12, 12))
                 if axis:
                     ax = fig.add_subplot(1, 1, 1)
@@ -492,6 +492,14 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                     elif model_config.particle_model_name == 'PDE_E':
                         in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                                  rr[:, None] / simulation_config.max_radius, embedding_, embedding_), dim=1)
+                    elif model_config.particle_model_name == 'PDE_K':
+                        in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / simulation_config.max_radius, embedding_, embedding_),
+                                                dim=1)
+                    elif model_config.particle_model_name == 'PDE_K1':
+                        in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / simulation_config.max_radius),
+                                                dim=1)
                     else:
                         in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                                  rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
@@ -510,6 +518,20 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/{dataset_name}_function_{epoch}_{N}.tif", dpi=87)
                 plt.close()
+
+    if model_config.particle_model_name =='PDE_K1':
+
+        i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+        A = torch.zeros(n_particles, n_particles, device=device, requires_grad=False, dtype=torch.float32)
+        A[i, j] = model.vals
+        A.T[i, j] = model.vals
+
+        fig = plt.figure(figsize=(8, 8))
+        ax = sns.heatmap(to_numpy(A), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
+        plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+        plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+        plt.savefig(f"./{log_dir}/tmp_training/matrix/{dataset_name}_{epoch}_{N}.tif", dpi=87)
+        plt.close()
 
 def plot_training_mouse(config, id_list, frame_list, dataset_name, log_dir, epoch, N, model, n_particle_types, type_stack, ynorm, cmap, device):
 
@@ -937,7 +959,7 @@ def choose_training_model(model_config, device):
             model.edges = []
         case 'PDE_Agents' | 'PDE_Agents_A' | 'PDE_Agents_B' | 'PDE_Agents_C':
             model = Interaction_Agent(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
-        case 'PDE_A' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_mass' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G':
+        case 'PDE_A' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_mass' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G' | 'PDE_K' | 'PDE_K1':
             model = Interaction_Particle(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             model.edges = []
         case 'PDE_GS':

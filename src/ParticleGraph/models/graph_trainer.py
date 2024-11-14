@@ -423,6 +423,12 @@ def data_train_particle(config, config_file, erase, best_model, device):
                                 case 'PDE_E':
                                     in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                                              rr[:, None] / max_radius, embedding_, embedding_), dim=1)
+                                case 'PDE_K':
+                                    in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                             rr[:, None] / max_radius, embedding_, embedding_), dim=1)
+                                case 'PDE_K1':
+                                    in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                             rr[:, None] / max_radius), dim=1)
                             pred.append(model.lin_edge(in_features.float()))
                         pred = torch.stack(pred)
                         loss = (pred[:, :, 0] - y_func_list.clone().detach()).norm(2)

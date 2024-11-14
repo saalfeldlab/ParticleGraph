@@ -1,0 +1,49 @@
+description: 'system of particles connected with spring'
+dataset: 'springs_N10_1'
+
+simulation:
+  params: [[0., 1.], [0.3, 0.7]]
+  min_radius: 0
+  max_radius: 1
+  n_particles: 10
+  n_particle_types: 3
+  n_interactions: 3
+  n_frames: 1000
+  delta_t: 0.025
+  dpos_init: 1.0E-5
+  boundary: 'periodic'
+  start_frame: -500
+
+graph_model:
+  particle_model_name: 'PDE_K'
+  mesh_model_name: ''
+  prediction: '2nd_derivative'
+  input_size: 7
+  output_size: 2
+  hidden_dim: 128
+  n_mp_layers: 5
+  aggr_type: 'mean'
+  embedding_dim: 2
+  update_type: 'none'
+
+plotting:
+  colormap: 'tab10'
+  arrow_length: 2
+  ylim: [-0.04, 0.03]
+
+training:
+  n_epochs: 20
+  batch_size: 8
+  small_init_batch_size: False
+  n_runs: 2
+  sparsity: 'replace_embedding_function'
+  cluster_method: 'distance_plot'
+  data_augmentation: True
+  data_augmentation_loop: 100
+  fix_cluster_embedding: True
+  device: 'auto'
+
+
+
+
+

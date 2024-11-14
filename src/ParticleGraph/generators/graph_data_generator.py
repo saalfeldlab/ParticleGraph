@@ -72,7 +72,6 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
         data_generate_synaptic(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
                                         alpha=0.2, ratio=ratio,
                                         scenario=scenario, device=device, bSave=bSave)
-
     else:
         data_generate_particle(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
                                         alpha=0.2, ratio=ratio,
@@ -330,6 +329,10 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
 
                         fig, ax = fig_init(formatx="%.1f", formaty="%.1f")
                         s_p = 100
+
+                        if 'PDE_K' in model_config.particle_model_name:
+                            s_p = 5
+
                         for n in range(n_particle_types):
                                 plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
                                             s=s_p, color=cmap.color(n))
@@ -375,6 +378,15 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                 np.save(f'graphs_data/graphs_{dataset_name}/inv_particle_dropout_mask.npy', inv_particle_dropout_mask)
             torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
             torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
+
+            if ('PDE_K1' in model_config.particle_model_name) and (run==1):
+                A = model.connection_matrix
+                fig = plt.figure(figsize=(8, 8))
+                ax = sns.heatmap(to_numpy(A), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
+                plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+                plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+                plt.tight_layout()
+                plt.savefig(f"graphs_data/graphs_{dataset_name}/Matrix_{run}.jpg", dpi=170.7)
 
     # for handler in logger.handlers[:]:
     #     handler.close()

@@ -73,6 +73,11 @@ class Interaction_Particle(pyg.nn.MessagePassing):
                 torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
                              requires_grad=True, dtype=torch.float32))
 
+        if self.model =='PDE_K1':
+            self.vals = nn.Parameter(
+                torch.zeros((int(self.n_particles * (self.n_particles + 1) / 2)), device=self.device,
+                            requires_grad=True, dtype=torch.float32))
+
 
     def forward(self, data=[], data_id=[], training=[], vnorm=[], phi=[], has_field=False, frame=[]):
 
@@ -85,6 +90,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
 
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+        particle_id = to_numpy(x[:, 0])
 
         if has_field:
             field = x[:,6:7]
@@ -96,7 +102,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         particle_id = x[:, 0:1]
         embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
 
-        pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
+        pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
 
         if self.update_type == 'linear':
             embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
@@ -110,7 +116,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
 
         return pred
 
-    def message(self, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j, field_j):
+    def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j, field_j):
         # distance normalized by the max radius
         r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
         delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
@@ -151,8 +157,20 @@ class Interaction_Particle(pyg.nn.MessagePassing):
             case 'PDE_E':
                 in_features = torch.cat(
                     (delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
+            case 'PDE_K':
+                in_features = torch.cat((delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
+            case 'PDE_K1':
+                in_features = torch.cat((delta_pos, r[:, None]), dim=-1)
 
-        out = self.lin_edge(in_features) * field_j
+        if self.model == 'PDE_K1':
+            A = torch.zeros(self.n_particles, self.n_particles, device=self.device, requires_grad=False, dtype=torch.float32)
+            i, j = torch.triu_indices(self.n_particles, self.n_particles, requires_grad=False, device=self.device)
+            A[i, j] = self.vals
+            A.T[i, j] = self.vals
+            out = A[edge_index_i, edge_index_j].repeat(2, 1).t() * self.lin_edge(in_features)
+
+        else:
+            out = self.lin_edge(in_features) * field_j
 
         return out
 

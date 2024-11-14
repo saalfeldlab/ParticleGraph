@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 # matplotlib.use("Qt5Agg")
 from tifffile import imread
-from ParticleGraph.generators import PDE_A, PDE_B, PDE_B_bis, PDE_B_mass, PDE_E, PDE_G, PDE_GS, PDE_N, PDE_N2, PDE_N4, PDE_N5, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, PDE_Laplacian, PDE_O
+from ParticleGraph.generators import PDE_A, PDE_B, PDE_B_bis, PDE_B_mass, PDE_E, PDE_G, PDE_GS, PDE_K, PDE_N, PDE_N2, PDE_N4, PDE_N5, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, PDE_Laplacian, PDE_O
 from ParticleGraph.utils import choose_boundary_values
 from ParticleGraph.data_loaders import load_solar_system
 from time import sleep
@@ -119,6 +119,14 @@ def choose_model(config=[], W=[], phi=[], device=[]):
             model = PDE_E(aggr_type=aggr_type, p=torch.squeeze(p),
                           clamp=config.training.clamp, pred_limit=config.training.pred_limit,
                           prediction=config.graph_model.prediction, bc_dpos=bc_dpos)
+        case 'PDE_K' | 'PDE_K1':
+            p = params
+            edges = np.random.choice(p[0], size=(n_particles, n_particles), p=p[1])
+            edges = np.tril(edges) + np.tril(edges, -1).T
+            np.fill_diagonal(edges, 0)
+            connection_matrix = torch.tensor(edges, dtype=torch.float32, device=device)
+            model = PDE_K(aggr_type=aggr_type, connection_matrix=connection_matrix, bc_dpos=bc_dpos)
+
         case 'PDE_O':
             p = initialize_random_values(n_particle_types, device)
             if len(params) > 0:
