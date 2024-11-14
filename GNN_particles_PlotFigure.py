@@ -4555,7 +4555,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
             file_id += 1
 
         file_id_list0 = np.arange(0, file_id, file_id // 90)
-        file_id_list1 = np.arange(file_id, len(files), (len(files) - file_id) // 90)
+        file_id_list1 = np.arange(file_id, len(files), (len(files) - file_id) // 40)
         file_id_list = np.concatenate((file_id_list0, file_id_list1))
 
         for file_id_ in trange(0, len(file_id_list)):
@@ -4827,22 +4827,21 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
 
                 for frame in trange(-500, n_frames + 500, n_frames//600):
 
-                    pred = model_f(time=frame / n_frames, enlarge=True) ** 2
-                    # pred = torch.reshape(pred, (n_nodes_per_axis, n_nodes_per_axis))
-                    pred = torch.reshape(pred, (640, 640))
+                    pred = model_f(time=frame / n_frames, enlarge=False) ** 2
+                    pred = torch.reshape(pred, (n_nodes_per_axis, n_nodes_per_axis))
+                    # pred = torch.reshape(pred, (640, 640))
                     pred = to_numpy(pred)
                     pred = np.flipud(pred)
                     pred = np.rot90(pred, 1)
                     pred = np.fliplr(pred)
                     #grey_values = np.reshape(pred, (n_nodes_per_axis * n_nodes_per_axis))
                     #plt.scatter(x[:, 1], 1 - x[:, 2], c=grey_values, s=20, cmap='gray')
-                    fig, ax = fig_init()
 
+                    fig, ax = fig_init()
                     if frame==-500:
                         vmin = min(0,np.min(pred))
                         vmax = np.max(pred)
                         field_correction = 1 / np.mean(pred)
-
                     plt.imshow(pred,cmap='gray',vmin=vmin,vmax=vmax)
                     plt.xticks([])
                     plt.yticks([])
@@ -4852,10 +4851,9 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
 
                     fig, ax = fig_init()
                     im_ = np.zeros((44,44))
-
                     if (frame>=0) & (frame<n_frames):
-                        im_[6:38, 6:38] = im[int(frame / n_frames * 256)].squeeze() / 2.5
-
+                        # im_[6:38, 6:38] = im[int(frame / n_frames * 256)].squeeze() / 2.5
+                        im_ =  im[int(frame / n_frames * 256)].squeeze()
                     plt.imshow(im_,cmap='gray',vmin=vmin,vmax=vmax)
                     plt.xticks([])
                     plt.yticks([])
@@ -6136,8 +6134,6 @@ if __name__ == '__main__':
     #                'signal_N2_r1_Lorentz_l3','signal_N2_r1_Lorentz_l4']
     # config_list = ['boids_16_256']
 
-    config_list = ['signal_N2_r1_Lorentz_M6_shuffle']
-
     # config_list = ['mouse_city_c1_quad']
 
     # config_list = ['mouse_city_c1_3','mouse_city_c1_4','mouse_city_c1_5',
@@ -6147,6 +6143,8 @@ if __name__ == '__main__':
     #                'mouse_city_c1_entropy_4', 'mouse_city_c1_entropy_5', 'mouse_city_c1_entropy_6', 'mouse_city_c1_entropy_7']
     #
     # config_list = ['mouse_city_c2_5','mouse_city_c2_1','mouse_city_c2_2','mouse_city_c2_3','mouse_city_c2_4','mouse_city_c2_6','mouse_city_c2_7','mouse_city_c2_8']  # , 'mouse_city_c3']
+
+    config_list = ['signal_N2_r1_Lorentz_m10_shuffle','signal_N2_r1_Lorentz_m11_shuffle','signal_N2_r1_Lorentz_m12_shuffle','signal_N2_r1_Lorentz_m13_shuffle']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')

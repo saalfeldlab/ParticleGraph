@@ -53,7 +53,7 @@ if __name__ == '__main__':
         action = 'generate'
         best_model = None
         # config_list = ["mouse_city_c1_quad"]
-        config_list = ["signal_N2_r1_Lorentz_p1_shuffle"]
+        config_list = ["arbitrary_3_N2000", "arbitrary_3_N1000", "arbitrary_3_N500", "arbitrary_3_N100", "arbitrary_3_N50", "arbitrary_3_N10"]
 
     for config_file in config_list:
 
@@ -61,7 +61,7 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
         if 'generate' in action:
-            data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=False, bSave=True, step=200)  #config.simulation.n_frames // 100)
+            data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=False, bSave=True, step=2)  #config.simulation.n_frames // 100)
         if 'train' in action:
             data_train(config=config, config_file=config_file, erase=False, best_model=best_model, device=device)
         if 'test' in action:

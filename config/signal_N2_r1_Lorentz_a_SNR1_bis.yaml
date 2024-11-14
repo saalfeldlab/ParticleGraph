@@ -1,35 +1,31 @@
-description: 'synaptic network small s   1000 neurons 4 types phi neuron dependent lorentz std 0.03 20 runs omega 30'
-dataset: 'signal_N2_Lorentz_p1_shuffle'
+description: 'synaptic network random matrix no recursive loop    1000 neurons 4 types lorentz std 0.03'
+dataset: 'signal_N2_Lorentz_a_SNR1_bis'
 
 simulation:
     connectivity_file: 'random'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
     connectivity_distribution: 'Lorentz'
-    params: [[4.0,0.0,0.8,1.0],[4.0,0.0,1.0,2.0],[4.0,0.0,1.2,4.0],[4.0,0.0,1.4,8.0]]
-    std_params : [1, -10, 10, 50]
+    params: [[10.0,1.0,1.0],[10.0,2.0,1.0],[10.0,1.0,2.0],[10.0,2.0,2.0]]
     phi: 'tanh'
     tau: 1.0
     min_radius: 1.0
     max_radius: 1.0E6
-    n_particles: 1024
-    n_nodes: 1024
+    n_particles: 1000
     n_particle_types: 4
-    shuffle_particle_types: True
-    n_frames: 200000
+    n_interactions: 4
+    n_frames: 10000
     delta_t: 0.01
     dpos_init:  0
     boundary: 'no'
-    start_frame: -5000
-    node_value_map: 'video_bisons_32.tif'
+    start_frame: -1000
 
 graph_model:
-    field_type: 'modulation_std'
-    signal_model_name: 'PDE_N4'
+    signal_model_name: 'PDE_N2'
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
-    input_size: 3
+    input_size: 1
     output_size: 1
     hidden_dim: 64
     n_mp_layers: 3
@@ -39,7 +35,7 @@ graph_model:
     aggr_type: 'add'
     embedding_dim: 2
     update_type: 'none'
-    omega:  30.0
+
 
 plotting:
     colormap: 'tab10'
@@ -47,22 +43,19 @@ plotting:
 
 training:
     n_epochs: 20
-    n_epochs_init: 5
     recursive_loop: 1
     batch_size: 1
     small_init_batch_size: False
-    n_runs: 1
+    n_runs: 10
     large_range: False
     sparsity: 'none'
     data_augmentation: False
     data_augmentation_loop: 100
-    cluster_method: 'kmeans_auto_embedding'
-    cluster_distance_threshold: 0.2
+    cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     device: 'auto'
     sparsity: 'replace_embedding_function'
     sparsity_freq: 4
     learning_rate_start: 1.0E-4
     learning_rate_embedding_start: 1.0E-4
-    coeff_diff: 100
-    learning_rate_NNR: 1.0E-6
+    noise_level: 28

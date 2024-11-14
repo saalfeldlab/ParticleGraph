@@ -559,6 +559,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         # initialize particle and graph states
         X1, V1, T1, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
 
+        A1 = torch.ones((n_particles, 1), dtype=torch.float32, device=device)
         U1 = torch.rand_like(H1, device=device)
         U1[:, 1] = 0
 
@@ -788,6 +789,44 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             plt.yticks(fontsize=24)
             plt.tight_layout()
             plt.savefig(f'graphs_data/graphs_{dataset_name}/signal_distribution.png', dpi=300)
+
+            plt.figure(figsize=(5, 9))
+            i=200
+            plt.subplot(211)
+            window_size = 50
+            # Create the window array
+            window = np.ones(window_size) / window_size
+            moving_average = np.convolve(to_numpy(X[i, :]), window, mode='valid')
+            moving_average = np.concatenate((np.zeros(window_size//2-1), moving_average,np.zeros(window_size//2)))
+            plt.plot(to_numpy(X[i, :]), linewidth=1, c='k')
+            plt.plot(moving_average, linewidth=1, c='r')
+
+
+            t = (to_numpy(X[i, :]) - moving_average) / (moving_average + 1E-7)
+            t = t[window_size//2+2:-window_size//2-2]
+            np.std(t)
+
+            signal = moving_average
+            # Calculate power of the signal
+            P_signal = np.mean(signal ** 2)
+
+            # Estimate the noise (assuming the noise is the difference between the signal and its mean)
+            noise = to_numpy(X[i, :]) - signal
+
+            # Calculate power of the noise
+            P_noise = np.mean(noise ** 2)
+
+            # Calculate SNR
+            SNR = 10 * np.log10(P_signal / P_noise)
+
+            print(SNR)
+
+
+
+
+            # Compute the moving average
+            moving_average = np.convolve(data, window, mode='valid')
+
 
         if bSave:
             x_list = np.array(x_list)

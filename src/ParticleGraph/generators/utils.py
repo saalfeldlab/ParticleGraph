@@ -228,8 +228,15 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
 
     dpos_init = simulation_config.dpos_init
 
-    if (simulation_config.boundary == 'periodic'): # | (simulation_config.dimension == 3):
+    if (simulation_config.boundary == 'periodic'):       # | (simulation_config.dimension == 3):
         pos = torch.rand(n_particles, dimension, device=device)
+        if n_particles <= 10:
+            pos = pos * 0.1 + 0.05
+        elif n_particles<=100:
+            pos = pos * 0.2 + 0.1
+        elif n_particles<=500:
+            pos = pos * 0.5 + 0.25
+
     else:
         pos = torch.randn(n_particles, dimension, device=device) * 0.5
     dpos = dpos_init * torch.randn((n_particles, dimension), device=device)
