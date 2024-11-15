@@ -245,7 +245,7 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
                 pos = pos * 0.1 + 0.45
         elif n_particles<=100:
             if 'PDE_K' in config.graph_model.particle_model_name:
-                pos = pos
+                pos = pos * 0.4 + 0.2
             else:
                 pos = pos * 0.2 + 0.4
         elif n_particles<=500:
