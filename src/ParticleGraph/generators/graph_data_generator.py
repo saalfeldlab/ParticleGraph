@@ -330,8 +330,8 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         fig, ax = fig_init(formatx="%.1f", formaty="%.1f")
                         s_p = 100
 
-                        if 'PDE_K' in model_config.particle_model_name:
-                            s_p = 5
+                        # if 'PDE_K' in model_config.particle_model_name:
+                        #     s_p = 5
 
                         for n in range(n_particle_types):
                                 plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),

@@ -29,7 +29,7 @@ graph_model:
 plotting:
   colormap: 'tab10'
   arrow_length: 2
-  ylim: [0, 2000]
+  ylim: [0, 50]
 
 training:
   n_epochs: 20
@@ -39,7 +39,7 @@ training:
   sparsity: 'replace_embedding_function'
   cluster_method: 'distance_plot'
   data_augmentation: True
-  data_augmentation_loop: 100
+  data_augmentation_loop: 20
   fix_cluster_embedding: True
   device: 'auto'
 
