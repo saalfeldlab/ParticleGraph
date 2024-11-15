@@ -95,6 +95,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
     has_particle_dropout = training_config.particle_dropout > 0
     cmap = CustomColorMap(config=config)
     dataset_name = config.dataset
+    connection_matrix_list = []
 
     if config.data_folder_name != 'none':
         print(f'Generating from data ...')
@@ -129,6 +130,15 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         generative_m = np.array([stats.norm(b[0], b[2]), stats.norm(b[1], b[2])])
 
     for run in range(config.training.n_runs):
+
+        if 'PDE_K' in model_config.particle_model_name:
+            p = config.simulation.params
+            edges = np.random.choice(p[0], size=(n_particles, n_particles), p=p[1])
+            edges = np.tril(edges) + np.tril(edges, -1).T
+            np.fill_diagonal(edges, 0)
+            connection_matrix = torch.tensor(edges, dtype=torch.float32, device=device)
+            model.connection_matrix = connection_matrix.detach().clone()
+            connection_matrix_list.append(connection_matrix)
 
         n_particles = simulation_config.n_particles
 
@@ -379,14 +389,8 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
             torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
             torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
 
-            if ('PDE_K1' in model_config.particle_model_name) and (run==1):
-                A = model.connection_matrix
-                fig = plt.figure(figsize=(8, 8))
-                ax = sns.heatmap(to_numpy(A), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
-                plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
-                plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
-                plt.tight_layout()
-                plt.savefig(f"graphs_data/graphs_{dataset_name}/Matrix_{run}.jpg", dpi=170.7)
+    if 'PDE_K' in model_config.particle_model_name:
+        torch.save(connection_matrix_list, f'graphs_data/graphs_{dataset_name}/connection_matrix_list.pt')
 
     # for handler in logger.handlers[:]:
     #     handler.close()

@@ -50,10 +50,10 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        action = 'train'
+        action = 'generate'
         best_model = None
         # config_list = ["mouse_city_c1_quad"]
-        config_list = ["springs_matrix_N50_1"]
+        config_list = ["springs_matrix_N5_7"]
 
     for config_file in config_list:
 

@@ -527,18 +527,83 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
 
     if model_config.particle_model_name =='PDE_K1':
 
-        i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
-        A = torch.zeros(n_particles, n_particles, device=device, requires_grad=False, dtype=torch.float32)
-        A[i, j] = model.vals**2
-        A.T[i, j] = model.vals**2
-        A[i, i] = 0
+        if len(model.connection_matrix)>5:
 
-        fig = plt.figure(figsize=(8, 8))
-        ax = sns.heatmap(to_numpy(A), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
-        plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
-        plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
-        plt.savefig(f"./{log_dir}/tmp_training/matrix/{dataset_name}_{epoch}_{N}.tif", dpi=87)
-        plt.close()
+            i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+
+            fig = plt.figure(figsize=(9, 15))
+
+            for n in range[5]:
+
+                A = torch.zeros(n_particles, n_particles, device=device, requires_grad=False, dtype=torch.float32)
+                A[i, j] = model.vals[n] ** 2
+                A.T[i, j] = model.vals[n] ** 2
+                A[i, i] = 0
+                ax = plt.subplot(5, 3, 1+n*3)
+                ax = sns.heatmap(to_numpy(model.connection_matrix[n]), center=0, square=True, cmap='bwr',
+                                 cbar_kws={'fraction': 0.046})
+                ax = plt.subplot(5, 3, 2+n*3)
+                ax = sns.heatmap(to_numpy(A), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
+                plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+                plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+
+                ax = plt.subplot(5, 3, 3+n*3)
+                gt_weight = to_numpy(model.connection_matrix[1])
+                pred_weight = to_numpy(A)
+                plt.scatter(gt_weight, pred_weight, s=40, c='k', alpha=0.1)
+                plt.xlabel(r'true $W_{ij}$', fontsize=12)
+                plt.ylabel(r'learned $W_{ij}$', fontsize=12)
+
+                x_data = np.reshape(gt_weight, (n_particles * n_particles))
+                y_data = np.reshape(pred_weight, (n_particles * n_particles))
+                lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+                residuals = y_data - linear_model(x_data, *lin_fit)
+                ss_res = np.sum(residuals ** 2)
+                ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+                r_squared = 1 - (ss_res / ss_tot)
+                plt.text(0.1, 0.1, f'R2: {r_squared:0.4f}', fontsize=8, alpha=0.5)
+                plt.tight_layout()
+
+            plt.savefig(f"./{log_dir}/tmp_training/matrix/M_{epoch}_{N}.tif", dpi=87)
+            plt.close()
+
+
+        else:
+
+            i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+            A = torch.zeros(n_particles, n_particles, device=device, requires_grad=False, dtype=torch.float32)
+            A[i, j] = model.vals[1]**2
+            A.T[i, j] = model.vals[1]**2
+            A[i, i] = 0
+
+            fig = plt.figure(figsize=(15, 5))
+            ax = plt.subplot(1, 3, 1)
+            ax = sns.heatmap(to_numpy(model.connection_matrix[1]), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
+            ax = plt.subplot(1, 3, 2)
+            ax = sns.heatmap(to_numpy(A), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
+            plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+            plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+
+            ax = plt.subplot(1, 3, 3)
+            gt_weight = to_numpy(model.connection_matrix[1])
+            pred_weight = to_numpy(A)
+            plt.scatter(gt_weight, pred_weight , s=40, c='k', alpha=0.1)
+            plt.xlabel(r'true $W_{ij}$', fontsize=12)
+            plt.ylabel(r'learned $W_{ij}$', fontsize=12)
+
+            x_data = np.reshape(gt_weight, (n_particles * n_particles))
+            y_data = np.reshape(pred_weight, (n_particles * n_particles))
+            lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+            residuals = y_data - linear_model(x_data, *lin_fit)
+            ss_res = np.sum(residuals ** 2)
+            ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+            r_squared = 1 - (ss_res / ss_tot)
+            plt.text(0.1, 0.1, f'R2: {r_squared:0.4f}', fontsize=8, alpha=0.5)
+            plt.tight_layout()
+
+            plt.savefig(f"./{log_dir}/tmp_training/matrix/M_{epoch}_{N}.tif", dpi=87)
+            plt.close()
+
 
 def plot_training_mouse(config, id_list, frame_list, dataset_name, log_dir, epoch, N, model, n_particle_types, type_stack, ynorm, cmap, device):
 

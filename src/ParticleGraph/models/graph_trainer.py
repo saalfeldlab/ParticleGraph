@@ -158,6 +158,9 @@ def data_train_particle(config, config_file, erase, best_model, device):
         start_epoch=0
         net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs.pt"
 
+    if 'PDE_K' in model_config.particle_model_name:
+        model.connection_matrix = torch.load(f'graphs_data/graphs_{dataset_name}/connection_matrix_list.pt', map_location=device)
+
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
