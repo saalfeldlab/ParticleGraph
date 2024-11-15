@@ -1004,17 +1004,11 @@ def choose_training_model(model_config, device):
         case 'PDE_N2':
             model = Signal_Propagation2(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
-        case 'PDE_N3':
-            model = Signal_Propagation3(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
-            model.edges = []
         case 'PDE_N4':
             model = Signal_Propagation2(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
         case 'PDE_N5':
             model = Signal_Propagation2(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
-            model.edges = []
-        case 'PDE_N6':
-            model = Signal_Propagation6(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
         case 'PDE_WBI':
             from ParticleGraph.models import WBI_Communication
