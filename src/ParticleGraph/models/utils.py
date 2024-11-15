@@ -80,6 +80,12 @@ def get_in_features(rr, embedding_, config_model, max_radius):
             in_features = torch.cat((rr[:, None], embedding_), dim=1)
         case 'PDE_N5':
             in_features = torch.cat((rr[:, None], embedding_, embedding_), dim=1)
+        case 'PDE_K':
+            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                     rr[:, None] / max_radius, embedding_, embedding_), dim=1)
+        case 'PDE_K1':
+            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                     rr[:, None] / max_radius), dim=1)
 
 
     return in_features
@@ -523,8 +529,9 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
 
         i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
         A = torch.zeros(n_particles, n_particles, device=device, requires_grad=False, dtype=torch.float32)
-        A[i, j] = model.vals
-        A.T[i, j] = model.vals
+        A[i, j] = model.vals**2
+        A.T[i, j] = model.vals**2
+        A[i, i] = 0
 
         fig = plt.figure(figsize=(8, 8))
         ax = sns.heatmap(to_numpy(A), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})

@@ -75,7 +75,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
 
         if self.model =='PDE_K1':
             self.vals = nn.Parameter(
-                torch.zeros((int(self.n_particles * (self.n_particles + 1) / 2)), device=self.device,
+                torch.ones((int(self.n_particles * (self.n_particles + 1) / 2)), device=self.device,
                             requires_grad=True, dtype=torch.float32))
 
 
@@ -165,8 +165,9 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         if self.model == 'PDE_K1':
             A = torch.zeros(self.n_particles, self.n_particles, device=self.device, requires_grad=False, dtype=torch.float32)
             i, j = torch.triu_indices(self.n_particles, self.n_particles, requires_grad=False, device=self.device)
-            A[i, j] = self.vals
-            A.T[i, j] = self.vals
+            A[i, j] = self.vals**2
+            A.T[i, j] = self.vals**2
+            A[i,i] = 0
             out = A[edge_index_i, edge_index_j].repeat(2, 1).t() * self.lin_edge(in_features)
 
         else:
