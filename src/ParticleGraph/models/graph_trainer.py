@@ -127,12 +127,11 @@ def data_train_particle(config, config_file, erase, best_model, device):
         y_list.append(y)
     x = x_list[0][0].clone().detach()
     y = y_list[0][0].clone().detach()
-    for run in range(n_runs):
-        for k in trange(n_frames):
+    for run in trange(n_runs):
+        for k in range(n_frames):
             if (k % 10 == 0) | (n_frames < 1000):
                 x = torch.cat((x, x_list[run][k].clone().detach()), 0)
                 y = torch.cat((y, y_list[run][k].clone().detach()), 0)
-        print(x_list[run][k].shape)
         time.sleep(0.5)
     vnorm = norm_velocity(x, dimension, device)
     ynorm = norm_acceleration(y, device)

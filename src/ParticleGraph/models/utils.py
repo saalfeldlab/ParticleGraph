@@ -81,11 +81,9 @@ def get_in_features(rr, embedding_, config_model, max_radius):
         case 'PDE_N5':
             in_features = torch.cat((rr[:, None], embedding_, embedding_), dim=1)
         case 'PDE_K':
-            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                     rr[:, None] / max_radius, embedding_, embedding_), dim=1)
+            in_features = torch.cat((0 * rr[:, None], rr[:, None] / max_radius, embedding_, embedding_), dim=1)
         case 'PDE_K1':
-            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                     rr[:, None] / max_radius), dim=1)
+            in_features = torch.cat((0 * rr[:, None], rr[:, None] / max_radius), dim=1)
 
 
     return in_features
@@ -499,13 +497,9 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                         in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                                  rr[:, None] / simulation_config.max_radius, embedding_, embedding_), dim=1)
                     elif model_config.particle_model_name == 'PDE_K':
-                        in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                                 rr[:, None] / simulation_config.max_radius, embedding_, embedding_),
-                                                dim=1)
+                        in_features = torch.cat((0 * rr[:, None], rr[:, None] / simulation_config.max_radius, embedding_, embedding_), dim=1)
                     elif model_config.particle_model_name == 'PDE_K1':
-                        in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                                 rr[:, None] / simulation_config.max_radius),
-                                                dim=1)
+                        in_features = torch.cat((0 * rr[:, None], rr[:, None] / simulation_config.max_radius), dim=1)
                     else:
                         in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                                  rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
@@ -533,14 +527,14 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
 
             fig = plt.figure(figsize=(9, 15))
 
-            for n in range[5]:
+            for n in range(5):
 
                 A = torch.zeros(n_particles, n_particles, device=device, requires_grad=False, dtype=torch.float32)
-                A[i, j] = model.vals[n] ** 2
-                A.T[i, j] = model.vals[n] ** 2
+                A[i, j] = model.vals[n+1] ** 2
+                A.T[i, j] = model.vals[n+1] ** 2
                 A[i, i] = 0
                 ax = plt.subplot(5, 3, 1+n*3)
-                ax = sns.heatmap(to_numpy(model.connection_matrix[n]), center=0, square=True, cmap='bwr',
+                ax = sns.heatmap(to_numpy(model.connection_matrix[n+1]), center=0, square=True, cmap='bwr',
                                  cbar_kws={'fraction': 0.046})
                 ax = plt.subplot(5, 3, 2+n*3)
                 ax = sns.heatmap(to_numpy(A), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
@@ -548,7 +542,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                 plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
 
                 ax = plt.subplot(5, 3, 3+n*3)
-                gt_weight = to_numpy(model.connection_matrix[1])
+                gt_weight = to_numpy(model.connection_matrix[n+1])
                 pred_weight = to_numpy(A)
                 plt.scatter(gt_weight, pred_weight, s=40, c='k', alpha=0.1)
                 plt.xlabel(r'true $W_{ij}$', fontsize=12)

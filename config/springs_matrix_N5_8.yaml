@@ -18,10 +18,10 @@ graph_model:
   particle_model_name: 'PDE_K1'
   mesh_model_name: ''
   prediction: '2nd_derivative'
-  input_size: 3
+  input_size: 2
   output_size: 2
-  hidden_dim: 128
-  n_mp_layers: 5
+  hidden_dim: 64
+  n_mp_layers: 3
   aggr_type: 'add'
   embedding_dim: 2
   update_type: 'none'
@@ -35,7 +35,7 @@ training:
   n_epochs: 20
   batch_size: 1
   small_init_batch_size: False
-  n_runs: 20
+  n_runs: 100
   sparsity: 'replace_embedding_function'
   cluster_method: 'distance_plot'
   data_augmentation: True

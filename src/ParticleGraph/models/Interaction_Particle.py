@@ -158,9 +158,9 @@ class Interaction_Particle(pyg.nn.MessagePassing):
                 in_features = torch.cat(
                     (delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
             case 'PDE_K':
-                in_features = torch.cat((delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
+                in_features = torch.cat((delta_pos, embedding_i, embedding_j), dim=-1)
             case 'PDE_K1':
-                in_features = torch.cat((delta_pos, r[:, None]), dim=-1)
+                in_features = delta_pos
 
         if self.model == 'PDE_K1':
             A = torch.zeros(self.n_particles, self.n_particles, device=self.device, requires_grad=False, dtype=torch.float32)
