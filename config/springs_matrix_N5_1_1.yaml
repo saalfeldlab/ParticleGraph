@@ -1,15 +1,15 @@
-description: 'system of particles connected with spring'
-dataset: 'springs_matrix_N5_13'
+description: 'system of particles connected with spring   delta_t: 0.005'
+dataset: 'springs_matrix_N5_1_1'
 
 simulation:
-  params: [[0, 1.], [0.2, 0.8]]
+  params: [[0, 0.2, 0.4, 0.6, 0.8], [0.2, 0.2, 0.2, 0.2, 0.2]]
   min_radius: 0
   max_radius: 1
   n_particles: 5
   n_particle_types: 3
   n_interactions: 3
   n_frames: 50
-  delta_t: 0.01
+  delta_t: 0.005
   dpos_init: 1.0E-5
   boundary: 'periodic'
   start_frame: -500
@@ -36,7 +36,7 @@ training:
   batch_size: 1
   small_init_batch_size: False
   n_runs: 1000
-  sparsity: 'replace_embedding_function'
+  sparsity: 'none'
   cluster_method: 'distance_plot'
   data_augmentation: True
   data_augmentation_loop: 10000

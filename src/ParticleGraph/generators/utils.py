@@ -6,7 +6,7 @@ import matplotlib
 from tifffile import imread
 from ParticleGraph.generators import PDE_A, PDE_B, PDE_B_bis, PDE_B_mass, PDE_E, PDE_G, PDE_GS, PDE_K, PDE_N, PDE_N2, PDE_N4, PDE_N5, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, PDE_Laplacian, PDE_O
 from ParticleGraph.utils import choose_boundary_values
-from ParticleGraph.data_loaders import load_solar_system
+from ParticleGraph.data_loaders import load_solar_system, load_LG_ODE
 from time import sleep
 import numpy as np
 import torch
@@ -24,11 +24,12 @@ def generate_from_data(config, device, visualize=True, step=None):
 
     data_folder_name = config.data_folder_name
 
-    match data_folder_name:
-        case 'graphs_data/solar_system':
-            load_solar_system(config, device, visualize, step)
-        case _:
-            raise ValueError(f'Unknown data folder name {data_folder_name}')
+    if data_folder_name == 'graphs_data/solar_system':
+        load_solar_system(config, device, visualize, step)
+    elif 'LG-ODE' in data_folder_name:
+        load_LG_ODE(config, device, visualize, step)
+    else:
+        raise ValueError(f'Unknown data folder name {data_folder_name}')
 
 
 def choose_model(config=[], W=[], phi=[], device=[]):

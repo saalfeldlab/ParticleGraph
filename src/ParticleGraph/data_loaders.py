@@ -126,6 +126,85 @@ def load_solar_system(config, device=None, visualize=False, step=1000):
         torch.save(y_list, f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/graphs_gravity_solar_system/y_list_{run}.pt')
 
 
+def load_LG_ODE(config, device=None, visualize=False, step=1000):
+    # create output folder, empty it if bErase=True, copy files into it
+    data_folder_name = config.data_folder_name
+    dataset_name = config.dataset
+
+    simulation_config = config.simulation
+    train_config = config.training
+    model_config = config.graph_model
+
+    n_particles = simulation_config.n_particles
+    n_runs = train_config.n_runs
+
+    # Loading Data
+
+    files = os.listdir(data_folder_name)
+    file = files[1][8:-4]
+
+    loc = np.load(data_folder_name + 'loc_train' + file + '.npy', allow_pickle=True)
+    vel = np.load(data_folder_name + 'vel_train' + file + '.npy', allow_pickle=True)
+    acc = np.load(data_folder_name + 'acc_train' + file + '.npy', allow_pickle=True)
+    edges = np.load(data_folder_name + 'edges_train' + file + '.npy', allow_pickle=True) # [500,5,5]
+    times = np.load(data_folder_name + 'times_train' + file + '.npy', allow_pickle=True) # 【500，5]
+
+    num_graph = loc.shape[0]
+    num_atoms = loc.shape[1]
+    feature = loc[0][0][0].shape[0] + vel[0][0][0].shape[0]
+
+    connection_matrix_list = []
+
+    for run in trange(n_runs):
+
+        connection_matrix = edges[run]
+        connection_matrix_list.append(connection_matrix)
+
+        n_frames = loc[run][0].shape[0]
+
+        x_list = []
+        y_list = []
+
+        for frame in range(n_frames):
+            x = []
+            y = []
+            time_= torch.tensor(times[run][0][frame], dtype=torch.float32, device=device).repeat(num_atoms)
+            for i in range(n_particles):
+                loc_ = torch.tensor(loc[run][i][frame], dtype=torch.float32, device=device)
+                vel_ = torch.tensor(vel[run][i][frame], dtype=torch.float32, device=device)
+                x_ = torch.cat((loc_, vel_), 0)
+                x.append(x_)
+
+                acc_ = torch.tensor(acc[run][i][frame], dtype=torch.float32, device=device)
+                y.append(acc_)
+
+            x = torch.stack(x)
+            x = torch.cat((torch.arange(n_particles, dtype=torch.float32, device=device).t()[:,None], x, time_.t()[:,None]), 1)
+            x_list.append(x)
+
+            y = torch.stack(y)
+            y_list.append(y)
+
+            if run == 0:
+                fig = plt.figure(figsize=(12, 12))
+                s_p = 100
+                plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=s_p, c='k')
+                plt.scatter(to_numpy(x[:, 2]+x[:, 4]*0.1), to_numpy(x[:, 1]+x[:, 3]*0.1), s=1, c='r')
+                plt.xlim([-3, 3])
+                plt.ylim([-3, 3])
+                plt.tight_layout()
+                num = f"{to_numpy(time_[0]):06}"
+                plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)  # 170.7)
+                plt.close()
+
+
+        torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
+        torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
+
+    torch.save(connection_matrix_list, f'graphs_data/graphs_{dataset_name}/connection_matrix_list.pt')
+
+
+
 def load_shrofflab_celegans(
         file_path,
         *,

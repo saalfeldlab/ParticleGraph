@@ -97,11 +97,6 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
     dataset_name = config.dataset
     connection_matrix_list = []
 
-    if config.data_folder_name != 'none':
-        print(f'Generating from data ...')
-        generate_from_data(config=config, device=device, visualize=visualize, step=step)
-        return
-
     folder = f'./graphs_data/graphs_{dataset_name}/'
     if erase:
         files = glob.glob(f"{folder}/*")
@@ -113,6 +108,11 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
     files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Fig/*')
     for f in files:
         os.remove(f)
+
+    if config.data_folder_name != 'none':
+        print(f'Generating from data ...')
+        generate_from_data(config=config, device=device, visualize=visualize, step=step)
+        return
 
     # create GNN
     model, bc_pos, bc_dpos = choose_model(config=config, device=device)

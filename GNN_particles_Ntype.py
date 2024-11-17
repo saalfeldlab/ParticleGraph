@@ -50,10 +50,9 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        action = 'training'
+        action = 'generate'
         best_model = None
-        # config_list = ["mouse_city_c1_quad"]
-        config_list = ["springs_matrix_N5_5"]
+        config_list = ["springs_matrix_example_3"]
 
     for config_file in config_list:
 
@@ -61,11 +60,11 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
         if 'generate' in action:
-            data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=False, bSave=True, step=2)  #config.simulation.n_frames // 100)
+            data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=False, bSave=True, step=1)  #config.simulation.n_frames // 100)
         if 'train' in action:
             data_train(config=config, config_file=config_file, erase=False, best_model=best_model, device=device)
         if 'test' in action:
             data_test(config=config, config_file=config_file, visualize=True, style='no_ticks black', verbose=False, best_model='best', run=0, step=config.simulation.n_frames // 200, plot_data=True, test_simulation=True, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
 
-# bsub -n 4 -gpu "num=1" -q gpu_h100 "python GNN_particles_Ntype.py -o generate_train signal_N2_r1_Lorentz_m1 5_240000"
+# bsub -n 4 -gpu "num=1" -q gpu_h100 "python GNN_particles_Ntype.py -o generate_train springs_matrix_N5_1"
