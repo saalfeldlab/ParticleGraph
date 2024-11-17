@@ -463,18 +463,11 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                 fig = plt.figure(figsize=(12, 12))
                 if axis:
                     ax = fig.add_subplot(1, 1, 1)
-                    # ax.xaxis.get_major_formatter()._usetex = False
-                    # ax.yaxis.get_major_formatter()._usetex = False
                     ax.xaxis.set_major_locator(plt.MaxNLocator(3))
                     ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-                    # plt.xlabel(r'$d_{ij}$', fontsize=64)
-                    # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
                     plt.xticks(fontsize=32)
                     plt.yticks(fontsize=32)
                     plt.xlim([0, simulation_config.max_radius])
-                    # plt.ylim([-0.15, 0.15])
-                    # plt.ylim([-0.04, 0.03])
-                    # plt.ylim([-0.1, 0.1])
                     plt.tight_layout()
                 rr = torch.tensor(np.linspace(0, simulation_config.max_radius, 200)).to(device)
                 for n in range(n_particles):
@@ -508,13 +501,13 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                     with torch.no_grad():
                         func = model.lin_edge(in_features.float())
                     func = func[:, 0]
-                    if n % 5 == 0:
+                    if (n % 5 == 0) | ('PDE_K' in model_config.particle_model_name):
                         plt.plot(to_numpy(rr),
                                  to_numpy(func*ynorm),
                                  linewidth=2,
                                  color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
-                if not (do_tracking):
-                    plt.ylim(config.plotting.ylim)
+                # if not (do_tracking):
+                #     plt.ylim(config.plotting.ylim)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/{dataset_name}_function_{epoch}_{N}.tif", dpi=87)
                 plt.close()

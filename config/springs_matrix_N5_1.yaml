@@ -29,13 +29,13 @@ graph_model:
 plotting:
   colormap: 'tab10'
   arrow_length: 2
-  ylim: [0, 2]
+  ylim: [-0.001, 0]
 
 training:
   n_epochs: 20
   batch_size: 1
   small_init_batch_size: False
-  n_runs: 1000
+  n_runs: 200
   sparsity: 'none'
   cluster_method: 'distance_plot'
   data_augmentation: True

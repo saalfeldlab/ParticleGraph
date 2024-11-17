@@ -120,15 +120,19 @@ def data_train_particle(config, config_file, erase, best_model, device):
 
     x_list = []
     y_list = []
+    run_lengths = list()
     for run in trange(n_runs):
         x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
         y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
         x_list.append(x)
         y_list.append(y)
+        run_lengths.append(len(x))
     x = x_list[0][0].clone().detach()
     y = y_list[0][0].clone().detach()
-    for run in trange(n_runs):
-        for k in range(n_frames):
+    if n_runs>100:
+        n_steps = n_runs // 25
+    for run in trange(0,n_runs,n_steps):
+        for k in range(run_lengths[run]):
             if (k % 10 == 0) | (n_frames < 1000):
                 x = torch.cat((x, x_list[run][k].clone().detach()), 0)
                 y = torch.cat((y, y_list[run][k].clone().detach()), 0)
@@ -140,6 +144,8 @@ def data_train_particle(config, config_file, erase, best_model, device):
     time.sleep(0.5)
     print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
     logger.info(f'vnorm ynorm: {to_numpy(vnorm)} {to_numpy(ynorm)}')
+    print(f'{to_numpy(torch.min(x, 1).values[1:3])}  {to_numpy(torch.max(x, 1).values[1:3])}')
+    logger.info(f'{to_numpy(torch.min(x, 1).values[1:3])}  {to_numpy(torch.max(x, 1).values[1:3])}')
 
     x = []
     y = []
@@ -225,7 +231,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
             dataset_batch = []
             for batch in range(batch_size):
 
-                k = np.random.randint(n_frames - 1)
+                k = np.random.randint(run_lengths[run] - 1)
 
                 x = x_list[run][k].clone().detach()
 

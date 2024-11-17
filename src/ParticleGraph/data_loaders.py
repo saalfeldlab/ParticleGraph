@@ -157,7 +157,7 @@ def load_LG_ODE(config, device=None, visualize=False, step=1000):
 
     for run in trange(n_runs):
 
-        connection_matrix = edges[run]
+        connection_matrix = torch.tensor(edges[run], dtype=torch.float32, device=device)
         connection_matrix_list.append(connection_matrix)
 
         n_frames = loc[run][0].shape[0]
