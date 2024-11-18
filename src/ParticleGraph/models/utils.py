@@ -470,6 +470,10 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                     plt.xlim([0, simulation_config.max_radius])
                     plt.tight_layout()
                 rr = torch.tensor(np.linspace(0, simulation_config.max_radius, 200)).to(device)
+                if 'PDE_K' in model_config.particle_model_name:
+                    rr = torch.tensor(np.linspace(-1, 1, 200)).to(device)
+                    plt.xlim([-1,1])
+
                 for n in range(n_particles):
                     if do_tracking:
                         embedding_ = model.a[n, :] * torch.ones((200, model_config.embedding_dim), device=device)
@@ -490,9 +494,9 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                         in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                                  rr[:, None] / simulation_config.max_radius, embedding_, embedding_), dim=1)
                     elif model_config.particle_model_name == 'PDE_K':
-                        in_features = torch.cat((0 * rr[:, None], rr[:, None] / simulation_config.max_radius, embedding_, embedding_), dim=1)
+                        in_features = torch.cat((rr[:, None], rr[:, None] / simulation_config.max_radius, embedding_, embedding_), dim=1)
                     elif model_config.particle_model_name == 'PDE_K1':
-                        in_features = torch.cat((0 * rr[:, None], rr[:, None] / simulation_config.max_radius), dim=1)
+                        in_features = torch.cat((rr[:, None], rr[:, None] / simulation_config.max_radius), dim=1)
                     else:
                         in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                                  rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],

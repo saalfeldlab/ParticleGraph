@@ -51,8 +51,8 @@ if __name__ == '__main__':
             best_model = None
     else:
         action = 'train'
-        best_model = '0_482500'
-        config_list = ["springs_matrix_N5_1"]
+        best_model = '0_495000'
+        config_list = ["springs_matrix_example_2"]
 
     for config_file in config_list:
 
