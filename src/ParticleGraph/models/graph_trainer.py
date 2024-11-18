@@ -3571,7 +3571,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     else:
         x_list = []
         y_list = []
-        if model_config.signal_model_name !='PDE_N':
+        if (model_config.signal_model_name !='PDE_N') & ('PDE_k' in model_config.signal_model_name):
             x = np.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy')
             y = np.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy')
             x_list.append(torch.tensor(x,device=device))
@@ -3583,6 +3583,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         vnorm = torch.load(f'./log/try_{config_file}/vnorm.pt', map_location=device).to(device)
         x = x_list[0][0].clone().detach()
         n_particles = int(x.shape[0] / ratio)
+        n_frames = len(x_list[0])
         config.simulation.n_particles = n_particles
         index_particles = get_index_particles(x, n_particle_types, dimension)
         if n_particle_types>1000:
@@ -3711,6 +3712,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             model.load_state_dict(state_dict['model_state_dict'])
             model.eval()
             mesh_model = None
+            if 'PDE_K' in model_config.particle_model_name:
+                model.connection_matrix = torch.load(f'graphs_data/graphs_{dataset_name}/connection_matrix_list.pt',
+                                                     map_location=device)
         if has_field:
             model_f_p = model
 
@@ -3749,10 +3753,11 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     geomloss_list=[]
     time.sleep(1)
 
-    for it in trange(n_frames-1):
+    for it in trange(n_frames+800):
 
-        x0 = x_list[0][it].clone().detach()
-        y0 = y_list[0][it].clone().detach()
+        if it < n_frames:
+            x0 = x_list[0][it].clone().detach()
+            y0 = y_list[0][it].clone().detach()
 
 
         if 'PDE_N' in model_config.signal_model_name:
@@ -3957,7 +3962,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{num}.tif", dpi=80)
                 plt.close()
-
             elif 'PDE_N' in model_config.signal_model_name:
 
                 plt.close()
@@ -4019,6 +4023,14 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=80)
                 plt.close()
+            elif 'PDE_K' in model_config.particle_model_name:
+
+                plt.scatter(x[:, 2].detach().cpu().numpy(),
+                            x[:, 1].detach().cpu().numpy(), s=20, color='r')
+                if it < n_frames-1:
+                    x0_ = x_list[0][it + 1].clone().detach()
+                    plt.scatter(x0_[:, 2].detach().cpu().numpy(),
+                                x0_[:, 1].detach().cpu().numpy(), s=40, color='k',alpha=1, edgecolors='None')
 
             elif do_tracking:
                 plt.scatter(to_numpy(x0[:, 2]), to_numpy(x0[:, 1]), s=20, c='k')
@@ -4035,7 +4047,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 s_p = 25
                 if simulation_config.has_cell_division:
                     s_p = 25
-
                 for n in range(n_particle_types):
                     if 'bw' in style:
                         plt.scatter(x[index_particles[n], 2].detach().cpu().numpy(),
@@ -4112,7 +4123,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     plt.ylim([-1.2, 1.2])
                     plt.xticks([])
                     plt.yticks([])
-
+                if 'PDE_K' in model_config.particle_model_name:
+                    plt.xlim([-3, 3])
+                    plt.ylim([-3, 3])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{num}.tif", dpi=80)
                 plt.close()
