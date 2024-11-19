@@ -52,7 +52,7 @@ if __name__ == '__main__':
     else:
         action = 'generate'
         best_model = 'best'
-        config_list = ["falling_particles_N1000_6"]
+        config_list = ["falling_particles_N1000_1"]
 
     for config_file in config_list:
 
