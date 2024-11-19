@@ -4827,9 +4827,9 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
 
                 for frame in trange(-500, n_frames + 500, n_frames//600):
 
-                    pred = model_f(time=frame / n_frames, enlarge=False) ** 2
-                    pred = torch.reshape(pred, (n_nodes_per_axis, n_nodes_per_axis))
-                    # pred = torch.reshape(pred, (640, 640))
+                    pred = model_f(time=frame / n_frames, enlarge=True) ** 2
+                    # pred = torch.reshape(pred, (n_nodes_per_axis, n_nodes_per_axis))
+                    pred = torch.reshape(pred, (640, 640))
                     pred = to_numpy(pred)
                     pred = np.flipud(pred)
                     pred = np.rot90(pred, 1)
@@ -4854,7 +4854,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
                     if (frame>=0) & (frame<n_frames):
                         # im_[6:38, 6:38] = im[int(frame / n_frames * 256)].squeeze() / 2.5
                         im_ =  im[int(frame / n_frames * 256)].squeeze()
-                    plt.imshow(im_,cmap='gray',vmin=vmin,vmax=vmax)
+                    plt.imshow(im_,cmap='gray',vmin=vmin,vmax=vmax*2)
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()

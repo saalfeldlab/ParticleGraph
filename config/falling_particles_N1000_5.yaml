@@ -50,7 +50,7 @@ training:
 
   learning_rate_start: 5E-4
   learning_rate_embedding_start: 5E-4
-  noise_level: 1.0E-5
+
 
 
 
