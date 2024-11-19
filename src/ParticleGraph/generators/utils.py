@@ -286,6 +286,9 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
         wall3[:,1] = wall_pos
         wall3[:,0] = 1
         pos = torch.cat((wall0,wall1,wall2,wall3,pos), dim=0)
+
+        pos = pos + torch.randn((n_particles,dimension), device=device) * 0.001
+
         dpos [0:n_wall_particles, :] = 0
         type = torch.cat((torch.zeros(n_wall_particles, device=device),torch.ones(real_n_particles, device=device)),0)
 

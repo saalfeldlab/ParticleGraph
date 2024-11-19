@@ -113,6 +113,8 @@ def data_train_particle(config, config_file, erase, best_model, device):
     embedding_cluster = EmbeddingCluster(config)
     n_runs = train_config.n_runs
     has_state = (config.simulation.state_type != 'discrete')
+    coeff_entropy_loss = train_config.coeff_entropy_loss
+    entropy_loss = KoLeoLoss()
 
     l_dir, log_dir, logger = create_log_dir(config, config_file,erase)
     print(f'Graph files N: {n_runs}')
@@ -285,11 +287,15 @@ def data_train_particle(config, config_file, erase, best_model, device):
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
             elif has_bounding_box:
                 y_ = y_batch.clone().detach()
-                fix_pos = ((y_[:,0]==0) & (y_[:,1]==0)) * 1E3 + 1
+                fix_pos = ((y_[:,0]==0) & (y_[:,1]==0)) * 1E2 + 1
                 fix_pos = fix_pos[:,None].repeat(1,2)
                 loss = ((pred - y_batch) * fix_pos).norm(2)
             else:
                 loss = (pred - y_batch).norm(2)
+
+            # if coeff_entropy_loss > 0:
+            #     idx = torch.randperm(len(model.a[1])).clone().detach()
+            #     loss += coeff_entropy_loss * entropy_loss(model.a[1,idx[0:10000]])
 
             loss.backward()
             optimizer.step()
@@ -1218,10 +1224,10 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
                 else:
                     loss += (pred - y_batch).norm(2)
 
-                if coeff_entropy_loss > 0:
-                    idx = torch.randperm(len(model.a))
-                    model_a = model.a[idx[0:10000]].clone().detach()
-                    loss += coeff_entropy_loss * entropy_loss(model_a)
+                # if coeff_entropy_loss > 0:
+                #     idx = torch.randperm(len(model.a))
+                #     model_a = model.a[idx[0:10000]].clone().detach()
+                #     loss += coeff_entropy_loss * entropy_loss(model_a)
                 
             loss.backward()
             optimizer.step()
@@ -3580,7 +3586,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     else:
         x_list = []
         y_list = []
-        if (model_config.signal_model_name !='PDE_N') & ('PDE_k' in model_config.signal_model_name):
+        if (model_config.signal_model_name !='PDE_N') | ('PDE_k' in model_config.signal_model_name):
             x = np.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy')
             y = np.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy')
             x_list.append(torch.tensor(x,device=device))
@@ -3887,6 +3893,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
             if model_config.prediction == '2nd_derivative':
                 y = y * ynorm * delta_t
+
                 x[:, dimension + 1:2*dimension+1] = x[:, dimension + 1:2*dimension+1] + y  # speed update
             else:
                 y = y * vnorm
