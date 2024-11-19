@@ -203,11 +203,6 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                     x_[:, 0] = torch.arange(len(x_), device=device)
                     x_removed_list.append(x[inv_particle_dropout_mask].clone().detach())
                     y_list.append(y[particle_dropout_mask].clone().detach())
-                elif 'PDE_F' in model_config.particle_model_name:
-                    x_ = x.clone().detach()
-                    x_[:,1:5] = x_[:,1:5] + torch.randn(x_[:,1:5].shape, device=device) * 1.0E-3
-                    x_list.append(x_.clone().detach())
-                    y_list.append(y.clone().detach())
                 else:
                     x_list.append(x.clone().detach())
                     y_list.append(y.clone().detach())

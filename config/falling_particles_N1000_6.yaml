@@ -39,7 +39,7 @@ training:
   n_epochs: 2
   batch_size: 8
   small_init_batch_size: False
-  n_runs: 10
+  n_runs: 2
   sparsity: 'none'
   cluster_method: 'distance_plot'
   data_augmentation: False

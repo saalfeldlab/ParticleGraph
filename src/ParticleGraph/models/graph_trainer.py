@@ -3684,7 +3684,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         neuron_gt_list = []
         neuron_pred_list=[]
 
-
     if verbose:
         print(f'Test data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
         print('log_dir: {}'.format(log_dir))
@@ -3717,7 +3716,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             if 'PDE_K' in model_config.particle_model_name:
                 model.connection_matrix = torch.load(f'graphs_data/graphs_{dataset_name}/connection_matrix_list.pt',
                                                      map_location=device)
-                timeit = np.load(f'graphs_data/graphs_{dataset_name}/times_train_springs_example_2.npy',allow_pickle=True)
+                timeit = np.load(f'graphs_data/graphs_{dataset_name}/times_train_springs_example.npy',allow_pickle=True)
                 timeit = timeit[run][0]
                 time_id = 0
         if has_field:
@@ -3765,11 +3764,11 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             x0 = x_list[0][it].clone().detach()
             y0 = y_list[0][it].clone().detach()
 
-        if 'PDE_K' in model_config.particle_model_name:
-            if it * delta_t *10 >= timeit[time_id]:
-                x0 = x_list[0][time_id].clone().detach()
-                x = x0.clone().detach()
-                time_id +=1
+        # if 'PDE_K' in model_config.particle_model_name:
+        #     if it * delta_t *10 >= timeit[time_id]:
+        #         x0 = x_list[0][time_id].clone().detach()
+        #         x = x0.clone().detach()
+        #         time_id += 1
 
         if 'PDE_N' in model_config.signal_model_name:
             rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 6:7] - x0[:, 6:7]) ** 2, axis=1)))
@@ -3904,6 +3903,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.style.use('dark_background')
 
             fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
+
             ax.tick_params(axis='both', which='major', pad=15)
             if has_mesh:
                 pts = x[:, 1:3].detach().cpu().numpy()
@@ -4036,6 +4036,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.close()
             elif 'PDE_K' in model_config.particle_model_name:
 
+                plt.close()
+                fig = plt.figure(figsize=(12, 12))
                 plt.scatter(x[:, 2].detach().cpu().numpy(),
                             x[:, 1].detach().cpu().numpy(), s=20, color='r')
                 if it < n_frames-1:
@@ -4043,6 +4045,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     plt.scatter(x0_[:, 2].detach().cpu().numpy(),
                                 x0_[:, 1].detach().cpu().numpy(), s=40, color='k',alpha=1, edgecolors='None')
 
+                plt.xlim([-3, 3])
+                plt.ylim([-3, 3])
             elif do_tracking:
                 plt.scatter(to_numpy(x0[:, 2]), to_numpy(x0[:, 1]), s=20, c='k')
                 plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=20, c='r')
@@ -4137,6 +4141,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 if 'PDE_K' in model_config.particle_model_name:
                     plt.xlim([-3, 3])
                     plt.ylim([-3, 3])
+                    plt.xticks(fontsize=24)
+                    plt.yticks(fontsize=24)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{num}.tif", dpi=80)
                 plt.close()
@@ -4226,7 +4232,32 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         print(h.shape)
         print('average u {:.3e}+/-{:.3e}'.format(np.mean(h), np.std(h)))
 
-    if not ('PDE_N' in model_config.signal_model_name):
+    if 'PDE_N' in model_config.signal_model_name:
+        neuron_gt_list = torch.cat(neuron_gt_list, 0)
+        neuron_pred_list = torch.cat(neuron_pred_list, 0)
+
+        neuron_gt_list = torch.reshape(neuron_gt_list, (n_frames-1, 6))
+        neuron_pred_list = torch.reshape(neuron_pred_list, (n_frames-1, 6))
+
+        plt.style.use('dark_background')
+        matplotlib.rcParams['savefig.pad_inches'] = 0
+
+        plt.figure(figsize=(10, 10))
+        plt.plot(neuron_gt_list[:,0].detach().cpu().numpy(), c='w', linewidth=8, label='original', alpha=0.5)
+        plt.plot(neuron_pred_list[:,0].detach().cpu().numpy(), linewidth=4, c='w', label='prediction')
+        plt.legend(fontsize=24)
+        plt.plot(neuron_gt_list[:,1:6].detach().cpu().numpy(), c='w', linewidth=8, alpha=0.5)
+        plt.plot(neuron_pred_list[:,1:6].detach().cpu().numpy(), linewidth=4)
+        plt.xlim([0,500])
+        plt.xlabel('time index', fontsize=48)
+        plt.ylabel(r'$x_i$', fontsize=48)
+        plt.xticks(fontsize=24)
+        plt.yticks(fontsize=24)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/neuron_signals.tif", dpi=170.7)
+        plt.close()
+
+    else:
 
         r = [np.mean(rmserr_list), np.std(rmserr_list), np.mean(geomloss_list), np.std(geomloss_list)]
         print('average rollout Sinkhorn div. {:.3e}+/-{:.3e}'.format(np.mean(geomloss_list), np.std(geomloss_list)))
@@ -4304,30 +4335,5 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/GT_{config_file}_{it}.tif", dpi=170.7)
             plt.close()
-
-    if 'PDE_N' in model_config.signal_model_name:
-        neuron_gt_list = torch.cat(neuron_gt_list, 0)
-        neuron_pred_list = torch.cat(neuron_pred_list, 0)
-
-        neuron_gt_list = torch.reshape(neuron_gt_list, (n_frames-1, 6))
-        neuron_pred_list = torch.reshape(neuron_pred_list, (n_frames-1, 6))
-
-        plt.style.use('dark_background')
-        matplotlib.rcParams['savefig.pad_inches'] = 0
-
-        plt.figure(figsize=(10, 10))
-        plt.plot(neuron_gt_list[:,0].detach().cpu().numpy(), c='w', linewidth=8, label='original', alpha=0.5)
-        plt.plot(neuron_pred_list[:,0].detach().cpu().numpy(), linewidth=4, c='w', label='prediction')
-        plt.legend(fontsize=24)
-        plt.plot(neuron_gt_list[:,1:6].detach().cpu().numpy(), c='w', linewidth=8, alpha=0.5)
-        plt.plot(neuron_pred_list[:,1:6].detach().cpu().numpy(), linewidth=4)
-        plt.xlim([0,500])
-        plt.xlabel('time index', fontsize=48)
-        plt.ylabel(r'$x_i$', fontsize=48)
-        plt.xticks(fontsize=24)
-        plt.yticks(fontsize=24)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/neuron_signals.tif", dpi=170.7)
-        plt.close()
 
 

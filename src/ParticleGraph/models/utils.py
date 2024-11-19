@@ -84,8 +84,6 @@ def get_in_features(rr, embedding_, config_model, max_radius):
             in_features = torch.cat((0 * rr[:, None], rr[:, None] / max_radius, embedding_, embedding_), dim=1)
         case 'PDE_K1':
             in_features = torch.cat((0 * rr[:, None], rr[:, None] / max_radius), dim=1)
-        case 'PDE_f':
-            in_features = torch.cat((rr[:, None], rr[:, None],rr[:, None], rr[:, None] , embedding_ ), dim=1)
 
 
     return in_features
@@ -472,52 +470,72 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                     plt.xlim([0, simulation_config.max_radius])
                     plt.tight_layout()
                 rr = torch.tensor(np.linspace(0, simulation_config.max_radius, 200)).to(device)
-                if 'PDE_K' in model_config.particle_model_name:
-                    rr = torch.tensor(np.linspace(-1, 1, 200)).to(device)
-                    plt.xlim([-1,1])
 
-                for n in range(n_particles):
-                    if do_tracking:
-                        embedding_ = model.a[n, :] * torch.ones((200, model_config.embedding_dim), device=device)
-                    else:
+                if 'PDE_K' in model_config.particle_model_name:
+
+                    rr = torch.tensor(np.linspace(-1, 1, 200)).to(device)
+                    for n in range(n_particles):
                         embedding_ = model.a[1, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
-                    if (model_config.particle_model_name == 'PDE_A'):
-                        in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                                 rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
-                    elif (model_config.particle_model_name == 'PDE_A_bis'):
-                        in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                                 rr[:, None] / simulation_config.max_radius, embedding_, embedding_), dim=1)
-                    elif (model_config.particle_model_name == 'PDE_B'):
-                        in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                                 rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                                 0 * rr[:, None],
-                                                 0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-                    elif model_config.particle_model_name == 'PDE_E':
-                        in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                                 rr[:, None] / simulation_config.max_radius, embedding_, embedding_), dim=1)
-                    elif model_config.particle_model_name == 'PDE_K':
-                        in_features = torch.cat((rr[:, None], rr[:, None] / simulation_config.max_radius, embedding_, embedding_), dim=1)
-                    elif model_config.particle_model_name == 'PDE_K1':
-                        in_features = torch.cat((rr[:, None], rr[:, None] / simulation_config.max_radius), dim=1)
-                    else:
-                        in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                                 rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                                 0 * rr[:, None],
-                                                 0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-                    with torch.no_grad():
-                        func = model.lin_edge(in_features.float())
-                    func = func[:, 0]
-                    if (n % 5 == 0) | ('PDE_K' in model_config.particle_model_name):
-                        plt.plot(to_numpy(rr),
-                                 to_numpy(func*ynorm),
-                                 linewidth=2,
-                                 color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
+                        if model_config.particle_model_name == 'PDE_K':
+                            in_features = torch.cat((rr[:, None], rr[:, None] , embedding_), dim=1)
+                        elif model_config.particle_model_name == 'PDE_K1':
+                            in_features = torch.cat((rr[:, None], rr[:, None] ), dim=1)
+                        else:
+                            in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                                     rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                                     0 * rr[:, None],
+                                                     0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                        with torch.no_grad():
+                            func = model.lin_edge(in_features.float())
+                        func = func[:, 0]
+                        if (n % 5 == 0) :
+                            plt.plot(to_numpy(rr * 5),
+                                     to_numpy(func*ynorm),
+                                     linewidth=2,
+                                     color='k', alpha=1)
+                    plt.xlim([-2,2])
+                else:
+                    for n in range(n_particles):
+                        if do_tracking:
+                            embedding_ = model.a[n, :] * torch.ones((200, model_config.embedding_dim), device=device)
+                        else:
+                            embedding_ = model.a[1, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
+                        if (model_config.particle_model_name == 'PDE_A'):
+                            in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                                     rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
+                        elif (model_config.particle_model_name == 'PDE_A_bis'):
+                            in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                                     rr[:, None] / simulation_config.max_radius, embedding_, embedding_), dim=1)
+                        elif (model_config.particle_model_name == 'PDE_B'):
+                            in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                                     rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                                     0 * rr[:, None],
+                                                     0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                        elif model_config.particle_model_name == 'PDE_E':
+                            in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                                     rr[:, None] / simulation_config.max_radius, embedding_, embedding_), dim=1)
+                        elif model_config.particle_model_name == 'PDE_K':
+                            in_features = torch.cat((rr[:, None], rr[:, None] / simulation_config.max_radius, embedding_, embedding_), dim=1)
+                        elif model_config.particle_model_name == 'PDE_K1':
+                            in_features = torch.cat((rr[:, None], rr[:, None] / simulation_config.max_radius), dim=1)
+                        else:
+                            in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                                     rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                                     0 * rr[:, None],
+                                                     0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                        with torch.no_grad():
+                            func = model.lin_edge(in_features.float())
+                        func = func[:, 0]
+                        if (n % 5 == 0) :
+                            plt.plot(to_numpy(rr),
+                                     to_numpy(func*ynorm),
+                                     linewidth=2,
+                                     color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
                 # if not (do_tracking):
                 #     plt.ylim(config.plotting.ylim)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/{dataset_name}_function_{epoch}_{N}.tif", dpi=87)
                 plt.close()
-
     if model_config.particle_model_name =='PDE_K1':
 
         if len(model.connection_matrix)>5:
@@ -560,6 +578,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
             plt.savefig(f"./{log_dir}/tmp_training/matrix/M_{epoch}_{N}.tif", dpi=87)
             plt.close()
 
+
         else:
 
             i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
@@ -595,6 +614,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
 
             plt.savefig(f"./{log_dir}/tmp_training/matrix/M_{epoch}_{N}.tif", dpi=87)
             plt.close()
+
 
 def plot_training_mouse(config, id_list, frame_list, dataset_name, log_dir, epoch, N, model, n_particle_types, type_stack, ynorm, cmap, device):
 
@@ -1010,8 +1030,6 @@ def choose_training_model(model_config, device):
     model=[]
     model_name = model_config.graph_model.particle_model_name
     match model_name:
-        case 'PDE_F':
-            model = Interaction_Falling_Box(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
         case 'PDE_M':
             model = Interaction_Mouse_Field(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos,
                                      dimension=dimension)
@@ -1047,6 +1065,8 @@ def choose_training_model(model_config, device):
             model.edges = torch.tensor(e, dtype=torch.long, device=device)
         case 'PDE_Cell_A' | 'PDE_Cell_B' | 'PDE_Cell_B_area' | 'PDE_Cell_A_area':
             model = Interaction_Cell(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
+        case 'PDE_F':
+            model =  Interaction_Falling_Box(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
     model_name = model_config.graph_model.mesh_model_name
     match model_name:
         case 'DiffMesh':
