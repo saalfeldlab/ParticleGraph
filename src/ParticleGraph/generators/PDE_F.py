@@ -38,7 +38,7 @@ class PDE_F(pyg.nn.MessagePassing):
         dd_pos = torch.zeros_like(x[:, 1:3])
         dd_pos[particles, 0] = -9.81
 
-        X1 = x[particles, 1:3] + torch.randn_like(x[particles, 1:3])
+        X1 = x[particles, 1:3]
         V1 = x[particles, 3:5]
         V1 += dd_pos[particles] * self.delta_t
         X1 = X1 + V1 * self.delta_t
@@ -50,7 +50,7 @@ class PDE_F(pyg.nn.MessagePassing):
             dd_pos[particles[bouncing_pos], 1] = - 0.4 * V1[bouncing_pos, 1] / self.delta_t
         bouncing_pos = torch.argwhere((X1[:, 1] <= 0) | (X1[:, 1] >= 1)).squeeze()
         if bouncing_pos.numel() > 0:
-            dd_pos[particles[bouncing_pos], 0] = - 0.4 * V1[bouncing_pos, 0] / self.delta_t
+        #     dd_pos[particles[bouncing_pos], 0] = - 0.4 * V1[bouncing_pos, 0] / self.delta_t
             dd_pos[particles[bouncing_pos], 1] = -1.6 * V1[bouncing_pos, 1] / self.delta_t
 
         return dd_pos
