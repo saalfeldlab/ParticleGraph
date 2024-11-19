@@ -50,9 +50,9 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        action = 'test'
+        action = 'train'
         best_model = None
-        config_list = ["falling_particles_N1000_1","falling_particles_N1000_2","falling_particles_N1000_3","falling_particles_N1000_4","falling_particles_N1000_5"]
+        config_list = ["falling_particles_N1000_6"]
 
     for config_file in config_list:
 

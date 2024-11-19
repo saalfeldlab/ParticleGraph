@@ -88,7 +88,6 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
 
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        particle_id = to_numpy(x[:, 0])
 
         if has_field:
             field = x[:,6:7]
@@ -99,71 +98,22 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
         particle_id = x[:, 0:1]
         embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
-        pred = self.lin_phi(torch.cat((pos, d_pos, embedding), dim=-1))
+
+        pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
+
+        pred = self.lin_phi(torch.cat((pos, d_pos, pred, embedding), dim=-1))
 
         return pred
 
     def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j, field_j):
         # distance normalized by the max radius
+
         r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
         delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
-        dpos_x_i = d_pos_i[:, 0] / self.vnorm
-        dpos_y_i = d_pos_i[:, 1] / self.vnorm
-        dpos_x_j = d_pos_j[:, 0] / self.vnorm
-        dpos_y_j = d_pos_j[:, 1] / self.vnorm
 
-        if self.data_augmentation & (self.training == True):
-            new_delta_pos_x = self.cos_phi * delta_pos[:, 0] + self.sin_phi * delta_pos[:, 1]
-            new_delta_pos_y = -self.sin_phi * delta_pos[:, 0] + self.cos_phi * delta_pos[:, 1]
-            delta_pos[:, 0] = new_delta_pos_x
-            delta_pos[:, 1] = new_delta_pos_y
-            new_dpos_x_i = self.cos_phi * dpos_x_i + self.sin_phi * dpos_y_i
-            new_dpos_y_i = -self.sin_phi * dpos_x_i + self.cos_phi * dpos_y_i
-            dpos_x_i = new_dpos_x_i
-            dpos_y_i = new_dpos_y_i
-            new_dpos_x_j = self.cos_phi * dpos_x_j + self.sin_phi * dpos_y_j
-            new_dpos_y_j = -self.sin_phi * dpos_x_j + self.cos_phi * dpos_y_j
-            dpos_x_j = new_dpos_x_j
-            dpos_y_j = new_dpos_y_j
+        in_features = torch.cat((delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
 
-        match self.model:
-            case 'PDE_A'|'PDE_ParticleField_A':
-                in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
-            case 'PDE_A_bis':
-                in_features = torch.cat((delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
-            case 'PDE_B' | 'PDE_B_bis' | 'PDE_B_mass':
-                in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
-                                         dpos_y_j[:, None], embedding_i), dim=-1)
-            case 'PDE_G':
-                in_features = torch.cat(
-                    (delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None], dpos_y_j[:, None],
-                     embedding_j),
-                    dim=-1)
-            case 'PDE_GS':
-                in_features = torch.cat((delta_pos, r[:, None], 10**embedding_j),dim=-1)
-            case 'PDE_E':
-                in_features = torch.cat(
-                    (delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
-            case 'PDE_K':
-                in_features = torch.cat((delta_pos, embedding_i, embedding_j), dim=-1)
-            case 'PDE_K1':
-                in_features = delta_pos
-
-        if self.model == 'PDE_K1':
-            A = torch.zeros(self.n_particles, self.n_particles, device=self.device, requires_grad=False, dtype=torch.float32)
-            i, j = torch.triu_indices(self.n_particles, self.n_particles, requires_grad=False, device=self.device)
-            A[i, j] = self.vals[self.data_id]**2
-            A.T[i, j] = self.vals[self.data_id]**2
-            A[i,i] = 0
-            out = A[edge_index_i, edge_index_j].repeat(2, 1).t() * self.lin_edge(in_features)
-
-        else:
-            out = self.lin_edge(in_features) * field_j
-
-        x = to_numpy(in_features)
-        y = -to_numpy(self.lin_edge(in_features))
-        plt.scatter(x[:, 0], y[:, 0], s=1, c='k')
-        plt.scatter(x[:, 1], y[:, 1], s=1, c='r')
+        out = self.lin_edge(in_features) * field_j
 
         return out
 

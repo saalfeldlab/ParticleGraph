@@ -173,11 +173,6 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         else:
             out = self.lin_edge(in_features) * field_j
 
-        x = to_numpy(in_features)
-        y = -to_numpy(self.lin_edge(in_features))
-        plt.scatter(x[:, 0], y[:, 0], s=1, c='k')
-        plt.scatter(x[:, 1], y[:, 1], s=1, c='r')
-
         return out
 
     def update(self, aggr_out):
