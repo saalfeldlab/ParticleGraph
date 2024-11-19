@@ -4,7 +4,7 @@ dataset: 'falling_particles_N1000_1'
 simulation:
   params: [[0, 0.2, 0.4, 0.6, 0.8], [0.2, 0.2, 0.2, 0.2, 0.2]]
   min_radius: 0
-  max_radius: 0.025
+  max_radius: 0.01
   n_particles: 2000
   n_particle_types: 2
   n_interactions: 2
@@ -37,15 +37,19 @@ plotting:
 
 training:
   n_epochs: 20
-  batch_size: 1
+  batch_size: 32
   small_init_batch_size: False
   n_runs: 2
   sparsity: 'none'
-  cluster_method: 'distance_plot'
+  cluster_method: 'kmeans_auto_embedding'
   data_augmentation: False
   data_augmentation_loop: 500
   fix_cluster_embedding: True
   device: 'auto'
+
+  learning_rate_start: 1E-4
+  learning_rate_embedding_start: 1E-4
+
 
 
 

@@ -50,9 +50,9 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        action = 'train'
-        best_model = None
-        config_list = ["falling_particles_N1000_1"]
+        action = 'test'
+        best_model = 'best'
+        config_list = ["falling_particles_N1000_2"] #,"falling_particles_N1000_2","falling_particles_N1000_3","falling_particles_N1000_4","falling_particles_N1000_5","falling_particles_N1000_6"]
 
     for config_file in config_list:
 
@@ -64,7 +64,8 @@ if __name__ == '__main__':
         if 'train' in action:
             data_train(config=config, config_file=config_file, erase=False, best_model=best_model, device=device)
         if 'test' in action:
-            data_test(config=config, config_file=config_file, visualize=True, style='color', verbose=False, best_model='best', run=1, plot_data=False, test_simulation=False, sample_embedding=False, device=device, step=10) # config.simulation.n_frames // 200, )    # config.simulation.n_frames // 7
+            data_test(config=config, config_file=config_file, visualize=True, style='color', verbose=False, best_model='best', run=1, plot_data=False,
+                      test_simulation=False, sample_embedding=False, device=device, step=2) # config.simulation.n_frames // 200, )    # config.simulation.n_frames // 7
 
 
 # bsub -n 4 -gpu "num=1" -q gpu_h100 "python GNN_particles_Ntype.py -o train falling_particles_N1000_1"

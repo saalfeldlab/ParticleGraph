@@ -102,6 +102,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
     has_ghost = train_config.n_ghosts > 0
+    has_bounding_box = 'PDE_F' in model_config.particle_model_name
     n_ghosts = train_config.n_ghosts
     if train_config.small_init_batch_size:
         get_batch_size = increasing_batch_size(target_batch_size)
@@ -282,6 +283,11 @@ def data_train_particle(config, config_file, erase, best_model, device):
 
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
+            elif has_bounding_box:
+                y_ = y_batch.clone().detach()
+                fix_pos = ((y_[:,0]==0) & (y_[:,1]==0)) * 1E3 + 1
+                fix_pos = fix_pos[:,None].repeat(1,2)
+                loss = ((pred - y_batch) * fix_pos).norm(2)
             else:
                 loss = (pred - y_batch).norm(2)
 
@@ -3491,6 +3497,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     has_mesh = (config.graph_model.mesh_model_name != '')
     only_mesh = (config.graph_model.particle_model_name == '') & has_mesh
     has_ghost = config.training.n_ghosts > 0
+    has_bounding_box = 'PDE_F' in model_config.particle_model_name
     max_radius = simulation_config.max_radius
     min_radius = simulation_config.min_radius
     n_particle_types = simulation_config.n_particle_types
@@ -3778,6 +3785,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             rmserr = torch.sqrt(torch.mean((x[mask_mesh.squeeze(), 6:7] - x0[mask_mesh.squeeze(), 6:7]) ** 2))
         elif model_config.mesh_model_name == 'RD_RPS_Mesh':
             rmserr = torch.sqrt(torch.mean(torch.sum((x[mask_mesh.squeeze(), 6:9] - x0[mask_mesh.squeeze(), 6:9]) ** 2, axis=1)))
+        elif has_bounding_box:
+            rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 1:dimension + 1] - x0[:, 1:dimension + 1]) ** 2, axis=1)))
         else:
             if do_tracking:
                 rmserr = torch.zeros(1,device=device)
@@ -4259,6 +4268,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
     else:
 
+        if geomloss_list==[]:
+            geomloss_list = [0,0]
         r = [np.mean(rmserr_list), np.std(rmserr_list), np.mean(geomloss_list), np.std(geomloss_list)]
         print('average rollout Sinkhorn div. {:.3e}+/-{:.3e}'.format(np.mean(geomloss_list), np.std(geomloss_list)))
         np.save(f"./{log_dir}/rmserr_geomloss_{config_file}.npy", r)
