@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 # matplotlib.use("Qt5Agg")
 from tifffile import imread
-from ParticleGraph.generators import PDE_A, PDE_B, PDE_B_bis, PDE_B_mass, PDE_E, PDE_G, PDE_GS, PDE_K, PDE_N, PDE_N2, PDE_N4, PDE_N5, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, PDE_Laplacian, PDE_O
+from ParticleGraph.generators import PDE_A, PDE_B, PDE_B_bis, PDE_B_mass, PDE_E, PDE_F, PDE_G, PDE_GS, PDE_K, PDE_N, PDE_N2, PDE_N4, PDE_N5, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, PDE_Laplacian, PDE_O
 from ParticleGraph.utils import choose_boundary_values
 from ParticleGraph.data_loaders import load_solar_system, load_LG_ODE
 from time import sleep
@@ -39,6 +39,7 @@ def choose_model(config=[], W=[], phi=[], device=[]):
     n_particles = config.simulation.n_particles
     n_node_types = config.simulation.n_node_types
     n_nodes = config.simulation.n_nodes
+    delta_t = config.simulation.delta_t
     n_particle_types = config.simulation.n_particle_types
     bc_pos, bc_dpos = choose_boundary_values(config.simulation.boundary)
     dimension = config.simulation.dimension
@@ -120,6 +121,8 @@ def choose_model(config=[], W=[], phi=[], device=[]):
             model = PDE_E(aggr_type=aggr_type, p=torch.squeeze(p),
                           clamp=config.training.clamp, pred_limit=config.training.pred_limit,
                           prediction=config.graph_model.prediction, bc_dpos=bc_dpos)
+        case 'PDE_F':
+            model = PDE_F(aggr_type=aggr_type, dimension=dimension, delta_t=delta_t)
         case 'PDE_K' | 'PDE_K1':
             p = params
             edges = np.random.choice(p[0], size=(n_particles, n_particles), p=p[1])
@@ -263,6 +266,28 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
         type = torch.cat((type, n * torch.ones(n_particles - type.shape[0], device=device)), 0)
     if (simulation_config.params == 'continuous') | (config.simulation.non_discrete_level > 0):  # TODO: params is a list[list[float]]; this can never happen?
         type = torch.tensor(np.arange(n_particles), device=device)
+
+    if 'PDE_F' in config.graph_model.particle_model_name:
+        n_wall_particles = 1000
+        real_n_particles = n_particles - n_wall_particles
+        pos = torch.rand(real_n_particles, dimension, device=device)
+        pos[:, 0] = pos[:, 0] * 0.2 + 0.75
+        pos[:, 1] = pos[:, 1] * 0.95 + 0.025
+        n_particles_wall = n_wall_particles // 4
+        wall_pos = torch.linspace(0, 1, n_particles_wall, device=device)
+        wall0 = torch.zeros(n_particles_wall, 2, device=device)
+        wall0[:,0] = wall_pos
+        wall1 = torch.zeros(n_particles_wall, 2, device=device)
+        wall1[:,0] = wall_pos
+        wall1[:,1] = 1
+        wall2 = torch.zeros(n_particles_wall, 2, device=device)
+        wall2[:,1] = wall_pos
+        wall3 = torch.zeros(n_particles_wall, 2, device=device)
+        wall3[:,1] = wall_pos
+        wall3[:,0] = 1
+        pos = torch.cat((wall0,wall1,wall2,wall3,pos), dim=0)
+        dpos [0:n_wall_particles, :] = 0
+        type = torch.cat((torch.zeros(n_wall_particles, device=device),torch.ones(real_n_particles, device=device)),0)
 
     features = torch.cat((torch.rand((n_particles, 1), device=device) , 0.1 * torch.randn((n_particles, 1), device=device)), 1)
 

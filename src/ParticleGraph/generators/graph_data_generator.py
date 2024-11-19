@@ -40,7 +40,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
 
     if (os.path.isfile(f'./graphs_data/graphs_{dataset_name}/x_list_0.npy')) | (os.path.isfile(f'./graphs_data/graphs_{dataset_name}/x_list_0.pt')):
         print('Data already generated')
-        return
+        # return
 
 
     if has_mouse_city:
@@ -168,6 +168,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
             distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
             adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
             edge_index = adj_t.nonzero().t().contiguous()
+
             dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, field=[])
 
             # model prediction
@@ -202,6 +203,11 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                     x_[:, 0] = torch.arange(len(x_), device=device)
                     x_removed_list.append(x[inv_particle_dropout_mask].clone().detach())
                     y_list.append(y[particle_dropout_mask].clone().detach())
+                elif 'PDE_F' in model_config.particle_model_name:
+                    x_ = x.clone().detach()
+                    x_[:,1:5] = x_[:,1:5] + torch.randn(x_[:,1:5].shape, device=device) * 1.0E-3
+                    x_list.append(x_.clone().detach())
+                    y_list.append(y.clone().detach())
                 else:
                     x_list.append(x.clone().detach())
                     y_list.append(y.clone().detach())

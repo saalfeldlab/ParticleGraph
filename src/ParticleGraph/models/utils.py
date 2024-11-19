@@ -84,6 +84,8 @@ def get_in_features(rr, embedding_, config_model, max_radius):
             in_features = torch.cat((0 * rr[:, None], rr[:, None] / max_radius, embedding_, embedding_), dim=1)
         case 'PDE_K1':
             in_features = torch.cat((0 * rr[:, None], rr[:, None] / max_radius), dim=1)
+        case 'PDE_f':
+            in_features = torch.cat((rr[:, None], rr[:, None],rr[:, None], rr[:, None] , embedding_ ), dim=1)
 
 
     return in_features
@@ -558,7 +560,6 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
             plt.savefig(f"./{log_dir}/tmp_training/matrix/M_{epoch}_{N}.tif", dpi=87)
             plt.close()
 
-
         else:
 
             i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
@@ -594,7 +595,6 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
 
             plt.savefig(f"./{log_dir}/tmp_training/matrix/M_{epoch}_{N}.tif", dpi=87)
             plt.close()
-
 
 def plot_training_mouse(config, id_list, frame_list, dataset_name, log_dir, epoch, N, model, n_particle_types, type_stack, ynorm, cmap, device):
 
@@ -1010,6 +1010,8 @@ def choose_training_model(model_config, device):
     model=[]
     model_name = model_config.graph_model.particle_model_name
     match model_name:
+        case 'PDE_F':
+            model = Interaction_Falling_Box(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
         case 'PDE_M':
             model = Interaction_Mouse_Field(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos,
                                      dimension=dimension)

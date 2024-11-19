@@ -1,0 +1,54 @@
+description: 'system of particles falling down in a box'
+dataset: 'falling_particles_N1000_1 noise 1E-1'
+
+simulation:
+  params: [[0, 0.2, 0.4, 0.6, 0.8], [0.2, 0.2, 0.2, 0.2, 0.2]]
+  min_radius: 0
+  max_radius: 0.075
+  n_particles: 2000
+  n_particle_types: 2
+  n_interactions: 2
+  n_frames: 800
+  delta_t: 0.0025
+  dpos_init: 1.0
+  boundary: 'no'
+  start_frame: 0
+
+graph_model:
+  particle_model_name: 'PDE_F'
+  mesh_model_name: ''
+  prediction: '2nd_derivative'
+  input_size: 6
+  output_size: 2
+  hidden_dim: 64
+  n_mp_layers: 3
+  aggr_type: 'add'
+  embedding_dim: 2
+
+  input_size_update: 6
+  n_layers_update: 3
+  hidden_dim_update: 64
+  output_size_update: 2
+
+plotting:
+  colormap: 'tab10'
+  arrow_length: 2
+  ylim: [-0.001, 0]
+
+training:
+  n_epochs: 2
+  batch_size: 1
+  small_init_batch_size: False
+  n_runs: 2
+  sparsity: 'none'
+  cluster_method: 'distance_plot'
+  data_augmentation: False
+  data_augmentation_loop: 1000
+  fix_cluster_embedding: True
+  noise_level: 1.0E-1
+  device: 'auto'
+
+
+
+
+

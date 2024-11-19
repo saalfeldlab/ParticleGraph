@@ -131,6 +131,8 @@ def data_train_particle(config, config_file, erase, best_model, device):
     y = y_list[0][0].clone().detach()
     if n_runs>100:
         n_steps = n_runs // 25
+    else:
+        n_steps = 1
     for run in trange(0,n_runs,n_steps):
         for k in range(run_lengths[run]):
             if (k % 10 == 0) | (n_frames < 1000):
@@ -3715,6 +3717,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             if 'PDE_K' in model_config.particle_model_name:
                 model.connection_matrix = torch.load(f'graphs_data/graphs_{dataset_name}/connection_matrix_list.pt',
                                                      map_location=device)
+                timeit = np.load(f'graphs_data/graphs_{dataset_name}/times_train_springs_example_2.npy',allow_pickle=True)
+                timeit = timeit[run][0]
+                time_id = 0
         if has_field:
             model_f_p = model
 
@@ -3753,12 +3758,18 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     geomloss_list=[]
     time.sleep(1)
 
-    for it in trange(n_frames+800):
+    for it in trange(n_frames):
 
         if it < n_frames:
+
             x0 = x_list[0][it].clone().detach()
             y0 = y_list[0][it].clone().detach()
 
+        if 'PDE_K' in model_config.particle_model_name:
+            if it * delta_t *10 >= timeit[time_id]:
+                x0 = x_list[0][time_id].clone().detach()
+                x = x0.clone().detach()
+                time_id +=1
 
         if 'PDE_N' in model_config.signal_model_name:
             rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 6:7] - x0[:, 6:7]) ** 2, axis=1)))
