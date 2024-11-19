@@ -183,7 +183,7 @@ class CustomColorMap:
         if self.model_name == 'PDE_F':
             match index:
                 case 0:
-                    color = (0, 0.25, 1)
+                    color = (0, 0, 0)
                 case 1:
                     color = (0, 0.5, 0.75)
                 case 2:

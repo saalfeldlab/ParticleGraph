@@ -84,6 +84,8 @@ def get_in_features(rr, embedding_, config_model, max_radius):
             in_features = torch.cat((0 * rr[:, None], rr[:, None] / max_radius, embedding_, embedding_), dim=1)
         case 'PDE_K1':
             in_features = torch.cat((0 * rr[:, None], rr[:, None] / max_radius), dim=1)
+        case 'PDE_F':
+            in_features = torch.cat((0 * rr[:, None], rr[:, None] / max_radius, rr[:, None] / max_radius, embedding_, embedding_), dim=-1)
 
 
     return in_features
@@ -349,7 +351,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
         else:
             embedding = get_embedding(model.a, 1)
         for n in range(n_particle_types):
-            plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=20)
+            plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n), s=20)
         plt.xticks([])
         plt.yticks([])
         plt.tight_layout()
@@ -470,7 +472,6 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                     plt.xlim([0, simulation_config.max_radius])
                     plt.tight_layout()
                 rr = torch.tensor(np.linspace(0, simulation_config.max_radius, 200)).to(device)
-
                 if 'PDE_K' in model_config.particle_model_name:
 
                     rr = torch.tensor(np.linspace(-1, 1, 200)).to(device)
@@ -614,7 +615,6 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
 
             plt.savefig(f"./{log_dir}/tmp_training/matrix/M_{epoch}_{N}.tif", dpi=87)
             plt.close()
-
 
 def plot_training_mouse(config, id_list, frame_list, dataset_name, log_dir, epoch, N, model, n_particle_types, type_stack, ynorm, cmap, device):
 
