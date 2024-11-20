@@ -267,13 +267,10 @@ def load_WaterDropSmall(config, device=None, visualize=None, step=None, cmap=Non
 
     n_wall_particles = 1000
     real_n_particles = n_particles - n_wall_particles
-    idx = 0
 
     for run in range(n_runs):
-
         x_list = []
         y_list = []
-
 
         wall_pos = torch.linspace(0.1, 0.9, n_wall_particles//4, device=device)
         wall0 = torch.zeros(n_wall_particles//4, 2, device=device)
@@ -296,12 +293,7 @@ def load_WaterDropSmall(config, device=None, visualize=None, step=None, cmap=Non
 
         for frame in trange(1,n_frames-2):
 
-            y = torch.zeros((n_particles, dimension), device=device)
-
-            dpos = torch.zeros((n_particles, dimension), device=device)
-
-            window = windows[idx]
-            idx += 1
+            window = windows[frame + 995 * run]
             size = window["size"]
             position_seq = position[window["pos"]: window["pos"] + 4 * size * dim]
             position_seq.resize(4, size, dim)
@@ -315,6 +307,11 @@ def load_WaterDropSmall(config, device=None, visualize=None, step=None, cmap=Non
             pos_next = pos[:, 2, :].squeeze()
             pos = pos[:,1,:].squeeze()
 
+            real_n_particles = pos.shape[0]
+            n_particles = n_wall_particles + pos.shape[0]
+
+            y = torch.zeros((n_particles, dimension), device=device)
+            dpos = torch.zeros((n_particles, dimension), device=device)
             dpos[n_wall_particles:] = (pos - pos_prev) / delta_t
             dpos_next = (pos_next - pos) / delta_t
 

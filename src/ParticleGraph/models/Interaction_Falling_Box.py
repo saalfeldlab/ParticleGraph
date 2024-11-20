@@ -97,7 +97,9 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
         pos = x[:, 1:self.dimension+1]
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
         particle_id = x[:, 0:1]
-        embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
+
+        # embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
+        embedding = self.a[1, to_numpy(particle_id), :].squeeze()
 
         pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
 

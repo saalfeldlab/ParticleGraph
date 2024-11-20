@@ -50,9 +50,9 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        action = 'generate'
+        action = 'train'
         best_model = None
-        config_list = ["falling_particles_google"]
+        config_list = ["falling_particles_google_single"]
 
     for config_file in config_list:
 

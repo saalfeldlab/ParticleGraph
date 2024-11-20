@@ -6,7 +6,7 @@ simulation:
   params: [[0, 0.2, 0.4, 0.6, 0.8], [0.2, 0.2, 0.2, 0.2, 0.2]]
   min_radius: 0
   max_radius: 0.01
-  n_particles: 1678
+  n_particles: 2200
   n_particle_types: 2
   n_interactions: 2
   n_frames: 994
