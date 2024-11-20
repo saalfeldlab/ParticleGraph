@@ -491,7 +491,7 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
     plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
     plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{epoch}.tif", dpi=170.7)
+    plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=170.7)
     plt.close()
 
     fig, ax = fig_init()
@@ -521,7 +521,7 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
     plt.xlim([-0.2, 1.2])
     plt.ylim([-0.2, 1.2])
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/UMAP_{config_file}_{epoch}.tif", dpi=170.7)
+    plt.savefig(f"./{log_dir}/results/UMAP_functions__{epoch}.tif", dpi=170.7)
     plt.close()
 
     config.training.cluster_distance_threshold = 0.01
@@ -531,6 +531,19 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
     accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
     print(accuracy, n_clusters)
 
+
+    fig, ax = fig_init()
+    for n in range(n_clusters):
+        pos = np.argwhere(labels == n)
+        if pos.size > 0:
+            plt.scatter(embedding[pos, 0], embedding[pos, 1], s=10)
+    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
+    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/results/clustered_embedding_{epoch}.tif", dpi=170.7)
+    plt.close()
+
+
     model_a_ = model.a[1].clone().detach()
     for n in range(n_clusters):
         pos = np.argwhere(labels == n).squeeze().astype(int)
@@ -539,25 +552,17 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
             median_center = model_a_[pos, :]
             median_center = torch.median(median_center, dim=0).values
             model_a_[pos, :] = median_center
-    with torch.no_grad():
-        model.a[1] = model_a_.clone().detach()
 
+    embedding = to_numpy(model_a_)
     fig, ax = fig_init()
-    embedding = get_embedding(model.a, 1)
-    if n_particle_types > 1000:
-        plt.scatter(embedding[:, 0], embedding[:, 1], c=to_numpy(x[:, 5]) / n_particles, s=10,
-                    cmap=cc)
-    else:
-        for n in range(n_particle_types):
-            pos = torch.argwhere(type_list == n)
-            pos = to_numpy(pos)
-            if len(pos) > 0:
-                plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n),
-                        s=100, alpha=0.1)
+    for n in range(n_clusters):
+        pos = np.argwhere(labels == n)
+        if pos.size > 0:
+            plt.scatter(embedding[pos, 0], embedding[pos, 1],s=10)
     plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
     plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{epoch}.tif", dpi=170.7)
+    plt.savefig(f"./{log_dir}/results/UMAP_clustered_embedding_{epoch}.tif", dpi=170.7)
     plt.close()
 
     return accuracy, n_clusters, new_labels
@@ -1286,8 +1291,7 @@ def plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
                 f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
             logger.info(
                 f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
-            model.load_state_dict(state_dict['model_state_dict'])
-            model.eval()
+
             config.training.cluster_method = 'distance_embedding'
             config.training.cluster_distance_threshold = 0.01
             alpha = 0.1
@@ -1320,7 +1324,7 @@ def plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
             plt.xlim([0, max_radius])
             plt.ylim(config.plotting.ylim)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/func_all_{config_file}_{epoch}.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/results/learned_function_{epoch}.tif", dpi=170.7)
             rmserr_list = torch.stack(rmserr_list)
             rmserr_list = to_numpy(rmserr_list)
             print("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
@@ -1338,7 +1342,7 @@ def plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
             plt.xlabel(r'$d_{ij}$', fontsize=78)
             plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/results/true_func.tif", dpi=170.7)
             plt.close()
 
 
@@ -1473,9 +1477,8 @@ def plot_falling_particles(config_file, epoch_list, log_dir, logger, device):
             logger.info(
                 f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
-            model.load_state_dict(state_dict['model_state_dict'])
-            model.eval()
-            config.training.cluster_method = 'distance_embedding'
+
+            config.training.cluster_method = 'kmeans_auto_embedding'
             config.training.cluster_distance_threshold = 0.01
             alpha = 0.1
             accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
@@ -1507,7 +1510,7 @@ def plot_falling_particles(config_file, epoch_list, log_dir, logger, device):
             plt.xlim([0, max_radius])
             plt.ylim(config.plotting.ylim)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/func_all_{config_file}_{epoch}.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/results/learned_function_{epoch}.tif", dpi=170.7)
             rmserr_list = torch.stack(rmserr_list)
             rmserr_list = to_numpy(rmserr_list)
             print("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
@@ -1525,7 +1528,7 @@ def plot_falling_particles(config_file, epoch_list, log_dir, logger, device):
             plt.xlabel(r'$d_{ij}$', fontsize=78)
             plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/results/true_func.tif", dpi=170.7)
             plt.close()
 
 
@@ -1794,7 +1797,7 @@ def plot_cell_tracking(config_file, epoch_list, log_dir, logger, device):
             plt.xlim([0, max_radius])
             plt.ylim(config.plotting.ylim)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/func_all_{config_file}_{epoch}.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/results/learned_function_{epoch}.tif", dpi=170.7)
             rmserr_list = torch.stack(rmserr_list)
             rmserr_list = to_numpy(rmserr_list)
             print("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
@@ -1820,7 +1823,7 @@ def plot_cell_tracking(config_file, epoch_list, log_dir, logger, device):
             plt.xlim([0, max_radius])
             plt.ylim(config.plotting.ylim)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/func_all_{config_file}_{epoch}.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/results/learned_function_{epoch}.tif", dpi=170.7)
             rmserr_list = torch.stack(rmserr_list)
             rmserr_list = to_numpy(rmserr_list)
             print("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
@@ -2236,7 +2239,7 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
             ax.xaxis.set_major_formatter(FormatStrFormatter('%.3f'))
             ax.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/func_all_{config_file}_{epoch}.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/results/learned_function_{epoch}.tif", dpi=170.7)
             rmserr_list = torch.stack(rmserr_list)
             rmserr_list = to_numpy(rmserr_list)
             print("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
@@ -2254,7 +2257,7 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
             plt.xlabel(r'$d_{ij}$', fontsize=78)
             # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/results/true_func.tif", dpi=170.7)
             plt.close()
 
             rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
@@ -3797,7 +3800,7 @@ def plot_particle_field(config_file, epoch_list, log_dir, logger, cc, device):
             plt.xlim([0, max_radius])
             plt.ylim(config.plotting.ylim)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/func_all_{config_file}_{epoch}.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/results/learned_function_{epoch}.tif", dpi=170.7)
             rmserr_list = torch.stack(rmserr_list)
             rmserr_list = to_numpy(rmserr_list)
             print("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
@@ -5998,7 +6001,7 @@ def data_plot(config, config_file, epoch_list, device):
         plt.ylabel('Loss', fontsize=78)
         plt.xlabel('Epochs', fontsize=78)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/loss_{config_file}.tif", dpi=170.7)
+        plt.savefig(f"./{log_dir}/results/loss.tif", dpi=170.7)
         plt.close()
         # print('final loss {:.3e}'.format(loss[-1]))
         # logger.info('final loss {:.3e}'.format(loss[-1]))
@@ -6331,12 +6334,13 @@ if __name__ == '__main__':
     #                'mouse_city_c1_entropy_1', 'mouse_city_c1_entropy_2', 'mouse_city_c1_entropy_3',
     #                'mouse_city_c1_entropy_4', 'mouse_city_c1_entropy_5', 'mouse_city_c1_entropy_6', 'mouse_city_c1_entropy_7']
 
-    config_list = ['falling_particles_N1000_2']
+    # config_list = ['falling_particles_N1000_2']
+    config_list = ['arbitrary_3']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         data_plot(config=config, config_file=config_file, epoch_list=['best'], device=device)
-        data_plot(config=config, config_file=config_file, epoch_list=['all'], device=device)
+        # data_plot(config=config, config_file=config_file, epoch_list=['all'], device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

@@ -101,7 +101,7 @@ def sparsify_cluster(cluster_method, proj_interaction, embedding, cluster_distan
         new_labels[labels == label_list[n]] = n
 
     computation_time = time.time() - start_time
-    print(f"Clustering computation time is {computation_time} seconds.")
+    print(f"clustering computation time is {computation_time:0.2f} seconds.")
 
     fig,ax = fig_init()
     ax.scatter(proj_interaction[:, 0], proj_interaction[:, 1], c=new_labels, s=5, cmap='tab20')
