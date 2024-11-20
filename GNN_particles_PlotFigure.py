@@ -2238,7 +2238,7 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, bLatex, device):
             y_data = popt_list[:, 0]
             lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
 
-            if epoch=='20':
+            if '20' in epoch:
 
                 threshold = 0.4
                 relative_error = np.abs(y_data - x_data) / x_data
@@ -2310,6 +2310,7 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, bLatex, device):
                     popt_list = np.load(f"./{log_dir}/results/coeff_pysrr.npy")
 
                 else:
+                    print('curve fitting ...')
                     text_trap = StringIO()
                     sys.stdout = text_trap
                     popt_list = []
@@ -2819,7 +2820,7 @@ def plot_Coulomb(config_file, epoch_list, log_dir, logger, bLatex, device):
             plt.xlim([0, 0.02])
             plt.ylim([-0.5E6, 0.5E6])
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/learedfunc__{epoch}.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/results/learned_func_{epoch}.tif", dpi=170.7)
             plt.close()
 
             fig, ax = fig_init(formatx='%.3f', formaty='%.0f')
@@ -6299,7 +6300,7 @@ if __name__ == '__main__':
 
     # config_list = ['arbitrary_3_field_video_bison']
 
-    # config_list = ['Coulomb_3_256']
+    config_list = ['Coulomb_3_256']
 
     # config_list = ['boids_16_256']
     # config_list = ['arbitrary_16']
@@ -6319,7 +6320,7 @@ if __name__ == '__main__':
 
     # config_list = ['falling_particles_N1000_2']
 
-    config_list = ['arbitrary_3', 'gravity_16']
+    # config_list = ['gravity_16']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
