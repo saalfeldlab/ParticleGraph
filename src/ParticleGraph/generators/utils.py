@@ -20,7 +20,7 @@ from torchvision.transforms import v2
 from scipy import ndimage
 
 
-def generate_from_data(config, device, visualize=True, step=None):
+def generate_from_data(config, device, visualize=True, step=None, cmap=None):
 
     data_folder_name = config.data_folder_name
 
@@ -29,7 +29,7 @@ def generate_from_data(config, device, visualize=True, step=None):
     elif 'LG-ODE' in data_folder_name:
         load_LG_ODE(config, device, visualize, step)
     elif 'WaterDropSmall' in data_folder_name:
-        load_WaterDropSmall(config, device, visualize, step)
+        load_WaterDropSmall(config, device, visualize, step, cmap)
     else:
         raise ValueError(f'Unknown data folder name {data_folder_name}')
 

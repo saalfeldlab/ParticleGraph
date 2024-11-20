@@ -20,6 +20,17 @@ from ParticleGraph.utils import *
 import json
 from tqdm import trange
 
+def get_index_particles(x, n_particle_types, dimension):
+    index_particles = []
+    for n in range(n_particle_types):
+        if dimension == 2:
+            index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
+        elif dimension == 3:
+            index = np.argwhere(x[:, 7].detach().cpu().numpy() == n)
+        index_particles.append(index.squeeze())
+    return index_particles
+
+
 
 def skip_to(file, start_line):
     with open(file) as f:
@@ -207,18 +218,22 @@ def load_LG_ODE(config, device=None, visualize=False, step=1000):
 
 
 
-def load_WaterDropSmall(config, device=None, visualize=False, step=1000):
+def load_WaterDropSmall(config, device=None, visualize=None, step=None, cmap=None):
     # create output folder, empty it if bErase=True, copy files into it
     data_folder_name = config.data_folder_name
     dataset_name = config.dataset
 
     simulation_config = config.simulation
     train_config = config.training
-
+    n_frames = simulation_config.n_frames
+    dimension = 2
 
     n_particles = simulation_config.n_particles
+    n_particle_types = simulation_config.n_particle_types
     n_runs = train_config.n_runs
     n_particles = simulation_config.n_particles
+
+    delta_t = simulation_config.delta_t
 
 
     # Loading Data
@@ -254,114 +269,111 @@ def load_WaterDropSmall(config, device=None, visualize=False, step=1000):
     n_wall_particles = 1000
     real_n_particles = n_particles - n_wall_particles
 
-    for run in trange(n_runs):
+    for run in range(n_runs):
 
         x_list = []
         y_list = []
 
-        for frame in range(1,n_frames):
+        for frame in trange(1,n_frames-2):
 
-            x = []
+            y = torch.zeros((n_particles, dimension), device=device)
 
-            pos = torch.zeros(real_n_particles, dimension, device=device)
+            dpos = torch.zeros((n_particles, dimension), device=device)
+
+            window = windows[frame]
+            size = window["size"]
+            position_seq = position[window["pos"]: window["pos"] + 4 * size * dim]
+            position_seq.resize(4, size, dim)
+            position_seq = position_seq.transpose(1, 0, 2)
+            position_seq = position_seq[:, :-1]
+            pos = torch.tensor(position_seq, dtype=torch.float32, device=device)
+            # Swap the columns
+            pos[:, [0, 1]] = pos[:, [1, 0]]
+
+            pos_prev = pos[:, 0, :].squeeze()
+            pos_next = pos[:, 2, :].squeeze()
+            pos = pos[:,1,:].squeeze()
+
+            dpos[n_wall_particles:] = (pos - pos_prev) / delta_t
+            dpos_next = (pos_next - pos) / delta_t
+
             n_particles_wall = n_wall_particles // 4
-            wall_pos = torch.linspace(0, 1, n_particles_wall, device=device)
+            wall_pos = torch.linspace(0.1, 0.9, n_particles_wall, device=device)
             wall0 = torch.zeros(n_particles_wall, 2, device=device)
             wall0[:, 0] = wall_pos
+            wall0[:, 1] = 0.1
             wall1 = torch.zeros(n_particles_wall, 2, device=device)
             wall1[:, 0] = wall_pos
-            wall1[:, 1] = 1
+            wall1[:, 1] = 0.9
             wall2 = torch.zeros(n_particles_wall, 2, device=device)
             wall2[:, 1] = wall_pos
+            wall2[:, 0] = 0.1
             wall3 = torch.zeros(n_particles_wall, 2, device=device)
             wall3[:, 1] = wall_pos
-            wall3[:, 0] = 1
+            wall3[:, 0] = 0.9
             pos = torch.cat((wall0, wall1, wall2, wall3, pos), dim=0)
+            noise_wall = torch.randn((n_particles, dimension), device=device) * 0.001
+            noise_wall[n_wall_particles:] = noise_wall[n_wall_particles:] * 0
+            pos = pos + noise_wall
 
-            pos = pos + torch.randn((n_particles, dimension), device=device) * 0.001
+            type = torch.cat((torch.zeros(n_wall_particles, device=device), torch.ones(real_n_particles, device=device)), 0)
+            type = type[:, None]
 
-            dpos[0:n_wall_particles, :] = 0
-            type = torch.cat(
-                (torch.zeros(n_wall_particles, device=device), torch.ones(real_n_particles, device=device)), 0)
+            particle_id = torch.arange(n_particles, device=device)
+            particle_id = particle_id[:, None]
 
-            if run == 0:
-                fig = plt.figure(figsize=(12, 12))
-                s_p = 100
-                plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=s_p, c='k')
-                plt.scatter(to_numpy(x[:, 2] + x[:, 4] * 0.1), to_numpy(x[:, 1] + x[:, 3] * 0.1), s=1, c='r')
-                plt.xlim([-3, 3])
-                plt.ylim([-3, 3])
-                plt.tight_layout()
-                num = f"{to_numpy(time_[0]):06}"
-                plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)  # 170.7)
-                plt.close()
+            x = torch.concatenate((particle_id.clone().detach(), pos.clone().detach(), dpos.clone().detach(), type.clone().detach()), 1)
 
-
-    for run in trange(n_runs):
-
-        x_list = []
-        y_list = []
-
-        for frame in range(n_frames):
-            x = []
-            y = []
-            time_= torch.tensor(times[run][0][frame], dtype=torch.float32, device=device).repeat(num_atoms)
-            for i in range(n_particles):
-                loc_ = torch.tensor(loc[run][i][frame], dtype=torch.float32, device=device)
-                vel_ = torch.tensor(vel[run][i][frame], dtype=torch.float32, device=device)
-                x_ = torch.cat((loc_, vel_), 0)
-                x.append(x_)
-                acc_ = torch.tensor(acc[run][i][frame], dtype=torch.float32, device=device)
-                y.append(acc_)
-
-            x = torch.stack(x)
-            x = torch.cat((torch.arange(n_particles, dtype=torch.float32, device=device).t()[:,None], x, time_.t()[:,None]), 1)
             x_list.append(x)
 
-            y = torch.stack(y)
+            y[n_wall_particles:] = (dpos_next - dpos[n_wall_particles:]) / delta_t
+
             y_list.append(y)
 
-            if run == 0:
+            # fig = plt.figure(figsize=(12, 12))
+            # plt.scatter(to_numpy(pos_prev[:, 0]), to_numpy(pos_prev[:, 1]), s=100, c='b')
+            # plt.xlim([0, 1])
+            # plt.ylim([0, 1])
+            # plt.scatter(to_numpy(pos[:, 0]), to_numpy(pos[:, 1]), s=100, c='g')
+            # plt.scatter(to_numpy(pos_next[:, 0]), to_numpy(pos_next[:, 1]), s=100, c='r')
+
+            if run <4:
                 fig = plt.figure(figsize=(12, 12))
+                fig, ax = fig_init(formatx="%.1f", formaty="%.1f")
                 s_p = 100
-                plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=s_p, c='k')
-                plt.scatter(to_numpy(x[:, 2]+x[:, 4]*0.1), to_numpy(x[:, 1]+x[:, 3]*0.1), s=1, c='r')
-                plt.xlim([-3, 3])
-                plt.ylim([-3, 3])
+
+                index_particles = get_index_particles(x, n_particle_types, dimension)
+
+                for n in range(n_particle_types):
+                    plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
+                                s=s_p, color=cmap.color(n))
+
+                plt.xlim([0, 1])
+                plt.ylim([0, 1])
                 plt.tight_layout()
-                num = f"{to_numpy(time_[0]):06}"
+                num = f"{frame-1:06}"
                 plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)  # 170.7)
                 plt.close()
 
+    torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
+    torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
 
-        torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
-        torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
-
-    torch.save(connection_matrix_list, f'graphs_data/graphs_{dataset_name}/connection_matrix_list.pt')
 
     # load corresponding data for this time slice
-    for idx in trange(4000):
-        window = windows[idx]
-        size = window["size"]
-        particle_type = particle_type[window["type"]: window["type"] + size]
-        # particle_type = torch.from_numpy(particle_type)
-        position_seq = position[window["pos"]: window["pos"] + window_length * size * dim]
-        position_seq.resize(window_length, size, dim)
-        position_seq = position_seq.transpose(1, 0, 2)
-        target_position = position_seq[:, -1]
-        position_seq = position_seq[:, :-1]
-        # target_position = torch.from_numpy(target_position)
-        position_seq = torch.from_numpy(position_seq)
+    # for idx in trange(4000):
+    #     window = windows[idx]
+    #     size = window["size"]
+    #     particle_type = particle_type[window["type"]: window["type"] + size]
+    #     # particle_type = torch.from_numpy(particle_type)
+    #     position_seq = position[window["pos"]: window["pos"] + window_length * size * dim]
+    #     position_seq.resize(window_length, size, dim)
+    #     position_seq = position_seq.transpose(1, 0, 2)
+    #     target_position = position_seq[:, -1]
+    #     position_seq = position_seq[:, :-1]
+    #     # target_position = torch.from_numpy(target_position)
+    #     position_seq = torch.from_numpy(position_seq)
 
 
-        pts = position_seq[:,0,:].squeeze()
-
-        fig = plt.figure(figsize=(8, 8))
-        plt.scatter(to_numpy(pts[:,0]), to_numpy(pts[:,1]), s=10, c='b')
-        plt.xlim([0,1])
-        plt.ylim([0,1])
-        plt.tight_layout()
-        plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{idx}.tif", dpi=60)  # 170.7)
 
 
 

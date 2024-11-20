@@ -173,9 +173,6 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         else:
             out = self.lin_edge(in_features) * field_j
 
-        fig = plt.figure()
-        plt.scatter(-delta_pos.detach().cpu().numpy(), self.lin_edge(in_features).detach().cpu().numpy(), s=20, c='k')
-
         return out
 
     def update(self, aggr_out):
@@ -196,3 +193,6 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         if self.model == 'PDE_E':
             acc = p1 * p2 / r ** 2
             return -acc  # Elec particles
+
+        # fig = plt.figure()
+        # plt.scatter(-delta_pos.detach().cpu().numpy(), self.lin_edge(in_features).detach().cpu().numpy(), s=20, c='k')

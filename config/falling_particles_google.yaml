@@ -6,7 +6,7 @@ simulation:
   params: [[0, 0.2, 0.4, 0.6, 0.8], [0.2, 0.2, 0.2, 0.2, 0.2]]
   min_radius: 0
   max_radius: 0.01
-  n_particles: 678
+  n_particles: 1678
   n_particle_types: 2
   n_interactions: 2
   n_frames: 994
@@ -40,12 +40,12 @@ training:
   n_epochs: 20
   batch_size: 32
   small_init_batch_size: False
-  n_runs: 20
+  n_runs: 100
   sparsity: 'replace_embedding'
   sparsity_freq: 3
   cluster_method: 'kmeans_auto_embedding'
   data_augmentation: False
-  data_augmentation_loop: 500
+  data_augmentation_loop: 100
   fix_cluster_embedding: True
   device: 'auto'
 
