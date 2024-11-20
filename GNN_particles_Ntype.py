@@ -68,4 +68,4 @@ if __name__ == '__main__':
                       test_simulation=False, sample_embedding=False, device=device, step=1) # config.simulation.n_frames // 200, )    # config.simulation.n_frames // 7
 
 
-# bsub -n 4 -gpu "num=1" -q gpu_h100 "python GNN_particles_Ntype.py -o train falling_particles_N1000_1"
+# bsub -n 4 -gpu "num=1" -q gpu_h100 "python GNN_particles_Ntype.py -o train falling_particles_google_single"

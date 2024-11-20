@@ -113,7 +113,7 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
 
         in_features = torch.cat((delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
 
-        out = self.lin_edge(in_features) * field_j
+        out = self.lin_edge(in_features) # * field_j
 
         return out
 

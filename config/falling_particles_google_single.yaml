@@ -40,7 +40,7 @@ training:
   n_epochs: 20
   batch_size: 32
   small_init_batch_size: False
-  n_runs: 100
+  n_runs: 2
   sparsity: 'replace_embedding'
   sparsity_freq: 3
   cluster_method: 'kmeans_auto_embedding'
