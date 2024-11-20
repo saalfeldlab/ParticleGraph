@@ -6,7 +6,7 @@ import warnings
 import matplotlib.pyplot as plt
 from ParticleGraph.utils import *
 import matplotlib as mpl
-# from pysr import PySRRegressor
+from pysr import PySRRegressor
 
 def power_model(x, a, b):
     return a / (x ** b)
