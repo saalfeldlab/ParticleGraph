@@ -300,7 +300,7 @@ def load_WaterDropSmall(config, device=None, visualize=None, step=None, cmap=Non
 
             dpos = torch.zeros((n_particles, dimension), device=device)
 
-            window = windows[frame]
+            window = windows[frame + run * 995]
             size = window["size"]
             position_seq = position[window["pos"]: window["pos"] + 4 * size * dim]
             position_seq.resize(4, size, dim)
@@ -341,7 +341,6 @@ def load_WaterDropSmall(config, device=None, visualize=None, step=None, cmap=Non
             # plt.scatter(to_numpy(pos_next[:, 0]), to_numpy(pos_next[:, 1]), s=100, c='r')
 
             if run <4:
-                fig = plt.figure(figsize=(12, 12))
                 fig, ax = fig_init(formatx="%.1f", formaty="%.1f")
                 s_p = 100
 
