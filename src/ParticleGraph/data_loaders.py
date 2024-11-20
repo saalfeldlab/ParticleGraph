@@ -265,30 +265,30 @@ def load_WaterDropSmall(config, device=None, visualize=None, step=None, cmap=Non
             }
             windows.append(desc)
 
-
     n_wall_particles = 1000
     real_n_particles = n_particles - n_wall_particles
+    idx = 0
 
     for run in range(n_runs):
 
         x_list = []
         y_list = []
 
-        n_particles_wall = n_wall_particles // 4
-        wall_pos = torch.linspace(0.1, 0.9, n_particles_wall, device=device)
-        wall0 = torch.zeros(n_particles_wall, 2, device=device)
+
+        wall_pos = torch.linspace(0.1, 0.9, n_wall_particles//4, device=device)
+        wall0 = torch.zeros(n_wall_particles//4, 2, device=device)
         wall0[:, 0] = wall_pos
         wall0[:, 1] = 0.1
-        wall1 = torch.zeros(n_particles_wall, 2, device=device)
+        wall1 = torch.zeros(n_wall_particles//4, 2, device=device)
         wall1[:, 0] = wall_pos
         wall1[:, 1] = 0.9
-        wall2 = torch.zeros(n_particles_wall, 2, device=device)
+        wall2 = torch.zeros(n_wall_particles//4, 2, device=device)
         wall2[:, 1] = wall_pos
         wall2[:, 0] = 0.1
-        wall3 = torch.zeros(n_particles_wall, 2, device=device)
+        wall3 = torch.zeros(n_wall_particles//4, 2, device=device)
         wall3[:, 1] = wall_pos
         wall3[:, 0] = 0.9
-        noise_wall = torch.randn((n_particles_wall, dimension), device=device) * 0.001
+        noise_wall = torch.randn((n_wall_particles//4, dimension), device=device) * 0.001
         wall0 = wall0 + noise_wall
         wall1 = wall1 + noise_wall
         wall2 = wall2 + noise_wall
@@ -300,7 +300,8 @@ def load_WaterDropSmall(config, device=None, visualize=None, step=None, cmap=Non
 
             dpos = torch.zeros((n_particles, dimension), device=device)
 
-            window = windows[frame + run * 995]
+            window = windows[idx]
+            idx += 1
             size = window["size"]
             position_seq = position[window["pos"]: window["pos"] + 4 * size * dim]
             position_seq.resize(4, size, dim)
