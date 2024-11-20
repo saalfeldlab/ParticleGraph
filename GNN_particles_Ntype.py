@@ -51,8 +51,8 @@ if __name__ == '__main__':
             best_model = None
     else:
         action = 'test'
-        best_model = 'best'
-        config_list = ["falling_particles_N1000_1"] #,"falling_particles_N1000_2","falling_particles_N1000_3","falling_particles_N1000_4","falling_particles_N1000_5","falling_particles_N1000_6"]
+        best_model = '16_2500'
+        config_list = ["falling_particles_N1000_2"] #,"falling_particles_N1000_2","falling_particles_N1000_3","falling_particles_N1000_4","falling_particles_N1000_5","falling_particles_N1000_6"]
 
     for config_file in config_list:
 
@@ -64,7 +64,7 @@ if __name__ == '__main__':
         if 'train' in action:
             data_train(config=config, config_file=config_file, erase=False, best_model=best_model, device=device)
         if 'test' in action:
-            data_test(config=config, config_file=config_file, visualize=True, style='color', verbose=False, best_model='best', run=1, plot_data=False,
+            data_test(config=config, config_file=config_file, visualize=True, style='black', verbose=False, best_model=best_model, run=0, plot_data=False,
                       test_simulation=False, sample_embedding=False, device=device, step=1) # config.simulation.n_frames // 200, )    # config.simulation.n_frames // 7
 
 
