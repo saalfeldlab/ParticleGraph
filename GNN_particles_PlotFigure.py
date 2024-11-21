@@ -2288,7 +2288,7 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, bLatex, device):
                     csv_.append(-popt_list[:, 1])
                     csv_ = np.array(csv_)
                     plt.plot(p_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-                    plt.scatter(p_list, -popt_list[:, 1], color='k', s=50, alpha=0.5)
+                    plt.scatter(p_list, -popt_list[:, 1], color='w', s=50, alpha=0.5)
                     plt.xlim([0, 5.5])
                     plt.ylim([-4, 0])
                     plt.xlabel(r'True mass', fontsize=78)
@@ -2346,20 +2346,18 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, bLatex, device):
                 y_data_ = y_data[pos[:, 0]]
                 lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
 
-
                 residuals = y_data_ - linear_model(x_data_, *lin_fit)
                 ss_res = np.sum(residuals ** 2)
                 ss_tot = np.sum((y_data_ - np.mean(y_data_)) ** 2)
                 r_squared = 1 - (ss_res / ss_tot)
 
-
                 print(f'R^2$: {np.round(r_squared, 2)}  Slope: {np.round(lin_fit[0], 2)}  outliers: {np.sum(relative_error > threshold)}  threshold: {threshold} ')
                 logger.info(f'R^2$: {np.round(r_squared, 2)}  Slope: {np.round(lin_fit[0], 2)}  outliers: {np.sum(relative_error > threshold)}  threshold: {threshold} ')
 
                 fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
-                plt.scatter(x_data_,y_data_, color='k', s=1, alpha=0.5)
+                plt.scatter(x_data_,y_data_, color='w', s=1, alpha=0.5)
                 plt.plot(p_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-                plt.scatter(p_list, popt_list, color='k', s=50, alpha=0.5)
+                plt.scatter(p_list, popt_list, color='w', s=50, alpha=1)
                 plt.xlabel(r'True mass ', fontsize=64)
                 plt.ylabel(r'Learned mass ', fontsize=64)
                 plt.xlim([0, 5.5])
@@ -2888,7 +2886,7 @@ def plot_Coulomb(config_file, epoch_list, log_dir, logger, bLatex, device):
             y_data = popt_list.squeeze()
             lin_fit, r_squared, relative_error, not_outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
             plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-            plt.scatter(qiqj_list, popt_list, color='k', s=200, alpha=0.1)
+            plt.scatter(qiqj_list, popt_list, color='w', s=200, alpha=0.1)
             plt.xlim([-2.5, 5])
             plt.ylim([-2.5, 5])
             plt.ylabel(r'Learned $q_i q_j$', fontsize=64)
@@ -3128,7 +3126,7 @@ def plot_boids(config_file, epoch_list, log_dir, logger, bLatex, device):
             fmt = lambda x, pos: '{:.1f}e-5'.format((x) * 1e5, pos)
             ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/func_dij_{config_file}_{epoch}.tif", dpi=300)
+            plt.savefig(f"./{log_dir}/results/learned_func_{epoch}.tif", dpi=300)
             plt.close()
 
             fig, ax = fig_init()
@@ -3144,7 +3142,7 @@ def plot_boids(config_file, epoch_list, log_dir, logger, bLatex, device):
             fmt = lambda x, pos: '{:.1f}e-5'.format((x) * 1e5, pos)
             ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/true_func_dij_{config_file}_{epoch}.tif", dpi=300)
+            plt.savefig(f"./{log_dir}/results/true_func_{epoch}.tif", dpi=300)
             func_list = func_list * ynorm
             func_list_ = torch.clamp(func_list, min=torch.tensor(-1.0E-4, device=device),
                                      max=torch.tensor(1.0E-4, device=device))
@@ -3165,7 +3163,7 @@ def plot_boids(config_file, epoch_list, log_dir, logger, bLatex, device):
                 alignment_list=[]
                 separation_list=[]
                 r_list = []
-                for it in range(0,n_frames//2,n_frames//40):
+                for it in range(0,n_frames//2,n_frames//80):
                     x = x_list[0][it].clone().detach()
                     particle_index = to_numpy(x[:, 0:1]).astype(int)
                     x[:, 5:6] = torch.tensor(new_labels[particle_index],
@@ -6321,7 +6319,7 @@ if __name__ == '__main__':
 
     # config_list = ['falling_particles_N1000_2']
 
-    config_list = ['gravity_16']
+    config_list = ['boids_16_256_sparse']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')

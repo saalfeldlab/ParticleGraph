@@ -342,7 +342,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
         plt.ylabel('Loss', fontsize=12)
         plt.xlabel('Epochs', fontsize=12)
 
-        if (simulation_config.n_interactions < 100) & ('google' not in dataset_name):
+        if (simulation_config.n_interactions < 100) & (has_bounding_box == False):
 
             ax = fig.add_subplot(1, 5, 2)
             embedding = get_embedding(model.a, 1)

@@ -180,7 +180,7 @@ class CustomColorMap:
 
     def color(self, index):
 
-        if self.model_name == 'PDE_F':
+        if (self.model_name == 'PDE_F') | (self.model_name == 'PDE_F1') | (self.model_name == 'PDE_F2') | (self.model_name == 'PDE_F3'):
             match index:
                 case 0:
                     color = (0.75, 0.75, 0.75)
@@ -195,7 +195,7 @@ class CustomColorMap:
         elif self.model_name == 'PDE_E':
             match index:
                 case 0:
-                    color = (0, 0, 0)
+                    color = (1, 1, 1)
                 case 1:
                     color = (0, 0.5, 0.75)
                 case 2:
@@ -203,7 +203,7 @@ class CustomColorMap:
                 case 3:
                     color = (0.75, 0, 0)
                 case _:
-                    color = (1, 1, 1)
+                    color = (0.5, 0.5, 0.5)
         elif self.has_mesh:
             if index == 0:
                 color = (0, 0, 0)
