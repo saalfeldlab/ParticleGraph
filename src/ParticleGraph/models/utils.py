@@ -84,7 +84,7 @@ def get_in_features(rr, embedding_, config_model, max_radius):
             in_features = torch.cat((0 * rr[:, None], rr[:, None] / max_radius, embedding_, embedding_), dim=1)
         case 'PDE_K1':
             in_features = torch.cat((0 * rr[:, None], rr[:, None] / max_radius), dim=1)
-        case 'PDE_F':
+        case 'PDE_F'| 'PDE_F1' | 'PDE_F2' | 'PDE_F3':
             in_features = torch.cat((0 * rr[:, None], rr[:, None] / max_radius, rr[:, None] / max_radius, embedding_, embedding_), dim=-1)
 
 
@@ -1065,7 +1065,7 @@ def choose_training_model(model_config, device):
             model.edges = torch.tensor(e, dtype=torch.long, device=device)
         case 'PDE_Cell_A' | 'PDE_Cell_B' | 'PDE_Cell_B_area' | 'PDE_Cell_A_area':
             model = Interaction_Cell(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
-        case 'PDE_F':
+        case 'PDE_F'| 'PDE_F1' | 'PDE_F2' | 'PDE_F3':
             model =  Interaction_Falling_Box(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
     model_name = model_config.graph_model.mesh_model_name
     match model_name:

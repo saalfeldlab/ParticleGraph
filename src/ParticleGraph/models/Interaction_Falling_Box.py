@@ -100,14 +100,14 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
 
         embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
 
+
         pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
 
-        if self.update_type == 'no_pos':
-            pred = self.lin_phi(torch.cat((d_pos, pred, embedding), dim=-1))
-        elif self.update_type == 'none':
-            pred = pred
-        else:
-            pred = self.lin_phi(torch.cat((pos, d_pos, pred, embedding), dim=-1))
+        match self.model:
+            case 'PDE_F' | 'PDE_F1':
+                pred = self.lin_phi(torch.cat((pos, d_pos, pred, embedding), dim=-1))
+            case 'PDE_F2':
+                pred = self.lin_phi(torch.cat((d_pos, pred, embedding), dim=-1))
 
         return pred
 
@@ -117,9 +117,13 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
         r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
         delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
 
-        in_features = torch.cat((delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
+        match self.model:
+            case 'PDE_F' | 'PDE_F2':
+                in_features = torch.cat((delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
+            case 'PDE_F1':
+                in_features = torch.cat((d_pos_i, delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
 
-        out = self.lin_edge(in_features) # * field_j
+        out = self.lin_edge(in_features)
 
         return out
 

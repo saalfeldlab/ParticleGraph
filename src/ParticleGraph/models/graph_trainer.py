@@ -91,6 +91,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
     n_epochs = train_config.n_epochs
     max_radius = simulation_config.max_radius
     min_radius = simulation_config.min_radius
+    n_particles = simulation_config.n_particles
     n_particle_types = simulation_config.n_particle_types
     delta_t = simulation_config.delta_t
     noise_level = train_config.noise_level
@@ -121,23 +122,25 @@ def data_train_particle(config, config_file, erase, best_model, device):
     logger.info(f'Graph files N: {n_runs}')
     time.sleep(0.5)
 
+    print('Load data ...')
     x_list = []
     y_list = []
     run_lengths = list()
-    n_particles = 0
     for run in trange(n_runs):
         x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
         y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
         x_list.append(x)
         y_list.append(y)
         run_lengths.append(len(x))
-        if x.shape[0] > n_particles:
-            n_particles = x.shape[0]
-            config.simulation.n_particles = n_particles
+        # if x[0].shape[0] > n_particles:
+        #     n_particles = x[0].shape[0]
+        #     config.simulation.n_particles = n_particles
     x = x_list[0][0].clone().detach()
     y = y_list[0][0].clone().detach()
-    if n_runs>100:
-        n_steps = n_runs // 25
+    print(f'N particles: {n_particles}')
+    logger.info(f'N particles: {n_particles}')
+    if n_runs>=100:
+        n_steps = n_runs // 10
     else:
         n_steps = 1
     for run in trange(0,n_runs,n_steps):
@@ -3599,9 +3602,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         ynorm = torch.load(f'./log/try_{config_file}/ynorm.pt', map_location=device).to(device)
         vnorm = torch.load(f'./log/try_{config_file}/vnorm.pt', map_location=device).to(device)
         x = x_list[0][0].clone().detach()
-        n_particles = int(x.shape[0] / ratio)
+        if 'PDE_F' not in model_config.particle_model_name:
+            n_particles = int(x.shape[0] / ratio)
+            config.simulation.n_particles = n_particles
         n_frames = len(x_list[0])
-        config.simulation.n_particles = n_particles
         index_particles = get_index_particles(x, n_particle_types, dimension)
         if n_particle_types>1000:
             index_particles = []
@@ -3775,7 +3779,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     if plot_data:
         x = x_list[0][0].clone().detach()
 
-    for it in trange(n_frames*2):
+    for it in trange(n_frames):
 
         if it < n_frames-4:
 

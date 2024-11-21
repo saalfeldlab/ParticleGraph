@@ -398,30 +398,33 @@ def load_WaterRamps(config, device=None, visualize=None, step=None, cmap=None):
     with open(os.path.join(data_folder_name, "metadata.json")) as f:
         metadata = json.load(f)
 
-    n_wall_particles = 1000
+    n_wall_particles = 400
+    n_max_particles = 0
 
     for run in range(n_runs):
         x_list = []
         y_list = []
 
-        wall_pos = torch.linspace(0.095, 0.905, n_wall_particles//4, device=device)
+        gap = 0.008
+
+        wall_pos = torch.linspace(0.1-gap, 0.9+gap, n_wall_particles//4, device=device)
         wall0 = torch.zeros(n_wall_particles//4, 2, device=device)
         wall0[:, 0] = wall_pos
-        wall0[:, 1] = 0.095
+        wall0[:, 1] = 0.1-gap
         wall1 = torch.zeros(n_wall_particles//4, 2, device=device)
         wall1[:, 0] = wall_pos
-        wall1[:, 1] = 0.905
+        wall1[:, 1] = 0.9+gap
         wall2 = torch.zeros(n_wall_particles//4, 2, device=device)
         wall2[:, 1] = wall_pos
-        wall2[:, 0] = 0.095
+        wall2[:, 0] = 0.1-gap
         wall3 = torch.zeros(n_wall_particles//4, 2, device=device)
         wall3[:, 1] = wall_pos
-        wall3[:, 0] = 0.905
-        noise_wall = torch.randn((n_wall_particles//4, dimension), device=device) * 0.001
-        wall0 = wall0 + noise_wall
-        wall1 = wall1 + noise_wall
-        wall2 = wall2 + noise_wall
-        wall3 = wall3 + noise_wall
+        wall3[:, 0] = 0.9+gap
+        # noise_wall = torch.randn((n_wall_particles//4, dimension), device=device) * 0.001
+        # wall0 = wall0 + noise_wall
+        # wall1 = wall1 + noise_wall
+        # wall2 = wall2 + noise_wall
+        # wall3 = wall3 + noise_wall
 
         position = np.load(data_folder_name + 'position.' + str(run) + '.npy', allow_pickle=True)
         # Swap the columns
@@ -433,14 +436,15 @@ def load_WaterRamps(config, device=None, visualize=None, step=None, cmap=None):
         type = torch.cat((torch.zeros(n_wall_particles, device=device), type), 0)
         type = type[:, None]
 
-
         for frame in trange(1,position.shape[0]-2):
 
             pos_prev = position[frame-1].squeeze()
-            pos_next = position[frame].squeeze()
-            pos = position[frame+1].squeeze()
+            pos_next = position[frame+1].squeeze()
+            pos = position[frame].squeeze()
 
             real_n_particles = pos.shape[0]
+            if real_n_particles > n_max_particles:
+                n_max_particles = real_n_particles
             n_particles = n_wall_particles + pos.shape[0]
 
             y = torch.zeros((n_particles, dimension), device=device)
@@ -472,13 +476,10 @@ def load_WaterRamps(config, device=None, visualize=None, step=None, cmap=None):
                 plt.style.use('dark_background')
                 fig, ax = fig_init(formatx="%.1f", formaty="%.1f")
                 s_p = 20
-
                 index_particles = get_index_particles(x, n_particle_types, dimension)
-
                 for n in range(n_particle_types):
                     plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
                                 s=s_p, color=cmap.color(n))
-
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
                 plt.tight_layout()
@@ -489,6 +490,7 @@ def load_WaterRamps(config, device=None, visualize=None, step=None, cmap=None):
         torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
         torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
 
+    print (f'n_max_particles: {n_max_particles}')
 
     # load corresponding data for this time slice
     # for idx in trange(4000):
