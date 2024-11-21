@@ -124,12 +124,16 @@ def data_train_particle(config, config_file, erase, best_model, device):
     x_list = []
     y_list = []
     run_lengths = list()
+    n_particles = 0
     for run in trange(n_runs):
         x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
         y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
         x_list.append(x)
         y_list.append(y)
         run_lengths.append(len(x))
+        if x.shape[0] > n_particles:
+            n_particles = x.shape[0]
+            config.simulation.n_particles = n_particles
     x = x_list[0][0].clone().detach()
     y = y_list[0][0].clone().detach()
     if n_runs>100:
@@ -188,8 +192,6 @@ def data_train_particle(config, config_file, erase, best_model, device):
 
     print('Update variables ...')
     x = x_list[1][0].clone().detach()
-    n_particles = x.shape[0]
-    config.simulation.n_particles = n_particles
     index_particles = get_index_particles(x, n_particle_types, dimension)
     type_list = get_type_list(x, dimension)
     print(f'N particles: {n_particles} {len(torch.unique(type_list))} types')
@@ -337,7 +339,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
         plt.ylabel('Loss', fontsize=12)
         plt.xlabel('Epochs', fontsize=12)
 
-        if (simulation_config.n_interactions < 100):
+        if (simulation_config.n_interactions < 100) & ('google' not in dataset_name):
 
             ax = fig.add_subplot(1, 5, 2)
             embedding = get_embedding(model.a, 1)
@@ -3770,9 +3772,12 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     geomloss_list=[]
     time.sleep(1)
 
-    for it in trange(n_frames):
+    if plot_data:
+        x = x_list[0][0].clone().detach()
 
-        if it < n_frames:
+    for it in trange(n_frames*2):
+
+        if it < n_frames-4:
 
             x0 = x_list[0][it].clone().detach()
             y0 = y_list[0][it].clone().detach()
@@ -3891,6 +3896,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 if has_ghost:
                     y = y[mask_ghost]
 
+            if plot_data:
+                y = y0.clone().detach() / ynorm
+
             if model_config.prediction == '2nd_derivative':
                 y = y * ynorm * delta_t
 
@@ -3904,8 +3912,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
             x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1] + x[:,dimension + 1:2*dimension+1] * delta_t)  # position update
 
-        if plot_data:
-            x = x0.clone().detach()
+
 
         if (it % step == 0) & (it >= 0) & visualize:
 

@@ -98,12 +98,16 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
         particle_id = x[:, 0:1]
 
-        # embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
-        embedding = self.a[1, to_numpy(particle_id), :].squeeze()
+        embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
 
         pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
 
-        pred = self.lin_phi(torch.cat((pos, d_pos, pred, embedding), dim=-1))
+        if self.update_type == 'no_pos':
+            pred = self.lin_phi(torch.cat((d_pos, pred, embedding), dim=-1))
+        elif self.update_type == 'none':
+            pred = pred
+        else:
+            pred = self.lin_phi(torch.cat((pos, d_pos, pred, embedding), dim=-1))
 
         return pred
 
@@ -123,17 +127,4 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
 
         return aggr_out  # self.lin_node(aggr_out)
 
-    def psi(self, r, p1, p2):
 
-        if (self.model == 'PDE_A') | (self.model =='PDE_A_bis') | (self.model=='PDE_ParticleField_A'):
-            return r * (p1[0] * torch.exp(-torch.abs(r) ** (2 * p1[1]) / (2 * self.sigma ** 2)) - p1[2] * torch.exp(-torch.abs(r) ** (2 * p1[3]) / (2 * self.sigma ** 2)))
-        if self.model == 'PDE_B':
-            cohesion = p1[0] * 0.5E-5 * r
-            separation = -p1[2] * 1E-8 / r
-            return (cohesion + separation) * p1[1] / 500
-        if self.model == 'PDE_G':
-            psi = p1 / r ** 2
-            return psi[:, None]
-        if self.model == 'PDE_E':
-            acc = p1 * p2 / r ** 2
-            return -acc  # Elec particles
