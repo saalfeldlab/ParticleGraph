@@ -50,9 +50,9 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        action = 'test'
+        action = 'train'
         best_model = None
-        config_list = ["falling_water_ramp_x1", "falling_water_ramp_x2", "falling_water_ramp_x3", "falling_water_ramp_x4", "falling_water_ramp_x5"]
+        config_list = ["falling_water_ramp_x7"]
 
     for config_file in config_list:
 
@@ -64,7 +64,7 @@ if __name__ == '__main__':
         if 'train' in action:
             data_train(config=config, config_file=config_file, erase=False, best_model=best_model, device=device)
         if 'test' in action:
-            data_test(config=config, config_file=config_file, visualize=True, style='black', verbose=False, best_model='best', run=4, plot_data=False,
+            data_test(config=config, config_file=config_file, visualize=True, style='black', verbose=False, best_model='best', run=2, plot_data=False,
                       test_simulation=False, sample_embedding=False, device=device, step=10) # config.simulation.n_frames // 200, )    # config.simulation.n_frames // 7
 
 

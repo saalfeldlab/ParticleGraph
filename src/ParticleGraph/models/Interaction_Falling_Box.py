@@ -62,6 +62,7 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
         self.n_frames = simulation_config.n_frames
         self.state_hot_encoding = train_config.state_hot_encoding
         self.do_tracking = train_config.do_tracking
+        self.time_window = train_config.time_window
         
         temperature = train_config.state_temperature
         self.temperature = torch.tensor(temperature, device=self.device)
@@ -83,45 +84,58 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
 
         self.data_id = data_id
         self.vnorm = vnorm
-        self.training = training
-        self.has_field = has_field
 
-        x, edge_index = data.x, data.edge_index
-        edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+        if self.time_window == 0:
 
-        if has_field:
-            field = x[:,6:7]
+            x, edge_index = data.x, data.edge_index
+            edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+            pos = x[:, 1:self.dimension+1]
+            d_pos = x[:, self.dimension+1:1+2*self.dimension]
+            particle_id = x[:, 0:1]
+            embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
+            pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding)
+            match self.model:
+                case 'PDE_F' | 'PDE_F1':
+                    pred = self.lin_phi(torch.cat((pos, d_pos, pred, embedding), dim=-1))
+
         else:
-            field = torch.ones_like(x[:,6:7])
-
-        pos = x[:, 1:self.dimension+1]
-        d_pos = x[:, self.dimension+1:1+2*self.dimension]
-        particle_id = x[:, 0:1]
-
-        embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
-
-
-        pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
-
-        match self.model:
-            case 'PDE_F' | 'PDE_F1':
-                pred = self.lin_phi(torch.cat((pos, d_pos, pred, embedding), dim=-1))
+            x, edge_index = data.x, data.edge_index
+            edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+            x = torch.stack(x)
+            pos = x[:, :, 1:self.dimension + 1]
+            pos = pos.transpose(0, 1)
+            pos = torch.reshape(pos, (pos.shape[0], pos.shape[1] * pos.shape[2]))
+            d_pos = x[:, :, self.dimension + 1:1 + 2 * self.dimension]
+            d_pos = d_pos.transpose(0, 1)
+            d_pos = torch.reshape(d_pos, (d_pos.shape[0], d_pos.shape[1] * d_pos.shape[2]))
+            particle_id = x[0, :, 0:1].squeeze()
+            embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
+            pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding)
+            match self.model:
+                case 'PDE_F' | 'PDE_F1':
+                    pred = self.lin_phi(torch.cat((pos[:,0:2], d_pos[:,0:2], pred, embedding), dim=-1))
 
         return pred
 
-    def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j, field_j):
+    def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j):
         # distance normalized by the max radius
 
-        r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
-        delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
+        if self.time_window ==0:
+            delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
+            match self.model:
+                case 'PDE_F':
+                    r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
+                    in_features = torch.cat((delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
+                case 'PDE_F1':
+                    in_features = torch.cat((d_pos_i, delta_pos, embedding_i, embedding_j), dim=-1)
+            out = self.lin_edge(in_features)
+        else:
+            delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
+            match self.model:
+                case 'PDE_F1':
+                    in_features = torch.cat((d_pos_i[:,0:2], delta_pos, embedding_i, embedding_j), dim=-1)
+            out = self.lin_edge(in_features)
 
-        match self.model:
-            case 'PDE_F':
-                in_features = torch.cat((delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
-            case 'PDE_F1':
-                in_features = torch.cat((d_pos_i, delta_pos, embedding_i, embedding_j), dim=-1)
-
-        out = self.lin_edge(in_features)
 
         return out
 
