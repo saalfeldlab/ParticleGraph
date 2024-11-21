@@ -182,13 +182,13 @@ def data_train_particle(config, config_file, erase, best_model, device):
     if 'PDE_K' in model_config.particle_model_name:
         model.connection_matrix = torch.load(f'graphs_data/graphs_{dataset_name}/connection_matrix_list.pt', map_location=device)
 
+
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
     logger.info(f"Total Trainable Params: {n_total_params}")
     logger.info(f'Learning rates: {lr}, {lr_embedding}')
     model.train()
-
 
     print(f'network: {net}')
     print(f'initial batch_size: {batch_size}')
@@ -279,6 +279,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
                     new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
                     y[:, 0] = new_x
                     y[:, 1] = new_y
+
                 if batch == 0:
                     y_batch = y[:, 0:2]
                 else:
@@ -346,7 +347,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
         plt.ylabel('Loss', fontsize=12)
         plt.xlabel('Epochs', fontsize=12)
 
-        if (simulation_config.n_interactions < 100) & (has_bounding_box == False):
+        if (simulation_config.n_interactions < 100) & (has_bounding_box == False) & ('PDE_K' not in model_config.particle_model_name):
 
             ax = fig.add_subplot(1, 5, 2)
             embedding = get_embedding(model.a, 1)
@@ -3917,6 +3918,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     n_runs = training_config.n_runs
     n_frames = simulation_config.n_frames
     delta_t = simulation_config.delta_t
+    time_window = training_config.time_window
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     dimension = simulation_config.dimension
     has_siren_time = 'siren_with_time' in model_config.field_type
@@ -4179,7 +4181,14 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     if plot_data:
         x = x_list[0][0].clone().detach()
 
-    for it in trange(n_frames):
+    if time_window > 0:
+        start_it = time_window
+        stop_it = n_frames
+    else:
+        start_it = 0
+        stop_it = n_frames
+
+    for it in trange(start_it, stop_it):
 
         if it < n_frames-4:
 
@@ -4287,7 +4296,15 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
                 adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
                 edge_index = adj_t.nonzero().t().contiguous()
-                dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
+
+                if time_window > 0:
+                    xt = []
+                    for t in range(time_window):
+                        x_ = x_list[run][k - t].clone().detach()
+                        xt.append(x_[:, :])
+                    dataset = data.Data(x=xt, edge_index=edges)
+                else:
+                    dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
                 if test_simulation:
                     y = y0 / ynorm
                     # dataset.x[:,5] = x0[:,5]
@@ -4315,8 +4332,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     x[:, dimension + 1:2*dimension+1] = y
 
             x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1] + x[:,dimension + 1:2*dimension+1] * delta_t)  # position update
-
-
 
         if (it % step == 0) & (it >= 0) & visualize:
 
@@ -4470,7 +4485,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 if it < n_frames-1:
                     x0_ = x_list[0][it + 1].clone().detach()
                     plt.scatter(x0_[:, 2].detach().cpu().numpy(),
-                                x0_[:, 1].detach().cpu().numpy(), s=40, color='k',alpha=1, edgecolors='None')
+                                x0_[:, 1].detach().cpu().numpy(), s=40, color='w',alpha=1, edgecolors='None')
 
                 plt.xlim([-3, 3])
                 plt.ylim([-3, 3])

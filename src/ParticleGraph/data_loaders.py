@@ -178,37 +178,40 @@ def load_LG_ODE(config, device=None, visualize=False, step=1000):
         x_list = []
         y_list = []
 
-        for frame in range(n_frames):
+        for frame in range(1, n_frames-1):
             x = []
             y = []
-            time_= torch.tensor(times[run][0][frame], dtype=torch.float32, device=device).repeat(num_atoms)
-            for i in range(n_particles):
-                loc_ = torch.tensor(loc[run][i][frame], dtype=torch.float32, device=device)
-                vel_ = torch.tensor(vel[run][i][frame], dtype=torch.float32, device=device)
-                x_ = torch.cat((loc_, vel_), 0)
-                x.append(x_)
+            test = times[run][0][frame-1:frame+2]
 
-                acc_ = torch.tensor(acc[run][i][frame], dtype=torch.float32, device=device)
-                y.append(acc_)
+            if test[2]-test[0] == 2:
+                time_= torch.tensor(times[run][0][frame], dtype=torch.float32, device=device).repeat(num_atoms)
 
-            x = torch.stack(x)
-            x = torch.cat((torch.arange(n_particles, dtype=torch.float32, device=device).t()[:,None], x, time_.t()[:,None]), 1)
-            x_list.append(x)
+                for i in range(n_particles):
+                    loc_ = torch.tensor(loc[run][i][frame], dtype=torch.float32, device=device)
+                    vel_ = torch.tensor(vel[run][i][frame], dtype=torch.float32, device=device)
+                    x_ = torch.cat((loc_, vel_), 0)
+                    x.append(x_)
+                    acc_ = torch.tensor(acc[run][i][frame], dtype=torch.float32, device=device)
+                    y.append(acc_)
 
-            y = torch.stack(y)
-            y_list.append(y)
+                x = torch.stack(x)
+                x = torch.cat((torch.arange(n_particles, dtype=torch.float32, device=device).t()[:,None], x, time_.t()[:,None]), 1)
+                x_list.append(x)
 
-            if run == 0:
-                fig = plt.figure(figsize=(12, 12))
-                s_p = 100
-                plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=s_p, c='k')
-                plt.scatter(to_numpy(x[:, 2]+x[:, 4]*0.1), to_numpy(x[:, 1]+x[:, 3]*0.1), s=1, c='r')
-                plt.xlim([-3, 3])
-                plt.ylim([-3, 3])
-                plt.tight_layout()
-                num = f"{to_numpy(time_[0]):06}"
-                plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)  # 170.7)
-                plt.close()
+                y = torch.stack(y)
+                y_list.append(y)
+
+                if run == 0:
+                    fig = plt.figure(figsize=(12, 12))
+                    s_p = 100
+                    plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=s_p, c='k')
+                    plt.scatter(to_numpy(x[:, 2]+x[:, 4]*0.1), to_numpy(x[:, 1]+x[:, 3]*0.1), s=1, c='r')
+                    plt.xlim([-3, 3])
+                    plt.ylim([-3, 3])
+                    plt.tight_layout()
+                    num = f"{to_numpy(time_[0]):06}"
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)  # 170.7)
+                    plt.close()
 
 
         torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')

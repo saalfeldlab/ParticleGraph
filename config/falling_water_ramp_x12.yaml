@@ -20,7 +20,7 @@ graph_model:
   mesh_model_name: ''
   prediction: '2nd_derivative'
 
-  input_size: 14
+  input_size: 8
   output_size: 2
   hidden_dim: 128
   n_mp_layers: 3
@@ -39,8 +39,7 @@ plotting:
 
 training:
   n_epochs: 20
-  batch_size: 32
-  time_window: 4
+  batch_size: 64
   small_init_batch_size: False
   n_runs: 1000
   sparsity: 'replace_embedding'
@@ -51,8 +50,8 @@ training:
   fix_cluster_embedding: True
   device: 'auto'
 
-  learning_rate_start: 5E-4
-  learning_rate_embedding_start: 5E-4
+  learning_rate_start: 1E-6
+  learning_rate_embedding_start: 1E-6
 
 
 

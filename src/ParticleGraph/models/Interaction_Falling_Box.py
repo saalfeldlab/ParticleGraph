@@ -112,7 +112,7 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
             embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
             pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding)
             match self.model:
-                case 'PDE_F' | 'PDE_F1':
+                case 'PDE_F' | 'PDE_F1' | 'PDE_F2':
                     pred = self.lin_phi(torch.cat((pos[:,0:2], d_pos[:,0:2], pred, embedding), dim=-1))
 
         return pred
@@ -133,7 +133,9 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
             delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
             match self.model:
                 case 'PDE_F1':
-                    in_features = torch.cat((d_pos_i[:,0:2], delta_pos, embedding_i, embedding_j), dim=-1)
+                    in_features = torch.cat((pos_i, pos_j[:,0:2], embedding_i, embedding_j), dim=-1)
+                case 'PDE_F2':
+                    in_features = torch.cat((pos_i, pos_j, embedding_i, embedding_j), dim=-1)
             out = self.lin_edge(in_features)
 
 

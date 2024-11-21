@@ -1,6 +1,6 @@
 description: 'system of particles connected with spring'
 dataset: 'springs_matrix_example_5'
-data_folder_name: '/groups/saalfeld/home/allierc/Py/ODE_PDE/LG-ODE/data/example_5/'
+data_folder_name: '/groups/saalfeld/home/allierc/Py/ODE_PDE/LG-ODE_MODIFIED/data/example_3/'
 
 simulation:
   params: [[0, 1.], [0.2, 0.8]]
@@ -10,7 +10,7 @@ simulation:
   n_particle_types: 3
   n_interactions: 3
   n_frames: 50
-  delta_t: 0.001
+  delta_t: 0.01
   dpos_init: 1.0E-5
   boundary: 'no'
   start_frame: -500

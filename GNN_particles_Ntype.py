@@ -50,12 +50,16 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        action = 'train'
+        action = 'test'
         best_model = None
-        config_list = ["falling_water_ramp_x7"]
+        config_list = ["falling_water_ramp_x1", "falling_water_ramp_x2", "falling_water_ramp_x3", "falling_water_ramp_x4", "falling_water_ramp_x5", "falling_water_ramp_x6",
+                        "falling_water_ramp_x7", "falling_water_ramp_x8", "falling_water_ramp_x9", "falling_water_ramp_x10", "falling_water_ramp_x11", "falling_water_ramp_x12",
+                       "falling_water_ramp_x13", "falling_water_ramp_x14", "falling_water_ramp_x15", "falling_water_ramp_x16"]
 
     for config_file in config_list:
 
+        print('')
+        print(config_file)
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         device = set_device(config.training.device)
         print(f'device {device}')
