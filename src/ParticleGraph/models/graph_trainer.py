@@ -3852,7 +3852,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
     if time_window > 0:
         start_it = time_window
-        stop_it = n_frames
+        stop_it = n_frames-1
     else:
         start_it = 0
         stop_it = n_frames
@@ -3888,8 +3888,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             if do_tracking:
                 rmserr = torch.zeros(1, device=device)
             else:
-                rmserr = torch.sqrt(
-                    torch.mean(torch.sum(bc_dpos(x[:, 1:dimension + 1] - x0[:, 1:dimension + 1]) ** 2, axis=1)))
+                rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 1:dimension + 1] - x0[:, 1:dimension + 1]) ** 2, axis=1)))
             if x.shape[0] > 5000:
                 geomloss = gloss(x[0:5000, 1:3], x0[0:5000, 1:3])
             else:
@@ -4010,6 +4009,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1] + x[:, dimension + 1:2 * dimension + 1] * delta_t)  # position update
 
             if time_window:
+                fixed_pos = torch.argwhere(x[:,5]==0)
+                x[fixed_pos, 3:5] = x0[fixed_pos, 3:5] * 0
                 x_list[0][it+1] = x.clone().detach()
 
         if (it % step == 0) & (it >= 0) & visualize:

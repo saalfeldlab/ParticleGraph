@@ -49,8 +49,8 @@ training:
   data_augmentation: False
   data_augmentation_loop: 200
   fix_cluster_embedding: True
-  learning_rate_start: 1.0E-4
-  learning_rate_embedding_start: 1.0E-4
+  learning_rate_start: 1.0E-5
+  learning_rate_embedding_start: 1.0E-5
   device: 'auto'
 
 
