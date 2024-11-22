@@ -76,10 +76,7 @@ def data_train(config=None, config_file=None, erase=False, best_model=None, devi
     elif 'PDE_GS' in config.graph_model.particle_model_name:
         data_solar_system(config, config_file, erase, best_model, device)
     else:
-        if has_time_window:
-            data_train_particle_window(config, config_file, erase, best_model, device)
-        else:
-            data_train_particle(config, config_file, erase, best_model, device)
+        data_train_particle(config, config_file, erase, best_model, device)
 
 
 def data_train_particle(config, config_file, erase, best_model, device):
@@ -4233,12 +4230,13 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     if plot_data:
         x = x_list[0][0].clone().detach()
 
-    if time_window > 0:
-        start_it = time_window
-        stop_it = n_frames
-    else:
-        start_it = 0
-        stop_it = n_frames
+    # if time_window > 0:
+    #     start_it = time_window
+    #     stop_it = n_frames
+    # else:
+
+    start_it = 0
+    stop_it = n_frames
 
     for it in trange(start_it, stop_it):
 
@@ -4356,14 +4354,14 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
                 edge_index = adj_t.nonzero().t().contiguous()
 
-                if time_window > 0:
-                    xt = []
-                    for t in range(time_window):
-                        x_ = x_list[run][k - t].clone().detach()
-                        xt.append(x_[:, :])
-                    dataset = data.Data(x=xt, edge_index=edges)
-                else:
-                    dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
+                # if time_window > 0:
+                #     xt = []
+                #     for t in range(time_window):
+                #         x_ = x_list[run][k - t].clone().detach()
+                #         xt.append(x_[:, :])
+                #     dataset = data.Data(x=xt, edge_index=edges)
+                # else:
+                #     dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
 
                 if test_simulation | plot_data:
                     y = y0 / ynorm
