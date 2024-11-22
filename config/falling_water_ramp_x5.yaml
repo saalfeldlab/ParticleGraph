@@ -40,7 +40,7 @@ plotting:
 training:
   n_epochs: 20
   batch_size: 1
-  time_window: 4
+  time_window: 0
   small_init_batch_size: True
   n_runs: 2
   sparsity: 'none'
