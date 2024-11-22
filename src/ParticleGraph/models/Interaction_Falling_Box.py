@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import torch_geometric as pyg
 import torch_geometric.utils as pyg_utils
 from ParticleGraph.models.MLP import MLP
@@ -78,29 +79,22 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
                 torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
                              requires_grad=True, dtype=torch.float32))
 
-
-
     def forward(self, data=[], data_id=[], training=[], vnorm=[], phi=[], has_field=False, frame=[]):
 
         self.data_id = data_id
         self.vnorm = vnorm
 
-        if self.time_window == 0:
+        x, edge_index = data.x, data.edge_index
+        edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
-            x, edge_index = data.x, data.edge_index
-            edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+        if self.time_window == 0:
             pos = x[:, 1:self.dimension+1]
             d_pos = x[:, self.dimension+1:1+2*self.dimension]
             particle_id = x[:, 0:1]
             embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
             pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding)
-            match self.model:
-                case 'PDE_F' | 'PDE_F1':
-                    pred = self.lin_phi(torch.cat((pos, d_pos, pred, embedding), dim=-1))
-
+            pred = self.lin_phi(torch.cat((d_pos, pred, embedding), dim=-1))
         else:
-            x, edge_index = data.x, data.edge_index
-            edge_index, _ = pyg_utils.remove_self_loops(edge_index)
             x = torch.stack(x)
             pos = x[:, :, 1:self.dimension + 1]
             pos = pos.transpose(0, 1)
@@ -111,32 +105,30 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
             particle_id = x[0, :, 0:1].squeeze()
             embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
             pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding)
-            match self.model:
-                case 'PDE_F' | 'PDE_F1' | 'PDE_F2':
-                    pred = self.lin_phi(torch.cat((pos[:,0:2], d_pos[:,0:2], pred, embedding), dim=-1))
+            pred = self.lin_phi(torch.cat((d_pos, pred, embedding), dim=-1))
+
+            # fig = plt.figure(figsize=(10, 10))
+            # for k in range(4):
+            #     plt.scatter(to_numpy(pos[:, 1+k*2]), to_numpy(pos[:, 0+k*2]),s=10)
+            # print('')
+            # print(pos[1200])
+            # print((pos[1200,0:2]-pos[1200,2:4])/0.0025)
+            # print(d_pos[1200,0:2])
+            # print((pos[1200,4:6]-pos[1200,6:8])/0.0025)
+            # print(d_pos[1200,4:6])
+
 
         return pred
 
     def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j):
         # distance normalized by the max radius
 
-        if self.time_window ==0:
-            delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
-            match self.model:
-                case 'PDE_F':
-                    r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
-                    in_features = torch.cat((delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
-                case 'PDE_F1':
-                    in_features = torch.cat((d_pos_i, delta_pos, embedding_i, embedding_j), dim=-1)
-            out = self.lin_edge(in_features)
+        delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
+        if self.time_window == 0:
+            in_features = torch.cat((d_pos_i, d_pos_j, delta_pos, embedding_i, embedding_j), dim=-1)
         else:
-            delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
-            match self.model:
-                case 'PDE_F1':
-                    in_features = torch.cat((pos_i, pos_j[:,0:2], embedding_i, embedding_j), dim=-1)
-                case 'PDE_F2':
-                    in_features = torch.cat((pos_i, pos_j, embedding_i, embedding_j), dim=-1)
-            out = self.lin_edge(in_features)
+            in_features = torch.cat((pos_i-pos_j, d_pos_i-d_pos_j, embedding_i, embedding_j), dim=-1)
+        out = self.lin_edge(in_features)
 
 
         return out

@@ -464,7 +464,9 @@ def load_WaterRamps(config, device=None, visualize=None, step=None, cmap=None):
 
             x_list.append(x)
 
-            y[n_wall_particles:] = (dpos_next - dpos[n_wall_particles:]) / delta_t
+            # y[n_wall_particles:] = (dpos_next - dpos[n_wall_particles:]) / delta_t
+
+            y[n_wall_particles:] = dpos_next
 
             y_list.append(y)
 

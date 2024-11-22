@@ -16,18 +16,18 @@ simulation:
   start_frame: 0
 
 graph_model:
-  particle_model_name: 'PDE_F1'
+  particle_model_name: 'PDE_F'
   mesh_model_name: ''
   prediction: '2nd_derivative'
 
-  input_size: 8
+  input_size: 20
   output_size: 2
   hidden_dim: 128
-  n_mp_layers: 3
+  n_mp_layers: 5
   aggr_type: 'add'
   embedding_dim: 2
 
-  input_size_update: 8
+  input_size_update: 12
   n_layers_update: 3
   hidden_dim_update: 128
   output_size_update: 2
@@ -39,19 +39,17 @@ plotting:
 
 training:
   n_epochs: 20
-  batch_size: 64
-  small_init_batch_size: False
-  n_runs: 1000
-  sparsity: 'replace_embedding'
+  batch_size: 8
+  time_window: 4
+  small_init_batch_size: True
+  n_runs: 2
+  sparsity: 'none'
   sparsity_freq: 3
   cluster_method: 'kmeans_auto_embedding'
   data_augmentation: False
-  data_augmentation_loop: 10000
+  data_augmentation_loop: 200
   fix_cluster_embedding: True
   device: 'auto'
-
-  learning_rate_start: 1E-5
-  learning_rate_embedding_start: 1E-5
 
 
 

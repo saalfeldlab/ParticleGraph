@@ -22,8 +22,8 @@ graph_model:
 
   input_size: 8
   output_size: 2
-  hidden_dim: 128
-  n_mp_layers: 3
+  hidden_dim: 256
+  n_mp_layers: 5
   aggr_type: 'add'
   embedding_dim: 2
 
@@ -41,7 +41,7 @@ training:
   n_epochs: 20
   batch_size: 32
   small_init_batch_size: False
-  n_runs: 100
+  n_runs: 1000
   sparsity: 'replace_embedding'
   sparsity_freq: 3
   cluster_method: 'kmeans_auto_embedding'
