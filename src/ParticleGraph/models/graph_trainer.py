@@ -3756,9 +3756,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             mesh_model.load_state_dict(state_dict['model_state_dict'])
             mesh_model.eval()
         else:
-            # state_dict = torch.load(net, map_location=device)
-            # model.load_state_dict(state_dict['model_state_dict'])
-            # model.eval()
+            state_dict = torch.load(net, map_location=device)
+            model.load_state_dict(state_dict['model_state_dict'])
+            model.eval()
             mesh_model = None
             if 'PDE_K' in model_config.particle_model_name:
                 model.connection_matrix = torch.load(f'graphs_data/graphs_{dataset_name}/connection_matrix_list.pt',
@@ -4405,5 +4405,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/GT_{config_file}_{it}.tif", dpi=170.7)
             plt.close()
+
+
 
 
