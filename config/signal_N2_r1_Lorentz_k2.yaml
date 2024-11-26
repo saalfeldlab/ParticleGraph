@@ -49,7 +49,7 @@ training:
     n_runs: 10
     large_range: False
     sparsity: 'none'
-    data_augmentation: False
+    rotation_augmentation: False
     data_augmentation_loop: 100
     cluster_method: 'kmeans_auto_embedding'
     fix_cluster_embedding: True

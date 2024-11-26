@@ -69,7 +69,7 @@ training:
   noise_level: 0
   sparsity: 'replace_embedding'
   cluster_method: 'distance_embedding'
-  data_augmentation: True
+  rotation_augmentation: True
   data_augmentation_loop: 50
   fix_cluster_embedding: True
   device: 'auto'

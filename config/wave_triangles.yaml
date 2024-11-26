@@ -43,7 +43,7 @@ training:
   small_init_batch_size: True
   n_runs: 2
   sparsity: 'replace_embedding'
-  data_augmentation: True
+  rotation_augmentation: True
   cluster_method: 'kmeans_auto_plot'
   fix_cluster_embedding: True
 

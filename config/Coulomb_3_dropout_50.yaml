@@ -40,7 +40,7 @@ training:
   ghost_method: 'tensor'
   n_ghosts: 500
   sparsity: 'none'
-  data_augmentation: True
+  rotation_augmentation: True
   data_augmentation_loop: 100
   cluster_method: 'distance_plot'
   fix_cluster_embedding: True

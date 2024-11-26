@@ -41,7 +41,7 @@ training:
   n_ghosts: 2600
   sparsity: 'none'
   cluster_method: 'kmeans_auto_plot'
-  data_augmentation: True
+  rotation_augmentation: True
   data_augmentation_loop: 100
   fix_cluster_embedding: True
   device: 'auto'

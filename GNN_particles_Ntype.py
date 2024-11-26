@@ -54,6 +54,26 @@ if __name__ == '__main__':
         best_model = None
         config_list=["falling_water_ramp_x5","falling_water_ramp_x6","falling_water_ramp_x6_bis","falling_water_ramp_x7","falling_water_ramp_x8","falling_water_ramp_x9", "falling_water_ramp_x10", "falling_water_ramp_x11",  "falling_water_ramp_x12",  "falling_water_ramp_x13",  "falling_water_ramp_x14",  "falling_water_ramp_x15",  "falling_water_ramp_x16"]
 
+    import os
+
+    # Define the directory containing the YAML files
+    directory = './config/'
+
+    # Iterate through all files in the directory
+    for filename in os.listdir(directory):
+        if filename.endswith('.yaml'):
+            filepath = os.path.join(directory, filename)
+
+            # Read the file content
+            with open(filepath, 'r') as file:
+                content = file.read()
+
+            # Replace 'data_augmentation:' with 'rotation_augmentation:'
+            content = content.replace('data_augmentation:', 'rotation_augmentation:')
+
+            # Write the modified content back to the file
+            with open(filepath, 'w') as file:
+                file.write(content)
 
     for config_file in config_list:
 

@@ -44,7 +44,7 @@ class Interaction_Mouse_Field(pyg.nn.MessagePassing):
         self.n_nodes = simulation_config.n_nodes
         self.n_nodes_per_axis = int(np.sqrt(self.n_nodes))
         self.max_radius = simulation_config.max_radius
-        self.data_augmentation = train_config.data_augmentation
+        self.rotation_augmentation = train_config.rotation_augmentation
         self.noise_level = train_config.noise_level
         self.embedding_dim = model_config.embedding_dim
         self.n_dataset = train_config.n_runs
@@ -114,7 +114,7 @@ class Interaction_Mouse_Field(pyg.nn.MessagePassing):
             dpos_z_i = d_pos_i[:, 2] / self.vnorm
             dpos_z_j = d_pos_j[:, 2] / self.vnorm
 
-        if self.data_augmentation & (self.training == True):
+        if self.rotation_augmentation & (self.training == True):
             new_delta_pos_x = self.cos_phi * delta_pos[:, 0] + self.sin_phi * delta_pos[:, 1]
             new_delta_pos_y = -self.sin_phi * delta_pos[:, 0] + self.cos_phi * delta_pos[:, 1]
             delta_pos[:, 0] = new_delta_pos_x

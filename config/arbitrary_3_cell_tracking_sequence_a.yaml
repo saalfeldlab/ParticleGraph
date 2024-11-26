@@ -50,7 +50,7 @@ training:
   sparsity: 'replace_embedding_function'
   sparsity_freq: 2
   cluster_method: 'kmeans_auto_plot'
-  data_augmentation: True
+  rotation_augmentation: True
   data_augmentation_loop: 200
   learning_rate_start: 0.001
   learning_rate_embedding_start: 0.001

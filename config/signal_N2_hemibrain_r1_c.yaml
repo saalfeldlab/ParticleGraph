@@ -51,7 +51,7 @@ training:
     large_range: False
     sparsity: 'replace_embedding_function'
     sparsity_freq: 4
-    data_augmentation: False
+    rotation_augmentation: False
     data_augmentation_loop: 500
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True

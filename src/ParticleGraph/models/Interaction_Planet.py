@@ -42,7 +42,7 @@ class Interaction_Planet(pyg.nn.MessagePassing):
         self.n_particles = simulation_config.n_particles
         self.n_particle_types = simulation_config.n_particle_types
         self.max_radius = simulation_config.max_radius
-        self.data_augmentation = train_config.data_augmentation
+        self.rotation_augmentation = train_config.rotation_augmentation
         self.noise_level = train_config.noise_level
         self.embedding_dim = model_config.embedding_dim
         self.n_dataset = train_config.n_runs

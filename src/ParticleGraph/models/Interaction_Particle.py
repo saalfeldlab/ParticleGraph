@@ -42,7 +42,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         self.n_particles = simulation_config.n_particles
         self.n_particle_types = simulation_config.n_particle_types
         self.max_radius = simulation_config.max_radius
-        self.data_augmentation = train_config.data_augmentation
+        self.rotation_augmentation = train_config.rotation_augmentation
         self.noise_level = train_config.noise_level
         self.embedding_dim = model_config.embedding_dim
         self.n_dataset = train_config.n_runs
@@ -125,7 +125,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         dpos_x_j = d_pos_j[:, 0] / self.vnorm
         dpos_y_j = d_pos_j[:, 1] / self.vnorm
 
-        if self.data_augmentation & (self.training == True):
+        if self.rotation_augmentation & (self.training == True):
             new_delta_pos_x = self.cos_phi * delta_pos[:, 0] + self.sin_phi * delta_pos[:, 1]
             new_delta_pos_y = -self.sin_phi * delta_pos[:, 0] + self.cos_phi * delta_pos[:, 1]
             delta_pos[:, 0] = new_delta_pos_x

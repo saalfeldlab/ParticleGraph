@@ -39,7 +39,7 @@ training:
   small_init_batch_size: True
   n_runs: 2
   noise_level: 0
-  data_augmentation: True
+  rotation_augmentation: True
   data_augmentation_loop: 100
   fix_cluster_embedding: True
   device: 'auto'

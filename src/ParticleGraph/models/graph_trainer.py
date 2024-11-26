@@ -97,8 +97,8 @@ def data_train_particle(config, config_file, erase, best_model, device):
     noise_level = train_config.noise_level
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
-    data_augmentation = train_config.data_augmentation
-    data_augmentation_loop = train_config.data_augmentation_loop
+    rotation_augmentation = train_config.rotation_augmentation
+    data__augmentation_loop = train_config.data__augmentation_loop
     target_batch_size = train_config.batch_size
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
@@ -213,9 +213,9 @@ def data_train_particle(config, config_file, erase, best_model, device):
         mask_ghost = mask_ghost[:, 0].astype(int)
 
     print("Start training ...")
-    print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
-    logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
-    Niter = n_frames * data_augmentation_loop // batch_size
+    print(f'{n_frames * data__augmentation_loop // batch_size} iterations per epoch')
+    logger.info(f'{n_frames * data__augmentation_loop // batch_size} iterations per epoch')
+    Niter = n_frames * data__augmentation_loop // batch_size
     print(f'plot every {Niter // 50} iterations')
 
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
@@ -232,7 +232,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
             mask_ghost = np.argwhere(mask_ghost == 1)
             mask_ghost = mask_ghost[:, 0].astype(int)
         total_loss = 0
-        Niter = n_frames * data_augmentation_loop // batch_size
+        Niter = n_frames * data__augmentation_loop // batch_size
 
         for N in trange(Niter):
 
@@ -296,7 +296,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
 
                 y = y / ynorm
 
-                if data_augmentation:
+                if rotation_augmentation:
                     new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
                     new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
                     y[:, 0] = new_x
@@ -533,7 +533,7 @@ def data_solar_system(config, config_file, erase, best_model, device):
     target_batch_size = train_config.batch_size
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
-    data_augmentation_loop = train_config.data_augmentation_loop
+    data__augmentation_loop = train_config.data__augmentation_loop
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     n_runs = train_config.n_runs
     if train_config.small_init_batch_size:
@@ -594,9 +594,9 @@ def data_solar_system(config, config_file, erase, best_model, device):
     logger.info(f'N particles:  {n_particles} {len(torch.unique(type_list))} types')
 
     print("Start training ...")
-    print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
-    logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
-    Niter = n_frames * data_augmentation_loop // batch_size
+    print(f'{n_frames * data__augmentation_loop // batch_size} iterations per epoch')
+    logger.info(f'{n_frames * data__augmentation_loop // batch_size} iterations per epoch')
+    Niter = n_frames * data__augmentation_loop // batch_size
     print(f'plot every {Niter // 100} iterations')
 
     list_loss = []
@@ -607,7 +607,7 @@ def data_solar_system(config, config_file, erase, best_model, device):
         logger.info(f'batch_size: {batch_size}')
 
         total_loss = 0
-        Niter = n_frames * data_augmentation_loop // batch_size
+        Niter = n_frames * data__augmentation_loop // batch_size
 
         for N in range(Niter):
 
@@ -705,8 +705,8 @@ def data_train_cell(config, config_file, erase, best_model, device):
     noise_level = train_config.noise_level
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
-    data_augmentation = train_config.data_augmentation
-    data_augmentation_loop = train_config.data_augmentation_loop
+    rotation_augmentation = train_config.rotation_augmentation
+    data__augmentation_loop = train_config.data__augmentation_loop
     target_batch_size = train_config.batch_size
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
@@ -842,10 +842,10 @@ def data_train_cell(config, config_file, erase, best_model, device):
     x = x_list[1][n_frames - 1].clone().detach()
 
     print("Start training ...")
-    print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
-    logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
+    print(f'{n_frames * data__augmentation_loop // batch_size} iterations per epoch')
+    logger.info(f'{n_frames * data__augmentation_loop // batch_size} iterations per epoch')
 
-    Niter = n_frames * data_augmentation_loop // batch_size
+    Niter = n_frames * data__augmentation_loop // batch_size
     print(f'plot every {Niter // 10} iterations')
 
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
@@ -858,7 +858,7 @@ def data_train_cell(config, config_file, erase, best_model, device):
         logger.info(f'batch_size: {batch_size}')
 
         total_loss = 0
-        Niter = n_frames * data_augmentation_loop // batch_size
+        Niter = n_frames * data__augmentation_loop // batch_size
 
         for N in trange(Niter):
 
@@ -897,7 +897,7 @@ def data_train_cell(config, config_file, erase, best_model, device):
             for i, batch in enumerate(batch_loader):
                 pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi)
 
-            if data_augmentation:
+            if rotation_augmentation:
                 new_x = cos_phi * pred[:, 0] - sin_phi * pred[:, 1]
                 new_y = sin_phi * pred[:, 0] + cos_phi * pred[:, 1]
                 pred[:, 0] = new_x
@@ -1106,8 +1106,8 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
     delta_t = simulation_config.delta_t * time_step
     noise_level = train_config.noise_level
     dataset_name = config.dataset
-    data_augmentation = train_config.data_augmentation
-    data_augmentation_loop = train_config.data_augmentation_loop
+    rotation_augmentation = train_config.rotation_augmentation
+    data__augmentation_loop = train_config.data__augmentation_loop
     target_batch_size = train_config.batch_size
     if train_config.small_init_batch_size:
         get_batch_size = increasing_batch_size(target_batch_size)
@@ -1196,10 +1196,10 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
     logger.info(f'N epochs: {n_epochs}')
 
     print("Start training ...")
-    print(f'{n_frames * data_augmentation_loop} iterations per epoch')
-    logger.info(f'{n_frames * data_augmentation_loop} iterations per epoch')
+    print(f'{n_frames * data__augmentation_loop} iterations per epoch')
+    logger.info(f'{n_frames * data__augmentation_loop} iterations per epoch')
 
-    Niter = n_frames * data_augmentation_loop
+    Niter = n_frames * data__augmentation_loop
     print(f'plot every {Niter // 20 // target_batch_size} iterations')
 
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
@@ -1215,7 +1215,7 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
         logger.info(f'batch_size: {batch_size}')
         print(f'batch_size: {batch_size}')
         total_loss = 0
-        Niter = n_frames * data_augmentation_loop // batch_size
+        Niter = n_frames * data__augmentation_loop // batch_size
         time.sleep(1)
 
         for N in trange(Niter):
@@ -1239,7 +1239,7 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
 
                 pred = model(dataset, data_id=run, training=True, vnorm=vnorm, phi=phi, has_field=False)
 
-                if data_augmentation:
+                if rotation_augmentation:
                     new_x = cos_phi * pred[:, 0] - sin_phi * pred[:, 1]
                     new_y = sin_phi * pred[:, 0] + cos_phi * pred[:, 1]
                     pred[:, 0] = new_x
@@ -1335,7 +1335,7 @@ def data_train_mesh(config, config_file, erase, best_model, device):
     n_node_types = simulation_config.n_node_types
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
-    data_augmentation_loop = train_config.data_augmentation_loop
+    data__augmentation_loop = train_config.data__augmentation_loop
     target_batch_size = train_config.batch_size
     replace_with_cluster = 'replace' in train_config.sparsity
     if train_config.small_init_batch_size:
@@ -1420,8 +1420,8 @@ def data_train_mesh(config, config_file, erase, best_model, device):
         index_nodes.append(index.squeeze())
 
     print("Start training mesh ...")
-    print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
-    logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
+    print(f'{n_frames * data__augmentation_loop // batch_size} iterations per epoch')
+    logger.info(f'{n_frames * data__augmentation_loop // batch_size} iterations per epoch')
 
     list_loss = []
     time.sleep(1)
@@ -1435,7 +1435,7 @@ def data_train_mesh(config, config_file, erase, best_model, device):
             mask_mesh = mask_mesh.repeat(repeat_factor, 1)
 
         total_loss = 0
-        Niter = n_frames * data_augmentation_loop // batch_size
+        Niter = n_frames * data__augmentation_loop // batch_size
         if (batch_size == 1):
             Niter = Niter // 4
 
@@ -1705,8 +1705,8 @@ def data_train_particle_field(config, config_file, erase, best_model, device):
     has_siren = 'siren' in model_config.field_type
     has_siren_time = 'siren_with_time' in model_config.field_type
     has_cell_division = simulation_config.has_cell_division
-    data_augmentation = train_config.data_augmentation
-    data_augmentation_loop = train_config.data_augmentation_loop
+    rotation_augmentation = train_config.rotation_augmentation
+    data__augmentation_loop = train_config.data__augmentation_loop
     target_batch_size = train_config.batch_size
     replace_with_cluster = 'replace' in train_config.sparsity
     has_ghost = train_config.n_ghosts > 0
@@ -1860,8 +1860,8 @@ def data_train_particle_field(config, config_file, erase, best_model, device):
         mask_ghost = mask_ghost[:, 0].astype(int)
 
     print("Start training ...")
-    print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
-    logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
+    print(f'{n_frames * data__augmentation_loop // batch_size} iterations per epoch')
+    logger.info(f'{n_frames * data__augmentation_loop // batch_size} iterations per epoch')
 
     list_loss = []
     time.sleep(1)
@@ -1889,7 +1889,7 @@ def data_train_particle_field(config, config_file, erase, best_model, device):
             mask_ghost = mask_ghost[:, 0].astype(int)
 
         total_loss = 0
-        Niter = n_frames * data_augmentation_loop // batch_size
+        Niter = n_frames * data__augmentation_loop // batch_size
 
         for N in range(Niter):
 
@@ -1946,7 +1946,7 @@ def data_train_particle_field(config, config_file, erase, best_model, device):
 
                 y = y / ynorm
 
-                if data_augmentation:
+                if rotation_augmentation:
                     new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
                     new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
                     y[:, 0] = new_x
@@ -2212,7 +2212,7 @@ def data_train_synaptic(config, config_file, erase, best_model, device):
     n_particle_types = simulation_config.n_particle_types
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
-    data_augmentation_loop = train_config.data_augmentation_loop
+    data__augmentation_loop = train_config.data__augmentation_loop
     recursive_loop = train_config.recursive_loop
     target_batch_size = train_config.batch_size
     delta_t = simulation_config.delta_t
@@ -2337,9 +2337,9 @@ def data_train_synaptic(config, config_file, erase, best_model, device):
     adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency.pt', map_location=device)
 
     print("Start training ...")
-    print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
-    logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
-    Niter = int(n_frames * data_augmentation_loop // batch_size * n_runs / 10)
+    print(f'{n_frames * data__augmentation_loop // batch_size} iterations per epoch')
+    logger.info(f'{n_frames * data__augmentation_loop // batch_size} iterations per epoch')
+    Niter = int(n_frames * data__augmentation_loop // batch_size * n_runs / 10)
     print(f'plot every {Niter // 100} iterations')
 
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
@@ -2357,7 +2357,7 @@ def data_train_synaptic(config, config_file, erase, best_model, device):
 
         total_loss = 0
 
-        Niter = int(n_frames * data_augmentation_loop // batch_size * n_runs / 10)
+        Niter = int(n_frames * data__augmentation_loop // batch_size * n_runs / 10)
         print(f'Niter = {Niter}')
         logger.info(f'Niter = {Niter}')
 
@@ -2686,7 +2686,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
     n_particle_types = simulation_config.n_particle_types
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
-    data_augmentation_loop = train_config.data_augmentation_loop
+    data__augmentation_loop = train_config.data__augmentation_loop
     omega = model_config.omega
     recursive_loop = train_config.recursive_loop
     target_batch_size = train_config.batch_size
@@ -2789,9 +2789,9 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
             model.mask = torch.max(model.mask, supp)
 
     print("Start training ...")
-    print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
-    logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
-    Niter = int(n_frames * data_augmentation_loop // batch_size * n_runs / 10)
+    print(f'{n_frames * data__augmentation_loop // batch_size} iterations per epoch')
+    logger.info(f'{n_frames * data__augmentation_loop // batch_size} iterations per epoch')
+    Niter = int(n_frames * data__augmentation_loop // batch_size * n_runs / 10)
 
     print(f'plot every {Niter // 100} iterations')
 
@@ -2814,7 +2814,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
 
         total_loss = 0
 
-        Niter = int(n_frames * data_augmentation_loop // batch_size * n_runs / 10)
+        Niter = int(n_frames * data__augmentation_loop // batch_size * n_runs / 10)
         print(f'Niter = {Niter}')
         logger.info(f'Niter = {Niter}')
 
@@ -3147,8 +3147,8 @@ def data_train_agents(config, config_file, erase, best_model, device):
     noise_level = train_config.noise_level
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
-    data_augmentation = train_config.data_augmentation
-    data_augmentation_loop = train_config.data_augmentation_loop
+    rotation_augmentation = train_config.rotation_augmentation
+    data__augmentation_loop = train_config.data__augmentation_loop
     target_batch_size = train_config.batch_size
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
@@ -3252,9 +3252,9 @@ def data_train_agents(config, config_file, erase, best_model, device):
         np.savez(f'./log/try_{config_file}/edge_p_p_list', *edge_p_p_list)
 
     print("Start training ...")
-    print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
-    logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
-    Niter = n_frames * data_augmentation_loop // batch_size
+    print(f'{n_frames * data__augmentation_loop // batch_size} iterations per epoch')
+    logger.info(f'{n_frames * data__augmentation_loop // batch_size} iterations per epoch')
+    Niter = n_frames * data__augmentation_loop // batch_size
     print(f'plot every {Niter // 50} iterations')
 
     list_loss = []
@@ -3265,7 +3265,7 @@ def data_train_agents(config, config_file, erase, best_model, device):
         batch_size = get_batch_size(epoch)
         logger.info(f'batch_size: {batch_size}')
         total_loss = 0
-        Niter = n_frames * data_augmentation_loop // batch_size
+        Niter = n_frames * data__augmentation_loop // batch_size
 
         for N in trange(Niter):
 
@@ -3303,7 +3303,7 @@ def data_train_agents(config, config_file, erase, best_model, device):
 
                 y = y / ynorm
 
-                if data_augmentation:
+                if rotation_augmentation:
                     new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
                     new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
                     y[:, 0] = new_x
@@ -3385,8 +3385,8 @@ def data_train_WBI(config, config_file, erase, best_model, device):
     noise_level = train_config.noise_level
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
-    data_augmentation = train_config.data_augmentation
-    data_augmentation_loop = train_config.data_augmentation_loop
+    rotation_augmentation = train_config.rotation_augmentation
+    data__augmentation_loop = train_config.data__augmentation_loop
     target_batch_size = train_config.batch_size
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
@@ -3467,9 +3467,9 @@ def data_train_WBI(config, config_file, erase, best_model, device):
     print('Local connectivity loaded ...')
 
     print("Start training ...")
-    print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
-    logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
-    Niter = n_frames * data_augmentation_loop // batch_size
+    print(f'{n_frames * data__augmentation_loop // batch_size} iterations per epoch')
+    logger.info(f'{n_frames * data__augmentation_loop // batch_size} iterations per epoch')
+    Niter = n_frames * data__augmentation_loop // batch_size
     print(f'plot every {Niter // 50} iterations')
 
     list_loss = []
@@ -3482,7 +3482,7 @@ def data_train_WBI(config, config_file, erase, best_model, device):
         batch_size = get_batch_size(epoch)
         logger.info(f'batch_size: {batch_size}')
         total_loss = 0
-        Niter = n_frames * data_augmentation_loop // batch_size
+        Niter = n_frames * data__augmentation_loop // batch_size
 
         for N in range(Niter):
 
@@ -3504,7 +3504,7 @@ def data_train_WBI(config, config_file, erase, best_model, device):
 
                 y = y / ynorm
 
-                if data_augmentation:
+                if rotation_augmentation:
                     new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
                     new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
                     y[:, 0] = new_x

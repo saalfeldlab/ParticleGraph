@@ -42,7 +42,7 @@ training:
   ghost_method: 'tensor'
   n_ghosts: 360
   sparsity: 'none'
-  data_augmentation: True
+  rotation_augmentation: True
   data_augmentation_loop: 100
   fix_cluster_embedding: True
   device: 'auto'

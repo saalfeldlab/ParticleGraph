@@ -173,7 +173,7 @@ class TrainingConfig(BaseModel):
     coeff_diff: float = 10
 
     noise_level: float = 0
-    data_augmentation: bool = True
+    rotation_augmentation: bool = True
     data_augmentation_loop: int = 40
     recursive_loop: int = 0
     regul_matrix: bool = False

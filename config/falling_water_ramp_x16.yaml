@@ -46,7 +46,7 @@ training:
   sparsity: 'none'
   sparsity_freq: 3
   cluster_method: 'kmeans_auto_embedding'
-  data_augmentation: False
+  rotation_augmentation: False
   data_augmentation_loop: 2000
   fix_cluster_embedding: True
   learning_rate_start: 1.0E-3

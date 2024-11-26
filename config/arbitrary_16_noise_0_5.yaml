@@ -37,7 +37,7 @@ training:
   n_runs: 2
   sparsity: 'none'
   cluster_method: 'distance_plot'
-  data_augmentation: True
+  rotation_augmentation: True
   data_augmentation_loop: 100
   fix_cluster_embedding: True
   noise_level: 5.0E-1

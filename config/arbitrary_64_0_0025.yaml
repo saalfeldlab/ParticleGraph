@@ -39,7 +39,7 @@ training:
   cluster_method: 'distance_plot'
   cluster_distance_threshold: 0.0025
   cluster_connectivity:  'average'
-  data_augmentation: True
+  rotation_augmentation: True
   data_augmentation_loop: 20
   fix_cluster_embedding: True
   device: 'auto'
