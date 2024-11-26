@@ -22,7 +22,7 @@ graph_model:
 
   input_size: 20
   output_size: 2
-  hidden_dim: 128
+  hidden_dim: 256
   n_mp_layers: 5
   aggr_type: 'add'
   embedding_dim: 2
@@ -42,15 +42,15 @@ training:
   batch_size: 1
   time_window: 4
   small_init_batch_size: True
-  n_runs: 100
+  n_runs: 1000
   sparsity: 'none'
   sparsity_freq: 3
   cluster_method: 'kmeans_auto_embedding'
   data_augmentation: False
   data_augmentation_loop: 2000
   fix_cluster_embedding: True
-  learning_rate_start: 1.0E-5
-  learning_rate_embedding_start: 1.0E-5
+  learning_rate_start: 1.0E-3
+  learning_rate_embedding_start: 1.0E-3
   device: 'auto'
 
 

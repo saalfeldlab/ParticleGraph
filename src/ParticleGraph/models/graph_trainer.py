@@ -20,7 +20,7 @@ from scipy.optimize import curve_fit
 from ParticleGraph.generators.cell_utils import *
 from ParticleGraph.fitting_models import linear_model
 from torch_geometric.utils import dense_to_sparse
-
+import torch.optim as optim
 
 def data_train(config=None, config_file=None, erase=False, best_model=None, device=None):
     # plt.rcParams['text.usetex'] = True
@@ -182,6 +182,10 @@ def data_train_particle(config, config_file, erase, best_model, device):
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+
+
     logger.info(f"Total Trainable Params: {n_total_params}")
     logger.info(f'Learning rates: {lr}, {lr_embedding}')
     model.train()
@@ -314,17 +318,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
 
-            # elif has_bounding_box:
-            #     y_ = y_batch.clone().detach()
-            #     fix_pos = ((y_[:,0]==0) & (y_[:,1]==0)) * 1E2 + 1
-            #     fix_pos = fix_pos[:,None].repeat(1,2)
-            #     loss = ((pred - y_batch) * fix_pos).norm(2)
-
             loss = (pred - y_batch).norm(2)
-
-            # if coeff_entropy_loss > 0:
-            #     idx = torch.randperm(len(model.a[1])).clone().detach()
-            #     loss += coeff_entropy_loss * entropy_loss(model.a[1,idx[0:10000]])
 
             loss.backward()
             optimizer.step()
@@ -357,6 +351,10 @@ def data_train_particle(config, config_file, erase, best_model, device):
                    os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
+
+        scheduler.step()
+        print(f'Epoch {epoch + 1}, Learning Rate: {scheduler.get_last_lr()[0]}')
+        logger.info(f'Epoch {epoch + 1}, Learning Rate: {scheduler.get_last_lr()[0]}')
 
         if has_ghost:
             torch.save({'model_state_dict': ghosts_particles.state_dict(),

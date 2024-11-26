@@ -47,7 +47,7 @@ training:
   sparsity_freq: 3
   cluster_method: 'kmeans_auto_embedding'
   data_augmentation: False
-  data_augmentation_loop: 200
+  data_augmentation_loop: 2000
   fix_cluster_embedding: True
   learning_rate_start: 1.0E-5
   learning_rate_embedding_start: 1.0E-5

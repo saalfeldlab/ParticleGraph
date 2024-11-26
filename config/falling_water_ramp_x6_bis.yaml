@@ -39,7 +39,7 @@ plotting:
 
 training:
   n_epochs: 20
-  batch_size: 1
+  batch_size: 8
   time_window: 4
   small_init_batch_size: True
   n_runs: 100
