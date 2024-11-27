@@ -1458,6 +1458,12 @@ def data_train_mesh(config, config_file, erase, best_model, device):
             for batch in range(batch_size):
                 k = np.random.randint(n_frames - 1)
                 x_mesh = x_mesh_list[run][k].clone().detach()
+
+                if batch == 0:
+                    data_id = torch.ones((x_mesh.shape[0],1), dtype=torch.int) * run
+                else:
+                    data_id = torch.cat((data_id, torch.ones((x_mesh.shape[0],1), dtype=torch.int) * run), dim = 0)
+
                 if train_config.noise_level > 0:
                     x_mesh[:, 6:7] = x_mesh[:, 6:7] + train_config.noise_level * torch.randn_like(x_mesh[:, 6:7])
                 dataset = data.Data(x=x_mesh, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
@@ -1472,7 +1478,7 @@ def data_train_mesh(config, config_file, erase, best_model, device):
             optimizer.zero_grad()
 
             for batch in batch_loader:
-                pred = model(batch, data_id=run)
+                pred = model(batch, data_id = data_id)
 
             loss = ((pred - y_batch) * mask_mesh).norm(2)
             loss.backward()
@@ -1920,11 +1926,6 @@ def data_train_particle_field(config, config_file, erase, best_model, device):
                 x = x_list[run][k].clone().detach()
                 x_mesh = x_mesh_list[run][k].clone().detach()
 
-                if batch == 0:
-                    data_id = torch.ones((x.shape[0],1), dtype=torch.int) * run
-                else:
-                    data_id = torch.cat((data_id, torch.ones((x.shape[0],1), dtype=torch.int) * run), dim = 0)
-
                 match model_config.field_type:
                     case 'tensor':
                         x_mesh[:, 6:7] = model.field[run]
@@ -1991,9 +1992,9 @@ def data_train_particle_field(config, config_file, erase, best_model, device):
                 optimizer_ghost_particles.zero_grad()
 
             for batch in batch_loader_f_p:
-                pred_f_p = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, has_field=True)
+                pred_f_p = model(batch, data_id = run, training=True, vnorm=vnorm, phi=phi, has_field=True)
             for batch in batch_loader_p_p:
-                pred_p_p = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, has_field=False)
+                pred_p_p = model(batch, data_id = run, training=True, vnorm=vnorm, phi=phi, has_field=False)
 
             pred_f_p = pred_f_p[f_p_mask]
 

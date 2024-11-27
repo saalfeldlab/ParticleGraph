@@ -50,9 +50,9 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        action = 'test'
+        action = 'train'
         best_model = None
-        config_list=["falling_water_ramp_x1"]
+        config_list=["falling_water_ramp_x4"]
         # config_list=['arbitrary_3_field_video_bison_test']
 
     for config_file in config_list:

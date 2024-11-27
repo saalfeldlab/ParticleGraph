@@ -132,15 +132,17 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
         return pred
 
 
-            # fig = plt.figure(figsize=(10, 10))
-            # for k in range(4):
-            #     plt.scatter(to_numpy(pos[:, 1+k*2]), to_numpy(pos[:, 0+k*2]),s=10)
-            # print('')
-            # print(pos[1200])
-            # print((pos[1200,0:2]-pos[1200,2:4])/0.0025)
-            # print(d_pos[1200,0:2])
-            # print((pos[1200,4:6]-pos[1200,6:8])/0.0025)
-            # print(d_pos[1200,4:6])
+        fig = plt.figure(figsize=(10, 10))
+        plt.scatter(to_numpy(pos[:, 1]), to_numpy(pos[:, 0]), s=10)
+
+        # for k in range(4):
+        #     plt.scatter(to_numpy(pos[:, 1+k*2]), to_numpy(pos[:, 0+k*2]),s=10)
+        # print('')
+        # print(pos[1200])
+        # print((pos[1200,0:2]-pos[1200,2:4])/0.0025)
+        # print(d_pos[1200,0:2])
+        # print((pos[1200,4:6]-pos[1200,6:8])/0.0025)
+        # print(d_pos[1200,4:6])
 
 
     def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j):
