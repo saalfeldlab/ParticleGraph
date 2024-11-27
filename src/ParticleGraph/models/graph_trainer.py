@@ -1902,7 +1902,7 @@ def data_train_particle_field(config, config_file, erase, best_model, device):
         total_loss = 0
         Niter = n_frames * data_augmentation_loop // batch_size
 
-        for N in range(Niter):
+        for N in trange(Niter):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -1917,9 +1917,14 @@ def data_train_particle_field(config, config_file, erase, best_model, device):
             for batch in range(batch_size):
 
                 k = np.random.randint(n_frames - 2)
-
                 x = x_list[run][k].clone().detach()
                 x_mesh = x_mesh_list[run][k].clone().detach()
+
+                if batch == 0:
+                    data_id = torch.ones((x.shape[0],1), dtype=torch.int) * run
+                else:
+                    data_id = torch.cat((data_id, torch.ones((x.shape[0],1), dtype=torch.int) * run), dim = 0)
+
                 match model_config.field_type:
                     case 'tensor':
                         x_mesh[:, 6:7] = model.field[run]
