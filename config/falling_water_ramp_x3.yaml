@@ -20,9 +20,9 @@ graph_model:
   mesh_model_name: ''
   prediction: '2nd_derivative'
 
-  input_size: 20
+  input_size: 9
   output_size: 2
-  hidden_dim: 128
+  hidden_dim: 64
   n_mp_layers: 3
   aggr_type: 'add'
   embedding_dim: 2
@@ -41,9 +41,9 @@ training:
   n_epochs: 20
   batch_size: 64
   small_init_batch_size: False
-  n_runs: 1000
-  time_window: 4
-  recursive_loop: 3
+  n_runs: 2
+  time_window: 0
+  recursive_loop: 0
   sparsity: 'replace_embedding'
   sparsity_freq: 3
   cluster_method: 'kmeans_auto_embedding'
