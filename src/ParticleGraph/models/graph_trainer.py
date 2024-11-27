@@ -249,12 +249,12 @@ def data_train_particle(config, config_file, erase, best_model, device):
             for batch in range(batch_size):
 
                 run = 1 + np.random.randint(n_runs - 1)
-                if batch == 0:
-                    data_id = torch.ones((n_particles,1), dtype=torch.int) * run
-                else:
-                    data_id = torch.cat((data_id, torch.ones((n_particles,1), dtype=torch.int) * run), dim = 0)
                 k = time_window + np.random.randint(run_lengths[run] - 1 - time_window - recursive_loop)
                 x = x_list[run][k].clone().detach()
+                if batch == 0:
+                    data_id = torch.ones((x.shape[0],1), dtype=torch.int) * run
+                else:
+                    data_id = torch.cat((data_id, torch.ones((x.shape[0],1), dtype=torch.int) * run), dim = 0)
 
                 if has_ghost:
                     x_ghost = ghosts_particles.get_pos(dataset_id=run, frame=k, bc_pos=bc_pos)
@@ -3869,6 +3869,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         stop_it = n_frames
 
     x = x_list[0][start_it].clone().detach()
+    n_particles = x.shape[0]
 
     for it in trange(start_it, stop_it):
 
@@ -3967,6 +3968,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
             x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t)
         else:
+
+            data_id = torch.ones((n_particles, 1), dtype=torch.int) * run
 
             x_ = x
             if has_ghost:

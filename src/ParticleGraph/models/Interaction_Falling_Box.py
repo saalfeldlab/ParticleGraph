@@ -150,7 +150,7 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
         r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
 
         if self.time_window == 0:
-            in_features = torch.cat((r[:, None], delta_pos, embedding_i, embedding_j), dim=-1)
+            in_features = torch.cat((r[:, None], delta_pos, d_pos_i, embedding_i, embedding_j), dim=-1)
         else:
             in_features = torch.cat((delta_pos, embedding_i, embedding_j), dim=-1)
 
