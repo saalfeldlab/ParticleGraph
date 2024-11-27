@@ -3863,14 +3863,16 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         start_it = 0
         stop_it = n_frames
 
-    if plot_data:
-        x = x_list[0][start_it].clone().detach()
+    x = x_list[0][start_it].clone().detach()
 
     for it in trange(start_it, stop_it):
 
         if it < n_frames - 4:
             x0 = x_list[0][it].clone().detach()
             y0 = y_list[0][it].clone().detach()
+        if has_mesh:
+            x[:, 1:5] = x0[:, 1:5].clone().detach()
+            dataset_mesh = data.Data(x=x, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
 
         # if 'PDE_K' in model_config.particle_model_name:
         #     if it * delta_t *10 >= timeit[time_id]:
@@ -3878,6 +3880,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         #         x = x0.clone().detach()
         #         time_id += 1
 
+        # error calculations
         if 'PDE_N' in model_config.signal_model_name:
             rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 6:7] - x0[:, 6:7]) ** 2, axis=1)))
             neuron_gt_list.append(x0[neuron_index, 6:7])
@@ -3900,13 +3903,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             else:
                 geomloss = gloss(x[:, 1:3], x0[:, 1:3])
             geomloss_list.append(geomloss.item())
-
         rmserr_list.append(rmserr.item())
 
-        if has_mesh:
-            x[:, 1:5] = x0[:, 1:5].clone().detach()
-            dataset_mesh = data.Data(x=x, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
-
+        # update calculations
         if model_config.mesh_model_name == 'DiffMesh':
             with torch.no_grad():
                 pred = mesh_model(dataset_mesh, data_id=0, )
@@ -3916,7 +3915,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 pred = mesh_model(dataset_mesh, data_id=1)
             x[mask_mesh.squeeze(), 7:8] += pred[mask_mesh.squeeze()] * hnorm * delta_t
             x[mask_mesh.squeeze(), 6:7] += x[mask_mesh.squeeze(), 7:8] * delta_t
-        elif (model_config.mesh_model_name == 'RD_RPS_Mesh') | (model_config.mesh_model_name == 'RD_RPS_Mesh_bis'):
+        elif 'RD_RPS_Mesh' in model_config.mesh_model_name == 'RD_RPS_Mesh':
             with torch.no_grad():
                 pred = mesh_model(dataset_mesh, data_id=1)
                 x[mask_mesh.squeeze(), 6:9] += pred[mask_mesh.squeeze()] * hnorm * delta_t
@@ -3969,6 +3968,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 x_ghost = model_ghost.get_pos(dataset_id=run, frame=it, bc_pos=bc_pos)
                 x_ = torch.cat((x_, x_ghost), 0)
 
+            # compute connectivity and prediction
             if has_adjacency_matrix:
                 dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
                 if test_simulation:
@@ -3989,13 +3989,14 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     dataset = data.Data(x=xt, edge_index=edge_index)
                 else:
                     dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
+
                 if test_simulation:
                     y = y0 / ynorm
                 else:
                     with torch.no_grad():
-                        y = model(dataset, data_id=1, training=False, vnorm=vnorm,
-                                  phi=torch.zeros(1, device=device))
-                        y = y[:,0:dimension]# acceleration estimation
+                        pred = model(dataset, data_id=run, training=False, vnorm=vnorm, phi=torch.zeros(1, device=device))
+                        y = pred[:,0:dimension]
+
                 if has_ghost:
                     y = y[mask_ghost]
 
@@ -4019,6 +4020,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 x[fixed_pos, 3:5] = x0[fixed_pos, 3:5] * 0
                 x_list[0][it+1] = x.clone().detach()
 
+        # viz
         if (it % step == 0) & (it >= 0) & visualize:
 
             num = f"{it:06}"
@@ -4191,8 +4193,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.tight_layout()
             else:
                 s_p = 25
-                if simulation_config.has_cell_division:
-                    s_p = 25
                 for n in range(n_particle_types):
                     if 'bw' in style:
                         plt.scatter(x[index_particles[n], 2].detach().cpu().numpy(),
@@ -4217,6 +4217,16 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     ax.tick_params(axis='both', which='major', pad=15)
                     # cbar = plt.colorbar(shrink=0.5)
                     # cbar.ax.tick_params(labelsize=32)
+                if 'arrow' in style:
+                    for m in range(0,x.shape[0]):
+                        if 'speed' in style:
+                            plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(x[m, 4]) * delta_t * 4, dy=to_numpy(x[m, 3]) * delta_t * 4, head_width=0.004, length_includes_head=True, color='w')
+                        if 'acc' in style:
+                            plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(y[m, 1])/20, dy=to_numpy(y[m, 0])/20, head_width=0.004, length_includes_head=True, color='r')
+
+
+
+
                 if 'no_ticks' in style:
                     plt.xticks([])
                     plt.yticks([])
