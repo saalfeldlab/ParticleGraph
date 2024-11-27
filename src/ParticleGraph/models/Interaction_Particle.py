@@ -116,18 +116,6 @@ class Interaction_Particle(pyg.nn.MessagePassing):
             self.phi_ =  self.phi(in_features).repeat(1,2)
             pred = pred * self.phi_
 
-        if self.recursive_loop > 0:
-            pred_ = pred
-            for k in range(self.recursive_loop):
-                if self.prediction == '2nd_derivative':
-                    d_pos = d_pos[:, 0:self.dimension:] + self.delta_t * pred * self.ynorm
-                else:
-                    d_pos = pred * self.vnorm
-                pos = pos[:, 0:self.dimension:] + self.delta_t * d_pos
-                pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
-                pred_ = torch.cat((pred_, pred), dim=1)
-            pred = pred_
-
         return pred
 
         return pred

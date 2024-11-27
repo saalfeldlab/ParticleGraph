@@ -1,3 +1,5 @@
+import time
+
 import matplotlib.pyplot as plt
 import torch
 import seaborn as sns
@@ -127,6 +129,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
     x_list = []
     y_list = []
     run_lengths = list()
+    time.sleep(0.5)
     for run in trange(n_runs):
         x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
         y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
@@ -138,12 +141,11 @@ def data_train_particle(config, config_file, erase, best_model, device):
         #     config.simulation.n_particles = n_particles
     x = x_list[0][0].clone().detach()
     y = y_list[0][0].clone().detach()
-    print(f'N particles: {n_particles}')
-    logger.info(f'N particles: {n_particles}')
     if n_runs >= 100:
         n_steps = n_runs // 10
     else:
         n_steps = 1
+    time.sleep(0.5)
     for run in trange(0, n_runs, n_steps):
         for k in range(run_lengths[run]):
             if (k % 10 == 0) | (n_frames < 1000):
@@ -155,10 +157,10 @@ def data_train_particle(config, config_file, erase, best_model, device):
     torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
     torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
     time.sleep(0.5)
+    print(f'N particles: {n_particles}')
+    logger.info(f'N particles: {n_particles}')
     print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
     logger.info(f'vnorm ynorm: {to_numpy(vnorm)} {to_numpy(ynorm)}')
-    print(f'{to_numpy(torch.min(x, 1).values[1:3])}  {to_numpy(torch.max(x, 1).values[1:3])}')
-    logger.info(f'{to_numpy(torch.min(x, 1).values[1:3])}  {to_numpy(torch.max(x, 1).values[1:3])}')
 
     x = []
     y = []
@@ -243,13 +245,15 @@ def data_train_particle(config, config_file, erase, best_model, device):
             cos_phi = torch.cos(phi)
             sin_phi = torch.sin(phi)
 
-            run = 1 + np.random.randint(n_runs - 1)
-
             dataset_batch = []
             for batch in range(batch_size):
 
+                run = 1 + np.random.randint(n_runs - 1)
+                if batch == 0:
+                    data_id = torch.ones((n_particles,1), dtype=torch.int) * run
+                else:
+                    data_id = torch.cat((data_id, torch.ones((n_particles,1), dtype=torch.int) * run), dim = 0)
                 k = time_window + np.random.randint(run_lengths[run] - 1 - time_window - recursive_loop)
-
                 x = x_list[run][k].clone().detach()
 
                 if has_ghost:
@@ -320,7 +324,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
                 optimizer_ghost_particles.zero_grad()
 
             for batch in batch_loader:
-                pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi)
+                pred = model(batch, data_id=data_id, training=True, vnorm=vnorm, phi=phi)
 
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
@@ -3852,6 +3856,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     model.field[run] = t.clone().detach()
 
     rmserr_list = []
+    pred_err_list = []
     gloss = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
     geomloss_list = []
     time.sleep(1)
@@ -4002,6 +4007,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
             if plot_data:
                 y = y0.clone().detach() / ynorm
+
+            loss = (pred [:,0:dimension] * ynorm - y0).norm(2)
+            pred_err_list.append(to_numpy(torch.sqrt(loss)))
 
             if model_config.prediction == '2nd_derivative':
                 y = y * ynorm * delta_t
@@ -4218,14 +4226,16 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     # cbar = plt.colorbar(shrink=0.5)
                     # cbar.ax.tick_params(labelsize=32)
                 if 'arrow' in style:
-                    for m in range(0,x.shape[0]):
+                    for m in range(x.shape[0]):
                         if 'speed' in style:
-                            plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(x[m, 4]) * delta_t * 4, dy=to_numpy(x[m, 3]) * delta_t * 4, head_width=0.004, length_includes_head=True, color='w')
+                            plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(x[m, 4]) * delta_t * 2, dy=to_numpy(x[m, 3]) * delta_t * 2, head_width=0.004, length_includes_head=True, color='g')
                         if 'acc' in style:
-                            plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(y[m, 1])/20, dy=to_numpy(y[m, 0])/20, head_width=0.004, length_includes_head=True, color='r')
+                            # plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(y0[m, 1])/5E3, dy=to_numpy(y0[m, 0])/5E3, head_width=0.004, length_includes_head=True, color='r')
+                            plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(pred[m, 1]*ynorm.squeeze()) / 5E3, dy=to_numpy(pred[m, 0]*ynorm.squeeze()) / 5E3, head_width=0.004, length_includes_head=True, color='r')
 
-
-
+                    plt.text(0,1.05,f'true acc {to_numpy(y0[900,0:2])} {to_numpy(pred[900,0:2]*ynorm)}',fontsize=12)
+                    plt.text(0,1.025,f'true speed {to_numpy(x_list[0][it][900,3:5] + y0[900,0:2] * delta_t)} {to_numpy(x_list[0][it][900,3:5] + pred[900,0:2] * ynorm * delta_t)}',fontsize=12)
+                    # plt.text(0,1,f'true pos {to_numpy(x_list[0][it][900,1:3] + (x_list[0][it][900,3:5] + y0[900] * delta_t) * delta_t)} {to_numpy(x_list[0][it][900,1:3] + (x_list[0][it][900,3:5] + pred[900] * ynorm * delta_t) * delta_t)}',fontsize=12)
 
                 if 'no_ticks' in style:
                     plt.xticks([])
@@ -4366,7 +4376,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.savefig(f"./{log_dir}/tmp_recons/Ghost3_{config_file}_{it}.tif", dpi=170.7)
                 plt.close()
 
-    print('average rollout RMS {:.3e}+/-{:.3e}'.format(np.mean(rmserr_list), np.std(rmserr_list)))
+    print('prediction error {:.3e}+/-{:.3e}'.format(np.mean(pred_err_list), np.std(pred_err_list)))
+    print('average rollout RMSE {:.3e}+/-{:.3e}'.format(np.mean(rmserr_list), np.std(rmserr_list)))
     if has_mesh:
         h = x_mesh_list[0][0][:, 6:7]
         for k in range(n_frames):

@@ -109,20 +109,24 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
 
             # pred = self.lin_phi(torch.cat((d_pos, pred, embedding), dim=-1))
 
-            if self.recursive_loop>0:
+        if self.recursive_loop>0:
 
-                pred_= pred
-                for k in range(self.recursive_loop):
-                    if self.prediction == '2nd_derivative':
-                        new_d_pos = d_pos[:, 0:self.dimension:] + self.delta_t * pred * self.ynorm
-                    else:
-                        new_d_pos = pred * self.vnorm
-                    new_pos = pos[:, 0:self.dimension:] + self.delta_t * new_d_pos
+            pred_= pred
+            for k in range(self.recursive_loop):
+                if self.prediction == '2nd_derivative':
+                    new_d_pos = d_pos[:, 0:self.dimension:] + self.delta_t * pred * self.ynorm
+                else:
+                    new_d_pos = pred * self.vnorm
+                new_pos = pos[:, 0:self.dimension:] + self.delta_t * new_d_pos
+                if self.time_window == 0:
+                    d_pos = new_d_pos
+                    pos = new_pos
+                else:
                     d_pos = torch.cat((new_d_pos, d_pos[:,0:-2]), dim=1)
                     pos = torch.cat((new_pos, pos[:,0:-2]), dim=1)
-                    pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding)
-                    pred_ = torch.cat((pred_, pred), dim=1)
-                pred = pred_
+                pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding)
+                pred_ = torch.cat((pred_, pred), dim=1)
+            pred = pred_
 
 
         return pred
@@ -148,7 +152,7 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
         if self.time_window == 0:
             in_features = torch.cat((r[:, None], delta_pos, embedding_i, embedding_j), dim=-1)
         else:
-            in_features = torch.cat((pos_i-pos_j, d_pos_i-d_pos_j, embedding_i, embedding_j), dim=-1)
+            in_features = torch.cat((delta_pos, embedding_i, embedding_j), dim=-1)
 
         # if self.time_window == 0:
         #     in_features = torch.cat((d_pos_i, d_pos_j, delta_pos, embedding_i, embedding_j), dim=-1)
