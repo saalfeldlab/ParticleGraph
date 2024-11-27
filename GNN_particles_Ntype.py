@@ -50,30 +50,9 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        action = 'test'
+        action = 'train'
         best_model = None
-        config_list=["falling_water_ramp_x5","falling_water_ramp_x6","falling_water_ramp_x6_bis","falling_water_ramp_x7","falling_water_ramp_x8","falling_water_ramp_x9", "falling_water_ramp_x10", "falling_water_ramp_x11",  "falling_water_ramp_x12",  "falling_water_ramp_x13",  "falling_water_ramp_x14",  "falling_water_ramp_x15",  "falling_water_ramp_x16"]
-
-    import os
-
-    # Define the directory containing the YAML files
-    directory = './config/'
-
-    # Iterate through all files in the directory
-    for filename in os.listdir(directory):
-        if filename.endswith('.yaml'):
-            filepath = os.path.join(directory, filename)
-
-            # Read the file content
-            with open(filepath, 'r') as file:
-                content = file.read()
-
-            # Replace 'data_augmentation:' with 'rotation_augmentation:'
-            content = content.replace('data_augmentation:', 'rotation_augmentation:')
-
-            # Write the modified content back to the file
-            with open(filepath, 'w') as file:
-                file.write(content)
+        config_list=["arbitrary_3_r"]
 
     for config_file in config_list:
 
@@ -87,7 +66,7 @@ if __name__ == '__main__':
         if 'train' in action:
             data_train(config=config, config_file=config_file, erase=True, best_model=best_model, device=device)
         if 'test' in action:
-            data_test(config=config, config_file=config_file, visualize=True, style='black', verbose=False, best_model='best', run=2, plot_data=False,
+            data_test(config=config, config_file=config_file, visualize=True, style='black', verbose=False, best_model='best', run=1, plot_data=False,
                       test_simulation=False, sample_embedding=False, device=device, step=10) # config.simulation.n_frames // 200, )    # config.simulation.n_frames // 7
 
 

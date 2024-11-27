@@ -41,9 +41,8 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
         self.hidden_dim = model_config.hidden_dim
         self.n_layers = model_config.n_mp_layers
         self.n_particles = simulation_config.n_particles
-        self.n_particle_types = simulation_config.n_particle_types
+        self.delta_t = simulation_config.delta_t
         self.max_radius = simulation_config.max_radius
-        self.data_augmentation = train_config.data_augmentation
         self.noise_level = train_config.noise_level
         self.embedding_dim = model_config.embedding_dim
         self.n_dataset = train_config.n_runs
@@ -61,9 +60,9 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
         self.dimension = dimension
         self.has_state = config.simulation.state_type != 'discrete'
         self.n_frames = simulation_config.n_frames
-        self.state_hot_encoding = train_config.state_hot_encoding
         self.do_tracking = train_config.do_tracking
         self.time_window = train_config.time_window
+        self.recursive_loop = train_config.recursive_loop
         
         temperature = train_config.state_temperature
         self.temperature = torch.tensor(temperature, device=self.device)
@@ -94,6 +93,8 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
             embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
             pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding)
             pred = self.lin_phi(torch.cat((d_pos, pred, embedding), dim=-1))
+
+            return pred
         else:
             x = torch.stack(x)
             pos = x[:, :, 1:self.dimension + 1]
@@ -105,20 +106,39 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
             particle_id = x[0, :, 0:1].squeeze()
             embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
             pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding)
-            pred = self.lin_phi(torch.cat((d_pos, pred, embedding), dim=-1))
 
-            # fig = plt.figure(figsize=(10, 10))
-            # for k in range(4):
-            #     plt.scatter(to_numpy(pos[:, 1+k*2]), to_numpy(pos[:, 0+k*2]),s=10)
-            # print('')
-            # print(pos[1200])
-            # print((pos[1200,0:2]-pos[1200,2:4])/0.0025)
-            # print(d_pos[1200,0:2])
-            # print((pos[1200,4:6]-pos[1200,6:8])/0.0025)
-            # print(d_pos[1200,4:6])
+            # pred = self.lin_phi(torch.cat((d_pos, pred, embedding), dim=-1))
+
+            if self.recursive_loop>0:
+
+                pred_= pred
+                for k in range(self.recursive_loop):
+                    if self.prediction == '2nd_derivative':
+                        new_d_pos = d_pos[:, 0:self.dimension:] + self.delta_t * pred * self.ynorm
+                    else:
+                        new_d_pos = pred * self.vnorm
+                    new_pos = pos[:, 0:self.dimension:] + self.delta_t * new_d_pos
+                    d_pos = torch.cat((new_d_pos, d_pos[:,0:-2]), dim=1)
+                    pos = torch.cat((new_pos, pos[:,0:-2]), dim=1)
+                    pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding)
+                    pred_ = torch.cat((pred_, pred), dim=1)
+                pred = pred_
+
+            return pred
 
 
-        return pred
+            fig = plt.figure(figsize=(10, 10))
+            for k in range(4):
+                plt.scatter(to_numpy(pos[:, 1+k*2]), to_numpy(pos[:, 0+k*2]),s=10)
+            print('')
+            print(pos[1200])
+            print((pos[1200,0:2]-pos[1200,2:4])/0.0025)
+            print(d_pos[1200,0:2])
+            print((pos[1200,4:6]-pos[1200,6:8])/0.0025)
+            print(d_pos[1200,4:6])
+
+
+
 
     def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j):
         # distance normalized by the max radius

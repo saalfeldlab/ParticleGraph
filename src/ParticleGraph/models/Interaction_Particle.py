@@ -60,6 +60,8 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         self.n_frames = simulation_config.n_frames
         self.state_hot_encoding = train_config.state_hot_encoding
         self.do_tracking = train_config.do_tracking
+        self.delta_t = simulation_config.delta_t
+        self.recursive_loop = train_config.recursive_loop
         
         temperature = train_config.state_temperature
         self.temperature = torch.tensor(temperature, device=self.device)
@@ -113,6 +115,20 @@ class Interaction_Particle(pyg.nn.MessagePassing):
             in_features = torch.cat((x[:, 8:9]/250, embedding), dim=-1)
             self.phi_ =  self.phi(in_features).repeat(1,2)
             pred = pred * self.phi_
+
+        if self.recursive_loop > 0:
+            pred_ = pred
+            for k in range(self.recursive_loop):
+                if self.prediction == '2nd_derivative':
+                    d_pos = d_pos[:, 0:self.dimension:] + self.delta_t * pred * self.ynorm
+                else:
+                    d_pos = pred * self.vnorm
+                pos = pos[:, 0:self.dimension:] + self.delta_t * d_pos
+                pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
+                pred_ = torch.cat((pred_, pred), dim=1)
+            pred = pred_
+
+        return pred
 
         return pred
 
