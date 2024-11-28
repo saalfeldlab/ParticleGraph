@@ -131,16 +131,13 @@ def data_train_particle(config, config_file, erase, best_model, device):
     run_lengths = list()
     time.sleep(0.5)
     for run in trange(n_runs):
-        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
-        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
+        x = np.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy')
+        y = np.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy')
         x_list.append(x)
         y_list.append(y)
         run_lengths.append(len(x))
-        # if x[0].shape[0] > n_particles:
-        #     n_particles = x[0].shape[0]
-        #     config.simulation.n_particles = n_particles
-    x = x_list[0][0].clone().detach()
-    y = y_list[0][0].clone().detach()
+    x = torch.tensor(x_list[0][0], dtype=torch.float32, device=device)
+    y = torch.tensor(y_list[0][0], dtype=torch.float32, device=device)
     if n_runs >= 100:
         n_steps = n_runs // 10
     else:
@@ -149,8 +146,8 @@ def data_train_particle(config, config_file, erase, best_model, device):
     for run in trange(0, n_runs, n_steps):
         for k in range(run_lengths[run]):
             if (k % 10 == 0) | (n_frames < 1000):
-                x = torch.cat((x, x_list[run][k].clone().detach()), 0)
-                y = torch.cat((y, y_list[run][k].clone().detach()), 0)
+                x = torch.cat((x, torch.tensor(x_list[run][k], dtype=torch.float32, device=device)), 0)
+                y = torch.cat((y, torch.tensor(y_list[run][k], dtype=torch.float32, device=device)), 0)
         time.sleep(0.5)
     vnorm = norm_velocity(x, dimension, device)
     ynorm = norm_acceleration(y, device)
@@ -203,7 +200,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
     logger.info(f'initial batch_size: {batch_size}')
 
     print('Update variables ...')
-    x = x_list[1][0].clone().detach()
+    x = torch.tensor(x_list[1][0], dtype=torch.float32, device=device)
     index_particles = get_index_particles(x, n_particle_types, dimension)
     type_list = get_type_list(x, dimension)
     print(f'N particles: {n_particles} {len(torch.unique(type_list))} types')
@@ -250,7 +247,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
 
                 run = 1 + np.random.randint(n_runs - 1)
                 k = time_window + np.random.randint(run_lengths[run] - 1 - time_window - recursive_loop)
-                x = x_list[run][k].clone().detach()
+                x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device)
                 if batch == 0:
                     data_id = torch.ones((x.shape[0],1), dtype=torch.int) * run
                 else:
@@ -281,16 +278,16 @@ def data_train_particle(config, config_file, erase, best_model, device):
                 else:
                     xt = []
                     for t in range(time_window):
-                        x_ = x_list[run][k - t].clone().detach()
+                        x_ = torch.tensor(x_list[run][k - t], dtype=torch.float32, device=device)
                         xt.append(x_[:, :])
 
                     dataset = data.Data(x=xt, edge_index=edges, num_nodes=x.shape[0])
                     dataset_batch.append(dataset)
 
-                y = y_list[run][k].clone().detach()
+                y = torch.tensor(y_list[run][k], dtype=torch.float32, device=device)
                 if recursive_loop> 0:
                     for m in range(recursive_loop):
-                        y_= y_list[run][k+m+1].clone().detach()
+                        y_= torch.tensor(y_list[run][k+m+1], dtype=torch.float32, device=device)
                         y = torch.cat((y, y_), dim = 1)
 
                 # x_next = x_list[run][k+1].clone().detach()

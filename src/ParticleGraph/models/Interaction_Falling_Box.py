@@ -133,7 +133,7 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
 
 
         fig = plt.figure(figsize=(10, 10))
-        plt.scatter(to_numpy(pos[:, 1]), to_numpy(pos[:, 0]), s=10)
+        plt.scatter(to_numpy(pos[:, 1]), to_numpy(pos[:, 0]), s=2)
 
         # for k in range(4):
         #     plt.scatter(to_numpy(pos[:, 1+k*2]), to_numpy(pos[:, 0+k*2]),s=10)

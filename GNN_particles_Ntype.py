@@ -52,8 +52,11 @@ if __name__ == '__main__':
     else:
         action = 'train'
         best_model = None
-        config_list=["falling_water_ramp_x4"]
-        # config_list=['arbitrary_3_field_video_bison_test']
+        # config_list=["falling_water_ramp_x1", "falling_water_ramp_x2", "falling_water_ramp_x3", "falling_water_ramp_x4", "falling_water_ramp_x5",
+        #              "falling_water_ramp_x6", "falling_water_ramp_x7", "falling_water_ramp_x8", "falling_water_ramp_x9", "falling_water_ramp_x10",
+        #              "falling_water_ramp_x11", "falling_water_ramp_x12", "falling_water_ramp_x13"]
+
+        config_list=['arbitrary_3_test']
 
     for config_file in config_list:
 

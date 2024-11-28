@@ -43,7 +43,7 @@ training:
   small_init_batch_size: False
   n_runs: 100
   time_window: 0
-  recursive_loop: 0
+  recursive_loop: 2
   sparsity: 'replace_embedding'
   sparsity_freq: 3
   cluster_method: 'kmeans_auto_embedding'
