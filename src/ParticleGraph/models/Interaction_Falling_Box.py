@@ -116,16 +116,15 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
                 else:
                     d_pos = torch.cat((new_d_pos, d_pos[:,0:-2]), dim=1)
                     pos = torch.cat((new_pos, pos[:,0:-2]), dim=1)
-                pred_ = torch.cat((pred_, self.recursive_param[k] * self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)), dim=1)
+                pred_ = torch.cat((pred_, self.recursive_param[k] * self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding)), dim=1)
             return pred_
 
         else:
 
             return pred
 
-
-        fig = plt.figure(figsize=(10, 10))
-        plt.scatter(to_numpy(pos[:, 1]), to_numpy(pos[:, 0]), s=2)
+        # fig = plt.figure(figsize=(10, 10))
+        # plt.scatter(to_numpy(pos[:, 1]), to_numpy(pos[:, 0]), s=2)
 
         # for k in range(4):
         #     plt.scatter(to_numpy(pos[:, 1+k*2]), to_numpy(pos[:, 0+k*2]),s=10)

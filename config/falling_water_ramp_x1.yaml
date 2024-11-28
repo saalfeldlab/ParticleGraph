@@ -44,7 +44,7 @@ training:
   n_runs: 2
   time_window: 0
   recursive_loop: 0
-  sparsity: 'replace_embedding'
+  sparsity: 'none'
   sparsity_freq: 3
   cluster_method: 'kmeans_auto_embedding'
   rotation_augmentation: False
