@@ -29,6 +29,7 @@ graph_model:
 plotting:
     colormap: 'tab20'
     arrow_length: 1
+    ylim: [ 0, 0.5E6 ]
 
 training:
     n_epochs: 20

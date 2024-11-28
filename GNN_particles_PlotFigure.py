@@ -50,7 +50,7 @@ class Interaction_Particle_extract(MessagePassing):
         self.n_layers = config.graph_model.n_mp_layers
         self.n_particles = config.simulation.n_particles
         self.max_radius = config.simulation.max_radius
-        self.data_augmentation = config.training.data_augmentation
+        self.rotation_augmentation = config.training.rotation_augmentation
         self.noise_level = config.training.noise_level
         self.embedding_dim = config.graph_model.embedding_dim
         self.n_dataset = config.training.n_runs
@@ -114,7 +114,7 @@ class Interaction_Particle_extract(MessagePassing):
         dpos_x_j = d_pos_j[:, 0] / self.vnorm
         dpos_y_j = d_pos_j[:, 1] / self.vnorm
 
-        if self.data_augmentation & (self.training == True):
+        if self.rotation_augmentation & (self.training == True):
             new_delta_pos_x = self.cos_phi * delta_pos[:, 0] + self.sin_phi * delta_pos[:, 1]
             new_delta_pos_y = -self.sin_phi * delta_pos[:, 0] + self.cos_phi * delta_pos[:, 1]
             delta_pos[:, 0] = new_delta_pos_x
@@ -2969,13 +2969,7 @@ def plot_boids(config_file, epoch_list, log_dir, logger, bLatex, device):
     embedding_cluster = EmbeddingCluster(config)
 
     print('load data ...')
-    x_list = []
-    y_list = []
-
-    x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_1.pt', map_location=device))
-    y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_1.pt', map_location=device))
-    vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
-    ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
+    x_list, y_list, vnorm, ynorm = load_training_data(dataset_name, 1, log_dir, device)
     x = x_list[0][-1].clone().detach()
 
     print('done ...')
@@ -6326,7 +6320,7 @@ if __name__ == '__main__':
 
     # config_list = ['falling_particles_N1000_2']
 
-    config_list = ['arbitrary_3_test']
+    config_list = ['gravity_16_test']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
