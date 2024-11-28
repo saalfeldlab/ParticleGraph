@@ -32,13 +32,13 @@ plotting:
   ylim: [-0.04, 0.03]
 
 training:
-  n_epochs: 0
-  batch_size: 8
+  n_epochs: 5
+  batch_size: 1
   small_init_batch_size: False
   n_runs: 2
   sparsity: 'replace_embedding_function'
   cluster_method: 'distance_plot'
-  rotation_augmentation: True
+  rotation_augmentation: False
   data_augmentation_loop: 100
   fix_cluster_embedding: True
   device: 'auto'

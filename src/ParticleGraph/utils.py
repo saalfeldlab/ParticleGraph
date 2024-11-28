@@ -13,7 +13,6 @@ from torch_geometric.data import Data
 from torchvision.transforms import CenterCrop
 import gc
 
-
 def sort_key(filename):
             # Extract the numeric parts using regular expressions
             if filename.split('_')[-2] == 'graphs':
@@ -293,7 +292,7 @@ def create_log_dir(config=[], config_file=[], erase=True):
     if erase:
         files = glob.glob(f"{log_dir}/results/*")
         for f in files:
-            if not('all' in f):
+            if ('all' not in f) & ('field' not in f):
                 os.remove(f)
         files = glob.glob(f"{log_dir}/tmp_training/particle/*")
         for f in files:

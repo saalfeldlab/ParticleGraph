@@ -282,10 +282,10 @@ def data_train_particle(config, config_file, erase, best_model, device):
                     dataset = data.Data(x=xt, edge_index=edges, num_nodes=x.shape[0])
                     dataset_batch.append(dataset)
 
-                y = torch.tensor(y_list[run][k], dtype=torch.float32, device=device)
+                y = torch.tensor(y_list[run][k], dtype=torch.float32, device=device).clone().detach()
                 if recursive_loop> 0:
                     for m in range(recursive_loop):
-                        y_= torch.tensor(y_list[run][k+m+1], dtype=torch.float32, device=device)
+                        y_= torch.tensor(y_list[run][k+m+1], dtype=torch.float32, device=device).clone().detach()
                         y = torch.cat((y, y_), dim = 1)
 
                 # x_next = x_list[run][k+1].clone().detach()
@@ -327,7 +327,19 @@ def data_train_particle(config, config_file, erase, best_model, device):
                 loss = (pred - y_batch).norm(2)
 
             loss.backward()
-            optimizer.step()
+
+            flag = True
+            test = [torch.isnan(p.grad) for p in model.parameters()]
+            for m in range(len(test)):
+                if test[m].any():
+                    flag = False
+
+            if flag:
+                optimizer.step()
+            else:
+                print('grad nan')
+                print(torch.unique(data_id))
+
 
             visualize_embedding = True
             if visualize_embedding & (((epoch < 30) & (N % (Niter // 50) == 0)) | (N == 0)):

@@ -47,25 +47,16 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
         self.embedding_dim = model_config.embedding_dim
         self.n_dataset = train_config.n_runs
         self.prediction = model_config.prediction
-        self.n_particles_max = simulation_config.n_particles_max
-        self.update_type = model_config.update_type
         self.n_layers_update = model_config.n_layers_update
         self.input_size_update = model_config.input_size_update
         self.hidden_dim_update = model_config.hidden_dim_update
         self.output_size_update = model_config.output_size_update
-        self.sigma = simulation_config.sigma
         self.model = model_config.particle_model_name
         self.bc_dpos = bc_dpos
         self.n_ghosts = int(train_config.n_ghosts)
         self.dimension = dimension
-        self.has_state = config.simulation.state_type != 'discrete'
-        self.n_frames = simulation_config.n_frames
-        self.do_tracking = train_config.do_tracking
         self.time_window = train_config.time_window
         self.recursive_loop = train_config.recursive_loop
-        
-        temperature = train_config.state_temperature
-        self.temperature = torch.tensor(temperature, device=self.device)
 
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
