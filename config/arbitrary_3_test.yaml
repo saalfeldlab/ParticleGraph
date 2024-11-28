@@ -33,14 +33,20 @@ plotting:
 
 training:
   n_epochs: 5
-  batch_size: 1
+  batch_size: 8
   small_init_batch_size: False
-  n_runs: 2
+  n_runs: 5
+  recursive_loop: 2
+  recursive_param: [0.1, 0.1]
   sparsity: 'replace_embedding_function'
   cluster_method: 'distance_plot'
-  rotation_augmentation: False
+  rotation_augmentation: True
   data_augmentation_loop: 100
   fix_cluster_embedding: True
+
+  learning_rate_start: 1.0E-4
+  learning_rate_embedding_start: 1.0E-4
+
   device: 'auto'
 
 

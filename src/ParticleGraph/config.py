@@ -156,8 +156,8 @@ class TrainingConfig(BaseModel):
     fix_cluster_embedding: bool = False
     loss_weight: bool = False
     learning_rate_start: float = 0.001
-    learning_rate_end: float = 0.0005
     learning_rate_embedding_start: float = 0.001
+    learning_rate_end: float = 0.0005
     learning_rate_embedding_end: float = 0.001
     learning_rate_NNR: float = 0.00001
 
@@ -176,6 +176,7 @@ class TrainingConfig(BaseModel):
     rotation_augmentation: bool = True
     data_augmentation_loop: int = 40
     recursive_loop: int = 0
+    recursive_param: list[float] = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
     regul_matrix: bool = False
     sub_batches: int = 1
 

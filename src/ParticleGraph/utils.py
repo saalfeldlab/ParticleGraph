@@ -303,12 +303,12 @@ def create_log_dir(config=[], config_file=[], erase=True):
         files = glob.glob(f"{log_dir}/tmp_training/matrix/*")
         for f in files:
             os.remove(f)
-        files = glob.glob(f"{log_dir}/tmp_training/function/*")
+        files = glob.glob(f"{log_dir}/tmp_training/function/lin_edge/*")
         for f in files:
-            if not(('lin_phi' in f) | ('lin_edge' in f)):
-                os.remove(f)
-
-
+            os.remove(f)
+        files = glob.glob(f"{log_dir}/tmp_training/function/lin_phis/*")
+        for f in files:
+            os.remove(f)
         files = glob.glob(f"{log_dir}/tmp_training/embedding/*")
         for f in files:
             os.remove(f)

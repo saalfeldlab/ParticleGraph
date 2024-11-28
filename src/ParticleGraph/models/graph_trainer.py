@@ -226,11 +226,18 @@ def data_train_particle(config, config_file, erase, best_model, device):
 
         batch_size = get_batch_size(epoch)
         logger.info(f'batch_size: {batch_size}')
+        # if (epoch==0):
+        #     model.recursive_loop = 0
         if (epoch == 1) & (has_ghost):
             mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
             mask_ghost = np.tile(mask_ghost, batch_size)
             mask_ghost = np.argwhere(mask_ghost == 1)
             mask_ghost = mask_ghost[:, 0].astype(int)
+        # if (epoch==1):
+        #     recursive_loop = train_config.recursive_loop
+        #     model.recursive_loop = recursive_loop
+        #     print(f'recursive_loop: {recursive_loop}')
+        #     logger.info(f'recursive_loop: {recursive_loop}')
         total_loss = 0
         Niter = n_frames * data_augmentation_loop // batch_size
 
@@ -285,7 +292,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
                 y = torch.tensor(y_list[run][k], dtype=torch.float32, device=device).clone().detach()
                 if recursive_loop> 0:
                     for m in range(recursive_loop):
-                        y_= torch.tensor(y_list[run][k+m+1], dtype=torch.float32, device=device).clone().detach()
+                        y_= model.recursive_param[m] * torch.tensor(y_list[run][k+m+1], dtype=torch.float32, device=device).clone().detach()
                         y = torch.cat((y, y_), dim = 1)
 
                 # x_next = x_list[run][k+1].clone().detach()
@@ -325,20 +332,21 @@ def data_train_particle(config, config_file, erase, best_model, device):
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
             else:
                 loss = (pred - y_batch).norm(2)
-
             loss.backward()
 
             flag = True
-            test = [torch.isnan(p.grad) for p in model.parameters()]
-            for m in range(len(test)):
-                if test[m].any():
-                    flag = False
+            if recursive_loop > 0:
+                test = [torch.isnan(p.grad) for p in model.parameters()]
+                for m in range(len(test)):
+                    if test[m].any():
+                        flag = False
 
             if flag:
                 optimizer.step()
             else:
                 print('grad nan')
                 print(torch.unique(data_id))
+                logger.info('grad nan')
 
 
             visualize_embedding = True
