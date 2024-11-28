@@ -27,7 +27,6 @@ from io import StringIO
 import sys
 from scipy.stats import pearsonr
 from scipy.spatial import Voronoi, voronoi_plot_2d
-from ParticleGraph.kan import *
 from sklearn.mixture import GaussianMixture
 
 # matplotlib.use("Qt5Agg")
@@ -301,8 +300,16 @@ def load_training_data(dataset_name, n_runs, log_dir, device):
     print('Load data ...')
     time.sleep(0.5)
     for run in trange(n_runs):
-        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
-        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
+        # check if path exists
+        if os.path.exists(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt'):
+            x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
+            y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
+        else:
+            x = np.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy')
+            x = torch.tensor(x, dtype=torch.float32, device=device)
+            y = np.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy')
+            y = torch.tensor(y, dtype=torch.float32, device=device)
+
         x_list.append(x)
         y_list.append(y)
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device).squeeze()
@@ -6319,7 +6326,7 @@ if __name__ == '__main__':
 
     # config_list = ['falling_particles_N1000_2']
 
-    config_list = ['boids_16_256_sparse']
+    config_list = ['arbitrary_3_test']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')

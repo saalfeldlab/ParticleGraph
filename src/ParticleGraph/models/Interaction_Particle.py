@@ -40,33 +40,17 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         self.hidden_dim = model_config.hidden_dim
         self.n_layers = model_config.n_mp_layers
         self.n_particles = simulation_config.n_particles
-        self.n_particle_types = simulation_config.n_particle_types
         self.max_radius = simulation_config.max_radius
         self.rotation_augmentation = train_config.rotation_augmentation
-        self.noise_level = train_config.noise_level
         self.embedding_dim = model_config.embedding_dim
         self.n_dataset = train_config.n_runs
-        self.prediction = model_config.prediction
-        self.n_particles_max = simulation_config.n_particles_max
-        self.update_type = model_config.update_type
-        self.n_layers_update = model_config.n_layers_update
-        self.hidden_dim_update = model_config.hidden_dim_update
         self.sigma = simulation_config.sigma
         self.model = model_config.particle_model_name
         self.bc_dpos = bc_dpos
         self.n_ghosts = int(train_config.n_ghosts)
         self.dimension = dimension
-        self.has_state = config.simulation.state_type != 'discrete'
-        self.n_frames = simulation_config.n_frames
-        self.state_hot_encoding = train_config.state_hot_encoding
-        self.do_tracking = train_config.do_tracking
         self.delta_t = simulation_config.delta_t
         self.recursive_loop = train_config.recursive_loop
-        
-        temperature = train_config.state_temperature
-        self.temperature = torch.tensor(temperature, device=self.device)
-
-
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device)
@@ -105,18 +89,6 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
 
         pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
-
-        if self.update_type == 'linear':
-            embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
-            pred = self.lin_update(torch.cat((pred, x[:, 3:5], embedding), dim=-1))
-
-        if self.update_type == 'embedding_Siren':
-            embedding = self.b[self.data_id, to_numpy(particle_id), :].squeeze()
-            in_features = torch.cat((x[:, 8:9]/250, embedding), dim=-1)
-            self.phi_ =  self.phi(in_features).repeat(1,2)
-            pred = pred * self.phi_
-
-        return pred
 
         return pred
 
