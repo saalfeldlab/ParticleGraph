@@ -57,6 +57,7 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
         self.dimension = dimension
         self.time_window = train_config.time_window
         self.recursive_loop = train_config.recursive_loop
+        self.recursive_param = train_config.recursive_param
 
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
@@ -105,7 +106,7 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
             pred_= pred
             for k in range(self.recursive_loop):
                 if self.prediction == '2nd_derivative':
-                    new_d_pos = d_pos[:, 0:self.dimension:] + self.delta_t * pred * self.ynorm
+                    new_d_pos = d_pos[:, 0:self.dimension:] + self.delta_t * pred_[:,-self.dimension:] * self.ynorm
                 else:
                     new_d_pos = pred * self.vnorm
                 new_pos = pos[:, 0:self.dimension:] + self.delta_t * new_d_pos
@@ -115,12 +116,12 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
                 else:
                     d_pos = torch.cat((new_d_pos, d_pos[:,0:-2]), dim=1)
                     pos = torch.cat((new_pos, pos[:,0:-2]), dim=1)
-                pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding)
-                pred_ = torch.cat((pred_, pred), dim=1)
-            pred = pred_
+                pred_ = torch.cat((pred_, self.recursive_param[k] * self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)), dim=1)
+            return pred_
 
+        else:
 
-        return pred
+            return pred
 
 
         fig = plt.figure(figsize=(10, 10))

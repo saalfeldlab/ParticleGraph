@@ -492,8 +492,13 @@ def load_WaterRamps(config, device=None, visualize=None, step=None, cmap=None):
                 plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)  # 170.7)
                 plt.close()
 
-        torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
-        torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
+        # torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
+        # torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
+
+        x_list = np.array(to_numpy(torch.stack(x_list)))
+        y_list = np.array(to_numpy(torch.stack(y_list)))
+        np.save(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy', x_list)
+        np.save(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy', y_list)
 
     print (f'n_max_particles: {n_max_particles}')
 
