@@ -3592,7 +3592,7 @@ def data_train_WBI(config, config_file, erase, best_model, device):
 
 
 def data_test(config=None, config_file=None, visualize=False, style='color frame', verbose=True, best_model=20, step=15,
-              ratio=1, run=1, plot_data=False, test_simulation=False, sample_embedding=False, device=[]):
+              ratio=1, run=1, plot_data=False, test_simulation=False, sample_embedding=False, fixed = False, device=[]):
     dataset_name = config.dataset
     simulation_config = config.simulation
     model_config = config.graph_model
@@ -4050,10 +4050,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
             x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1] + x[:, dimension + 1:2 * dimension + 1] * delta_t)  # position update
 
-            if time_window:
+            if fixed:
                 fixed_pos = torch.argwhere(x[:,5]==0)
-                x[fixed_pos, 3:5] = x0[fixed_pos, 3:5] * 0
-                x_list[0][it+1] = x.clone().detach()
+                x[fixed_pos, 1:2 * dimension + 1] = x_list[0][it+1,1:2 * dimension + 1].clone().detach()
 
         # vizulazition
         if (it % step == 0) & (it >= 0) & visualize:
