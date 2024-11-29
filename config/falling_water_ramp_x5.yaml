@@ -41,13 +41,14 @@ training:
   n_epochs: 20
   batch_size: 64
   small_init_batch_size: False
-  n_runs: 2
+  n_runs: 100
   time_window: 0
   recursive_loop: 0
   sparsity: 'none'
   sparsity_freq: 3
   cluster_method: 'kmeans_auto_embedding'
   rotation_augmentation: False
+  translation_augmentation: True
   data_augmentation_loop: 5000
   fix_cluster_embedding: True
   device: 'auto'

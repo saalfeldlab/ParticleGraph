@@ -953,7 +953,7 @@ def data_train_cell(config, config_file, erase, best_model, device):
             total_loss += loss.item()
 
             visualize_embedding = True
-            if visualize_embedding & (((epoch < 30) & (N % (Niter // 50) == 0)) | (N == 0)):
+            if visualize_embedding & (((epoch < 10) & (N % (Niter // 10) == 0)) | (N == 0)):
                 if do_tracking | has_state:
                     id_list = []
                     for k in range(n_frames + 1):
@@ -3592,7 +3592,7 @@ def data_train_WBI(config, config_file, erase, best_model, device):
 
 
 def data_test(config=None, config_file=None, visualize=False, style='color frame', verbose=True, best_model=20, step=15,
-              ratio=1, run=1, plot_data=False, test_simulation=False, sample_embedding=False, fixed = False, device=[]):
+              ratio=1, run=1, plot_data=False, test_simulation=False, sample_embedding=False, fixed=False, time_ratio=1, device=[]):
     dataset_name = config.dataset
     simulation_config = config.simulation
     model_config = config.graph_model
@@ -3609,8 +3609,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     n_particles = simulation_config.n_particles
     n_nodes = simulation_config.n_nodes
     n_runs = training_config.n_runs
-    n_frames = simulation_config.n_frames
-    delta_t = simulation_config.delta_t
+    n_frames = simulation_config.n_frames * time_ratio
+    delta_t = simulation_config.delta_t / time_ratio
     time_window = training_config.time_window
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     dimension = simulation_config.dimension
@@ -3650,7 +3650,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         index = np.arange(n_particles * n // n_particle_types, n_particles * (n + 1) // n_particle_types)
         first_cell_id_particles.append(index)
 
-    print('Load data ...')
+    print('load data ...')
     if only_mesh:
         vnorm = torch.tensor(1.0, device=device)
         ynorm = torch.tensor(1.0, device=device)
@@ -3709,7 +3709,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         if 'PDE_F' not in model_config.particle_model_name:
             n_particles = int(x.shape[0] / ratio)
             config.simulation.n_particles = n_particles
-        n_frames = len(x_list[0])
+        n_frames = len(x_list[0]) * time_ratio
         index_particles = get_index_particles(x, n_particle_types, dimension)
         if n_particle_types > 1000:
             index_particles = []
@@ -3894,18 +3894,23 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         stop_it = n_frames-1
     else:
         start_it = 0
-        stop_it = n_frames
+        stop_it = n_frames-1
 
     x = x_list[0][start_it].clone().detach()
     n_particles = x.shape[0]
+    if x_list[0].shape[0]<n_frames:
+        print('extend x_list ...')
+        time.sleep(1)
+        for k in trange(n_frames-x_list[0].shape[0]):
+            x_list[0] = torch.cat((x_list[0], x_list[0][-1].clone().detach().unsqueeze(0)), 0)
 
     data_id = torch.ones((x.shape[0], 1), dtype=torch.int) * run
 
     for it in trange(start_it, stop_it):
 
         if it < n_frames - 4:
-            x0 = x_list[0][it].clone().detach()
-            y0 = y_list[0][it].clone().detach()
+            x0 = x_list[0][it//time_ratio].clone().detach()
+            y0 = y_list[0][it//time_ratio].clone().detach()
         if has_mesh:
             x[:, 1:5] = x0[:, 1:5].clone().detach()
             dataset_mesh = data.Data(x=x, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
@@ -4016,7 +4021,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 if time_window > 0:
                     xt = []
                     for t in range(time_window):
-                        x_ = x_list[0][it - t].clone().detach()
+                        x_ = x_list[0][it//time_ratio - t].clone().detach()
                         xt.append(x_[:, :])
                     dataset = data.Data(x=xt, edge_index=edge_index)
                 else:
@@ -4050,9 +4055,13 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
             x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1] + x[:, dimension + 1:2 * dimension + 1] * delta_t)  # position update
 
+            if time_window:
+                fixed_pos = torch.argwhere(x[:,5]!=0)
+                x_list[0][it//time_ratio+1,fixed_pos.squeeze(),1:2 * dimension + 1] = x[fixed_pos.squeeze(), 1:2 * dimension + 1].clone().detach()
+
             if fixed:
                 fixed_pos = torch.argwhere(x[:,5]==0)
-                x[fixed_pos, 1:2 * dimension + 1] = x_list[0][it+1,1:2 * dimension + 1].clone().detach()
+                x[fixed_pos.squeeze(), 1:2 * dimension + 1] = x_list[0][it+1,fixed_pos.squeeze(),1:2 * dimension + 1].clone().detach()
 
         # vizulazition
         if (it % step == 0) & (it >= 0) & visualize:
@@ -4260,8 +4269,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                         # plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(y0[m, 1])/5E3, dy=to_numpy(y0[m, 0])/5E3, head_width=0.004, length_includes_head=True, color='r')
                         plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(pred[m, 1]*ynorm.squeeze()) / 5E3, dy=to_numpy(pred[m, 0]*ynorm.squeeze()) / 5E3, head_width=0.004, length_includes_head=True, color='r')
                 plt.text(0,1.05,f'true acc {to_numpy(y0[900,0:2])} {to_numpy(pred[900,0:2]*ynorm)}',fontsize=12)
-                plt.text(0,1.025,f'true speed {to_numpy(x_list[0][it][900,3:5] + y0[900,0:2] * delta_t)} {to_numpy(x_list[0][it][900,3:5] + pred[900,0:2] * ynorm * delta_t)}',fontsize=12)
-                # plt.text(0,1,f'true pos {to_numpy(x_list[0][it][900,1:3] + (x_list[0][it][900,3:5] + y0[900] * delta_t) * delta_t)} {to_numpy(x_list[0][it][900,1:3] + (x_list[0][it][900,3:5] + pred[900] * ynorm * delta_t) * delta_t)}',fontsize=12)
+                plt.text(0,1.025,f'true speed {to_numpy(x_list[0][it//time_ratio][900,3:5] + y0[900,0:2] * delta_t)} {to_numpy(x_list[0][it//time_ratio][900,3:5] + pred[900,0:2] * ynorm * delta_t)}',fontsize=12)
             if 'no_ticks' in style:
                 plt.xticks([])
                 plt.yticks([])

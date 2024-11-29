@@ -145,7 +145,7 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
         if self.time_window == 0:
             in_features = torch.cat((r[:, None], delta_pos, d_pos_i, embedding_i, embedding_j), dim=-1)
         else:
-            in_features = torch.cat((delta_pos, embedding_i, embedding_j), dim=-1)
+            in_features = torch.cat((delta_pos, d_pos_i, embedding_i, embedding_j), dim=-1)
 
         out = self.lin_edge(in_features)
 
