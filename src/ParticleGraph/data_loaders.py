@@ -441,6 +441,9 @@ def load_WaterRamps(config, device=None, visualize=None, step=None, cmap=None):
 
         for frame in trange(1,position.shape[0]-2):
 
+            if len(x_list)==31:
+                a=1
+
             pos_prev = position[frame-1].squeeze()
             pos_next = position[frame+1].squeeze()
             pos = position[frame].squeeze()
@@ -464,9 +467,10 @@ def load_WaterRamps(config, device=None, visualize=None, step=None, cmap=None):
 
             x_list.append(x)
 
-            # y[n_wall_particles:] = (dpos_next - dpos[n_wall_particles:]) / delta_t
-
-            y[n_wall_particles:] = dpos_next
+            if config.graph_model.prediction == '2nd_derivative':
+                y[n_wall_particles:] = (dpos_next - dpos[n_wall_particles:]) / delta_t
+            else:
+                y[n_wall_particles:] = dpos_next
 
             y_list.append(y)
 

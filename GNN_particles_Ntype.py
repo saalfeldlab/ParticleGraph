@@ -51,12 +51,13 @@ if __name__ == '__main__':
             best_model = None
     else:
         action = 'train'
-        best_model = '1_0'
+        best_model = None
+
         # config_list=["falling_water_ramp_x1", "falling_water_ramp_x2", "falling_water_ramp_x3", "falling_water_ramp_x4", "falling_water_ramp_x5",
         #              "falling_water_ramp_x6", "falling_water_ramp_x7", "falling_water_ramp_x8", "falling_water_ramp_x9", "falling_water_ramp_x10",
-        #              "falling_water_ramp_x11", "falling_water_ramp_x12", "falling_water_ramp_x13"]
+        #              "falling_water_ramp_x11"]
 
-        config_list=['arbitrary_3_test']
+        config_list=['falling_water_ramp_x12']
 
     for config_file in config_list:
 
@@ -71,7 +72,7 @@ if __name__ == '__main__':
             data_train(config=config, config_file=config_file, erase=True, best_model=best_model, device=device)
         if 'test' in action:
             data_test(config=config, config_file=config_file, visualize=True, style='black arrow speed acc', verbose=False, best_model='best', run=1, plot_data=True,
-                      test_simulation=False, sample_embedding=False, device=device, step=4) # config.simulation.n_frames // 200, )
+                      test_simulation=False, sample_embedding=False, device=device, step=2) # config.simulation.n_frames // 200, )
 
 
 # bsub -n 4 -gpu "num=1" -q gpu_h100 "python GNN_particles_Ntype.py -o train falling_water_ramp_x1"

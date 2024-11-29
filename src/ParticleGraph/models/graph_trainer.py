@@ -100,6 +100,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
     rotation_augmentation = train_config.rotation_augmentation
+    translation_augmentation = train_config.translation_augmentation
     data_augmentation_loop = train_config.data_augmentation_loop
     recursive_loop = train_config.recursive_loop
     target_batch_size = train_config.batch_size
@@ -253,6 +254,13 @@ def data_train_particle(config, config_file, erase, best_model, device):
                 run = 1 + np.random.randint(n_runs - 1)
                 k = time_window + np.random.randint(run_lengths[run] - 1 - time_window - recursive_loop)
                 x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device)
+
+                if translation_augmentation:
+                    displacement = torch.randn(1, dimension, dtype=torch.float32, device=device) * 5
+                    displacement = displacement.repeat(x.shape[0], 1)
+                    x[:, 1:dimension + 1] = x[:, 1:dimension + 1] + displacement
+
+
                 if batch == 0:
                     data_id = torch.ones((x.shape[0],1), dtype=torch.int) * run
                 else:
@@ -294,15 +302,6 @@ def data_train_particle(config, config_file, erase, best_model, device):
                     for m in range(recursive_loop):
                         y_= model.recursive_param[m] * torch.tensor(y_list[run][k+m+1], dtype=torch.float32, device=device).clone().detach()
                         y = torch.cat((y, y_), dim = 1)
-
-                # x_next = x_list[run][k+1].clone().detach()
-                # x_prev = x_list[run][k-1].clone().detach()
-                # print('')
-                # print(x[1200])
-                # print((x[1200, 1:3] - x_prev[1200, 1:3]) / 0.0025)
-                # print(x[1200, 3:5])
-                # print((x_next[1200, 1:3] - 2 * x[1200, 1:3] + x_prev[1200, 1:3]) / 0.0025**2)
-                # print(y[1200])
 
                 if noise_level > 0:
                     y = y * (1 + torch.randn_like(y) * noise_level)
@@ -3692,8 +3691,17 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             x_list.append(torch.tensor(x, device=device))
             y_list.append(torch.tensor(y, device=device))
         else:
-            x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device))
-            y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device))
+
+            if os.path.exists(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt'):
+                x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
+                y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
+            else:
+                x = np.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy')
+                x = torch.tensor(x, dtype=torch.float32, device=device)
+                y = np.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy')
+                y = torch.tensor(y, dtype=torch.float32, device=device)
+            x_list.append(x)
+            y_list.append(y)
         ynorm = torch.load(f'./log/try_{config_file}/ynorm.pt', map_location=device).to(device)
         vnorm = torch.load(f'./log/try_{config_file}/vnorm.pt', map_location=device).to(device)
         x = x_list[0][0].clone().detach()
@@ -3890,6 +3898,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     x = x_list[0][start_it].clone().detach()
     n_particles = x.shape[0]
 
+    data_id = torch.ones((x.shape[0], 1), dtype=torch.int) * run
+
     for it in trange(start_it, stop_it):
 
         if it < n_frames - 4:
@@ -3898,12 +3908,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         if has_mesh:
             x[:, 1:5] = x0[:, 1:5].clone().detach()
             dataset_mesh = data.Data(x=x, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
-
-        # if 'PDE_K' in model_config.particle_model_name:
-        #     if it * delta_t *10 >= timeit[time_id]:
-        #         x0 = x_list[0][time_id].clone().detach()
-        #         x = x0.clone().detach()
-        #         time_id += 1
 
         # error calculations
         if 'PDE_N' in model_config.signal_model_name:
@@ -4021,7 +4025,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     y = y0 / ynorm
                 else:
                     with torch.no_grad():
-                        pred = model(dataset, data_id=run, training=False, vnorm=vnorm, phi=torch.zeros(1, device=device))
+                        pred = model(dataset, data_id=data_id, training=False, vnorm=vnorm, phi=torch.zeros(1, device=device))
                         y = pred[:,0:dimension]
 
                 if has_ghost:
@@ -4050,7 +4054,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 x[fixed_pos, 3:5] = x0[fixed_pos, 3:5] * 0
                 x_list[0][it+1] = x.clone().detach()
 
-        # viz
+        # vizulazition
         if (it % step == 0) & (it >= 0) & visualize:
 
             num = f"{it:06}"
@@ -4252,9 +4256,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                         if 'speed' in style:
                             plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(x[m, 4]) * delta_t * 2, dy=to_numpy(x[m, 3]) * delta_t * 2, head_width=0.004, length_includes_head=True, color='g')
                         if 'acc' in style:
-                            # plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(y0[m, 1])/5E3, dy=to_numpy(y0[m, 0])/5E3, head_width=0.004, length_includes_head=True, color='r')
-                            plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(pred[m, 1]*ynorm.squeeze()) / 5E3, dy=to_numpy(pred[m, 0]*ynorm.squeeze()) / 5E3, head_width=0.004, length_includes_head=True, color='r')
-
+                            plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(y0[m, 1])/5E3, dy=to_numpy(y0[m, 0])/5E3, head_width=0.004, length_includes_head=True, color='r')
+                            # plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(pred[m, 1]*ynorm.squeeze()) / 5E3, dy=to_numpy(pred[m, 0]*ynorm.squeeze()) / 5E3, head_width=0.004, length_includes_head=True, color='r')
                     plt.text(0,1.05,f'true acc {to_numpy(y0[900,0:2])} {to_numpy(pred[900,0:2]*ynorm)}',fontsize=12)
                     plt.text(0,1.025,f'true speed {to_numpy(x_list[0][it][900,3:5] + y0[900,0:2] * delta_t)} {to_numpy(x_list[0][it][900,3:5] + pred[900,0:2] * ynorm * delta_t)}',fontsize=12)
                     # plt.text(0,1,f'true pos {to_numpy(x_list[0][it][900,1:3] + (x_list[0][it][900,3:5] + y0[900] * delta_t) * delta_t)} {to_numpy(x_list[0][it][900,1:3] + (x_list[0][it][900,3:5] + pred[900] * ynorm * delta_t) * delta_t)}',fontsize=12)
@@ -4399,6 +4402,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.close()
 
     print('prediction error {:.3e}+/-{:.3e}'.format(np.mean(pred_err_list), np.std(pred_err_list)))
+
     print('average rollout RMSE {:.3e}+/-{:.3e}'.format(np.mean(rmserr_list), np.std(rmserr_list)))
     if has_mesh:
         h = x_mesh_list[0][0][:, 6:7]
@@ -4512,6 +4516,25 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/GT_{config_file}_{it}.tif", dpi=170.7)
             plt.close()
+
+    # run = 0
+    # k = 32
+    # x = x_list[run][k]
+    # y = y_list[run][k]
+    #
+    # x_next = x_list[run][k + 1].clone().detach()
+    # x_prev = x_list[run][k - 1].clone().detach()
+    # print('')
+    # print(x[1200])
+    # print((x[1200, 1:3] - x_prev[1200, 1:3]) / delta_t)
+    # print(x[1200, 3:5])
+    # print(x_next[1200])
+    # print((x_next[1200, 1:3] - x[1200, 1:3]) / delta_t)
+    # print(x_next[1200, 3:5])
+    # acc = ((x_next[1200, 1:3] - x[1200, 1:3]) / delta_t - (x[1200, 1:3] - x_prev[1200, 1:3]) / delta_t) / delta_t
+    # print(acc)
+    # print((x_next[1200, 1:3] - 2 * x[1200, 1:3] + x_prev[1200, 1:3]) / delta_t ** 2)
+    # print(y[1200])
 
 
 

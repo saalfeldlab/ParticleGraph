@@ -63,8 +63,8 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device)
 
-        self.lin_phi = MLP(input_size=self.input_size_update, output_size=self.output_size_update, nlayers=self.n_layers_update,
-                                hidden_size=self.hidden_dim_update, device=self.device)
+        # self.lin_phi = MLP(input_size=self.input_size_update, output_size=self.output_size_update, nlayers=self.n_layers_update,
+        #                         hidden_size=self.hidden_dim_update, device=self.device)
 
         self.a = nn.Parameter(
                 torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
@@ -88,6 +88,7 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
             # pred = self.lin_phi(torch.cat((d_pos, pred, embedding), dim=-1))
 
         else:
+            particle_id = x[0][:, 0:1]
             x = torch.stack(x)
             pos = x[:, :, 1:self.dimension + 1]
             pos = pos.transpose(0, 1)
@@ -95,7 +96,6 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
             d_pos = x[:, :, self.dimension + 1:1 + 2 * self.dimension]
             d_pos = d_pos.transpose(0, 1)
             d_pos = torch.reshape(d_pos, (d_pos.shape[0], d_pos.shape[1] * d_pos.shape[2]))
-            particle_id = x[0, :, 0:1].squeeze()
             embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
             pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding)
 
@@ -147,13 +147,7 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
         else:
             in_features = torch.cat((delta_pos, embedding_i, embedding_j), dim=-1)
 
-        # if self.time_window == 0:
-        #     in_features = torch.cat((d_pos_i, d_pos_j, delta_pos, embedding_i, embedding_j), dim=-1)
-        # else:
-        #     in_features = torch.cat((pos_i-pos_j, d_pos_i-d_pos_j, embedding_i, embedding_j), dim=-1)
-
         out = self.lin_edge(in_features)
-
 
         return out
 
