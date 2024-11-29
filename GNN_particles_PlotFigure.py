@@ -1496,66 +1496,182 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, bLatex, device):
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
-    for epoch in epoch_list:
+    if epoch_list[0] == 'all':
 
-        net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
-        print(f'network: {net}')
-        state_dict = torch.load(net, map_location=device)
-        model.load_state_dict(state_dict['model_state_dict'])
-        model.eval()
+        plt.rcParams['text.usetex'] = False
+        plt.rc('font', family='sans-serif')
+        plt.rc('text', usetex=False)
+        matplotlib.rcParams['savefig.pad_inches'] = 0
 
-        accuracy, n_clusters, new_labels = plot_embedding_func_cluster_state(model, config, config_file, embedding_cluster,
-                                                                       cmap, type_list, type_stack, id_list,
-                                                                       n_particle_types, ynorm, epoch,
-                                                                       log_dir, device)
+        files = glob.glob(f"./log/try_{config_file}/models/best_model_with_1_graphs_*.pt")
+        files.sort(key=sort_key)
+
+        files = glob.glob(f"./log/try_{config_file}/models/best_model_with_1_graphs_*.pt")
+        files.sort(key=sort_key)
+
+        flag = True
+        file_id = 0
+        while (flag):
+            if sort_key(files[file_id])//1E7 == 2:
+                flag = False
+            file_id += 1
+
+        file_id_list0 = np.arange(0,1200,20)
+        file_id_list1 = np.arange(1200,file_id,(file_id-40)//60)
+        file_id_list2 = np.arange(file_id, len(files), (len(files)-file_id) // 100)
+        file_id_list = np.concatenate((file_id_list0,file_id_list1, file_id_list2))
+
+        for file_id_ in trange(0,len(file_id_list)):
+            file_id = file_id_list[file_id_]
+            if sort_key(files[file_id]) % 1E7 != 0:
+                epoch = files[file_id].split('graphs')[1][1:-3]
+                print(epoch)
+
+                net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
+                state_dict = torch.load(net, map_location=device)
+                model.load_state_dict(state_dict['model_state_dict'])
+                model.eval()
+
+                plt.style.use('dark_background')
+
+                fig, ax = fig_init()
+                for n in range(n_particle_types):
+                    pos = torch.argwhere(type_stack == n).squeeze()
+                    if len(pos) > 0:
+                        plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=1, color=cmap.color(n),
+                                    alpha=0.05, edgecolor='none')
+                plt.xlabel(r'$a_{i0}$', fontsize=48)
+                plt.ylabel(r'$a_{i1}$', fontsize=48)
+                plt.xlim([0, 2])
+                plt.ylim([0, 2])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/all/embedding_{epoch}.tif", dpi=80)
+                plt.close()
+
+                max_radius = 0.1
+                fig = plt.figure(figsize=(12, 12))
+                ax = fig.add_subplot(1, 1, 1)
+                if config.graph_model.particle_model_name == 'PDE_Cell_B':
+                    rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
+                else:
+                    rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+                if len(type_list) > 1E5:
+                    nk = len(type_list) // 1000
+                else:
+                    nk = 40
+                if len(type_list[0]) > 1000:
+                    nn = 10
+                else:
+                    nn = 1
+                for k in range(1, len(type_list), nk):
+                    for n in range(1, len(type_list[k]), nn):
+                        embedding_ = model.a[to_numpy(id_list[k][n]).astype(int)]
+                        embedding_ = embedding_ * torch.ones((1000, config.simulation.dimension), device=device)
+
+                        match config.graph_model.particle_model_name:
+                            case 'PDE_Cell_A':
+                                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                         rr[:, None] / max_radius, embedding_), dim=1)
+                            case 'PDE_Cell_A_area':
+                                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                         rr[:, None] / max_radius, torch.ones_like(rr[:, None]) * 0.1,
+                                                         torch.ones_like(rr[:, None]) * 0.4, embedding_, embedding_),
+                                                        dim=1)
+                            case 'PDE_Cell_B':
+                                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                         torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None],
+                                                         0 * rr[:, None],
+                                                         0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                            case 'PDE_Cell_B_area':
+                                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                         torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None],
+                                                         0 * rr[:, None],
+                                                         0 * rr[:, None], 0 * rr[:, None],
+                                                         torch.ones_like(rr[:, None]) * 0.001,
+                                                         torch.ones_like(rr[:, None]) * 0.001, embedding_, embedding_),
+                                                        dim=1)
+
+                        with torch.no_grad():
+                            func = model.lin_edge(in_features.float())
+                        func = func[:, 0]
+                        type = to_numpy(type_list[k][n])
+                        plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
+                                 color=cmap.color(int(type)), linewidth=2, alpha=0.5)
+                ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+                ax.yaxis.set_major_locator(plt.MaxNLocator(5))
+                ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+                fmt = lambda x, pos: '{:.1f}e-5'.format((x) * 1e5, pos)
+                ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+                plt.xticks(fontsize=32.0)
+                plt.yticks(fontsize=32.0)
+                plt.xlabel('$d_{ij}$', fontsize=48)
+                plt.ylabel('$f(a_{i,t}, d_{ij})$', fontsize=48)
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/all/function_{epoch}.tif", dpi=80)
+                plt.close()
+
+    else:
+
+        for epoch in epoch_list:
+
+            net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
+            print(f'network: {net}')
+            state_dict = torch.load(net, map_location=device)
+            model.load_state_dict(state_dict['model_state_dict'])
+            model.eval()
+
+            accuracy, n_clusters, new_labels = plot_embedding_func_cluster_state(model, config, config_file, embedding_cluster,
+                                                                           cmap, type_list, type_stack, id_list,
+                                                                           n_particle_types, ynorm, epoch,
+                                                                           log_dir, bLatex, device)
 
 
-        print(f'result accuracy: {accuracy:0.3f}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
-        logger.info(f'result accuracy: {accuracy:0.3f}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+            print(f'result accuracy: {accuracy:0.3f}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+            logger.info(f'result accuracy: {accuracy:0.3f}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
-        fig, ax = fig_init()
-        plots = []
-        p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
-        rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
-        plots.append(rr)
-        for n in range(n_particle_types):
-            plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n), linewidth=8)
-            plots.append(model.psi(rr, p[n], p[n]).squeeze())
-        plt.xlim([0, max_radius])
-        plt.ylim(config.plotting.ylim)
-        if bLatex:
-            plt.xlabel(r'$d_{ij}$', fontsize=78)
-            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
-        else:
-            plt.xlabel(r'$d_{ij}$', fontsize=78)
-            plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=78)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif", dpi=170.7)
-        plt.close()
+            fig, ax = fig_init()
+            plots = []
+            p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
+            rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+            plots.append(rr)
+            for n in range(n_particle_types):
+                plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n), linewidth=8)
+                plots.append(model.psi(rr, p[n], p[n]).squeeze())
+            plt.xlim([0, max_radius])
+            plt.ylim(config.plotting.ylim)
+            if bLatex:
+                plt.xlabel(r'$d_{ij}$', fontsize=78)
+                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
+            else:
+                plt.xlabel(r'$d_{ij}$', fontsize=78)
+                plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=78)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif", dpi=170.7)
+            plt.close()
 
-        learned_time_series = np.reshape(new_labels, (n_frames + 1, n_particles))
-        GT_time_series = np.reshape(to_numpy(type_stack), (n_frames + 1, n_particles))
+            learned_time_series = np.reshape(new_labels, (n_frames + 1, n_particles))
+            GT_time_series = np.reshape(to_numpy(type_stack), (n_frames + 1, n_particles))
 
-        c_map = ['#1f77b4', '#ff7f0e', '#2ca02c']
-        cm = matplotlib.colors.ListedColormap(c_map)
+            c_map = ['#1f77b4', '#ff7f0e', '#2ca02c']
+            cm = matplotlib.colors.ListedColormap(c_map)
 
-        selected = np.concatenate((np.arange(0,80),np.arange(1600,1680),np.arange(3200,3280)),axis=0)
+            selected = np.concatenate((np.arange(0,80),np.arange(1600,1680),np.arange(3200,3280)),axis=0)
 
-        fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
-        plt.imshow(np.rot90(GT_time_series[:,selected.astype(int)]), aspect='auto', cmap=cm,vmin=0, vmax=2)
-        plt.xlabel('frame', fontsize=78)
-        plt.ylabel('cell_id', fontsize=78)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/true_kinograph_{config_file}.tif", dpi=170.7)
-        plt.close()
+            fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
+            plt.imshow(np.rot90(GT_time_series[:,selected.astype(int)]), aspect='auto', cmap=cm,vmin=0, vmax=2)
+            plt.xlabel('frame', fontsize=78)
+            plt.ylabel('cell_id', fontsize=78)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/true_kinograph_{config_file}.tif", dpi=170.7)
+            plt.close()
 
-        fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
-        plt.imshow(np.rot90(learned_time_series[:,selected.astype(int)]), aspect='auto', cmap=cm,vmin=0, vmax=2)
-        plt.xlabel('frame', fontsize=78)
-        plt.ylabel('cell_id', fontsize=78)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/learned_kinograph_{config_file}.tif", dpi=170.7)
-        plt.close()
+            fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
+            plt.imshow(np.rot90(learned_time_series[:,selected.astype(int)]), aspect='auto', cmap=cm,vmin=0, vmax=2)
+            plt.xlabel('frame', fontsize=78)
+            plt.ylabel('cell_id', fontsize=78)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/learned_kinograph_{config_file}.tif", dpi=170.7)
+            plt.close()
 
 
 def plot_cell_tracking(config_file, epoch_list, log_dir, logger, bLatex, device):
@@ -6320,12 +6436,12 @@ if __name__ == '__main__':
 
     # config_list = ['falling_particles_N1000_2']
 
-    config_list = ['gravity_16_test']
+    config_list = ['arbitrary_3_cell_sequence_c_bis']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['best'], bLatex=False, device=device)
-        # data_plot(config=config, config_file=config_file, epoch_list=['all'], device=device)
+        # data_plot(config=config, config_file=config_file, epoch_list=['best'], bLatex=False, device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['all'], bLatex=False, device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

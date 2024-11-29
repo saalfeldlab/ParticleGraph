@@ -953,7 +953,7 @@ def data_train_cell(config, config_file, erase, best_model, device):
             total_loss += loss.item()
 
             visualize_embedding = True
-            if visualize_embedding & (((epoch < 10) & (N % (Niter // 10) == 0)) | (N == 0)):
+            if visualize_embedding & (((epoch < 30) & (N % (Niter // 50) == 0)) | (N == 0)):
                 if do_tracking | has_state:
                     id_list = []
                     for k in range(n_frames + 1):
@@ -4068,8 +4068,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.style.use('dark_background')
 
             fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
-
             ax.tick_params(axis='both', which='major', pad=15)
+
             if has_mesh:
                 pts = x[:, 1:3].detach().cpu().numpy()
                 tri = Delaunay(pts)
@@ -4235,93 +4235,93 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     else:
                         plt.scatter(x[index_particles[n], 2].detach().cpu().numpy(),
                                     x[index_particles[n], 1].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
+                plt.xlim([0, 1])
+                plt.ylim([0, 1])
+
+
+            if 'latex' in style:
+                plt.xlabel(r'$x$', fontsize=78)
+                plt.ylabel(r'$y$', fontsize=78)
+                plt.xticks(fontsize=48.0)
+                plt.yticks(fontsize=48.0)
+            if 'frame' in style:
+                plt.xlabel('x', fontsize=48)
+                plt.ylabel('y', fontsize=48)
+                plt.xticks(fontsize=48.0)
+                plt.yticks(fontsize=48.0)
+                plt.text(0, 1.1, f'   ', ha='left', va='top', transform=ax.transAxes, fontsize=48)
+                ax.tick_params(axis='both', which='major', pad=15)
+                # cbar = plt.colorbar(shrink=0.5)
+                # cbar.ax.tick_params(labelsize=32)
+            if 'arrow' in style:
+                for m in range(x.shape[0]):
+                    if 'speed' in style:
+                        plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(x[m, 4]) * delta_t * 2, dy=to_numpy(x[m, 3]) * delta_t * 2, head_width=0.004, length_includes_head=True, color='g')
+                    if 'acc' in style:
+                        # plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(y0[m, 1])/5E3, dy=to_numpy(y0[m, 0])/5E3, head_width=0.004, length_includes_head=True, color='r')
+                        plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(pred[m, 1]*ynorm.squeeze()) / 5E3, dy=to_numpy(pred[m, 0]*ynorm.squeeze()) / 5E3, head_width=0.004, length_includes_head=True, color='r')
+                plt.text(0,1.05,f'true acc {to_numpy(y0[900,0:2])} {to_numpy(pred[900,0:2]*ynorm)}',fontsize=12)
+                plt.text(0,1.025,f'true speed {to_numpy(x_list[0][it][900,3:5] + y0[900,0:2] * delta_t)} {to_numpy(x_list[0][it][900,3:5] + pred[900,0:2] * ynorm * delta_t)}',fontsize=12)
+                # plt.text(0,1,f'true pos {to_numpy(x_list[0][it][900,1:3] + (x_list[0][it][900,3:5] + y0[900] * delta_t) * delta_t)} {to_numpy(x_list[0][it][900,1:3] + (x_list[0][it][900,3:5] + pred[900] * ynorm * delta_t) * delta_t)}',fontsize=12)
+            if 'no_ticks' in style:
+                plt.xticks([])
+                plt.yticks([])
+            if 'PDE_G' in model_config.particle_model_name:
+                plt.xlim([-2, 2])
+                plt.ylim([-2, 2])
+            if 'PDE_GS' in model_config.particle_model_name:
+
+                object_list = ['sun', 'mercury', 'venus', 'earth', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune',
+                               'pluto', 'io',
+                               'europa', 'ganymede', 'callisto', 'mimas', 'enceladus', 'tethys', 'dione', 'rhea',
+                               'titan', 'hyperion', 'moon',
+                               'phobos', 'deimos', 'charon']
+
+                masses = torch.tensor(
+                    [1.989e30, 3.30e23, 4.87e24, 5.97e24, 6.42e23, 1.90e27, 5.68e26, 8.68e25, 1.02e26, 1.31e22,
+                     8.93e22, 4.80e22, 1.48e23, 1.08e23, 3.75e19, 1.08e20,
+                     6.18e20, 1.10e21, 2.31e21, 1.35e23, 5.62e18, 7.35e22, 1.07e16, 1.48e15, 1.52e21],
+                    device=device)
+
+                pos = x[:, 1:dimension + 1]  # - x[0,1:dimension + 1]
+                distance = torch.sqrt(torch.sum(bc_dpos(pos[:, None, :] - pos[None, 0, :]) ** 2, dim=2))
+                unit_vector = pos / distance
+
+                if it == 0:
+                    log_coeff = torch.log(distance[1:])
+                    log_coeff_min = torch.min(log_coeff)
+                    log_coeff_max = torch.max(log_coeff)
+                    log_coeff_diff = log_coeff_max - log_coeff_min
+                    d_log = [log_coeff_min, log_coeff_max, log_coeff_diff]
+
+                    log_coeff = torch.log(masses)
+                    log_coeff_min = torch.min(log_coeff)
+                    log_coeff_max = torch.max(log_coeff)
+                    log_coeff_diff = log_coeff_max - log_coeff_min
+                    m_log = [log_coeff_min, log_coeff_max, log_coeff_diff]
+
+                    m_ = torch.log(masses) / m_log[2]
+
+                distance_ = (torch.log(distance) - d_log[0]) / d_log[2]
+                pos = distance_ * unit_vector
+                pos = to_numpy(pos)
+                pos[0] = 0
+
+                for n in range(25):
+                    plt.scatter(pos[n, 1], pos[n, 0], s=200 * to_numpy(m_[n] ** 3), color=cmap.color(n))
+                    # plt.text(pos[n,1], pos[n, 0], object_list[n], fontsize=8)
+                plt.xlim([-1.2, 1.2])
+                plt.ylim([-1.2, 1.2])
+                plt.xticks([])
+                plt.yticks([])
+            if 'PDE_K' in model_config.particle_model_name:
+                plt.xlim([-3, 3])
+                plt.ylim([-3, 3])
+                plt.xticks(fontsize=24)
+                plt.yticks(fontsize=24)
+
 
             if not ('PDE_N' in model_config.signal_model_name):
-
-                if 'latex' in style:
-                    plt.xlabel(r'$x$', fontsize=78)
-                    plt.ylabel(r'$y$', fontsize=78)
-                    plt.xticks(fontsize=48.0)
-                    plt.yticks(fontsize=48.0)
-                if 'frame' in style:
-                    plt.xlabel('x', fontsize=48)
-                    plt.ylabel('y', fontsize=48)
-                    plt.xticks(fontsize=48.0)
-                    plt.yticks(fontsize=48.0)
-                    plt.text(0, 1.1, f'   ', ha='left', va='top', transform=ax.transAxes, fontsize=48)
-                    ax.tick_params(axis='both', which='major', pad=15)
-                    # cbar = plt.colorbar(shrink=0.5)
-                    # cbar.ax.tick_params(labelsize=32)
-                if 'arrow' in style:
-                    for m in range(x.shape[0]):
-                        if 'speed' in style:
-                            plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(x[m, 4]) * delta_t * 2, dy=to_numpy(x[m, 3]) * delta_t * 2, head_width=0.004, length_includes_head=True, color='g')
-                        if 'acc' in style:
-                            plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(y0[m, 1])/5E3, dy=to_numpy(y0[m, 0])/5E3, head_width=0.004, length_includes_head=True, color='r')
-                            # plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(pred[m, 1]*ynorm.squeeze()) / 5E3, dy=to_numpy(pred[m, 0]*ynorm.squeeze()) / 5E3, head_width=0.004, length_includes_head=True, color='r')
-                    plt.text(0,1.05,f'true acc {to_numpy(y0[900,0:2])} {to_numpy(pred[900,0:2]*ynorm)}',fontsize=12)
-                    plt.text(0,1.025,f'true speed {to_numpy(x_list[0][it][900,3:5] + y0[900,0:2] * delta_t)} {to_numpy(x_list[0][it][900,3:5] + pred[900,0:2] * ynorm * delta_t)}',fontsize=12)
-                    # plt.text(0,1,f'true pos {to_numpy(x_list[0][it][900,1:3] + (x_list[0][it][900,3:5] + y0[900] * delta_t) * delta_t)} {to_numpy(x_list[0][it][900,1:3] + (x_list[0][it][900,3:5] + pred[900] * ynorm * delta_t) * delta_t)}',fontsize=12)
-
-                if 'no_ticks' in style:
-                    plt.xticks([])
-                    plt.yticks([])
-                if not (('RD_RPS_Mesh' in model_config.mesh_model_name) | ('PDE_N' in model_config.signal_model_name)):
-                    plt.xlim([0, 1])
-                    plt.ylim([0, 1])
-                if 'PDE_G' in model_config.particle_model_name:
-                    plt.xlim([-2, 2])
-                    plt.ylim([-2, 2])
-                if 'PDE_GS' in model_config.particle_model_name:
-
-                    object_list = ['sun', 'mercury', 'venus', 'earth', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune',
-                                   'pluto', 'io',
-                                   'europa', 'ganymede', 'callisto', 'mimas', 'enceladus', 'tethys', 'dione', 'rhea',
-                                   'titan', 'hyperion', 'moon',
-                                   'phobos', 'deimos', 'charon']
-
-                    masses = torch.tensor(
-                        [1.989e30, 3.30e23, 4.87e24, 5.97e24, 6.42e23, 1.90e27, 5.68e26, 8.68e25, 1.02e26, 1.31e22,
-                         8.93e22, 4.80e22, 1.48e23, 1.08e23, 3.75e19, 1.08e20,
-                         6.18e20, 1.10e21, 2.31e21, 1.35e23, 5.62e18, 7.35e22, 1.07e16, 1.48e15, 1.52e21],
-                        device=device)
-
-                    pos = x[:, 1:dimension + 1]  # - x[0,1:dimension + 1]
-                    distance = torch.sqrt(torch.sum(bc_dpos(pos[:, None, :] - pos[None, 0, :]) ** 2, dim=2))
-                    unit_vector = pos / distance
-
-                    if it == 0:
-                        log_coeff = torch.log(distance[1:])
-                        log_coeff_min = torch.min(log_coeff)
-                        log_coeff_max = torch.max(log_coeff)
-                        log_coeff_diff = log_coeff_max - log_coeff_min
-                        d_log = [log_coeff_min, log_coeff_max, log_coeff_diff]
-
-                        log_coeff = torch.log(masses)
-                        log_coeff_min = torch.min(log_coeff)
-                        log_coeff_max = torch.max(log_coeff)
-                        log_coeff_diff = log_coeff_max - log_coeff_min
-                        m_log = [log_coeff_min, log_coeff_max, log_coeff_diff]
-
-                        m_ = torch.log(masses) / m_log[2]
-
-                    distance_ = (torch.log(distance) - d_log[0]) / d_log[2]
-                    pos = distance_ * unit_vector
-                    pos = to_numpy(pos)
-                    pos[0] = 0
-
-                    for n in range(25):
-                        plt.scatter(pos[n, 1], pos[n, 0], s=200 * to_numpy(m_[n] ** 3), color=cmap.color(n))
-                        # plt.text(pos[n,1], pos[n, 0], object_list[n], fontsize=8)
-                    plt.xlim([-1.2, 1.2])
-                    plt.ylim([-1.2, 1.2])
-                    plt.xticks([])
-                    plt.yticks([])
-                if 'PDE_K' in model_config.particle_model_name:
-                    plt.xlim([-3, 3])
-                    plt.ylim([-3, 3])
-                    plt.xticks(fontsize=24)
-                    plt.yticks(fontsize=24)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{num}.tif", dpi=80)
                 plt.close()
