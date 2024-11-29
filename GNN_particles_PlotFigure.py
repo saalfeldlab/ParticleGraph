@@ -1518,15 +1518,13 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, bLatex, device):
 
         file_id_list0 = np.arange(0,1200,20)
         file_id_list1 = np.arange(1200,file_id,(file_id-40)//60)
-        file_id_list2 = np.arange(file_id, len(files), (len(files)-file_id) // 100)
-        file_id_list = np.concatenate((file_id_list0,file_id_list1, file_id_list2))
+        # file_id_list2 = np.arange(file_id, len(files), (len(files)-file_id) // 100)
+        file_id_list = np.concatenate((file_id_list0,file_id_list1)) #, file_id_list2))
 
         for file_id_ in trange(0,len(file_id_list)):
             file_id = file_id_list[file_id_]
             if sort_key(files[file_id]) % 1E7 != 0:
                 epoch = files[file_id].split('graphs')[1][1:-3]
-                print(epoch)
-
                 net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
                 state_dict = torch.load(net, map_location=device)
                 model.load_state_dict(state_dict['model_state_dict'])
