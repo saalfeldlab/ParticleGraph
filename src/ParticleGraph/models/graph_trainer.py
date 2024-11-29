@@ -260,7 +260,6 @@ def data_train_particle(config, config_file, erase, best_model, device):
                     displacement = displacement.repeat(x.shape[0], 1)
                     x[:, 1:dimension + 1] = x[:, 1:dimension + 1] + displacement
 
-
                 if batch == 0:
                     data_id = torch.ones((x.shape[0],1), dtype=torch.int) * run
                 else:
@@ -292,6 +291,8 @@ def data_train_particle(config, config_file, erase, best_model, device):
                     xt = []
                     for t in range(time_window):
                         x_ = torch.tensor(x_list[run][k - t], dtype=torch.float32, device=device)
+                        if translation_augmentation:
+                            x_[:, 1:dimension + 1] = x_[:, 1:dimension + 1] + displacement
                         xt.append(x_[:, :])
 
                     dataset = data.Data(x=xt, edge_index=edges, num_nodes=x.shape[0])
