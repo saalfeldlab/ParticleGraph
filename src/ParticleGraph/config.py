@@ -92,7 +92,7 @@ class GraphModelConfig(BaseModel):
     mesh_aggr_type: str = 'add'
     embedding_dim: int = 2
 
-    update_type: Literal['linear', 'none', 'no_pos', 'embedding_MLP'] = 'none'
+    update_type: Literal['linear', 'mlp', 'none', 'no_pos', 'embedding_MLP'] = 'none'
     input_size_update: int = 3
     n_layers_update: int = 3
     hidden_dim_update: int = 64
@@ -173,6 +173,7 @@ class TrainingConfig(BaseModel):
     coeff_diff: float = 10
 
     noise_level: float = 0
+    time_window_noise: float = 0
     rotation_augmentation: bool = False
     translation_augmentation: bool = False
     data_augmentation_loop: int = 40

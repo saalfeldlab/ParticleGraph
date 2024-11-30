@@ -1509,20 +1509,19 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, bLatex, device):
         files = glob.glob(f"./log/try_{config_file}/models/best_model_with_1_graphs_*.pt")
         files.sort(key=sort_key)
 
-        flag = True
-        file_id = 0
-        while (flag):
-            if sort_key(files[file_id])//1E7 == 2:
-                flag = False
-            file_id += 1
+        # flag = True
+        # file_id = 0
+        # while (flag):
+        #     if sort_key(files[file_id])//1E7 == 2:
+        #         flag = False
+        #     file_id += 1
+        #
+        # file_id_list0 = np.arange(0,1200,20)
+        # file_id_list1 = np.arange(1200,file_id,(file_id-40)//60)
+        # # file_id_list2 = np.arange(file_id, len(files), (len(files)-file_id) // 100)
+        # file_id_list = np.concatenate((file_id_list0,file_id_list1)) #, file_id_list2))
 
-        file_id_list0 = np.arange(0,1200,20)
-        file_id_list1 = np.arange(1200,file_id,(file_id-40)//60)
-        # file_id_list2 = np.arange(file_id, len(files), (len(files)-file_id) // 100)
-        file_id_list = np.concatenate((file_id_list0,file_id_list1)) #, file_id_list2))
-
-        for file_id_ in trange(0,len(file_id_list)):
-            file_id = file_id_list[file_id_]
+        for file_id in trange(0,len(files)):
             if sort_key(files[file_id]) % 1E7 != 0:
                 epoch = files[file_id].split('graphs')[1][1:-3]
                 net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
@@ -1540,15 +1539,14 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, bLatex, device):
                                     alpha=0.05, edgecolor='none')
                 plt.xlabel(r'$a_{i0}$', fontsize=48)
                 plt.ylabel(r'$a_{i1}$', fontsize=48)
-                plt.xlim([0, 2])
-                plt.ylim([0, 2])
+                plt.xlim([0.6, 1.6])
+                plt.ylim([0.6, 1.6])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/all/embedding_{epoch}.tif", dpi=80)
                 plt.close()
 
                 max_radius = 0.1
-                fig = plt.figure(figsize=(12, 12))
-                ax = fig.add_subplot(1, 1, 1)
+                fig, ax = fig_init(fontsize=24)
                 if config.graph_model.particle_model_name == 'PDE_Cell_B':
                     rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
                 else:
@@ -1595,15 +1593,9 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, bLatex, device):
                         type = to_numpy(type_list[k][n])
                         plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
                                  color=cmap.color(int(type)), linewidth=2, alpha=0.5)
-                ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-                ax.yaxis.set_major_locator(plt.MaxNLocator(5))
-                ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-                fmt = lambda x, pos: '{:.1f}e-5'.format((x) * 1e5, pos)
-                ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-                plt.xticks(fontsize=32.0)
-                plt.yticks(fontsize=32.0)
+                plt.ylim([-0.04, 0.03])
                 plt.xlabel('$d_{ij}$', fontsize=48)
-                plt.ylabel('$f(a_{i,t}, d_{ij})$', fontsize=48)
+                plt.ylabel('$f(a_{it}, d_{ij})$', fontsize=48)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/all/function_{epoch}.tif", dpi=80)
                 plt.close()

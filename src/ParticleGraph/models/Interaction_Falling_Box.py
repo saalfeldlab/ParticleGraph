@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import torch
 import torch_geometric as pyg
 import torch_geometric.utils as pyg_utils
 from ParticleGraph.models.MLP import MLP
@@ -43,10 +44,11 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
         self.n_particles = simulation_config.n_particles
         self.delta_t = simulation_config.delta_t
         self.max_radius = simulation_config.max_radius
-        self.noise_level = train_config.noise_level
+        self.time_window_noise = train_config.time_window_noise
         self.embedding_dim = model_config.embedding_dim
         self.n_dataset = train_config.n_runs
         self.prediction = model_config.prediction
+        self.update_type = model_config.update_type
         self.n_layers_update = model_config.n_layers_update
         self.input_size_update = model_config.input_size_update
         self.hidden_dim_update = model_config.hidden_dim_update
@@ -63,8 +65,8 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device)
 
-        # self.lin_phi = MLP(input_size=self.input_size_update, output_size=self.output_size_update, nlayers=self.n_layers_update,
-        #                         hidden_size=self.hidden_dim_update, device=self.device)
+        self.lin_phi = MLP(input_size=self.input_size_update, output_size=self.output_size_update, nlayers=self.n_layers_update,
+                                hidden_size=self.hidden_dim_update, device=self.device)
 
         self.a = nn.Parameter(
                 torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
@@ -84,9 +86,6 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
             particle_id = x[:, 0:1]
             embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
             pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding)
-
-            # pred = self.lin_phi(torch.cat((d_pos, pred, embedding), dim=-1))
-
         else:
             particle_id = x[0][:, 0:1]
             x = torch.stack(x)
@@ -97,9 +96,17 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
             d_pos = d_pos.transpose(0, 1)
             d_pos = torch.reshape(d_pos, (d_pos.shape[0], d_pos.shape[1] * d_pos.shape[2]))
             embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
+
+            if self.time_window_noise > 0:
+                noise = torch.randn((pos.shape[0], pos.shape[1] + 2), dtype=torch.float32, device=self.device) * self.time_window_noise
+                pos = pos + noise[:, :-self.dimension]
+                d_noise = (noise[:, :-2] - noise[:, 2:]) / self.delta_t
+                d_pos = d_pos + d_noise
+
             pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding)
 
-            # pred = self.lin_phi(torch.cat((d_pos, pred, embedding), dim=-1))
+        if self.update_type == 'mlp':
+            pred = self.lin_phi(torch.cat((d_pos, pred, embedding), dim=-1))
 
         if self.recursive_loop>0:
 
@@ -123,11 +130,11 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
 
             return pred
 
-        # fig = plt.figure(figsize=(10, 10))
-        # plt.scatter(to_numpy(pos[:, 1]), to_numpy(pos[:, 0]), s=2)
+        fig = plt.figure(figsize=(10, 10))
+        plt.scatter(to_numpy(pos[:, 1]), to_numpy(pos[:, 0]), s=2)
 
-        # for k in range(4):
-        #     plt.scatter(to_numpy(pos[:, 1+k*2]), to_numpy(pos[:, 0+k*2]),s=10)
+        for k in range(4):
+            plt.scatter(to_numpy(pos[:, 1+k*2]), to_numpy(pos[:, 0+k*2]),s=10)
         # print('')
         # print(pos[1200])
         # print((pos[1200,0:2]-pos[1200,2:4])/0.0025)
