@@ -53,7 +53,7 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
         self.input_size_update = model_config.input_size_update
         self.hidden_dim_update = model_config.hidden_dim_update
         self.output_size_update = model_config.output_size_update
-        self.model = model_config.particle_model_name
+        self.model_type = model_config.particle_model_name
         self.bc_dpos = bc_dpos
         self.n_ghosts = int(train_config.n_ghosts)
         self.dimension = dimension
@@ -65,6 +65,7 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device)
 
+        # if self.update_type == 'mlp':
         self.lin_phi = MLP(input_size=self.input_size_update, output_size=self.output_size_update, nlayers=self.n_layers_update,
                                 hidden_size=self.hidden_dim_update, device=self.device)
 
@@ -130,11 +131,11 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
 
             return pred
 
-        fig = plt.figure(figsize=(10, 10))
-        plt.scatter(to_numpy(pos[:, 1]), to_numpy(pos[:, 0]), s=2)
-
-        for k in range(4):
-            plt.scatter(to_numpy(pos[:, 1+k*2]), to_numpy(pos[:, 0+k*2]),s=10)
+        # fig = plt.figure(figsize=(10, 10))
+        # plt.scatter(to_numpy(pos[:, 1]), to_numpy(pos[:, 0]), s=2)
+        #
+        # for k in range(4):
+        #     plt.scatter(to_numpy(pos[:, 1+k*2]), to_numpy(pos[:, 0+k*2]),s=10)
         # print('')
         # print(pos[1200])
         # print((pos[1200,0:2]-pos[1200,2:4])/0.0025)
@@ -152,8 +153,15 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
         if self.time_window == 0:
             in_features = torch.cat((r[:, None], delta_pos, d_pos_i, embedding_i, embedding_j), dim=-1)
         else:
-            in_features = torch.cat((delta_pos, d_pos_i, embedding_i, embedding_j), dim=-1)
-
+            match self.model_type:
+                case 'PDE_F1':
+                    in_features = torch.cat((delta_pos, d_pos_i, embedding_i, embedding_j), dim=-1)
+                case 'PDE_F2':
+                    in_features = torch.cat((delta_pos, d_pos_j-d_pos_i, embedding_i, embedding_j), dim=-1)
+                case 'PDE_F3':
+                    in_features = torch.cat((r[:, None], delta_pos, d_pos_i, embedding_i, embedding_j), dim=-1)
+                case 'PDE_F4':
+                    in_features = torch.cat((r[:, None], delta_pos, d_pos_j-d_pos_i, embedding_i, embedding_j), dim=-1)
         out = self.lin_edge(in_features)
 
         return out

@@ -50,13 +50,13 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        action = 'train'
+        action = 'test'
         best_model = None
 
-        # config_list=["falling_water_ramp_x1", "falling_water_ramp_x2", "falling_water_ramp_x3", "falling_water_ramp_x4", "falling_water_ramp_x5",
-        #              "falling_water_ramp_x6", "falling_water_ramp_x7", "falling_water_ramp_x8", "falling_water_ramp_x9", "falling_water_ramp_x10"]
+        # config_list=["falling_water_ramp_x12", "falling_water_ramp_x13", "falling_water_ramp_x14", "falling_water_ramp_x15",
+        #              "falling_water_ramp_x16", "falling_water_ramp_x17", "falling_water_ramp_x18", "falling_water_ramp_x19"]
 
-        config_list=['falling_water_ramp_x17']
+        config_list=['falling_water_ramp_x14']
 
     for config_file in config_list:
 
@@ -70,10 +70,11 @@ if __name__ == '__main__':
         if 'train' in action:
             data_train(config=config, config_file=config_file, erase=False, best_model=best_model, device=device)
         if 'test' in action:
+            data_test(config=config, config_file=config_file, visualize=True, style='black arrow speed acc', verbose=False, best_model='best', run=2, plot_data=False,
+                      test_simulation=False, sample_embedding=False, device=device, fixed=True, bounce=True, step=4) # config.simulation.n_frames // 200, )  arrow speed acc
+
             # data_test(config=config, config_file=config_file, visualize=True, style='black arrow speed acc', verbose=False, best_model='best', run=1, plot_data=False,
-            #           test_simulation=False, sample_embedding=False, device=device, fixed=True, step=4) # config.simulation.n_frames // 200, )  arrow speed acc
-            data_test(config=config, config_file=config_file, visualize=True, style='black arrow speed acc', verbose=False, best_model='best', run=1, plot_data=False,
-                      test_simulation=False, sample_embedding=False, device=device, fixed=True, step=80, time_ratio=20) # config.simulation.n_frames // 200, )  arrow speed acc
+            #           test_simulation=False, sample_embedding=False, device=device, fixed=True, step=80, time_ratio=20) # config.simulation.n_frames // 200, )  arrow speed acc
 
 
 # bsub -n 4 -gpu "num=1" -q gpu_h100 "python GNN_particles_Ntype.py -o train falling_water_ramp_x1"

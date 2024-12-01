@@ -3592,7 +3592,7 @@ def data_train_WBI(config, config_file, erase, best_model, device):
 
 
 def data_test(config=None, config_file=None, visualize=False, style='color frame', verbose=True, best_model=20, step=15,
-              ratio=1, run=1, plot_data=False, test_simulation=False, sample_embedding=False, fixed=False, time_ratio=1, device=[]):
+              ratio=1, run=1, plot_data=False, test_simulation=False, sample_embedding=False, fixed=False, bounce=False, time_ratio=1, device=[]):
     dataset_name = config.dataset
     simulation_config = config.simulation
     model_config = config.graph_model
@@ -4054,6 +4054,15 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     x[:, dimension + 1:2 * dimension + 1] = y
 
             x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1] + x[:, dimension + 1:2 * dimension + 1] * delta_t)  # position update
+
+            if bounce:
+                # Bounce on walls
+                bouncing_pos = torch.argwhere((x[:, 1] <= 0.1) | (x[:, 1] >= 0.9)).squeeze()
+                if bouncing_pos.numel() > 0:
+                    x[bouncing_pos, 3] = - 0.6 * x[bouncing_pos, 3]
+                bouncing_pos = torch.argwhere((x[:, 2] <= 0.1) | (x[:, 2] >= 0.9)).squeeze()
+                if bouncing_pos.numel() > 0:
+                    x[bouncing_pos, 4] = - 0.6 * x[bouncing_pos, 4]
 
             if time_window:
                 fixed_pos = torch.argwhere(x[:,5]!=0)
