@@ -92,10 +92,10 @@ class Smooth_Particle(pyg.nn.MessagePassing):
         match function:
             case 'gaussian':
                 w_density = 1/(np.pi*s**2)*torch.exp(-d**2/s**2)
-                wp_density = -2/(np.pi*s**4)*d*torch.exp(-d**2/s**2)
+                wp_density = 2/(np.pi*s**4)*d*torch.exp(-d**2/s**2)
             case triangular:
                 w_density = 4/(np.pi*s**8)*(s**2-d**2)**3
-                wp_density = -24/(np.pi*s**8)*d*(s**2-d**2)**2
+                wp_density = 24/(np.pi*s**8)*d*(s**2-d**2)**2
 
 
         return w_density, wp_density
@@ -330,6 +330,15 @@ if __name__ == '__main__':
         plt.tight_layout()
         plt.savefig(f"tmp/output_density_{k}.png")
         plt.close()
+
+        grad_norm = torch.norm(grad, dim=1)
+
+        fig = plt.figure(figsize=(8, 8))
+        plt.scatter(mgrid[:, 2].detach().cpu().numpy(),
+                    mgrid[:, 1].detach().cpu().numpy(), s=1, c=grad_norm[0:mgrid.shape[0]].detach().cpu().numpy(), vmin=0, vmax=1E4)
+        plt.tight_layout()
+
+
 
 
 
