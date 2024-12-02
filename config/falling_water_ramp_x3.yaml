@@ -20,7 +20,7 @@ graph_model:
   mesh_model_name: ''
   prediction: '2nd_derivative'
 
-  input_size: 21
+  input_size: 37
   output_size: 2
   hidden_dim: 128
   n_mp_layers: 3
@@ -43,7 +43,7 @@ training:
   batch_size: 64
   small_init_batch_size: False
   n_runs: 100
-  time_window: 2
+  time_window: 4
   time_window_noise: 5.0E-4
 
   smooth_particle: True

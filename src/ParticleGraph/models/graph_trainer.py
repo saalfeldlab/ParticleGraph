@@ -3689,31 +3689,34 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             x_list.append(torch.tensor(x, device=device))
             y_list.append(torch.tensor(y, device=device))
         else:
-
             if os.path.exists(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt'):
                 x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
                 y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
+                x_list.append(x)
+                y_list.append(y)
             else:
                 x = np.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy')
                 x = torch.tensor(x, dtype=torch.float32, device=device)
                 y = np.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy')
                 y = torch.tensor(y, dtype=torch.float32, device=device)
-            x_list.append(x)
-            y_list.append(y)
+                x_list.append(x)
+                y_list.append(y)
+
+                x = x_list[0][0].clone().detach()
+                if 'PDE_F' not in model_config.particle_model_name:
+                    n_particles = int(x.shape[0] / ratio)
+                    config.simulation.n_particles = n_particles
+                n_frames = len(x_list[0]) * time_ratio
+                index_particles = get_index_particles(x, n_particle_types, dimension)
+                if n_particle_types > 1000:
+                    index_particles = []
+                    for n in range(3):
+                        index = np.arange(n_particles * n // 3, n_particles * (n + 1) // 3)
+                        index_particles.append(index)
+                        n_particle_types = 3
+
         ynorm = torch.load(f'./log/try_{config_file}/ynorm.pt', map_location=device).to(device)
         vnorm = torch.load(f'./log/try_{config_file}/vnorm.pt', map_location=device).to(device)
-        x = x_list[0][0].clone().detach()
-        if 'PDE_F' not in model_config.particle_model_name:
-            n_particles = int(x.shape[0] / ratio)
-            config.simulation.n_particles = n_particles
-        n_frames = len(x_list[0]) * time_ratio
-        index_particles = get_index_particles(x, n_particle_types, dimension)
-        if n_particle_types > 1000:
-            index_particles = []
-            for n in range(3):
-                index = np.arange(n_particles * n // 3, n_particles * (n + 1) // 3)
-                index_particles.append(index)
-                n_particle_types = 3
 
     if do_tracking | has_state:
         for k in range(len(x_list[0])):
@@ -3724,6 +3727,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 type_list = torch.concatenate((type_list, type))
         n_particles_max = len(type_list)
         config.simulation.n_particles_max = n_particles_max
+
     if ratio > 1:
         new_nparticles = int(n_particles * ratio)
         model.a = nn.Parameter(
@@ -3895,11 +3899,12 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
     x = x_list[0][start_it].clone().detach()
     n_particles = x.shape[0]
-    if x_list[0].shape[0]<n_frames:
-        print('extend x_list ...')
-        time.sleep(1)
-        for k in trange(n_frames-x_list[0].shape[0]):
-            x_list[0] = torch.cat((x_list[0], x_list[0][-1].clone().detach().unsqueeze(0)), 0)
+
+    # if x_list[0].shape[0]<n_frames:
+    #     print('extend x_list ...')
+    #     time.sleep(1)
+    #     for k in trange(n_frames-x_list[0].shape[0]):
+    #         x_list[0] = torch.cat((x_list[0], x_list[0][-1].clone().detach().unsqueeze(0)), 0)
 
     data_id = torch.ones((x.shape[0], 1), dtype=torch.int) * run
 
@@ -3926,7 +3931,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             rmserr = torch.sqrt(
                 torch.mean(torch.sum(bc_dpos(x[:, 1:dimension + 1] - x0[:, 1:dimension + 1]) ** 2, axis=1)))
         else:
-            if do_tracking:
+            if (do_tracking) | (x.shape[0]!=x0.shape[0]):
                 rmserr = torch.zeros(1, device=device)
             else:
                 rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 1:dimension + 1] - x0[:, 1:dimension + 1]) ** 2, axis=1)))
@@ -4242,6 +4247,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.tight_layout()
             else:
                 s_p = 25
+                index_particles = get_index_particles(x, n_particle_types, dimension)
                 for n in range(n_particle_types):
                     if 'bw' in style:
                         plt.scatter(x[index_particles[n], 2].detach().cpu().numpy(),
@@ -4251,7 +4257,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                                     x[index_particles[n], 1].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
-
 
             if 'latex' in style:
                 plt.xlabel(r'$x$', fontsize=78)

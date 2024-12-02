@@ -9,7 +9,7 @@ from ParticleGraph.models.Gumbel import gumbel_softmax_sample, gumbel_softmax
 # from ParticleGraph.models.utils import reparameterize
 
 
-class Interaction_Falling_Box(pyg.nn.MessagePassing):
+class Interaction_Falling_Water(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
@@ -30,7 +30,7 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
 
     def __init__(self, config, device, aggr_type=None, bc_dpos=None, dimension=2):
 
-        super(Interaction_Falling_Box, self).__init__(aggr=aggr_type)  # "Add" aggregation.
+        super(Interaction_Falling_Water, self).__init__(aggr=aggr_type)  # "Add" aggregation.
 
         simulation_config = config.simulation
         model_config = config.graph_model
@@ -167,7 +167,7 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
         else:
             match self.model_type:
                 case 'PDE_F1':
-                    in_features = torch.cat((r[:, None], delta_pos, d_pos_i, density_j-density_i, embedding_i, embedding_j), dim=-1)
+                    in_features = torch.cat((r[:, None], delta_pos, d_pos_i, d_pos_j, density_i, density_j, embedding_i, embedding_j), dim=-1)
 
         out = self.lin_edge(in_features)
 
