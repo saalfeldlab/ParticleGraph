@@ -396,6 +396,8 @@ def load_WaterRamps(config, device=None, visualize=None, step=None, cmap=None):
     delta_t = simulation_config.delta_t
 
 
+
+
     # Loading Data
 
     with open(os.path.join(data_folder_name, "metadata.json")) as f:

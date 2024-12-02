@@ -20,14 +20,15 @@ graph_model:
   mesh_model_name: ''
   prediction: '2nd_derivative'
 
-  input_size: 9
-  output_size: 2
+  input_size: 20
+  output_size: 8
   hidden_dim: 64
   n_mp_layers: 3
-  aggr_type: 'add'
+  aggr_type: 'mean'
   embedding_dim: 2
 
-  input_size_update: 7
+  update_type: 'mlp'
+  input_size_update: 18
   n_layers_update: 3
   hidden_dim_update: 128
   output_size_update: 2
@@ -41,8 +42,14 @@ training:
   n_epochs: 20
   batch_size: 64
   small_init_batch_size: False
-  n_runs: 2
-  time_window: 0
+  n_runs: 100
+  time_window: 4
+  time_window_noise: 5.0E-4
+
+  smooth_particle: True
+  smooth_radius: 0.025
+  smooth_function: 'triangular'
+
   recursive_loop: 0
   sparsity: 'none'
   sparsity_freq: 3
