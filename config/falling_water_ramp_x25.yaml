@@ -44,7 +44,7 @@ training:
   small_init_batch_size: False
   n_runs: 100
   time_window: 4
-  time_window_noise: 1.0E-4
+  time_window_noise: 5.0E-3
   recursive_loop: 0
   sparsity: 'none'
   sparsity_freq: 3

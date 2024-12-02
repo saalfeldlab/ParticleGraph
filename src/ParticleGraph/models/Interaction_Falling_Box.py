@@ -82,6 +82,7 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
         if self.time_window == 0:
+            # x.requires_grad = True
             pos = x[:, 1:self.dimension+1]
             d_pos = x[:, self.dimension+1:1+2*self.dimension]
             particle_id = x[:, 0:1]
@@ -98,13 +99,16 @@ class Interaction_Falling_Box(pyg.nn.MessagePassing):
             d_pos = torch.reshape(d_pos, (d_pos.shape[0], d_pos.shape[1] * d_pos.shape[2]))
             embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
 
-            if self.time_window_noise > 0:
+            if training & (self.time_window_noise > 0):
                 noise = torch.randn((pos.shape[0], pos.shape[1] + 2), dtype=torch.float32, device=self.device) * self.time_window_noise
                 pos = pos + noise[:, :-self.dimension]
                 d_noise = (noise[:, :-2] - noise[:, 2:]) / self.delta_t
                 d_pos = d_pos + d_noise
 
             pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding)
+
+        # g = torch.autograd.grad(pred[1200], [x], create_graph=True)
+
 
         if self.update_type == 'mlp':
             pred = self.lin_phi(torch.cat((d_pos, pred, embedding), dim=-1))

@@ -139,6 +139,8 @@ class TrainingConfig(BaseModel):
     distance_threshold: float = 0.1
     epoch_distance_replace: int = 20
     time_window: int=0
+    smooth_particle: bool = False
+    smooth_radius: float = 0.1
 
     n_runs: int = 2
     seed : int = 40

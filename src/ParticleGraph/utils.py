@@ -179,7 +179,7 @@ class CustomColorMap:
 
     def color(self, index):
 
-        if (self.model_name == 'PDE_F') | (self.model_name == 'PDE_F1') | (self.model_name == 'PDE_F2') | (self.model_name == 'PDE_F3'):
+        if ('PDE_F' in self.model_name):
             match index:
                 case 0:
                     color = (0.75, 0.75, 0.75)

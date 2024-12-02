@@ -19,6 +19,23 @@ from tifffile import imsave
 import torch.nn as nn
 import torch.nn.functional as F
 
+
+def laplace(y, x):
+    grad = gradient(y, x)
+    return divergence(grad, x)
+
+def divergence(y, x):
+    div = 0.
+    for i in range(y.shape[-1]):
+        div += torch.autograd.grad(y[..., i], x, torch.ones_like(y[..., i]), create_graph=True)[0][..., i:i+1]
+    return div
+
+def gradient(y, x, grad_outputs=None):
+    if grad_outputs is None:
+        grad_outputs = torch.ones_like(y)
+    grad = torch.autograd.grad(y, [x], grad_outputs=grad_outputs, create_graph=True)[0]
+    return grad
+
 def linear_model(x, a, b):
     return a * x + b
 
@@ -974,6 +991,7 @@ def choose_training_model(model_config, device):
     n_particles = model_config.simulation.n_particles
     dimension = model_config.simulation.dimension
     do_tracking = model_config.training.do_tracking
+    dataset_name = model_config.dataset
 
 
     bc_pos, bc_dpos = choose_boundary_values(model_config.simulation.boundary)
@@ -996,6 +1014,8 @@ def choose_training_model(model_config, device):
         case 'PDE_A' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_mass' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G' | 'PDE_K' | 'PDE_K1':
             model = Interaction_Particle(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             model.edges = []
+            if 'PDE_K' in model_name:
+                model.connection_matrix = torch.load(f'graphs_data/graphs_{dataset_name}/connection_matrix_list.pt', map_location=device)
         case 'PDE_GS':
             model = Interaction_Planet(aggr_type=aggr_type, config=model_config, device=device)
             t = np.arange(model_config.simulation.n_particles)

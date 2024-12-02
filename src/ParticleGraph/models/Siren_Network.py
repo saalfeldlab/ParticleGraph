@@ -48,6 +48,7 @@ class SineLayer(nn.Module):
     def forward(self, input):
         return torch.sin(self.omega_0 * self.linear(input))
 
+
 class Siren_Network(nn.Module):
     def __init__(self, image_width, in_features, hidden_features, hidden_layers, out_features, outermost_linear=False, 
                  first_omega_0=30, hidden_omega_0=30., device='cuda:0'):
@@ -187,41 +188,41 @@ def get_cameraman_tensor(sidelength):
 if __name__ == '__main__':
 
 
-    # cameraman = ImageFitting(256)
-    # dataloader = DataLoader(cameraman, batch_size=1, pin_memory=True, num_workers=0)
-    #
-    # img_siren = Siren(in_features=2, out_features=1, hidden_features=256,
-    #                   hidden_layers=3, outermost_linear=True)
-    # img_siren.cuda()
-    #
-    # total_steps = 500  # Since the whole image is our dataset, this just means 500 gradient descent steps.
-    # steps_til_summary = 10
-    #
-    # optim = torch.optim.Adam(lr=1e-4, params=img_siren.parameters())
-    #
-    # model_input, ground_truth = next(iter(dataloader))
-    # model_input, ground_truth = model_input.cuda(), ground_truth.cuda()
-    #
-    # for step in range(total_steps):
-    #     model_output, coords = img_siren(model_input)
-    #     loss = ((model_output - ground_truth) ** 2).mean()
-    #
-    #     if not step % steps_til_summary:
-    #         print("Step %d, Total loss %0.6f" % (step, loss))
-    #         img_grad = gradient(model_output, coords)
-    #         img_laplacian = laplace(model_output, coords)
-    #
-    #         fig, axes = plt.subplots(1, 3, figsize=(18, 6))
-    #         axes[0].imshow(model_output.cpu().view(256, 256).detach().numpy())
-    #         axes[1].imshow(img_grad.norm(dim=-1).cpu().view(256, 256).detach().numpy())
-    #         axes[2].imshow(img_laplacian.cpu().view(256, 256).detach().numpy())
-    #         plt.show()
-    #         plt.savefig(f"tmp/output_{step}.png")
-    #         plt.close()
-    #
-    #     optim.zero_grad()
-    #     loss.backward()
-    #     optim.step()
+    cameraman = ImageFitting(256)
+    dataloader = DataLoader(cameraman, batch_size=1, pin_memory=True, num_workers=0)
+
+    img_siren = Siren(in_features=2, out_features=1, hidden_features=256,
+                      hidden_layers=3, outermost_linear=True)
+    img_siren.cuda()
+
+    total_steps = 500  # Since the whole image is our dataset, this just means 500 gradient descent steps.
+    steps_til_summary = 10
+
+    optim = torch.optim.Adam(lr=1e-4, params=img_siren.parameters())
+
+    model_input, ground_truth = next(iter(dataloader))
+    model_input, ground_truth = model_input.cuda(), ground_truth.cuda()
+
+    for step in range(total_steps):
+        model_output, coords = img_siren(model_input)
+        loss = ((model_output - ground_truth) ** 2).mean()
+
+        if not step % steps_til_summary:
+            print("Step %d, Total loss %0.6f" % (step, loss))
+            img_grad = gradient(model_output, coords)
+            img_laplacian = laplace(model_output, coords)
+
+            fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+            axes[0].imshow(model_output.cpu().view(256, 256).detach().numpy())
+            axes[1].imshow(img_grad.norm(dim=-1).cpu().view(256, 256).detach().numpy())
+            axes[2].imshow(img_laplacian.cpu().view(256, 256).detach().numpy())
+            plt.show()
+            plt.savefig(f"tmp/output_{step}.png")
+            plt.close()
+
+        optim.zero_grad()
+        loss.backward()
+        optim.step()
 
 
 
