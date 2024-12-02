@@ -57,6 +57,7 @@ if __name__ == '__main__':
         #              "falling_water_ramp_x26", "falling_water_ramp_x27", "falling_water_ramp_x28","falling_water_ramp_x29", "falling_water_ramp_x30", "falling_water_ramp_x31"]
 
         config_list=['falling_water_ramp_x32']
+        config_list = ['arbitrary_3_test']
 
     for config_file in config_list:
 

@@ -141,6 +141,7 @@ class TrainingConfig(BaseModel):
     time_window: int=0
     smooth_particle: bool = False
     smooth_radius: float = 0.1
+    smooth_function: Literal['gaussian', 'triangular'] = 'gaussian'
 
     n_runs: int = 2
     seed : int = 40

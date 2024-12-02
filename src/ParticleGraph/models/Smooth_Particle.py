@@ -21,6 +21,7 @@ from torch.utils.data import DataLoader, Dataset
 import matplotlib
 
 from ParticleGraph.utils import choose_boundary_values
+from ParticleGraph.config import ParticleGraphConfig
 
 
 
@@ -48,6 +49,7 @@ class Smooth_Particle(pyg.nn.MessagePassing):
         self.bc_dpos = bc_dpos
         self.dimension = dimension
         self.smooth_radius = config.training.smooth_radius
+        self.smooth_function = config.training.smooth_function
 
 
     def forward(self, data=[], has_field=False):
@@ -63,7 +65,7 @@ class Smooth_Particle(pyg.nn.MessagePassing):
         return density
 
 
-    def message(self, pos_i, pos_j, field_j):
+    def message(self, edge_index_i, edge_index_j, pos_i, pos_j, field_j):
 
         distance_squared = torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, axis=1)
         distance = torch.sqrt(distance_squared)
@@ -257,29 +259,53 @@ if __name__ == '__main__':
 
     plt.style.use('dark_background')
 
-    fig = plt.figure(figsize=(8, 8))
-    plt.scatter(x[:, 2].detach().cpu().numpy(),
-                x[:, 1].detach().cpu().numpy(), s=10, c='w')
+
 
     bc_pos, bc_dpos = choose_boundary_values('no')
+    config = ParticleGraphConfig.from_yaml('/groups/saalfeld/home/allierc/Py/ParticleGraph/config/test_smooth_particle.yaml')
+    dimension = config.simulation.dimension
+    max_radius = config.simulation.max_radius
+    min_radius = config.simulation.min_radius
+    smooth_radius  = config.training.smooth_radius
 
-    config = {'training': {'smooth_radius': 0.1}}
 
 
-    model_density = Smooth_Particle(config=config, aggr_type='mean', bc_dpos=bc_dpos, dimension=2)
     tensors = tuple(dimension * [torch.linspace(0, 1, steps=100)])
     mgrid = torch.stack(torch.meshgrid(*tensors), dim=-1)
     mgrid = mgrid.reshape(-1, dimension)
     mgrid = torch.cat((torch.ones((mgrid.shape[0],1)),mgrid), 1)
     mgrid = mgrid.to(device)
 
+    fig = plt.figure(figsize=(8, 8))
+    plt.scatter(x[:, 2].detach().cpu().numpy(),
+                x[:, 1].detach().cpu().numpy(), s=10, c='w')
+    plt.scatter(mgrid[:, 2].detach().cpu().numpy(),
+                mgrid[:, 1].detach().cpu().numpy(), s=1, c='r')
 
 
-    if smooth_particle:
-        distance = torch.sum(bc_dpos(mgrid[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-        t = torch.Tensor([max_radius ** 2])
-        edges = adj_t.nonzero().t().contiguous()
+    model_density = Smooth_Particle(config=config, aggr_type='mean', bc_dpos=bc_dpos, dimension=dimension)
+    distance = torch.sum(bc_dpos(mgrid[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+    adj_t = ((distance < smooth_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+    edges = adj_t.nonzero().t().contiguous()
+
+    xp = torch.cat((mgrid, x[:, 0:dimension + 1]), 0)
+    edges[1,:] = edges[1,:] + mgrid.shape[0]
+
+    fig = plt.figure(figsize=(14, 14))
+    plt.scatter(x[:, 2].detach().cpu().numpy(),
+                x[:, 1].detach().cpu().numpy(), s=10, c='w')
+    plt.scatter(mgrid[:, 2].detach().cpu().numpy(),
+                mgrid[:, 1].detach().cpu().numpy(), s=1, c='r')
+    pixel = 5020
+    plt.scatter(mgrid[pixel, 2].detach().cpu().numpy(),
+                mgrid[pixel, 1].detach().cpu().numpy(), s=40, c='g')
+    pos = torch.argwhere(edges[0,:] == pixel)
+    plt.scatter(xp[edges[1,pos], 2].detach().cpu().numpy(),
+                xp[edges[1,pos], 1].detach().cpu().numpy(), s=10, c='b')
+
+
+
+
 
 
 

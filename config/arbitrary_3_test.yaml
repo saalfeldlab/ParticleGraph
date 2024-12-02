@@ -35,7 +35,7 @@ training:
   n_epochs: 5
   batch_size: 8
   small_init_batch_size: False
-  n_runs: 5
+  n_runs: 2
   recursive_loop: 2
   recursive_param: [0.1, 0.1]
   sparsity: 'replace_embedding_function'
