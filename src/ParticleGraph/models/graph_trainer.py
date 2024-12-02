@@ -117,7 +117,9 @@ def data_train_particle(config, config_file, erase, best_model, device):
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     embedding_cluster = EmbeddingCluster(config)
     n_runs = train_config.n_runs
-    smooth_particle = train_config.smooth_particle
+    has_state = (config.simulation.state_type != 'discrete')
+    coeff_entropy_loss = train_config.coeff_entropy_loss
+    entropy_loss = KoLeoLoss()
 
     l_dir, log_dir, logger = create_log_dir(config, config_file, erase)
     print(f'Graph files N: {n_runs}')
@@ -175,6 +177,10 @@ def data_train_particle(config, config_file, erase, best_model, device):
     else:
         start_epoch = 0
         net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs.pt"
+
+    if 'PDE_K' in model_config.particle_model_name:
+        model.connection_matrix = torch.load(f'graphs_data/graphs_{dataset_name}/connection_matrix_list.pt',
+                                             map_location=device)
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -275,15 +281,10 @@ def data_train_particle(config, config_file, erase, best_model, device):
 
                 distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
                 adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                t = torch.Tensor([max_radius ** 2])
                 edges = adj_t.nonzero().t().contiguous()
 
                 if time_window == 0:
                     dataset = data.Data(x=x[:, :], edge_index=edges, num_nodes=x.shape[0])
-
-
-
-
                     dataset_batch.append(dataset)
                 else:
                     xt = []
