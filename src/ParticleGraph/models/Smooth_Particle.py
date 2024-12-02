@@ -5,11 +5,11 @@ import os
 
 import torch
 from torch import nn
-import torch.nn.functional as F
 
 import torch
 import torch_geometric as pyg
 import torch_geometric.utils as pyg_utils
+import torch_geometric.data as data
 
 from PIL import Image
 from torchvision.transforms import Resize, Compose, ToTensor, Normalize
@@ -61,8 +61,12 @@ class Smooth_Particle(pyg.nn.MessagePassing):
             field = torch.ones_like(x[:,0:1])
 
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        density, d_density = self.propagate(edge_index, pos=x[:, 1:self.dimension+1], field=field)
-        return density
+        t = self.propagate(edge_index, pos=x[:, 1:self.dimension+1], field=field)
+
+        density = t[:,0]
+        grad = t[:,1:]
+
+        return density, grad
 
 
     def message(self, edge_index_i, edge_index_j, pos_i, pos_j, field_j):
@@ -70,21 +74,28 @@ class Smooth_Particle(pyg.nn.MessagePassing):
         distance_squared = torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, axis=1)
         distance = torch.sqrt(distance_squared)
 
-        d, d_d = self.W(distance, self.smooth_radius)
-        pos = torch.argwhere(distance_squared > self.smooth_radius^2)
+        d, d_d = self.W(distance, self.smooth_radius, self.smooth_function)
+        pos = torch.argwhere(distance==0)
         if pos.numel() > 0:
             d[pos] = 0
             d_d[pos] = 0
 
-        d_d = d_d * self.bc_dpos(pos_j - pos_i)/distance
+        d_d = d_d/distance
+        d_d = d_d[:,None].repeat(1,2) * self.bc_dpos(pos_j - pos_i)
 
-        return d, d_d
+        t = torch.cat((d[:,None], d_d), 1)
 
-    def w(self, d, s):
+        return t
 
-        w_density = 4/(np.pi*s^8)(s^2-s^2)^3
+    def W(self, d, s, function):
 
-        wp_density = -24/(np.pi*s^8)*d*(s^2-d^2)^2
+        match function:
+            case 'gaussian':
+                w_density = 1/(np.pi*s**2)*torch.exp(-d**2/s**2)
+                wp_density = -2/(np.pi*s**4)*d*torch.exp(-d**2/s**2)
+            case triangular:
+                w_density = 4/(np.pi*s**8)*(s**2-d**2)**3
+                wp_density = -24/(np.pi*s**8)*d*(s**2-d**2)**2
 
 
         return w_density, wp_density
@@ -253,13 +264,12 @@ if __name__ == '__main__':
     except:
         pass
 
-    x = np.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/graphs_falling_water_ramp/x_list_2.npy')
-    x = torch.tensor(x, dtype=torch.float32, device=device)
-    x = x[100].squeeze()
+    x_list = np.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/graphs_falling_water_ramp/x_list_2.npy')
+    x_list = torch.tensor(x_list, dtype=torch.float32, device=device)
+
+
 
     plt.style.use('dark_background')
-
-
 
     bc_pos, bc_dpos = choose_boundary_values('no')
     config = ParticleGraphConfig.from_yaml('/groups/saalfeld/home/allierc/Py/ParticleGraph/config/test_smooth_particle.yaml')
@@ -268,49 +278,64 @@ if __name__ == '__main__':
     min_radius = config.simulation.min_radius
     smooth_radius  = config.training.smooth_radius
 
-
-
     tensors = tuple(dimension * [torch.linspace(0, 1, steps=100)])
     mgrid = torch.stack(torch.meshgrid(*tensors), dim=-1)
     mgrid = mgrid.reshape(-1, dimension)
     mgrid = torch.cat((torch.ones((mgrid.shape[0],1)),mgrid), 1)
     mgrid = mgrid.to(device)
 
-    fig = plt.figure(figsize=(8, 8))
-    plt.scatter(x[:, 2].detach().cpu().numpy(),
-                x[:, 1].detach().cpu().numpy(), s=10, c='w')
-    plt.scatter(mgrid[:, 2].detach().cpu().numpy(),
-                mgrid[:, 1].detach().cpu().numpy(), s=1, c='r')
-
-
     model_density = Smooth_Particle(config=config, aggr_type='mean', bc_dpos=bc_dpos, dimension=dimension)
-    distance = torch.sum(bc_dpos(mgrid[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-    adj_t = ((distance < smooth_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-    edges = adj_t.nonzero().t().contiguous()
 
-    xp = torch.cat((mgrid, x[:, 0:dimension + 1]), 0)
-    edges[1,:] = edges[1,:] + mgrid.shape[0]
-
-    fig = plt.figure(figsize=(14, 14))
-    plt.scatter(x[:, 2].detach().cpu().numpy(),
-                x[:, 1].detach().cpu().numpy(), s=10, c='w')
-    plt.scatter(mgrid[:, 2].detach().cpu().numpy(),
-                mgrid[:, 1].detach().cpu().numpy(), s=1, c='r')
-    pixel = 5020
-    plt.scatter(mgrid[pixel, 2].detach().cpu().numpy(),
-                mgrid[pixel, 1].detach().cpu().numpy(), s=40, c='g')
-    pos = torch.argwhere(edges[0,:] == pixel)
-    plt.scatter(xp[edges[1,pos], 2].detach().cpu().numpy(),
-                xp[edges[1,pos], 1].detach().cpu().numpy(), s=10, c='b')
+    # fig = plt.figure(figsize=(8, 8))
+    # plt.scatter(x[:, 2].detach().cpu().numpy(),
+    #             x[:, 1].detach().cpu().numpy(), s=10, c='w')
+    # plt.scatter(mgrid[:, 2].detach().cpu().numpy(),
+    #             mgrid[:, 1].detach().cpu().numpy(), s=1, c='r')
 
 
 
 
+    for k in trange(0,len(x_list),2):
+
+        x = x_list[k].squeeze()
+
+        distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - mgrid[None, :, 1:dimension + 1]) ** 2, dim=2)
+        adj_t = ((distance < smooth_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+        edges = adj_t.nonzero().t().contiguous()
+
+        xp = torch.cat((mgrid, x[:, 0:dimension + 1]), 0)
+        edges[0,:] = edges[0,:] + mgrid.shape[0]
+
+        edges_np = edges.detach().cpu().numpy()
+
+        fig = plt.figure(figsize=(8, 8))
+        plt.scatter(x[:, 2].detach().cpu().numpy(),
+                    x[:, 1].detach().cpu().numpy(), s=10, c='w')
+        plt.scatter(mgrid[:, 2].detach().cpu().numpy(),
+                    mgrid[:, 1].detach().cpu().numpy(), s=1, c='r')
+        pixel = 5020
+        plt.scatter(mgrid[pixel, 2].detach().cpu().numpy(),
+                    mgrid[pixel, 1].detach().cpu().numpy(), s=40, c='g')
+        pos = torch.argwhere(edges[1,:] == pixel).squeeze()
+        plt.scatter(xp[edges[0,pos], 2].detach().cpu().numpy(), xp[edges[0,pos], 1].detach().cpu().numpy(), s=10, c='b')
+        dataset = data.Data(x=xp[:, :], edge_index=edges, num_nodes=xp.shape[0])
+        density, grad = model_density(data=dataset, has_field=False)
+        plt.tight_layout()
+        plt.savefig(f"tmp/output_grid_{k}.png")
+        plt.close()
+
+        fig = plt.figure(figsize=(8, 8))
+        plt.scatter(mgrid[:, 2].detach().cpu().numpy(),
+                    mgrid[:, 1].detach().cpu().numpy(), s=1, c=density[0:mgrid.shape[0]].detach().cpu().numpy(), vmin=0, vmax=1E3)
+        plt.tight_layout()
+        plt.savefig(f"tmp/output_density_{k}.png")
+        plt.close()
 
 
 
 
 
+def test_siren():
 
 
     cameraman = ImageFitting(256)
@@ -354,6 +379,9 @@ if __name__ == '__main__':
     axes[1].imshow(img_grad.norm(dim=-1).cpu().view(256, 256).detach().numpy())
     axes[2].imshow(img_laplacian.cpu().view(256, 256).detach().numpy())
     plt.show()
+
+
+
 
 
 
