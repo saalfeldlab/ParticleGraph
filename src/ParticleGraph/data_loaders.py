@@ -8,6 +8,7 @@ from typing import Dict, Tuple, Literal
 
 import astropy.units as u
 import h5py
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
@@ -17,8 +18,14 @@ from tqdm import trange
 
 from ParticleGraph.TimeSeries import TimeSeries
 from ParticleGraph.utils import *
+from ParticleGraph.models.Smooth_Particle import Smooth_Particle
+# from ParticleGraph.utils import choose_boundary_values
+
+
+
 import json
 from tqdm import trange
+
 
 def get_index_particles(x, n_particle_types, dimension):
     index_particles = []
@@ -29,7 +36,6 @@ def get_index_particles(x, n_particle_types, dimension):
             index = np.argwhere(x[:, 7].detach().cpu().numpy() == n)
         index_particles.append(index.squeeze())
     return index_particles
-
 
 
 def skip_to(file, start_line):
@@ -396,6 +402,8 @@ def load_WaterRamps(config, device=None, visualize=None, step=None, cmap=None):
     delta_t = simulation_config.delta_t
 
 
+    bc_pos, bc_dpos = choose_boundary_values('no')
+    model_density = Smooth_Particle(config=config, aggr_type='mean', bc_dpos=bc_dpos, dimension=dimension, device=device)
 
 
     # Loading Data
@@ -466,6 +474,16 @@ def load_WaterRamps(config, device=None, visualize=None, step=None, cmap=None):
             particle_id = particle_id[:, None]
 
             x = torch.concatenate((particle_id.clone().detach(), pos.clone().detach(), dpos.clone().detach(), type.clone().detach()), 1)
+            density = model_density(x=x, has_field=False)
+            x = torch.cat((x, density), 1)
+
+            # fig = plt.figure(figsize=(8, 8))
+            # plt.scatter(x[:, 2].detach().cpu().numpy(),
+            #             x[:, 1].detach().cpu().numpy(), s=10, c=density.detach().cpu().numpy(), vmin=0, vmax=1)
+            # plt.xlim([0,1])
+            # plt.ylim([0,1])
+            # plt.tight_layout()
+
 
             x_list.append(x)
 
@@ -485,7 +503,8 @@ def load_WaterRamps(config, device=None, visualize=None, step=None, cmap=None):
 
             if run <4:
                 plt.style.use('dark_background')
-                fig, ax = fig_init(formatx="%.1f", formaty="%.1f")
+                fig = plt.figure(figsize=(18, 10))
+                ax = fig.add_subplot(121)
                 s_p = 20
                 index_particles = get_index_particles(x, n_particle_types, dimension)
                 for n in range(n_particle_types):
@@ -493,6 +512,15 @@ def load_WaterRamps(config, device=None, visualize=None, step=None, cmap=None):
                                 s=s_p, color=cmap.color(n))
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
+                plt.xticks([])
+                plt.yticks([])
+                ax = fig.add_subplot(122)
+                plt.scatter(x[:, 2].detach().cpu().numpy(),
+                            x[:, 1].detach().cpu().numpy(), s=10, c=x[:, -1].detach().cpu().numpy(), vmin=0, vmax=1)
+                plt.xlim([0,1])
+                plt.ylim([0,1])
+                plt.xticks([])
+                plt.yticks([])
                 plt.tight_layout()
                 num = f"{frame-1:06}"
                 plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)  # 170.7)

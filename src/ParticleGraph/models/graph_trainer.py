@@ -11,12 +11,10 @@ from ParticleGraph.models.utils import *
 from ParticleGraph.models.Siren_Network import *
 from ParticleGraph.models.Ghost_Particles import *
 from geomloss import SamplesLoss
-from ParticleGraph.sparsify import EmbeddingCluster, sparsify_cluster, sparsify_cluster_state
-from ParticleGraph.models.Gumbel import gumbel_softmax_sample, gumbel_softmax
+from ParticleGraph.sparsify import EmbeddingCluster, sparsify_cluster
+from ParticleGraph.models.Smooth_Particle import Smooth_Particle
 
-from ParticleGraph.data_loaders import load_agent_data
 from sklearn.neighbors import NearestNeighbors
-from scipy.ndimage import median_filter
 from scipy.optimize import curve_fit
 
 from ParticleGraph.generators.cell_utils import *

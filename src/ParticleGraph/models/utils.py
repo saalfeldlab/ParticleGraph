@@ -19,23 +19,6 @@ from tifffile import imsave
 import torch.nn as nn
 import torch.nn.functional as F
 
-
-def laplace(y, x):
-    grad = gradient(y, x)
-    return divergence(grad, x)
-
-def divergence(y, x):
-    div = 0.
-    for i in range(y.shape[-1]):
-        div += torch.autograd.grad(y[..., i], x, torch.ones_like(y[..., i]), create_graph=True)[0][..., i:i+1]
-    return div
-
-def gradient(y, x, grad_outputs=None):
-    if grad_outputs is None:
-        grad_outputs = torch.ones_like(y)
-    grad = torch.autograd.grad(y, [x], grad_outputs=grad_outputs, create_graph=True)[0]
-    return grad
-
 def linear_model(x, a, b):
     return a * x + b
 
@@ -1133,7 +1116,6 @@ def get_index_particles(x, n_particle_types, dimension):
 def get_type_list(x, dimension):
     type_list = x[:, 1 + 2 * dimension:2 + 2 * dimension].clone().detach()
     return type_list
-
 
 
 

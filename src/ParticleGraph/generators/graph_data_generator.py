@@ -4,6 +4,7 @@ import networkx as nx
 import torch
 from ParticleGraph.generators.utils import *
 from ParticleGraph.models.utils import *
+
 from GNN_particles_Ntype import *
 from ParticleGraph.utils import set_size
 from ParticleGraph.generators.cell_utils import *
@@ -21,6 +22,7 @@ import pandas as pd
 import tables
 import h5py as h5
 from torch_geometric.utils import dense_to_sparse
+
 
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
