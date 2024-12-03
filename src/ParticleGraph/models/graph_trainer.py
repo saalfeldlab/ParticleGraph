@@ -820,7 +820,8 @@ def data_train_cell(config, config_file, erase, best_model, device):
             ids = x_list[1][k][:, -1]
             id_list.append(ids)
             n_particles_max += len(type)
-            x_list[1][k][:, 3:5] = 0
+            if do_tracking:
+                x_list[1][k][:, 3:5] = 0
         config.simulation.n_particles_max = n_particles_max
         Initial_node_id = id_list
     else:

@@ -756,17 +756,6 @@ def plot_generated(config, run, style, step, bLatex, device):
     for f in files:
         os.remove(f)
 
-    os.makedirs(os.path.join(log_dir, 'generated_bw'), exist_ok=True)
-    os.makedirs(os.path.join(log_dir, 'generated_color'), exist_ok=True)
-
-    files = glob.glob(f"./{log_dir}/generated_bw/*")
-    for f in files:
-        os.remove(f)
-
-    files = glob.glob(f"./{log_dir}/generated_color/*")
-    for f in files:
-        os.remove(f)
-
     print('Load data ...')
 
     x_list = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
@@ -779,6 +768,9 @@ def plot_generated(config, run, style, step, bLatex, device):
         T1 = x[:, 5:6].clone().detach()
         H1 = x[:, 6:8].clone().detach()
         X1 = x[:, 1:3].clone().detach()
+
+        if 'black' in style:
+            plt.style.use('dark_background')
 
         if 'latex' in style:
             plt.rcParams['text.usetex'] = True
@@ -797,7 +789,7 @@ def plot_generated(config, run, style, step, bLatex, device):
             plt.yticks([])
             index_particles = []
 
-            voronoi_plot_2d(vor, ax=ax, show_vertices=False, line_colors='black', line_width=1, line_alpha=0.5, point_size=0)
+            voronoi_plot_2d(vor, ax=ax, show_vertices=False, line_colors='white', line_width=4, line_alpha=1, point_size=0)
 
             if 'color' in style:
                 for n in range(n_particle_types):
@@ -813,122 +805,166 @@ def plot_generated(config, run, style, step, bLatex, device):
                         vertices = to_numpy(vertices_pos[cell, :])
                         patches.append(Polygon(vertices, closed=True))
 
-                    pc = PatchCollection(patches, alpha=0.4, facecolors=cmap.color(n))
+                    pc = PatchCollection(patches, alpha=0.75, facecolors=cmap.color(n))
                     ax.add_collection(pc)
                     if 'center' in style:
                         plt.scatter(to_numpy(X1[index_particles[n], 0]), to_numpy(X1[index_particles[n], 1]), s=size,
                                     color=cmap.color(n))
 
             if 'vertices' in style:
-                plt.scatter(to_numpy(vertices_pos[:, 0]), to_numpy(vertices_pos[:, 1]), s=5, color='k')
+                plt.scatter(to_numpy(vertices_pos[:, 0]), to_numpy(vertices_pos[:, 1]), s=5, color='w')
+
+            plt.xlim([0.5, 0.55])
+            plt.ylim([0.5, 0.55])
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/detail.tif", dpi=85.35)
+            plt.close()
+
+
+            im = imread(f"./{log_dir}/detail.tif")
+
+
+            fig = plt.figure(figsize=(12, 12))
+            ax = fig.add_subplot(1, 1, 1)
+            plt.xticks([])
+            plt.yticks([])
+            index_particles = []
+
+            voronoi_plot_2d(vor, ax=ax, show_vertices=False, line_colors='white', line_width=1, line_alpha=0.5, point_size=0)
+            if 'color' in style:
+                for n in range(n_particle_types):
+                    pos = torch.argwhere((T1.squeeze() == n) & (H1[:, 0].squeeze() == 1))
+                    pos = to_numpy(pos[:, 0].squeeze()).astype(int)
+                    index_particles.append(pos)
+
+                    size = set_size(x, index_particles[n], 10) / 10
+
+                    patches = []
+                    for i in index_particles[n]:
+                        cell = vertices_per_cell[i]
+                        vertices = to_numpy(vertices_pos[cell, :])
+                        patches.append(Polygon(vertices, closed=True))
+
+                    pc = PatchCollection(patches, alpha=0.75, facecolors=cmap.color(n))
+                    ax.add_collection(pc)
+                    if 'center' in style:
+                        plt.scatter(to_numpy(X1[index_particles[n], 0]), to_numpy(X1[index_particles[n], 1]), s=size,
+                                    color=cmap.color(n))
 
             plt.xlim([-0.05, 1.05])
             plt.ylim([-0.05, 1.05])
+
+            ax = fig.add_subplot(3, 3, 1)
+            ax.imshow(im)
+            plt.xticks([])
+            plt.yticks([])
             plt.tight_layout()
 
-            num = f"{it:06}"
-            if 'color' in style:
-                plt.savefig(f"./{log_dir}/generated_color/frame_{num}.tif", dpi=85.35)
-            else:
-                plt.savefig(f"./{log_dir}/generated_bw/frame_{num}.tif", dpi=85.35)
-            plt.close()
 
+            num = f"{it:06}"
+            plt.savefig(f"./{log_dir}/tmp_recons/frame_{num}.tif", dpi=85.35)
+
+            plt.close()
 
         else:
 
-            matplotlib.rcParams['savefig.pad_inches'] = 0
-            fig = plt.figure(figsize=(12, 12))
-            ax = fig.add_subplot(1, 1, 1)
-            ax.xaxis.get_major_formatter()._usetex = False
-            ax.yaxis.get_major_formatter()._usetex = False
-            ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-            ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-            ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-            ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-            index_particles = []
-            for n in range(n_particle_types):
-                pos = torch.argwhere((T1.squeeze() == n) & (H1[:, 0].squeeze() == 1))
-                pos = to_numpy(pos[:, 0].squeeze()).astype(int)
-                index_particles.append(pos)
-                # plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                #             s=marker_size, color=cmap.color(n))
+            if 'color' in style:
 
-                size = set_size(x, index_particles[n], 10) / 10
+                matplotlib.rcParams['savefig.pad_inches'] = 0
+                fig = plt.figure(figsize=(12, 12))
+                ax = fig.add_subplot(1, 1, 1)
+                ax.xaxis.get_major_formatter()._usetex = False
+                ax.yaxis.get_major_formatter()._usetex = False
+                ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+                ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+                ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                index_particles = []
+                for n in range(n_particle_types):
+                    pos = torch.argwhere((T1.squeeze() == n) & (H1[:, 0].squeeze() == 1))
+                    pos = to_numpy(pos[:, 0].squeeze()).astype(int)
+                    index_particles.append(pos)
+                    # plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+                    #             s=marker_size, color=cmap.color(n))
 
-                plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                            s=40, color=cmap.color(n))
-            dead_cell = np.argwhere(to_numpy(H1[:, 0]) == 0)
-            if len(dead_cell) > 0:
-                plt.scatter(to_numpy(X1[dead_cell[:, 0].squeeze(), 0]), to_numpy(X1[dead_cell[:, 0].squeeze(), 1]),
-                            s=2, color='k', alpha=0.5)
-            if 'latex' in style:
-                plt.xlabel(r'$x$', fontsize=78)
-                plt.ylabel(r'$y$', fontsize=78)
-                plt.xticks(fontsize=48.0)
-                plt.yticks(fontsize=48.0)
-            elif 'frame' in style:
-                plt.xlabel('x', fontsize=13)
-                plt.ylabel('y', fontsize=16)
-                plt.xticks(fontsize=16.0)
-                plt.yticks(fontsize=16.0)
-                ax.tick_params(axis='both', which='major', pad=15)
-                plt.text(0, 1.05,
-                         f'frame {it}, {int(n_particles_alive)} alive particles ({int(n_particles_dead)} dead), {edge_index.shape[1]} edges  ',
-                         ha='left', va='top', transform=ax.transAxes, fontsize=16)
-            plt.xticks([])
-            plt.yticks([])
-            plt.xlim([0,1])
-            plt.ylim([0,1])
-            plt.tight_layout()
-            num = f"{it:06}"
-            plt.savefig(f"./{log_dir}/generated_color/frame_{num}.tif", dpi=80)
-            plt.close()
+                    size = 10 # set_size(x, index_particles[n], 10) / 10
 
-            matplotlib.rcParams['savefig.pad_inches'] = 0
-            fig = plt.figure(figsize=(12, 12))
-            ax = fig.add_subplot(1, 1, 1)
-            ax.xaxis.get_major_formatter()._usetex = False
-            ax.yaxis.get_major_formatter()._usetex = False
-            ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-            ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-            ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-            ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-            index_particles = []
-            for n in range(n_particle_types):
-                pos = torch.argwhere((T1.squeeze() == n) & (H1[:, 0].squeeze() == 1))
-                pos = to_numpy(pos[:, 0].squeeze()).astype(int)
-                index_particles.append(pos)
-                # plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                #             s=marker_size, color=cmap.color(n))
-                size = set_size(x, index_particles[n], 10)
-                plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                            s=size/10, color='k')
-            dead_cell = np.argwhere(to_numpy(H1[:, 0]) == 0)
-            if len(dead_cell) > 0:
-                plt.scatter(to_numpy(X1[dead_cell[:, 0].squeeze(), 0]), to_numpy(X1[dead_cell[:, 0].squeeze(), 1]),
-                            s=2, color='k', alpha=0.5)
-            if 'latex' in style:
-                plt.xlabel(r'$x$', fontsize=78)
-                plt.ylabel(r'$y$', fontsize=78)
-                plt.xticks(fontsize=48.0)
-                plt.yticks(fontsize=48.0)
-            elif 'frame' in style:
-                plt.xlabel('x', fontsize=13)
-                plt.ylabel('y', fontsize=16)
-                plt.xticks(fontsize=16.0)
-                plt.yticks(fontsize=16.0)
-                ax.tick_params(axis='both', which='major', pad=15)
-                plt.text(0, 1.05,
-                         f'frame {it}, {int(n_particles_alive)} alive particles ({int(n_particles_dead)} dead), {edge_index.shape[1]} edges  ',
-                         ha='left', va='top', transform=ax.transAxes, fontsize=16)
-            plt.xticks([])
-            plt.yticks([])
-            plt.xlim([0,1])
-            plt.ylim([0,1])
-            plt.tight_layout()
-            num = f"{it:06}"
-            plt.savefig(f"./{log_dir}/generated_bw/frame_{num}.tif", dpi=80)
-            plt.close()
+                    plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+                                s=size, color=cmap.color(n))
+                dead_cell = np.argwhere(to_numpy(H1[:, 0]) == 0)
+                if len(dead_cell) > 0:
+                    plt.scatter(to_numpy(X1[dead_cell[:, 0].squeeze(), 0]), to_numpy(X1[dead_cell[:, 0].squeeze(), 1]),
+                                s=2, color='k', alpha=0.5)
+                if 'latex' in style:
+                    plt.xlabel(r'$x$', fontsize=78)
+                    plt.ylabel(r'$y$', fontsize=78)
+                    plt.xticks(fontsize=48.0)
+                    plt.yticks(fontsize=48.0)
+                elif 'frame' in style:
+                    plt.xlabel('x', fontsize=13)
+                    plt.ylabel('y', fontsize=16)
+                    plt.xticks(fontsize=16.0)
+                    plt.yticks(fontsize=16.0)
+                    ax.tick_params(axis='both', which='major', pad=15)
+                    plt.text(0, 1.05,
+                             f'frame {it}, {int(n_particles_alive)} alive particles ({int(n_particles_dead)} dead), {edge_index.shape[1]} edges  ',
+                             ha='left', va='top', transform=ax.transAxes, fontsize=16)
+                plt.xticks([])
+                plt.yticks([])
+                plt.xlim([0,1])
+                plt.ylim([0,1])
+                plt.tight_layout()
+                num = f"{it:06}"
+                plt.savefig(f"./{log_dir}/tmp_recons/frame_{num}.tif", dpi=80)
+                plt.close()
+
+            elif 'bw' in style:
+
+                matplotlib.rcParams['savefig.pad_inches'] = 0
+                fig = plt.figure(figsize=(12, 12))
+                ax = fig.add_subplot(1, 1, 1)
+                ax.xaxis.get_major_formatter()._usetex = False
+                ax.yaxis.get_major_formatter()._usetex = False
+                ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+                ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+                ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                index_particles = []
+                for n in range(n_particle_types):
+                    pos = torch.argwhere((T1.squeeze() == n) & (H1[:, 0].squeeze() == 1))
+                    pos = to_numpy(pos[:, 0].squeeze()).astype(int)
+                    index_particles.append(pos)
+                    # plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+                    #             s=marker_size, color=cmap.color(n))
+                    size = 10
+                    plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+                                s=size, color='w')
+                dead_cell = np.argwhere(to_numpy(H1[:, 0]) == 0)
+                if len(dead_cell) > 0:
+                    plt.scatter(to_numpy(X1[dead_cell[:, 0].squeeze(), 0]), to_numpy(X1[dead_cell[:, 0].squeeze(), 1]),
+                                s=2, color='k', alpha=0.5)
+                if 'latex' in style:
+                    plt.xlabel(r'$x$', fontsize=78)
+                    plt.ylabel(r'$y$', fontsize=78)
+                    plt.xticks(fontsize=48.0)
+                    plt.yticks(fontsize=48.0)
+                elif 'frame' in style:
+                    plt.xlabel('x', fontsize=13)
+                    plt.ylabel('y', fontsize=16)
+                    plt.xticks(fontsize=16.0)
+                    plt.yticks(fontsize=16.0)
+                    ax.tick_params(axis='both', which='major', pad=15)
+                    plt.text(0, 1.05,
+                             f'frame {it}, {int(n_particles_alive)} alive particles ({int(n_particles_dead)} dead), {edge_index.shape[1]} edges  ',
+                             ha='left', va='top', transform=ax.transAxes, fontsize=16)
+                plt.xticks([])
+                plt.yticks([])
+                plt.xlim([0,1])
+                plt.ylim([0,1])
+                plt.tight_layout()
+                num = f"{it:06}"
+                plt.savefig(f"./{log_dir}/tmp_recons/frame_{num}.tif", dpi=80)
+                plt.close()
 
 
 def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoch, it, fig, ax, bLatex):
@@ -1480,19 +1516,7 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, bLatex, device):
     x_list, y_list, vnorm, ynorm = load_training_data(dataset_name, n_runs, log_dir, device)
     logger.info("vnorm:{:.2e},  ynorm:{:.2e}".format(to_numpy(vnorm), to_numpy(ynorm)))
 
-    type_stack = torch.stack(x_list[1])[:,:,5]
-    type_stack = torch.reshape(type_stack, ((n_frames + 1)* n_particles,1))
-
-    n_particles_max = 0
-    id_list = []
-    type_list=[]
-    for k in range(n_frames+1):
-        type = x_list[1][k][:, 5]
-        type_list.append(type)
-        ids = x_list[1][k][:, -1]
-        id_list.append(ids)
-        n_particles_max += len(type)
-    config.simulation.n_particles_max = n_particles_max
+    type_list = torch.load(f'graphs_data/graphs_{dataset_name}/type_list_1.pt', map_location=device).squeeze()
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
@@ -1531,12 +1555,12 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, bLatex, device):
 
                 plt.style.use('dark_background')
 
-                fig, ax = fig_init()
+                fig, ax = fig_init(fontsize=24)
                 for n in range(n_particle_types):
-                    pos = torch.argwhere(type_stack == n).squeeze()
+                    pos = torch.argwhere(type_list == n)
                     if len(pos) > 0:
-                        plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=1, color=cmap.color(n),
-                                    alpha=0.05, edgecolor='none')
+                        plt.scatter(to_numpy(model.a[1][pos, 0]), to_numpy(model.a[1][pos, 1]), s=4, color=cmap.color(n),
+                                    alpha=0.5, edgecolor='none')
                 plt.xlabel(r'$a_{i0}$', fontsize=48)
                 plt.ylabel(r'$a_{i1}$', fontsize=48)
                 plt.xlim([0.6, 1.6])
@@ -1553,46 +1577,44 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, bLatex, device):
                     rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
                 if len(type_list) > 1E5:
                     nk = len(type_list) // 1000
+                if len(type_list) > 1E4:
+                    nk = len(type_list) // 100
                 else:
                     nk = 40
-                if len(type_list[0]) > 1000:
-                    nn = 10
-                else:
-                    nn = 1
-                for k in range(1, len(type_list), nk):
-                    for n in range(1, len(type_list[k]), nn):
-                        embedding_ = model.a[to_numpy(id_list[k][n]).astype(int)]
-                        embedding_ = embedding_ * torch.ones((1000, config.simulation.dimension), device=device)
 
-                        match config.graph_model.particle_model_name:
-                            case 'PDE_Cell_A':
-                                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                                         rr[:, None] / max_radius, embedding_), dim=1)
-                            case 'PDE_Cell_A_area':
-                                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                                         rr[:, None] / max_radius, torch.ones_like(rr[:, None]) * 0.1,
-                                                         torch.ones_like(rr[:, None]) * 0.4, embedding_, embedding_),
-                                                        dim=1)
-                            case 'PDE_Cell_B':
-                                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                                         torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None],
-                                                         0 * rr[:, None],
-                                                         0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-                            case 'PDE_Cell_B_area':
-                                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                                         torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None],
-                                                         0 * rr[:, None],
-                                                         0 * rr[:, None], 0 * rr[:, None],
-                                                         torch.ones_like(rr[:, None]) * 0.001,
-                                                         torch.ones_like(rr[:, None]) * 0.001, embedding_, embedding_),
-                                                        dim=1)
+                for k in trange(1, len(type_list), nk):
+                    embedding_ = model.a[1][to_numpy(type_list[k]).astype(int)]
+                    embedding_ = embedding_ * torch.ones((1000, config.simulation.dimension), device=device)
 
-                        with torch.no_grad():
-                            func = model.lin_edge(in_features.float())
-                        func = func[:, 0]
-                        type = to_numpy(type_list[k][n])
-                        plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
-                                 color=cmap.color(int(type)), linewidth=2, alpha=0.5)
+                    match config.graph_model.particle_model_name:
+                        case 'PDE_Cell_A':
+                            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                     rr[:, None] / max_radius, embedding_), dim=1)
+                        case 'PDE_Cell_A_area':
+                            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                     rr[:, None] / max_radius, torch.ones_like(rr[:, None]) * 0.1,
+                                                     torch.ones_like(rr[:, None]) * 0.4, embedding_, embedding_),
+                                                    dim=1)
+                        case 'PDE_Cell_B':
+                            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                     torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None],
+                                                     0 * rr[:, None],
+                                                     0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                        case 'PDE_Cell_B_area':
+                            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                     torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None],
+                                                     0 * rr[:, None],
+                                                     0 * rr[:, None], 0 * rr[:, None],
+                                                     torch.ones_like(rr[:, None]) * 0.001,
+                                                     torch.ones_like(rr[:, None]) * 0.001, embedding_, embedding_),
+                                                    dim=1)
+
+                    with torch.no_grad():
+                        func = model.lin_edge(in_features.float())
+                    func = func[:, 0]
+                    type = to_numpy(type_list[k])
+                    plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
+                             color=cmap.color(int(type)), linewidth=2, alpha=0.5)
                 plt.ylim([-0.04, 0.03])
                 plt.xlabel('$d_{ij}$', fontsize=48)
                 plt.ylabel('$f(a_{it}, d_{ij})$', fontsize=48)
@@ -6426,14 +6448,14 @@ if __name__ == '__main__':
 
     # config_list = ['falling_particles_N1000_2']
 
-    config_list = ['boids_division_model_2']
+    config_list = ['boids_division_model']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         # data_plot(config=config, config_file=config_file, epoch_list=['best'], bLatex=False, device=device)
-        # data_plot(config=config, config_file=config_file, epoch_list=['all'], bLatex=False, device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['all'], bLatex=False, device=device)
 
-        plot_generated(config=config, run=0, style='color', step = 2, device=device)
+        # plot_generated(config=config, run=0, style='black voronoi color', step = 20, bLatex=False, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 
 
