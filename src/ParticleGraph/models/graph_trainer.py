@@ -334,8 +334,8 @@ def data_train_particle(config, config_file, erase, best_model, device):
                 loss = (pred[:, 0:dimension] - y_batch[:, 0:dimension]).norm(2) + loss_density
             else:
                 loss = (pred - y_batch).norm(2)
-            loss.backward()
 
+            loss.backward()
             optimizer.step()
 
             # flag = True

@@ -243,7 +243,7 @@ def get_vertices(points=[], device=[]):
 
     vor = Voronoi(to_numpy(all_points))
 
-    fig = plt.figure(figsize=(10, 10))
+    # fig = plt.figure(figsize=(10, 10))
     # voronoi_plot_2d(vor, ax=fig.gca(), show_vertices=False, line_colors='black', line_width=1, line_alpha=0.5)
     # plt.scatter(to_numpy(points[:, 0]), to_numpy(points[:, 1]), s=30, color='red')
 

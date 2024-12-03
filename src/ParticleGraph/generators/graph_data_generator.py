@@ -1138,7 +1138,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
 
-                # plt.style.use('dark_background')
+                plt.style.use('dark_background')
                 # matplotlib.use("Qt5Agg")
 
                 if 'latex' in style:
@@ -1236,7 +1236,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
-
                     num = f"{it:06}"
                     plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif",
                                 dpi=85.35)
@@ -1289,9 +1288,9 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                                     vertices = to_numpy(vertices_pos[cell, :])
                                     patches.append(Polygon(vertices, closed=True))
                                 if (n==0) & (has_cell_death) & (n_particle_types==3):
-                                    pc = PatchCollection(patches, alpha=0.4, facecolors='k')
+                                    pc = PatchCollection(patches, alpha=0.75, facecolors='k')
                                 else:
-                                    pc = PatchCollection(patches, alpha=0.4, facecolors=cmap.color(n))
+                                    pc = PatchCollection(patches, alpha=0.75, facecolors=cmap.color(n))
                                 ax.add_collection(pc)
                             elif pos.shape[0]==1:
                                 try:

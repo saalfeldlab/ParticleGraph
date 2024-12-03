@@ -6457,14 +6457,14 @@ if __name__ == '__main__':
 
     # config_list = ['falling_particles_N1000_2']
 
-    config_list = ['boids_division']
+    config_list = ['boids_division_model_f2_boids_perimeter']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         # data_plot(config=config, config_file=config_file, epoch_list=['best'], bLatex=False, device=device)
-        data_plot(config=config, config_file=config_file, epoch_list=['all'], bLatex=False, device=device)
+        # data_plot(config=config, config_file=config_file, epoch_list=['all'], bLatex=False, device=device)
 
-        # plot_generated(config=config, run=0, style='black voronoi color', step = 20, bLatex=False, device=device)
+        plot_generated(config=config, run=0, style='black voronoi color', step = 2, bLatex=False, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 
 
