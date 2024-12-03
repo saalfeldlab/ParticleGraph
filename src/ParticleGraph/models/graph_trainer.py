@@ -101,6 +101,9 @@ def data_train_particle(config, config_file, erase, best_model, device):
     translation_augmentation = train_config.translation_augmentation
     data_augmentation_loop = train_config.data_augmentation_loop
     recursive_loop = train_config.recursive_loop
+    smooth_particle = train_config.smooth_particle
+
+
     target_batch_size = train_config.batch_size
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
@@ -3610,10 +3613,13 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     n_frames = simulation_config.n_frames * time_ratio
     delta_t = simulation_config.delta_t / time_ratio
     time_window = training_config.time_window
+    smooth_particle = training_config.smooth_particle
+
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     dimension = simulation_config.dimension
     has_siren_time = 'siren_with_time' in model_config.field_type
     has_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
+
     do_tracking = training_config.do_tracking
     has_state = (config.simulation.state_type != 'discrete')
     field_type = model_config.field_type
@@ -3824,6 +3830,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     model.ynorm = ynorm
     model.vnorm = vnorm
 
+    if smooth_particle:
+        model_density = Smooth_Particle(config=config, aggr_type='mean', bc_dpos=bc_dpos, dimension=dimension, device=device)
+
     table = PrettyTable(["Modules", "Parameters"])
     total_params = 0
     for name, parameter in model.named_parameters():
@@ -3906,8 +3915,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     #     time.sleep(1)
     #     for k in trange(n_frames-x_list[0].shape[0]):
     #         x_list[0] = torch.cat((x_list[0], x_list[0][-1].clone().detach().unsqueeze(0)), 0)
-
-    data_id = torch.ones((x.shape[0], 1), dtype=torch.int) * run
 
     for it in trange(start_it, stop_it):
 
@@ -4057,6 +4064,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     x[:, dimension + 1:2 * dimension + 1] = y
 
             x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1] + x[:, dimension + 1:2 * dimension + 1] * delta_t)  # position update
+
+            if smooth_particle:
+                density = model_density(x=x, has_field=False)
+                x[:,-1] = density.squeeze()
 
             if bounce:
                 # Bounce on walls
@@ -4345,6 +4356,16 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{num}.tif", dpi=80)
                 plt.close()
+
+            if smooth_particle:
+                fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
+                plt.scatter(x[:, 2].detach().cpu().numpy(),
+                            x[:, 1].detach().cpu().numpy(), s=10, c=x[:, -1].detach().cpu().numpy(), vmin=0, vmax=1)
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_recons/Density_{config_file}_{num}.tif", dpi=80)
+                plt.close()
+
+
 
             if has_ghost:
 
