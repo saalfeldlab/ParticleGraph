@@ -53,9 +53,9 @@ if __name__ == '__main__':
         action = 'train'
         best_model = None
 
-        config_list=['falling_water_ramp_x3']
-        # config_list=['boids_division_model_2']
-        # config_list = ['arbitrary_3']
+        # config_list=['falling_water_ramp_x3']
+        config_list=['boids_division']
+        # config_list = ['arbitrary_3_test']
 
     for config_file in config_list:
 

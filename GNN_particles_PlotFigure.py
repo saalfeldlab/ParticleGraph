@@ -1518,6 +1518,13 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, bLatex, device):
 
     type_list = torch.load(f'graphs_data/graphs_{dataset_name}/type_list_1.pt', map_location=device).squeeze()
 
+    for k in trange(n_frames + 1):
+        type = x_list[1][k][:, 5]
+        if k == 0:
+            type_stack = type
+        else:
+            type_stack = torch.cat((type_stack, type), 0)
+
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
     if epoch_list[0] == 'all':
@@ -1559,33 +1566,28 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, bLatex, device):
                 for n in range(n_particle_types):
                     pos = torch.argwhere(type_list == n)
                     if len(pos) > 0:
-                        plt.scatter(to_numpy(model.a[1][pos, 0]), to_numpy(model.a[1][pos, 1]), s=4, color=cmap.color(n),
+                        plt.scatter(to_numpy(model.a[1][pos, 0]), to_numpy(model.a[1][pos, 1]), s=2, color=cmap.color(n),
                                     alpha=0.5, edgecolor='none')
                 plt.xlabel(r'$a_{i0}$', fontsize=48)
                 plt.ylabel(r'$a_{i1}$', fontsize=48)
-                plt.xlim([0.6, 1.6])
-                plt.ylim([0.6, 1.6])
+                plt.xlim([-2, 2])
+                plt.ylim([-2, 2])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/all/embedding_{epoch}.tif", dpi=80)
                 plt.close()
 
-                max_radius = 0.1
-                fig, ax = fig_init(fontsize=24)
-                if config.graph_model.particle_model_name == 'PDE_Cell_B':
-                    rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
-                else:
-                    rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
-                if len(type_list) > 1E5:
-                    nk = len(type_list) // 1000
-                if len(type_list) > 1E4:
-                    nk = len(type_list) // 100
-                else:
-                    nk = 40
+                max_radius = 0.04
+                fig = plt.figure(figsize=(12, 12))
+                ax = fig.add_subplot(1,1,1)
+                rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
 
-                for k in trange(1, len(type_list), nk):
-                    embedding_ = model.a[1][to_numpy(type_list[k]).astype(int)]
-                    embedding_ = embedding_ * torch.ones((1000, config.simulation.dimension), device=device)
+                if len(type_list) > 10000:
+                    step = len(type_list) // 100
+                else:
+                    step = 5
 
+                for n in range(1, len(type_list), step):
+                    embedding_ = model.a[1, n, :] * torch.ones((1000, dimension), device=device)
                     match config.graph_model.particle_model_name:
                         case 'PDE_Cell_A':
                             in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
@@ -1593,8 +1595,7 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, bLatex, device):
                         case 'PDE_Cell_A_area':
                             in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                                      rr[:, None] / max_radius, torch.ones_like(rr[:, None]) * 0.1,
-                                                     torch.ones_like(rr[:, None]) * 0.4, embedding_, embedding_),
-                                                    dim=1)
+                                                     torch.ones_like(rr[:, None]) * 0.4, embedding_, embedding_), dim=1)
                         case 'PDE_Cell_B':
                             in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                                      torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None],
@@ -1612,15 +1613,23 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, bLatex, device):
                     with torch.no_grad():
                         func = model.lin_edge(in_features.float())
                     func = func[:, 0]
-                    type = to_numpy(type_list[k])
                     plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
-                             color=cmap.color(int(type)), linewidth=2, alpha=0.5)
-                plt.ylim([-0.04, 0.03])
+                             color=cmap.color(int(type_list[n])), linewidth=2)
+                plt.xlim([-max_radius, max_radius])
+                plt.ylim(config.plotting.ylim)
+                ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+                ax.yaxis.set_major_locator(plt.MaxNLocator(5))
+                ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+                fmt = lambda x, pos: '{:.1f}e-5'.format((x) * 1e5, pos)
+                ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+                plt.xticks(fontsize=32.0)
+                plt.yticks(fontsize=32.0)
                 plt.xlabel('$d_{ij}$', fontsize=48)
-                plt.ylabel('$f(a_{it}, d_{ij})$', fontsize=48)
+                plt.ylabel('$f(a_i, d_{ij})$', fontsize=48)
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/all/function_{epoch}.tif", dpi=80)
+                plt.savefig(f"./{log_dir}/results/all/func_{epoch}.tif", dpi=80)
                 plt.close()
+
 
     else:
 
@@ -6448,7 +6457,7 @@ if __name__ == '__main__':
 
     # config_list = ['falling_particles_N1000_2']
 
-    config_list = ['boids_division_model']
+    config_list = ['boids_division']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
