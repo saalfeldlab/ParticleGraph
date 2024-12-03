@@ -33,6 +33,8 @@ def data_train(config=None, config_file=None, erase=False, best_model=None, devi
     np.random.seed(seed)
     random.seed(seed)
 
+    # torch.autograd.set_detect_anomaly(True)
+
     has_mesh = (config.graph_model.mesh_model_name != '')
     has_signal = (config.graph_model.signal_model_name != '')
     has_particle_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
@@ -102,6 +104,8 @@ def data_train_particle(config, config_file, erase, best_model, device):
     data_augmentation_loop = train_config.data_augmentation_loop
     recursive_loop = train_config.recursive_loop
     smooth_particle = train_config.smooth_particle
+    predict_density = train_config.predict_density
+    coeff_predict_density = train_config.coeff_predict_density
 
 
     target_batch_size = train_config.batch_size
@@ -179,10 +183,6 @@ def data_train_particle(config, config_file, erase, best_model, device):
         start_epoch = 0
         net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs.pt"
 
-    if 'PDE_K' in model_config.particle_model_name:
-        model.connection_matrix = torch.load(f'graphs_data/graphs_{dataset_name}/connection_matrix_list.pt',
-                                             map_location=device)
-
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
@@ -223,24 +223,21 @@ def data_train_particle(config, config_file, erase, best_model, device):
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
 
     list_loss = []
+    list_loss_density = []
     time.sleep(1)
     for epoch in range(start_epoch, n_epochs + 1):
 
         batch_size = get_batch_size(epoch)
         logger.info(f'batch_size: {batch_size}')
-        # if (epoch==0):
-        #     model.recursive_loop = 0
+
         if (epoch == 1) & (has_ghost):
             mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
             mask_ghost = np.tile(mask_ghost, batch_size)
             mask_ghost = np.argwhere(mask_ghost == 1)
             mask_ghost = mask_ghost[:, 0].astype(int)
-        # if (epoch==1):
-        #     recursive_loop = train_config.recursive_loop
-        #     model.recursive_loop = recursive_loop
-        #     print(f'recursive_loop: {recursive_loop}')
-        #     logger.info(f'recursive_loop: {recursive_loop}')
+
         total_loss = 0
+        total_loss_density = 0
         Niter = n_frames * data_augmentation_loop // batch_size
 
         for N in trange(Niter):
@@ -254,7 +251,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
 
                 run = 1 + np.random.randint(n_runs - 1)
                 k = time_window + np.random.randint(run_lengths[run] - 1 - time_window - recursive_loop)
-                x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device)
+                x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
 
                 if translation_augmentation:
                     displacement = torch.randn(1, dimension, dtype=torch.float32, device=device) * 5
@@ -299,6 +296,8 @@ def data_train_particle(config, config_file, erase, best_model, device):
                     dataset_batch.append(dataset)
 
                 y = torch.tensor(y_list[run][k], dtype=torch.float32, device=device).clone().detach()
+                if predict_density:
+                    y = torch.cat((y, torch.tensor(x_list[run][k][:,-1][:,None], dtype=torch.float32, device=device).clone().detach()), dim=1)
                 if recursive_loop> 0:
                     for m in range(recursive_loop):
                         y_= model.recursive_param[m] * torch.tensor(y_list[run][k+m+1], dtype=torch.float32, device=device).clone().detach()
@@ -307,7 +306,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
                 if noise_level > 0:
                     y = y * (1 + torch.randn_like(y) * noise_level)
 
-                y = y / ynorm
+                y[:,0:dimension] = y[:,0:dimension] / ynorm
 
                 if rotation_augmentation:
                     new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
@@ -326,28 +325,33 @@ def data_train_particle(config, config_file, erase, best_model, device):
                 optimizer_ghost_particles.zero_grad()
 
             for batch in batch_loader:
-                pred = model(batch, data_id=data_id, training=True, vnorm=vnorm, phi=phi)
+               pred = model(batch, data_id=data_id, training=True, vnorm=vnorm, phi=phi)
 
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
+            elif predict_density:
+                loss_density = coeff_predict_density * (pred[:, dimension] - y_batch[:, dimension]).norm(2)
+                loss = (pred[:, 0:dimension] - y_batch[:, 0:dimension]).norm(2) + loss_density
             else:
                 loss = (pred - y_batch).norm(2)
             loss.backward()
 
-            flag = True
-            if recursive_loop > 0:
-                test = [torch.isnan(p.grad) for p in model.parameters()]
-                for m in range(len(test)):
-                    if test[m].any():
-                        flag = False
+            optimizer.step()
 
-            if flag:
-                optimizer.step()
-            else:
-                print('grad nan')
-                print(torch.unique(data_id))
-                logger.info('grad nan')
+            # flag = True
+            # if (recursive_loop > 0) | predict_density :
+            #     for name, p in model.named_parameters():
+            #         if torch.isnan(p.grad).any():
+            #     print('grad nan')
+            #     print(torch.unique(data_id))
+            #     logger.info('grad nan')
 
+            if has_ghost:
+                optimizer_ghost_particles.step()
+
+            total_loss += loss.item()
+            if predict_density:
+                total_loss_density += loss_density.item()
 
             visualize_embedding = True
             if visualize_embedding & (((epoch < 30) & (N % (Niter // 50) == 0)) | (N == 0)):
@@ -365,18 +369,21 @@ def data_train_particle(config, config_file, erase, best_model, device):
             check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 50,
                                    memory_percentage_threshold=0.6)
 
-            if has_ghost:
-                optimizer_ghost_particles.step()
 
-            total_loss += loss.item()
 
-        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
-        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()},
                    os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
+
+        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
+        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
+        if predict_density:
+            print("          Loss density: {:.6f}".format(epoch, total_loss_density / (N + 1) / n_particles / batch_size))
+            logger.info("          Loss density: {:.6f}".format(epoch, total_loss_density / (N + 1) / n_particles / batch_size))
+            list_loss_density.append(total_loss_density / (N + 1) / n_particles / batch_size)
+            torch.save(list_loss_density, os.path.join(log_dir, 'loss_density.pt'))
 
         scheduler.step()
         print(f'Epoch {epoch + 1}, Learning Rate: {scheduler.get_last_lr()[0]}')
@@ -390,6 +397,9 @@ def data_train_particle(config, config_file, erase, best_model, device):
         fig = plt.figure(figsize=(22, 4))
         ax = fig.add_subplot(1, 5, 1)
         plt.plot(list_loss, color='k')
+        if predict_density:
+            plt.plot(list_loss_density, color='b')
+
         plt.xlim([0, n_epochs])
         plt.ylabel('Loss', fontsize=12)
         plt.xlabel('Epochs', fontsize=12)
@@ -4289,11 +4299,12 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     if x[m, 4] != 0 :
                         if 'speed' in style:
                             plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(x[m, 4]) * delta_t * 2, dy=to_numpy(x[m, 3]) * delta_t * 2, head_width=0.004, length_includes_head=True, color='g')
-                        if 'acc' in style:
-                            # plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(y0[m, 1])/5E3, dy=to_numpy(y0[m, 0])/5E3, head_width=0.004, length_includes_head=True, color='r')
+                        if 'acc_gt' in style:
+                            plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(y0[m, 1])/5E3, dy=to_numpy(y0[m, 0])/5E3, head_width=0.004, length_includes_head=True, color='r')
+                        if 'acc_learned' in style:
                             plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(pred[m, 1]*ynorm.squeeze()) / 5E3, dy=to_numpy(pred[m, 0]*ynorm.squeeze()) / 5E3, head_width=0.004, length_includes_head=True, color='r')
-                plt.text(0,1.05,f'true acc {to_numpy(y0[900,0:2])} {to_numpy(pred[900,0:2]*ynorm)}',fontsize=12)
-                plt.text(0,1.025,f'true speed {to_numpy(x_list[0][it//time_ratio][900,3:5] + y0[900,0:2] * delta_t)} {to_numpy(x_list[0][it//time_ratio][900,3:5] + pred[900,0:2] * ynorm * delta_t)}',fontsize=12)
+                # plt.text(0,1.05,f'true acc {to_numpy(y0[900,0:2])} {to_numpy(pred[900,0:2]*ynorm)}',fontsize=12)
+                # plt.text(0,1.025,f'true speed {to_numpy(x_list[0][it//time_ratio][900,3:5] + y0[900,0:2] * delta_t)} {to_numpy(x_list[0][it//time_ratio][900,3:5] + pred[900,0:2] * ynorm * delta_t)}',fontsize=12)
             if 'no_ticks' in style:
                 plt.xticks([])
                 plt.yticks([])
@@ -4360,7 +4371,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             if smooth_particle:
                 fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
                 plt.scatter(x[:, 2].detach().cpu().numpy(),
-                            x[:, 1].detach().cpu().numpy(), s=10, c=x[:, -1].detach().cpu().numpy(), vmin=0, vmax=1)
+                            x[:, 1].detach().cpu().numpy(), s=20, c=x[:, -1].detach().cpu().numpy(), vmin=0, vmax=1)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_recons/Density_{config_file}_{num}.tif", dpi=80)
                 plt.close()

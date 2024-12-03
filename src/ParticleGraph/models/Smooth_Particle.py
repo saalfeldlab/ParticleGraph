@@ -11,9 +11,6 @@ import matplotlib.pyplot as plt
 from tqdm import trange
 import matplotlib
 
-# from ParticleGraph.utils import choose_boundary_values
-# from ParticleGraph.config import ParticleGraphConfig
-
 
 class Smooth_Particle(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
@@ -54,37 +51,29 @@ class Smooth_Particle(pyg.nn.MessagePassing):
         distance = torch.sum(self.bc_dpos(x[:, None, 1:self.dimension + 1] - x[None, :, 1:self.dimension + 1]) ** 2, dim=2)
         adj_t = ((distance <  self.smooth_radius ** 2) & (distance > 0)).float() * 1
         edge_index = adj_t.nonzero().t().contiguous()
-        xp = x
         self.edge_index = edge_index
 
-
-        if has_field:
-            field = xp[:,6:7]
-        else:
-            field = torch.ones_like(xp[:,0:1])
-
-        out = self.propagate(edge_index, pos=xp[:, 1:self.dimension+1], field=field)
+        out = self.propagate(edge_index, pos=x[:, 1:self.dimension+1])
 
         return out
 
 
-    def message(self, edge_index_i, edge_index_j, pos_i, pos_j, field_j):
+    def message(self, edge_index_i, edge_index_j, pos_i, pos_j):
 
-        distance_squared = torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, axis=1)
-        distance = torch.sqrt(distance_squared)
+        distance_squared = torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)
+        # distance = torch.sqrt(distance_squared)
+        w = self.W(distance_squared, self.smooth_radius, self.smooth_function)
 
-        d = self.W(distance, self.smooth_radius, self.smooth_function)
-
-        return d[:,None]
+        return w[:,None]
 
 
-    def W(self, d, s, function):
+    def W(self, d_squared, s, function):
 
         match function:
             case 'gaussian':
-                w_density = 1/(np.pi*s**2)*torch.exp(-d**2/s**2) / 1E3
+                w_density = 1/(np.pi*s**2)*torch.exp(-d_squared/s**2) / 1E3
             case triangular:
-                w_density = 4/(np.pi*s**8)*(s**2-d**2)**3 / 1E3
+                w_density = 4/(np.pi*s**8)*(s**2-d_squared)**3 / 1E3
 
 
         return w_density
@@ -182,6 +171,9 @@ class Smooth_Particle_Field(pyg.nn.MessagePassing):
 
 
 if __name__ == '__main__':
+
+    from ParticleGraph.utils import choose_boundary_values
+    from ParticleGraph.config import ParticleGraphConfig
 
     device = 'cuda:0'
     try:

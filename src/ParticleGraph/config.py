@@ -142,6 +142,7 @@ class TrainingConfig(BaseModel):
     smooth_particle: bool = False
     smooth_radius: float = 0.1
     smooth_function: Literal['gaussian', 'triangular'] = 'gaussian'
+    predict_density: bool = False
 
     n_runs: int = 2
     seed : int = 40
@@ -174,6 +175,7 @@ class TrainingConfig(BaseModel):
     coeff_loss2: float = 1
     coeff_loss3: float = 1
     coeff_diff: float = 10
+    coeff_predict_density: float = 1
 
     noise_level: float = 0
     time_window_noise: float = 0

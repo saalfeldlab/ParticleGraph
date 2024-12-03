@@ -968,14 +968,14 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
     return func_list, proj_interaction
 
 def choose_training_model(model_config, device):
-    
+
+    dataset_name = model_config.dataset
     aggr_type = model_config.graph_model.aggr_type
     n_particle_types = model_config.simulation.n_particle_types
     n_particles = model_config.simulation.n_particles
     dimension = model_config.simulation.dimension
     do_tracking = model_config.training.do_tracking
-    dataset_name = model_config.dataset
-
+    smooth_particle = model_config.training.smooth_particle
 
     bc_pos, bc_dpos = choose_boundary_values(model_config.simulation.boundary)
 
@@ -1020,7 +1020,9 @@ def choose_training_model(model_config, device):
         case 'PDE_Cell_A' | 'PDE_Cell_B' | 'PDE_Cell_B_area' | 'PDE_Cell_A_area':
             model = Interaction_Cell(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
         case 'PDE_F'| 'PDE_F1' | 'PDE_F2' | 'PDE_F3' | 'PDE_F4':
-            model = Interaction_Falling_Water(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
+            if smooth_particle:
+                model_density = Smooth_Particle(config=model_config, aggr_type='mean', bc_dpos=bc_dpos, dimension=dimension, device=device)
+            model = Interaction_Falling_Water(aggr_type=aggr_type, config=model_config,bc_dpos=bc_dpos, dimension=dimension, model_density=model_density, device=device)
     model_name = model_config.graph_model.mesh_model_name
     match model_name:
         case 'DiffMesh':

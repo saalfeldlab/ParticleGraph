@@ -28,7 +28,7 @@ class Interaction_Falling_Water(pyg.nn.MessagePassing):
         the acceleration of the particles (dimension 2)
     """
 
-    def __init__(self, config, device, aggr_type=None, bc_dpos=None, dimension=2):
+    def __init__(self, config, device, aggr_type=None, bc_dpos=None, dimension=2, model_density=[]):
 
         super(Interaction_Falling_Water, self).__init__(aggr=aggr_type)  # "Add" aggregation.
 
@@ -60,14 +60,16 @@ class Interaction_Falling_Water(pyg.nn.MessagePassing):
         self.time_window = train_config.time_window
         self.recursive_loop = train_config.recursive_loop
         self.recursive_param = train_config.recursive_param
+        self.predict_density = train_config.predict_density
+        self.model_density = model_density
 
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device)
 
-        # if self.update_type == 'mlp':
-        self.lin_phi = MLP(input_size=self.input_size_update, output_size=self.output_size_update, nlayers=self.n_layers_update,
-                                hidden_size=self.hidden_dim_update, device=self.device)
+        if self.update_type == 'mlp':
+            self.lin_phi = MLP(input_size=self.input_size_update, output_size=self.output_size_update, nlayers=self.n_layers_update,
+                                    hidden_size=self.hidden_dim_update, device=self.device)
 
         self.a = nn.Parameter(
                 torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
@@ -79,6 +81,7 @@ class Interaction_Falling_Water(pyg.nn.MessagePassing):
         self.vnorm = vnorm
 
         x, edge_index = data.x, data.edge_index
+        edge_index_ = edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
         if self.time_window == 0:
@@ -113,11 +116,23 @@ class Interaction_Falling_Water(pyg.nn.MessagePassing):
 
             pred = self.propagate(edge_index, particle_id = particle_id, pos=pos, d_pos=d_pos, embedding=embedding, density=density)
 
+            if self.update_type == 'mlp':
+                pred = self.lin_phi(torch.cat((d_pos, density, pred, embedding), dim=-1))
 
-        if self.update_type == 'mlp':
-            pred = self.lin_phi(torch.cat((d_pos, pred, embedding), dim=-1))
+        if self.predict_density:
+            if self.prediction == '2nd_derivative':
+                new_d_pos = d_pos[:, 0:self.dimension:].clone().detach() + self.delta_t * pred[:, -self.dimension:] * self.ynorm
+            else:
+                new_d_pos = pred * self.vnorm
+            new_pos = pos[:, 0:self.dimension:].clone().detach() + self.delta_t * new_d_pos
 
-        return pred
+            density = self.model_density.propagate(edge_index_, pos=new_pos[:, 1:self.dimension + 1])
+
+            return torch.cat((pred, density), dim=1)
+
+        else:
+
+            return pred
 
 
 
