@@ -331,18 +331,13 @@ def data_train_particle(config, config_file, erase, best_model, device):
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(train_norm)
             elif predict_density:
-                loss_density = coeff_predict_density * (pred[:, dimension] - y_batch[:, dimension]).norm(2)
+                loss_density = coeff_predict_density * (pred[:, dimension] - y_batch[:, dimension]).norm(train_norm)
                 loss = (pred[:, 0:dimension] - y_batch[:, 0:dimension]).norm(train_norm) + loss_density
             else:
                 loss = (pred - y_batch).norm(2)
 
             loss.backward()
             optimizer.step()
-
-            fig = plt.figure(figsize=(8, 8))
-            plt.scatter(xt[0][:, 2].detach().cpu().numpy(),
-                        xt[0][:, 1].detach().cpu().numpy(), s=10, c='k', vmin=0, vmax=1)
-            plt.tight_layout()
 
             # flag = True
             # if (recursive_loop > 0) | predict_density :
@@ -3926,12 +3921,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     x = x_list[0][start_it].clone().detach()
     n_particles = x.shape[0]
 
-    # if x_list[0].shape[0]<n_frames:
-    #     print('extend x_list ...')
-    #     time.sleep(1)
-    #     for k in trange(n_frames-x_list[0].shape[0]):
-    #         x_list[0] = torch.cat((x_list[0], x_list[0][-1].clone().detach().unsqueeze(0)), 0)
-
     for it in trange(start_it, stop_it):
 
         if it < n_frames - 4:
@@ -4309,6 +4298,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                             plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(y0[m, 1])/5E3, dy=to_numpy(y0[m, 0])/5E3, head_width=0.004, length_includes_head=True, color='r')
                         if 'acc_learned' in style:
                             plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(pred[m, 1]*ynorm.squeeze()) / 5E3, dy=to_numpy(pred[m, 0]*ynorm.squeeze()) / 5E3, head_width=0.004, length_includes_head=True, color='r')
+                plt.xlim([0,1])
+                plt.ylim([0,1])
                 # plt.text(0,1.05,f'true acc {to_numpy(y0[900,0:2])} {to_numpy(pred[900,0:2]*ynorm)}',fontsize=12)
                 # plt.text(0,1.025,f'true speed {to_numpy(x_list[0][it//time_ratio][900,3:5] + y0[900,0:2] * delta_t)} {to_numpy(x_list[0][it//time_ratio][900,3:5] + pred[900,0:2] * ynorm * delta_t)}',fontsize=12)
             if 'no_ticks' in style:
@@ -4378,6 +4369,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
                 plt.scatter(x[:, 2].detach().cpu().numpy(),
                             x[:, 1].detach().cpu().numpy(), s=20, c=x[:, -1].detach().cpu().numpy(), vmin=0, vmax=1)
+                plt.xlim([0,1])
+                plt.ylim([0,1])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_recons/Density_{config_file}_{num}.tif", dpi=80)
                 plt.close()
