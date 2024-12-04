@@ -339,10 +339,10 @@ def data_train_particle(config, config_file, erase, best_model, device):
             loss.backward()
             optimizer.step()
 
-            # fig = plt.figure(figsize=(8, 8))
-            # plt.scatter(x[:, 2].detach().cpu().numpy(),
-            #             x[:, 1].detach().cpu().numpy(), s=10, c=x[:, -1].detach().cpu().numpy(), vmin=0, vmax=1)
-            # plt.tight_layout()
+            fig = plt.figure(figsize=(8, 8))
+            plt.scatter(xt[0][:, 2].detach().cpu().numpy(),
+                        xt[0][:, 1].detach().cpu().numpy(), s=10, c='k', vmin=0, vmax=1)
+            plt.tight_layout()
 
             # flag = True
             # if (recursive_loop > 0) | predict_density :

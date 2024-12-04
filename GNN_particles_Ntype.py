@@ -51,7 +51,7 @@ if __name__ == '__main__':
             best_model = None
     else:
         action = 'train'
-        best_model = '16_0'
+        best_model = None
         config_list=['falling_water_ramp_x10']
 
     for config_file in config_list:

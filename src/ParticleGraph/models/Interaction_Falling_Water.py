@@ -126,13 +126,33 @@ class Interaction_Falling_Water(pyg.nn.MessagePassing):
                 new_d_pos = pred * self.vnorm
             new_pos = pos[:, 0:self.dimension:].clone().detach() + self.delta_t * new_d_pos
 
-            density = self.model_density.propagate(edge_index_, pos=new_pos[:, 1:self.dimension + 1])
+            density = self.model_density.propagate(edge_index_, pos=new_pos)
 
             return torch.cat((pred, density), dim=1)
 
         else:
 
             return pred
+
+
+        # plt.style.use('dark_background')
+        #
+        # fig = plt.figure(figsize=(10, 10))
+        # plt.scatter(to_numpy(new_pos[:, 1]), to_numpy(new_pos[:, 0]), s=10, c=to_numpy(density[:, 0]), vmin=0, vmax=2)
+        #
+        # fig = plt.figure(figsize=(10, 10))
+        # density_ = self.model_density.propagate(edge_index_, pos=pos[:, 1:self.dimension + 1])
+        # plt.scatter(to_numpy(pos[:, 1]), to_numpy(pos[:, 0]), s=10, c=to_numpy(density_[:, 0]), vmin=0, vmax=2)
+        #
+        # fig = plt.figure(figsize=(10, 10))
+        # plt.scatter(to_numpy(pos[:, 1]), to_numpy(pos[:, 0]), s=10, c='g')
+        # plt.scatter(to_numpy(new_pos[:, 1]), to_numpy(new_pos[:, 0]), s=10, c='r')
+        #
+        # fig = plt.figure(figsize=(10, 10))
+        # plt.scatter(to_numpy(density), to_numpy(density_), s=10, c='w')
+
+
+
 
 
 
@@ -158,8 +178,13 @@ class Interaction_Falling_Water(pyg.nn.MessagePassing):
         #
         #     return pred
 
-        # fig = plt.figure(figsize=(10, 10))
-        # plt.scatter(to_numpy(pos[:, 1]), to_numpy(pos[:, 0]), s=10, c=to_numpy(density[:, 0]))
+
+
+
+
+
+
+        # plt.scatter(to_numpy(pos[:, 1]), to_numpy(pos[:, 0]), s=10, c=to_numpy(density[:, 0]), vmin=0, vmax=2)
         #
         # for k in range(4):
         #     plt.scatter(to_numpy(pos[:, 1+k*2]), to_numpy(pos[:, 0+k*2]),s=10)
