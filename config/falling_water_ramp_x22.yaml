@@ -21,14 +21,14 @@ graph_model:
   prediction: '2nd_derivative'
 
   input_size: 37
-  output_size: 2
+  output_size: 8
   hidden_dim: 128
   n_mp_layers: 3
   aggr_type: 'mean'
   embedding_dim: 2
 
-  update_type: 'none'
-  input_size_update: 18
+  update_type: 'mlp'
+  input_size_update: 22
   n_layers_update: 3
   hidden_dim_update: 128
   output_size_update: 2
@@ -44,7 +44,7 @@ training:
   small_init_batch_size: False
   n_runs: 100
   time_window: 4
-  time_window_noise: 1.0E-4
+  time_window_noise: 3.0E-4
 
   smooth_particle: True
   smooth_radius: 0.025

@@ -381,8 +381,8 @@ def data_train_particle(config, config_file, erase, best_model, device):
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
         if predict_density:
-            print("          Loss density: {:.6f}".format(epoch, total_loss_density / (N + 1) / n_particles / batch_size))
-            logger.info("          Loss density: {:.6f}".format(epoch, total_loss_density / (N + 1) / n_particles / batch_size))
+            print("Epoch {}. Loss density: {:.6f}".format(epoch, total_loss_density / (N + 1) / n_particles / batch_size))
+            logger.info("Epoch {}. Loss density: {:.6f}".format(epoch, total_loss_density / (N + 1) / n_particles / batch_size))
             list_loss_density.append(total_loss_density / (N + 1) / n_particles / batch_size)
             torch.save(list_loss_density, os.path.join(log_dir, 'loss_density.pt'))
 
@@ -4294,7 +4294,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     if x[m, 4] != 0 :
                         if 'speed' in style:
                             plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(x[m, 4]) * delta_t * 2, dy=to_numpy(x[m, 3]) * delta_t * 2, head_width=0.004, length_includes_head=True, color='g')
-                        if 'acc_gt' in style:
+                        if 'acc_true' in style:
                             plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(y0[m, 1])/5E3, dy=to_numpy(y0[m, 0])/5E3, head_width=0.004, length_includes_head=True, color='r')
                         if 'acc_learned' in style:
                             plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(pred[m, 1]*ynorm.squeeze()) / 5E3, dy=to_numpy(pred[m, 0]*ynorm.squeeze()) / 5E3, head_width=0.004, length_includes_head=True, color='r')

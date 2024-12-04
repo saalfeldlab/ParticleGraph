@@ -21,14 +21,14 @@ graph_model:
   prediction: '2nd_derivative'
 
   input_size: 37
-  output_size: 2
+  output_size: 8
   hidden_dim: 128
   n_mp_layers: 3
   aggr_type: 'mean'
   embedding_dim: 2
 
-  update_type: 'none'
-  input_size_update: 18
+  update_type: 'mlp'
+  input_size_update: 22
   n_layers_update: 3
   hidden_dim_update: 128
   output_size_update: 2
@@ -40,6 +40,8 @@ plotting:
 
 training:
   n_epochs: 20
+  train_norm: 3
+
   batch_size: 1
   small_init_batch_size: False
   n_runs: 100
