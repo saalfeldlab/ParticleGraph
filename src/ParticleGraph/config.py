@@ -167,6 +167,7 @@ class TrainingConfig(BaseModel):
 
     learning_rate_NNR: float = 0.0001
 
+    train_norm: int = 2
     first_coeff_L1: float = 0
     coeff_L1: float = 0
     coeff_anneal_L1: float = 0

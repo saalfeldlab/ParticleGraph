@@ -40,7 +40,7 @@ plotting:
 
 training:
   n_epochs: 20
-  batch_size: 64
+  batch_size: 1
   small_init_batch_size: False
   n_runs: 100
   time_window: 4
@@ -51,7 +51,7 @@ training:
   smooth_function: 'triangular'
 
   predict_density: True
-  coeff_predict_density: 4
+  coeff_predict_density: 2
 
   recursive_loop: 0
   sparsity: 'none'

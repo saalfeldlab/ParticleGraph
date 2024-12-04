@@ -90,6 +90,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
 
     dimension = simulation_config.dimension
     n_epochs = train_config.n_epochs
+    train_norm = train_config.train_norm
     max_radius = simulation_config.max_radius
     min_radius = simulation_config.min_radius
     n_particles = simulation_config.n_particles
@@ -297,7 +298,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
 
                 y = torch.tensor(y_list[run][k], dtype=torch.float32, device=device).clone().detach()
                 if predict_density:
-                    y = torch.cat((y, torch.tensor(x_list[run][k][:,-1][:,None], dtype=torch.float32, device=device).clone().detach()), dim=1)
+                    y = torch.cat((y, torch.tensor(x_list[run][k+1][:,-1][:,None], dtype=torch.float32, device=device).clone().detach()), dim=1)
                 if recursive_loop> 0:
                     for m in range(recursive_loop):
                         y_= model.recursive_param[m] * torch.tensor(y_list[run][k+m+1], dtype=torch.float32, device=device).clone().detach()
@@ -328,15 +329,20 @@ def data_train_particle(config, config_file, erase, best_model, device):
                pred = model(batch, data_id=data_id, training=True, vnorm=vnorm, phi=phi)
 
             if has_ghost:
-                loss = ((pred[mask_ghost] - y_batch)).norm(2)
+                loss = ((pred[mask_ghost] - y_batch)).norm(train_norm)
             elif predict_density:
                 loss_density = coeff_predict_density * (pred[:, dimension] - y_batch[:, dimension]).norm(2)
-                loss = (pred[:, 0:dimension] - y_batch[:, 0:dimension]).norm(2) + loss_density
+                loss = (pred[:, 0:dimension] - y_batch[:, 0:dimension]).norm(train_norm) + loss_density
             else:
                 loss = (pred - y_batch).norm(2)
 
             loss.backward()
             optimizer.step()
+
+            # fig = plt.figure(figsize=(8, 8))
+            # plt.scatter(x[:, 2].detach().cpu().numpy(),
+            #             x[:, 1].detach().cpu().numpy(), s=10, c=x[:, -1].detach().cpu().numpy(), vmin=0, vmax=1)
+            # plt.tight_layout()
 
             # flag = True
             # if (recursive_loop > 0) | predict_density :
