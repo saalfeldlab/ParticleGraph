@@ -50,13 +50,9 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        action = 'test'
+        action = 'generate_train_test'
         best_model = None
-
-        # config_list=['boids_division_model_f2_boids_perimeter_bis']
-        config_list=['falling_water_ramp_x5', 'falling_water_ramp_x6', 'falling_water_ramp_x7', 'falling_water_ramp_x8', 'falling_water_ramp_x9',
-                     'falling_water_ramp_x10', 'falling_water_ramp_x11', 'falling_water_ramp_x12']
-        # config_list = ['arbitrary_3_test']
+        config_list = ['mouse_city_c1_2.yaml']
 
     for config_file in config_list:
 

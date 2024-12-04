@@ -6447,24 +6447,22 @@ if __name__ == '__main__':
     #                'signal_N2_r1_Lorentz_l3','signal_N2_r1_Lorentz_l4']
     # config_list = ['boids_16_256']
 
-    # config_list = ['mouse_city_c1_quad']
 
     # config_list = ['mouse_city_c1_3','mouse_city_c1_4','mouse_city_c1_5',
     #                'mouse_city_c1_6','mouse_city_c1_7','mouse_city_c1_8', 'mouse_city_c1_9','mouse_city_c1_10',
-    #                'mouse_city_c1_11', 'mouse_city_c1_bis','mouse_city_c1_ter','mouse_city_c1_quad',
-    #                'mouse_city_c1_entropy_1', 'mouse_city_c1_entropy_2', 'mouse_city_c1_entropy_3',
-    #                'mouse_city_c1_entropy_4', 'mouse_city_c1_entropy_5', 'mouse_city_c1_entropy_6', 'mouse_city_c1_entropy_7']
+    #                'mouse_city_c1_11', 'mouse_city_c1_bis','mouse_city_c1_ter','mouse_city_c1_quad']
+
 
     # config_list = ['falling_particles_N1000_2']
 
-    config_list = ['boids_division_model_f2_boids_perimeter']
+    config_list = ['boids_division_model_f2_boids_perimeter_bis']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         # data_plot(config=config, config_file=config_file, epoch_list=['best'], bLatex=False, device=device)
         # data_plot(config=config, config_file=config_file, epoch_list=['all'], bLatex=False, device=device)
 
-        plot_generated(config=config, run=0, style='black voronoi color', step = 2, bLatex=False, device=device)
+        plot_generated(config=config, run=0, style='black voronoi color', step = 10, bLatex=False, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 
 
