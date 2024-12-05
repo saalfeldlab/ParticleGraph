@@ -42,7 +42,7 @@ training:
   n_epochs: 20
   train_norm: 3
 
-  batch_size: 1
+  batch_size: 64
   small_init_batch_size: False
   n_runs: 100
   time_window: 4

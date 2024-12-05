@@ -40,11 +40,11 @@ plotting:
 
 training:
   n_epochs: 20
-  batch_size: 1
+  batch_size: 64
   small_init_batch_size: False
   n_runs: 100
   time_window: 4
-  time_window_noise: 3.0E-4
+  time_window_noise: 5.0E-5
 
   smooth_particle: True
   smooth_radius: 0.025

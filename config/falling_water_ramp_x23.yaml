@@ -40,20 +40,18 @@ plotting:
 
 training:
   n_epochs: 20
-  train_norm: 4
-
   batch_size: 64
   small_init_batch_size: False
   n_runs: 100
   time_window: 4
-  time_window_noise: 1.0E-4
+  time_window_noise: 2.0E-5
 
   smooth_particle: True
   smooth_radius: 0.025
   smooth_function: 'triangular'
 
   predict_density: True
-  coeff_predict_density: 10
+  coeff_predict_density: 2
 
   recursive_loop: 0
   sparsity: 'none'

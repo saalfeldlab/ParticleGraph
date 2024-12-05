@@ -52,8 +52,9 @@ if __name__ == '__main__':
     else:
         action = 'test'
         best_model = None
-        # config_list=['falling_water_ramp_x11','falling_water_ramp_x12','falling_water_ramp_x13','falling_water_ramp_x14','falling_water_ramp_x15','falling_water_ramp_x16']
-        config_list=['falling_water_ramp_x1']
+        config_list=['falling_water_ramp_x13','falling_water_ramp_x14','falling_water_ramp_x15','falling_water_ramp_x16','falling_water_ramp_x17','falling_water_ramp_x18','falling_water_ramp_x19',
+                     'falling_water_ramp_x20','falling_water_ramp_x21','falling_water_ramp_x22','falling_water_ramp_x23','falling_water_ramp_x24']
+
 
     for config_file in config_list:
 
