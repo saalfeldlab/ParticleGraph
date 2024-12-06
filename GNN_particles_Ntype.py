@@ -52,8 +52,8 @@ if __name__ == '__main__':
     else:
         action = 'test'
         best_model = None
-        config_list=['falling_water_ramp_x13','falling_water_ramp_x14','falling_water_ramp_x15','falling_water_ramp_x16','falling_water_ramp_x17','falling_water_ramp_x18','falling_water_ramp_x19',
-                     'falling_water_ramp_x20','falling_water_ramp_x21','falling_water_ramp_x22','falling_water_ramp_x23','falling_water_ramp_x24']
+        config_list=['falling_water_ramp_x25','falling_water_ramp_x26','falling_water_ramp_x27','falling_water_ramp_x28','falling_water_ramp_x29',
+                     'falling_water_ramp_x30','falling_water_ramp_x31','falling_water_ramp_x32','falling_water_ramp_x33','falling_water_ramp_x34']
 
 
     for config_file in config_list:
@@ -64,12 +64,12 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
         if 'generate' in action:
-            data_generate(config, device=device, visualize=True, run_vizualized=0, style='voronoi', alpha=1, erase=False, bSave=True, step=20)  #config.simulation.n_frames // 100)
+            data_generate(config, device=device, visualize=True, run_vizualized=1, style='black color', alpha=1, erase=False, bSave=True, step=2)  #config.simulation.n_frames // 100)
         if 'train' in action:
             data_train(config=config, config_file=config_file, erase=False, best_model=best_model, device=device)
         if 'test' in action:
-            data_test(config=config, config_file=config_file, visualize=True, style='black arrow speed acc_true', verbose=False, best_model='best', run=2, plot_data=False,
-                      test_simulation=False, sample_embedding=False, device=device, fixed=True, bounce=True, step=4) # config.simulation.n_frames // 200, )  arrow speed acc_learned
+            data_test(config=config, config_file=config_file, visualize=True, style='black color arrow speed', verbose=False, best_model='best', run=2, plot_data=False,
+                      test_simulation=False, sample_embedding=False, device=device, fixed=True, bounce=True, step=4) # config.simulation.n_frames // 200, )  arrow speed acc_learned   arrow speed acc_true
 
             # data_test(config=config, config_file=config_file, visualize=True, style='black arrow speed acc', verbose=False, best_model='best', run=1, plot_data=False,
             #           test_simulation=False, sample_embedding=False, device=device, fixed=True, step=80, time_ratio=20) # config.simulation.n_frames // 200, )  arrow speed acc_learned

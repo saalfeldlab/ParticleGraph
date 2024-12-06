@@ -153,7 +153,10 @@ def data_train_particle(config, config_file, erase, best_model, device):
     for run in trange(0, n_runs, n_steps):
         for k in range(run_lengths[run]):
             if (k % 10 == 0) | (n_frames < 1000):
-                x = torch.cat((x, torch.tensor(x_list[run][k], dtype=torch.float32, device=device)), 0)
+                try:
+                    x = torch.cat((x, torch.tensor(x_list[run][k], dtype=torch.float32, device=device)), 0)
+                except:
+                    print(f'Error in run {run} frame {k}')
                 y = torch.cat((y, torch.tensor(y_list[run][k], dtype=torch.float32, device=device)), 0)
         time.sleep(0.5)
     vnorm = norm_velocity(x, dimension, device)
@@ -3909,6 +3912,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     pred_err_list = []
     gloss = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
     geomloss_list = []
+    angle_list = []
     time.sleep(1)
 
     if time_window > 0:
@@ -3925,6 +3929,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
         if it < n_frames - 4:
             x0 = x_list[0][it//time_ratio].clone().detach()
+            x0_next = x_list[0][(it+1)//time_ratio].clone().detach()
             y0 = y_list[0][it//time_ratio].clone().detach()
         if has_mesh:
             x[:, 1:5] = x0[:, 1:5].clone().detach()
@@ -4293,13 +4298,20 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 for m in range(x.shape[0]):
                     if x[m, 4] != 0 :
                         if 'speed' in style:
+                            # plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(y0[m, 1]) * delta_t * 50, dy=to_numpy(y0[m, 0]) * delta_t * 50, head_width=0.004, length_includes_head=False, color='g')
+                            # plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(x[m, 4]) * delta_t * 50, dy=to_numpy(x[m, 3]) * delta_t * 50, head_width=0.004, length_includes_head=False, color='w')
                             plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(x[m, 4]) * delta_t * 2, dy=to_numpy(x[m, 3]) * delta_t * 2, head_width=0.004, length_includes_head=True, color='g')
+                            # angle = compute_signed_angle(x[m, 3:5], y0[m, 0:2])
+                            # angle_list.append(angle)
                         if 'acc_true' in style:
                             plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(y0[m, 1])/5E3, dy=to_numpy(y0[m, 0])/5E3, head_width=0.004, length_includes_head=True, color='r')
                         if 'acc_learned' in style:
                             plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(pred[m, 1]*ynorm.squeeze()) / 5E3, dy=to_numpy(pred[m, 0]*ynorm.squeeze()) / 5E3, head_width=0.004, length_includes_head=True, color='r')
                 plt.xlim([0,1])
                 plt.ylim([0,1])
+                plt.xlim([0.4,0.6])
+                plt.ylim([0.4,0.6])
+
                 # plt.text(0,1.05,f'true acc {to_numpy(y0[900,0:2])} {to_numpy(pred[900,0:2]*ynorm)}',fontsize=12)
                 # plt.text(0,1.025,f'true speed {to_numpy(x_list[0][it//time_ratio][900,3:5] + y0[900,0:2] * delta_t)} {to_numpy(x_list[0][it//time_ratio][900,3:5] + pred[900,0:2] * ynorm * delta_t)}',fontsize=12)
             if 'no_ticks' in style:
@@ -4568,6 +4580,20 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/GT_{config_file}_{it}.tif", dpi=170.7)
             plt.close()
+
+    if len(angle_list)>0:
+        angle = torch.stack(angle_list)
+        fig = plt.figure(figsize=(12, 12))
+        plt.hist(to_numpy(angle), bins=1000, color='w')
+        plt.xlabel('angle', fontsize=48)
+        plt.ylabel('count', fontsize=48)
+        plt.xticks(fontsize=24)
+        plt.yticks(fontsize=24)
+        plt.xlim([-90,90])
+        plt.savefig(f"./{log_dir}/results/angle.tif", dpi=170.7)
+        plt.close
+
+
 
     # run = 0
     # k = 32

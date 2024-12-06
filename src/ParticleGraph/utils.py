@@ -160,6 +160,49 @@ def tv2D(params):
     tvloss = torch.sqrt(sx.cuda() ** 2 + sy.cuda() ** 2 + 1e-8).sum()
     return tvloss / nb_voxel
 
+def compute_angle(tensor1, tensor2):
+    # Ensure the tensors are 2D
+    assert tensor1.shape == tensor2.shape == (2,), "Tensors must be 2D vectors"
+
+    # Compute the dot product
+    dot_product = torch.dot(tensor1, tensor2)
+
+    # Compute the magnitudes (norms) of the tensors
+    norm1 = torch.norm(tensor1)
+    norm2 = torch.norm(tensor2)
+
+    # Compute the cosine of the angle
+    cos_angle = dot_product / (norm1 * norm2)
+
+    # Compute the angle in radians
+    angle = torch.acos(cos_angle)
+
+    return angle * 180 / np.pi
+
+
+def compute_signed_angle(tensor1, tensor2):
+    # Ensure the tensors are 2D
+    assert tensor1.shape == tensor2.shape == (2,), "Tensors must be 2D vectors"
+
+    # Compute the dot product
+    dot_product = torch.dot(tensor1, tensor2)
+
+    # Compute the magnitudes (norms) of the tensors
+    norm1 = torch.norm(tensor1)
+    norm2 = torch.norm(tensor2)
+
+    # Compute the cosine of the angle
+    cos_angle = dot_product / (norm1 * norm2)
+
+    # Compute the angle in radians
+    angle = torch.acos(cos_angle)
+
+    # Compute the sign of the angle using the cross product
+    cross_product = tensor1[0] * tensor2[1] - tensor1[1] * tensor2[0]
+    sign = torch.sign(cross_product)
+
+    # Return the signed angle
+    return angle * sign * 180 / np.pi
 
 def get_r2_numpy_corrcoef(x, y):
     return np.corrcoef(x, y)[0, 1] ** 2

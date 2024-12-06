@@ -51,7 +51,7 @@ training:
   smooth_function: 'triangular'
 
   predict_density: True
-  coeff_predict_density: 2
+  coeff_predict_density: 10
 
   recursive_loop: 0
   sparsity: 'none'

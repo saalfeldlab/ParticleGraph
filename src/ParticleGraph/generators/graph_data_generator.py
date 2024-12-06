@@ -221,6 +221,9 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
 
+                if 'black' in style:
+                    plt.style.use('dark_background')
+
                 if 'latex' in style:
                     plt.rcParams['text.usetex'] = True
                     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
@@ -341,7 +344,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         # matplotlib.use("Qt5Agg")
 
                         fig, ax = fig_init(formatx="%.1f", formaty="%.1f")
-                        s_p = 100
+                        s_p = 25
 
                         # if 'PDE_K' in model_config.particle_model_name:
                         #     s_p = 5
