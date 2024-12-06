@@ -42,7 +42,7 @@ training:
   n_epochs: 20
   batch_size: 64
   small_init_batch_size: False
-  n_runs: 1000
+  n_runs: 100
   time_window: 4
   time_window_noise: 1.0E-4
 
@@ -51,7 +51,7 @@ training:
   smooth_function: 'triangular'
 
   predict_density: True
-  coeff_predict_density: 2
+  coeff_predict_density: 6
 
   recursive_loop: 0
   sparsity: 'none'
