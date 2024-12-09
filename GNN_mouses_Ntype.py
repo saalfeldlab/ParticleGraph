@@ -52,7 +52,7 @@ if __name__ == '__main__':
     else:
         action = 'generate_train_test'
         best_model = None
-        config_list = ['mouse_city_c1_2']
+        config_list = ['mouse_city_c1_3']
 
     for config_file in config_list:
 

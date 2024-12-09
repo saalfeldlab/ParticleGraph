@@ -30,8 +30,8 @@ class Smooth_Particle(pyg.nn.MessagePassing):
         the speed of the particles (dimension 2)
     """
 
-    def __init__(self, config=[], aggr_type='mean', bc_dpos=[], dimension=[], device='cuda:0'):
-        super(Smooth_Particle, self).__init__(aggr=aggr_type)  # "mean" aggregation.
+    def __init__(self, config=[], aggr_type='add', bc_dpos=[], dimension=[], device='cuda:0'):
+        super(Smooth_Particle, self).__init__(aggr='add')  # "mean" aggregation.
 
         self.bc_dpos = bc_dpos
         self.dimension = dimension
@@ -53,17 +53,6 @@ class Smooth_Particle(pyg.nn.MessagePassing):
         edge_index = adj_t.nonzero().t().contiguous()
         self.edge_index = edge_index
 
-        fig = plt.figure(figsize=(8, 8))
-        plt.scatter(x[:, 2].detach().cpu().numpy(),
-                    x[:, 1].detach().cpu().numpy(), s=10, c='w')
-
-        pos = torch.argwhere(edge_index[0,:]==4550)
-        if pos.numel()>0:
-            print(pos.numel())
-            plt.scatter(x[edge_index[1,pos], 2].detach().cpu().numpy(),
-                        x[edge_index[1,pos], 1].detach().cpu().numpy(), s=10, c='r')
-
-
         out = self.propagate(edge_index, pos=x[:, 1:self.dimension+1])
 
         return out
@@ -72,7 +61,6 @@ class Smooth_Particle(pyg.nn.MessagePassing):
     def message(self, edge_index_i, edge_index_j, pos_i, pos_j):
 
         distance_squared = torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)
-        # distance = torch.sqrt(distance_squared)
         w = self.W(distance_squared, self.smooth_radius, self.smooth_function)
 
         return w[:,None]
@@ -82,14 +70,44 @@ class Smooth_Particle(pyg.nn.MessagePassing):
 
         match function:
             case 'gaussian':
-                w_density = 4/(np.pi*s**8)*(s**2-distance_squared)**3 / 1E3
+                w_density = 1/(np.pi*s**8)*(s**2-distance_squared)**3 / 6E3
             case triangular:
-                w_density = 4/(np.pi*s**8)*(s**2-distance_squared)**3 / 1E3
+                w_density = 1/(np.pi*s**8)*(s**2-distance_squared)**3 / 6E3
 
 
         return w_density
 
 
+
+
+
+
+    # r = torch.linspace(0, self.smooth_radius, 100, device=self.device)
+    # fig = plt.figure(figsize=(8, 8))
+    # k = self.W(r**2, self.smooth_radius, self.smooth_function)
+    # plt.scatter(r.detach().cpu().numpy(), k.detach().cpu().numpy(), c='w')
+    #
+    # fig = plt.figure(figsize=(8, 8))
+    # plt.scatter(x[:, 2].detach().cpu().numpy(),
+    #             x[:, 1].detach().cpu().numpy(), s=10, c='w')
+    # pos = torch.argwhere(edge_index[0,:]==50)
+    # if pos.numel()>0:
+    #     print(pos.numel())
+    #     plt.scatter(x[edge_index[1,pos], 2].detach().cpu().numpy(),
+    #                 x[edge_index[1,pos], 1].detach().cpu().numpy(), s=10, c='r')
+    #     t = torch.sum(self.W(distance[edge_index[1,pos],edge_index[0,pos]], self.smooth_radius, self.smooth_function))
+    #     print(t)
+    #
+    # fig = plt.figure(figsize=(8, 8))
+    # plt.scatter(x[:, 2].detach().cpu().numpy(),
+    #             x[:, 1].detach().cpu().numpy(), s=10, c='w')
+    # pos = torch.argwhere(edge_index[0,:]==479)
+    # if pos.numel()>0:
+    #     print(pos.numel())
+    #     plt.scatter(x[edge_index[1,pos], 2].detach().cpu().numpy(),
+    #                 x[edge_index[1,pos], 1].detach().cpu().numpy(), s=10, c='r')
+    #     t = torch.sum(self.W(distance[edge_index[0,pos],edge_index[1,pos]], self.smooth_radius, self.smooth_function))
+    #     print(t)
 
 
 
@@ -117,40 +135,15 @@ if __name__ == '__main__':
     min_radius = config.simulation.min_radius
     smooth_radius  = config.training.smooth_radius
 
-    for smooth_radius in [0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05]:
-
-        config.training.smooth_radius =smooth_radius
-        model_density = Smooth_Particle(config=config, aggr_type='mean', bc_dpos=bc_dpos, dimension=dimension)
-        mgrid = model_density.mgrid.clone().detach()
-
-        x = mgrid
-
-        density = model_density(x=x, has_field=False)
-
-        print(smooth_radius, density[4550])
-
-
-    fig = plt.figure(figsize=(8, 8))
-    plt.scatter(x[:, 2].detach().cpu().numpy(),
-                x[:, 1].detach().cpu().numpy(), s=10, c=density.detach().cpu().numpy(), vmin=0, vmax=1)
-
-    plt.xlim([0, 1])
-    plt.ylim([0, 1])
-    plt.tight_layout()
-
-
-
-
+    config.training.smooth_radius = smooth_radius
+    model_density = Smooth_Particle(config=config, aggr_type='mean', bc_dpos=bc_dpos, dimension=dimension)
+    mgrid = model_density.mgrid.clone().detach()
 
 
     for k in trange(0,len(x_list),10):
 
         x = x_list[k].squeeze()
-
-        x = mgrid
-
         density = model_density(x=x, has_field=False)
-        # density, grad = model_density(x=x, has_field=False)
 
         fig = plt.figure(figsize=(8, 8))
         plt.scatter(x[:, 2].detach().cpu().numpy(),
@@ -160,6 +153,19 @@ if __name__ == '__main__':
         plt.tight_layout()
         plt.savefig(f"tmp/particle_density_{k}.png")
         plt.close()
+
+    # x = mgrid
+    #
+    # for smooth_radius in [0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05]:
+    #
+    #     config.training.smooth_radius = smooth_radius
+    #     model_density = Smooth_Particle(config=config, aggr_type='mean', bc_dpos=bc_dpos, dimension=dimension)
+    #
+    #     density = model_density(x=x, has_field=False)
+    #
+    #     print(smooth_radius, density[4550])
+
+
 
 
 
