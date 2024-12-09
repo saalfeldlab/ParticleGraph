@@ -4299,18 +4299,20 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     if x[m, 4] != 0 :
                         if 'speed' in style:
                             # plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(y0[m, 1]) * delta_t * 50, dy=to_numpy(y0[m, 0]) * delta_t * 50, head_width=0.004, length_includes_head=False, color='g')
-                            plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(x[m, 4]) * delta_t * 50, dy=to_numpy(x[m, 3]) * delta_t * 50, head_width=0.004, length_includes_head=False, color='w')
-                            plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(x[m, 4]) * delta_t * 2, dy=to_numpy(x[m, 3]) * delta_t * 2, head_width=0.004, length_includes_head=True, color='g')
+                            # plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(x[m, 4]) * delta_t * 50, dy=to_numpy(x[m, 3]) * delta_t * 50, head_width=0.004, length_includes_head=False, color='w')
                             # angle = compute_signed_angle(x[m, 3:5], y0[m, 0:2])
                             # angle_list.append(angle)
+
+                            plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(x[m, 4]) * delta_t * 2, dy=to_numpy(x[m, 3]) * delta_t * 2, head_width=0.004, length_includes_head=True, color='g')
+
                         if 'acc_true' in style:
                             plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(y0[m, 1])/5E3, dy=to_numpy(y0[m, 0])/5E3, head_width=0.004, length_includes_head=True, color='r')
                         if 'acc_learned' in style:
                             plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(pred[m, 1]*ynorm.squeeze()) / 5E3, dy=to_numpy(pred[m, 0]*ynorm.squeeze()) / 5E3, head_width=0.004, length_includes_head=True, color='r')
                 plt.xlim([0,1])
                 plt.ylim([0,1])
-                plt.xlim([0.4,0.6])
-                plt.ylim([0.4,0.6])
+                # plt.xlim([0.4,0.6])
+                # plt.ylim([0.4,0.6])
 
                 # plt.text(0,1.05,f'true acc {to_numpy(y0[900,0:2])} {to_numpy(pred[900,0:2]*ynorm)}',fontsize=12)
                 # plt.text(0,1.025,f'true speed {to_numpy(x_list[0][it//time_ratio][900,3:5] + y0[900,0:2] * delta_t)} {to_numpy(x_list[0][it//time_ratio][900,3:5] + pred[900,0:2] * ynorm * delta_t)}',fontsize=12)

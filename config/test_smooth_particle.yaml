@@ -47,8 +47,8 @@ training:
   time_window_noise: 0
 
   smooth_particle: True
-  smooth_radius: 0.025
-  smooth_function: 'triangular'
+  smooth_radius: 0.035
+  smooth_function: 'gaussian'
 
   recursive_loop: 0
   sparsity: 'none'
