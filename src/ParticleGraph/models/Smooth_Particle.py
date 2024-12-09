@@ -35,11 +35,9 @@ class Smooth_Particle(pyg.nn.MessagePassing):
 
         self.bc_dpos = bc_dpos
         self.dimension = dimension
+        self.smooth_radius = config.training.smooth_radius
         self.smooth_function = config.training.smooth_function
         self.device = device
-
-        # self.smooth_radius = config.training.smooth_radius
-        self.smooth_radius = nn.Parameter(torch.tensor(config.training.smooth_radius, device=self.device,requires_grad=True, dtype=torch.float32))
 
         tensors = tuple(dimension * [torch.linspace(0, 1, steps=100)])
         mgrid = torch.stack(torch.meshgrid(*tensors), dim=-1)
@@ -50,13 +48,12 @@ class Smooth_Particle(pyg.nn.MessagePassing):
 
     def forward(self, x=[], has_field=False):
 
-
-        distance = torch.sum(self.bc_dpos(x[:, None, 0:self.dimension] - x[None, :, 0:self.dimension]) ** 2, dim=2)
+        distance = torch.sum(self.bc_dpos(x[:, None, 1:self.dimension + 1] - x[None, :, 1:self.dimension + 1]) ** 2, dim=2)
         adj_t = ((distance <  self.smooth_radius ** 2) & (distance >= 0)).float() * 1
         edge_index = adj_t.nonzero().t().contiguous()
         self.edge_index = edge_index
 
-        out = self.propagate(edge_index, pos=x[:, 0:self.dimension])
+        out = self.propagate(edge_index, pos=x[:, 1:self.dimension+1])
 
         return out
 
@@ -114,20 +111,11 @@ class Smooth_Particle(pyg.nn.MessagePassing):
 
 
 
-def gradient(y, x, grad_outputs=None):
-    if grad_outputs is None:
-        grad_outputs = torch.ones_like(y)
-    grad = torch.autograd.grad(y, [x], grad_outputs=grad_outputs, create_graph=True)[0]
-    return grad
-
-
-
 
 if __name__ == '__main__':
 
     from ParticleGraph.utils import choose_boundary_values
     from ParticleGraph.config import ParticleGraphConfig
-    import torch.nn as nn
 
     device = 'cuda:0'
     try:
@@ -152,32 +140,23 @@ if __name__ == '__main__':
     mgrid = model_density.mgrid.clone().detach()
 
 
-    for k in trange(0,len(x_list),10):
-
-        x = x_list[k].squeeze()
-
-        coords = x[:,1:3].clone().detach().requires_grad_(True)
-
-        density = model_density(x=coords, has_field=False)
-
-        density_grad = gradient(density.squeeze(), coords)
-
-        fig = plt.figure(figsize=(8, 8))
-
-        plt.scatter(x[:, 2].detach().cpu().numpy(),
-                    x[:, 1].detach().cpu().numpy(), s=10, c=density.detach().cpu().numpy(), vmin=0, vmax=1)
-
-
-
-        plt.xlim([0,1])
-        plt.ylim([0,1])
-        plt.tight_layout()
-        plt.savefig(f"tmp/particle_density_{k}.png")
-        plt.close()
+    # for k in trange(0,len(x_list),10):
+    #
+    #     x = x_list[k].squeeze()
+    #     density = model_density(x=x, has_field=False)
+    #
+    #     fig = plt.figure(figsize=(8, 8))
+    #     plt.scatter(x[:, 2].detach().cpu().numpy(),
+    #                 x[:, 1].detach().cpu().numpy(), s=10, c=density.detach().cpu().numpy(), vmin=0, vmax=1)
+    #     plt.xlim([0,1])
+    #     plt.ylim([0,1])
+    #     plt.tight_layout()
+    #     plt.savefig(f"tmp/particle_density_{k}.png")
+    #     plt.close()
 
     x = mgrid
 
-    for smooth_radius in [0.1, 0.2, 0.3, 0.4]:
+    for smooth_radius in [0.1, 0.2, 0.3, 0.4, 0.5]:
 
         config.training.smooth_radius = smooth_radius
         model_density = Smooth_Particle(config=config, aggr_type='mean', bc_dpos=bc_dpos, dimension=dimension)
@@ -189,14 +168,9 @@ if __name__ == '__main__':
         fig = plt.figure(figsize=(8, 8))
         plt.scatter(x[:, 2].detach().cpu().numpy(),
                     x[:, 1].detach().cpu().numpy(), s=10, c=density.detach().cpu().numpy(), vmin=0, vmax=1)
-        plt.scatter(x[4550, 2].detach().cpu().numpy(),
-                    x[4550, 1].detach().cpu().numpy(), s=10, c='r')
         plt.xlim([0,1])
         plt.ylim([0,1])
         plt.tight_layout()
-
-        plt.savefig(f"tmp/particle_density_{smooth_radius}.png")
-
 
 
 

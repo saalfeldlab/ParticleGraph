@@ -200,7 +200,7 @@ if __name__ == '__main__':
 
     for step in trange(total_steps):
         model_output, coords = img_siren(model_input)
-        model_output = gradient(model_output, coords)
+        model_output = laplace(model_output, coords)
         loss = ((model_output - ground_truth) ** 2).mean()
 
         # if not step % steps_til_summary:
