@@ -83,8 +83,7 @@ class Interaction_Falling_Water(pyg.nn.MessagePassing):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
-        boundary = torch.cat((1-x[:,1:2], x[:,1:2], 1-x[:,2:3], x[:,2:3]), dim=-1)
-        boundary = torch.clamp(boundary/ self.max_radius, -1, 1)
+
 
         if self.time_window == 0:
             particle_id = x[:, 0:1]

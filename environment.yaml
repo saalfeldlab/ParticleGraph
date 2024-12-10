@@ -29,6 +29,7 @@ dependencies:
   - tables
   - zarr
   - xarray
+  - PyQt5
   - pip:
     - geomloss
     - torch_geometric

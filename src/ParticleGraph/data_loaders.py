@@ -394,13 +394,11 @@ def load_WaterRamps(config, device=None, visualize=None, step=None, cmap=None):
     n_frames = simulation_config.n_frames
     dimension = 2
 
-    n_particles = simulation_config.n_particles
     n_particle_types = simulation_config.n_particle_types
     n_runs = train_config.n_runs
     n_particles = simulation_config.n_particles
 
     delta_t = simulation_config.delta_t
-
 
     bc_pos, bc_dpos = choose_boundary_values('no')
     model_density = Smooth_Particle(config=config, aggr_type='mean', bc_dpos=bc_dpos, dimension=dimension, device=device)
@@ -411,33 +409,28 @@ def load_WaterRamps(config, device=None, visualize=None, step=None, cmap=None):
     with open(os.path.join(data_folder_name, "metadata.json")) as f:
         metadata = json.load(f)
 
-    n_wall_particles = 400
-    n_max_particles = 0
+    # n_wall_particles = 400
+    # n_max_particles = 0
 
     for run in range(n_runs):
         x_list = []
         y_list = []
 
-        gap = 0.008
+        # gap = 0.008
+        # wall_pos = torch.linspace(0.1-gap, 0.9+gap, n_wall_particles//4, device=device)
+        # wall0 = torch.zeros(n_wall_particles//4, 2, device=device)
+        # wall0[:, 0] = wall_pos
+        # wall0[:, 1] = 0.1-gap
+        # wall1 = torch.zeros(n_wall_particles//4, 2, device=device)
+        # wall1[:, 0] = wall_pos
+        # wall1[:, 1] = 0.9+gap
+        # wall2 = torch.zeros(n_wall_particles//4, 2, device=device)
+        # wall2[:, 1] = wall_pos
+        # wall2[:, 0] = 0.1-gap
+        # wall3 = torch.zeros(n_wall_particles//4, 2, device=device)
+        # wall3[:, 1] = wall_pos
+        # wall3[:, 0] = 0.9+gap
 
-        wall_pos = torch.linspace(0.1-gap, 0.9+gap, n_wall_particles//4, device=device)
-        wall0 = torch.zeros(n_wall_particles//4, 2, device=device)
-        wall0[:, 0] = wall_pos
-        wall0[:, 1] = 0.1-gap
-        wall1 = torch.zeros(n_wall_particles//4, 2, device=device)
-        wall1[:, 0] = wall_pos
-        wall1[:, 1] = 0.9+gap
-        wall2 = torch.zeros(n_wall_particles//4, 2, device=device)
-        wall2[:, 1] = wall_pos
-        wall2[:, 0] = 0.1-gap
-        wall3 = torch.zeros(n_wall_particles//4, 2, device=device)
-        wall3[:, 1] = wall_pos
-        wall3[:, 0] = 0.9+gap
-        # noise_wall = torch.randn((n_wall_particles//4, dimension), device=device) * 0.001
-        # wall0 = wall0 + noise_wall
-        # wall1 = wall1 + noise_wall
-        # wall2 = wall2 + noise_wall
-        # wall3 = wall3 + noise_wall
 
         position = np.load(data_folder_name + 'position.' + str(run) + '.npy', allow_pickle=True)
         # Swap the columns
@@ -451,24 +444,20 @@ def load_WaterRamps(config, device=None, visualize=None, step=None, cmap=None):
 
         for frame in trange(1,position.shape[0]-2):
 
-            if len(x_list)==31:
-                a=1
-
             pos_prev = position[frame-1].squeeze()
             pos_next = position[frame+1].squeeze()
             pos = position[frame].squeeze()
-
             real_n_particles = pos.shape[0]
-            if real_n_particles > n_max_particles:
-                n_max_particles = real_n_particles
-            n_particles = n_wall_particles + pos.shape[0]
+
+            # if real_n_particles > n_max_particles:
+            #     n_max_particles = real_n_particles
+            # n_particles = n_wall_particles + pos.shape[0]
+
+            n_particles = pos.shape[0]
 
             y = torch.zeros((n_particles, dimension), device=device)
-            dpos = torch.zeros((n_particles, dimension), device=device)
-            dpos[n_wall_particles:] = (pos - pos_prev) / delta_t
+            dpos = (pos - pos_prev) / delta_t
             dpos_next = (pos_next - pos) / delta_t
-
-            pos = torch.cat((wall0, wall1, wall2, wall3, pos), dim=0)
 
             particle_id = torch.arange(n_particles, device=device)
             particle_id = particle_id[:, None]
@@ -476,6 +465,13 @@ def load_WaterRamps(config, device=None, visualize=None, step=None, cmap=None):
             x = torch.concatenate((particle_id.clone().detach(), pos.clone().detach(), dpos.clone().detach(), type.clone().detach()), 1)
             density = model_density(x=x, has_field=False)
             x = torch.cat((x, density), 1)
+
+            boundary = torch.cat((1 - x[:, 1:2], x[:, 1:2], 1 - x[:, 2:3], x[:, 2:3]), dim=-1)
+
+            fig = plt.figure()
+            plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), c=to_numpy(boundary[:, 0]))
+
+            boundary = torch.clamp(boundary / self.max_radius, -1, 1)
 
             # fig = plt.figure(figsize=(8, 8))
             # plt.scatter(x[:, 2].detach().cpu().numpy(),
