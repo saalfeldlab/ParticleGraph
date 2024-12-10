@@ -25,7 +25,7 @@ from ParticleGraph.models.Smooth_Particle import Smooth_Particle
 
 import json
 from tqdm import trange
-
+import matplotlib
 
 def get_index_particles(x, n_particle_types, dimension):
     index_particles = []
@@ -227,163 +227,6 @@ def load_LG_ODE(config, device=None, visualize=False, step=1000):
 
 
 
-def load_WaterDropSmall(config, device=None, visualize=None, step=None, cmap=None):
-    # create output folder, empty it if bErase=True, copy files into it
-    data_folder_name = config.data_folder_name
-    dataset_name = config.dataset
-
-    simulation_config = config.simulation
-    train_config = config.training
-    n_frames = simulation_config.n_frames
-    dimension = 2
-
-    n_particles = simulation_config.n_particles
-    n_particle_types = simulation_config.n_particle_types
-    n_runs = train_config.n_runs
-    n_particles = simulation_config.n_particles
-
-    delta_t = simulation_config.delta_t
-
-
-    # Loading Data
-
-    with open(os.path.join(data_folder_name, "metadata.json")) as f:
-        metadata = json.load(f)
-    with open(os.path.join(data_folder_name, f"train_offset.json")) as f:
-        offset = json.load(f)
-
-    particle_type = np.memmap(os.path.join(data_folder_name, f"train_particle_type.dat"), dtype=np.int64, mode="r")
-    position = np.memmap(os.path.join(data_folder_name, f"train_position.dat"), dtype=np.float32, mode="r")
-
-    window_length = 7
-    noise_std = 3.0E-4
-    return_pos = False
-
-    for traj in offset.values():
-        dim = traj["position"]["shape"][2]
-        break
-    windows = []
-    for traj in offset.values():
-        size = traj["position"]["shape"][1]
-        length = traj["position"]["shape"][0] - window_length + 1
-        for i in range(length):
-            desc = {
-                "size": size,
-                "type": traj["particle_type"]["offset"],
-                "pos": traj["position"]["offset"] + i * size * dim,
-            }
-            windows.append(desc)
-
-    n_wall_particles = 1000
-    real_n_particles = n_particles - n_wall_particles
-
-    for run in range(n_runs):
-        x_list = []
-        y_list = []
-
-        wall_pos = torch.linspace(0.1, 0.9, n_wall_particles//4, device=device)
-        wall0 = torch.zeros(n_wall_particles//4, 2, device=device)
-        wall0[:, 0] = wall_pos
-        wall0[:, 1] = 0.1
-        wall1 = torch.zeros(n_wall_particles//4, 2, device=device)
-        wall1[:, 0] = wall_pos
-        wall1[:, 1] = 0.9
-        wall2 = torch.zeros(n_wall_particles//4, 2, device=device)
-        wall2[:, 1] = wall_pos
-        wall2[:, 0] = 0.1
-        wall3 = torch.zeros(n_wall_particles//4, 2, device=device)
-        wall3[:, 1] = wall_pos
-        wall3[:, 0] = 0.9
-        noise_wall = torch.randn((n_wall_particles//4, dimension), device=device) * 0.001
-        wall0 = wall0 + noise_wall
-        wall1 = wall1 + noise_wall
-        wall2 = wall2 + noise_wall
-        wall3 = wall3 + noise_wall
-
-        for frame in trange(1,n_frames-2):
-
-            window = windows[frame + 995 * run]
-            size = window["size"]
-            position_seq = position[window["pos"]: window["pos"] + 4 * size * dim]
-            position_seq.resize(4, size, dim)
-            position_seq = position_seq.transpose(1, 0, 2)
-            position_seq = position_seq[:, :-1]
-            pos = torch.tensor(position_seq, dtype=torch.float32, device=device)
-            # Swap the columns
-            pos[:, :, [0, 1]] = pos[:, :, [1, 0]]
-
-            pos_prev = pos[:, 0, :].squeeze()
-            pos_next = pos[:, 2, :].squeeze()
-            pos = pos[:,1,:].squeeze()
-
-            real_n_particles = pos.shape[0]
-            n_particles = n_wall_particles + pos.shape[0]
-
-            y = torch.zeros((n_particles, dimension), device=device)
-            dpos = torch.zeros((n_particles, dimension), device=device)
-            dpos[n_wall_particles:] = (pos - pos_prev) / delta_t
-            dpos_next = (pos_next - pos) / delta_t
-
-            pos = torch.cat((wall0, wall1, wall2, wall3, pos), dim=0)
-
-            type = torch.cat((torch.zeros(n_wall_particles, device=device), torch.ones(real_n_particles, device=device)), 0)
-            type = type[:, None]
-
-            particle_id = torch.arange(n_particles, device=device)
-            particle_id = particle_id[:, None]
-
-            x = torch.concatenate((particle_id.clone().detach(), pos.clone().detach(), dpos.clone().detach(), type.clone().detach()), 1)
-
-            x_list.append(x)
-
-            y[n_wall_particles:] = (dpos_next - dpos[n_wall_particles:]) / delta_t
-
-            y_list.append(y)
-
-            # fig = plt.figure(figsize=(12, 12))
-            # plt.scatter(to_numpy(pos_prev[:, 0]), to_numpy(pos_prev[:, 1]), s=100, c='b')
-            # plt.xlim([0, 1])
-            # plt.ylim([0, 1])
-            # plt.scatter(to_numpy(pos[:, 0]), to_numpy(pos[:, 1]), s=100, c='g')
-            # plt.scatter(to_numpy(pos_next[:, 0]), to_numpy(pos_next[:, 1]), s=100, c='r')
-
-            if run <4:
-                fig, ax = fig_init(formatx="%.1f", formaty="%.1f")
-                s_p = 100
-
-                index_particles = get_index_particles(x, n_particle_types, dimension)
-
-                for n in range(n_particle_types):
-                    plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
-                                s=s_p, color=cmap.color(n))
-
-                plt.xlim([0, 1])
-                plt.ylim([0, 1])
-                plt.tight_layout()
-                num = f"{frame-1:06}"
-                plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)  # 170.7)
-                plt.close()
-
-        torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
-        torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
-
-
-    # load corresponding data for this time slice
-    # for idx in trange(4000):
-    #     window = windows[idx]
-    #     size = window["size"]
-    #     particle_type = particle_type[window["type"]: window["type"] + size]
-    #     # particle_type = torch.from_numpy(particle_type)
-    #     position_seq = position[window["pos"]: window["pos"] + window_length * size * dim]
-    #     position_seq.resize(window_length, size, dim)
-    #     position_seq = position_seq.transpose(1, 0, 2)
-    #     target_position = position_seq[:, -1]
-    #     position_seq = position_seq[:, :-1]
-    #     # target_position = torch.from_numpy(target_position)
-    #     position_seq = torch.from_numpy(position_seq)
-
-
-
 def load_WaterRamps(config, device=None, visualize=None, step=None, cmap=None):
     # create output folder, empty it if bErase=True, copy files into it
     data_folder_name = config.data_folder_name
@@ -409,8 +252,7 @@ def load_WaterRamps(config, device=None, visualize=None, step=None, cmap=None):
     with open(os.path.join(data_folder_name, "metadata.json")) as f:
         metadata = json.load(f)
 
-    # n_wall_particles = 400
-    # n_max_particles = 0
+    n_max_particles = 0
 
     for run in range(n_runs):
         x_list = []
@@ -439,7 +281,6 @@ def load_WaterRamps(config, device=None, visualize=None, step=None, cmap=None):
         type = np.load(data_folder_name + 'particle_type.' + str(run) + '.npy', allow_pickle=True)
         type = torch.tensor(type, dtype=torch.float32, device=device)
         type = (type-3)/2
-        type = torch.cat((torch.zeros(n_wall_particles, device=device), type), 0)
         type = type[:, None]
 
         for frame in trange(1,position.shape[0]-2):
@@ -447,13 +288,13 @@ def load_WaterRamps(config, device=None, visualize=None, step=None, cmap=None):
             pos_prev = position[frame-1].squeeze()
             pos_next = position[frame+1].squeeze()
             pos = position[frame].squeeze()
-            real_n_particles = pos.shape[0]
-
-            # if real_n_particles > n_max_particles:
-            #     n_max_particles = real_n_particles
-            # n_particles = n_wall_particles + pos.shape[0]
-
             n_particles = pos.shape[0]
+
+            if n_particles > n_max_particles:
+                n_max_particles = n_particles
+
+
+
 
             y = torch.zeros((n_particles, dimension), device=device)
             dpos = (pos - pos_prev) / delta_t
@@ -466,27 +307,18 @@ def load_WaterRamps(config, device=None, visualize=None, step=None, cmap=None):
             density = model_density(x=x, has_field=False)
             x = torch.cat((x, density), 1)
 
-            boundary = torch.cat((1 - x[:, 1:2], x[:, 1:2], 1 - x[:, 2:3], x[:, 2:3]), dim=-1)
+            gap = 0.104
+            boundary = torch.cat((1-gap-x[:, 1:2], x[:, 1:2]-gap, 1-gap-x[:, 2:3], x[:, 2:3]-gap), dim=-1)
+            boundary = torch.clamp(boundary/0.015,-1,1)
 
-            fig = plt.figure()
-            plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), c=to_numpy(boundary[:, 0]))
-
-            boundary = torch.clamp(boundary / self.max_radius, -1, 1)
-
-            # fig = plt.figure(figsize=(8, 8))
-            # plt.scatter(x[:, 2].detach().cpu().numpy(),
-            #             x[:, 1].detach().cpu().numpy(), s=10, c=density.detach().cpu().numpy(), vmin=0, vmax=1)
-            # plt.xlim([0,1])
-            # plt.ylim([0,1])
-            # plt.tight_layout()
-
+            x = torch.cat((x, boundary), 1)
 
             x_list.append(x)
 
             if config.graph_model.prediction == '2nd_derivative':
-                y[n_wall_particles:] = (dpos_next - dpos[n_wall_particles:]) / delta_t
+                y = (dpos_next - dpos) / delta_t
             else:
-                y[n_wall_particles:] = dpos_next
+                y = dpos_next
 
             y_list.append(y)
 
@@ -499,25 +331,32 @@ def load_WaterRamps(config, device=None, visualize=None, step=None, cmap=None):
 
             if run <4:
                 plt.style.use('dark_background')
-                fig = plt.figure(figsize=(18, 10))
-                ax = fig.add_subplot(121)
-                s_p = 20
+                fig = plt.figure(figsize=(10, 10.5))
+                ax = fig.add_subplot(221)
                 index_particles = get_index_particles(x, n_particle_types, dimension)
                 for n in range(n_particle_types):
                     plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
-                                s=s_p, color=cmap.color(n))
+                                s=5, color=cmap.color(n))
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
                 plt.xticks([])
                 plt.yticks([])
-                ax = fig.add_subplot(122)
+                ax = fig.add_subplot(222)
                 plt.scatter(x[:, 2].detach().cpu().numpy(),
-                            x[:, 1].detach().cpu().numpy(), s=10, c=x[:, -1].detach().cpu().numpy(), vmin=0, vmax=1)
+                            x[:, 1].detach().cpu().numpy(), s=5, c=x[:, 6:7].detach().cpu().numpy(), vmin=0, vmax=1)
+                plt.xlim([0,1])
+                plt.ylim([0,1])
+                plt.xticks([])
+                plt.yticks([])
+                ax = fig.add_subplot(223)
+                plt.scatter(x[:, 2].detach().cpu().numpy(),
+                            x[:, 1].detach().cpu().numpy(), s=5, c=torch.min(x[:, 7:],-1).values.detach().cpu().numpy(), vmin=-1, vmax=1)
                 plt.xlim([0,1])
                 plt.ylim([0,1])
                 plt.xticks([])
                 plt.yticks([])
                 plt.tight_layout()
+
                 num = f"{frame-1:06}"
                 plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)  # 170.7)
                 plt.close()

@@ -6,7 +6,7 @@ import matplotlib
 from tifffile import imread
 from ParticleGraph.generators import PDE_A, PDE_B, PDE_B_bis, PDE_B_mass, PDE_E, PDE_F, PDE_G, PDE_GS, PDE_K, PDE_N, PDE_N2, PDE_N4, PDE_N5, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, PDE_Laplacian, PDE_O
 from ParticleGraph.utils import choose_boundary_values
-from ParticleGraph.data_loaders import load_solar_system, load_LG_ODE, load_WaterDropSmall, load_WaterRamps
+from ParticleGraph.data_loaders import load_solar_system, load_LG_ODE, load_WaterRamps
 from time import sleep
 import numpy as np
 import torch

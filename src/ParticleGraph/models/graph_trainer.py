@@ -3591,7 +3591,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     n_frames = simulation_config.n_frames * time_ratio
     delta_t = simulation_config.delta_t / time_ratio
     time_window = training_config.time_window
-    smooth_particle = training_config.smooth_particle
 
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     dimension = simulation_config.dimension
@@ -3807,9 +3806,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     model, bc_pos, bc_dpos = choose_training_model(config, device)
     model.ynorm = ynorm
     model.vnorm = vnorm
-
-    if smooth_particle:
-        model_density = Smooth_Particle(config=config, aggr_type='mean', bc_dpos=bc_dpos, dimension=dimension, device=device)
 
     table = PrettyTable(["Modules", "Parameters"])
     total_params = 0
@@ -4040,9 +4036,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
             x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1] + x[:, dimension + 1:2 * dimension + 1] * delta_t)  # position update
 
-            if smooth_particle:
-                density = model_density(x=x, has_field=False)
-                x[:,-1] = density.squeeze()
 
             if bounce:
                 # Bounce on walls
@@ -4343,17 +4336,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{num}.tif", dpi=80)
                 plt.close()
-
-            if smooth_particle:
-                fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
-                plt.scatter(x[:, 2].detach().cpu().numpy(),
-                            x[:, 1].detach().cpu().numpy(), s=20, c=x[:, -1].detach().cpu().numpy(), vmin=0, vmax=1)
-                plt.xlim([0,1])
-                plt.ylim([0,1])
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_recons/Density_{config_file}_{num}.tif", dpi=80)
-                plt.close()
-
 
 
             if has_ghost:
