@@ -50,7 +50,7 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        action = 'generate'
+        action = 'test'
         best_model = None
         # config_list=['falling_water_ramp_x25','falling_water_ramp_x26','falling_water_ramp_x27','falling_water_ramp_x28','falling_water_ramp_x29',
         #            'falling_water_ramp_x30','falling_water_ramp_x31','falling_water_ramp_x32','falling_water_ramp_x33','falling_water_ramp_x34']
@@ -66,7 +66,7 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
         if 'generate' in action:
-            data_generate(config, device=device, visualize=True, run_vizualized=1, style='black color', alpha=1, erase=False, bSave=True, step=2)  #config.simulation.n_frames // 100)
+            data_generate(config, device=device, visualize=True, run_vizualized=1, style='black color', alpha=1, erase=False, bSave=True, step=100)  #config.simulation.n_frames // 100)
         if 'train' in action:
             data_train(config=config, config_file=config_file, erase=False, best_model=best_model, device=device)
         if 'test' in action:
