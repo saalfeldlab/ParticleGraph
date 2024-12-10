@@ -26,6 +26,9 @@ dependencies:
   - pysr
   - h5py
   - fa2_modified
+  - tables
+  - zarr
+  - xarray
   - pip:
     - geomloss
     - torch_geometric

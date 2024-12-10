@@ -50,7 +50,7 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        action = 'test'
+        action = 'train'
         best_model = None
 
         config_list = ['falling_water_ramp_x35']

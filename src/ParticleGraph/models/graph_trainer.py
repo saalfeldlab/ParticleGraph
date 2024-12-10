@@ -104,7 +104,6 @@ def data_train_particle(config, config_file, erase, best_model, device):
     translation_augmentation = train_config.translation_augmentation
     data_augmentation_loop = train_config.data_augmentation_loop
     recursive_loop = train_config.recursive_loop
-    smooth_particle = train_config.smooth_particle
 
     target_batch_size = train_config.batch_size
     replace_with_cluster = 'replace' in train_config.sparsity
@@ -120,9 +119,6 @@ def data_train_particle(config, config_file, erase, best_model, device):
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     embedding_cluster = EmbeddingCluster(config)
     n_runs = train_config.n_runs
-    has_state = (config.simulation.state_type != 'discrete')
-    coeff_entropy_loss = train_config.coeff_entropy_loss
-    entropy_loss = KoLeoLoss()
 
     l_dir, log_dir, logger = create_log_dir(config, config_file, erase)
     print(f'Graph files N: {n_runs}')
@@ -238,7 +234,6 @@ def data_train_particle(config, config_file, erase, best_model, device):
             mask_ghost = mask_ghost[:, 0].astype(int)
 
         total_loss = 0
-        total_loss_density = 0
         Niter = n_frames * data_augmentation_loop // batch_size
 
         for N in trange(Niter):
@@ -330,12 +325,6 @@ def data_train_particle(config, config_file, erase, best_model, device):
             loss.backward()
             optimizer.step()
 
-            #     for name, p in model.named_parameters():
-            #         if torch.isnan(p.grad).any():
-            #     print('grad nan')
-            #     print(torch.unique(data_id))
-            #     logger.info('grad nan')
-
             if has_ghost:
                 optimizer_ghost_particles.step()
 
@@ -356,8 +345,6 @@ def data_train_particle(config, config_file, erase, best_model, device):
 
             check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 50,
                                    memory_percentage_threshold=0.6)
-
-
 
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()},
