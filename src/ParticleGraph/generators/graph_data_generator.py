@@ -1837,11 +1837,8 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
             print(SNR)
 
-
-
-
             # Compute the moving average
-            moving_average = np.convolve(data, window, mode='valid')
+            # moving_average = np.convolve(data, window, mode='valid')
 
 
         if bSave:

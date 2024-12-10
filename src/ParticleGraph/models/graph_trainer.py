@@ -4032,7 +4032,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     y = y0 / ynorm
                 else:
                     with torch.no_grad():
-                        y = model(dataset, data_id=1)
+                        pred = model(dataset, data_id=1)
+                        y = pred
             else:
                 distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
                 adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
