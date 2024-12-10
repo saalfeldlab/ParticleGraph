@@ -105,9 +105,6 @@ def data_train_particle(config, config_file, erase, best_model, device):
     data_augmentation_loop = train_config.data_augmentation_loop
     recursive_loop = train_config.recursive_loop
     smooth_particle = train_config.smooth_particle
-    predict_density = train_config.predict_density
-    coeff_predict_density = train_config.coeff_predict_density
-
 
     target_batch_size = train_config.batch_size
     replace_with_cluster = 'replace' in train_config.sparsity
@@ -227,8 +224,8 @@ def data_train_particle(config, config_file, erase, best_model, device):
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
 
     list_loss = []
-    list_loss_density = []
     time.sleep(1)
+
     for epoch in range(start_epoch, n_epochs + 1):
 
         batch_size = get_batch_size(epoch)
@@ -300,12 +297,6 @@ def data_train_particle(config, config_file, erase, best_model, device):
                     dataset_batch.append(dataset)
 
                 y = torch.tensor(y_list[run][k], dtype=torch.float32, device=device).clone().detach()
-                if predict_density:
-                    y = torch.cat((y, torch.tensor(x_list[run][k+1][:,-1][:,None], dtype=torch.float32, device=device).clone().detach()), dim=1)
-                if recursive_loop> 0:
-                    for m in range(recursive_loop):
-                        y_= model.recursive_param[m] * torch.tensor(y_list[run][k+m+1], dtype=torch.float32, device=device).clone().detach()
-                        y = torch.cat((y, y_), dim = 1)
 
                 if noise_level > 0:
                     y = y * (1 + torch.randn_like(y) * noise_level)
@@ -333,17 +324,12 @@ def data_train_particle(config, config_file, erase, best_model, device):
 
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(train_norm)
-            elif predict_density:
-                loss_density = coeff_predict_density * (pred[:, dimension] - y_batch[:, dimension]).norm(train_norm)
-                loss = (pred[:, 0:dimension] - y_batch[:, 0:dimension]).norm(train_norm) + loss_density
             else:
                 loss = (pred - y_batch).norm(2)
 
             loss.backward()
             optimizer.step()
 
-            # flag = True
-            # if (recursive_loop > 0) | predict_density :
             #     for name, p in model.named_parameters():
             #         if torch.isnan(p.grad).any():
             #     print('grad nan')
@@ -354,8 +340,6 @@ def data_train_particle(config, config_file, erase, best_model, device):
                 optimizer_ghost_particles.step()
 
             total_loss += loss.item()
-            if predict_density:
-                total_loss_density += loss_density.item()
 
             visualize_embedding = True
             if visualize_embedding & (((epoch < 30) & (N % (Niter // 50) == 0)) | (N == 0)):
@@ -383,11 +367,6 @@ def data_train_particle(config, config_file, erase, best_model, device):
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
-        if predict_density:
-            print("Epoch {}. Loss density: {:.6f}".format(epoch, total_loss_density / (N + 1) / n_particles / batch_size))
-            logger.info("Epoch {}. Loss density: {:.6f}".format(epoch, total_loss_density / (N + 1) / n_particles / batch_size))
-            list_loss_density.append(total_loss_density / (N + 1) / n_particles / batch_size)
-            torch.save(list_loss_density, os.path.join(log_dir, 'loss_density.pt'))
 
         scheduler.step()
         print(f'Epoch {epoch + 1}, Learning Rate: {scheduler.get_last_lr()[0]}')
@@ -401,8 +380,6 @@ def data_train_particle(config, config_file, erase, best_model, device):
         fig = plt.figure(figsize=(22, 4))
         ax = fig.add_subplot(1, 5, 1)
         plt.plot(list_loss, color='k')
-        if predict_density:
-            plt.plot(list_loss_density, color='b')
 
         plt.xlim([0, n_epochs])
         plt.ylabel('Loss', fontsize=12)
