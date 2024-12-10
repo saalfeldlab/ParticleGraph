@@ -83,7 +83,7 @@ class Interaction_Falling_Water(pyg.nn.MessagePassing):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
-
+        boundary = x[0][:,7:]
 
         if self.time_window == 0:
             particle_id = x[:, 0:1]
@@ -119,14 +119,14 @@ class Interaction_Falling_Water(pyg.nn.MessagePassing):
 
 
 
-    def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j):
+    def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j, boundary_i):
         # distance normalized by the max radius
 
         delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
         r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
 
-        k_ij = self.kernel(torch.cat((r[:, None], delta_pos), dim=-1))
-        in_features = torch.cat((k_ij, d_pos_i, d_pos_j, boundary_i, embedding_i, embedding_j), dim=-1)
+        k_ij = self.kernel(torch.cat((r[:, None], delta_pos[:,0:2]), dim=-1))
+        in_features = torch.cat((k_ij, d_pos_i, d_pos_j[:,0:2], boundary_i, embedding_i, embedding_j), dim=-1)
 
         out = self.lin_edge(in_features)
 
