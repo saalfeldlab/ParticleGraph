@@ -34,7 +34,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
     has_cell_divsion = config.simulation.has_cell_division
     has_fluo = config.simulation.has_fluo
     has_WBI = 'WBI' in config.dataset
-    has_mouse_city = 'mouse_city' in config.dataset
+    has_mouse_city = ('mouse_city' in config.dataset) | ('rat_city' in config.dataset)
     dataset_name = config.dataset
 
     print('')
@@ -1916,13 +1916,6 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
     x_list = []
     edge_f_p_list = []
     edge_p_p_list = []
-
-    X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
-
-    x_mesh = torch.concatenate(
-        (N1_mesh.clone().detach(), X1_mesh.clone().detach(),torch.zeros((len(X1_mesh),6),device=device)  ), 1)
-
-    torch.save(x_mesh, f'graphs_data/graphs_{dataset_name}/x_mesh.pt')
 
     if time_step >1:
         files = files[::time_step]
