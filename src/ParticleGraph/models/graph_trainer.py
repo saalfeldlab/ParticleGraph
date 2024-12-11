@@ -43,7 +43,7 @@ def data_train(config=None, config_file=None, erase=False, best_model=None, devi
     do_tracking = config.training.do_tracking
     has_state = (config.simulation.state_type != 'discrete')
     has_WBI = 'WBI' in config.dataset
-    has_mouse_city = 'mouse_city' in config.dataset
+    has_mouse_city = ('mouse_city' in config.dataset) | ('rat_city' in config.dataset)
     has_time_window = config.training.time_window > 0
 
     dataset_name = config.dataset
@@ -300,9 +300,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
                             x_[:, 1:dimension + 1] = x_[:, 1:dimension + 1] + displacement
                         xt.append(x_[:, :])
 
-                    x_next = torch.tensor(x_list[run][k + 1], dtype=torch.float32, device=device)
-
-                    dataset = data.Data(x=xt, edge_index=edges, num_nodes=x.shape[0], x_next=x_next)
+                    dataset = data.Data(x=xt, edge_index=edges, num_nodes=x.shape[0])
                     dataset_batch.append(dataset)
 
                 y = torch.tensor(y_list[run][k], dtype=torch.float32, device=device).clone().detach()
@@ -332,7 +330,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
                pred = model(batch, data_id=data_id, training=True, vnorm=vnorm, phi=phi)
 
             if has_ghost:
-                loss = ((pred[mask_ghost] - y_batch)).norm(train_norm)
+                loss = ((pred[mask_ghost] - y_batch)).norm(2)
             else:
                 loss = (pred - y_batch).norm(2)
 

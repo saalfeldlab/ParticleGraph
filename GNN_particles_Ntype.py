@@ -53,7 +53,7 @@ if __name__ == '__main__':
         action = 'train'
         best_model = None
 
-        config_list = ['rat_city_c1']  #, 'falling_water_ramp_x36', 'falling_water_ramp_x35']
+        config_list = ['falling_water_ramp_x38']  #, 'falling_water_ramp_x36', 'falling_water_ramp_x35']
 
 
 

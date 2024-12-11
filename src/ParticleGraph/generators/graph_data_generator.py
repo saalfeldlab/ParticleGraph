@@ -1957,16 +1957,10 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
         edge_index = edge_index.nonzero().t().contiguous()
         edge_p_p_list.append(to_numpy(edge_index))
 
-        # compute connectivity rules
-        edge_index = torch.sum((x[:, None, 1:dimension + 1] - x_mesh[None, :, 1:dimension + 1]) ** 2, dim=2)
-        adj_t = ((edge_index < 0.25 ** 2) & (edge_index > 0)).float() * 1
-        edge_index = adj_t.nonzero().t().contiguous()
-        edge_f_p_list.append(to_numpy(edge_index))
-
         x_list.append(x)
 
         # output plots
-        if visualize & (run == 0) & (it % step == 0) & (it < 2000):
+        if visualize & (run == 0) & (it % step == 0) & (it < 10000):
 
             if 'latex' in style:
                 plt.rcParams['text.usetex'] = True
@@ -2006,12 +2000,11 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
                     plt.ylim([0,1])
                     plt.tight_layout()
 
-                num = f"{it:06}"
+                num = f"{it*time_step:06}"
                 plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
                 plt.close()
 
     torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
-    np.savez(f'graphs_data/graphs_{dataset_name}/edge_f_p_list_{run}', *edge_f_p_list)
     np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}', *edge_p_p_list)
 
 

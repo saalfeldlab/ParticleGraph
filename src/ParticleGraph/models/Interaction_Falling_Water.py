@@ -75,12 +75,12 @@ class Interaction_Falling_Water(pyg.nn.MessagePassing):
                 torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
                              requires_grad=True, dtype=torch.float32))
 
-    def forward(self, data=[], data_id=[], training=[], vnorm=[], phi=[], has_field=False, x_next=[]):
+    def forward(self, data=[], data_id=[], training=[], vnorm=[], phi=[], has_field=False):
 
         self.data_id = data_id
         self.vnorm = vnorm
 
-        x, edge_index, x_next = data.x, data.edge_index, data.x_next
+        x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
         boundary = x[0][:,7:]
@@ -110,14 +110,13 @@ class Interaction_Falling_Water(pyg.nn.MessagePassing):
                 d_noise = (noise[:, :-2] - noise[:, 2:]) / self.delta_t
                 d_pos = d_pos + d_noise
 
-
             pred = self.propagate(edge_index, particle_id = particle_id, pos=pos, d_pos=d_pos, embedding=embedding, boundary=boundary)
 
             if self.update_type == 'mlp':
                 pred = self.lin_phi(torch.cat((boundary, d_pos, pred, embedding), dim=-1))
 
             if training & (self.time_window_noise > 0):
-                a=1
+                pred = pred - (noise[:, 2:4] - noise[:, 0:2]) / self.delta_t**2
 
             return pred
 
