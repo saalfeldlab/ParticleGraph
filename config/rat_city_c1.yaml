@@ -1,5 +1,5 @@
 description: 'mouse_city trial1_active_1 time_step = 5 0.25s LR 1.0E-4'
-dataset: 'mouse_city_c'
+dataset: 'rat_city_c'
 data_folder_name: '/groups/saalfeld/home/allierc/signaling/MouseCity/cohort2_exp1/prediction/labels/'
 
 simulation:
