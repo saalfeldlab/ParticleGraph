@@ -141,6 +141,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
             edge_p_p = np.load(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}.npz')
         x_list.append(x)
         y_list.append(y)
+        edge_p_p_list.append(edge_p_p)
         run_lengths.append(len(x))
     x = torch.tensor(x_list[0][0], dtype=torch.float32, device=device)
     y = torch.tensor(y_list[0][0], dtype=torch.float32, device=device)

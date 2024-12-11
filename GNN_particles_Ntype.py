@@ -50,10 +50,11 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        action = 'generate'
+        action = 'train'
         best_model = None
 
-        config_list = ['falling_water_ramp_x37']
+        # config_list = ['falling_water_ramp_x37']
+        config_list = ['arbitrary_3']
 
 
     for config_file in config_list:

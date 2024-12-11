@@ -146,6 +146,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
 
         x_list = []
         y_list = []
+        edge_p_p_list = []
 
         # initialize particle and graph states
         X1, V1, T1, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
@@ -170,6 +171,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
             distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
             adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
             edge_index = adj_t.nonzero().t().contiguous()
+            edge_p_p_list.append(to_numpy(edge_index))
 
             dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, field=[])
 
@@ -398,6 +400,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                 np.save(f'graphs_data/graphs_{dataset_name}/inv_particle_dropout_mask.npy', inv_particle_dropout_mask)
             # torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
             np.save(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy', y_list)
+            np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}', *edge_p_p_list)
 
             torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
 
