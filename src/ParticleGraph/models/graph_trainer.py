@@ -1,3 +1,4 @@
+import os
 import time
 
 import matplotlib.pyplot as plt
@@ -128,11 +129,16 @@ def data_train_particle(config, config_file, erase, best_model, device):
     print('Load data ...')
     x_list = []
     y_list = []
+    edge_p_p_list = []
+    edge_saved = os.path.exists(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_0.npz')
+
     run_lengths = list()
     time.sleep(0.5)
     for run in trange(n_runs):
         x = np.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy')
         y = np.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy')
+        if edge_saved:
+            edge_p_p = np.load(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}.npz')
         x_list.append(x)
         y_list.append(y)
         run_lengths.append(len(x))
@@ -273,9 +279,13 @@ def data_train_particle(config, config_file, erase, best_model, device):
                         model.a[run, n_particles:n_particles + n_ghosts] = model.a[
                             run, ghosts_particles.embedding_index].clone().detach()  # sample ghost embedding
 
-                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                edges = adj_t.nonzero().t().contiguous()
+                if edge_saved:
+                    edges = edge_p_p_list[run][f'arr_{k}']
+                    edges = torch.tensor(edges, dtype=torch.int64, device=device)
+                else:
+                    distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                    adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                    edges = adj_t.nonzero().t().contiguous()
 
                 if time_window == 0:
                     dataset = data.Data(x=x[:, :], edge_index=edges, num_nodes=x.shape[0])

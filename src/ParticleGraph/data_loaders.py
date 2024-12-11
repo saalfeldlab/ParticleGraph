@@ -234,18 +234,17 @@ def load_WaterRamps(config, device=None, visualize=None, step=None, cmap=None):
 
     simulation_config = config.simulation
     train_config = config.training
-    n_frames = simulation_config.n_frames
     dimension = 2
 
     n_particle_types = simulation_config.n_particle_types
     n_runs = train_config.n_runs
-    n_particles = simulation_config.n_particles
+    max_radius = simulation_config.max_radius
+    min_radius = simulation_config.min_radius
 
     delta_t = simulation_config.delta_t
 
     bc_pos, bc_dpos = choose_boundary_values('no')
     model_density = Smooth_Particle(config=config, aggr_type='mean', bc_dpos=bc_dpos, dimension=dimension, device=device)
-
 
     # Loading Data
 
@@ -255,8 +254,10 @@ def load_WaterRamps(config, device=None, visualize=None, step=None, cmap=None):
     n_max_particles = 0
 
     for run in range(n_runs):
+
         x_list = []
         y_list = []
+        edge_p_p_list = []
 
         # gap = 0.008
         # wall_pos = torch.linspace(0.1-gap, 0.9+gap, n_wall_particles//4, device=device)
@@ -293,9 +294,6 @@ def load_WaterRamps(config, device=None, visualize=None, step=None, cmap=None):
             if n_particles > n_max_particles:
                 n_max_particles = n_particles
 
-
-
-
             y = torch.zeros((n_particles, dimension), device=device)
             dpos = (pos - pos_prev) / delta_t
             dpos_next = (pos_next - pos) / delta_t
@@ -321,6 +319,11 @@ def load_WaterRamps(config, device=None, visualize=None, step=None, cmap=None):
                 y = dpos_next
 
             y_list.append(y)
+
+            edge_index = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+            edge_index = ((edge_index < max_radius ** 2) & (edge_index > min_radius ** 2)).float() * 1
+            edge_index = edge_index.nonzero().t().contiguous()
+            edge_p_p_list.append(to_numpy(edge_index))
 
             # fig = plt.figure(figsize=(12, 12))
             # plt.scatter(to_numpy(pos_prev[:, 0]), to_numpy(pos_prev[:, 1]), s=100, c='b')
@@ -368,6 +371,7 @@ def load_WaterRamps(config, device=None, visualize=None, step=None, cmap=None):
         y_list = np.array(to_numpy(torch.stack(y_list)))
         np.save(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy', x_list)
         np.save(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy', y_list)
+        np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}', *edge_p_p_list)
 
     print (f'n_max_particles: {n_max_particles}')
 
