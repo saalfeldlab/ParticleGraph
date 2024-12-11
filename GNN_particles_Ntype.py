@@ -50,11 +50,11 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        action = 'train'
+        action = 'test'
         best_model = None
 
-        # config_list = ['falling_water_ramp_x37']
-        config_list = ['arbitrary_3']
+        config_list = ['falling_water_ramp_x37']
+
 
 
     for config_file in config_list:
@@ -70,7 +70,7 @@ if __name__ == '__main__':
             data_train(config=config, config_file=config_file, erase=False, best_model=best_model, device=device)
         if 'test' in action:
             data_test(config=config, config_file=config_file, visualize=True, style='black color arrow speed acc_learned', verbose=False, best_model='best', run=2, plot_data=False,
-                      test_simulation=False, sample_embedding=False, device=device, fixed=True, bounce=False, step=4) # config.simulation.n_frames // 200, )  arrow speed acc_learned   arrow speed acc_true
+                      test_simulation=False, sample_embedding=False, device=device, fixed=True, bounce=True, step=4) # config.simulation.n_frames // 200, )  arrow speed acc_learned   arrow speed acc_true
 
 
 # bsub -n 4 -gpu "num=1" -q gpu_h100 "python GNN_particles_Ntype.py -o train falling_water_ramp_x1"

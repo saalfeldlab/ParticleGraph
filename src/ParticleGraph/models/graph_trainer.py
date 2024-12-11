@@ -3582,7 +3582,7 @@ def data_train_WBI(config, config_file, erase, best_model, device):
 
 
 def data_test(config=None, config_file=None, visualize=False, style='color frame', verbose=True, best_model=20, step=15,
-              ratio=1, run=1, plot_data=False, test_simulation=False, sample_embedding=False, fixed=False, bounce=False, time_ratio=1, device=[]):
+              ratio=1, run=1, plot_data=False, test_simulation=False, sample_embedding=False, fixed=False, bounce=False, device=[]):
     dataset_name = config.dataset
     simulation_config = config.simulation
     model_config = config.graph_model
@@ -3599,8 +3599,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     n_particles = simulation_config.n_particles
     n_nodes = simulation_config.n_nodes
     n_runs = training_config.n_runs
-    n_frames = simulation_config.n_frames * time_ratio
-    delta_t = simulation_config.delta_t / time_ratio
+    n_frames = simulation_config.n_frames
+    delta_t = simulation_config.delta_t
     time_window = training_config.time_window
 
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
@@ -3701,7 +3701,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 if 'PDE_F' not in model_config.particle_model_name:
                     n_particles = int(x.shape[0] / ratio)
                     config.simulation.n_particles = n_particles
-                n_frames = len(x_list[0]) * time_ratio
+                n_frames = len(x_list[0])
                 index_particles = get_index_particles(x, n_particle_types, dimension)
                 if n_particle_types > 1000:
                     index_particles = []
@@ -3899,9 +3899,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     for it in trange(start_it, stop_it):
 
         if it < n_frames - 4:
-            x0 = x_list[0][it//time_ratio].clone().detach()
-            x0_next = x_list[0][(it+1)//time_ratio].clone().detach()
-            y0 = y_list[0][it//time_ratio].clone().detach()
+            x0 = x_list[0][it].clone().detach()
+            x0_next = x_list[0][(it+1)].clone().detach()
+            y0 = y_list[0][it].clone().detach()
         if has_mesh:
             x[:, 1:5] = x0[:, 1:5].clone().detach()
             dataset_mesh = data.Data(x=x, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
@@ -4013,7 +4013,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 if time_window > 0:
                     xt = []
                     for t in range(time_window):
-                        x_ = x_list[0][it//time_ratio - t].clone().detach()
+                        x_ = x_list[0][it - t].clone().detach()
                         xt.append(x_[:, :])
                     dataset = data.Data(x=xt, edge_index=edge_index)
                 else:
@@ -4059,7 +4059,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
             if time_window:
                 fixed_pos = torch.argwhere(x[:,5]!=0)
-                x_list[0][it//time_ratio+1,fixed_pos.squeeze(),1:2 * dimension + 1] = x[fixed_pos.squeeze(), 1:2 * dimension + 1].clone().detach()
+                x_list[0][it+1,fixed_pos.squeeze(),1:2 * dimension + 1] = x[fixed_pos.squeeze(), 1:2 * dimension + 1].clone().detach()
 
             if fixed:
                 fixed_pos = torch.argwhere(x[:,5]==0)
@@ -4283,8 +4283,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 # plt.xlim([0.4,0.6])
                 # plt.ylim([0.4,0.6])
 
-                # plt.text(0,1.05,f'true acc {to_numpy(y0[900,0:2])} {to_numpy(pred[900,0:2]*ynorm)}',fontsize=12)
-                # plt.text(0,1.025,f'true speed {to_numpy(x_list[0][it//time_ratio][900,3:5] + y0[900,0:2] * delta_t)} {to_numpy(x_list[0][it//time_ratio][900,3:5] + pred[900,0:2] * ynorm * delta_t)}',fontsize=12)
             if 'no_ticks' in style:
                 plt.xticks([])
                 plt.yticks([])
