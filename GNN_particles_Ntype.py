@@ -50,10 +50,10 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        action = 'test'
+        action = 'train'
         best_model = None
 
-        config_list = ['falling_water_ramp_x37']
+        config_list = ['rat_city_c1']  #, 'falling_water_ramp_x36', 'falling_water_ramp_x35']
 
 
 
@@ -69,7 +69,7 @@ if __name__ == '__main__':
         if 'train' in action:
             data_train(config=config, config_file=config_file, erase=False, best_model=best_model, device=device)
         if 'test' in action:
-            data_test(config=config, config_file=config_file, visualize=True, style='black color arrow speed acc_learned', verbose=False, best_model='best', run=2, plot_data=False,
+            data_test(config=config, config_file=config_file, visualize=True, style='black color arrow speed acc_learned boundary', verbose=False, best_model='best', run=2, plot_data=True,
                       test_simulation=False, sample_embedding=False, device=device, fixed=True, bounce=True, step=4) # config.simulation.n_frames // 200, )  arrow speed acc_learned   arrow speed acc_true
 
 

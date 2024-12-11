@@ -1943,9 +1943,12 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
         if 'cohort2' in data_folder_name:
             X1[:, 0] = X1[:, 0] * 2
 
+        # speed
         V1 = 0 * X1
+        # mouse ID
         T1 = torch.tensor(data[:, 0:1], dtype=torch.float32, device=device)
-        H1 = torch.tensor(data[:, 3:5], dtype=torch.float32, device=device)
+        # W H confidence
+        H1 = torch.tensor(data[:, 3:6], dtype=torch.float32, device=device)
 
         if (it == simulation_config.start_frame):
             ID1 = torch.arange(len(N1), device=device)[:, None]

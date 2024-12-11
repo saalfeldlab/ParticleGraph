@@ -130,18 +130,19 @@ def data_train_particle(config, config_file, erase, best_model, device):
     x_list = []
     y_list = []
     edge_p_p_list = []
-    edge_saved = os.path.exists(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_0.npz')
+    # edge_saved = os.path.exists(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_0.npz')
+    edge_saved = False
 
     run_lengths = list()
     time.sleep(0.5)
     for run in trange(n_runs):
         x = np.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy')
         y = np.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy')
-        if edge_saved:
-            edge_p_p = np.load(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}.npz')
         x_list.append(x)
         y_list.append(y)
-        edge_p_p_list.append(edge_p_p)
+        if edge_saved:
+            edge_p_p = np.load(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}.npz')
+            edge_p_p_list.append(edge_p_p)
         run_lengths.append(len(x))
     x = torch.tensor(x_list[0][0], dtype=torch.float32, device=device)
     y = torch.tensor(y_list[0][0], dtype=torch.float32, device=device)
@@ -299,7 +300,9 @@ def data_train_particle(config, config_file, erase, best_model, device):
                             x_[:, 1:dimension + 1] = x_[:, 1:dimension + 1] + displacement
                         xt.append(x_[:, :])
 
-                    dataset = data.Data(x=xt, edge_index=edges, num_nodes=x.shape[0])
+                    x_next = torch.tensor(x_list[run][k + 1], dtype=torch.float32, device=device)
+
+                    dataset = data.Data(x=xt, edge_index=edges, num_nodes=x.shape[0], x_next=x_next)
                     dataset_batch.append(dataset)
 
                 y = torch.tensor(y_list[run][k], dtype=torch.float32, device=device).clone().detach()
@@ -4049,13 +4052,23 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
 
             if bounce:
+
+                gap = 0.104
+                boundary = torch.cat((1 - gap - x[:, 1:2], x[:, 1:2] - gap, 1 - gap - x[:, 2:3], x[:, 2:3] - gap), dim=-1)
+                boundary = torch.clamp(boundary / 0.015, -1, 1)
+
+                x[:,7:] = boundary
                 # Bounce on walls
-                bouncing_pos = torch.argwhere((x[:, 1] <= 0.1) | (x[:, 1] >= 0.9)).squeeze()
-                if bouncing_pos.numel() > 0:
-                    x[bouncing_pos, 3] = - 0.6 * x[bouncing_pos, 3]
-                bouncing_pos = torch.argwhere((x[:, 2] <= 0.1) | (x[:, 2] >= 0.9)).squeeze()
-                if bouncing_pos.numel() > 0:
-                    x[bouncing_pos, 4] = - 0.6 * x[bouncing_pos, 4]
+
+
+
+
+                # bouncing_pos = torch.argwhere((x[:, 1] <= 0.1) | (x[:, 1] >= 0.9)).squeeze()
+                # if bouncing_pos.numel() > 0:
+                #     x[bouncing_pos, 3] = - 0.6 * x[bouncing_pos, 3]
+                # bouncing_pos = torch.argwhere((x[:, 2] <= 0.1) | (x[:, 2] >= 0.9)).squeeze()
+                # if bouncing_pos.numel() > 0:
+                #     x[bouncing_pos, 4] = - 0.6 * x[bouncing_pos, 4]
 
             if time_window:
                 fixed_pos = torch.argwhere(x[:,5]!=0)
@@ -4271,9 +4284,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                             # plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(x[m, 4]) * delta_t * 50, dy=to_numpy(x[m, 3]) * delta_t * 50, head_width=0.004, length_includes_head=False, color='w')
                             # angle = compute_signed_angle(x[m, 3:5], y0[m, 0:2])
                             # angle_list.append(angle)
-
                             plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(x[m, 4]) * delta_t * 2, dy=to_numpy(x[m, 3]) * delta_t * 2, head_width=0.004, length_includes_head=True, color='g')
-
                         if 'acc_true' in style:
                             plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(y0[m, 1])/5E3, dy=to_numpy(y0[m, 0])/5E3, head_width=0.004, length_includes_head=True, color='r')
                         if 'acc_learned' in style:
@@ -4344,6 +4355,16 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             if not ('PDE_N' in model_config.signal_model_name):
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{num}.tif", dpi=80)
+                plt.close()
+
+            if 'boundary' in style:
+                fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
+                t=torch.min(x[:, 7:],-1).values
+                plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=25, c=to_numpy(t),vmin=-1,vmax=1)
+                plt.xlim([0, 1])
+                plt.ylim([0, 1])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_recons/Boundary_{config_file}_{num}.tif", dpi=80)
                 plt.close()
 
 
