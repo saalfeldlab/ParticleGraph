@@ -1995,25 +1995,33 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
 
                 if 'cohort2' in data_folder_name:
 
+                    plt.style.use('dark_background')
+
                     fig, ax = plt.subplots(figsize=(8, 4))
                     ax.axvline(x=1, ymin=0, ymax=0.7, color='r', linestyle='--', linewidth=2)
-                    plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=200, c='k', alpha=1.0)
+                    plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=200, c='w', alpha=0.9)
                     plt.xlim([0, 2])
                     plt.ylim([0, 1])
 
                     pos=x[:, 1:3]
                     dataset = data.Data(x=x, pos=pos, edge_index=edge_index)
                     vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-                    nx.draw_networkx(vis, pos=to_numpy(pos), node_size=0, linewidths=0, with_labels=False, ax=ax, edge_color='r',
+                    nx.draw_networkx(vis, pos=to_numpy(pos), node_size=0, linewidths=0, with_labels=False, ax=ax, edge_color='w',
                                      width=1)
 
                     plt.tight_layout()
 
                 else:
 
-                    fig = plt.figure(figsize=(8, 8))
-                    # plt.scatter(to_numpy(X1_mesh[:, 0]), to_numpy(X1_mesh[:, 1]), s=1, c='k', alpha=0.25)
-                    plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=400, c='k', alpha=1.0)
+                    plt.style.use('dark_background')
+
+                    fig, ax = plt.subplots(figsize=(8, 4))
+                    plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=400, c='w', alpha=0.9)
+                    pos=x[:, 1:3]
+                    dataset = data.Data(x=x, pos=pos, edge_index=edge_index)
+                    vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
+                    nx.draw_networkx(vis, pos=to_numpy(pos), node_size=0, linewidths=0, with_labels=False, ax=ax, edge_color='w',
+                                     width=1)
                     # pos_connect = to_numpy(edge_index[1,:]).astype(int)
                     # plt.scatter(to_numpy(X1_mesh[pos_connect, 0]), to_numpy(X1_mesh[pos_connect, 1]), s=100, c='r',alpha=0.1)
                     plt.xticks([])
@@ -2023,7 +2031,7 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
                     plt.ylim([0,1])
                     plt.tight_layout()
 
-                num = f"{it*time_step:06}"
+                num = f"{it:06}"
                 plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
                 plt.close()
 
