@@ -1117,8 +1117,7 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
 
     n_epochs = train_config.n_epochs
     n_particle_types = simulation_config.n_particle_types
-    time_step = simulation_config.time_step
-    delta_t = simulation_config.delta_t * time_step
+    delta_t = simulation_config.delta_t
     dataset_name = config.dataset
     rotation_augmentation = train_config.rotation_augmentation
     data_augmentation_loop = train_config.data_augmentation_loop
@@ -1259,12 +1258,12 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
                     pred[:, 1] = new_y
 
                 if do_tracking:
-                    x_next = x_list[run][k + time_step]
+                    x_next = x_list[run][k + 1]
                     x_pos_next = x_next[:, 1:3].clone().detach()
                     if model_config.prediction == '2nd_derivative':
-                        x_pos_pred = (x[:, 1:3] + (delta_t*time_step) * (x[:, 3:5] + (delta_t*time_step) * pred * ynorm))
+                        x_pos_pred = (x[:, 1:3] + (delta_t) * (x[:, 3:5] + (delta_t) * pred * ynorm))
                     else:
-                        x_pos_pred = (x[:, 1:3] + (delta_t*time_step) * pred * ynorm)
+                        x_pos_pred = (x[:, 1:3] + (delta_t) * pred * ynorm)
                     distance = torch.sum(bc_dpos(x_pos_pred[:, None, :] - x_pos_next[None, :, :]) ** 2, dim=2)
                     result = distance.min(dim=1)
                     min_value = result.values

@@ -1917,8 +1917,8 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
     edge_f_p_list = []
     edge_p_p_list = []
 
-    # if time_step > 1:
-    #     files = files[::time_step]
+    if time_step > 1:
+        files = files[::time_step]
 
     for it, f in enumerate(files):
 
@@ -2031,7 +2031,7 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
                     plt.ylim([0,1])
                     plt.tight_layout()
 
-                num = f"{it:06}"
+                num = f"{it*time_step:06}"
                 plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
                 plt.close()
 

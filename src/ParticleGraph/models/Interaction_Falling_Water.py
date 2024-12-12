@@ -115,8 +115,8 @@ class Interaction_Falling_Water(pyg.nn.MessagePassing):
             if self.update_type == 'mlp':
                 pred = self.lin_phi(torch.cat((boundary, d_pos, pred, embedding), dim=-1))
 
-            if training & (self.time_window_noise > 0):
-                pred = pred - (noise[:, 2:4] - noise[:, 0:2]) / self.delta_t**2
+            # if training & (self.time_window_noise > 0):
+            #     pred = pred - (noise[:, 2:4] - noise[:, 0:2]) / self.delta_t**2
 
             return pred
 

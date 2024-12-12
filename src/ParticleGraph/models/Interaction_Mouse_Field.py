@@ -67,9 +67,8 @@ class Interaction_Mouse_Field(pyg.nn.MessagePassing):
             self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device)
 
-        self.a = nn.Parameter(
-            torch.tensor(np.ones((self.n_particles_max, self.embedding_dim)), device=self.device,
-                         requires_grad=True, dtype=torch.float32))
+        # self.a = nn.Parameter(torch.tensor(np.random.randn(self.n_particles_max, self.embedding_dim), device=self.device,requires_grad=True, dtype=torch.float32))
+        self.a = nn.Parameter(torch.tensor(np.ones((self.n_particles_max, self.embedding_dim)), device=self.device,requires_grad=True, dtype=torch.float32))
 
         if self.update_type != 'none':
             self.lin_update = MLP(input_size=self.output_size + self.embedding_dim + 2, output_size=self.output_size,

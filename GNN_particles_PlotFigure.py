@@ -5777,8 +5777,6 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
         gmm.fit(embedding)
         labels = gmm.predict(embedding)
 
-
-
         labels_ =  torch.tensor(labels, dtype=torch.float32, device=device)
 
         for k in range(n_frames):
@@ -5850,6 +5848,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
 
                 fig = plt.figure(figsize=(16, 5))
                 ax = fig.add_subplot(1, 2, 1)
+                ax.axvline(x=1, ymin=0, ymax=0.7, color='r', linestyle='--', linewidth=2)
                 plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=100, c='b')
                 for n in range(len(x)):
                     plt.arrow(x=to_numpy(x[n, 1]), y=to_numpy(x[n, 2]), dx=to_numpy(V[n, 0]), dy=to_numpy(V[n, 1]),
@@ -6455,14 +6454,16 @@ if __name__ == '__main__':
 
     # config_list = ['falling_particles_N1000_2']
 
-    config_list = ['boids_division_model_f2_boids_perimeter_bis']
+    config_list = ['rat_city_c1']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        # data_plot(config=config, config_file=config_file, epoch_list=['best'], bLatex=False, device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['best'], bLatex=False, device=device)
+
+
         # data_plot(config=config, config_file=config_file, epoch_list=['all'], bLatex=False, device=device)
 
-        plot_generated(config=config, run=0, style='black voronoi color', step = 10, bLatex=False, device=device)
+        # plot_generated(config=config, run=0, style='black voronoi color', step = 10, bLatex=False, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 
 
