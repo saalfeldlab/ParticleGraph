@@ -1119,7 +1119,6 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
     n_particle_types = simulation_config.n_particle_types
     time_step = simulation_config.time_step
     delta_t = simulation_config.delta_t * time_step
-    noise_level = train_config.noise_level
     dataset_name = config.dataset
     rotation_augmentation = train_config.rotation_augmentation
     data_augmentation_loop = train_config.data_augmentation_loop
@@ -1134,10 +1133,9 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     embedding_cluster = EmbeddingCluster(config)
     n_runs = train_config.n_runs
-    has_inert_model = simulation_config.cell_inert_model_coeff > 0
+
     do_tracking = train_config.do_tracking
-    distance_threshold = train_config.distance_threshold
-    epoch_distance_replace = train_config.epoch_distance_replace
+
     has_state = (simulation_config.state_type != 'discrete')
 
     l_dir, log_dir, logger = create_log_dir(config, config_file, erase)

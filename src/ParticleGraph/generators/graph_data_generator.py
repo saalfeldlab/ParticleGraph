@@ -1917,20 +1917,20 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
     edge_f_p_list = []
     edge_p_p_list = []
 
-    if time_step >1:
-        files = files[::time_step]
+    # if time_step > 1:
+    #     files = files[::time_step]
 
     for it, f in enumerate(files):
 
         if (it%1000 == 0):
             print(f'frame {it} ...')
 
-        data = pd.read_csv(f, sep=' ', header=None)
-        data = data.values
+        data_values = pd.read_csv(f, sep=' ', header=None)
+        data_values = data_values.values
 
 
-        N1 = torch.arange(len(data), dtype=torch.float32, device=device)[:, None]
-        X1 = torch.tensor(data[:, 1:3], dtype=torch.float32, device=device)
+        N1 = torch.arange(len(data_values), dtype=torch.float32, device=device)[:, None]
+        X1 = torch.tensor(data_values[:, 1:3], dtype=torch.float32, device=device)
         X1[:, 1] = 1-X1[:, 1]
 
         if 'cohort2' in data_folder_name:
@@ -1939,9 +1939,9 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
         # speed
         V1 = 0 * X1
         # mouse ID
-        T1 = torch.tensor(data[:, 0:1], dtype=torch.float32, device=device)
+        T1 = torch.tensor(data_values[:, 0:1], dtype=torch.float32, device=device)
         # W H confidence
-        H1 = torch.tensor(data[:, 3:6], dtype=torch.float32, device=device)
+        H1 = torch.tensor(data_values[:, 3:6], dtype=torch.float32, device=device)
 
         if (it == simulation_config.start_frame):
             ID1 = torch.arange(len(N1), device=device)[:, None]
@@ -1955,6 +1955,24 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
         edge_index = torch.sum((x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
         edge_index = ((edge_index < max_radius ** 2) & (edge_index > min_radius ** 2)).float() * 1
         edge_index = edge_index.nonzero().t().contiguous()
+        if 'cohort2' in data_folder_name:
+            edge_mask = torch.zeros((edge_index.shape[1]), device=device)
+            for k in range(edge_index.shape[1]):
+                x1, y1 = x[to_numpy(edge_index[0,k]),1:3]
+                x2, y2 = x[to_numpy(edge_index[1,k]),1:3]
+                # Calculate the slope (m) and intercept (b) of the line
+                if x1 == x2:
+                    edge_mask[k]=1
+                else:
+                    m = (y2 - y1) / (x2 - x1)
+                    b = y1 - m * x1
+                    y_intersection = m * 1 + b    # x_vertical = 1
+                    if (y_intersection>0.7) | ((x1 < 1) & (x2 < 1)) | ((x1 > 1) & (x2 > 1)):
+                        edge_mask[k]=1
+            pos = torch.argwhere(edge_mask == 1)
+            if pos.numel()==0:
+                raise ValueError("No edges.")
+            edge_index = edge_index[:, pos.squeeze()]
         edge_p_p_list.append(to_numpy(edge_index))
 
         x_list.append(x)
@@ -1977,13 +1995,18 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
 
                 if 'cohort2' in data_folder_name:
 
-                    fig = plt.figure(figsize=(8, 4))
+                    fig, ax = plt.subplots(figsize=(8, 4))
+                    ax.axvline(x=1, ymin=0, ymax=0.7, color='r', linestyle='--', linewidth=2)
                     plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=200, c='k', alpha=1.0)
-                    plt.xticks([])
-                    plt.yticks([])
-
                     plt.xlim([0, 2])
                     plt.ylim([0, 1])
+
+                    pos=x[:, 1:3]
+                    dataset = data.Data(x=x, pos=pos, edge_index=edge_index)
+                    vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
+                    nx.draw_networkx(vis, pos=to_numpy(pos), node_size=0, linewidths=0, with_labels=False, ax=ax, edge_color='r',
+                                     width=1)
+
                     plt.tight_layout()
 
                 else:
