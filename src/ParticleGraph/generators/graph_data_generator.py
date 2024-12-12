@@ -1869,6 +1869,8 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
     # sudo mkdir /nearline/
     # sudo mount -o rw,hard,bg,nolock,nfsvers=4.1,sec=krb5 nearline4.hhmi.org:/nearline/ /nearline/
 
+    torch.random.fork_rng(devices=device)
+    torch.random.manual_seed(42)
 
     simulation_config = config.simulation
     training_config = config.training
@@ -1917,8 +1919,8 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
     edge_f_p_list = []
     edge_p_p_list = []
 
-    if time_step > 1:
-        files = files[::time_step]
+    # if time_step > 1:
+    #     files = files[::time_step]
 
     for it, f in enumerate(files):
 
@@ -2038,13 +2040,6 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
     torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
     np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}', *edge_p_p_list)
 
-
-
-
-
-    # for handler in logger.handlers[:]:
-    #     handler.close()
-    #     logger.removeHandler(handler)
 
 
 def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2,
