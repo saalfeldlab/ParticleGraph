@@ -20,15 +20,15 @@ graph_model:
   mesh_model_name: ''
   prediction: '2nd_derivative'
 
-  input_size: 23
-  output_size: 2
+  input_size: 22
+  output_size: 128
   hidden_dim: 128
   n_mp_layers: 3
   aggr_type: 'add'
   embedding_dim: 2
 
-  update_type: 'none'
-  input_size_update: 8
+  update_type: 'mlp'
+  input_size_update: 140
   n_layers_update: 3
   hidden_dim_update: 128
   output_size_update: 2

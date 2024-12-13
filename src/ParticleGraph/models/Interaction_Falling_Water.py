@@ -91,7 +91,7 @@ class Interaction_Falling_Water(pyg.nn.MessagePassing):
             pos = x[:, 1:self.dimension+1]
             d_pos = x[:, self.dimension+1:1+2*self.dimension]
 
-            pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, boundary=boundary)
+            pred = self.propagate(edge_index,pos=pos, embedding=embedding, boundary=boundary)
 
         else:
             particle_id = x[0][:, 0:1]
@@ -100,9 +100,10 @@ class Interaction_Falling_Water(pyg.nn.MessagePassing):
             pos = x[:, :, 1:self.dimension + 1]
             pos = pos.transpose(0, 1)
             pos = torch.reshape(pos, (pos.shape[0], pos.shape[1] * pos.shape[2]))
-            d_pos = x[:, :, self.dimension + 1:1 + 2 * self.dimension]
-            d_pos = d_pos.transpose(0, 1)
-            d_pos = torch.reshape(d_pos, (d_pos.shape[0], d_pos.shape[1] * d_pos.shape[2]))
+
+            # d_pos = x[:, :, self.dimension + 1:1 + 2 * self.dimension]
+            # d_pos = d_pos.transpose(0, 1)
+            # d_pos = torch.reshape(d_pos, (d_pos.shape[0], d_pos.shape[1] * d_pos.shape[2]))
 
             if training & (self.time_window_noise > 0):
                 noise = torch.randn((pos.shape[0], pos.shape[1] + 2), dtype=torch.float32, device=self.device) * self.time_window_noise
@@ -110,26 +111,32 @@ class Interaction_Falling_Water(pyg.nn.MessagePassing):
                 d_noise = (noise[:, :-2] - noise[:, 2:]) / self.delta_t
                 d_pos = d_pos + d_noise
 
-            pred = self.propagate(edge_index, particle_id = particle_id, pos=pos, d_pos=d_pos, embedding=embedding, boundary=boundary)
+            pred = self.propagate(edge_index, pos=pos, embedding=embedding, boundary=boundary)
 
             if self.update_type == 'mlp':
-                pred = self.lin_phi(torch.cat((boundary, d_pos, pred, embedding), dim=-1))
+                pos_p = (pos - pos[:, 0:2].repeat(1, 4))[:, 2:]
+                out = self.lin_phi(torch.cat((pred, embedding, boundary, pos_p), dim=-1))
+            else:
+                out = pred
 
             # if training & (self.time_window_noise > 0):
             #     pred = pred - (noise[:, 2:4] - noise[:, 0:2]) / self.delta_t**2
 
-            return pred
+            return out
 
 
 
-    def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j, boundary_i):
+    def message(self, edge_index_i, edge_index_j, pos_i, pos_j, embedding_i, embedding_j, boundary_i):
         # distance normalized by the max radius
 
-        delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
-        r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
+        # delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
+        # r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
+        # k_ij = self.kernel(torch.cat((r[:, None], delta_pos[:,0:2]), dim=-1))
 
-        k_ij = self.kernel(torch.cat((r[:, None], delta_pos[:,0:2]), dim=-1))
-        in_features = torch.cat((k_ij, d_pos_i, d_pos_j[:,0:2], boundary_i, embedding_i, embedding_j), dim=-1)
+        pos_i_p = (pos_i - pos_i[:, 0:2].repeat(1, 4))[:, 2:]
+        pos_j_p = (pos_j - pos_i[:, 0:2].repeat(1, 4))
+
+        in_features = torch.cat((boundary_i, pos_i_p, pos_j_p, embedding_i, embedding_j), dim=-1)
 
         out = self.lin_edge(in_features)
 
