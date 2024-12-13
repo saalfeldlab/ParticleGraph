@@ -5835,7 +5835,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
             else:
                 x_pos_pred = (x[:,1:3] + delta_t * pred * ynorm)
 
-            V = x_pos_pred - x[:, 1:3]
+            V = (x_pos_pred - x[:, 1:3]) / 2
 
             distance = torch.sum(bc_dpos(x_pos_pred[:, None, :] - x_pos_next[None, :, :]) ** 2, dim=2)
             result = distance.min(dim=1)
@@ -5850,10 +5850,11 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
                 ax = fig.add_subplot(1, 2, 1)
                 ax.axvline(x=1.05, ymin=0, ymax=0.7, color='r', linestyle='--', linewidth=2)
                 plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=100, c='b')
+                plt.scatter(to_numpy(x_next[:, 1]), to_numpy(x_next[:, 2]), s=100, c='g', alpha=0.5)
+
                 for n in range(len(x)):
                     plt.arrow(x=to_numpy(x[n, 1]), y=to_numpy(x[n, 2]), dx=to_numpy(V[n, 0]), dy=to_numpy(V[n, 1]),
-                              head_width=0.004, length_includes_head=True)
-                plt.scatter(to_numpy(x_next[:, 1]), to_numpy(x_next[:, 2]), s=100, c='g', alpha=0.5)
+                              head_width=0.01, length_includes_head=True)
 
                 plt.xlim([0, 2])
                 plt.ylim([0, 1])
@@ -5868,8 +5869,19 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
                 # plt.xticks([])
                 # plt.yticks([])
                 ax = fig.add_subplot(1, 2, 2)
-                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=100,
-                            color=cmap.color(to_numpy(x[:, 6]).astype(int)))
+                ax.axvline(x=1.05, ymin=0, ymax=0.7, color='r', linestyle='--', linewidth=2)
+                pos = x[:, 1:3]
+                dataset = data.Data(x=x, pos=pos, edge_index=edges)
+                vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
+                nx.draw_networkx(vis, pos=to_numpy(pos), node_size=0, linewidths=0, with_labels=False, ax=ax, edge_color='g', width=1, alpha=0.5)
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=100, c='b')
+                plt.scatter(to_numpy(x_next[:, 1]), to_numpy(x_next[:, 2]), s=100, c='g', alpha=0.5)
+                for n in range(edges.shape[1]):
+                    plt.arrow(x=to_numpy(model.pos[n, 0]), y=to_numpy(model.pos[n, 1]), dx=to_numpy(model.msg[n, 0])/2, dy=to_numpy(model.msg[n, 1])/2, head_width=0.01, length_includes_head=True, alpha=0.5)
+
+                # plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=100,
+                #             color=cmap.color(to_numpy(x[:, 6]).astype(int)))
+
                 plt.xlim([0, 2])
                 plt.ylim([0, 1])
                 plt.title('GNN cluster')
@@ -5877,7 +5889,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
                 plt.yticks([])
 
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{N}.tif", dpi=60)
+                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{N}.tif", dpi=120)
                 plt.close()
 
             else:

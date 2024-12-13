@@ -122,11 +122,11 @@ def data_train_particle(config, config_file, erase, best_model, device):
     n_runs = train_config.n_runs
 
     l_dir, log_dir, logger = create_log_dir(config, config_file, erase)
-    print(f'Graph files N: {n_runs}')
-    logger.info(f'Graph files N: {n_runs}')
+    print(f'graph files N: {n_runs}')
+    logger.info(f'graph files N: {n_runs}')
     time.sleep(0.5)
 
-    print('Load data ...')
+    print('load data ...')
     x_list = []
     y_list = []
     edge_p_p_list = []
@@ -173,7 +173,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
     x = []
     y = []
 
-    print('Create models ...')
+    print('create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
     model.ynorm = ynorm
     model.vnorm = vnorm
@@ -193,8 +193,8 @@ def data_train_particle(config, config_file, erase, best_model, device):
     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
-    logger.info(f"Total Trainable Params: {n_total_params}")
-    logger.info(f'Learning rates: {lr}, {lr_embedding}')
+    logger.info(f"total Trainable Params: {n_total_params}")
+    logger.info(f'learning rates: {lr}, {lr_embedding}')
     model.train()
 
     print(f'network: {net}')
@@ -283,7 +283,6 @@ def data_train_particle(config, config_file, erase, best_model, device):
 
                 if edge_saved:
                     edges = edge_p_p_list[run][f'arr_{k}']
-                    edges = torch.tensor(edges, dtype=torch.int64, device=device)
                 else:
                     distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
                     adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
@@ -710,7 +709,7 @@ def data_train_cell(config, config_file, erase, best_model, device):
     train_config = config.training
     model_config = config.graph_model
 
-    print(f'Training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+    print(f'training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
     dimension = simulation_config.dimension
     n_epochs = train_config.n_epochs
@@ -736,48 +735,36 @@ def data_train_cell(config, config_file, erase, best_model, device):
     do_tracking = train_config.do_tracking
     has_state = (simulation_config.state_type != 'discrete')
     max_radius = simulation_config.max_radius
+    time_step = simulation_config.time_step
 
     l_dir, log_dir, logger = create_log_dir(config, config_file, erase)
-    print(f'Graph files N: {n_runs}')
-    logger.info(f'Graph files N: {n_runs}')
+    print(f'graph files N: {n_runs}')
+    logger.info(f'graph files N: {n_runs}')
     time.sleep(0.5)
+
+    print('load data ...')
+
+    n_cells = np.load(f'graphs_data/graphs_{dataset_name}/n_cells_{run}.npy')
+    im_dim = np.load(f'graphs_data/graphs_{dataset_name}/im_dim{run}.npy')
+
 
     x_list = []
     y_list = []
     edge_p_p_list = []
     vertices_pos_list = []
+    # edge_saved = os.path.exists(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_0.npz')
+    edge_saved = False
 
     n_particles_max = 0
     for run in trange(n_runs):
         x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
-        if x[-1][-1, 0] > n_particles_max:
-            n_particles_max = x[-1][-1, 0] + 1
-        if run > 0:
-            y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
+        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
+        x_list.append(x)
+        y_list.append(y)
+        if edge_saved:
             edge_p_p = np.load(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}.npz')
-            x_list.append(x)
-            y_list.append(y)
             edge_p_p_list.append(edge_p_p)
-            # if has_inert_model:
-            #     vertices_pos = np.load(f'graphs_data/graphs_{dataset_name}/vertices_pos_list_{run}.npz')
-            #     vertices_pos_list.append(vertices_pos)
-        else:
-            # first dataset is not loaded to spare memory
-            # first dataset is not used for training but for validation
-            small_tensor = torch.zeros((1, 1), dtype=torch.float32, device=device)
-            x_list.append(small_tensor)
-            y_list.append(small_tensor)
-            # vertices_pos_list.append(small_tensor)
-            edge_p_p_list.append(to_numpy(small_tensor))
-
-    n_particles_max = int(to_numpy(n_particles_max))
-    n_particles = n_particles_max
-    config.simulation.n_particles = n_particles_max
-    type_list = torch.load(f'graphs_data/graphs_{dataset_name}/type_list_1.pt', map_location=device)
-    if n_particles_max > type_list.shape[0]:
-        type_list = torch.cat(
-            (type_list, torch.zeros((n_particles_max - type_list.shape[0], 1), dtype=torch.int64, device=device)))
-
+            
     x = x_list[1][0].clone().detach()
     y = y_list[1][0].clone().detach()
     config.simulation.n_particles_max = n_particles_max
@@ -787,7 +774,6 @@ def data_train_cell(config, config_file, erase, best_model, device):
             if (k % 10 == 0) | (n_frames < 1000):
                 x = torch.cat((x, x_list[run][k].clone().detach()), 0)
                 y = torch.cat((y, y_list[run][k].clone().detach()), 0)
-        print(x_list[run][k].shape)
         time.sleep(0.5)
 
     vnorm = norm_velocity(x, dimension, device)
@@ -816,7 +802,7 @@ def data_train_cell(config, config_file, erase, best_model, device):
             if do_tracking:
                 x_list[1][k][:, 3:5] = 0
         config.simulation.n_particles_max = n_particles_max
-        Initial_node_id = id_list
+        initial_node_id = id_list
     else:
         for k in range(n_frames + 1):
             type = x_list[1][k][:, 5]
@@ -891,8 +877,13 @@ def data_train_cell(config, config_file, erase, best_model, device):
 
                 x = x_list[run][k].clone().detach()
 
-                edges = edge_p_p_list[run][f'arr_{k}']
-                edges = torch.tensor(edges, dtype=torch.int64, device=device)
+                if edge_saved:
+                    edges = edge_p_p_list[run][f'arr_{k}']
+                else:
+                    distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                    adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                    edges = adj_t.nonzero().t().contiguous()
+
                 dataset = data.Data(x=x[:, :], edge_index=edges)
                 dataset_batch.append(dataset)
 
@@ -919,24 +910,19 @@ def data_train_cell(config, config_file, erase, best_model, device):
                 pred[:, 1] = new_y
 
             if do_tracking:
-                x_next = x_list[run][k + 1]
+                x_next = x_list[run][k + time_step]
                 x_pos_next = x_next[:, 1:3].clone().detach()
                 if model_config.prediction == '2nd_derivative':
-                    x_pos_pred = (x[:, 1:3] + delta_t * (x[:, 3:5] + delta_t * pred * ynorm))
+                    x_pos_pred = (x[:, 1:3] + delta_t * time_step * (x[:, 3:5] + delta_t * time_step * pred * ynorm))
                 else:
-                    x_pos_pred = (x[:, 1:3] + delta_t * pred * ynorm)
+                    x_pos_pred = (x[:, 1:3] + delta_t * time_step * pred * ynorm)
                 distance = torch.sum(bc_dpos(x_pos_pred[:, None, :] - x_pos_next[None, :, :]) ** 2, dim=2)
                 result = distance.min(dim=1)
                 min_value = result.values
-                pos_pre = min_value
                 indices = result.indices
-                pos = torch.argwhere(min_value < 0.5E-5)
-                if model_config.prediction == '2nd_derivative':
-                    loss = torch.sum(pos_pre[pos]) * 1E8
-                else:
-                    loss = torch.sum(pos_pre) * 1E5
+                loss += torch.sum(min_value)
             else:
-                loss = (pred - y_batch).norm(2)  # + model.a.norm(1) * 1E-3
+                loss = (pred - y_batch).norm(2)
 
             loss.backward()
             optimizer.step()
@@ -992,7 +978,7 @@ def data_train_cell(config, config_file, erase, best_model, device):
                 distance_threshold = 1E-4
             for k in trange(n_frames):
                 x = x_list[1][k].clone().detach()
-                x_list[1][k + 1][:, -1] = Initial_node_id[k + 1]
+                x_list[1][k + 1][:, -1] = initial_node_id[k + 1]
 
                 edges = edge_p_p_list[1][f'arr_{k}']
                 edges = torch.tensor(edges, dtype=torch.int64, device=device)
@@ -1262,7 +1248,7 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
                     x_next = x_list[run][k + time_step]
                     x_pos_next = x_next[:, 1:3].clone().detach()
                     if model_config.prediction == '2nd_derivative':
-                        x_pos_pred = (x[:, 1:3] + (delta_t * time_step) * (x[:, 3:5] + (delta_t * time_step) * pred * ynorm))
+                        x_pos_pred = (x[:, 1:3] + (delta_t * time_step) * (x[:, 3:5] + delta_t * time_step * pred * ynorm))
                     else:
                         x_pos_pred = (x[:, 1:3] + (delta_t * time_step) * pred * ynorm)
                     distance = torch.sum(bc_dpos(x_pos_pred[:, None, :] - x_pos_next[None, :, :]) ** 2, dim=2)

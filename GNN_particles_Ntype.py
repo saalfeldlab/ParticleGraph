@@ -54,7 +54,7 @@ if __name__ == '__main__':
         best_model = None
 
         config_list = ['PSC_1']
-        # config_list = ['boids_division']
+        # config_list = ['falling_water_ramp_x2']
 
 
     for config_file in config_list:

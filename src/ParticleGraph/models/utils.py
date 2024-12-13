@@ -985,7 +985,7 @@ def choose_training_model(model_config, device):
         case 'PDE_M':
             model = Interaction_Mouse_Field(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos,
                                      dimension=dimension)
-        case 'PDE_Cell_A' | 'PDE_Cell_B' | 'PDE_Cell_B_area' | 'PDE_Cell_A_area':
+        case 'PDE_Cell_A' | 'PDE_Cell_B' | 'PDE_Cell_B_area' | 'PDE_Cell_A_area' | 'PDE_Cell_A_PSC':
             model = Interaction_Cell(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             model.edges = []
         case 'PDE_ParticleField_A' | 'PDE_ParticleField_B':

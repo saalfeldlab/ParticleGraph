@@ -26,7 +26,9 @@ from tqdm import trange
 import matplotlib
 from skimage.measure import label, regionprops
 import tifffile
-
+import torch_geometric.data as data
+import networkx as nx
+from torch_geometric.utils.convert import to_networkx
 
 def extract_object_properties(segmentation_image):
     # Label the objects in the segmentation image
@@ -265,6 +267,7 @@ def load_cell_data(config, device, visualize, step, cmap):
     n_runs = train_config.n_runs
     max_radius = simulation_config.max_radius
     min_radius = simulation_config.min_radius
+    dimension = simulation_config.dimension
 
     delta_t = simulation_config.delta_t
 
@@ -275,8 +278,6 @@ def load_cell_data(config, device, visualize, step, cmap):
     files = os.listdir(data_folder_name)
     files = [f for f in files if f.endswith('.tif')]
     files.sort()
-
-
 
     # 0 N1 cell index dim=1
     # 1,2 X1 positions dim=2
@@ -298,6 +299,7 @@ def load_cell_data(config, device, visualize, step, cmap):
     run = 0
     x_list = []
     y_list = []
+    edge_p_p_list = []
 
     raw_data_list = []
     annotation_data_list = []
@@ -324,9 +326,15 @@ def load_cell_data(config, device, visualize, step, cmap):
         n_cells = ID[-1] + 1
 
         x = np.concatenate((N.astype(int), X, empty_columns, AR, P, ASR, OR, ID.astype(int) -1), axis=1)
+        x = torch.tensor(x, dtype=torch.float32, device=device)
         x_list.append(x)
 
-        y = np.zeros((x.shape[0], 2))
+        distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+        edge_index = adj_t.nonzero().t().contiguous()
+        edge_p_p_list.append(to_numpy(edge_index))
+
+        y = torch.zeros((x.shape[0], 2), dtype=torch.float32, device=device)
         y_list.append(y)
 
         LABEL = object_properties[:,0:1]
@@ -353,30 +361,49 @@ def load_cell_data(config, device, visualize, step, cmap):
 
 
         if visualize:
+
             plt.style.use('dark_background')
-            fig = plt.figure(figsize=(10, 10.5))
+
+            fig = plt.figure(figsize=(13, 10.5))
             ax = fig.add_subplot(221)
-            plt.scatter(x[:, 2], x[:, 1], s=5, c='w')
+            plt.imshow(im>0)
+            plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=5, c='k', alpha=0.75)
             plt.xticks([])
             plt.yticks([])
             plt.xlim([0, im_dim[1]])
             plt.ylim([0, im_dim[0]])
             ax = fig.add_subplot(222)
-            plt.scatter(x[:, 2], x[:, 1], s=5, c='w')
+            plt.imshow(im*0)
+            plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=5, c='w')
             for k in range(len(x)):
-                plt.text(x[k, 2] + 5, x[k, 1], f'{int(x[k, -1])}', fontsize=6, color='w')
+                plt.text(to_numpy(x[k, 2]) + 5, to_numpy(x[k, 1]), f'{int(to_numpy(x[k, -1]))}', fontsize=6, color='w')
             plt.xticks([])
             plt.yticks([])
             plt.xlim([0, im_dim[1]])
             plt.ylim([0, im_dim[0]])
+
             ax = fig.add_subplot(223)
-            plt.scatter(x[:, 2], x[:, 1], s=5, c=x[:, 14:15], vmin=0, vmax=200)
+            plt.imshow(im>0)
+            edge_index = torch.sum((x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
+            edge_index = ((edge_index < max_radius ** 2) & (edge_index > min_radius ** 2)).float() * 1
+            edge_index = edge_index.nonzero().t().contiguous()
+
+            pos = x[:, 1:3].clone().detach()
+            pos[:, [0, 1]] = pos[:, [1, 0]]
+
+            dataset = data.Data(x=x, pos=pos, edge_index=edge_index)
+            vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
+            nx.draw_networkx(vis, pos=to_numpy(pos), node_size=0, linewidths=0, with_labels=False, ax=ax,
+                             edge_color='w', width=1, alpha=0.75)
+            plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=5, c='k', alpha=0.75)
             plt.xticks([])
             plt.yticks([])
             plt.xlim([0, im_dim[1]])
             plt.ylim([0, im_dim[0]])
+
             ax = fig.add_subplot(224)
-            plt.scatter(x[:, 2], x[:, 1], s=5, c=x[:, 15:16], vmin=0, vmax=100)
+            plt.imshow(im*0)
+            plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=50, c=to_numpy(x[:, 14:15]), vmin=0, vmax=200)
             plt.xticks([])
             plt.yticks([])
             plt.xlim([0, im_dim[1]])
@@ -385,15 +412,21 @@ def load_cell_data(config, device, visualize, step, cmap):
             plt.tight_layout()
 
             num = f"{it:06}"
-            plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{it}.tif", dpi=80)
+            plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{it}.tif", dpi=120)
             plt.close()
 
-    np.savez(f'graphs_data/graphs_{dataset_name}/x_list_{run}', *x_list)
-    np.savez(f'graphs_data/graphs_{dataset_name}/y_list_{run}', *y_list)
-    np.save(f'graphs_data/graphs_{dataset_name}/n_cells_{run}', n_cells)
-    np.save(f'graphs_data/graphs_{dataset_name}/im_dim{run}', im_dim)
-    np.save(f'graphs_data/graphs_{dataset_name}/raw_data_{run}', raw_data_list)
-    np.save(f'graphs_data/graphs_{dataset_name}/annotation_data_{run}', annotation_data_list)
+
+    torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
+    torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
+
+    # np.savez(f'graphs_data/graphs_{dataset_name}/x_list_{run}', *x_list)
+    # np.savez(f'graphs_data/graphs_{dataset_name}/y_list_{run}', *y_list)
+
+    np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}.npz', *edge_p_p_list)
+    np.save(f'graphs_data/graphs_{dataset_name}/n_cells_{run}.npy', n_cells)
+    np.save(f'graphs_data/graphs_{dataset_name}/im_dim{run}.npy', im_dim)
+    np.save(f'graphs_data/graphs_{dataset_name}/raw_data_{run}.npy', raw_data_list)
+    np.save(f'graphs_data/graphs_{dataset_name}/annotation_data_{run}.npy', annotation_data_list)
 
 
 

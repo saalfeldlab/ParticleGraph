@@ -131,6 +131,9 @@ class Interaction_Mouse_Field(pyg.nn.MessagePassing):
 
         out = self.lin_edge(in_features) * field_j
 
+        self.pos = pos_i
+        self.msg = out
+
         return out
 
     def update(self, aggr_out):
