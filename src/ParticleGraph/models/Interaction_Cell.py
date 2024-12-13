@@ -57,21 +57,12 @@ class Interaction_Cell(pyg.nn.MessagePassing):
         self.has_state = config.simulation.state_type != 'discrete'
         self.n_frames = simulation_config.n_frames
         self.do_tracking = train_config.do_tracking
-        self.use_hot_encoding = train_config.use_hot_encoding
-
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device, initialisation='zeros')
 
         if self.do_tracking | self.has_state:
             self.a = nn.Parameter(torch.tensor(np.ones((self.n_particles_max, self.embedding_dim)), device=self.device, requires_grad=True, dtype=torch.float32))
-
-            # self.cc = nn.Parameter(torch.tensor(np.zeros((self.embedding_dim)), device=self.device, requires_grad=False,
-            #                                     dtype=torch.float32))
-            # self.b = nn.Parameter(
-            #     torch.tensor(np.zeros((self.n_particle_types, self.embedding_dim)), device=self.device,
-            #                  requires_grad=False, dtype=torch.float32))
-            # self.basis = nn.Parameter(torch.tensor(np.zeros((self.n_particle_types, self.embedding_dim)), device=self.device, requires_grad=False, dtype=torch.float32))
         else:
             self.a = nn.Parameter(torch.tensor(np.ones((self.n_dataset, self.n_particles_max, 2)), device=self.device, requires_grad=True, dtype=torch.float32))
 
@@ -101,11 +92,7 @@ class Interaction_Cell(pyg.nn.MessagePassing):
 
         if self.do_tracking | self.has_state:
             particle_id = x[:, -1][:, None]
-            if self.use_hot_encoding:
-                # embedding = self.cc.clone().detach() + torch.matmul(self.a[to_numpy(particle_id), :], self.basis.clone().detach()).squeeze()
-                embedding = torch.matmul(torch.sigmoid((self.a[to_numpy(particle_id), :]-0.5)*10), self.b.clone().detach()).squeeze()
-            else:
-                embedding = self.a[to_numpy(particle_id), :].squeeze()
+            embedding = self.a[to_numpy(particle_id), :].squeeze()
         else:
             particle_id = x[:, 0:1]
             embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()

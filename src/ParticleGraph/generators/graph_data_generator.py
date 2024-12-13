@@ -833,6 +833,11 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         for f in files:
             os.remove(f)
 
+    if config.data_folder_name != 'none':
+        print(f'Generating from data ...')
+        generate_from_data(config=config, device=device, visualize=visualize, step=step, cmap=cmap)
+        return
+
     logging.basicConfig(filename=f'./graphs_data/graphs_{dataset_name}/generator.log', format='%(asctime)s %(message)s',
                         filemode='w')
     logger = logging.getLogger()
@@ -879,6 +884,8 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         13 DR1 cell death rate dim=1
         14 AR1 area of the cell
         15 P1 cell perimeter
+        16 ASR1 aspect ratio
+        17 OR1 orientation
         '''
 
         if run == 0:

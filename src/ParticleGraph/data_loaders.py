@@ -21,11 +21,37 @@ from ParticleGraph.utils import *
 from ParticleGraph.models.Smooth_Particle import Smooth_Particle
 # from ParticleGraph.utils import choose_boundary_values
 
-
-
 import json
 from tqdm import trange
 import matplotlib
+from skimage.measure import label, regionprops
+import tifffile
+
+
+def extract_object_properties(segmentation_image):
+    # Label the objects in the segmentation image
+    labeled_image = label(segmentation_image)
+
+    # Extract properties of the labeled objects
+    object_properties = []
+    for region in regionprops(labeled_image, intensity_image=segmentation_image):
+        # Get the cell ID
+        cell_id = np.median(region.intensity_image[region.image])
+        # Calculate the position (centroid) of the object
+        pos_x = region.centroid[0]
+        pos_y = region.centroid[1]
+        # Calculate the area of the object
+        area = region.area
+        # Calculate the perimeter of the object
+        perimeter = region.perimeter
+        # Calculate the aspect ratio of the bounding box
+        aspect_ratio = region.major_axis_length / region.minor_axis_length
+        # Calculate the orientation of the object
+        orientation = region.orientation
+        object_properties.append((cell_id, pos_x, pos_y, area, perimeter, aspect_ratio, orientation))
+
+    return object_properties
+
 
 def get_index_particles(x, n_particle_types, dimension):
     index_particles = []
@@ -224,6 +250,154 @@ def load_LG_ODE(config, device=None, visualize=False, step=1000):
         torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
 
     torch.save(connection_matrix_list, f'graphs_data/graphs_{dataset_name}/connection_matrix_list.pt')
+
+
+def load_cell_data(config, device, visualize, step, cmap):
+
+    data_folder_name = config.data_folder_name
+    dataset_name = config.dataset
+
+    simulation_config = config.simulation
+    train_config = config.training
+    model_config = config.graph_model
+
+    n_particle_types = simulation_config.n_particle_types
+    n_runs = train_config.n_runs
+    max_radius = simulation_config.max_radius
+    min_radius = simulation_config.min_radius
+
+    delta_t = simulation_config.delta_t
+
+    bc_pos, bc_dpos = choose_boundary_values('no')
+
+    # Loading Data
+
+    files = os.listdir(data_folder_name)
+    files = [f for f in files if f.endswith('.tif')]
+    files.sort()
+
+
+
+    # 0 N1 cell index dim=1
+    # 1,2 X1 positions dim=2
+    # 3,4 V1 velocities dim=2
+    # 5 T1 cell type dim=1
+    # 6,7 H1 cell status dim=2  H1[:,0] = cell alive flag, alive : 0 , death : 0 , H1[:,1] = cell division flag, dividing : 1
+    # 8 A1 cell age dim=1
+    # 9 S1 cell stage dim=1  0 = G1 , 1 = S, 2 = G2, 3 = M
+    # 10 M1 cell_mass dim=1 (per node)
+    # 11 R1 cell growth rate dim=1
+    # 12 CL1 cell cycle length dim=1
+    # 13 DR1 cell death rate dim=1
+    # 14 AR1 area of the cell
+    # 15 P1 cell perimeter
+    # 16 ASR1 aspect ratio
+    # 17 OR1 orientation
+
+    n_cells = 1
+    run = 0
+    x_list = []
+    y_list = []
+
+    raw_data_list = []
+    annotation_data_list = []
+
+
+    for it in trange(len(files)):
+
+        im = tifffile.imread(data_folder_name + files[it])
+        im = np.array(im)
+
+        im_dim = im.shape
+
+        object_properties = extract_object_properties(im)
+        object_properties = np.array(object_properties, dtype=float)
+
+        N = np.arange(object_properties.shape[0], dtype=np.float32)[:, None]
+        X = object_properties[:,1:3]
+        empty_columns = np.zeros((X.shape[0], 11))
+        AR = object_properties[:,3:4]
+        P = object_properties[:,4:5]
+        ASR = object_properties[:,5:6]
+        OR = object_properties[:,6:7]
+        ID = n_cells + np.arange(object_properties.shape[0], dtype=np.float32)[:, None]
+        n_cells = ID[-1] + 1
+
+        x = np.concatenate((N.astype(int), X, empty_columns, AR, P, ASR, OR, ID.astype(int) -1), axis=1)
+        x_list.append(x)
+
+        y = np.zeros((x.shape[0], 2))
+        y_list.append(y)
+
+        LABEL = object_properties[:,0:1]
+        FRAME = it * np.ones((x.shape[0], 1))
+
+        raw_data = np.concatenate((ID.astype(int), FRAME.astype(int), X[:,1:2], X[:,0:1], AR, P, ASR, OR), axis=1)
+        if it == 0:
+            EDGE = np.zeros((len(ID), 1))
+        else:
+            EDGE = np.zeros((len(ID), 1))
+            for k in range(len(ID)):
+                pos = np.argwhere(PREV_LABEL == LABEL[k])
+                if len(pos)>0:
+                    EDGE[k] = PREV_ID[pos[0][0]]
+        annotation_data = np.concatenate((ID.astype(int), FRAME.astype(int), X[:,1:2], X[:,0:1], EDGE.astype(int)), axis=1)
+        if it == 0:
+            raw_data_list = raw_data
+            annotation_data_list = annotation_data
+        else:
+            raw_data_list = np.concatenate((raw_data_list,raw_data), axis = 0)
+            annotation_data_list = np.concatenate((annotation_data_list,annotation_data), axis = 0)
+        PREV_ID = ID
+        PREV_LABEL = LABEL
+
+
+        if visualize:
+            plt.style.use('dark_background')
+            fig = plt.figure(figsize=(10, 10.5))
+            ax = fig.add_subplot(221)
+            plt.scatter(x[:, 2], x[:, 1], s=5, c='w')
+            plt.xticks([])
+            plt.yticks([])
+            plt.xlim([0, im_dim[1]])
+            plt.ylim([0, im_dim[0]])
+            ax = fig.add_subplot(222)
+            plt.scatter(x[:, 2], x[:, 1], s=5, c='w')
+            for k in range(len(x)):
+                plt.text(x[k, 2] + 5, x[k, 1], f'{int(x[k, -1])}', fontsize=6, color='w')
+            plt.xticks([])
+            plt.yticks([])
+            plt.xlim([0, im_dim[1]])
+            plt.ylim([0, im_dim[0]])
+            ax = fig.add_subplot(223)
+            plt.scatter(x[:, 2], x[:, 1], s=5, c=x[:, 14:15], vmin=0, vmax=200)
+            plt.xticks([])
+            plt.yticks([])
+            plt.xlim([0, im_dim[1]])
+            plt.ylim([0, im_dim[0]])
+            ax = fig.add_subplot(224)
+            plt.scatter(x[:, 2], x[:, 1], s=5, c=x[:, 15:16], vmin=0, vmax=100)
+            plt.xticks([])
+            plt.yticks([])
+            plt.xlim([0, im_dim[1]])
+            plt.ylim([0, im_dim[0]])
+
+            plt.tight_layout()
+
+            num = f"{it:06}"
+            plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{it}.tif", dpi=80)
+            plt.close()
+
+    np.savez(f'graphs_data/graphs_{dataset_name}/x_list_{run}', *x_list)
+    np.savez(f'graphs_data/graphs_{dataset_name}/y_list_{run}', *y_list)
+    np.save(f'graphs_data/graphs_{dataset_name}/n_cells_{run}', n_cells)
+    np.save(f'graphs_data/graphs_{dataset_name}/im_dim{run}', im_dim)
+    np.save(f'graphs_data/graphs_{dataset_name}/raw_data_{run}', raw_data_list)
+    np.save(f'graphs_data/graphs_{dataset_name}/annotation_data_{run}', annotation_data_list)
+
+
+
+    print(f'n_cells: {n_cells}')
 
 
 
