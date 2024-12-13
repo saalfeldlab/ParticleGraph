@@ -61,6 +61,9 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         self.a = nn.Parameter(
                 torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
                              requires_grad=True, dtype=torch.float32))
+        # self.a = nn.Parameter(
+        #         torch.tensor(np.random.randn(self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim), device=self.device,
+        #                      requires_grad=True, dtype=torch.float32))
 
         if self.model =='PDE_K1':
             self.vals = nn.Parameter(

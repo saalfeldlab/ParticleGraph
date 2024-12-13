@@ -50,11 +50,10 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        action = 'test'
+        action = 'train'
         best_model = None
 
-        config_list = ['falling_water_ramp_x41', 'falling_water_ramp_x42', 'falling_water_ramp_x43', 'falling_water_ramp_x44', 'falling_water_ramp_x45', 'falling_water_ramp_x46', 'falling_water_ramp_x47']
-
+        config_list = ['falling_water_ramp_x1']
 
 
     for config_file in config_list:

@@ -5828,7 +5828,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
 
             pred = model(dataset, data_id=0, training=True, vnorm=vnorm, phi=torch.zeros(1, device=device), has_field=False)
 
-            x_next = x_list[0][k+1]
+            x_next = x_list[0][k + time_step]
             x_pos_next = x_next[:,1:3].clone().detach()
             if model_config.prediction == '2nd_derivative':
                 x_pos_pred = (x[:, 1:3] + delta_t * (x[:, 3:5] + delta_t * pred * ynorm))
@@ -5848,7 +5848,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
 
                 fig = plt.figure(figsize=(16, 5))
                 ax = fig.add_subplot(1, 2, 1)
-                ax.axvline(x=1, ymin=0, ymax=0.7, color='r', linestyle='--', linewidth=2)
+                ax.axvline(x=1.05, ymin=0, ymax=0.7, color='r', linestyle='--', linewidth=2)
                 plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=100, c='b')
                 for n in range(len(x)):
                     plt.arrow(x=to_numpy(x[n, 1]), y=to_numpy(x[n, 2]), dx=to_numpy(V[n, 0]), dy=to_numpy(V[n, 1]),
@@ -6454,7 +6454,7 @@ if __name__ == '__main__':
 
     # config_list = ['falling_particles_N1000_2']
 
-    config_list = ['rat_city_c1']
+    config_list = ['rat_city_c2']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')

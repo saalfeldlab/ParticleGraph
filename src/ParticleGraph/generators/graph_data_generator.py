@@ -1968,7 +1968,7 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
                 else:
                     m = (y2 - y1) / (x2 - x1)
                     b = y1 - m * x1
-                    y_intersection = m * 1 + b    # x_vertical = 1
+                    y_intersection = m * 1.05 + b    # x_vertical = 1
                     if (y_intersection>0.7) | ((x1 < 1) & (x2 < 1)) | ((x1 > 1) & (x2 > 1)):
                         edge_mask[k]=1
             pos = torch.argwhere(edge_mask == 1)
@@ -2000,15 +2000,15 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
                     plt.style.use('dark_background')
 
                     fig, ax = plt.subplots(figsize=(8, 4))
-                    ax.axvline(x=1, ymin=0, ymax=0.7, color='r', linestyle='--', linewidth=2)
-                    plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=200, c='w', alpha=0.9)
+                    ax.axvline(x=1.05, ymin=0, ymax=0.7, color='r', linestyle='--', linewidth=2)
+                    # plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=200, c='w', alpha=0.5)
                     plt.xlim([0, 2])
                     plt.ylim([0, 1])
 
                     pos=x[:, 1:3]
                     dataset = data.Data(x=x, pos=pos, edge_index=edge_index)
                     vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-                    nx.draw_networkx(vis, pos=to_numpy(pos), node_size=0, linewidths=0, with_labels=False, ax=ax, edge_color='w',
+                    nx.draw_networkx(vis, pos=to_numpy(pos), node_size=0, linewidths=0, with_labels=False, ax=ax, edge_color='g',
                                      width=1)
 
                     plt.tight_layout()
@@ -2018,11 +2018,11 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
                     plt.style.use('dark_background')
 
                     fig, ax = plt.subplots(figsize=(8, 4))
-                    plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=400, c='w', alpha=0.9)
+                    plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=100, c='w', alpha=0.5)
                     pos=x[:, 1:3]
                     dataset = data.Data(x=x, pos=pos, edge_index=edge_index)
                     vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-                    nx.draw_networkx(vis, pos=to_numpy(pos), node_size=0, linewidths=0, with_labels=False, ax=ax, edge_color='w',
+                    nx.draw_networkx(vis, pos=to_numpy(pos), node_size=0, linewidths=0, with_labels=False, ax=ax, edge_color='g',
                                      width=1)
                     # pos_connect = to_numpy(edge_index[1,:]).astype(int)
                     # plt.scatter(to_numpy(X1_mesh[pos_connect, 0]), to_numpy(X1_mesh[pos_connect, 1]), s=100, c='r',alpha=0.1)

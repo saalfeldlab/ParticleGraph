@@ -50,7 +50,7 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        action = 'train'
+        action = 'generate'
         best_model = None
         config_list = ['rat_city_c2']
 
@@ -74,3 +74,4 @@ if __name__ == '__main__':
 
 
 # bsub -n 4 -gpu "num=1" -q gpu_h100 "python GNN_particles_Ntype.py -o train falling_water_ramp_x1"
+# sudo mount -o rw,hard,bg,nolock,nfsvers=4.1,sec=krb5 nrs.hhmi.org:/nrs/ /nrs/
