@@ -32,7 +32,7 @@ def generate_from_data(config, device, visualize=True, step=None, cmap=None):
         load_WaterDropSmall(config, device, visualize, step, cmap)
     elif 'WaterRamps' in data_folder_name:
         load_WaterRamps(config, device, visualize, step, cmap)
-    elif 'PSC' in data_folder_name:
+    elif ('PSC' in data_folder_name) | ('HeLa' in data_folder_name):
         load_cell_data(config, device, visualize, step, cmap)
     else:
         raise ValueError(f'Unknown data folder name {data_folder_name}')

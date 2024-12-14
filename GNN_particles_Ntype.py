@@ -50,10 +50,11 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        action = 'generate'
+        action = 'train'
         best_model = None
 
-        config_list = ['PSC_1']
+        # config_list = ['rat_city_c2']
+        config_list = ['cell_PSC_10']
         # config_list = ['falling_water_ramp_x2']
 
 

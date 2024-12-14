@@ -628,6 +628,8 @@ def plot_training_state(config, id_list, dataset_name, log_dir, epoch, N, model,
 
     if model_config.particle_model_name == 'PDE_Cell_B':
         rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
+    elif model_config.particle_model_name == 'PDE_Cell_A_PSC':
+        rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
     else:
         rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
 
@@ -985,7 +987,7 @@ def choose_training_model(model_config, device):
         case 'PDE_M':
             model = Interaction_Mouse_Field(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos,
                                      dimension=dimension)
-        case 'PDE_Cell_A' | 'PDE_Cell_B' | 'PDE_Cell_B_area' | 'PDE_Cell_A_area' | 'PDE_Cell_A_PSC':
+        case 'PDE_Cell_A' | 'PDE_Cell_B' | 'PDE_Cell_B_area' | 'PDE_Cell_A_area' | 'PDE_Cell':
             model = Interaction_Cell(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             model.edges = []
         case 'PDE_ParticleField_A' | 'PDE_ParticleField_B':

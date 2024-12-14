@@ -256,15 +256,14 @@ def load_LG_ODE(config, device=None, visualize=False, step=1000):
 
 def load_cell_data(config, device, visualize, step, cmap):
 
+    # load data from https://celltrackingchallenge.net/2d-datasets/
+
     data_folder_name = config.data_folder_name
     dataset_name = config.dataset
 
     simulation_config = config.simulation
     train_config = config.training
-    model_config = config.graph_model
 
-    n_particle_types = simulation_config.n_particle_types
-    n_runs = train_config.n_runs
     max_radius = simulation_config.max_radius
     min_radius = simulation_config.min_radius
     dimension = simulation_config.dimension
@@ -424,7 +423,7 @@ def load_cell_data(config, device, visualize, step, cmap):
 
     np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}.npz', *edge_p_p_list)
     np.save(f'graphs_data/graphs_{dataset_name}/n_cells_{run}.npy', n_cells)
-    np.save(f'graphs_data/graphs_{dataset_name}/im_dim{run}.npy', im_dim)
+    np.save(f'graphs_data/graphs_{dataset_name}/im_dim_{run}.npy', im_dim)
     np.save(f'graphs_data/graphs_{dataset_name}/raw_data_{run}.npy', raw_data_list)
     np.save(f'graphs_data/graphs_{dataset_name}/annotation_data_{run}.npy', annotation_data_list)
 

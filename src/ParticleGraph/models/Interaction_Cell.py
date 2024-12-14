@@ -88,20 +88,18 @@ class Interaction_Cell(pyg.nn.MessagePassing):
             field = torch.ones_like(x[:,6:7])
         pos = x[:, 1:self.dimension+1]
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
-        area = x[:, 14:15]
+        features = x[:, 14:-1]
 
         if self.do_tracking | self.has_state:
-            particle_id = x[:, -1][:, None]
-            embedding = self.a[to_numpy(particle_id), :].squeeze()
+            embedding = self.a[to_numpy(x[:, -1][:, None]), :].squeeze()
         else:
-            particle_id = x[:, 0:1]
-            embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
+            embedding = self.a[self.data_id, to_numpy(x[:, 0:1]), :].squeeze()
 
-        pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, particle_id=particle_id, embedding=embedding, field=field, area=area)
+        pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding, field=field, features=features)
 
         return pred
 
-    def message(self, pos_i, pos_j, d_pos_i, d_pos_j, particle_id_i, particle_id_j, embedding_i, embedding_j, field_j, area_i, area_j):
+    def message(self, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j, field_j, features_i, features_j):
         # distance normalized by the max radius
         r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
         delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
@@ -109,6 +107,7 @@ class Interaction_Cell(pyg.nn.MessagePassing):
         dpos_y_i = d_pos_i[:, 1] / self.vnorm
         dpos_x_j = d_pos_j[:, 0] / self.vnorm
         dpos_y_j = d_pos_j[:, 1] / self.vnorm
+
         if self.dimension == 3:
             dpos_z_i = d_pos_i[:, 2] / self.vnorm
             dpos_z_j = d_pos_j[:, 2] / self.vnorm
@@ -138,12 +137,17 @@ class Interaction_Cell(pyg.nn.MessagePassing):
             case 'PDE_Cell_B':
                 in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
                                          dpos_y_j[:, None], embedding_i), dim=-1)
-
             case 'PDE_Cell_B_area':
                 in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
                                          dpos_y_j[:, None], area_i, area_j, embedding_i, embedding_j), dim=-1)
 
+            case 'PDE_Cell':
+                in_features = torch.cat((delta_pos, r[:, None], embedding_i, features_i, features_j), dim=-1)
+
         out = self.lin_edge(in_features) * field_j
+
+        self.pos = pos_i
+        self.msg = out
 
         return out
 
@@ -165,3 +169,20 @@ class Interaction_Cell(pyg.nn.MessagePassing):
         if self.model == 'PDE_E':
             acc = p1 * p2 / r ** 2
             return -acc  # Elec particles
+
+
+    # 0 N1 cell index dim=1
+    # 1,2 X1 positions dim=2
+    # 3,4 V1 velocities dim=2
+    # 5 T1 cell type dim=1
+    # 6,7 H1 cell status dim=2  H1[:,0] = cell alive flag, alive : 0 , death : 0 , H1[:,1] = cell division flag, dividing : 1
+    # 8 A1 cell age dim=1
+    # 9 S1 cell stage dim=1  0 = G1 , 1 = S, 2 = G2, 3 = M
+    # 10 M1 cell_mass dim=1 (per node)
+    # 11 R1 cell growth rate dim=1
+    # 12 CL1 cell cycle length dim=1
+    # 13 DR1 cell death rate dim=1
+    # 14 AR1 area of the cell
+    # 15 P1 cell perimeter
+    # 16 ASR1 aspect ratio
+    # 17 OR1 orientation

@@ -31,7 +31,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
     has_particle_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
     has_signal = ('PDE_N' in config.graph_model.signal_model_name)
     has_mesh = (config.graph_model.mesh_model_name != '')
-    has_cell_divsion = config.simulation.has_cell_division
+    has_cell_division = config.simulation.has_cell_division
     has_fluo = config.simulation.has_fluo
     has_WBI = 'WBI' in config.dataset
     has_mouse_city = ('mouse_city' in config.dataset) | ('rat_city' in config.dataset)
@@ -41,7 +41,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
     print(f'dataset_name: {dataset_name}')
 
     if (os.path.isfile(f'./graphs_data/graphs_{dataset_name}/x_list_0.npy')) | (os.path.isfile(f'./graphs_data/graphs_{dataset_name}/x_list_0.pt')):
-        print('Data already generated')
+        print('data already generated')
         # return
 
 
@@ -62,7 +62,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                            step=step,
                            alpha=0.2, ratio=ratio,
                            scenario=scenario, device=device, bSave=bSave)
-    elif has_cell_divsion:
+    elif has_cell_division:
             data_generate_cell(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
                                         alpha=0.2, ratio=ratio,
                                         scenario=scenario, device=device, bSave=bSave)
@@ -803,7 +803,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
     training_config = config.training
     model_config = config.graph_model
 
-    print(f'Generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+    print(f'generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
     dimension = simulation_config.dimension
     max_radius = simulation_config.max_radius
@@ -834,7 +834,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             os.remove(f)
 
     if config.data_folder_name != 'none':
-        print(f'Generating from data ...')
+        print(f'generating from data ...')
         generate_from_data(config=config, device=device, visualize=visualize, step=step, cmap=cmap)
         return
 
