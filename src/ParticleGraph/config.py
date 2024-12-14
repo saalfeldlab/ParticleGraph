@@ -22,6 +22,10 @@ class SimulationConfig(BaseModel):
     connectivity_distribution_params: float = 1
     connectivity_mask: bool = False
 
+    smooth_particle: bool = False
+    smooth_radius: float = 0.1
+
+
     excitation_value_map: Optional[str] = None
     excitation: str='none'
     adjacency_matrix: str = ''
@@ -139,9 +143,7 @@ class TrainingConfig(BaseModel):
     distance_threshold: float = 0.1
     epoch_distance_replace: int = 20
     time_window: int=0
-    smooth_particle: bool = False
-    smooth_radius: float = 0.1
-    smooth_function: Literal['gaussian', 'triangular'] = 'gaussian'
+
 
 
     n_runs: int = 2

@@ -705,6 +705,7 @@ def data_solar_system(config, config_file, erase, best_model, device):
 
 
 def data_train_cell(config, config_file, erase, best_model, device):
+
     simulation_config = config.simulation
     train_config = config.training
     model_config = config.graph_model
@@ -848,7 +849,7 @@ def data_train_cell(config, config_file, erase, best_model, device):
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
 
     Niter = n_frames * data_augmentation_loop // batch_size
-    print(f'plot every {Niter // 1000} iterations')
+    print(f'plot every {Niter // 100} iterations')
 
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
 
@@ -921,9 +922,9 @@ def data_train_cell(config, config_file, erase, best_model, device):
                 result = distance.min(dim=1)
                 min_value = result.values
                 indices = result.indices
-                loss = torch.sum(min_value)
+                loss = min_value.norm(2) * 1E3
             else:
-                loss = (pred - y_batch).norm(2) * 1E2
+                loss = (pred - y_batch).norm(2)
 
             loss.backward()
             optimizer.step()
@@ -936,7 +937,7 @@ def data_train_cell(config, config_file, erase, best_model, device):
             total_loss += loss.item()
 
             visualize_embedding = False
-            if ((epoch < 10) & (N % (Niter // 1000) == 0)) | (N == 0):
+            if ((epoch < 10) & (N % (Niter // 100) == 0)) | (N == 0):
                 if visualize_embedding:
                     if do_tracking | has_state:
                         id_list = []
@@ -952,14 +953,22 @@ def data_train_cell(config, config_file, erase, best_model, device):
                                            epoch=epoch, N=N, model=model, n_particle_types=n_particle_types,
                                            type_list=type_list, ynorm=ynorm, cmap=cmap, device=device)
 
+                print(loss)
+
                 fig, ax = fig_init(fontsize=24)
                 plt.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), s=2, color='k',alpha=0.5, edgecolor='none')
                 plt.xlabel(r'$a_{i0}$', fontsize=48)
                 plt.ylabel(r'$a_{i1}$', fontsize=48)
                 plt.tight_layout()
-
                 plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif", dpi=87)
                 plt.close()
+
+                fig, ax = fig_init(fontsize=24)
+                g = to_numpy(model.a.grad)
+                plt.scatter(g[:, 0], g[:, 1], s=2, c='k')
+                plt.savefig(f"./{log_dir}/tmp_training/embedding/grad_{dataset_name}_{epoch}_{N}.tif", dpi=87)
+                plt.close()
+
 
                 torch.save({'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict()},
@@ -977,6 +986,10 @@ def data_train_cell(config, config_file, erase, best_model, device):
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
         if False: # do_tracking:
+
+
+
+
             id_list_ = []
             for k in range(0, n_frames + 1):
                 ids = x_list[1][k][:, -1]

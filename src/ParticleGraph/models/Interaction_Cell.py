@@ -38,7 +38,6 @@ class Interaction_Cell(pyg.nn.MessagePassing):
         self.hidden_dim = model_config.hidden_dim
         self.n_layers = model_config.n_mp_layers
         self.n_particles = simulation_config.n_particles
-        self.n_particle_types = simulation_config.n_particle_types
         self.max_radius = simulation_config.max_radius
         self.rotation_augmentation = train_config.rotation_augmentation
         self.noise_level = train_config.noise_level
@@ -49,17 +48,16 @@ class Interaction_Cell(pyg.nn.MessagePassing):
         self.update_type = model_config.update_type
         self.n_layers_update = model_config.n_layers_update
         self.hidden_dim_update = model_config.hidden_dim_update
-        self.sigma = simulation_config.sigma
+
         self.model = model_config.particle_model_name
         self.bc_dpos = bc_dpos
-        self.n_ghosts = int(train_config.n_ghosts)
         self.dimension = dimension
         self.has_state = config.simulation.state_type != 'discrete'
         self.n_frames = simulation_config.n_frames
         self.do_tracking = train_config.do_tracking
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
-                                hidden_size=self.hidden_dim, device=self.device, initialisation='zeros')
+                                hidden_size=self.hidden_dim, device=self.device, initialisation='std')
 
         if self.do_tracking | self.has_state:
             self.a = nn.Parameter(torch.tensor(np.ones((self.n_particles_max, self.embedding_dim)), device=self.device, requires_grad=True, dtype=torch.float32))
@@ -155,20 +153,8 @@ class Interaction_Cell(pyg.nn.MessagePassing):
 
         return aggr_out  # self.lin_node(aggr_out)
 
-    def psi(self, r, p1, p2):
 
-        if (self.model == 'PDE_A') | (self.model == 'PDE_Cell_A') | (self.model =='PDE_A_bis') | (self.model=='PDE_ParticleField_A'):
-            return r * (p1[0] * torch.exp(-torch.abs(r) ** (2 * p1[1]) / (2 * self.sigma ** 2)) - p1[2] * torch.exp(-torch.abs(r) ** (2 * p1[3]) / (2 * self.sigma ** 2)))
-        if (self.model == 'PDE_B') | (self.model == 'PDE_Cell_B'):
-            cohesion = p1[0] * 0.5E-5 * r
-            separation = -p1[2] * 1E-8 / r
-            return (cohesion + separation) * p1[1] / 500
-        if self.model == 'PDE_G':
-            psi = p1 / r ** 2
-            return psi[:, None]
-        if self.model == 'PDE_E':
-            acc = p1 * p2 / r ** 2
-            return -acc  # Elec particles
+
 
 
     # 0 N1 cell index dim=1

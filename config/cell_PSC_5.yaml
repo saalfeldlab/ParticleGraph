@@ -38,7 +38,7 @@ plotting:
 
 training:
   seed: 14
-  n_epochs: 10
+  n_epochs: 2
   batch_size: 1
   small_init_batch_size: False
   n_runs: 1
@@ -50,4 +50,6 @@ training:
   fix_cluster_embedding: True
   device: 'auto'
   do_tracking: True
+  learning_rate_start: 1.0E-4
+  learning_rate_embedding_start: 1.0E-4
 

@@ -36,6 +36,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
     has_WBI = 'WBI' in config.dataset
     has_mouse_city = ('mouse_city' in config.dataset) | ('rat_city' in config.dataset)
     dataset_name = config.dataset
+    has_smooth_particles = config.simulation.has_smooth_particles
 
     print('')
     print(f'dataset_name: {dataset_name}')
@@ -44,7 +45,10 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
         print('data already generated')
         # return
 
-
+    if has_smooth_particle:
+        data_generate_smooth_particle(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
+                                        alpha=0.2, ratio=ratio,
+                                        scenario=scenario, device=device, bSave=bSave)
     if has_mouse_city:
         data_generate_mouse_city(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
                                         alpha=0.2, ratio=ratio,
@@ -406,6 +410,148 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
 
     if 'PDE_K' in model_config.particle_model_name:
         torch.save(connection_matrix_list, f'graphs_data/graphs_{dataset_name}/connection_matrix_list.pt')
+
+    # for handler in logger.handlers[:]:
+    #     handler.close()
+    #     logger.removeHandler(handler)
+
+
+
+def data_generate_smooth_particle(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1, scenario='none', device=None, bSave=True):
+    simulation_config = config.simulation
+    training_config = config.training
+    model_config = config.graph_model
+
+    print(f'Generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+
+    dimension = simulation_config.dimension
+    max_radius = simulation_config.max_radius
+    min_radius = simulation_config.min_radius
+    n_particle_types = simulation_config.n_particle_types
+    n_particles = simulation_config.n_particles
+    delta_t = simulation_config.delta_t
+    n_frames = simulation_config.n_frames
+    has_particle_dropout = training_config.particle_dropout > 0
+    cmap = CustomColorMap(config=config)
+    dataset_name = config.dataset
+
+    folder = f'./graphs_data/graphs_{dataset_name}/'
+    if erase:
+        files = glob.glob(f"{folder}/*")
+        for f in files:
+            if (f[-3:] != 'Fig') & (f[-14:] != 'generated_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (f != 'generation_code.py'):
+                os.remove(f)
+    os.makedirs(folder, exist_ok=True)
+    os.makedirs(f'./graphs_data/graphs_{dataset_name}/Fig/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Fig/*')
+    for f in files:
+        os.remove(f)
+
+    # create GNN
+    model, bc_pos, bc_dpos = choose_model(config=config, device=device)
+
+
+    for run in range(config.training.n_runs):
+
+        n_particles = simulation_config.n_particles
+
+        x_list = []
+        y_list = []
+        edge_p_p_list = []
+
+        # initialize particle and graph states
+        X1, V1, T1, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
+
+        time.sleep(0.5)
+        for it in trange(simulation_config.start_frame, n_frames + 1):
+
+            x = torch.concatenate(
+                (N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
+                 H1.clone().detach(), A1.clone().detach()), 1)
+
+            # compute connectivity rule
+
+            distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+            adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+            edge_index = adj_t.nonzero().t().contiguous()
+            edge_p_p_list.append(to_numpy(edge_index))
+
+            dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, field=[])
+
+            # model prediction
+            with torch.no_grad():
+                y = model(dataset)
+
+            # append list
+            if (it >= 0) & bSave:
+                x_list.append(x.clone().detach())
+                y_list.append(y.clone().detach())
+
+            # Particle update
+
+            if model_config.prediction == '2nd_derivative':
+                V1 += y * delta_t
+            else:
+                V1 = y
+            X1 = bc_pos(X1 + V1 * delta_t)
+            A1 = A1 + 1
+
+            # output plots
+            if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
+
+                if 'black' in style:
+                    plt.style.use('dark_background')
+
+                if 'latex' in style:
+                    plt.rcParams['text.usetex'] = True
+                    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+
+                if 'color' in style:
+
+
+                    # matplotlib.use("Qt5Agg")
+
+                    fig, ax = fig_init(formatx="%.1f", formaty="%.1f")
+                    s_p = 25
+                    for n in range(n_particle_types):
+                            plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
+                                        s=s_p, color=cmap.color(n))
+
+                    plt.xlim([0, 1])
+                    plt.ylim([0, 1])
+
+                    if 'latex' in style:
+                        plt.xlabel(r'$x$', fontsize=78)
+                        plt.ylabel(r'$y$', fontsize=78)
+                        plt.xticks(fontsize=48.0)
+                        plt.yticks(fontsize=48.0)
+                    if 'frame' in style:
+                        plt.xlabel('x', fontsize=48)
+                        plt.ylabel('y', fontsize=48)
+                        plt.xticks(fontsize=48.0)
+                        plt.yticks(fontsize=48.0)
+                        ax.tick_params(axis='both', which='major', pad=15)
+                        plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=48)
+                    if 'no_ticks' in style:
+                        plt.xticks([])
+                        plt.yticks([])
+                    plt.tight_layout()
+
+                        num = f"{it:06}"
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80) # 170.7)
+                        plt.close()
+
+        if bSave:
+            x_list = np.array(to_numpy(torch.stack(x_list)))
+            y_list = np.array(to_numpy(torch.stack(y_list)))
+            # torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
+            np.save(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy', x_list)
+            # torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
+            np.save(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy', y_list)
+            np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}', *edge_p_p_list)
+            torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
+
+
 
     # for handler in logger.handlers[:]:
     #     handler.close()
