@@ -13,6 +13,8 @@ import matplotlib
 from ParticleGraph.models.MLP import MLP
 
 
+
+
 class Smooth_Particle(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -42,7 +44,7 @@ class Smooth_Particle(pyg.nn.MessagePassing):
 
         self.K = nn.Parameter(torch.tensor([1.0], device=self.device, requires_grad=True, dtype=torch.float32))
         self.rho_0 = nn.Parameter(torch.tensor([0.5], device=self.device, requires_grad=True, dtype=torch.float32))
-        self.lin_rho = MLP(input_size=2, output_size=1, nlayers=3, hidden_size=32, device=self.device)
+        self.lin_rho = MLP(input_size=1, output_size=1, nlayers=5, hidden_size=128, device=self.device)
 
 
     def forward(self, x=[], has_field=False):
@@ -83,7 +85,7 @@ class Smooth_Particle(pyg.nn.MessagePassing):
             case 'Nine':
                 w_density = 315 / (64 * np.pi * s ** 9) * (s ** 2 - distance_squared) ** 3
             case 'mlp':
-                w_density = self.lin_rho(torch.cat((distance_squared[:,None], s**2*torch.ones_like(distance_squared)[:,None]), 1))
+                w_density = self.lin_rho(distance_squared)
                 w_density = w_density.squeeze()
             # ρᵢ = (315 M) / (64 π L⁹) ∑ⱼ(L² − dᵢⱼ²)³
             # https://github.com/Ceyron/machine-learning-and-simulation/blob/main/english/simulation_scripts/smoothed_particle_hydrodynamics_simple_python.py
@@ -130,6 +132,28 @@ if __name__ == '__main__':
     from ParticleGraph.utils import choose_boundary_values
     from ParticleGraph.config import ParticleGraphConfig
     import torch.nn as nn
+    import torch.optim as optim
+
+
+    def laplace(y, x):
+        grad = gradient(y, x)
+        return divergence(grad, x)
+
+
+    def divergence(y, x):
+        div = 0.
+        for i in range(y.shape[-1]):
+            div += torch.autograd.grad(y[..., i], x, torch.ones_like(y[..., i]), create_graph=True)[0][..., i:i + 1]
+        return div
+
+
+    def gradient(y, x, grad_outputs=None):
+        if grad_outputs is None:
+            grad_outputs = torch.ones_like(y)
+        grad = torch.autograd.grad(y, [x], grad_outputs=grad_outputs, create_graph=True)[0]
+        return grad
+
+
 
     device = 'cuda:0'
     try:
@@ -150,12 +174,92 @@ if __name__ == '__main__':
     smooth_radius = config.simulation.smooth_radius
 
     model_density = Smooth_Particle(config=config, aggr_type='mean', bc_dpos=bc_dpos, dimension=dimension)
+    model_density.train()
 
     tensors = tuple(dimension * [torch.linspace(0, 1, steps=100)])
     mgrid = torch.stack(torch.meshgrid(*tensors), dim=-1)
     mgrid = mgrid.reshape(-1, dimension)
     mgrid = torch.cat((torch.ones((mgrid.shape[0], 1)), mgrid), 1)
     mgrid = mgrid.to(device)
+
+    # Create the dataset
+
+    s = torch.tensor([smooth_radius], device=device)
+    x = torch.linspace(-1, 1, 1000).view(-1, 1).to(device)
+    y = torch.exp(-x ** 2 / 0.25)
+
+    coords = x.clone().detach().requires_grad_(True)
+
+    # Initialize the model, loss function, and optimizer
+    model = model_density.lin_rho
+    criterion = nn.MSELoss()
+    optimizer = optim.Adam(model.parameters(), lr=1e-3)
+
+    # Train the model
+    num_epochs = 10000
+    for epoch in trange(num_epochs):
+        model.train()
+        optimizer.zero_grad()
+        output = model(coords)
+        model_output = gradient(output, coords)
+        loss = criterion(model_output, y)
+        loss.backward()
+        optimizer.step()
+
+    pred = model(coords)
+    model_output = gradient(pred, coords)
+    plt.figure(figsize=(8, 8))
+    plt.scatter(x.cpu().numpy(), y.cpu().numpy(), label='True Function')
+    plt.scatter(x.cpu().numpy(), pred.detach().cpu().numpy(), label='MLP Approximation')
+    plt.scatter(x.cpu().numpy(), model_output.detach().cpu().numpy(), label='grad MLP Approximation')
+    plt.legend()
+    plt.show()
+
+
+
+
+
+
+
+
+
+
+
+    s = torch.tensor([smooth_radius], device=device)
+
+    optim = torch.optim.Adam(lr=1e-1, params=model_density.parameters())
+
+    sample = torch.rand(100, 1, device=device)
+    pred = model_density.lin_rho(sample.clone().detach())
+    y = (s ** 2 * torch.ones_like(sample)[:, None] - sample[:, None] ** 2) ** 2
+    y = y.clone().detach()
+    fig = plt.figure(figsize=(8, 8))
+    plt.scatter(sample.detach().cpu().numpy(), y.detach().cpu().numpy())
+    plt.scatter(sample.detach().cpu().numpy(), pred.detach().cpu().numpy())
+
+    for step in trange(10000):
+
+        optim.zero_grad()
+        sample = torch.rand(5, 1, device=device)
+        pred = model_density.lin_rho(sample.clone().detach())
+        y = (s**2*torch.ones_like(sample)[:,None] - sample[:,None]**2)**2
+        y = y.clone().detach()
+        loss = ((pred - y) ** 2).norm(2)
+        loss.backward()
+        optim.step()
+
+    print(step, loss)
+
+    sample = torch.rand(100, 1, device=device)
+    pred = model_density.lin_rho(sample.clone().detach())
+    y = (s ** 2 * torch.ones_like(sample)[:, None] - sample[:, None] ** 2) ** 2
+    y = y.clone().detach()
+    fig = plt.figure(figsize=(8, 8))
+    plt.scatter(sample.detach().cpu().numpy(), y.detach().cpu().numpy())
+    plt.scatter(sample.detach().cpu().numpy(), pred.detach().cpu().numpy())
+
+
+
 
     for k in trange(0,len(x_list),10):
 
