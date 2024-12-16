@@ -977,7 +977,7 @@ def choose_training_model(model_config, device):
     n_particles = model_config.simulation.n_particles
     dimension = model_config.simulation.dimension
     do_tracking = model_config.training.do_tracking
-    smooth_particle = model_config.training.smooth_particle
+    smooth_particle = model_config.simulation.smooth_particle
 
     bc_pos, bc_dpos = choose_boundary_values(model_config.simulation.boundary)
 

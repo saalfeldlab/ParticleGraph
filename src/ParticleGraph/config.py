@@ -24,7 +24,7 @@ class SimulationConfig(BaseModel):
 
     smooth_particle: bool = False
     smooth_radius: float = 0.1
-
+    smooth_function: str = 'Gaussian'
 
     excitation_value_map: Optional[str] = None
     excitation: str='none'
@@ -88,6 +88,7 @@ class GraphModelConfig(BaseModel):
     mesh_model_name: str = ''
     signal_model_name: str = ''
     prediction: Literal['first_derivative', '2nd_derivative'] = '2nd_derivative'
+    integration: Literal['Euler', 'Runge-Kutta'] = 'Euler'
     input_size: int
     output_size: int
     hidden_dim: int
@@ -144,8 +145,6 @@ class TrainingConfig(BaseModel):
     epoch_distance_replace: int = 20
     time_window: int=0
 
-
-
     n_runs: int = 2
     seed : int = 40
     clamp: float = 0
@@ -167,7 +166,6 @@ class TrainingConfig(BaseModel):
     learning_rate_embedding_end: float = 0.001
     learning_rate_NNR: float = 0.0001
 
-    train_norm: int = 2
     first_coeff_L1: float = 0
     coeff_L1: float = 0
     coeff_anneal_L1: float = 0
@@ -183,7 +181,6 @@ class TrainingConfig(BaseModel):
     translation_augmentation: bool = False
     data_augmentation_loop: int = 40
     recursive_loop: int = 0
-    recursive_param: list[float] = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
     regul_matrix: bool = False
     sub_batches: int = 1
 

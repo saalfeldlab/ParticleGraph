@@ -10,6 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import trange
 import matplotlib
+from ParticleGraph.models.MLP import MLP
 
 
 class Smooth_Particle(pyg.nn.MessagePassing):
@@ -35,15 +36,13 @@ class Smooth_Particle(pyg.nn.MessagePassing):
 
         self.bc_dpos = bc_dpos
         self.dimension = dimension
-        self.smooth_radius = config.training.smooth_radius
-        self.smooth_function = config.training.smooth_function
+        self.smooth_radius = config.simulation.smooth_radius
+        self.smooth_function = config.simulation.smooth_function
         self.device = device
 
-        tensors = tuple(dimension * [torch.linspace(0, 1, steps=100)])
-        mgrid = torch.stack(torch.meshgrid(*tensors), dim=-1)
-        mgrid = mgrid.reshape(-1, dimension)
-        mgrid = torch.cat((torch.ones((mgrid.shape[0], 1)), mgrid), 1)
-        self.mgrid = mgrid.to(device)
+        self.K = nn.Parameter(torch.tensor([1.0], device=self.device, requires_grad=True, dtype=torch.float32))
+        self.rho_0 = nn.Parameter(torch.tensor([0.5], device=self.device, requires_grad=True, dtype=torch.float32))
+        self.lin_rho = MLP(input_size=2, output_size=1, nlayers=3, hidden_size=32, device=self.device)
 
 
     def forward(self, x=[], has_field=False):
@@ -53,7 +52,15 @@ class Smooth_Particle(pyg.nn.MessagePassing):
         edge_index = adj_t.nonzero().t().contiguous()
         self.edge_index = edge_index
 
-        out = self.propagate(edge_index, pos=x[:, 1:self.dimension+1])
+        rho = self.propagate(edge_index, pos=x[:, 1:self.dimension+1])
+        p = self.K * (rho - self.rho_0)
+
+        # Compute the pressure at each particle's position (κ is the isentropic exponent, ρ₀ is a base density)
+        # pᵢ = κ * (ρ − ρ₀)
+        # https://github.com/Ceyron/machine-learning-and-simulation/blob/main/english/simulation_scripts/smoothed_particle_hydrodynamics_simple_python.py
+
+
+        out = torch.cat((rho, p), 1)
 
         return out
 
@@ -69,11 +76,17 @@ class Smooth_Particle(pyg.nn.MessagePassing):
     def W(self, distance_squared, s, function):
 
         match function:
-            case 'gaussian':
-                w_density = 1/(np.pi*s**8)*(s**2-distance_squared)**3 / 6E3
-            case triangular:
-                w_density = 1/(np.pi*s**8)*(s**2-distance_squared)**3 / 6E3
-
+            case 'Gaussian':
+                w_density = 1 / (np.pi*s**8)*(s**2-distance_squared)**3 / 6E3
+            case 'Triangular':
+                w_density = 1 / (np.pi*s**8)*(s**2-distance_squared)**3 / 6E3
+            case 'Nine':
+                w_density = 315 / (64 * np.pi * s ** 9) * (s ** 2 - distance_squared) ** 3
+            case 'mlp':
+                w_density = self.lin_rho(torch.cat((distance_squared[:,None], s**2*torch.ones_like(distance_squared)[:,None]), 1))
+                w_density = w_density.squeeze()
+            # ρᵢ = (315 M) / (64 π L⁹) ∑ⱼ(L² − dᵢⱼ²)³
+            # https://github.com/Ceyron/machine-learning-and-simulation/blob/main/english/simulation_scripts/smoothed_particle_hydrodynamics_simple_python.py
 
         return w_density
 
@@ -116,6 +129,7 @@ if __name__ == '__main__':
 
     from ParticleGraph.utils import choose_boundary_values
     from ParticleGraph.config import ParticleGraphConfig
+    import torch.nn as nn
 
     device = 'cuda:0'
     try:
@@ -133,32 +147,35 @@ if __name__ == '__main__':
     dimension = config.simulation.dimension
     max_radius = config.simulation.max_radius
     min_radius = config.simulation.min_radius
-    smooth_radius  = config.training.smooth_radius
+    smooth_radius = config.simulation.smooth_radius
 
-    config.training.smooth_radius = smooth_radius
     model_density = Smooth_Particle(config=config, aggr_type='mean', bc_dpos=bc_dpos, dimension=dimension)
-    mgrid = model_density.mgrid.clone().detach()
 
+    tensors = tuple(dimension * [torch.linspace(0, 1, steps=100)])
+    mgrid = torch.stack(torch.meshgrid(*tensors), dim=-1)
+    mgrid = mgrid.reshape(-1, dimension)
+    mgrid = torch.cat((torch.ones((mgrid.shape[0], 1)), mgrid), 1)
+    mgrid = mgrid.to(device)
 
-    # for k in trange(0,len(x_list),10):
-    #
-    #     x = x_list[k].squeeze()
-    #     density = model_density(x=x, has_field=False)
-    #
-    #     fig = plt.figure(figsize=(8, 8))
-    #     plt.scatter(x[:, 2].detach().cpu().numpy(),
-    #                 x[:, 1].detach().cpu().numpy(), s=10, c=density.detach().cpu().numpy(), vmin=0, vmax=1)
-    #     plt.xlim([0,1])
-    #     plt.ylim([0,1])
-    #     plt.tight_layout()
-    #     plt.savefig(f"tmp/particle_density_{k}.png")
-    #     plt.close()
+    for k in trange(0,len(x_list),10):
+
+        x = x_list[k].squeeze()
+        density = model_density(x=x, has_field=False)
+
+        fig = plt.figure(figsize=(8, 8))
+        plt.scatter(x[:, 2].detach().cpu().numpy(),
+                    x[:, 1].detach().cpu().numpy(), s=10, c=density[:,0].detach().cpu().numpy(), vmin=0, vmax=1)
+        plt.xlim([0,1])
+        plt.ylim([0,1])
+        plt.tight_layout()
+        plt.savefig(f"tmp/particle_density_{k}.png")
+        plt.close()
 
     x = mgrid
 
     for smooth_radius in [0.1, 0.2, 0.3, 0.4, 0.5]:
 
-        config.training.smooth_radius = smooth_radius
+        config.simulation.smooth_radius = smooth_radius
         model_density = Smooth_Particle(config=config, aggr_type='mean', bc_dpos=bc_dpos, dimension=dimension)
 
         density = model_density(x=x, has_field=False)

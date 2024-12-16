@@ -91,7 +91,6 @@ def data_train_particle(config, config_file, erase, best_model, device):
 
     dimension = simulation_config.dimension
     n_epochs = train_config.n_epochs
-    train_norm = train_config.train_norm
     max_radius = simulation_config.max_radius
     min_radius = simulation_config.min_radius
     n_particles = simulation_config.n_particles
@@ -105,6 +104,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
     translation_augmentation = train_config.translation_augmentation
     data_augmentation_loop = train_config.data_augmentation_loop
     recursive_loop = train_config.recursive_loop
+
 
     target_batch_size = train_config.batch_size
     replace_with_cluster = 'replace' in train_config.sparsity
@@ -262,11 +262,6 @@ def data_train_particle(config, config_file, erase, best_model, device):
                     displacement = displacement.repeat(x.shape[0], 1)
                     x[:, 1:dimension + 1] = x[:, 1:dimension + 1] + displacement
 
-                if batch == 0:
-                    data_id = torch.ones((x.shape[0],1), dtype=torch.int) * run
-                else:
-                    data_id = torch.cat((data_id, torch.ones((x.shape[0],1), dtype=torch.int) * run), dim = 0)
-
                 if has_ghost:
                     x_ghost = ghosts_particles.get_pos(dataset_id=run, frame=k, bc_pos=bc_pos)
                     if ghosts_particles.boids:
@@ -316,9 +311,13 @@ def data_train_particle(config, config_file, erase, best_model, device):
                     y[:, 1] = new_y
 
                 if batch == 0:
+                    data_id = torch.ones((x.shape[0],1), dtype=torch.int) * run
                     y_batch = y
+                    x_batch = x.clone().detach()
                 else:
+                    data_id = torch.cat((data_id, torch.ones((x.shape[0],1), dtype=torch.int) * run), dim = 0)
                     y_batch = torch.cat((y_batch, y), dim=0)
+                    x_batch = torch.cat((x_batch, x.clone().detach()), dim=0)
 
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
@@ -326,7 +325,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
                 optimizer_ghost_particles.zero_grad()
 
             for batch in batch_loader:
-               pred = model(batch, data_id=data_id, training=True, vnorm=vnorm, phi=phi)
+                pred = model(batch, data_id=data_id, training=True, vnorm=vnorm, phi=phi)
 
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)

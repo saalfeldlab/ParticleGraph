@@ -1,5 +1,5 @@
 description: 'Gravity model with 16 different particle types'
-dataset: 'gravity_16_bis'
+dataset: 'gravity_16'
 
 simulation:
     params: [[-1]]
@@ -25,10 +25,12 @@ graph_model:
     aggr_type: 'add'
     embedding_dim: 2
     update_type: 'none'
+    integration: 'Runge-Kutta'
 
 plotting:
     colormap: 'tab20'
     arrow_length: 1
+    ylim: [ 0, 0.5E6 ]
 
 training:
     n_epochs: 20

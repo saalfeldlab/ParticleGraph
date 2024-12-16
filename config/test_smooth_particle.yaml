@@ -15,6 +15,10 @@ simulation:
   boundary: 'no'
   start_frame: 0
 
+  smooth_particle: True
+  smooth_radius: 0.025
+  smooth_function: 'mlp'
+
 graph_model:
   particle_model_name: 'PDE_F1'
   mesh_model_name: ''
@@ -45,10 +49,6 @@ training:
   n_runs: 2
   time_window: 0
   time_window_noise: 0
-
-  smooth_particle: True
-  smooth_radius: 0.025
-  smooth_function: 'triangular'
 
   recursive_loop: 0
   sparsity: 'none'

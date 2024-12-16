@@ -52,8 +52,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         self.delta_t = simulation_config.delta_t
         self.prediction = model_config.prediction
         self.time_window = train_config.time_window
-        self.recursive_loop = train_config.recursive_loop
-        self.recursive_param = train_config.recursive_param
+        self.integration = model_config.integration
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device)
@@ -96,27 +95,16 @@ class Interaction_Particle(pyg.nn.MessagePassing):
 
         pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
 
-        if self.recursive_loop>0:
+        if self.integration:
 
-            pred_= pred
-            for k in range(self.recursive_loop):
-                if self.prediction == '2nd_derivative':
-                    new_d_pos = d_pos[:, 0:self.dimension:] + self.delta_t * pred_[:,-self.dimension:] * self.ynorm
-                else:
-                    new_d_pos = pred * self.vnorm
-                new_pos = pos[:, 0:self.dimension:] + self.delta_t * new_d_pos
-                if self.time_window == 0:
-                    d_pos = new_d_pos
-                    pos = new_pos
-                else:
-                    d_pos = torch.cat((new_d_pos, d_pos[:,0:-2]), dim=1)
-                    pos = torch.cat((new_pos, pos[:,0:-2]), dim=1)
-                pred_ = torch.cat((pred_, self.recursive_param[k] * self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)), dim=1)
-            return pred_
+            if self.prediction == '2nd_derivative':
+                d_pos = d_pos + self.delta_t/2 * pred * self.ynorm
+            else:
+                d_pos = pred * self.vnorm
+            pos = pos + self.delta_t/2 * d_pos
+            pred = (pred + self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)) / 2
 
-        else:
-
-            return pred
+        return pred
 
     def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j, field_j):
 
