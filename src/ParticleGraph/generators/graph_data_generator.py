@@ -43,7 +43,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
 
     if (os.path.isfile(f'./graphs_data/graphs_{dataset_name}/x_list_0.npy')) | (os.path.isfile(f'./graphs_data/graphs_{dataset_name}/x_list_0.pt')):
         print('data already generated')
-        # return
+        return
 
     if has_smooth_particle:
         data_generate_smooth_particle(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
