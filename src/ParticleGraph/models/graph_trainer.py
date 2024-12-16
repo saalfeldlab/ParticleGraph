@@ -132,9 +132,12 @@ def data_train_particle(config, config_file, erase, best_model, device):
 
     run_lengths = list()
     time.sleep(0.5)
+    n_particles_max = 0
     for run in trange(n_runs):
         x = np.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy')
         y = np.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy')
+        if x[0].shape[0] > n_particles_max:
+            n_particles_max = x[0].shape[0]
         x_list.append(x)
         y_list.append(y)
         if edge_saved:

@@ -80,15 +80,13 @@ class Interaction_Falling_Water_Wall(pyg.nn.MessagePassing):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
-        boundary = x[0][:,7:]
-
         if self.time_window == 0:
             particle_id = x[:, 0:1]
             embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
             pos = x[:, 1:self.dimension+1]
             d_pos = x[:, self.dimension+1:1+2*self.dimension]
 
-            pred = self.propagate(edge_index,pos=pos, embedding=embedding, boundary=boundary)
+            pred = self.propagate(edge_index,pos=pos, embedding=embedding)
 
         else:
             particle_id = x[0][:, 0:1]
@@ -108,18 +106,18 @@ class Interaction_Falling_Water_Wall(pyg.nn.MessagePassing):
                 d_noise = (noise[:, :-2] - noise[:, 2:]) / self.delta_t
                 d_pos = d_pos + d_noise
 
-            pred = self.propagate(edge_index, pos=pos, embedding=embedding, boundary=boundary)
+            pred = self.propagate(edge_index, pos=pos, embedding=embedding)
 
             if self.update_type == 'mlp':
                 pos_p = (pos - pos[:, 0:2].repeat(1, 4))[:, 2:]
-                out = self.lin_phi(torch.cat((pred, embedding, boundary, pos_p), dim=-1))
+                out = self.lin_phi(torch.cat((pred, embedding, pos_p), dim=-1))
             else:
                 out = pred
 
             return out
 
 
-    def message(self, edge_index_i, edge_index_j, pos_i, pos_j, embedding_i, embedding_j, boundary_i):
+    def message(self, edge_index_i, edge_index_j, pos_i, pos_j, embedding_i, embedding_j):
         # distance normalized by the max radius
 
         # delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
@@ -129,7 +127,7 @@ class Interaction_Falling_Water_Wall(pyg.nn.MessagePassing):
         pos_i_p = (pos_i - pos_i[:, 0:2].repeat(1, 4))[:, 2:]
         pos_j_p = (pos_j - pos_i[:, 0:2].repeat(1, 4))
 
-        in_features = torch.cat((boundary_i, pos_i_p, pos_j_p, embedding_i, embedding_j), dim=-1)
+        in_features = torch.cat((pos_i_p, pos_j_p, embedding_i, embedding_j), dim=-1)
 
         out = self.lin_edge(in_features)
 
