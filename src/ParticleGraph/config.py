@@ -81,6 +81,7 @@ class SimulationConfig(BaseModel):
     fluo_path: str = ''
     fluo_method: str = 'padding'
 
+
 class GraphModelConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     particle_model_name: str = ''

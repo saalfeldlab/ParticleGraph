@@ -46,12 +46,6 @@ training:
   time_window: 4
   time_window_noise: 0
 
-
-  smooth_particle: True
-  smooth_radius: 0.025
-  smooth_function: 'triangular'
-
-  recursive_loop: 0
   sparsity: 'none'
   sparsity_freq: 3
   cluster_method: 'kmeans_auto_embedding'

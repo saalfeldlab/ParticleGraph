@@ -43,19 +43,19 @@ if __name__ == '__main__':
     if args.option:
         print(f"Options: {args.option}")
     if args.option!=None:
-        action = args.option[0]
+        task = args.option[0]
         config_list = [args.option[1]]
         if len(args.option) > 2:
             best_model = args.option[2]
         else:
             best_model = None
     else:
-        action = 'test'
+        task = 'test'
         best_model = None
 
         # config_list = ['rat_city_c2']
         # config_list = ['cell_PSC_5']
-        config_list = ['falling_water_ramp_x1','falling_water_ramp_x2','falling_water_ramp_x3']
+        config_list = ['falling_water_ramp_x1', 'falling_water_ramp_x2','falling_water_ramp_x3']
         # config_list = ['gravity_16_RK']
 
 
@@ -66,11 +66,11 @@ if __name__ == '__main__':
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         device = set_device(config.training.device)
         print(f'device {device}')
-        if 'generate' in action:
+        if 'generate' in task:
             data_generate(config, device=device, visualize=True, run_vizualized=1, style='black color', alpha=1, erase=False, bSave=True, step=10)  #config.simulation.n_frames // 100)
-        if 'train' in action:
+        if 'train' in task:
             data_train(config=config, config_file=config_file, erase=True, best_model=best_model, device=device)
-        if 'test' in action:
+        if 'test' in task:
             data_test(config=config, config_file=config_file, visualize=True, style='black color arrow speed acc_learned boundary', verbose=False, best_model='best', run=2, plot_data=False,
                       test_simulation=False, sample_embedding=False, device=device, fixed=True, bounce=True, step=4) # config.simulation.n_frames // 200, )  arrow speed acc_learned   arrow speed acc_true
 
