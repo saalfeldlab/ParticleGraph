@@ -55,7 +55,7 @@ if __name__ == '__main__':
 
         # config_list = ['rat_city_c2']
         # config_list = ['cell_PSC_5']
-        config_list = ['falling_water_ramp_x1', 'falling_water_ramp_x2','falling_water_ramp_x3']
+        config_list = ['falling_water_ramp_x3'] #, 'falling_water_ramp_x2','falling_water_ramp_x3']
         # config_list = ['gravity_16_RK']
 
 
@@ -71,7 +71,7 @@ if __name__ == '__main__':
         if 'train' in task:
             data_train(config=config, config_file=config_file, erase=True, best_model=best_model, device=device)
         if 'test' in task:
-            data_test(config=config, config_file=config_file, visualize=True, style='black color arrow speed acc_learned boundary', verbose=False, best_model='best', run=2, plot_data=False,
+            data_test(config=config, config_file=config_file, visualize=True, style='black color arrow speed acc_learned boundary', verbose=False, best_model='best', run=2, plot_data=True,
                       test_simulation=False, sample_embedding=False, device=device, fixed=True, bounce=True, step=4) # config.simulation.n_frames // 200, )  arrow speed acc_learned   arrow speed acc_true
 
 

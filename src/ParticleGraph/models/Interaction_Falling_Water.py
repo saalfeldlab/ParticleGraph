@@ -57,11 +57,7 @@ class Interaction_Falling_Water(pyg.nn.MessagePassing):
         self.n_ghosts = int(train_config.n_ghosts)
         self.dimension = dimension
         self.time_window = train_config.time_window
-        self.recursive_loop = train_config.recursive_loop
-        self.recursive_param = train_config.recursive_param
         self.model_density = model_density
-        self.integration = model_config.integration
-
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device)
@@ -86,15 +82,7 @@ class Interaction_Falling_Water(pyg.nn.MessagePassing):
 
         boundary = x[0][:,7:]
 
-        if self.integration == 'Runge-Kutta':
-            if self.prediction == '2nd_derivative':
-                d_pos = d_pos + self.delta_t/2 * pred * self.ynorm
-            else:
-                d_pos = pred * self.vnorm
-            pos = pos + self.delta_t/2 * d_pos
-            pred = (pred + self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)) / 2
-
-        elif self.time_window == 0:
+        if self.time_window == 0:
             particle_id = x[:, 0:1]
             embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
             pos = x[:, 1:self.dimension+1]
@@ -128,11 +116,7 @@ class Interaction_Falling_Water(pyg.nn.MessagePassing):
             else:
                 out = pred
 
-            # if training & (self.time_window_noise > 0):
-            #     pred = pred - (noise[:, 2:4] - noise[:, 0:2]) / self.delta_t**2
-
             return out
-
 
 
     def message(self, edge_index_i, edge_index_j, pos_i, pos_j, embedding_i, embedding_j, boundary_i):
