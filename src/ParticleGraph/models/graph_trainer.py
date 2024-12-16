@@ -87,7 +87,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
     train_config = config.training
     model_config = config.graph_model
 
-    print(f'Training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+    print(f'training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
     dimension = simulation_config.dimension
     n_epochs = train_config.n_epochs
@@ -104,8 +104,6 @@ def data_train_particle(config, config_file, erase, best_model, device):
     translation_augmentation = train_config.translation_augmentation
     data_augmentation_loop = train_config.data_augmentation_loop
     recursive_loop = train_config.recursive_loop
-
-
     target_batch_size = train_config.batch_size
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
@@ -125,7 +123,6 @@ def data_train_particle(config, config_file, erase, best_model, device):
     print(f'graph files N: {n_runs}')
     logger.info(f'graph files N: {n_runs}')
     time.sleep(0.5)
-
     print('load data ...')
     x_list = []
     y_list = []
@@ -199,12 +196,10 @@ def data_train_particle(config, config_file, erase, best_model, device):
 
     print(f'network: {net}')
     print(f'initial batch_size: {batch_size}')
-    print('')
     logger.info(f'network: {net}')
     logger.info(f'N epochs: {n_epochs}')
     logger.info(f'initial batch_size: {batch_size}')
 
-    print('Update variables ...')
     x = torch.tensor(x_list[1][0], dtype=torch.float32, device=device)
     index_particles = get_index_particles(x, n_particle_types, dimension)
     type_list = get_type_list(x, dimension)
@@ -219,7 +214,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
         mask_ghost = np.argwhere(mask_ghost == 1)
         mask_ghost = mask_ghost[:, 0].astype(int)
 
-    print("Start training ...")
+    print("start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     Niter = n_frames * data_augmentation_loop // batch_size
@@ -493,9 +488,6 @@ def data_train_particle(config, config_file, erase, best_model, device):
                                     in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                                              rr[:, None] / max_radius, embedding_, embedding_), dim=1)
                                 case 'PDE_K':
-                                    in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                                             rr[:, None] / max_radius, embedding_, embedding_), dim=1)
-                                case 'PDE_K1':
                                     in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                                              rr[:, None] / max_radius), dim=1)
                             pred.append(model.lin_edge(in_features.float()))

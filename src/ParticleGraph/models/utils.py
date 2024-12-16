@@ -81,8 +81,6 @@ def get_in_features(rr, embedding_, config_model, max_radius):
         case 'PDE_N5':
             in_features = torch.cat((rr[:, None], embedding_, embedding_), dim=1)
         case 'PDE_K':
-            in_features = torch.cat((0 * rr[:, None], rr[:, None] / max_radius, embedding_, embedding_), dim=1)
-        case 'PDE_K1':
             in_features = torch.cat((0 * rr[:, None], rr[:, None] / max_radius), dim=1)
         case 'PDE_F'| 'PDE_F1' | 'PDE_F2' | 'PDE_F3':
             in_features = torch.cat((0 * rr[:, None], rr[:, None] / max_radius, rr[:, None] / max_radius, embedding_, embedding_), dim=-1)
@@ -461,7 +459,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                 plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/func_{dataset_name}_{epoch}_{N}.tif", dpi=87)
                 plt.close()
 
-            case 'PDE_K' | 'PDE_K1':
+            case 'PDE_K':
                 fig = plt.figure(figsize=(12, 12))
                 if axis:
                     ax = fig.add_subplot(1, 1, 1)
@@ -493,7 +491,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                 plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/{dataset_name}_function_{epoch}_{N}.tif", dpi=87)
                 plt.close()
 
-    if model_config.particle_model_name =='PDE_K1':
+    if model_config.particle_model_name =='PDE_K':
 
         if len(model.connection_matrix)>5:
             i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
@@ -996,7 +994,7 @@ def choose_training_model(model_config, device):
             model.edges = []
         case 'PDE_Agents' | 'PDE_Agents_A' | 'PDE_Agents_B' | 'PDE_Agents_C':
             model = Interaction_Agent(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
-        case 'PDE_A' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_mass' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G' | 'PDE_K' | 'PDE_K1':
+        case 'PDE_A' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_mass' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G' | 'PDE_K':
             model = Interaction_Particle(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             model.edges = []
             if 'PDE_K' in model_name:

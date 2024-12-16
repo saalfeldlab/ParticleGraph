@@ -129,7 +129,7 @@ def choose_model(config=[], W=[], phi=[], device=[]):
                           prediction=config.graph_model.prediction, bc_dpos=bc_dpos)
         case 'PDE_F':
             model = PDE_F(aggr_type=aggr_type, dimension=dimension, delta_t=delta_t)
-        case 'PDE_K' | 'PDE_K1':
+        case 'PDE_K':
             p = params
             edges = np.random.choice(p[0], size=(n_particles, n_particles), p=p[1])
             edges = np.tril(edges) + np.tril(edges, -1).T

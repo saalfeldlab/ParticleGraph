@@ -50,13 +50,13 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        action = 'train'
+        action = 'test'
         best_model = None
 
         # config_list = ['rat_city_c2']
         # config_list = ['cell_PSC_5']
-        # config_list = ['falling_water_1']
-        config_list = ['gravity_16_RK']
+        config_list = ['falling_water_ramp_x1','falling_water_ramp_x2','falling_water_ramp_x3']
+        # config_list = ['gravity_16_RK']
 
 
     for config_file in config_list:

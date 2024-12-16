@@ -52,7 +52,6 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         self.delta_t = simulation_config.delta_t
         self.prediction = model_config.prediction
         self.time_window = train_config.time_window
-        self.integration = model_config.integration
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device)
@@ -64,7 +63,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         #         torch.tensor(np.random.randn(self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim), device=self.device,
         #                      requires_grad=True, dtype=torch.float32))
 
-        if self.model =='PDE_K1':
+        if self.model =='PDE_K':
             self.vals = nn.Parameter(
                 torch.ones((self.n_dataset, int(self.n_particles * (self.n_particles + 1) / 2)), device=self.device,
                             requires_grad=True, dtype=torch.float32))
@@ -94,15 +93,6 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         embedding = self.a[self.data_id.clone().detach(), to_numpy(particle_id), :].squeeze()
 
         pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
-
-        if self.integration:
-
-            if self.prediction == '2nd_derivative':
-                d_pos = d_pos + self.delta_t/2 * pred * self.ynorm
-            else:
-                d_pos = pred * self.vnorm
-            pos = pos + self.delta_t/2 * d_pos
-            pred = (pred + self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)) / 2
 
         return pred
 
