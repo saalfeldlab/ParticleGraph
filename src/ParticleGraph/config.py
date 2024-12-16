@@ -24,7 +24,6 @@ class SimulationConfig(BaseModel):
 
     smooth_particle: bool = False
     smooth_radius: float = 0.1
-    smooth_function: str = 'Gaussian'
 
     excitation_value_map: Optional[str] = None
     excitation: str='none'

@@ -44,7 +44,7 @@ class Smooth_Particle(pyg.nn.MessagePassing):
 
         self.K = nn.Parameter(torch.tensor([1.0], device=self.device, requires_grad=True, dtype=torch.float32))
         self.rho_0 = nn.Parameter(torch.tensor([0.5], device=self.device, requires_grad=True, dtype=torch.float32))
-        self.lin_rho = MLP(input_size=1, output_size=1, nlayers=5, hidden_size=128, device=self.device)
+        self.lin_rho = MLP(input_size=2, output_size=1, nlayers=5, hidden_size=128, device=self.device)
 
 
     def forward(self, x=[], has_field=False):
@@ -176,11 +176,39 @@ if __name__ == '__main__':
     model_density = Smooth_Particle(config=config, aggr_type='mean', bc_dpos=bc_dpos, dimension=dimension)
     model_density.train()
 
-    tensors = tuple(dimension * [torch.linspace(0, 1, steps=100)])
+    tensors = tuple(dimension * [torch.linspace(-1, 1, steps=200)])
     mgrid = torch.stack(torch.meshgrid(*tensors), dim=-1)
     mgrid = mgrid.reshape(-1, dimension)
     mgrid = torch.cat((torch.ones((mgrid.shape[0], 1)), mgrid), 1)
     mgrid = mgrid.to(device)
+
+    coords = mgrid[:, 1:3].clone().detach().requires_grad_(True)
+
+    y = torch.exp(-(coords[:,0] ** 2 + coords[:,1] ** 2) / 0.25)
+    y = y.clone().detach()
+    y = y[:,None]
+
+    # Initialize the model, loss function, and optimizer
+    model = model_density.lin_rho
+    criterion = nn.MSELoss()
+    optimizer = optim.Adam(model.parameters(), lr=1e-3)
+
+    num_epochs = 1000
+    for epoch in trange(num_epochs):
+        model.train()
+        optimizer.zero_grad()
+        output = model(coords)
+        # model_output = gradient(output, coords)[:,0]
+        loss = criterion(output, y)
+        loss.backward()
+        optimizer.step()
+
+    fig = plt.figure(figsize=(8, 8))
+    plt.scatter(coords[:, 0].detach().cpu().numpy(), coords[:, 1].detach().cpu().numpy(), c=y.cpu().numpy(), label='True Function')
+
+    fig = plt.figure(figsize=(8, 8))
+    plt.scatter(coords[:, 0].detach().cpu().numpy(), coords[:, 1].detach().cpu().numpy(), c=output.detach().cpu().numpy(), label='True Function')
+
 
     # Create the dataset
 
