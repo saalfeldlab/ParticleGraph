@@ -160,6 +160,7 @@ def tv2D(params):
     tvloss = torch.sqrt(sx.cuda() ** 2 + sy.cuda() ** 2 + 1e-8).sum()
     return tvloss / nb_voxel
 
+
 def compute_angle(tensor1, tensor2):
     # Ensure the tensors are 2D
     assert tensor1.shape == tensor2.shape == (2,), "Tensors must be 2D vectors"
@@ -204,6 +205,7 @@ def compute_signed_angle(tensor1, tensor2):
     # Return the signed angle
     return angle * sign * 180 / np.pi
 
+
 def get_r2_numpy_corrcoef(x, y):
     return np.corrcoef(x, y)[0, 1] ** 2
 
@@ -222,7 +224,7 @@ class CustomColorMap:
 
     def color(self, index):
 
-        if ('PDE_F' in self.model_name):
+        if ('PDE_F' in self.model_name) | ('PDE_WF' in self.model_name):
             match index:
                 case 0:
                     color = (0.75, 0.75, 0.75)
