@@ -103,10 +103,8 @@ class Interaction_Falling_Water(pyg.nn.MessagePassing):
             # d_pos = torch.reshape(d_pos, (d_pos.shape[0], d_pos.shape[1] * d_pos.shape[2]))
 
             if training & (self.time_window_noise > 0):
-                noise = torch.randn((pos.shape[0], pos.shape[1] + 2), dtype=torch.float32, device=self.device) * self.time_window_noise
-                pos = pos + noise[:, :-self.dimension]
-                d_noise = (noise[:, :-2] - noise[:, 2:]) / self.delta_t
-                d_pos = d_pos + d_noise
+                noise = torch.randn_like(pos) * self.time_window_noise
+                pos = pos + noise
 
             pred = self.propagate(edge_index, pos=pos, embedding=embedding, boundary=boundary)
 
