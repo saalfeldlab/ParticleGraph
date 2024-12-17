@@ -42,9 +42,9 @@ plotting:
 
 training:
   n_epochs: 20
-  batch_size: 32
+  batch_size: 1
   small_init_batch_size: False
-  n_runs: 500
+  n_runs: 2
   time_window: 4
   time_window_noise: 0
 

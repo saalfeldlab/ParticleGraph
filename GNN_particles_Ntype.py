@@ -55,7 +55,7 @@ if __name__ == '__main__':
 
         # config_list = ['rat_city_c2']
         # config_list = ['cell_PSC_5']
-        config_list = ['falling_water_ramp_x6']
+        config_list = ['falling_water_ramp_x6_s8']
         # config_list = ['arbitrary_3_field_video_bison']
 
     for config_file in config_list:

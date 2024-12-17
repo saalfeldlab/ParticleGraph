@@ -4066,7 +4066,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
             if sub_sampling > 1:
                 # predict position, does not work with rotation_augmentation
-                x[:, 1:dimension + 1] = bc_pos(y[(time_step-1)*dimension:time_step*dimension])
+                x[:, 1:dimension + 1] = bc_pos(y[:,(time_step-1)*dimension:time_step*dimension])
                 loss = (x[:, 1:dimension + 1] - x0_next[:, 1:dimension + 1]).norm(2)
                 pred_err_list.append(to_numpy(torch.sqrt(loss)))
             else:
