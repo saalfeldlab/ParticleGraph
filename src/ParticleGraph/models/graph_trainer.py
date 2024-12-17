@@ -338,12 +338,11 @@ def data_train_particle(config, config_file, erase, best_model, device):
 
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
+            elif sub_sampling>1:
+                # predict position, does not work with rotation_augmentation
+                loss = (pred[:,0:dimension] - y_batch).norm(2) * 1E5
             else:
-                if sub_sampling>1:
-                    # predict position, does not work with rotation_augmentation
-                    loss = (pred[:,0:dimension] - y_batch).norm(2)
-                else:
-                    loss = (pred - y_batch).norm(2)
+                loss = (pred - y_batch).norm(2)
 
             loss.backward()
             optimizer.step()
