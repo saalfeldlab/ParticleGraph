@@ -52,6 +52,8 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         self.delta_t = simulation_config.delta_t
         self.prediction = model_config.prediction
         self.time_window = train_config.time_window
+        self.sub_sampling = simulation_config.sub_sampling
+        self.prediction = model_config.prediction
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device)
@@ -92,9 +94,26 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         particle_id = x[:, 0:1]
         embedding = self.a[self.data_id.clone().detach(), to_numpy(particle_id), :].squeeze()
 
-        pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
+        out = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
 
-        return pred
+        if self.sub_sampling>1:
+
+            pred = out
+
+            for k in range(self.sub_sampling):
+                if self.prediction == '2nd_derivative':
+                    y = pred * self.ynorm * self.delta_t / self.sub_sampling
+                    d_pos = d_pos + y  # speed update
+                else:
+                    y = pred * self.vnorm
+                    d_pos = y
+                pos = pos + d_pos * self.delta_t / self.sub_sampling
+
+                out = pos
+
+                pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
+
+        return out
 
     def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j, field_j):
 

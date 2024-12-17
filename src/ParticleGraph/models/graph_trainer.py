@@ -44,7 +44,11 @@ def data_train(config=None, config_file=None, erase=False, best_model=None, devi
     has_state = (config.simulation.state_type != 'discrete')
     has_WBI = 'WBI' in config.dataset
     has_mouse_city = ('mouse_city' in config.dataset) | ('rat_city' in config.dataset)
-    has_time_window = config.training.time_window > 0
+    sub_sampling = config.simulation.sub_sampling
+    rotation_augmentation = config.training.rotation_augmentation
+
+    if rotation_augmentation & (sub_sampling > 1):
+        assert(False), 'rotation_augmentation does not work with sub_sampling > 1'
 
     dataset_name = config.dataset
     print('')
@@ -4054,13 +4058,15 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             if plot_data:
                 y = y0.clone().detach() / ynorm
 
-            loss = (pred [:,0:dimension] * ynorm - y0).norm(2)
-            pred_err_list.append(to_numpy(torch.sqrt(loss)))
 
             if sub_sampling > 1:
                 # predict position, does not work with rotation_augmentation
                 x[:, 1:dimension + 1] = bc_pos(y)
+                loss = (x[:, 1:dimension + 1] - x0_next[:, 1:dimension + 1]).norm(2)
+                pred_err_list.append(to_numpy(torch.sqrt(loss)))
             else:
+                loss = (pred[:, 0:dimension] * ynorm - y0).norm(2)
+                pred_err_list.append(to_numpy(torch.sqrt(loss)))
                 if model_config.prediction == '2nd_derivative':
                     y = y * ynorm * delta_t
                     x[:, dimension + 1:2 * dimension + 1] = x[:, dimension + 1:2 * dimension + 1] + y  # speed update
@@ -4071,7 +4077,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     else:
                         x[:, dimension + 1:2 * dimension + 1] = y
                 x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1] + x[:, dimension + 1:2 * dimension + 1] * delta_t)  # position update
-
 
             if bounce:
 
@@ -4093,9 +4098,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 #     x[bouncing_pos, 4] = - 0.6 * x[bouncing_pos, 4]
 
             if time_window:
-                fixed_pos = torch.argwhere(x[:,5]!=0)
-                x_list[0][it+1,fixed_pos.squeeze(),1:2 * dimension + 1] = x[fixed_pos.squeeze(), 1:2 * dimension + 1].clone().detach()
-
+                moving_pos = torch.argwhere(x[:,5]!=0)
+                x_list[0][it+1,moving_pos.squeeze(),1:2 * dimension + 1] = x[moving_pos.squeeze(), 1:2 * dimension + 1].clone().detach()
             if fixed:
                 fixed_pos = torch.argwhere(x[:,5]==0)
                 x[fixed_pos.squeeze(), 1:2 * dimension + 1] = x_list[0][it+1,fixed_pos.squeeze(),1:2 * dimension + 1].clone().detach()
