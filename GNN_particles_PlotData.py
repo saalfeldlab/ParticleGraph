@@ -358,6 +358,8 @@ def plot_gravity_solar_system(config_file, epoch_list, log_dir, logger, device):
     type_list = get_type_list(x, dimension)
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
+    model.ynorm = ynorm
+    model.vnorm = vnorm
 
     net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_2.pt"
     state_dict = torch.load(net, map_location=device)
@@ -393,8 +395,7 @@ def plot_gravity_solar_system(config_file, epoch_list, log_dir, logger, device):
     dataset = data.Data(x=x, edge_index=edge_index)
 
     with torch.no_grad():
-        y = model(dataset, data_id=1, training=False, vnorm=vnorm,
-                  phi=torch.zeros(1, device=device))  # acceleration estimation
+        y = model(dataset, data_id=1, training=False, phi=torch.zeros(1, device=device))  # acceleration estimation
     y = y * ynorm
 
     proj_interaction, new_labels, n_clusters = plot_umap('b)', func_list, log_dir, 500, index_particles,

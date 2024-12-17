@@ -74,7 +74,7 @@ class Interaction_Falling_Water_Wall(pyg.nn.MessagePassing):
                 torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
                              requires_grad=True, dtype=torch.float32))
 
-    def forward(self, data=[], data_id=[], training=[], vnorm=[], phi=[], has_field=False):
+    def forward(self, data=[], data_id=[], training=[], phi=[], has_field=False):
 
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)

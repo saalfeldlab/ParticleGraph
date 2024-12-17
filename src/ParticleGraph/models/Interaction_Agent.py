@@ -73,10 +73,9 @@ class Interaction_Agent(pyg.nn.MessagePassing):
             self.phi = MLP(input_size=6, output_size=2, nlayers=5, hidden_size=64, device=self.device)
 
 
-    def forward(self, data=[], data_id=[], training=[], vnorm=[], phi=[], frame=[], has_field=False):
+    def forward(self, data=[], data_id=[], training=[], phi=[], frame=[], has_field=False):
 
         self.data_id = data_id
-        self.vnorm = vnorm
         self.cos_phi = torch.cos(phi)
         self.sin_phi = torch.sin(phi)
         self.training = training

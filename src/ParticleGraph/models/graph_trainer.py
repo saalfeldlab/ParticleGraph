@@ -334,7 +334,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
                 optimizer_ghost_particles.zero_grad()
 
             for batch in batch_loader:
-                pred = model(batch, data_id=data_id, training=True, vnorm=vnorm, phi=phi)
+                pred = model(batch, data_id=data_id, training=True, phi=phi)
 
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
@@ -826,6 +826,8 @@ def data_train_cell(config, config_file, erase, best_model, device):
 
     print('create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
+    model.ynorm = ynorm
+    model.vnorm = vnorm
     if best_model != None:
         net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{best_model}.pt"
         state_dict = torch.load(net, map_location=device)
@@ -836,6 +838,7 @@ def data_train_cell(config, config_file, erase, best_model, device):
     else:
         start_epoch = 0
         net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs.pt"
+
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -912,7 +915,7 @@ def data_train_cell(config, config_file, erase, best_model, device):
             optimizer.zero_grad()
 
             for i, batch in enumerate(batch_loader):
-                pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi)
+                pred = model(batch, data_id=run, training=True, phi=phi)
 
             if rotation_augmentation:
                 new_x = cos_phi * pred[:, 0] - sin_phi * pred[:, 1]
@@ -1023,7 +1026,7 @@ def data_train_cell(config, config_file, erase, best_model, device):
                 edges = torch.tensor(edges, dtype=torch.int64, device=device)
                 dataset = data.Data(x=x[:, :], edge_index=edges)
 
-                pred = model(dataset, training=True, vnorm=vnorm, phi=torch.zeros(1, device=device))
+                pred = model(dataset, training=True, phi=torch.zeros(1, device=device))
 
                 x_next = x_list[1][k + 1]
                 x_pos_next = x_next[:, 1:3].clone().detach()
@@ -1205,6 +1208,8 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
+    model.ynorm = ynorm
+    model.vnorm = vnorm
     if best_model != None:
         net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{best_model}.pt"
         state_dict = torch.load(net, map_location=device)
@@ -1275,7 +1280,7 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
                 edges = torch.tensor(edges, dtype=torch.int64, device=device)
                 dataset = data.Data(x=x[:, :], edge_index=edges)
 
-                pred = model(dataset, data_id=run, training=True, vnorm=vnorm, phi=phi, has_field=False)
+                pred = model(dataset, data_id=run, training=True, phi=phi, has_field=False)
 
                 if rotation_augmentation:
                     new_x = cos_phi * pred[:, 0] - sin_phi * pred[:, 1]
@@ -1841,6 +1846,8 @@ def data_train_particle_field(config, config_file, erase, best_model, device):
         logger.info(f'best_model: {best_model}  start_epoch: {start_epoch}')
     else:
         start_epoch = 0
+    model.ynorm = ynorm
+    model.vnorm = vnorm
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -2019,9 +2026,9 @@ def data_train_particle_field(config, config_file, erase, best_model, device):
                 optimizer_ghost_particles.zero_grad()
 
             for batch in batch_loader_f_p:
-                pred_f_p = model(batch, data_id = run, training=True, vnorm=vnorm, phi=phi, has_field=True)
+                pred_f_p = model(batch, data_id = run, training=True, phi=phi, has_field=True)
             for batch in batch_loader_p_p:
-                pred_p_p = model(batch, data_id = run, training=True, vnorm=vnorm, phi=phi, has_field=False)
+                pred_p_p = model(batch, data_id = run, training=True, phi=phi, has_field=False)
 
             pred_f_p = pred_f_p[f_p_mask]
 
@@ -3363,7 +3370,7 @@ def data_train_agents(config, config_file, erase, best_model, device):
                 optimizer_ghost_particles.zero_grad()
 
             for batch in batch_loader:
-                pred = model(batch, data_id=0, training=True, vnorm=vnorm, phi=phi, frame=k)
+                pred = model(batch, data_id=0, training=True, phi=phi, frame=k)
 
             loss = (pred - y_batch).norm(2)
 
@@ -3999,9 +4006,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                                     field=x_particle_field[:, 6:7])
 
             with torch.no_grad():
-                y0 = model(dataset_p_p, data_id=1, training=False, vnorm=vnorm, phi=torch.zeros(1, device=device),
+                y0 = model(dataset_p_p, data_id=1, training=False, phi=torch.zeros(1, device=device),
                            has_field=False)
-                y1 = model_f_p(dataset_f_p, data_id=1, training=False, vnorm=vnorm, phi=torch.zeros(1, device=device),
+                y1 = model_f_p(dataset_f_p, data_id=1, training=False, phi=torch.zeros(1, device=device),
                                has_field=True)[n_nodes:]
                 y = y0 + y1
 
@@ -4049,7 +4056,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     y = y0 / ynorm
                 else:
                     with torch.no_grad():
-                        pred = model(dataset, data_id=data_id, training=False, vnorm=vnorm, phi=torch.zeros(1, device=device))
+                        pred = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device))
                         y = pred[:,0:dimension]
 
                 if has_ghost:
@@ -4057,7 +4064,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
             if plot_data:
                 y = y0.clone().detach() / ynorm
-
 
             if sub_sampling > 1:
                 # predict position, does not work with rotation_augmentation

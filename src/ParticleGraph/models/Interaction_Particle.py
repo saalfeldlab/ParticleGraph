@@ -71,10 +71,9 @@ class Interaction_Particle(pyg.nn.MessagePassing):
                             requires_grad=True, dtype=torch.float32))
 
 
-    def forward(self, data=[], data_id=[], training=[], vnorm=[], phi=[], has_field=False, frame=[]):
+    def forward(self, data=[], data_id=[], training=[], phi=[], has_field=False, frame=[]):
 
         self.data_id = data_id
-        self.vnorm = vnorm
         self.cos_phi = torch.cos(phi)
         self.sin_phi = torch.sin(phi)
         self.training = training

@@ -74,11 +74,9 @@ class Interaction_Mouse_Field(pyg.nn.MessagePassing):
             self.lin_update = MLP(input_size=self.output_size + self.embedding_dim + 2, output_size=self.output_size,
                                   nlayers=self.n_layers_update, hidden_size=self.hidden_dim_update, device=self.device)
 
-    def forward(self, data=[], data_id=[], training=[], vnorm=[], phi=[], has_field=False):
-
+    def forward(self, data=[], data_id=[], training=[], phi=[], has_field=False):
 
         self.data_id = data_id
-        self.vnorm = vnorm
         self.cos_phi = torch.cos(phi)
         self.sin_phi = torch.sin(phi)
         self.has_field = has_field

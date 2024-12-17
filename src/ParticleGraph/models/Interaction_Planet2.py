@@ -78,7 +78,6 @@ class Interaction_Planet2(pyg.nn.MessagePassing):
 
 
 
-
     def forward(self, data=[], data_id=[]):
 
 

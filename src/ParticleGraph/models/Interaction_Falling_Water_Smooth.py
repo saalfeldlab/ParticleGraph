@@ -98,7 +98,7 @@ class Interaction_Falling_Water_Smooth(pyg.nn.MessagePassing):
 
 
 
-    def forward(self, data=[], data_id=[], training=[], vnorm=[], phi=[], has_field=False):
+    def forward(self, data=[], data_id=[], training=[], phi=[], has_field=False):
 
         self.data_id = data_id
 

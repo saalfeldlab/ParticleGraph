@@ -1729,6 +1729,8 @@ def plot_cell_tracking(config_file, epoch_list, log_dir, logger, bLatex, device)
     index_particles = get_index_particles(x_list[0][0], n_particle_types, dimension)
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
+    model.ynorm = ynorm
+    model.vnorm = vnorm
 
     accuracy_list_=[]
     tracking_index_list_=[]
@@ -1798,7 +1800,7 @@ def plot_cell_tracking(config_file, epoch_list, log_dir, logger, bLatex, device)
                 edges = adj_t.nonzero().t().contiguous()
                 dataset = data.Data(x=x[:, :], edge_index=edges)
 
-                pred = model(dataset, training=True, vnorm=vnorm, phi=torch.zeros(1, device=device))
+                pred = model(dataset, training=True, phi=torch.zeros(1, device=device))
 
                 x_next = x_list[1][k + 1]
                 x_pos_next = x_next[:, 1:3].clone().detach()
@@ -3169,6 +3171,8 @@ def plot_boids(config_file, epoch_list, log_dir, logger, bLatex, device):
     if epoch_list[0] == 'all':
 
         model, bc_pos, bc_dpos = choose_training_model(config, device)
+        model.ynorm = ynorm
+        model.vnorm = vnorm
 
         plt.rcParams['text.usetex'] = False
         plt.rc('font', family='sans-serif')
@@ -3249,6 +3253,8 @@ def plot_boids(config_file, epoch_list, log_dir, logger, bLatex, device):
 
             model, bc_pos, bc_dpos = choose_training_model(config, device)
             model = Interaction_Particle_extract(config, device, aggr_type=config.graph_model.aggr_type, bc_dpos=bc_dpos)
+            model.ynorm = ynorm
+            model.vnorm = vnorm
 
             net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt"
             state_dict = torch.load(net, map_location=device)
@@ -3358,8 +3364,7 @@ def plot_boids(config_file, epoch_list, log_dir, logger, bLatex, device):
                     edge_index = adj_t.nonzero().t().contiguous()
                     dataset = data.Data(x=x, edge_index=edge_index)
                     with torch.no_grad():
-                        y, in_features, lin_edge_out = model(dataset, data_id=1, training=False, vnorm=vnorm,
-                                                             phi=torch.zeros(1, device=device))  # acceleration estimation
+                        y, in_features, lin_edge_out = model(dataset, data_id=1, training=False, phi=torch.zeros(1, device=device))  # acceleration estimation
                     y = y * ynorm
                     lin_edge_out = lin_edge_out * ynorm
 
@@ -5664,6 +5669,8 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
 
     print('load models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
+    model.ynorm = ynorm
+    model.vnorm = vnorm
 
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
 
@@ -5870,7 +5877,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
             edges = torch.tensor(edges, dtype=torch.int64, device=device)
             dataset = data.Data(x=x[:, :], edge_index=edges)
 
-            pred = model(dataset, data_id=0, training=True, vnorm=vnorm, phi=torch.zeros(1, device=device), has_field=False)
+            pred = model(dataset, data_id=0, training=True, phi=torch.zeros(1, device=device), has_field=False)
 
             x_next = x_list[0][k + time_step]
             x_pos_next = x_next[:,1:3].clone().detach()
