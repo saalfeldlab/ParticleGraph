@@ -151,17 +151,27 @@ class Interaction_Falling_Water_Smooth(pyg.nn.MessagePassing):
         pos_i_p = (pos_i - pos_i[:, 0:2].repeat(1, 4))[:, 2:]
         pos_j_p = (pos_j - pos_i[:, 0:2].repeat(1, 4))
 
-        W_j, dW_j = self.W(pos_j_p[:,0:2])
+
 
         match self.mode:
             case 'density':
+                W_j = self.W(pos_j_p[:, 0:2])
                 return W_j
             case 'smooth_particle':
+                W_j, dW_j = self.W_d_W(pos_j_p[:, 0:2])
                 in_features = torch.cat((pos_i_p, pos_j_p, density_i, density_j,  W_j, dW_j, embedding_i, embedding_j), dim=-1)
                 out = self.lin_edge(in_features)
                 return out
 
     def W(self, x):
+
+        d = torch.norm(x, dim=-1) / self.smooth_radius
+        d = d[:, None]
+        W = self.kernel(d)
+
+        return W
+
+    def W_d_W(self, x):
 
         coords = x.clone().detach().requires_grad_(True)
         d = torch.norm(coords, dim=-1) / self.smooth_radius
@@ -227,13 +237,12 @@ if __name__ == '__main__':
     for epoch in trange(num_epochs):
         model.train()
         optimizer.zero_grad()
-        W, dW = model.W(mgrid)
+        W = model.W(mgrid)
         loss = criterion(W, y)
         loss.backward()
         optimizer.step()
 
-
-
+    W,dW = model.W_d_W(mgrid)
 
     fig = plt.figure(figsize=(8, 8))
     plt.plot(y[20000:20200].cpu().numpy())
