@@ -58,6 +58,8 @@ class Interaction_Falling_Water_Wall(pyg.nn.MessagePassing):
         self.dimension = dimension
         self.time_window = train_config.time_window
         self.model_density = model_density
+        self.sub_sampling = simulation_config.sub_sampling
+        self.prediction = model_config.prediction
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device)
@@ -95,12 +97,35 @@ class Interaction_Falling_Water_Wall(pyg.nn.MessagePassing):
             pos = pos + noise
 
         pred = self.propagate(edge_index, pos=pos, embedding=embedding)
-
         if self.update_type == 'mlp':
             pos_p = (pos - pos[:, 0:2].repeat(1, 4))[:, 2:]
             out = self.lin_phi(torch.cat((pred, embedding, pos_p), dim=-1))
         else:
             out = pred
+
+        if self.sub_sampling>1:
+
+            pred = out
+            d_pos = x[:, :, self.dimension + 1:1 + 2 * self.dimension]
+            d_pos = d_pos.transpose(0, 1)
+            d_pos = torch.reshape(d_pos, (d_pos.shape[0], d_pos.shape[1] * d_pos.shape[2]))
+
+            for k in range(self.sub_sampling):
+                if self.prediction == '2nd_derivative':
+                    y = pred * self.ynorm * self.delta_t / self.sub_sampling
+                    d_pos = d_pos + y  # speed update
+                else:
+                    y = pred * self.vnorm
+                    d_pos = y
+                pos = pos + d_pos * self.delta_t / self.sub_sampling
+
+                out = pos
+
+                if self.update_type == 'mlp':
+                    pos_p = (pos - pos[:, 0:2].repeat(1, 4))[:, 2:]
+                    pred = self.lin_phi(torch.cat((self.propagate(edge_index, pos=pos, embedding=embedding), embedding, pos_p), dim=-1))
+                else:
+                    pred = self.propagate(edge_index, pos=pos, embedding=embedding)
 
         return out
 
@@ -108,8 +133,8 @@ class Interaction_Falling_Water_Wall(pyg.nn.MessagePassing):
     def message(self, edge_index_i, edge_index_j, pos_i, pos_j, embedding_i, embedding_j):
 
 
-        pos_i_p = (pos_i - pos_i[:, 0:2].repeat(1, 4))[:, 2:]
-        pos_j_p = (pos_j - pos_i[:, 0:2].repeat(1, 4))
+        pos_i_p = (pos_i - pos_i[:, 0:self.dimension].repeat(1, self.time_window))[:, self.dimension:]
+        pos_j_p = (pos_j - pos_i[:, 0:self.dimension].repeat(1, self.time_window))
 
         in_features = torch.cat((pos_i_p, pos_j_p, embedding_i, embedding_j), dim=-1)
 

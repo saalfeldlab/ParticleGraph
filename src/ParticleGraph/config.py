@@ -64,6 +64,7 @@ class SimulationConfig(BaseModel):
     n_frames: int = 1000
     sigma: float = 0.005
     time_step: int = 1
+    sub_sampling: int = 1
     delta_t: float = 1
     dpos_init: float = 0
     boundary: Literal['periodic', 'no', 'periodic_special'] = 'periodic'

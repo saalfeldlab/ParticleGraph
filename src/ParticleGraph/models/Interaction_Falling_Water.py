@@ -106,14 +106,9 @@ class Interaction_Falling_Water(pyg.nn.MessagePassing):
 
 
     def message(self, edge_index_i, edge_index_j, pos_i, pos_j, embedding_i, embedding_j, boundary_i):
-        # distance normalized by the max radius
 
-        # delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
-        # r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
-        # k_ij = self.kernel(torch.cat((r[:, None], delta_pos[:,0:2]), dim=-1))
-
-        pos_i_p = (pos_i - pos_i[:, 0:2].repeat(1, 4))[:, 2:]
-        pos_j_p = (pos_j - pos_i[:, 0:2].repeat(1, 4))
+        pos_i_p = (pos_i - pos_i[:, 0:self.dimension].repeat(1, self.time_window))[:, self.dimension:]
+        pos_j_p = (pos_j - pos_i[:, 0:self.dimension].repeat(1, self.time_window))
 
         in_features = torch.cat((boundary_i, pos_i_p, pos_j_p, embedding_i, embedding_j), dim=-1)
 

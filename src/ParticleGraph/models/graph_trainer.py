@@ -97,6 +97,9 @@ def data_train_particle(config, config_file, erase, best_model, device):
     n_particle_types = simulation_config.n_particle_types
     delta_t = simulation_config.delta_t
     time_window = train_config.time_window
+    time_step = simulation_config.time_step
+    sub_sampling = simulation_config.sub_sampling
+
     noise_level = train_config.noise_level
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
@@ -252,13 +255,15 @@ def data_train_particle(config, config_file, erase, best_model, device):
             for batch in range(batch_size):
 
                 run = 1 + np.random.randint(n_runs - 1)
-                k = time_window + np.random.randint(run_lengths[run] - 1 - time_window - recursive_loop)
+                k = time_window + np.random.randint(run_lengths[run] - 1 - time_window - time_step - recursive_loop)
                 x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
+                x_next = torch.tensor(x_list[run][k + time_step], dtype=torch.float32, device=device).clone().detach()
 
                 if translation_augmentation:
                     displacement = torch.randn(1, dimension, dtype=torch.float32, device=device) * 5
                     displacement = displacement.repeat(x.shape[0], 1)
                     x[:, 1:dimension + 1] = x[:, 1:dimension + 1] + displacement
+                    x_next[:, 1:dimension + 1] = x_next[:, 1:dimension + 1] + displacement
 
                 if has_ghost:
                     x_ghost = ghosts_particles.get_pos(dataset_id=run, frame=k, bc_pos=bc_pos)
@@ -295,12 +300,14 @@ def data_train_particle(config, config_file, erase, best_model, device):
                     dataset = data.Data(x=xt, edge_index=edges, num_nodes=x.shape[0])
                     dataset_batch.append(dataset)
 
-                y = torch.tensor(y_list[run][k], dtype=torch.float32, device=device).clone().detach()
-
-                if noise_level > 0:
-                    y = y * (1 + torch.randn_like(y) * noise_level)
-
-                y[:,0:dimension] = y[:,0:dimension] / ynorm
+                if sub_sampling > 1:
+                    # predict position, does not work with rotation_augmentation
+                    y = x_next[:, 1:dimension + 1]
+                else:
+                    y = torch.tensor(y_list[run][k], dtype=torch.float32, device=device).clone().detach()
+                    if noise_level > 0:
+                        y = y * (1 + torch.randn_like(y) * noise_level)
+                    y[:,0:dimension] = y[:,0:dimension] / ynorm
 
                 if rotation_augmentation:
                     new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
@@ -328,7 +335,11 @@ def data_train_particle(config, config_file, erase, best_model, device):
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
             else:
-                loss = (pred - y_batch).norm(2)
+                if sub_sampling>1:
+                    # predict position, does not work with rotation_augmentation
+                    loss = (pred[:,0:dimension] - y_batch).norm(2)
+                else:
+                    loss = (pred - y_batch).norm(2)
 
             loss.backward()
             optimizer.step()
@@ -3611,6 +3622,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     n_frames = simulation_config.n_frames
     delta_t = simulation_config.delta_t
     time_window = training_config.time_window
+    time_step = simulation_config.time_step
+    sub_sampling = simulation_config.sub_sampling
 
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     dimension = simulation_config.dimension
@@ -4044,17 +4057,20 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             loss = (pred [:,0:dimension] * ynorm - y0).norm(2)
             pred_err_list.append(to_numpy(torch.sqrt(loss)))
 
-            if model_config.prediction == '2nd_derivative':
-                y = y * ynorm * delta_t
-                x[:, dimension + 1:2 * dimension + 1] = x[:, dimension + 1:2 * dimension + 1] + y  # speed update
+            if sub_sampling > 1:
+                # predict position, does not work with rotation_augmentation
+                x[:, 1:dimension + 1] = bc_pos(y)
             else:
-                y = y * vnorm
-                if 'PDE_N' in model_config.signal_model_name:
-                    x[:, 6:7] += y * delta_t  # signal update
+                if model_config.prediction == '2nd_derivative':
+                    y = y * ynorm * delta_t
+                    x[:, dimension + 1:2 * dimension + 1] = x[:, dimension + 1:2 * dimension + 1] + y  # speed update
                 else:
-                    x[:, dimension + 1:2 * dimension + 1] = y
-
-            x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1] + x[:, dimension + 1:2 * dimension + 1] * delta_t)  # position update
+                    y = y * vnorm
+                    if 'PDE_N' in model_config.signal_model_name:
+                        x[:, 6:7] += y * delta_t  # signal update
+                    else:
+                        x[:, dimension + 1:2 * dimension + 1] = y
+                x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1] + x[:, dimension + 1:2 * dimension + 1] * delta_t)  # position update
 
 
             if bounce:

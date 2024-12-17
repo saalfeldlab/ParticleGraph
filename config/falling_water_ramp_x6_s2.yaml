@@ -10,10 +10,12 @@ simulation:
   n_particle_types: 2
   n_interactions: 2
   n_frames: 600
-  delta_t: 0.001
+  delta_t: 0.0025
   dpos_init: 1.0
   boundary: 'no'
   start_frame: 0
+  time_step: 1
+  sub_sampling: 2
 
 graph_model:
   particle_model_name: 'PDE_WF'
@@ -31,7 +33,7 @@ graph_model:
   input_size_update: 136
   n_layers_update: 3
   hidden_dim_update: 128
-  output_size_update: 2
+  output_size_update: 8
 
 plotting:
   colormap: 'tab10'
