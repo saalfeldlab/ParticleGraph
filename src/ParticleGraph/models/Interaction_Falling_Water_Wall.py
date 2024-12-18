@@ -98,7 +98,7 @@ class Interaction_Falling_Water_Wall(pyg.nn.MessagePassing):
 
         pred = self.propagate(edge_index, pos=pos, embedding=embedding)
         if self.update_type == 'mlp':
-            pos_p = (pos - pos[:, 0:2].repeat(1, 4))[:, 2:]
+            pos_p = (pos - pos[:, 0:self.dimension].repeat(1, self.time_window))[:, self.dimension:]
             out = self.lin_phi(torch.cat((pred, embedding, pos_p), dim=-1))
         else:
             out = pred
@@ -128,7 +128,7 @@ class Interaction_Falling_Water_Wall(pyg.nn.MessagePassing):
                 out = pos
 
                 if self.update_type == 'mlp':
-                    pos_p = (pos - pos[:, 0:2].repeat(1, 4))[:, 2:]
+                    pos_p = (pos - pos[:, 0:self.dimension].repeat(1, self.time_window))[:, self.dimension:]
                     pred = self.lin_phi(torch.cat((self.propagate(edge_index, pos=pos, embedding=embedding), embedding, pos_p), dim=-1))
                 else:
                     pred = self.propagate(edge_index, pos=pos, embedding=embedding)

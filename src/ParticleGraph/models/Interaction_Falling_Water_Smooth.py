@@ -104,45 +104,40 @@ class Interaction_Falling_Water_Smooth(pyg.nn.MessagePassing):
 
     def forward(self, data=[], data_id=[], training=[], phi=[], has_field=False):
 
-        self.data_id = data_id
-
         x, edge_index = data.x, data.edge_index
 
         # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
         if self.time_window == 0:
             particle_id = x[:, 0:1]
-            embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
+            embedding = self.a[data_id, to_numpy(particle_id), :].squeeze()
             pos = x[:, 1:self.dimension+1]
-            d_pos = x[:, self.dimension+1:1+2*self.dimension]
-
-            pred = self.propagate(edge_index,pos=pos, embedding=embedding)
 
         else:
             particle_id = x[0][:, 0:1]
-            embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
+            embedding = self.a[data_id, to_numpy(particle_id), :].squeeze()
             x = torch.stack(x)
             pos = x[:, :, 1:self.dimension + 1]
             pos = pos.transpose(0, 1)
             pos = torch.reshape(pos, (pos.shape[0], pos.shape[1] * pos.shape[2]))
 
-            if training & (self.time_window_noise > 0):
-                noise = torch.randn_like(pos) * self.time_window_noise
-                pos = pos + noise
+        if training & (self.time_window_noise > 0):
+            noise = torch.randn_like(pos) * self.time_window_noise
+            pos = pos + noise
 
-            density_null = torch.zeros_like(pos[:, 0:1])
-            self.mode = 'density'
-            density = self.propagate(edge_index, pos=pos, embedding=embedding, density=density_null)
-            self.mode = 'smooth_particle'
-            pred = self.propagate(edge_index, pos=pos, embedding=embedding, density=density)
+        density_null = torch.zeros_like(pos[:, 0:1])
+        self.mode = 'density'
+        density = self.propagate(edge_index, pos=pos, embedding=embedding, density=density_null)
+        self.mode = 'smooth_particle'
+        pred = self.propagate(edge_index, pos=pos, embedding=embedding, density=density)
 
-            if self.update_type == 'mlp':
-                pos_p = (pos - pos[:, 0:self.dimension].repeat(1, 4))[:, 2:]
-                out = self.lin_phi(torch.cat((pred, embedding, pos_p), dim=-1))
-            else:
-                out = pred
+        if self.update_type == 'mlp':
+            pos_p = (pos - pos[:, 0:self.dimension].repeat(1, self.time_window))[:, self.dimension:]
+            out = self.lin_phi(torch.cat((pred, embedding, pos_p), dim=-1))
+        else:
+            out = pred
 
-            return out
+        return out
 
 
     def message(self, edge_index_i, edge_index_j, pos_i, pos_j, embedding_i, embedding_j, density_i, density_j):
@@ -170,9 +165,13 @@ class Interaction_Falling_Water_Smooth(pyg.nn.MessagePassing):
         coords = x.clone().detach().requires_grad_(True)
         d = torch.norm(x, dim=-1) / self.smooth_radius
         d = d[None, :, None]
-        W = self.kernel.net(d)
 
-        return W[0, :, :]
+        W = 1 / (np.pi * s ** 8) * (self.smooth_radius ** 2 - d ** 2) ** 3 / 6E3
+        return W
+
+
+        # W = self.kernel.net(d)
+        # return W[0, :, :]
 
     def W_d_W(self, x):
 
