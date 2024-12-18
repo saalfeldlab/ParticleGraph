@@ -225,8 +225,6 @@ if __name__ == '__main__':
     except:
         pass
 
-    x_list = np.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/graphs_falling_water_ramp/x_list_2.npy')
-    x_list = torch.tensor(x_list, dtype=torch.float32, device=device)
 
     plt.style.use('dark_background')
 
@@ -247,6 +245,48 @@ if __name__ == '__main__':
     model = Interaction_Falling_Water_Smooth(config=config, device=device, aggr_type='add', bc_dpos=bc_dpos)
     optimizer = optim.Adam(model.parameters(), lr=1e-6)
     model.train()
+
+
+
+    x = mgrid
+
+    for smooth_radius in [0.1, 0.2, 0.3, 0.4, 0.5]:
+
+        config.simulation.smooth_radius = smooth_radius
+        model_density = Smooth_Particle(config=config, aggr_type='mean', bc_dpos=bc_dpos, dimension=dimension)
+
+        density = model_density(x=x, has_field=False)
+
+        print(smooth_radius, density[4550])
+
+        fig = plt.figure(figsize=(8, 8))
+        plt.scatter(x[:, 2].detach().cpu().numpy(),
+                    x[:, 1].detach().cpu().numpy(), s=10, c=density.detach().cpu().numpy(), vmin=0, vmax=1)
+        plt.xlim([0,1])
+        plt.ylim([0,1])
+        plt.tight_layout()
+
+        
+
+
+    for k in trange(0,len(x_list),10):
+
+        x = x_list[k].squeeze()
+        density = model_density(x=x, has_field=False)
+
+        fig = plt.figure(figsize=(8, 8))
+        plt.scatter(x[:, 2].detach().cpu().numpy(),
+                    x[:, 1].detach().cpu().numpy(), s=10, c=density[:,0].detach().cpu().numpy(), vmin=0, vmax=1)
+        plt.xlim([0,1])
+        plt.ylim([0,1])
+        plt.tight_layout()
+        plt.savefig(f"tmp/particle_density_{k}.png")
+        plt.close()
+
+
+
+
+
 
     num_epochs = 5000
     loss_list=[]
@@ -283,5 +323,168 @@ if __name__ == '__main__':
     d2W_im = torch.reshape(d2W[0], (200,200))
     fig = plt.figure(figsize=(8, 8))
     plt.imshow(d2W_im.detach().cpu().numpy())
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    bc_pos, bc_dpos = choose_boundary_values('no')
+    config = ParticleGraphConfig.from_yaml('/groups/saalfeld/home/allierc/Py/ParticleGraph/config/test_smooth_particle.yaml')
+    dimension = config.simulation.dimension
+    max_radius = config.simulation.max_radius
+    min_radius = config.simulation.min_radius
+    smooth_radius = config.simulation.smooth_radius
+
+    model_density = Smooth_Particle(config=config, aggr_type='mean', bc_dpos=bc_dpos, dimension=dimension)
+    model_density.train()
+
+    tensors = tuple(dimension * [torch.linspace(-1, 1, steps=200)])
+    mgrid = torch.stack(torch.meshgrid(*tensors), dim=-1)
+    mgrid = mgrid.reshape(-1, dimension)
+    mgrid = torch.cat((torch.ones((mgrid.shape[0], 1)), mgrid), 1)
+    mgrid = mgrid.to(device)
+
+    coords = mgrid[:, 1:3].clone().detach().requires_grad_(True)
+
+    y = torch.exp(-(coords[:,0] ** 2 + coords[:,1] ** 2) / 0.25)
+    y = y.clone().detach()
+    y = y[:,None]
+
+    # Initialize the model, loss function, and optimizer
+    model = model_density.lin_rho
+    criterion = nn.MSELoss()
+    optimizer = optim.Adam(model.parameters(), lr=1e-3)
+
+    num_epochs = 1000
+    for epoch in trange(num_epochs):
+        model.train()
+        optimizer.zero_grad()
+        output = model(coords)
+        # model_output = gradient(output, coords)[:,0]
+        loss = criterion(output, y)
+        loss.backward()
+        optimizer.step()
+
+    fig = plt.figure(figsize=(8, 8))
+    plt.scatter(coords[:, 0].detach().cpu().numpy(), coords[:, 1].detach().cpu().numpy(), c=y.cpu().numpy(), label='True Function')
+
+    fig = plt.figure(figsize=(8, 8))
+    plt.scatter(coords[:, 0].detach().cpu().numpy(), coords[:, 1].detach().cpu().numpy(), c=output.detach().cpu().numpy(), label='True Function')
+
+
+    # Create the dataset
+
+    s = torch.tensor([smooth_radius], device=device)
+    x = torch.linspace(-1, 1, 1000).view(-1, 1).to(device)
+    y = torch.exp(-x ** 2 / 0.25)
+
+    coords = x.clone().detach().requires_grad_(True)
+
+    # Initialize the model, loss function, and optimizer
+    model = model_density.lin_rho
+    criterion = nn.MSELoss()
+    optimizer = optim.Adam(model.parameters(), lr=1e-3)
+
+    # Train the model
+    num_epochs = 10000
+    for epoch in trange(num_epochs):
+        model.train()
+        optimizer.zero_grad()
+        output = model(coords)
+        model_output = gradient(output, coords)
+        loss = criterion(model_output, y)
+        loss.backward()
+        optimizer.step()
+
+    pred = model(coords)
+    model_output = gradient(pred, coords)
+    plt.figure(figsize=(8, 8))
+    plt.scatter(x.cpu().numpy(), y.cpu().numpy(), label='True Function')
+    plt.scatter(x.cpu().numpy(), pred.detach().cpu().numpy(), label='MLP Approximation')
+    plt.scatter(x.cpu().numpy(), model_output.detach().cpu().numpy(), label='grad MLP Approximation')
+    plt.legend()
+    plt.show()
+
+
+
+
+
+
+
+
+
+
+
+    s = torch.tensor([smooth_radius], device=device)
+
+    optim = torch.optim.Adam(lr=1e-1, params=model_density.parameters())
+
+    sample = torch.rand(100, 1, device=device)
+    pred = model_density.lin_rho(sample.clone().detach())
+    y = (s ** 2 * torch.ones_like(sample)[:, None] - sample[:, None] ** 2) ** 2
+    y = y.clone().detach()
+    fig = plt.figure(figsize=(8, 8))
+    plt.scatter(sample.detach().cpu().numpy(), y.detach().cpu().numpy())
+    plt.scatter(sample.detach().cpu().numpy(), pred.detach().cpu().numpy())
+
+    for step in trange(10000):
+
+        optim.zero_grad()
+        sample = torch.rand(5, 1, device=device)
+        pred = model_density.lin_rho(sample.clone().detach())
+        y = (s**2*torch.ones_like(sample)[:,None] - sample[:,None]**2)**2
+        y = y.clone().detach()
+        loss = ((pred - y) ** 2).norm(2)
+        loss.backward()
+        optim.step()
+
+    print(step, loss)
+
+    sample = torch.rand(100, 1, device=device)
+    pred = model_density.lin_rho(sample.clone().detach())
+    y = (s ** 2 * torch.ones_like(sample)[:, None] - sample[:, None] ** 2) ** 2
+    y = y.clone().detach()
+    fig = plt.figure(figsize=(8, 8))
+    plt.scatter(sample.detach().cpu().numpy(), y.detach().cpu().numpy())
+    plt.scatter(sample.detach().cpu().numpy(), pred.detach().cpu().numpy())
+
+
+
+
+
+
+    x = mgrid
+
+    for smooth_radius in [0.1, 0.2, 0.3, 0.4, 0.5]:
+
+        config.simulation.smooth_radius = smooth_radius
+        model_density = Smooth_Particle(config=config, aggr_type='mean', bc_dpos=bc_dpos, dimension=dimension)
+
+        density = model_density(x=x, has_field=False)
+
+        print(smooth_radius, density[4550])
+
+        fig = plt.figure(figsize=(8, 8))
+        plt.scatter(x[:, 2].detach().cpu().numpy(),
+                    x[:, 1].detach().cpu().numpy(), s=10, c=density.detach().cpu().numpy(), vmin=0, vmax=1)
+        plt.xlim([0,1])
+        plt.ylim([0,1])
+        plt.tight_layout()
+
 
 
