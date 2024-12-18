@@ -13,8 +13,6 @@ from ParticleGraph.models.Siren_Network import *
 from ParticleGraph.models.Ghost_Particles import *
 from geomloss import SamplesLoss
 from ParticleGraph.sparsify import EmbeddingCluster, sparsify_cluster
-from ParticleGraph.models.Smooth_Particle import Smooth_Particle
-
 from sklearn.neighbors import NearestNeighbors
 from scipy.optimize import curve_fit
 
