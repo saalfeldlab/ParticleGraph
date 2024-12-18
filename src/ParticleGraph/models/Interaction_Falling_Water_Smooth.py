@@ -151,6 +151,7 @@ class Interaction_Falling_Water_Smooth(pyg.nn.MessagePassing):
                     W_j = self.W(delta_pos)
                     return W_j
                 case 'smooth_particle':
+                    dW_j = self.d_W(delta_pos)
                     in_features = torch.cat((delta_pos, density_i, density_j, embedding_i, embedding_j), dim=-1)
                     out = self.lin_edge(in_features)
                     return out
@@ -166,6 +167,11 @@ class Interaction_Falling_Water_Smooth(pyg.nn.MessagePassing):
                     in_features = torch.cat((pos_i_p, pos_j_p, density_i, density_j, embedding_i, embedding_j), dim=-1)
                     out = self.lin_edge(in_features)
                     return out
+                case 'smooth_particle_dW':
+                    dW_j = self.d_W(pos_j_p[:, 0:2])
+                    in_features = torch.cat((pos_i_p, pos_j_p, density_i, density_j, embedding_i, embedding_j, dW_j), dim=-1)
+                    out = self.lin_edge(in_features)
+                    return out
 
     def W(self, x):
 
@@ -174,19 +180,37 @@ class Interaction_Falling_Water_Smooth(pyg.nn.MessagePassing):
         W = 1 / (np.pi * self.smooth_radius ** 8) * (self.smooth_radius ** 2 - d ** 2) ** 3 / 6E3
         return W[0, :, :]
 
-
         # W = self.kernel.net(d)
         # return W[0, :, :]
 
+    def d_W(self, x):
+
+        d = torch.norm(x, dim=-1)
+        d = d[None, :, None]
+
+        dW = [-3 * x[:,0] * (self.smooth_radius ** 2 - torch.sqrt(x[:,0] ** 2 + x[:,1] ** 2)) ** 2 / torch.sqrt(x[:,0] ** 2 + x[:,1] ** 2),
+         -3 * x[:,1] * (self.smooth_radius ** 2 - torch.sqrt(x[:,0] ** 2 + x[:,1] ** 2)) ** 2 / torch.sqrt(x[:,0] ** 2 + x[:,1] ** 2)]
+        dW = torch.stack(dW, dim=-1)
+        dW = 1 / (np.pi * self.smooth_radius ** 8) * dW /6E3
+
+        dW_ = torch.where(torch.isnan(dW), torch.zeros_like(dW), dW)
+
+        return dW_
+
+
+
     def W_d_W(self, x):
 
-        d = torch.norm(x, dim=-1) / self.smooth_radius
-        d = d[:, None]
+        d = torch.norm(x, dim=-1)
+        d = d[None, :, None]
         W = 1 / (np.pi * self.smooth_radius ** 8) * (self.smooth_radius ** 2 - d ** 2) ** 3 / 6E3
-        dW = (-3 * x[:,0] * (s ** 2 - sqrt(x[:,0] ** 2 + x[:,1] ** 2)) ** 2 / sqrt(x[:,0] ** 2 + x[:,1] ** 2),
-         -3 * x[:,1] * (s ** 2 - sqrt(x[:,0] ** 2 + x[:,1] ** 2)) ** 2 / sqrt(x[:,0] ** 2 + x[:,1] ** 2))
 
-        return W, dW
+        dW = [-3 * x[:,0] * (self.smooth_radius ** 2 - torch.sqrt(x[:,0] ** 2 + x[:,1] ** 2)) ** 2 / torch.sqrt(x[:,0] ** 2 + x[:,1] ** 2),
+         -3 * x[:,1] * (self.smooth_radius ** 2 - torch.sqrt(x[:,0] ** 2 + x[:,1] ** 2)) ** 2 / torch.sqrt(x[:,0] ** 2 + x[:,1] ** 2)]
+        dW = torch.stack(dW, dim=-1)
+        dW = 1 / (np.pi * self.smooth_radius ** 8) * dW /6E3
+
+        return W[0, :, :], dW
 
     def W_d_W_d2W(self, x):
 
