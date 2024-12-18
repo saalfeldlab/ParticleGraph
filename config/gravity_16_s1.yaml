@@ -13,6 +13,8 @@ simulation:
     dpos_init:  5.0E-5
     boundary: 'no'
     start_frame: 0 # -1000
+    time_step: 1
+    sub_sampling: 4
 
 graph_model:
     particle_model_name: 'PDE_G'
@@ -32,12 +34,12 @@ plotting:
     ylim: [ 0, 0.5E6 ]
 
 training:
-    n_epochs: 20
+    n_epochs: 2
     batch_size: 8
     small_init_batch_size: False
     n_runs: 2
     sparsity: 'replace_embedding_function'
-    rotation_augmentation: True
+    rotation_augmentation: False
     data_augmentation_loop: 100
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True

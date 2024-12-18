@@ -337,13 +337,9 @@ def data_train_particle(config, config_file, erase, best_model, device):
 
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
-            elif sub_sampling>1:
+            elif sub_sampling>1: #############################################
                 # predict position, does not work with rotation_augmentation
                 loss = (pred[:,0:dimension] - y_batch).norm(2) * 1E7
-                # fig = plt.figure(figsize=(10, 10))
-                # plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), c='k', s=1)
-                # plt.scatter(to_numpy(y_batch[:, 1]), to_numpy(y_batch[:, 0]), c='g', s=1)
-                # plt.scatter(to_numpy(pred[:, 1]), to_numpy(pred[:, 0]), c='r', s=1)
             else:
                 loss = (pred - y_batch).norm(2)
 
