@@ -50,12 +50,12 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        task = 'test'
+        task = 'train'
         best_model = None
 
         # config_list = ['rat_city_c2']
         # config_list = ['cell_PSC_5']
-        config_list = ['falling_water_ramp_x6_s2']
+        config_list = ['falling_water_ramp_x8']
         # config_list = ['arbitrary_3_field_video_bison']
         # config_list = ['gravity_16_s1']
 

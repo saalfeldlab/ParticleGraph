@@ -110,12 +110,6 @@ class Interaction_Falling_Water_Wall(pyg.nn.MessagePassing):
             d_pos = d_pos.transpose(0, 1)
             d_pos = torch.reshape(d_pos, (d_pos.shape[0], d_pos.shape[1] * d_pos.shape[2]))
 
-            # fig = plt.figure(figsize=(10, 10))
-            # plt.scatter(to_numpy(pos[:, 1]), to_numpy(pos[:, 0]), c='k', s=10)
-            # plt.scatter(to_numpy(pos[:, 1]), to_numpy(pos[:, 0]), c='r', s=10)
-            # plt.scatter(to_numpy(pos[:, 1]), to_numpy(pos[:, 0]), c='g', s=10)
-
-
             for k in range(self.sub_sampling):
                 if self.prediction == '2nd_derivative':
                     y = pred * self.ynorm * self.delta_t / self.sub_sampling
@@ -138,11 +132,15 @@ class Interaction_Falling_Water_Wall(pyg.nn.MessagePassing):
 
     def message(self, edge_index_i, edge_index_j, pos_i, pos_j, embedding_i, embedding_j):
 
+        if self.time_window == 0:
+            delta_pos = self.bc_dpos(pos_j - pos_i)
+            in_features = torch.cat((delta_pos, embedding_i, embedding_j), dim=-1)
 
-        pos_i_p = (pos_i - pos_i[:, 0:self.dimension].repeat(1, self.time_window))[:, self.dimension:]
-        pos_j_p = (pos_j - pos_i[:, 0:self.dimension].repeat(1, self.time_window))
+        else:
+            pos_i_p = (pos_i - pos_i[:, 0:self.dimension].repeat(1, self.time_window))[:, self.dimension:]
+            pos_j_p = (pos_j - pos_i[:, 0:self.dimension].repeat(1, self.time_window))
 
-        in_features = torch.cat((pos_i_p, pos_j_p, embedding_i, embedding_j), dim=-1)
+            in_features = torch.cat((pos_i_p, pos_j_p, embedding_i, embedding_j), dim=-1)
 
         out = self.lin_edge(in_features)
 

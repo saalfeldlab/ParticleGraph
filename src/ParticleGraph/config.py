@@ -22,7 +22,6 @@ class SimulationConfig(BaseModel):
     connectivity_distribution_params: float = 1
     connectivity_mask: bool = False
 
-    smooth_particle: bool = False
     smooth_radius: float = 0.1
 
     excitation_value_map: Optional[str] = None
