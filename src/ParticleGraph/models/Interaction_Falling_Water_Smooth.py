@@ -4,14 +4,15 @@ import torch_geometric as pyg
 import torch_geometric.utils as pyg_utils
 from ParticleGraph.models.MLP import MLP
 from ParticleGraph.utils import to_numpy, reparameterize
-from ParticleGraph.models.Siren_Network import *
 from ParticleGraph.models.Gumbel import gumbel_softmax_sample, gumbel_softmax
 # from ParticleGraph.models.utils import reparameterize
+from ParticleGraph.models.Siren_Network import Siren
+
 
 
 def kernel_laplace(y, x):
-    grad = gradient(y, x)
-    return divergence(grad, x)
+    grad = kernel_gradient(y, x)
+    return kernel_divergence(grad, x)
 
 
 def kernel_divergence(y, x):
@@ -79,7 +80,11 @@ class Interaction_Falling_Water_Smooth(pyg.nn.MessagePassing):
         self.smooth_radius = simulation_config.smooth_radius
 
 
-        self.kernel = MLP(input_size=1, output_size=1, nlayers=5, hidden_size=128, device=self.device)
+        # self.kernel = MLP(input_size=1, output_size=1, nlayers=5, hidden_size=128, device=self.device)
+
+        self.kernel = Siren(in_features=1, out_features=1, hidden_features=256,
+                          hidden_layers=3, outermost_linear=True, first_omega_0=30, hidden_omega_0=30.)
+        self.kernel.to(self.device)
 
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
@@ -94,7 +99,6 @@ class Interaction_Falling_Water_Smooth(pyg.nn.MessagePassing):
         self.a = nn.Parameter(
                 torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
                              requires_grad=True, dtype=torch.float32))
-
 
 
 
@@ -151,8 +155,6 @@ class Interaction_Falling_Water_Smooth(pyg.nn.MessagePassing):
         pos_i_p = (pos_i - pos_i[:, 0:2].repeat(1, 4))[:, 2:]
         pos_j_p = (pos_j - pos_i[:, 0:2].repeat(1, 4))
 
-
-
         match self.mode:
             case 'density':
                 W_j = self.W(pos_j_p[:, 0:2])
@@ -165,21 +167,37 @@ class Interaction_Falling_Water_Smooth(pyg.nn.MessagePassing):
 
     def W(self, x):
 
+        coords = x.clone().detach().requires_grad_(True)
         d = torch.norm(x, dim=-1) / self.smooth_radius
-        d = d[:, None]
-        W = self.kernel(d)
+        d = d[None, :, None]
+        W = self.kernel.net(d)
 
-        return W
+        return W[0, :, :]
 
     def W_d_W(self, x):
 
         coords = x.clone().detach().requires_grad_(True)
         d = torch.norm(coords, dim=-1) / self.smooth_radius
-        d = d[:, None]
-        W = self.kernel(d)
+        d = d[None, :, None]
+
+        W = self.kernel.net(d)
         dW = kernel_gradient(W, coords)
 
-        return W, dW
+        return W[0, :, :], dW
+
+    def W_d_W_d2W(self, x):
+
+        coords = x.clone().detach().requires_grad_(True)
+        d = torch.norm(coords, dim=-1) / self.smooth_radius
+        d = d[None, :, None]
+        W = self.kernel.net(d)
+        dW = kernel_gradient(W, coords)
+
+        d2W = []
+        for i in range(dW.shape[-1]):
+            d2W.append(torch.autograd.grad(dW[..., i], coords, torch.ones_like(dW[..., i]), create_graph=True)[0][..., i:i + 1])
+
+        return W[0, :, :], dW, d2W
 
 
     def update(self, aggr_out):
@@ -196,6 +214,9 @@ if __name__ == '__main__':
     from ParticleGraph.config import ParticleGraphConfig
     import torch.nn as nn
     import torch.optim as optim
+    import numpy as np
+    from tqdm import trange
+    import matplotlib
 
 
     device = 'cuda:0'
@@ -216,49 +237,51 @@ if __name__ == '__main__':
     min_radius = config.simulation.min_radius
     smooth_radius = config.simulation.smooth_radius
 
-    model_density = Interaction_Falling_Water_Smooth(config=config, device=device, aggr_type='add', bc_dpos=bc_dpos)
-    model_density.train()
-
     tensors = tuple(dimension * [torch.linspace(-1, 1, steps=200)*smooth_radius])
     mgrid = torch.stack(torch.meshgrid(*tensors), dim=-1)
     mgrid = mgrid.reshape(-1, dimension)
     mgrid = mgrid.to(device)
 
-    y = torch.exp(-(mgrid[:,0] ** 2 + mgrid[:,1] ** 2) / (0.25 * smooth_radius ** 2))
-    y = y.clone().detach()
-    y = y[:,None]
 
-    # Initialize the model, loss function, and optimizer
-    model = model_density
-    criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
-    num_epochs = 10000
+    model = Interaction_Falling_Water_Smooth(config=config, device=device, aggr_type='add', bc_dpos=bc_dpos)
+    optimizer = optim.Adam(model.parameters(), lr=1e-6)
+    model.train()
+
+    num_epochs = 5000
+    loss_list=[]
     for epoch in trange(num_epochs):
-        model.train()
+
+        input = mgrid + torch.randn_like(mgrid) * smooth_radius
+        y = torch.exp(-(input[:, 0] ** 2 + input[:, 1] ** 2) / (0.25 * smooth_radius ** 2))
+        y = y.clone().detach()
+        y = y[:, None]
+
         optimizer.zero_grad()
-        W = model.W(mgrid)
-        loss = criterion(W, y)
+        W = model.W(input)
+        loss = (W-y).norm(2)
         loss.backward()
         optimizer.step()
+        if epoch % 10 == 0:
+            loss_list.append(loss.item())
 
-    W,dW = model.W_d_W(mgrid)
+    fig = plt.figure(figsize=(8, 8))
+    plt.plot(np.log(loss_list))
 
+    W, dW, d2W = model.W_d_W_d2W(mgrid)
+    y = torch.exp(-(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / (0.25 * smooth_radius ** 2))
     fig = plt.figure(figsize=(8, 8))
     plt.plot(y[20000:20200].cpu().numpy())
     plt.plot(W[20000:20200].detach().cpu().numpy())
     plt.plot(dW[20000:20200,1].detach().cpu().numpy()/40)
+    d2W_im = torch.reshape(d2W[0], (200,200))
+    plt.plot(d2W_im[100,:].detach().cpu().numpy()/16000)
 
-
+    dW_im = torch.reshape(dW[:,0], (200,200))
     fig = plt.figure(figsize=(8, 8))
-    plt.scatter(mgrid[:, 0].detach().cpu().numpy(), mgrid[:, 1].detach().cpu().numpy(), c=y.cpu().numpy(), label='True Function')
+    plt.imshow(dW_im.detach().cpu().numpy())
+    d2W_im = torch.reshape(d2W[0], (200,200))
     fig = plt.figure(figsize=(8, 8))
-    plt.scatter(mgrid[:, 0].detach().cpu().numpy(), mgrid[:, 1].detach().cpu().numpy(), c=W.detach().cpu().numpy(), label='True Function')
-
-
-    fig = plt.figure(figsize=(8, 8))
-    plt.scatter(mgrid[:, 0].detach().cpu().numpy(), mgrid[:, 1].detach().cpu().numpy(), c=dW[0].detach().cpu().numpy(), label='True Function')
-    fig = plt.figure(figsize=(8, 8))
-    plt.scatter(mgrid[:, 0].detach().cpu().numpy(), mgrid[:, 1].detach().cpu().numpy(), c=dW[1].detach().cpu().numpy(), label='True Function')
+    plt.imshow(d2W_im.detach().cpu().numpy())
 
 

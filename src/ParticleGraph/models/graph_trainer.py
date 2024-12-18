@@ -140,6 +140,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
     run_lengths = list()
     time.sleep(0.5)
     n_particles_max = 0
+
     for run in trange(n_runs):
         x = np.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy')
         y = np.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy')
@@ -322,11 +323,9 @@ def data_train_particle(config, config_file, erase, best_model, device):
                 if batch == 0:
                     data_id = torch.ones((x.shape[0],1), dtype=torch.int) * run
                     y_batch = y
-                    x_batch = x.clone().detach()
                 else:
                     data_id = torch.cat((data_id, torch.ones((x.shape[0],1), dtype=torch.int) * run), dim = 0)
                     y_batch = torch.cat((y_batch, y), dim=0)
-                    x_batch = torch.cat((x_batch, x.clone().detach()), dim=0)
 
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
@@ -340,7 +339,11 @@ def data_train_particle(config, config_file, erase, best_model, device):
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
             elif sub_sampling>1:
                 # predict position, does not work with rotation_augmentation
-                loss = (pred[:,0:dimension] - y_batch).norm(2) * 1E5
+                loss = (pred[:,0:dimension] - y_batch).norm(2) * 1E7
+                # fig = plt.figure(figsize=(10, 10))
+                # plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), c='k', s=1)
+                # plt.scatter(to_numpy(y_batch[:, 1]), to_numpy(y_batch[:, 0]), c='g', s=1)
+                # plt.scatter(to_numpy(pred[:, 1]), to_numpy(pred[:, 0]), c='r', s=1)
             else:
                 loss = (pred - y_batch).norm(2)
 
@@ -4056,7 +4059,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 else:
                     with torch.no_grad():
                         pred = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device))
-                        y = pred[:,0:dimension]
+                        y = pred
+
 
                 if has_ghost:
                     y = y[mask_ghost]
