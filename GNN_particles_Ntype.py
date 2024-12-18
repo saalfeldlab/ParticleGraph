@@ -50,13 +50,14 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        task = 'train'
-        best_model = '3_0'
+        task = 'test'
+        best_model = None
 
         # config_list = ['rat_city_c2']
         # config_list = ['cell_PSC_5']
-        config_list = ['falling_water_ramp_x6_s2']
+        # config_list = ['falling_water_ramp_x6_s2']
         # config_list = ['arbitrary_3_field_video_bison']
+        config_list = ['gravity_16_s1']
 
     for config_file in config_list:
 
@@ -71,7 +72,7 @@ if __name__ == '__main__':
             data_train(config=config, config_file=config_file, erase=False, best_model=best_model, device=device)
         if 'test' in task:
             data_test(config=config, config_file=config_file, visualize=True, style='black color', verbose=False, best_model='best', run=1, plot_data=False,
-                      test_simulation=False, sample_embedding=False, device=device, fixed=False, bounce=False, step=4) # config.simulation.n_frames // 200, )  arrow speed acc_learned   arrow speed acc_true
+                      test_simulation=False, sample_embedding=False, device=device, fixed=False, bounce=False, step=12) # config.simulation.n_frames // 200, )  arrow speed acc_learned   arrow speed acc_true
 
 
 # bsub -n 4 -gpu "num=1" -q gpu_h100 "python GNN_particles_Ntype.py -o train falling_water_ramp_x1"

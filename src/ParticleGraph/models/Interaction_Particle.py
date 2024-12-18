@@ -112,6 +112,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
 
                 pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
 
+
         return out
 
     def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j, field_j):

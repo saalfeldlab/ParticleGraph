@@ -337,7 +337,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
 
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
-            elif sub_sampling>1: #############################################
+            elif sub_sampling>1:
                 # predict position, does not work with rotation_augmentation
                 loss = (pred[:,0:dimension] - y_batch).norm(2) * 1E7
             else:
@@ -4066,7 +4066,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
             if sub_sampling > 1:
                 # predict position, does not work with rotation_augmentation
-                x[:, 1:dimension + 1] = bc_pos(y[:,(time_step-1)*dimension:time_step*dimension])
+                x_next = bc_pos(y[:,(time_step-1)*dimension:time_step*dimension])
+                x[:, dimension + 1:2 * dimension + 1] = (x_next - x[:, 1:dimension + 1]) / delta_t
+                x[:, 1:dimension + 1] = x_next
                 loss = (x[:, 1:dimension + 1] - x0_next[:, 1:dimension + 1]).norm(2)
                 pred_err_list.append(to_numpy(torch.sqrt(loss)))
             else:
