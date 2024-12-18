@@ -219,7 +219,6 @@ if __name__ == '__main__':
     except:
         pass
 
-
     plt.style.use('dark_background')
 
     bc_pos, bc_dpos = choose_boundary_values('no')
@@ -229,27 +228,28 @@ if __name__ == '__main__':
     min_radius = config.simulation.min_radius
     smooth_radius = config.simulation.smooth_radius
 
-    tensors = tuple(dimension * [torch.linspace(-1, 1, steps=200)*smooth_radius])
-    mgrid = torch.stack(torch.meshgrid(*tensors), dim=-1)
-    mgrid = mgrid.reshape(-1, dimension)
-    mgrid = mgrid.to(device)
-
 
 
     model = Interaction_Falling_Water_Smooth(config=config, device=device, aggr_type='add', bc_dpos=bc_dpos)
     optimizer = optim.Adam(model.parameters(), lr=1e-6)
     model.train()
 
-
-
     x = mgrid
+
+    x = x_list[80].squeeze()
+    data_id = torch.ones((x.shape[0], 1), dtype=torch.int)
 
     for smooth_radius in [0.1, 0.2, 0.3, 0.4, 0.5]:
 
         config.simulation.smooth_radius = smooth_radius
-        model_density = Smooth_Particle(config=config, aggr_type='mean', bc_dpos=bc_dpos, dimension=dimension)
+        model_density = Interaction_Falling_Water_Smooth(config=config, aggr_type='mean', bc_dpos=bc_dpos, device=device)
 
-        density = model_density(x=x, has_field=False)
+        distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+        edge_index = adj_t.nonzero().t().contiguous()
+
+
+        density = model(x=x, has_field=False)
 
         print(smooth_radius, density[4550])
 
@@ -279,8 +279,10 @@ if __name__ == '__main__':
 
 
 
-
-
+    tensors = tuple(dimension * [torch.linspace(-1, 1, steps=200)*smooth_radius])
+    mgrid = torch.stack(torch.meshgrid(*tensors), dim=-1)
+    mgrid = mgrid.reshape(-1, dimension)
+    mgrid = mgrid.to(device)
 
     num_epochs = 5000
     loss_list=[]
