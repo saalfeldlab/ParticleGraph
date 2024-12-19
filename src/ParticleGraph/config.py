@@ -134,7 +134,7 @@ class ImageData(BaseModel):
     file_type: str = 'none'
     cellpose_model: str = 'cyto3'
     cellpose_channel : int = 0
-    cellpose_diameter: int = 30
+    cellpose_diameter: float = 30
     cellpose_flow_threshold: int = 0.4
     cellpose_cellprob_threshold: int = 0.0
 

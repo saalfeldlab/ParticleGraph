@@ -1,5 +1,5 @@
 description: 'Boids 16 different types, division'
-dataset: 'cell_PSC_1'
+dataset: 'cell_PSC'
 data_folder_name: '/groups/saalfeld/home/allierc/signaling/PSC/PhC-C2DL-PSC/01_ST/SEG/'
 
 simulation:
@@ -17,6 +17,9 @@ simulation:
   time_step: 2
   boundary: 'no'
   start_frame: 0
+
+image_data:
+    file_type: 'segmentation'
 
 graph_model:
   particle_model_name: 'PDE_Cell'

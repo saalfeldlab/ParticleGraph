@@ -1,5 +1,5 @@
 description: 'Boids 16 different types, division'
-dataset: 'cell_HeLa_1'
+dataset: 'cell_HeLa'
 data_folder_name: '/groups/saalfeld/home/allierc/signaling/HeLa/Fluo-N2DL-HeLa/01_ST/SEG/'
 
 simulation:
@@ -17,6 +17,9 @@ simulation:
   time_step: 10
   boundary: 'no'
   start_frame: 0
+
+image_data:
+    file_type: 'segmentation'
 
 graph_model:
   particle_model_name: 'PDE_Cell'

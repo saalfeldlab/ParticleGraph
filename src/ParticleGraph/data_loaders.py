@@ -28,6 +28,7 @@ import tifffile
 import torch_geometric.data as data
 import networkx as nx
 from torch_geometric.utils.convert import to_networkx
+from cellpose import models
 
 def extract_object_properties(segmentation_image):
     # Label the objects in the segmentation image
@@ -262,6 +263,7 @@ def load_cell_data(config, device, visualize, step, cmap):
 
     simulation_config = config.simulation
     train_config = config.training
+    image_data = config.image_data
 
     max_radius = simulation_config.max_radius
     min_radius = simulation_config.min_radius
@@ -276,6 +278,36 @@ def load_cell_data(config, device, visualize, step, cmap):
     files = os.listdir(data_folder_name)
     files = [f for f in files if f.endswith('.tif')]
     files.sort()
+
+
+    if image_data.file_type == 'fluo':
+        os.makedirs(f"{data_folder_name}/SEG", exist_ok=True)
+
+        model_path = image_data.cellpose_model
+        model = models.CellposeModel(gpu=True, pretrained_model=model_path)
+
+        print('generate segmentation masks with Cellpose ...')
+        for it in trange(len(files)):
+
+            im = tifffile.imread(data_folder_name + files[0])
+            im = np.array(im)
+            # im = im[:,:, image_data.cellpose_channel]
+            masks, flows, styles = model.eval(im, diameter=75, invert=False, normalize=True, channels=[0, 1])
+            tifffile.imsave(data_folder_name + 'SEG/' + files[0], masks)
+
+            matplotlib.use("Qt5Agg")
+            fig = plt.figure(figsize=(8, 8))
+            plt.imshow(masks)
+            plt.tight_layout()
+            plt.show()
+
+        data_folder_name = data_folder_name + 'SEG/'
+
+
+
+
+
+
 
     # 0 N1 cell index dim=1
     # 1,2 X1 positions dim=2
@@ -301,7 +333,6 @@ def load_cell_data(config, device, visualize, step, cmap):
 
     raw_data_list = []
     annotation_data_list = []
-
 
     for it in trange(len(files)):
 
