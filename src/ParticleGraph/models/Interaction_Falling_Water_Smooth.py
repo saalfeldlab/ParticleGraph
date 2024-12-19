@@ -249,7 +249,6 @@ if __name__ == '__main__':
 
     device = 'cuda:0'
 
-    # device='cpu'
 
     try:
         matplotlib.use("Qt5Agg")
@@ -265,7 +264,7 @@ if __name__ == '__main__':
     min_radius = config.simulation.min_radius
     smooth_radius = config.simulation.smooth_radius
 
-    x_list = np.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/graphs_falling_water_ramp/x_list_2.npy')
+    x_list = np.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/graphs_falling_water_ramp_wall/x_list_2.npy')
     x_list = torch.tensor(x_list, dtype=torch.float32, device=device)
 
     tensors = tuple(dimension * [torch.linspace(-1, 1, steps=100)])
@@ -279,7 +278,7 @@ if __name__ == '__main__':
     optimizer = optim.Adam(model.parameters(), lr=1e-6)
     model.train()
 
-    x = mgrid
+    # x = mgrid
     x = x_list[80].squeeze()
     data_id = torch.ones((x.shape[0], 1), dtype=torch.int)
 
@@ -292,12 +291,35 @@ if __name__ == '__main__':
 
     pred = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device))
 
+    matplotlib.use("Qt5Agg")
     fig = plt.figure(figsize=(8, 8))
     plt.scatter(x[:, 2].detach().cpu().numpy(),
-                x[:, 1].detach().cpu().numpy(), s=10, c=model.density.detach().cpu().numpy())
+                x[:, 1].detach().cpu().numpy(), s=10, c=model.density.detach().cpu().numpy(), vmin=0, vmax=0.5)
     plt.xlim([0,1])
     plt.ylim([0,1])
     plt.tight_layout()
+    plt.show()
+
+
+    for k in trange(0,len(x_list),4):
+
+        x = x_list[k].squeeze()
+
+        distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+        adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
+        edge_index = adj_t.nonzero().t().contiguous()
+        dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
+
+        pred = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device))
+
+        fig = plt.figure(figsize=(8, 8))
+        plt.scatter(x[:, 2].detach().cpu().numpy(),
+                    x[:, 1].detach().cpu().numpy(), s=10, c=model.density.detach().cpu().numpy(), vmin=0, vmax=0.75)
+        plt.xlim([0,1])
+        plt.ylim([0,1])
+        plt.tight_layout()
+        plt.savefig(f"tmp/particle_density_{k}.png")
+        plt.close()
 
         
 

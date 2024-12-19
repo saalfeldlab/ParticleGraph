@@ -286,7 +286,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
                 if edge_saved:
                     edges = edge_p_p_list[run][f'arr_{k}']
                 else:
-                    distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                    distance = torch.sum((x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
                     adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
                     edges = adj_t.nonzero().t().contiguous()
 

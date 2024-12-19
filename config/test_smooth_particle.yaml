@@ -1,5 +1,5 @@
 description: 'system of particles falling down in a box'
-dataset: 'falling_water_ramp'
+dataset: 'falling_water_ramp_wall'
 data_folder_name: '/groups/saalfeld/saalfeldlab/projects/gnn/learning-to-simulate/WaterRamps/'
 
 simulation:
@@ -15,11 +15,10 @@ simulation:
   boundary: 'no'
   start_frame: 0
 
-  smooth_particle: True
   smooth_radius: 0.05
 
 graph_model:
-  particle_model_name: 'PDE_F1'
+  particle_model_name: 'PDE_WF'
   mesh_model_name: ''
   prediction: '2nd_derivative'
 

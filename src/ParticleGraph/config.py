@@ -76,9 +76,6 @@ class SimulationConfig(BaseModel):
     final_cell_mass: list[float] = [-1]
     mc_slope: list[float] = [-1]
     kill_cell_leaving: bool = False
-    has_fluo: bool = False
-    fluo_path: str = ''
-    fluo_method: str = 'padding'
 
 
 class GraphModelConfig(BaseModel):
@@ -129,6 +126,17 @@ class PlottingConfig(BaseModel):
     xlim: list[float] = [-0.1, 0.1]
     ylim: list[float] = [-0.1, 0.1]
     embedding_lim: list[float] = [-40, 40]
+
+
+class ImageData(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    file_type: str = 'none'
+    cellpose_model: str = 'cyto3'
+    cellpose_channel : int = 0
+    cellpose_diameter: int = 30
+    cellpose_flow_threshold: int = 0.4
+    cellpose_cellprob_threshold: int = 0.0
 
 
 class TrainingConfig(BaseModel):
@@ -208,6 +216,8 @@ class ParticleGraphConfig(BaseModel):
     graph_model: GraphModelConfig
     plotting: PlottingConfig
     training: TrainingConfig
+    image_data: ImageData
+
 
     @staticmethod
     def from_yaml(file_name: str):

@@ -23,6 +23,7 @@ from scipy import ndimage
 def generate_from_data(config, device, visualize=True, step=None, cmap=None):
 
     data_folder_name = config.data_folder_name
+    image_data = config.image_data
 
     if data_folder_name == 'graphs_data/solar_system':
         load_solar_system(config, device, visualize, step)
@@ -32,7 +33,7 @@ def generate_from_data(config, device, visualize=True, step=None, cmap=None):
         load_WaterDropSmall(config, device, visualize, step, cmap)
     elif 'WaterRamps' in data_folder_name:
         load_WaterRampsWall(config, device, visualize, step, cmap)
-    elif ('PSC' in data_folder_name) | ('HeLa' in data_folder_name):
+    elif image_data.file_type != 'none':
         load_cell_data(config, device, visualize, step, cmap)
     else:
         raise ValueError(f'Unknown data folder name {data_folder_name}')
