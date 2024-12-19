@@ -26,10 +26,10 @@ dependencies:
   - pysr
   - h5py
   - fa2_modified
-  - tables
   - zarr
   - xarray
-  - PyQt5
   - pip:
     - geomloss
     - torch_geometric
+    - PyQt5
+    - tables

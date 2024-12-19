@@ -34,7 +34,7 @@ class SimulationConfig(BaseModel):
     cell_cycle_length: list[float] =[-1]
     cell_death_rate: list[float] = [-1]
     cell_area: list[float] = [-1]
-    min_radius: Annotated[float, Field(ge=0)] = 0
+    min_radius: float = 0.0
     max_radius: Annotated[float, Field(gt=0)]
     n_neighbors: int = 10
     angular_sigma: float = 0

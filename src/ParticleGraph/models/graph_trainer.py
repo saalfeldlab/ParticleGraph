@@ -21,6 +21,7 @@ from ParticleGraph.fitting_models import linear_model
 from torch_geometric.utils import dense_to_sparse
 import torch.optim as optim
 
+
 def data_train(config=None, config_file=None, erase=False, best_model=None, device=None):
     # plt.rcParams['text.usetex'] = True
     # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
@@ -286,7 +287,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
                     edges = edge_p_p_list[run][f'arr_{k}']
                 else:
                     distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                    adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                    adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
                     edges = adj_t.nonzero().t().contiguous()
 
                 if time_window == 0:
@@ -3697,8 +3698,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         hnorm = torch.load(f'./log/try_{config_file}/hnorm.pt', map_location=device).to(device)
         x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device))
         y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device))
-        ynorm = torch.load(f'./log/try_{config_file}/ynorm.pt', map_location=device).to(device)
-        vnorm = torch.load(f'./log/try_{config_file}/vnorm.pt', map_location=device).to(device)
+        ynorm = torch.load(f'./log/try_{config_file}/ynorm.pt', map_location=device, weights_only=True).to(device)
+        vnorm = torch.load(f'./log/try_{config_file}/vnorm.pt', map_location=device, weights_only=True).to(device)
         x = x_list[0][0].clone().detach()
         n_particles = x.shape[0]
         config.simulation.n_particles = n_particles
@@ -3739,8 +3740,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                         index_particles.append(index)
                         n_particle_types = 3
 
-        ynorm = torch.load(f'./log/try_{config_file}/ynorm.pt', map_location=device).to(device)
-        vnorm = torch.load(f'./log/try_{config_file}/vnorm.pt', map_location=device).to(device)
+        ynorm = torch.load(f'./log/try_{config_file}/ynorm.pt', map_location=device, weights_only=True).to(device)
+        vnorm = torch.load(f'./log/try_{config_file}/vnorm.pt', map_location=device, weights_only=True ).to(device)
 
     if do_tracking | has_state:
         for k in range(len(x_list[0])):
@@ -3864,7 +3865,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             mesh_model.load_state_dict(state_dict['model_state_dict'])
             mesh_model.eval()
         else:
-            state_dict = torch.load(net, map_location=device)
+            state_dict = torch.load(net, map_location=device, weights_only=True)
             model.load_state_dict(state_dict['model_state_dict'])
             model.eval()
             mesh_model = None
@@ -4064,7 +4065,11 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
             if sub_sampling > 1:
                 # predict position, does not work with rotation_augmentation
-                x_next = bc_pos(y[:,(time_step-1)*dimension:time_step*dimension])
+                if time_step == 1:
+                    x_next = bc_pos(y[:,0:dimension])
+                elif time_step == 2:
+                    x_next = bc_pos(y[:,dimension:2*dimension])
+
                 x[:, dimension + 1:2 * dimension + 1] = (x_next - x[:, 1:dimension + 1]) / delta_t
                 x[:, 1:dimension + 1] = x_next
                 loss = (x[:, 1:dimension + 1] - x0_next[:, 1:dimension + 1]).norm(2)
@@ -4085,22 +4090,19 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
             if bounce:
 
-                gap = 0.104
-                boundary = torch.cat((1 - gap - x[:, 1:2], x[:, 1:2] - gap, 1 - gap - x[:, 2:3], x[:, 2:3] - gap), dim=-1)
-                boundary = torch.clamp(boundary / 0.015, -1, 1)
-
-                x[:,7:] = boundary
+                # gap = 0.104
+                # boundary = torch.cat((1 - gap - x[:, 1:2], x[:, 1:2] - gap, 1 - gap - x[:, 2:3], x[:, 2:3] - gap), dim=-1)
+                # boundary = torch.clamp(boundary / 0.015, -1, 1)
+                #
+                # x[:,7:] = boundary
                 # Bounce on walls
-
-
-
-
-                # bouncing_pos = torch.argwhere((x[:, 1] <= 0.1) | (x[:, 1] >= 0.9)).squeeze()
-                # if bouncing_pos.numel() > 0:
-                #     x[bouncing_pos, 3] = - 0.6 * x[bouncing_pos, 3]
-                # bouncing_pos = torch.argwhere((x[:, 2] <= 0.1) | (x[:, 2] >= 0.9)).squeeze()
-                # if bouncing_pos.numel() > 0:
-                #     x[bouncing_pos, 4] = - 0.6 * x[bouncing_pos, 4]
+                gap = 0.005
+                bouncing_pos = torch.argwhere((x[:, 1] <= 0.1-gap) | (x[:, 1] >= 0.9+gap)).squeeze()
+                if bouncing_pos.numel() > 0:
+                    x[bouncing_pos, 3] = - 0.9 * x[bouncing_pos, 3]
+                bouncing_pos = torch.argwhere((x[:, 2] <= 0.1-gap) | (x[:, 2] >= 0.9+gap)).squeeze()
+                if bouncing_pos.numel() > 0:
+                    x[bouncing_pos, 4] = - 0.9 * x[bouncing_pos, 4]
 
             if time_window:
                 moving_pos = torch.argwhere(x[:,5]!=0)
@@ -4385,7 +4387,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
             if not ('PDE_N' in model_config.signal_model_name):
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{num}.tif", dpi=80)
+                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{num}.tif", dpi=40)
                 plt.close()
 
             if 'boundary' in style:
