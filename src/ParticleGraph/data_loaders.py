@@ -295,17 +295,13 @@ def load_cell_data(config, device, visualize, step, cmap):
             masks, flows, styles = model.eval(im, diameter=75, invert=False, normalize=True, channels=[0, 1])
             tifffile.imsave(data_folder_name + 'SEG/' + files[0], masks)
 
-            matplotlib.use("Qt5Agg")
-            fig = plt.figure(figsize=(8, 8))
-            plt.imshow(masks)
-            plt.tight_layout()
-            plt.show()
+            # matplotlib.use("Qt5Agg")
+            # fig = plt.figure(figsize=(8, 8))
+            # plt.imshow(masks)
+            # plt.tight_layout()
+            # plt.show()
 
         data_folder_name = data_folder_name + 'SEG/'
-
-
-
-
 
 
 
