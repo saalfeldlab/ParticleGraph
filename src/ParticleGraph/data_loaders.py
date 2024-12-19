@@ -45,12 +45,13 @@ def extract_object_properties(segmentation_image):
         # Calculate the area of the object
         area = region.area
         # Calculate the perimeter of the object
-        perimeter = region.perimeter
-        # Calculate the aspect ratio of the bounding box
-        aspect_ratio = region.major_axis_length / region.minor_axis_length
-        # Calculate the orientation of the object
-        orientation = region.orientation
-        object_properties.append((cell_id, pos_x, pos_y, area, perimeter, aspect_ratio, orientation))
+        if area > 8:
+            perimeter = region.perimeter
+            # Calculate the aspect ratio of the bounding box
+            aspect_ratio = region.major_axis_length / (region.minor_axis_length + 1e-6)
+            # Calculate the orientation of the object
+            orientation = region.orientation
+            object_properties.append((cell_id, pos_x, pos_y, area, perimeter, aspect_ratio, orientation))
 
     return object_properties
 
@@ -289,11 +290,11 @@ def load_cell_data(config, device, visualize, step, cmap):
         print('generate segmentation masks with Cellpose ...')
         for it in trange(len(files)):
 
-            im = tifffile.imread(data_folder_name + files[0])
+            im = tifffile.imread(data_folder_name + files[it])
             im = np.array(im)
             # im = im[:,:, image_data.cellpose_channel]
             masks, flows, styles = model.eval(im, diameter=75, invert=False, normalize=True, channels=[0, 1])
-            tifffile.imsave(data_folder_name + 'SEG/' + files[0], masks)
+            tifffile.imsave(data_folder_name + 'SEG/' + files[it], masks)
 
             # matplotlib.use("Qt5Agg")
             # fig = plt.figure(figsize=(8, 8))
@@ -428,7 +429,7 @@ def load_cell_data(config, device, visualize, step, cmap):
 
             ax = fig.add_subplot(224)
             plt.imshow(im*0)
-            plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=50, c=to_numpy(x[:, 14:15]), vmin=0, vmax=200)
+            plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=50, c=to_numpy(x[:, 14:15]))
             plt.xticks([])
             plt.yticks([])
             plt.xlim([0, im_dim[1]])
