@@ -39,8 +39,8 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
     print(f'dataset_name: {dataset_name}')
 
     if (os.path.isfile(f'./graphs_data/graphs_{dataset_name}/x_list_0.npy')) | (os.path.isfile(f'./graphs_data/graphs_{dataset_name}/x_list_0.pt')):
-        print('data already generated')
-        return
+        print('watch out: data already generated')
+        # return
 
     if has_mouse_city:
         data_generate_mouse_city(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,

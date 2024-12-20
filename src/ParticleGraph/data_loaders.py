@@ -29,6 +29,7 @@ import torch_geometric.data as data
 import networkx as nx
 from torch_geometric.utils.convert import to_networkx
 from cellpose import models
+from ParticleGraph.generators.cell_utils import *
 
 def extract_object_properties(segmentation_image):
     # Label the objects in the segmentation image
@@ -288,23 +289,21 @@ def load_cell_data(config, device, visualize, step, cmap):
         model = models.CellposeModel(gpu=True, pretrained_model=model_path)
 
         print('generate segmentation masks with Cellpose ...')
-        for it in trange(len(files)):
+        if False:
+            for it in trange(len(files)):
+                im = tifffile.imread(data_folder_name + files[it])
+                im = np.array(im)
+                # im = im[:,:, image_data.cellpose_channel]
+                masks, flows, styles = model.eval(im, diameter=75, invert=False, normalize=True, channels=[0, 1])
+                tifffile.imsave(data_folder_name + 'SEG/' + files[it], masks)
 
-            im = tifffile.imread(data_folder_name + files[it])
-            im = np.array(im)
-            # im = im[:,:, image_data.cellpose_channel]
-            masks, flows, styles = model.eval(im, diameter=75, invert=False, normalize=True, channels=[0, 1])
-            tifffile.imsave(data_folder_name + 'SEG/' + files[it], masks)
-
-            # matplotlib.use("Qt5Agg")
-            # fig = plt.figure(figsize=(8, 8))
-            # plt.imshow(masks)
-            # plt.tight_layout()
-            # plt.show()
+                # matplotlib.use("Qt5Agg")
+                # fig = plt.figure(figsize=(8, 8))
+                # plt.imshow(masks)
+                # plt.tight_layout()
+                # plt.show()
 
         data_folder_name = data_folder_name + 'SEG/'
-
-
 
     # 0 N1 cell index dim=1
     # 1,2 X1 positions dim=2
@@ -385,11 +384,11 @@ def load_cell_data(config, device, visualize, step, cmap):
         PREV_ID = ID
         PREV_LABEL = LABEL
 
-
         if visualize:
 
             plt.style.use('dark_background')
 
+            matplotlib.use("Qt5Agg")
             fig = plt.figure(figsize=(13, 10.5))
             ax = fig.add_subplot(221)
             plt.imshow(im>0)
@@ -402,7 +401,7 @@ def load_cell_data(config, device, visualize, step, cmap):
             plt.imshow(im*0)
             plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=5, c='w')
             for k in range(len(x)):
-                plt.text(to_numpy(x[k, 2]) + 5, to_numpy(x[k, 1]), f'{int(to_numpy(x[k, -1]))}', fontsize=6, color='w')
+                plt.text(to_numpy(x[k, 2]) + 5, to_numpy(x[k, 1]), f'{int(to_numpy(x[k, -1]))}', fontsize=4, color='w')
             plt.xticks([])
             plt.yticks([])
             plt.xlim([0, im_dim[1]])
@@ -428,12 +427,20 @@ def load_cell_data(config, device, visualize, step, cmap):
             plt.ylim([0, im_dim[0]])
 
             ax = fig.add_subplot(224)
-            plt.imshow(im*0)
-            plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=50, c=to_numpy(x[:, 14:15]))
+
+            X1 = x[:,1:3].clone().detach()
+            X1[:,0]  = X1[:,0] / im_dim[0]
+            X1[:, 1] = X1[:, 1] / im_dim[1]
+            X1[:, [0, 1]] = X1[:, [1, 0]]
+
+            vor, vertices_pos, vertices_per_cell, all_points = get_vertices(points=X1, device=device)
+            voronoi_plot_2d(vor, ax=ax, show_vertices=False, line_colors='green', line_width=1, line_alpha=1,
+                            point_size=0)
+            plt.scatter(to_numpy(X1[:,0]),to_numpy(X1[:,1]),s=10,c='g')
             plt.xticks([])
             plt.yticks([])
-            plt.xlim([0, im_dim[1]])
-            plt.ylim([0, im_dim[0]])
+            plt.xlim([0, 1])
+            plt.ylim([0, 1])
 
             plt.tight_layout()
 

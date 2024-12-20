@@ -3926,6 +3926,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     x = x_list[0][start_it].clone().detach()
     n_particles = x.shape[0]
 
+    # x_list[0] = torch.cat((x_list[0],x_list[0],x_list[0],x_list[0]), dim=0)
+
     for it in trange(start_it, stop_it):
 
         if it < n_frames - 4:
@@ -4099,10 +4101,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 gap = 0.005
                 bouncing_pos = torch.argwhere((x[:, 1] <= 0.1-gap) | (x[:, 1] >= 0.9+gap)).squeeze()
                 if bouncing_pos.numel() > 0:
-                    x[bouncing_pos, 3] = - 0.9 * x[bouncing_pos, 3]
+                    x[bouncing_pos, 3] = - 0.7 * x[bouncing_pos, 3]
                 bouncing_pos = torch.argwhere((x[:, 2] <= 0.1-gap) | (x[:, 2] >= 0.9+gap)).squeeze()
                 if bouncing_pos.numel() > 0:
-                    x[bouncing_pos, 4] = - 0.9 * x[bouncing_pos, 4]
+                    x[bouncing_pos, 4] = - 0.7 * x[bouncing_pos, 4]
 
             if time_window:
                 moving_pos = torch.argwhere(x[:,5]!=0)
