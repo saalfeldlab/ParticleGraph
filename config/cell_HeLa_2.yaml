@@ -11,7 +11,6 @@ simulation:
   has_cell_death: True
   n_particles_max: 8603
   n_particle_types: 16
-  n_interactions: 16
   n_frames: 92
   delta_t: 1
   time_step: 2
@@ -19,7 +18,7 @@ simulation:
   start_frame: 0
 
 image_data:
-    file_type: 'segmentation'
+  file_type: 'segmentation'
 
 graph_model:
   particle_model_name: 'PDE_Cell'

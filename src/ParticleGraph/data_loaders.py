@@ -275,6 +275,11 @@ def load_cell_data(config, device, visualize, step, cmap):
 
     bc_pos, bc_dpos = choose_boundary_values('no')
 
+    if image_data.file_type == '3D masks meshes':
+
+        return
+
+
     # Loading Data
 
     files = os.listdir(data_folder_name)
@@ -282,7 +287,9 @@ def load_cell_data(config, device, visualize, step, cmap):
     files.sort()
 
 
-    if image_data.file_type == 'fluo':
+
+
+    if image_data.file_type == '2D fluo':
         os.makedirs(f"{data_folder_name}/SEG", exist_ok=True)
 
         model_path = image_data.cellpose_model
@@ -447,7 +454,6 @@ def load_cell_data(config, device, visualize, step, cmap):
             num = f"{it:06}"
             plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{it}.tif", dpi=120)
             plt.close()
-
 
     torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
     torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')

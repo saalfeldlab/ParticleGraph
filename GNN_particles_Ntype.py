@@ -54,11 +54,11 @@ if __name__ == '__main__':
         best_model = None
 
         # config_list = ['rat_city_c2']
-        config_list = ['cell_PSC_5']
+        # config_list = ['cell_PSC_5']
         # config_list = ['falling_water_ramp_x7','falling_water_ramp_x8','falling_water_ramp_x8_1']
         # config_list = ['falling_water_ramp_x6_3']
         # config_list = ['arbitrary_3_field_video_bison']
-        # config_list = ['gland']
+        config_list = ['cell_gland_SMG2']
 
     for config_file in config_list:
 
@@ -78,33 +78,3 @@ if __name__ == '__main__':
 
 # bsub -n 4 -gpu "num=1" -q gpu_h100 "python GNN_particles_Ntype.py -o train falling_water_ramp_x1"
 
-
-import yaml
-import os
-
-# Define the lines to be added
-new_lines = {
-    'image_data': {
-        'file_type': ''
-    }
-}
-
-
-# Function to update a YAML file
-def update_yaml_file(file_path, new_lines):
-    with open(file_path, 'r') as file:
-        yaml_content = yaml.safe_load(file)
-
-    yaml_content.update(new_lines)
-
-    with open(file_path, 'w') as file:
-        yaml.dump(yaml_content, file)
-
-
-# Directory containing the YAML files
-directory = './config/'
-
-# Update all YAML files in the directory
-for filename in os.listdir(directory):
-    if filename.endswith('.yaml'):
-        update_yaml_file(os.path.join(directory, filename), new_lines)

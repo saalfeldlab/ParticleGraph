@@ -1,26 +1,32 @@
 description: 'attraction-repulsion with 3 types particles'
-dataset: '/groups/wang/wanglab/GNN/240104-SMG-HisG-PNA-Cy3-001-SIL/1 - Denoised_Statistics/1 - Denoised_Position.csv'
+dataset: 'cell_gland_SGM2'
+data_folder_name: '/groups/wang/wanglab/GNN/240408-LVpD80-E10-IAI/SMG2-processed/masks'
 
 simulation:
   params: [[-1]]
   min_radius: 0
   max_radius: 5
-  n_neighbors: 10
   n_particles: 300000
-  n_particle_types: 10
+  has_cell_division: True
+  has_cell_death: True
   n_frames: 149
   delta_t: 1
-  boundary: 'periodic'
+  time_step: 2
+  boundary: 'no'
+  start_frame: 0
+
+image_data:
+    file_type: '3D masks meshes'
 
 graph_model:
-  particle_model_name: 'PDE_Agents'
+  particle_model_name: 'PDE_Cell'
   mesh_model_name: ''
   prediction: 'first_derivative'
   input_size: 9
   output_size: 2
   hidden_dim: 128
   n_mp_layers: 5
-  aggr_type: 'mean'
+  aggr_type: 'add'
   embedding_dim: 2
   update_type: 'none'
 
@@ -33,12 +39,13 @@ training:
   batch_size: 1
   small_init_batch_size: False
   n_runs: 1
-  sparsity: 'replace_embedding_function'
+  sparsity: 'none'
   cluster_method: 'distance_plot'
   rotation_augmentation: True
   data_augmentation_loop: 100
   fix_cluster_embedding: True
   device: 'auto'
+  do_tracking: True
 
 
 

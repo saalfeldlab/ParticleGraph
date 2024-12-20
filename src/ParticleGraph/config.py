@@ -135,6 +135,7 @@ class ImageData(BaseModel):
     cellpose_model: str = 'cyto3'
     cellpose_channel : int = 0
     cellpose_diameter: float = 30
+
     cellpose_flow_threshold: int = 0.4
     cellpose_cellprob_threshold: int = 0.0
 
@@ -216,7 +217,7 @@ class ParticleGraphConfig(BaseModel):
     graph_model: GraphModelConfig
     plotting: PlottingConfig
     training: TrainingConfig
-    image_data: ImageData
+    image_data: Optional[ImageData] = None
 
 
     @staticmethod
