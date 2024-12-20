@@ -12,6 +12,12 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from tifffile import imread, imsave
 import glob
 from skimage.measure import regionprops
+import os, time, argparse
+import numpy as np
+import pandas as pd
+from skimage import io
+import vedo
+from joblib import Parallel, delayed
 
 def init_cell_range(config, device, scenario="None"):
     simulation_config = config.simulation
@@ -315,6 +321,358 @@ def cell_energy(voronoi_area, voronoi_perimeter, voronoi_lengths, device):
 
     energy = []
     return energy
+
+
+
+def calculate_volume(segmented_image, voxel_size=(0.75, 0.75, 1.0)):
+    print("Starting volume calculation...")
+    start_time = time.time()
+
+    labels, counts = np.unique(segmented_image, return_counts=True)
+    valid_mask = (labels != 0)
+    labels = labels[valid_mask]
+    counts = counts[valid_mask]
+    voxel_volume = np.prod(voxel_size)
+    volume_by_label = {label: count * voxel_volume for label, count in zip(labels, counts)}
+
+    volume_df = pd.DataFrame.from_dict(volume_by_label, orient='index', columns=['volume'])
+
+    end_time = time.time()
+    print(f"Volume calculation completed in {end_time - start_time:.2f} seconds.")
+    return volume_df
+
+def calculate_surface_area_from_segmented_image(segmented_image, voxel_size=(0.75, 0.75, 1.0), smoothing_iterations=2, n_jobs=-1):
+    print("Starting surface area calculation...")
+    start_time = time.time()
+
+    vol = Volume(segmented_image, spacing=voxel_size)
+    labels = np.unique(segmented_image)
+    labels = labels[labels != 0]
+
+    mesh = vol.isosurface_discrete(values=labels,
+                                   background_label=0,
+                                   internal_boundaries=True,
+                                   nsmooth=smoothing_iterations)
+
+    vertices = mesh.vertices
+    cells = np.array(mesh.cells)
+    labels_on_cells = mesh.celldata['BoundaryLabels']
+
+    # Compute the areas of all triangles first
+    v0, v1, v2 = vertices[cells[:, 0]], vertices[cells[:, 1]], vertices[cells[:, 2]]
+    edge1, edge2 = v1 - v0, v2 - v0
+    cross_prod = np.cross(edge1, edge2)
+    areas = 0.5 * np.linalg.norm(cross_prod, axis=1)
+
+    # Parallelize only the summation of areas for each label
+    def sum_areas_for_label(label):
+        return label, np.sum(areas[(labels_on_cells[:, 0] == label) | (labels_on_cells[:, 1] == label)])
+
+    results = Parallel(n_jobs=n_jobs)(
+        delayed(sum_areas_for_label)(label) for label in labels
+    )
+
+    area_df = pd.DataFrame(results, columns=['label', 'surface_area']).set_index('label')
+
+    end_time = time.time()
+    print(f"Surface area calculation completed in {end_time - start_time:.2f} seconds.")
+    return area_df
+
+def generate_and_save_mesh(segmented_image, voxel_size, output_folder_base, base_name, smoothing_iterations=2):
+    print("Starting mesh generation and saving...")
+    start_time = time.time()
+
+    vol = Volume(segmented_image, spacing=voxel_size)
+    labels = np.unique(segmented_image)
+    labels = labels[labels != 0]
+
+    mesh = vol.isosurface_discrete(values=labels,
+                                   background_label=0,
+                                   internal_boundaries=True,
+                                   nsmooth=smoothing_iterations)
+
+    # Extract vertices and cells
+    vertices = mesh.vertices
+    cells = np.array(mesh.cells)
+    labels_on_cells = mesh.celldata['BoundaryLabels']
+
+    # Save mesh as .vtp
+    vtp_output_folder = output_folder_base + "_mesh_vtp"
+    os.makedirs(vtp_output_folder, exist_ok=True)
+    vtp_output_path = os.path.join(vtp_output_folder, base_name + ".vtp")
+    mesh.write(vtp_output_path)
+
+    # Save vertices and faces to CSV files
+    csv_output_folder = output_folder_base + "_mesh_csv"
+    os.makedirs(csv_output_folder, exist_ok=True)
+
+    vertices_df = pd.DataFrame(vertices, columns=['x', 'y', 'z'])
+    vertices_csv_path = os.path.join(csv_output_folder, base_name + "_vertices.csv")
+    vertices_df.to_csv(vertices_csv_path, index=False)
+
+    faces_df = pd.DataFrame(cells, columns=['v1', 'v2', 'v3'])
+    faces_csv_path = os.path.join(csv_output_folder, base_name + "_faces.csv")
+    faces_df.to_csv(faces_csv_path, index=False)
+
+    labels_df = pd.DataFrame(labels_on_cells, columns=['label1', 'label2'])
+    labels_csv_path = os.path.join(csv_output_folder, base_name + "_labels.csv")
+    labels_df.to_csv(labels_csv_path, index=False)
+
+    end_time = time.time()
+    print(f"Mesh generation and saving completed in {end_time - start_time:.2f} seconds.")
+
+    return vertices, cells, labels, labels_on_cells
+
+def calculate_surface_area(vertices, cells, labels, labels_on_cells, n_jobs=-1):
+    print("Starting surface area calculation...")
+    start_time = time.time()
+
+    # Compute the areas of all triangles first
+    v0, v1, v2 = vertices[cells[:, 0]], vertices[cells[:, 1]], vertices[cells[:, 2]]
+    edge1, edge2 = v1 - v0, v2 - v0
+    cross_prod = np.cross(edge1, edge2)
+    areas = 0.5 * np.linalg.norm(cross_prod, axis=1)
+
+    # Parallelize only the summation of areas for each label
+    def sum_areas_for_label(label):
+        return label, np.sum(areas[(labels_on_cells[:, 0] == label) | (labels_on_cells[:, 1] == label)])
+
+    results = Parallel(n_jobs=n_jobs)(
+        delayed(sum_areas_for_label)(label) for label in labels
+    )
+
+    area_df = pd.DataFrame(results, columns=['label', 'surface_area']).set_index('label')
+
+    end_time = time.time()
+    print(f"Surface area calculation completed in {end_time - start_time:.2f} seconds.")
+    return area_df
+
+def calculate_centroids_and_accumulators(segmented_image, voxel_size=(0.75, 0.75, 1.0)):
+    print("Starting centroid and accumulator calculation...")
+    start_time = time.time()
+
+    labels = np.unique(segmented_image)
+    labels = labels[labels != 0]
+
+    label_max = labels.max()
+    sum_z = np.zeros(label_max + 1, dtype=np.float64)
+    sum_y = np.zeros(label_max + 1, dtype=np.float64)
+    sum_x = np.zeros(label_max + 1, dtype=np.float64)
+    counts = np.zeros(label_max + 1, dtype=np.int64)
+    covariance_matrix = np.zeros((label_max + 1, 3, 3), dtype=np.float64)
+
+    # Get the coordinates of all non-zero voxels
+    coords = np.column_stack(np.nonzero(segmented_image))
+    values = segmented_image[segmented_image > 0]
+
+    # Accumulate the coordinates and counts for each label
+    scaled_coords = coords * voxel_size
+    np.add.at(sum_z, values, scaled_coords[:, 2])
+    np.add.at(sum_y, values, scaled_coords[:, 1])
+    np.add.at(sum_x, values, scaled_coords[:, 0])
+    np.add.at(counts, values, 1)
+
+    # Compute the centroids
+    centroids_z = sum_z[labels] / counts[labels]
+    centroids_y = sum_y[labels] / counts[labels]
+    centroids_x = sum_x[labels] / counts[labels]
+
+    centroids = np.column_stack((centroids_x, centroids_y, centroids_z))
+
+    # Fill the covariance matrices
+    for i in range(3):
+        for j in range(i, 3):
+            np.add.at(covariance_matrix[:, i, j], values, scaled_coords[:, i] * scaled_coords[:, j])
+            if i != j:
+                covariance_matrix[:, j, i] = covariance_matrix[:, i, j]
+
+    end_time = time.time()
+    print(f"Centroid and accumulator calculation completed in {end_time - start_time:.2f} seconds.")
+    return centroids, counts, covariance_matrix, labels
+
+def calculate_elongation_and_orientation(centroids, counts, covariance_matrix, labels):
+    print("Starting optimized elongation and orientation calculation...")
+    start_time = time.time()
+
+    elongation_results = []
+    for label, cov_matrix in zip(labels, covariance_matrix[labels]):
+        if counts[label] < 3:
+            continue
+        centroid = centroids[labels == label]
+        # Adjust covariance matrices to be mean-centered
+        cov_matrix -= np.outer(centroid, centroid) * counts[label]
+
+        eigenvalues, eigenvectors = np.linalg.eigh(cov_matrix)
+        elongation = np.sqrt(eigenvalues[-1]) / np.sqrt(eigenvalues[0])
+        principal_axis = eigenvectors[:, -1]
+        elongation_results.append((label, elongation, *principal_axis))
+
+    elongation_df = pd.DataFrame(elongation_results, columns=['label', 'elongation', 'eigenvector_x', 'eigenvector_y', 'eigenvector_z']).set_index('label')
+
+    end_time = time.time()
+    print(f"Elongation and orientation calculation completed in {end_time - start_time:.2f} seconds.")
+    return elongation_df
+
+def compute_intensity_statistics(raw_image, segmented_image):
+    print("Starting intensity statistics computation...")
+    start_time = time.time()
+
+    labels = np.unique(segmented_image)
+
+    assert labels[0] == 0, "Background label '0' is missing from the segmented image."
+
+    flat_raw = raw_image.ravel()
+    flat_labels = segmented_image.ravel()
+
+    sum_intensity = np.bincount(flat_labels, weights=flat_raw)
+    count_intensity = np.bincount(flat_labels)
+
+    mean_intensity = sum_intensity / count_intensity
+
+    sum_squared_diff = np.bincount(flat_labels, weights=(flat_raw - mean_intensity[flat_labels])**2)
+
+    stddev_intensity = np.sqrt(sum_squared_diff / count_intensity)
+
+    background_mean_intensity = mean_intensity[0]
+
+    adjusted_mean_intensity = mean_intensity - background_mean_intensity
+
+    labels = labels[1:]
+    adjusted_mean_intensity = adjusted_mean_intensity[1:]
+    stddev_intensity = stddev_intensity[1:]
+    snr = adjusted_mean_intensity / stddev_intensity
+
+    df = pd.DataFrame({
+        'label': labels,
+        'mean_intensity': adjusted_mean_intensity,
+        'stddev': stddev_intensity,
+        'snr': snr
+    }).set_index('label')
+
+    end_time = time.time()
+    print(f"Intensity statistics computation completed in {end_time - start_time:.2f} seconds.")
+    return df
+
+
+def visualize_mesh(mesh_file):
+    # Load the mesh file
+    mesh = vedo.load(mesh_file)
+    mesh.color('#00FF00')
+
+    # Display the mesh
+    plotter = vedo.Plotter()
+    plotter.show(mesh, "3D Mesh Visualization",
+                 axes=4,
+                 bg='black',
+                 azimuth=0,
+                #  elevation=180,
+                #  roll=180,
+                #  viewup="z"
+                 )
+
+
+
+
+
+def process_image_batch(segmented_image_path, raw_image_path,
+         voxel_size=(0.75, 0.75, 1.0), smoothing_iterations=2, n_jobs=-1,
+         mesh_only=False, props_only=False):
+    start_time_all = time.time()
+
+    print("Reading images...")
+    start_time = time.time()
+
+    # note that vedo use a default xyz order for arrays,
+    # which is opposite to the zyx order of skimage.io.imread()
+    segmented_image = io.imread(segmented_image_path)
+    segmented_image = np.swapaxes(segmented_image, 0, 2)
+
+    if not mesh_only:
+        raw_image = io.imread(raw_image_path)
+        raw_image = np.swapaxes(raw_image, 0, 2)
+
+    end_time = time.time()
+    print(f"Images read in {end_time - start_time:.2f} seconds.")
+
+    # Parse out the output folder base and base name
+    parent_dir = os.path.dirname(os.path.dirname(segmented_image_path))
+    base_name = os.path.splitext(os.path.basename(segmented_image_path))[0]
+    output_folder_base = os.path.join(parent_dir, os.path.basename(os.path.dirname(segmented_image_path)) + '_smooth' + str(smoothing_iterations))
+
+    if not props_only:
+        # Generate mesh, save to .vtp and CSV
+        vertices, cells, labels, labels_on_cells = generate_and_save_mesh(segmented_image, voxel_size, output_folder_base, base_name, smoothing_iterations)
+
+    if not mesh_only:
+        # calculate surface area
+        if props_only:
+            surface_area_df = calculate_surface_area_from_segmented_image(segmented_image, voxel_size, smoothing_iterations, n_jobs)
+        else:
+            surface_area_df = calculate_surface_area(vertices, cells, labels, labels_on_cells, n_jobs=n_jobs)
+
+        # Compute morphometrics
+        centroids, counts, covariance_matrix, labels = calculate_centroids_and_accumulators(segmented_image, voxel_size)
+        centroid_df = pd.DataFrame(centroids, index=labels, columns=['centroid_x', 'centroid_y', 'centroid_z'])
+        elongation_df = calculate_elongation_and_orientation(centroids, counts, covariance_matrix, labels)
+        volume_df = calculate_volume(segmented_image, voxel_size)
+
+        morphometrics_df = pd.concat([volume_df, surface_area_df, centroid_df, elongation_df], axis=1)
+        morphometrics_df['sphericity'] = (np.pi**(1/3) * (6 * morphometrics_df['volume'])**(2/3)) / morphometrics_df['surface_area']
+
+        # Compute fluorescence stats
+        fluorescence_df = compute_intensity_statistics(raw_image, segmented_image)
+
+        # Merge DataFrames
+        final_df = pd.concat([morphometrics_df, fluorescence_df], axis=1)
+
+        # Filter out rows with inf or nan values
+        final_df.replace([np.inf, -np.inf], np.nan, inplace=True)
+        final_df.dropna(inplace=True)
+
+        # Reset index to ensure label is saved as a column
+        final_df.reset_index(inplace=True)
+
+        # Rename index to label
+        final_df.rename(columns={'index': 'label'}, inplace=True)
+
+        # Determine output folder and file path for CSV
+        output_folder = output_folder_base + '_label_props'
+        os.makedirs(output_folder, exist_ok=True)
+
+        # Output file name
+        output_file_name = base_name + '_label_props.csv'
+        output_file = os.path.join(output_folder, output_file_name)
+
+        # Save to CSV
+        start_time = time.time()
+        final_df.to_csv(output_file, index=False)
+        end_time = time.time()
+        print(f"Results saved to {output_file} in {end_time - start_time:.2f} seconds.")
+
+    end_time_all = time.time()
+    print(f"Total processing time: {end_time_all - start_time_all:.2f} seconds.")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Compute morphometrics and fluorescence stats from 3D images.")
+    parser.add_argument("segmented_image_path", type=str, help="Path to the segmented image file (TIFF).")
+    parser.add_argument("raw_image_path", type=str, help="Path to the raw image file (TIFF).")
+    parser.add_argument("-vs", "--voxel_size", type=float, nargs=3, default=(0.75, 0.75, 1.0), help="Voxel size as three floats (x, y, z), e.g., -vs 0.75 0.75 1.0")
+    parser.add_argument("-si", "--smoothing_iterations", type=int, default=2, help="Number of smoothing iterations for surface area calculation. Default is 2.")
+    parser.add_argument("-n", "--n_jobs", type=int, default=-1, help="Number of parallel jobs to use. Default is -1 (use all processors).")
+    parser.add_argument('--mesh_only', action='store_true', help='Only compute and save mesh (not label properties)')
+    parser.add_argument('--props_only', action='store_true', help='Only compute and save label properties (not saving mesh)')
+
+    args = parser.parse_args()
+    process_image_batch(args.segmented_image_path, args.raw_image_path, tuple(args.voxel_size), smoothing_iterations=args.smoothing_iterations, n_jobs=args.n_jobs, mesh_only=args.mesh_only, props_only=args.props_only)
+
+    import sys
+    if len(sys.argv) != 2:
+        print("Usage: python visualize_mesh.py <mesh_file>")
+        sys.exit(1)
+
+    mesh_file = sys.argv[1]
+    visualize_mesh(mesh_file)
+
 
 
 

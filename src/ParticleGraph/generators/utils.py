@@ -34,7 +34,7 @@ def generate_from_data(config, device, visualize=True, step=None, cmap=None):
     elif 'WaterRamps' in data_folder_name:
         load_WaterRampsWall(config, device, visualize, step, cmap)
     elif image_data.file_type != 'none':
-        load_cell_data(config, device, visualize, step, cmap)
+        load_cell_data(config, device, visualize)
     else:
         raise ValueError(f'Unknown data folder name {data_folder_name}')
 

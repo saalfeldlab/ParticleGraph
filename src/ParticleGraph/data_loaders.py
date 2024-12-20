@@ -256,9 +256,8 @@ def load_LG_ODE(config, device=None, visualize=False, step=1000):
     torch.save(connection_matrix_list, f'graphs_data/graphs_{dataset_name}/connection_matrix_list.pt')
 
 
-def load_cell_data(config, device, visualize, step, cmap):
+def load_cell_data(config, device, visualize):
 
-    # load data from https://celltrackingchallenge.net/2d-datasets/
 
     data_folder_name = config.data_folder_name
     dataset_name = config.dataset
@@ -277,6 +276,7 @@ def load_cell_data(config, device, visualize, step, cmap):
 
     if image_data.file_type == '3D masks meshes':
 
+        load_3D_cell_data(config, device, visualize)
         return
 
 
@@ -285,9 +285,6 @@ def load_cell_data(config, device, visualize, step, cmap):
     files = os.listdir(data_folder_name)
     files = [f for f in files if f.endswith('.tif')]
     files.sort()
-
-
-
 
     if image_data.file_type == '2D fluo':
         os.makedirs(f"{data_folder_name}/SEG", exist_ok=True)
@@ -470,6 +467,31 @@ def load_cell_data(config, device, visualize, step, cmap):
 
 
     print(f'n_cells: {n_cells}')
+
+
+def load_3D_cell_data(config, device, visualize):
+
+
+    data_folder_name = config.data_folder_name
+    dataset_name = config.dataset
+
+    simulation_config = config.simulation
+    train_config = config.training
+    image_data = config.image_data
+
+    max_radius = simulation_config.max_radius
+    min_radius = simulation_config.min_radius
+    dimension = simulation_config.dimension
+
+    delta_t = simulation_config.delta_t
+
+    bc_pos, bc_dpos = choose_boundary_values('no')
+
+    mesh_file = '/groups/wang/wanglab/GNN/240408-LVpD80-E10-IAI/SMG2-processed/masks_smooth2_mesh_vtp/240408-E14-SMG-LVpD80-E10-IAI-SMG2-combined-rcan-t049_cp_masks.vtp'
+    visualize_mesh(mesh_file)
+
+
+
 
 
 def load_WaterRampsWall(config, device=None, visualize=None, step=None, cmap=None):

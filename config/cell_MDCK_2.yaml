@@ -1,55 +1,61 @@
-data_folder_name: '/groups/saalfeld/home/allierc/signaling/MDCK/Leica SGFP2 and H42'
-  nuclear marker/Larger center region/merged/
-dataset: cell_MDCK
-description: Boids 16 different types, division
-graph_model:
-  aggr_type: add
-  embedding_dim: 2
-  hidden_dim: 128
-  input_size: 13
-  mesh_model_name: ''
-  n_mp_layers: 5
-  output_size: 2
-  particle_model_name: PDE_Cell
-  prediction: first_derivative
-  update_type: none
-image_data:
-  file_type: ''
-plotting:
-  arrow_length: 5
-  colormap: tab20
-  marker_size: 10
-  ylim:
-  - -0.0001
-  - 0.0001
+description: 'Boids 16 different types, division'
+dataset: 'cell_MDCK'
+data_folder_name: '/groups/saalfeld/home/allierc/signaling/MDCK/Leica SGFP2 and H42 nuclear marker/Larger center region/merged/'
+
 simulation:
-  boundary: 'no'
-  delta_t: 1
-  has_cell_death: true
-  has_cell_division: true
-  max_radius: 250
+  params: [[-1]]
   min_radius: 0
-  n_frames: 92
-  n_interactions: 16
-  n_particle_types: 16
+  max_radius: 100
   n_particles: 96
-  n_particles_max: 28167
-  ylim: [-1.0E-4,1.0E-4]
-  start_frame: 0
+  has_cell_division: True
+  has_cell_death: True
+  n_particles_max: 8603
+  n_particle_types: 16
+  n_interactions: 16
+  n_frames: 92
+  delta_t: 1
   time_step: 2
+  boundary: 'no'
+  start_frame: 0
+
+image_data:
+    file_type: '2D fluo'
+    cellpose_channel: 0
+    cellpose_diameter: 75
+    cellpose_model: '/groups/saalfeld/home/allierc/signaling/MDCK/Leica SGFP2 and H42 nuclear marker/Larger center region/merged/CP_20241219_130112'
+
+graph_model:
+  particle_model_name: 'PDE_Cell'
+  mesh_model_name: ''
+  prediction: 'first_derivative'
+  input_size: 13
+  output_size: 2
+  hidden_dim: 128
+  n_mp_layers: 5
+  aggr_type: 'add'
+  embedding_dim: 2
+  update_type: 'none'
+
+plotting:
+  colormap: 'tab20'
+  arrow_length: 5
+  marker_size: 10
+  ylim: [-1.0E-4,1.0E-4]
+
 training:
-  batch_size: 1
-  cluster_method: distance_plot
-  data_augmentation_loop: 5000
-  device: auto
-  do_tracking: true
-  fix_cluster_embedding: true
-  learning_rate_embedding_start: 0.0001
-  learning_rate_start: 0.0001
+  seed: 14
   n_epochs: 2
+  batch_size: 1
+  small_init_batch_size: False
   n_runs: 1
   noise_level: 0
-  rotation_augmentation: true
-  seed: 14
-  small_init_batch_size: false
-  sparsity: none
+  sparsity: 'none'
+  cluster_method: 'distance_plot'
+  rotation_augmentation: True
+  data_augmentation_loop: 5000
+  fix_cluster_embedding: True
+  device: 'auto'
+  do_tracking: True
+  learning_rate_start: 1.0E-4
+  learning_rate_embedding_start: 1.0E-4
+

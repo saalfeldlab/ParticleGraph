@@ -126,7 +126,7 @@ class Interaction_Falling_Water_Smooth(pyg.nn.MessagePassing):
         density_null = torch.zeros_like(pos[:, 0:1])
         self.mode = 'density'
         self.density = self.propagate(edge_index, pos=pos, embedding=embedding, density=density_null)
-        self.mode = 'smooth_particle'
+        self.mode = 'smooth_particle_dW'
         pred = self.propagate(edge_index, pos=pos, embedding=embedding, density=self.density)
 
         if self.update_type == 'mlp':

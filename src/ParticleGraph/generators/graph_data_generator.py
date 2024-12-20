@@ -829,7 +829,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
     if config.data_folder_name != 'none':
         print(f'generating from data ...')
-        generate_from_data(config=config, device=device, visualize=visualize, step=step, cmap=cmap)
+        generate_from_data(config=config, device=device, visualize=visualize)
         return
 
     logging.basicConfig(filename=f'./graphs_data/graphs_{dataset_name}/generator.log', format='%(asctime)s %(message)s',

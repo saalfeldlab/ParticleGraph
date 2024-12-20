@@ -33,3 +33,6 @@ dependencies:
     - torch_geometric
     - PyQt5
     - tables
+    - vedo
+    - cellpose
+    - joblib
