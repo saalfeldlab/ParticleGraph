@@ -172,7 +172,11 @@ class Interaction_Falling_Water_Smooth(pyg.nn.MessagePassing):
                 case 'grad_velocity':
                     vx_x = self.dW_j[:, 0:1] * d_pos_j[:,0:1] / self.delta_t / density_j[:,0:1]
                     vy_y = self.dW_j[:, 1:2] * d_pos_j[:,1:2] / self.delta_t / density_j[:,0:1]
-                    return torch.cat((vx_x, vy_y), dim=1)
+                    vx_xx = self.d2W_j[:, 0:1] * (d_pos_i[:,0:1] - d_pos_j[:,0:1]) / self.delta_t / density_j[:,0:1]
+                    vy_xx = self.d2W_j[:, 0:1] * (d_pos_i[:, 1:2] - d_pos_j[:, 1:2]) / self.delta_t / density_j[:, 0:1]
+                    vx_yy = self.d2W_j[:, 1:2] * (d_pos_i[:,0:1] - d_pos_j[:,0:1]) / self.delta_t / density_j[:,0:1]
+                    vy_yy = self.d2W_j[:, 1:2] * (d_pos_i[:, 1:2] - d_pos_j[:, 1:2]) / self.delta_t / density_j[:, 0:1]
+                    return torch.cat((vx_x, vy_y, vx_xx+vy_xx, vx_yy+vy_yy), dim=1)
                 case 'pred_smooth_particle':
                     in_features = torch.cat((delta_pos, density_i, density_j, embedding_i, embedding_j), dim=-1)
                     out = self.lin_edge(in_features)
@@ -188,11 +192,6 @@ class Interaction_Falling_Water_Smooth(pyg.nn.MessagePassing):
                     return W_j
                 case 'smooth_particle':
                     in_features = torch.cat((pos_i_p, pos_j_p, density_i, density_j, embedding_i, embedding_j), dim=-1)
-                    out = self.lin_edge(in_features)
-                    return out
-                case 'smooth_particle_dW':
-                    dW_j = self.d_W(pos_j_p[:, 0:2])
-                    in_features = torch.cat((pos_i_p, pos_j_p, density_i, density_j, embedding_i, embedding_j, dW_j), dim=-1)
                     out = self.lin_edge(in_features)
                     return out
 
@@ -268,7 +267,7 @@ if __name__ == '__main__':
 
     it = 80
     x = x_list[it].squeeze()
-    x = torch.cat((x, torch.zeros((x.shape[0], 5), device=device)), 1)
+    x = torch.cat((x, torch.zeros((x.shape[0], 7), device=device)), 1)
     data_id = torch.ones((x.shape[0], 1), dtype=torch.int)
 
     distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
@@ -291,14 +290,14 @@ if __name__ == '__main__':
     plt.show()
 
     with torch.no_grad():
-        grad_v = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device),
+        vs = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device),
                                tasks=['grad_velocity'])
-    x[:, 9:11] = grad_v
+    x[:, 9:13] = vs
 
     matplotlib.use("Qt5Agg")
     fig = plt.figure(figsize=(8, 8))
     plt.scatter(x[:, 2].detach().cpu().numpy(),
-                x[:, 1].detach().cpu().numpy(), s=10, c=x[:, 9].detach().cpu().numpy())
+                x[:, 1].detach().cpu().numpy(), s=10, c=x[:, 11].detach().cpu().numpy())
     plt.xlim([0,1])
     plt.ylim([0,1])
     plt.tight_layout()
@@ -307,7 +306,7 @@ if __name__ == '__main__':
     matplotlib.use("Qt5Agg")
     fig = plt.figure(figsize=(8, 8))
     plt.scatter(x[:, 2].detach().cpu().numpy(),
-                x[:, 1].detach().cpu().numpy(), s=10, c=x[:, 10].detach().cpu().numpy())
+                x[:, 1].detach().cpu().numpy(), s=10, c=x[:, 12].detach().cpu().numpy())
     plt.xlim([0,1])
     plt.ylim([0,1])
     plt.tight_layout()
@@ -316,7 +315,7 @@ if __name__ == '__main__':
     matplotlib.use("Qt5Agg")
     fig = plt.figure(figsize=(8, 8))
     plt.scatter(x[:, 2].detach().cpu().numpy(),
-                x[:, 1].detach().cpu().numpy(), s=10, c=(x[:, 9] + x[:, 10]).detach().cpu().numpy())
+                x[:, 1].detach().cpu().numpy(), s=10, c=(x[:, 11] + x[:, 12]).detach().cpu().numpy())
     plt.xlim([0,1])
     plt.ylim([0,1])
     plt.tight_layout()
