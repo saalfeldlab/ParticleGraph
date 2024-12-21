@@ -178,7 +178,7 @@ class Interaction_Falling_Water_Smooth(pyg.nn.MessagePassing):
                     vy_yy = self.d2W_j[:, 1:2] * (d_pos_i[:, 1:2] - d_pos_j[:, 1:2]) / self.delta_t / density_j[:, 0:1]
                     return torch.cat((vx_x, vy_y, vx_xx+vy_xx, vx_yy+vy_yy), dim=1)
                 case 'pred_smooth_particle':
-                    in_features = torch.cat((delta_pos, density_i, density_j, embedding_i, embedding_j), dim=-1)
+                    in_features = torch.cat((delta_pos, density_j, embedding_i, embedding_j), dim=-1)
                     out = self.lin_edge(in_features)
                     return out
 
@@ -204,7 +204,7 @@ class Interaction_Falling_Water_Smooth(pyg.nn.MessagePassing):
         dW = [-3 * x[:,0] * (self.smooth_radius ** 2 - torch.sqrt(x[:,0] ** 2 + x[:,1] ** 2)) ** 2 / torch.sqrt(x[:,0] ** 2 + x[:,1] ** 2),
          -3 * x[:,1] * (self.smooth_radius ** 2 - torch.sqrt(x[:,0] ** 2 + x[:,1] ** 2)) ** 2 / torch.sqrt(x[:,0] ** 2 + x[:,1] ** 2)]
         dW = torch.stack(dW, dim=-1)
-        dW = 1 / (np.pi * self.smooth_radius ** 8) * dW /6E3
+        dW = -1 / (np.pi * self.smooth_radius ** 8) * dW /6E3
         dW = torch.where(torch.isnan(dW), torch.zeros_like(dW), dW)
         d2W = torch.abs(dW) / d.repeat(1, 2)
         d2W = torch.where(torch.isnan(d2W), torch.zeros_like(d2W), d2W)
@@ -260,39 +260,68 @@ if __name__ == '__main__':
 
 
     model = Interaction_Falling_Water_Smooth(config=config, device=device, aggr_type='add', bc_dpos=bc_dpos, dimension=dimension)
-    optimizer = optim.Adam(model.parameters(), lr=1e-6)
+    optimizer = optim.Adam(model.parameters(), lr=1e-5)
     model.train()
 
     # x = mgrid
 
     it = 80
-    x = x_list[it].squeeze()
-    x = torch.cat((x, torch.zeros((x.shape[0], 7), device=device)), 1)
-    data_id = torch.ones((x.shape[0], 1), dtype=torch.int)
 
-    distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-    adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
-    edge_index = adj_t.nonzero().t().contiguous()
+    for k in trange(100000):
 
-    dataset = data.Data(x=x, pos=x[:, 1:dimension + 1], edge_index=edge_index)
+        x = x_list[it].squeeze()
+        x = torch.cat((x, torch.zeros((x.shape[0], 7), device=device)), 1)
+        data_id = torch.ones((x.shape[0], 1), dtype=torch.int)
 
-    with torch.no_grad():
-        pred = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device), tasks=['density'])
-    x[:, 6:9] = pred[:, 0:3]
+        distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+        adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
+        edge_index = adj_t.nonzero().t().contiguous()
+
+        dataset = data.Data(x=x, pos=x[:, 1:dimension + 1], edge_index=edge_index)
+
+        optimizer.zero_grad()
+
+        density_s = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device), tasks=['density'])
+        x[:, 6:9] = density_s[:, 0:3]
+        v_s = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device), tasks=['grad_velocity'])
+        x[:, 9:13] = v_s
+        pred = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device), tasks=['pred_smooth_particle'])
+        loss = torch.std(pred)/torch.mean(pred)
+        loss.backward()
+        optimizer.step()
+
+    print(loss)
 
     matplotlib.use("Qt5Agg")
     fig = plt.figure(figsize=(8, 8))
     plt.scatter(x[:, 2].detach().cpu().numpy(),
-                x[:, 1].detach().cpu().numpy(), s=10, c=x[:, 6].detach().cpu().numpy(), vmin=0, vmax=0.5)
+                x[:, 1].detach().cpu().numpy(), s=10, c=(pred / torch.mean(pred)).detach().cpu().numpy(),vmin=0.9,vmax=1.1)
     plt.xlim([0,1])
     plt.ylim([0,1])
     plt.tight_layout()
     plt.show()
 
-    with torch.no_grad():
-        vs = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device),
-                               tasks=['grad_velocity'])
-    x[:, 9:13] = vs
+
+
+    matplotlib.use("Qt5Agg")
+    fig = plt.figure(figsize=(8, 8))
+    plt.scatter(x[:, 2].detach().cpu().numpy(),
+                x[:, 1].detach().cpu().numpy(), s=10, c=x[:, 8].detach().cpu().numpy())
+    plt.xlim([0,1])
+    plt.ylim([0,1])
+    plt.tight_layout()
+    plt.show()
+
+    matplotlib.use("Qt5Agg")
+    fig = plt.figure(figsize=(8, 8))
+    plt.scatter(x[:, 2].detach().cpu().numpy(),
+                x[:, 1].detach().cpu().numpy(), s=10, c=(x[:, 7]+x[:, 8]).detach().cpu().numpy())
+    plt.xlim([0,1])
+    plt.ylim([0,1])
+    plt.tight_layout()
+    plt.show()
+
+
 
     matplotlib.use("Qt5Agg")
     fig = plt.figure(figsize=(8, 8))
@@ -320,8 +349,6 @@ if __name__ == '__main__':
     plt.ylim([0,1])
     plt.tight_layout()
     plt.show()
-
-
 
 
     for k in trange(0,len(x_list),4):
@@ -404,7 +431,7 @@ if __name__ == '__main__':
         plt.savefig(f"tmp/particle_density_{k}.png")
         plt.close()
 
-        
+
 
 
 
