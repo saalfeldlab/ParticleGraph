@@ -99,59 +99,96 @@ class Interaction_Falling_Water_Smooth(pyg.nn.MessagePassing):
         self.a = nn.Parameter(
                 torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
                              requires_grad=True, dtype=torch.float32))
+        self.embedding_size = self.a.shape[1]
 
-    def forward(self, data=[], data_id=[], training=[], phi=[], has_field=False):
+    def forward(self, data=[], data_id=[], training=[], phi=[], has_field=False, tasks=None):
 
         x, edge_index = data.x, data.edge_index
-
         # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
         if self.time_window == 0:
-            particle_id = x[:, 0:1]
-            embedding = self.a[data_id, to_numpy(particle_id), :].squeeze()
+            if x.shape[0] <=self.embedding_size:
+                particle_id = x[:, 0:1]
+                embedding = self.a[data_id, to_numpy(particle_id), :].squeeze()
+            else:
+                embedding = torch.zeros((x.shape[0],2), device=device)
+
             pos = x[:, 1:self.dimension+1]
+            d_pos = x[:, self.dimension+1:2*self.dimension+1]
 
         else:
-            particle_id = x[0][:, 0:1]
-            embedding = self.a[data_id, to_numpy(particle_id), :].squeeze()
+            if x[0].shape[0] <= self.embedding_size:
+                particle_id = x[0][:, 0:1]
+                embedding = self.a[data_id, to_numpy(particle_id), :].squeeze()
+            else:
+                embedding = torch.zeros_like(x[0:self.dimension])
             x = torch.stack(x)
             pos = x[:, :, 1:self.dimension + 1]
             pos = pos.transpose(0, 1)
             pos = torch.reshape(pos, (pos.shape[0], pos.shape[1] * pos.shape[2]))
 
+            d_pos = x[:, :, self.dimension + 1:2 * self.dimension + 1]
+            d_pos = d_pos.transpose(0, 1)
+            d_pos = torch.reshape(d_pos, (d_pos.shape[0], d_pos.shape[1] * d_pos.shape[2]))
+
         if training & (self.time_window_noise > 0):
             noise = torch.randn_like(pos) * self.time_window_noise
             pos = pos + noise
 
-        density_null = torch.zeros_like(pos[:, 0:1])
-        self.mode = 'density'
-        self.density = self.propagate(edge_index, pos=pos, embedding=embedding, density=density_null)
-        self.mode = 'smooth_particle_dW'
-        pred = self.propagate(edge_index, pos=pos, embedding=embedding, density=self.density)
+        pred = None
+        for task in tasks:
+            self.task = task
+            match task:
+                case 'density':
+                    density_null = torch.zeros_like(pos[:, 0:1])
+                    self.density = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding, density=density_null)
+                    out = self.density
+                case 'density_grad':
+                    density_null = torch.zeros_like(pos[:, 0:1])
+                    self.density = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding, density=density_null)
+                    out = self.density
+                case 'velocity_field':
+                    velocity_field = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding, density=self.density)
+                    out = velocity_field
+                case 'velocity_field_grad':
+                    velocity_field_grad = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding, density=self.density)
+                    out = velocity_field_grad
+                case 'pred_smooth_particle':
+                    pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding, density=self.density)
+                case 'pred_smooth_particle_dW':
+                    pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding, density=self.density)
 
-        if self.update_type == 'mlp':
-            if self.time_window == 0:
-                pos_p = pos
-            else:
-                pos_p = (pos - pos[:, 0:self.dimension].repeat(1, self.time_window))[:, self.dimension:]
-            out = self.lin_phi(torch.cat((pred, embedding, pos_p), dim=-1))
-        else:
+        if pred != None:
             out = pred
+            if self.update_type == 'mlp':
+                if self.time_window == 0:
+                    pos_p = pos
+                else:
+                    pos_p = (pos - pos[:, 0:self.dimension].repeat(1, self.time_window))[:, self.dimension:]
+                out = self.lin_phi(torch.cat((pred, embedding, pos_p), dim=-1))
 
         return out
 
 
-    def message(self, edge_index_i, edge_index_j, pos_i, pos_j, embedding_i, embedding_j, density_i, density_j):
+    def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j, density_i, density_j):
 
 
         if self.time_window == 0:
             delta_pos = self.bc_dpos(pos_j - pos_i)
-            match self.mode:
+            match self.task:
                 case 'density':
-                    W_j = self.W(delta_pos)
-                    return W_j
-                case 'smooth_particle':
-                    dW_j = self.d_W(delta_pos)
+                    self.W_j = self.W(delta_pos)
+                    return self.W_j
+                case 'density_grad':
+                    self.W_j, self.dW_j = self.W_d_W(delta_pos)
+                    return self.W_j
+                case 'velocity_field':
+                    return self.W_j.repeat(1, self.dimension) * d_pos_j / self.delta_t / density_j
+                case 'velocity_field_grad':
+                    v_x = self.dW_j[:, 0:1].repeat(1, self.dimension) * d_pos_j / self.delta_t / density_j
+                    v_y = self.dW_j[:, 1:2].repeat(1, self.dimension) * d_pos_j / self.delta_t / density_j
+                    return torch.cat((v_x, v_y), dim=1)
+                case 'pred_smooth_particle':
                     in_features = torch.cat((delta_pos, density_i, density_j, embedding_i, embedding_j), dim=-1)
                     out = self.lin_edge(in_features)
                     return out
@@ -159,9 +196,10 @@ class Interaction_Falling_Water_Smooth(pyg.nn.MessagePassing):
         else:
             pos_i_p = (pos_i - pos_i[:, 0:self.dimension].repeat(1, self.time_window))[:, self.dimension:]
             pos_j_p = (pos_j - pos_i[:, 0:self.dimension].repeat(1, self.time_window))
-            match self.mode:
+            match self.task:
                 case 'density':
                     W_j = self.W(pos_j_p[:, 0:2])
+                    self.W_j = W_j
                     return W_j
                 case 'smooth_particle':
                     in_features = torch.cat((pos_i_p, pos_j_p, density_i, density_j, embedding_i, embedding_j), dim=-1)
@@ -187,6 +225,8 @@ class Interaction_Falling_Water_Smooth(pyg.nn.MessagePassing):
 
         d = torch.norm(x, dim=-1)
         d = d[None, :, None]
+
+        W = 1 / (np.pi * self.smooth_radius ** 8) * (self.smooth_radius ** 2 - d ** 2) ** 3 / 6E3
 
         dW = [-3 * x[:,0] * (self.smooth_radius ** 2 - torch.sqrt(x[:,0] ** 2 + x[:,1] ** 2)) ** 2 / torch.sqrt(x[:,0] ** 2 + x[:,1] ** 2),
          -3 * x[:,1] * (self.smooth_radius ** 2 - torch.sqrt(x[:,0] ** 2 + x[:,1] ** 2)) ** 2 / torch.sqrt(x[:,0] ** 2 + x[:,1] ** 2)]
@@ -263,14 +303,15 @@ if __name__ == '__main__':
     max_radius = config.simulation.max_radius
     min_radius = config.simulation.min_radius
     smooth_radius = config.simulation.smooth_radius
+    time_window = config.training.time_window
 
     x_list = np.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/graphs_falling_water_ramp_wall/x_list_2.npy')
     x_list = torch.tensor(x_list, dtype=torch.float32, device=device)
 
-    tensors = tuple(dimension * [torch.linspace(-1, 1, steps=100)])
+    tensors = tuple(dimension * [torch.linspace(0, 1, steps=512)])
     mgrid = torch.stack(torch.meshgrid(*tensors), dim=-1)
     mgrid = mgrid.reshape(-1, dimension)
-    mgrid = torch.cat((torch.ones((mgrid.shape[0], 1)), mgrid), 1)
+    mgrid = torch.cat((torch.ones((mgrid.shape[0], 1)), mgrid, torch.zeros((mgrid.shape[0], 2))), 1)
     mgrid = mgrid.to(device)
 
 
@@ -279,7 +320,10 @@ if __name__ == '__main__':
     model.train()
 
     # x = mgrid
-    x = x_list[80].squeeze()
+
+
+    it = 80
+    x = x_list[it].squeeze()
     data_id = torch.ones((x.shape[0], 1), dtype=torch.int)
 
     model_density = Interaction_Falling_Water_Smooth(config=config, aggr_type='add', bc_dpos=bc_dpos, device=device)
@@ -287,9 +331,11 @@ if __name__ == '__main__':
     distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
     adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
     edge_index = adj_t.nonzero().t().contiguous()
-    dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
 
-    pred = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device))
+    dataset = data.Data(x=x, pos=x[:, 1:dimension + 1], edge_index=edge_index)
+
+    with torch.no_grad():
+        pred = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device), tasks=['density_grad'])
 
     matplotlib.use("Qt5Agg")
     fig = plt.figure(figsize=(8, 8))
@@ -300,10 +346,101 @@ if __name__ == '__main__':
     plt.tight_layout()
     plt.show()
 
+    with torch.no_grad():
+        velocity_field = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device),
+                               tasks=['velocity_field'])
+
+    velocity = torch.norm(velocity_field, dim=1)
+    velocity = torch.norm(x[:,3:5], dim=1)
+
+    matplotlib.use("Qt5Agg")
+    fig = plt.figure(figsize=(8, 8))
+    plt.scatter(x[:, 2].detach().cpu().numpy(),
+                x[:, 1].detach().cpu().numpy(), s=10, c=velocity.detach().cpu().numpy())
+    plt.xlim([0,1])
+    plt.ylim([0,1])
+    plt.tight_layout()
+    plt.show()
+
+    with torch.no_grad():
+        velocity_field_grad = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device),
+                               tasks=['velocity_field_grad'])
+
+    matplotlib.use("Qt5Agg")
+    fig = plt.figure(figsize=(8, 8))
+    plt.scatter(x[:, 2].detach().cpu().numpy(),
+                x[:, 1].detach().cpu().numpy(), s=10, c=(velocity_field_grad[:,0] + velocity_field_grad[:,3]).detach().cpu().numpy())
+    plt.xlim([0,1])
+    plt.ylim([0,1])
+    plt.tight_layout()
+    plt.show()
+
+
+
 
     for k in trange(0,len(x_list),4):
 
         x = x_list[k].squeeze()
+
+        distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - mgrid[None, :, 1:dimension + 1]) ** 2, dim=2)
+        adj_t = ((distance <  smooth_radius ** 2) & (distance > 0)).float() * 1
+        edge_index = adj_t.nonzero().t().contiguous()
+        xp = torch.cat((mgrid, x[:, 0:2*dimension + 1]), 0)
+        edge_index[0,:] = edge_index[0,:] + mgrid.shape[0]
+        edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+        edges = edge_index
+
+        matplotlib.use("Qt5Agg")
+        fig = plt.figure(figsize=(8, 8))
+        plt.scatter(x[:, 2].detach().cpu().numpy(),
+                    x[:, 1].detach().cpu().numpy(), s=10, c='w')
+        plt.scatter(mgrid[:, 2].detach().cpu().numpy(),
+                    mgrid[:, 1].detach().cpu().numpy(), s=0.1, c='r')
+        pixel = 5020
+        plt.scatter(mgrid[pixel, 2].detach().cpu().numpy(),
+                    mgrid[pixel, 1].detach().cpu().numpy(), s=40, c='g')
+        pos = torch.argwhere(edges[1, :] == pixel).squeeze()
+        plt.scatter(xp[edges[0, pos], 2].detach().cpu().numpy(), xp[edges[0, pos], 1].detach().cpu().numpy(), s=10,
+                    c='b')
+        plt.xlim([0, 1])
+        plt.ylim([0, 1])
+        plt.tight_layout()
+        plt.show()
+
+        dataset = data.Data(x=xp, pos=xp[:, 1:dimension + 1], edge_index=edge_index)
+        with torch.no_grad():
+            density = self.density(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device), tasks=['density'])
+
+        density = density[0:mgrid.shape[0]]
+        density = torch.reshape(density, (512, 512))
+
+        matplotlib.use("Qt5Agg")
+        fig = plt.figure(figsize=(8, 8))
+        ax = fig.add_subplot(111)
+        plt.imshow(to_numpy(density), cmap='viridis', vmin=0, vmax=1, extent=[0, 1, 0, 1])
+        ax.invert_yaxis()
+        plt.xticks([])
+        plt.yticks([])
+        plt.show()
+
+
+
+
+
+
+
+        density[0:mgrid.shape[0]]
+        density = torch.reshape(density, (512, 512))
+
+        matplotlib.use("Qt5Agg")
+        fig = plt.figure(figsize=(8, 8))
+        ax = fig.add_subplot(111)
+        plt.imshow(to_numpy(density), cmap='viridis', vmin=0, vmax=1, extent=[0, 1, 0, 1])
+        ax.invert_yaxis()
+        plt.xticks([])
+        plt.yticks([])
+        plt.show()
+
 
         distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
         adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1

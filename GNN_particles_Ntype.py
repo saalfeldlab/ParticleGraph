@@ -50,7 +50,7 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        task = 'test'
+        task = 'train'
         best_model = None
 
         # config_list = ['rat_city_c2']
@@ -58,9 +58,7 @@ if __name__ == '__main__':
         config_list = ['falling_water_ramp_x1', 'falling_water_ramp_x4', 'falling_water_ramp_x5', 'falling_water_ramp_x6_3', 'falling_water_ramp_x6_4',
                        'falling_water_ramp_x6_s2', 'falling_water_ramp_x6_s4', 'falling_water_ramp_x8', 'falling_water_ramp_x8_1']
 
-        config_list = ['falling_water_ramp_x8_2']
 
-        # config_list = ['falling_water_ramp_x6_3']
         # config_list = ['arbitrary_3_field_video_bison']
         # config_list = ['cell_gland_SMG2']
 
