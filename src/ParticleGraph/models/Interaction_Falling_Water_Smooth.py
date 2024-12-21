@@ -143,19 +143,9 @@ class Interaction_Falling_Water_Smooth(pyg.nn.MessagePassing):
                     density_null = torch.zeros_like(pos[:, 0:1])
                     self.density = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding, density=density_null)
                     out = self.density
-                case 'density_grad':
-                    density_null = torch.zeros_like(pos[:, 0:1])
-                    self.density = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding, density=density_null)
-                    out = self.density
-                case 'velocity_field':
-                    velocity_field = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding, density=self.density)
-                    out = velocity_field
-                case 'velocity_field_grad':
-                    velocity_field_grad = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding, density=self.density)
-                    out = velocity_field_grad
+                case 'grad_velocity':
+                    out = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding, density=self.density)
                 case 'pred_smooth_particle':
-                    pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding, density=self.density)
-                case 'pred_smooth_particle_dW':
                     pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding, density=self.density)
 
         if pred != None:
@@ -177,17 +167,12 @@ class Interaction_Falling_Water_Smooth(pyg.nn.MessagePassing):
             delta_pos = self.bc_dpos(pos_j - pos_i)
             match self.task:
                 case 'density':
-                    self.W_j = self.W(delta_pos)
-                    return self.W_j
-                case 'density_grad':
                     self.W_j, self.dW_j = self.W_d_W(delta_pos)
-                    return self.W_j
-                case 'velocity_field':
-                    return self.W_j.repeat(1, self.dimension) * d_pos_j / self.delta_t / density_j
-                case 'velocity_field_grad':
-                    v_x = self.dW_j[:, 0:1].repeat(1, self.dimension) * d_pos_j / self.delta_t / density_j
-                    v_y = self.dW_j[:, 1:2].repeat(1, self.dimension) * d_pos_j / self.delta_t / density_j
-                    return torch.cat((v_x, v_y), dim=1)
+                    return torch.cat((self.W_j, self.dW_j), dim=1)
+                case 'grad_velocity':
+                    vx_x = self.dW_j[:, 0:1] * d_pos_j[:,0:1] / self.delta_t / density_j[:,0:1]
+                    vy_y = self.dW_j[:, 1:2] * d_pos_j[:,1:2] / self.delta_t / density_j[:,0:1]
+                    return torch.cat((vx_x, vy_y), dim=1)
                 case 'pred_smooth_particle':
                     in_features = torch.cat((delta_pos, density_i, density_j, embedding_i, embedding_j), dim=-1)
                     out = self.lin_edge(in_features)
@@ -289,7 +274,6 @@ if __name__ == '__main__':
 
     device = 'cuda:0'
 
-
     try:
         matplotlib.use("Qt5Agg")
     except:
@@ -321,12 +305,10 @@ if __name__ == '__main__':
 
     # x = mgrid
 
-
     it = 80
     x = x_list[it].squeeze()
+    x = torch.cat((x, torch.zeros((x.shape[0], 5), device=device)), 1)
     data_id = torch.ones((x.shape[0], 1), dtype=torch.int)
-
-    model_density = Interaction_Falling_Water_Smooth(config=config, aggr_type='add', bc_dpos=bc_dpos, device=device)
 
     distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
     adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
@@ -335,41 +317,45 @@ if __name__ == '__main__':
     dataset = data.Data(x=x, pos=x[:, 1:dimension + 1], edge_index=edge_index)
 
     with torch.no_grad():
-        pred = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device), tasks=['density_grad'])
+        pred = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device), tasks=['density'])
+    x[:, 6:9] = pred
 
     matplotlib.use("Qt5Agg")
     fig = plt.figure(figsize=(8, 8))
     plt.scatter(x[:, 2].detach().cpu().numpy(),
-                x[:, 1].detach().cpu().numpy(), s=10, c=model.density.detach().cpu().numpy(), vmin=0, vmax=0.5)
+                x[:, 1].detach().cpu().numpy(), s=10, c=x[:, 6].detach().cpu().numpy(), vmin=0, vmax=0.5)
     plt.xlim([0,1])
     plt.ylim([0,1])
     plt.tight_layout()
     plt.show()
 
     with torch.no_grad():
-        velocity_field = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device),
-                               tasks=['velocity_field'])
-
-    velocity = torch.norm(velocity_field, dim=1)
-    velocity = torch.norm(x[:,3:5], dim=1)
+        grad_v = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device),
+                               tasks=['grad_velocity'])
+    x[:, 9:11] = grad_v
 
     matplotlib.use("Qt5Agg")
     fig = plt.figure(figsize=(8, 8))
     plt.scatter(x[:, 2].detach().cpu().numpy(),
-                x[:, 1].detach().cpu().numpy(), s=10, c=velocity.detach().cpu().numpy())
+                x[:, 1].detach().cpu().numpy(), s=10, c=x[:, 9].detach().cpu().numpy())
     plt.xlim([0,1])
     plt.ylim([0,1])
     plt.tight_layout()
     plt.show()
 
-    with torch.no_grad():
-        velocity_field_grad = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device),
-                               tasks=['velocity_field_grad'])
+    matplotlib.use("Qt5Agg")
+    fig = plt.figure(figsize=(8, 8))
+    plt.scatter(x[:, 2].detach().cpu().numpy(),
+                x[:, 1].detach().cpu().numpy(), s=10, c=x[:, 10].detach().cpu().numpy())
+    plt.xlim([0,1])
+    plt.ylim([0,1])
+    plt.tight_layout()
+    plt.show()
 
     matplotlib.use("Qt5Agg")
     fig = plt.figure(figsize=(8, 8))
     plt.scatter(x[:, 2].detach().cpu().numpy(),
-                x[:, 1].detach().cpu().numpy(), s=10, c=(velocity_field_grad[:,0] + velocity_field_grad[:,3]).detach().cpu().numpy())
+                x[:, 1].detach().cpu().numpy(), s=10, c=(x[:, 9] + x[:, 10]).detach().cpu().numpy())
     plt.xlim([0,1])
     plt.ylim([0,1])
     plt.tight_layout()
