@@ -167,8 +167,8 @@ class Interaction_Falling_Water_Smooth(pyg.nn.MessagePassing):
             delta_pos = self.bc_dpos(pos_j - pos_i)
             match self.task:
                 case 'density':
-                    self.W_j, self.dW_j = self.W_d_W(delta_pos)
-                    return torch.cat((self.W_j, self.dW_j), dim=1)
+                    self.W_j, self.dW_j, self.d2W_j = self.W_d_W_d2W(delta_pos)
+                    return torch.cat((self.W_j, self.dW_j, self.d2W_j), dim=1)
                 case 'grad_velocity':
                     vx_x = self.dW_j[:, 0:1] * d_pos_j[:,0:1] / self.delta_t / density_j[:,0:1]
                     vy_y = self.dW_j[:, 1:2] * d_pos_j[:,1:2] / self.delta_t / density_j[:,0:1]
@@ -196,60 +196,21 @@ class Interaction_Falling_Water_Smooth(pyg.nn.MessagePassing):
                     out = self.lin_edge(in_features)
                     return out
 
-    def W(self, x):
-
-        d = torch.norm(x, dim=-1)
-        d = d[None, :, None]
-        W = 1 / (np.pi * self.smooth_radius ** 8) * (self.smooth_radius ** 2 - d ** 2) ** 3 / 6E3
-        return W[0, :, :]
-
-        # W = self.kernel.net(d)
-        # return W[0, :, :]
-
-    def d_W(self, x):
-
-        d = torch.norm(x, dim=-1)
-        d = d[None, :, None]
-
-        W = 1 / (np.pi * self.smooth_radius ** 8) * (self.smooth_radius ** 2 - d ** 2) ** 3 / 6E3
-
-        dW = [-3 * x[:,0] * (self.smooth_radius ** 2 - torch.sqrt(x[:,0] ** 2 + x[:,1] ** 2)) ** 2 / torch.sqrt(x[:,0] ** 2 + x[:,1] ** 2),
-         -3 * x[:,1] * (self.smooth_radius ** 2 - torch.sqrt(x[:,0] ** 2 + x[:,1] ** 2)) ** 2 / torch.sqrt(x[:,0] ** 2 + x[:,1] ** 2)]
-        dW = torch.stack(dW, dim=-1)
-        dW = 1 / (np.pi * self.smooth_radius ** 8) * dW /6E3
-
-        dW_ = torch.where(torch.isnan(dW), torch.zeros_like(dW), dW)
-
-        return dW_
-
-
-
-    def W_d_W(self, x):
-
-        d = torch.norm(x, dim=-1)
-        d = d[None, :, None]
-        W = 1 / (np.pi * self.smooth_radius ** 8) * (self.smooth_radius ** 2 - d ** 2) ** 3 / 6E3
-
-        dW = [-3 * x[:,0] * (self.smooth_radius ** 2 - torch.sqrt(x[:,0] ** 2 + x[:,1] ** 2)) ** 2 / torch.sqrt(x[:,0] ** 2 + x[:,1] ** 2),
-         -3 * x[:,1] * (self.smooth_radius ** 2 - torch.sqrt(x[:,0] ** 2 + x[:,1] ** 2)) ** 2 / torch.sqrt(x[:,0] ** 2 + x[:,1] ** 2)]
-        dW = torch.stack(dW, dim=-1)
-        dW = 1 / (np.pi * self.smooth_radius ** 8) * dW /6E3
-
-        return W[0, :, :], dW
-
     def W_d_W_d2W(self, x):
 
-        coords = x.clone().detach().requires_grad_(True)
-        d = torch.norm(coords, dim=-1) / self.smooth_radius
-        d = d[None, :, None]
-        W = self.kernel.net(d)
-        dW = kernel_gradient(W, coords)
+        d = torch.norm(x, dim=-1)
+        d = d[:, None]
+        W = 1 / (np.pi * self.smooth_radius ** 8) * (self.smooth_radius ** 2 - d ** 2) ** 3 / 6E3
 
-        d2W = []
-        for i in range(dW.shape[-1]):
-            d2W.append(torch.autograd.grad(dW[..., i], coords, torch.ones_like(dW[..., i]), create_graph=True)[0][..., i:i + 1])
+        dW = [-3 * x[:,0] * (self.smooth_radius ** 2 - torch.sqrt(x[:,0] ** 2 + x[:,1] ** 2)) ** 2 / torch.sqrt(x[:,0] ** 2 + x[:,1] ** 2),
+         -3 * x[:,1] * (self.smooth_radius ** 2 - torch.sqrt(x[:,0] ** 2 + x[:,1] ** 2)) ** 2 / torch.sqrt(x[:,0] ** 2 + x[:,1] ** 2)]
+        dW = torch.stack(dW, dim=-1)
+        dW = 1 / (np.pi * self.smooth_radius ** 8) * dW /6E3
+        dW = torch.where(torch.isnan(dW), torch.zeros_like(dW), dW)
+        d2W = torch.abs(dW) / d.repeat(1, 2)
+        d2W = torch.where(torch.isnan(d2W), torch.zeros_like(d2W), d2W)
 
-        return W[0, :, :], dW, d2W
+        return W, dW, d2W
 
 
     def update(self, aggr_out):
@@ -311,14 +272,14 @@ if __name__ == '__main__':
     data_id = torch.ones((x.shape[0], 1), dtype=torch.int)
 
     distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-    adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+    adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
     edge_index = adj_t.nonzero().t().contiguous()
 
     dataset = data.Data(x=x, pos=x[:, 1:dimension + 1], edge_index=edge_index)
 
     with torch.no_grad():
         pred = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device), tasks=['density'])
-    x[:, 6:9] = pred
+    x[:, 6:9] = pred[:, 0:3]
 
     matplotlib.use("Qt5Agg")
     fig = plt.figure(figsize=(8, 8))
