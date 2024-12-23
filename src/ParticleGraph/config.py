@@ -86,6 +86,12 @@ class GraphModelConfig(BaseModel):
     signal_model_name: str = ''
     prediction: Literal['first_derivative', '2nd_derivative'] = '2nd_derivative'
     integration: Literal['Euler', 'Runge-Kutta'] = 'Euler'
+
+    pre_input_size: int
+    pre_output_size: int
+    pre_hidden_dim: int
+    pre_n_mp_layers: int
+
     input_size: int
     output_size: int
     hidden_dim: int
@@ -94,7 +100,7 @@ class GraphModelConfig(BaseModel):
     mesh_aggr_type: str = 'add'
     embedding_dim: int = 2
 
-    update_type: Literal['linear', 'mlp', 'none', 'no_pos', 'embedding_MLP'] = 'none'
+    update_type: Literal['linear', 'mlp', 'pre_mlp', 'none', 'no_pos', 'embedding_MLP'] = 'none'
     input_size_update: int = 3
     n_layers_update: int = 3
     hidden_dim_update: int = 64

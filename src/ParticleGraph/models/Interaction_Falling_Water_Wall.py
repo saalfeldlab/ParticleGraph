@@ -37,6 +37,12 @@ class Interaction_Falling_Water_Wall(pyg.nn.MessagePassing):
         train_config = config.training
 
         self.device = device
+
+        self.pre_input_size = model_config.pre_input_size
+        self.pre_output_size = model_config.pre_output_size
+        self.pre_hidden_dim = model_config.pre_hidden_dim
+        self.pre_n_layers = model_config.pre_n_mp_layers
+
         self.input_size = model_config.input_size
         self.output_size = model_config.output_size
         self.hidden_dim = model_config.hidden_dim
@@ -61,12 +67,14 @@ class Interaction_Falling_Water_Wall(pyg.nn.MessagePassing):
         self.sub_sampling = simulation_config.sub_sampling
         self.prediction = model_config.prediction
 
+        if self.update_type == 'pre_mlp':
+            self.pre_lin_edge = MLP(input_size=self.pre_input_size, output_size=self.pre_output_size, nlayers=self.pre_n_layers,
+                                hidden_size=self.pre_hidden_dim, device=self.device)
+
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device)
 
-        self.kernel = MLP(input_size=3, output_size=5, nlayers=3, hidden_size=32, device=self.device)
-
-        if self.update_type == 'mlp':
+        if 'mlp' in self.update_type:
             self.lin_phi = MLP(input_size=self.input_size_update, output_size=self.output_size_update, nlayers=self.n_layers_update,
                                     hidden_size=self.hidden_dim_update, device=self.device)
 
@@ -96,8 +104,15 @@ class Interaction_Falling_Water_Wall(pyg.nn.MessagePassing):
             noise = torch.randn_like(pos) * self.time_window_noise
             pos = pos + noise
 
-        pred = self.propagate(edge_index, pos=pos, embedding=embedding)
-        if self.update_type == 'mlp':
+        if self.update_type == 'pre_mlp':
+            self.mode = 'pre_mlp'
+            kernel_null = torch.zeros((pos.shape[0], 2), device=self.device)
+            kernel = self.propagate(edge_index=edge_index, pos=pos, embedding=embedding, kernel=kernel_null)
+            self.mode = 'mlp'
+            pred = self.propagate(edge_index=edge_index, pos=pos, embedding=embedding, kernel=kernel)
+            pos_p = (pos - pos[:, 0:self.dimension].repeat(1, self.time_window))[:, self.dimension:]
+            out = self.lin_phi(torch.cat((pred, embedding, pos_p), dim=-1))
+        elif self.update_type == 'mlp':
             pos_p = (pos - pos[:, 0:self.dimension].repeat(1, self.time_window))[:, self.dimension:]
             out = self.lin_phi(torch.cat((pred, embedding, pos_p), dim=-1))
         else:
@@ -130,21 +145,39 @@ class Interaction_Falling_Water_Wall(pyg.nn.MessagePassing):
         return out
 
 
-    def message(self, edge_index_i, edge_index_j, pos_i, pos_j, embedding_i, embedding_j):
+    def message(self, edge_index_i, edge_index_j, pos_i, pos_j, embedding_i, embedding_j, kernel_j):
 
-        if self.time_window == 0:
-            delta_pos = self.bc_dpos(pos_j - pos_i)
-            in_features = torch.cat((delta_pos, embedding_i, embedding_j), dim=-1)
+
+        if self.update_type == 'pre_mlp':
+
+            if self.mode == 'pre_mlp':
+                delta_pos = self.bc_dpos(pos_j - pos_i)
+                delta_pos = delta_pos[:, 0:self.dimension]
+                self.W_ijs = self.pre_lin_edge(torch.cat((delta_pos, embedding_i, embedding_j), dim=-1))
+
+                return self.W_ijs[:,0:3]
+
+            else:
+
+                pos_i_p = (pos_i - pos_i[:, 0:self.dimension].repeat(1, self.time_window))[:, self.dimension:]
+                pos_j_p = (pos_j - pos_i[:, 0:self.dimension].repeat(1, self.time_window))
+                in_features = torch.cat((pos_i_p, pos_j_p, embedding_i, embedding_j, kernel_j, self.W_ijs[:,1:]), dim=-1)
+
+                out = self.lin_edge(in_features)
+
+                return out
 
         else:
-            pos_i_p = (pos_i - pos_i[:, 0:self.dimension].repeat(1, self.time_window))[:, self.dimension:]
-            pos_j_p = (pos_j - pos_i[:, 0:self.dimension].repeat(1, self.time_window))
+            if self.time_window == 0:
+                delta_pos = self.bc_dpos(pos_j - pos_i)
+                in_features = torch.cat((delta_pos, embedding_i, embedding_j), dim=-1)
+            else:
+                pos_i_p = (pos_i - pos_i[:, 0:self.dimension].repeat(1, self.time_window))[:, self.dimension:]
+                pos_j_p = (pos_j - pos_i[:, 0:self.dimension].repeat(1, self.time_window))
+                in_features = torch.cat((pos_i_p, pos_j_p, embedding_i, embedding_j), dim=-1)
+            out = self.lin_edge(in_features)
 
-            in_features = torch.cat((pos_i_p, pos_j_p, embedding_i, embedding_j), dim=-1)
-
-        out = self.lin_edge(in_features)
-
-        return out
+            return out
 
     def update(self, aggr_out):
 

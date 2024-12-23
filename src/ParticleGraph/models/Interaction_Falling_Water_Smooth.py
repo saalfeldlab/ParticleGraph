@@ -136,28 +136,29 @@ class Interaction_Falling_Water_Smooth(pyg.nn.MessagePassing):
             pos = pos + noise
 
         pred = None
+        final_out = []
         for task in tasks:
             self.task = task
             match task:
-                case 'density':
+                case 'density_tensor':
                     density_null = torch.zeros_like(pos[:, 0:1])
                     self.density = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding, density=density_null)
                     out = self.density
-                case 'grad_velocity':
+                case 'velocity_tensor':
                     out = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding, density=self.density)
                 case 'pred_smooth_particle':
                     pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding, density=self.density)
+            final_out = out if final_out == [] else torch.cat((final_out, out), dim=-1)
 
         if pred != None:
-            out = pred
             if self.update_type == 'mlp':
                 if self.time_window == 0:
                     pos_p = pos
                 else:
                     pos_p = (pos - pos[:, 0:self.dimension].repeat(1, self.time_window))[:, self.dimension:]
-                out = self.lin_phi(torch.cat((pred, embedding, pos_p), dim=-1))
+                final_out = self.lin_phi(torch.cat((pred, embedding, pos_p), dim=-1))
 
-        return out
+        return final_out
 
 
     def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j, density_i, density_j):
@@ -166,10 +167,10 @@ class Interaction_Falling_Water_Smooth(pyg.nn.MessagePassing):
         if self.time_window == 0:
             delta_pos = self.bc_dpos(pos_j - pos_i)
             match self.task:
-                case 'density':
+                case 'density_tensor':
                     self.W_j, self.dW_j, self.d2W_j = self.W_d_W_d2W(delta_pos)
                     return torch.cat((self.W_j, self.dW_j, self.d2W_j), dim=1)
-                case 'grad_velocity':
+                case 'velocity_tensor':
                     vx_x = self.dW_j[:, 0:1] * d_pos_j[:,0:1] / self.delta_t / density_j[:,0:1]
                     vy_y = self.dW_j[:, 1:2] * d_pos_j[:,1:2] / self.delta_t / density_j[:,0:1]
                     vx_xx = self.d2W_j[:, 0:1] * (d_pos_i[:,0:1] - d_pos_j[:,0:1]) / self.delta_t / density_j[:,0:1]
@@ -232,7 +233,7 @@ if __name__ == '__main__':
     import torch_geometric.data as data
 
 
-    device = 'cuda:0'
+    device = 'cpu'
 
     try:
         matplotlib.use("Qt5Agg")
@@ -263,11 +264,65 @@ if __name__ == '__main__':
     optimizer = optim.Adam(model.parameters(), lr=1e-5)
     model.train()
 
+    momentum_list = []
+    grad_density_list = []
+    divergence_list = []
+    for k in trange(0,len(x_list)):
+        x = x_list[k].squeeze()
+        x = torch.cat((x, torch.zeros((x.shape[0], 9), device=device)), 1)
+        distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+        adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
+        edge_index = adj_t.nonzero().t().contiguous()
+
+        dataset = data.Data(x=x, pos=x[:, 1:dimension + 1], edge_index=edge_index)
+        data_id = torch.ones((x.shape[0], 1), dtype=torch.int)
+        tensors = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device), tasks=['density_tensor','velocity_tensor'])
+        x[:, 6:15] = tensors # W_j, dW_j, d2W_j, vx_x, vy_y, vx_xx+vy_xx, vx_yy+vy_yy
+
+        pos = torch.argwhere(x[:, 3] != 0)
+        grad_density_list.append(torch.sum(x[pos, 7:9]))
+        divergence_list.append(torch.sum(x[pos, 11:13]))
+        momentum_list.append(torch.sum(x[pos, 6:7]*torch.norm(x[pos,3:5],dim=-1)[:,None]))
+
+    momentum_list = torch.stack(momentum_list)
+    grad_density_list = torch.stack(grad_density_list)
+    divergence_list = torch.stack(divergence_list)
+
+    matplotlib.use("Qt5Agg")
+    fig = plt.figure(figsize=(8, 8))
+    plt.plot(to_numpy(momentum_list))
+    plt.tight_layout()
+    plt.show()
+
+    matplotlib.use("Qt5Agg")
+    fig = plt.figure(figsize=(8, 8))
+    plt.plot(to_numpy(grad_density_list))
+    plt.tight_layout()
+    plt.show()
+
+    matplotlib.use("Qt5Agg")
+    fig = plt.figure(figsize=(8, 8))
+    plt.scatter(x[pos, 2].detach().cpu().numpy(),
+                x[pos, 1].detach().cpu().numpy(), s=10, c=to_numpy(torch.sum(x[pos, 7:9],dim=-1)))
+    plt.xlim([0,1])
+    plt.ylim([0,1])
+    plt.tight_layout()
+    plt.show()
+
+
+
+
+
+
+
+
+
+
     # x = mgrid
 
     it = 80
 
-    for k in trange(100000):
+    for k in range(100000):
 
         x = x_list[it].squeeze()
         x = torch.cat((x, torch.zeros((x.shape[0], 7), device=device)), 1)
@@ -281,21 +336,22 @@ if __name__ == '__main__':
 
         optimizer.zero_grad()
 
-        density_s = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device), tasks=['density'])
+        density_s = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device), tasks=['density_tensor'])
         x[:, 6:9] = density_s[:, 0:3]
-        v_s = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device), tasks=['grad_velocity'])
+        v_s = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device), tasks=['velocity_tensor'])
         x[:, 9:13] = v_s
         pred = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device), tasks=['pred_smooth_particle'])
         loss = torch.std(pred)/torch.mean(pred)
         loss.backward()
         optimizer.step()
 
-    print(loss)
+        if k % 1000 == 0:
+            print(k,loss)
 
     matplotlib.use("Qt5Agg")
     fig = plt.figure(figsize=(8, 8))
     plt.scatter(x[:, 2].detach().cpu().numpy(),
-                x[:, 1].detach().cpu().numpy(), s=10, c=(pred / torch.mean(pred)).detach().cpu().numpy(),vmin=0.9,vmax=1.1)
+                x[:, 1].detach().cpu().numpy(), s=10, c=(pred / torch.mean(pred)).detach().cpu().numpy(),vmin=0.5,vmax=1.5)
     plt.xlim([0,1])
     plt.ylim([0,1])
     plt.tight_layout()
