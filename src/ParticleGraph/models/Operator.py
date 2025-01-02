@@ -144,8 +144,8 @@ class Operator_smooth(pyg.nn.MessagePassing):
 
             self.kernel = self.pre_lin_edge(d[:, None])
 
-            grad_autograd = density_gradient(self.kernel, mgrid)
-            laplacian_autograd = density_laplace(self.kernel, mgrid)
+            grad_autograd = density_gradient(self.kernel, mgrid) / self.max_radius
+            laplacian_autograd = density_laplace(self.kernel, mgrid) / self.max_radius
 
             self.kernel_operators = torch.cat((self.kernel, grad_autograd), dim=-1)
 

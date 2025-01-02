@@ -27,7 +27,7 @@ graph_model:
   pre_hidden_dim: 128
   pre_n_mp_layers: 4
 
-  input_size: 7
+  input_size: 1
   output_size: 1
   hidden_dim: 128
   n_mp_layers: 4
