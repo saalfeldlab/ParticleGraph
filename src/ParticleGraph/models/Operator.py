@@ -276,6 +276,7 @@ if __name__ == '__main__':
     x = x.to(device)
     x.requires_grad = False
     size = np.sqrt(x.shape[0]).astype(int)
+    x0 = x
 
     pos = torch.argwhere((x[:, 1] > max_radius) & (x[:, 1] < 1 - max_radius) & (x[:, 2] > max_radius) & (x[:, 2] < 1 - max_radius))
 
@@ -283,53 +284,58 @@ if __name__ == '__main__':
     optimizer = optim.Adam(model.parameters(), lr=5e-5)
     model.train()
 
-    distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-    adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
-    edge_index = adj_t.nonzero().t().contiguous()
-    dataset = data.Data(x=x, pos=x[:, 1:dimension + 1], edge_index=edge_index)
-    data_id = torch.ones((x.shape[0], 1), dtype=torch.int)
-
-    u0, grad_u0, laplace_u0 = arbitrary_gaussian_grad_laplace(mgrid=x[:, 1:3], n_gaussian=5, device=device)
-
+    phi = torch.zeros(1, device=device)
+    threshold = 0.05
 
     for epochs in trange(0, 100000):
 
         optimizer.zero_grad()
 
-        phi = torch.zeros(1, device=device)
-        # phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
-
+        x = x0.clone().detach()
         u, grad_u, laplace_u = arbitrary_gaussian_grad_laplace(mgrid = x[:,1:3], n_gaussian = 5, device=device)
         L_u = grad_u.clone().detach()
         x[:, 6:7] = u[:, None].clone().detach()
+
+        discrete_pos = torch.argwhere((u >= threshold) | (u <= -threshold))
+        x = x[discrete_pos].squeeze()
+        L_u = L_u[discrete_pos].squeeze()
+
+        distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+        adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
+        edge_index = adj_t.nonzero().t().contiguous()
+        dataset = data.Data(x=x, pos=x[:, 1:dimension + 1], edge_index=edge_index)
+        data_id = torch.ones((x.shape[0], 1), dtype=torch.int)
         dataset = data.Data(x=x, pos=x[:, 1:dimension + 1], edge_index=edge_index)
 
         pred = model(dataset, data_id=data_id, training=False, phi=phi)
 
-        loss = (pred[pos]-L_u[pos]).norm(2)
+        loss = (pred-L_u).norm(2)
 
         loss.backward()
         optimizer.step()
 
-        if (epochs+1) % 999 == 0:
+        if (epochs+1) % 1999 == 0:
+
+            u = u[discrete_pos]
+            grad_u = grad_u[discrete_pos]
 
             print(epochs, loss)
 
             fig = plt.figure(figsize=(18, 6))
             ax = fig.add_subplot(131)
-            plt.imshow(to_numpy(u).reshape(size,size), cmap='viridis', extent=[0, 1, 0, 1])
+            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=30, c=to_numpy(u))
             ax.invert_yaxis()
             plt.xticks([])
             plt.yticks([])
             plt.title('u(x,y)')
             ax = fig.add_subplot(132)
-            plt.imshow(to_numpy(L_u[:,0]).reshape(size,size), cmap='viridis', extent=[0, 1, 0, 1])
+            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=30, c=to_numpy(L_u[:,0]))
             ax.invert_yaxis()
             plt.xticks([])
             plt.yticks([])
             plt.title('grad_x(u(x,y))')
             ax = fig.add_subplot(133)
-            plt.imshow(to_numpy(2*pred[:,0]).reshape(size,size), cmap='viridis', extent=[0, 1, 0, 1])
+            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=30, c=to_numpy(pred[:,0]))
             ax.invert_yaxis()
             plt.xticks([])
             plt.yticks([])
