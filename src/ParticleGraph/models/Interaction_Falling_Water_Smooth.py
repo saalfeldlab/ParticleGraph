@@ -244,14 +244,15 @@ if __name__ == '__main__':
 
     bc_pos, bc_dpos = choose_boundary_values('no')
     config = ParticleGraphConfig.from_yaml('/groups/saalfeld/home/allierc/Py/ParticleGraph/config/test_smooth_particle.yaml')
+
     dimension = config.simulation.dimension
     max_radius = config.simulation.max_radius
     min_radius = config.simulation.min_radius
     smooth_radius = config.simulation.smooth_radius
     time_window = config.training.time_window
 
-    x_list = np.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/graphs_falling_water_ramp_wall/x_list_2.npy')
-    x_list = torch.tensor(x_list, dtype=torch.float32, device=device)
+    # x_list = np.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/graphs_falling_water_ramp_wall/x_list_2.npy')
+    # x_list = torch.tensor(x_list, dtype=torch.float32, device=device)
 
     tensors = tuple(dimension * [torch.linspace(0, 1, steps=512)])
     mgrid = torch.stack(torch.meshgrid(*tensors), dim=-1)
