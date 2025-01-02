@@ -37,9 +37,9 @@ class Operator_smooth(pyg.nn.MessagePassing):
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
     """
-    Model learning the acceleration of particles as a function of their relative distance and relative velocities.
-    The interaction function is defined by a MLP self.lin_edge
-    The particle embedding is defined by a table self.a
+    Model learning kernel operators.
+    The methods follows the particle smoothing techniques proposed in the paper:
+    'Smoothed Particle Hydrodynamics Techniques for the Physics Based Simulation of Fluids and Solids'
 
     Inputs
     ----------
@@ -48,7 +48,7 @@ class Operator_smooth(pyg.nn.MessagePassing):
     Returns
     -------
     pred : float
-        the acceleration of the particles (dimension 2)
+        the kernel operators and their convolution with the data
     """
 
     def __init__(self, config, device, aggr_type=None, bc_dpos=None, dimension=2, model_density=[]):
@@ -109,9 +109,10 @@ class Operator_smooth(pyg.nn.MessagePassing):
     def forward(self, data=[], data_id=[], training=[], phi=[], has_field=False):
 
         x, edge_index = data.x, data.edge_index
+
         # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        self.cos_phi = torch.cos(phi)
-        self.sin_phi = torch.sin(phi)
+        # self.cos_phi = torch.cos(phi)
+        # self.sin_phi = torch.sin(phi)
 
         particle_id = x[:, 0:1]
         embedding = self.a[data_id, to_numpy(particle_id), :].squeeze()
@@ -131,18 +132,19 @@ class Operator_smooth(pyg.nn.MessagePassing):
 
         delta_pos = self.bc_dpos(pos_j - pos_i)
 
-        new_delta_pos_x = self.cos_phi * delta_pos[:, 0] + self.sin_phi * delta_pos[:, 1]
-        new_delta_pos_y = -self.sin_phi * delta_pos[:, 0] + self.cos_phi * delta_pos[:, 1]
-        delta_pos[:, 0] = new_delta_pos_x
-        delta_pos[:, 1] = new_delta_pos_y
+        # new_delta_pos_x = self.cos_phi * delta_pos[:, 0] + self.sin_phi * delta_pos[:, 1]
+        # new_delta_pos_y = -self.sin_phi * delta_pos[:, 0] + self.cos_phi * delta_pos[:, 1]
+        # delta_pos[:, 0] = new_delta_pos_x
+        # delta_pos[:, 1] = new_delta_pos_y
 
         if self.mode == 'pre_mlp':
             mgrid = delta_pos.clone().detach()
             mgrid.requires_grad = True
 
-            d = torch.sum(mgrid ** 2, dim=-1)
-
-            self.kernel = self.pre_lin_edge(d[:, None])
+            first_kernel = torch.exp(-4 * (mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / (self.max_radius ** 2))
+            first_grad_autograd = density_gradient(first_kernel, mgrid) / self.max_radius
+            in_features = torch.cat((first_kernel[:,None].clone().detach(), first_grad_autograd.clone().detach(),mgrid), dim=-1)
+            self.kernel = first_kernel[:,None] #self.pre_lin_edge(in_features)
 
             grad_autograd = density_gradient(self.kernel, mgrid) / self.max_radius
             laplacian_autograd = density_laplace(self.kernel, mgrid) / self.max_radius
@@ -156,14 +158,14 @@ class Operator_smooth(pyg.nn.MessagePassing):
             # in_features = torch.cat((delta_pos, field_i, field_j, self.kernel_operators / density_j), dim=-1)
             # out = self.lin_edge(in_features)
 
-            out = field_j * self.kernel_operators[:,1:2] / density_j
+            out = self.lin_edge(field_j) * self.kernel_operators[:,1:2] / density_j
 
             return out
 
-        matplotlib.use("Qt5Agg")
         fig = plt.figure(figsize=(8, 8))
-        plt.scatter(to_numpy(delta_pos[:,0]), to_numpy(delta_pos[:,1]), s=2000, c=to_numpy(self.kernel_operators[:,0]))
+        plt.scatter(to_numpy(delta_pos[:,0]), to_numpy(delta_pos[:,1]), s=2000, c=to_numpy(self.kernel_operators[:,1:2]))
         plt.show()
+
 
 
     def update(self, aggr_out):
@@ -214,7 +216,6 @@ def arbitrary_gaussian_grad_laplace (mgrid, n_gaussian, device):
     plt.yticks([])
     plt.title('Laplacian(u(x,y)) autograd')
     plt.show()
-
 
 def arbitrary_test_grad_laplace (mgrid):
 
@@ -273,6 +274,8 @@ if __name__ == '__main__':
     x.requires_grad = False
     size = np.sqrt(x.shape[0]).astype(int)
 
+    pos = torch.argwhere((x[:, 1] > max_radius) & (x[:, 1] < 1 - max_radius) & (x[:, 2] > max_radius) & (x[:, 2] < 1 - max_radius))
+
     model = Operator_smooth(config=config, device=device, aggr_type='add', bc_dpos=bc_dpos, dimension=dimension)
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
     model.train()
@@ -288,9 +291,6 @@ if __name__ == '__main__':
 
     for epochs in trange(0, 100000):
 
-        if epochs % 100 == 0:
-            torch.manual_seed(42)
-
         optimizer.zero_grad()
 
         phi = torch.zeros(1, device=device)
@@ -303,14 +303,14 @@ if __name__ == '__main__':
 
         pred = model(dataset, data_id=data_id, training=False, phi=phi)
 
-        loss = (pred-L_u).norm(2)
+        loss = (pred[pos]-L_u[pos]).norm(2)
 
         loss.backward()
         optimizer.step()
 
-        if epochs % 100 == 0:
+        if (epochs+1) % 399 == 0:
 
-            print(epochs, (pred-L_u).norm(2))
+            print(epochs, loss)
 
             fig = plt.figure(figsize=(18, 6))
             ax = fig.add_subplot(131)
@@ -326,7 +326,7 @@ if __name__ == '__main__':
             plt.yticks([])
             plt.title('grad_x(u(x,y))')
             ax = fig.add_subplot(133)
-            plt.imshow(to_numpy(pred[:,0]).reshape(size,size), cmap='viridis', extent=[0, 1, 0, 1])
+            plt.imshow(to_numpy(2*pred[:,0]).reshape(size,size), cmap='viridis', extent=[0, 1, 0, 1])
             ax.invert_yaxis()
             plt.xticks([])
             plt.yticks([])

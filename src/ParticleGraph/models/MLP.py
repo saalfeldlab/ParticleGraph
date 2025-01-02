@@ -31,6 +31,7 @@ class MLP(nn.Module):
         else :
             nn.init.normal_(layer.weight, std=0.1)
             nn.init.zeros_(layer.bias)
+
         self.layers.append(layer)
 
         if activation=='tanh':
