@@ -141,31 +141,34 @@ class Operator_smooth(pyg.nn.MessagePassing):
             mgrid = delta_pos.clone().detach()
             mgrid.requires_grad = True
 
-            first_kernel = torch.exp(-4 * (mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / (self.max_radius ** 2))
+            first_kernel = torch.exp(-4 * (mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / (self.max_radius ** 2))[:,None]
             first_grad_autograd = density_gradient(first_kernel, mgrid) / self.max_radius
-            in_features = torch.cat((first_kernel[:,None].clone().detach(), first_grad_autograd.clone().detach(),mgrid), dim=-1)
-            self.kernel = first_kernel[:,None] #self.pre_lin_edge(in_features)
+            in_features = torch.cat((first_kernel.clone().detach(), first_grad_autograd.clone().detach(), delta_pos), dim=-1)
+            self.kernel_operators = in_features # self.pre_lin_edge(in_features)
 
-            grad_autograd = density_gradient(self.kernel, mgrid) / self.max_radius
-            laplacian_autograd = density_laplace(self.kernel, mgrid) / self.max_radius
-
-            self.kernel_operators = torch.cat((self.kernel, grad_autograd), dim=-1)
-
-            return self.kernel
+            return first_kernel
 
         else:
-
             # in_features = torch.cat((delta_pos, field_i, field_j, self.kernel_operators / density_j), dim=-1)
-            # out = self.lin_edge(in_features)
-
             out = self.lin_edge(field_j) * self.kernel_operators[:,1:2] / density_j
+            # out = field_j * self.kernel_operators[:,1:2] / density_j
 
             return out
 
         fig = plt.figure(figsize=(8, 8))
-        plt.scatter(to_numpy(delta_pos[:,0]), to_numpy(delta_pos[:,1]), s=2000, c=to_numpy(self.kernel_operators[:,1:2]))
+        plt.scatter(to_numpy(delta_pos[:,0]), to_numpy(delta_pos[:,1]), s=2000, c=to_numpy(self.kernel_operators[:,0:1]))
         plt.show()
 
+        fig = plt.figure(figsize=(8, 8))
+        ax = fig.add_subplot(221)
+        plt.scatter(to_numpy(delta_pos[:,0]), to_numpy(delta_pos[:,1]), s=1000, c=to_numpy(first_kernel[:,None]))
+        ax = fig.add_subplot(222)
+        plt.scatter(to_numpy(delta_pos[:,0]), to_numpy(delta_pos[:,1]), s=1000, c=to_numpy(self.kernel_operators[:,0:1]))
+        ax = fig.add_subplot(223)
+        plt.scatter(to_numpy(delta_pos[:,0]), to_numpy(delta_pos[:,1]), s=1000, c=to_numpy(first_grad_autograd[:,0:1]))
+        ax = fig.add_subplot(224)
+        plt.scatter(to_numpy(delta_pos[:,0]), to_numpy(delta_pos[:,1]), s=1000, c=to_numpy(self.kernel_operators[:,1:2]))
+        plt.show()
 
 
     def update(self, aggr_out):
@@ -277,7 +280,7 @@ if __name__ == '__main__':
     pos = torch.argwhere((x[:, 1] > max_radius) & (x[:, 1] < 1 - max_radius) & (x[:, 2] > max_radius) & (x[:, 2] < 1 - max_radius))
 
     model = Operator_smooth(config=config, device=device, aggr_type='add', bc_dpos=bc_dpos, dimension=dimension)
-    optimizer = optim.Adam(model.parameters(), lr=1e-4)
+    optimizer = optim.Adam(model.parameters(), lr=5e-5)
     model.train()
 
     distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
@@ -308,7 +311,7 @@ if __name__ == '__main__':
         loss.backward()
         optimizer.step()
 
-        if (epochs+1) % 399 == 0:
+        if (epochs+1) % 999 == 0:
 
             print(epochs, loss)
 
