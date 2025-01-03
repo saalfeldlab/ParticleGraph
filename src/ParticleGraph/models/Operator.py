@@ -144,15 +144,16 @@ class Operator_smooth(pyg.nn.MessagePassing):
             first_kernel = torch.exp(- (mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / (self.max_radius ** 2))[:,None]
             kernel_modified = self.pre_lin_edge(first_kernel)
             grad_autograd = density_gradient(kernel_modified, mgrid) / self.max_radius
-            in_features = torch.cat((first_kernel.clone().detach(), grad_autograd.clone().detach(), delta_pos), dim=-1)
+            laplace_autograd = density_laplace(kernel_modified, mgrid) / self.max_radius ** 2
+            in_features = torch.cat((first_kernel.clone().detach(), grad_autograd.clone().detach(), laplace_autograd.clone().detach()), dim=-1)
             self.kernel_operators = in_features
             # self.kernel_operators = self.pre_lin_edge(first_grad_autograd)
 
             return first_kernel
 
         else:
-            out = self.lin_edge(field_j) * self.kernel_operators[:,1:2] / density_j
-            # out = field_j * self.kernel_operators[:,1:2] / density_j
+            # out = self.lin_edge(field_j) * self.kernel_operators[:,1:2] / density_j
+            out = self.lin_edge(field_j) * self.kernel_operators[:,3:4] / density_j
 
             return out
 
@@ -284,13 +285,14 @@ if __name__ == '__main__':
     phi = torch.zeros(1, device=device)
     threshold = 0.05
 
-    for epochs in trange(0, 10000):
+    for epoch in trange(0, 10000):
 
         optimizer.zero_grad()
 
         x = x0.clone().detach() + 0.1 * torch.randn_like(x0)
         u, grad_u, laplace_u = arbitrary_gaussian_grad_laplace(mgrid = x[:,1:3], n_gaussian = 5, device=device)
-        L_u = grad_u.clone().detach()
+        # L_u = grad_u.clone().detach()
+        L_u = laplace_u.clone().detach()
         x[:, 6:7] = u[:, None].clone().detach()
 
         discrete_pos = torch.argwhere((u >= threshold) | (u <= -threshold))
@@ -310,42 +312,43 @@ if __name__ == '__main__':
         loss.backward()
         optimizer.step()
 
-    u = u[discrete_pos]
-    grad_u = grad_u[discrete_pos]
+        if (epoch+1) % 500 == 0:
 
-    print(epochs, loss)
+            u = u[discrete_pos]
+            grad_u = grad_u[discrete_pos]
+            laplace_u = laplace_u[discrete_pos]
 
+            print(epoch, loss)
 
+            fig = plt.figure(figsize=(18, 6))
+            ax = fig.add_subplot(131)
+            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(u))
+            ax.invert_yaxis()
+            plt.xticks([])
+            plt.yticks([])
+            plt.title('u')
+            ax = fig.add_subplot(132)
+            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u))
+            ax.invert_yaxis()
+            plt.xticks([])
+            plt.yticks([])
+            plt.title('true L_u')
+            ax = fig.add_subplot(133)
+            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
+            ax.invert_yaxis()
+            plt.xticks([])
+            plt.yticks([])
+            plt.title('pred L_u')
+            plt.show()
 
-    fig = plt.figure(figsize=(18, 6))
-    ax = fig.add_subplot(131)
-    plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(u))
-    ax.invert_yaxis()
-    plt.xticks([])
-    plt.yticks([])
-    plt.title('u(x,y)')
-    ax = fig.add_subplot(132)
-    plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u[:,0]))
-    ax.invert_yaxis()
-    plt.xticks([])
-    plt.yticks([])
-    plt.title('grad_x(u(x,y))')
-    ax = fig.add_subplot(133)
-    plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred[:,0]))
-    ax.invert_yaxis()
-    plt.xticks([])
-    plt.yticks([])
-    plt.title('pred_x(x,y)')
-    plt.show()
-
-    fig = plt.figure(figsize=(6, 6))
-    ax = fig.add_subplot(111)
-    plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(model.density))
-    ax.invert_yaxis()
-    plt.xticks([])
-    plt.yticks([])
-    plt.title('density(x,y)')
-    plt.show()
+            fig = plt.figure(figsize=(6, 6))
+            ax = fig.add_subplot(111)
+            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(model.density))
+            ax.invert_yaxis()
+            plt.xticks([])
+            plt.yticks([])
+            plt.title('density')
+            plt.show()
 
 
 
