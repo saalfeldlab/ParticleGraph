@@ -109,15 +109,12 @@ class Operator_smooth(pyg.nn.MessagePassing):
     def forward(self, data=[], data_id=[], training=[], phi=[], has_field=False):
 
         x, edge_index = data.x, data.edge_index
-
         # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        # self.cos_phi = torch.cos(phi)
-        # self.sin_phi = torch.sin(phi)
 
         particle_id = x[:, 0:1]
         embedding = self.a[data_id, to_numpy(particle_id), :].squeeze()
         pos = x[:, 1:self.dimension+1]
-        field = x[:, 2*self.dimension+2:2*self.dimension+3]
+        field = x[:, 2*self.dimension+2: 2*self.dimension+3]
 
         self.mode = 'pre_mlp'
         density_null = torch.zeros((pos.shape[0], 2), device=self.device)
@@ -131,41 +128,42 @@ class Operator_smooth(pyg.nn.MessagePassing):
     def message(self, edge_index_i, edge_index_j, pos_i, pos_j, field_i, field_j, embedding_i, embedding_j, density_j):
 
         delta_pos = self.bc_dpos(pos_j - pos_i)
-
-        # new_delta_pos_x = self.cos_phi * delta_pos[:, 0] + self.sin_phi * delta_pos[:, 1]
-        # new_delta_pos_y = -self.sin_phi * delta_pos[:, 0] + self.cos_phi * delta_pos[:, 1]
-        # delta_pos[:, 0] = new_delta_pos_x
-        # delta_pos[:, 1] = new_delta_pos_y
+        self.delta_pos = delta_pos
 
         if self.mode == 'pre_mlp':
             mgrid = delta_pos.clone().detach()
             mgrid.requires_grad = True
 
-            first_kernel = torch.exp(- (mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / (self.max_radius ** 2))[:,None]
-            kernel_modified = self.pre_lin_edge(first_kernel)
+            first_kernel = torch.exp(-(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / (self.max_radius ** 2))[:,None]
+            kernel_modified = self.pre_lin_edge(torch.sqrt(first_kernel)) ** 2
+
             grad_autograd = density_gradient(kernel_modified, mgrid) / self.max_radius
-            laplace_autograd = density_laplace(kernel_modified, mgrid) / self.max_radius ** 2
-            in_features = torch.cat((first_kernel.clone().detach(), grad_autograd.clone().detach(), laplace_autograd.clone().detach()), dim=-1)
-            self.kernel_operators = in_features
-            # self.kernel_operators = self.pre_lin_edge(first_grad_autograd)
+            laplace_autograd = density_laplace(kernel_modified, mgrid) / self.max_radius
+
+            self.kernel_operators = torch.cat((first_kernel.clone().detach(), grad_autograd.clone().detach(), laplace_autograd.clone().detach()), dim=-1)
 
             return first_kernel
 
         else:
             # out = self.lin_edge(field_j) * self.kernel_operators[:,1:2] / density_j
-            out = self.lin_edge(field_j) * self.kernel_operators[:,3:4] / density_j
+            # out = self.lin_edge(field_j) * self.kernel_operators[:,3:4] / density_j
+            out = field_j * self.kernel_operators[:, 3:4] / density_j
 
             return out
 
-        fig = plt.figure(figsize=(8, 8))
-        ax = fig.add_subplot(221)
-        plt.scatter(to_numpy(delta_pos[:,0]), to_numpy(delta_pos[:,1]), s=400, c=to_numpy(first_kernel[:,None]))
-        ax = fig.add_subplot(222)
-        plt.scatter(to_numpy(delta_pos[:,0]), to_numpy(delta_pos[:,1]), s=400, c=to_numpy(-kernel_modified[:,None]))
-        ax = fig.add_subplot(223)
-        plt.scatter(to_numpy(delta_pos[:,0]), to_numpy(delta_pos[:,1]), s=400, c=to_numpy(grad_autograd[:,0:1]))
-        ax = fig.add_subplot(224)
-        plt.scatter(to_numpy(delta_pos[:,0]), to_numpy(delta_pos[:,1]), s=400, c=to_numpy(self.kernel_operators[:,1:2]))
+        fig = plt.figure(figsize=(6, 10))
+        ax = fig.add_subplot(321)
+        plt.scatter(to_numpy(delta_pos[:,0]), to_numpy(delta_pos[:,1]), s=1, c=to_numpy(first_kernel[:,None]))
+        ax = fig.add_subplot(322)
+        plt.scatter(to_numpy(delta_pos[:,0]), to_numpy(delta_pos[:,1]), s=1, c=to_numpy(kernel_modified[:,None]))
+        ax = fig.add_subplot(323)
+        plt.scatter(to_numpy(delta_pos[:,0]), to_numpy(delta_pos[:,1]), s=1, c=to_numpy(grad_autograd[:,0:1]))
+        ax = fig.add_subplot(324)
+        plt.scatter(to_numpy(delta_pos[:,0]), to_numpy(delta_pos[:,1]), s=1, c=to_numpy(self.kernel_operators[:,1:2]))
+        ax = fig.add_subplot(325)
+        plt.scatter(to_numpy(delta_pos[:,0]), to_numpy(delta_pos[:,1]), s=1, c=to_numpy(self.kernel_operators[:,2:3]))
+        ax = fig.add_subplot(326)
+        plt.scatter(to_numpy(delta_pos[:,0]), to_numpy(delta_pos[:,1]), s=2, c=to_numpy(self.kernel_operators[:,3:4]))
         plt.show()
 
     def update(self, aggr_out):
@@ -257,6 +255,7 @@ if __name__ == '__main__':
     bc_pos, bc_dpos = choose_boundary_values('no')
     max_radius = config.simulation.max_radius
     min_radius = config.simulation.min_radius
+    lr = config.training.learning_rate_start
 
     seed = 42
     torch.manual_seed(seed)
@@ -279,7 +278,7 @@ if __name__ == '__main__':
     x0 = x
 
     model = Operator_smooth(config=config, device=device, aggr_type='add', bc_dpos=bc_dpos, dimension=dimension)
-    optimizer = optim.Adam(model.parameters(), lr=5e-5)
+    optimizer = optim.Adam(model.parameters(), lr=lr)
     model.train()
 
     phi = torch.zeros(1, device=device)
@@ -320,38 +319,47 @@ if __name__ == '__main__':
 
             print(epoch, loss)
 
-            fig = plt.figure(figsize=(18, 6))
-            ax = fig.add_subplot(131)
-            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(u))
-            ax.invert_yaxis()
-            plt.xticks([])
-            plt.yticks([])
-            plt.title('u')
-            ax = fig.add_subplot(132)
-            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u))
-            ax.invert_yaxis()
-            plt.xticks([])
-            plt.yticks([])
-            plt.title('true L_u')
-            ax = fig.add_subplot(133)
-            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
-            ax.invert_yaxis()
-            plt.xticks([])
-            plt.yticks([])
-            plt.title('pred L_u')
-            plt.show()
-
-            fig = plt.figure(figsize=(6, 6))
-            ax = fig.add_subplot(111)
+            fig = plt.figure(figsize=(18, 4))
+            ax = fig.add_subplot(141)
             plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(model.density))
             ax.invert_yaxis()
             plt.xticks([])
             plt.yticks([])
             plt.title('density')
+            ax = fig.add_subplot(142)
+            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(u))
+            ax.invert_yaxis()
+            plt.xticks([])
+            plt.yticks([])
+            plt.title('u')
+            ax = fig.add_subplot(143)
+            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u))
+            ax.invert_yaxis()
+            plt.xticks([])
+            plt.yticks([])
+            plt.title('true L_u')
+            ax = fig.add_subplot(144)
+            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
+            ax.invert_yaxis()
+            plt.xticks([])
+            plt.yticks([])
+            plt.title('pred L_u')
+
+            fig = plt.figure(figsize=(10, 3))
+
+            ax = fig.add_subplot(131)
+            plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=1,
+                        c=to_numpy(model.kernel_operators[:, 1:2]))
+            plt.title('grad_x')
+            ax = fig.add_subplot(132)
+            plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=1,
+                        c=to_numpy(model.kernel_operators[:, 2:3]))
+            plt.title('grad_y')
+            ax = fig.add_subplot(133)
+            plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=1,
+                        c=to_numpy(model.kernel_operators[:, 3:4]))
+            plt.title('laplace')
             plt.show()
-
-
-
 
 
 
