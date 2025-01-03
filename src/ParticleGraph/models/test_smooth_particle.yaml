@@ -24,7 +24,7 @@ graph_model:
   update_type: 'pre_mlp'
   aggr_type: 'add'
 
-  pre_input_size: 1
+  pre_input_size: 2
   pre_output_size: 1
   pre_hidden_dim: 64
   pre_n_mp_layers: 3
@@ -63,8 +63,8 @@ training:
   fix_cluster_embedding: True
   device: 'cpu'
 
-  learning_rate_start: 1E-5
-  learning_rate_embedding_start: 1E-5
+  learning_rate_start: 1E-4
+  learning_rate_embedding_start: 1E-4
 
 
 

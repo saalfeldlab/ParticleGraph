@@ -136,14 +136,14 @@ class Operator_smooth(pyg.nn.MessagePassing):
 
             d_squared = torch.sum(mgrid ** 2, dim=-1)[:,None]
             first_kernel = torch.exp(-(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / (self.max_radius ** 2))[:,None]
-
-            # kernel_modified = self.pre_lin_edge(torch.cat((torch.sqrt(first_kernel), d_squared), dim=-1)) ** 2
-            kernel_modified = self.pre_lin_edge(first_kernel)
+            # kernel_modified = first_kernel * self.pre_lin_edge(d_squared)
+            kernel_modified = first_kernel * self.pre_lin_edge(mgrid)
+            # kernel_modified = self.pre_lin_edge(d_squared)
 
             grad_autograd = -density_gradient(kernel_modified, mgrid) / self.max_radius
             laplace_autograd = density_laplace(kernel_modified, mgrid) / self.max_radius
 
-            self.kernel_operators = torch.cat((first_kernel.clone().detach(), grad_autograd, laplace_autograd), dim=-1)
+            self.kernel_operators = torch.cat((kernel_modified, grad_autograd, laplace_autograd), dim=-1)
 
             return first_kernel
 
@@ -155,6 +155,10 @@ class Operator_smooth(pyg.nn.MessagePassing):
 
 
             return out
+
+
+        fig = plt.figure(figsize=(6, 6))
+        plt.scatter(to_numpy(d_squared), to_numpy(self.pre_lin_edge(d_squared)), s=1)
 
         fig = plt.figure(figsize=(6, 10))
         ax = fig.add_subplot(321)
@@ -316,7 +320,7 @@ if __name__ == '__main__':
         loss.backward()
         optimizer.step()
 
-        if (epoch+1) % 500 == 0:
+        if True: # epoch % 500 == 0:
 
             u = u[discrete_pos]
             grad_u = grad_u[discrete_pos]
@@ -324,37 +328,42 @@ if __name__ == '__main__':
 
             print(epoch, loss)
 
-            fig = plt.figure(figsize=(18, 4.75))
-            ax = fig.add_subplot(141)
-            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(model.density))
-            ax.invert_yaxis()
-            plt.title('density')
-            ax = fig.add_subplot(142)
-            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(u))
-            ax.invert_yaxis()
-            plt.title('u')
-            ax = fig.add_subplot(143)
-            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u[:,0]))
-            ax.invert_yaxis()
-            plt.title('true L_u')
-            ax = fig.add_subplot(144)
-            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred[:,0]))
-            ax.invert_yaxis()
-            plt.title('pred L_u')
-            plt.tight_layout()
+            # fig = plt.figure(figsize=(18, 4.75))
+            # ax = fig.add_subplot(141)
+            # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(model.density))
+            # ax.invert_yaxis()
+            # plt.title('density')
+            # ax = fig.add_subplot(142)
+            # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(u))
+            # ax.invert_yaxis()
+            # plt.title('u')
+            # ax = fig.add_subplot(143)
+            # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u[:,0]))
+            # ax.invert_yaxis()
+            # plt.title('true L_u')
+            # ax = fig.add_subplot(144)
+            # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred[:,0]))
+            # ax.invert_yaxis()
+            # plt.title('pred L_u')
+            # plt.tight_layout()
 
-            fig = plt.figure(figsize=(10, 3.5))
-            ax = fig.add_subplot(131)
+            fig = plt.figure(figsize=(12, 3))
+            ax = fig.add_subplot(141)
+            plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1, c=to_numpy(model.kernel_operators[:, 0:1]))
+            plt.title('kernel')
+            ax = fig.add_subplot(142)
             plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1, c=to_numpy(model.kernel_operators[:, 1:2]))
             plt.title('grad_x')
-            ax = fig.add_subplot(132)
+            ax = fig.add_subplot(143)
             plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1, c=to_numpy(model.kernel_operators[:, 2:3]))
             plt.title('grad_y')
-            ax = fig.add_subplot(133)
+            ax = fig.add_subplot(144)
             plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1, c=to_numpy(model.kernel_operators[:, 3:4]))
             plt.title('laplace')
             plt.tight_layout()
-            plt.show()
+            # plt.show()
+            plt.savefig(f'tmp/test_epoch{epoch}.tif')
+            plt.close()
 
 
 
