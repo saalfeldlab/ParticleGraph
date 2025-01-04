@@ -134,18 +134,17 @@ class Operator_smooth(pyg.nn.MessagePassing):
             mgrid = delta_pos.clone().detach()
             mgrid.requires_grad = True
 
-            d_squared = torch.sum(mgrid ** 2, dim=-1)[:,None]
-            first_kernel = torch.exp(-(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / (self.max_radius ** 2))[:,None]
-            # kernel_modified = first_kernel * self.pre_lin_edge(d_squared)
+            density_kernel = torch.exp(-(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / (self.max_radius ** 2))[:,None]
+            first_kernel = torch.exp(-4*(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / (self.max_radius ** 2))[:, None]
             kernel_modified = first_kernel * self.pre_lin_edge(mgrid)
-            # kernel_modified = self.pre_lin_edge(d_squared)
 
-            grad_autograd = -density_gradient(kernel_modified, mgrid) / self.max_radius
-            laplace_autograd = density_laplace(kernel_modified, mgrid) / self.max_radius
+
+            grad_autograd = -density_gradient(kernel_modified, mgrid)
+            laplace_autograd = density_laplace(kernel_modified, mgrid)
 
             self.kernel_operators = torch.cat((kernel_modified, grad_autograd, laplace_autograd), dim=-1)
 
-            return first_kernel
+            return density_kernel
 
         else:
             # out = self.lin_edge(field_j) * self.kernel_operators[:,1:2] / density_j
@@ -293,11 +292,13 @@ if __name__ == '__main__':
     phi = torch.zeros(1, device=device)
     threshold = 0.05
 
-    for epoch in trange(0, 10000):
+    for epoch in trange(0, 4000):
 
         optimizer.zero_grad()
 
         x = x0.clone().detach() + 0.05 * torch.randn_like(x0)
+        # x = x[torch.randperm(x.size(0))[:int(0.5 * x.size(0))]] # removal of 10%
+
         u, grad_u, laplace_u = arbitrary_gaussian_grad_laplace(mgrid = x[:,1:3], n_gaussian = 5, device=device)
         L_u = grad_u.clone().detach()
         # L_u = laplace_u.clone().detach()
@@ -320,7 +321,7 @@ if __name__ == '__main__':
         loss.backward()
         optimizer.step()
 
-        if True: # epoch % 500 == 0:
+        if epoch % 1 == 0:
 
             u = u[discrete_pos]
             grad_u = grad_u[discrete_pos]
@@ -365,32 +366,74 @@ if __name__ == '__main__':
             plt.savefig(f'tmp/test_epoch{epoch}.tif')
             plt.close()
 
+    x = x0.clone().detach() + 0.05 * torch.randn_like(x0)
+    u, grad_u, laplace_u = arbitrary_gaussian_grad_laplace(mgrid=x[:, 1:3], n_gaussian=5, device=device)
+    L_u = grad_u.clone().detach()
+    x[:, 6:7] = u[:, None].clone().detach()
+    discrete_pos = torch.argwhere((u >= threshold) | (u <= -threshold))
+    x = x[discrete_pos].squeeze()
+    L_u = L_u[discrete_pos].squeeze()
+
+    tensors = tuple(dimension * [torch.linspace(0, 1, steps=100)])
+    mgrid = torch.stack(torch.meshgrid(*tensors), dim=-1)
+    mgrid = mgrid.reshape(-1, dimension)
+    mgrid = torch.cat((torch.ones((mgrid.shape[0], 1)), mgrid, torch.zeros((mgrid.shape[0], 2))), 1)
+    mgrid = mgrid.to(device)
+
+    distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - mgrid[None, :, 1:dimension + 1]) ** 2, dim=2)
+    adj_t = ((distance < max_radius ** 2) & (distance > 0)).float() * 1
+    edge_index = adj_t.nonzero().t().contiguous()
+    xp = torch.cat((mgrid, x[:, 0:2 * dimension + 1]), 0)
+    edge_index[0, :] = edge_index[0, :] + mgrid.shape[0]
+    # edge_index[0, :], edge_index[1, :] = edge_index[1, :], edge_index[0, :].clone()
+    edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+
+    dataset = data.Data(x=xp, pos=xp[:, 1:dimension + 1], edge_index=edge_index)
+    data_id = torch.ones((xp.shape[0], 1), dtype=torch.int)
+
+    pred = model(dataset, data_id=data_id, training=False, phi=phi)
+    density = model.density[0: mgrid.shape[0]]
+
+    matplotlib.use("Qt5Agg")
+
+    fig = plt.figure(figsize=(8, 8))
+    plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=10, c=to_numpy(density))
+    plt.xlim([0, 1])
+    plt.ylim([0, 1])
+    plt.tight_layout()
+    plt.show()
+
+    fig = plt.figure(figsize=(8, 8))
+    plt.scatter(x[:, 2].detach().cpu().numpy(),
+                x[:, 1].detach().cpu().numpy(), s=10, c='w')
+    plt.scatter(mgrid[:, 2].detach().cpu().numpy(),
+                mgrid[:, 1].detach().cpu().numpy(), s=0.1, c='r')
+    pixel = 8020
+    plt.scatter(mgrid[pixel, 2].detach().cpu().numpy(),
+                mgrid[pixel, 1].detach().cpu().numpy(), s=40, c='g')
+    pos = torch.argwhere(edge_index[1, :] == pixel).squeeze()
+    plt.scatter(xp[edge_index[0, pos], 2].detach().cpu().numpy(), xp[edge_index[0, pos], 1].detach().cpu().numpy(), s=10,
+                c='b')
+    plt.xlim([0, 1])
+    plt.ylim([0, 1])
+    plt.tight_layout()
+    plt.show()
+
+    fig = plt.figure(figsize=(8, 8))
+    plt.scatter(to_numpy(x[:, 2]),to_numpy(x[:, 1]), s=10, c=to_numpy(x[:,6]))
+    plt.xlim([0, 1])
+    plt.ylim([0, 1])
+    plt.tight_layout()
+    plt.show()
 
 
-    for k in range(100000):
 
-        x = x_list[it].squeeze()
-        x = torch.cat((x, torch.zeros((x.shape[0], 7), device=device)), 1)
-        data_id = torch.ones((x.shape[0], 1), dtype=torch.int)
 
-        distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-        adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
-        edge_index = adj_t.nonzero().t().contiguous()
 
-        dataset = data.Data(x=x, pos=x[:, 1:dimension + 1], edge_index=edge_index)
 
-        optimizer.zero_grad()
 
-        density_s = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device), tasks=['density_tensor'])
-        x[:, 6:9] = density_s[:, 0:3]
-        v_s = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device), tasks=['velocity_tensor'])
-        x[:, 9:13] = v_s
-        pred = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device), tasks=['pred_smooth_particle'])
-        loss = torch.std(pred)/torch.mean(pred)
-        loss.backward()
-        optimizer.step()
 
-        if k % 1000 == 0:
-            print(k,loss)
+
+
 
 
