@@ -138,7 +138,6 @@ class Operator_smooth(pyg.nn.MessagePassing):
             first_kernel = torch.exp(-4*(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / (self.max_radius ** 2))[:, None]
             kernel_modified = first_kernel * self.pre_lin_edge(mgrid)
 
-
             grad_autograd = -density_gradient(kernel_modified, mgrid)
             laplace_autograd = density_laplace(kernel_modified, mgrid)
 
@@ -149,9 +148,8 @@ class Operator_smooth(pyg.nn.MessagePassing):
         else:
             # out = self.lin_edge(field_j) * self.kernel_operators[:,1:2] / density_j
             # out = self.lin_edge(field_j) * self.kernel_operators[:,3:4] / density_j
-            out = field_j * self.kernel_operators[:, 1:2] / density_j
-            # out = field_j * self.kernel_operators[:, 3:4] / density_j
-
+            # out = field_j * self.kernel_operators[:, 1:2] / density_j
+            out = field_j * self.kernel_operators[:, 3:4] / density_j
 
             return out
 
@@ -292,7 +290,7 @@ if __name__ == '__main__':
     phi = torch.zeros(1, device=device)
     threshold = 0.05
 
-    for epoch in trange(0, 4000):
+    for epoch in trange(0, 5000):
 
         optimizer.zero_grad()
 
@@ -300,8 +298,8 @@ if __name__ == '__main__':
         # x = x[torch.randperm(x.size(0))[:int(0.5 * x.size(0))]] # removal of 10%
 
         u, grad_u, laplace_u = arbitrary_gaussian_grad_laplace(mgrid = x[:,1:3], n_gaussian = 5, device=device)
-        L_u = grad_u.clone().detach()
-        # L_u = laplace_u.clone().detach()
+        # L_u = grad_u.clone().detach()
+        L_u = laplace_u.clone().detach()
         x[:, 6:7] = u[:, None].clone().detach()
 
         discrete_pos = torch.argwhere((u >= threshold) | (u <= -threshold))
@@ -321,7 +319,7 @@ if __name__ == '__main__':
         loss.backward()
         optimizer.step()
 
-        if epoch % 1 == 0:
+        if epoch % 1000 == 0:
 
             u = u[discrete_pos]
             grad_u = grad_u[discrete_pos]
@@ -329,24 +327,28 @@ if __name__ == '__main__':
 
             print(epoch, loss)
 
-            # fig = plt.figure(figsize=(18, 4.75))
-            # ax = fig.add_subplot(141)
-            # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(model.density))
-            # ax.invert_yaxis()
-            # plt.title('density')
-            # ax = fig.add_subplot(142)
-            # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(u))
-            # ax.invert_yaxis()
-            # plt.title('u')
-            # ax = fig.add_subplot(143)
+            fig = plt.figure(figsize=(18, 4.75))
+            ax = fig.add_subplot(141)
+            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(model.density))
+            ax.invert_yaxis()
+            plt.title('density')
+            ax = fig.add_subplot(142)
+            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(u))
+            ax.invert_yaxis()
+            plt.title('u')
+            ax = fig.add_subplot(143)
             # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u[:,0]))
-            # ax.invert_yaxis()
-            # plt.title('true L_u')
-            # ax = fig.add_subplot(144)
+            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u))
+            ax.invert_yaxis()
+            plt.title('true L_u')
+            ax = fig.add_subplot(144)
             # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred[:,0]))
-            # ax.invert_yaxis()
-            # plt.title('pred L_u')
-            # plt.tight_layout()
+            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
+            ax.invert_yaxis()
+            plt.title('pred L_u')
+            plt.tight_layout()
+            plt.savefig(f'tmp/learning_{epoch}.tif')
+            plt.close()
 
             fig = plt.figure(figsize=(12, 3))
             ax = fig.add_subplot(141)
@@ -363,7 +365,7 @@ if __name__ == '__main__':
             plt.title('laplace')
             plt.tight_layout()
             # plt.show()
-            plt.savefig(f'tmp/test_epoch{epoch}.tif')
+            plt.savefig(f'tmp/kernels_{epoch}.tif')
             plt.close()
 
     x = x0.clone().detach() + 0.05 * torch.randn_like(x0)
@@ -385,7 +387,6 @@ if __name__ == '__main__':
     edge_index = adj_t.nonzero().t().contiguous()
     xp = torch.cat((mgrid, x[:, 0:2 * dimension + 1]), 0)
     edge_index[0, :] = edge_index[0, :] + mgrid.shape[0]
-    # edge_index[0, :], edge_index[1, :] = edge_index[1, :], edge_index[0, :].clone()
     edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
     dataset = data.Data(x=xp, pos=xp[:, 1:dimension + 1], edge_index=edge_index)
@@ -410,7 +411,7 @@ if __name__ == '__main__':
                 mgrid[:, 1].detach().cpu().numpy(), s=0.1, c='r')
     pixel = 8020
     plt.scatter(mgrid[pixel, 2].detach().cpu().numpy(),
-                mgrid[pixel, 1].detach().cpu().numpy(), s=40, c='g')
+                mgrid[pixel, 1].detach().cpu().numpy(), s=40, c='r')
     pos = torch.argwhere(edge_index[1, :] == pixel).squeeze()
     plt.scatter(xp[edge_index[0, pos], 2].detach().cpu().numpy(), xp[edge_index[0, pos], 1].detach().cpu().numpy(), s=10,
                 c='b')

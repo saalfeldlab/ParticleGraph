@@ -12,7 +12,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
     """
-    Model learning the acceleration of particles as a function of their relative distance and relative velocities.
+    Model learning the motion of particles as a function of their relative distance and relative velocities.
     The interaction function is defined by a MLP self.lin_edge
     The particle embedding is defined by a table self.a
 
@@ -61,11 +61,8 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         self.a = nn.Parameter(
                 torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
                              requires_grad=True, dtype=torch.float32))
-        # self.a = nn.Parameter(
-        #         torch.tensor(np.random.randn(self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim), device=self.device,
-        #                      requires_grad=True, dtype=torch.float32))
 
-        if self.model =='PDE_K':
+        if self.model =='PDE_K1':
             self.vals = nn.Parameter(
                 torch.ones((self.n_dataset, int(self.n_particles * (self.n_particles + 1) / 2)), device=self.device,
                             requires_grad=True, dtype=torch.float32))
@@ -76,12 +73,11 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         self.data_id = data_id
         self.cos_phi = torch.cos(phi)
         self.sin_phi = torch.sin(phi)
-        self.training = training
         self.has_field = has_field
+        self.training = training
 
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        particle_id = to_numpy(x[:, 0])
 
         if has_field:
             field = x[:,6:7]
@@ -102,7 +98,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
             for k in range(self.sub_sampling):
                 if self.prediction == '2nd_derivative':
                     y = pred * self.ynorm * self.delta_t / self.sub_sampling
-                    d_pos = d_pos + y  # speed update
+                    d_pos = d_pos + y
                 else:
                     y = pred * self.vnorm
                     d_pos = y
@@ -116,6 +112,8 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         return out
 
     def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j, field_j):
+
+        # TEST WITH FIELD
 
         if torch.isnan(pos_i).any():
             print('nan')
@@ -131,6 +129,9 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         dpos_y_j = d_pos_j[:, 1] / self.vnorm
 
         if self.rotation_augmentation & (self.training == True):
+
+            # CREATE FUNCTION ROTATION PHI
+
             new_delta_pos_x = self.cos_phi * delta_pos[:, 0] + self.sin_phi * delta_pos[:, 1]
             new_delta_pos_y = -self.sin_phi * delta_pos[:, 0] + self.cos_phi * delta_pos[:, 1]
             delta_pos[:, 0] = new_delta_pos_x
@@ -167,6 +168,8 @@ class Interaction_Particle(pyg.nn.MessagePassing):
             case 'PDE_K1':
                 in_features = delta_pos
 
+        # CORRECT FIELD MODULATION K K1
+
         if self.model == 'PDE_K1':
             A = torch.zeros(self.n_particles, self.n_particles, device=self.device, requires_grad=False, dtype=torch.float32)
             i, j = torch.triu_indices(self.n_particles, self.n_particles, requires_grad=False, device=self.device)
@@ -174,7 +177,6 @@ class Interaction_Particle(pyg.nn.MessagePassing):
             A.T[i, j] = self.vals[self.data_id]**2
             A[i,i] = 0
             out = A[edge_index_i, edge_index_j].repeat(2, 1).t() * self.lin_edge(in_features)
-
         else:
             out = self.lin_edge(in_features) * field_j
 

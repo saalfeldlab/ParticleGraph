@@ -233,7 +233,6 @@ def choose_mesh_model(config, X1_mesh, device):
     return mesh_model
 
 
-# TODO: this seems to be used to provide default values in case no parameters are given?
 def initialize_random_values(n, device):
     return torch.ones(n, 1, device=device) + torch.rand(n, 1, device=device)
 
