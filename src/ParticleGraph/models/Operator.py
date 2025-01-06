@@ -30,8 +30,6 @@ def density_gradient(y, x, grad_outputs=None):
     return grad
 
 
-
-
 class Operator_smooth(pyg.nn.MessagePassing):
 
     """
@@ -87,7 +85,8 @@ class Operator_smooth(pyg.nn.MessagePassing):
         self.model_density = model_density
         self.sub_sampling = simulation_config.sub_sampling
         self.prediction = model_config.prediction
-        self.var = self.max_radius ** 2 / 8
+        self.kernel_var = self.max_radius ** 2
+        self.kernel_norm = np.pi * self.kernel_var * (1 - np.exp(-self.max_radius ** 2/ self.kernel_var))
 
         if self.update_type == 'pre_mlp':
             self.pre_lin_edge = MLP(input_size=self.pre_input_size, output_size=self.pre_output_size, nlayers=self.pre_n_layers,
@@ -133,8 +132,8 @@ class Operator_smooth(pyg.nn.MessagePassing):
             mgrid = delta_pos.clone().detach()
             mgrid.requires_grad = True
 
-            density_kernel = torch.exp(-(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / (self.max_radius ** 2))[:,None]
-            first_kernel = torch.exp(-4*(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / (self.max_radius ** 2))[:, None]
+            density_kernel = torch.exp(-(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / self.kernel_var)[:,None] / self.kernel_norm
+            first_kernel = torch.exp(-4*(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / self.kernel_var)[:, None] / self.kernel_norm
             kernel_modified = density_kernel   # first_kernel * self.pre_lin_edge(mgrid)
 
             grad_autograd = -density_gradient(kernel_modified, mgrid)
@@ -328,12 +327,10 @@ if __name__ == '__main__':
         pred = model(dataset, data_id=data_id, training=False, phi=phi)
         density = model.density
 
-
         fig = plt.figure(figsize=(8, 8))
         ax = fig.add_subplot(111)
         plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=10, c=to_numpy(density_field))
         Q = ax.quiver(to_numpy(x[:, 2]), to_numpy(x[:, 1]), -to_numpy(pred[:,1]), -to_numpy(pred[:,0]), color='w')
-
 
         fig = plt.figure(figsize=(8, 8))
         ax = fig.add_subplot(4,4,1)
