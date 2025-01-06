@@ -2,3 +2,6 @@ remove interaction_particle_field
 test spring K and K1, with without connectivity matrix
 add field static movie modulation forcing
 remove PDE_B_bis PDE_B_mass
+update continuous field calculation
+
+pipeline motile gurobi traccuracy

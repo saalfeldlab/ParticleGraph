@@ -12,7 +12,36 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class SimulationConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
+
     dimension: int = 2
+    n_frames: int = 1000
+    start_frame: int = 0
+
+    time_step: int = 1
+    sub_sampling: int = 1
+    delta_t: float = 1
+
+    boundary: Literal['periodic', 'no', 'periodic_special'] = 'periodic'
+
+    diffusion_coefficients: list[list[float]] = None
+    n_particles: int = 1000
+    n_particles_max: int = 20000
+    max_edges: float = 1.0E6
+    n_particle_types: int = 5
+    shuffle_particle_types: bool = False
+    dpos_init: float = 0
+    angular_sigma: float = 0
+    angular_Bernouilli: list[float] = [-1]
+
+    n_nodes: Optional[int] = None
+    n_node_types: Optional[int] = None
+    node_coeff_map: Optional[str] = None
+    node_value_map: Optional[str] = None
+    node_proliferation_map: Optional[str] = None
+
+
+    adjacency_matrix: str = ''
+
     connectivity_file: str = ''
     connectivity_init: list[float] =[-1]
     connectivity_filling_factor: float = 1
@@ -22,60 +51,44 @@ class SimulationConfig(BaseModel):
     connectivity_distribution_params: float = 1
     connectivity_mask: bool = False
 
+    min_radius: float = 0.0
+    max_radius: Annotated[float, Field(gt=0)]
     smooth_radius: float = 0.1
 
     excitation_value_map: Optional[str] = None
     excitation: str='none'
-    adjacency_matrix: str = ''
-    phi: str = 'tanh'
-    tau: float = 1.0
+
     params: list[list[float]]
     std_params : list[float] = [2, -2.5, 10, 50]
+
+    phi: str = 'tanh'
+    tau: float = 1.0
+    sigma: float = 0.005
+
     cell_cycle_length: list[float] =[-1]
     cell_death_rate: list[float] = [-1]
     cell_area: list[float] = [-1]
-    min_radius: float = 0.0
-    max_radius: Annotated[float, Field(gt=0)]
-    n_neighbors: int = 10
-    angular_sigma: float = 0
-    angular_Bernouilli: list[float] =[-1]
-    max_edges: float = 1.0E6
-    diffusion_coefficients: list[list[float]] = None
-    n_particles: int = 1000
-    n_particles_max: int = 20000
-    n_particle_types: int = 5
-    shuffle_particle_types: bool = False
-    n_interactions: int = 5
-    has_cell_state: bool = False
-    state_type: Literal['discrete', 'sequence', 'continuous'] = 'discrete'
-    state_params: list[float] =[-1]
-    non_discrete_level: float = 0
-    n_nodes: Optional[int] = None
-    n_node_types: Optional[int] = None
+    cell_type_map: Optional[str] = None
+    final_cell_mass: list[float] = [-1]
     pos_rate: list[list[float]] = None
     neg_rate: list[list[float]] = None
     has_cell_division: bool = False
     has_cell_death: bool = False
+    has_cell_state: bool = False
+    state_type: Literal['discrete', 'sequence', 'continuous'] = 'discrete'
+    state_params: list[float] =[-1]
+    non_discrete_level: float = 0
+    cell_active_model_coeff: float = 1
     cell_inert_model_coeff: float = 0
     coeff_area: float = 1
     coeff_perimeter: float = 0
-    cell_active_model_coeff: float = 1
-    n_frames: int = 1000
-    sigma: float = 0.005
-    time_step: int = 1
-    sub_sampling: int = 1
-    delta_t: float = 1
-    dpos_init: float = 0
-    boundary: Literal['periodic', 'no', 'periodic_special'] = 'periodic'
-    cell_type_map: Optional[str] = None
-    node_coeff_map: Optional[str] = None
-    node_value_map: Optional[str] = None
-    node_proliferation_map: Optional[str] = None
-    beta: Optional[float] = None
-    start_frame: int = 0
-    final_cell_mass: list[float] = [-1]
-    mc_slope: list[float] = [-1]
     kill_cell_leaving: bool = False
+
+
+
+
+
+
 
 
 class GraphModelConfig(BaseModel):
@@ -87,10 +100,10 @@ class GraphModelConfig(BaseModel):
     prediction: Literal['first_derivative', '2nd_derivative'] = '2nd_derivative'
     integration: Literal['Euler', 'Runge-Kutta'] = 'Euler'
 
-    pre_input_size: int
-    pre_output_size: int
-    pre_hidden_dim: int
-    pre_n_mp_layers: int
+    pre_input_size: Optional[int]
+    pre_output_size: Optional[int]
+    pre_hidden_dim: Optional[int]
+    pre_n_mp_layers: Optional[int]
 
     input_size: int
     output_size: int
@@ -111,11 +124,6 @@ class GraphModelConfig(BaseModel):
     hidden_dim_nnr: int = 128
     output_size_nnr: int = 1
     omega : float = 80.0
-
-    division_predictor_input_size: int = 3
-    division_predictor_hidden_dim: int = 64
-    division_predictor_n_layers: int = 3
-    division_predictor_output_size: int = 1
 
     field_type: str = ''
 
@@ -141,19 +149,18 @@ class ImageData(BaseModel):
     cellpose_model: str = 'cyto3'
     cellpose_channel : int = 0
     cellpose_diameter: float = 30
-
     cellpose_flow_threshold: int = 0.4
     cellpose_cellprob_threshold: int = 0.0
 
 
 class TrainingConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
+    device: Annotated[str, Field(pattern=r'^(auto|cpu|cuda:\d+)$')] = 'auto'
     
     n_epochs: int = 20
     n_epochs_init: int = 2
     batch_size: int = 1
     small_init_batch_size: bool = True
-    large_range: bool = False
     do_tracking: bool = False
     ctrl_tracking: bool = False
     distance_threshold: float = 0.1
@@ -164,17 +171,19 @@ class TrainingConfig(BaseModel):
     seed : int = 40
     clamp: float = 0
     pred_limit: float = 1.E+10
-    sparsity: Literal['none', 'replace_embedding', 'replace_embedding_function', 'replace_state', 'replace_track'] = 'none'
-    use_hot_encoding: bool = False
-    sparsity_freq : int = 5
+
     particle_dropout: float = 0
     n_ghosts: int = 0
     ghost_method: Literal['none', 'tensor', 'MLP'] = 'none'
     ghost_logvar: float = -12
-    n_no_siren: int = 0
 
+    sparsity_freq : int = 5
+    sparsity: Literal['none', 'replace_embedding', 'replace_embedding_function', 'replace_state', 'replace_track'] = 'none'
     fix_cluster_embedding: bool = False
-    loss_weight: bool = False
+    cluster_method: Literal['kmeans', 'kmeans_auto_plot', 'kmeans_auto_embedding', 'distance_plot', 'distance_embedding', 'distance_both', 'inconsistent_plot', 'inconsistent_embedding', 'none'] = 'distance_plot'
+    cluster_distance_threshold: float = 0.01
+    cluster_connectivity: Literal['single','average'] = 'single'
+
     learning_rate_start: float = 0.001
     learning_rate_embedding_start: float = 0.001
     learning_rate_end: float = 0.0005
@@ -198,17 +207,8 @@ class TrainingConfig(BaseModel):
     recursive_loop: int = 0
     regul_matrix: bool = False
     sub_batches: int = 1
-
     sequence: list[str] = ['to track','to cell']
 
-    cluster_method: Literal['kmeans', 'kmeans_auto_plot', 'kmeans_auto_embedding', 'distance_plot', 'distance_embedding', 'distance_both', 'inconsistent_plot', 'inconsistent_embedding', 'none'] = 'distance_plot'
-    cluster_distance_threshold: float = 0.01
-    cluster_connectivity: Literal['single','average'] = 'single'
-
-    state_hot_encoding: bool = False
-    state_temperature: float = 0.5
-
-    device: Annotated[str, Field(pattern=r'^(auto|cpu|cuda:\d+)$')] = 'auto'
 
 
 # Main config schema for ParticleGraph

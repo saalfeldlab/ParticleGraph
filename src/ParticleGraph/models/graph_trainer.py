@@ -1757,7 +1757,7 @@ def data_train_particle_field(config, config_file, erase, best_model, device):
     replace_with_cluster = 'replace' in train_config.sparsity
     has_ghost = train_config.n_ghosts > 0
     n_ghosts = train_config.n_ghosts
-    has_large_range = train_config.large_range
+
     if train_config.small_init_batch_size:
         get_batch_size = increasing_batch_size(target_batch_size)
     else:
