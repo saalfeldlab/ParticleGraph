@@ -9,10 +9,7 @@ class PDE_O(pyg.nn.MessagePassing):
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
     """
-    Compute the speed of particles as a function of their relative position according to an attraction-repulsion law.
-    The latter is defined by four parameters p = (p1, p2, p3, p4) and a parameter sigma.
-
-    See https://github.com/gpeyre/numerical-tours/blob/master/python/ml_10_particle_system.ipynb
+    Compute the state synchronization
 
     Inputs
     ----------
@@ -20,8 +17,8 @@ class PDE_O(pyg.nn.MessagePassing):
 
     Returns
     -------
-    pred : float
-        the speed of the particles (dimension 2)
+    d_theta : float
+    angle change rate
     """
 
     def __init__(self, aggr_type=[], bc_dpos=[], p=[], beta=[], rr=[]):

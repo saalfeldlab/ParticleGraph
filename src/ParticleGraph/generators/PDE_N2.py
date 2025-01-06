@@ -13,7 +13,7 @@ class PDE_N2(pyg.nn.MessagePassing):
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
     """
-    Comput
+    Compute network signaling, the transfer functions are neuron-dependent
     
     Inputs
     ----------
@@ -21,7 +21,8 @@ class PDE_N2(pyg.nn.MessagePassing):
 
     Returns
     -------
-    pred : float
+    du : float
+    the update rate of the signals (dim 1)
         
     """
 

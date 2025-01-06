@@ -9,7 +9,7 @@ class PDE_E(pyg.nn.MessagePassing):
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
     """
-    Compute the acceleration of charged particles as a function of their relative position according to the Coulomb law.
+    Compute the acceleration of charged particles according to the Coulomb law as a function of their relative position .
 
     Inputs
     ----------
@@ -17,7 +17,7 @@ class PDE_E(pyg.nn.MessagePassing):
 
     Returns
     -------
-    pred : float
+    dd_pos : float
         the acceleration of the particles (dimension 2)
     """
 

@@ -13,7 +13,7 @@ class Mesh_RPS_bis(pyg.nn.MessagePassing):
     """
     Model learning the first derivative of a scalar field on a mesh.
     The node embedding is defined by a table self.a
-    Note the Laplacian coeeficients are in data.edge_attr
+    Note the Laplacian coefficients are in data.edge_attr
 
     Inputs
     ----------

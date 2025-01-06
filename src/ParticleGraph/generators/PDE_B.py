@@ -9,7 +9,7 @@ class PDE_B(pyg.nn.MessagePassing):
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
     """
-    Compute the acceleration of Boids as a function of their relative positions and relative positions.
+    Compute the acceleration of Boids as a function of their relative positions and relative velocities.
     The interaction function is defined by three parameters p = (p1, p2, p3)
 
     Inputs
@@ -18,7 +18,7 @@ class PDE_B(pyg.nn.MessagePassing):
 
     Returns
     -------
-    pred : float
+    dd_pos : float
         the acceleration of the Boids (dimension 2)
     """
 

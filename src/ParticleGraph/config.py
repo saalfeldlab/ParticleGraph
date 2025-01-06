@@ -22,6 +22,9 @@ class SimulationConfig(BaseModel):
     delta_t: float = 1
 
     boundary: Literal['periodic', 'no', 'periodic_special'] = 'periodic'
+    min_radius: float = 0.0
+    max_radius: Annotated[float, Field(gt=0)]
+    smooth_radius: float = 0.1
 
     diffusion_coefficients: list[list[float]] = None
     n_particles: int = 1000
@@ -39,7 +42,6 @@ class SimulationConfig(BaseModel):
     node_value_map: Optional[str] = None
     node_proliferation_map: Optional[str] = None
 
-
     adjacency_matrix: str = ''
 
     connectivity_file: str = ''
@@ -50,10 +52,6 @@ class SimulationConfig(BaseModel):
     connectivity_distribution: str = 'Gaussian'
     connectivity_distribution_params: float = 1
     connectivity_mask: bool = False
-
-    min_radius: float = 0.0
-    max_radius: Annotated[float, Field(gt=0)]
-    smooth_radius: float = 0.1
 
     excitation_value_map: Optional[str] = None
     excitation: str='none'
@@ -83,12 +81,6 @@ class SimulationConfig(BaseModel):
     coeff_area: float = 1
     coeff_perimeter: float = 0
     kill_cell_leaving: bool = False
-
-
-
-
-
-
 
 
 class GraphModelConfig(BaseModel):

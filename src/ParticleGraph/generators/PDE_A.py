@@ -9,7 +9,7 @@ class PDE_A(pyg.nn.MessagePassing):
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
     """
-    Compute the speed of particles as a function of their relative position according to an attraction-repulsion law.
+    Compute particle velocity as a function of relative position and attraction-repulsion law.
     The latter is defined by four parameters p = (p1, p2, p3, p4) and a parameter sigma.
 
     See https://github.com/gpeyre/numerical-tours/blob/master/python/ml_10_particle_system.ipynb
@@ -20,8 +20,8 @@ class PDE_A(pyg.nn.MessagePassing):
 
     Returns
     -------
-    pred : float
-        the speed of the particles (dimension 2)
+    d_pos : float
+        the velocity of the particles (dimension 2)
     """
 
     def __init__(self, aggr_type=[], p=[], sigma=[], bc_dpos=[], dimension=2):
@@ -44,6 +44,7 @@ class PDE_A(pyg.nn.MessagePassing):
         particle_type = to_numpy(x[:, 1 + 2*self.dimension])
         parameters = self.p[particle_type,:]
         d_pos = self.propagate(edge_index, pos=x[:, 1:self.dimension+1], parameters=parameters, field=field)
+
         return d_pos
 
 
