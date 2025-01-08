@@ -61,9 +61,6 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         self.a = nn.Parameter(
                 torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
                              requires_grad=True, dtype=torch.float32))
-        # self.a = nn.Parameter(
-        #         torch.tensor(np.random.randn(self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim), device=self.device,
-        #                      requires_grad=True, dtype=torch.float32))
 
         if self.model =='PDE_K':
             self.vals = nn.Parameter(
@@ -81,7 +78,6 @@ class Interaction_Particle(pyg.nn.MessagePassing):
 
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        particle_id = to_numpy(x[:, 0])
 
         if has_field:
             field = x[:,6:7]
@@ -163,15 +159,13 @@ class Interaction_Particle(pyg.nn.MessagePassing):
                 in_features = torch.cat(
                     (delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
             case 'PDE_K':
-                in_features = torch.cat((delta_pos, embedding_i, embedding_j), dim=-1)
-            case 'PDE_K1':
                 in_features = delta_pos
 
-        if self.model == 'PDE_K1':
+        if self.model == 'PDE_K':
             A = torch.zeros(self.n_particles, self.n_particles, device=self.device, requires_grad=False, dtype=torch.float32)
             i, j = torch.triu_indices(self.n_particles, self.n_particles, requires_grad=False, device=self.device)
-            A[i, j] = self.vals[self.data_id]**2
-            A.T[i, j] = self.vals[self.data_id]**2
+            A[i, j] = self.vals[self.data_id[0]]**2
+            A.T[i, j] = self.vals[self.data_id[0]]**2
             A[i,i] = 0
             out = A[edge_index_i, edge_index_j].repeat(2, 1).t() * self.lin_edge(in_features)
 

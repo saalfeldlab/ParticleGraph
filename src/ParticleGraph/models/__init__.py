@@ -1,5 +1,4 @@
 from .Interaction_Particle import Interaction_Particle
-from .Interaction_Falling_Water import Interaction_Falling_Water
 from .Interaction_Falling_Water_Wall import Interaction_Falling_Water_Wall
 from .Interaction_Falling_Water_Smooth import Interaction_Falling_Water_Smooth
 from .Interaction_Agent import Interaction_Agent
@@ -11,7 +10,6 @@ from .Signal_Propagation import Signal_Propagation
 from .Signal_Propagation2 import Signal_Propagation2
 from .Siren_Network import Siren_Network, Siren
 from .Mesh_RPS import Mesh_RPS
-from .Mesh_RPS_bis import Mesh_RPS_bis
 from .Mesh_Laplacian import Mesh_Laplacian
 from .Ghost_Particles import Ghost_Particles
 from .graph_trainer import *
@@ -19,7 +17,7 @@ from .utils import KoLeoLoss, get_embedding, get_embedding_time_series, choose_t
 from .Gumbel import sample_gumbel, gumbel_softmax_sample, gumbel_softmax
 from .WBI_Communication import WBI_Communication
 
-__all__ = [graph_trainer, Interaction_Agent, Interaction_Particle, Interaction_Falling_Water, Interaction_Falling_Water_Wall, Interaction_Falling_Water_Smooth,
+__all__ = [graph_trainer, Interaction_Agent, Interaction_Particle, Interaction_Falling_Water_Wall, Interaction_Falling_Water_Smooth,
            Interaction_Cell, Cell_Area, Interaction_Particle_Field, Interaction_Mouse, Siren_Network, Siren, Signal_Propagation,
-           Signal_Propagation2, Mesh_RPS, Mesh_RPS_bis, Mesh_Laplacian, Ghost_Particles, KoLeoLoss, get_embedding, get_embedding_time_series, choose_training_model, constant_batch_size,
+           Signal_Propagation2, Mesh_RPS, Mesh_Laplacian, Ghost_Particles, KoLeoLoss, get_embedding, get_embedding_time_series, choose_training_model, constant_batch_size,
            increasing_batch_size, set_trainable_parameters, set_trainable_division_parameters, plot_training, sample_gumbel, gumbel_softmax_sample, gumbel_softmax, WBI_Communication]
