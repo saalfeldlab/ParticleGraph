@@ -143,7 +143,7 @@ class Operator_smooth(pyg.nn.MessagePassing):
 
             density_kernel = torch.exp(-(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / self.kernel_var)[:,None] / self.kernel_norm
             first_kernel = torch.exp(-4*(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / self.kernel_var)[:, None] / self.kernel_norm
-            kernel_modified = density_kernel # first_kernel # density_kernel  # first_kernel * self.pre_lin_edge(mgrid) #
+            kernel_modified = first_kernel * self.pre_lin_edge(mgrid) #
 
             grad_autograd = -density_gradient(kernel_modified, mgrid)
             laplace_autograd = density_laplace(kernel_modified, mgrid)
@@ -161,7 +161,9 @@ class Operator_smooth(pyg.nn.MessagePassing):
             velocity = self.kernel_operators[:, 0:1] * torch.sum(d_pos_j**2, dim=1)[:,None] / density_j
             grad_velocity = self.kernel_operators[:, 1:3] * torch.sum(d_pos_j**2, dim=1)[:,None].repeat(1,2) / density_j.repeat(1,2)
 
-            out = torch.cat((grad_density, velocity, grad_velocity), dim = 1) # d_rho_x d_rho_y, velocity
+            # out = torch.cat((grad_density, velocity, grad_velocity), dim = 1) # d_rho_x d_rho_y, velocity
+
+            out = field_j * self.kernel_operators[:, 1:2] / density_j
 
             return out
 
@@ -327,12 +329,12 @@ if __name__ == '__main__':
         dataset = data.Data(x=x, pos=x[:, 1:dimension + 1], edge_index=edge_index)
 
         pred = model(dataset, data_id=data_id, training=False, phi=phi)
-        loss = (pred[:,0:2]-L_u[:,0:2]).norm(2)
+        loss = (pred-L_u).norm(2)
 
         loss.backward()
         optimizer.step()
 
-        if epoch % 10 == 0:
+        if epoch % 1 == 0:
 
             u = u[discrete_pos]
             grad_u = grad_u[discrete_pos]
@@ -340,44 +342,33 @@ if __name__ == '__main__':
 
             print(epoch, loss)
 
-            matplotlib.use("Qt5Agg")
-            fig = plt.figure(figsize=(18, 4.75))
-            ax = fig.add_subplot(141)
-            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c='w')
-            ax.invert_yaxis()
-            pixel = 1030
-
-            pos = torch.argwhere(edge_index[1, :] == pixel).squeeze()
-            if pos.numel() > 0:
-                plt.scatter(x[edge_index[0, pos], 1].detach().cpu().numpy(),
-                            x[edge_index[0, pos], 2].detach().cpu().numpy(), s=10, c='b')
-            plt.scatter(x[pixel, 1].detach().cpu().numpy(),
-                        x[pixel, 2].detach().cpu().numpy(), s=20, c='r')
-            plt.show()
-
-
-            plt.title('density')
-            ax = fig.add_subplot(142)
-            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(u))
-            ax.invert_yaxis()
-            plt.title('u')
-            ax = fig.add_subplot(143)
-            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u[:,0]))
-            # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u))
-            ax.invert_yaxis()
-            plt.title('true L_u')
-            ax = fig.add_subplot(144)
-            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred[:,0]))
+            # matplotlib.use("Qt5Agg")
+            # fig = plt.figure(figsize=(18, 4.75))
+            # ax = fig.add_subplot(141)
+            # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c='w')
+            # ax.invert_yaxis()
+            # plt.title('density')
+            # ax = fig.add_subplot(142)
+            # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(u))
+            # ax.invert_yaxis()
+            # plt.title('u')
+            # ax = fig.add_subplot(143)
+            # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u[:,0]))
+            # # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u))
+            # ax.invert_yaxis()
+            # plt.title('true L_u')
+            # ax = fig.add_subplot(144)
             # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
-            ax.invert_yaxis()
-            plt.title('pred L_u')
-            plt.tight_layout()
-            plt.show()
-            plt.savefig(f'tmp/learning_{epoch}.tif')
-            plt.close()
+            # # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
+            # ax.invert_yaxis()
+            # plt.title('pred L_u')
+            # plt.tight_layout()
+            # # plt.show()
+            # plt.savefig(f'tmp/learning_{epoch}.tif')
+            # plt.close()
 
             matplotlib.use("Qt5Agg")
-            fig = plt.figure(figsize=(12, 3))
+            fig = plt.figure(figsize=(12, 6))
             ax = fig.add_subplot(141)
             plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1, c=to_numpy(model.kernel_operators[:, 0:1]))
             plt.title('kernel')
@@ -391,7 +382,7 @@ if __name__ == '__main__':
             plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1, c=to_numpy(model.kernel_operators[:, 3:4]))
             plt.title('laplace')
             plt.tight_layout()
-            plt.show()
+            # plt.show()
             plt.savefig(f'tmp/kernels_{epoch}.tif')
             plt.close()
 

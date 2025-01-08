@@ -58,11 +58,8 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
         self.n_ghosts = int(train_config.n_ghosts)
         self.dimension = dimension
 
-        if train_config.large_range:
-            self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
-                                hidden_size=self.hidden_dim, device=self.device, activation='tanh')
-        else:
-            self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
+
+        self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device)
 
         if simulation_config.has_cell_division :

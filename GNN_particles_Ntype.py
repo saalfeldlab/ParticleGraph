@@ -51,12 +51,11 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'generate'
+        task = 'train'
 
         best_model = None
 
-        config_list = ['springs_matrix_N5_2']
-        # config_list = ['arbitrary_3_test']
+        config_list = ['arbitrary_3_field_video_bison']
 
 
     for config_file in config_list:

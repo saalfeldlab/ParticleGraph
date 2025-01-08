@@ -1757,7 +1757,7 @@ def data_train_particle_field(config, config_file, erase, best_model, device):
     replace_with_cluster = 'replace' in train_config.sparsity
     has_ghost = train_config.n_ghosts > 0
     n_ghosts = train_config.n_ghosts
-    has_large_range = train_config.large_range
+
     if train_config.small_init_batch_size:
         get_batch_size = increasing_batch_size(target_batch_size)
     else:
@@ -1780,10 +1780,10 @@ def data_train_particle_field(config, config_file, erase, best_model, device):
     edge_f_f_list = []
     edge_f_p_list = []
     for run in trange(n_runs):
-        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
-        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
-        edge_p_p = torch.load(f'graphs_data/graphs_{dataset_name}/edge_p_p_list{run}.pt', map_location=device)
-        edge_f_p = torch.load(f'graphs_data/graphs_{dataset_name}/edge_f_p_list{run}.pt', map_location=device)
+        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device, weights_only=False)
+        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device, weights_only=False)
+        edge_p_p = torch.load(f'graphs_data/graphs_{dataset_name}/edge_p_p_list{run}.pt', map_location=device, weights_only=False)
+        edge_f_p = torch.load(f'graphs_data/graphs_{dataset_name}/edge_f_p_list{run}.pt', map_location=device, weights_only=False)
         x_list.append(x)
         y_list.append(y)
         edge_p_p_list.append(edge_p_p)
@@ -1809,9 +1809,9 @@ def data_train_particle_field(config, config_file, erase, best_model, device):
     y_mesh_list = []
     time.sleep(0.5)
     for run in trange(n_runs):
-        x_mesh = torch.load(f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt', map_location=device)
+        x_mesh = torch.load(f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt', map_location=device, weights_only=False)
         x_mesh_list.append(x_mesh)
-        h = torch.load(f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt', map_location=device)
+        h = torch.load(f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt', map_location=device, weights_only=False)
         y_mesh_list.append(h)
     h = y_mesh_list[0][0].clone().detach()
     for run in range(n_runs):
@@ -1822,7 +1822,7 @@ def data_train_particle_field(config, config_file, erase, best_model, device):
     print(f'hnorm: {to_numpy(hnorm)}')
     logger.info(f'hnorm: {to_numpy(hnorm)}')
     time.sleep(0.5)
-    mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_1.pt', map_location=device)
+    mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_1.pt', map_location=device, weights_only=False)
     mask_mesh = mesh_data['mask']
     mask_mesh = mask_mesh.repeat(batch_size, 1)
     edge_index_mesh = mesh_data['edge_index']

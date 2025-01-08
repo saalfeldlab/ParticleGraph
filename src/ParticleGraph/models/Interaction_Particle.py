@@ -145,7 +145,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
                 in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
             case 'PDE_A_bis':
                 in_features = torch.cat((delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
-            case 'PDE_B' | 'PDE_B_bis' | 'PDE_B_mass':
+            case 'PDE_B' | 'PDE_ParticleField_B':
                 in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
                                          dpos_y_j[:, None], embedding_i), dim=-1)
             case 'PDE_G':
@@ -167,7 +167,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
             A[i, j] = self.vals[self.data_id[0]]**2
             A.T[i, j] = self.vals[self.data_id[0]]**2
             A[i,i] = 0
-            out = A[edge_index_i, edge_index_j].repeat(2, 1).t() * self.lin_edge(in_features)
+            out = A[edge_index_i, edge_index_j].repeat(2, 1).t() * self.lin_edge(in_features) * field_j
 
         else:
             out = self.lin_edge(in_features) * field_j

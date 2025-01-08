@@ -258,7 +258,6 @@ def plot_training_particle_field(config, has_siren, has_siren_time, model_f, dat
     plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/{model_name}_{dataset_name}_function_{epoch}_{N}.tif", dpi=170.7)
     plt.close()
 
-    fig = plt.figure(figsize=(12, 12))
     if has_siren:
         if has_siren_time:
             frame_list = [n_frames//4, 2*n_frames//4, 3*n_frames//4, n_frames-1]

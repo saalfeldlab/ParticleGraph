@@ -165,7 +165,7 @@ class Siren_Network(nn.Module):
         else:
             tensors = tuple(dim * [torch.linspace(0, 1, steps=sidelen)])
 
-        mgrid = torch.stack(torch.meshgrid(*tensors), dim=-1)
+        mgrid = torch.stack(torch.meshgrid(*tensors,indexing="ij"), dim=-1)
         mgrid = mgrid.reshape(-1, dim)
         return mgrid
 
