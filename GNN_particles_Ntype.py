@@ -55,8 +55,8 @@ if __name__ == '__main__':
 
         best_model = None
 
-        # config_list = ['springs_matrix_N5_1_bis']
-        config_list = ['arbitrary_3_test']
+        config_list = ['springs_matrix_N5_1_bis']
+        # config_list = ['arbitrary_3_test']
 
 
     for config_file in config_list:
