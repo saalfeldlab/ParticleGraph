@@ -143,7 +143,7 @@ class Operator_smooth(pyg.nn.MessagePassing):
 
             density_kernel = torch.exp(-(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / self.kernel_var)[:,None] / self.kernel_norm
             first_kernel = torch.exp(-4*(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / self.kernel_var)[:, None] / self.kernel_norm
-            kernel_modified = first_kernel * self.pre_lin_edge(mgrid) # density_kernel
+            kernel_modified = first_kernel # density_kernel  # first_kernel * self.pre_lin_edge(mgrid) #
 
             grad_autograd = -density_gradient(kernel_modified, mgrid)
             laplace_autograd = density_laplace(kernel_modified, mgrid)
@@ -302,6 +302,89 @@ if __name__ == '__main__':
     phi = torch.zeros(1, device=device)
     threshold = 0.05
 
+
+
+    for epoch in trange(0, 5000):
+
+        optimizer.zero_grad()
+
+        x = x0.clone().detach() + 0.05 * torch.randn_like(x0)
+        # x = x[torch.randperm(x.size(0))[:int(0.5 * x.size(0))]] # removal of 10%
+
+        u, grad_u, laplace_u = arbitrary_gaussian_grad_laplace(mgrid = x[:,1:3], n_gaussian = 5, device=device)
+        L_u = grad_u.clone().detach()
+        # L_u = laplace_u.clone().detach()
+        x[:, 6:7] = u[:, None].clone().detach()
+
+        discrete_pos = torch.argwhere((u >= threshold) | (u <= -threshold))
+        x = x[discrete_pos].squeeze()
+        L_u = L_u[discrete_pos].squeeze()
+
+        distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+        adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
+        edge_index = adj_t.nonzero().t().contiguous()
+        data_id = torch.ones((x.shape[0], 1), dtype=torch.int)
+        dataset = data.Data(x=x, pos=x[:, 1:dimension + 1], edge_index=edge_index)
+
+        pred = model(dataset, data_id=data_id, training=False, phi=phi)
+        loss = (pred[:,0:2]-L_u[:,0:2]).norm(2)
+
+        loss.backward()
+        optimizer.step()
+
+        if epoch % 10 == 0:
+
+            u = u[discrete_pos]
+            grad_u = grad_u[discrete_pos]
+            laplace_u = laplace_u[discrete_pos]
+
+            print(epoch, loss)
+
+            matplotlib.use("Qt5Agg")
+            fig = plt.figure(figsize=(18, 4.75))
+            ax = fig.add_subplot(141)
+            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(model.density))
+            ax.invert_yaxis()
+            plt.title('density')
+            ax = fig.add_subplot(142)
+            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(u))
+            ax.invert_yaxis()
+            plt.title('u')
+            ax = fig.add_subplot(143)
+            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u[:,0]))
+            # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u))
+            ax.invert_yaxis()
+            plt.title('true L_u')
+            ax = fig.add_subplot(144)
+            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred[:,0]))
+            # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
+            ax.invert_yaxis()
+            plt.title('pred L_u')
+            plt.tight_layout()
+            plt.show()
+            plt.savefig(f'tmp/learning_{epoch}.tif')
+            plt.close()
+
+            matplotlib.use("Qt5Agg")
+            fig = plt.figure(figsize=(12, 3))
+            ax = fig.add_subplot(141)
+            plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1, c=to_numpy(model.kernel_operators[:, 0:1]))
+            plt.title('kernel')
+            ax = fig.add_subplot(142)
+            plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1, c=to_numpy(model.kernel_operators[:, 1:2]))
+            plt.title('grad_x')
+            ax = fig.add_subplot(143)
+            plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1, c=to_numpy(model.kernel_operators[:, 2:3]))
+            plt.title('grad_y')
+            ax = fig.add_subplot(144)
+            plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1, c=to_numpy(model.kernel_operators[:, 3:4]))
+            plt.title('laplace')
+            plt.tight_layout()
+            plt.show()
+            plt.savefig(f'tmp/kernels_{epoch}.tif')
+            plt.close()
+
+
     x_list = torch.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/graphs_boids_16_256/x_list_0.pt', map_location=device)
 
     for frame in trange(4000,4001,20):
@@ -444,85 +527,6 @@ if __name__ == '__main__':
 
 
 
-
-    for epoch in trange(0, 5000):
-
-        optimizer.zero_grad()
-
-        x = x0.clone().detach() + 0.05 * torch.randn_like(x0)
-        # x = x[torch.randperm(x.size(0))[:int(0.5 * x.size(0))]] # removal of 10%
-
-        u, grad_u, laplace_u = arbitrary_gaussian_grad_laplace(mgrid = x[:,1:3], n_gaussian = 5, device=device)
-        L_u = grad_u.clone().detach()
-        # L_u = laplace_u.clone().detach()
-        x[:, 6:7] = u[:, None].clone().detach()
-
-        discrete_pos = torch.argwhere((u >= threshold) | (u <= -threshold))
-        x = x[discrete_pos].squeeze()
-        L_u = L_u[discrete_pos].squeeze()
-
-        distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-        adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
-        edge_index = adj_t.nonzero().t().contiguous()
-        data_id = torch.ones((x.shape[0], 1), dtype=torch.int)
-        dataset = data.Data(x=x, pos=x[:, 1:dimension + 1], edge_index=edge_index)
-
-        pred = model(dataset, data_id=data_id, training=False, phi=phi)
-        loss = (pred[:,0:2]-L_u[:,0:2]).norm(2)
-
-        loss.backward()
-        optimizer.step()
-
-        if epoch % 10 == 0:
-
-            u = u[discrete_pos]
-            grad_u = grad_u[discrete_pos]
-            laplace_u = laplace_u[discrete_pos]
-
-            print(epoch, loss)
-
-            matplotlib.use("Qt5Agg")
-            fig = plt.figure(figsize=(18, 4.75))
-            ax = fig.add_subplot(141)
-            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(model.density))
-            ax.invert_yaxis()
-            plt.title('density')
-            ax = fig.add_subplot(142)
-            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(u))
-            ax.invert_yaxis()
-            plt.title('u')
-            ax = fig.add_subplot(143)
-            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u[:,0]))
-            # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u))
-            ax.invert_yaxis()
-            plt.title('true L_u')
-            ax = fig.add_subplot(144)
-            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred[:,0]))
-            # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
-            ax.invert_yaxis()
-            plt.title('pred L_u')
-            plt.tight_layout()
-            # plt.show()
-            plt.savefig(f'tmp/learning_{epoch}.tif')
-            plt.close()
-
-            fig = plt.figure(figsize=(12, 3))
-            ax = fig.add_subplot(141)
-            plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1, c=to_numpy(model.kernel_operators[:, 0:1]))
-            plt.title('kernel')
-            ax = fig.add_subplot(142)
-            plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1, c=to_numpy(model.kernel_operators[:, 1:2]))
-            plt.title('grad_x')
-            ax = fig.add_subplot(143)
-            plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1, c=to_numpy(model.kernel_operators[:, 2:3]))
-            plt.title('grad_y')
-            ax = fig.add_subplot(144)
-            plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1, c=to_numpy(model.kernel_operators[:, 3:4]))
-            plt.title('laplace')
-            plt.tight_layout()
-            # plt.show()
-            plt.savefig(f'tmp/kernels_{epoch}.tif')
-            plt.close()
 
 
 
