@@ -24,8 +24,8 @@ graph_model:
 
   pre_input_size: 6
   pre_output_size: 5
-  pre_hidden_dim: 128
-  pre_n_mp_layers: 4
+  pre_hidden_dim: 64
+  pre_n_mp_layers: 3
 
   input_size: 25
   output_size: 2

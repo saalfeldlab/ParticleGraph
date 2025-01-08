@@ -147,26 +147,22 @@ class Interaction_Falling_Water_Wall(pyg.nn.MessagePassing):
 
     def message(self, edge_index_i, edge_index_j, pos_i, pos_j, embedding_i, embedding_j, kernel_j):
 
-
         if self.update_type == 'pre_mlp':
-
             if self.mode == 'pre_mlp':
                 delta_pos = self.bc_dpos(pos_j - pos_i)
                 delta_pos = delta_pos[:, 0:self.dimension]
                 self.W_ijs = self.pre_lin_edge(torch.cat((delta_pos, embedding_i, embedding_j), dim=-1))
-
                 return self.W_ijs[:,0:3]
-
             else:
-
-                pos_i_p = (pos_i - pos_i[:, 0:self.dimension].repeat(1, self.time_window))[:, self.dimension:]
-                pos_j_p = (pos_j - pos_i[:, 0:self.dimension].repeat(1, self.time_window))
-                in_features = torch.cat((pos_i_p, pos_j_p, embedding_i, embedding_j, kernel_j, self.W_ijs[:,1:]), dim=-1)
-
+                if self.time_window == 0:
+                    delta_pos = self.bc_dpos(pos_j - pos_i)
+                    in_features = torch.cat((delta_pos, embedding_i, embedding_j, kernel_j, self.W_ijs[:,1:]), dim=-1)
+                else:
+                    pos_i_p = (pos_i - pos_i[:, 0:self.dimension].repeat(1, self.time_window))[:, self.dimension:]
+                    pos_j_p = (pos_j - pos_i[:, 0:self.dimension].repeat(1, self.time_window))
+                    in_features = torch.cat((pos_i_p, pos_j_p, embedding_i, embedding_j, kernel_j, self.W_ijs[:,1:]), dim=-1)
                 out = self.lin_edge(in_features)
-
                 return out
-
         else:
             if self.time_window == 0:
                 delta_pos = self.bc_dpos(pos_j - pos_i)
@@ -176,7 +172,6 @@ class Interaction_Falling_Water_Wall(pyg.nn.MessagePassing):
                 pos_j_p = (pos_j - pos_i[:, 0:self.dimension].repeat(1, self.time_window))
                 in_features = torch.cat((pos_i_p, pos_j_p, embedding_i, embedding_j), dim=-1)
             out = self.lin_edge(in_features)
-
             return out
 
     def update(self, aggr_out):

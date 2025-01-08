@@ -80,25 +80,17 @@ class Interaction_Falling_Water_Smooth(pyg.nn.MessagePassing):
         self.time_window = train_config.time_window
         self.smooth_radius = simulation_config.smooth_radius
 
-
-        # self.kernel = MLP(input_size=1, output_size=1, nlayers=5, hidden_size=128, device=self.device)
-        # self.kernel = Siren(in_features=1, out_features=1, hidden_features=256,
-        #                   hidden_layers=3, outermost_linear=True, first_omega_0=30, hidden_omega_0=30.)
-        # self.kernel.to(self.device)
-
-
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device)
-
 
         if self.update_type == 'mlp':
             self.lin_phi = MLP(input_size=self.input_size_update, output_size=self.output_size_update, nlayers=self.n_layers_update,
                                     hidden_size=self.hidden_dim_update, device=self.device)
 
-
         self.a = nn.Parameter(
                 torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
                              requires_grad=True, dtype=torch.float32))
+
         self.embedding_size = self.a.shape[1]
 
     def forward(self, data=[], data_id=[], training=[], phi=[], has_field=False, tasks=None):
@@ -165,6 +157,7 @@ class Interaction_Falling_Water_Smooth(pyg.nn.MessagePassing):
 
 
         if self.time_window == 0:
+
             delta_pos = self.bc_dpos(pos_j - pos_i)
             match self.task:
                 case 'density_tensor':
@@ -184,14 +177,15 @@ class Interaction_Falling_Water_Smooth(pyg.nn.MessagePassing):
                     return out
 
         else:
+
             pos_i_p = (pos_i - pos_i[:, 0:self.dimension].repeat(1, self.time_window))[:, self.dimension:]
             pos_j_p = (pos_j - pos_i[:, 0:self.dimension].repeat(1, self.time_window))
             match self.task:
-                case 'density':
+                case 'density_tensor':
                     W_j = self.W(pos_j_p[:, 0:2])
                     self.W_j = W_j
                     return W_j
-                case 'smooth_particle':
+                case 'pred_smooth_particle':
                     in_features = torch.cat((pos_i_p, pos_j_p, density_i, density_j, embedding_i, embedding_j), dim=-1)
                     out = self.lin_edge(in_features)
                     return out
@@ -260,7 +254,6 @@ if __name__ == '__main__':
     mgrid = torch.cat((torch.ones((mgrid.shape[0], 1)), mgrid, torch.zeros((mgrid.shape[0], 2))), 1)
     mgrid = mgrid.to(device)
 
-
     model = Interaction_Falling_Water_Smooth(config=config, device=device, aggr_type='add', bc_dpos=bc_dpos, dimension=dimension)
     optimizer = optim.Adam(model.parameters(), lr=1e-5)
     model.train()
@@ -309,14 +302,6 @@ if __name__ == '__main__':
     plt.ylim([0,1])
     plt.tight_layout()
     plt.show()
-
-
-
-
-
-
-
-
 
 
     # x = mgrid
@@ -453,12 +438,6 @@ if __name__ == '__main__':
         plt.yticks([])
         plt.show()
 
-
-
-
-
-
-
         density[0:mgrid.shape[0]]
         density = torch.reshape(density, (512, 512))
 
@@ -470,7 +449,6 @@ if __name__ == '__main__':
         plt.xticks([])
         plt.yticks([])
         plt.show()
-
 
         distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
         adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
@@ -488,6 +466,66 @@ if __name__ == '__main__':
         plt.savefig(f"tmp/particle_density_{k}.png")
         plt.close()
 
+
+
+
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+
+    # Define the 2D Gaussian function
+    def gaussian_2d(x, y, mu_x, mu_y, sigma):
+        return np.exp(-((x - mu_x) ** 2 + (y - mu_y) ** 2) / (2 * sigma ** 2))
+
+
+    # Compute the first derivatives
+    def gaussian_2d_first_derivative(x, y, mu_x, mu_y, sigma):
+        dG_dx = -((x - mu_x) / sigma ** 2) * gaussian_2d(x, y, mu_x, mu_y, sigma)
+        dG_dy = -((y - mu_y) / sigma ** 2) * gaussian_2d(x, y, mu_x, mu_y, sigma)
+        return dG_dx, dG_dy
+
+
+    # Compute the second derivatives
+    def gaussian_2d_second_derivative(x, y, mu_x, mu_y, sigma):
+        d2G_dx2 = ((x - mu_x) ** 2 / sigma ** 4 - 1 / sigma ** 2) * gaussian_2d(x, y, mu_x, mu_y, sigma)
+        d2G_dy2 = ((y - mu_y) ** 2 / sigma ** 4 - 1 / sigma ** 2) * gaussian_2d(x, y, mu_x, mu_y, sigma)
+        return d2G_dx2, d2G_dy2
+
+
+    # Define the grid
+    x = np.linspace(-5, 5, 100)
+    y = np.linspace(-5, 5, 100)
+    x, y = np.meshgrid(x, y)
+
+    # Parameters for the Gaussian
+    mu_x, mu_y = 0.5, 0.25
+    sigma = 1
+
+    # Compute the Gaussian and its derivatives
+    G = gaussian_2d(x, y, mu_x, mu_y, sigma)
+    dG_dx, dG_dy = gaussian_2d_first_derivative(x, y, mu_x, mu_y, sigma)
+    d2G_dx2, d2G_dy2 = gaussian_2d_second_derivative(x, y, mu_x, mu_y, sigma)
+
+    # Plot the results
+    fig, axs = plt.subplots(2, 2, figsize=(12, 10))
+
+    # Original Gaussian
+    axs[0, 0].imshow(G, extent=[-5, 5, -5, 5], origin='lower')
+    axs[0, 0].set_title('2D Gaussian')
+
+    # First derivatives
+    axs[0, 1].imshow(dG_dx, extent=[-5, 5, -5, 5], origin='lower')
+    axs[0, 1].set_title('First Derivative w.r.t x')
+
+    axs[1, 0].imshow(dG_dy, extent=[-5, 5, -5, 5], origin='lower')
+    axs[1, 0].set_title('First Derivative w.r.t y')
+
+    # Second derivatives
+    axs[1, 1].imshow(d2G_dx2, extent=[-5, 5, -5, 5], origin='lower')
+    axs[1, 1].set_title('Second Derivative w.r.t x')
+
+    plt.tight_layout()
+    plt.show()
 
 
 
