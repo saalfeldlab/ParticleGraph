@@ -103,7 +103,7 @@ class Operator_smooth(pyg.nn.MessagePassing):
                 torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
                              requires_grad=True, dtype=torch.float32))
 
-    def forward(self, data=[], data_id=[], training=[], phi=[], has_field=False):
+    def forward(self, data=[], data_id=[], training=[], phi=[], continuous_field=False, continuous_field_size=None):
 
         x, edge_index = data.x, data.edge_index
         # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
@@ -114,11 +114,20 @@ class Operator_smooth(pyg.nn.MessagePassing):
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
         field = x[:, 2*self.dimension+2: 2*self.dimension+3]
 
-        self.mode = 'pre_mlp'
         density_null = torch.zeros((pos.shape[0], 2), device=self.device)
-        self.density = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, density=density_null)
-        self.mode = 'mlp'
-        out = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, density=self.density)
+        if continuous_field:
+            self.mode = 'pre_mlp'
+            previous_density = self.density
+            self.density = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, density=density_null)
+            density = torch.zeros((pos.shape[0], 1), device=self.device)
+            density[continuous_field_size[0]:] = previous_density
+            self.mode = 'mlp'
+            out = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, density=density)
+        else:
+            self.mode = 'pre_mlp'
+            self.density = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, density=density_null)
+            self.mode = 'mlp'
+            out = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, density=self.density)
 
         return out
 
@@ -134,7 +143,7 @@ class Operator_smooth(pyg.nn.MessagePassing):
 
             density_kernel = torch.exp(-(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / self.kernel_var)[:,None] / self.kernel_norm
             first_kernel = torch.exp(-4*(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / self.kernel_var)[:, None] / self.kernel_norm
-            kernel_modified = density_kernel   # first_kernel * self.pre_lin_edge(mgrid)
+            kernel_modified = first_kernel * self.pre_lin_edge(mgrid) # density_kernel
 
             grad_autograd = -density_gradient(kernel_modified, mgrid)
             laplace_autograd = density_laplace(kernel_modified, mgrid)
@@ -293,30 +302,17 @@ if __name__ == '__main__':
     phi = torch.zeros(1, device=device)
     threshold = 0.05
 
-    x_list = np.load(f'/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/graphs_data/graphs_boids_16_256_test/x_list_0.npy')
+    x_list = torch.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/graphs_boids_16_256/x_list_0.pt', map_location=device)
 
-    for frame in trange(4000,8000,20):
+    for frame in trange(4000,4001,20):
 
-        x = torch.tensor(x_list[frame].squeeze(), dtype = torch.float32, device=device)
+        x = x_list[frame]
 
         tensors = tuple(dimension * [torch.linspace(0, 1, steps=100)])
         mgrid = torch.stack(torch.meshgrid(*tensors), dim=-1)
         mgrid = mgrid.reshape(-1, dimension)
         mgrid = torch.cat((torch.ones((mgrid.shape[0], 1)), mgrid, torch.zeros((mgrid.shape[0], 2))), 1)
         mgrid = mgrid.to(device)
-
-        distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - mgrid[None, :, 1:dimension + 1]) ** 2, dim=2)
-        adj_t = ((distance < max_radius ** 2) & (distance > 0)).float() * 1
-        edge_index_mgrid = adj_t.nonzero().t().contiguous()
-        xp = torch.cat((mgrid, x[:, 0:2 * dimension + 1]), 0)
-        edge_index_mgrid[0, :] = edge_index_mgrid[0, :] + mgrid.shape[0]
-        edge_index_mgrid, _ = pyg_utils.remove_self_loops(edge_index_mgrid)
-
-        dataset = data.Data(x=xp, pos=xp[:, 1:dimension + 1], edge_index=edge_index_mgrid)
-        data_id = torch.ones((xp.shape[0], 1), dtype=torch.int)
-
-        pred_field = model(dataset, data_id=data_id, training=False, phi=phi)[0: mgrid.shape[0]]
-        density_field = model.density[0: mgrid.shape[0]]
 
         distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
         adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
@@ -327,12 +323,26 @@ if __name__ == '__main__':
         pred = model(dataset, data_id=data_id, training=False, phi=phi)
         density = model.density
 
+        distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - mgrid[None, :, 1:dimension + 1]) ** 2, dim=2)
+        adj_t = ((distance < max_radius ** 2) & (distance > 0)).float() * 1
+        edge_index_mgrid = adj_t.nonzero().t().contiguous()
+        xp = torch.cat((mgrid, x[:, 0:2 * dimension + 1]), 0)
+        edge_index_mgrid[0, :] = edge_index_mgrid[0, :] + mgrid.shape[0]
+        edge_index_mgrid, _ = pyg_utils.remove_self_loops(edge_index_mgrid)
+
+        dataset = data.Data(x=xp, pos=xp[:, 1:dimension + 1], edge_index=edge_index_mgrid)
+        data_id = torch.ones((xp.shape[0], 1), dtype=torch.int)
+        pred_field = model(dataset, data_id=data_id, training=False, phi=phi, continuous_field=True, continuous_field_size=mgrid.shape)[0: mgrid.shape[0]]
+        density_field = model.density[0: mgrid.shape[0]]
+
+        matplotlib.use("Qt5Agg")
         fig = plt.figure(figsize=(8, 8))
         ax = fig.add_subplot(111)
         plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=10, c=to_numpy(density_field))
         Q = ax.quiver(to_numpy(x[:, 2]), to_numpy(x[:, 1]), -to_numpy(pred[:,1]), -to_numpy(pred[:,0]), color='w')
+        plt.show()
 
-        fig = plt.figure(figsize=(8, 8))
+        fig = plt.figure(figsize=(12, 12))
         ax = fig.add_subplot(4,4,1)
         plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c='w')
         pixel = 7020
@@ -345,55 +355,82 @@ if __name__ == '__main__':
         plt.yticks([])
         plt.title('pos', fontsize=8)
         ax = fig.add_subplot(4,4,2)
-        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c=to_numpy(density))
-        plt.xticks([])
-        plt.yticks([])
-        plt.title('density_kernel', fontsize=8)
-        ax = fig.add_subplot(4,4,3)
         plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=1, c=to_numpy(density_field))
         plt.xticks([])
         plt.yticks([])
         plt.title('density_field', fontsize=8)
+        ax = fig.add_subplot(4,4,3)
+        plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=1, c=to_numpy(pred_field[:,0]))
+        plt.xticks([])
+        plt.yticks([])
+        plt.title('density_field_x', fontsize=8)
         ax = fig.add_subplot(4,4,4)
+        plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=1, c=to_numpy(pred_field[:,1]))
+        plt.xticks([])
+        plt.yticks([])
+        plt.title('density_field_y', fontsize=8)
+        ax = fig.add_subplot(4,4,5)
+        plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=1, c=to_numpy(pred_field[:,2]))
+        plt.xticks([])
+        plt.yticks([])
+        plt.title('velocity_field', fontsize=8)
+        ax = fig.add_subplot(4,4,6)
+        plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=1, c=to_numpy(pred_field[:,3]))
+        plt.xticks([])
+        plt.yticks([])
+        plt.title('velocity_field_x', fontsize=8)
+        ax = fig.add_subplot(4,4,7)
+        plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=1, c=to_numpy(pred_field[:,4]))
+        plt.xticks([])
+        plt.yticks([])
+        plt.title('velocity_field_y', fontsize=8)
+
+        ax = fig.add_subplot(4,4,8)
+        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c=to_numpy(density))
+        plt.xticks([])
+        plt.yticks([])
+        plt.title('density_kernel', fontsize=8)
+        ax = fig.add_subplot(4,4,9)
         plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c=to_numpy(pred[:,0]))
         plt.xticks([])
         plt.yticks([])
         plt.title('density_y', fontsize=8)
-        ax = fig.add_subplot(4,4,5)
+        ax = fig.add_subplot(4,4,10)
         plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c=to_numpy(pred[:,1]))
         plt.xticks([])
         plt.yticks([])
         plt.title('density_x', fontsize=8)
-        ax = fig.add_subplot(4,4,6)
+        ax = fig.add_subplot(4,4,11)
         plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c=to_numpy(torch.sum(x[:,3:5]**2, dim=1)))
         plt.xticks([])
         plt.yticks([])
         plt.title('velocity', fontsize=8)
-        ax = fig.add_subplot(4,4,7)
+        ax = fig.add_subplot(4,4,12)
         plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c=to_numpy(x[:,3:4]))
         plt.xticks([])
         plt.yticks([])
         plt.title('velocity-x', fontsize=8)
-        ax = fig.add_subplot(4,4,8)
+        ax = fig.add_subplot(4,4,13)
         plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c=to_numpy(x[:,4:5]))
         plt.xticks([])
         plt.yticks([])
-        plt.title('velocity-x', fontsize=8)
-        ax = fig.add_subplot(4,4,9)
+        plt.title('velocity-y', fontsize=8)
+        ax = fig.add_subplot(4,4,14)
         plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c=to_numpy(pred[:,2]))
         plt.xticks([])
         plt.yticks([])
         plt.title('velocity_kernel', fontsize=8)
-        ax = fig.add_subplot(4,4,10)
+        ax = fig.add_subplot(4,4,15)
         plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c=to_numpy(pred[:,3]))
         plt.xticks([])
         plt.yticks([])
         plt.title('velocity_kernel_y', fontsize=8)
-        ax = fig.add_subplot(4,4,11)
+        ax = fig.add_subplot(4,4,16)
         plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c=to_numpy(pred[:,4]))
         plt.xticks([])
         plt.yticks([])
         plt.title('velocity_kernel_x', fontsize=8)
+        plt.show()
 
         plt.savefig(f'tmp/kernels_{frame}.tif')
         plt.close()
@@ -416,8 +453,8 @@ if __name__ == '__main__':
         # x = x[torch.randperm(x.size(0))[:int(0.5 * x.size(0))]] # removal of 10%
 
         u, grad_u, laplace_u = arbitrary_gaussian_grad_laplace(mgrid = x[:,1:3], n_gaussian = 5, device=device)
-        # L_u = grad_u.clone().detach()
-        L_u = laplace_u.clone().detach()
+        L_u = grad_u.clone().detach()
+        # L_u = laplace_u.clone().detach()
         x[:, 6:7] = u[:, None].clone().detach()
 
         discrete_pos = torch.argwhere((u >= threshold) | (u <= -threshold))
@@ -431,12 +468,12 @@ if __name__ == '__main__':
         dataset = data.Data(x=x, pos=x[:, 1:dimension + 1], edge_index=edge_index)
 
         pred = model(dataset, data_id=data_id, training=False, phi=phi)
-        loss = (pred-L_u).norm(2)
+        loss = (pred[:,0:2]-L_u[:,0:2]).norm(2)
 
         loss.backward()
         optimizer.step()
 
-        if epoch % 1000 == 0:
+        if epoch % 10 == 0:
 
             u = u[discrete_pos]
             grad_u = grad_u[discrete_pos]
@@ -444,6 +481,7 @@ if __name__ == '__main__':
 
             print(epoch, loss)
 
+            matplotlib.use("Qt5Agg")
             fig = plt.figure(figsize=(18, 4.75))
             ax = fig.add_subplot(141)
             plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(model.density))
@@ -454,16 +492,17 @@ if __name__ == '__main__':
             ax.invert_yaxis()
             plt.title('u')
             ax = fig.add_subplot(143)
-            # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u[:,0]))
-            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u))
+            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u[:,0]))
+            # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u))
             ax.invert_yaxis()
             plt.title('true L_u')
             ax = fig.add_subplot(144)
-            # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred[:,0]))
-            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
+            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred[:,0]))
+            # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
             ax.invert_yaxis()
             plt.title('pred L_u')
             plt.tight_layout()
+            # plt.show()
             plt.savefig(f'tmp/learning_{epoch}.tif')
             plt.close()
 
