@@ -143,7 +143,7 @@ class Operator_smooth(pyg.nn.MessagePassing):
 
             density_kernel = torch.exp(-(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / self.kernel_var)[:,None] / self.kernel_norm
             first_kernel = torch.exp(-4*(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / self.kernel_var)[:, None] / self.kernel_norm
-            kernel_modified = first_kernel # density_kernel  # first_kernel * self.pre_lin_edge(mgrid) #
+            kernel_modified = density_kernel # first_kernel # density_kernel  # first_kernel * self.pre_lin_edge(mgrid) #
 
             grad_autograd = -density_gradient(kernel_modified, mgrid)
             laplace_autograd = density_laplace(kernel_modified, mgrid)
@@ -343,8 +343,19 @@ if __name__ == '__main__':
             matplotlib.use("Qt5Agg")
             fig = plt.figure(figsize=(18, 4.75))
             ax = fig.add_subplot(141)
-            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(model.density))
+            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c='w')
             ax.invert_yaxis()
+            pixel = 1030
+
+            pos = torch.argwhere(edge_index[1, :] == pixel).squeeze()
+            if pos.numel() > 0:
+                plt.scatter(x[edge_index[0, pos], 1].detach().cpu().numpy(),
+                            x[edge_index[0, pos], 2].detach().cpu().numpy(), s=10, c='b')
+            plt.scatter(x[pixel, 1].detach().cpu().numpy(),
+                        x[pixel, 2].detach().cpu().numpy(), s=20, c='r')
+            plt.show()
+
+
             plt.title('density')
             ax = fig.add_subplot(142)
             plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(u))
