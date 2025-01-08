@@ -31,6 +31,7 @@ class SimulationConfig(BaseModel):
     n_particles_max: int = 20000
     max_edges: float = 1.0E6
     n_particle_types: int = 5
+    n_interactions: int = 3
     shuffle_particle_types: bool = False
     dpos_init: float = 0
     angular_sigma: float = 0
@@ -92,10 +93,10 @@ class GraphModelConfig(BaseModel):
     prediction: Literal['first_derivative', '2nd_derivative'] = '2nd_derivative'
     integration: Literal['Euler', 'Runge-Kutta'] = 'Euler'
 
-    pre_input_size: Optional[int]
-    pre_output_size: Optional[int]
-    pre_hidden_dim: Optional[int]
-    pre_n_mp_layers: Optional[int]
+    pre_input_size: int = 1
+    pre_output_size: int = 1
+    pre_hidden_dim: int = 1
+    pre_n_mp_layers: int = 1
 
     input_size: int
     output_size: int

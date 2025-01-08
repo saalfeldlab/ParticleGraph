@@ -1,4 +1,4 @@
-description: 'system of particles connected with spring'
+description: 'system of particles connected with spring possible coeffs 0 1'
 dataset: 'springs_matrix_N5_2'
 
 simulation:
@@ -7,7 +7,6 @@ simulation:
   max_radius: 1
   n_particles: 5
   n_particle_types: 3
-  n_interactions: 3
   n_frames: 50
   delta_t: 0.01
   dpos_init: 1.0E-5

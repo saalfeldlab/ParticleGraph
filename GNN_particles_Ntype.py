@@ -50,23 +50,14 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-<<<<<<< Updated upstream
-        task = 'generate'
-=======
-        task = 'test'
->>>>>>> Stashed changes
+
+        task = 'generate train'
+
         best_model = None
 
-        # config_list = ['rat_city_c2']
-        # config_list = ['cell_PSC_5']
-<<<<<<< Updated upstream
-        config_list = ['boids_16_256']
-=======
-        config_list = ['falling_water_ramp_x9','falling_water_ramp_x9_1','falling_water_ramp_x9_2','falling_water_ramp_x9_3']
->>>>>>> Stashed changes
+        # config_list = ['springs_matrix_N5_1_bis']
+        config_list = ['arbitrary_3_test']
 
-        # config_list = ['arbitrary_3_field_video_bison']
-        # config_list = ['cell_gland_SMG2']
 
     for config_file in config_list:
 
