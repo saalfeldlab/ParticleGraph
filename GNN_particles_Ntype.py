@@ -51,7 +51,7 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'generate train'
+        task = 'train'
 
         best_model = None
 
