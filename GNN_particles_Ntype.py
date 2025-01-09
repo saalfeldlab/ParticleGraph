@@ -75,8 +75,8 @@ if __name__ == '__main__':
         if 'train' in task:
             data_train(config=config, config_file=config_file, erase=False, best_model=best_model, device=device)
         if 'test' in task:
-            data_test(config=config, config_file=config_file, visualize=True, style='black color', verbose=False, best_model='best', run=1, plot_data=False,
-                      test_simulation=False, sample_embedding=False, device=device, fixed=False, bounce=False, step=1) # config.simulation.n_frames // 200, )  arrow speed acc_learned   arrow speed acc_true
+            data_test(config=config, config_file=config_file, visualize=True, style='black color', verbose=False, best_model='best', run=2, plot_data=False,
+                      test_simulation=False, sample_embedding=False, fixed=True, bounce=True, step=4, device=device)
 
 
 # bsub -n 4 -gpu "num=1" -q gpu_h100 "python GNN_particles_Ntype.py -o train falling_water_ramp_x1"

@@ -29,7 +29,7 @@ graph_model:
 
   update_type: 'mlp'
   input_size_update: 264
-  n_layers_update: 4
+  n_layers_update: 8
   hidden_dim_update: 128
   output_size_update: 2
 
