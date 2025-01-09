@@ -55,11 +55,11 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'test'
+        task = 'generate'
 
         best_model = '20'
 
-        config_list = ['arbitrary_3_field_video_bison']
+        config_list = ['cell_MDCK_2']
 
 
     for config_file in config_list:

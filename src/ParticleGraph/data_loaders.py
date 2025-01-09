@@ -30,6 +30,7 @@ import networkx as nx
 from torch_geometric.utils.convert import to_networkx
 from cellpose import models
 from ParticleGraph.generators.cell_utils import *
+from ParticleGraph.generators import PDE_V
 
 def extract_object_properties(segmentation_image):
     # Label the objects in the segmentation image
@@ -258,6 +259,7 @@ def load_LG_ODE(config, device=None, visualize=False, step=1000):
 
 def load_cell_data(config, device, visualize):
 
+    plt.style.use('dark_background')
 
     data_folder_name = config.data_folder_name
     dataset_name = config.dataset
@@ -290,24 +292,20 @@ def load_cell_data(config, device, visualize):
         os.makedirs(f"{data_folder_name}/SEG", exist_ok=True)
 
         model_path = image_data.cellpose_model
-        model = models.CellposeModel(gpu=True, pretrained_model=model_path)
+        model_custom = models.CellposeModel(gpu=True, pretrained_model=model_path)
+
+        # model_cyto1 = models.CellposeModel(gpu=True, model_type='cyto3', nchan=2)
+        # model_cyto2 = models.CellposeModel(gpu=True, model_type='cyto2', nchan=2)
+        # model_cyto3 = models.CellposeModel(gpu=True, model_type='cyto2_cp3', nchan=2)
+
 
         print('generate segmentation masks with Cellpose ...')
-        if False:
+        if True:
             for it in trange(len(files)):
                 im = tifffile.imread(data_folder_name + files[it])
                 im = np.array(im)
-                # im = im[:,:, image_data.cellpose_channel]
-                masks, flows, styles = model.eval(im, diameter=75, invert=False, normalize=True, channels=[0, 1])
+                masks, flows, styles = model_custom.eval(im, diameter=150, invert=False, normalize=True, channels=image_data.channel)
                 tifffile.imsave(data_folder_name + 'SEG/' + files[it], masks)
-
-                # matplotlib.use("Qt5Agg")
-                # fig = plt.figure(figsize=(8, 8))
-                # plt.imshow(masks)
-                # plt.tight_layout()
-                # plt.show()
-
-        data_folder_name = data_folder_name + 'SEG/'
 
     # 0 N1 cell index dim=1
     # 1,2 X1 positions dim=2
@@ -329,14 +327,16 @@ def load_cell_data(config, device, visualize):
     run = 0
     x_list = []
     y_list = []
-    edge_p_p_list = []
 
-    raw_data_list = []
-    annotation_data_list = []
+    full_vertice_list = []
 
-    for it in trange(len(files)):
+    for it in range(len(files)):
 
-        im = tifffile.imread(data_folder_name + files[it])
+        print (f'{files[it]}')
+
+
+        im_fluo = tifffile.imread(data_folder_name + files[it])
+        im = tifffile.imread(data_folder_name + 'SEG/' + files[it])
         im = np.array(im)
 
         im_dim = im.shape
@@ -351,46 +351,78 @@ def load_cell_data(config, device, visualize):
         P = object_properties[:,4:5]
         ASR = object_properties[:,5:6]
         OR = object_properties[:,6:7]
-        ID = n_cells + np.arange(object_properties.shape[0], dtype=np.float32)[:, None]
-        n_cells = ID[-1] + 1
+        ID = n_cells + np.arange(object_properties.shape[0])[:, None]
 
         x = np.concatenate((N.astype(int), X, empty_columns, AR, P, ASR, OR, ID.astype(int) -1), axis=1)
         x = torch.tensor(x, dtype=torch.float32, device=device)
         x_list.append(x)
 
-        distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-        edge_index = adj_t.nonzero().t().contiguous()
-        edge_p_p_list.append(to_numpy(edge_index))
-
         y = torch.zeros((x.shape[0], 2), dtype=torch.float32, device=device)
         y_list.append(y)
 
-        LABEL = object_properties[:,0:1]
-        FRAME = it * np.ones((x.shape[0], 1))
+        vertices = mask_to_vertices(mask=(im == 100), num_vertices=20)
+        vertices = np.array(vertices)
 
-        raw_data = np.concatenate((ID.astype(int), FRAME.astype(int), X[:,1:2], X[:,0:1], AR, P, ASR, OR), axis=1)
-        if it == 0:
-            EDGE = np.zeros((len(ID), 1))
-        else:
-            EDGE = np.zeros((len(ID), 1))
-            for k in range(len(ID)):
-                pos = np.argwhere(PREV_LABEL == LABEL[k])
-                if len(pos)>0:
-                    EDGE[k] = PREV_ID[pos[0][0]]
-        annotation_data = np.concatenate((ID.astype(int), FRAME.astype(int), X[:,1:2], X[:,0:1], EDGE.astype(int)), axis=1)
-        if it == 0:
-            raw_data_list = raw_data
-            annotation_data_list = annotation_data
-        else:
-            raw_data_list = np.concatenate((raw_data_list,raw_data), axis = 0)
-            annotation_data_list = np.concatenate((annotation_data_list,annotation_data), axis = 0)
-        PREV_ID = ID
-        PREV_LABEL = LABEL
 
+        vertices_list = []
+        for n in trange(len(x)):
+            vertices = mask_to_vertices(mask=(im == n), num_vertices=20)
+            uniform_points = get_uniform_points(vertices, num_points=20)
+
+            N = n*20 + np.arange(20, dtype=np.float32)[:, None]
+            X = uniform_points
+            empty_columns = np.zeros((X.shape[0], 2))
+            T = n_cells + n * np.ones((X.shape[0], 1))
+            vertices = np.concatenate((N.astype(int), X, empty_columns, T, N.astype(int)), axis=1)
+
+            vertices = torch.tensor(vertices, dtype=torch.float32, device=device)
+            vertices_list.append(vertices)
+
+        vertices_list = torch.stack(vertices_list)
+        vertices_list = torch.reshape(vertices_list, (-1, vertices_list.shape[2]))
+        vertices = vertices_list
+
+        params = torch.tensor([[1.6233, 1.0413, 1.6012, 1.5615]], dtype=torch.float32, device=device)
+        model_vertices = PDE_V(aggr_type='mean', p=torch.squeeze(params), sigma=30, bc_dpos=bc_dpos, dimension=2)
+
+        max_radius=50
+        min_radius=0
+
+        for epoch in trange(6):
+
+            distance = torch.sum(bc_dpos(vertices[:, None, 1:dimension + 1] - vertices[None, :, 1:dimension + 1]) ** 2, dim=2)
+            adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
+            edge_index = adj_t.nonzero().t().contiguous()
+
+            dataset = data.Data(x=vertices, pos=vertices[:, 1:3], edge_index=edge_index, field=[])
+
+            with torch.no_grad():
+                y = model_vertices(dataset)
+
+            vertices[:,1:3] = vertices[:,1:3] + y
+            vertices[:, 1:2] = torch.clip(vertices[:, 1:2], 0, im_dim[0])
+            vertices[:, 2:3] = torch.clip(vertices[:, 2:3], 0, im_dim[1])
+
+        full_vertice_list.append(vertices)
+
+        fig, ax = plt.subplots(figsize=(16, 12))
+        plt.imshow(im_fluo)
+        for n in range(len(x)):
+            pos = torch.argwhere(vertices[:, 5:6] == torch.tensor(n_cells+n,dtype=torch.float32,device=device))
+            plt.plot(to_numpy(vertices[pos, 2]), to_numpy(vertices[pos, 1]), c='w')
+        plt.tight_layout()
+        plt.xlim([0 , im_dim[1]])
+        plt.ylim([0 , im_dim[0]])
+        plt.xticks([])
+        plt.yticks([])
+        # plt.show()
+        plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/{files[it]}.tif", dpi=80)
+        plt.close()
+
+        n_cells = ID[-1] + 1
+
+        visualize = False
         if visualize:
-
-            plt.style.use('dark_background')
 
             matplotlib.use("Qt5Agg")
             fig = plt.figure(figsize=(13, 10.5))
@@ -447,22 +479,40 @@ def load_cell_data(config, device, visualize):
             plt.ylim([0, 1])
 
             plt.tight_layout()
+            plt.show()
 
             num = f"{it:06}"
             plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{it}.tif", dpi=120)
             plt.close()
 
+
+            vor.vertices = vor.vertices * im_dim
+
+            matplotlib.use("Qt5Agg")
+            fig = plt.figure(figsize=(13, 10.5))
+            plt.imshow(im_fluo[:,:,0])
+            plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=10, c='r', alpha=0.75)
+            plt.show()
+            fig = plt.figure(figsize=(13, 10.5))
+            plt.imshow(im_fluo[:,:,1])
+            plt.show()
+            fig = plt.figure(figsize=(13, 10.5))
+            plt.imshow(im>0)
+            plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=5, c='k', alpha=0.75)
+            vor, vertices_pos, vertices_per_cell, all_points = get_vertices(points=X1, device=device)
+            voronoi_plot_2d(vor, ax=ax, show_vertices=False, line_colors='green', line_width=1, line_alpha=1,
+                            point_size=0)
+            plt.scatter(to_numpy(X1[:,1]*im_dim[1]),to_numpy(X1[:,0]*im_dim[0]),s=10,c='r')
+
+
     torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
     torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
 
-    # np.savez(f'graphs_data/graphs_{dataset_name}/x_list_{run}', *x_list)
-    # np.savez(f'graphs_data/graphs_{dataset_name}/y_list_{run}', *y_list)
+    np.savez(f'graphs_data/graphs_{dataset_name}/x_list_{run}', *x_list)
+    np.savez(f'graphs_data/graphs_{dataset_name}/y_list_{run}', *y_list)
 
-    np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}.npz', *edge_p_p_list)
-    np.save(f'graphs_data/graphs_{dataset_name}/n_cells_{run}.npy', n_cells)
-    np.save(f'graphs_data/graphs_{dataset_name}/im_dim_{run}.npy', im_dim)
-    np.save(f'graphs_data/graphs_{dataset_name}/raw_data_{run}.npy', raw_data_list)
-    np.save(f'graphs_data/graphs_{dataset_name}/annotation_data_{run}.npy', annotation_data_list)
+
+
 
 
 

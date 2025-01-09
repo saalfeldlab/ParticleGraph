@@ -18,6 +18,9 @@ import pandas as pd
 from skimage import io
 import vedo
 from joblib import Parallel, delayed
+from skimage.measure import find_contours
+from scipy.spatial import ConvexHull
+from shapely.geometry import Polygon, LineString
 
 def init_cell_range(config, device, scenario="None"):
     simulation_config = config.simulation
@@ -552,6 +555,44 @@ def compute_intensity_statistics(raw_image, segmented_image):
     end_time = time.time()
     print(f"Intensity statistics computation completed in {end_time - start_time:.2f} seconds.")
     return df
+
+
+def mask_to_vertices(mask, num_vertices=20):
+    # Find contours in the mask
+    contours = find_contours(mask, level=0.5)
+
+    # Select the largest contour
+    largest_contour = max(contours, key=len)
+
+    # Find the convex hull of the largest contour
+    hull = ConvexHull(largest_contour)
+
+    # Select 20 vertices from the convex hull
+    vertices = largest_contour[hull.vertices]
+
+    # If there are more than 20 vertices, select a subset
+    if len(vertices) > num_vertices:
+        indices = np.linspace(0, len(vertices) - 1, num_vertices, dtype=int)
+        vertices = vertices[indices]
+
+    return vertices
+
+
+def get_uniform_points(vertices, num_points=100):
+    # Create a polygon from the vertices
+    polygon = Polygon(vertices)
+
+    # Get the boundary of the polygon
+    boundary = LineString(polygon.exterior.coords)
+
+    # Get 100 points uniformly spaced along the boundary
+    distances = np.linspace(0, boundary.length, num_points)
+    points = [boundary.interpolate(distance) for distance in distances]
+
+    # Convert points to numpy array
+    points = np.array([(point.x, point.y) for point in points])
+
+    return points
 
 
 def visualize_mesh(mesh_file):

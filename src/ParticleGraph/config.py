@@ -144,6 +144,7 @@ class ImageData(BaseModel):
     cellpose_diameter: float = 30
     cellpose_flow_threshold: int = 0.4
     cellpose_cellprob_threshold: int = 0.0
+    cellpose_channel: list[int] = [1]
 
 
 class TrainingConfig(BaseModel):
