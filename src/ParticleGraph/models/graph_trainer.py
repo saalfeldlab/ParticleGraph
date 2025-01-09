@@ -3926,9 +3926,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     x = x_list[0][start_it].clone().detach()
     n_particles = x.shape[0]
 
-    x_list[0] = torch.cat((x_list[0],x_list[0],x_list[0],x_list[0]), dim=0)
+    # x_list[0] = torch.cat((x_list[0],x_list[0],x_list[0],x_list[0]), dim=0)
 
-    for it in trange(start_it, stop_it*3):
+    for it in trange(start_it, stop_it):
 
         if it < n_frames - 4:
             x0 = x_list[0][it].clone().detach()

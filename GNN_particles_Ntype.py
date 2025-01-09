@@ -26,8 +26,12 @@ from ParticleGraph.models.Siren_Network import *
 from ParticleGraph.models.Ghost_Particles import Ghost_Particles
 from ParticleGraph.models.utils import *
 from ParticleGraph.utils import *
+import warnings
+
 
 if __name__ == '__main__':
+
+    warnings.filterwarnings("ignore", category=FutureWarning)
 
     try:
         matplotlib.use("Qt5Agg")
@@ -51,9 +55,9 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'train'
+        task = 'test'
 
-        best_model = None
+        best_model = '20'
 
         config_list = ['arbitrary_3_field_video_bison']
 
@@ -70,8 +74,8 @@ if __name__ == '__main__':
         if 'train' in task:
             data_train(config=config, config_file=config_file, erase=False, best_model=best_model, device=device)
         if 'test' in task:
-            data_test(config=config, config_file=config_file, visualize=True, style='black color', verbose=False, best_model='best', run=2, plot_data=False,
-                      test_simulation=False, sample_embedding=False, device=device, fixed=True, bounce=True, step=4) # config.simulation.n_frames // 200, )  arrow speed acc_learned   arrow speed acc_true
+            data_test(config=config, config_file=config_file, visualize=True, style='black color', verbose=False, best_model='best', run=1, plot_data=False,
+                      test_simulation=False, sample_embedding=False, device=device, fixed=False, bounce=False, step=1) # config.simulation.n_frames // 200, )  arrow speed acc_learned   arrow speed acc_true
 
 
 # bsub -n 4 -gpu "num=1" -q gpu_h100 "python GNN_particles_Ntype.py -o train falling_water_ramp_x1"

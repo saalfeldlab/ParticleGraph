@@ -1,5 +1,5 @@
 
-from pysr import PySRRegressor
+# from pysr import PySRRegressor
 
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
@@ -28,6 +28,7 @@ import sys
 from scipy.stats import pearsonr
 from scipy.spatial import Voronoi, voronoi_plot_2d
 from sklearn.mixture import GaussianMixture
+import warnings
 
 # matplotlib.use("Qt5Agg")
 
@@ -591,6 +592,7 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
     # plt.close()
 
     return accuracy, n_clusters, new_labels
+
 
 def plot_focused_on_cell(config, run, style, step, cell_id, bLatex, device):
 
@@ -6478,6 +6480,8 @@ def get_figures(index):
 
 if __name__ == '__main__':
 
+    warnings.filterwarnings("ignore", category=FutureWarning)
+
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(' ')
     print(f'device {device}')
@@ -6519,12 +6523,12 @@ if __name__ == '__main__':
 
     # config_list = ['rat_city_c2']
     # config_list = ['cell_HeLa_1', 'cell_HeLa_2', 'cell_HeLa_5', 'cell_PSC_1', 'cell_PSC_2', 'cell_PSC_5']
-    config_list = ['cell_PSC_10']
+    config_list = ['arbitrary_3_field_video_bison']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        # data_plot(config=config, config_file=config_file, epoch_list=['best'], bLatex=False, device=device)
-        data_plot(config=config, config_file=config_file, epoch_list=['all'], bLatex=False, device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['best'], bLatex=False, device=device)
+        # data_plot(config=config, config_file=config_file, epoch_list=['all'], bLatex=False, device=device)
 
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, bLatex=False, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
