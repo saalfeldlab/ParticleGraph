@@ -55,11 +55,12 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'generate'
+        task = 'train'
 
-        best_model = '20'
+        best_model = None
 
-        config_list = ['cell_MDCK_2']
+        config_list = ['falling_water_ramp_x6_6']
+
 
 
     for config_file in config_list:

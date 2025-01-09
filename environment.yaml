@@ -17,6 +17,7 @@ dependencies:
   - PyYAML
   - tifffile
   - pydantic
+  - shapely
   - gputil
   - pip
   - imageio

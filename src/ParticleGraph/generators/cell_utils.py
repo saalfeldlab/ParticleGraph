@@ -326,7 +326,6 @@ def cell_energy(voronoi_area, voronoi_perimeter, voronoi_lengths, device):
     return energy
 
 
-
 def calculate_volume(segmented_image, voxel_size=(0.75, 0.75, 1.0)):
     print("Starting volume calculation...")
     start_time = time.time()

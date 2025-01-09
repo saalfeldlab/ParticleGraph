@@ -32,18 +32,27 @@ from cellpose import models
 from ParticleGraph.generators.cell_utils import *
 from ParticleGraph.generators import PDE_V
 
-def extract_object_properties(segmentation_image):
+
+
+def extract_object_properties(segmentation_image, fluorescence_image=[]):
     # Label the objects in the segmentation image
     labeled_image = label(segmentation_image)
 
+    # matplotlib.use("Qt5Agg")
+    # fig = plt.figure(figsize=(13, 10.5))
+    # plt.imshow(fluorescence_image)
+    # plt.show()
+
     # Extract properties of the labeled objects
     object_properties = []
-    for region in regionprops(labeled_image, intensity_image=segmentation_image):
+    for id, region in enumerate(regionprops(labeled_image, intensity_image=fluorescence_image)):
         # Get the cell ID
-        cell_id = np.median(region.intensity_image[region.image])
+        cell_id = id
         # Calculate the position (centroid) of the object
         pos_x = region.centroid[0]
         pos_y = region.centroid[1]
+        pos_x_weighted = region.weighted_centroid[0]
+        pos_y_weighted = region.weighted_centroid[1]
         # Calculate the area of the object
         area = region.area
         # Calculate the perimeter of the object
@@ -53,7 +62,7 @@ def extract_object_properties(segmentation_image):
             aspect_ratio = region.major_axis_length / (region.minor_axis_length + 1e-6)
             # Calculate the orientation of the object
             orientation = region.orientation
-            object_properties.append((cell_id, pos_x, pos_y, area, perimeter, aspect_ratio, orientation))
+            object_properties.append((cell_id, pos_x_weighted, pos_y_weighted, area, perimeter, aspect_ratio, orientation))
 
     return object_properties
 
@@ -304,7 +313,7 @@ def load_cell_data(config, device, visualize):
             for it in trange(len(files)):
                 im = tifffile.imread(data_folder_name + files[it])
                 im = np.array(im)
-                masks, flows, styles = model_custom.eval(im, diameter=150, invert=False, normalize=True, channels=image_data.channel)
+                masks, flows, styles = model_custom.eval(im, diameter=150, invert=False, normalize=True, channels=image_data.cellpose_channel)
                 tifffile.imsave(data_folder_name + 'SEG/' + files[it], masks)
 
     # 0 N1 cell index dim=1
@@ -334,14 +343,16 @@ def load_cell_data(config, device, visualize):
 
         print (f'{files[it]}')
 
-
-        im_fluo = tifffile.imread(data_folder_name + files[it])
-        im = tifffile.imread(data_folder_name + 'SEG/' + files[it])
-        im = np.array(im)
+        im_fluo = np.array(tifffile.imread(data_folder_name + files[it]))
+        im = np.array(tifffile.imread(data_folder_name + 'SEG/' + files[it]))
 
         im_dim = im.shape
 
-        object_properties = extract_object_properties(im)
+        if len(image_data.cellpose_channel) == 2:
+            object_properties = extract_object_properties(im, im_fluo[:,:,image_data.cellpose_channel[1]-1])
+        else:
+            object_properties = extract_object_properties(im, im)
+
         object_properties = np.array(object_properties, dtype=float)
 
         N = np.arange(object_properties.shape[0], dtype=np.float32)[:, None]
@@ -410,12 +421,13 @@ def load_cell_data(config, device, visualize):
         for n in range(len(x)):
             pos = torch.argwhere(vertices[:, 5:6] == torch.tensor(n_cells+n,dtype=torch.float32,device=device))
             plt.plot(to_numpy(vertices[pos, 2]), to_numpy(vertices[pos, 1]), c='w')
+        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=50, c='w', alpha=0.75)
         plt.tight_layout()
         plt.xlim([0 , im_dim[1]])
         plt.ylim([0 , im_dim[0]])
         plt.xticks([])
         plt.yticks([])
-        # plt.show()
+        plt.show()
         plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/{files[it]}.tif", dpi=80)
         plt.close()
 
