@@ -1936,7 +1936,7 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
         X1 = torch.tensor(data_values[:, 1:3], dtype=torch.float32, device=device)
         X1[:, 1] = 1-X1[:, 1]
 
-        if 'cohort2' in data_folder_name:
+        if 'rat_city' in dataset_name:
             X1[:, 0] = X1[:, 0] * 2
 
         # speed
@@ -1958,7 +1958,7 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
         edge_index = torch.sum((x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
         edge_index = ((edge_index < max_radius ** 2) & (edge_index > min_radius ** 2)).float() * 1
         edge_index = edge_index.nonzero().t().contiguous()
-        if 'cohort2' in data_folder_name:
+        if 'rat_city' in dataset_name:
             edge_mask = torch.zeros((edge_index.shape[1]), device=device)
             for k in range(edge_index.shape[1]):
                 x1, y1 = x[to_numpy(edge_index[0,k]),1:3]
@@ -1996,7 +1996,7 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
                 # pos = edge_index[1, pos]
                 # pos=to_numpy(pos)
 
-                if 'cohort2' in data_folder_name:
+                if 'rat_city' in dataset_name:
 
                     plt.style.use('dark_background')
 

@@ -427,7 +427,7 @@ def load_cell_data(config, device, visualize):
         plt.ylim([0 , im_dim[0]])
         plt.xticks([])
         plt.yticks([])
-        plt.show()
+        # plt.show()
         plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/{files[it]}.tif", dpi=80)
         plt.close()
 
@@ -519,9 +519,9 @@ def load_cell_data(config, device, visualize):
 
     torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
     torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
+    torch.save(full_vertice_list, f'graphs_data/graphs_{dataset_name}/full_vertice_list{run}.pt')
 
-    np.savez(f'graphs_data/graphs_{dataset_name}/x_list_{run}', *x_list)
-    np.savez(f'graphs_data/graphs_{dataset_name}/y_list_{run}', *y_list)
+
 
 
 

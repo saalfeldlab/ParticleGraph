@@ -43,7 +43,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    # Use the argument
     if args.option:
         print(f"Options: {args.option}")
     if args.option!=None:
@@ -54,14 +53,9 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-
         task = 'train'
-
         best_model = None
-
-        config_list = ['falling_water_ramp_x6_6']
-
-
+        config_list = ['cell_MDCK_2']
 
     for config_file in config_list:
 
@@ -79,5 +73,5 @@ if __name__ == '__main__':
                       test_simulation=False, sample_embedding=False, fixed=True, bounce=True, step=4, device=device)
 
 
-# bsub -n 4 -gpu "num=1" -q gpu_h100 "python GNN_particles_Ntype.py -o train falling_water_ramp_x1"
+# bsub -n 4 -gpu "num=1" -q gpu_h100 -Is "python GNN_particles_Ntype.py -o train_test falling_water_ramp_x6_6"
 

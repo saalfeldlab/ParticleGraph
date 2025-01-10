@@ -5744,7 +5744,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
                                  c='w', linewidth=1, alpha=0.15)
                     plt.xlabel('$d_{ij}$', fontsize=48)
                     plt.ylabel('$f(a_i, d_{ij})$', fontsize=48)
-                    if 'cohort2' in data_folder_name:
+                    if 'rat_city' in dataset_name:
                         plt.ylim([-0.2, 0.2])
                     else:
                         plt.ylim([-0.05, 0.05])
@@ -5863,7 +5863,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
                      color=cmap.color(labels[n].astype(int)), linewidth=2, alpha=0.15)
         plt.xlabel('$d_{ij}$', fontsize=48)
         plt.ylabel('$f(a_i, d_{ij})$', fontsize=48)
-        if 'cohort2' in data_folder_name:
+        if 'rat_city' in dataset_name:
             plt.ylim([-0.2, 0.2])
         else:
             plt.ylim([-0.05, 0.05])
