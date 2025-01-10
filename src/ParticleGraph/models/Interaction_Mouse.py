@@ -60,14 +60,9 @@ class Interaction_Mouse(pyg.nn.MessagePassing):
         self.n_particles_max = simulation_config.n_particles_max
         self.ctrl_tracking = train_config.ctrl_tracking
 
-        if train_config.large_range:
-            self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
-                                hidden_size=self.hidden_dim, device=self.device, activation='tanh')
-        else:
-            self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
+        self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device)
 
-        # self.a = nn.Parameter(torch.tensor(np.random.randn(self.n_particles_max, self.embedding_dim), device=self.device,requires_grad=True, dtype=torch.float32))
         self.a = nn.Parameter(torch.tensor(np.ones((self.n_particles_max, self.embedding_dim)), device=self.device,requires_grad=True, dtype=torch.float32))
 
         if self.update_type != 'none':

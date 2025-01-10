@@ -5837,15 +5837,15 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
             x_list[0][k][:,6] = labels_[0:n]
             labels_ = labels_[n:]
 
+        matplotlib.use("Qt5Agg")
         fig, ax = fig_init(fontsize=24)
         for k in np.unique(labels):
             pos = np.argwhere(labels == k)
-            plt.scatter(embedding[pos, 0], embedding[pos, 1], s=1, c=cmap.color(k), alpha=0.5, edgecolors='None')
+            plt.scatter(embedding[pos, 0], embedding[pos, 1], s=10, c=cmap.color(k), alpha=0.5, edgecolors='None')
         plt.xlabel(r'$a_{i0}$', fontsize=48)
         plt.ylabel(r'$a_{i1}$', fontsize=48)
-        plt.xlim(xlim)
-        plt.ylim(ylim)
         plt.tight_layout()
+        plt.show()
         plt.savefig(f"./{log_dir}/results/clustered_embedding_{epoch_list[0]}.tif", dpi=80)
         plt.close()
 
@@ -5871,7 +5871,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
         plt.savefig(f"./{log_dir}/results/clustered_functions_{epoch_list[0]}.tif", dpi=80)
         plt.close()
 
-        for N in trange(0, 400): #n_frames-1):
+        for N in trange(0, 2000): #n_frames-1):
 
             k = N
             x = x_list[0][k].clone().detach()
@@ -5897,31 +5897,22 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
             loss = torch.sum(min_value)*1E5
 
 
-            if 'cohort2' in data_folder_name:
+            if 'rat_city' in dataset_name:
 
-                fig = plt.figure(figsize=(16, 5))
-                ax = fig.add_subplot(1, 2, 1)
+                fig = plt.figure(figsize=(16, 10))
+                ax = fig.add_subplot(2, 2, 1)
                 ax.axvline(x=1.05, ymin=0, ymax=0.7, color='r', linestyle='--', linewidth=2)
                 plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=100, c='b')
                 plt.scatter(to_numpy(x_next[:, 1]), to_numpy(x_next[:, 2]), s=100, c='g', alpha=0.5)
-
                 for n in range(len(x)):
                     plt.arrow(x=to_numpy(x[n, 1]), y=to_numpy(x[n, 2]), dx=to_numpy(V[n, 0]), dy=to_numpy(V[n, 1]),
                               head_width=0.01, length_includes_head=True)
-
                 plt.xlim([0, 2])
                 plt.ylim([0, 1])
                 plt.title('GNN tracking')
                 plt.xticks([])
                 plt.yticks([])
-                # ax = fig.add_subplot(2, 2, 3)
-                # plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=100, color=cmap.color(to_numpy(type_list[k]).astype(int)))
-                # plt.xlim([0,1])
-                # plt.ylim([0,1])
-                # plt.title('Yolo tracking')
-                # plt.xticks([])
-                # plt.yticks([])
-                ax = fig.add_subplot(1, 2, 2)
+                ax = fig.add_subplot(2, 2, 2)
                 ax.axvline(x=1.05, ymin=0, ymax=0.7, color='r', linestyle='--', linewidth=2)
                 pos = x[:, 1:3]
                 dataset = data.Data(x=x, pos=pos, edge_index=edges)
@@ -5931,17 +5922,35 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
                 plt.scatter(to_numpy(x_next[:, 1]), to_numpy(x_next[:, 2]), s=100, c='g', alpha=0.5)
                 for n in range(edges.shape[1]):
                     plt.arrow(x=to_numpy(model.pos[n, 0]), y=to_numpy(model.pos[n, 1]), dx=to_numpy(model.msg[n, 0]), dy=to_numpy(model.msg[n, 1]), head_width=0.01, length_includes_head=True, alpha=0.5)
-
-                # plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=100,
-                #             color=cmap.color(to_numpy(x[:, 6]).astype(int)))
-
                 plt.xlim([0, 2])
                 plt.ylim([0, 1])
                 plt.title('GNN cluster')
                 plt.xticks([])
                 plt.yticks([])
-
                 plt.tight_layout()
+                ax = fig.add_subplot(2, 3, 4)
+                plt.scatter(embedding[:, 0], embedding[:, 1], s=1, c='w', alpha=0.25, edgecolors='None')
+                particle_id = to_numpy(x[:, 0])
+                for n in particle_id.astype(int):
+                    plt.scatter(embedding[n, 0], embedding[n, 1], s=20, alpha=1, edgecolors='None')
+                plt.xticks([])
+                plt.yticks([])
+                ax = fig.add_subplot(2, 3, 5)
+                rr = torch.tensor(np.linspace(0, 0.75, 1000)).to(device)
+                for n in particle_id.astype(int):
+                    embedding_ = model.a[n] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                    in_features = torch.cat((rr[:, None], 0 * rr[:, None],
+                                             rr[:, None], embedding_), dim=1)
+                    with torch.no_grad():
+                        func = model.lin_edge(in_features.float())
+                        func = func[:, 0]
+                    plt.plot(to_numpy(rr),to_numpy(func) * to_numpy(ynorm), linewidth=2, alpha=1)
+                if 'rat_city' in dataset_name:
+                    plt.ylim([-0.05, 0.05])
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+                plt.show()
                 plt.savefig(f"./{log_dir}/tmp_recons/Fig_{N}.tif", dpi=120)
                 plt.close()
 
@@ -6521,13 +6530,14 @@ if __name__ == '__main__':
 
     # config_list = ['falling_particles_N1000_2']
 
-    # config_list = ['rat_city_c2']
+    config_list = ['rat_city_a']
     # config_list = ['cell_HeLa_1', 'cell_HeLa_2', 'cell_HeLa_5', 'cell_PSC_1', 'cell_PSC_2', 'cell_PSC_5']
-    config_list = ['arbitrary_3_field_video_bison']
+    # config_list = ['arbitrary_3_field_video_bison']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         data_plot(config=config, config_file=config_file, epoch_list=['best'], bLatex=False, device=device)
+
         # data_plot(config=config, config_file=config_file, epoch_list=['all'], bLatex=False, device=device)
 
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, bLatex=False, device=device)

@@ -53,9 +53,9 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        task = 'train'
+        task = 'test'
         best_model = None
-        config_list = ['cell_MDCK_2']
+        config_list = ['rat_city_a']
 
     for config_file in config_list:
 
