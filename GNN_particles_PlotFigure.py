@@ -5628,8 +5628,8 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
     model_config = config.graph_model
 
     time_step = simulation_config.time_step
-    delta_t = simulation_config.delta_t * time_step\
-
+    delta_t = simulation_config.delta_t * time_step
+    data_folder_name = config.data_folder_name
     dataset_name = config.dataset
     time_step = simulation_config.time_step
     entropy_loss = KoLeoLoss()
@@ -5957,35 +5957,28 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
                 ax = fig.add_subplot(2, 3, 4)
 
                 xp = x[0:4, :]
-                xp[:, 1:3] = torch.randn_like(xp[:, 1:3]) * 0.5
+                xp[:, 1:3] = torch.randn_like(xp[:, 1:3]) * 0.01
                 xp[0, 1:3] = 0 * xp[0, 1:3]
-
-                distance = torch.sum(bc_dpos(xp[:, None, 1:dimension + 1] - xp[None, :, 1:dimension + 1]) ** 2, dim=2)
-                adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
-                edges = adj_t.nonzero().t().contiguous()
+                pos_i = xp[0, 1:3]
+                pos_j = xp[1:, 1:3]
+                r = torch.sqrt(torch.sum(bc_dpos(pos_j - pos_i) ** 2, dim=1)) / max_radius
+                delta_pos = bc_dpos(pos_j - pos_i) / max_radius
                 embedding_size = embedding.shape[0]
 
-                dimension = 2
                 point_list = []
-                for n in trange(1000):
-                    xp[0, -1] = torch.randint(0, embedding_size, (1,))
-                    dataset = data.Data(x=xp[:, :], edge_index=edges, num_nodes=xp.shape[0])
-                    pred = model(dataset, data_id=0, training=False, phi=torch.zeros(1, device=device))
-                    point_list.append(pred[0])
+                for n in trange(100000):
+                    particle_id = torch.randint(0, embedding_size, (1,),device=device).repeat(3,1)
+                    embedding_i = model.a[to_numpy(particle_id), :].squeeze()
+                    in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
+                    out = torch.mean(model.lin_edge(in_features.float()), dim=0)
+                    point_list.append(out)
                 point_list = torch.stack(point_list)
-
-                matplotlib.use("Qt5Agg")
-                fig =plt.figure(figsize=(8, 8))
-                plt.scatter(to_numpy(xp[:, 1]), to_numpy(xp[:, 2]), s=100, c='w')
-                plt.scatter(to_numpy(point_list[:, 0]), to_numpy(point_list[:, 1]), s=100, c='b', alpha=1)
-                plt.ylim([-1, 1])
-                plt.xlim([-1, 1])
-                plt.xticks([])
-                plt.yticks([])
+                plt.scatter(to_numpy(point_list[:, 0]), to_numpy(point_list[:, 1]), s=10, c='w', alpha=0.1, edgecolors='None')
+                plt.scatter(to_numpy(xp[:, 1]), to_numpy(xp[:, 2]), s=100, c='g', alpha=0.5)
+                plt.ylim([-0.025, 0.025])
+                plt.xlim([-0.025, 0.025])
                 plt.tight_layout()
                 plt.show()
-
-
 
                 plt.savefig(f"./{log_dir}/tmp_recons/Fig_{N}.tif", dpi=120)
                 plt.close()
