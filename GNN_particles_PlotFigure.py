@@ -5628,15 +5628,15 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
     model_config = config.graph_model
 
     time_step = simulation_config.time_step
-    delta_t = simulation_config.delta_t * time_step
-    data_folder_name = config.data_folder_name
+    delta_t = simulation_config.delta_t * time_step\
+
     dataset_name = config.dataset
     time_step = simulation_config.time_step
     entropy_loss = KoLeoLoss()
     xlim = config.plotting.xlim
     ylim = config.plotting.ylim
-    embedding_cluster = EmbeddingCluster(config)
-
+    max_radius = simulation_config.max_radius
+    min_radius = simulation_config.min_radius
     n_runs = train_config.n_runs
     cmap = CustomColorMap(config=config)
 
@@ -5805,7 +5805,6 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
         model.eval()
-
         time.sleep(1)
 
         plt.rcParams['text.usetex'] = False
@@ -5837,39 +5836,39 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
             x_list[0][k][:,6] = labels_[0:n]
             labels_ = labels_[n:]
 
-        matplotlib.use("Qt5Agg")
-        fig, ax = fig_init(fontsize=24)
-        for k in np.unique(labels):
-            pos = np.argwhere(labels == k)
-            plt.scatter(embedding[pos, 0], embedding[pos, 1], s=10, c=cmap.color(k), alpha=0.5, edgecolors='None')
-        plt.xlabel(r'$a_{i0}$', fontsize=48)
-        plt.ylabel(r'$a_{i1}$', fontsize=48)
-        plt.tight_layout()
-        plt.show()
-        plt.savefig(f"./{log_dir}/results/clustered_embedding_{epoch_list[0]}.tif", dpi=80)
-        plt.close()
+        # matplotlib.use("Qt5Agg")
+        # fig, ax = fig_init(fontsize=24)
+        # for k in np.unique(labels):
+        #     pos = np.argwhere(labels == k)
+        #     plt.scatter(embedding[pos, 0], embedding[pos, 1], s=10, c=cmap.color(k), alpha=0.5, edgecolors='None')
+        # plt.xlabel(r'$a_{i0}$', fontsize=48)
+        # plt.ylabel(r'$a_{i1}$', fontsize=48)
+        # plt.tight_layout()
+        # plt.show()
+        # plt.savefig(f"./{log_dir}/results/clustered_embedding_{epoch_list[0]}.tif", dpi=80)
+        # plt.close()
 
-        fig, ax = fig_init(fontsize=24)
-        rr = torch.tensor(np.linspace(0, 0.75, 1000)).to(device)
-        for n in range(0, len(model.a), len(model.a) // 2000):
-            embedding_ = model.a[n] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-            in_features = torch.cat((rr[:, None], 0 * rr[:, None],
-                                     rr[:, None], embedding_), dim=1)
-            with torch.no_grad():
-                func = model.lin_edge(in_features.float())
-                func = func[:, 0]
-            plt.plot(to_numpy(rr),
-                     to_numpy(func) * to_numpy(ynorm),
-                     color=cmap.color(labels[n].astype(int)), linewidth=2, alpha=0.15)
-        plt.xlabel('$d_{ij}$', fontsize=48)
-        plt.ylabel('$f(a_i, d_{ij})$', fontsize=48)
-        if 'rat_city' in dataset_name:
-            plt.ylim([-0.2, 0.2])
-        else:
-            plt.ylim([-0.05, 0.05])
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/clustered_functions_{epoch_list[0]}.tif", dpi=80)
-        plt.close()
+        # fig, ax = fig_init(fontsize=24)
+        # rr = torch.tensor(np.linspace(0, 0.75, 1000)).to(device)
+        # for n in range(0, len(model.a), len(model.a) // 2000):
+        #     embedding_ = model.a[n] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+        #     in_features = torch.cat((rr[:, None], 0 * rr[:, None],
+        #                              rr[:, None], embedding_), dim=1)
+        #     with torch.no_grad():
+        #         func = model.lin_edge(in_features.float())
+        #         func = func[:, 0]
+        #     plt.plot(to_numpy(rr),
+        #              to_numpy(func) * to_numpy(ynorm),
+        #              color=cmap.color(labels[n].astype(int)), linewidth=2, alpha=0.15)
+        # plt.xlabel('$d_{ij}$', fontsize=48)
+        # plt.ylabel('$f(a_i, d_{ij})$', fontsize=48)
+        # if 'rat_city' in dataset_name:
+        #     plt.ylim([-0.2, 0.2])
+        # else:
+        #     plt.ylim([-0.05, 0.05])
+        # plt.tight_layout()
+        # plt.savefig(f"./{log_dir}/results/clustered_functions_{epoch_list[0]}.tif", dpi=80)
+        # plt.close()
 
         for N in trange(0, 2000): #n_frames-1):
 
@@ -5899,6 +5898,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
 
             if 'rat_city' in dataset_name:
 
+                matplotlib.use("Qt5Agg")
                 fig = plt.figure(figsize=(16, 10))
                 ax = fig.add_subplot(2, 2, 1)
                 ax.axvline(x=1.05, ymin=0, ymax=0.7, color='r', linestyle='--', linewidth=2)
@@ -5915,6 +5915,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
                 ax = fig.add_subplot(2, 2, 2)
                 ax.axvline(x=1.05, ymin=0, ymax=0.7, color='r', linestyle='--', linewidth=2)
                 pos = x[:, 1:3]
+                particle_id = to_numpy(x[:, -1])
                 dataset = data.Data(x=x, pos=pos, edge_index=edges)
                 vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
                 nx.draw_networkx(vis, pos=to_numpy(pos), node_size=0, linewidths=0, with_labels=False, ax=ax, edge_color='g', width=1, alpha=0.5)
@@ -5922,35 +5923,70 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
                 plt.scatter(to_numpy(x_next[:, 1]), to_numpy(x_next[:, 2]), s=100, c='g', alpha=0.5)
                 for n in range(edges.shape[1]):
                     plt.arrow(x=to_numpy(model.pos[n, 0]), y=to_numpy(model.pos[n, 1]), dx=to_numpy(model.msg[n, 0]), dy=to_numpy(model.msg[n, 1]), head_width=0.01, length_includes_head=True, alpha=0.5)
+                for n, id in enumerate(particle_id.astype(int)):
+                    plt.text(to_numpy(x[n, 1])+0.025, to_numpy(x[n, 2]), f'{n}', fontsize=9, color='w')
                 plt.xlim([0, 2])
                 plt.ylim([0, 1])
                 plt.title('GNN cluster')
                 plt.xticks([])
                 plt.yticks([])
-                plt.tight_layout()
-                ax = fig.add_subplot(2, 3, 4)
-                plt.scatter(embedding[:, 0], embedding[:, 1], s=1, c='w', alpha=0.25, edgecolors='None')
-                particle_id = to_numpy(x[:, 0])
-                for n in particle_id.astype(int):
-                    plt.scatter(embedding[n, 0], embedding[n, 1], s=20, alpha=1, edgecolors='None')
+                ax = fig.add_subplot(2, 3, 5)
+                plt.scatter(embedding[:, 0], embedding[:, 1], s=1, c='g', alpha=0.25, edgecolors='None')
+                for n, id in enumerate(particle_id.astype(int)):
+                    plt.scatter(embedding[id, 0], embedding[id, 1], s=40, alpha=1, edgecolors='None')
+                    plt.text(embedding[id, 0]+0.05, embedding[id, 1], f'{n}', fontsize=9, color='w')
                 plt.xticks([])
                 plt.yticks([])
-                ax = fig.add_subplot(2, 3, 5)
-                rr = torch.tensor(np.linspace(0, 0.75, 1000)).to(device)
-                for n in particle_id.astype(int):
-                    embedding_ = model.a[n] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                ax = fig.add_subplot(2, 3, 6)
+                rr = torch.tensor(np.linspace(0, 0.6, 1000)).to(device)
+                for n, id in enumerate(particle_id.astype(int)):
+                    embedding_ = model.a[id] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
                     in_features = torch.cat((rr[:, None], 0 * rr[:, None],
                                              rr[:, None], embedding_), dim=1)
                     with torch.no_grad():
                         func = model.lin_edge(in_features.float())
                         func = func[:, 0]
                     plt.plot(to_numpy(rr),to_numpy(func) * to_numpy(ynorm), linewidth=2, alpha=1)
+                    plt.text(to_numpy(rr[200 + 50*n]), to_numpy(func[200 + 50*n]) * to_numpy(ynorm) + 0.0035, f'{n}', fontsize=9, color='w')
                 if 'rat_city' in dataset_name:
-                    plt.ylim([-0.05, 0.05])
+                    plt.ylim([-0.2, 0.2])
+                plt.xticks([])
+                plt.yticks([])
+                plt.show()
+
+                ax = fig.add_subplot(2, 3, 4)
+
+                xp = x[0:4, :]
+                xp[:, 1:3] = torch.randn_like(xp[:, 1:3]) * 0.5
+                xp[0, 1:3] = 0 * xp[0, 1:3]
+
+                distance = torch.sum(bc_dpos(xp[:, None, 1:dimension + 1] - xp[None, :, 1:dimension + 1]) ** 2, dim=2)
+                adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
+                edges = adj_t.nonzero().t().contiguous()
+                embedding_size = embedding.shape[0]
+
+                dimension = 2
+                point_list = []
+                for n in trange(1000):
+                    xp[0, -1] = torch.randint(0, embedding_size, (1,))
+                    dataset = data.Data(x=xp[:, :], edge_index=edges, num_nodes=xp.shape[0])
+                    pred = model(dataset, data_id=0, training=False, phi=torch.zeros(1, device=device))
+                    point_list.append(pred[0])
+                point_list = torch.stack(point_list)
+
+                matplotlib.use("Qt5Agg")
+                fig =plt.figure(figsize=(8, 8))
+                plt.scatter(to_numpy(xp[:, 1]), to_numpy(xp[:, 2]), s=100, c='w')
+                plt.scatter(to_numpy(point_list[:, 0]), to_numpy(point_list[:, 1]), s=100, c='b', alpha=1)
+                plt.ylim([-1, 1])
+                plt.xlim([-1, 1])
                 plt.xticks([])
                 plt.yticks([])
                 plt.tight_layout()
                 plt.show()
+
+
+
                 plt.savefig(f"./{log_dir}/tmp_recons/Fig_{N}.tif", dpi=120)
                 plt.close()
 

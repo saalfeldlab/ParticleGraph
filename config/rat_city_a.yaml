@@ -38,7 +38,7 @@ graph_model:
   field_type: 'siren_with_time'
 
 plotting:
-  colormap: 'tab10'
+  colormap: 'tab20'
   arrow_length: 2
   xlim: [0.94, 1.06]
   ylim: [0.94, 1.06]
