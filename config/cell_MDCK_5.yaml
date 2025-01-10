@@ -1,6 +1,6 @@
 description: 'Boids 16 different types, division'
-dataset: 'cell_MDCK_2'
-data_folder_name: '/groups/saalfeld/home/allierc/signaling/MDCK/Leica SGFP2 and H42 nuclear marker/Larger center region/merged/'
+dataset: 'cell_MDCK_5'
+data_folder_name: '/groups/saalfeld/home/allierc/signaling/MDCK/Leica SGFP2 and H42 nuclear marker/Wound_area/merged/'
 
 simulation:
   params: [[-1]]
