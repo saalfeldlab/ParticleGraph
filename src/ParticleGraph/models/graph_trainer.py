@@ -3926,9 +3926,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     x = x_list[0][start_it].clone().detach()
     n_particles = x.shape[0]
 
-    # x_list[0] = torch.cat((x_list[0],x_list[0],x_list[0],x_list[0]), dim=0)
+    x_list[0] = torch.cat((x_list[0],x_list[0],x_list[0],x_list[0]), dim=0)
+    x_inference_list = []
 
-    for it in trange(start_it, stop_it):
+    for it in trange(start_it, stop_it+1400):
 
         if it < n_frames - 4:
             x0 = x_list[0][it].clone().detach()
@@ -4112,6 +4113,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             if fixed:
                 fixed_pos = torch.argwhere(x[:,5]==0)
                 x[fixed_pos.squeeze(), 1:2 * dimension + 1] = x_list[0][it+1,fixed_pos.squeeze(),1:2 * dimension + 1].clone().detach()
+
+            x_inference_list.append(x)
 
         # vizualization
         if (it % step == 0) & (it >= 0) & visualize:
@@ -4478,6 +4481,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_recons/Ghost3_{config_file}_{it}.tif", dpi=170.7)
                 plt.close()
+
+    torch.save(x_inference_list, f"./{log_dir}/x_inference_list_{run}.pt")
 
     print('prediction error {:.3e}+/-{:.3e}'.format(np.mean(pred_err_list), np.std(pred_err_list)))
 
