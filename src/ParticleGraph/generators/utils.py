@@ -50,6 +50,7 @@ def choose_model(config=[], W=[], phi=[], device=[]):
     n_particle_types = config.simulation.n_particle_types
     bc_pos, bc_dpos = choose_boundary_values(config.simulation.boundary)
     dimension = config.simulation.dimension
+    max_radius = config.simulation.max_radius
 
     params = config.simulation.params
 
@@ -129,7 +130,7 @@ def choose_model(config=[], W=[], phi=[], device=[]):
                           clamp=config.training.clamp, pred_limit=config.training.pred_limit,
                           prediction=config.graph_model.prediction, bc_dpos=bc_dpos)
         case 'PDE_F':
-            model = PDE_F(aggr_type=aggr_type, dimension=dimension, delta_t=delta_t)
+            model = PDE_F(aggr_type=aggr_type, p=torch.tensor(params, dtype=torch.float32, device=device), dimension=dimension, delta_t=delta_t, max_radius=max_radius)
         case 'PDE_K':
             p = params
             edges = np.random.choice(p[0], size=(n_particles, n_particles), p=p[1])
@@ -273,7 +274,7 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
     if (simulation_config.params == 'continuous') | (config.simulation.non_discrete_level > 0):  # TODO: params is a list[list[float]]; this can never happen?
         type = torch.tensor(np.arange(n_particles), device=device)
 
-    if 'PDE_F' in config.graph_model.particle_model_name:
+    if 'PDE_F_special' in config.graph_model.particle_model_name:
         n_wall_particles = 1000
         real_n_particles = n_particles - n_wall_particles
         pos = torch.rand(real_n_particles, dimension, device=device)
@@ -361,11 +362,14 @@ def get_time_series(x_list, cell_id, feature):
 
 
 def init_mesh(config, device):
+
     simulation_config = config.simulation
+    model_config = config.graph_model
+
     n_nodes = simulation_config.n_nodes
     n_particles = simulation_config.n_particles
     node_value_map = simulation_config.node_value_map
-    node_coeff_map = simulation_config.node_coeff_map
+    field_grid = model_config.field_grid
 
     n_nodes_per_axis = int(np.sqrt(n_nodes))
     xs = torch.linspace(1 / (2 * n_nodes_per_axis), 1 - 1 / (2 * n_nodes_per_axis), steps=n_nodes_per_axis)
@@ -379,19 +383,15 @@ def init_mesh(config, device):
     pos_mesh[0:n_nodes, 1:2] = y_mesh[0:n_nodes]
 
     i0 = imread(f'graphs_data/{node_value_map}')
-    if 'video' in simulation_config.node_value_map:
-        i0 = imread(f'graphs_data/pattern_Null.tif')
-    else:
-        i0 = imread(f'graphs_data/{node_value_map}')
-        i0 = np.flipud(i0)
+    i0 = np.flipud(i0)
     values = i0[(to_numpy(pos_mesh[:, 1]) * 255).astype(int), (to_numpy(pos_mesh[:, 0]) * 255).astype(int)]
-
     mask_mesh = (x_mesh > torch.min(x_mesh) + 0.02) & (x_mesh < torch.max(x_mesh) - 0.02) & (y_mesh > torch.min(y_mesh) + 0.02) & (y_mesh < torch.max(y_mesh) - 0.02)
 
-    if 'pattern_Null.tif' in simulation_config.node_value_map:
-        pos_mesh = pos_mesh + torch.randn(n_nodes, 2, device=device) * mesh_size / 24
-    else:
-        pos_mesh = pos_mesh + torch.randn(n_nodes, 2, device=device) * mesh_size / 8
+    if field_grid == 'voronoi':
+        if 'pattern_Null.tif' in simulation_config.node_value_map:
+            pos_mesh = pos_mesh + torch.randn(n_nodes, 2, device=device) * mesh_size / 24
+        else:
+            pos_mesh = pos_mesh + torch.randn(n_nodes, 2, device=device) * mesh_size / 8
 
     match config.graph_model.mesh_model_name:
         case 'RD_Gray_Scott_Mesh':
@@ -417,18 +417,6 @@ def init_mesh(config, device):
             features_mesh[0:n_particles, 4:5] = features_mesh[0:n_particles, 3:4]  # d_theta0
             pos_mesh[:, 0] = features_mesh[:, 0] + (3 / 8) * mesh_size * torch.cos(features_mesh[:, 2])
             pos_mesh[:, 1] = features_mesh[:, 1] + (3 / 8) * mesh_size * torch.sin(features_mesh[:, 2])
-
-    # i0 = imread(f'graphs_data/{node_coeff_map}')
-    # values = i0[(to_numpy(x_mesh[:, 0]) * 255).astype(int), (to_numpy(y_mesh[:, 0]) * 255).astype(int)]
-    # type_mesh = torch.tensor(values, device=device)
-    # type_mesh = type_mesh[:, None]
-
-    # i0 = imread(f'graphs_data/{node_coeff_map}')
-    # values = i0[(to_numpy(x_mesh[:, 0]) * 255).astype(int), (to_numpy(y_mesh[:, 0]) * 255).astype(int)]
-    # if np.max(values) > 0:
-    #     values = np.round(values / np.max(values) * (simulation_config.n_node_types-1))
-    # type_mesh = torch.tensor(values, device=device)
-    # type_mesh = type_mesh[:, None]
 
     type_mesh = torch.zeros((n_nodes, 1), device=device)
 

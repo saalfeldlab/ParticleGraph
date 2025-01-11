@@ -3651,8 +3651,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     files = glob.glob(f"./{log_dir}/tmp_recons/*")
-    for f in files:
-        os.remove(f)
+    # for f in files:
+    #     os.remove(f)
 
     if best_model == 'best':
         files = glob.glob(f"{log_dir}/models/*")
@@ -4390,9 +4390,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.yticks(fontsize=24)
 
 
+            # save figure
             if not ('PDE_N' in model_config.signal_model_name):
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{num}.tif", dpi=40)
+                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{run}_{num}.tif", dpi=40)
                 plt.close()
 
             if 'boundary' in style:

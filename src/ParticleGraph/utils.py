@@ -161,6 +161,25 @@ def tv2D(params):
     return tvloss / nb_voxel
 
 
+def density_laplace(y, x):
+    grad = density_gradient(y, x)
+    return density_divergence(grad, x)
+
+
+def density_divergence(y, x):
+    div = 0.
+    for i in range(y.shape[-1]):
+        div += torch.autograd.grad(y[..., i], x, torch.ones_like(y[..., i]), create_graph=True)[0][..., i:i + 1]
+    return div
+
+
+def density_gradient(y, x, grad_outputs=None):
+    if grad_outputs is None:
+        grad_outputs = torch.ones_like(y)
+    grad = torch.autograd.grad(y, [x], grad_outputs=grad_outputs, create_graph=True)[0]
+    return grad
+
+
 def compute_angle(tensor1, tensor2):
     # Ensure the tensors are 2D
     assert tensor1.shape == tensor2.shape == (2,), "Tensors must be 2D vectors"

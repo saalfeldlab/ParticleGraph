@@ -30,7 +30,7 @@ from scipy.spatial import Voronoi, voronoi_plot_2d
 from sklearn.mixture import GaussianMixture
 import warnings
 
-# matplotlib.use("Qt5Agg")
+# # matplotlib.use("Qt5Agg")
 
 class Interaction_Particle_extract(MessagePassing):
     """Interaction Network as proposed in this paper:
@@ -658,7 +658,7 @@ def plot_focused_on_cell(config, run, style, step, cell_id, bLatex, device):
 
             if 'color' in style:
 
-                # matplotlib.use("Qt5Agg")
+                # # matplotlib.use("Qt5Agg")
                 matplotlib.rcParams['savefig.pad_inches'] = 0
                 fig = plt.figure(figsize=(24, 12))
                 ax = fig.add_subplot(1, 2, 1)
@@ -780,7 +780,7 @@ def plot_generated(config, run, style, step, bLatex, device):
 
 
         if 'voronoi' in style:
-            matplotlib.use("Qt5Agg")
+            # matplotlib.use("Qt5Agg")
             matplotlib.rcParams['savefig.pad_inches'] = 0
 
             vor, vertices_pos, vertices_per_cell, all_points = get_vertices(points=X1, device=device)
@@ -3729,7 +3729,7 @@ def plot_particle_field(config_file, epoch_list, log_dir, logger, cc, bLatex, de
     mask_mesh = mesh_data['mask']
     mask_mesh = mask_mesh.repeat(batch_size, 1)
 
-    # matplotlib.use("Qt5Agg")
+    # # matplotlib.use("Qt5Agg")
     # plt.rcParams['text.usetex'] = True
     # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
@@ -5836,7 +5836,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
             x_list[0][k][:,6] = labels_[0:n]
             labels_ = labels_[n:]
 
-        # matplotlib.use("Qt5Agg")
+        # # matplotlib.use("Qt5Agg")
         # fig, ax = fig_init(fontsize=24)
         # for k in np.unique(labels):
         #     pos = np.argwhere(labels == k)
@@ -5898,7 +5898,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
 
             if 'rat_city' in dataset_name:
 
-                matplotlib.use("Qt5Agg")
+                # matplotlib.use("Qt5Agg")
                 fig = plt.figure(figsize=(16, 10))
                 ax = fig.add_subplot(2, 2, 1)
                 ax.axvline(x=1.05, ymin=0, ymax=0.7, color='r', linestyle='--', linewidth=2)
@@ -5952,30 +5952,31 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
                     plt.ylim([-0.2, 0.2])
                 plt.xticks([])
                 plt.yticks([])
-                # ax = fig.add_subplot(2, 3, 4)
-                # xp = x[0:4, :]
-                # xp[:, 1:3] = torch.randn_like(xp[:, 1:3]) * 0.01
-                # xp[0, 1:3] = 0 * xp[0, 1:3]
-                # pos_i = xp[0, 1:3]
-                # pos_j = xp[1:, 1:3]
-                # r = torch.sqrt(torch.sum(bc_dpos(pos_j - pos_i) ** 2, dim=1)) / max_radius
-                # delta_pos = bc_dpos(pos_j - pos_i) / max_radius
-                # embedding_size = embedding.shape[0]
-                # point_list = []
-                # for n in range(200000):
-                #     particle_id = torch.randint(0, embedding_size, (1,),device=device).repeat(3,1)
-                #     embedding_i = model.a[to_numpy(particle_id), :].squeeze()
-                #     in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
-                #     out = torch.mean(model.lin_edge(in_features.float()), dim=0)
-                #     point_list.append(out)
-                # point_list = torch.stack(point_list)
-                # plt.scatter(to_numpy(point_list[:, 0]), to_numpy(point_list[:, 1]), s=1, c='w', alpha=0.1, edgecolors='None')
-                # plt.scatter(to_numpy(xp[:, 1]), to_numpy(xp[:, 2]), s=100, c='g', alpha=1)
-                # plt.ylim([-0.02, 0.022])
-                # plt.xlim([-0.02, 0.022])
-                # plt.tight_layout()
+                if N%40 == 0:
+                    ax = fig.add_subplot(2, 3, 4)
+                    xp = x[0:4, :]
+                    xp[:, 1:3] = torch.randn_like(xp[:, 1:3]) * 0.01
+                    xp[0, 1:3] = 0 * xp[0, 1:3]
+                    pos_i = xp[0, 1:3]
+                    pos_j = xp[1:, 1:3]
+                    r = torch.sqrt(torch.sum(bc_dpos(pos_j - pos_i) ** 2, dim=1)) / max_radius
+                    delta_pos = bc_dpos(pos_j - pos_i) / max_radius
+                    embedding_size = embedding.shape[0]
+                    point_list = []
+                    for n in range(200000):
+                        particle_id = torch.randint(0, embedding_size, (1,),device=device).repeat(3,1)
+                        embedding_i = model.a[to_numpy(particle_id), :].squeeze()
+                        in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
+                        out = torch.mean(model.lin_edge(in_features.float()), dim=0)
+                        point_list.append(out)
+                    point_list = torch.stack(point_list)
+                    plt.scatter(to_numpy(point_list[:, 0]), to_numpy(point_list[:, 1]), s=1, c='w', alpha=0.1, edgecolors='None')
+                    plt.scatter(to_numpy(xp[:, 1]), to_numpy(xp[:, 2]), s=100, c='g', alpha=1)
+                    plt.ylim([-0.02, 0.022])
+                    plt.xlim([-0.02, 0.022])
                 # plt.show()
 
+                plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_recons/Fig_{N}.tif", dpi=120)
                 plt.close()
 
@@ -6067,7 +6068,7 @@ def data_video_training(config_file, epoch_list, log_dir, logger, bLatex, device
     function = imread(f"{log_dir}/function.tif")
     # field = imread(f"{log_dir}/field.tif")
 
-    matplotlib.use("Qt5Agg")
+    # matplotlib.use("Qt5Agg")
 
     os.makedirs(f"video_tmp/{config_file}_training", exist_ok=True)
 
@@ -6521,10 +6522,10 @@ if __name__ == '__main__':
     print(f'device {device}')
     print(' ')
 
-    try:
-        matplotlib.use("Qt5Agg")
-    except:
-        pass
+    # try:
+    #     matplotlib.use("Qt5Agg")
+    # except:
+    #     pass
 
     # f_list = ['supp7']
     # for f in f_list:
@@ -6555,7 +6556,7 @@ if __name__ == '__main__':
 
     # config_list = ['falling_particles_N1000_2']
 
-    config_list = ['rat_city_a']
+    config_list = ['rat_city_b','rat_city_c','rat_city_d','rat_city_e','rat_city_f','rat_city_g']
     # config_list = ['cell_HeLa_1', 'cell_HeLa_2', 'cell_HeLa_5', 'cell_PSC_1', 'cell_PSC_2', 'cell_PSC_5']
     # config_list = ['arbitrary_3_field_video_bison']
 

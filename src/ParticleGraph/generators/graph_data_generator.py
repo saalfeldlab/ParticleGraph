@@ -27,7 +27,7 @@ from torch_geometric.utils import dense_to_sparse
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
 
-    has_particle_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
+    has_particle_field = ('PDE_ParticleField' in config.graph_model.particle_model_name) | ('PDE_F' in config.graph_model.particle_model_name)
     has_signal = ('PDE_N' in config.graph_model.signal_model_name)
     has_mesh = (config.graph_model.mesh_model_name != '')
     has_cell_division = config.simulation.has_cell_division
@@ -504,27 +504,13 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                                    H1.clone().detach(), A1.clone().detach()), 1)
 
-            plt.scatter(to_numpy(X1_mesh[:, 0]), 1 - to_numpy(X1_mesh[:, 1]),
-                        c=to_numpy(H1_mesh[:, 0]), s=20, cmap='gray')
-
-            if it==0:
-                x = torch.load('/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/graphs_arbitrary_3_field_video_bison/x_list_1.pt')[0]
-                N1 = x[:, 0:1]
-                X1 = x[:, 1:3]
-                V1 = x[:, 3:5]
-                T1 = x[:, 5:6]
-                H1 = x[:, 6:8]
-                A1 = x[:, 8:9]
-
-            index_particles = get_index_particles(x, n_particle_types, dimension)
-
             x_mesh = torch.concatenate(
                 (N1_mesh.clone().detach(), X1_mesh.clone().detach(), V1_mesh.clone().detach(),
                  T1_mesh.clone().detach(), H1_mesh.clone().detach(), A1_mesh.clone().detach()), 1)
 
             x_particle_field = torch.concatenate((x_mesh, x), dim=0)
 
-            # compute connectivity rules
+            # compute particle-particle connectivity
             distance = torch.sum(bc_dpos(x[:, None, 1:dimension+1] - x[None, :, 1:dimension+1]) ** 2, dim=2)
             adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
             edge_index = adj_t.nonzero().t().contiguous()
@@ -532,21 +518,44 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             if not(has_particle_dropout):
                 edge_p_p_list.append(edge_index)
 
-            distance = torch.sum(bc_dpos(x_particle_field[:, None, 1:dimension+1] - x_particle_field[None, :, 1:dimension+1]) ** 2, dim=2)
-            adj_t = ((distance < (max_radius/2) ** 2) & (distance > min_radius ** 2)).float() * 1
-            edge_index = adj_t.nonzero().t().contiguous()
-            pos = torch.argwhere((edge_index[1,:]>=n_nodes) & (edge_index[0,:]<n_nodes))
-            pos = to_numpy(pos[:,0])
-            edge_index = edge_index[:,pos]
-            dataset_f_p = data.Data(x=x_particle_field, pos=x_particle_field[:, 1:3], edge_index=edge_index)
-            if not (has_particle_dropout):
-                edge_f_p_list.append(edge_index)
-
             # model prediction
-            with torch.no_grad():
-                y0 = model_p_p(dataset_p_p,has_field=False)
-                y1 = model_f_p(dataset_f_p,has_field=True)[n_nodes:]
-                y = y0 + y1
+            if ('calculus' in model_config.field_type):
+
+                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x_mesh[None, :, 1:dimension + 1]) ** 2, dim=2)
+                adj_t = ((distance < max_radius ** 2) & (distance > 0)).float() * 1
+                edge_index = adj_t.nonzero().t().contiguous()
+                xp = torch.cat((x_mesh[:, 0:2 * dimension + 1], x[:, 0:2 * dimension + 1]), 0)
+                edge_index[0, :] = edge_index[0, :] + x_mesh.shape[0]
+                edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+                dataset = data.Data(x=xp, pos=xp[:, 1:dimension + 1], edge_index=edge_index)
+                edge_f_p_list.append(edge_index)
+                with torch.no_grad():
+
+                    y = model_p_p(dataset_p_p)
+                    density = model_p_p.density
+
+                    y_field = model(dataset, continuous_field=True, continuous_field_size=x_mesh.shape)[0: x_mesh.shape[0]]
+                    density_field = model.density[0: mgrid.shape[0]]
+
+            else:
+
+                distance = torch.sum(bc_dpos(
+                    x_particle_field[:, None, 1:dimension + 1] - x_particle_field[None, :, 1:dimension + 1]) ** 2,
+                                     dim=2)
+                adj_t = ((distance < (max_radius / 2) ** 2) & (distance > min_radius ** 2)).float() * 1
+                edge_index = adj_t.nonzero().t().contiguous()
+                pos = torch.argwhere((edge_index[1, :] >= n_nodes) & (edge_index[0, :] < n_nodes))
+                pos = to_numpy(pos[:, 0])
+                edge_index = edge_index[:, pos]
+                dataset_f_p = data.Data(x=x_particle_field, pos=x_particle_field[:, 1:3], edge_index=edge_index)
+                if not (has_particle_dropout):
+                    edge_f_p_list.append(edge_index)
+
+                with torch.no_grad():
+                    y0 = model_p_p(dataset_p_p,has_field=False)
+                    y1 = model_f_p(dataset_f_p,has_field=True)[n_nodes:]
+                    y = y0 + y1
+
 
             # append list
             if (it >= 0) & bSave:

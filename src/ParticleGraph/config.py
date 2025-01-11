@@ -40,7 +40,7 @@ class SimulationConfig(BaseModel):
     n_nodes: Optional[int] = None
     n_node_types: Optional[int] = None
     node_coeff_map: Optional[str] = None
-    node_value_map: Optional[str] = None
+    node_value_map: Optional[str] = 'Pattern.tiff'
     node_proliferation_map: Optional[str] = None
 
     adjacency_matrix: str = ''
@@ -93,6 +93,9 @@ class GraphModelConfig(BaseModel):
     prediction: Literal['first_derivative', '2nd_derivative'] = '2nd_derivative'
     integration: Literal['Euler', 'Runge-Kutta'] = 'Euler'
 
+    field_type: str = ''
+    field_grid: Optional[str] = 'voronoi'
+
     pre_input_size: int = 1
     pre_output_size: int = 1
     pre_hidden_dim: int = 1
@@ -118,7 +121,7 @@ class GraphModelConfig(BaseModel):
     output_size_nnr: int = 1
     omega : float = 80.0
 
-    field_type: str = ''
+
 
     # def get_instance(self, **kwargs):
     #     return GraphModel(**self.model_dump(), **kwargs)
