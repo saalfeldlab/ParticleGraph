@@ -99,7 +99,7 @@ class Interaction_Falling_Water_Wall(pyg.nn.MessagePassing):
             noise = torch.randn_like(pos) * self.time_window_noise
             pos = pos + noise
 
-        pred = self.propagate(edge_index=edge_index, pos=pos, embedding=embedding, kernel=kernel_null)
+        pred = self.propagate(edge_index=edge_index, pos=pos, embedding=embedding)
 
         if self.update_type == 'mlp':
             pos_p = (pos - pos[:, 0:self.dimension].repeat(1, self.time_window))[:, self.dimension:]

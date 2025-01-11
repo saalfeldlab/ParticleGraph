@@ -22,7 +22,7 @@ image_data:
     file_type: '2D fluo'
     cellpose_channel: 0
     cellpose_diameter: 75
-    cellpose_model: '/groups/saalfeld/home/allierc/signaling/MDCK/Leica SGFP2 and H42 nuclear marker/Larger center region/merged/CP_20250109_093212'
+    cellpose_model: '/groups/saalfeld/home/allierc/signaling/MDCK/Leica SGFP2 and H42 nuclear marker/training/models/CP_20250109_093212'
     cellpose_channel: [2, 1]
 
 graph_model:

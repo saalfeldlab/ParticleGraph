@@ -307,14 +307,18 @@ def load_cell_data(config, device, visualize):
         # model_cyto2 = models.CellposeModel(gpu=True, model_type='cyto2', nchan=2)
         # model_cyto3 = models.CellposeModel(gpu=True, model_type='cyto2_cp3', nchan=2)
 
-
         print('generate segmentation masks with Cellpose ...')
         if True:
             for it in trange(len(files)):
                 im = tifffile.imread(data_folder_name + files[it])
                 im = np.array(im)
-                masks, flows, styles = model_custom.eval(im, diameter=150, invert=False, normalize=True, channels=image_data.cellpose_channel)
+                masks, flows, styles = model_custom.eval(im, diameter=120, flow_threshold=0.0, invert=False, normalize=True, channels=image_data.cellpose_channel)
                 tifffile.imsave(data_folder_name + 'SEG/' + files[it], masks)
+                # matplotlib.use("Qt5Agg")
+                # fig = plt.subplots(figsize=(8, 8))
+                # plt.imshow(masks)
+                # plt.show()
+
 
     # 0 N1 cell index dim=1
     # 1,2 X1 positions dim=2

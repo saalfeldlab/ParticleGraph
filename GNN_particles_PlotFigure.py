@@ -5952,28 +5952,28 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
                     plt.ylim([-0.2, 0.2])
                 plt.xticks([])
                 plt.yticks([])
-                ax = fig.add_subplot(2, 3, 4)
-                xp = x[0:4, :]
-                xp[:, 1:3] = torch.randn_like(xp[:, 1:3]) * 0.01
-                xp[0, 1:3] = 0 * xp[0, 1:3]
-                pos_i = xp[0, 1:3]
-                pos_j = xp[1:, 1:3]
-                r = torch.sqrt(torch.sum(bc_dpos(pos_j - pos_i) ** 2, dim=1)) / max_radius
-                delta_pos = bc_dpos(pos_j - pos_i) / max_radius
-                embedding_size = embedding.shape[0]
-                point_list = []
-                for n in range(200000):
-                    particle_id = torch.randint(0, embedding_size, (1,),device=device).repeat(3,1)
-                    embedding_i = model.a[to_numpy(particle_id), :].squeeze()
-                    in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
-                    out = torch.mean(model.lin_edge(in_features.float()), dim=0)
-                    point_list.append(out)
-                point_list = torch.stack(point_list)
-                plt.scatter(to_numpy(point_list[:, 0]), to_numpy(point_list[:, 1]), s=1, c='w', alpha=0.1, edgecolors='None')
-                plt.scatter(to_numpy(xp[:, 1]), to_numpy(xp[:, 2]), s=100, c='g', alpha=1)
-                plt.ylim([-0.02, 0.022])
-                plt.xlim([-0.02, 0.022])
-                plt.tight_layout()
+                # ax = fig.add_subplot(2, 3, 4)
+                # xp = x[0:4, :]
+                # xp[:, 1:3] = torch.randn_like(xp[:, 1:3]) * 0.01
+                # xp[0, 1:3] = 0 * xp[0, 1:3]
+                # pos_i = xp[0, 1:3]
+                # pos_j = xp[1:, 1:3]
+                # r = torch.sqrt(torch.sum(bc_dpos(pos_j - pos_i) ** 2, dim=1)) / max_radius
+                # delta_pos = bc_dpos(pos_j - pos_i) / max_radius
+                # embedding_size = embedding.shape[0]
+                # point_list = []
+                # for n in range(200000):
+                #     particle_id = torch.randint(0, embedding_size, (1,),device=device).repeat(3,1)
+                #     embedding_i = model.a[to_numpy(particle_id), :].squeeze()
+                #     in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
+                #     out = torch.mean(model.lin_edge(in_features.float()), dim=0)
+                #     point_list.append(out)
+                # point_list = torch.stack(point_list)
+                # plt.scatter(to_numpy(point_list[:, 0]), to_numpy(point_list[:, 1]), s=1, c='w', alpha=0.1, edgecolors='None')
+                # plt.scatter(to_numpy(xp[:, 1]), to_numpy(xp[:, 2]), s=100, c='g', alpha=1)
+                # plt.ylim([-0.02, 0.022])
+                # plt.xlim([-0.02, 0.022])
+                # plt.tight_layout()
                 # plt.show()
 
                 plt.savefig(f"./{log_dir}/tmp_recons/Fig_{N}.tif", dpi=120)
