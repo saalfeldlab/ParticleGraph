@@ -23,7 +23,7 @@ import tables
 import h5py as h5
 from torch_geometric.utils import dense_to_sparse
 import torch_geometric.utils as pyg_utils
-
+from scipy.ndimage import zoom
 
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
@@ -636,28 +636,34 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
 
                 if 'field' in style:
 
-                    fig = plt.figure(figsize=(16, 8))
-                    ax = fig.add_subplot(121)
-                    plt.scatter(to_numpy(xp[0: x_mesh.shape[0], 1:2]), to_numpy(xp[0: x_mesh.shape[0], 2:3]), s=10,
-                                c=to_numpy(density_field), vmin=0, vmax=10, cmap='viridis')
+                    im = np.reshape(to_numpy(density_field), (100, 100))
+                    im = np.flipud(im)
+                    im_resized = zoom(im, 10)
+
+                    fig = plt.figure(figsize=(8, 8))
+                    plt.imshow(im_resized, vmin=2, vmax=6, cmap='bwr')
+                    plt.scatter(to_numpy(x[:, 1]*1000), to_numpy(x[:, 2]*1000), s=8, c='k')
+                    plt.tight_layout()
+                    plt.xlim([0,1000])
+                    plt.ylim([0,1000])
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=80)
+                    plt.close()
+
                     # Q = ax.quiver(to_numpy(x[:, 1]), to_numpy(x[:, 2]), to_numpy(y[:, 0]), to_numpy(y[:, 1]), color='r')
                     # Q = ax.quiver(to_numpy(x[:, 1]), to_numpy(x[:, 2]), to_numpy(x[:, 3]), to_numpy(x[:, 4]), color='w')
-                    plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=10, c='w')
-                    plt.tight_layout()
-                    plt.xlim([0,1])
-                    plt.ylim([0,1])
                     # ax = fig.add_subplot(2,4,3)
                     # plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1,
                     #             c=to_numpy(model.kernel_operators[:, 0:1]))
                     # plt.title('kernel')
-                    ax = fig.add_subplot(2,4,4)
-                    std_list.append(torch.std((density_field),dim=0))
-                    plt.plot(to_numpy(torch.stack(std_list)), c='w')
-                    plt.xlim([0,200])
-                    plt.ylim([0,1])
-                    plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=170.7)
-                    plt.close()
+                    # ax = fig.add_subplot(2,4,4)
+                    # std_list.append(torch.std((density_field),dim=0))
+                    # plt.plot(to_numpy(torch.stack(std_list)), c='w')
+                    # plt.xlim([0,200])
+                    # plt.ylim([0,1])
+
 
 
 
