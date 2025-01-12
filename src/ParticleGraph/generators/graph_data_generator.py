@@ -22,6 +22,7 @@ import pandas as pd
 import tables
 import h5py as h5
 from torch_geometric.utils import dense_to_sparse
+import torch_geometric.utils as pyg_utils
 
 
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
@@ -427,6 +428,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
     has_particle_dropout = training_config.particle_dropout > 0
     cmap = CustomColorMap(config=config)
     dataset_name = config.dataset
+    bounce = simulation_config.bounce
 
     folder = f'./graphs_data/graphs_{dataset_name}/'
     if erase:
@@ -442,8 +444,12 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
         os.remove(f)
     copyfile(os.path.realpath(__file__), os.path.join(folder, 'generation_code.py'))
 
-    model_p_p, bc_pos, bc_dpos = choose_model(config=config, device=device)
-    model_f_p = model_p_p
+    if ('calculus' in model_config.field_type):
+        model, bc_pos, bc_dpos = choose_model(config=config, device=device)
+        std_list=[]
+    else:
+        model_p_p, bc_pos, bc_dpos = choose_model(config=config, device=device)
+        model_f_p = model_p_p
 
     # model_f_f = choose_mesh_model(config, device=device)
 
@@ -524,18 +530,19 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x_mesh[None, :, 1:dimension + 1]) ** 2, dim=2)
                 adj_t = ((distance < max_radius ** 2) & (distance > 0)).float() * 1
                 edge_index = adj_t.nonzero().t().contiguous()
-                xp = torch.cat((x_mesh[:, 0:2 * dimension + 1], x[:, 0:2 * dimension + 1]), 0)
+                xp = torch.cat((x_mesh[:, 0: 2 + 2*dimension], x[:, 0: 2 + 2*dimension]), 0)
                 edge_index[0, :] = edge_index[0, :] + x_mesh.shape[0]
                 edge_index, _ = pyg_utils.remove_self_loops(edge_index)
                 dataset = data.Data(x=xp, pos=xp[:, 1:dimension + 1], edge_index=edge_index)
                 edge_f_p_list.append(edge_index)
-                with torch.no_grad():
 
-                    y = model_p_p(dataset_p_p)
-                    density = model_p_p.density
+                y = model(dataset_p_p)
+                y = y[:, 0: dimension]
+                density = model.density
 
-                    y_field = model(dataset, continuous_field=True, continuous_field_size=x_mesh.shape)[0: x_mesh.shape[0]]
-                    density_field = model.density[0: mgrid.shape[0]]
+                y_field = model(dataset, continuous_field=True, continuous_field_size=x_mesh.shape)[0: x_mesh.shape[0]]
+                density_field = model.density[0: x_mesh.shape[0]]
+
 
             else:
 
@@ -555,7 +562,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     y0 = model_p_p(dataset_p_p,has_field=False)
                     y1 = model_f_p(dataset_f_p,has_field=True)[n_nodes:]
                     y = y0 + y1
-
 
             # append list
             if (it >= 0) & bSave:
@@ -596,6 +602,12 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 V1 = y
             X1 = bc_pos(X1 + V1 * delta_t)
 
+            if bounce:
+                bouncing_pos = torch.argwhere((X1[:, 1] <= 0) ).squeeze()
+                if bouncing_pos.numel() > 0:
+                    V1[bouncing_pos, 1] = 0.6 * torch.abs(V1[bouncing_pos, 1])
+                    X1[bouncing_pos, 1] = 0
+
             A1 = A1 + 1
 
             # Mesh update
@@ -609,9 +621,36 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 # plt.style.use('dark_background')
                 # matplotlib.use("Qt5Agg")
 
+                if 'black' in style:
+                    plt.style.use('dark_background')
+
                 if 'latex' in style:
                     plt.rcParams['text.usetex'] = True
                     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+
+
+                if 'field' in style:
+
+                    fig = plt.figure(figsize=(16, 8))
+                    ax = fig.add_subplot(121)
+                    plt.scatter(to_numpy(xp[0: x_mesh.shape[0], 1:2]), to_numpy(xp[0: x_mesh.shape[0], 2:3]), s=10,
+                                c=to_numpy(density_field), vmin=0, vmax=4, cmap='viridis')
+                    # Q = ax.quiver(to_numpy(x[:, 1]), to_numpy(x[:, 2]), to_numpy(y[:, 0]), to_numpy(y[:, 1]), color='r')
+                    # Q = ax.quiver(to_numpy(x[:, 1]), to_numpy(x[:, 2]), to_numpy(x[:, 3]), to_numpy(x[:, 4]), color='w')
+                    plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=10, c='w')
+                    plt.tight_layout()
+                    plt.xlim([0,1])
+                    plt.ylim([-0.1,1])
+                    ax = fig.add_subplot(2,4,3)
+                    std_list.append(torch.std((density_field),dim=0))
+                    plt.plot(to_numpy(torch.stack(std_list)), c='w')
+                    plt.xlim([0,200])
+                    plt.ylim([0,1])
+                    plt.tight_layout()
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=170.7)
+                    plt.close()
+
+
 
                 if 'graph' in style:
 

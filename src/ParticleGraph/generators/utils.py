@@ -48,7 +48,9 @@ def choose_model(config=[], W=[], phi=[], device=[]):
     n_nodes = config.simulation.n_nodes
     delta_t = config.simulation.delta_t
     n_particle_types = config.simulation.n_particle_types
+
     bc_pos, bc_dpos = choose_boundary_values(config.simulation.boundary)
+
     dimension = config.simulation.dimension
     max_radius = config.simulation.max_radius
 
@@ -130,7 +132,8 @@ def choose_model(config=[], W=[], phi=[], device=[]):
                           clamp=config.training.clamp, pred_limit=config.training.pred_limit,
                           prediction=config.graph_model.prediction, bc_dpos=bc_dpos)
         case 'PDE_F':
-            model = PDE_F(aggr_type=aggr_type, p=torch.tensor(params, dtype=torch.float32, device=device), dimension=dimension, delta_t=delta_t, max_radius=max_radius)
+            model = PDE_F(aggr_type=aggr_type, p=torch.tensor(params, dtype=torch.float32, device=device), bc_dpos=bc_dpos, dimension=dimension, delta_t=delta_t, max_radius=max_radius)
+
         case 'PDE_K':
             p = params
             edges = np.random.choice(p[0], size=(n_particles, n_particles), p=p[1])
@@ -247,7 +250,7 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
 
     dpos_init = simulation_config.dpos_init
 
-    if (simulation_config.boundary == 'periodic'):       # | (simulation_config.dimension == 3):
+    if (simulation_config.boundary == 'periodic') | ('PDE_F' in config.graph_model.particle_model_name):
         pos = torch.rand(n_particles, dimension, device=device)
         if n_particles <= 10:
             if 'PDE_K' in config.graph_model.particle_model_name:

@@ -22,6 +22,7 @@ class SimulationConfig(BaseModel):
     delta_t: float = 1
 
     boundary: Literal['periodic', 'no', 'periodic_special'] = 'periodic'
+    bounce: bool = False
     min_radius: float = 0.0
     max_radius: Annotated[float, Field(gt=0)]
     smooth_radius: float = 0.1

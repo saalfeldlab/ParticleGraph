@@ -1,19 +1,20 @@
-description: 'Boids 16 different types'
+description: 'fluids simulation'
 dataset: 'fluids'
 
 simulation:
-  params: [[1.6233, 1.0413, 1.6012, 1.5615], [1.7667, 1.8308, 1.0855, 1.9055],  [1.7226, 1.7850, 1.0584, 1.8579]]
+  params: [[0.0, 5.0E-1]]
   min_radius: 0.001
   max_radius: 0.05
-  n_particles: 1792
+  n_particles: 2000
   n_particle_types: 1
   has_cell_division: False
   n_nodes: 10000
   n_frames: 800
   sigma: 0.005
-  delta_t: 1
-  dpos_init: 5.0E-4
+  delta_t: 0.0025
+  dpos_init: 5.0E-1
   boundary: 'periodic'
+  bounce: True
   start_frame: 0
   node_value_map: 'pattern_Null.tif'
 
