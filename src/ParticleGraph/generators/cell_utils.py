@@ -610,10 +610,6 @@ def visualize_mesh(mesh_file):
                 #  viewup="z"
                  )
 
-
-
-
-
 def process_image_batch(segmented_image_path, raw_image_path,
          voxel_size=(0.75, 0.75, 1.0), smoothing_iterations=2, n_jobs=-1,
          mesh_only=False, props_only=False):

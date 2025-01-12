@@ -44,6 +44,9 @@ class PDE_F(pyg.nn.MessagePassing):
         particle_type = to_numpy(x[:, 1 + 2*self.dimension])
         pos = x[:, 1:self.dimension+1]
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
+
+        pos = pos + 0.25 * d_pos * self.delta_t
+
         field = x[:, 2*self.dimension+2: 2*self.dimension+3]
 
         density_null = torch.zeros((pos.shape[0], 2))
@@ -65,15 +68,6 @@ class PDE_F(pyg.nn.MessagePassing):
 
         out[:, 1] = out[:, 1] + torch.ones_like(out[:, 1]) * self.p[0] * 9.8
 
-        # # Bounce on walls
-        # bouncing_pos = torch.argwhere((X1[:, 0] <= 0) | (X1[:, 0] >= 1)).squeeze()
-        # if bouncing_pos.numel() > 0:
-        #     dd_pos[particles[bouncing_pos], 0] = -1.6 * V1[bouncing_pos, 0] / self.delta_t
-        #     dd_pos[particles[bouncing_pos], 1] = - 0.4 * V1[bouncing_pos, 1] / self.delta_t
-        # bouncing_pos = torch.argwhere((X1[:, 1] <= 0) | (X1[:, 1] >= 1)).squeeze()
-        # if bouncing_pos.numel() > 0:
-        #     dd_pos[particles[bouncing_pos], 1] = -1.6 * V1[bouncing_pos, 1] / self.delta_t
-
         return out
 
     def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, field_i, field_j, particle_type_i, particle_type, density_i, density_j):
@@ -84,17 +78,20 @@ class PDE_F(pyg.nn.MessagePassing):
         if self.mode == 'pre_mlp':
             mgrid = delta_pos.clone().detach()
             mgrid.requires_grad = True
+            density_kernel = torch.exp(-4*(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / self.kernel_var)[:, None] / 2
 
             if 'gaussian' in self.field_type:
-                density_kernel = torch.exp(-4*(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / self.kernel_var)[:, None] / 2
+                pressure_kernel = density_kernel
             elif 'triangle' in self.field_type:
                 dist = torch.sqrt(torch.sum(mgrid ** 2, dim=1))
-                density_kernel = ((self.max_radius - dist)**2 / self.kernel_var)[:, None] / 1.309
+                pressure_kernel = ((self.max_radius - dist)**2 / self.kernel_var)[:, None] / 1.309
 
-            grad_autograd = density_gradient(density_kernel, mgrid)
-            laplace_autograd = density_laplace(density_kernel, mgrid)
+            grad_density_kernel = density_gradient(density_kernel, mgrid)
+            grad_pressure_kernel = density_gradient(pressure_kernel, mgrid)
 
-            self.kernel_operators = torch.cat((density_kernel, grad_autograd, laplace_autograd), dim=-1)
+            # laplace_autograd = density_laplace(density_kernel, mgrid)
+
+            self.kernel_operators = torch.cat((density_kernel, grad_density_kernel, grad_pressure_kernel), dim=-1)
 
             return density_kernel
 
@@ -103,13 +100,16 @@ class PDE_F(pyg.nn.MessagePassing):
             # out = self.lin_edge(field_j) * self.kernel_operators[:,3:4] / density_j
             # out = field_j * self.kernel_operators[:, 1:2] / density_j
 
-            grad_density = ((density_i+density_j)/2 - self.p[2])  * self.kernel_operators[:, 1:3] * self.p[1] / density_j  # / 1E7  # d_rho_x d_rho_y
-            velocity = self.kernel_operators[:, 0:1] * torch.sum(d_pos_j**2, dim=1)[:,None] / density_j
-            grad_velocity = self.kernel_operators[:, 1:3] * torch.sum(d_pos_j**2, dim=1)[:,None].repeat(1,2) / density_j.repeat(1,2)
-
-            out = torch.cat((grad_density, velocity, grad_velocity), dim = 1) # d_rho_x d_rho_y, velocity
+            # grad_density = ((density_i+density_j)/2 - self.p[2])  * self.kernel_operators[:, 1:3] * self.p[1] / density_j  # / 1E7  # d_rho_x d_rho_y
+            # velocity = self.kernel_operators[:, 0:1] * torch.sum(d_pos_j**2, dim=1)[:,None] / density_j
+            # grad_velocity = self.kernel_operators[:, 1:3] * torch.sum(d_pos_j**2, dim=1)[:,None].repeat(1,2) / density_j.repeat(1,2)
+            # out = torch.cat((grad_density, velocity, grad_velocity), dim = 1) # d_rho_x d_rho_y, velocity
 
             # out = field_j * self.kernel_operators[:, 1:2] / density_j
+
+            pressure_force = ((density_i+density_j)/2 - self.p[2]/2) * self.kernel_operators[:, 3:5] * self.p[1] / density_j.repeat(1,2)
+            viscosity_force = (d_pos_j-d_pos_i) * self.p[3] * self.kernel_operators[:, 0:1].repeat(1,2) / density_j.repeat(1,2)
+            out = pressure_force + viscosity_force
 
             return out
 

@@ -636,13 +636,16 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
 
                 if 'field' in style:
 
-                    im = np.reshape(to_numpy(density_field), (100, 100))
-                    im = np.flipud(im)
+                    density_field = to_numpy(density_field)
+                    im = np.reshape(density_field, (100, 100))
+                    # im = np.flipud(im)
                     im_resized = zoom(im, 10)
 
                     fig = plt.figure(figsize=(8, 8))
                     plt.imshow(im_resized, vmin=2, vmax=6, cmap='bwr')
-                    plt.scatter(to_numpy(x[:, 1]*1000), to_numpy(x[:, 2]*1000), s=8, c='k')
+                    # plt.scatter(to_numpy(x_mesh[:, 1] * 1000), to_numpy(x_mesh[:, 2] * 1000), c=density_field, s=40, vmin=2, vmax=6, cmap='bwr')
+                    plt.text(20, 950, f'{np.mean(density_field):0.3}+/-{np.std(density_field):0.3}', c='k', fontsize=18)
+                    plt.scatter(to_numpy(x[:, 1]*1000), to_numpy(x[:, 2]*1000), s=1, c='k')
                     plt.tight_layout()
                     plt.xlim([0,1000])
                     plt.ylim([0,1000])
@@ -663,9 +666,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     # plt.plot(to_numpy(torch.stack(std_list)), c='w')
                     # plt.xlim([0,200])
                     # plt.ylim([0,1])
-
-
-
 
                 if 'graph' in style:
 
@@ -847,7 +847,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             torch.save(y_mesh_list, f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt')
             torch.save(edge_p_p_list, f'graphs_data/graphs_{dataset_name}/edge_p_p_list{run}.pt')
             torch.save(edge_f_p_list, f'graphs_data/graphs_{dataset_name}/edge_f_p_list{run}.pt')
-            torch.save(model_p_p.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
+            # torch.save(model_p_p.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
 
 
 
