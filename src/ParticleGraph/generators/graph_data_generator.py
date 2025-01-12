@@ -640,7 +640,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=10, c='w')
                     plt.tight_layout()
                     plt.xlim([0,1])
-                    plt.ylim([-0.1,1])
+                    plt.ylim([0,1])
                     ax = fig.add_subplot(2,4,3)
                     std_list.append(torch.std((density_field),dim=0))
                     plt.plot(to_numpy(torch.stack(std_list)), c='w')
