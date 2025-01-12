@@ -132,7 +132,8 @@ def choose_model(config=[], W=[], phi=[], device=[]):
                           clamp=config.training.clamp, pred_limit=config.training.pred_limit,
                           prediction=config.graph_model.prediction, bc_dpos=bc_dpos)
         case 'PDE_F':
-            model = PDE_F(aggr_type=aggr_type, p=torch.tensor(params, dtype=torch.float32, device=device), bc_dpos=bc_dpos, dimension=dimension, delta_t=delta_t, max_radius=max_radius)
+            model = PDE_F(aggr_type=aggr_type, p=torch.tensor(params, dtype=torch.float32, device=device), bc_dpos=bc_dpos,
+                          dimension=dimension, delta_t=delta_t, max_radius=max_radius, field_type=config.graph_model.field_type)
 
         case 'PDE_K':
             p = params
@@ -250,7 +251,10 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
 
     dpos_init = simulation_config.dpos_init
 
-    if (simulation_config.boundary == 'periodic') | ('PDE_F' in config.graph_model.particle_model_name):
+    if ('PDE_F' in config.graph_model.particle_model_name):
+        pos = torch.rand(n_particles, dimension, device=device)
+        pos = pos * 0.5 + 0.25
+    elif (simulation_config.boundary == 'periodic'):
         pos = torch.rand(n_particles, dimension, device=device)
         if n_particles <= 10:
             if 'PDE_K' in config.graph_model.particle_model_name:
@@ -264,7 +268,6 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
                 pos = pos * 0.2 + 0.4
         elif n_particles<=500:
             pos = pos * 0.5 + 0.25
-
     else:
         pos = torch.randn(n_particles, dimension, device=device) * 0.5
     dpos = dpos_init * torch.randn((n_particles, dimension), device=device)

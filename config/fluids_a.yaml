@@ -2,7 +2,7 @@ description: 'fluids simulation'
 dataset: 'fluids'
 
 simulation:
-  params: [[0.0, 2.0]]
+  params: [[0, 0.1, 0.0]]
   min_radius: 0.001
   max_radius: 0.05
   n_particles: 2000
@@ -14,7 +14,7 @@ simulation:
   delta_t: 0.0025
   dpos_init: 5.0E-1
   boundary: 'periodic'
-  bounce: True
+  bounce: False
   start_frame: 0
   node_value_map: 'pattern_Null.tif'
 
@@ -23,9 +23,9 @@ graph_model:
   mesh_model_name: ''
 
   field_grid: 'grid'
-  field_type: 'calculus'
+  field_type: 'calculus gaussian'
 
-  prediction: '2nd_derivative'
+  prediction: 'first_derivative'
   input_size: 9
   output_size: 2
   hidden_dim: 256

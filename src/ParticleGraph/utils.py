@@ -126,10 +126,18 @@ def choose_boundary_values(bc_name):
         return x
 
     def periodic(x):
-        return torch.remainder(x, 1.0)  # in [0, 1)
+        return torch.remainder(x, 1.0)
+
+    def periodic_wall(x):
+        y = torch.remainder(x[:,0:1], 1.0)
+        return torch.cat((y,x[:,1:2]), 1)
 
     def shifted_periodic(x):
-        return torch.remainder(x - 0.5, 1.0) - 0.5  # in [-0.5, 0.5)
+        return torch.remainder(x - 0.5, 1.0) - 0.5
+
+    def shifted_periodic_wall(x):
+        y = torch.remainder(x[:,0:1] - 0.5, 1.0) - 0.5
+        return torch.cat((y,x[:,1:2]), 1)
 
 
     match bc_name:
@@ -137,6 +145,8 @@ def choose_boundary_values(bc_name):
             return identity, identity
         case 'periodic':
             return periodic, shifted_periodic
+        case 'wall':
+            return periodic_wall, shifted_periodic_wall
         case _:
             raise ValueError(f'Unknown boundary condition {bc_name}')
 

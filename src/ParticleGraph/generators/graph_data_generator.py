@@ -600,13 +600,18 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 V1 += y * delta_t
             else:
                 V1 = y
-            X1 = bc_pos(X1 + V1 * delta_t)
+
 
             if bounce:
+                X1 = X1 + V1 * delta_t
                 bouncing_pos = torch.argwhere((X1[:, 1] <= 0) ).squeeze()
                 if bouncing_pos.numel() > 0:
                     V1[bouncing_pos, 1] = 0.6 * torch.abs(V1[bouncing_pos, 1])
-                    X1[bouncing_pos, 1] = 0
+                    X1[bouncing_pos, 1] = 0.01 + torch.rand(bouncing_pos.numel(), device=device) * 0.05
+                X1 = bc_pos(X1)
+
+            else:
+                X1 = bc_pos(X1 + V1 * delta_t)
 
             A1 = A1 + 1
 
@@ -634,14 +639,18 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     fig = plt.figure(figsize=(16, 8))
                     ax = fig.add_subplot(121)
                     plt.scatter(to_numpy(xp[0: x_mesh.shape[0], 1:2]), to_numpy(xp[0: x_mesh.shape[0], 2:3]), s=10,
-                                c=to_numpy(density_field), vmin=0, vmax=4, cmap='viridis')
+                                c=to_numpy(density_field), vmin=0, vmax=10, cmap='viridis')
                     # Q = ax.quiver(to_numpy(x[:, 1]), to_numpy(x[:, 2]), to_numpy(y[:, 0]), to_numpy(y[:, 1]), color='r')
                     # Q = ax.quiver(to_numpy(x[:, 1]), to_numpy(x[:, 2]), to_numpy(x[:, 3]), to_numpy(x[:, 4]), color='w')
                     plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=10, c='w')
                     plt.tight_layout()
                     plt.xlim([0,1])
                     plt.ylim([0,1])
-                    ax = fig.add_subplot(2,4,3)
+                    # ax = fig.add_subplot(2,4,3)
+                    # plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1,
+                    #             c=to_numpy(model.kernel_operators[:, 0:1]))
+                    # plt.title('kernel')
+                    ax = fig.add_subplot(2,4,4)
                     std_list.append(torch.std((density_field),dim=0))
                     plt.plot(to_numpy(torch.stack(std_list)), c='w')
                     plt.xlim([0,200])
