@@ -3929,7 +3929,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     x_list[0] = torch.cat((x_list[0],x_list[0],x_list[0],x_list[0]), dim=0)
     x_inference_list = []
 
-    for it in trange(start_it, stop_it+1400):
+    for it in trange(start_it, stop_it):
 
         if it < n_frames - 4:
             x0 = x_list[0][it].clone().detach()
@@ -4054,11 +4054,11 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
                 if test_simulation:
                     y = y0 / ynorm
+                    pred = y
                 else:
                     with torch.no_grad():
                         pred = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device))
                         y = pred
-
 
                 if has_ghost:
                     y = y[mask_ghost]

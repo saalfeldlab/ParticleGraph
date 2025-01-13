@@ -409,6 +409,10 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
 
 def data_generate_particle_field(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
+
+    torch.random.fork_rng(devices=device)
+    torch.random.manual_seed(config.training.seed)
+
     simulation_config = config.simulation
     training_config = config.training
     model_config = config.graph_model

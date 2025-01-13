@@ -8,8 +8,6 @@ from ParticleGraph.generators import PDE_A, PDE_B, PDE_E, PDE_F, PDE_G, PDE_K, P
 from ParticleGraph.utils import choose_boundary_values
 from ParticleGraph.data_loaders import load_solar_system, load_LG_ODE, load_WaterRampsWall, load_cell_data
 from time import sleep
-import numpy as np
-import torch
 from scipy.spatial import Delaunay
 from tifffile import imread, imsave
 from torch_geometric.utils import get_mesh_laplacian
@@ -253,7 +251,7 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
 
     if ('PDE_F' in config.graph_model.particle_model_name):
         pos = torch.rand(n_particles, dimension, device=device)
-        pos = pos * 0.5 + 0.25
+        # pos = pos * 0.5 + 0.25
     elif (simulation_config.boundary == 'periodic'):
         pos = torch.rand(n_particles, dimension, device=device)
         if n_particles <= 10:
