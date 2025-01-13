@@ -14,13 +14,13 @@ from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 import tifffile
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-import seaborn as sns
-from fa2_modified import ForceAtlas2
-import zarr
-import xarray as xr
+# from fa2_modified import ForceAtlas2
+# import h5py as h5
+# import zarr
+# import xarray as xr
 import pandas as pd
 import tables
-import h5py as h5
+
 from torch_geometric.utils import dense_to_sparse
 import torch_geometric.utils as pyg_utils
 from scipy.ndimage import zoom

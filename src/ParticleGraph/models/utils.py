@@ -12,7 +12,6 @@ import warnings
 import numpy as np
 import time
 import tqdm
-import seaborn as sns
 from tifffile import imsave
 
 import torch.nn as nn
