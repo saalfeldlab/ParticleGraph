@@ -2,6 +2,8 @@
 import torch_geometric as pyg
 import torch_geometric.utils as pyg_utils
 from ParticleGraph.utils import to_numpy
+import torch
+from ParticleGraph.utils import *
 
 class PDE_N2(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:

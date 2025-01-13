@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
-import torch
-import umap
+
 from matplotlib.ticker import FormatStrFormatter
 from ParticleGraph.models import *
 from ParticleGraph.utils import *

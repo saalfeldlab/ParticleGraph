@@ -1,6 +1,8 @@
 import torch_geometric as pyg
 import torch_geometric.utils as pyg_utils
 import matplotlib.pyplot as plt
+import torch
+from ParticleGraph.utils import *
 
 class PDE_Laplacian(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:

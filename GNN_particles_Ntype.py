@@ -3,6 +3,7 @@ from shutil import copyfile
 import argparse
 import networkx as nx
 import scipy.io
+import umap
 import torch
 import torch.nn as nn
 import torch_geometric.data as data

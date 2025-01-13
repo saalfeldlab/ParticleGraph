@@ -1,6 +1,7 @@
-
+import torch
 import torch_geometric as pyg
 import torch_geometric.utils as pyg_utils
+from ParticleGraph.utils import to_numpy
 
 
 class PDE_F(pyg.nn.MessagePassing):

@@ -4,7 +4,8 @@ import torch_geometric.utils as pyg_utils
 import numpy as np
 import matplotlib.pyplot as plt
 from tifffile import imread
-
+import torch
+from ParticleGraph.utils import *
 
 def constructRandomMatrices(n_neurons=1000, density=1.0, connectivity_mask=[], device=[]):
     """
