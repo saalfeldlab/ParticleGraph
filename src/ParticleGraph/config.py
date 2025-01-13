@@ -23,6 +23,7 @@ class SimulationConfig(BaseModel):
 
     boundary: Literal['periodic', 'no', 'periodic_special', 'wall'] = 'periodic'
     bounce: bool = False
+    bounce_coeff: float = 0.1
     min_radius: float = 0.0
     max_radius: Annotated[float, Field(gt=0)]
     smooth_radius: float = 0.1

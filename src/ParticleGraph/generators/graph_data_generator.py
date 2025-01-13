@@ -429,6 +429,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
     cmap = CustomColorMap(config=config)
     dataset_name = config.dataset
     bounce = simulation_config.bounce
+    bounce_coeff = simulation_config.bounce_coeff
 
     folder = f'./graphs_data/graphs_{dataset_name}/'
     if erase:
@@ -606,7 +607,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 X1 = X1 + V1 * delta_t
                 bouncing_pos = torch.argwhere((X1[:, 1] <= 0) ).squeeze()
                 if bouncing_pos.numel() > 0:
-                    V1[bouncing_pos, 1] = 0.6 * torch.abs(V1[bouncing_pos, 1])
+                    V1[bouncing_pos, 1] = bounce_coeff * torch.abs(V1[bouncing_pos, 1])
                     X1[bouncing_pos, 1] = 0.01 + torch.rand(bouncing_pos.numel(), device=device) * 0.05
                 X1 = bc_pos(X1)
 
@@ -644,7 +645,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     fig = plt.figure(figsize=(8, 8))
                     plt.imshow(im_resized, vmin=2, vmax=6, cmap='bwr')
                     # plt.scatter(to_numpy(x_mesh[:, 1] * 1000), to_numpy(x_mesh[:, 2] * 1000), c=density_field, s=40, vmin=2, vmax=6, cmap='bwr')
-                    plt.text(20, 950, f'{np.mean(density_field):0.3}+/-{np.std(density_field):0.3}', c='k', fontsize=18)
+                    # plt.text(20, 950, f'{np.mean(density_field):0.3}+/-{np.std(density_field):0.3}', c='k', fontsize=18)
                     plt.scatter(to_numpy(x[:, 1]*1000), to_numpy(x[:, 2]*1000), s=1, c='k')
                     plt.tight_layout()
                     plt.xlim([0,1000])

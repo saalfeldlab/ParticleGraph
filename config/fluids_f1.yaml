@@ -15,6 +15,7 @@ simulation:
   dpos_init: 0 # 5.0E-1
   boundary: 'periodic'
   bounce: True
+  bounce_coeff: 0.1
   start_frame: 0
   node_value_map: 'pattern_Null.tif'
 

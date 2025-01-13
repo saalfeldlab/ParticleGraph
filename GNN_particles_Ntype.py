@@ -53,11 +53,13 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        task = 'generate'
+        task = 'test'
         best_model = 'best'
         # config_list = ['cell_MDCK_5','cell_MDCK_3','cell_MDCK_4','cell_MDCK_2']
-        # config_list = ['falling_water_ramp_x6_6','falling_water_ramp_x6_7','falling_water_ramp_x6_8','falling_water_ramp_x6_9','falling_water_ramp_x6_10','falling_water_ramp_x6_11']
-        config_list = ['fluids_h', 'fluids_i'] #, 'fluids_f', 'fluids_g','fluids_e1', 'fluids_f1', 'fluids_g1','fluids_e2', 'fluids_f2', 'fluids_g2']
+        config_list = ['falling_water_ramp_x6_6','falling_water_ramp_x6_7','falling_water_ramp_x6_8','falling_water_ramp_x6_9',
+            'falling_water_ramp_x6_10','falling_water_ramp_x6_11','falling_water_ramp_x6_12']
+        # config_list = ['fluids_h','fluids_i','fluids_j']
+        # config_list = ['fluids_f', 'fluids_f1', 'fluids_f2']
 
     for config_file in config_list:
 

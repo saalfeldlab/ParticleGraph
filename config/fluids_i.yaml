@@ -2,10 +2,10 @@ description: 'fluids simulation'
 dataset: 'fluids_i'
 
 simulation:
-  params: [[-10, 10.0, 10, 10.0]]
+  params: [[-10, 8.0, 4.0, 10.0]]
   min_radius: 0.001
   max_radius: 0.05
-  n_particles: 1000
+  n_particles: 2000
   n_particle_types: 1
   has_cell_division: False
   n_nodes: 10000
@@ -15,6 +15,7 @@ simulation:
   dpos_init: 0 # 5.0E-1
   boundary: 'periodic'
   bounce: True
+  bounce_coeff: 0.1
   start_frame: 0
   node_value_map: 'pattern_Null.tif'
 
