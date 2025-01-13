@@ -66,6 +66,10 @@ class PDE_F(pyg.nn.MessagePassing):
 
         out = out / (self.density.repeat(1,out.shape[1]) + 1E-7)
 
+        pos = torch.argwhere(self.density==0)
+        if pos.numel() > 0:
+            out[pos[:,0],:] = 0
+
         out[:, 1] = out[:, 1] + torch.ones_like(out[:, 1]) * self.p[0] * 9.8
 
         return out

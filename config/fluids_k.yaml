@@ -23,7 +23,7 @@ graph_model:
   mesh_model_name: ''
 
   field_grid: 'grid'
-  field_type: 'calculus triangle'
+  field_type: 'calculus gaussian'
 
   prediction: 'first_derivative'
   input_size: 9
