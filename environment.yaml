@@ -22,9 +22,6 @@ dependencies:
   - astropy
   - scikit-image
   - pysr
-  - h5py
-  - zarr
-  - xarray
   - pip:
     - geomloss
     - torch_geometric
