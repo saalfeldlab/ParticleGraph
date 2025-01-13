@@ -2,6 +2,7 @@ name: particle-graph
 channels:
   - conda-forge
 dependencies:
+  - python==3.10.13
   - pytorch
   - torchvision
   - umap-learn
