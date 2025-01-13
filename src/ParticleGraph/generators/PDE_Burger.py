@@ -5,8 +5,6 @@ from scipy.integrate import odeint
 import matplotlib
 import torch
 import torch.fft
-# import viz_tools
-
 
 """ 
 This file was built to solve numerically 1D Burgers' equation wave equation with the FFT. The equation corresponds to :

@@ -1,8 +1,7 @@
-import torch
+
 import torch_geometric as pyg
 import torch_geometric.utils as pyg_utils
-from ParticleGraph.utils import to_numpy, density_laplace, density_divergence, density_gradient
-import numpy as np
+
 
 class PDE_F(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:

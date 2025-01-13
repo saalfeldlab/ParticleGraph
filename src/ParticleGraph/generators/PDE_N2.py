@@ -1,12 +1,7 @@
-import torch
+
 import torch_geometric as pyg
 import torch_geometric.utils as pyg_utils
 from ParticleGraph.utils import to_numpy
-from scipy import sparse
-import seaborn as sns
-import numpy as np
-import matplotlib.pyplot as plt
-from tifffile import imread
 
 class PDE_N2(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:

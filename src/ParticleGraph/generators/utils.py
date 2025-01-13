@@ -1,9 +1,6 @@
 import torch
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib
-# matplotlib.use("Qt5Agg")
-from tifffile import imread
+
 from ParticleGraph.generators import PDE_A, PDE_B, PDE_E, PDE_F, PDE_G, PDE_K, PDE_N, PDE_N2, PDE_N4, PDE_N5, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, PDE_Laplacian, PDE_O
 from ParticleGraph.utils import choose_boundary_values
 from ParticleGraph.data_loaders import load_solar_system, load_LG_ODE, load_WaterRampsWall, load_cell_data
@@ -13,9 +10,8 @@ from tifffile import imread, imsave
 from torch_geometric.utils import get_mesh_laplacian
 from tqdm import trange
 
-from ParticleGraph.utils import to_numpy
-from torchvision.transforms import v2
-from scipy import ndimage
+
+
 
 
 def generate_from_data(config, device, visualize=True, step=None, cmap=None):
