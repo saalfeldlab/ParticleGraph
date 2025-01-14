@@ -9,9 +9,6 @@ from torch_geometric.utils import get_mesh_laplacian
 from tqdm import trange
 
 
-
-
-
 def generate_from_data(config, device, visualize=True, step=None, cmap=None):
 
     data_folder_name = config.data_folder_name
@@ -245,7 +242,7 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
 
     if ('PDE_F' in config.graph_model.particle_model_name):
         pos = torch.rand(n_particles, dimension, device=device)
-        # pos = pos * 0.5 + 0.25
+        pos = pos * 0.5 + 0.25
     elif (simulation_config.boundary == 'periodic'):
         pos = torch.rand(n_particles, dimension, device=device)
         if n_particles <= 10:

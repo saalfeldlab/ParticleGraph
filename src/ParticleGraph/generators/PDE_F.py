@@ -45,7 +45,7 @@ class PDE_F(pyg.nn.MessagePassing):
         pos = x[:, 1:self.dimension+1]
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
 
-        pos = pos + 0.25 * d_pos * self.delta_t
+        pos = pos + 1 * d_pos * self.delta_t
 
         field = x[:, 2*self.dimension+2: 2*self.dimension+3]
 
@@ -64,7 +64,7 @@ class PDE_F(pyg.nn.MessagePassing):
             self.mode = 'mlp'
             out = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, particle_type=particle_type, density=self.density)
 
-        out = out / (self.density.repeat(1,out.shape[1]) + 1E-7)
+        out[:,0:self.dimension] = out[:,0:self.dimension] / (self.density.repeat(1,self.dimension) + 1E-7)        # divide force by density
 
         pos = torch.argwhere(self.density==0)
         if pos.numel() > 0:
@@ -113,7 +113,11 @@ class PDE_F(pyg.nn.MessagePassing):
 
             pressure_force = ((density_i+density_j)/2 - self.p[2]/2) * self.kernel_operators[:, 3:5] * self.p[1] / density_j.repeat(1,2)
             viscosity_force = (d_pos_j-d_pos_i) * self.p[3] * self.kernel_operators[:, 0:1].repeat(1,2) / density_j.repeat(1,2)
-            out = pressure_force + viscosity_force
+            force = pressure_force + viscosity_force
+
+            velocity = self.kernel_operators[:, 0:1] * torch.sum(d_pos_j ** 2, dim=1)[:, None] / density_j
+
+            out = torch.cat((force, velocity), dim=1)
 
             return out
 

@@ -61,7 +61,7 @@ if __name__ == '__main__':
         # config_list = ['falling_water_ramp_x6_6','falling_water_ramp_x6_7','falling_water_ramp_x6_8','falling_water_ramp_x6_9',
         #     'falling_water_ramp_x6_10','falling_water_ramp_x6_11','falling_water_ramp_x6_12']
         # config_list = ['fluids_h','fluids_i','fluids_j']
-        config_list = ['fluids_k']
+        config_list = ['fluids_m', 'fluids_m1', 'fluids_m2', 'fluids_m3', 'fluids_m4', 'fluids_m5', 'fluids_m6', 'fluids_m7']
 
     for config_file in config_list:
 
@@ -71,7 +71,7 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
         if 'generate' in task:
-            data_generate(config, device=device, visualize=True, run_vizualized=0, style='black field', alpha=1, erase=False, bSave=True, step=2)  #config.simulation.n_frames // 100)
+            data_generate(config, device=device, visualize=True, run_vizualized=0, style='black field', alpha=1, erase=False, bSave=True, step=4)  #config.simulation.n_frames // 100)
         if 'train' in task:
             data_train(config=config, config_file=config_file, erase=False, best_model=best_model, device=device)
         if 'test' in task:

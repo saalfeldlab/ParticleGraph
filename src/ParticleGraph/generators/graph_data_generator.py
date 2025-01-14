@@ -547,7 +547,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
 
                 y_field = model(dataset, continuous_field=True, continuous_field_size=x_mesh.shape)[0: x_mesh.shape[0]]
                 density_field = model.density[0: x_mesh.shape[0]]
-
+                velocity_field = y_field[0: x_mesh.shape[0],2]
 
             else:
 
@@ -612,7 +612,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 bouncing_pos = torch.argwhere((X1[:, 1] <= 0) ).squeeze()
                 if bouncing_pos.numel() > 0:
                     V1[bouncing_pos, 1] = bounce_coeff * torch.abs(V1[bouncing_pos, 1])
-                    X1[bouncing_pos, 1] = 0.01 + torch.rand(bouncing_pos.numel(), device=device) * 0.05
+                    X1[bouncing_pos, 1] = 0  #  + torch.rand(bouncing_pos.numel(), device=device) * 0.05
                 X1 = bc_pos(X1)
 
             else:
@@ -641,23 +641,43 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
 
                 if 'field' in style:
 
+
+
+                    fig = plt.figure(figsize=(8, 8))
+                    plt.xticks([])
+                    plt.yticks([])
                     density_field = to_numpy(density_field)
                     im = np.reshape(density_field, (100, 100))
                     # im = np.flipud(im)
                     im_resized = zoom(im, 10)
-
-                    fig = plt.figure(figsize=(8, 8))
-                    plt.imshow(im_resized, vmin=2, vmax=6, cmap='bwr')
+                    plt.imshow(im_resized, vmin=0, vmax=16, cmap='bwr')
                     # plt.scatter(to_numpy(x_mesh[:, 1] * 1000), to_numpy(x_mesh[:, 2] * 1000), c=density_field, s=40, vmin=2, vmax=6, cmap='bwr')
                     # plt.text(20, 950, f'{np.mean(density_field):0.3}+/-{np.std(density_field):0.3}', c='k', fontsize=18)
                     plt.scatter(to_numpy(x[:, 1]*1000), to_numpy(x[:, 2]*1000), s=1, c='k')
                     plt.tight_layout()
                     plt.xlim([0,1000])
                     plt.ylim([0,1000])
-                    plt.xticks([])
-                    plt.yticks([])
+                    plt.tight_layout()
                     plt.tight_layout()
                     plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=80)
+                    plt.close()
+
+                    fig = plt.figure(figsize=(8, 8))
+                    plt.xticks([])
+                    plt.yticks([])
+                    velocity_field = to_numpy(velocity_field)
+                    im = np.reshape(velocity_field, (100, 100))
+                    plt.tight_layout()
+                    # im = np.flipud(im)
+                    im_resized = zoom(im, 10)
+                    plt.imshow(im_resized, cmap='viridis', vmin=0, vmax=1)
+                    plt.scatter(to_numpy(x[:, 1]*1000), to_numpy(x[:, 2]*1000), s=1, c='w')
+                    plt.tight_layout()
+                    plt.xlim([0,1000])
+                    plt.ylim([0,1000])
+                    plt.tight_layout()
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Vel_{run}_{it}.jpg", dpi=80)
+                    # plt.show()
                     plt.close()
 
                     # Q = ax.quiver(to_numpy(x[:, 1]), to_numpy(x[:, 2]), to_numpy(y[:, 0]), to_numpy(y[:, 1]), color='r')
