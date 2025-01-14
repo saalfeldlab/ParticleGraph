@@ -66,8 +66,8 @@ class PDE_F(pyg.nn.MessagePassing):
 
         out[:,0:self.dimension] = out[:,0:self.dimension] / (self.density.repeat(1,self.dimension) + 1E-7)        # divide force by density
 
-        out = torch.where(torch.isinf(out), torch.zeros_like(out), out)
-        out = torch.where(torch.isnan(out), torch.zeros_like(out), out)
+        # out = torch.where(torch.isinf(out), torch.zeros_like(out), out)
+        # out = torch.where(torch.isnan(out), torch.zeros_like(out), out)
 
         out[:, 1] = out[:, 1] + torch.ones_like(out[:, 1]) * self.p[0] * 9.8
 
@@ -91,6 +91,7 @@ class PDE_F(pyg.nn.MessagePassing):
 
             grad_density_kernel = density_gradient(density_kernel, mgrid)
             grad_pressure_kernel = density_gradient(pressure_kernel, mgrid)
+            grad_pressure_kernel = torch.where(torch.isnan(grad_pressure_kernel), torch.zeros_like(grad_pressure_kernel), grad_pressure_kernel)
 
             # laplace_autograd = density_laplace(density_kernel, mgrid)
 
