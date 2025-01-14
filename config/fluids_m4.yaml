@@ -9,7 +9,7 @@ simulation:
   n_particle_types: 1
   has_cell_division: False
   n_nodes: 10000
-  n_frames: 2000
+  n_frames: 3000
   sigma: 0.005
   delta_t: 0.005
   dpos_init: 0 # 5.0E-1
