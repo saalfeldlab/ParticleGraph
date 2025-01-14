@@ -61,7 +61,7 @@ if __name__ == '__main__':
         # config_list = ['falling_water_ramp_x6_6','falling_water_ramp_x6_7','falling_water_ramp_x6_8','falling_water_ramp_x6_9',
         #     'falling_water_ramp_x6_10','falling_water_ramp_x6_11','falling_water_ramp_x6_12']
         # config_list = ['fluids_h','fluids_i','fluids_j']
-        config_list = ['fluids_l1', 'fluids_l2', 'fluids_l3']
+        config_list = ['fluids_m']
 
     for config_file in config_list:
 

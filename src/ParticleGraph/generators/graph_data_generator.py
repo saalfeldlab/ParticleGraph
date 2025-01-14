@@ -505,6 +505,9 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
         time.sleep(0.5)
         for it in trange(simulation_config.start_frame, n_frames + 1):
 
+            check_and_clear_memory(device=device, iteration_number=it, every_n_iterations=it // 50,
+                                   memory_percentage_threshold=0.6)
+
             if ('siren' in model_config.field_type) & (it >= 0):
                 im = imread(f"graphs_data/{simulation_config.node_value_map}") # / 255 * 5000
                 im = im[it].squeeze()
@@ -641,8 +644,10 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
 
                 if 'field' in style:
 
+                    if it==220:
+                        a=1
 
-
+                    # matplotlib.use("Qt5Agg")
                     fig = plt.figure(figsize=(8, 8))
                     plt.xticks([])
                     plt.yticks([])
@@ -654,11 +659,11 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     # plt.scatter(to_numpy(x_mesh[:, 1] * 1000), to_numpy(x_mesh[:, 2] * 1000), c=density_field, s=40, vmin=2, vmax=6, cmap='bwr')
                     # plt.text(20, 950, f'{np.mean(density_field):0.3}+/-{np.std(density_field):0.3}', c='k', fontsize=18)
                     plt.scatter(to_numpy(x[:, 1]*1000), to_numpy(x[:, 2]*1000), s=1, c='k')
-                    plt.tight_layout()
+                    plt.axis('off')
                     plt.xlim([0,1000])
-                    plt.ylim([0,1000])
+                    plt.ylim([-40,1000])
                     plt.tight_layout()
-                    plt.tight_layout()
+                    # plt.show()
                     plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=80)
                     plt.close()
 
@@ -667,14 +672,13 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     plt.yticks([])
                     velocity_field = to_numpy(velocity_field)
                     im = np.reshape(velocity_field, (100, 100))
-                    plt.tight_layout()
+                    plt.axis('off')
                     # im = np.flipud(im)
                     im_resized = zoom(im, 10)
                     plt.imshow(im_resized, cmap='viridis', vmin=0, vmax=1)
                     plt.scatter(to_numpy(x[:, 1]*1000), to_numpy(x[:, 2]*1000), s=1, c='w')
-                    plt.tight_layout()
                     plt.xlim([0,1000])
-                    plt.ylim([0,1000])
+                    plt.ylim([-40,1000])
                     plt.tight_layout()
                     plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Vel_{run}_{it}.jpg", dpi=80)
                     # plt.show()
