@@ -525,18 +525,23 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             x_particle_field = torch.concatenate((x_mesh, x), dim=0)
 
             # compute particle-particle connectivity
-            distance = torch.sum(bc_dpos(x[:, None, 1:dimension+1] - x[None, :, 1:dimension+1]) ** 2, dim=2)
-            adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-            edge_index = adj_t.nonzero().t().contiguous()
-            dataset_p_p = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
-            if not(has_particle_dropout):
-                edge_p_p_list.append(edge_index)
+
 
             # model prediction
             if ('calculus' in model_config.field_type):
 
+                if it == 212:
+                    a = 1
+
+                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                adj_t = ((distance < max_radius ** 2) & (distance >= 0)).float() * 1
+                edge_index = adj_t.nonzero().t().contiguous()
+                dataset_p_p = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
+                if not (has_particle_dropout):
+                    edge_p_p_list.append(edge_index)
+
                 distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x_mesh[None, :, 1:dimension + 1]) ** 2, dim=2)
-                adj_t = ((distance < max_radius ** 2) & (distance > 0)).float() * 1
+                adj_t = ((distance < max_radius ** 2) & (distance >= 0)).float() * 1
                 edge_index = adj_t.nonzero().t().contiguous()
                 xp = torch.cat((x_mesh[:, 0: 2 + 2*dimension], x[:, 0: 2 + 2*dimension]), 0)
                 edge_index[0, :] = edge_index[0, :] + x_mesh.shape[0]
@@ -553,6 +558,13 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 velocity_field = y_field[0: x_mesh.shape[0],2]
 
             else:
+
+                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                edge_index = adj_t.nonzero().t().contiguous()
+                dataset_p_p = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
+                if not (has_particle_dropout):
+                    edge_p_p_list.append(edge_index)
 
                 distance = torch.sum(bc_dpos(
                     x_particle_field[:, None, 1:dimension + 1] - x_particle_field[None, :, 1:dimension + 1]) ** 2,
@@ -614,8 +626,8 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 X1 = X1 + V1 * delta_t
                 bouncing_pos = torch.argwhere((X1[:, 1] <= 0) ).squeeze()
                 if bouncing_pos.numel() > 0:
-                    V1[bouncing_pos, 1] = bounce_coeff * torch.abs(V1[bouncing_pos, 1])
-                    X1[bouncing_pos, 1] = 0  #  + torch.rand(bouncing_pos.numel(), device=device) * 0.05
+                    V1[bouncing_pos, 1] = - bounce_coeff * V1[bouncing_pos, 1]
+                    X1[bouncing_pos, 1] = 1E-6  #  + torch.rand(bouncing_pos.numel(), device=device) * 0.05
                 X1 = bc_pos(X1)
 
             else:
@@ -644,9 +656,12 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
 
                 if 'field' in style:
 
-                    if it==220:
-                        a=1
-
+                    # distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                    # adj_t = ((distance < max_radius ** 2) & (distance >= 0)).float() * 1
+                    # edge_index = adj_t.nonzero().t().contiguous()
+                    # pos = torch.argwhere(edge_index[1,:]==3393)
+                    # pos = edge_index[0,pos.squeeze()]
+                    #
                     # matplotlib.use("Qt5Agg")
                     fig = plt.figure(figsize=(8, 8))
                     plt.xticks([])
@@ -659,6 +674,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     # plt.scatter(to_numpy(x_mesh[:, 1] * 1000), to_numpy(x_mesh[:, 2] * 1000), c=density_field, s=40, vmin=2, vmax=6, cmap='bwr')
                     # plt.text(20, 950, f'{np.mean(density_field):0.3}+/-{np.std(density_field):0.3}', c='k', fontsize=18)
                     plt.scatter(to_numpy(x[:, 1]*1000), to_numpy(x[:, 2]*1000), s=1, c='k')
+                    # plt.scatter(to_numpy(x[pos, 1] * 1000), to_numpy(x[pos, 2] * 1000), s=10, c='r')
                     plt.axis('off')
                     plt.xlim([0,1000])
                     plt.ylim([-40,1000])
