@@ -520,11 +520,13 @@ def get_less_used_gpu(gpus=None, debug=False):
     min_allocated = min(cur_allocated_mem, key=cur_allocated_mem.get)
     if debug:
         print(warn)
-        print('Current allocated memory:', {f'cuda:{k}': v for k, v in cur_allocated_mem.items()})
-        print('Current reserved memory:', {f'cuda:{k}': v for k, v in cur_cached_mem.items()})
-        print('Maximum allocated memory:', {f'cuda:{k}': v for k, v in max_allocated_mem.items()})
-        print('Maximum reserved memory:', {f'cuda:{k}': v for k, v in max_cached_mem.items()})
-        print('Suggested GPU:', min_allocated)
+        # print('Current allocated memory:', {f'cuda:{k}': v for k, v in cur_allocated_mem.items()})
+        # print('Current reserved memory:', {f'cuda:{k}': v for k, v in cur_cached_mem.items()})
+        # print('Maximum allocated memory:', {f'cuda:{k}': v for k, v in max_allocated_mem.items()})
+        # print('Maximum reserved memory:', {f'cuda:{k}': v for k, v in max_cached_mem.items()})
+        # print('Suggested GPU:', min_allocated)
+        print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
+        print(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
     return min_allocated
 
 
@@ -534,7 +536,7 @@ def free_memory(to_delete: list, debug=False):
     calling_namespace = inspect.currentframe().f_back
     if debug:
         print('Before:')
-        get_less_used_gpu(debug=True)
+        get_less_used_gpu(debug=False)
 
     for _var in to_delete:
         calling_namespace.f_locals.pop(_var, None)
@@ -570,8 +572,9 @@ def check_and_clear_memory(
             gc.collect()
             torch.cuda.empty_cache()
 
-            print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
-            print(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
+            if (iteration_number==0):
+                logger.info(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
+                logger.info(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
 
 
         elif torch.cuda.memory_allocated(device) > memory_percentage_threshold * torch.cuda.get_device_properties(device).total_memory:
