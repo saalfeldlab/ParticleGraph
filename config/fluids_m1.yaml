@@ -39,6 +39,7 @@ plotting:
   colormap: 'tab20'
   arrow_length: 5
   ylim: [-1E-4, 1E-4]
+  speedlim: [0, 0.1]
 
 training:
   n_epochs: 20

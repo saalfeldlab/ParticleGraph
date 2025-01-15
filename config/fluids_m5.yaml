@@ -9,13 +9,13 @@ simulation:
   n_particle_types: 1
   has_cell_division: False
   n_nodes: 10000
-  n_frames: 3000
+  n_frames: 2000
   sigma: 0.005
   delta_t: 0.005
   dpos_init: 0 # 5.0E-1
   boundary: 'periodic'
   bounce: True
-  bounce_coeff: 0.6
+  bounce_coeff: 0.95
   start_frame: 0
   node_value_map: 'pattern_Null.tif'
 

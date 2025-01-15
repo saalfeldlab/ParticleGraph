@@ -1,15 +1,15 @@
 description: 'fluids simulation'
-dataset: 'fluids_m11'
+dataset: 'fluids_m12'
 
 simulation:
-  params: [[-0.05, 1.0, 26, 25.0]]
+  params: [[-0.025, 1.0, 26, 25.0]]
   min_radius: 0.001
   max_radius: 0.05
   n_particles: 4000
   n_particle_types: 1
   has_cell_division: False
   n_nodes: 10000
-  n_frames: 3000
+  n_frames: 2000
   sigma: 0.005
   delta_t: 0.005
   dpos_init: 0 # 5.0E-1

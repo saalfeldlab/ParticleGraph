@@ -113,11 +113,6 @@ class Interaction_Particle(pyg.nn.MessagePassing):
 
     def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j, field_j):
 
-        if torch.isnan(pos_i).any():
-            print('nan')
-        if torch.isnan(pos_i).any():
-            print('nan')
-
         # distance normalized by the max radius
         r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
         delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
@@ -145,7 +140,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
                 in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
             case 'PDE_A_bis':
                 in_features = torch.cat((delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
-            case 'PDE_B' | 'PDE_ParticleField_B':
+            case 'PDE_B' | 'PDE_ParticleField_B' | 'PDE_F':
                 in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
                                          dpos_y_j[:, None], embedding_i), dim=-1)
             case 'PDE_G':

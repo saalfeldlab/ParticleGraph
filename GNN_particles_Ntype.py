@@ -56,12 +56,9 @@ if __name__ == '__main__':
             best_model = None
     else:
         task = 'generate'
-        best_model = 'best'
+        best_model = None
         # config_list = ['cell_MDCK_5','cell_MDCK_3','cell_MDCK_4','cell_MDCK_2']
-        # config_list = ['falling_water_ramp_x6_6','falling_water_ramp_x6_7','falling_water_ramp_x6_8','falling_water_ramp_x6_9',
-        #     'falling_water_ramp_x6_10','falling_water_ramp_x6_11','falling_water_ramp_x6_12']
-        # config_list = ['fluids_h','fluids_i','fluids_j']
-        config_list = ['fluids_m']
+        config_list = ['fluids_l1']
 
     for config_file in config_list:
 
@@ -71,7 +68,7 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
         if 'generate' in task:
-            data_generate(config, device=device, visualize=True, run_vizualized=0, style='black field', alpha=1, erase=False, bSave=True, step=4)  #config.simulation.n_frames // 100)
+            data_generate(config, device=device, visualize=False, run_vizualized=0, style='black field', alpha=1, erase=False, bSave=False, step=4)  #config.simulation.n_frames // 100)
         if 'train' in task:
             data_train(config=config, config_file=config_file, erase=False, best_model=best_model, device=device)
         if 'test' in task:

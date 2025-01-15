@@ -504,10 +504,19 @@ def check_and_clear_memory(
         logger = logging.getLogger(__name__)
 
         if (iteration_number % (10 * every_n_iterations) == 0):
-            logger.debug(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
-            logger.debug(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
+            logger.info(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
+            logger.info(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
 
-        if (iteration_number % every_n_iterations == 0) or torch.cuda.memory_allocated(device) > memory_percentage_threshold * torch.cuda.get_device_properties(device).total_memory:
-            logger.debug("Memory usage is high. Calling garbage collector and clearing cache.")
+        if (iteration_number % every_n_iterations == 0):
+            logger.info(f"Recurrent cuda cleanining")
+            logger.info(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
+            logger.info(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
+            torch.cuda.memory_allocated(device)
+            gc.collect()
+            torch.cuda.empty_cache()
+        elif torch.cuda.memory_allocated(device) > memory_percentage_threshold * torch.cuda.get_device_properties(device).total_memory:
+            logger.info("Memory usage is high. Calling garbage collector and clearing cache.")
+            logger.info(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
+            logger.info(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
             gc.collect()
             torch.cuda.empty_cache()

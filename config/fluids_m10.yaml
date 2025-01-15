@@ -1,5 +1,5 @@
 description: 'fluids simulation'
-dataset: 'fluids_m8'
+dataset: 'fluids_m10'
 
 simulation:
   params: [[-0.1, 1.0, 26, 25.0]]
@@ -9,8 +9,8 @@ simulation:
   n_particle_types: 1
   has_cell_division: False
   n_nodes: 10000
-  n_frames: 3000
-  sigma: 0.005
+  n_frames: 2000
+  sigma: 0.0075
   delta_t: 0.006
   dpos_init: 0 # 5.0E-1
   boundary: 'periodic'

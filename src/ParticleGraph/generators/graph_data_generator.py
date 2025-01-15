@@ -48,9 +48,9 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                                         alpha=0.2, ratio=ratio,
                                         scenario=scenario, device=device, bSave=bSave)
     elif has_particle_field:
-        data_generate_particle_field(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=False, step=step,
+        data_generate_particle_field(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
                                      alpha=0.2, ratio=ratio,
-                                     scenario='none', device=None, bSave=True)
+                                     scenario='none', device=device, bSave=bSave)
     elif has_mesh:
         data_generate_mesh(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
                                         alpha=0.2, ratio=ratio,
@@ -434,6 +434,12 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
     dataset_name = config.dataset
     bounce = simulation_config.bounce
     bounce_coeff = simulation_config.bounce_coeff
+    speedlim = config.plotting.speedlim
+
+    logging.basicConfig(filename=f'./graphs_data/graphs_{dataset_name}/generator.log', format='%(asctime)s %(message)s',filemode='w')
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    logger.info(config)
 
     folder = f'./graphs_data/graphs_{dataset_name}/'
     if erase:
@@ -451,12 +457,10 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
 
     if ('calculus' in model_config.field_type):
         model, bc_pos, bc_dpos = choose_model(config=config, device=device)
-        std_list=[]
     else:
         model_p_p, bc_pos, bc_dpos = choose_model(config=config, device=device)
         model_f_p = model_p_p
-
-    # model_f_f = choose_mesh_model(config, device=device)
+        # model_f_f = choose_mesh_model(config, device=device)
 
     index_particles = []
     for n in range(n_particle_types):
@@ -505,7 +509,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
         time.sleep(0.5)
         for it in trange(simulation_config.start_frame, n_frames + 1):
 
-            check_and_clear_memory(device=device, iteration_number=it, every_n_iterations=it // 50,
+            check_and_clear_memory(device=device, iteration_number=it, every_n_iterations=250,
                                    memory_percentage_threshold=0.6)
 
             if ('siren' in model_config.field_type) & (it >= 0):
@@ -530,15 +534,14 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             # model prediction
             if ('calculus' in model_config.field_type):
 
-                if it == 212:
-                    a = 1
-
                 distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
                 adj_t = ((distance < max_radius ** 2) & (distance >= 0)).float() * 1
                 edge_index = adj_t.nonzero().t().contiguous()
                 dataset_p_p = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
-                if not (has_particle_dropout):
-                    edge_p_p_list.append(edge_index)
+
+                y = model(dataset_p_p)
+                y = y[:, 0: dimension]
+                density = model.density
 
                 distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x_mesh[None, :, 1:dimension + 1]) ** 2, dim=2)
                 adj_t = ((distance < max_radius ** 2) & (distance >= 0)).float() * 1
@@ -547,11 +550,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 edge_index[0, :] = edge_index[0, :] + x_mesh.shape[0]
                 edge_index, _ = pyg_utils.remove_self_loops(edge_index)
                 dataset = data.Data(x=xp, pos=xp[:, 1:dimension + 1], edge_index=edge_index)
-                edge_f_p_list.append(edge_index)
-
-                y = model(dataset_p_p)
-                y = y[:, 0: dimension]
-                density = model.density
 
                 y_field = model(dataset, continuous_field=True, continuous_field_size=x_mesh.shape)[0: x_mesh.shape[0]]
                 density_field = model.density[0: x_mesh.shape[0]]
@@ -610,10 +608,10 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     pos = to_numpy(pos[:, 0])
                     edge_index = edge_index[:, pos]
                     edge_f_p_list.append(edge_index)
-
                 else:
-                    x_list.append(x.clone().detach())
-                    y_list.append(y.clone().detach())
+                    a=1
+                    # x_list.append(x.clone().detach())
+                    # y_list.append(y.clone().detach())
 
             # Particle update
             if model_config.prediction == '2nd_derivative':
@@ -621,13 +619,12 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             else:
                 V1 = y
 
-
             if bounce:
                 X1 = X1 + V1 * delta_t
                 bouncing_pos = torch.argwhere((X1[:, 1] <= 0) ).squeeze()
                 if bouncing_pos.numel() > 0:
                     V1[bouncing_pos, 1] = - bounce_coeff * V1[bouncing_pos, 1]
-                    X1[bouncing_pos, 1] = 1E-6  #  + torch.rand(bouncing_pos.numel(), device=device) * 0.05
+                    X1[bouncing_pos, 1] = - X1[bouncing_pos, 1] # 1E-6  #  + torch.rand(bouncing_pos.numel(), device=device) * 0.05
                 X1 = bc_pos(X1)
 
             else:
@@ -656,17 +653,22 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
 
                 if 'field' in style:
 
+                    if it == 212:
+                        a=1
+
                     # distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
                     # adj_t = ((distance < max_radius ** 2) & (distance >= 0)).float() * 1
                     # edge_index = adj_t.nonzero().t().contiguous()
                     # pos = torch.argwhere(edge_index[1,:]==3393)
                     # pos = edge_index[0,pos.squeeze()]
-                    #
+
+
+                    density_field = to_numpy(density_field)
+
                     # matplotlib.use("Qt5Agg")
                     fig = plt.figure(figsize=(8, 8))
                     plt.xticks([])
                     plt.yticks([])
-                    density_field = to_numpy(density_field)
                     im = np.reshape(density_field, (100, 100))
                     # im = np.flipud(im)
                     im_resized = zoom(im, 10)
@@ -674,7 +676,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     # plt.scatter(to_numpy(x_mesh[:, 1] * 1000), to_numpy(x_mesh[:, 2] * 1000), c=density_field, s=40, vmin=2, vmax=6, cmap='bwr')
                     # plt.text(20, 950, f'{np.mean(density_field):0.3}+/-{np.std(density_field):0.3}', c='k', fontsize=18)
                     plt.scatter(to_numpy(x[:, 1]*1000), to_numpy(x[:, 2]*1000), s=1, c='k')
-                    # plt.scatter(to_numpy(x[pos, 1] * 1000), to_numpy(x[pos, 2] * 1000), s=10, c='r')
+                    # plt.scatter(to_numpy(x[pos, 1] * 1000), to_numpy(x[pos, 2] * 1000), s=10, c='b')
                     plt.axis('off')
                     plt.xlim([0,1000])
                     plt.ylim([-40,1000])
@@ -691,7 +693,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     plt.axis('off')
                     # im = np.flipud(im)
                     im_resized = zoom(im, 10)
-                    plt.imshow(im_resized, cmap='viridis', vmin=0, vmax=1)
+                    plt.imshow(im_resized, cmap='viridis', vmin=speedlim[0], vmax=speedlim[1])
                     plt.scatter(to_numpy(x[:, 1]*1000), to_numpy(x[:, 2]*1000), s=1, c='w')
                     plt.xlim([0,1000])
                     plt.ylim([-40,1000])
@@ -882,16 +884,21 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     plt.close()
 
         if bSave:
-            torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
+
+            x_list = np.array(to_numpy(torch.stack(x_list)))
+            y_list = np.array(to_numpy(torch.stack(y_list)))
+            np.save(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy', x_list)
             if has_particle_dropout:
                 torch.save(x_removed_list, f'graphs_data/graphs_{dataset_name}/x_removed_list_{run}.pt')
                 np.save(f'graphs_data/graphs_{dataset_name}/particle_dropout_mask.npy', particle_dropout_mask)
                 np.save(f'graphs_data/graphs_{dataset_name}/inv_particle_dropout_mask.npy', inv_particle_dropout_mask)
-            torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
+            np.save(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy', y_list)
+
             torch.save(x_mesh_list, f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt')
             torch.save(y_mesh_list, f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt')
             torch.save(edge_p_p_list, f'graphs_data/graphs_{dataset_name}/edge_p_p_list{run}.pt')
             torch.save(edge_f_p_list, f'graphs_data/graphs_{dataset_name}/edge_f_p_list{run}.pt')
+
             # torch.save(model_p_p.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
 
 
