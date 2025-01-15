@@ -487,20 +487,22 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
         edge_index = adj_t.nonzero().t().contiguous()
         edge_attr_adjacency = adjacency[adj_t]
 
-    x_list = []
-    y_list = []
-    x_mesh_list = []
-    y_mesh_list = []
-    edge_p_p_list = []
-    edge_f_p_list = []
+
 
     for run in range(config.training.n_runs):
 
         n_particles = simulation_config.n_particles
 
         if run >0:
-            free_memory(to_delete=[*dataset, *x_list, *y_list, *x_mesh_list, *y_mesh_list, *edge_p_p_list, *edge_f_p_list, *edge_index], debug=False)
+            free_memory(to_delete=[*dataset, *x_mesh_list, *y_mesh_list, *edge_p_p_list, *edge_f_p_list, *edge_index], debug=False)
             get_less_used_gpu(debug=True)
+
+        x_list = []
+        y_list = []
+        x_mesh_list = []
+        y_mesh_list = []
+        edge_p_p_list = []
+        edge_f_p_list = []
 
         # initialize particle and mesh states
         X1, V1, T1, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
@@ -520,6 +522,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
 
             check_and_clear_memory(device=device, iteration_number=it, every_n_iterations=250,
                                    memory_percentage_threshold=0.6)
+            time.sleep(1)
 
             if ('siren' in model_config.field_type) & (it >= 0):
                 im = imread(f"graphs_data/{simulation_config.node_value_map}") # / 255 * 5000

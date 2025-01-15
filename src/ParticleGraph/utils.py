@@ -525,8 +525,8 @@ def get_less_used_gpu(gpus=None, debug=False):
         # print('Maximum allocated memory:', {f'cuda:{k}': v for k, v in max_allocated_mem.items()})
         # print('Maximum reserved memory:', {f'cuda:{k}': v for k, v in max_cached_mem.items()})
         # print('Suggested GPU:', min_allocated)
-        print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
-        print(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
+        # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
+        # print(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
     return min_allocated
 
 
@@ -573,8 +573,8 @@ def check_and_clear_memory(
             torch.cuda.empty_cache()
 
             if (iteration_number==0):
-                logger.info(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
-                logger.info(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
+                print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
+                print(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
 
 
         elif torch.cuda.memory_allocated(device) > memory_percentage_threshold * torch.cuda.get_device_properties(device).total_memory:
