@@ -494,7 +494,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
         n_particles = simulation_config.n_particles
 
         if run >0:
-            free_memory(to_delete=[*dataset, *x_mesh_list, *y_mesh_list, *edge_p_p_list, *edge_f_p_list, *edge_index], debug=False)
+            free_memory(to_delete=[*dataset, *x_list, *y_list, *x_mesh_list, *y_mesh_list, *edge_p_p_list, *edge_f_p_list, *edge_index], debug=False)
             get_less_used_gpu(debug=True)
 
         x_list = []
@@ -517,12 +517,14 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
         torch.save(mesh_data, f'graphs_data/graphs_{dataset_name}/mesh_data_{run}.pt')
         mask_mesh = mesh_data['mask'].squeeze()
 
+        check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=250,
+                               memory_percentage_threshold=0.6)
+        time.sleep(1)
+
         time.sleep(0.5)
         for it in trange(simulation_config.start_frame, n_frames + 1):
 
-            check_and_clear_memory(device=device, iteration_number=it, every_n_iterations=250,
-                                   memory_percentage_threshold=0.6)
-            time.sleep(1)
+
 
             if ('siren' in model_config.field_type) & (it >= 0):
                 im = imread(f"graphs_data/{simulation_config.node_value_map}") # / 255 * 5000
@@ -624,23 +626,21 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     y_list.append(y.clone().detach())
 
             # Particle update
-            if model_config.prediction == '2nd_derivative':
-                V1 += y * delta_t
-            else:
-                V1 = y
-
-            if bounce:
-                X1 = X1 + V1 * delta_t
-                bouncing_pos = torch.argwhere((X1[:, 1] <= 0) ).squeeze()
-                if bouncing_pos.numel() > 0:
-                    V1[bouncing_pos, 1] = - bounce_coeff * V1[bouncing_pos, 1]
-                    X1[bouncing_pos, 1] = - X1[bouncing_pos, 1] # 1E-6  #  + torch.rand(bouncing_pos.numel(), device=device) * 0.05
-                X1 = bc_pos(X1)
-
-            else:
-                X1 = bc_pos(X1 + V1 * delta_t)
-
-            A1 = A1 + 1
+            with torch.no_grad():
+                if model_config.prediction == '2nd_derivative':
+                    V1 += y * delta_t
+                else:
+                    V1 = y
+                if bounce:
+                    X1 = X1 + V1 * delta_t
+                    bouncing_pos = torch.argwhere((X1[:, 1] <= 0) ).squeeze()
+                    if bouncing_pos.numel() > 0:
+                        V1[bouncing_pos, 1] = - bounce_coeff * V1[bouncing_pos, 1]
+                        X1[bouncing_pos, 1] = - X1[bouncing_pos, 1] # 1E-6  #  + torch.rand(bouncing_pos.numel(), device=device) * 0.05
+                    X1 = bc_pos(X1)
+                else:
+                    X1 = bc_pos(X1 + V1 * delta_t)
+                A1 = A1 + 1
 
             # Mesh update
 
@@ -893,14 +893,15 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
 
         if bSave:
 
-            x_list = np.array(to_numpy(torch.stack(x_list)))
-            y_list = np.array(to_numpy(torch.stack(y_list)))
-            np.save(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy', x_list)
+            x_list_ = np.array(to_numpy(torch.stack(x_list)))
+            y_list_ = np.array(to_numpy(torch.stack(y_list)))
+            np.save(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy', x_list_)
             if has_particle_dropout:
                 torch.save(x_removed_list, f'graphs_data/graphs_{dataset_name}/x_removed_list_{run}.pt')
                 np.save(f'graphs_data/graphs_{dataset_name}/particle_dropout_mask.npy', particle_dropout_mask)
                 np.save(f'graphs_data/graphs_{dataset_name}/inv_particle_dropout_mask.npy', inv_particle_dropout_mask)
-            np.save(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy', y_list)
+            np.save(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy', y_list_)
+            del x_list_, y_list_
 
             torch.save(x_mesh_list, f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt')
             torch.save(y_mesh_list, f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt')
