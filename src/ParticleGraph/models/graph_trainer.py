@@ -236,6 +236,9 @@ def data_train_particle(config, config_file, erase, best_model, device):
 
     for epoch in range(start_epoch, n_epochs + 1):
 
+        logger.info(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
+        logger.info(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
+
         batch_size = get_batch_size(epoch)
         logger.info(f'batch_size: {batch_size}')
 
@@ -247,6 +250,8 @@ def data_train_particle(config, config_file, erase, best_model, device):
 
         total_loss = 0
         Niter = n_frames * data_augmentation_loop // batch_size
+
+        time.sleep(1)
 
         for N in trange(Niter):
 

@@ -487,15 +487,9 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
         edge_index = adj_t.nonzero().t().contiguous()
         edge_attr_adjacency = adjacency[adj_t]
 
-
-
     for run in range(config.training.n_runs):
 
         n_particles = simulation_config.n_particles
-
-        # if run >0:
-        #     free_memory(to_delete=[*dataset, *x_list, *y_list, *x_mesh_list, *y_mesh_list, *edge_p_p_list, *edge_f_p_list, *edge_index], debug=False)
-        #     get_less_used_gpu(debug=True)
 
         x_list = []
         y_list = []

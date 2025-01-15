@@ -55,10 +55,9 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        task = 'generate'
+        task = 'train'
         best_model = None
-        # config_list = ['cell_MDCK_5','cell_MDCK_3','cell_MDCK_4','cell_MDCK_2']
-        config_list = ['fluids_l1']
+        config_list = ['fluids_l1_training']
 
     for config_file in config_list:
 
