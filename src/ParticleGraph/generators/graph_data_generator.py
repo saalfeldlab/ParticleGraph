@@ -493,9 +493,9 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
 
         n_particles = simulation_config.n_particles
 
-        if run >0:
-            free_memory(to_delete=[*dataset, *x_list, *y_list, *x_mesh_list, *y_mesh_list, *edge_p_p_list, *edge_f_p_list, *edge_index], debug=False)
-            get_less_used_gpu(debug=True)
+        # if run >0:
+        #     free_memory(to_delete=[*dataset, *x_list, *y_list, *x_mesh_list, *y_mesh_list, *edge_p_p_list, *edge_f_p_list, *edge_index], debug=False)
+        #     get_less_used_gpu(debug=True)
 
         x_list = []
         y_list = []
@@ -524,8 +524,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
         time.sleep(0.5)
         for it in trange(simulation_config.start_frame, n_frames + 1):
 
-
-
             if ('siren' in model_config.field_type) & (it >= 0):
                 im = imread(f"graphs_data/{simulation_config.node_value_map}") # / 255 * 5000
                 im = im[it].squeeze()
@@ -541,9 +539,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                  T1_mesh.clone().detach(), H1_mesh.clone().detach(), A1_mesh.clone().detach()), 1)
 
             x_particle_field = torch.concatenate((x_mesh, x), dim=0)
-
-            # compute particle-particle connectivity
-
 
             # model prediction
             if ('calculus' in model_config.field_type):
