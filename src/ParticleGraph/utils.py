@@ -13,6 +13,8 @@ from torch_geometric.data import Data
 from torchvision.transforms import CenterCrop
 import gc
 from torch import cuda
+import subprocess
+
 
 def sort_key(filename):
             # Extract the numeric parts using regular expressions
@@ -35,19 +37,68 @@ def to_numpy(tensor: torch.Tensor) -> np.ndarray:
     return tensor.detach().cpu().numpy()
 
 
-def set_device(device=None):
-    if device is None or device == 'auto':
+
+def set_device(device: str = 'auto'):
+    """
+    Set the device to use for computations. If 'auto' is specified, the device is chosen automatically:
+     * if GPUs are available, the GPU with the most free memory is chosen
+     * if MPS is available, MPS is used
+     * otherwise, the CPU is used
+    :param device: The device to use for computations. Automatically chosen if 'auto' is specified (default).
+    :return: The torch.device object that is used for computations.
+    """
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    os.environ.pop('CUDA_VISIBLE_DEVICES', None)  # Unset CUDA_VISIBLE_DEVICES
+
+    if device == 'auto':
         if torch.cuda.is_available():
-            # Get the list of available GPUs and their free memory
-            gpus = GPUtil.getGPUs()
-            if gpus:
-                # Find the GPU with the maximum free memory
-                device_id = max(range(len(gpus)), key=lambda x: gpus[x].memoryFree)
-                device = f'cuda:{device_id}'
-            else:
+            try:
+                # Use nvidia-smi to get free memory of each GPU
+                result = subprocess.check_output(
+                    ['nvidia-smi', '--query-gpu=index,memory.free', '--format=csv,noheader,nounits'],
+                    encoding='utf-8'
+                )
+                # Parse the output
+                free_mem_list = []
+                for line in result.strip().split('\n'):
+                    index_str, mem_str = line.strip().split(',')
+                    index = int(index_str)
+                    free_mem = float(mem_str) * 1024 * 1024  # Convert MiB to bytes
+                    free_mem_list.append((index, free_mem))
+                # Ensure the device count matches
+                num_gpus = torch.cuda.device_count()
+                if num_gpus != len(free_mem_list):
+                    print(f"Mismatch in GPU count between PyTorch ({num_gpus}) and nvidia-smi ({len(free_mem_list)})")
+                    device = 'cpu'
+                    print(f"Using device: {device}")
+                else:
+                    # Find the GPU with the most free memory
+                    max_free_memory = -1
+                    best_device_id = -1
+                    for index, free_mem in free_mem_list:
+                        if free_mem > max_free_memory:
+                            max_free_memory = free_mem
+                            best_device_id = index
+                    if best_device_id == -1:
+                        raise ValueError("Could not determine the GPU with the most free memory.")
+
+                    device = f'cuda:{best_device_id}'
+                    torch.cuda.set_device(best_device_id)  # Set the chosen device globally
+                    total_memory_gb = torch.cuda.get_device_properties(best_device_id).total_memory / 1024 ** 3
+                    free_memory_gb = max_free_memory / 1024 ** 3
+                    print(
+                        f"Using device: {device}, name: {torch.cuda.get_device_name(best_device_id)}, "
+                        f"total memory: {total_memory_gb:.2f} GB, free memory: {free_memory_gb:.2f} GB")
+            except Exception as e:
+                print(f"Failed to get GPU information: {e}")
                 device = 'cpu'
+                print(f"Using device: {device}")
+        elif torch.backends.mps.is_available():
+            device = 'mps'
+            print(f"Using device: {device}")
         else:
             device = 'cpu'
+            print(f"Using device: {device}")
     return device
 
 
