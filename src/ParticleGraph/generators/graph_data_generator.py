@@ -126,6 +126,8 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
 
     for run in range(config.training.n_runs):
 
+        check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=250, memory_percentage_threshold=0.6)
+
         if 'PDE_K' in model_config.particle_model_name:
             p = config.simulation.params
             edges = np.random.choice(p[0], size=(n_particles, n_particles), p=p[1])
@@ -500,7 +502,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
 
         # initialize particle and mesh states
         X1, V1, T1, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
-        # X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, model_mesh=model_f_f, device=device)
         X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
 
         # matplotlib.use("Qt5Agg")
@@ -544,7 +545,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 adj_t = ((distance < max_radius ** 2) & (distance >= 0)).float() * 1
                 edge_index = adj_t.nonzero().t().contiguous()
                 dataset_p_p = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
-
                 y = model(dataset_p_p)
                 y = y[:, 0: dimension]
                 density = model.density
@@ -638,9 +638,11 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             A1 = A1 + 1
 
             # Mesh update
-            x_mesh_list.append(x_mesh.clone().detach())
-            pred = x_mesh[:,6:7]
-            y_mesh_list.append(pred)
+
+            if ('calculus' not in model_config.field_type):
+                x_mesh_list.append(x_mesh.clone().detach())
+                pred = x_mesh[:,6:7]
+                y_mesh_list.append(pred)
 
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
