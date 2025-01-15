@@ -1137,6 +1137,9 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
     train_config = config.training
     model_config = config.graph_model
 
+    torch.random.fork_rng(devices=device)
+    torch.random.manual_seed(config.training.seed)
+
     print(f'Training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
     n_epochs = train_config.n_epochs

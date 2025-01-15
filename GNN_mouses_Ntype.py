@@ -52,7 +52,7 @@ if __name__ == '__main__':
     else:
         action = 'generate'
         best_model = None
-        config_list = ['rat_city_c2']
+        config_list = ['rat_city_a']
 
     for config_file in config_list:
 

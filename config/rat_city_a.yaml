@@ -44,6 +44,7 @@ plotting:
   ylim: [0.94, 1.06]
 
 training:
+  seed: 40
   n_epochs: 20
   batch_size: 1
   small_init_batch_size: True
