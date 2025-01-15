@@ -481,16 +481,22 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
         edge_index = adj_t.nonzero().t().contiguous()
         edge_attr_adjacency = adjacency[adj_t]
 
+    x_list = []
+    y_list = []
+    x_mesh_list = []
+    y_mesh_list = []
+    edge_p_p_list = []
+    edge_f_p_list = []
+
     for run in range(config.training.n_runs):
 
         n_particles = simulation_config.n_particles
 
-        x_list = []
-        y_list = []
-        x_mesh_list = []
-        y_mesh_list = []
-        edge_p_p_list = []
-        edge_f_p_list = []
+        # if run >0:
+        #     free_memory(to_delete=[*dataset, *x_list, *y_list, *x_mesh_list, *y_mesh_list, *edge_p_p_list, *edge_f_p_list, *edge_index], debug=True)
+        #     get_less_used_gpu(debug=True)
+
+        check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=250, memory_percentage_threshold=0.6)
 
         # initialize particle and mesh states
         X1, V1, T1, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
@@ -609,9 +615,8 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     edge_index = edge_index[:, pos]
                     edge_f_p_list.append(edge_index)
                 else:
-                    a=1
-                    # x_list.append(x.clone().detach())
-                    # y_list.append(y.clone().detach())
+                    x_list.append(x.clone().detach())
+                    y_list.append(y.clone().detach())
 
             # Particle update
             if model_config.prediction == '2nd_derivative':
@@ -653,15 +658,11 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
 
                 if 'field' in style:
 
-                    if it == 212:
-                        a=1
-
                     # distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
                     # adj_t = ((distance < max_radius ** 2) & (distance >= 0)).float() * 1
                     # edge_index = adj_t.nonzero().t().contiguous()
                     # pos = torch.argwhere(edge_index[1,:]==3393)
                     # pos = edge_index[0,pos.squeeze()]
-
 
                     density_field = to_numpy(density_field)
 

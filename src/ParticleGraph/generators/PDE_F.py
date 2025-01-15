@@ -84,20 +84,20 @@ class PDE_F(pyg.nn.MessagePassing):
         self.delta_pos = delta_pos
 
         if self.mode == 'kernel':
-            mgrid = delta_pos.clone().detach()
-            mgrid.requires_grad = True
-            density_kernel = torch.exp(-4*(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / self.kernel_var)[:, None] / 2
+            self.mgrid = delta_pos.clone().detach()
+            self.mgrid.requires_grad = True
+            density_kernel = torch.exp(-4*(self.mgrid[:, 0] ** 2 + self.mgrid[:, 1] ** 2) / self.kernel_var)[:, None] / 2
 
             if 'gaussian' in self.field_type:
                 pressure_kernel = density_kernel
             elif 'triangle' in self.field_type:
-                dist = torch.sqrt(torch.sum(mgrid ** 2, dim=1))
+                dist = torch.sqrt(torch.sum(self.mgrid ** 2, dim=1))
                 pressure_kernel = ((self.max_radius - dist)**2 / self.kernel_var)[:, None] / 1.309
 
-            grad_density_kernel = density_gradient(density_kernel, mgrid)
-            grad_pressure_kernel = density_gradient(pressure_kernel, mgrid)
+            grad_density_kernel = density_gradient(density_kernel, self.mgrid)
+            grad_pressure_kernel = density_gradient(pressure_kernel, self.mgrid)
             grad_pressure_kernel = torch.where(torch.isnan(grad_pressure_kernel), torch.zeros_like(grad_pressure_kernel), grad_pressure_kernel)
-            # laplace_autograd = density_laplace(density_kernel, mgrid)
+            # laplace_autograd = density_laplace(density_kernel, self.mgrid)
 
             self.kernel_operators = torch.cat((density_kernel, grad_density_kernel, grad_pressure_kernel), dim=-1)
 
