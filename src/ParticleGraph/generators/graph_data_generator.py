@@ -492,9 +492,9 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
 
         n_particles = simulation_config.n_particles
 
-        # if run >0:
-        #     free_memory(to_delete=[*dataset, *x_list, *y_list, *x_mesh_list, *y_mesh_list, *edge_p_p_list, *edge_f_p_list, *edge_index], debug=True)
-        #     get_less_used_gpu(debug=True)
+        if run >0:
+            free_memory(to_delete=[*dataset, *x_list, *y_list, *x_mesh_list, *y_mesh_list, *edge_p_p_list, *edge_f_p_list, *edge_index], debug=True)
+            get_less_used_gpu(debug=True)
 
         check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=250, memory_percentage_threshold=0.6)
 
