@@ -436,7 +436,11 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
     bounce_coeff = simulation_config.bounce_coeff
     speedlim = config.plotting.speedlim
 
-    logging.basicConfig(filename=f'./graphs_data/graphs_{dataset_name}/generator.log', format='%(asctime)s %(message)s',filemode='w')
+    # Create log directory
+    log_dir = f'./graphs_data/graphs_{dataset_name}/'
+    log_file = f'{log_dir}/generator.log'
+    os.makedirs(log_dir, exist_ok=True)
+    logging.basicConfig(filename=log_file, format='%(asctime)s %(message)s', filemode='w')
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     logger.info(config)
