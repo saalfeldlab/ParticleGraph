@@ -2,7 +2,7 @@ description: 'fluids simulation'
 dataset: 'fluids_k'
 
 simulation:
-  params: [[0, 1.0E-1, 3.86, 0.0]]
+  params: [[0, 1.0E-1, 3.86, 0.0, 0.0]]
   min_radius: 0.001
   max_radius: 0.05
   n_particles: 4000
@@ -13,6 +13,7 @@ simulation:
   sigma: 0.005
   delta_t: 0.0025
   dpos_init: 0 # 5.0E-1
+  pos_init: 'square'
   boundary: 'periodic'
   bounce: False
   start_frame: 0

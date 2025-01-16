@@ -6556,7 +6556,7 @@ if __name__ == '__main__':
 
     # config_list = ['falling_particles_N1000_2']
 
-    config_list = ['rat_city_b','rat_city_c','rat_city_d','rat_city_e','rat_city_f','rat_city_g']
+    config_list = ['rat_city_a']
     # config_list = ['cell_HeLa_1', 'cell_HeLa_2', 'cell_HeLa_5', 'cell_PSC_1', 'cell_PSC_2', 'cell_PSC_5']
     # config_list = ['arbitrary_3_field_video_bison']
 

@@ -36,6 +36,7 @@ class SimulationConfig(BaseModel):
     n_interactions: int = 3
     shuffle_particle_types: bool = False
     dpos_init: float = 0
+    pos_init: str = 'uniform'
     angular_sigma: float = 0
     angular_Bernouilli: list[float] = [-1]
 

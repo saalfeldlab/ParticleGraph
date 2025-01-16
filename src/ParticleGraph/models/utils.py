@@ -580,27 +580,20 @@ def plot_training_mouse(config, id_list, frame_list, dataset_name, log_dir, epoc
     amin = torch.min(model_a, dim=0)[0]
     model_a = (model_a - amin) / (amax - amin)
 
-    plt.figure(figsize=(10, 5))
-    ax = plt.subplot(1, 2, 1)
-    for n in range(n_particle_types):
-        pos = torch.argwhere(type_stack == n).squeeze()
-        if len(pos) > 0:
-            plt.scatter(to_numpy(model_a[pos, 0]), to_numpy(model_a[pos, 1]), s=1, color=cmap.color(n), alpha=0.25)
+    plt.figure(figsize=(8, 8))
+    plt.scatter(to_numpy(model_a[:, 0]), to_numpy(model_a[:, 1]), s=1, color='k', alpha=0.25)
     embedding_size = model.a.shape[0]
-    embedding_current_size = torch.unique(id_list).shape[0]
     plt.text(0.05, 0.9, f'Embedding size: {embedding_size}', fontsize=12)
-    plt.xlim([0,1])
-    plt.ylim([0,1])
+    plt.xlim([0,2])
+    plt.ylim([0,2])
     plt.xticks([])
     plt.yticks([])
-    ax = plt.subplot(1, 2, 2)
-    for n in range(config.simulation.n_frames):
-        pos = torch.argwhere(frame_list == n).squeeze()
-        if len(pos) > 0:
-            plt.scatter(to_numpy(model_a[pos, 0]), to_numpy(model_a[pos, 1]), s=1, alpha=0.25, c = np.ones(len(pos))*n/config.simulation.n_frames, cmap='viridis', vmin=0, vmax=1)
-
+    # ax = plt.subplot(1, 2, 2)
+    # for n in range(config.simulation.n_frames):
+    #     pos = torch.argwhere(frame_list == n).squeeze()
+    #     if len(pos) > 0:
+    #         plt.scatter(to_numpy(model_a[pos, 0]), to_numpy(model_a[pos, 1]), s=1, alpha=0.25, c = np.ones(len(pos))*n/config.simulation.n_frames, cmap='viridis', vmin=0, vmax=1)
     plt.tight_layout()
-
     plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif", dpi=87)
     plt.close()
 

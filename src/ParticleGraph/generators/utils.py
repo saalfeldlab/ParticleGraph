@@ -242,7 +242,8 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
 
     if ('PDE_F' in config.graph_model.particle_model_name):
         pos = torch.rand(n_particles, dimension, device=device)
-        pos = pos * 0.5 + 0.25
+        if simulation_config.pos_init == 'square':
+            pos = pos * 0.5 + 0.25
     elif (simulation_config.boundary == 'periodic'):
         pos = torch.rand(n_particles, dimension, device=device)
         if n_particles <= 10:

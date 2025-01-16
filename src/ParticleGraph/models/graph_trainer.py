@@ -1277,7 +1277,7 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
 
             for batch in range(batch_size):
 
-                k = np.random.randint(n_frames - 2)
+                k = np.random.randint(n_frames - 2*time_step)
                 # k = np.random.randint(n_frames // 2 - 2) * 2
                 x = x_list[run][k].clone().detach()
                 edges = edge_p_p_list[run][f'arr_{k}']
