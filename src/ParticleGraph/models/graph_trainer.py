@@ -3655,7 +3655,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     time_step = simulation_config.time_step
     sub_sampling = simulation_config.sub_sampling
 
-    cmap = CustomColorMap(config=config)  # create colormap for given model_config
+    cmap = CustomColorMap(config=config)  # creat
+    # e colormap for given model_config
     dimension = simulation_config.dimension
     has_siren_time = 'siren_with_time' in model_config.field_type
     has_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
@@ -4525,7 +4526,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         neuron_gt_list = torch.reshape(neuron_gt_list, (n_frames - 1, 6))
         neuron_pred_list = torch.reshape(neuron_pred_list, (n_frames - 1, 6))
 
-        plt.style.use('dark_background')
+        # plt.style.use('dark_background')
         matplotlib.rcParams['savefig.pad_inches'] = 0
 
         plt.figure(figsize=(10, 10))

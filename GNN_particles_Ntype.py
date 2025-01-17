@@ -55,11 +55,11 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        task = 'train'
+        task = 'generate'
         best_model = None
         # config_list = ['fluids_m13_1_training']
         # config_list = ['falling_water_ramp_x6_12']
-        config_list =['signal_N2_g']
+        config_list =['signal_N2_a10']
 
     for config_file in config_list:
 
@@ -73,7 +73,7 @@ if __name__ == '__main__':
         if 'train' in task:
             data_train(config=config, config_file=config_file, erase=False, best_model=best_model, device=device)
         if 'test' in task:
-            data_test(config=config, config_file=config_file, visualize=True, style='black bw color', verbose=False, best_model='best', run=0, plot_data=True,
+            data_test(config=config, config_file=config_file, visualize=True, style='black bw color', verbose=False, best_model='best', run=0, plot_data=False,
                       test_simulation=False, sample_embedding=False, fixed=False, bounce=False, step=4, device=device)
 
 
