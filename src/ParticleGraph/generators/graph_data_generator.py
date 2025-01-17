@@ -24,6 +24,11 @@ import tables
 from torch_geometric.utils import dense_to_sparse
 import torch_geometric.utils as pyg_utils
 from scipy.ndimage import zoom
+import re
+
+def extract_number(filename):
+    match = re.search(r'_(\d+)\.txt$', filename)
+    return int(match.group(1)) if match else -1
 
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
@@ -2008,7 +2013,9 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
 
     print(f'Loading data ...')
     files = glob.glob(f'{data_folder_name}/*.txt')
-    files.sort(key=os.path.getmtime)
+
+    # files.sort(key=os.path.getmtime)
+    files.sort(key=extract_number)
 
     x_list = []
     edge_f_p_list = []

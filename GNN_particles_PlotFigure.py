@@ -5024,8 +5024,8 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
                 in_features = rr[:, None]
                 with torch.no_grad():
                     func = model.lin_edge(in_features.float()) * correction
-                plt.plot(to_numpy(rr), to_numpy(func), color='w', linewidth=8, label=r'learned')
-                plt.xlabel('x', fontsize=78)
+                plt.plot(to_numpy(rr), to_numpy(func), color='k', linewidth=8, label=r'learned')
+                plt.xlabel(r'$x$', fontsize=78)
                 plt.ylabel(r'learned $MLP_1(x)$', fontsize=78)
                 plt.ylim([-1.6, 1.6])
                 plt.xlim([-5,5])
@@ -5043,7 +5043,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
                     func = model.lin_phi(in_features.float())
                 func = func[:, 0]
                 plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm), color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8 // ( 1 + (n_particle_types>16)*1.0), alpha=0.25)
-            plt.xlabel('x', fontsize=78)
+            plt.xlabel('$x$', fontsize=78)
             plt.ylabel(r'learned $MLP_0(x)$', fontsize=78)
             plt.ylim([-10,10])
             plt.tight_layout()
@@ -6378,6 +6378,9 @@ def get_figures(index):
         case 'synaptic_2':
             config_list = ['signal_N2_a10']
             epoch_list = ['best']
+        case 'synaptic_supp2':
+            config_list = [f'signal_N2_a{i}' for i in range(1, 10)]
+            epoch_list = ['all']
 
         case _:
             config_list = ['arbitrary_3']
@@ -6393,6 +6396,12 @@ def get_figures(index):
                                   sample_embedding=False, device=device)
                 print(' ')
                 print(' ')
+        case 'synaptic_supp2':
+            for config_file in config_list:
+                config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+                data_plot(config=config, config_file=config_file, epoch_list=['best'], device=device, bLatex=True)
+                data_plot(config=config, config_file=config_file, epoch_list=['all'], device=device, bLatex=True)
+
 
 
         case '3' | '4' |'4_bis' | 'supp4' | 'supp5' | 'supp6' | 'supp7' | 'supp8' | 'supp9' | 'supp10' | 'supp11' | 'supp12' | 'supp15' |'supp16' |'supp18':
@@ -6599,16 +6608,16 @@ if __name__ == '__main__':
     # except:
     #     pass
 
-    # f_list = ['synaptic_2']
-    # for f in f_list:
-    #     config_list,epoch_list = get_figures(f)
+    f_list = ['synaptic_supp2']
+    for f in f_list:
+        config_list,epoch_list = get_figures(f)
 
 
-    config_list = ['signal_N2_a10']
-
-    for config_file in config_list:
-        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['all'], bLatex=True, device=device)
+    # config_list = ['signal_N2_a10']
+    #
+    # for config_file in config_list:
+    #     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+    #     data_plot(config=config, config_file=config_file, epoch_list=['all'], bLatex=True, device=device)
 
         # data_plot(config=config, config_file=config_file, epoch_list=['all'], bLatex=False, device=device)
 

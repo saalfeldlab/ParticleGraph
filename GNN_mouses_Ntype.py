@@ -50,9 +50,9 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        action = 'train'
+        action = 'generate'
         best_model = None
-        config_list = ['mouse_city_c1']
+        config_list = ['rat_city_a']
 
     for config_file in config_list:
 
