@@ -16,6 +16,7 @@ from tifffile import imsave
 
 import torch.nn as nn
 import torch.nn.functional as F
+import seaborn as sns
 
 def linear_model(x, a, b):
     return a * x + b

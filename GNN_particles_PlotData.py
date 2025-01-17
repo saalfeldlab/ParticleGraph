@@ -8,6 +8,7 @@ from matplotlib import rc
 from ParticleGraph.fitting_models import *
 from ParticleGraph.utils import set_size
 from scipy.ndimage import median_filter
+import seaborn as sns
 
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 

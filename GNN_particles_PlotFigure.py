@@ -29,6 +29,7 @@ from scipy.stats import pearsonr
 from scipy.spatial import Voronoi, voronoi_plot_2d
 from sklearn.mixture import GaussianMixture
 import warnings
+import seaborn as sns
 
 # # matplotlib.use("Qt5Agg")
 

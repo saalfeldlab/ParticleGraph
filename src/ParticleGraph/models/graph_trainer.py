@@ -19,7 +19,7 @@ from ParticleGraph.generators.cell_utils import *
 from ParticleGraph.fitting_models import linear_model
 from torch_geometric.utils import dense_to_sparse
 import torch.optim as optim
-
+import seaborn as sns
 
 def data_train(config=None, config_file=None, erase=False, best_model=None, device=None):
     # plt.rcParams['text.usetex'] = True
@@ -2777,6 +2777,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
         x_list.append(x)
         y_list.append(y)
     x = x_list[0][n_frames - 1]
+
     n_particles = x.shape[0]
     print(f'N particles: {n_particles}')
     logger.info(f'N particles: {n_particles}')
@@ -2836,6 +2837,20 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
     adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency.pt', map_location=device)
     model.edges = torch.load(f'./graphs_data/graphs_{dataset_name}/edge_index.pt', map_location=device)
     print(f'{to_numpy(torch.sum(model.edges))} edges')
+
+    # Example usage
+    matrix = to_numpy(adjacency)
+    rank = get_matrix_rank(matrix)
+    print(f"the rank of the matrix {adjacency.shape} is: {rank}")
+    logger.info(f"the rank of the matrix {adjacency.shape} is: {rank}")
+    centers, density = compute_spectral_density(matrix)
+
+    plt.figure(figsize=(8, 8)
+    plt.plot(centers, density,c='k')
+    plt.xlabel('Eigenvalue')
+    plt.ylabel('Density')
+    plt.title('Spectral Density')
+    plt.savefig(f"./{log_dir}/tmp_training/Spectral_density_Aij.tif")
 
     if simulation_config.connectivity_mask:
         model.mask = model.mask * (adjacency != 0) * 1.0

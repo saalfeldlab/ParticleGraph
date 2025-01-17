@@ -40,7 +40,6 @@ training:
     batch_size: 1
     small_init_batch_size: False
     n_runs: 10
-    large_range: False
     learning_rate_start: 0.000001
     learning_rate_end: 0.0000005
     learning_rate_embedding_start: 0.0001

@@ -578,3 +578,32 @@ def check_and_clear_memory(
             # logger.info(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
             gc.collect()
             torch.cuda.empty_cache()
+
+
+
+
+
+def get_matrix_rank(matrix):
+    return np.linalg.matrix_rank(matrix)
+
+# Example usage
+# matrix = np.random.rand(100, 100)
+# rank = get_matrix_rank(matrix)
+# print(f"The rank of the matrix is: {rank}")
+
+
+def compute_spectral_density(matrix, bins=100):
+    # Compute eigenvalues
+    eigenvalues = np.linalg.eigvals(matrix)
+
+    # Create histogram
+    density, edges = np.histogram(eigenvalues, bins=bins, density=True)
+
+    # Compute bin centers
+    centers = (edges[:-1] + edges[1:]) / 2
+
+    return centers, density
+
+# Example usage
+# matrix = np.random.rand(100, 100)
+# centers, density = compute_spectral_density(matrix)
