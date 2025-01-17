@@ -1896,18 +1896,18 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             plt.subplot(121)
             ax = sns.heatmap(to_numpy(X), center=0, cbar_kws={'fraction': 0.046})
             ax.invert_yaxis()
-            plt.title('Firing rate', fontsize=12)
-            plt.ylabel('Units', fontsize=12)
+            # plt.title('firing rate', fontsize=12)
+            plt.ylabel('units', fontsize=12)
             plt.xlabel('Time', fontsize=12)
             plt.xticks([])
             plt.yticks([0, 999], [1, 1000], fontsize=12)
 
             plt.subplot(122)
-            plt.title('Firing rate samples', fontsize=12)
+            # plt.title('Firing rate samples', fontsize=12)
             for i in range(50):
                 plt.plot(to_numpy(X[i, :]), linewidth=1)
-            plt.xlabel('Time', fontsize=12)
-            plt.ylabel('Normalized activity', fontsize=12)
+            plt.xlabel('time', fontsize=12)
+            plt.ylabel('r$x_i$', fontsize=12)
             plt.xticks([])
             plt.yticks(fontsize=12)
             plt.tight_layout()
@@ -1934,25 +1934,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             plt.plot(to_numpy(X[i, :]), linewidth=1, c='k')
             plt.plot(moving_average, linewidth=1, c='r')
 
-
-            t = (to_numpy(X[i, :]) - moving_average) / (moving_average + 1E-7)
-            t = t[window_size//2+2:-window_size//2-2]
-            np.std(t)
-
-            signal = moving_average
-            # Calculate power of the signal
-            P_signal = np.mean(signal ** 2)
-
-            # Estimate the noise (assuming the noise is the difference between the signal and its mean)
-            noise = to_numpy(X[i, :]) - signal
-
-            # Calculate power of the noise
-            P_noise = np.mean(noise ** 2)
-
-            # Calculate SNR
-            SNR = 10 * np.log10(P_signal / P_noise)
-
-            print(SNR)
 
             # Compute the moving average
             # moving_average = np.convolve(data, window, mode='valid')

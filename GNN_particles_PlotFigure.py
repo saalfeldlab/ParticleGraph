@@ -5089,13 +5089,12 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
 
         fig_init()
         plt.hist(distrib, bins=100, color='k', alpha=0.5)
-        plt.ylabel(r'counts', fontsize=64)
-        plt.xlabel(r'$x$', fontsize=64)
+        plt.ylabel('counts', fontsize=64)
+        plt.xlabel('$x_{ij}$', fontsize=64)
         plt.xticks(fontsize=24)
         plt.yticks(fontsize=24)
         plt.tight_layout()
         plt.savefig(f'./{log_dir}/results/signal_distribution.png', dpi=300)
-
         plt.close()
         print(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
         logger.info(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
@@ -6167,9 +6166,11 @@ def data_plot(config, config_file, epoch_list, bLatex, device):
     # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     # matplotlib.rcParams['savefig.pad_inches'] = 0
 
-    plt.style.use('dark_background')
+    # plt.style.use('dark_background')
     plt.rcParams['text.usetex'] = bLatex
-    plt.rc('font', family='sans-serif')
+    # plt.rc('font', family='sans-serif')
+    plt.rc('font', family='serif')
+    plt.rcParams['font.family'] = 'Times New Roman'
     plt.rc('text', usetex=False)
     matplotlib.rcParams['savefig.pad_inches'] = 0
 
@@ -6219,8 +6220,8 @@ def data_plot(config, config_file, epoch_list, bLatex, device):
         fig, ax = fig_init(formatx='%.0f', formaty='%.5f')
         plt.plot(loss, color='k', linewidth=4)
         plt.xlim([0, 20])
-        plt.ylabel('Loss', fontsize=78)
-        plt.xlabel('Epochs', fontsize=78)
+        plt.ylabel('loss', fontsize=78)
+        plt.xlabel('epochs', fontsize=78)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/loss.tif", dpi=170.7)
         plt.close()
@@ -6557,13 +6558,14 @@ if __name__ == '__main__':
 
     # config_list = ['falling_particles_N1000_2']
 
-    config_list = ['rat_city_a']
+    # config_list = ['rat_city_a']
     # config_list = ['cell_HeLa_1', 'cell_HeLa_2', 'cell_HeLa_5', 'cell_PSC_1', 'cell_PSC_2', 'cell_PSC_5']
     # config_list = ['arbitrary_3_field_video_bison']
+    config_list = ['signal_N2_a10']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['best'], bLatex=False, device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['best'], bLatex=True, device=device)
 
         # data_plot(config=config, config_file=config_file, epoch_list=['all'], bLatex=False, device=device)
 

@@ -2845,7 +2845,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
     logger.info(f"the rank of the matrix {adjacency.shape} is: {rank}")
     centers, density = compute_spectral_density(matrix)
 
-    plt.figure(figsize=(8, 8)
+    plt.figure(figsize=(8, 8))
     plt.plot(centers, density,c='k')
     plt.xlabel('Eigenvalue')
     plt.ylabel('Density')
