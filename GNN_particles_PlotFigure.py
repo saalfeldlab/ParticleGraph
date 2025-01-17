@@ -4918,9 +4918,8 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
         r_squared_list = []
         slope_list = []
 
-        for file_id_ in trange(0, len(file_id_list)):
+        for file_id_ in trange(0, 100):
             file_id = file_id_list[file_id_]
-
 
             epoch = files[file_id].split('graphs')[1][1:-3]
             net = f"./log/try_{config_file}/models/best_model_with_{n_runs-1}_graphs_{epoch}.pt"
@@ -6379,7 +6378,7 @@ def get_figures(index):
             config_list = ['signal_N2_a10']
             epoch_list = ['best']
         case 'synaptic_supp2':
-            config_list = [f'signal_N2_a{i}' for i in range(1, 10)]
+            config_list = [f'signal_N2_a{i}' for i in range(5, 10)]
             epoch_list = ['all']
 
         case _:
