@@ -2015,7 +2015,8 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
     files = glob.glob(f'{data_folder_name}/*.txt')
 
     # files.sort(key=os.path.getmtime)
-    files.sort(key=extract_number)
+    files.sort(key=/groups/saalfeld/home/allierc/signaling/MouseCity/cohort2_exp1/prediction/labels/RatCity_0620_260_10Hz_500-1500_H264_36.txt
+)
 
     x_list = []
     edge_f_p_list = []
