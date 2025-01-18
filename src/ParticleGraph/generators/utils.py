@@ -146,6 +146,8 @@ def choose_model(config=[], W=[], phi=[], device=[]):
         case _:
             model = PDE_Z(device=device)
 
+    phi
+
     match model_signal_name:
         case 'PDE_N':
             p = torch.rand(n_particle_types, 2, device=device) * 100  # comprised between 10 and 50

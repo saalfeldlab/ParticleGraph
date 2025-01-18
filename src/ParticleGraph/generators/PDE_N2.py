@@ -59,7 +59,15 @@ class PDE_N2(pyg.nn.MessagePassing):
         return edge_attr[:,None] * self.phi(u_j)
 
 
+    def func(self, u, type, function):
 
+        if function=='phi':
+            return self.phi(u)
+        elif function=='update':
 
-    def psi(self, r, p):
-        return r * p
+            g = parameters[type, 0:1]
+            s = parameters[type, 1:2]
+            c = parameters[type, 2:3]
+
+            return -c * u + s * self.phi(u)
+

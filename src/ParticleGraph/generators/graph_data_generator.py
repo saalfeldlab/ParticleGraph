@@ -1673,17 +1673,10 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     plt.savefig(f"graphs_data/graphs_{dataset_name}/W_distribution.tif", dpi=70)
     plt.close()
 
-    # create GNN
-    if is_V2:
-        if ('modulation' in model_config.field_type) | ('visual' in model_config.field_type):
-            im = imread(f"graphs_data/{simulation_config.node_value_map}")
-        match config.simulation.phi:
-            case 'tanh':
-                model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, phi=torch.tanh, device=device)
-            case _:
-                model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, phi=torch.tanh, device=device)
-    else:
-        model, bc_pos, bc_dpos = choose_model(config=config, device=device)
+    if ('modulation' in model_config.field_type) | ('visual' in model_config.field_type):
+        im = imread(f"graphs_data/{simulation_config.node_value_map}")
+
+    model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, device=device)
 
     first_T1 = None
 

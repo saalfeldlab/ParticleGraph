@@ -1,6 +1,7 @@
 
 # from pysr import PySRRegressor
-
+import umap
+import torch
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 from torch_geometric.nn import MessagePassing
@@ -5204,6 +5205,8 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
         plt.savefig(f'./{log_dir}/results/true connectivity.png', dpi=300)
         plt.close()
 
+        true_model, bc_pos, bc_dpos = choose_model(config=config, W=None, phi=torch.tanh, device=device)
+
         for epoch in epoch_list:
 
             net = f'{log_dir}/models/best_model_with_{n_runs-1}_graphs_{epoch}.pt'
@@ -5305,10 +5308,11 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
             print(f'correction: {correction:0.2f}')
             torch.save(correction, f'{log_dir}/correction.pt')
 
-
+            matplotlib.use("Qt5Agg")
             fig, ax = fig_init()
             rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
-            func_list = []
+            true_func = true_model.func(rr, 0, 'phi')
+            plt.plot(to_numpy(rr), to_numpy(true_func), c = 'k', linewidth = 8, label = 'original', alpha = 0.5)
             for n in trange(0,n_particles,n_particles//100):
                 if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
                     embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
@@ -5333,6 +5337,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
             plt.ylim([-1.1, 1.1])
             plt.xlim([-5,5])
             plt.tight_layout()
+            plt.show()
             plt.savefig(f"./{log_dir}/results/learned_psi.tif", dpi=170.7)
             plt.close()
 
@@ -6378,7 +6383,7 @@ def get_figures(index):
             config_list = ['signal_N2_a10']
             epoch_list = ['best']
         case 'synaptic_supp2':
-            config_list = [f'signal_N2_a{i}' for i in range(5, 10)]
+            config_list = [f'signal_N2_a{i}' for i in range(10, 11)]
             epoch_list = ['all']
 
         case _:
@@ -6607,16 +6612,17 @@ if __name__ == '__main__':
     # except:
     #     pass
 
-    f_list = ['synaptic_supp2']
-    for f in f_list:
-        config_list,epoch_list = get_figures(f)
+    # f_list = ['synaptic_supp2']
+    # for f in f_list:
+    #     config_list,epoch_list = get_figures(f)
 
 
-    # config_list = ['signal_N2_a10']
-    #
-    # for config_file in config_list:
-    #     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-    #     data_plot(config=config, config_file=config_file, epoch_list=['all'], bLatex=True, device=device)
+    config_list = ['signal_N2_a10']
+
+    for config_file in config_list:
+        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+        data_plot(config=config, config_file=config_file, epoch_list=['best'], bLatex=True, device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['all'], bLatex=True, device=device)
 
         # data_plot(config=config, config_file=config_file, epoch_list=['all'], bLatex=False, device=device)
 
