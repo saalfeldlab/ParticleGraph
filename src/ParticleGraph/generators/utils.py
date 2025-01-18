@@ -28,7 +28,7 @@ def generate_from_data(config, device, visualize=True, step=None, cmap=None):
         raise ValueError(f'Unknown data folder name {data_folder_name}')
 
 
-def choose_model(config=[], W=[], phi=[], device=[]):
+def choose_model(config=[], W=[], device=[]):
     particle_model_name = config.graph_model.particle_model_name
     model_signal_name = config.graph_model.signal_model_name
     aggr_type = config.graph_model.aggr_type
@@ -146,7 +146,15 @@ def choose_model(config=[], W=[], phi=[], device=[]):
         case _:
             model = PDE_Z(device=device)
 
-    phi
+
+    match config.simulation.phi:
+        case 'tanh':
+            phi=torch.tanh
+        case 'relu':
+            phi=torch.relu
+        case _:
+            phi=torch.sigmoid
+
 
     match model_signal_name:
         case 'PDE_N':

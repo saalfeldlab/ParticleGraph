@@ -63,11 +63,8 @@ class PDE_N2(pyg.nn.MessagePassing):
 
         if function=='phi':
             return self.phi(u)
+
         elif function=='update':
-
-            g = parameters[type, 0:1]
-            s = parameters[type, 1:2]
-            c = parameters[type, 2:3]
-
+            g, s, c = self.p[type, 0:1], self.p[type, 1:2], self.p[type, 2:3]
             return -c * u + s * self.phi(u)
 
