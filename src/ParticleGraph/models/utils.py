@@ -582,7 +582,7 @@ def plot_training_mouse(config, id_list, frame_list, dataset_name, log_dir, epoc
     model_a = (model_a - amin) / (amax - amin)
 
     plt.figure(figsize=(8, 8))
-    plt.scatter(to_numpy(model_a[:, 0]), to_numpy(model_a[:, 1]), s=1, color='k', alpha=0.25)
+    plt.scatter(to_numpy(model_a[:, 0]), to_numpy(model_a[:, 1]), s=1, color='b', alpha=0.25)
     embedding_size = model.a.shape[0]
     plt.text(0.05, 0.9, f'Embedding size: {embedding_size}', fontsize=12)
     plt.xlim([0,2])
