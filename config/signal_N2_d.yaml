@@ -40,6 +40,8 @@ graph_model:
 plotting:
     colormap: 'tab10'
     arrow_length: 1
+    xlim: [ -5,5 ]
+    ylim: [ -8,8 ]
 
 training:
     n_epochs: 30
@@ -47,7 +49,6 @@ training:
     batch_size: 1
     small_init_batch_size: True
     n_runs: 10
-    large_range: False
     sparsity: 'none'
     rotation_augmentation: False
     data_augmentation_loop: 100

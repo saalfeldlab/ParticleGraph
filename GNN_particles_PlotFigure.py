@@ -6615,7 +6615,7 @@ if __name__ == '__main__':
     #     config_list,epoch_list = get_figures(f)
 
 
-    config_list = ['signal_N2_a1_LR_5E4']
+    config_list = ['signal_N2_e']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
