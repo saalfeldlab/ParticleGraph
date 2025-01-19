@@ -2795,7 +2795,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
 
     if model_config.embedding_init !='':
         print('compute init embedding ...')
-        for j in range(min(n_frames,9000000)):
+        for j in trange(n_frames):
             if j == 0:
                 time_series = np.array(x_list[0][j][:,6:7])
             else:
@@ -2829,10 +2829,8 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
     else:
         projections = None
 
-
-
     print('Create models ...')
-    model, bc_pos, bc_dpos = choose_training_model(config=config, device=device, projections=projections)
+    model, bc_pos, bc_dpos = choose_training_model(model_config=config, device=device, projections=projections)
 
     if has_field:
         model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
