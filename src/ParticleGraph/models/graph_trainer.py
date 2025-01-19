@@ -20,6 +20,8 @@ from ParticleGraph.fitting_models import linear_model
 from torch_geometric.utils import dense_to_sparse
 import torch.optim as optim
 import seaborn as sns
+from sklearn.decomposition import PCA, TruncatedSVD
+from sklearn.manifold import TSNE
 
 def data_train(config=None, config_file=None, erase=False, best_model=None, device=None):
     # plt.rcParams['text.usetex'] = True
@@ -2791,8 +2793,46 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
     print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
     logger.info(f'vnorm ynorm: {to_numpy(vnorm)} {to_numpy(ynorm)}')
 
+    if model_config.embedding_init !='':
+        print('compute init embedding ...')
+        for j in range(min(n_frames,9000000)):
+            if j == 0:
+                time_series = np.array(x_list[0][j][:,6:7])
+            else:
+                time_series = np.concatenate((time_series, x_list[0][j][:,6:7]), axis=1)
+        time_series = np.array(time_series)
+
+        match model_config.embedding_init:
+            case 'umap':
+                trans = umap.UMAP(n_neighbors=50, n_components=2 , transform_queue_size=0, random_state=config.training.seed).fit(time_series)
+                projections = trans.transform(time_series)
+            case 'pca':
+                pca = PCA(n_components=2)
+                projections = pca.fit_transform(time_series)
+            case 'svd':
+                svd = TruncatedSVD(n_components=2)
+                projections = svd.fit_transform(time_series)
+            case 'tsne':
+                tsne = TSNE(n_components=2, perplexity=30, n_iter=300)
+                projections = tsne.fit_transform(time_series)
+
+        fig = plt.figure(figsize=(8, 8))
+        for n in range(n_particle_types):
+            pos = torch.argwhere(type_list == n).squeeze()
+            plt.scatter(projections[to_numpy(pos), 0], projections[to_numpy(pos), 1], s=10, color=cmap.color(n))
+        plt.xlabel('Embedding 0', fontsize=12)
+        plt.ylabel('Embedding 1', fontsize=12)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/Embedding_init.tif")
+        plt.close()
+
+    else:
+        projections = None
+
+
+
     print('Create models ...')
-    model, bc_pos, bc_dpos = choose_training_model(config, device)
+    model, bc_pos, bc_dpos = choose_training_model(config=config, device=device, projections=projections)
 
     if has_field:
         model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
@@ -2821,6 +2861,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
     lr_embedding = train_config.learning_rate_embedding_start
     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
     model.train()
+
 
     if has_field:
         optimizer_f = torch.optim.Adam(lr=train_config.learning_rate_NNR, params=model_f.parameters())

@@ -111,6 +111,7 @@ class GraphModelConfig(BaseModel):
     aggr_type: str
     mesh_aggr_type: str = 'add'
     embedding_dim: int = 2
+    embedding_init: str = ''
 
     update_type: Literal['linear', 'mlp', 'pre_mlp', 'none', 'no_pos', 'embedding_MLP'] = 'none'
     input_size_update: int = 3

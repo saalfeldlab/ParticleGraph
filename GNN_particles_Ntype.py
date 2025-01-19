@@ -55,11 +55,11 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        task = 'test'
+        task = 'train'
         best_model = None
         # config_list = ['fluids_m13_1_training']
         # config_list = ['falling_water_ramp_x6_12']
-        config_list =['signal_N2_a10']
+        config_list =['signal_N2_a1_umap']
 
     for config_file in config_list:
 

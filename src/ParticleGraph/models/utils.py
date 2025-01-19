@@ -962,7 +962,7 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
 
     return func_list, proj_interaction
 
-def choose_training_model(model_config, device):
+def choose_training_model(model_config=None, device=None, projections=None):
 
     dataset_name = model_config.dataset
     aggr_type = model_config.graph_model.aggr_type
@@ -1040,7 +1040,7 @@ def choose_training_model(model_config, device):
             model = Signal_Propagation(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
         case 'PDE_N2':
-            model = Signal_Propagation2(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
+            model = Signal_Propagation2(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, projections=projections)
             model.edges = []
         case 'PDE_N4':
             model = Signal_Propagation2(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)

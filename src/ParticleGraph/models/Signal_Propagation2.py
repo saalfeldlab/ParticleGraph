@@ -24,7 +24,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         the first derivative of a scalar field on a mesh (dimension 3).
     """
 
-    def __init__(self, aggr_type=None, config=None, device=None, bc_dpos=None):
+    def __init__(self, aggr_type=None, config=None, device=None, bc_dpos=None, projections=None):
         super(Signal_Propagation2, self).__init__(aggr=aggr_type)
 
         simulation_config = config.simulation
@@ -51,7 +51,10 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         self.lin_phi = MLP(input_size=self.input_size_update, output_size=self.output_size, nlayers=self.n_layers_update,
                             hidden_size=self.hidden_dim_update, device=self.device)
 
-        self.a = nn.Parameter(torch.ones((int(self.n_particles), self.embedding_dim), device=self.device, requires_grad=True, dtype=torch.float32))
+        if projections==None:
+            self.a = nn.Parameter(torch.ones((int(self.n_particles), self.embedding_dim), device=self.device, requires_grad=True, dtype=torch.float32))
+        else:
+            self.a = nn.Parameter(torch.tensor(projections, device=self.device, requires_grad=True, dtype=torch.float32))
 
         self.W = nn.Parameter(torch.randn((int(self.n_particles),int(self.n_particles)), device=self.device, requires_grad=True, dtype=torch.float32))
 
