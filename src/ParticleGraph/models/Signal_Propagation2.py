@@ -38,6 +38,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         self.embedding_dim = model_config.embedding_dim
         self.n_particles = simulation_config.n_particles
         self.n_dataset = config.training.n_runs
+        self.n_frames = simulation_config.n_frames
         self.n_layers_update = model_config.n_layers_update
         self.hidden_dim_update = model_config.hidden_dim_update
         self.input_size_update = model_config.input_size_update
@@ -45,13 +46,21 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         self.adjacency_matrix = simulation_config.adjacency_matrix
         self.model = model_config.signal_model_name
 
+        if self.model == 'PDE_N3':
+            self.embedding_evolves = True
+        else:
+            self.embedding_evolves = False
+
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                             hidden_size=self.hidden_dim, device=self.device)
 
         self.lin_phi = MLP(input_size=self.input_size_update, output_size=self.output_size, nlayers=self.n_layers_update,
                             hidden_size=self.hidden_dim_update, device=self.device)
 
-        if model_config.embedding_init =='':
+        if self.model == 'PDE_N3':
+            self.a = nn.Parameter(
+                torch.ones((int(self.n_particles*self.n_frames), self.embedding_dim), device=self.device, requires_grad=True,dtype=torch.float32))
+        elif model_config.embedding_init =='':
             self.a = nn.Parameter(torch.ones((int(self.n_particles), self.embedding_dim), device=self.device, requires_grad=True, dtype=torch.float32))
         else:
             self.a = nn.Parameter(torch.tensor(projections, device=self.device, requires_grad=True, dtype=torch.float32))
@@ -62,7 +71,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         self.mask.fill_diagonal_(0)
 
 
-    def forward(self, data=[], data_id=[], return_all=False, has_field=False):
+    def forward(self, data=[], data_id=[], return_all=False, has_field=False, k = 0):
         self.data_id = data_id
         x, edge_index = data.x, data.edge_index
 
@@ -73,7 +82,11 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         else:
             field = torch.ones_like(x[:,6:7])
 
-        particle_id = to_numpy(x[:, 0])
+        if self.model == 'PDE_N3':
+            particle_id = to_numpy(x[:, 0]) + k * self.n_particles
+        else:
+            particle_id = to_numpy(x[:, 0])
+
         embedding = self.a[particle_id, :]
 
         in_features = torch.cat([u, embedding], dim=1)

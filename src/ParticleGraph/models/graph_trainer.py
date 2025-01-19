@@ -69,7 +69,7 @@ def data_train(config=None, config_file=None, erase=False, best_model=None, devi
                 'PDE_N5' in config.graph_model.signal_model_name):
             data_train_synaptic2(config, config_file, erase, best_model, device)
         elif 'PDE_N3' in config.graph_model.signal_model_name:
-            data_train_synaptic3(config, config_file, erase, best_model, device)
+            data_train_synaptic2(config, config_file, erase, best_model, device)
         else:
             data_train_synaptic(config, config_file, erase, best_model, device)
     elif do_tracking & has_cell_division:
@@ -1001,9 +1001,6 @@ def data_train_cell(config, config_file, erase, best_model, device):
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
         if False: # do_tracking:
-
-
-
 
             id_list_ = []
             for k in range(0, n_frames + 1):
@@ -2736,7 +2733,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
     train_config = config.training
     model_config = config.graph_model
 
-    print(f'Training with data {model_config.particle_model_name} {model_config.mesh_model_name}')
+    print(f'training with data {model_config.particle_model_name} {model_config.mesh_model_name}')
 
     dimension = simulation_config.dimension
     n_epochs = train_config.n_epochs
@@ -2768,7 +2765,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
     sparsity_freq = train_config.sparsity_freq
 
     l_dir, log_dir, logger = create_log_dir(config, config_file, erase)
-    print(f'Loading graph files N: {n_runs} ...')
+    print(f'loading graph files N: {n_runs} ...')
     logger.info(f'Graph files N: {n_runs}')
 
     x_list = []
@@ -2792,6 +2789,14 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
     time.sleep(0.5)
     print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
     logger.info(f'vnorm ynorm: {to_numpy(vnorm)} {to_numpy(ynorm)}')
+
+    print('compute type_stack ...')
+    for k in range(n_frames):
+        type = torch.tensor(x_list[0][k][:, 5], dtype=torch.float32, device=device)
+        if k == 0:
+            type_stack = type
+        else:
+            type_stack = torch.cat((type_stack, type), 0)
 
     if model_config.embedding_init !='':
         print('compute init embedding ...')
@@ -2829,7 +2834,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
     else:
         projections = None
 
-    print('Create models ...')
+    print('create models ...')
     model, bc_pos, bc_dpos = choose_training_model(model_config=config, device=device, projections=projections)
 
     if has_field:
@@ -2902,7 +2907,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     Niter = int(n_frames * data_augmentation_loop // batch_size * n_runs / 10)
 
-    print(f'plot every {Niter // 100} iterations')
+    print(f'plot every {Niter // 10} iterations')
 
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
 
@@ -2929,7 +2934,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
 
         for N in trange(Niter):
 
-            run = np.random.randint(n_runs)
+            run = 1 + np.random.randint(n_runs-1)
             k = np.random.randint(n_frames - 5)
 
             if has_field:
@@ -2938,7 +2943,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
 
             for batch in range(batch_size):
 
-                in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a), dim=1)
+                in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[0:n_particles]), dim=1)
                 func_phi = model.lin_phi(in_features.float())
                 x = torch.tensor(x_list[run][k], device=device)
                 if model_config.signal_model_name == 'PDE_N4':
@@ -2968,32 +2973,32 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
                 match recursive_loop:
                     case 1:
                         dataset = data.Data(x=x, edge_index=model.edges)
-                        pred = model(dataset, data_id=run, has_field=has_field)
+                        pred = model(dataset, data_id=run, has_field=has_field, k = k)
                         y = torch.tensor(y_list[run][k], device=device) / ynorm
                         loss = (pred - y).norm(2) + model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(
                             2) + diff * coeff_diff
                     case 2:
                         dataset = data.Data(x=x, edge_index=model.edges)
-                        pred1 = model(dataset, data_id=run, has_field=has_field)
+                        pred1 = model(dataset, data_id=run, has_field=has_field, k = k)
                         x_ = x.clone().detach()
                         x_[:, 6:7] += pred1 * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred2 = model(dataset, data_id=run, has_field=has_field)
+                        pred2 = model(dataset, data_id=run, has_field=has_field, k = k)
                         y1 = torch.tensor(y_list[run][k], device=device) / ynorm
                         y2 = torch.tensor(y_list[run][k + 1], device=device) / ynorm
                         loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + model.W.norm(1) * coeff_L1 + func_phi.norm(
                             2) + func_edge.norm(2) + diff * coeff_diff
                     case 3:
                         dataset = data.Data(x=x, edge_index=model.edges)
-                        pred1 = model(dataset, data_id=run, has_field=has_field)
+                        pred1 = model(dataset, data_id=run, has_field=has_field, k = k)
                         x_ = x.clone().detach()
                         x_[:, 6:7] += pred1 * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred2 = model(dataset, data_id=run, has_field=has_field)
+                        pred2 = model(dataset, data_id=run, has_field=has_field, k = k)
                         x_ = x.clone().detach()
                         x_[:, 6:7] += (pred1 + pred2) * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred3 = model(dataset, data_id=run, has_field=has_field)
+                        pred3 = model(dataset, data_id=run, has_field=has_field, k = k)
                         y1 = torch.tensor(y_list[run][k], device=device) / ynorm
                         y2 = torch.tensor(y_list[run][k + 1], device=device) / ynorm
                         y3 = torch.tensor(y_list[run][k + 2], device=device) / ynorm
@@ -3001,23 +3006,23 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
                             1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * coeff_diff
                     case 5:
                         dataset = data.Data(x=x, edge_index=model.edges)
-                        pred1 = model(dataset, data_id=run, has_field=has_field)
+                        pred1 = model(dataset, data_id=run, has_field=has_field, k = k)
                         x_ = x.clone().detach()
                         x_[:, 6:7] += pred1 * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred2 = model(dataset, data_id=run, has_field=has_field)
+                        pred2 = model(dataset, data_id=run, has_field=has_field, k = k)
                         x_ = x.clone().detach()
                         x_[:, 6:7] += (pred1 + pred2) * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred3 = model(dataset, data_id=run, has_field=has_field)
+                        pred3 = model(dataset, data_id=run, has_field=has_field, k = k)
                         x_ = x.clone().detach()
                         x_[:, 6:7] += (pred1 + pred2 + pred3) * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred4 = model(dataset, data_id=run, has_field=has_field)
+                        pred4 = model(dataset, data_id=run, has_field=has_field, k = k)
                         x_ = x.clone().detach()
                         x_[:, 6:7] += (pred1 + pred2 + pred3 + pred4) * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred5 = model(dataset, data_id=run, has_field=has_field)
+                        pred5 = model(dataset, data_id=run, has_field=has_field, k = k)
                         y1 = y_list[run][k].clone().detach() / ynorm
                         y2 = y_list[run][k + 1].clone().detach() / ynorm
                         y3 = y_list[run][k + 2].clone().detach() / ynorm
@@ -3036,8 +3041,8 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
             total_loss += loss.item()
 
             visualize_embedding = True
-            if visualize_embedding & (((epoch < 30) & (N % (Niter // 50) == 0)) | (N == 0)):
-                plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, n_particles,
+            if visualize_embedding & (((epoch < 30) & (N % (Niter // 10) == 0)) | (N == 0)):
+                plot_training_signal(config, dataset_name, model, type_stack, adjacency, ynorm, log_dir, epoch, N, n_particles,
                                      n_particle_types, type_list, cmap, device)
                 torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
                            os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
@@ -3074,7 +3079,6 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
         fig = plt.figure(figsize=(20, 8))
-
         ax = fig.add_subplot(2, 5, 1)
         plt.plot(list_loss, color='k')
         plt.xlim([0, n_epochs])
@@ -3122,121 +3126,123 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
         print(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
         logger.info(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
 
-        ax = fig.add_subplot(2, 5, 6)
-        embedding = to_numpy(model.a.squeeze())
+        if ('PDE_N3' not in model_config.signal_model_name):
 
-        if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
-            model_MLP = model.lin_edge
-        else:
-            model_MLP = model.lin_phi
+            ax = fig.add_subplot(2, 5, 6)
+            embedding = to_numpy(model.a.squeeze())
 
-        func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config,
-                                                            model_MLP=model_MLP, model_a=model.a,
-                                                            n_nodes=0,
-                                                            dataset_number=1,
-                                                            n_particles=n_particles, ynorm=ynorm,
-                                                            type_list=to_numpy(x[:, 1 + 2 * dimension]),
-                                                            cmap=cmap, dimension=dimension, device=device)
-
-        labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding,
-                                                          train_config.cluster_distance_threshold, type_list,
-                                                          n_particle_types, embedding_cluster)
-
-        accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-        print(f'accuracy: {np.round(accuracy, 3)}   n_clusters: {n_clusters}')
-        logger.info(f'accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}')
-
-        ax = fig.add_subplot(2, 5, 7)
-        for n in np.unique(new_labels):
-            pos = np.array(np.argwhere(new_labels == n).squeeze().astype(int))
-            if pos.size > 0:
-                plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], s=5)
-        plt.xlabel('proj 0', fontsize=12)
-        plt.ylabel('proj 1', fontsize=12)
-        plt.text(0, 1.1, f'accuracy: {np.round(accuracy, 3)},  {n_clusters} clusters', ha='left', va='top',
-                 transform=ax.transAxes, fontsize=10)
-
-        ax = fig.add_subplot(2, 5, 8)
-        model_a_ = model.a.clone().detach()
-        for n in range(n_clusters):
-            pos = np.argwhere(labels == n).squeeze().astype(int)
-            if pos.size > 0:
-                pos = np.array(pos)
-                median_center = model_a_[pos, :]
-                median_center = torch.median(median_center, dim=0).values
-                plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='r', alpha=0.25)
-                model_a_[pos, :] = median_center
-                plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=10, c='k')
-        plt.xlabel('ai0', fontsize=12)
-        plt.ylabel('ai1', fontsize=12)
-        plt.xticks(fontsize=10.0)
-        plt.yticks(fontsize=10.0)
-
-        if (replace_with_cluster) & (epoch % sparsity_freq == sparsity_freq - 1) & (epoch < n_epochs - sparsity_freq):
-            # Constrain embedding domain
-
-            model.a.values = model_a_.clone().detach()
-            print(f'regul_embedding: replaced')
-            logger.info(f'regul_embedding: replaced')
-
-            # Constrain function domain
-            if train_config.sparsity == 'replace_embedding_function':
-
-                logger.info(f'replace_embedding_function')
-                y_func_list = func_list * 0
-
-                ax = fig.add_subplot(2, 5, 9)
-                for n in np.unique(new_labels):
-                    pos = np.argwhere(new_labels == n)
-                    pos = pos.squeeze()
-                    if pos.size > 0:
-                        target_func = torch.median(func_list[pos, :], dim=0).values.squeeze()
-                        y_func_list[pos] = target_func
-                    plt.plot(to_numpy(target_func) * to_numpy(ynorm), linewidth=2, alpha=1)
-                plt.xticks([])
-                plt.yticks([])
-                plt.tight_layout()
-
-                lr_embedding = 1E-12
-                optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-                for sub_epochs in range(20):
-                    rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
-                    pred = []
-                    optimizer.zero_grad()
-                    for n in range(n_particles):
-                        embedding_ = model.a[n, :].clone().detach() * torch.ones((1000, model_config.embedding_dim),
-                                                                                 device=device)
-                        in_features = get_in_features(rr, embedding_, config.graph_model.signal_model_name,
-                                                      config.simulation.max_radius)
-                        if (model_config.signal_model_name == 'PDE_N4'):
-                            pred.append(model.lin_edge(in_features.float()))
-                        else:
-                            pred.append(model.lin_phi(in_features.float()))
-                    pred = torch.stack(pred)
-                    loss = (pred[:, :, 0] - y_func_list.clone().detach()).norm(2)
-                    logger.info(f'    loss: {np.round(loss.item() / n_particles, 3)}')
-                    loss.backward()
-                    optimizer.step()
-            if train_config.fix_cluster_embedding:
-                lr_embedding = 1E-12
+            if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
+                model_MLP = model.lin_edge
             else:
-                lr_embedding = train_config.learning_rate_embedding_start
-            optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-            logger.info(f'Learning rates: {lr}, {lr_embedding}')
-        else:
-            if epoch > n_epochs - sparsity_freq:
-                lr_embedding = train_config.learning_rate_embedding_end
-                lr = train_config.learning_rate_end
+                model_MLP = model.lin_phi
+
+            func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config,
+                                                                model_MLP=model_MLP, model_a=model.a,
+                                                                n_nodes=0,
+                                                                dataset_number=1,
+                                                                n_particles=n_particles, ynorm=ynorm,
+                                                                type_list=to_numpy(x[:, 1 + 2 * dimension]),
+                                                                cmap=cmap, dimension=dimension, device=device)
+
+            labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding,
+                                                              train_config.cluster_distance_threshold, type_list,
+                                                              n_particle_types, embedding_cluster)
+
+            accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
+            print(f'accuracy: {np.round(accuracy, 3)}   n_clusters: {n_clusters}')
+            logger.info(f'accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}')
+
+            ax = fig.add_subplot(2, 5, 7)
+            for n in np.unique(new_labels):
+                pos = np.array(np.argwhere(new_labels == n).squeeze().astype(int))
+                if pos.size > 0:
+                    plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], s=5)
+            plt.xlabel('proj 0', fontsize=12)
+            plt.ylabel('proj 1', fontsize=12)
+            plt.text(0, 1.1, f'accuracy: {np.round(accuracy, 3)},  {n_clusters} clusters', ha='left', va='top',
+                     transform=ax.transAxes, fontsize=10)
+
+            ax = fig.add_subplot(2, 5, 8)
+            model_a_ = model.a.clone().detach()
+            for n in range(n_clusters):
+                pos = np.argwhere(labels == n).squeeze().astype(int)
+                if pos.size > 0:
+                    pos = np.array(pos)
+                    median_center = model_a_[pos, :]
+                    median_center = torch.median(median_center, dim=0).values
+                    plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='r', alpha=0.25)
+                    model_a_[pos, :] = median_center
+                    plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=10, c='k')
+            plt.xlabel('ai0', fontsize=12)
+            plt.ylabel('ai1', fontsize=12)
+            plt.xticks(fontsize=10.0)
+            plt.yticks(fontsize=10.0)
+
+            if (replace_with_cluster) & (epoch % sparsity_freq == sparsity_freq - 1) & (epoch < n_epochs - sparsity_freq):
+                # Constrain embedding domain
+
+                model.a.values = model_a_.clone().detach()
+                print(f'regul_embedding: replaced')
+                logger.info(f'regul_embedding: replaced')
+
+                # Constrain function domain
+                if train_config.sparsity == 'replace_embedding_function':
+
+                    logger.info(f'replace_embedding_function')
+                    y_func_list = func_list * 0
+
+                    ax = fig.add_subplot(2, 5, 9)
+                    for n in np.unique(new_labels):
+                        pos = np.argwhere(new_labels == n)
+                        pos = pos.squeeze()
+                        if pos.size > 0:
+                            target_func = torch.median(func_list[pos, :], dim=0).values.squeeze()
+                            y_func_list[pos] = target_func
+                        plt.plot(to_numpy(target_func) * to_numpy(ynorm), linewidth=2, alpha=1)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+
+                    lr_embedding = 1E-12
+                    optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+                    for sub_epochs in range(20):
+                        rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
+                        pred = []
+                        optimizer.zero_grad()
+                        for n in range(n_particles):
+                            embedding_ = model.a[n, :].clone().detach() * torch.ones((1000, model_config.embedding_dim),
+                                                                                     device=device)
+                            in_features = get_in_features(rr, embedding_, config.graph_model.signal_model_name,
+                                                          config.simulation.max_radius)
+                            if (model_config.signal_model_name == 'PDE_N4'):
+                                pred.append(model.lin_edge(in_features.float()))
+                            else:
+                                pred.append(model.lin_phi(in_features.float()))
+                        pred = torch.stack(pred)
+                        loss = (pred[:, :, 0] - y_func_list.clone().detach()).norm(2)
+                        logger.info(f'    loss: {np.round(loss.item() / n_particles, 3)}')
+                        loss.backward()
+                        optimizer.step()
+                if train_config.fix_cluster_embedding:
+                    lr_embedding = 1E-12
+                else:
+                    lr_embedding = train_config.learning_rate_embedding_start
                 optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
                 logger.info(f'Learning rates: {lr}, {lr_embedding}')
             else:
-                lr_embedding = train_config.learning_rate_embedding_start
-                lr = train_config.learning_rate_start
-                optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-                logger.info(f'Learning rates: {lr}, {lr_embedding}')
-        if (epoch == 20) & (train_config.coeff_anneal_L1 > 0):
-            coeff_L1 = train_config.coeff_anneal_L1
-            logger.info(f'coeff_L1: {coeff_L1}')
+                if epoch > n_epochs - sparsity_freq:
+                    lr_embedding = train_config.learning_rate_embedding_end
+                    lr = train_config.learning_rate_end
+                    optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+                    logger.info(f'Learning rates: {lr}, {lr_embedding}')
+                else:
+                    lr_embedding = train_config.learning_rate_embedding_start
+                    lr = train_config.learning_rate_start
+                    optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+                    logger.info(f'Learning rates: {lr}, {lr_embedding}')
+            if (epoch == 20) & (train_config.coeff_anneal_L1 > 0):
+                coeff_L1 = train_config.coeff_anneal_L1
+                logger.info(f'coeff_L1: {coeff_L1}')
 
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{epoch}.tif")

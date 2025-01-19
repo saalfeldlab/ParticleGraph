@@ -1537,7 +1537,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     n_frames = simulation_config.n_frames
     has_particle_dropout = training_config.particle_dropout > 0
     dataset_name = config.dataset
-    is_V2 = ('PDE_N2' in model_config.signal_model_name) | ('PDE_N3' in model_config.signal_model_name) | ('PDE_N4' in model_config.signal_model_name) | ('PDE_N5' in model_config.signal_model_name)
     has_zarr = 'zarr' in simulation_config.connectivity_file
     excitation = simulation_config.excitation
     noise_level = training_config.noise_level
@@ -1760,6 +1759,8 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     y, s_tanhu, msg = model(dataset, return_all=True, has_field=True)
                 elif ('visual' in field_type) & (it >= 0):
                     y, s_tanhu, msg = model(dataset, return_all=True, has_field=True)
+                elif 'PDE_N3' in model_config.signal_model_name:
+                    y, s_tanhu, msg = model(dataset, return_all=True, has_field=False, alpha = it/n_frames)
                 else:
                     y, s_tanhu, msg = model(dataset, return_all=True, has_field=False)
 
@@ -2157,7 +2158,6 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
     n_frames = simulation_config.n_frames
     has_particle_dropout = training_config.particle_dropout > 0
     dataset_name = config.dataset
-    is_V2 = 'signal_N2' in dataset_name
 
     torch.random.fork_rng(devices=device)
     torch.random.manual_seed(training_config.seed)
@@ -2238,9 +2238,6 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
         # initialize particle and graph states
         X1_, V1, T1_, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
 
-        # if (is_V2) & (run == 0):
-        #     H1[:,0] = X_[:, 0].clone().detach()
-
         x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                                H1.clone().detach(), A1.clone().detach()), 1)
 
@@ -2303,7 +2300,7 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
 
 
 
-        if (is_V2) & (run == 0):
+        if (run == 0):
 
             fig = plt.figure(figsize=(16, 8))
             plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 2]), s=10, c=to_numpy(T1[:, 0]), cmap='tab20', vmin=0,

@@ -89,15 +89,25 @@ def get_in_features(rr, embedding_, config_model, max_radius):
 
     return in_features
 
-def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, n_particles, n_particle_types, type_list, cmap, device):
+def plot_training_signal(config, dataset_name, model, type_stack, adjacency, ynorm, log_dir, epoch, N, n_particles, n_particle_types, type_list, cmap, device):
 
-    fig = plt.figure(figsize=(8, 8))
-    for n in range(n_particle_types):
-        pos=torch.argwhere(type_list==n).squeeze()
-        if config.graph_model.signal_model_name=='PDE_N':
-            plt.scatter(to_numpy(model.a[1,pos, 0]), to_numpy(model.a[1,pos, 1]), s=20, color=cmap.color(n))
-        else:
-            plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=20, color=cmap.color(n))
+    if 'PDE_N3' in config.graph_model.signal_model_name:
+        fig, ax = fig_init()
+        for n in range(n_particle_types):
+            pos = torch.argwhere(type_stack == n).squeeze()
+            if len(pos) > 1E5:
+                pos = pos[np.random.permutation(len(pos))[:int(1E5)]]
+            if len(pos) > 0:
+                plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=1, color=cmap.color(n), alpha=0.1,
+                            edgecolor='none')
+    else:
+        fig = plt.figure(figsize=(8, 8))
+        for n in range(n_particle_types):
+            pos=torch.argwhere(type_list==n).squeeze()
+            if config.graph_model.signal_model_name=='PDE_N':
+                plt.scatter(to_numpy(model.a[1,pos, 0]), to_numpy(model.a[1,pos, 1]), s=20, color=cmap.color(n))
+            else:
+                plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=20, color=cmap.color(n))
 
     plt.xticks([])
     plt.yticks([])
@@ -129,11 +139,8 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
     fig = plt.figure(figsize=(8, 8))
     rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
     for n in range(n_particles):
-        if ('PDE_N2' in config.graph_model.signal_model_name):
+        if ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N3' in config.graph_model.signal_model_name):
             embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-            in_features = torch.cat((rr[:, None], embedding_), dim=1)
-        elif 'PDE_N3' in config.graph_model.signal_model_name:
-            embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
             in_features = torch.cat((rr[:, None], embedding_), dim=1)
         elif 'PDE_N4' in config.graph_model.signal_model_name:
             embedding_ = model.a[n, 0:2] * torch.ones((1000, 2), device=device)
@@ -1039,7 +1046,7 @@ def choose_training_model(model_config=None, device=None, projections=None):
         case 'PDE_N':
             model = Signal_Propagation(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
-        case 'PDE_N2':
+        case 'PDE_N2' | 'PDE_N3':
             model = Signal_Propagation2(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, projections=projections)
             model.edges = []
         case 'PDE_N4':

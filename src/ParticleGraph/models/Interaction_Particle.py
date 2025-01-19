@@ -35,28 +35,43 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         train_config = config.training
 
         self.device = device
+
         self.input_size = model_config.input_size
         self.output_size = model_config.output_size
         self.hidden_dim = model_config.hidden_dim
         self.n_layers = model_config.n_mp_layers
-        self.n_particles = simulation_config.n_particles
-        self.max_radius = simulation_config.max_radius
-        self.rotation_augmentation = train_config.rotation_augmentation
-        self.embedding_dim = model_config.embedding_dim
-        self.n_dataset = train_config.n_runs
-        self.sigma = simulation_config.sigma
+
+        self.update_type = model_config.update_type
+        self.n_layers_update = model_config.n_layers_update
+        self.input_size_update = model_config.input_size_update
+        self.hidden_dim_update = model_config.hidden_dim_update
+        self.output_size_update = model_config.output_size_update
+
         self.model = model_config.particle_model_name
-        self.bc_dpos = bc_dpos
-        self.n_ghosts = int(train_config.n_ghosts)
+        self.n_dataset = train_config.n_runs
         self.dimension = dimension
         self.delta_t = simulation_config.delta_t
+        self.n_particles = simulation_config.n_particles
+        self.embedding_dim = model_config.embedding_dim
+
         self.prediction = model_config.prediction
+        self.bc_dpos = bc_dpos
+        self.max_radius = simulation_config.max_radius
+        self.rotation_augmentation = train_config.rotation_augmentation
         self.time_window = train_config.time_window
         self.sub_sampling = simulation_config.sub_sampling
-        self.prediction = model_config.prediction
+
+        self.sigma = simulation_config.sigma
+        self.n_ghosts = int(train_config.n_ghosts)
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device)
+
+        if self.update_type == 'mlp':
+            self.lin_phi = MLP(input_size=self.input_size_update, output_size=self.output_size_update,
+                               nlayers=self.n_layers_update,
+                               hidden_size=self.hidden_dim_update, device=self.device)
+
 
         self.a = nn.Parameter(
                 torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
@@ -108,6 +123,8 @@ class Interaction_Particle(pyg.nn.MessagePassing):
 
                 pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
 
+        if self.update_type == 'mlp':
+            out = self.lin_phi(torch.cat((out, embedding, d_pos), dim=-1))
 
         return out
 

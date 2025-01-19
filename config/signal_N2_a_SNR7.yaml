@@ -1,12 +1,12 @@
-description: 'synaptic network random matrix no coeff_diff 100    1000 neurons 4 types phi neuron dependent lorentz std 0.03'
-dataset: 'signal_N2_Lorentz_j'
+description: 'synaptic network random matrix no recursive loop  noise 7.2'
+dataset: 'signal_N2_Lorentz_SNR7'
 
 simulation:
-    connectivity_file: 'random'
+    connectivity_file: '/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/graphs_signal_N2_Lorentz_a/adjacency.pt'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
     connectivity_distribution: 'Lorentz'
-    params: [[10.0,1.0,1.0,1.0],[10.0,1.0,1.0,2.0],[10.0,1.0,1.0,4.0],[10.0,1.0,1.0,8.0]]
+    params: [[10.0,1.0,1.0],[10.0,2.0,1.0],[10.0,1.0,2.0],[10.0,2.0,2.0]]
     phi: 'tanh'
     tau: 1.0
     min_radius: 1.0
@@ -21,11 +21,11 @@ simulation:
     start_frame: -1000
 
 graph_model:
-    signal_model_name: 'PDE_N4'
+    signal_model_name: 'PDE_N2'
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
-    input_size: 3
+    input_size: 1
     output_size: 1
     hidden_dim: 64
     n_mp_layers: 3
@@ -35,7 +35,6 @@ graph_model:
     aggr_type: 'add'
     embedding_dim: 2
     update_type: 'none'
-
 
 plotting:
     colormap: 'tab10'
@@ -49,15 +48,14 @@ training:
     batch_size: 1
     small_init_batch_size: False
     n_runs: 10
-    large_range: False
     sparsity: 'none'
     rotation_augmentation: False
     data_augmentation_loop: 100
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     device: 'auto'
-    sparsity: 'replace_embedding'
+    sparsity: 'replace_embedding_function'
     sparsity_freq: 4
     learning_rate_start: 1.0E-4
     learning_rate_embedding_start: 1.0E-4
-    coeff_diff: 100
+    noise_level: 7.2

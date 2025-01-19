@@ -57,9 +57,9 @@ if __name__ == '__main__':
     else:
         task = 'train'
         best_model = None
-        # config_list = ['fluids_m13_1_training']
-        # config_list = ['falling_water_ramp_x6_12']
-        config_list =['signal_N2_a1_umap']
+        # config_list = ['fluids_m11']
+        # config_list = ['falling_water_ramp_x6_11']
+        config_list =['signal_N3_c']
 
     for config_file in config_list:
 
@@ -73,16 +73,16 @@ if __name__ == '__main__':
         if 'train' in task:
             data_train(config=config, config_file=config_file, erase=False, best_model=best_model, device=device)
         if 'test' in task:
-            data_test(config=config, config_file=config_file, visualize=True, style='white bw color', verbose=False, best_model='best', run=0, plot_data=False,
-                      test_simulation=False, sample_embedding=False, fixed=False, bounce=False, step=400, device=device)
+            # data_test(config=config, config_file=config_file, visualize=True, style='white bw color', verbose=False, best_model='best', run=0, plot_data=False,
+            #           test_simulation=False, sample_embedding=False, fixed=False, bounce=False, step=4, device=device)
 
 
-            # data_test(config=config, config_file=config_file, visualize=True, style='black color', verbose=False, best_model='best', run=1, plot_data=False,
-            #           test_simulation=False, sample_embedding=False, fixed=True, bounce=True, step=4, device=device)
-            # data_test(config=config, config_file=config_file, visualize=True, style='black color', verbose=False, best_model='best', run=1, plot_data=False,
-            #           test_simulation=False, sample_embedding=False, fixed=True, bounce=False, step=4, device=device)
-            # data_test(config=config, config_file=config_file, visualize=True, style='black color', verbose=False, best_model='best', run=15, plot_data=False,
-            #           test_simulation=False, sample_embedding=False, fixed=True, bounce=True, step=4, device=device)
+            data_test(config=config, config_file=config_file, visualize=True, style='black color', verbose=False, best_model='best', run=1, plot_data=True,
+                      test_simulation=False, sample_embedding=False, fixed=True, bounce=True, step=4, device=device)
+            data_test(config=config, config_file=config_file, visualize=True, style='black color', verbose=False, best_model='best', run=2, plot_data=False,
+                      test_simulation=False, sample_embedding=False, fixed=True, bounce=False, step=4, device=device)
+            data_test(config=config, config_file=config_file, visualize=True, style='black color', verbose=False, best_model='best', run=15, plot_data=False,
+                      test_simulation=False, sample_embedding=False, fixed=True, bounce=True, step=4, device=device)
 
 
 # bsub -n 4 -gpu "num=1" -q gpu_h100 -Is "python GNN_particles_Ntype.py"

@@ -5311,18 +5311,23 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
 
             fig, ax = fig_init()
             rr = torch.tensor(np.linspace(-7.5, 7.5, 1500)).to(device)
-            true_func = true_model.func(rr, 0, 'phi')
-            plt.plot(to_numpy(rr), to_numpy(true_func), c = 'k', linewidth = 16, label = 'original', alpha = 0.07)
+            if model_config.signal_model_name == 'PDE_N4':
+                for n in range(n_particle_types):
+                    true_func = true_model.func(rr, n, 'phi')
+                    plt.plot(to_numpy(rr), to_numpy(true_func), c = 'k', linewidth = 16, label = 'original', alpha = 0.07)
+            else:
+                true_func = true_model.func(rr, 0, 'phi')
+                plt.plot(to_numpy(rr), to_numpy(true_func), c = 'k', linewidth = 16, label = 'original', alpha = 0.07)
             for n in trange(0,n_particles,n_particles//100):
                 if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
-                    embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                    embedding_ = model.a[n, :] * torch.ones((1500, config.graph_model.embedding_dim), device=device)
                     in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
                 else:
                     in_features = rr[:, None]
                 with torch.no_grad():
                     func = model.lin_edge(in_features.float()) * correction
                 if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
-                    plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=8, alpha=0.25)
+                    plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
                 else:
                     plt.plot(to_numpy(rr), to_numpy(func), 2, color='k', linewidth=2, alpha=0.25)
             plt.xlabel(r'$x_i$', fontsize=78)
@@ -6603,7 +6608,7 @@ if __name__ == '__main__':
     print(f'device {device}')
     print(' ')
 
-    matplotlib.use("Qt5Agg")
+    # matplotlib.use("Qt5Agg")
 
     # try:
     #     matplotlib.use("Qt5Agg")
@@ -6615,12 +6620,12 @@ if __name__ == '__main__':
     #     config_list,epoch_list = get_figures(f)
 
 
-    config_list = ['signal_N2_e']
+    config_list = ['signal_N2_d']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         data_plot(config=config, config_file=config_file, epoch_list=['best'], bLatex=True, device=device)
-        data_plot(config=config, config_file=config_file, epoch_list=['all'], bLatex=True, device=device)
+        # data_plot(config=config, config_file=config_file, epoch_list=['all'], bLatex=True, device=device)
 
         # data_plot(config=config, config_file=config_file, epoch_list=['all'], bLatex=False, device=device)
 

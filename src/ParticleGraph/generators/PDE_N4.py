@@ -149,5 +149,13 @@ class PDE_N4(pyg.nn.MessagePassing):
         return T[to_numpy(edge_index_i), to_numpy(edge_index_j)][:, None]  * self.phi(u_j/t_i) * field_i
 
 
-    def psi(self, r, p):
-        return r * p
+    def func(self, u, type, function):
+
+        if function=='phi':
+
+            t = self.p[type, 3:4]
+            return self.phi(u/t)
+
+        elif function=='update':
+            g, s, c = self.p[type, 0:1], self.p[type, 1:2], self.p[type, 2:3]
+            return -c * u + s * self.phi(u)
