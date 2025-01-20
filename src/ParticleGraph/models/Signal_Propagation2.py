@@ -59,7 +59,8 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
 
         if self.model == 'PDE_N3':
             self.a = nn.Parameter(
-                torch.ones((int(self.n_particles*self.n_frames), self.embedding_dim), device=self.device, requires_grad=True,dtype=torch.float32))
+                torch.ones((int(self.n_particles*100 + 1000), self.embedding_dim), device=self.device, requires_grad=True,dtype=torch.float32))
+            self.embedding_step =  self.n_frames // 100
         elif model_config.embedding_init =='':
             self.a = nn.Parameter(torch.ones((int(self.n_particles), self.embedding_dim), device=self.device, requires_grad=True, dtype=torch.float32))
         else:
@@ -69,6 +70,14 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
 
         self.mask = torch.ones((int(self.n_particles),int(self.n_particles)), device=self.device, requires_grad=False, dtype=torch.float32)
         self.mask.fill_diagonal_(0)
+
+
+    def get_interp_a(self, k, particle_id):
+
+        id = particle_id * 100 + k // self.embedding_step
+        alpha = (k % self.embedding_step) / self.embedding_step
+
+        return alpha * self.a[id+1, :] + (1 - alpha) * self.a[id, :]
 
 
     def forward(self, data=[], data_id=[], return_all=False, has_field=False, k = 0):
@@ -83,11 +92,12 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             field = torch.ones_like(x[:,6:7])
 
         if self.model == 'PDE_N3':
-            particle_id = to_numpy(x[:, 0]) + k * self.n_particles
+            particle_id = to_numpy(x[:, 0])
+            embedding = self.get_interp_a(k, particle_id)
+
         else:
             particle_id = to_numpy(x[:, 0])
-
-        embedding = self.a[particle_id, :]
+            embedding = self.a[particle_id, :]
 
         in_features = torch.cat([u, embedding], dim=1)
 

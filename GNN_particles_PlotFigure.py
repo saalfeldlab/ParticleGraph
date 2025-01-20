@@ -5291,10 +5291,13 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
                     in_features = rr[:, None]
                 with torch.no_grad():
                     func = model.lin_edge(in_features.float())
-                if ((n<250) & (model_config.signal_model_name == 'PDE_N4')) | (model_config.signal_model_name != 'PDE_N4'):
+                if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
+                    if n<250:
+                        func_list.append(func)
+                else:
                     func_list.append(func)
-                    plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)),
-                             linewidth=8 // ( 1 + (n_particle_types>16)*1.0), alpha=0.25)
+                plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)),
+                         linewidth=8 // ( 1 + (n_particle_types>16)*1.0), alpha=0.25)
             func_list = torch.stack(func_list)
             plt.xlabel(r'$x_i$', fontsize=78)
             plt.ylabel(r'Learned $\psi^*(a_i, x_i)$', fontsize=78)
@@ -5309,44 +5312,19 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
             print(f'correction: {correction:0.2f}')
             torch.save(correction, f'{log_dir}/correction.pt')
 
-            fig, ax = fig_init()
-            rr = torch.tensor(np.linspace(-7.5, 7.5, 1500)).to(device)
-            if model_config.signal_model_name == 'PDE_N4':
-                for n in range(n_particle_types):
-                    true_func = true_model.func(rr, n, 'phi')
-                    plt.plot(to_numpy(rr), to_numpy(true_func), c = 'k', linewidth = 16, label = 'original', alpha = 0.07)
-            else:
-                true_func = true_model.func(rr, 0, 'phi')
-                plt.plot(to_numpy(rr), to_numpy(true_func), c = 'k', linewidth = 16, label = 'original', alpha = 0.07)
-            for n in trange(0,n_particles,n_particles//100):
-                if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
-                    embedding_ = model.a[n, :] * torch.ones((1500, config.graph_model.embedding_dim), device=device)
-                    in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
-                else:
-                    in_features = rr[:, None]
-                with torch.no_grad():
-                    func = model.lin_edge(in_features.float()) * correction
-                if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
-                    plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
-                else:
-                    plt.plot(to_numpy(rr), to_numpy(func), 2, color='k', linewidth=2, alpha=0.25)
-            plt.xlabel(r'$x_i$', fontsize=78)
-            if model_config.signal_model_name == 'PDE_N4':
-                plt.ylabel(r'learned $\psi^*(a_i, x_i)$', fontsize=78)
-            elif model_config.signal_model_name == 'PDE_N5':
-                plt.ylabel(r'learned $\psi^*(a_i, a_j, x_i)$', fontsize=78)
-            else:
-                plt.ylabel(r'learned $\psi^*(x_i)$', fontsize=78)
-            plt.ylim([-1.1, 1.1])
-            plt.xlim(config.plotting.xlim)
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/learned_psi.tif", dpi=170.7)
-            plt.close()
-
             if model_config.signal_model_name == 'PDE_N5':
-                fig = plt.figure(figsize=(15, 15))
+
+                fig, ax = fig_init()
+                rr = torch.tensor(np.linspace(-7.5, 7.5, 1500)).to(device)
+
+                ax.set_frame_on(False)
+                ax.get_xaxis().set_visible(False)
+                ax.get_yaxis().set_visible(False)
                 for k in range(n_particle_types):
-                    ax = fig.add_subplot(2, 2, k+1)
+                    ax = fig.add_subplot(2, 2, k + 1)
+                    for m in range(n_particle_types):
+                        true_func = true_model.func(rr, k, m, 'phi')
+                        plt.plot(to_numpy(rr), to_numpy(true_func), c='k', linewidth=8, label='original', alpha=0.07)
                     for n in range(n_particle_types):
                         for m in range(250):
                             pos0 = to_numpy(torch.argwhere(type_list == k).squeeze())
@@ -5355,24 +5333,71 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
                             n0 = pos0[n0,0]
                             n1 = np.random.randint(len(pos1))
                             n1 = pos1[n1,0]
-                            embedding0 = model.a[n0, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-                            embedding1 = model.a[n1, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                            embedding0 = model.a[n0, :] * torch.ones((1500, config.graph_model.embedding_dim), device=device)
+                            embedding1 = model.a[n1, :] * torch.ones((1500, config.graph_model.embedding_dim), device=device)
                             in_features = torch.cat((rr[:,None],embedding0, embedding1), dim=1)
                             func = model.lin_edge(in_features.float()) * correction
                             plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(k),linewidth=1, alpha=0.25)
-                    plt.ylabel(r'learned $\psi^*(a_i, a_j, x_i)$', fontsize=24)
-                    plt.xlabel(r'$x_i$', fontsize=24)
-                    plt.ylim([-1.5, 1.5])
+
+                    plt.ylim([-1.1, 1.1])
                     plt.xlim([-5, 5])
+
+
+                    # plt.ylabel(r'learned $\psi^*(a_i, a_j, x_i)$', fontsize=24)
+                    # plt.xlabel(r'$x_i$', fontsize=24)
+                    # plt.ylim([-1.5, 1.5])
+                    # plt.xlim([-5, 5])
+
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/learned_multiple_psi.tif", dpi=170.7)
+                plt.savefig(f"./{log_dir}/results/learned_psi.tif", dpi=170.7)
                 plt.close()
+
+            else:
+
+                fig, ax = fig_init()
+                rr = torch.tensor(np.linspace(-7.5, 7.5, 1500)).to(device)
+                if model_config.signal_model_name == 'PDE_N4':
+                    for n in range(n_particle_types):
+                        true_func = true_model.func(rr, n, 'phi')
+                        plt.plot(to_numpy(rr), to_numpy(true_func), c = 'k', linewidth = 16, label = 'original', alpha = 0.07)
+                else:
+                    true_func = true_model.func(rr, 0, 'phi')
+                    plt.plot(to_numpy(rr), to_numpy(true_func), c = 'k', linewidth = 16, label = 'original', alpha = 0.07)
+
+                for n in trange(0,n_particles,n_particles//100):
+                    if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
+                        embedding_ = model.a[n, :] * torch.ones((1500, config.graph_model.embedding_dim), device=device)
+                        in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
+                    else:
+                        in_features = rr[:, None]
+                    with torch.no_grad():
+                        func = model.lin_edge(in_features.float()) * correction
+                    if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
+                        plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
+                    else:
+                        plt.plot(to_numpy(rr), to_numpy(func), 2, color='k', linewidth=2, alpha=0.25)
+                plt.xlabel(r'$x_i$', fontsize=78)
+                if model_config.signal_model_name == 'PDE_N4':
+                    plt.ylabel(r'learned $\psi^*(a_i, x_i)$', fontsize=78)
+                elif model_config.signal_model_name == 'PDE_N5':
+                    plt.ylabel(r'learned $\psi^*(a_i, a_j, x_i)$', fontsize=78)
+                else:
+                    plt.ylabel(r'learned $\psi^*(x_i)$', fontsize=78)
+                plt.ylim([-1.1, 1.1])
+                plt.xlim(config.plotting.xlim)
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/learned_psi.tif", dpi=170.7)
+                plt.close()
+
 
             print('interaction functions ...')
 
             fig, ax = fig_init()
             for n in trange(n_particle_types):
-                true_func = true_model.func(rr, n, 'update')
+                if model_config.signal_model_name == 'PDE_N5':
+                    true_func = true_model.func(rr, n, n, 'update')
+                else:
+                    true_func = true_model.func(rr, n, 'update')
                 plt.plot(to_numpy(rr), to_numpy(true_func), c='k', linewidth=16, label='original', alpha=0.07)
             func_list = []
             for n in trange(n_particles):
@@ -6608,7 +6633,7 @@ if __name__ == '__main__':
     print(f'device {device}')
     print(' ')
 
-    # matplotlib.use("Qt5Agg")
+    matplotlib.use("Qt5Agg")
 
     # try:
     #     matplotlib.use("Qt5Agg")
@@ -6620,7 +6645,7 @@ if __name__ == '__main__':
     #     config_list,epoch_list = get_figures(f)
 
 
-    config_list = ['signal_N2_d']
+    config_list = ['signal_N5_l']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')

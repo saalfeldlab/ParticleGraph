@@ -149,5 +149,14 @@ class PDE_N5(pyg.nn.MessagePassing):
         return T[to_numpy(edge_index_i), to_numpy(edge_index_j)][:, None]  * (self.phi(u_j/t_i) - u_j*l_j/50) * field_i
 
 
-    def psi(self, r, p):
-        return r * p
+    def func(self, u, type_i, type_j, function):
+
+        if function=='phi':
+
+            t = self.p[type_i, 3:4]
+            l = torch.log(self.p[type_j, 3:4])
+            return self.phi(u/t) - u*l/50
+
+        elif function=='update':
+            g, s, c = self.p[type_i, 0:1], self.p[type_i, 1:2], self.p[type_i, 2:3]
+            return -c * u + s * self.phi(u)

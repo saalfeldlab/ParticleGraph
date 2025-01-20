@@ -2415,8 +2415,6 @@ def data_train_synaptic(config, config_file, erase, best_model, device):
         print(f'Niter = {Niter}')
         logger.info(f'Niter = {Niter}')
 
-        excitation = torch.zeros((n_particles, 1), device=device)
-
         for N in trange(Niter):
 
             run = 1 + np.random.randint(n_runs - 1)
@@ -2882,19 +2880,17 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
     model.edges = torch.load(f'./graphs_data/graphs_{dataset_name}/edge_index.pt', map_location=device)
     print(f'{to_numpy(torch.sum(model.edges))} edges')
 
-    # Example usage
-    matrix = to_numpy(adjacency)
-    rank = get_matrix_rank(matrix)
-    print(f"the rank of the matrix {adjacency.shape} is: {rank}")
-    logger.info(f"the rank of the matrix {adjacency.shape} is: {rank}")
-    centers, density = compute_spectral_density(matrix)
-
-    plt.figure(figsize=(8, 8))
-    plt.plot(centers, density,c='k')
-    plt.xlabel('Eigenvalue')
-    plt.ylabel('Density')
-    plt.title('Spectral Density')
-    plt.savefig(f"./{log_dir}/tmp_training/Spectral_density_Aij.tif")
+    # matrix = to_numpy(adjacency)
+    # rank = get_matrix_rank(matrix)
+    # print(f"the rank of the matrix {adjacency.shape} is: {rank}")
+    # logger.info(f"the rank of the matrix {adjacency.shape} is: {rank}")
+    # centers, density = compute_spectral_density(matrix)
+    # plt.figure(figsize=(8, 8))
+    # plt.plot(centers, density,c='k')
+    # plt.xlabel('Eigenvalue')
+    # plt.ylabel('Density')
+    # plt.title('Spectral Density')
+    # plt.savefig(f"./{log_dir}/tmp_training/Spectral_density_Aij.tif")
 
     if simulation_config.connectivity_mask:
         model.mask = model.mask * (adjacency != 0) * 1.0

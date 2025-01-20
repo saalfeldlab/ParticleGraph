@@ -92,14 +92,20 @@ def get_in_features(rr, embedding_, config_model, max_radius):
 def plot_training_signal(config, dataset_name, model, type_stack, adjacency, ynorm, log_dir, epoch, N, n_particles, n_particle_types, type_list, cmap, device):
 
     if 'PDE_N3' in config.graph_model.signal_model_name:
+
         fig, ax = fig_init()
-        for n in range(n_particle_types):
-            pos = torch.argwhere(type_stack == n).squeeze()
-            if len(pos) > 1E5:
-                pos = pos[np.random.permutation(len(pos))[:int(1E5)]]
-            if len(pos) > 0:
-                plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=1, color=cmap.color(n), alpha=0.1,
-                            edgecolor='none')
+        plt.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), s=1, color='k', alpha=0.1, edgecolor='none')
+
+
+        # fig, ax = fig_init()
+        # for n in range(n_particle_types):
+        #     pos = torch.argwhere(type_stack == n).squeeze()
+        #     if len(pos) > 1E5:
+        #         pos = pos[np.random.permutation(len(pos))[:int(1E5)]]
+        #     if len(pos) > 0:
+        #         plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=1, color=cmap.color(n), alpha=0.1,
+        #                     edgecolor='none')
+
     else:
         fig = plt.figure(figsize=(8, 8))
         for n in range(n_particle_types):
