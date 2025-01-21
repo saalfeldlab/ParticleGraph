@@ -2026,7 +2026,6 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
         data_values = pd.read_csv(f, sep=' ', header=None)
         data_values = data_values.values
 
-
         N1 = torch.arange(len(data_values), dtype=torch.float32, device=device)[:, None]
         X1 = torch.tensor(data_values[:, 1:3], dtype=torch.float32, device=device)
         X1[:, 1] = 1-X1[:, 1]

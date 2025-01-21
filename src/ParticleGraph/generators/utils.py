@@ -395,8 +395,11 @@ def init_mesh(config, device):
     pos_mesh[0:n_nodes, 1:2] = y_mesh[0:n_nodes]
 
     i0 = imread(f'graphs_data/{node_value_map}')
-    i0 = np.flipud(i0)
-    values = i0[(to_numpy(pos_mesh[:, 1]) * 255).astype(int), (to_numpy(pos_mesh[:, 0]) * 255).astype(int)]
+    if len(i0.shape) == 2:
+        i0 = i0[0,:, :]
+        i0 = np.flipud(i0)
+        values = i0[(to_numpy(pos_mesh[:, 1]) * 255).astype(int), (to_numpy(pos_mesh[:, 0]) * 255).astype(int)]
+
     mask_mesh = (x_mesh > torch.min(x_mesh) + 0.02) & (x_mesh < torch.max(x_mesh) - 0.02) & (y_mesh > torch.min(y_mesh) + 0.02) & (y_mesh < torch.max(y_mesh) - 0.02)
 
     if field_grid == 'voronoi':
@@ -417,7 +420,7 @@ def init_mesh(config, device):
             s = torch.sum(features_mesh, dim=1)
             for k in range(3):
                 features_mesh[:, k] = features_mesh[:, k] / s
-        case '' | 'DiffMesh' | 'WaveMesh' | 'Particle_Mesh_A' | 'Particle_Mesh_B':
+        case 'DiffMesh' | 'WaveMesh' | 'Particle_Mesh_A' | 'Particle_Mesh_B':
             features_mesh = torch.zeros((n_nodes, 2), device=device)
             features_mesh[:, 0] = torch.tensor(values / 255 * 5000, device=device)
         case 'PDE_O_Mesh':
@@ -429,6 +432,8 @@ def init_mesh(config, device):
             features_mesh[0:n_particles, 4:5] = features_mesh[0:n_particles, 3:4]  # d_theta0
             pos_mesh[:, 0] = features_mesh[:, 0] + (3 / 8) * mesh_size * torch.cos(features_mesh[:, 2])
             pos_mesh[:, 1] = features_mesh[:, 1] + (3 / 8) * mesh_size * torch.sin(features_mesh[:, 2])
+        case '' :
+            features_mesh = torch.zeros((n_nodes, 2), device=device)
 
     type_mesh = torch.zeros((n_nodes, 1), device=device)
 

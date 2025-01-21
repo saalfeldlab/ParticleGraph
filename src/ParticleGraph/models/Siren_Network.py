@@ -161,7 +161,8 @@ class Siren_Network(nn.Module):
         sidelen: int
         dim: int'''
         if enlarge:
-            tensors = tuple(dim * [torch.linspace(-0.2, 1.2, steps=sidelen*20)])
+            # tensors = tuple(dim * [torch.linspace(-0.2, 1.2, steps=sidelen*20)])
+            tensors = tuple(dim * [torch.linspace(0, 1, steps=sidelen*20)])
         else:
             tensors = tuple(dim * [torch.linspace(0, 1, steps=sidelen)])
 
