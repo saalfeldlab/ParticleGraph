@@ -6254,10 +6254,11 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
                 plt.savefig(f"./{log_dir}/tmp_recons/Fig_{N}.tif", dpi=100)
                 plt.close()
 
-        fig = plt.figure(figsize=(10, 5))
-        plt.imshow(map_behavior[:, 0:1000],  aspect='auto', cmap='bwr', vmin=-0.2, vmax=0.2)
-        plt.savefig(f"./{log_dir}/behavior.tif", dpi=100)
-        plt.close
+        if 'rat_city' in dataset_name:
+            fig = plt.figure(figsize=(10, 5))
+            plt.imshow(map_behavior[:, 0:1000],  aspect='auto', cmap='bwr', vmin=-0.2, vmax=0.2)
+            plt.savefig(f"./{log_dir}/behavior.tif", dpi=100)
+            plt.close
 
 def data_video_validation(config_file, epoch_list, log_dir, logger, bLatex, device):
     print('')
