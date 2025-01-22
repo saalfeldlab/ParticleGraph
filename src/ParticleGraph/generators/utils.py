@@ -402,11 +402,11 @@ def init_mesh(config, device):
 
     mask_mesh = (x_mesh > torch.min(x_mesh) + 0.02) & (x_mesh < torch.max(x_mesh) - 0.02) & (y_mesh > torch.min(y_mesh) + 0.02) & (y_mesh < torch.max(y_mesh) - 0.02)
 
-    if field_grid == 'voronoi':
-        if 'pattern_Null.tif' in simulation_config.node_value_map:
-            pos_mesh = pos_mesh + torch.randn(n_nodes, 2, device=device) * mesh_size / 24
-        else:
-            pos_mesh = pos_mesh + torch.randn(n_nodes, 2, device=device) * mesh_size / 8
+    # if field_grid == 'voronoi':
+    #     if 'pattern_Null.tif' in simulation_config.node_value_map:
+    #         pos_mesh = pos_mesh + torch.randn(n_nodes, 2, device=device) * mesh_size / 24
+    #     else:
+    #         pos_mesh = pos_mesh + torch.randn(n_nodes, 2, device=device) * mesh_size / 8
 
     match config.graph_model.mesh_model_name:
         case 'RD_Gray_Scott_Mesh':

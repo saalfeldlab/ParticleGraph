@@ -1712,10 +1712,20 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         elif ('visual' in field_type):
             if run==0:
                 X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
-                X1 = torch.load(f'./graphs_data/graphs_signal_N2_Lorentz_c/X1.pt', map_location=device) / 10000
-                X1[:,1] = X1[:,1] + 2.2
+
+                indices = np.arange(0, 1024, dtype=float) + 0.5
+                r = np.sqrt(indices / 1024)
+                theta = np.pi * (1 + 5 ** 0.5) * indices
+                x, y = r * np.cos(theta), r * np.sin(theta)
+                X1 = torch.tensor(np.stack((x, y), axis=1), dtype=torch.float32, device=device) / 2
+                # X1 = torch.load(f'./graphs_data/graphs_signal_N2_Lorentz_c/X1.pt', map_location=device) / 10000
+
+                X1[:,1] = X1[:,1] + 1.5
                 X1[:, 0] = X1[:, 0] + 0.5
                 X1 = torch.cat((X1_mesh,X1[0:n_particles-n_nodes]), 0)
+
+                fig = plt.figure(figsize=(12, 8))
+                plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=40, c='b')
 
         x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
         check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
@@ -1861,11 +1871,21 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                         plt.savefig(f"graphs_data/graphs_{dataset_name}/Signal/Signal_{run}_{num}.tif", dpi=70)
                         plt.close()
                     elif 'visual' in field_type:
-                        fig = plt.figure(figsize=(12, 4))
+                        fig = plt.figure(figsize=(32, 8))
                         plt.subplot(121)
-                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=8, c=to_numpy(A1[:, 0]), cmap='viridis', vmin=0,vmax=2)
+                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=150, c=to_numpy(A1[:, 0]), cmap='viridis',
+                                    vmin=0, vmax=2)
+                        cbar = plt.colorbar()
+                        cbar.ax.yaxis.set_tick_params(labelsize=16)
+                        plt.xticks([])
+                        plt.yticks([])
                         plt.subplot(122)
-                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=8, c=to_numpy(H1[:, 0]), cmap='viridis', vmin=-10,vmax=10)
+                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=150, c=to_numpy(H1[:, 0]), cmap='viridis', vmin=-10,vmax=10)
+                        cbar = plt.colorbar()
+                        cbar.ax.yaxis.set_tick_params(labelsize=16)
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
                     elif 'modulation' in field_type:
                         fig = plt.figure(figsize=(12, 12))
                         plt.subplot(221)

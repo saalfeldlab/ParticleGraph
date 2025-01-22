@@ -1,5 +1,5 @@
 
-# from pysr import PySRRegressor
+
 import umap
 import torch
 import matplotlib.pyplot as plt
@@ -32,7 +32,8 @@ from sklearn.mixture import GaussianMixture
 import warnings
 import seaborn as sns
 
-# # matplotlib.use("Qt5Agg")
+from pysr import PySRRegressor
+
 
 class Interaction_Particle_extract(MessagePassing):
     """Interaction Network as proposed in this paper:
@@ -5130,7 +5131,6 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
         plt.savefig(f'./{log_dir}/results/slope.png', dpi=300)
         plt.close()
 
-
     else:
 
         fig_init(formatx='%.0f', formaty='%.0f')
@@ -5146,7 +5146,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
         logger.info(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
 
         plt.figure(figsize=(15, 10))
-        ax = sns.heatmap(to_numpy(activity), center=0, cmap='bwr', cbar_kws={'fraction': 0.046})
+        ax = sns.heatmap(to_numpy(activity), center=0, cmap='viridis', cbar_kws={'fraction': 0.046})
         cbar = ax.collections[0].colorbar
         cbar.ax.tick_params(labelsize=32)
         ax.invert_yaxis()
@@ -5229,6 +5229,8 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
                 x = x_list[0][0]
 
                 slope_list = list([])
+                im_list=list([])
+                pred_list=list([])
 
                 for frame in trange(0, n_frames, n_frames//100):
 
@@ -5258,7 +5260,6 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/results/field/reconstructed_field_HR {epoch}_{frame}.tif", dpi=80)
                     plt.close()
-
 
                     pred = model_f(time=frame / n_frames, enlarge=False) ** 2
                     pred = torch.reshape(pred, (n_nodes_per_axis, n_nodes_per_axis))
@@ -5294,8 +5295,30 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/results/field/comparison {epoch}_{frame}.tif", dpi=80)
                     plt.close()
+                    im_list.append(im_)
+                    pred_list.append(pred)
 
-            field_correction = 1 / np.mean(slope_list)
+                im_list = np.array(np.array(im_list))
+                pred_list = np.array(np.array(pred_list))
+
+                fig, ax = fig_init()
+                plt.scatter(im_list, pred_list, s=1, c='k', alpha=0.1)
+                plt.xlim([0.3, 1.6])
+                plt.ylim([0.3, 1.6])
+                plt.xlabel(r'true $\Omega_i$', fontsize=78)
+                plt.ylabel(r'learned $\Omega_i$', fontsize=78)
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/field/all_comparison {epoch}.tif", dpi=80)
+                plt.close()
+
+                x_data = np.reshape(im_list, (100 * n_nodes_per_axis * n_nodes_per_axis))
+                y_data = np.reshape(pred_list, (100 * n_nodes_per_axis * n_nodes_per_axis))
+                lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+                residuals = y_data - linear_model(x_data, *lin_fit)
+                ss_res = np.sum(residuals ** 2)
+                ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+                r_squared = 1 - (ss_res / ss_tot)
+                print(f'R^2$: {r_squared:0.4f}  slope: {np.round(lin_fit[0], 4)}')
 
             fig, ax = fig_init()
             for n in range(n_particle_types,-1,-1):
@@ -5314,7 +5337,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
             fig, ax = fig_init()
             rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
             func_list = []
-            for n in trange(0,n_particles,n_particles//100):
+            for n in trange(0,n_particles,n_particles):
                 if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
                     embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
                     in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
@@ -5344,7 +5367,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
             torch.save(correction, f'{log_dir}/correction.pt')
 
             if model_config.signal_model_name == 'PDE_N5':
-
+                psi_list = []
                 fig, ax = fig_init()
                 rr = torch.tensor(np.linspace(-7.5, 7.5, 1500)).to(device)
 
@@ -5368,14 +5391,12 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
                             embedding1 = model.a[n1, :] * torch.ones((1500, config.graph_model.embedding_dim), device=device)
                             in_features = torch.cat((rr[:,None],embedding0, embedding1), dim=1)
                             func = model.lin_edge(in_features.float()) * correction
+                            psi_list.append(func)
                             plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(k),linewidth=1, alpha=0.25)
-
                     plt.ylim([-1.1, 1.1])
                     plt.xlim([-5, 5])
                     plt.xticks(fontsize=18)
                     plt.yticks(fontsize=18)
-
-
                     # plt.ylabel(r'learned $\psi^*(a_i, a_j, x_i)$', fontsize=24)
                     # plt.xlabel(r'$x_i$', fontsize=24)
                     # plt.ylim([-1.5, 1.5])
@@ -5384,9 +5405,11 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/learned_psi.tif", dpi=170.7)
                 plt.close()
+                psi_list = torch.stack(psi_list)
+                psi_list = psi_list.squeeze()
 
             else:
-
+                psi_list = []
                 fig, ax = fig_init()
                 rr = torch.tensor(np.linspace(-7.5, 7.5, 1500)).to(device)
                 if model_config.signal_model_name == 'PDE_N4':
@@ -5397,7 +5420,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
                     true_func = true_model.func(rr, 0, 'phi')
                     plt.plot(to_numpy(rr), to_numpy(true_func), c = 'k', linewidth = 16, label = 'original', alpha = 0.21)
 
-                for n in trange(0,n_particles,n_particles//100):
+                for n in trange(0,n_particles):
                     if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
                         embedding_ = model.a[n, :] * torch.ones((1500, config.graph_model.embedding_dim), device=device)
                         in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
@@ -5405,6 +5428,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
                         in_features = rr[:, None]
                     with torch.no_grad():
                         func = model.lin_edge(in_features.float()) * correction
+                        psi_list.append(func)
                     if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
                         plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
                     else:
@@ -5421,6 +5445,8 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/learned_psi.tif", dpi=170.7)
                 plt.close()
+                psi_list = torch.stack(psi_list)
+                psi_list = psi_list.squeeze()
 
 
             print('interaction functions ...')
@@ -5432,18 +5458,18 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
                 else:
                     true_func = true_model.func(rr, n, 'update')
                 plt.plot(to_numpy(rr), to_numpy(true_func), c='k', linewidth=16, label='original', alpha=0.21)
-            func_list = []
+            phi_list = []
             for n in trange(n_particles):
                 embedding_ = model.a[n, :] * torch.ones((1500, config.graph_model.embedding_dim), device=device)
                 in_features = torch.cat((rr[:, None], embedding_), dim=1)
                 with torch.no_grad():
                     func = model.lin_phi(in_features.float())
                 func = func[:, 0]
-                func_list.append(func)
+                phi_list.append(func)
                 plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
                          color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=2, alpha=0.25)
-            func_list = torch.stack(func_list)
-            func_list_ = to_numpy(func_list)
+            phi_list = torch.stack(phi_list)
+            func_list_ = to_numpy(phi_list)
             plt.xlabel(r'$x_i$', fontsize=78)
             plt.ylabel(r'learned $\phi^*(a_i, x_i)$', fontsize=78)
             plt.tight_layout()
@@ -5546,6 +5572,108 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
             plt.tight_layout()
             plt.savefig(f'./{log_dir}/results/learned connectivity.png', dpi=300)
             plt.close()
+
+            print ('symbolic regression ...')
+
+            def get_pyssr_function(model_pysrr, rr, func):
+
+                text_trap = StringIO()
+                sys.stdout = text_trap
+
+                model_pysrr.fit(to_numpy(rr[:, None]), to_numpy(func[:, None]))
+
+                sys.stdout = sys.__stdout__
+
+                return model_pysrr.sympy
+
+            model_pysrr = PySRRegressor(
+                niterations=30,  # < Increase me for better results
+                binary_operators=["+", "*"],
+                unary_operators=[
+                    "cos",
+                    "exp",
+                    "sin",
+                    "tanh"
+                ],
+                random_state=0,
+                temp_equation_file=False
+            )
+
+
+            for k in range(n_particle_types):
+
+                print(f'phi{k} ................')
+                logger.info(f'phi{k} ................')
+
+                pos = np.argwhere(labels==k)
+                pos = pos.squeeze()
+
+                func = phi_list[pos]
+                func = torch.mean(phi_list[pos], dim=0)
+
+                symbolic = get_pyssr_function(model_pysrr, rr,func)
+
+                for n in range(4,7):
+                    print(model_pysrr.sympy(n))
+                    logger.info(model_pysrr.sympy(n))
+
+            print('psi ...')
+            logger.info('psi ...')
+
+            match model_config.signal_model_name:
+
+                case 'PDE_N2':
+
+                    func = torch.mean(psi_list, dim=0).squeeze()
+
+                    symbolic = get_pyssr_function(model_pysrr, rr, func)
+
+                    for n in range(0,7):
+                        print(model_pysrr.sympy(n))
+                        logger.info(model_pysrr.sympy(n))
+
+                case 'PDE_N4':
+
+                    for k in range(n_particle_types):
+
+                        print(f'psi{k} ................')
+                        logger.info(f'psi{k} ................')
+
+                        pos = np.argwhere(labels == k)
+                        pos = pos.squeeze()
+
+                        func = psi_list[pos]
+                        func = torch.mean(psi_list[pos], dim=0)
+
+                        symbolic = get_pyssr_function(model_pysrr, rr, func)
+
+                        for n in range(0, 5):
+                            print(model_pysrr.sympy(n))
+                            logger.info(model_pysrr.sympy(n))
+
+                case 'PDE_N5':
+
+                    for k in range(n_particle_types**2):
+
+                        print(f'psi{k} ................')
+                        logger.info(f'psi{k} ................')
+
+                        pos =np.arange(k*250,(k+1)*250)
+
+                        symbolic = get_pyssr_function(model_pysrr, rr, func)
+
+                        for n in range(0, 5):
+                            print(model_pysrr.sympy(n))
+                            logger.info(model_pysrr.sympy(n))
+
+
+
+
+
+
+
+
+
 
 
 def plot_agents(config_file, epoch_list, log_dir, logger, bLatex, device):
@@ -6718,7 +6846,7 @@ if __name__ == '__main__':
     print(f'device {device}')
     print(' ')
 
-    matplotlib.use("Qt5Agg")
+    # matplotlib.use("Qt5Agg")
 
     # try:
     #     matplotlib.use("Qt5Agg")
@@ -6732,7 +6860,7 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N5_l']
     # config_list = ['signal_N3_c1']
-    config_list = ['signal_N4_v']
+    config_list = ['signal_N5_l'] #, 'signal_N2_b', 'signal_N2_c', 'signal_N2_d', 'signal_N2_e', 'signal_N4_k', 'signal_N5_l', 'signal_N4_v']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
