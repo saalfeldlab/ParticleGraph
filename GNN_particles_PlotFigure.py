@@ -6162,10 +6162,10 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
                     plt.text(to_numpy(x[n, 1])+0.025, to_numpy(x[n, 2]), f'{n}', fontsize=9, color='w')
                 plt.xlim([0, 2])
                 plt.ylim([0, 1])
-                plt.title('GNN cluster')
                 plt.xticks([])
                 plt.yticks([])
                 ax = fig.add_subplot(2, 3, 5)
+                plt.title('embedding : rat state')
                 plt.scatter(embedding[:, 0], embedding[:, 1], s=1, c='g', alpha=0.25, edgecolors='None')
                 for n, id in enumerate(particle_id.astype(int)):
                     plt.scatter(embedding[id, 0], embedding[id, 1], s=40, alpha=1, edgecolors='None')
@@ -6174,6 +6174,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
                 plt.yticks([])
 
                 ax = fig.add_subplot(2, 3, 6)
+                plt.title('MLP plot : rat small action')
                 rr = torch.tensor(np.linspace(0, 0.6, 1000)).to(device)
                 for n, id in enumerate(particle_id.astype(int)):
                     embedding_ = model.a[id] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
