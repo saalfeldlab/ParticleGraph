@@ -32,7 +32,7 @@ from sklearn.mixture import GaussianMixture
 import warnings
 import seaborn as sns
 
-from pysr import PySRRegressor
+# from pysr import PySRRegressor
 
 
 class Interaction_Particle_extract(MessagePassing):
@@ -5599,27 +5599,6 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
                 temp_equation_file=False
             )
 
-
-            for k in range(n_particle_types):
-
-                print(f'phi{k} ................')
-                logger.info(f'phi{k} ................')
-
-                pos = np.argwhere(labels==k)
-                pos = pos.squeeze()
-
-                func = phi_list[pos]
-                func = torch.mean(phi_list[pos], dim=0)
-
-                symbolic = get_pyssr_function(model_pysrr, rr,func)
-
-                for n in range(4,7):
-                    print(model_pysrr.sympy(n))
-                    logger.info(model_pysrr.sympy(n))
-
-            print('psi ...')
-            logger.info('psi ...')
-
             match model_config.signal_model_name:
 
                 case 'PDE_N2':
@@ -5629,8 +5608,8 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
                     symbolic = get_pyssr_function(model_pysrr, rr, func)
 
                     for n in range(0,7):
-                        print(model_pysrr.sympy(n))
-                        logger.info(model_pysrr.sympy(n))
+                        print(symbolic(n))
+                        logger.info(symbolic(n))
 
                 case 'PDE_N4':
 
@@ -5648,32 +5627,42 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
                         symbolic = get_pyssr_function(model_pysrr, rr, func)
 
                         for n in range(0, 5):
-                            print(model_pysrr.sympy(n))
-                            logger.info(model_pysrr.sympy(n))
+                            print(symbolic(n))
+                            logger.info(symbolic(n))
 
                 case 'PDE_N5':
 
+                    indices =[2,1,0,3]
                     for k in range(n_particle_types**2):
 
-                        print(f'psi{k} ................')
-                        logger.info(f'psi{k} ................')
+                        print(f'psi {indices [k//4]} {indices[k%4]} ................')
+                        logger.info(f'psi {indices[k//4]} {indices[k%4]} ................')
 
                         pos =np.arange(k*250,(k+1)*250)
+                        func = psi_list[pos]
+                        func = torch.mean(psi_list[pos], dim=0)
 
                         symbolic = get_pyssr_function(model_pysrr, rr, func)
 
-                        for n in range(0, 5):
-                            print(model_pysrr.sympy(n))
-                            logger.info(model_pysrr.sympy(n))
+                        print(symbolic)
+                        logger.info(symbolic)
 
+            for k in range(n_particle_types):
 
+                print(f'phi{k} ................')
+                logger.info(f'phi{k} ................')
 
+                pos = np.argwhere(labels == k)
+                pos = pos.squeeze()
 
+                func = phi_list[pos]
+                func = torch.mean(phi_list[pos], dim=0)
 
+                symbolic = get_pyssr_function(model_pysrr, rr, func)
 
-
-
-
+                for n in range(4, 7):
+                    print(symbolic(n))
+                    logger.info(symbolic(n))
 
 
 def plot_agents(config_file, epoch_list, log_dir, logger, bLatex, device):
@@ -6056,28 +6045,28 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
         matplotlib.rcParams['savefig.pad_inches'] = 0
         plt.style.use('dark_background')
 
-        print('clustering ...')
+        # print('clustering ...')
         embedding = to_numpy(model.a.clone().detach())
-        # labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
+        # # labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
+        #
+        # n_components = 3
+        # gmm = GaussianMixture(
+        #     n_components=n_components,
+        #     covariance_type='full',  # Experiment with 'full', 'tied', 'diag', 'spherical'
+        #     init_params='kmeans',  # Use 'kmeans' or 'random'
+        #     reg_covar=1e-6,
+        #     max_iter=10000,  # Increase the number of iterations
+        #     random_state=42
+        # )
+        # gmm.fit(embedding)
+        # labels = gmm.predict(embedding)
+        #
+        # labels_ =  torch.tensor(labels, dtype=torch.float32, device=device)
 
-        n_components = 3
-        gmm = GaussianMixture(
-            n_components=n_components,
-            covariance_type='full',  # Experiment with 'full', 'tied', 'diag', 'spherical'
-            init_params='kmeans',  # Use 'kmeans' or 'random'
-            reg_covar=1e-6,
-            max_iter=10000,  # Increase the number of iterations
-            random_state=42
-        )
-        gmm.fit(embedding)
-        labels = gmm.predict(embedding)
-
-        labels_ =  torch.tensor(labels, dtype=torch.float32, device=device)
-
-        for k in range(n_frames):
-            n = x_list[0][k].shape[0]
-            x_list[0][k][:,6] = labels_[0:n]
-            labels_ = labels_[n:]
+        # for k in range(n_frames):
+        #     n = x_list[0][k].shape[0]
+        #     x_list[0][k][:,6] = labels_[0:n]
+        #     labels_ = labels_[n:]
 
         # # matplotlib.use("Qt5Agg")
         # fig, ax = fig_init(fontsize=24)
@@ -6113,6 +6102,8 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
         # plt.savefig(f"./{log_dir}/results/clustered_functions_{epoch_list[0]}.tif", dpi=80)
         # plt.close()
 
+        map_behavior = np.zeros((15,2000))
+
         for N in trange(0, 2000): #n_frames-1):
 
             k = N
@@ -6129,6 +6120,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
                 x_pos_pred = (x[:, 1:3] + delta_t * (x[:, 3:5] + delta_t * pred * ynorm))
             else:
                 x_pos_pred = (x[:,1:3] + delta_t * pred * ynorm)
+
 
             V = (x_pos_pred - x[:, 1:3])
 
@@ -6180,6 +6172,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
                     plt.text(embedding[id, 0]+0.05, embedding[id, 1], f'{n}', fontsize=9, color='w')
                 plt.xticks([])
                 plt.yticks([])
+
                 ax = fig.add_subplot(2, 3, 6)
                 rr = torch.tensor(np.linspace(0, 0.6, 1000)).to(device)
                 for n, id in enumerate(particle_id.astype(int)):
@@ -6189,13 +6182,16 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
                     with torch.no_grad():
                         func = model.lin_edge(in_features.float())
                         func = func[:, 0]
+
+                    map_behavior[n,N] = to_numpy(func[500])
+
                     plt.plot(to_numpy(rr),to_numpy(func) * to_numpy(ynorm), linewidth=2, alpha=1)
                     plt.text(to_numpy(rr[200 + 50*n]), to_numpy(func[200 + 50*n]) * to_numpy(ynorm) + 0.0035, f'{n}', fontsize=9, color='w')
                 if 'rat_city' in dataset_name:
                     plt.ylim([-0.2, 0.2])
                 plt.xticks([])
                 plt.yticks([])
-                if N%40 == 0:
+                if (N+1)%40 == 0:
                     ax = fig.add_subplot(2, 3, 4)
                     xp = x[0:4, :]
                     xp[:, 1:3] = torch.randn_like(xp[:, 1:3]) * 0.01
@@ -6213,7 +6209,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
                         out = torch.mean(model.lin_edge(in_features.float()), dim=0)
                         point_list.append(out)
                     point_list = torch.stack(point_list)
-                    plt.scatter(to_numpy(point_list[:, 0]), to_numpy(point_list[:, 1]), s=1, c='w', alpha=0.1, edgecolors='None')
+                    plt.scatter(to_numpy(point_list[:, 0]), to_numpy(point_list[:, 1]), s=10, c='w', alpha=0.1, edgecolors='None')
                     plt.scatter(to_numpy(xp[:, 1]), to_numpy(xp[:, 2]), s=100, c='g', alpha=1)
                     plt.ylim([-0.02, 0.022])
                     plt.xlim([-0.02, 0.022])
@@ -6257,6 +6253,10 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
                 plt.savefig(f"./{log_dir}/tmp_recons/Fig_{N}.tif", dpi=100)
                 plt.close()
 
+        fig = plt.figure(figsize=(10, 5))
+        plt.imshow(map_behavior[:, 0:1000],  aspect='auto', cmap='bwr', vmin=-0.2, vmax=0.2)
+        plt.savefig(f"./{log_dir}/behavior.tif", dpi=100)
+        plt.close
 
 def data_video_validation(config_file, epoch_list, log_dir, logger, bLatex, device):
     print('')
@@ -6846,7 +6846,7 @@ if __name__ == '__main__':
     print(f'device {device}')
     print(' ')
 
-    # matplotlib.use("Qt5Agg")
+    matplotlib.use("Qt5Agg")
 
     # try:
     #     matplotlib.use("Qt5Agg")
@@ -6860,7 +6860,9 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N5_l']
     # config_list = ['signal_N3_c1']
-    config_list = ['signal_N5_l'] #, 'signal_N2_b', 'signal_N2_c', 'signal_N2_d', 'signal_N2_e', 'signal_N4_k', 'signal_N5_l', 'signal_N4_v']
+    # config_list = ['signal_N5_l'] #, 'signal_N2_b', 'signal_N2_c', 'signal_N2_d', 'signal_N2_e', 'signal_N4_k', 'signal_N5_l', 'signal_N4_v']
+
+    config_list = ['rat_city_a']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
