@@ -128,6 +128,8 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
 
         return T[to_numpy(edge_index_i),to_numpy(edge_index_j)][:,None] * self.lin_edge(in_features) * field_i
 
+        # return T[to_numpy(edge_index_i),to_numpy(edge_index_j)][:,None] * (self.lin_edge(in_features) + self.lin_edge_plus(in_features)) * field_i
+
     def update(self, aggr_out):
         return aggr_out
 

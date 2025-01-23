@@ -32,7 +32,7 @@ from sklearn.mixture import GaussianMixture
 import warnings
 import seaborn as sns
 
-# from pysr import PySRRegressor
+from pysr import PySRRegressor
 
 
 class Interaction_Particle_extract(MessagePassing):
@@ -5632,11 +5632,10 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
 
                 case 'PDE_N5':
 
-                    indices =[2,1,0,3]
-                    for k in range(n_particle_types**2):
+                    for k in range(4**2):
 
-                        print(f'psi {indices [k//4]} {indices[k%4]} ................')
-                        logger.info(f'psi {indices[k//4]} {indices[k%4]} ................')
+                        print(f'psi {k//4} {k%4}................')
+                        logger.info(f'psi {k//4} {k%4} ................')
 
                         pos =np.arange(k*250,(k+1)*250)
                         func = psi_list[pos]
@@ -5644,8 +5643,9 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
 
                         symbolic = get_pyssr_function(model_pysrr, rr, func)
 
-                        print(symbolic)
-                        logger.info(symbolic)
+                        for n in range(0, 7):
+                            print(symbolic(n))
+                            logger.info(symbolic(n))
 
             for k in range(n_particle_types):
 
@@ -6047,6 +6047,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
 
         # print('clustering ...')
         embedding = to_numpy(model.a.clone().detach())
+
         # # labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
         #
         # n_components = 3
@@ -6259,6 +6260,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
             plt.imshow(map_behavior[:, 0:1000],  aspect='auto', cmap='bwr', vmin=-0.2, vmax=0.2)
             plt.savefig(f"./{log_dir}/behavior.tif", dpi=100)
             plt.close
+
 
 def data_video_validation(config_file, epoch_list, log_dir, logger, bLatex, device):
     print('')
@@ -6862,9 +6864,8 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N5_l']
     # config_list = ['signal_N3_c1']
-    # config_list = ['signal_N5_l'] #, 'signal_N2_b', 'signal_N2_c', 'signal_N2_d', 'signal_N2_e', 'signal_N4_k', 'signal_N5_l', 'signal_N4_v']
-
-    config_list = ['rat_city_a']
+    config_list = ['signal_N5_l'] #, 'signal_N2_b', 'signal_N2_c', 'signal_N2_d', 'signal_N2_e', 'signal_N4_k', 'signal_N5_l', 'signal_N4_v']
+    # config_list = ['rat_city_a']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')

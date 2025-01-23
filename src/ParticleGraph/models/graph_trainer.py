@@ -2850,6 +2850,10 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
         print(f'best_model: {best_model}  start_epoch: {start_epoch}')
         logger.info(f'best_model: {best_model}  start_epoch: {start_epoch}')
 
+        # from ParticleGraph.models.MLP import MLP
+        # model.lin_edge_plus = MLP(input_size=model.input_size, output_size=model.output_size, nlayers=model.n_layers,
+        #                     hidden_size=model.hidden_dim * 4, device=model.device)
+
         if has_field:
             net = f'./log/try_{config_file}/models/best_model_f_with_{n_runs - 1}_graphs_{best_model}.pt'
             state_dict = torch.load(net, map_location=device)
@@ -3695,6 +3699,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     time_window = training_config.time_window
     time_step = simulation_config.time_step
     sub_sampling = simulation_config.sub_sampling
+    bounce_coeff = simulation_config.bounce_coeff
 
     cmap = CustomColorMap(config=config)  # creat
     # e colormap for given model_config
@@ -4153,9 +4158,18 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                         x[:, 6:7] += y * delta_t  # signal update
                     else:
                         x[:, dimension + 1:2 * dimension + 1] = y
-                x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1] + x[:, dimension + 1:2 * dimension + 1] * delta_t)  # position update
 
-            if bounce:
+                if bounce=='bottom':
+                    x[:, 1:dimension + 1] = x[:, 1:dimension + 1] + x[:, dimension + 1:2 * dimension + 1] * delta_t
+                    bouncing_pos = torch.argwhere((x[:, 2] <= 0) ).squeeze()
+                    if bouncing_pos.numel() > 0:
+                        x[bouncing_pos, dimension + 2] = - bounce_coeff * x[bouncing_pos, dimension + 2]
+                        x[bouncing_pos, 2] = - x[bouncing_pos, 2] # 1E-6  #  + torch.rand(bouncing_pos.numel(), device=device) * 0.05
+                    x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1])
+                else:
+                    x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1] + x[:, dimension + 1:2 * dimension + 1] * delta_t)  # position update
+
+            if bounce=='all':
 
                 # gap = 0.104
                 # boundary = torch.cat((1 - gap - x[:, 1:2], x[:, 1:2] - gap, 1 - gap - x[:, 2:3], x[:, 2:3] - gap), dim=-1)
