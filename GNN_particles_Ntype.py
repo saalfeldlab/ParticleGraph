@@ -60,7 +60,7 @@ if __name__ == '__main__':
         # config_list = ['fluids_m20']
         # config_list = ['falling_water_ramp_x6_11']
         # config_list =['signal_N5_l1']
-        config_list = ['cell_MDCK_7','cell_MDCK_8','cell_MDCK_9','cell_MDCK_10','cell_MDCK_11']
+        config_list = ['cell_MDCK_8','cell_MDCK_9','cell_MDCK_10','cell_MDCK_11']
 
     for config_file in config_list:
 

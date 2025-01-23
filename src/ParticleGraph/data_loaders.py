@@ -377,17 +377,19 @@ def load_cell_data(config, device, visualize):
 
         vertices_list = []
         for n in trange(1, len(x)):
-            vertices = mask_to_vertices(mask=(im == n), num_vertices=20)
-            uniform_points = get_uniform_points(vertices, num_points=20)
+            mask = (im == n)
+            if np.sum(mask)>0:
+                vertices = mask_to_vertices(mask=(im == n), num_vertices=20)
+                uniform_points = get_uniform_points(vertices, num_points=20)
 
-            N = n*20 + np.arange(20, dtype=np.float32)[:, None]
-            X = uniform_points
-            empty_columns = np.zeros((X.shape[0], 2))
-            T = n_cells + n * np.ones((X.shape[0], 1))
-            vertices = np.concatenate((N.astype(int), X, empty_columns, T, N.astype(int)), axis=1)
+                N = n*20 + np.arange(20, dtype=np.float32)[:, None]
+                X = uniform_points
+                empty_columns = np.zeros((X.shape[0], 2))
+                T = n_cells + n * np.ones((X.shape[0], 1))
+                vertices = np.concatenate((N.astype(int), X, empty_columns, T, N.astype(int)), axis=1)
 
-            vertices = torch.tensor(vertices, dtype=torch.float32, device=device)
-            vertices_list.append(vertices)
+                vertices = torch.tensor(vertices, dtype=torch.float32, device=device)
+                vertices_list.append(vertices)
 
         vertices_list = torch.stack(vertices_list)
         vertices_list = torch.reshape(vertices_list, (-1, vertices_list.shape[2]))
