@@ -28,7 +28,7 @@ import tifffile
 import torch_geometric.data as data
 import networkx as nx
 from torch_geometric.utils.convert import to_networkx
-# from cellpose import models
+from cellpose import models
 from ParticleGraph.generators.cell_utils import *
 from ParticleGraph.generators import PDE_V
 
@@ -529,12 +529,6 @@ def load_cell_data(config, device, visualize):
     torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
     torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
     torch.save(full_vertice_list, f'graphs_data/graphs_{dataset_name}/full_vertice_list{run}.pt')
-
-
-
-
-
-
 
 
     print(f'n_cells: {n_cells}')
