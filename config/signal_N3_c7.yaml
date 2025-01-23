@@ -29,11 +29,11 @@ graph_model:
     output_size: 1
     hidden_dim: 64
     n_mp_layers: 3
-    input_size_update: 3
+    input_size_update: 4
     n_layers_update: 3
     hidden_dim_update: 64
     aggr_type: 'add'
-    embedding_dim: 2
+    embedding_dim: 3
     update_type: 'none'
 
 
@@ -59,4 +59,4 @@ training:
     sparsity_freq: 4
     learning_rate_start: 1.0E-4
     learning_rate_embedding_start: 1.0E-4
-    coeff_model_a: 0.1
+    coeff_model_a: 1.0

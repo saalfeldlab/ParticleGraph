@@ -2902,7 +2902,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
             supp = (torch.rand(adjacency.shape, device=device) < simulation_config.connectivity_filling_factor) * 1.0
             model.mask = torch.max(model.mask, supp)
 
-    print("Start training ...")
+    print("start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     Niter = int(n_frames * data_augmentation_loop // batch_size * n_runs / 10)
@@ -2977,6 +2977,10 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
                         y = torch.tensor(y_list[run][k], device=device) / ynorm
                         loss = (pred - y).norm(2) + model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(
                             2) + diff * coeff_diff
+
+                        if ('PDE_N3' in model_config.signal_model_name):
+                            loss = loss + train_config.coeff_model_a * (model.a[1,:] - model.a[0,:-1]).norm(2)
+
                     case 2:
                         dataset = data.Data(x=x, edge_index=model.edges)
                         pred1 = model(dataset, data_id=run, has_field=has_field, k = k)
