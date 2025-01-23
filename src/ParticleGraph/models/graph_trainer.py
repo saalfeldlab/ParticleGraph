@@ -2979,7 +2979,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
                             2) + diff * coeff_diff
 
                         if ('PDE_N3' in model_config.signal_model_name):
-                            loss = loss + train_config.coeff_model_a * (model.a[1,:] - model.a[0,:-1]).norm(2)
+                            loss = loss + train_config.coeff_model_a * (model.a[1:] - model.a[:-1]).norm(2)
 
                     case 2:
                         dataset = data.Data(x=x, edge_index=model.edges)
