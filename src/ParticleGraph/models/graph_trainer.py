@@ -2901,6 +2901,10 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
         if simulation_config.connectivity_filling_factor > 0:
             supp = (torch.rand(adjacency.shape, device=device) < simulation_config.connectivity_filling_factor) * 1.0
             model.mask = torch.max(model.mask, supp)
+    if ('PDE_N3' in model_config.signal_model_name):
+        ind_a = torch.tensor(np.arange(1, n_particles*100), device=device)
+        pos = torch.argwhere(ind_a % 100 != 99).squeeze()
+        ind_a = ind_a[pos]
 
     print("start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
@@ -2979,7 +2983,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
                             2) + diff * coeff_diff
 
                         if ('PDE_N3' in model_config.signal_model_name):
-                            loss = loss + train_config.coeff_model_a * (model.a[1:] - model.a[:-1]).norm(2)
+                            loss = loss + train_config.coeff_model_a * (model.a[ind_a+1] - model.a[ind_a]).norm(2)
 
                     case 2:
                         dataset = data.Data(x=x, edge_index=model.edges)

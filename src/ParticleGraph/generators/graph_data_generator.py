@@ -1871,18 +1871,21 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                         plt.savefig(f"graphs_data/graphs_{dataset_name}/Signal/Signal_{run}_{num}.tif", dpi=70)
                         plt.close()
                     elif 'visual' in field_type:
-                        fig = plt.figure(figsize=(32, 8))
+                        fig = plt.figure(figsize=(17, 4))
                         plt.subplot(121)
-                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=150, c=to_numpy(A1[:, 0]), cmap='viridis',
+                        plt.scatter(to_numpy(X1[0:1024, 1]), to_numpy(X1[0:1024, 0]), s=40, c=to_numpy(A1[0:1024, 0]), cmap='viridis',
+                                    vmin=0, vmax=2)
+                        plt.scatter(to_numpy(X1[1024:, 1]), to_numpy(X1[1024:, 0]), s=30, c=to_numpy(A1[1024:, 0]), cmap='viridis',
                                     vmin=0, vmax=2)
                         cbar = plt.colorbar()
-                        cbar.ax.yaxis.set_tick_params(labelsize=16)
+                        cbar.ax.yaxis.set_tick_params(labelsize=8)
                         plt.xticks([])
                         plt.yticks([])
                         plt.subplot(122)
-                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=150, c=to_numpy(H1[:, 0]), cmap='viridis', vmin=-10,vmax=10)
+                        plt.scatter(to_numpy(X1[0:1024, 1]), to_numpy(X1[0:1024, 0]), s=40, c=to_numpy(H1[0:1024, 0]), cmap='viridis', vmin=-10,vmax=10)
+                        plt.scatter(to_numpy(X1[1024:, 1]), to_numpy(X1[1024:, 0]), s=30, c=to_numpy(H1[1024:, 0]), cmap='viridis', vmin=-10,vmax=10)
                         cbar = plt.colorbar()
-                        cbar.ax.yaxis.set_tick_params(labelsize=16)
+                        cbar.ax.yaxis.set_tick_params(labelsize=8)
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
@@ -1899,11 +1902,11 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                             plt.subplot(224)
                             plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=100, c=to_numpy(U1[:, 1]), cmap='viridis', vmin=-0.01, vmax=0.01)
                             plt.text(0, 1.1, f' {np.mean(to_numpy(U1[:, 1])):0.3} +/- {np.std(to_numpy(U1[:, 1])):0.3}', fontsize=12)
-                    if 'latex' in style:
-                        plt.xlabel(r'$x$', fontsize=78)
-                        plt.ylabel(r'$y$', fontsize=78)
-                        plt.xticks(fontsize=18.0)
-                        plt.yticks(fontsize=18.0)
+                    # if 'latex' in style:
+                    #     plt.xlabel(r'$x$', fontsize=78)
+                    #     plt.ylabel(r'$y$', fontsize=78)
+                    #     plt.xticks(fontsize=18.0)
+                    #     plt.yticks(fontsize=18.0)
                     plt.tight_layout()
                     num = f"{it:06}"
                     plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=70)

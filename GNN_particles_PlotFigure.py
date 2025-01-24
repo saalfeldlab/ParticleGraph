@@ -1,5 +1,4 @@
-
-
+import numpy as np
 import umap
 import torch
 import matplotlib.pyplot as plt
@@ -32,7 +31,7 @@ from sklearn.mixture import GaussianMixture
 import warnings
 import seaborn as sns
 
-from pysr import PySRRegressor
+# from pysr import PySRRegressor
 
 
 class Interaction_Particle_extract(MessagePassing):
@@ -6167,13 +6166,76 @@ def plot_synaptic3(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
                 r_squared = 1 - (ss_res / ss_tot)
                 print(f'R^2$: {r_squared:0.4f}  slope: {np.round(lin_fit[0], 4)}')
 
-            for k in range(n_particle_types):
+            if model_config.embedding_dim == 3:
+                for k in range(n_particle_types):
+                    fig = plt.figure(figsize=(10, 10))
+                    ax = fig.add_subplot(111, projection='3d')
+                    # ax.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), to_numpy(model.a[:, 2]), s=1, color='k', alpha=0.01, edgecolors='none')
+                    ax.scatter(to_numpy(model.a[k * 25000:(k + 1) * 25000, 0]),
+                            to_numpy(model.a[k * 25000:(k + 1) * 25000, 1]), to_numpy(model.a[k * 25000:(k + 1) * 25000, 2]), s=0.1, color=cmap.color(k), alpha=0.5)
+                    # ax.scatter(to_numpy(model.a[k*25000:k*25000+100, 0]), to_numpy(model.a[k*25000:k*25000+100, 1]), to_numpy(model.a[k*25000:k*25000+100, 1]), color='k')
+                    plt.ylim([0, 2])
+                    plt.xlim([0, 2])
+                    ax.set_zlim([-2, 3.5])
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/embedding_{k}_{config_file}_{epoch}.tif", dpi=80)
+                    plt.close()
+
+                fig = plt.figure(figsize=(10, 10))
+                ax = fig.add_subplot(111, projection='3d')
+
+                for k in range(n_particle_types):
+                    # ax.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), to_numpy(model.a[:, 2]), s=1, color='k', alpha=0.01, edgecolors='none')
+                    ax.scatter(to_numpy(model.a[k * 25000:(k + 1) * 25000, 0]),
+                            to_numpy(model.a[k * 25000:(k + 1) * 25000, 1]), to_numpy(model.a[k * 25000:(k + 1) * 25000, 2]), s=10, color=cmap.color(k), alpha=0.1, edgecolors='none')
+                    # ax.scatter(to_numpy(model.a[k*25000:k*25000+100, 0]), to_numpy(model.a[k*25000:k*25000+100, 1]), to_numpy(model.a[k*25000:k*25000+100, 1]), color='k')
+                plt.ylim([0.5, 2])
+                plt.xlim([0, 1.5])
+                ax.set_zlim([-2, 2.5])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/all_embedding_{config_file}_{epoch}.tif", dpi=80)
+                plt.close()
+
+            else:
+
                 fig, ax = fig_init()
-                plt.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), s=1, color='k', alpha=0.5, edgecolors='none')
-                plt.scatter(to_numpy(model.a[k*25000:(k+1)*25000, 0]), to_numpy(model.a[k*25000:(k+1)*25000, 1]), s=1, color=cmap.color(k),alpha=0.5, edgecolors='none')
-                plt.plot(to_numpy(model.a[k*25000:k*25000+100, 0]), to_numpy(model.a[k*25000:k*25000+100, 1]), color='m')
-                plt.ylim([-2,3.5])
-                plt.xlim([-2,3.5])
+                for n in range(n_particle_types):
+                    c1 = cmap.color(n)
+                    c2 = cmap.color((n+1)%4)
+                    c_list = np.linspace(c1, c2, 100)
+                    for k in range(250*n,250*(n+1)):
+                        plt.scatter(to_numpy(model.a[k*100:(k+1)*100, 0:1]), to_numpy(model.a[k*100:(k+1)*100, 1:2]), s=10, color=c_list, alpha=0.1, edgecolors='none')
+                if bLatex:
+                    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}(t)$', fontsize=78)
+                    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}(t)$', fontsize=78)
+                else:
+                    plt.xlabel(r'$a_{i0}(t)$', fontsize=78)
+                    plt.ylabel(r'$a_{i1}(t)$', fontsize=78)
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/all_embedding_0_{config_file}_{epoch}.tif", dpi=80)
+                plt.close()
+
+
+                for k in range(n_particle_types):
+                    fig, ax = fig_init()
+                    # plt.scatter(to_numpy(model.a[0:100000, 0]), to_numpy(model.a[0:100000, 1]), s=1, color='k', alpha=0.25, edgecolors='none')
+                    plt.scatter(to_numpy(model.a[k*25000:(k+1)*25000, 0]), to_numpy(model.a[k*25000:(k+1)*25000, 1]), s=1, color=cmap.color(k),alpha=0.5, edgecolors='none')
+                    if bLatex:
+                        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
+                        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
+                    else:
+                        plt.xlabel(r'$a_{i0}$', fontsize=78)
+                        plt.ylabel(r'$a_{i1}$', fontsize=78)
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/embedding_{k}_{config_file}_{epoch}.tif", dpi=80)
+                    plt.close()
+
+                fig, ax = fig_init()
+                for k in range(n_particle_types):
+                    # plt.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), s=1, color='k', alpha=0.5, edgecolors='none')
+                    plt.scatter(to_numpy(model.a[k*25000:(k+1)*25000, 0]), to_numpy(model.a[k*25000:(k+1)*25000, 1]), s=1, color=cmap.color(k),alpha=0.5, edgecolors='none')
+                    # plt.scatter(to_numpy(model.a[k * 25000: k * 25000 + 100, 0]),
+                    #             to_numpy(model.a[k * 25000: k * 25000 + 100, 1]), s=10, color=c_list, alpha=1)
                 if bLatex:
                     plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
                     plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
@@ -6181,36 +6243,39 @@ def plot_synaptic3(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
                     plt.xlabel(r'$a_{i0}$', fontsize=78)
                     plt.ylabel(r'$a_{i1}$', fontsize=78)
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/all_embedding_{config_file}_{epoch}_{k}.tif", dpi=80)
+                plt.savefig(f"./{log_dir}/results/all_embedding_1_{config_file}_{epoch}.tif", dpi=80)
                 plt.close()
 
-            fig, ax = fig_init()
+
             rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
             func_list = []
-            for n in trange(0,n_particles,n_particles):
-                if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
+            k_list=[0,250,500,750]
+            for it, k in enumerate(k_list):
+                c1 = cmap.color(it)
+                c2 = cmap.color((it + 1) % 4)
+                c_list = np.linspace(c1, c2, 100)
+                fig, ax = fig_init()
+                for n in trange(k*100,(k+1)*100):
                     embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
                     in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
-                else:
-                    in_features = rr[:, None]
-                with torch.no_grad():
-                    func = model.lin_edge(in_features.float())
-                if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
-                    if n<250:
-                        func_list.append(func)
-                else:
+                    with torch.no_grad():
+                        func = model.lin_phi(in_features.float())
                     func_list.append(func)
-                plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)),
-                         linewidth=8 // ( 1 + (n_particle_types>16)*1.0), alpha=0.25)
+                    plt.plot(to_numpy(rr), to_numpy(func), 2, color=c_list[n%100], alpha=0.25)
+                             # linewidth=4, alpha=0.15-0.15*(n%100)/100)
+                true_func = true_model.func(rr, it, 'update')
+                plt.plot(to_numpy(rr), to_numpy(true_func), c='k', linewidth=1)
+                true_func = true_model.func(rr, it+1, 'update')
+                plt.plot(to_numpy(rr), to_numpy(true_func), c='k', linewidth=1)
+                plt.xlabel(r'$x_i$', fontsize=78)
+                plt.ylabel(r'Learned $\phi^*(a_i(t), x_i)$', fontsize=78)
+                plt.ylim([-8,8])
+                plt.xlim([-5,5])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/phi_{k}.tif", dpi=170.7)
+                plt.close()
+
             func_list = torch.stack(func_list)
-            plt.xlabel(r'$x_i$', fontsize=78)
-            plt.ylabel(r'Learned $\psi^*(a_i, x_i)$', fontsize=78)
-            if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
-                plt.ylim([-0.5,0.5])
-            plt.xlim([-5,5])
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/raw_psi.tif", dpi=170.7)
-            plt.close()
 
             correction = 1 / torch.mean(torch.mean(func_list[:,900:1000], dim=0))
             print(f'correction: {correction:0.2f}')
@@ -7717,7 +7782,7 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N5_l']
     # config_list = ['signal_N3_c1']
-    config_list = ['signal_N3_c5']
+    config_list = ['signal_N3_c3']
     # config_list = ['rat_city_a']
 
     for config_file in config_list:

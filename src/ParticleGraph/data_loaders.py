@@ -28,7 +28,7 @@ import tifffile
 import torch_geometric.data as data
 import networkx as nx
 from torch_geometric.utils.convert import to_networkx
-from cellpose import models
+# from cellpose import models
 from ParticleGraph.generators.cell_utils import *
 from ParticleGraph.generators import PDE_V
 
