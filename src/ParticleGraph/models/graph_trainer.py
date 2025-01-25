@@ -2751,6 +2751,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
     embedding_cluster = EmbeddingCluster(config)
     cmap = CustomColorMap(config=config)
     n_runs = train_config.n_runs
+    noise_level = train_config.noise_level
     field_type = model_config.field_type
     if field_type != '':
         n_nodes = simulation_config.n_nodes
@@ -2979,6 +2980,11 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
                         dataset = data.Data(x=x, edge_index=model.edges)
                         pred = model(dataset, data_id=run, has_field=has_field, k = k)
                         y = torch.tensor(y_list[run][k], device=device) / ynorm
+
+                        if noise_level > 0:
+                            y = y * (1 + torch.randn_like(y) * noise_level)
+
+
                         loss = (pred - y).norm(2) + model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(
                             2) + diff * coeff_diff
 
