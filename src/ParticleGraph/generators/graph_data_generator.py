@@ -30,6 +30,7 @@ def extract_number(filename):
     match = re.search(r'_(\d+)\.txt$', filename)
     return int(match.group(1)) if match else -1
 
+
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
 
@@ -1902,11 +1903,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                             plt.subplot(224)
                             plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=100, c=to_numpy(U1[:, 1]), cmap='viridis', vmin=-0.01, vmax=0.01)
                             plt.text(0, 1.1, f' {np.mean(to_numpy(U1[:, 1])):0.3} +/- {np.std(to_numpy(U1[:, 1])):0.3}', fontsize=12)
-                    # if 'latex' in style:
-                    #     plt.xlabel(r'$x$', fontsize=78)
-                    #     plt.ylabel(r'$y$', fontsize=78)
-                    #     plt.xticks(fontsize=18.0)
-                    #     plt.yticks(fontsize=18.0)
                     plt.tight_layout()
                     num = f"{it:06}"
                     plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=70)

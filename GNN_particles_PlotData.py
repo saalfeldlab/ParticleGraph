@@ -95,8 +95,8 @@ def plot_celegans(config, config_file, device):
     n_runs = train_config.n_runs
     dimension = 3
 
-    l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
+    l_dir = get_log_dir(config)
+    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file.split('/')[-1]))
 
     os.makedirs(os.path.join(log_dir, 'generated_bw'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'generated_voronoi'), exist_ok=True)
@@ -189,8 +189,8 @@ def plot_generated_agents(config, config_file, device):
     n_frames = simulation_config.n_frames
     n_runs = train_config.n_runs
 
-    l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
+    l_dir = get_log_dir(config)
+    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file.split('/')[-1]))
 
     os.makedirs(os.path.join(log_dir, 'generated_bw'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'generated_velocity'), exist_ok=True)
@@ -240,9 +240,9 @@ def plot_generated_agents(config, config_file, device):
     n_particles = config.simulation.n_particles
     print(f'N particles: {n_particles}')
 
-    if os.path.exists(f'./log/try_{config_file}/edge_p_p_list.npz'):
+    if os.path.exists(f'format(config_file.split('/')[-1])/edge_p_p_list.npz'):
         print('Load list of edges index ...')
-        edge_p_p_list = np.load(f'./log/try_{config_file}/edge_p_p_list.npz')
+        edge_p_p_list = np.load(f'format(config_file.split('/')[-1])/edge_p_p_list.npz')
     else:
         print('Create list of edges index ...')
         edge_p_p_list = []
@@ -260,7 +260,7 @@ def plot_generated_agents(config, config_file, device):
             edge_index = np.array(edge_index)
             edge_index = torch.tensor(edge_index, device=device).t().contiguous()
             edge_p_p_list.append(to_numpy(edge_index))
-        np.savez(f'./log/try_{config_file}/edge_p_p_list', *edge_p_p_list)
+        np.savez(f'format(config_file.split('/')[-1])/edge_p_p_list', *edge_p_p_list)
 
     for k in trange(1,n_frames):
 
@@ -362,7 +362,7 @@ def plot_gravity_solar_system(config_file, epoch_list, log_dir, logger, device):
     model.ynorm = ynorm
     model.vnorm = vnorm
 
-    net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_2.pt"
+    net = f"format(config_file.split('/')[-1])/models/best_model_with_{n_runs - 1}_graphs_2.pt"
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
     model.eval()

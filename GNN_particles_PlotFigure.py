@@ -621,8 +621,8 @@ def plot_focused_on_cell(config, run, style, step, cell_id, bLatex, device):
     has_siren_time = 'siren_with_time' in model_config.field_type
     has_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
 
-    l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
+    l_dir = get_log_dir(config)
+    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file.split('/')[-1]))
     files = glob.glob(f"./{log_dir}/tmp_recons/*")
     for f in files:
         os.remove(f)
@@ -754,8 +754,8 @@ def plot_generated(config, run, style, step, bLatex, device):
     has_siren_time = 'siren_with_time' in model_config.field_type
     has_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
 
-    l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
+    l_dir = get_log_dir(config)
+    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file.split('/')[-1]))
     files = glob.glob(f"./{log_dir}/tmp_recons/*")
     for f in files:
         os.remove(f)
@@ -1115,9 +1115,8 @@ def plot_cell_rates(config, device, log_dir, n_particle_types, type_list, x_list
                 division_list[x_[5]].append(x_[8])
 
 
-def plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, bLatex, device):
+def plot_attraction_repulsion(config, config_file, epoch_list, log_dir, logger, bLatex, device):
 
-    config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
 
     dimension = config.simulation.dimension
@@ -1147,7 +1146,7 @@ def plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, bLatex, 
         plt.rc('text', usetex=False)
         matplotlib.rcParams['savefig.pad_inches'] = 0
 
-        files = glob.glob(f"./log/try_{config_file}/models/best_model_with_1_graphs_*.pt")
+        files = glob.glob(f"{log_dir}/models/best_model_with_1_graphs_*.pt")
         files.sort(key=sort_key)
 
         flag = True
@@ -1168,7 +1167,7 @@ def plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, bLatex, 
                 epoch = files[file_id].split('graphs')[1][1:-3]
                 print(epoch)
 
-                net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
+                net = f"{log_dir}/models/best_model_with_1_graphs_{epoch}.pt"
                 state_dict = torch.load(net, map_location=device)
                 model.load_state_dict(state_dict['model_state_dict'])
                 model.eval()
@@ -1227,7 +1226,7 @@ def plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, bLatex, 
     else:
         for epoch in epoch_list:
 
-            net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
+            net = f"{log_dir}/models/best_model_with_1_graphs_{epoch}.pt"
             print(f'network: {net}')
             state_dict = torch.load(net, map_location=device)
             model.load_state_dict(state_dict['model_state_dict'])
@@ -1307,9 +1306,8 @@ def plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, bLatex, 
             plt.close()
 
 
-def plot_falling_particles(config_file, epoch_list, log_dir, logger, bLatex, device):
+def plot_falling_particles(config, config_file,epoch_list, log_dir, logger, bLatex, device):
 
-    config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
 
     dimension = config.simulation.dimension
@@ -1339,7 +1337,7 @@ def plot_falling_particles(config_file, epoch_list, log_dir, logger, bLatex, dev
         plt.rc('text', usetex=False)
         matplotlib.rcParams['savefig.pad_inches'] = 0
 
-        files = glob.glob(f"./log/try_{config_file}/models/best_model_with_1_graphs_*.pt")
+        files = glob.glob(f"{log_dir}/models/best_model_with_1_graphs_*.pt")
         files.sort(key=sort_key)
 
         flag = True
@@ -1360,7 +1358,7 @@ def plot_falling_particles(config_file, epoch_list, log_dir, logger, bLatex, dev
                 epoch = files[file_id].split('graphs')[1][1:-3]
                 print(epoch)
 
-                net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
+                net = f"{log_dir}/models/best_model_with_1_graphs_{epoch}.pt"
                 state_dict = torch.load(net, map_location=device)
                 model.load_state_dict(state_dict['model_state_dict'])
                 model.eval()
@@ -1419,7 +1417,7 @@ def plot_falling_particles(config_file, epoch_list, log_dir, logger, bLatex, dev
     else:
         for epoch in epoch_list:
 
-            net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
+            net = f"{log_dir}/models/best_model_with_1_graphs_{epoch}.pt"
             print(f'network: {net}')
             state_dict = torch.load(net, map_location=device)
             model.load_state_dict(state_dict['model_state_dict'])
@@ -1500,9 +1498,8 @@ def plot_falling_particles(config_file, epoch_list, log_dir, logger, bLatex, dev
             plt.close()
 
 
-def plot_cell_state(config_file, epoch_list, log_dir, logger, bLatex, device):
+def plot_cell_state(config, config_file,epoch_list, log_dir, logger, bLatex, device):
 
-    config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
 
     dimension = config.simulation.dimension
@@ -1538,10 +1535,10 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, bLatex, device):
         plt.rc('text', usetex=False)
         matplotlib.rcParams['savefig.pad_inches'] = 0
 
-        files = glob.glob(f"./log/try_{config_file}/models/best_model_with_1_graphs_*.pt")
+        files = glob.glob(f"{log_dir}/models/best_model_with_1_graphs_*.pt")
         files.sort(key=sort_key)
 
-        files = glob.glob(f"./log/try_{config_file}/models/best_model_with_1_graphs_*.pt")
+        files = glob.glob(f"{log_dir}/models/best_model_with_1_graphs_*.pt")
         files.sort(key=sort_key)
 
         flag = True
@@ -1559,7 +1556,7 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, bLatex, device):
             file_id = file_id_list[file_id_]
             if sort_key(files[file_id]) % 1E7 != 0:
                 epoch = files[file_id].split('graphs')[1][1:-3]
-                net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
+                net = f"{log_dir}/models/best_model_with_1_graphs_{epoch}.pt"
                 state_dict = torch.load(net, map_location=device)
                 model.load_state_dict(state_dict['model_state_dict'])
                 model.eval()
@@ -1641,7 +1638,7 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, bLatex, device):
 
         for epoch in epoch_list:
 
-            net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
+            net = f"{log_dir}/models/best_model_with_1_graphs_{epoch}.pt"
             print(f'network: {net}')
             state_dict = torch.load(net, map_location=device)
             model.load_state_dict(state_dict['model_state_dict'])
@@ -1701,9 +1698,8 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, bLatex, device):
             plt.close()
 
 
-def plot_cell_tracking(config_file, epoch_list, log_dir, logger, bLatex, device):
+def plot_cell_tracking(config, config_file,epoch_list, log_dir, logger, bLatex, device):
 
-    config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
 
     dimension = config.simulation.dimension
@@ -1747,7 +1743,7 @@ def plot_cell_tracking(config_file, epoch_list, log_dir, logger, bLatex, device)
         plt.rc('text', usetex=False)
         matplotlib.rcParams['savefig.pad_inches'] = 0
 
-        files = glob.glob(f"./log/try_{config_file}/models/best_model_with_0_graphs_*.pt")
+        files = glob.glob(f"{log_dir}/models/best_model_with_0_graphs_*.pt")
         files.sort(key=sort_key)
 
         # flag = True
@@ -1767,7 +1763,7 @@ def plot_cell_tracking(config_file, epoch_list, log_dir, logger, bLatex, device)
             file_id = file_id_list[file_id_]
             if sort_key(files[file_id]) % 1E7 != 0:
                 epoch = files[file_id].split('graphs')[1][1:-3]
-                net = f"./log/try_{config_file}/models/best_model_with_0_graphs_{epoch}.pt"
+                net = f"{log_dir}/models/best_model_with_0_graphs_{epoch}.pt"
                 state_dict = torch.load(net, map_location=device)
                 model.load_state_dict(state_dict['model_state_dict'])
                 model.eval()
@@ -1787,7 +1783,7 @@ def plot_cell_tracking(config_file, epoch_list, log_dir, logger, bLatex, device)
 
         for epoch in epoch_list:
 
-            net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
+            net = f"{log_dir}/models/best_model_with_1_graphs_{epoch}.pt"
             print(f'network: {net}')
             state_dict = torch.load(net, map_location=device)
             model.load_state_dict(state_dict['model_state_dict'])
@@ -1989,9 +1985,9 @@ def plot_cell_tracking(config_file, epoch_list, log_dir, logger, bLatex, device)
             plt.savefig(f"./{log_dir}/results/tracking_errors_list_{config_file}.tif", dpi=170.7)
 
 
-def plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger, bLatex, device):
+def plot_attraction_repulsion_asym(config, config_file,epoch_list, log_dir, logger, bLatex, device):
 
-    config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+
     dataset_name = config.dataset
 
     dimension = config.simulation.dimension
@@ -2013,7 +2009,7 @@ def plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger, bLa
 
     for epoch in epoch_list:
 
-        net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
+        net = f"{log_dir}/models/best_model_with_1_graphs_{epoch}.pt"
         print(f'network: {net}')
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
@@ -2102,9 +2098,8 @@ def plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger, bLa
         logger.info("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
 
 
-def plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, logger, bLatex, device):
+def plot_attraction_repulsion_continuous(config, config_file,epoch_list, log_dir, logger, bLatex, device):
 
-    config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
 
     dimension = config.simulation.dimension
@@ -2125,7 +2120,7 @@ def plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, logge
 
     for epoch in epoch_list:
 
-        net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
+        net = f"{log_dir}/models/best_model_with_1_graphs_{epoch}.pt"
         print(f'network: {net}')
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
@@ -2212,9 +2207,8 @@ def plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, logge
         logger.info("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
 
 
-def plot_gravity(config_file, epoch_list, log_dir, logger, bLatex, device):
+def plot_gravity(config, config_file,epoch_list, log_dir, logger, bLatex, device):
 
-    config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
 
     max_radius = config.simulation.max_radius
@@ -2244,7 +2238,7 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, bLatex, device):
         matplotlib.rcParams['savefig.pad_inches'] = 0
 
 
-        files = glob.glob(f"./log/try_{config_file}/models/best_model_with_1_graphs_*.pt")
+        files = glob.glob(f"{log_dir}/models/best_model_with_1_graphs_*.pt")
         files.sort(key=sort_key)
 
         flag = True
@@ -2264,7 +2258,7 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, bLatex, device):
             file_id = file_id_list[file_id_]
             if sort_key(files[file_id]) % 1E7 != 0:
                 epoch = files[file_id].split('graphs')[1][1:-3]
-                net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
+                net = f"{log_dir}/models/best_model_with_1_graphs_{epoch}.pt"
                 state_dict = torch.load(net, map_location=device)
                 model.load_state_dict(state_dict['model_state_dict'])
                 model.eval()
@@ -2320,7 +2314,7 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, bLatex, device):
 
         for epoch in epoch_list:
 
-            net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
+            net = f"{log_dir}/models/best_model_with_1_graphs_{epoch}.pt"
             print(f'network: {net}')
             state_dict = torch.load(net, map_location=device)
             model.load_state_dict(state_dict['model_state_dict'])
@@ -2568,9 +2562,8 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, bLatex, device):
                 logger.info(f'pysrr_mass relative error wo outliers: {np.round(np.mean(relative_error[pos[:, 0]]), 2)}+/-{np.round(np.std(relative_error[pos[:, 0]]), 2)}')
 
 
-def plot_gravity_continuous(config_file, epoch_list, log_dir, logger, bLatex, device):
+def plot_gravity_continuous(config, config_file,epoch_list, log_dir, logger, bLatex, device):
 
-    config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
 
     max_radius = config.simulation.max_radius
@@ -2595,7 +2588,7 @@ def plot_gravity_continuous(config_file, epoch_list, log_dir, logger, bLatex, de
 
     for epoch in epoch_list:
 
-        net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
+        net = f"{log_dir}/models/best_model_with_1_graphs_{epoch}.pt"
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
         model.eval()
@@ -2823,9 +2816,8 @@ def plot_gravity_continuous(config_file, epoch_list, log_dir, logger, bLatex, de
         logger.info(f'pysrr_mass relative error wo outliers: {np.round(np.mean(relative_error[pos[:, 0]]), 2)}+/-{np.round(np.std(relative_error[pos[:, 0]]), 2)}')
 
 
-def plot_Coulomb(config_file, epoch_list, log_dir, logger, bLatex, device):
+def plot_Coulomb(config, config_file,epoch_list, log_dir, logger, bLatex, device):
 
-    config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
 
     max_radius = config.simulation.max_radius
@@ -2863,7 +2855,7 @@ def plot_Coulomb(config_file, epoch_list, log_dir, logger, bLatex, device):
         indexes = np.random.randint(0, edges.shape[1], 5000)
         edges = edges[:, indexes]
 
-        files = glob.glob(f"./log/try_{config_file}/models/best_model_with_1_graphs_*.pt")
+        files = glob.glob(f"{log_dir}/models/best_model_with_1_graphs_*.pt")
         files.sort(key=sort_key)
 
         flag = True
@@ -2882,7 +2874,7 @@ def plot_Coulomb(config_file, epoch_list, log_dir, logger, bLatex, device):
             file_id = file_id_list[file_id_]
             if sort_key(files[file_id]) % 1E7 != 0:
                 epoch = files[file_id].split('graphs')[1][1:-3]
-                net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
+                net = f"{log_dir}/models/best_model_with_1_graphs_{epoch}.pt"
                 state_dict = torch.load(net, map_location=device)
                 model.load_state_dict(state_dict['model_state_dict'])
                 model.eval()
@@ -2942,7 +2934,7 @@ def plot_Coulomb(config_file, epoch_list, log_dir, logger, bLatex, device):
     else:
         for epoch in epoch_list:
 
-            net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt"
+            net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt"
             state_dict = torch.load(net, map_location=device)
             model.load_state_dict(state_dict['model_state_dict'])
             model.eval()
@@ -3139,9 +3131,8 @@ def plot_Coulomb(config_file, epoch_list, log_dir, logger, bLatex, device):
             plt.savefig(f"./{log_dir}/results/qi_{config_file}_{epoch}.tif", dpi=170)
 
 
-def plot_boids(config_file, epoch_list, log_dir, logger, bLatex, device):
+def plot_boids(config, config_file,epoch_list, log_dir, logger, bLatex, device):
 
-    config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
 
     max_radius = config.simulation.max_radius
@@ -3183,7 +3174,7 @@ def plot_boids(config_file, epoch_list, log_dir, logger, bLatex, device):
         plt.rc('text', usetex=False)
         matplotlib.rcParams['savefig.pad_inches'] = 0
 
-        files = glob.glob(f"./log/try_{config_file}/models/best_model_with_1_graphs_*.pt")
+        files = glob.glob(f"{log_dir}/models/best_model_with_1_graphs_*.pt")
         files.sort(key=sort_key)
 
         flag = True
@@ -3203,7 +3194,7 @@ def plot_boids(config_file, epoch_list, log_dir, logger, bLatex, device):
             if sort_key(files[file_id]) % 1E7 != 0:
                 epoch = files[file_id].split('graphs')[1][1:-3]
                 print(epoch)
-                net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
+                net = f"{log_dir}/models/best_model_with_1_graphs_{epoch}.pt"
                 state_dict = torch.load(net, map_location=device)
                 model.load_state_dict(state_dict['model_state_dict'])
                 model.eval()
@@ -3260,7 +3251,7 @@ def plot_boids(config_file, epoch_list, log_dir, logger, bLatex, device):
             model.ynorm = ynorm
             model.vnorm = vnorm
 
-            net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt"
+            net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt"
             state_dict = torch.load(net, map_location=device)
             model.load_state_dict(state_dict['model_state_dict'])
             model.eval()
@@ -3511,9 +3502,8 @@ def plot_boids(config_file, epoch_list, log_dir, logger, bLatex, device):
                 logger.info(f'separation   slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)}  threshold {threshold} ')
 
 
-def plot_wave(config_file, epoch_list, log_dir, logger, cc, bLatex, device):
-    # Load parameters from config file
-    config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+def plot_wave(config, config_file,epoch_list, log_dir, logger, cc, bLatex, device):
+
     dataset_name = config.dataset
 
     n_nodes = config.simulation.n_nodes
@@ -3521,7 +3511,7 @@ def plot_wave(config_file, epoch_list, log_dir, logger, cc, bLatex, device):
     n_frames = config.simulation.n_frames
     n_runs = config.training.n_runs
 
-    hnorm = torch.load(f'./log/try_{config_file}/hnorm.pt', map_location=device).to(device)
+    hnorm = torch.load(f'{log_dir}/hnorm.pt', map_location=device).to(device)
 
     x_mesh_list = []
     y_mesh_list = []
@@ -3572,7 +3562,7 @@ def plot_wave(config_file, epoch_list, log_dir, logger, cc, bLatex, device):
 
     for epoch in epoch_list:
 
-        net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
+        net = f"{log_dir}/models/best_model_with_1_graphs_{epoch}.pt"
         print(f'network: {net}')
 
         mesh_model_gene = choose_mesh_model(config=config, X1_mesh=x_mesh[:,1:3], device=device)
@@ -3684,9 +3674,8 @@ def plot_wave(config_file, epoch_list, log_dir, logger, cc, bLatex, device):
         plt.close()
 
 
-def plot_particle_field(config_file, epoch_list, log_dir, logger, cc, bLatex, device):
+def plot_particle_field(config, config_file,epoch_list, log_dir, logger, cc, bLatex, device):
 
-    config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
 
     dimension = config.simulation.dimension
@@ -3808,7 +3797,7 @@ def plot_particle_field(config_file, epoch_list, log_dir, logger, cc, bLatex, de
         plt.rc('text', usetex=False)
         matplotlib.rcParams['savefig.pad_inches'] = 0
 
-        files = glob.glob(f"./log/try_{config_file}/models/best_model_with_1_graphs_*.pt")
+        files = glob.glob(f"{log_dir}/models/best_model_with_1_graphs_*.pt")
         files.sort(key=sort_key)
 
         flag = True
@@ -3832,13 +3821,13 @@ def plot_particle_field(config_file, epoch_list, log_dir, logger, cc, bLatex, de
                 epoch = files[file_id].split('graphs')[1][1:-3]
                 print(epoch)
 
-                net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
+                net = f"{log_dir}/models/best_model_with_1_graphs_{epoch}.pt"
                 state_dict = torch.load(net, map_location=device)
                 model.load_state_dict(state_dict['model_state_dict'])
                 model.eval()
 
                 if has_siren:
-                    net = f'./log/try_{config_file}/models/best_model_f_with_1_graphs_{epoch}.pt'
+                    net = f'{log_dir}/models/best_model_f_with_1_graphs_{epoch}.pt'
                     state_dict = torch.load(net, map_location=device)
                     model_f.load_state_dict(state_dict['model_state_dict'])
 
@@ -3914,12 +3903,12 @@ def plot_particle_field(config_file, epoch_list, log_dir, logger, cc, bLatex, de
         for epoch in epoch_list:
             print(f'epoch: {epoch}')
 
-            net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
+            net = f"{log_dir}/models/best_model_with_1_graphs_{epoch}.pt"
             state_dict = torch.load(net, map_location=device)
             model.load_state_dict(state_dict['model_state_dict'])
 
             if has_siren:
-                net = f'./log/try_{config_file}/models/best_model_f_with_1_graphs_{epoch}.pt'
+                net = f'{log_dir}/models/best_model_f_with_1_graphs_{epoch}.pt'
                 state_dict = torch.load(net, map_location=device)
                 model_f.load_state_dict(state_dict['model_state_dict'])
 
@@ -4215,9 +4204,8 @@ def plot_particle_field(config_file, epoch_list, log_dir, logger, cc, bLatex, de
                     logger.info(f'R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}')
 
 
-def plot_RD_RPS(config_file, epoch_list, log_dir, logger, cc, bLatex, device):
-    # Load parameters from config file
-    config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+def plot_RD_RPS(config, config_file,epoch_list, log_dir, logger, cc, bLatex, device):
+
     dataset_name = config.dataset
 
     n_nodes = config.simulation.n_nodes
@@ -4230,7 +4218,7 @@ def plot_RD_RPS(config_file, epoch_list, log_dir, logger, cc, bLatex, device):
 
     embedding_cluster = EmbeddingCluster(config)
 
-    hnorm = torch.load(f'./log/try_{config_file}/hnorm.pt', map_location=device).to(device)
+    hnorm = torch.load(f'{log_dir}/hnorm.pt', map_location=device).to(device)
 
     x_mesh_list = []
     y_mesh_list = []
@@ -4282,7 +4270,7 @@ def plot_RD_RPS(config_file, epoch_list, log_dir, logger, cc, bLatex, device):
 
     for epoch in epoch_list:
 
-        net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt"
+        net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt"
 
         model, bc_pos, bc_dpos = choose_training_model(config, device)
         state_dict = torch.load(net, map_location=device)
@@ -4489,9 +4477,8 @@ def plot_RD_RPS(config_file, epoch_list, log_dir, logger, cc, bLatex, device):
             print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}")
 
 
-def plot_synaptic(config_file, epoch_list, log_dir, logger, cc, bLatex, device):
-    # Load parameters from config file
-    config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+def plot_synaptic(config, config_file,epoch_list, log_dir, logger, cc, bLatex, device):
+
     dataset_name = config.dataset
 
     n_frames = config.simulation.n_frames
@@ -4532,7 +4519,7 @@ def plot_synaptic(config_file, epoch_list, log_dir, logger, cc, bLatex, device):
 
     for epoch in epoch_list:
 
-        net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt"
+        net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt"
         model, bc_pos, bc_dpos = choose_training_model(config, device)
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
@@ -4822,9 +4809,8 @@ def plot_synaptic(config_file, epoch_list, log_dir, logger, cc, bLatex, device):
         #     print(formula)
 
 
-def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device):
-    # Load parameters from config file
-    config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+def plot_synaptic2(config, config_file,epoch_list, log_dir, logger, cc, bLatex, device):
+
     dataset_name = config.dataset
 
     simulation_config = config.simulation
@@ -4897,7 +4883,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
         # plt.rc('text', usetex=False)
         # matplotlib.rcParams['savefig.pad_inches'] = 0
 
-        files = glob.glob(f"./log/try_{config_file}/models/best_model_with_{n_runs-1}_graphs_*.pt")
+        files = glob.glob(f"{log_dir}/models/best_model_with_{n_runs-1}_graphs_*.pt")
         files.sort(key=sort_key)
 
         flag = True
@@ -4923,13 +4909,13 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
                 file_id = file_id_list[file_id_]
 
                 epoch = files[file_id].split('graphs')[1][1:-3]
-                net = f"./log/try_{config_file}/models/best_model_with_{n_runs-1}_graphs_{epoch}.pt"
+                net = f"{log_dir}/models/best_model_with_{n_runs-1}_graphs_{epoch}.pt"
                 state_dict = torch.load(net, map_location=device)
                 model.load_state_dict(state_dict['model_state_dict'])
                 model.eval()
 
                 if has_field:
-                    net = f'./log/try_{config_file}/models/best_model_f_with_{n_runs-1}_graphs_{epoch}.pt'
+                    net = f'{log_dir}/models/best_model_f_with_{n_runs-1}_graphs_{epoch}.pt'
                     state_dict = torch.load(net, map_location=device)
                     model_f.load_state_dict(state_dict['model_state_dict'])
 
@@ -5220,7 +5206,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
 
                 im = imread(f"graphs_data/{simulation_config.node_value_map}")
 
-                net = f'./log/try_{config_file}/models/best_model_f_with_{n_runs-1}_graphs_{epoch}.pt'
+                net = f'{log_dir}/models/best_model_f_with_{n_runs-1}_graphs_{epoch}.pt'
                 state_dict = torch.load(net, map_location=device)
                 model_f.load_state_dict(state_dict['model_state_dict'])
 
@@ -5664,9 +5650,8 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
                     logger.info(symbolic(n))
 
 
-def plot_synaptic3(config_file, epoch_list, log_dir, logger, cc, bLatex, device):
-    # Load parameters from config file
-    config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+def plot_synaptic3(config, config_file,epoch_list, log_dir, logger, cc, bLatex, device):
+
     dataset_name = config.dataset
 
     simulation_config = config.simulation
@@ -5744,7 +5729,7 @@ def plot_synaptic3(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
         # plt.rc('text', usetex=False)
         # matplotlib.rcParams['savefig.pad_inches'] = 0
 
-        files = glob.glob(f"./log/try_{config_file}/models/best_model_with_{n_runs-1}_graphs_*.pt")
+        files = glob.glob(f"{log_dir}/models/best_model_with_{n_runs-1}_graphs_*.pt")
         files.sort(key=sort_key)
 
         flag = True
@@ -5770,13 +5755,13 @@ def plot_synaptic3(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
                 file_id = file_id_list[file_id_]
 
                 epoch = files[file_id].split('graphs')[1][1:-3]
-                net = f"./log/try_{config_file}/models/best_model_with_{n_runs-1}_graphs_{epoch}.pt"
+                net = f"{log_dir}/models/best_model_with_{n_runs-1}_graphs_{epoch}.pt"
                 state_dict = torch.load(net, map_location=device)
                 model.load_state_dict(state_dict['model_state_dict'])
                 model.eval()
 
                 if has_field:
-                    net = f'./log/try_{config_file}/models/best_model_f_with_{n_runs-1}_graphs_{epoch}.pt'
+                    net = f'{log_dir}/models/best_model_f_with_{n_runs-1}_graphs_{epoch}.pt'
                     state_dict = torch.load(net, map_location=device)
                     model_f.load_state_dict(state_dict['model_state_dict'])
 
@@ -6067,7 +6052,7 @@ def plot_synaptic3(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
 
                 im = imread(f"graphs_data/{simulation_config.node_value_map}")
 
-                net = f'./log/try_{config_file}/models/best_model_f_with_{n_runs-1}_graphs_{epoch}.pt'
+                net = f'{log_dir}/models/best_model_f_with_{n_runs-1}_graphs_{epoch}.pt'
                 state_dict = torch.load(net, map_location=device)
                 model_f.load_state_dict(state_dict['model_state_dict'])
 
@@ -6580,7 +6565,7 @@ def plot_synaptic3(config_file, epoch_list, log_dir, logger, cc, bLatex, device)
                     logger.info(symbolic(n))
 
 
-def plot_agents(config_file, epoch_list, log_dir, logger, bLatex, device):
+def plot_agents(config, config_file,epoch_list, log_dir, logger, bLatex, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -6600,12 +6585,12 @@ def plot_agents(config_file, epoch_list, log_dir, logger, bLatex, device):
     n_runs = train_config.n_runs
     has_state = (config.simulation.state_type != 'discrete')
 
-    l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
+    l_dir = get_log_dir(config)
+    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file.split('/')[-1]))
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_3.pt"
+    # net = f"{log_dir}/models/best_model_with_1_graphs_3.pt"
     # print(f'Loading existing model {net}...')
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
@@ -6637,9 +6622,9 @@ def plot_agents(config_file, epoch_list, log_dir, logger, bLatex, device):
     print(f'N particles: {n_particles}')
     logger.info(f'N particles:  {n_particles}')
 
-    if os.path.exists(f'./log/try_{config_file}/edge_p_p_list.npz'):
+    if os.path.exists(f'{log_dir}/edge_p_p_list.npz'):
         print('Load list of edges index ...')
-        edge_p_p_list = np.load(f'./log/try_{config_file}/edge_p_p_list.npz')
+        edge_p_p_list = np.load(f'{log_dir}/edge_p_p_list.npz')
     else:
         print('Create list of edges index ...')
         edge_p_p_list = []
@@ -6657,13 +6642,13 @@ def plot_agents(config_file, epoch_list, log_dir, logger, bLatex, device):
             edge_index = np.array(edge_index)
             edge_index = torch.tensor(edge_index, device=device).t().contiguous()
             edge_p_p_list.append(to_numpy(edge_index))
-        np.savez(f'./log/try_{config_file}/edge_p_p_list', *edge_p_p_list)
+        np.savez(f'{log_dir}/edge_p_p_list', *edge_p_p_list)
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
     for epoch in epoch_list:
 
-        net = f"./log/try_{config_file}/models/best_model_with_0_graphs_{epoch}.pt"
+        net = f"{log_dir}/models/best_model_with_0_graphs_{epoch}.pt"
         print(f'network: {net}')
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
@@ -6767,8 +6752,7 @@ def plot_agents(config_file, epoch_list, log_dir, logger, bLatex, device):
         # plt.savefig(f"./{log_dir}/tmp_training/particle/Fig_{epoch}_{N}.tif", dpi=87)
 
 
-def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
-
+def plot_mouse(config, config_file,epoch_list, log_dir, logger, bLatex, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -6831,7 +6815,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
         plt.rc('text', usetex=False)
         matplotlib.rcParams['savefig.pad_inches'] = 0
 
-        files = glob.glob(f"./log/try_{config_file}/models/best_model_with_0_graphs_*.pt")
+        files = glob.glob(f"{log_dir}/models/best_model_with_0_graphs_*.pt")
         files.sort(key=sort_key)
         entropy_list=[]
 
@@ -6840,7 +6824,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
 
             if (sort_key(files[file_id]) % 1E7 != 0):
                 epoch = files[file_id].split('graphs')[1][1:-3]
-                net = f"./log/try_{config_file}/models/best_model_with_0_graphs_{epoch}.pt"
+                net = f"{log_dir}/models/best_model_with_0_graphs_{epoch}.pt"
                 state_dict = torch.load(net, map_location=device)
                 model.load_state_dict(state_dict['model_state_dict'])
                 model.eval()
@@ -6948,7 +6932,7 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
 
     else:
 
-        net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{epoch_list[0]}.pt"
+        net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{epoch_list[0]}.pt"
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
         model.eval()
@@ -7177,11 +7161,8 @@ def plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device):
             plt.close
 
 
-def data_video_validation(config_file, epoch_list, log_dir, logger, bLatex, device):
-    print('')
+def data_video_validation(config, config_file,epoch_list, log_dir, logger, bLatex, device):
 
-    # Load parameters from config file
-    config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
 
     print(f'Save movie ... {config.graph_model.particle_model_name} {config.graph_model.mesh_model_name}')
@@ -7209,11 +7190,8 @@ def data_video_validation(config_file, epoch_list, log_dir, logger, bLatex, devi
     # print("Video saved as 'output.avi'")
 
 
-def data_video_training(config_file, epoch_list, log_dir, logger, bLatex, device):
-    print('')
+def data_video_training(config, config_file,epoch_list, log_dir, logger, bLatex, device):
 
-    # Load parameters from config file
-    config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
 
     max_radius = config.simulation.max_radius
@@ -7338,8 +7316,8 @@ def data_plot(config, config_file, epoch_list, bLatex, device):
     # plt.rc('text', usetex=False)
     matplotlib.rcParams['savefig.pad_inches'] = 0
 
-    l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
+    l_dir = get_log_dir(config)
+    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file.split('/')[-1]))
     print('log_dir: {}'.format(log_dir))
 
     logging.basicConfig(filename=f'{log_dir}/results.log', format='%(asctime)s %(message)s', filemode='w')
@@ -7394,50 +7372,50 @@ def data_plot(config, config_file, epoch_list, bLatex, device):
 
     match config.graph_model.particle_model_name:
         case 'PDE_Agents_A' | 'PDE_Agents_B':
-            plot_agents(config_file, epoch_list, log_dir, logger, bLatex, device)
+            plot_agents(config, config_file,epoch_list, log_dir, logger, bLatex, device)
         case 'PDE_Cell_A' | 'PDE_Cell_B' | 'PDE_Cell':
             if config.training.do_tracking:
-                plot_cell_tracking(config_file, epoch_list, log_dir, logger, bLatex, device)
+                plot_cell_tracking(config, config_file,epoch_list, log_dir, logger, bLatex, device)
             else:
-                plot_cell_state(config_file, epoch_list, log_dir, logger, bLatex, device)
+                plot_cell_state(config, config_file,epoch_list, log_dir, logger, bLatex, device)
         case 'PDE_A':
             if config.simulation.non_discrete_level>0:
-                plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, logger, bLatex, device)
+                plot_attraction_repulsion_continuous(config, config_file,epoch_list, log_dir, logger, bLatex, device)
             elif config.training.do_tracking:
-                plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, logger, bLatex, device)
+                plot_attraction_repulsion_tracking(config, config_file,epoch_list, log_dir, logger, bLatex, device)
             else:
-                plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, bLatex, device)
+                plot_attraction_repulsion(config, config_file,epoch_list, log_dir, logger, bLatex, device)
         case 'PDE_A_bis':
-            plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger, bLatex, device)
+            plot_attraction_repulsion_asym(config, config_file,epoch_list, log_dir, logger, bLatex, device)
         case 'PDE_B' | 'PDE_Cell_B':
-            plot_boids(config_file, epoch_list, log_dir, logger, bLatex, device)
+            plot_boids(config, config_file,epoch_list, log_dir, logger, bLatex, device)
         case 'PDE_ParticleField_B' | 'PDE_ParticleField_A':
-            plot_particle_field(config_file, epoch_list, log_dir, logger, 'grey', bLatex, device)
+            plot_particle_field(config, config_file,epoch_list, log_dir, logger, 'grey', bLatex, device)
         case 'PDE_E':
-            plot_Coulomb(config_file, epoch_list, log_dir, logger, bLatex, device)
+            plot_Coulomb(config, config_file,epoch_list, log_dir, logger, bLatex, device)
         case 'PDE_F':
-            plot_falling_particles(config_file, epoch_list, log_dir, logger, bLatex, device)
+            plot_falling_particles(config, config_file,epoch_list, log_dir, logger, bLatex, device)
         case 'PDE_G':
             if config_file == 'gravity_continuous':
-                plot_gravity_continuous(config_file, epoch_list, log_dir, logger, bLatex, device)
+                plot_gravity_continuous(config, config_file,epoch_list, log_dir, logger, bLatex, device)
             else:
-                plot_gravity(config_file, epoch_list, log_dir, logger, bLatex, device)
+                plot_gravity(config, config_file,epoch_list, log_dir, logger, bLatex, device)
         case 'PDE_M':
-                plot_mouse(config_file, epoch_list, log_dir, logger, bLatex, device)
+                plot_mouse(config, config_file,epoch_list, log_dir, logger, bLatex, device)
 
     match config.graph_model.mesh_model_name:
         case 'WaveMesh':
-            plot_wave(config_file=config_file, epoch_list=epoch_list, log_dir=log_dir, logger=logger, cc='viridis', bLatex=bLatex, device=device)
+            plot_wave(config=config, config_file=config_file, epoch_list=epoch_list, log_dir=log_dir, logger=logger, cc='viridis', bLatex=bLatex, device=device)
         case 'RD_RPS_Mesh':
-            plot_RD_RPS(config_file=config_file, epoch_list=epoch_list, log_dir=log_dir, logger=logger, cc='viridis',  bLatex=bLatex, device=device)
+            plot_RD_RPS(config=config, config_file=config_file, epoch_list=epoch_list, log_dir=log_dir, logger=logger, cc='viridis',  bLatex=bLatex, device=device)
 
     if config.graph_model.signal_model_name == 'PDE_N':
-        plot_synaptic(config_file, epoch_list, log_dir, logger, 'viridis', bLatex, device)
+        plot_synaptic(config, config_file,epoch_list, log_dir, logger, 'viridis', bLatex, device)
     elif ('PDE_N' in config.graph_model.signal_model_name):
         if ('PDE_N3' in config.graph_model.signal_model_name):
-            plot_synaptic3(config_file, epoch_list, log_dir, logger, 'viridis', bLatex, device)
+            plot_synaptic3(config, config_file,epoch_list, log_dir, logger, 'viridis', bLatex, device)
         else:
-            plot_synaptic2(config_file, epoch_list, log_dir, logger, 'viridis', bLatex, device)
+            plot_synaptic2(config, config_file,epoch_list, log_dir, logger, 'viridis', bLatex, device)
 
     for handler in logger.handlers[:]:
         handler.close()
@@ -7533,8 +7511,8 @@ def get_figures(index):
             plt.ylabel(r'$R^2$', fontsize=48)
             plt.xlabel(r'epoch', fontsize=48)
             for it, config_file in enumerate(config_list):
-                l_dir = os.path.join('.', 'log')
-                log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
+                l_dir = get_log_dir(config)
+                log_dir = os.path.join(l_dir, 'try_{}'.format(config_file.split('/')[-1]))
                 r_squared_list = np.load(f'./{log_dir}/results/R2.npy')
                 plt.plot(r_squared_list, linewidth = 4, label=f'{(it+1)*10}000')
                 plt.legend(fontsize=20)
@@ -7558,8 +7536,8 @@ def get_figures(index):
             plt.ylabel(r'$R^2$', fontsize=48)
             plt.xlabel(r'epoch', fontsize=48)
             for it, config_file in enumerate(config_list):
-                l_dir = os.path.join('.', 'log')
-                log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
+                l_dir = get_log_dir(config)
+                log_dir = os.path.join(l_dir, 'try_{}'.format(config_file.split('/')[-1]))
                 r_squared_list = np.load(f'./{log_dir}/results/R2.npy')
                 plt.plot(r_squared_list, linewidth = 4, label=labels[it])
                 plt.legend(fontsize=20)
@@ -7782,15 +7760,15 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N5_l']
     # config_list = ['signal_N3_c1']
-    config_list = ['signal_N3_c11']
-    # config_list = ['rat_city_a']
+    # config_list = ['signal_N3_c11']
+    config_list = ['arbitrary/arbitrary_3']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['best'], bLatex=True, device=device)
-        # data_plot(config=config, config_file=config_file, epoch_list=['all'], bLatex=True, device=device)
+        data_plot(config=config, config_file=config_file.split('/')[-1], epoch_list=['best'], bLatex=True, device=device)
+        # data_plot(config=config, config_file=config_file.split('/')[-1], epoch_list=['all'], bLatex=True, device=device)
 
-        # data_plot(config=config, config_file=config_file, epoch_list=['all'], bLatex=False, device=device)
+        # data_plot(config=config, config_file=config_file.split('/')[-1], epoch_list=['all'], bLatex=False, device=device)
 
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, bLatex=False, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

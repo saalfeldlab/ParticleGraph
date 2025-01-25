@@ -107,6 +107,7 @@ class PDE_F(pyg.nn.MessagePassing):
 
             pressure_force = torch.relu((density_i+density_j)/2 - self.p[2]/2) * self.kernel_operators[:, 3:5] * self.p[1] / density_j.repeat(1,2)
             viscosity_force = (d_pos_j-d_pos_i) * self.p[3] * self.kernel_operators[:, 0:1].repeat(1,2) / density_j.repeat(1,2)
+
             # viscosity_force = d_pos_j * self.p[3] * self.kernel_operators[:, 5:7] / density_j.repeat(1,2)
             # convection_force_x = d_pos_i[:,0:1] * self.kernel_operators[:, 1:2] *  d_pos_j[:,0:1] + d_pos_i[:,1:2] * self.kernel_operators[:, 2:3] *  d_pos_j[:,0:1]
             # convection_force_y = d_pos_i[:, 0:1] * self.kernel_operators[:, 1:2] * d_pos_j[:, 1:2] + d_pos_i[:,1:2] * self.kernel_operators[:, 2:3] * d_pos_j[:, 1:2]

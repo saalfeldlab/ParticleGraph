@@ -55,11 +55,11 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        task = 'generate'
+        task = 'test'
         best_model = 'None'
         # config_list = ['fluids_m20']
         # config_list = ['falling_water_ramp_x6_11']
-        config_list =['signal_N4_v_bis']
+        config_list =['arbitrary/arbitrary_3']
         # config_list = ['cell_MDCK_8','cell_MDCK_9','cell_MDCK_10','cell_MDCK_11']
 
     for config_file in config_list:
@@ -72,9 +72,9 @@ if __name__ == '__main__':
         if 'generate' in task:
             data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=False, bSave=True, step=1000)  #config.simulation.n_frames // 100)
         if 'train' in task:
-            data_train(config=config, config_file=config_file, erase=False, best_model=best_model, device=device)
+            data_train(config=config, config_file=config_file.split('/')[-1], erase=False, best_model=best_model, device=device)
         if 'test' in task:
-            data_test(config=config, config_file=config_file, visualize=True, style='white color', verbose=False, best_model='best', run=1, plot_data=False,
+            data_test(config=config, config_file=config_file.split('/')[-1], visualize=True, style='white color', verbose=False, best_model='best', run=1, plot_data=False,
                       test_simulation=False, sample_embedding=False, fixed=False, bounce='bottom', step=4, device=device)
 
 

@@ -186,7 +186,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
     model.ynorm = ynorm
     model.vnorm = vnorm
     if best_model != None:
-        net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{best_model}.pt"
+        net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{best_model}.pt"
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
         start_epoch = int(best_model.split('_')[0])
@@ -194,7 +194,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
         logger.info(f'best_model: {best_model}  start_epoch: {start_epoch}')
     else:
         start_epoch = 0
-        net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs.pt"
+        net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs.pt"
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -590,7 +590,7 @@ def data_solar_system(config, config_file, erase, best_model, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_0_0.pt"
+    # net = f"{log_dir}/models/best_model_with_1_graphs_0_0.pt"
     # print(f'Loading existing model {net}...')
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
@@ -602,7 +602,7 @@ def data_solar_system(config, config_file, erase, best_model, device):
     logger.info(f'Learning rates: {lr}, {lr_embedding}')
     model.train()
 
-    net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs.pt"
+    net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs.pt"
     print(f'network: {net}')
     print(f'initial batch_size: {batch_size}')
     print('')
@@ -832,7 +832,7 @@ def data_train_cell(config, config_file, erase, best_model, device):
     model.ynorm = ynorm
     model.vnorm = vnorm
     if best_model != None:
-        net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{best_model}.pt"
+        net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{best_model}.pt"
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
         start_epoch = int(best_model.split('_')[0])
@@ -840,7 +840,7 @@ def data_train_cell(config, config_file, erase, best_model, device):
         logger.info(f'best_model: {best_model}  start_epoch: {start_epoch}')
     else:
         start_epoch = 0
-        net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs.pt"
+        net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs.pt"
 
 
     lr = train_config.learning_rate_start
@@ -1214,7 +1214,7 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
     model.ynorm = ynorm
     model.vnorm = vnorm
     if best_model != None:
-        net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{best_model}.pt"
+        net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{best_model}.pt"
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
         start_epoch = int(best_model.split('_')[0])
@@ -1222,7 +1222,7 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
         logger.info(f'best_model: {best_model}  start_epoch: {start_epoch}')
     else:
         start_epoch = 0
-        net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs.pt"
+        net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs.pt"
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -1234,7 +1234,7 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
     coeff_entropy_loss = train_config.coeff_entropy_loss
     entropy_loss = KoLeoLoss()
 
-    net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs.pt"
+    net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs.pt"
     print(f'network: {net}')
     print('')
     logger.info(f'network: {net}')
@@ -1432,7 +1432,7 @@ def data_train_mesh(config, config_file, erase, best_model, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_17.pt"
+    # net = f"{log_dir}/models/best_model_with_1_graphs_17.pt"
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
 
@@ -1443,7 +1443,7 @@ def data_train_mesh(config, config_file, erase, best_model, device):
     logger.info(f'Learning rates: {lr}, {lr_embedding}')
     model.train()
 
-    net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs.pt"
+    net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs.pt"
     print(f'network: {net}')
     print(f'initial batch_size: {batch_size}')
     print('')
@@ -1841,7 +1841,7 @@ def data_train_particle_field(config, config_file, erase, best_model, device):
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
     if best_model != None:
-        net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{best_model}.pt"
+        net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{best_model}.pt"
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
         start_epoch = int(best_model.split('_')[0])
@@ -1859,7 +1859,7 @@ def data_train_particle_field(config, config_file, erase, best_model, device):
     logger.info(f'Learning rates: {lr}, {lr_embedding}')
     model.train()
 
-    net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs.pt"
+    net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs.pt"
     print(f'network: {net}')
     print(f'initial batch_size: {batch_size}')
     print('')
@@ -1895,7 +1895,7 @@ def data_train_particle_field(config, config_file, erase, best_model, device):
         model_f.to(device=device)
         model_f.train()
         optimizer_f = torch.optim.Adam(lr=1e-5, params=model_f.parameters())
-        # net = f"./log/try_{config_file}/models/best_model_f_with_1_graphs_20.pt"
+        # net = f"{log_dir}/models/best_model_f_with_1_graphs_20.pt"
         # state_dict = torch.load(net, map_location=device)
         # model_f.load_state_dict(state_dict['model_state_dict'])
 
@@ -2305,7 +2305,7 @@ def data_train_synaptic(config, config_file, erase, best_model, device):
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
     if best_model != None:
-        net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{best_model}.pt"
+        net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{best_model}.pt"
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
         start_epoch = int(best_model.split('_')[0])
@@ -2333,7 +2333,7 @@ def data_train_synaptic(config, config_file, erase, best_model, device):
     logger.info(f"Total Trainable Params: {n_total_params}")
     logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
-    net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs.pt"
+    net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs.pt"
     print(f'network: {net}')
     print(f'initial batch_size: {batch_size}')
     print('')
@@ -2376,7 +2376,7 @@ def data_train_synaptic(config, config_file, erase, best_model, device):
         model_f.train()
         optimizer_exc = torch.optim.Adam(lr=train_config.learning_rate_NNR, params=model_f.parameters())
 
-        # net = f"./log/try_{config_file}/models/best_model_f_with_9_graphs_14.pt"
+        # net = f"{log_dir}/models/best_model_f_with_9_graphs_14.pt"
         # state_dict = torch.load(net, map_location=device)
         # model_f.load_state_dict(state_dict['model_state_dict'])
 
@@ -2844,7 +2844,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
         model_f.to(device=device)
 
     if best_model != None:
-        net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{best_model}.pt"
+        net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{best_model}.pt"
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
         start_epoch = int(best_model.split('_')[0])
@@ -2856,7 +2856,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
         #                     hidden_size=model.hidden_dim * 4, device=model.device)
 
         if has_field:
-            net = f'./log/try_{config_file}/models/best_model_f_with_{n_runs - 1}_graphs_{best_model}.pt'
+            net = f'{log_dir}/models/best_model_f_with_{n_runs - 1}_graphs_{best_model}.pt'
             state_dict = torch.load(net, map_location=device)
             model_f.load_state_dict(state_dict['model_state_dict'])
 
@@ -2873,7 +2873,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
         optimizer_f = torch.optim.Adam(lr=train_config.learning_rate_NNR, params=model_f.parameters())
         model_f.train()
 
-    net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs.pt"
+    net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs.pt"
     print(f'network: {net}')
     print(f'initial batch_size: {batch_size}')
     print('')
@@ -3299,7 +3299,7 @@ def data_train_agents(config, config_file, erase, best_model, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_3.pt"
+    # net = f"{log_dir}/models/best_model_with_1_graphs_3.pt"
     # print(f'Loading existing model {net}...')
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
@@ -3345,7 +3345,7 @@ def data_train_agents(config, config_file, erase, best_model, device):
     logger.info(f'Learning rates: {lr}, {lr_embedding}')
     model.train()
 
-    net = f"./log/try_{config_file}/models/best_model_with_1_graphs.pt"
+    net = f"{log_dir}/models/best_model_with_1_graphs.pt"
     print(f'network: {net}')
     print(f'initial batch_size: {batch_size}')
     print('')
@@ -3357,9 +3357,9 @@ def data_train_agents(config, config_file, erase, best_model, device):
     print(f'N particles: {n_particles}')
     logger.info(f'N particles:  {n_particles}')
 
-    if os.path.exists(f'./log/try_{config_file}/edge_p_p_list.npz'):
+    if os.path.exists(f'{log_dir}/edge_p_p_list.npz'):
         print('Load list of edges index ...')
-        edge_p_p_list = np.load(f'./log/try_{config_file}/edge_p_p_list.npz')
+        edge_p_p_list = np.load(f'{log_dir}/edge_p_p_list.npz')
     else:
         print('Create list of edges index ...')
         edge_p_p_list = []
@@ -3378,7 +3378,7 @@ def data_train_agents(config, config_file, erase, best_model, device):
             edge_index = np.array(edge_index)
             edge_index = torch.tensor(edge_index, device=device).t().contiguous()
             edge_p_p_list.append(to_numpy(edge_index))
-        np.savez(f'./log/try_{config_file}/edge_p_p_list', *edge_p_p_list)
+        np.savez(f'{log_dir}/edge_p_p_list', *edge_p_p_list)
 
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
@@ -3562,7 +3562,7 @@ def data_train_WBI(config, config_file, erase, best_model, device):
 
     print('Create GNN model ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_0_0.pt"
+    # net = f"{log_dir}/models/best_model_with_1_graphs_0_0.pt"
     # print(f'Loading existing model {net}...')
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
@@ -3574,7 +3574,7 @@ def data_train_WBI(config, config_file, erase, best_model, device):
     logger.info(f'Learning rates: {lr}, {lr_embedding}')
     model.train()
 
-    net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs.pt"
+    net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs.pt"
     print(f'network: {net}')
     print(f'initial batch_size: {batch_size}')
     print('')
@@ -3731,7 +3731,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     else:
         has_synaptic_field = False
 
-    l_dir = os.path.join('.', 'log')
+    l_dir = get_log_dir(config)
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     files = glob.glob(f"./{log_dir}/tmp_recons/*")
     # for f in files:
@@ -3746,7 +3746,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         best_model = filename
         print(f'best model: {best_model}')
 
-    net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{best_model}.pt"
+    net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{best_model}.pt"
 
     n_sub_population = n_particles // n_particle_types
 
@@ -3759,7 +3759,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     if only_mesh:
         vnorm = torch.tensor(1.0, device=device)
         ynorm = torch.tensor(1.0, device=device)
-        hnorm = torch.load(f'./log/try_{config_file}/hnorm.pt', map_location=device).to(device)
+        hnorm = torch.load(f'{log_dir}/hnorm.pt', map_location=device).to(device)
         x_mesh_list = []
         y_mesh_list = []
         time.sleep(0.5)
@@ -3778,11 +3778,11 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         x_mesh_list = []
         x_mesh = torch.load(f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt', map_location=device)
         x_mesh_list.append(x_mesh)
-        hnorm = torch.load(f'./log/try_{config_file}/hnorm.pt', map_location=device).to(device)
+        hnorm = torch.load(f'{log_dir}/hnorm.pt', map_location=device).to(device)
         x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device))
         y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device))
-        ynorm = torch.load(f'./log/try_{config_file}/ynorm.pt', map_location=device, weights_only=True).to(device)
-        vnorm = torch.load(f'./log/try_{config_file}/vnorm.pt', map_location=device, weights_only=True).to(device)
+        ynorm = torch.load(f'{log_dir}/ynorm.pt', map_location=device, weights_only=True).to(device)
+        vnorm = torch.load(f'{log_dir}/vnorm.pt', map_location=device, weights_only=True).to(device)
         x = x_list[0][0].clone().detach()
         n_particles = x.shape[0]
         config.simulation.n_particles = n_particles
@@ -3823,8 +3823,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                         index_particles.append(index)
                         n_particle_types = 3
 
-        ynorm = torch.load(f'./log/try_{config_file}/ynorm.pt', map_location=device, weights_only=True).to(device)
-        vnorm = torch.load(f'./log/try_{config_file}/vnorm.pt', map_location=device, weights_only=True ).to(device)
+        ynorm = torch.load(f'{log_dir}/ynorm.pt', map_location=device, weights_only=True)
+        vnorm = torch.load(f'{log_dir}/vnorm.pt', map_location=device, weights_only=True )
 
     if do_tracking | has_state:
         for k in range(len(x_list[0])):
@@ -3860,7 +3860,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 model.a[n] = model_a_
     if has_ghost:
         model_ghost = Ghost_Particles(config, n_particles, vnorm, device)
-        net = f"./log/try_{config_file}/models/best_ghost_particles_with_{n_runs - 1}_graphs_20.pt"
+        net = f"{log_dir}/models/best_ghost_particles_with_{n_runs - 1}_graphs_20.pt"
         state_dict = torch.load(net, map_location=device)
         model_ghost.load_state_dict(state_dict['model_state_dict'])
         model_ghost.eval()
@@ -3869,7 +3869,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         mask_ghost = np.argwhere(mask_ghost == 1)
         mask_ghost = mask_ghost[:, 0].astype(int)
     if has_mesh:
-        hnorm = torch.load(f'./log/try_{config_file}/hnorm.pt', map_location=device).to(device)
+        hnorm = torch.load(f'{log_dir}/hnorm.pt', map_location=device).to(device)
 
         mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_{run}.pt', map_location=device)
         mask_mesh = mesh_data['mask']
@@ -3967,7 +3967,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 model_f = Siren_Network(image_width=image_width, in_features=3, out_features=1, hidden_features=128,
                                         hidden_layers=5, outermost_linear=True, device=device, first_omega_0=80,
                                         hidden_omega_0=80.)
-                net = f'./log/try_{config_file}/models/best_model_f_with_1_graphs_{best_model}.pt'
+                net = f'{log_dir}/models/best_model_f_with_1_graphs_{best_model}.pt'
                 state_dict = torch.load(net, map_location=device)
                 model_f.load_state_dict(state_dict['model_state_dict'])
                 model_f.to(device=device)

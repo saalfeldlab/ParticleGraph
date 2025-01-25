@@ -397,8 +397,72 @@ def calculate_ssim(img1, img2):
     return ssim_score
 
 
+def get_log_dir(config=[]):
+
+    if 'PDE_A' in config.graph_model.particle_model_name:
+        l_dir = os.path.join('./log/arbitrary/')
+    elif 'PDE_B' in config.graph_model.particle_model_name:
+        l_dir = os.path.join('./log/boids/')
+    elif 'PDE_E' in config.graph_model.particle_model_name:
+        l_dir = os.path.join('./log/Coulomb/')
+    elif 'PDE_F' in config.graph_model.particle_model_name:
+        l_dir = os.path.join('./log/fluids/')
+    elif 'PDE_G' in config.graph_model.particle_model_name:
+        l_dir = os.path.join('./log/gravity/')
+    elif 'PDE_K' in config.graph_model.particle_model_name:
+        l_dir = os.path.join('./log/springs/')
+    elif 'PDE_N' in config.graph_model.particle_model_name:
+        l_dir = os.path.join('./log/signal/')
+    elif 'PDE_WF' in config.graph_model.particle_model_name:
+        l_dir = os.path.join('./log/falling_wter_ramp/')
+    elif 'RD_RPS' in config.graph_model.mesh_model_name:
+        l_dir = os.path.join('./log/reaction_diffusion/')
+    elif 'Wave' in config.graph_model.mesh_model_name:
+        l_dir = os.path.join('./log/wave/')
+    elif 'cell' in config.dataset:
+        l_dir = os.path.join('./log/cell/')
+    elif 'mouse' in config.dataset:
+        l_dir = os.path.join('./log/mouse/')
+    elif 'rat' in config.dataset:
+        l_dir = os.path.join('./log/rat/')
+    elif 'celegans' in config.dataset:
+        l_dir = os.path.join('./log/celegans/')
+
+    return l_dir
+
+
 def create_log_dir(config=[], config_file=[], erase=True):
     l_dir = os.path.join('.', 'log')
+
+    if 'PDE_A' in config.graph_model.particle_model_name:
+        l_dir = os.path.join('./log/arbitrary/')
+    elif 'PDE_B' in config.graph_model.particle_model_name:
+        l_dir = os.path.join('./log/boids/')
+    elif 'PDE_E' in config.graph_model.particle_model_name:
+        l_dir = os.path.join('./log/Coulomb/')
+    elif 'PDE_F' in config.graph_model.particle_model_name:
+        l_dir = os.path.join('./log/fluids/')
+    elif 'PDE_G' in config.graph_model.particle_model_name:
+        l_dir = os.path.join('./log/gravity/')
+    elif 'PDE_K' in config.graph_model.particle_model_name:
+        l_dir = os.path.join('./log/springs/')
+    elif 'PDE_N' in config.graph_model.particle_model_name:
+        l_dir = os.path.join('./log/signal/')
+    elif 'PDE_WF' in config.graph_model.particle_model_name:
+        l_dir = os.path.join('./log/falling_wter_ramp/')
+    elif 'RD_RPS' in config.graph_model.mesh_model_name:
+        l_dir = os.path.join('./log/reaction_diffusion/')
+    elif 'Wave' in config.graph_model.mesh_model_name:
+        l_dir = os.path.join('./log/wave/')
+    elif 'cell' in config.dataset:
+        l_dir = os.path.join('./log/cell/')
+    elif 'mouse' in config.dataset:
+        l_dir = os.path.join('./log/mouse/')
+    elif 'rat' in config.dataset:
+        l_dir = os.path.join('./log/rat/')
+    elif 'celegans' in config.dataset:
+        l_dir = os.path.join('./log/celegans/')
+
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     print('log_dir: {}'.format(log_dir))
 
