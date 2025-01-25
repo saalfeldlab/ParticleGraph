@@ -55,11 +55,12 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        task = 'test'
+        task = 'train'
         best_model = 'None'
         # config_list = ['fluids_m20']
         # config_list = ['falling_water_ramp_x6_11']
-        config_list =['arbitrary/arbitrary_3']
+        # config_list =['arbitrary/arbitrary_3']
+        config_list =['signal/signal_N2_a1_SNR7']
         # config_list = ['cell_MDCK_8','cell_MDCK_9','cell_MDCK_10','cell_MDCK_11']
 
     for config_file in config_list:
