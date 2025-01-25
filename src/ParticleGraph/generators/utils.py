@@ -207,24 +207,22 @@ def choose_mesh_model(config, X1_mesh, device):
         #     for n in range(n_node_types):
         #         c[n] = torch.tensor(config.simulation.diffusion_coefficients[n])
 
-        beta = config.simulation.beta
-
         match mesh_model_name:
             case 'RD_Gray_Scott_Mesh':
-                mesh_model = RD_Gray_Scott(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
+                mesh_model = RD_Gray_Scott(aggr_type=aggr_type, c=torch.squeeze(c), bc_dpos=bc_dpos)
             case 'RD_FitzHugh_Nagumo_Mesh':
-                mesh_model = RD_FitzHugh_Nagumo(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
+                mesh_model = RD_FitzHugh_Nagumo(aggr_type=aggr_type, c=torch.squeeze(c), bc_dpos=bc_dpos)
             case 'RD_RPS_Mesh':
                 mesh_model = RD_RPS(aggr_type=aggr_type, bc_dpos=bc_dpos)
             case 'RD_RPS_Mesh_bis':
                 mesh_model = RD_RPS(aggr_type=aggr_type, bc_dpos=bc_dpos)
             case 'DiffMesh' | 'WaveMesh':
-                mesh_model = PDE_Laplacian(aggr_type=aggr_type, beta=beta, bc_dpos=bc_dpos)
+                mesh_model = PDE_Laplacian(aggr_type=aggr_type, bc_dpos=bc_dpos)
             case 'Chemotaxism_Mesh':
                 c = initialize_random_values(n_node_types, device)
                 for n in range(n_node_types):
                     c[n] = torch.tensor(config.simulation.diffusion_coefficients[n])
-                mesh_model = PDE_Laplacian(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
+                mesh_model = PDE_Laplacian(aggr_type=aggr_type, c=torch.squeeze(c), bc_dpos=bc_dpos)
             case 'PDE_O_Mesh':
                 c = initialize_random_values(n_node_types, device)
                 for n in range(n_node_types):
@@ -396,7 +394,7 @@ def init_mesh(config, device):
 
     i0 = imread(f'graphs_data/{node_value_map}')
     if len(i0.shape) == 2:
-        i0 = i0[0,:, :]
+        # i0 = i0[0,:, :]
         i0 = np.flipud(i0)
         values = i0[(to_numpy(pos_mesh[:, 1]) * 255).astype(int), (to_numpy(pos_mesh[:, 0]) * 255).astype(int)]
 

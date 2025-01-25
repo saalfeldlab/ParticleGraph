@@ -414,7 +414,6 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
 
 
 
-
 def data_generate_particle_field(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
 

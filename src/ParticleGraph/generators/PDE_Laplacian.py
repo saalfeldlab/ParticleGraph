@@ -22,10 +22,10 @@ class PDE_Laplacian(pyg.nn.MessagePassing):
         the Laplacian
     """
 
-    def __init__(self, aggr_type=[], beta=[], bc_dpos=[]):
+    def __init__(self, aggr_type=[], bc_dpos=[]):
         super(PDE_Laplacian, self).__init__(aggr='add')  # "mean" aggregation.
 
-        self.beta = beta
+        self.beta = 1.E-2
         self.bc_dpos = bc_dpos
         self.coeff = []
 
