@@ -1,5 +1,5 @@
 description: 'synaptic network random matrix   cluster embedding distance 0.2   1000 neurons 4 types phi neuron-neuron dependent lorentz std 0.03   coeff_diff 500'
-dataset: 'signal_N5_Lorentz_l'
+dataset: 'signal_N5_Lorentz_l1'
 
 simulation:
     connectivity_file: 'random'
@@ -14,7 +14,7 @@ simulation:
     n_particles: 1000
     n_particle_types: 4
     n_interactions: 4
-    n_frames: 10000
+    n_frames: 100000
     delta_t: 0.01
     dpos_init:  0
     boundary: 'no'
@@ -44,12 +44,12 @@ plotting:
     ylim: [ -8,8 ]
 
 training:
-    n_epochs: 80
+    n_epochs: 40
     n_epochs_init: 10
     recursive_loop: 1
     batch_size: 1
     small_init_batch_size: False
-    n_runs: 10
+    n_runs: 2
     sparsity: 'none'
     rotation_augmentation: False
     data_augmentation_loop: 100
