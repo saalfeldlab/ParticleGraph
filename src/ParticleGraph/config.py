@@ -26,7 +26,6 @@ class SimulationConfig(BaseModel):
     bounce_coeff: float = 0.1
     min_radius: float = 0.0
     max_radius: Annotated[float, Field(gt=0)]
-    smooth_radius: float = 0.1
 
     diffusion_coefficients: list[list[float]] = None
     n_particles: int = 1000

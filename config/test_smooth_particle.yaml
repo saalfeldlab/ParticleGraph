@@ -14,8 +14,6 @@ simulation:
   boundary: 'no'
   start_frame: 0
 
-  smooth_radius: 0.05
-
 graph_model:
   particle_model_name: 'PDE_WF'
   mesh_model_name: ''

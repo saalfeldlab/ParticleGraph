@@ -171,7 +171,7 @@ class Operator_smooth(pyg.nn.MessagePassing):
             # out = torch.cat((grad_density, velocity, grad_velocity), dim = 1) # d_rho_x d_rho_y, velocity
 
             # out = field_j * self.kernel_operators[:, 1:2] / density_j  # grad_x
-            out = field_j * self.kernel_operators[:, 3:4] / density_j  # grad_x
+            out = field_j * self.kernel_operators[:, 3:4] / density_j  # laplacian
 
             return out
 
@@ -242,25 +242,24 @@ def arbitrary_gaussian_grad_laplace (mgrid, n_gaussian, device):
     plt.title('Laplacian(u(x,y)) autograd')
     plt.show()
 
-def arbitrary_test_grad_laplace (mgrid):
+def remove_files_from_folder(folder_path):
+    # Check if the folder exists
+    if os.path.exists(folder_path):
+        # Iterate over all the files in the folder
+        for filename in os.listdir(folder_path):
+            file_path = os.path.join(folder_path, filename)
+            try:
+                # Check if it is a file and remove it
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)
+                # Check if it is a directory and remove it
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+            except Exception as e:
+                print(f'Failed to delete {file_path}. Reason: {e}')
+    else:
+        print(f'The folder {folder_path} does not exist.')
 
-    mgrid.requires_grad = True
-    x = mgrid[:, 0]
-    y = mgrid[:, 1]
-    size = np.sqrt(mgrid.shape[0]).astype(int)
-
-    a =  x ** 2 * torch.sin(5*y) + y ** 3 * torch.cos(5*x)
-
-    da_x = 2 * x * torch.sin(5*y)  - y ** 3 * 5 * torch.sin(5*x)
-    da_y = x**2 * 5 * torch.cos(5*y) + 3 * y **2 * torch.cos(5*x)
-    d2a_x = 2 * torch.sin(5*y) - 25 * y ** 3 * torch.cos(5*x)
-    d2a_y = - 25 * x ** 2 * torch.sin(5*y) + 6 * y * torch.cos(5*x)
-    laplacian = d2a_x + d2a_y
-
-    grad_autograd = density_gradient(a, mgrid)
-    laplacian_autograd  = density_laplace(a, mgrid)
-
-    return a, laplacian
 
 
 
@@ -275,8 +274,13 @@ if __name__ == '__main__':
     import torch_geometric.data as data
     from ParticleGraph.utils import choose_boundary_values
     from ParticleGraph.config import ParticleGraphConfig
+    import os
+    import shutil
 
-    config = ParticleGraphConfig.from_yaml('/groups/saalfeld/home/allierc/Py/ParticleGraph/config/test_smooth_particle.yaml')
+    remove_files_from_folder('tmp')
+
+    # config = ParticleGraphConfig.from_yaml('/groups/saalfeld/home/allierc/Py/ParticleGraph/config/test_smooth_particle.yaml')
+    config = ParticleGraphConfig.from_yaml('/groups/saalfeld/home/allierc/Py/ParticleGraph/config/wave/wave_smooth_particle.yaml')
 
     device = 'cuda:0'
     dimension = 2
@@ -296,14 +300,8 @@ if __name__ == '__main__':
 
     plt.style.use('dark_background')
 
-    tensors = tuple(dimension * [torch.linspace(0, 1, steps=100)])
-    x = torch.stack(torch.meshgrid(*tensors), dim=-1)
-    x = x.reshape(-1, dimension)
-    x = torch.cat((torch.arange(x.shape[0])[:,None], x, torch.zeros((x.shape[0], 9))), 1)
-    x = x.to(device)
-    x.requires_grad = False
-    size = np.sqrt(x.shape[0]).astype(int)
-    x0 = x
+
+
 
     model = Operator_smooth(config=config, device=device, aggr_type='add', bc_dpos=bc_dpos, dimension=dimension)
     optimizer = optim.Adam(model.parameters(), lr=lr)
@@ -312,87 +310,189 @@ if __name__ == '__main__':
     phi = torch.zeros(1, device=device)
     threshold = 0.05
 
+    data = 'wave'
+
+    if data == 'gaussian':
+
+        tensors = tuple(dimension * [torch.linspace(0, 1, steps=50)])
+        x = torch.stack(torch.meshgrid(*tensors), dim=-1)
+        x = x.reshape(-1, dimension)
+        x = torch.cat((torch.arange(x.shape[0])[:, None], x, torch.zeros((x.shape[0], 9))), 1)
+        x = x.to(device)
+        x.requires_grad = False
+        size = np.sqrt(x.shape[0]).astype(int)
+        x0 = x
+
+    elif data=='wave':
+
+        dataset_name = config.dataset
+        n_frames = config.simulation.n_frames
+
+        x_mesh_list = []
+        y_mesh_list = []
+        x_mesh = torch.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/graphs_{dataset_name}/x_mesh_list_0.pt', map_location=device, weights_only=True)
+        x_mesh_list.append(x_mesh)
+        y_mesh = torch.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/graphs_{dataset_name}/y_mesh_list_0.pt', map_location=device, weights_only=True)
+        y_mesh_list.append(y_mesh)
+
 
 
     for epoch in trange(0, 5000):
 
         optimizer.zero_grad()
 
-        x = x0.clone().detach() + 0.05 * torch.randn_like(x0)
-        # x = x[torch.randperm(x.size(0))[:int(0.5 * x.size(0))]] # removal of 10%
+        if data == 'gaussian':
+            x = x0.clone().detach() + 0.05 * torch.randn_like(x0)
+            # x = x[torch.randperm(x.size(0))[:int(0.5 * x.size(0))]] # removal of 10%
+            u, grad_u, laplace_u = arbitrary_gaussian_grad_laplace(mgrid = x[:,1:3], n_gaussian = 5, device=device)
+            # L_u = grad_u.clone().detach()
+            L_u = laplace_u.clone().detach()
+            x[:, 6:7] = u[:, None].clone().detach()
 
-        u, grad_u, laplace_u = arbitrary_gaussian_grad_laplace(mgrid = x[:,1:3], n_gaussian = 5, device=device)
-        # L_u = grad_u.clone().detach()
-        L_u = laplace_u.clone().detach()
-        x[:, 6:7] = u[:, None].clone().detach()
+            discrete_pos = torch.argwhere((u >= threshold) | (u <= -threshold))
+            x = x[discrete_pos].squeeze()
+            L_u = L_u[discrete_pos].squeeze()
 
-        discrete_pos = torch.argwhere((u >= threshold) | (u <= -threshold))
-        x = x[discrete_pos].squeeze()
-        L_u = L_u[discrete_pos].squeeze()
+            distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+            adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
+            edge_index = adj_t.nonzero().t().contiguous()
+            data_id = torch.ones((x.shape[0], 1), dtype=torch.int)
+            dataset = data.Data(x=x, pos=x[:, 1:dimension + 1], edge_index=edge_index)
 
-        distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-        adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
-        edge_index = adj_t.nonzero().t().contiguous()
-        data_id = torch.ones((x.shape[0], 1), dtype=torch.int)
-        dataset = data.Data(x=x, pos=x[:, 1:dimension + 1], edge_index=edge_index)
+            pred = model(dataset, data_id=data_id, training=False, phi=phi)
+            loss = (pred - L_u).norm(2)
 
-        pred = model(dataset, data_id=data_id, training=False, phi=phi)
-        loss = (pred-L_u).norm(2)
+            loss.backward()
+            optimizer.step()
 
-        loss.backward()
-        optimizer.step()
+            if epoch % 1 == 0:
 
-        if epoch % 1 == 0:
+                print(epoch, loss)
 
-            u = u[discrete_pos]
-            grad_u = grad_u[discrete_pos]
-            laplace_u = laplace_u[discrete_pos]
+                fig = plt.figure(figsize=(15, 5))
+                ax = fig.add_subplot(141)
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=1, c='w')
+                ax.invert_yaxis()
+                plt.title('density')
+                ax = fig.add_subplot(142)
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(u))
+                ax.invert_yaxis()
+                plt.title('u')
+                ax = fig.add_subplot(143)
+                # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u[:,0]))
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(L_u))
+                ax.invert_yaxis()
+                plt.title('true L_u')
+                ax = fig.add_subplot(144)
+                # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(pred))
+                ax.invert_yaxis()
+                plt.title('pred L_u')
+                plt.tight_layout()
+                # plt.show()
+                plt.savefig(f'tmp/learning_{epoch}.tif')
+                plt.close()
 
-            print(epoch, loss)
+                matplotlib.use("Qt5Agg")
+                fig = plt.figure(figsize=(12, 3))
+                ax = fig.add_subplot(141)
+                plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1,
+                            c=to_numpy(model.kernel_operators[:, 0:1]))
+                plt.title('kernel')
+                ax = fig.add_subplot(142)
+                plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1,
+                            c=to_numpy(model.kernel_operators[:, 1:2]))
+                plt.title('grad_x')
+                ax = fig.add_subplot(143)
+                plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1,
+                            c=to_numpy(model.kernel_operators[:, 2:3]))
+                plt.title('grad_y')
+                ax = fig.add_subplot(144)
+                plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1,
+                            c=to_numpy(model.kernel_operators[:, 3:4]))
+                plt.title('laplace')
+                plt.tight_layout()
+                # plt.show()
+                plt.savefig(f'tmp/kernels_{epoch}.tif')
+                plt.close()
 
-            # matplotlib.use("Qt5Agg")
-            fig = plt.figure(figsize=(12,3))
-            ax = fig.add_subplot(141)
-            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c='w')
-            ax.invert_yaxis()
-            plt.title('density')
-            ax = fig.add_subplot(142)
-            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(u))
-            ax.invert_yaxis()
-            plt.title('u')
-            ax = fig.add_subplot(143)
-            # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u[:,0]))
-            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u))
-            ax.invert_yaxis()
-            plt.title('true L_u')
-            ax = fig.add_subplot(144)
-            # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
-            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
-            ax.invert_yaxis()
-            plt.title('pred L_u')
-            plt.tight_layout()
-            # plt.show()
-            plt.savefig(f'tmp/learning_{epoch}.tif')
-            plt.close()
+        elif data == 'wave':
+            k = np.random.randint(n_frames - 1)
+            x = x_mesh_list[0][k].clone().detach()
+            L_u = y_mesh_list[0][k].clone().detach()
+            u = x[:, 6:7].clone().detach()
 
-            matplotlib.use("Qt5Agg")
-            fig = plt.figure(figsize=(12,3))
-            ax = fig.add_subplot(141)
-            plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1, c=to_numpy(model.kernel_operators[:, 0:1]))
-            plt.title('kernel')
-            ax = fig.add_subplot(142)
-            plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1, c=to_numpy(model.kernel_operators[:, 1:2]))
-            plt.title('grad_x')
-            ax = fig.add_subplot(143)
-            plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1, c=to_numpy(model.kernel_operators[:, 2:3]))
-            plt.title('grad_y')
-            ax = fig.add_subplot(144)
-            plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1, c=to_numpy(model.kernel_operators[:, 3:4]))
-            plt.title('laplace')
-            plt.tight_layout()
-            # plt.show()
-            plt.savefig(f'tmp/kernels_{epoch}.tif')
-            plt.close()
+            distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+            adj_t = ((distance < max_radius ** 2) & (distance >= 0)).float() * 1
+            edge_index = adj_t.nonzero().t().contiguous()
+            data_id = torch.ones((x.shape[0], 1), dtype=torch.int)
+            dataset = data.Data(x=x, pos=x[:, 1:dimension + 1], edge_index=edge_index)
+
+            pred = model(dataset, data_id=data_id, training=False, phi=phi)
+            loss = (pred - L_u).norm(2)
+
+            loss.backward()
+            optimizer.step()
+
+            if epoch % 1 == 0:
+
+                print(epoch, loss)
+
+                fig = plt.figure(figsize=(15, 5))
+                ax = fig.add_subplot(141)
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=1, c='w')
+                pos = torch.argwhere(edge_index[0,:]==1000)
+                plt.scatter(to_numpy(x[edge_index[1,pos], 1]), to_numpy(x[edge_index[1,pos], 2]), s=1, c='r')
+                ax.invert_yaxis()
+                plt.title('density')
+                ax = fig.add_subplot(142)
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(u))
+                ax.invert_yaxis()
+                plt.title('u')
+                ax = fig.add_subplot(143)
+                # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u[:,0]))
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(L_u))
+                ax.invert_yaxis()
+                plt.title('true L_u')
+                ax = fig.add_subplot(144)
+                # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(pred))
+                ax.invert_yaxis()
+                plt.title('pred L_u')
+                plt.tight_layout()
+                # plt.show()
+                plt.savefig(f'tmp/learning_{epoch}.tif')
+                plt.close()
+
+                matplotlib.use("Qt5Agg")
+                fig = plt.figure(figsize=(12, 3))
+                ax = fig.add_subplot(141)
+                plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1,
+                            c=to_numpy(model.kernel_operators[:, 0:1]))
+                plt.title('kernel')
+                ax = fig.add_subplot(142)
+                plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1,
+                            c=to_numpy(model.kernel_operators[:, 1:2]))
+                plt.title('grad_x')
+                ax = fig.add_subplot(143)
+                plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1,
+                            c=to_numpy(model.kernel_operators[:, 2:3]))
+                plt.title('grad_y')
+                ax = fig.add_subplot(144)
+                plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1,
+                            c=to_numpy(model.kernel_operators[:, 3:4]))
+                plt.title('laplace')
+                plt.tight_layout()
+                # plt.show()
+                plt.savefig(f'tmp/kernels_{epoch}.tif')
+                plt.close()
+
+
+
+
+
+
+
 
 
     x_list = torch.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/graphs_boids_16_256/x_list_0.pt', map_location=device)

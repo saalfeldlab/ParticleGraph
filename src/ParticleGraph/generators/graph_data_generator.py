@@ -2436,7 +2436,7 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
                 case 'PDE_O_Mesh':
                     pred = []
 
-            # y_mesh_list.append(pred)
+            y_mesh_list.append(pred)
 
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
 

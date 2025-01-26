@@ -16,8 +16,8 @@ simulation:
   dpos_init: 0
   boundary: 'periodic'
   node_value_map: 'pattern_10.tif'
-  node_coeff_map: 'pattern_21.tif'
-  beta: 1.E-2
+  node_coeff_map: 'pattern_25.tif'
+
   start_frame: 0
 
 graph_model:
@@ -42,7 +42,7 @@ training:
   n_epochs: 20
   batch_size: 8
   small_init_batch_size: True
-  n_runs: 2
+  n_runs: 1
   sparsity: 'replace_embedding'
   rotation_augmentation: True
   cluster_method: 'kmeans_auto_plot'
