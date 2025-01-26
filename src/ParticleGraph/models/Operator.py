@@ -170,7 +170,8 @@ class Operator_smooth(pyg.nn.MessagePassing):
 
             # out = torch.cat((grad_density, velocity, grad_velocity), dim = 1) # d_rho_x d_rho_y, velocity
 
-            out = field_j * self.kernel_operators[:, 1:2] / density_j
+            # out = field_j * self.kernel_operators[:, 1:2] / density_j  # grad_x
+            out = field_j * self.kernel_operators[:, 3:4] / density_j  # grad_x
 
             return out
 
@@ -275,7 +276,7 @@ if __name__ == '__main__':
     from ParticleGraph.utils import choose_boundary_values
     from ParticleGraph.config import ParticleGraphConfig
 
-    config = ParticleGraphConfig.from_yaml('test_smooth_particle.yaml')
+    config = ParticleGraphConfig.from_yaml('/groups/saalfeld/home/allierc/Py/ParticleGraph/config/test_smooth_particle.yaml')
 
     device = 'cuda:0'
     dimension = 2
@@ -321,8 +322,8 @@ if __name__ == '__main__':
         # x = x[torch.randperm(x.size(0))[:int(0.5 * x.size(0))]] # removal of 10%
 
         u, grad_u, laplace_u = arbitrary_gaussian_grad_laplace(mgrid = x[:,1:3], n_gaussian = 5, device=device)
-        L_u = grad_u.clone().detach()
-        # L_u = laplace_u.clone().detach()
+        # L_u = grad_u.clone().detach()
+        L_u = laplace_u.clone().detach()
         x[:, 6:7] = u[:, None].clone().detach()
 
         discrete_pos = torch.argwhere((u >= threshold) | (u <= -threshold))
@@ -350,7 +351,7 @@ if __name__ == '__main__':
             print(epoch, loss)
 
             # matplotlib.use("Qt5Agg")
-            fig = plt.figure(figsize=(18, 4.75))
+            fig = plt.figure(figsize=(12,3))
             ax = fig.add_subplot(141)
             plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c='w')
             ax.invert_yaxis()
@@ -360,13 +361,13 @@ if __name__ == '__main__':
             ax.invert_yaxis()
             plt.title('u')
             ax = fig.add_subplot(143)
-            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u[:,0]))
-            # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u))
+            # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u[:,0]))
+            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u))
             ax.invert_yaxis()
             plt.title('true L_u')
             ax = fig.add_subplot(144)
-            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
             # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
+            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
             ax.invert_yaxis()
             plt.title('pred L_u')
             plt.tight_layout()
@@ -375,7 +376,7 @@ if __name__ == '__main__':
             plt.close()
 
             matplotlib.use("Qt5Agg")
-            fig = plt.figure(figsize=(12, 6))
+            fig = plt.figure(figsize=(12,3))
             ax = fig.add_subplot(141)
             plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1, c=to_numpy(model.kernel_operators[:, 0:1]))
             plt.title('kernel')
