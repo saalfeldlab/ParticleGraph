@@ -3,9 +3,9 @@ description: 'Wave propagation'
 dataset: 'wave_smooth_particle'
 
 simulation:
-  params: [[0.2],[1.4],[2.6],[3.8],[5.0]]
+  params: [[1.0E-10],[1.4],[2.6],[3.8],[5.0]]
   min_radius: 0
-  max_radius: 0.3
+  max_radius: 0.02
   diffusion_coefficients: [[0],[0.6],[0.8],[1],[0.4]]
   n_particles: 10000
   n_particle_types: 5
@@ -13,16 +13,20 @@ simulation:
   n_nodes: 10000
   n_node_types:  5
   n_frames: 8000
-  delta_t: 0.125
+  delta_t: 10
   dpos_init: 0
   boundary: 'periodic'
-  node_value_map: 'pattern_10.tif'
+  node_value_map: 'pattern_10s.tif'
   node_coeff_map: 'pattern_21.tif'
   start_frame: 0
 
 graph_model:
   particle_model_name: ''
-  mesh_model_name: 'WaveMesh'
+  mesh_model_name: 'WaveSmoothParticle'
+
+  field_grid: 'grid'
+  field_type: 'calculus gaussian laplacian'
+
   prediction: '2nd_derivative'
   input_size: 3
   output_size: 1

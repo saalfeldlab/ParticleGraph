@@ -2416,6 +2416,10 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
                     new_pred = torch.zeros_like(pred)
                     new_pred[mask_mesh] = pred[mask_mesh]
                     pred = new_pred
+                case 'WaveSmoothParticle':
+                    pred = mesh_model(dataset_mesh)
+                    H1_mesh[mask_mesh, 1:2] += pred[mask_mesh, :] * delta_t
+                    H1_mesh[mask_mesh, 0:1] += H1_mesh[mask_mesh, 1:2] * delta_t
                 case 'WaveMesh':
                     with torch.no_grad():
                         pred = mesh_model(dataset_mesh)
@@ -2432,7 +2436,7 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
                 case 'PDE_O_Mesh':
                     pred = []
 
-            y_mesh_list.append(pred)
+            # y_mesh_list.append(pred)
 
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
 
@@ -2495,6 +2499,14 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
                             ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
                             plt.xlim([0, 1])
                             plt.ylim([0, 1])
+                        case 'WaveSmoothParticle':
+                            plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                                          facecolors=colors.detach().cpu().numpy(), vmin=-1000, vmax=1000)
+                            fmt = lambda x, pos: '{:.1f}'.format((x)/100, pos)
+                            ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+                            ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+                            plt.xlim([0, 1])
+                            plt.ylim([0, 1])
                         case 'RD_Gray_Scott_Mesh':
                             fig = plt.figure(figsize=(12, 6))
                             ax = fig.add_subplot(1, 2, 1)
@@ -2532,7 +2544,7 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
                     plt.tight_layout()
 
                     num = f"{it:06}"
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=170.7)
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
                     plt.close()
 
         if bSave:

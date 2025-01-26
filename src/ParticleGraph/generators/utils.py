@@ -1,5 +1,5 @@
 
-from ParticleGraph.generators import PDE_A, PDE_B, PDE_E, PDE_F, PDE_G, PDE_K, PDE_N, PDE_N2,  PDE_N3, PDE_N4, PDE_N5, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, PDE_Laplacian, PDE_O
+from ParticleGraph.generators import PDE_A, PDE_B, PDE_E, PDE_F, PDE_G, PDE_K, PDE_N, PDE_N2,  PDE_N3, PDE_N4, PDE_N5, PDE_S, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, PDE_Laplacian, PDE_O
 from ParticleGraph.utils import *
 from ParticleGraph.data_loaders import load_solar_system, load_LG_ODE, load_WaterRampsWall, load_cell_data
 from time import sleep
@@ -199,6 +199,11 @@ def choose_mesh_model(config, X1_mesh, device):
     aggr_type = config.graph_model.mesh_aggr_type
     _, bc_dpos = choose_boundary_values(config.simulation.boundary)
 
+    params = config.simulation.params
+    delta_t = config.simulation.delta_t
+    dimension = config.simulation.dimension
+    max_radius = config.simulation.max_radius
+
     if mesh_model_name =='':
         mesh_model = []
     else:
@@ -218,6 +223,9 @@ def choose_mesh_model(config, X1_mesh, device):
                 mesh_model = RD_RPS(aggr_type=aggr_type, bc_dpos=bc_dpos)
             case 'DiffMesh' | 'WaveMesh':
                 mesh_model = PDE_Laplacian(aggr_type=aggr_type, bc_dpos=bc_dpos)
+            case 'WaveSmoothParticle':
+                mesh_model = PDE_S(aggr_type=aggr_type, bc_dpos=bc_dpos, p=torch.tensor(params, dtype=torch.float32, device=device),
+                          dimension=dimension, delta_t=delta_t, max_radius=max_radius, field_type=config.graph_model.field_type)
             case 'Chemotaxism_Mesh':
                 c = initialize_random_values(n_node_types, device)
                 for n in range(n_node_types):
@@ -227,7 +235,7 @@ def choose_mesh_model(config, X1_mesh, device):
                 c = initialize_random_values(n_node_types, device)
                 for n in range(n_node_types):
                     c[n] = torch.tensor(config.simulation.diffusion_coefficients[n])
-                mesh_model = PDE_Laplacian(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
+                mesh_model = PDE_Laplacian(aggr_type=aggr_type, c=torch.squeeze(c), bc_dpos=bc_dpos)
             case _:
                 mesh_model = PDE_Z(device=device)
 
@@ -380,6 +388,7 @@ def init_mesh(config, device):
     n_particles = simulation_config.n_particles
     node_value_map = simulation_config.node_value_map
     field_grid = model_config.field_grid
+    max_radius = simulation_config.max_radius
 
     n_nodes_per_axis = int(np.sqrt(n_nodes))
     xs = torch.linspace(1 / (2 * n_nodes_per_axis), 1 - 1 / (2 * n_nodes_per_axis), steps=n_nodes_per_axis)
@@ -418,7 +427,7 @@ def init_mesh(config, device):
             s = torch.sum(features_mesh, dim=1)
             for k in range(3):
                 features_mesh[:, k] = features_mesh[:, k] / s
-        case 'DiffMesh' | 'WaveMesh' | 'Particle_Mesh_A' | 'Particle_Mesh_B':
+        case 'DiffMesh' | 'WaveMesh' | 'Particle_Mesh_A' | 'Particle_Mesh_B' | 'WaveSmoothParticle':
             features_mesh = torch.zeros((n_nodes, 2), device=device)
             features_mesh[:, 0] = torch.tensor(values / 255 * 5000, device=device)
         case 'PDE_O_Mesh':
@@ -447,7 +456,7 @@ def init_mesh(config, device):
     face = torch.from_numpy(tri.simplices)
     face_longest_edge = np.zeros((face.shape[0], 1))
 
-    print('Removal of skinny faces ...')
+    print('removal of skinny faces ...')
     sleep(0.5)
     for k in trange(face.shape[0]):
         # compute edge distances
@@ -499,6 +508,11 @@ def init_mesh(config, device):
 
     a_mesh = torch.zeros_like(type_mesh)
     type_mesh = type_mesh.to(dtype=torch.float32)
+
+    if 'Smooth' in config.graph_model.mesh_model_name:
+        distance = torch.sum((pos_mesh[:, None, :] - pos_mesh[None, :, :]) ** 2, dim=2)
+        adj_t = ((distance < max_radius ** 2) & (distance >= 0)).float() * 1
+        mesh_data['edge_index'] = adj_t.nonzero().t().contiguous()
 
 
     return pos_mesh, dpos_mesh, type_mesh, features_mesh, a_mesh, node_id_mesh, mesh_data

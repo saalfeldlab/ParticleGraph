@@ -34,11 +34,11 @@ import warnings
 if __name__ == '__main__':
 
     warnings.filterwarnings("ignore", category=FutureWarning)
-
-    try:
-        matplotlib.use("Qt5Agg")
-    except:
-        pass
+    #
+    # try:
+    #     matplotlib.use("Qt5Agg")
+    # except:
+    #     pass
 
     parser = argparse.ArgumentParser(description="ParticleGraph")
     parser.add_argument('-o', '--option', nargs='+', help='Option that takes multiple values')
@@ -57,11 +57,12 @@ if __name__ == '__main__':
     else:
         task = 'generate'
         best_model = 'None'
-        # config_list = ['fluids_m20']
+        # config_list = ['fluids/fluids_m']
         # config_list = ['falling_water_ramp_x6_11']
         # config_list =['arbitrary/arbitrary_3']
         config_list =['wave/wave_smooth_particle']
         # config_list = ['cell_MDCK_8','cell_MDCK_9','cell_MDCK_10','cell_MDCK_11']
+
 
     for config_file in config_list:
 

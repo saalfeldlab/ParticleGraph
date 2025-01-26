@@ -37,7 +37,6 @@ def to_numpy(tensor: torch.Tensor) -> np.ndarray:
     return tensor.detach().cpu().numpy()
 
 
-
 def set_device(device: str = 'auto'):
     """
     Set the device to use for computations. If 'auto' is specified, the device is chosen automatically:
@@ -200,7 +199,7 @@ def choose_boundary_values(bc_name):
         case 'wall':
             return periodic_wall, shifted_periodic_wall
         case _:
-            raise ValueError(f'Unknown boundary condition {bc_name}')
+            raise ValueError(f'unknown boundary condition {bc_name}')
 
 
 def grads2D(params):

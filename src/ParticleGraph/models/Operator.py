@@ -1,13 +1,36 @@
-import matplotlib.pyplot as plt
+
+import umap
 import torch
+from ParticleGraph.models.MLP import MLP
 import torch_geometric as pyg
 import torch_geometric.utils as pyg_utils
-from ParticleGraph.models.MLP import MLP
-from ParticleGraph.utils import to_numpy, reparameterize
+
+from ParticleGraph.utils import to_numpy
 # from ParticleGraph.models.utils import reparameterize
 # from ParticleGraph.models.Siren_Network import Siren
 import torch.nn as nn
 import numpy as np
+import matplotlib.pyplot as plt
+
+
+
+def density_laplace(y, x):
+    grad = density_gradient(y, x)
+    return density_divergence(grad, x)
+
+
+def density_divergence(y, x):
+    div = 0.
+    for i in range(y.shape[-1]):
+        div += torch.autograd.grad(y[..., i], x, torch.ones_like(y[..., i]), create_graph=True)[0][..., i:i + 1]
+    return div
+
+
+def density_gradient(y, x, grad_outputs=None):
+    if grad_outputs is None:
+        grad_outputs = torch.ones_like(y)
+    grad = torch.autograd.grad(y, [x], grad_outputs=grad_outputs, create_graph=True)[0]
+    return grad
 
 
 
@@ -327,29 +350,29 @@ if __name__ == '__main__':
             print(epoch, loss)
 
             # matplotlib.use("Qt5Agg")
-            # fig = plt.figure(figsize=(18, 4.75))
-            # ax = fig.add_subplot(141)
-            # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c='w')
-            # ax.invert_yaxis()
-            # plt.title('density')
-            # ax = fig.add_subplot(142)
-            # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(u))
-            # ax.invert_yaxis()
-            # plt.title('u')
-            # ax = fig.add_subplot(143)
-            # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u[:,0]))
-            # # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u))
-            # ax.invert_yaxis()
-            # plt.title('true L_u')
-            # ax = fig.add_subplot(144)
+            fig = plt.figure(figsize=(18, 4.75))
+            ax = fig.add_subplot(141)
+            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c='w')
+            ax.invert_yaxis()
+            plt.title('density')
+            ax = fig.add_subplot(142)
+            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(u))
+            ax.invert_yaxis()
+            plt.title('u')
+            ax = fig.add_subplot(143)
+            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u[:,0]))
+            # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u))
+            ax.invert_yaxis()
+            plt.title('true L_u')
+            ax = fig.add_subplot(144)
+            plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
             # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
-            # # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
-            # ax.invert_yaxis()
-            # plt.title('pred L_u')
-            # plt.tight_layout()
-            # # plt.show()
-            # plt.savefig(f'tmp/learning_{epoch}.tif')
-            # plt.close()
+            ax.invert_yaxis()
+            plt.title('pred L_u')
+            plt.tight_layout()
+            # plt.show()
+            plt.savefig(f'tmp/learning_{epoch}.tif')
+            plt.close()
 
             matplotlib.use("Qt5Agg")
             fig = plt.figure(figsize=(12, 6))

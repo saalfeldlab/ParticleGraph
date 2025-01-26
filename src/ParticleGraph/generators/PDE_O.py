@@ -21,12 +21,12 @@ class PDE_O(pyg.nn.MessagePassing):
     angle change rate
     """
 
-    def __init__(self, aggr_type=[], bc_dpos=[], p=[], beta=[], rr=[]):
+    def __init__(self, aggr_type=[], bc_dpos=[], p=[], rr=[]):
         super(PDE_O, self).__init__(aggr=aggr_type)  # "mean" aggregation.
 
         self.bc_dpos = bc_dpos
         self.p = p
-        self.beta = beta
+        self.beta = 1E-2
         self.rr = rr
 
     def forward(self, data):
