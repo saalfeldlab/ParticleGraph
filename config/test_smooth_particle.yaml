@@ -5,7 +5,7 @@ data_folder_name: '/groups/saalfeld/saalfeldlab/projects/gnn/learning-to-simulat
 simulation:
   params: [[0, 0.2, 0.4, 0.6, 0.8], [0.2, 0.2, 0.2, 0.2, 0.2]]
   min_radius: 0
-  max_radius: 0.05
+  max_radius: 0.035
   n_particles: 10000
   n_particle_types: 2
   n_frames: 600
@@ -52,7 +52,7 @@ plotting:
 
 training:
   n_epochs: 20
-  batch_size: 1
+  batch_size: 8
   small_init_batch_size: False
   n_runs: 2
   time_window: 0
@@ -68,8 +68,8 @@ training:
   fix_cluster_embedding: True
   device: 'cpu'
 
-  learning_rate_start: 1E-4
-  learning_rate_embedding_start: 1E-4
+  learning_rate_start: 1E-5
+  learning_rate_embedding_start: 1E-5
 
 
 

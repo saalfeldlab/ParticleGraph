@@ -235,7 +235,7 @@ def arbitrary_gaussian_grad_laplace (mgrid, n_gaussian, device):
         x0 = np.random.uniform(0, 1)
         y0 = np.random.uniform(0, 1)
         a = np.random.uniform(0, 1)
-        sigma = np.random.uniform(0.05, 0.1)
+        sigma = 2 * np.random.uniform(0.05, 0.1)
         u = u + a * torch.exp(-((x - x0) ** 2 + (y - y0) ** 2) / (2 * sigma ** 2))
 
     grad_autograd = density_gradient(u, mgrid)
@@ -298,6 +298,7 @@ if __name__ == '__main__':
     from ParticleGraph.config import ParticleGraphConfig
     import os
     import shutil
+    from torch_geometric.loader import DataLoader
 
     remove_files_from_folder('tmp')
 
@@ -316,6 +317,7 @@ if __name__ == '__main__':
     max_radius = config.simulation.max_radius
     min_radius = config.simulation.min_radius
     lr = config.training.learning_rate_start
+    batch_size = config.training.batch_size
 
     seed = 42
     torch.manual_seed(seed)
@@ -365,40 +367,59 @@ if __name__ == '__main__':
 
     for epoch in range(0, 500):
 
-        optimizer.zero_grad()
 
         if mode == 'gaussian':
-            x = x0.clone().detach() + 0.05 * torch.randn_like(x0)
-            # x = x[torch.randperm(x.size(0))[:int(0.5 * x.size(0))]] # removal of 10%
-            u, grad_u, laplace_u = arbitrary_gaussian_grad_laplace(mgrid = x[:,1:3], n_gaussian = 5, device=device)
-            # L_u = grad_u.clone().detach()
-            L_u = laplace_u.clone().detach()
-            x[:, 6:7] = u[:, None].clone().detach()
 
-            discrete_pos = torch.argwhere((u >= threshold) | (u <= -threshold))
-            x = x[discrete_pos].squeeze()
-            L_u = L_u[discrete_pos].squeeze()
+            dataset_batch = []
 
-            distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-            adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
-            edge_index = adj_t.nonzero().t().contiguous()
-            data_id = torch.ones((x.shape[0], 1), dtype=torch.int)
-            dataset = data.Data(x=x, pos=x[:, 1:dimension + 1], edge_index=edge_index)
+            for batch in range(batch_size):
 
-            pred = model(dataset, data_id=data_id, training=False, phi=phi)
-            loss = (pred - L_u).norm(2)
+
+                x = x0.clone().detach() + 0.05 * torch.randn_like(x0)
+                # x = x[torch.randperm(x.size(0))[:int(0.5 * x.size(0))]] # removal of 10%
+                u, grad_u, laplace_u = arbitrary_gaussian_grad_laplace(mgrid = x[:,1:3], n_gaussian = 5, device=device)
+                L_u = laplace_u.clone().detach()
+                x[:, 6:7] = u[:, None].clone().detach()
+
+                # discrete_pos = torch.argwhere((u >= threshold) | (u <= -threshold))
+                # x = x[discrete_pos].squeeze()
+                # L_u = L_u[discrete_pos].squeeze()
+
+                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
+                edge_index = adj_t.nonzero().t().contiguous()
+                dataset = data.Data(x=x, pos=x[:, 1:dimension + 1], edge_index=edge_index)
+                dataset_batch.append(dataset)
+
+                if batch == 0:
+                    data_id = torch.ones((x.shape[0],1), dtype=torch.int)
+                    y_batch = L_u
+                else:
+                    data_id = torch.cat((data_id, torch.ones((x.shape[0],1), dtype=torch.int)), dim = 0)
+                    y_batch = torch.cat((y_batch, L_u), dim=0)
+
+            batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
+            optimizer.zero_grad()
+
+            for batch in batch_loader:
+                pred = model(batch, data_id=data_id, training=True, phi=phi)
+
+            loss = (pred - y_batch).norm(2)
 
             loss.backward()
             optimizer.step()
 
-            u = u[discrete_pos]
-            grad_u = grad_u[discrete_pos]
-            laplace_u = laplace_u[discrete_pos]
+            # u = u[discrete_pos]
+            # grad_u = grad_u[discrete_pos]
+            # laplace_u = laplace_u[discrete_pos]
 
             print(epoch, loss)
 
             if epoch%10==0:
-                fig = plt.figure(figsize=(14, 6))
+
+                pred = pred[-x.shape[0]:]
+
+                fig = plt.figure(figsize=(16, 6))
                 ax = fig.add_subplot(241)
                 plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=1, c='w')
                 pos = torch.argwhere(edge_index[0, :] == 250)
@@ -410,10 +431,12 @@ if __name__ == '__main__':
                 ax = fig.add_subplot(242)
                 plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(u))
                 ax.invert_yaxis()
+                plt.xlim([0,1])
+                plt.ylim([0,1])
                 plt.title('u')
                 ax = fig.add_subplot(243)
                 # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u[:,0]))
-                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(L_u), vmin=-200, vmax=0)
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(L_u), vmin=-200, vmax=10)
                 plt.xlim([0,1])
                 plt.ylim([0,1])
                 plt.colorbar()
@@ -421,7 +444,7 @@ if __name__ == '__main__':
                 plt.title('true L_u')
                 ax = fig.add_subplot(244)
                 # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
-                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(pred))
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(pred), vmin=-200, vmax=10)
                 plt.xlim([0,1])
                 plt.ylim([0,1])
                 plt.colorbar()
@@ -429,13 +452,13 @@ if __name__ == '__main__':
                 plt.title('pred L_u')
                 ax = fig.add_subplot(245)
                 indices = torch.randperm(x.shape[0])[:1000]
-                plt.scatter(to_numpy(model.delta_pos[indices, 0]), to_numpy(model.delta_pos[indices, 1]), s=4,
+                plt.scatter(to_numpy(model.delta_pos[indices, 0]), to_numpy(model.delta_pos[indices, 1]), s=50,
                             c=to_numpy(model.correction[indices]))
                 plt.xlim([-max_radius,max_radius])
                 plt.ylim([-max_radius,max_radius])
                 plt.colorbar()
                 ax = fig.add_subplot(246)
-                plt.scatter(to_numpy(model.delta_pos[indices, 0]), to_numpy(model.delta_pos[indices, 1]), s=4,
+                plt.scatter(to_numpy(model.delta_pos[indices, 0]), to_numpy(model.delta_pos[indices, 1]), s=50,
                             c=to_numpy(model.kernel_operators[indices, 3:4]))
                 plt.xlim([-max_radius,max_radius])
                 plt.ylim([-max_radius,max_radius])
@@ -470,24 +493,38 @@ if __name__ == '__main__':
 
         elif mode == 'wave':
 
-            threshold = 50
+            dataset_batch = []
 
-            k = np.random.randint(n_frames - 1)
-            x = x_mesh_list[0][k].clone().detach()
-            L_u = y_mesh_list[0][k].clone().detach()
-            L_u = torch.where(torch.isnan(L_u), torch.zeros_like(L_u), L_u)
-            u = x[:, 6:7].clone().detach()
+            for batch in range(batch_size):
 
-            distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-            adj_t = ((distance < max_radius ** 2) & (distance >= 0)).float() * 1
-            edge_index = adj_t.nonzero().t().contiguous()
-            data_id = torch.ones((x.shape[0], 1), dtype=torch.int)
-            dataset = data.Data(x=x, pos=x[:, 1:dimension + 1], edge_index=edge_index)
+                k = np.random.randint(n_frames - 1)
+                x = x_mesh_list[0][k].clone().detach()
+                L_u = y_mesh_list[0][k].clone().detach()
+                L_u = torch.where(torch.isnan(L_u), torch.zeros_like(L_u), L_u)
+                u = x[:, 6:7].clone().detach()
 
-            mask = torch.argwhere((u >= threshold) | (u <= -threshold))
+                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                adj_t = ((distance < max_radius ** 2) & (distance >= 0)).float() * 1
+                edge_index = adj_t.nonzero().t().contiguous()
+                dataset = data.Data(x=x, pos=x[:, 1:dimension + 1], edge_index=edge_index)
 
-            pred = model(dataset, data_id=data_id, training=False, phi=phi)
-            loss = (pred[mask] - L_u[mask]).norm(2)
+                dataset_batch.append(dataset)
+
+                if batch == 0:
+                    data_id = torch.ones((x.shape[0],1), dtype=torch.int)
+                    y_batch = L_u
+                else:
+                    data_id = torch.cat((data_id, torch.ones((x.shape[0],1), dtype=torch.int)), dim = 0)
+                    y_batch = torch.cat((y_batch, L_u), dim=0)
+
+
+            batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
+            optimizer.zero_grad()
+
+            for batch in batch_loader:
+                pred = model(batch, data_id=data_id, training=True, phi=phi)
+
+            loss = (pred - y_batch).norm(2)
 
             loss.backward()
             optimizer.step()
@@ -495,44 +532,55 @@ if __name__ == '__main__':
 
             print(epoch, loss)
 
-            fig = plt.figure(figsize=(20, 10))
-            ax = fig.add_subplot(231)
-            plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=0.5, c='w')
-            pos = torch.argwhere(edge_index[0,:]==5050)
-            plt.scatter(to_numpy(x[edge_index[1,pos], 1]), to_numpy(x[edge_index[1,pos], 2]), s=4, c='r')
-            ax.invert_yaxis()
-            plt.colorbar()
-            plt.title('density')
-            ax = fig.add_subplot(232)
-            plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(u), vmin=-1000, vmax=1000)
-            ax.invert_yaxis()
-            plt.colorbar()
-            plt.title('u')
-            ax = fig.add_subplot(233)
-            # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u[:,0]))
-            plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(L_u), vmin=-30, vmax=30)
-            plt.colorbar()
-            ax.invert_yaxis()
-            plt.title('voronoi L_u')
-            ax = fig.add_subplot(234)
-            # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
-            plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(pred))
-            plt.colorbar()
-            ax.invert_yaxis()
-            plt.title('pred L_u')
-            ax = fig.add_subplot(235)
-            # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
-            plt.scatter(to_numpy(L_u), to_numpy(pred), s=1, c='w', alpha=0.5)
-            ax = fig.add_subplot(236)
+            if epoch%10==0:
 
-            indices = torch.randperm(x.shape[0])[:1000]
-            plt.scatter(to_numpy(model.delta_pos[indices, 0]), to_numpy(model.delta_pos[indices, 1]), s=4000,
-                    c=to_numpy(model.correction[indices]))
-            plt.colorbar()
-            plt.tight_layout()
-            # plt.show()
-            plt.savefig(f'tmp/learning_{epoch}.tif')
-            plt.close()
+                pred = pred[-x.shape[0]:]
+
+                fig = plt.figure(figsize=(24, 10))
+                ax = fig.add_subplot(241)
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=0.5, c='w')
+                pos = torch.argwhere(edge_index[0,:]==5050)
+                plt.scatter(to_numpy(x[edge_index[1,pos], 1]), to_numpy(x[edge_index[1,pos], 2]), s=4, c='r')
+                ax.invert_yaxis()
+                plt.colorbar()
+                plt.title('density')
+                ax = fig.add_subplot(242)
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(u), vmin=-1000, vmax=1000)
+                ax.invert_yaxis()
+                plt.colorbar()
+                plt.title('u')
+                ax = fig.add_subplot(243)
+                # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u[:,0]))
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(L_u), vmin=-30, vmax=30)
+                plt.colorbar()
+                ax.invert_yaxis()
+                plt.title('voronoi L_u')
+                ax = fig.add_subplot(244)
+                # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(pred))
+                plt.colorbar()
+                ax.invert_yaxis()
+                plt.title('pred L_u')
+
+                ax = fig.add_subplot(245)
+                indices = torch.randperm(x.shape[0])[:1000]
+                plt.scatter(to_numpy(model.delta_pos[indices, 0]), to_numpy(model.delta_pos[indices, 1]), s=2000,
+                            c=to_numpy(model.correction[indices]))
+                plt.xlim([-max_radius,max_radius])
+                plt.ylim([-max_radius,max_radius])
+                plt.colorbar()
+                ax = fig.add_subplot(246)
+                plt.scatter(to_numpy(model.delta_pos[indices, 0]), to_numpy(model.delta_pos[indices, 1]), s=2000,
+                            c=to_numpy(model.kernel_operators[indices, 3:4]))
+                plt.xlim([-max_radius,max_radius])
+                plt.ylim([-max_radius,max_radius])
+                plt.colorbar()
+                ax = fig.add_subplot(247)
+                # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
+                plt.scatter(to_numpy(L_u), to_numpy(pred), s=1, c='w', alpha=0.5)
+                plt.tight_layout()
+                plt.savefig(f'tmp/learning_{epoch}.tif')
+                plt.close()
 
             # # matplotlib.use("Qt5Agg")
             # fig = plt.figure(figsize=(22, 5))

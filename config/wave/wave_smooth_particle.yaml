@@ -47,6 +47,12 @@ graph_model:
   hidden_dim_update: 128
   output_size_update: 2
 
+  input_size_nnr: 2
+  n_layers_nnr: 5
+  hidden_dim_nnr: 128
+  output_size_nnr: 1
+  omega: 30.0
+
 plotting:
   colormap: 'tab10'
   arrow_length: 10
