@@ -118,7 +118,7 @@ class Operator_smooth(pyg.nn.MessagePassing):
                                 out_features=model_config.output_size_nnr,
                                 hidden_features=model_config.hidden_dim_nnr,
                                 hidden_layers=3, outermost_linear=True, device=device, first_omega_0=80,
-                                hidden_omega_0=80.)
+                                hidden_omega_0=model_config.omega )
 
     def forward(self, data=[], data_id=[], training=[], phi=[], continuous_field=False, continuous_field_size=None):
 
@@ -159,10 +159,10 @@ class Operator_smooth(pyg.nn.MessagePassing):
             mgrid.requires_grad = True
 
             density_kernel = torch.exp(-(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / self.kernel_var)[:,None]
-            first_kernel = torch.exp(-4*(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / self.kernel_var)[:, None]
-            # kernel_modified = first_kernel * self.pre_lin_edge(mgrid) * max_radius * 100
+            first_kernel = torch.exp(-8*(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / self.kernel_var)[:, None]
 
-            kernel_modified = first_kernel * self.siren(coords=mgrid) * max_radius
+            # kernel_modified = first_kernel * self.pre_lin_edge(mgrid) * max_radius * 100
+            kernel_modified = first_kernel * self.siren(coords=mgrid) * max_radius / 100
 
             self.correction = self.siren(coords=mgrid) * max_radius
 
@@ -200,21 +200,6 @@ class Operator_smooth(pyg.nn.MessagePassing):
         fig = plt.figure(figsize=(6, 6))
         plt.scatter(to_numpy(mgrid[:,0]), to_numpy(mgrid[:,1]), s=100, c=to_numpy(self.pre_lin_edge(mgrid)))
 
-
-        fig = plt.figure(figsize=(6, 10))
-        ax = fig.add_subplot(321)
-        plt.scatter(to_numpy(delta_pos[:,0]), to_numpy(delta_pos[:,1]), s=1, c=to_numpy(first_kernel[:,None]))
-        ax = fig.add_subplot(322)
-        plt.scatter(to_numpy(delta_pos[:,0]), to_numpy(delta_pos[:,1]), s=1, c=to_numpy(kernel_modified[:,None]))
-        ax = fig.add_subplot(323)
-        plt.scatter(to_numpy(delta_pos[:,0]), to_numpy(delta_pos[:,1]), s=1, c=to_numpy(grad_autograd[:,0:1]))
-        ax = fig.add_subplot(324)
-        plt.scatter(to_numpy(delta_pos[:,0]), to_numpy(delta_pos[:,1]), s=1, c=to_numpy(self.kernel_operators[:,1:2]))
-        ax = fig.add_subplot(325)
-        plt.scatter(to_numpy(delta_pos[:,0]), to_numpy(delta_pos[:,1]), s=1, c=to_numpy(self.kernel_operators[:,2:3]))
-        ax = fig.add_subplot(326)
-        plt.scatter(to_numpy(delta_pos[:,0]), to_numpy(delta_pos[:,1]), s=1, c=to_numpy(self.kernel_operators[:,3:4]))
-        plt.show()
 
     def update(self, aggr_out):
 
@@ -302,7 +287,7 @@ if __name__ == '__main__':
 
     remove_files_from_folder('tmp')
 
-    mode = 'gaussian'
+    mode = 'wave'
 
     if mode == 'gaussian':
         config = ParticleGraphConfig.from_yaml('/groups/saalfeld/home/allierc/Py/ParticleGraph/config/test_smooth_particle.yaml')
@@ -365,7 +350,7 @@ if __name__ == '__main__':
     matplotlib.use("Qt5Agg")
 
 
-    for epoch in range(0, 500):
+    for epoch in range(0, 5000):
 
 
         if mode == 'gaussian':
@@ -422,31 +407,31 @@ if __name__ == '__main__':
                 fig = plt.figure(figsize=(16, 6))
                 ax = fig.add_subplot(241)
                 plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=1, c='w')
-                pos = torch.argwhere(edge_index[0, :] == 250)
-                plt.scatter(to_numpy(x[edge_index[1, pos], 1]), to_numpy(x[edge_index[1, pos], 2]), s=4, c='r')
+                pos = torch.argwhere(edge_index[0, :] == 350)
+                plt.scatter(to_numpy(x[edge_index[1, pos], 1]), to_numpy(x[edge_index[1, pos], 2]), s=10, c='r')
                 ax.invert_yaxis()
                 plt.title('density')
-                plt.xlim([0,1])
-                plt.ylim([0,1])
+                plt.xlim([-0.1,1.1])
+                plt.ylim([-0.1,1.1])
                 ax = fig.add_subplot(242)
                 plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(u))
                 ax.invert_yaxis()
-                plt.xlim([0,1])
-                plt.ylim([0,1])
+                plt.xlim([-0.1,1.1])
+                plt.ylim([-0.1,1.1])
                 plt.title('u')
                 ax = fig.add_subplot(243)
                 # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u[:,0]))
                 plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(L_u), vmin=-200, vmax=10)
-                plt.xlim([0,1])
-                plt.ylim([0,1])
+                plt.xlim([-0.1,1.1])
+                plt.ylim([-0.1,1.1])
                 plt.colorbar()
                 ax.invert_yaxis()
                 plt.title('true L_u')
                 ax = fig.add_subplot(244)
                 # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
                 plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(pred), vmin=-200, vmax=10)
-                plt.xlim([0,1])
-                plt.ylim([0,1])
+                plt.xlim([-0.1,1.1])
+                plt.ylim([-0.1,1.1])
                 plt.colorbar()
                 ax.invert_yaxis()
                 plt.title('pred L_u')
@@ -557,7 +542,7 @@ if __name__ == '__main__':
                 plt.title('voronoi L_u')
                 ax = fig.add_subplot(244)
                 # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
-                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(pred))
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(pred), vmin=-30, vmax=30)
                 plt.colorbar()
                 ax.invert_yaxis()
                 plt.title('pred L_u')
