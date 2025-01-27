@@ -6,6 +6,8 @@ import torch_geometric as pyg
 import torch_geometric.utils as pyg_utils
 
 from ParticleGraph.utils import to_numpy
+from ParticleGraph.models.Siren_Network import *
+
 # from ParticleGraph.models.utils import reparameterize
 # from ParticleGraph.models.Siren_Network import Siren
 import torch.nn as nn
@@ -112,6 +114,12 @@ class Operator_smooth(pyg.nn.MessagePassing):
                 torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
                              requires_grad=True, dtype=torch.float32))
 
+        self.siren = Siren_Network(image_width=100, in_features=model_config.input_size_nnr,
+                                out_features=model_config.output_size_nnr,
+                                hidden_features=model_config.hidden_dim_nnr,
+                                hidden_layers=3, outermost_linear=True, device=device, first_omega_0=80,
+                                hidden_omega_0=80.)
+
     def forward(self, data=[], data_id=[], training=[], phi=[], continuous_field=False, continuous_field_size=None):
 
         x, edge_index = data.x, data.edge_index
@@ -152,9 +160,11 @@ class Operator_smooth(pyg.nn.MessagePassing):
 
             density_kernel = torch.exp(-(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / self.kernel_var)[:,None]
             first_kernel = torch.exp(-4*(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / self.kernel_var)[:, None]
-            kernel_modified = first_kernel * self.pre_lin_edge(mgrid) * max_radius
+            # kernel_modified = first_kernel * self.pre_lin_edge(mgrid) * max_radius * 100
 
-            self.correction = self.pre_lin_edge(mgrid) * max_radius
+            kernel_modified = first_kernel * self.siren(coords=mgrid) * max_radius
+
+            self.correction = self.siren(coords=mgrid) * max_radius
 
             grad_autograd = -density_gradient(kernel_modified, mgrid)
             laplace_autograd = density_laplace(kernel_modified, mgrid)
@@ -291,7 +301,7 @@ if __name__ == '__main__':
 
     remove_files_from_folder('tmp')
 
-    mode = 'wave'
+    mode = 'gaussian'
 
     if mode == 'gaussian':
         config = ParticleGraphConfig.from_yaml('/groups/saalfeld/home/allierc/Py/ParticleGraph/config/test_smooth_particle.yaml')
@@ -329,7 +339,7 @@ if __name__ == '__main__':
 
     if mode == 'gaussian':
 
-        tensors = tuple(dimension * [torch.linspace(0, 1, steps=50)])
+        tensors = tuple(dimension * [torch.linspace(0, 1, steps=100)])
         x = torch.stack(torch.meshgrid(*tensors), dim=-1)
         x = x.reshape(-1, dimension)
         x = torch.cat((torch.arange(x.shape[0])[:, None], x, torch.zeros((x.shape[0], 9))), 1)
@@ -381,60 +391,82 @@ if __name__ == '__main__':
             loss.backward()
             optimizer.step()
 
-            if epoch % 1 == 0:
+            u = u[discrete_pos]
+            grad_u = grad_u[discrete_pos]
+            laplace_u = laplace_u[discrete_pos]
 
-                u = u[discrete_pos]
-                grad_u = grad_u[discrete_pos]
-                laplace_u = laplace_u[discrete_pos]
+            print(epoch, loss)
 
-                print(epoch, loss)
-
-                fig = plt.figure(figsize=(12, 3))
-                ax = fig.add_subplot(141)
+            if epoch%10==0:
+                fig = plt.figure(figsize=(14, 6))
+                ax = fig.add_subplot(241)
                 plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=1, c='w')
+                pos = torch.argwhere(edge_index[0, :] == 250)
+                plt.scatter(to_numpy(x[edge_index[1, pos], 1]), to_numpy(x[edge_index[1, pos], 2]), s=4, c='r')
                 ax.invert_yaxis()
                 plt.title('density')
-                ax = fig.add_subplot(142)
+                plt.xlim([0,1])
+                plt.ylim([0,1])
+                ax = fig.add_subplot(242)
                 plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(u))
                 ax.invert_yaxis()
                 plt.title('u')
-                ax = fig.add_subplot(143)
+                ax = fig.add_subplot(243)
                 # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u[:,0]))
-                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(L_u))
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(L_u), vmin=-200, vmax=0)
+                plt.xlim([0,1])
+                plt.ylim([0,1])
+                plt.colorbar()
                 ax.invert_yaxis()
                 plt.title('true L_u')
-                ax = fig.add_subplot(144)
+                ax = fig.add_subplot(244)
                 # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
                 plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(pred))
+                plt.xlim([0,1])
+                plt.ylim([0,1])
+                plt.colorbar()
                 ax.invert_yaxis()
                 plt.title('pred L_u')
+                ax = fig.add_subplot(245)
+                indices = torch.randperm(x.shape[0])[:1000]
+                plt.scatter(to_numpy(model.delta_pos[indices, 0]), to_numpy(model.delta_pos[indices, 1]), s=4,
+                            c=to_numpy(model.correction[indices]))
+                plt.xlim([-max_radius,max_radius])
+                plt.ylim([-max_radius,max_radius])
+                plt.colorbar()
+                ax = fig.add_subplot(246)
+                plt.scatter(to_numpy(model.delta_pos[indices, 0]), to_numpy(model.delta_pos[indices, 1]), s=4,
+                            c=to_numpy(model.kernel_operators[indices, 3:4]))
+                plt.xlim([-max_radius,max_radius])
+                plt.ylim([-max_radius,max_radius])
+                plt.colorbar()
                 plt.tight_layout()
                 # plt.show()
                 plt.savefig(f'tmp/learning_{epoch}.tif')
                 plt.close()
 
-                # matplotlib.use("Qt5Agg")
-                fig = plt.figure(figsize=(12, 3))
-                ax = fig.add_subplot(141)
-                plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1,
-                            c=to_numpy(model.kernel_operators[:, 0:1]))
-                plt.title('kernel')
-                ax = fig.add_subplot(142)
-                plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1,
-                            c=to_numpy(model.kernel_operators[:, 1:2]))
-                plt.title('grad_x')
-                ax = fig.add_subplot(143)
-                plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1,
-                            c=to_numpy(model.kernel_operators[:, 2:3]))
-                plt.title('grad_y')
-                ax = fig.add_subplot(144)
-                plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1,
-                            c=to_numpy(model.kernel_operators[:, 3:4]))
-                plt.title('laplace')
-                plt.tight_layout()
-                # plt.show()
-                plt.savefig(f'tmp/kernels_{epoch}.tif')
-                plt.close()
+            # # matplotlib.use("Qt5Agg")
+            # fig = plt.figure(figsize=(12, 3))
+            # ax = fig.add_subplot(141)
+            # plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1,
+            #             c=to_numpy(model.kernel_operators[:, 0:1]))
+            # plt.title('kernel')
+            # ax = fig.add_subplot(142)
+            # plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1,
+            #             c=to_numpy(model.kernel_operators[:, 1:2]))
+            # plt.title('grad_x')
+            # ax = fig.add_subplot(143)
+            # plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1,
+            #             c=to_numpy(model.kernel_operators[:, 2:3]))
+            # plt.title('grad_y')
+            # ax = fig.add_subplot(144)
+            # plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1,
+            #             c=to_numpy(model.kernel_operators[:, 3:4]))
+            # plt.title('laplace')
+            # plt.tight_layout()
+            # # plt.show()
+            # plt.savefig(f'tmp/kernels_{epoch}.tif')
+            # plt.close()
 
         elif mode == 'wave':
 
