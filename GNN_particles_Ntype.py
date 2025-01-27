@@ -60,8 +60,8 @@ if __name__ == '__main__':
         # config_list = ['fluids/fluids_m']
         # config_list = ['falling_water_ramp_x6_11']
         # config_list =['arbitrary/arbitrary_3']
-        config_list =['wave/wave']
-        # config_list = ['cell_MDCK_8','cell_MDCK_9','cell_MDCK_10','cell_MDCK_11']
+        # config_list =['wave/wave']
+        config_list = ['cell/cell_MDCK_4']
 
 
     for config_file in config_list:

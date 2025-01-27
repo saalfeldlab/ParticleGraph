@@ -21,6 +21,8 @@ graph_model:
   update_type: 'pre_mlp'
   aggr_type: 'add'
 
+  field_type: 'calculus gaussian laplacian'
+
   pre_input_size: 2
   pre_output_size: 1
   pre_hidden_dim: 64

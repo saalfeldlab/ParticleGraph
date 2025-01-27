@@ -5,7 +5,7 @@ dataset: 'wave'
 simulation:
   params: [[1.0E-10],[1.4],[2.6],[3.8],[5.0]]
   min_radius: 0
-  max_radius: 0.05
+  max_radius: 0.025
   diffusion_coefficients: [[0],[0.6],[0.8],[1],[0.4]]
   n_particles: 10000
   n_particle_types: 5
@@ -61,5 +61,8 @@ training:
   rotation_augmentation: True
   cluster_method: 'kmeans_auto_plot'
   fix_cluster_embedding: True
+
+  learning_rate_start: 1.0E-4
+  learning_rate_embedding_start: 1.0E-4
 
   device: 'auto'

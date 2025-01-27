@@ -31,6 +31,7 @@ from torch_geometric.utils.convert import to_networkx
 # from cellpose import models
 from ParticleGraph.generators.cell_utils import *
 from ParticleGraph.generators import PDE_V
+from cellpose import models
 
 
 
@@ -308,7 +309,7 @@ def load_cell_data(config, device, visualize):
         # model_cyto3 = models.CellposeModel(gpu=True, model_type='cyto2_cp3', nchan=2)
 
         print('generate segmentation masks with Cellpose ...')
-        if True:
+        if False:
             for it in trange(len(files)):
                 im = tifffile.imread(data_folder_name + files[it])
                 im = np.array(im)
