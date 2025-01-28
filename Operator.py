@@ -159,12 +159,9 @@ class Operator_smooth(pyg.nn.MessagePassing):
             mgrid.requires_grad = True
 
             density_kernel = torch.exp(-(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / self.kernel_var)[:,None]
-            first_kernel = torch.exp(-8*(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / self.kernel_var)[:, None]
 
-            # kernel_modified = first_kernel * self.pre_lin_edge(mgrid) * max_radius * 100
-            kernel_modified = first_kernel * self.siren(coords=mgrid) * max_radius / 100
-
-            self.correction = self.siren(coords=mgrid) * max_radius
+            self.modulation = self.siren(coords=mgrid) * max_radius **2
+            kernel_modified = torch.exp(-2*(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / self.kernel_var)[:, None] * self.modulation
 
             grad_autograd = -density_gradient(kernel_modified, mgrid)
             laplace_autograd = density_laplace(kernel_modified, mgrid)
@@ -178,11 +175,10 @@ class Operator_smooth(pyg.nn.MessagePassing):
             # out = self.lin_edge(field_j) * self.kernel_operators[:,3:4] / density_j
             # out = field_j * self.kernel_operators[:, 1:2] / density_j
 
+            # grad_density = self.kernel_operators[:, 1:3]  # d_rho_x d_rho_y
 
-            grad_density = self.kernel_operators[:, 1:3]  # d_rho_x d_rho_y
-            velocity = self.kernel_operators[:, 0:1] * torch.sum(d_pos_j**2, dim=1)[:,None] / density_j
-            grad_velocity = self.kernel_operators[:, 1:3] * torch.sum(d_pos_j**2, dim=1)[:,None].repeat(1,2) / density_j.repeat(1,2)
-
+            # velocity = self.kernel_operators[:, 0:1] * torch.sum(d_pos_j**2, dim=1)[:,None] / density_j
+            # grad_velocity = self.kernel_operators[:, 1:3] * torch.sum(d_pos_j**2, dim=1)[:,None].repeat(1,2) / density_j.repeat(1,2)
             # out = torch.cat((grad_density, velocity, grad_velocity), dim = 1) # d_rho_x d_rho_y, velocity
             # out = field_j * self.kernel_operators[:, 1:2] / density_j  # grad_x
 
@@ -292,7 +288,8 @@ if __name__ == '__main__':
     if mode == 'gaussian':
         config = ParticleGraphConfig.from_yaml('/groups/saalfeld/home/allierc/Py/ParticleGraph/config/test_smooth_particle.yaml')
     elif mode == 'wave':
-        config = ParticleGraphConfig.from_yaml('/groups/saalfeld/home/allierc/Py/ParticleGraph/config/wave/wave_smooth_particle.yaml')
+        # config = ParticleGraphConfig.from_yaml('/groups/saalfeld/home/allierc/Py/ParticleGraph/config/wave/wave_smooth_particle.yaml')
+        config = ParticleGraphConfig.from_yaml('/groups/saalfeld/home/allierc/Py/ParticleGraph/config/wave/wave_smooth_particle_1.yaml')
     elif mode == 'cell':
         config = ParticleGraphConfig.from_yaml('/groups/saalfeld/home/allierc/Py/ParticleGraph/config/cell/cell_MDCK_4.yaml')
 
@@ -438,7 +435,7 @@ if __name__ == '__main__':
                 ax = fig.add_subplot(245)
                 indices = torch.randperm(x.shape[0])[:1000]
                 plt.scatter(to_numpy(model.delta_pos[indices, 0]), to_numpy(model.delta_pos[indices, 1]), s=50,
-                            c=to_numpy(model.correction[indices]))
+                            c=to_numpy(model.modulation[indices]))
                 plt.xlim([-max_radius,max_radius])
                 plt.ylim([-max_radius,max_radius])
                 plt.colorbar()
@@ -549,13 +546,13 @@ if __name__ == '__main__':
 
                 ax = fig.add_subplot(245)
                 indices = torch.randperm(x.shape[0])[:1000]
-                plt.scatter(to_numpy(model.delta_pos[indices, 0]), to_numpy(model.delta_pos[indices, 1]), s=2000,
-                            c=to_numpy(model.correction[indices]))
+                plt.scatter(to_numpy(model.delta_pos[indices, 0]), to_numpy(model.delta_pos[indices, 1]), s=10,
+                            c=to_numpy(model.modulation[indices]))
                 plt.xlim([-max_radius,max_radius])
                 plt.ylim([-max_radius,max_radius])
                 plt.colorbar()
                 ax = fig.add_subplot(246)
-                plt.scatter(to_numpy(model.delta_pos[indices, 0]), to_numpy(model.delta_pos[indices, 1]), s=2000,
+                plt.scatter(to_numpy(model.delta_pos[indices, 0]), to_numpy(model.delta_pos[indices, 1]), s=10,
                             c=to_numpy(model.kernel_operators[indices, 3:4]))
                 plt.xlim([-max_radius,max_radius])
                 plt.ylim([-max_radius,max_radius])
