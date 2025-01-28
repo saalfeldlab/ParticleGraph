@@ -1,0 +1,74 @@
+
+description: 'Wave propagation'
+dataset: 'wave_2'
+
+simulation:
+  params: [[1.0E-10],[1.4],[2.6],[3.8],[5.0]]
+  min_radius: 0
+  max_radius: 0.025
+  diffusion_coefficients: [[0],[0.6],[0.8],[1],[0.4]]
+  n_particles: 10000
+  n_particle_types: 5
+  n_interactions: 5
+  n_nodes: 10000
+  n_node_types:  5
+  n_frames: 8000
+  delta_t: 10
+  dpos_init: 0
+  boundary: 'periodic'
+  node_value_map: 'pattern_10s.tif'
+  node_coeff_map: 'pattern_21.tif'
+  start_frame: 0
+
+graph_model:
+  particle_model_name: ''
+  mesh_model_name: 'WaveSmoothParticle'
+
+  field_grid: 'grid'
+  field_type: 'calculus gaussian laplacian'
+
+  prediction: '2nd_derivative'
+  update_type: 'pre_mlp'
+  aggr_type: 'add'
+
+  pre_input_size: 2
+  pre_output_size: 1
+  pre_hidden_dim: 64
+  pre_n_mp_layers: 3
+
+  input_size: 1
+  output_size: 1
+  hidden_dim: 32
+  n_mp_layers: 2
+  embedding_dim: 2
+
+  input_size_update: 1
+  n_layers_update: 3
+  hidden_dim_update: 128
+  output_size_update: 2
+
+  input_size_nnr: 2
+  n_layers_nnr: 5
+  hidden_dim_nnr: 128
+  output_size_nnr: 1
+  omega: 80.0
+
+plotting:
+  colormap: 'tab10'
+  arrow_length: 10
+
+training:
+  noise_level: 1.0E-3
+  n_epochs: 20
+  batch_size: 8
+  small_init_batch_size: True
+  n_runs: 2
+  sparsity: 'replace_embedding'
+  rotation_augmentation: True
+  cluster_method: 'kmeans_auto_plot'
+  fix_cluster_embedding: True
+
+  learning_rate_start: 5.0E-6
+  learning_rate_embedding_start: 5.0E-6
+
+  device: 'auto'

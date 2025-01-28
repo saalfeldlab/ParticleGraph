@@ -33,8 +33,6 @@ def choose_model(config=[], W=[], device=[]):
     model_signal_name = config.graph_model.signal_model_name
     aggr_type = config.graph_model.aggr_type
     n_particles = config.simulation.n_particles
-    n_node_types = config.simulation.n_node_types
-    n_nodes = config.simulation.n_nodes
     delta_t = config.simulation.delta_t
     n_particle_types = config.simulation.n_particle_types
 
@@ -68,7 +66,9 @@ def choose_model(config=[], W=[], device=[]):
                 print(p)
             sigma = config.simulation.sigma
             p = p if n_particle_types == 1 else torch.squeeze(p)
-            model = PDE_A(aggr_type=aggr_type, p=torch.squeeze(p), sigma=sigma, bc_dpos=bc_dpos, dimension=dimension)
+            func_p = config.simulation.func_params
+            embedding_step = config.simulation.n_frames // 100
+            model = PDE_A(aggr_type=aggr_type, p=torch.squeeze(p), func_p = func_p, sigma=sigma, bc_dpos=bc_dpos, dimension=dimension, embedding_step=embedding_step)
         case 'PDE_B' | 'PDE_ParticleField_B' | 'PDE_Cell_B' | 'PDE_Cell_B_area':
             p = torch.rand(n_particle_types, 3, device=device) * 100  # comprised between 10 and 50
             if params[0] != [-1]:
