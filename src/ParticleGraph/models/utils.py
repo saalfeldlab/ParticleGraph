@@ -44,6 +44,7 @@ def get_type_time_series(new_labels=None, dataset_number=None, cell_id=None, n_p
     return new_labels[indexes]
 
 def get_in_features(rr, embedding_, config_model, max_radius):
+
     match config_model:
         case 'PDE_A' | 'PDE_Cell_A':
             in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],

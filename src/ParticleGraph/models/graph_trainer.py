@@ -111,6 +111,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
     translation_augmentation = train_config.translation_augmentation
     data_augmentation_loop = train_config.data_augmentation_loop
     recursive_loop = train_config.recursive_loop
+    coeff_continuous = train_config.coeff_continuous
     target_batch_size = train_config.batch_size
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
@@ -347,8 +348,20 @@ def data_train_particle(config, config_file, erase, best_model, device):
             else:
                 loss = (pred - y_batch).norm(2)
 
-            loss.backward()
-            optimizer.step()
+            if coeff_continuous>0:
+
+                rr = torch.linspace(0, max_radius, 1000, dtype=torch.float32, device=device)
+                for n in np.random.permutation(n_particles)[:n_particles//100]:
+                    embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
+                    in_features = get_in_features(rr + simulation_config.max_radius/200, embedding_, config.graph_model.particle_model_name, simulation_config.max_radius)
+                    func1 = model.lin_edge(in_features)
+                    in_features = get_in_features(rr, embedding_, config.graph_model.particle_model_name,simulation_config.max_radius)
+                    func0 = model.lin_edge(in_features)
+                    grad = func1-func0
+                    loss = loss + coeff_continuous * grad.norm(2)
+
+                loss.backward()
+                optimizer.step()
 
             if has_ghost:
                 optimizer_ghost_particles.step()
@@ -4402,8 +4415,13 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     yc = x[particle_of_interest, 1].detach().cpu().numpy()
                     pos = torch.argwhere(edge_index[1,:]==particle_of_interest)
                     pos = pos[:, 0]
-                    plt.scatter(x[edge_index[0,pos], 2].detach().cpu().numpy(),
-                                x[edge_index[0,pos], 1].detach().cpu().numpy(), s=s_p * 50 , color=mc, alpha=0.25)
+                    if 'zoom' in style:
+                        plt.scatter(x[edge_index[0,pos], 2].detach().cpu().numpy(),
+                                    x[edge_index[0,pos], 1].detach().cpu().numpy(), s=s_p * 20 , color=mc, alpha=0.25)
+                    else:
+                        plt.scatter(x[edge_index[0,pos], 2].detach().cpu().numpy(),
+                                    x[edge_index[0,pos], 1].detach().cpu().numpy(), s=s_p * 5 , color=mc, alpha=0.25, )
+
 
                     for k in range(pos.shape[0]):
                         plt.arrow(x[edge_index[1,pos[k]], 2].detach().cpu().numpy(),
