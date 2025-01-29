@@ -6201,20 +6201,6 @@ def plot_synaptic3(config, config_file,epoch_list, log_dir, logger, cc, bLatex, 
                 plt.close()
 
 
-                for k in range(n_particle_types):
-                    fig, ax = fig_init()
-                    # plt.scatter(to_numpy(model.a[0:100000, 0]), to_numpy(model.a[0:100000, 1]), s=1, color='k', alpha=0.25, edgecolors='none')
-                    plt.scatter(to_numpy(model.a[k*25000:(k+1)*25000, 0]), to_numpy(model.a[k*25000:(k+1)*25000, 1]), s=1, color=cmap.color(k),alpha=0.5, edgecolors='none')
-                    if bLatex:
-                        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
-                        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
-                    else:
-                        plt.xlabel(r'$a_{i0}$', fontsize=78)
-                        plt.ylabel(r'$a_{i1}$', fontsize=78)
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/results/embedding_{k}_{config_file}_{epoch}.tif", dpi=80)
-                    plt.close()
-
                 fig, ax = fig_init()
                 for k in range(n_particle_types):
                     # plt.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), s=1, color='k', alpha=0.5, edgecolors='none')
@@ -6230,6 +6216,20 @@ def plot_synaptic3(config, config_file,epoch_list, log_dir, logger, cc, bLatex, 
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/all_embedding_1_{config_file}_{epoch}.tif", dpi=80)
                 plt.close()
+
+                for k in range(n_particle_types):
+                    fig, ax = fig_init()
+                    # plt.scatter(to_numpy(model.a[0:100000, 0]), to_numpy(model.a[0:100000, 1]), s=1, color='k', alpha=0.25, edgecolors='none')
+                    plt.scatter(to_numpy(model.a[k*25000:(k+1)*25000, 0]), to_numpy(model.a[k*25000:(k+1)*25000, 1]), s=1, color=cmap.color(k),alpha=0.5, edgecolors='none')
+                    if bLatex:
+                        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
+                        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
+                    else:
+                        plt.xlabel(r'$a_{i0}$', fontsize=78)
+                        plt.ylabel(r'$a_{i1}$', fontsize=78)
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/embedding_{k}_{config_file}_{epoch}.tif", dpi=80)
+                    plt.close()
 
 
             rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
@@ -6427,98 +6427,6 @@ def plot_synaptic3(config, config_file,epoch_list, log_dir, logger, cc, bLatex, 
             plt.tight_layout()
             plt.savefig(f'./{log_dir}/results/learned connectivity.png', dpi=300)
             plt.close()
-
-            print ('symbolic regression ...')
-
-            def get_pyssr_function(model_pysrr, rr, func):
-
-                text_trap = StringIO()
-                sys.stdout = text_trap
-
-                model_pysrr.fit(to_numpy(rr[:, None]), to_numpy(func[:, None]))
-
-                sys.stdout = sys.__stdout__
-
-                return model_pysrr.sympy
-
-            model_pysrr = PySRRegressor(
-                niterations=30,  # < Increase me for better results
-                binary_operators=["+", "*"],
-                unary_operators=[
-                    "cos",
-                    "exp",
-                    "sin",
-                    "tanh"
-                ],
-                random_state=0,
-                temp_equation_file=False
-            )
-
-            match model_config.signal_model_name:
-
-                case 'PDE_N2':
-
-                    func = torch.mean(psi_list, dim=0).squeeze()
-
-                    symbolic = get_pyssr_function(model_pysrr, rr, func)
-
-                    for n in range(0,7):
-                        print(symbolic(n))
-                        logger.info(symbolic(n))
-
-                case 'PDE_N4':
-
-                    for k in range(n_particle_types):
-
-                        print(f'psi{k} ................')
-                        logger.info(f'psi{k} ................')
-
-                        pos = np.argwhere(labels == k)
-                        pos = pos.squeeze()
-
-                        func = psi_list[pos]
-                        func = torch.mean(psi_list[pos], dim=0)
-
-                        symbolic = get_pyssr_function(model_pysrr, rr, func)
-
-                        for n in range(0, 5):
-                            print(symbolic(n))
-                            logger.info(symbolic(n))
-
-                case 'PDE_N5':
-
-                    for k in range(4**2):
-
-                        print(f'psi {k//4} {k%4}................')
-                        logger.info(f'psi {k//4} {k%4} ................')
-
-                        pos =np.arange(k*250,(k+1)*250)
-                        func = psi_list[pos]
-                        func = torch.mean(psi_list[pos], dim=0)
-
-                        symbolic = get_pyssr_function(model_pysrr, rr, func)
-
-                        for n in range(0, 7):
-                            print(symbolic(n))
-                            logger.info(symbolic(n))
-
-            for k in range(n_particle_types):
-
-                print(f'phi{k} ................')
-                logger.info(f'phi{k} ................')
-
-                pos = np.argwhere(labels == k)
-                pos = pos.squeeze()
-
-                func = phi_list[pos]
-                func = torch.mean(phi_list[pos], dim=0)
-
-                symbolic = get_pyssr_function(model_pysrr, rr, func)
-
-                for n in range(4, 7):
-                    print(symbolic(n))
-                    logger.info(symbolic(n))
-
 
 def plot_agents(config, config_file,epoch_list, log_dir, logger, bLatex, device):
 
