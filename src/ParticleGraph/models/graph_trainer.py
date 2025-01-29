@@ -349,7 +349,6 @@ def data_train_particle(config, config_file, erase, best_model, device):
                 loss = (pred - y_batch).norm(2)
 
             if (epoch>0) & (coeff_continuous>0):
-
                 rr = torch.linspace(0, max_radius, 1000, dtype=torch.float32, device=device)
                 for n in np.random.permutation(n_particles)[:n_particles//100]:
                     embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
@@ -360,8 +359,8 @@ def data_train_particle(config, config_file, erase, best_model, device):
                     grad = func1-func0
                     loss = loss + coeff_continuous * grad.norm(2)
 
-                loss.backward()
-                optimizer.step()
+            loss.backward()
+            optimizer.step()
 
             if has_ghost:
                 optimizer_ghost_particles.step()
