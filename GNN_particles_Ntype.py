@@ -34,11 +34,11 @@ import warnings
 if __name__ == '__main__':
 
     warnings.filterwarnings("ignore", category=FutureWarning)
-    #
-    # try:
-    #     matplotlib.use("Qt5Agg")
-    # except:
-    #     pass
+
+    try:
+        matplotlib.use("Qt5Agg")
+    except:
+        pass
 
     parser = argparse.ArgumentParser(description="ParticleGraph")
     parser.add_argument('-o', '--option', nargs='+', help='Option that takes multiple values')
@@ -55,11 +55,11 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        task = 'generate_test'
-        best_model = 'best'
+        task = 'test'
+        best_model = None
         # config_list = ['fluids/fluids_m']
         # config_list = ['falling_water_ramp_x6_11']
-        config_list =['arbitrary/arbitrary_3']
+        config_list =['arbitrary/arbitrary_3_1']
         # config_list =['wave/wave_2']
         # config_list = ['cell/cell_MDCK_4']
 
@@ -71,13 +71,17 @@ if __name__ == '__main__':
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         device = set_device(config.training.device)
         print(f'device {device}')
+
         if 'generate' in task:
             data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=False, bSave=True, step=4)  #config.simulation.n_frames // 100)
         if 'train' in task:
             data_train(config=config, config_file=config_file.split('/')[-1], erase=False, best_model=best_model, device=device)
         if 'test' in task:
-            data_test(config=config, config_file=config_file.split('/')[-1], visualize=True, style='white color', verbose=False, best_model='best', run=1, plot_data=False,
-                      test_simulation=False, sample_embedding=False, fixed=False, bounce='bottom', step=4, device=device)
+            data_test(config=config, config_file=config_file.split('/')[-1], visualize=True, style='black zoom color', verbose=False, best_model='best', run=1, plot_data=False,
+                      test_simulation=False, sample_embedding=False, fixed=False, bounce=False, step=10, particle_of_interest=1200, device=device)
+        if 'try_func' in task:
+            try_func(max_radius=config.simulation.max_radius, device=device)
+
 
 
             # data_test(config=config, config_file=config_file, visualize=True, style='black color', verbose=False, best_model='best', run=1, plot_data=True,

@@ -283,7 +283,7 @@ if __name__ == '__main__':
 
     remove_files_from_folder('tmp')
 
-    mode = 'wave'
+    mode = 'gaussian'
 
     if mode == 'gaussian':
         config = ParticleGraphConfig.from_yaml('/groups/saalfeld/home/allierc/Py/ParticleGraph/config/test_smooth_particle.yaml')

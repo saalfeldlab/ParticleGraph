@@ -2553,4 +2553,29 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
 
 
 
+def try_func(max_radius,device):
+
+    r = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+    sigma = 0.005
+
+
+
+    fig, ax = fig_init()
+    p = torch.tensor([1.6233, 1.0413, 1.6012, 1.5615], device=device)
+    out = r * (p[0] * torch.exp(-r ** (2 * p[1]) / (2 * sigma ** 2)) - p[2] * torch.exp(-r ** (2 * p[3]) / (2 * sigma ** 2)))
+    plt.plot(to_numpy(r), to_numpy(out), linewidth=2)
+    p = torch.tensor([1.7667, 1.8308, 1.0855, 1.9055], device=device)
+    out = r * (p[0] * torch.exp(-r ** (2 * p[1]) / (2 * sigma ** 2)) - p[2] * torch.exp(-r ** (2 * p[3]) / (2 * sigma ** 2)))
+    plt.plot(to_numpy(r), to_numpy(out), linewidth=2)
+    # p = torch.tensor([1.7226, 1.7850, 1.0584, 1.8579], device=device)
+    # out = r * (p[0] * torch.exp(-r ** (2 * p[1]) / (2 * sigma ** 2)) - p[2] * torch.exp(-r ** (2 * p[3]) / (2 * sigma ** 2)))
+    # plt.plot(to_numpy(r), to_numpy(out), linewidth=2)
+    p = torch.tensor([0.03, 0.03, 100, 1.0], device=device)
+    out = p[0] * torch.tanh((r-p[1])*p[2])
+    plt.plot(to_numpy(r), to_numpy(out), linewidth=2)
+    p = torch.tensor([0.03, 0.05, 100, 1.0], device=device)
+    out = p[0] * torch.tanh((r-p[1])*p[2])
+    plt.plot(to_numpy(r), to_numpy(out), linewidth=2)
+    plt.tight_layout()
+
 

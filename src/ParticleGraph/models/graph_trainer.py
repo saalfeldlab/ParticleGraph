@@ -306,7 +306,6 @@ def data_train_particle(config, config_file, erase, best_model, device):
                         if translation_augmentation:
                             x_[:, 1:dimension + 1] = x_[:, 1:dimension + 1] + displacement
                         xt.append(x_[:, :])
-
                     dataset = data.Data(x=xt, edge_index=edges, num_nodes=x.shape[0])
                     dataset_batch.append(dataset)
 
@@ -3691,7 +3690,7 @@ def data_train_WBI(config, config_file, erase, best_model, device):
 
 
 def data_test(config=None, config_file=None, visualize=False, style='color frame', verbose=True, best_model=20, step=15,
-              ratio=1, run=1, plot_data=False, test_simulation=False, sample_embedding=False, fixed=False, bounce=False, device=[]):
+              ratio=1, run=1, plot_data=False, test_simulation=False, sample_embedding=False, fixed=False, bounce=False, particle_of_interest=1, device=[]):
     dataset_name = config.dataset
     simulation_config = config.simulation
     model_config = config.graph_model
@@ -3930,6 +3929,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     model, bc_pos, bc_dpos = choose_training_model(config, device)
     model.ynorm = ynorm
     model.vnorm = vnorm
+    model.particle_of_interest = particle_of_interest
 
     table = PrettyTable(["Modules", "Parameters"])
     total_params = 0
@@ -4391,6 +4391,28 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                                     x[index_particles[n], 1].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
+
+
+            if 'zoom' in style:
+                # plt.scatter(x[4400, 2].detach().cpu().numpy(),
+                #             x[4400, 1].detach().cpu().numpy(), s=s_p*200, color='r', alpha=0.25)
+                xc = x[particle_of_interest, 2].detach().cpu().numpy()
+                yc = x[particle_of_interest, 1].detach().cpu().numpy()
+                pos = torch.argwhere(edge_index[1,:]==particle_of_interest)
+                pos = pos[:, 0]
+                plt.scatter(x[edge_index[0,pos], 2].detach().cpu().numpy(),
+                            x[edge_index[0,pos], 1].detach().cpu().numpy(), s=s_p*20, color='w', alpha=0.25)
+
+                for k in range(pos.shape[0]):
+                    plt.arrow(x[edge_index[1,pos[k]], 2].detach().cpu().numpy(),
+                                x[edge_index[1,pos[k]], 1].detach().cpu().numpy(),  dx=to_numpy(model.msg[k,1]) * delta_t/20,
+                              dy=to_numpy(model.msg[k,0]) * delta_t/20, head_width=0.004, length_includes_head=True, color='w',alpha=0.25)
+
+                plt.arrow(x=to_numpy(x[particle_of_interest, 2]), y=to_numpy(x[particle_of_interest, 1]), dx=to_numpy(x[particle_of_interest, 4]) * delta_t * 100,
+                          dy=to_numpy(x[particle_of_interest, 3]) * delta_t * 100, head_width=0.004, length_includes_head=True, color=cmap.color(to_numpy(x[particle_of_interest, 5])))
+                plt.xlim([xc-0.1, xc+0.1])
+                plt.ylim([yc-0.1, yc+0.1])
+
 
             if 'latex' in style:
                 plt.xlabel(r'$x$', fontsize=78)

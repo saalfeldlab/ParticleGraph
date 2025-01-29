@@ -184,6 +184,13 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         else:
             out = self.lin_edge(in_features) * field_j
 
+        if self.training==False:
+            pos = torch.argwhere(edge_index_i == self.particle_of_interest)
+            if pos.numel()>0:
+                self.msg = out[pos[:,0]]
+            else:
+                self.msg = out[0]
+
         return out
 
     def update(self, aggr_out):
