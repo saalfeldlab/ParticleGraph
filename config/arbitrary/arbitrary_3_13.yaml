@@ -41,7 +41,7 @@ training:
   rotation_augmentation: True
   data_augmentation_loop: 100
   fix_cluster_embedding: True
-  coeff_continuous: 1.0E-2
+  coeff_continuous: 1.0E-3
   device: 'auto'
 
 

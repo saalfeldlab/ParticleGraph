@@ -161,7 +161,7 @@ class Operator_smooth(pyg.nn.MessagePassing):
             density_kernel = torch.exp(-(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / self.kernel_var)[:,None]
 
             self.modulation = self.siren(coords=mgrid) * max_radius **2
-            kernel_modified = torch.exp(-2*(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / self.kernel_var)[:, None] * self.modulation
+            kernel_modified = torch.exp(-2*(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / (20*self.kernel_var))[:, None] * self.modulation
 
             grad_autograd = -density_gradient(kernel_modified, mgrid)
             laplace_autograd = density_laplace(kernel_modified, mgrid)
@@ -169,6 +169,11 @@ class Operator_smooth(pyg.nn.MessagePassing):
             self.kernel_operators = torch.cat((kernel_modified, grad_autograd, laplace_autograd), dim=-1)
 
             return density_kernel
+
+            # kernel_modified = torch.exp(-2 * (mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / (20*self.kernel_var))[:, None]
+            # fig = plt.figure(figsize=(6, 6))
+            # plt.scatter(to_numpy(mgrid[:,0]), to_numpy(mgrid[:,1]), s=10, c=to_numpy(kernel_modified))
+            # plt.show()
 
         else:
             # out = self.lin_edge(field_j) * self.kernel_operators[:,1:2] / density_j
@@ -283,14 +288,14 @@ if __name__ == '__main__':
 
     remove_files_from_folder('tmp')
 
-    mode = 'gaussian'
+    mode = 'wave'
 
     if mode == 'gaussian':
         config = ParticleGraphConfig.from_yaml('/groups/saalfeld/home/allierc/Py/ParticleGraph/config/test_smooth_particle.yaml')
     elif mode == 'wave':
         # config = ParticleGraphConfig.from_yaml('/groups/saalfeld/home/allierc/Py/ParticleGraph/config/wave/wave_smooth_particle.yaml')
-        config = ParticleGraphConfig.from_yaml('/groups/saalfeld/home/allierc/Py/ParticleGraph/config/wave/wave_smooth_particle_1.yaml')
-        # config = ParticleGraphConfig.from_yaml('/groups/saalfeld/home/allierc/Py/ParticleGraph/config/wave/wave_smooth_particle_2.yaml')
+        # config = ParticleGraphConfig.from_yaml('/groups/saalfeld/home/allierc/Py/ParticleGraph/config/wave/wave_smooth_particle_1.yaml')
+        config = ParticleGraphConfig.from_yaml('/groups/saalfeld/home/allierc/Py/ParticleGraph/config/wave/wave_smooth_particle_2.yaml')
     elif mode == 'cell':
         config = ParticleGraphConfig.from_yaml('/groups/saalfeld/home/allierc/Py/ParticleGraph/config/cell/cell_MDCK_4.yaml')
 

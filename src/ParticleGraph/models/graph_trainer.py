@@ -348,7 +348,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
             else:
                 loss = (pred - y_batch).norm(2)
 
-            if coeff_continuous>0:
+            if (epoch>0) & (coeff_continuous>0):
 
                 rr = torch.linspace(0, max_radius, 1000, dtype=torch.float32, device=device)
                 for n in np.random.permutation(n_particles)[:n_particles//100]:
