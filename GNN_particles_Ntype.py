@@ -78,7 +78,7 @@ if __name__ == '__main__':
             data_train(config=config, config_file=config_file.split('/')[-1], erase=False, best_model=best_model, device=device)
         if 'test' in task:
             data_test(config=config, config_file=config_file.split('/')[-1], visualize=True, style='black zoom color', verbose=False, best_model='best', run=1, plot_data=False,
-                      test_simulation=False, sample_embedding=False, fixed=False, bounce=False, step=10, particle_of_interest=1200, device=device)
+                      test_simulation=False, sample_embedding=False, fixed=False, bounce=False, step=10, particle_of_interest=4400, device=device)
         if 'try_func' in task:
             try_func(max_radius=config.simulation.max_radius, device=device)
 

@@ -4219,6 +4219,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
             if 'black' in style:
                 plt.style.use('dark_background')
+                mc = 'w'
+            else:
+                plt.style.use('default')
+                mc = 'k'
 
             fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
             ax.tick_params(axis='both', which='major', pad=15)
@@ -4392,26 +4396,28 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
 
+                if particle_of_interest > 1:
 
-            if 'zoom' in style:
-                # plt.scatter(x[4400, 2].detach().cpu().numpy(),
-                #             x[4400, 1].detach().cpu().numpy(), s=s_p*200, color='r', alpha=0.25)
-                xc = x[particle_of_interest, 2].detach().cpu().numpy()
-                yc = x[particle_of_interest, 1].detach().cpu().numpy()
-                pos = torch.argwhere(edge_index[1,:]==particle_of_interest)
-                pos = pos[:, 0]
-                plt.scatter(x[edge_index[0,pos], 2].detach().cpu().numpy(),
-                            x[edge_index[0,pos], 1].detach().cpu().numpy(), s=s_p*20, color='w', alpha=0.25)
+                    xc = x[particle_of_interest, 2].detach().cpu().numpy()
+                    yc = x[particle_of_interest, 1].detach().cpu().numpy()
+                    pos = torch.argwhere(edge_index[1,:]==particle_of_interest)
+                    pos = pos[:, 0]
+                    plt.scatter(x[edge_index[0,pos], 2].detach().cpu().numpy(),
+                                x[edge_index[0,pos], 1].detach().cpu().numpy(), s=s_p * 50 , color=mc, alpha=0.25)
 
-                for k in range(pos.shape[0]):
-                    plt.arrow(x[edge_index[1,pos[k]], 2].detach().cpu().numpy(),
-                                x[edge_index[1,pos[k]], 1].detach().cpu().numpy(),  dx=to_numpy(model.msg[k,1]) * delta_t/20,
-                              dy=to_numpy(model.msg[k,0]) * delta_t/20, head_width=0.004, length_includes_head=True, color='w',alpha=0.25)
+                    for k in range(pos.shape[0]):
+                        plt.arrow(x[edge_index[1,pos[k]], 2].detach().cpu().numpy(),
+                                    x[edge_index[1,pos[k]], 1].detach().cpu().numpy(),  dx=to_numpy(model.msg[k,1]) * delta_t/20,
+                                  dy=to_numpy(model.msg[k,0]) * delta_t/20, head_width=0.004, length_includes_head=True, color=mc,alpha=0.25)
 
-                plt.arrow(x=to_numpy(x[particle_of_interest, 2]), y=to_numpy(x[particle_of_interest, 1]), dx=to_numpy(x[particle_of_interest, 4]) * delta_t * 100,
-                          dy=to_numpy(x[particle_of_interest, 3]) * delta_t * 100, head_width=0.004, length_includes_head=True, color=cmap.color(to_numpy(x[particle_of_interest, 5])))
-                plt.xlim([xc-0.1, xc+0.1])
-                plt.ylim([yc-0.1, yc+0.1])
+                    plt.arrow(x=to_numpy(x[particle_of_interest, 2]), y=to_numpy(x[particle_of_interest, 1]), dx=to_numpy(x[particle_of_interest, 4]) * delta_t * 100,
+                              dy=to_numpy(x[particle_of_interest, 3]) * delta_t * 100, head_width=0.004, length_includes_head=True, color=cmap.color(to_numpy(x[particle_of_interest, 5]).astype(int)))
+
+                if 'zoom' in style:
+                    plt.xlim([xc-0.1, xc+0.1])
+                    plt.ylim([yc-0.1, yc+0.1])
+                    plt.xticks([])
+                    plt.yticks([])
 
 
             if 'latex' in style:
@@ -4507,7 +4513,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             # save figure
             if not ('PDE_N' in model_config.signal_model_name):
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{run}_{num}.tif", dpi=40)
+                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{run}_{num}.tif", dpi=100)
                 plt.close()
 
             if 'boundary' in style:
