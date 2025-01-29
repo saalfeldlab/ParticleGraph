@@ -6151,7 +6151,7 @@ def plot_synaptic3(config, config_file,epoch_list, log_dir, logger, cc, bLatex, 
                 r_squared = 1 - (ss_res / ss_tot)
                 print(f'R^2$: {r_squared:0.4f}  slope: {np.round(lin_fit[0], 4)}')
 
-            if model_config.embedding_dim == 3:
+            if model_config.embedding_dim == 4:
                 for k in range(n_particle_types):
                     fig = plt.figure(figsize=(10, 10))
                     ax = fig.add_subplot(111, projection='3d')
@@ -6246,8 +6246,9 @@ def plot_synaptic3(config, config_file,epoch_list, log_dir, logger, cc, bLatex, 
                     with torch.no_grad():
                         func = model.lin_phi(in_features.float())
                     func_list.append(func)
-                    plt.plot(to_numpy(rr), to_numpy(func), 2, color=c_list[n%100], alpha=0.25)
+                    # plt.plot(to_numpy(rr), to_numpy(func), 2, color=c_list[n%100], alpha=0.25)
                              # linewidth=4, alpha=0.15-0.15*(n%100)/100)
+                    plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(it), alpha=0.25)
                 true_func = true_model.func(rr, it, 'update')
                 plt.plot(to_numpy(rr), to_numpy(true_func), c='k', linewidth=1)
                 true_func = true_model.func(rr, it+1, 'update')
@@ -6260,7 +6261,34 @@ def plot_synaptic3(config, config_file,epoch_list, log_dir, logger, cc, bLatex, 
                 plt.savefig(f"./{log_dir}/results/phi_{k}.tif", dpi=170.7)
                 plt.close()
 
+
+            fig, ax = fig_init()
+            rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
+            func_list = []
+            for n in trange(0,n_particles,n_particles):
+                if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
+                    embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                    in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
+                else:
+                    in_features = rr[:, None]
+                with torch.no_grad():
+                    func = model.lin_edge(in_features.float())
+                if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
+                    if n<250:
+                        func_list.append(func)
+                else:
+                    func_list.append(func)
+                plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)),
+                         linewidth=8 // ( 1 + (n_particle_types>16)*1.0), alpha=0.25)
             func_list = torch.stack(func_list)
+            plt.xlabel(r'$x_i$', fontsize=78)
+            plt.ylabel(r'Learned $\psi^*(a_i, x_i)$', fontsize=78)
+            if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
+                plt.ylim([-0.5,0.5])
+            plt.xlim([-5,5])
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/raw_psi.tif", dpi=170.7)
+            plt.close()
 
             correction = 1 / torch.mean(torch.mean(func_list[:,900:1000], dim=0))
             print(f'correction: {correction:0.2f}')
@@ -6347,79 +6375,6 @@ def plot_synaptic3(config, config_file,epoch_list, log_dir, logger, cc, bLatex, 
                 plt.close()
                 psi_list = torch.stack(psi_list)
                 psi_list = psi_list.squeeze()
-
-
-            print('interaction functions ...')
-
-            fig, ax = fig_init()
-            for n in trange(n_particle_types):
-                if model_config.signal_model_name == 'PDE_N5':
-                    true_func = true_model.func(rr, n, n, 'update')
-                else:
-                    true_func = true_model.func(rr, n, 'update')
-                plt.plot(to_numpy(rr), to_numpy(true_func), c='k', linewidth=16, label='original', alpha=0.21)
-            phi_list = []
-            for n in trange(n_particles):
-                embedding_ = model.a[n, :] * torch.ones((1500, config.graph_model.embedding_dim), device=device)
-                in_features = torch.cat((rr[:, None], embedding_), dim=1)
-                with torch.no_grad():
-                    func = model.lin_phi(in_features.float())
-                func = func[:, 0]
-                phi_list.append(func)
-                plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
-                         color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=2, alpha=0.25)
-            phi_list = torch.stack(phi_list)
-            func_list_ = to_numpy(phi_list)
-            plt.xlabel(r'$x_i$', fontsize=78)
-            plt.ylabel(r'learned $\phi^*(a_i, x_i)$', fontsize=78)
-            plt.tight_layout()
-            plt.xlim(config.plotting.xlim)
-            plt.ylim(config.plotting.ylim)
-            plt.savefig(f'./{log_dir}/results/learned phi.png', dpi=300)
-            plt.close()
-
-            print('UMAP reduction ...')
-            with warnings.catch_warnings():
-                warnings.simplefilter('ignore')
-                trans = umap.UMAP(n_neighbors=50, n_components=2, transform_queue_size=0,
-                                  random_state=config.training.seed).fit(func_list_)
-                proj_interaction = trans.transform(func_list_)
-
-            proj_interaction = (proj_interaction - np.min(proj_interaction)) / (
-                    np.max(proj_interaction) - np.min(proj_interaction) + 1e-10)
-            fig, ax = fig_init()
-            for n in trange(n_particle_types):
-                pos = torch.argwhere(type_list == n)
-                pos = to_numpy(pos)
-                if len(pos) > 0:
-                    plt.scatter(proj_interaction[pos, 0],
-                                proj_interaction[pos, 1], s=200, alpha=0.1)
-            plt.xlabel(r'UMAP 0', fontsize=78)
-            plt.ylabel(r'UMAP 1', fontsize=78)
-            plt.xlim([-0.2, 1.2])
-            plt.ylim([-0.2, 1.2])
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/UMAP_{config_file}_{epoch}.tif", dpi=170.7)
-            plt.close()
-
-            config.training.cluster_distance_threshold = 0.2
-            config.training.cluster_method = 'distance_embedding'
-            embedding = to_numpy(model.a.squeeze())
-            labels, n_clusters, new_labels = sparsify_cluster(config.training.cluster_method, proj_interaction, embedding,
-                                                              config.training.cluster_distance_threshold, type_list,
-                                                              n_particle_types, embedding_cluster)
-            accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-            print(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}  ')
-            logger.info(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method} ')
-
-            config.training.cluster_method = 'kmeans_auto_embedding'
-            labels, n_clusters, new_labels = sparsify_cluster(config.training.cluster_method, proj_interaction, embedding,
-                                                              config.training.cluster_distance_threshold, type_list,
-                                                              n_particle_types, embedding_cluster)
-            accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-            print(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}  ')
-            logger.info(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method} ')
-
 
             i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
             A = model.W.clone().detach() / correction
@@ -7760,8 +7715,8 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N5_l']
     # config_list = ['signal_N3_c1']
-    # config_list = ['signal_N3_c11']
-    config_list = ['arbitrary/arbitrary_3']
+    config_list = ['signal/signal_N3_c12']
+    # config_list = ['arbitrary/arbitrary_3']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')

@@ -410,7 +410,7 @@ def get_log_dir(config=[]):
         l_dir = os.path.join('./log/gravity/')
     elif 'PDE_K' in config.graph_model.particle_model_name:
         l_dir = os.path.join('./log/springs/')
-    elif 'PDE_N' in config.graph_model.particle_model_name:
+    elif 'PDE_N' in config.graph_model.signal_model_name:
         l_dir = os.path.join('./log/signal/')
     elif 'PDE_WF' in config.graph_model.particle_model_name:
         l_dir = os.path.join('./log/falling_wter_ramp/')
