@@ -61,7 +61,7 @@ if __name__ == '__main__':
         # config_list = ['falling_water_ramp_x6_11']
         # config_list =['arbitrary/arbitrary_3_11']
         # config_list =['wave/wave_2']
-        config_list = ['signal/signal_N2_d1']
+        config_list = ['signal/signal_N4_v2']
 
 
     for config_file in config_list:
@@ -73,7 +73,7 @@ if __name__ == '__main__':
         print(f'device {device}')
 
         if 'generate' in task:
-            data_generate(config, device=device, visualize=True, run_vizualized=1, style='black color', alpha=1, erase=False, bSave=True, step=10)  #config.simulation.n_frames // 100)
+            data_generate(config, device=device, visualize=True, run_vizualized=0, style='black color', alpha=1, erase=False, bSave=True, step=10)  #config.simulation.n_frames // 100)
         if 'train' in task:
             data_train(config=config, config_file=config_file.split('/')[-1], erase=False, best_model=best_model, device=device)
         if 'test' in task:

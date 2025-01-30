@@ -97,7 +97,7 @@ class GraphModelConfig(BaseModel):
     integration: Literal['Euler', 'Runge-Kutta'] = 'Euler'
 
     field_type: str = ''
-    field_grid: Optional[str] = 'voronoi'
+    field_grid: Optional[str] = ''
 
     pre_input_size: int = 1
     pre_output_size: int = 1

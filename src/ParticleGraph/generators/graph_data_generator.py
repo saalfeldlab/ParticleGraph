@@ -1910,6 +1910,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
+                        plt.show()
                     elif 'modulation' in field_type:
                         fig = plt.figure(figsize=(12, 12))
                         plt.subplot(221)
