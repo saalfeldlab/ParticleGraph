@@ -3918,18 +3918,33 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             print('load b_i movie ...')
             im = imread(f"graphs_data/{simulation_config.node_value_map}")
             A1 = torch.zeros((n_particles, 1), device=device)
-        else:
-            print('create graph positions ...')
-            G_first = to_networkx(first_dataset.clone().detach(), remove_self_loops=True, to_undirected=True)
-            first_positions = nx.spring_layout(G_first, weight='weight', seed=42, k=1)
-            X1_first = torch.zeros((n_particles, 2), device=device)
-            for node, pos in first_positions.items():
-                X1_first[node, :] = torch.tensor([pos[0], pos[1]], device=device)
-            print('done ...')
+        # else:
+        #     print('create graph positions ...')
+        #     G_first = to_networkx(first_dataset.clone().detach(), remove_self_loops=True, to_undirected=True)
+        #     first_positions = nx.spring_layout(G_first, weight='weight', seed=42, k=1)
+        #     X1_first = torch.zeros((n_particles, 2), device=device)
+        #     for node, pos in first_positions.items():
+        #         X1_first[node, :] = torch.tensor([pos[0], pos[1]], device=device)
+        #     print('done ...')
 
         neuron_index = torch.randint(0, n_particles, (6,))
         neuron_gt_list = []
         neuron_pred_list = []
+
+        if os.path.exists(f'./graphs_data/graphs_{dataset_name}/X1.pt') > 0:
+            X1_first = torch.load(f'./graphs_data/graphs_{dataset_name}/X1.pt', map_location=device)
+            X_msg = torch.load(f'./graphs_data/graphs_{dataset_name}/X_msg.pt', map_location=device)
+        else:
+            xc, yc = get_equidistant_points(n_points=n_particles)
+            X1_first = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
+            perm = torch.randperm(X1_first.size(0))
+            X1_first = X1_first[perm]
+            torch.save(X1, f'./graphs_data/graphs_{dataset_name}/X1.pt')
+            xc, yc = get_equidistant_points(n_points=n_particles**2)
+            X_msg = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
+            perm = torch.randperm(X_msg.size(0))
+            X_msg = X_msg[perm]
+            torch.save(X_msg, f'./graphs_data/graphs_{dataset_name}/X_msg.pt')
 
     if verbose:
         print(f'Test data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
@@ -4313,7 +4328,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
                 plt.close()
 
-                y, msg = y = model(dataset, data_id=1, return_all=True)
+                y = model(dataset, data_id=1, return_all=True)
 
                 plt.style.use('dark_background')
                 matplotlib.rcParams['savefig.pad_inches'] = 0
@@ -4348,17 +4363,16 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     plt.close()
 
                 plt.figure(figsize=(10, 10))
-                plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=30, c=to_numpy(x[:, 6]),
+                plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=200, c=to_numpy(x[:, 6]),
                             cmap='viridis', vmin=-10, vmax=10, edgecolors='k', alpha=1)
                 ax = plt.gca()
                 ax.axis('off')
                 plt.xticks([])
                 plt.yticks([])
-                plt.xlim([-1, 1])
-                plt.ylim([-1, 1])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=170.7)
+                plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=170)
                 plt.close()
+
                 im = imread(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif")
                 plt.figure(figsize=(10, 10))
                 plt.imshow(im)
@@ -4371,6 +4385,33 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=80)
                 plt.close()
+
+
+
+                plt.figure(figsize=(10, 10))
+                msg = to_numpy(model.msg) / 10
+                msg = np.reshape(msg, (n_particles ** 2, 1))
+                plt.scatter(to_numpy(X_msg[:, 0]), to_numpy(X_msg[:, 1]), s=0.1, c=msg, cmap='viridis', vmin=-0.075,
+                            vmax=0.075)
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_recons/Msg_{config_file}_{num}.tif", dpi=170)
+                plt.close()
+
+                im = imread(f"./{log_dir}/tmp_recons/Msg_{config_file}_{num}.tif")
+                plt.figure(figsize=(10, 10))
+                plt.imshow(im)
+                plt.xticks([])
+                plt.yticks([])
+                plt.subplot(3, 3, 1)
+                plt.imshow(im[800:1000, 800:1000, :])
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_recons/Msg_{config_file}_{num}.tif", dpi=80)
+                plt.close()
+
             elif 'PDE_K' in model_config.particle_model_name:
 
                 plt.close()

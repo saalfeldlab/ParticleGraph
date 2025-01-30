@@ -6428,6 +6428,7 @@ def plot_synaptic3(config, config_file,epoch_list, log_dir, logger, cc, bLatex, 
             plt.savefig(f'./{log_dir}/results/learned connectivity.png', dpi=300)
             plt.close()
 
+
 def plot_agents(config, config_file,epoch_list, log_dir, logger, bLatex, device):
 
     simulation_config = config.simulation

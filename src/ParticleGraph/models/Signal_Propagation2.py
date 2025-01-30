@@ -82,7 +82,9 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
 
     def forward(self, data=[], data_id=[], return_all=False, has_field=False, k = 0):
         self.data_id = data_id
+        self.return_all = return_all
         x, edge_index = data.x, data.edge_index
+
 
         u = data.x[:, 6:7]
 
@@ -105,13 +107,12 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             msg = self.propagate(edge_index, u=u, embedding=embedding,field=field)
         else:
             msg = torch.matmul(self.W * self.mask, self.lin_edge(u))
+            if return_all:
+                self.msg = self.W * self.mask * self.lin_edge(u)
 
         pred = self.lin_phi(in_features) + msg
 
-        if return_all:
-            return pred, msg
-        else:
-            return pred
+        return pred
 
     def message(self, edge_index_i, edge_index_j, u_j, embedding_i, embedding_j, field_i):
 
@@ -125,6 +126,9 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         # print(to_numpy(T[to_numpy(edge_index_i[pos]),to_numpy(edge_index_j[pos])].t()))
         # mul = torch.sum(T[to_numpy(edge_index_i[pos]),to_numpy(edge_index_j[pos])][:,None] * self.lin_edge(u_j[pos]))
         # print(to_numpy(mul))
+
+        if return_all:
+            self.msg = T[to_numpy(edge_index_i),to_numpy(edge_index_j)][:,None] * self.lin_edge(u_j) * field_i
 
         return T[to_numpy(edge_index_i),to_numpy(edge_index_j)][:,None] * self.lin_edge(in_features) * field_i
 

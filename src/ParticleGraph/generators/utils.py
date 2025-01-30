@@ -262,7 +262,7 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
 
     dpos_init = simulation_config.dpos_init
 
-    if ('PDE_F' in config.graph_model.particle_model_name):
+    if 'PDE_F' in config.graph_model.particle_model_name:
         pos = torch.rand(n_particles, dimension, device=device)
         if simulation_config.pos_init == 'square':
             pos = pos * 0.5 + 0.25
@@ -280,6 +280,12 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
                 pos = pos * 0.2 + 0.4
         elif n_particles<=500:
             pos = pos * 0.5 + 0.25
+    elif 'PDE_N' in config.graph_model.signal_model_name:
+        xc, yc = get_equidistant_points(n_points=n_particles)
+        pos = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
+        perm = torch.randperm(pos.size(0))
+        pos = pos[perm]
+
     else:
         pos = torch.randn(n_particles, dimension, device=device) * 0.5
     dpos = dpos_init * torch.randn((n_particles, dimension), device=device)

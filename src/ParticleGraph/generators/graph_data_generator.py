@@ -1528,7 +1528,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     torch.random.fork_rng(devices=device)
     torch.random.manual_seed(42)
 
-    print(f'Generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+    print(f'generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
@@ -1541,6 +1541,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     excitation = simulation_config.excitation
     noise_level = training_config.noise_level
     std_params = torch.tensor(simulation_config.std_params, dtype=torch.float32, device=device)
+    cmap = CustomColorMap(config=config)
 
     field_type = model_config.field_type
     if field_type != '':
@@ -1551,7 +1552,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     torch.random.manual_seed(training_config.seed)
 
     if config.data_folder_name != 'none':
-        print(f'Generating from data ...')
+        print(f'generating from data ...')
         generate_from_data(config=config, device=device, visualize=visualize, folder=folder, step=step)
         return
 
@@ -1656,21 +1657,19 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency.pt')
     torch.save(edge_index, f'./graphs_data/graphs_{dataset_name}/edge_index.pt')
 
-    print(to_numpy(torch.sum(edge_index)))
-
-    weights = to_numpy(adjacency.flatten())
-    pos = np.argwhere(weights != 0)
-    weights = weights[pos]
-    plt.figure(figsize=(10, 10))
-    plt.hist(weights, bins=1000, color='k', alpha=0.5)
-    plt.ylabel(r'counts', fontsize=64)
-    plt.xlabel(r'$W$', fontsize=64)
-    plt.yticks(fontsize=12)
-    plt.xticks(fontsize=12)
-    plt.xlim([-0.1, 0.1])
-    plt.tight_layout()
-    plt.savefig(f"graphs_data/graphs_{dataset_name}/W_distribution.tif", dpi=70)
-    plt.close()
+    # weights = to_numpy(adjacency.flatten())
+    # pos = np.argwhere(weights != 0)
+    # weights = weights[pos]
+    # plt.figure(figsize=(10, 10))
+    # plt.hist(weights, bins=1000, color='k', alpha=0.5)
+    # plt.ylabel(r'counts', fontsize=64)
+    # plt.xlabel(r'$W$', fontsize=64)
+    # plt.yticks(fontsize=12)
+    # plt.xticks(fontsize=12)
+    # plt.xlim([-0.1, 0.1])
+    # plt.tight_layout()
+    # plt.savefig(f"graphs_data/graphs_{dataset_name}/W_distribution.tif", dpi=70)
+    # plt.close()
 
     if ('modulation' in model_config.field_type) | ('visual' in model_config.field_type):
         im = imread(f"graphs_data/{simulation_config.node_value_map}")
@@ -1701,8 +1700,32 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                 T1 = T1[index]
                 first_T1 = T1.clone().detach()
 
-        if os.path.isfile(f'./graphs_data/graphs_{dataset_name}/X1.pt'):
+        if run == run_vizualized:
+
+            if 'black' in style:
+                plt.style.use('dark_background')
+
+            plt.figure(figsize=(10, 10))
+            for n in range(n_particle_types):
+                pos = torch.argwhere(T1.squeeze() == n)
+                plt.scatter(to_numpy(X1[pos, 0]), to_numpy(X1[pos, 1]), s=200, color=cmap.color(n))
+            plt.xticks([])
+            plt.yticks([])
+            plt.tight_layout()
+            plt.savefig(f"graphs_data/graphs_{dataset_name}/type_distribution.tif", dpi=130)
+            plt.close()
+
+        if run > 0:
             X1 = torch.load(f'./graphs_data/graphs_{dataset_name}/X1.pt', map_location=device)
+            X_msg = torch.load(f'./graphs_data/graphs_{dataset_name}/X_msg.pt', map_location=device)
+        else:
+            xc, yc = get_equidistant_points(n_points=n_particles**2)
+            X_msg = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
+            perm = torch.randperm(X_msg.size(0))
+            X_msg = X_msg[perm]
+            torch.save(X1, f'./graphs_data/graphs_{dataset_name}/X1.pt')
+            torch.save(X_msg, f'./graphs_data/graphs_{dataset_name}/X_msg.pt')
+
 
         if ('modulation' in field_type):
             if run==0:
@@ -1712,14 +1735,8 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         elif ('visual' in field_type):
             if run==0:
                 X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
-
-                indices = np.arange(0, 1024, dtype=float) + 0.5
-                r = np.sqrt(indices / 1024)
-                theta = np.pi * (1 + 5 ** 0.5) * indices
-                x, y = r * np.cos(theta), r * np.sin(theta)
+                x, y = get_equidistant_points(n_points=1024)
                 X1 = torch.tensor(np.stack((x, y), axis=1), dtype=torch.float32, device=device) / 2
-                # X1 = torch.load(f'./graphs_data/graphs_signal_N2_Lorentz_c/X1.pt', map_location=device) / 10000
-
                 X1[:,1] = X1[:,1] + 1.5
                 X1[:, 0] = X1[:, 0] + 0.5
                 X1 = torch.cat((X1_mesh,X1[0:n_particles-n_nodes]), 0)
@@ -1807,7 +1824,10 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
 
             # output plots
-            if visualize & (run ==0) & (it % step == 0) & (it >= 0):
+            if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
+
+                if 'black' in style:
+                    plt.style.use('dark_background')
 
                 if 'latex' in style:
                     plt.rcParams['text.usetex'] = True
@@ -1902,10 +1922,54 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                             plt.subplot(224)
                             plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=100, c=to_numpy(U1[:, 1]), cmap='viridis', vmin=-0.01, vmax=0.01)
                             plt.text(0, 1.1, f' {np.mean(to_numpy(U1[:, 1])):0.3} +/- {np.std(to_numpy(U1[:, 1])):0.3}', fontsize=12)
+                    else:
+                        plt.figure(figsize=(10, 10))
+                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=200, c=to_numpy(x[:, 6]),
+                                    cmap='viridis', vmin=-10, vmax=10, edgecolors='k', alpha=1)
+                        plt.xticks([])
+                        plt.yticks([])
                     plt.tight_layout()
                     num = f"{it:06}"
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=70)
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=170)
                     plt.close()
+
+                    im = imread(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif")
+                    plt.figure(figsize=(10, 10))
+                    plt.imshow(im)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.subplot(3, 3, 1)
+                    plt.imshow(im[800:1000, 800:1000, :])
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
+                    plt.close()
+
+                    plt.figure(figsize=(10, 10))
+                    msg = to_numpy(model.msg)
+                    msg = np.reshape(msg, (n_particles**2,1))
+                    plt.scatter(to_numpy(X_msg[:, 0]), to_numpy(X_msg[:, 1]), s=0.1, c=msg ,cmap='viridis', vmin=-0.075, vmax=0.075)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Msg_{run}_{num}.tif", dpi=170)
+                    plt.close()
+
+                    im = imread(f"graphs_data/graphs_{dataset_name}/Fig/Msg_{run}_{num}.tif")
+                    plt.figure(figsize=(10, 10))
+                    plt.imshow(im)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.subplot(3, 3, 1)
+                    plt.imshow(im[800:1000, 800:1000, :])
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Msg_{run}_{num}.tif", dpi=80)
+                    plt.close()
+
+
 
         if (run==0):
 
