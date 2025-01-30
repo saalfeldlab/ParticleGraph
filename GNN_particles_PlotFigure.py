@@ -4865,6 +4865,21 @@ def plot_synaptic2(config, config_file,epoch_list, log_dir, logger, cc, bLatex, 
     distrib = to_numpy(activity.flatten())
     activity = activity.t()
 
+    if os.path.exists(f'./graphs_data/graphs_{dataset_name}/X1.pt') > 0:
+        X1_first = torch.load(f'./graphs_data/graphs_{dataset_name}/X1.pt', map_location=device)
+        X_msg = torch.load(f'./graphs_data/graphs_{dataset_name}/X_msg.pt', map_location=device)
+    else:
+        xc, yc = get_equidistant_points(n_points=n_particles)
+        X1_first = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
+        perm = torch.randperm(X1_first.size(0))
+        X1_first = X1_first[perm]
+        torch.save(X1, f'./graphs_data/graphs_{dataset_name}/X1.pt')
+        xc, yc = get_equidistant_points(n_points=n_particles ** 2)
+        X_msg = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
+        perm = torch.randperm(X_msg.size(0))
+        X_msg = X_msg[perm]
+        torch.save(X_msg, f'./graphs_data/graphs_{dataset_name}/X_msg.pt')
+
     if has_field:
         model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
                                         hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device, first_omega_0=omega, hidden_omega_0=omega)
@@ -5497,6 +5512,8 @@ def plot_synaptic2(config, config_file,epoch_list, log_dir, logger, cc, bLatex, 
             print(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}  ')
             logger.info(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method} ')
 
+
+
             config.training.cluster_method = 'kmeans_auto_embedding'
             labels, n_clusters, new_labels = sparsify_cluster(config.training.cluster_method, proj_interaction, embedding,
                                                               config.training.cluster_distance_threshold, type_list,
@@ -5504,6 +5521,24 @@ def plot_synaptic2(config, config_file,epoch_list, log_dir, logger, cc, bLatex, 
             accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
             print(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}  ')
             logger.info(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method} ')
+
+            plt.style.use('dark_background')
+            plt.figure(figsize=(10, 10))
+            plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=200, color=cmap.color(to_numpy(type_list).astype(int)))
+            plt.xticks([])
+            plt.yticks([])
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/true_types_{config_file}_{epoch}.tif", dpi=170.7)
+            plt.close()
+
+            plt.figure(figsize=(10, 10))
+            plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=200, color=cmap.color(new_labels.astype(int)))
+            plt.xticks([])
+            plt.yticks([])
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/learned_types_{config_file}_{epoch}.tif", dpi=170.7)
+            plt.close()
+            plt.style.use('default')
 
 
             i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
@@ -7624,7 +7659,7 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N5_l']
     # config_list = ['signal_N3_c1']
-    config_list = ['signal/signal_N3_c12']
+    config_list = ['signal/signal_N2_d1']
     # config_list = ['arbitrary/arbitrary_3']
 
     for config_file in config_list:

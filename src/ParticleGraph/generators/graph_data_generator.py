@@ -31,6 +31,7 @@ def extract_number(filename):
     return int(match.group(1)) if match else -1
 
 
+
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
 
@@ -1708,7 +1709,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             plt.figure(figsize=(10, 10))
             for n in range(n_particle_types):
                 pos = torch.argwhere(T1.squeeze() == n)
-                plt.scatter(to_numpy(X1[pos, 0]), to_numpy(X1[pos, 1]), s=200, color=cmap.color(n))
+                plt.scatter(to_numpy(X1[pos, 0]), to_numpy(X1[pos, 1]), s=40, color=cmap.color(n))
             plt.xticks([])
             plt.yticks([])
             plt.tight_layout()
@@ -1924,11 +1925,11 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                             plt.text(0, 1.1, f' {np.mean(to_numpy(U1[:, 1])):0.3} +/- {np.std(to_numpy(U1[:, 1])):0.3}', fontsize=12)
                     else:
                         plt.figure(figsize=(10, 10))
-                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=200, c=to_numpy(x[:, 6]),
+                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=40, c=to_numpy(x[:, 6]),
                                     cmap='viridis', vmin=-10, vmax=10, edgecolors='k', alpha=1)
                         plt.xticks([])
                         plt.yticks([])
-                    plt.tight_layout()
+                        plt.tight_layout()
                     num = f"{it:06}"
                     plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=170)
                     plt.close()
@@ -1946,29 +1947,30 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
                     plt.close()
 
-                    plt.figure(figsize=(10, 10))
-                    msg = to_numpy(model.msg)
-                    msg = np.reshape(msg, (n_particles**2,1))
-                    plt.scatter(to_numpy(X_msg[:, 0]), to_numpy(X_msg[:, 1]), s=0.1, c=msg ,cmap='viridis', vmin=-0.075, vmax=0.075)
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Msg_{run}_{num}.tif", dpi=170)
-                    plt.close()
+                    if 'msg' in style:
 
-                    im = imread(f"graphs_data/graphs_{dataset_name}/Fig/Msg_{run}_{num}.tif")
-                    plt.figure(figsize=(10, 10))
-                    plt.imshow(im)
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.subplot(3, 3, 1)
-                    plt.imshow(im[800:1000, 800:1000, :])
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Msg_{run}_{num}.tif", dpi=80)
-                    plt.close()
+                        plt.figure(figsize=(10, 10))
+                        msg = to_numpy(model.msg)
+                        msg = np.reshape(msg, (n_particles**2,1))
+                        plt.scatter(to_numpy(X_msg[:, 0]), to_numpy(X_msg[:, 1]), s=0.1, c=msg ,cmap='viridis', vmin=-0.075, vmax=0.075)
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Msg_{run}_{num}.tif", dpi=170)
+                        plt.close()
 
+                        im = imread(f"graphs_data/graphs_{dataset_name}/Fig/Msg_{run}_{num}.tif")
+                        plt.figure(figsize=(10, 10))
+                        plt.imshow(im)
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.subplot(3, 3, 1)
+                        plt.imshow(im[800:1000, 800:1000, :])
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Msg_{run}_{num}.tif", dpi=80)
+                        plt.close()
 
 
         if (run==0):

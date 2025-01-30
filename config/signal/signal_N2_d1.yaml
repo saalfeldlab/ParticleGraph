@@ -14,11 +14,11 @@ simulation:
     n_particles: 8000
     n_particle_types: 4
     n_interactions: 4
-    n_frames: 400000
+    n_frames: 10000
     delta_t: 0.01
     dpos_init:  0
     boundary: 'no'
-    start_frame: 0 # -1000
+    start_frame: -1000
 
 graph_model:
     signal_model_name: 'PDE_N2'

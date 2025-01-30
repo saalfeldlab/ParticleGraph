@@ -4365,8 +4365,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.figure(figsize=(10, 10))
                 plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=200, c=to_numpy(x[:, 6]),
                             cmap='viridis', vmin=-10, vmax=10, edgecolors='k', alpha=1)
-                ax = plt.gca()
-                ax.axis('off')
                 plt.xticks([])
                 plt.yticks([])
                 plt.tight_layout()
