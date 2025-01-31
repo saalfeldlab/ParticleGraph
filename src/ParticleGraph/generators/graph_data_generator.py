@@ -1727,7 +1727,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             torch.save(X1, f'./graphs_data/graphs_{dataset_name}/X1.pt')
             torch.save(X_msg, f'./graphs_data/graphs_{dataset_name}/X_msg.pt')
 
-
         if ('modulation' in field_type):
             if run==0:
                 X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
@@ -1741,9 +1740,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                 X1[:,1] = X1[:,1] + 1.5
                 X1[:, 0] = X1[:, 0] + 0.5
                 X1 = torch.cat((X1_mesh,X1[0:n_particles-n_nodes]), 0)
-
-                fig = plt.figure(figsize=(12, 8))
-                plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=40, c='b')
 
         x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
         check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
@@ -1823,6 +1819,9 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                 # plt.scatter(to_numpy(t), to_numpy(s), s=10, c='k')
                 # plt.xlim([-1,2])
 
+            # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
+            # print(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
+
 
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
@@ -1893,27 +1892,25 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                         plt.close()
                     elif 'visual' in field_type:
                         fig = plt.figure(figsize=(8.5, 8))
-                        plt.axis('off')
+                        plt.title('modulation',fontsize=24)
                         plt.subplot(211)
-                        plt.title('modulation b_{i,t} ', fontsize=24)
                         plt.scatter(to_numpy(X1[0:1024, 1]), to_numpy(X1[0:1024, 0]), s=40, c=to_numpy(A1[0:1024, 0]), cmap='viridis',
                                     vmin=0, vmax=2)
-                        plt.scatter(to_numpy(X1[1024:, 1]), to_numpy(X1[1024:, 0]), s=25, c=to_numpy(A1[1024:, 0]), cmap='viridis',
+                        plt.scatter(to_numpy(X1[1024:, 1]), to_numpy(X1[1024:, 0]), s=30, c=to_numpy(A1[1024:, 0]), cmap='viridis',
                                     vmin=0, vmax=2)
                         cbar = plt.colorbar()
                         cbar.ax.yaxis.set_tick_params(labelsize=8)
                         plt.xticks([])
                         plt.yticks([])
                         plt.subplot(212)
-                        plt.title('firing rate $x_i$', fontsize=24)
+                        plt.title('firing rate $x_i$',fontsize=24)
                         plt.scatter(to_numpy(X1[0:1024, 1]), to_numpy(X1[0:1024, 0]), s=40, c=to_numpy(H1[0:1024, 0]), cmap='viridis', vmin=-10,vmax=10)
-                        plt.scatter(to_numpy(X1[1024:, 1]), to_numpy(X1[1024:, 0]), s=25, c=to_numpy(H1[1024:, 0]), cmap='viridis', vmin=-10,vmax=10)
+                        plt.scatter(to_numpy(X1[1024:, 1]), to_numpy(X1[1024:, 0]), s=30, c=to_numpy(H1[1024:, 0]), cmap='viridis', vmin=-10,vmax=10)
                         cbar = plt.colorbar()
                         cbar.ax.yaxis.set_tick_params(labelsize=8)
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
-                        plt.show()
                     elif 'modulation' in field_type:
                         fig = plt.figure(figsize=(12, 12))
                         plt.subplot(221)
@@ -1938,20 +1935,20 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=170)
                     plt.close()
 
-                    if 'msg' in style:
+                    im_ = imread(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif")
+                    plt.figure(figsize=(10, 10))
+                    plt.imshow(im_)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.subplot(3, 3, 1)
+                    plt.imshow(im[800:1000, 800:1000, :])
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
+                    plt.close()
 
-                        im = imread(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif")
-                        plt.figure(figsize=(10, 10))
-                        plt.imshow(im)
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.subplot(3, 3, 1)
-                        plt.imshow(im[800:1000, 800:1000, :])
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
-                        plt.close()
+                    if 'msg' in style:
 
                         plt.figure(figsize=(10, 10))
                         msg = to_numpy(model.msg)
@@ -1963,13 +1960,13 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                         plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Msg_{run}_{num}.tif", dpi=170)
                         plt.close()
 
-                        im = imread(f"graphs_data/graphs_{dataset_name}/Fig/Msg_{run}_{num}.tif")
+                        im_ = imread(f"graphs_data/graphs_{dataset_name}/Fig/Msg_{run}_{num}.tif")
                         plt.figure(figsize=(10, 10))
                         plt.imshow(im)
                         plt.xticks([])
                         plt.yticks([])
                         plt.subplot(3, 3, 1)
-                        plt.imshow(im[800:1000, 800:1000, :])
+                        plt.imshow(im_[800:1000, 800:1000, :])
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()

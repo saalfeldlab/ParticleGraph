@@ -5704,7 +5704,7 @@ def plot_synaptic2(config, config_file,epoch_list, log_dir, logger, cc, bLatex, 
                         logger.info(symbolic(n))
 
 
-def plot_synaptic3(config, config_file,epoch_list, log_dir, logger, cc, bLatex, device):
+def plot_synaptic3(config, config_file, epoch_list, log_dir, logger, cc, bLatex, device):
 
     dataset_name = config.dataset
 
@@ -5842,11 +5842,14 @@ def plot_synaptic3(config, config_file,epoch_list, log_dir, logger, cc, bLatex, 
                 else:
                     plt.xlabel(r'$a_{i0}(t)$', fontsize=78)
                     plt.ylabel(r'$a_{i1}(t)$', fontsize=78)
-                plt.xlim([0.9, 1.1])
-                plt.ylim([0.9, 1.1])
+                plt.xlim([0.94, 1.06])
+                plt.ylim([0.94, 1.18])
+                # plt.xlim([0.7, 1.2])
+                # plt.ylim([0.7, 1.2])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/all/all_embedding_0_{config_file}_{epoch}.tif", dpi=80)
                 plt.close()
+
                 fig, ax = fig_init()
                 for k in range(n_particle_types):
                     # plt.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), s=1, color=mc, alpha=0.5, edgecolors='none')
@@ -5859,8 +5862,10 @@ def plot_synaptic3(config, config_file,epoch_list, log_dir, logger, cc, bLatex, 
                 else:
                     plt.xlabel(r'$a_{i0}(t)$', fontsize=78)
                     plt.ylabel(r'$a_{i1}(t)$', fontsize=78)
-                plt.xlim([0.9, 1.1])
-                plt.ylim([0.9, 1.1])
+                plt.xlim([0.94, 1.06])
+                plt.ylim([0.94, 1.18])
+                # plt.xlim([0.7, 1.2])
+                # plt.ylim([0.7, 1.2])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/all/all_embedding_1_{config_file}_{epoch}.tif", dpi=80)
                 plt.close()
@@ -5918,6 +5923,7 @@ def plot_synaptic3(config, config_file,epoch_list, log_dir, logger, cc, bLatex, 
                 plt.savefig(f"./{log_dir}/results/all/MLP0_{epoch}.tif", dpi=80)
                 plt.close()
 
+                fig, ax = fig_init()
                 for n in range(0, n_particles):
                     in_features = rr[:, None]
                     with torch.no_grad():
@@ -6009,6 +6015,80 @@ def plot_synaptic3(config, config_file,epoch_list, log_dir, logger, cc, bLatex, 
         plt.tight_layout()
         plt.savefig(f'./{log_dir}/results/slope.png', dpi=300)
         plt.close()
+
+    elif epoch_list[0] == 'time':
+
+        files = glob.glob(f"{log_dir}/models/*")
+        files.sort(key=sort_key)
+        filename = files[-1]
+        filename = filename.split('/')[-1]
+        filename = filename.split('graphs')[-1][1:-3]
+
+        epoch = filename
+        net = f'{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt'
+        model, bc_pos, bc_dpos = choose_training_model(config, device)
+        state_dict = torch.load(net, map_location=device)
+        model.load_state_dict(state_dict['model_state_dict'])
+        print(f'net: {net}')
+
+        for n in trange(100):
+
+            indices = np.arange(n_particles)*100+n
+
+            fig, ax = fig_init()
+            plt.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), s=1, color=mc, alpha=0.01)
+            for k in range(n_particle_types):
+                plt.scatter(to_numpy(model.a[indices[k * 250:(k + 1) * 250], 0]),
+                            to_numpy(model.a[indices[k * 250:(k + 1) * 250], 1]), s=10, color=cmap.color(k), alpha=0.5,
+                            edgecolors='none')
+            if bLatex:
+                plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}(t)$', fontsize=78)
+                plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}(t)$', fontsize=78)
+            else:
+                plt.xlabel(r'$a_{i0}(t)$', fontsize=78)
+                plt.ylabel(r'$a_{i1}(t)$', fontsize=78)
+            plt.xlim([0.94, 1.02])
+            plt.ylim([0.96, 1.12])
+            # plt.xlim([0.9, 1.1])
+            # plt.ylim([0.7, 1.2])
+
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/all2/all_embedding_1_{config_file}_{n}.tif", dpi=80)
+            plt.close()
+
+            # rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
+            # k_list = [0, 250, 500, 750]
+            # fig, ax = fig_init()
+            # plt.axis('off')
+            # for it, k in enumerate(k_list):
+            #     ax = plt.subplot(2, 2, it + 1)
+            #     for n in range(k * 100, (k + 25) * 100):
+            #         embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+            #         in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
+            #         with torch.no_grad():
+            #             func = model.lin_phi(in_features.float())
+            #         plt.plot(to_numpy(rr), to_numpy(func), 2, color=mc, alpha=0.025)
+            #     plt.xlabel(r'$x_i$', fontsize=16)
+            #     # plt.ylabel(r'Learned $\phi^*(a_i(t), x_i)$', fontsize=78)
+            #     plt.ylabel(r'Learned $MLP_0(a_i(t), x_i)$', fontsize=16)
+            #
+            #
+            # for k in range(n_particle_types):
+            #     ax = plt.subplot(2, 2, k + 1)
+            #     n = indices[k * 250:(k + 1) * 250]
+            #     plt.scatter(to_numpy(model.a[indices[k * 250:(k + 1) * 250], 0]),
+            #                 to_numpy(model.a[indices[k * 250:(k + 1) * 250], 1]), s=10, color=cmap.color(k),
+            #                 alpha=0.5,
+            #                 edgecolors='none')
+            #
+            #     plt.ylim([-8, 8])
+            #     plt.xlim([-5, 5])
+            #     plt.tight_layout()
+            #
+            # plt.savefig(f"./{log_dir}/results/all/MLP0_{epoch}.tif", dpi=80)
+            # plt.close()
+
+
 
     else:
 
@@ -7562,13 +7642,14 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N5_l']
     # config_list = ['signal_N3_c1']
-    config_list = ['signal/signal_N3_c4']
+    config_list = ['signal/signal_N2_b1']
     # config_list = ['arbitrary/arbitrary_3']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         # data_plot(config=config, config_file=config_file.split('/')[-1], epoch_list=['best'], bLatex=False, device=device)
-        data_plot(config=config, config_file=config_file.split('/')[-1], epoch_list=['all'], bLatex=False, device=device)
+        # data_plot(config=config, config_file=config_file.split('/')[-1], epoch_list=['all'], bLatex=False, device=device)
+        data_plot(config=config, config_file=config_file.split('/')[-1], epoch_list=['time'], bLatex=False, device=device)
 
         # data_plot(config=config, config_file=config_file.split('/')[-1], epoch_list=['all'], bLatex=False, device=device)
 
