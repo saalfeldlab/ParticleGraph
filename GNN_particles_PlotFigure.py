@@ -300,17 +300,17 @@ class Mesh_RPS_extract(MessagePassing):
 def load_training_data(dataset_name, n_runs, log_dir, device):
     x_list = []
     y_list = []
-    print('Load data ...')
+    print('load data ...')
     time.sleep(0.5)
     for run in trange(n_runs):
         # check if path exists
-        if os.path.exists(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt'):
-            x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
-            y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
+        if os.path.exists(f'graphs_data/{dataset_name}/x_list_{run}.pt'):
+            x = torch.load(f'graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device)
+            y = torch.load(f'graphs_data/{dataset_name}/y_list_{run}.pt', map_location=device)
         else:
-            x = np.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy')
+            x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
             x = torch.tensor(x, dtype=torch.float32, device=device)
-            y = np.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy')
+            y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
             y = torch.tensor(y, dtype=torch.float32, device=device)
 
         x_list.append(x)
@@ -324,8 +324,8 @@ def load_training_data(dataset_name, n_runs, log_dir, device):
     return x_list, y_list, vnorm, ynorm
 
 
-def plot_embedding_func_cluster_tracking(model, config, config_file, embedding_cluster, cmap, index_particles, indexes, type_list,
-                                n_particle_types, n_particles, ynorm, epoch, log_dir, embedding_type, bLatex, device):
+def plot_embedding_func_cluster_tracking(model, config, embedding_cluster, cmap, index_particles, indexes, type_list,
+                                n_particle_types, n_particles, ynorm, epoch, log_dir, embedding_type, style, device):
 
     if embedding_type == 1:
         embedding = to_numpy(model.a.clone().detach())
@@ -334,7 +334,7 @@ def plot_embedding_func_cluster_tracking(model, config, config_file, embedding_c
         for n in range(n_particle_types):
             pos = np.argwhere(type_list == n).squeeze().astype(int)
             plt.scatter(embedding[pos, 0], embedding[pos, 1], s=1, alpha=0.25)
-        if bLatex:
+        if 'latex' in style:
             plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
             plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
         else:
@@ -352,7 +352,7 @@ def plot_embedding_func_cluster_tracking(model, config, config_file, embedding_c
             for n in range(n_particle_types):
                 plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=1,
                             color=cmap.color(n), alpha=0.025)
-        if bLatex:
+        if 'latex' in style:
             plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
             plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
         else:
@@ -409,14 +409,14 @@ def plot_embedding_func_cluster_tracking(model, config, config_file, embedding_c
     return accuracy, n_clusters, new_labels
 
 
-def plot_embedding_func_cluster_state(model, config, config_file, embedding_cluster, cmap, type_list, type_stack, id_list,
-                                n_particle_types, ynorm, epoch, log_dir, bLatex, device):
+def plot_embedding_func_cluster_state(model, config,embedding_cluster, cmap, type_list, type_stack, id_list,
+                                n_particle_types, ynorm, epoch, log_dir, style, device):
 
     fig, ax = fig_init()
     for n in range(n_particle_types):
         pos = torch.argwhere(type_stack == n).squeeze()
         plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=1, color=cmap.color(n), alpha=0.25)
-    if bLatex:
+    if 'latex' in style:
         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
     else:
@@ -490,8 +490,8 @@ def plot_embedding_func_cluster_state(model, config, config_file, embedding_clus
     return accuracy, n_clusters, new_labels
 
 
-def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, type_list,
-                                n_particle_types, n_particles, ynorm, epoch, log_dir, alpha, bLatex, device):
+def plot_embedding_func_cluster(model, config,embedding_cluster, cmap, index_particles, type_list,
+                                n_particle_types, n_particles, ynorm, epoch, log_dir, alpha, style, device):
 
     fig, ax = fig_init()
     if config.training.do_tracking:
@@ -510,7 +510,7 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
             pos = to_numpy(pos)
             if len(pos) > 0:
                 plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=10)
-    if bLatex:
+    if 'latex' in style:
         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
     else:
@@ -561,7 +561,7 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
         pos = np.argwhere(labels == n)
         if pos.size > 0:
             plt.scatter(embedding[pos, 0], embedding[pos, 1], s=10)
-    if bLatex:
+    if 'latex' in style:
         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
     else:
@@ -596,7 +596,7 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
     return accuracy, n_clusters, new_labels
 
 
-def plot_focused_on_cell(config, run, style, step, cell_id, bLatex, device):
+def plot_focused_on_cell(config, run, style, step, cell_id, device):
 
     dataset_name = config.dataset
     simulation_config = config.simulation
@@ -629,7 +629,7 @@ def plot_focused_on_cell(config, run, style, step, cell_id, bLatex, device):
 
     print('Load data ...')
 
-    x_list = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
+    x_list = torch.load(f'graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device)
 
 
     mass_time_series = get_time_series(x_list, cell_id, feature='mass')
@@ -729,7 +729,7 @@ def plot_focused_on_cell(config, run, style, step, cell_id, bLatex, device):
                 plt.close()
 
 
-def plot_generated(config, run, style, step, bLatex, device):
+def plot_generated(config, run, style, step, device):
 
     dataset_name = config.dataset
     simulation_config = config.simulation
@@ -762,7 +762,7 @@ def plot_generated(config, run, style, step, bLatex, device):
 
     print('Load data ...')
 
-    x_list = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
+    x_list = torch.load(f'graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device)
 
 
     for it in trange(0,n_frames,step):
@@ -971,7 +971,7 @@ def plot_generated(config, run, style, step, bLatex, device):
                 plt.close()
 
 
-def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoch, it, fig, ax, bLatex):
+def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoch, it, fig, ax, style):
     # print(f'plot confusion matrix epoch:{epoch} it: {it}')
     plt.text(-0.25, 1.1, f'{index}', ha='left', va='top', transform=ax.transAxes, fontsize=12)
     confusion_matrix = metrics.confusion_matrix(true_labels, new_labels)  # , normalize='true')
@@ -991,7 +991,7 @@ def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoc
     return accuracy
 
 
-def plot_cell_rates(config, device, log_dir, n_particle_types, type_list, x_list, new_labels, cmap, logger, bLatex):
+def plot_cell_rates(config, device, log_dir, n_particle_types, type_list, x_list, new_labels, cmap, logger, style):
 
     n_frames = config.simulation.n_frames
     delta_t = config.simulation.delta_t
@@ -1115,7 +1115,7 @@ def plot_cell_rates(config, device, log_dir, n_particle_types, type_list, x_list
                 division_list[x_[5]].append(x_[8])
 
 
-def plot_attraction_repulsion(config, config_file, epoch_list, log_dir, logger, bLatex, device):
+def plot_attraction_repulsion(config,epoch_list, log_dir, logger, style, device):
 
     dataset_name = config.dataset
 
@@ -1139,7 +1139,10 @@ def plot_attraction_repulsion(config, config_file, epoch_list, log_dir, logger, 
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
-    mc = 'w'
+    if 'black' in style:
+        mc = 'w'
+    else:
+        mc = 'k'
 
     if epoch_list[0] == 'all':
 
@@ -1237,10 +1240,10 @@ def plot_attraction_repulsion(config, config_file, epoch_list, log_dir, logger, 
             config.training.cluster_method = 'distance_plot'
             config.training.cluster_distance_threshold = 0.01
             alpha=0.1
-            accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
+            accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config,embedding_cluster,
                                                                            cmap, index_particles, type_list,
                                                                            n_particle_types, n_particles, ynorm, epoch,
-                                                                           log_dir, alpha, bLatex,device)
+                                                                           log_dir, alpha, style,device)
             print(
                 f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
             logger.info(
@@ -1249,15 +1252,15 @@ def plot_attraction_repulsion(config, config_file, epoch_list, log_dir, logger, 
             config.training.cluster_method = 'distance_embedding'
             config.training.cluster_distance_threshold = 0.01
             alpha = 0.1
-            accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
+            accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config,embedding_cluster,
                                                                            cmap, index_particles, type_list,
                                                                            n_particle_types, n_particles, ynorm, epoch,
-                                                                           log_dir, alpha, bLatex,device)
+                                                                           log_dir, alpha, style,device)
             print(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
             logger.info(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
             fig, ax = fig_init()
-            p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
+            p = torch.load(f'graphs_data/{dataset_name}/model_p.pt', map_location=device)
             rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
             rmserr_list = []
             for n in range(int(n_particles * (1 - config.training.particle_dropout))):
@@ -1273,7 +1276,7 @@ def plot_attraction_repulsion(config, config_file, epoch_list, log_dir, logger, 
                 plt.plot(to_numpy(rr),
                          to_numpy(func) * to_numpy(ynorm),
                          color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
-            if bLatex:
+            if 'latex' in style:
                 plt.xlabel(r'$d_{ij}$', fontsize=78)
                 plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
             else:
@@ -1297,7 +1300,7 @@ def plot_attraction_repulsion(config, config_file, epoch_list, log_dir, logger, 
                 plots.append(model.psi(rr, p[n], p[n]).squeeze())
             plt.xlim([0, max_radius])
             plt.ylim(config.plotting.ylim)
-            if bLatex:
+            if 'latex' in style:
                 plt.xlabel(r'$d_{ij}$', fontsize=78)
                 plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
             else:
@@ -1308,7 +1311,7 @@ def plot_attraction_repulsion(config, config_file, epoch_list, log_dir, logger, 
             plt.close()
 
 
-def plot_falling_particles(config, config_file,epoch_list, log_dir, logger, bLatex, device):
+def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
 
     dataset_name = config.dataset
 
@@ -1428,10 +1431,10 @@ def plot_falling_particles(config, config_file,epoch_list, log_dir, logger, bLat
             config.training.cluster_method = 'distance_plot'
             config.training.cluster_distance_threshold = 0.01
             alpha=0.1
-            accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
+            accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config,embedding_cluster,
                                                                            cmap, index_particles, type_list,
                                                                            n_particle_types, n_particles, ynorm, epoch,
-                                                                           log_dir, alpha, bLatex,device)
+                                                                           log_dir, alpha, style,device)
             print(
                 f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
             logger.info(
@@ -1441,15 +1444,15 @@ def plot_falling_particles(config, config_file,epoch_list, log_dir, logger, bLat
             config.training.cluster_method = 'kmeans_auto_embedding'
             config.training.cluster_distance_threshold = 0.01
             alpha = 0.1
-            accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
+            accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config,embedding_cluster,
                                                                            cmap, index_particles, type_list,
                                                                            n_particle_types, n_particles, ynorm, epoch,
-                                                                           log_dir, alpha, bLatex,device)
+                                                                           log_dir, alpha, style,device)
             print(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
             logger.info(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
             fig, ax = fig_init()
-            p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
+            p = torch.load(f'graphs_data/{dataset_name}/model_p.pt', map_location=device)
             rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
             rmserr_list = []
             for n in range(int(n_particles * (1 - config.training.particle_dropout))):
@@ -1465,7 +1468,7 @@ def plot_falling_particles(config, config_file,epoch_list, log_dir, logger, bLat
                 plt.plot(to_numpy(rr),
                          to_numpy(func) * to_numpy(ynorm),
                          color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
-            if bLatex:
+            if 'latex' in style:
                 plt.xlabel(r'$d_{ij}$', fontsize=78)
                 plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
             else:
@@ -1489,7 +1492,7 @@ def plot_falling_particles(config, config_file,epoch_list, log_dir, logger, bLat
                 plots.append(model.psi(rr, p[n], p[n]).squeeze())
             plt.xlim([0, max_radius])
             plt.ylim(config.plotting.ylim)
-            if bLatex:
+            if 'latex' in style:
                 plt.xlabel(r'$d_{ij}$', fontsize=78)
                 plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
             else:
@@ -1500,7 +1503,7 @@ def plot_falling_particles(config, config_file,epoch_list, log_dir, logger, bLat
             plt.close()
 
 
-def plot_cell_state(config, config_file,epoch_list, log_dir, logger, bLatex, device):
+def plot_cell_state(config, epoch_list, log_dir, logger, style, device):
 
     dataset_name = config.dataset
 
@@ -1519,7 +1522,7 @@ def plot_cell_state(config, config_file,epoch_list, log_dir, logger, bLatex, dev
     x_list, y_list, vnorm, ynorm = load_training_data(dataset_name, n_runs, log_dir, device)
     logger.info("vnorm:{:.2e},  ynorm:{:.2e}".format(to_numpy(vnorm), to_numpy(ynorm)))
 
-    type_list = torch.load(f'graphs_data/graphs_{dataset_name}/type_list_1.pt', map_location=device).squeeze()
+    type_list = torch.load(f'graphs_data/{dataset_name}/type_list_1.pt', map_location=device).squeeze()
 
     for k in trange(n_frames + 1):
         type = x_list[1][k][:, 5]
@@ -1646,10 +1649,10 @@ def plot_cell_state(config, config_file,epoch_list, log_dir, logger, bLatex, dev
             model.load_state_dict(state_dict['model_state_dict'])
             model.eval()
 
-            accuracy, n_clusters, new_labels = plot_embedding_func_cluster_state(model, config, config_file, embedding_cluster,
+            accuracy, n_clusters, new_labels = plot_embedding_func_cluster_state(model, config,embedding_cluster,
                                                                            cmap, type_list, type_stack, id_list,
                                                                            n_particle_types, ynorm, epoch,
-                                                                           log_dir, bLatex, device)
+                                                                           log_dir, style, device)
 
 
             print(f'result accuracy: {accuracy:0.3f}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
@@ -1657,7 +1660,7 @@ def plot_cell_state(config, config_file,epoch_list, log_dir, logger, bLatex, dev
 
             fig, ax = fig_init()
             plots = []
-            p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
+            p = torch.load(f'graphs_data/{dataset_name}/model_p.pt', map_location=device)
             rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
             plots.append(rr)
             for n in range(n_particle_types):
@@ -1665,7 +1668,7 @@ def plot_cell_state(config, config_file,epoch_list, log_dir, logger, bLatex, dev
                 plots.append(model.psi(rr, p[n], p[n]).squeeze())
             plt.xlim([0, max_radius])
             plt.ylim(config.plotting.ylim)
-            if bLatex:
+            if 'latex' in style:
                 plt.xlabel(r'$d_{ij}$', fontsize=78)
                 plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
             else:
@@ -1700,7 +1703,7 @@ def plot_cell_state(config, config_file,epoch_list, log_dir, logger, bLatex, dev
             plt.close()
 
 
-def plot_cell_tracking(config, config_file,epoch_list, log_dir, logger, bLatex, device):
+def plot_cell_tracking(config, epoch_list, log_dir, logger, style, device):
 
     dataset_name = config.dataset
 
@@ -1882,7 +1885,7 @@ def plot_cell_tracking(config, config_file,epoch_list, log_dir, logger, bLatex, 
             config.training.cluster_distance_threshold = 0.1
 
             alpha = 0.1
-            accuracy, n_clusters, new_labels = plot_embedding_func_cluster_tracking(model, config, config_file, embedding_cluster, cmap, index_particles, indexes, type_list,
+            accuracy, n_clusters, new_labels = plot_embedding_func_cluster_tracking(model, config,embedding_cluster, cmap, index_particles, indexes, type_list,
                                     n_particle_types, n_particles, ynorm, epoch, log_dir, embedding_type, alpha, device)
             print(
                 f'accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
@@ -1893,7 +1896,7 @@ def plot_cell_tracking(config, config_file,epoch_list, log_dir, logger, bLatex, 
 
             if embedding_type==1:
                 fig, ax = fig_init()
-                p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
+                p = torch.load(f'graphs_data/{dataset_name}/model_p.pt', map_location=device)
                 rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
                 rmserr_list = []
                 for n, k in enumerate(indexes):
@@ -1909,7 +1912,7 @@ def plot_cell_tracking(config, config_file,epoch_list, log_dir, logger, bLatex, 
                     plt.plot(to_numpy(rr),
                              to_numpy(func),
                              color=cmap.color(int(type_list[int(n)])), linewidth=2, alpha=0.1)
-                if bLatex:
+                if 'latex' in style:
                     plt.xlabel(r'$d_{ij}$', fontsize=78)
                     plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
                 else:
@@ -1926,7 +1929,7 @@ def plot_cell_tracking(config, config_file,epoch_list, log_dir, logger, bLatex, 
                 plt.close()
             else:
                 fig, ax = fig_init()
-                p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
+                p = torch.load(f'graphs_data/{dataset_name}/model_p.pt', map_location=device)
                 rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
                 rmserr_list = []
                 for n in range(int(n_particles * (1 - config.training.particle_dropout))):
@@ -1939,7 +1942,7 @@ def plot_cell_tracking(config, config_file,epoch_list, log_dir, logger, bLatex, 
                     true_func = model.psi(rr, p[int(type_list[n,0])],p[int(type_list[n,0])])
                     rmserr_list.append(torch.sqrt(torch.mean((func - true_func.squeeze()) ** 2)))
                     plt.plot(to_numpy(rr), to_numpy(func), color=cmap.color(int(type_list[n,0])), linewidth=2, alpha=0.1)
-                if bLatex:
+                if 'latex' in style:
                     plt.xlabel(r'$d_{ij}$', fontsize=78)
                     plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
                 else:
@@ -1960,7 +1963,7 @@ def plot_cell_tracking(config, config_file,epoch_list, log_dir, logger, bLatex, 
                 plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n), linewidth=8)
             plt.xlim([0, max_radius])
             plt.ylim(config.plotting.ylim)
-            if bLatex:
+            if 'latex' in style:
                 plt.xlabel(r'$d_{ij}$', fontsize=78)
                 plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
             else:
@@ -1987,7 +1990,7 @@ def plot_cell_tracking(config, config_file,epoch_list, log_dir, logger, bLatex, 
             plt.savefig(f"./{log_dir}/results/tracking_errors_list_{config_file}.tif", dpi=170.7)
 
 
-def plot_attraction_repulsion_asym(config, config_file,epoch_list, log_dir, logger, bLatex, device):
+def plot_attraction_repulsion_asym(config, epoch_list, log_dir, logger, style, device):
 
 
     dataset_name = config.dataset
@@ -2009,7 +2012,10 @@ def plot_attraction_repulsion_asym(config, config_file,epoch_list, log_dir, logg
     index_particles = get_index_particles(x, n_particle_types, dimension)
     type_list = get_type_list(x, dimension)
 
-    mc = 'k'
+    if 'black' in style:
+        mc = 'w'
+    else:
+        mc = 'k'
 
     for epoch in epoch_list:
 
@@ -2022,7 +2028,7 @@ def plot_attraction_repulsion_asym(config, config_file,epoch_list, log_dir, logg
         config.training.cluster_method = 'distance_embedding'
         config.training.cluster_distance_threshold = 0.01
         alpha = 0.1
-        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
+        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config,embedding_cluster,
                                                                        cmap, index_particles, type_list,
                                                                        n_particle_types, n_particles, ynorm, epoch,
                                                                        log_dir, alpha, device)
@@ -2058,7 +2064,7 @@ def plot_attraction_repulsion_asym(config, config_file,epoch_list, log_dir, logg
             plt.plot(to_numpy(rr),
                      to_numpy(func) * to_numpy(ynorm),
                      color=cmap.color(type), linewidth=8)
-        if bLatex:
+        if 'latex' in style:
             plt.xlabel(r'$d_{ij}$', fontsize=78)
             plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
         else:
@@ -2071,13 +2077,13 @@ def plot_attraction_repulsion_asym(config, config_file,epoch_list, log_dir, logg
         plt.close()
 
         fig, ax = fig_init()
-        p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
+        p = torch.load(f'graphs_data/{dataset_name}/model_p.pt', map_location=device)
         true_func = []
         for n in range(n_particle_types):
             for m in range(n_particle_types):
                 true_func.append(model.psi(rr, p[n, m].squeeze(), p[n, m].squeeze()))
                 plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n,m], p[n,m]).squeeze()), color=cmap.color(n), linewidth=8)
-        if bLatex:
+        if 'latex' in style:
             plt.xlabel(r'$d_{ij}$', fontsize=78)
             plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
         else:
@@ -2102,7 +2108,7 @@ def plot_attraction_repulsion_asym(config, config_file,epoch_list, log_dir, logg
         logger.info("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
 
 
-def plot_attraction_repulsion_continuous(config, config_file,epoch_list, log_dir, logger, bLatex, device):
+def plot_attraction_repulsion_continuous(config, epoch_list, log_dir, logger, style, device):
 
     dataset_name = config.dataset
 
@@ -2122,7 +2128,10 @@ def plot_attraction_repulsion_continuous(config, config_file,epoch_list, log_dir
 
     x = x_list[1][0].clone().detach()
 
-    mc = 'k'
+    if 'black' in style:
+        mc = 'w'
+    else:
+        mc = 'k'
 
     for epoch in epoch_list:
 
@@ -2142,7 +2151,7 @@ def plot_attraction_repulsion_continuous(config, config_file,epoch_list, log_dir
         for n in range(n_particle_types):
             plt.scatter(embedding[index_particles[n], 0],
                         embedding[index_particles[n], 1], color=cmap.color(n), s=400, alpha=0.1)
-        if bLatex:
+        if 'latex' in style:
             plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
             plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
         else:
@@ -2166,7 +2175,7 @@ def plot_attraction_repulsion_continuous(config, config_file,epoch_list, log_dir
             plt.plot(to_numpy(rr),
                      to_numpy(func) * to_numpy(ynorm),
                      color=cmap.color(n // 1600), linewidth=2, alpha=0.1)
-        if bLatex:
+        if 'latex' in style:
             plt.xlabel(r'$d_{ij}$', fontsize=78)
             plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
         else:
@@ -2179,7 +2188,7 @@ def plot_attraction_repulsion_continuous(config, config_file,epoch_list, log_dir
         plt.close()
 
         fig, ax = fig_init()
-        p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt')
+        p = torch.load(f'graphs_data/{dataset_name}/model_p.pt')
         true_func_list = []
         csv_ = []
         csv_.append(to_numpy(rr))
@@ -2188,7 +2197,7 @@ def plot_attraction_repulsion_continuous(config, config_file,epoch_list, log_dir
                      alpha=0.1)
             true_func_list.append(model.psi(rr, p[n], p[n]))
             csv_.append(to_numpy(model.psi(rr, p[n], p[n]).squeeze()))
-        if bLatex:
+        if 'latex' in style:
             plt.xlabel(r'$d_{ij}$', fontsize=78)
             plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
         else:
@@ -2213,7 +2222,7 @@ def plot_attraction_repulsion_continuous(config, config_file,epoch_list, log_dir
         logger.info("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
 
 
-def plot_gravity(config, config_file,epoch_list, log_dir, logger, bLatex, device):
+def plot_gravity(config, epoch_list, log_dir, logger, style, device):
 
     dataset_name = config.dataset
 
@@ -2233,7 +2242,10 @@ def plot_gravity(config, config_file,epoch_list, log_dir, logger, bLatex, device
     type_list = get_type_list(x, dimension)
     n_particles = x.shape[0]
 
-    mc = 'w'
+    if 'black' in style:
+        mc = 'w'
+    else:
+        mc = 'k'
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
@@ -2336,10 +2348,10 @@ def plot_gravity(config, config_file,epoch_list, log_dir, logger, bLatex, device
             config.training.cluster_method = 'distance_embedding'
             config.training.cluster_distance_threshold = 0.01
             alpha=0.1
-            accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
+            accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config,embedding_cluster,
                                                                            cmap, index_particles, type_list,
                                                                            n_particle_types, n_particles, ynorm, epoch,
-                                                                           log_dir, alpha, bLatex,device)
+                                                                           log_dir, alpha, style,device)
             print(
                 f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
             logger.info(
@@ -2348,17 +2360,17 @@ def plot_gravity(config, config_file,epoch_list, log_dir, logger, bLatex, device
             config.training.cluster_method = 'distance_plot'
             config.training.cluster_distance_threshold = 0.01
             alpha = 0.5
-            accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
+            accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config,embedding_cluster,
                                                                            cmap, index_particles, type_list,
                                                                            n_particle_types, n_particles, ynorm, epoch,
-                                                                           log_dir, alpha, bLatex,device)
+                                                                           log_dir, alpha, style,device)
             print(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
             logger.info(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
             fig, ax = fig_init(formatx='%.3f', formaty='%.0f')
             params = {'mathtext.default': 'regular'}
             plt.rcParams.update(params)
-            p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
+            p = torch.load(f'graphs_data/{dataset_name}/model_p.pt', map_location=device)
             rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
             rmserr_list = []
             for n in range(int(n_particles * (1 - config.training.particle_dropout))):
@@ -2375,7 +2387,7 @@ def plot_gravity(config, config_file,epoch_list, log_dir, logger, bLatex, device
                 plt.plot(to_numpy(rr),
                          to_numpy(func) * to_numpy(ynorm),
                          color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
-            if bLatex:
+            if 'latex' in style:
                 plt.xlabel(r'$d_{ij}$', fontsize=78)
                 plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
             else:
@@ -2401,7 +2413,7 @@ def plot_gravity(config, config_file,epoch_list, log_dir, logger, bLatex, device
                 plots.append(model.psi(rr, p[n], p[n]).squeeze())
             plt.xlim([0, 0.02])
             plt.ylim([0, 0.5E6])
-            if bLatex:
+            if 'latex' in style:
                 plt.xlabel(r'$d_{ij}$', fontsize=78)
                 plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
             else:
@@ -2570,7 +2582,7 @@ def plot_gravity(config, config_file,epoch_list, log_dir, logger, bLatex, device
                 logger.info(f'pysrr_mass relative error wo outliers: {np.round(np.mean(relative_error[pos[:, 0]]), 2)}+/-{np.round(np.std(relative_error[pos[:, 0]]), 2)}')
 
 
-def plot_gravity_continuous(config, config_file,epoch_list, log_dir, logger, bLatex, device):
+def plot_gravity_continuous(config, epoch_list, log_dir, logger, style, device):
 
     dataset_name = config.dataset
 
@@ -2594,7 +2606,10 @@ def plot_gravity_continuous(config, config_file,epoch_list, log_dir, logger, bLa
     index_particles = get_index_particles(x, n_particle_types, dimension)
     type_list = get_type_list(x, dimension)
 
-    mc = 'w'
+    if 'black' in style:
+        mc = 'w'
+    else:
+        mc = 'k'
 
     for epoch in epoch_list:
 
@@ -2609,7 +2624,7 @@ def plot_gravity_continuous(config, config_file,epoch_list, log_dir, logger, bLa
             plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n % 256),
                         s=400,
                         alpha=0.5)
-        if bLatex:
+        if 'latex' in style:
             plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
             plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
         else:
@@ -2620,7 +2635,7 @@ def plot_gravity_continuous(config, config_file,epoch_list, log_dir, logger, bLa
         plt.close()
 
         fig, ax = fig_init(formatx='%.3f', formaty='%.0f')
-        p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
+        p = torch.load(f'graphs_data/{dataset_name}/model_p.pt', map_location=device)
         rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
         rmserr_list = []
         csv_ = []
@@ -2640,7 +2655,7 @@ def plot_gravity_continuous(config, config_file,epoch_list, log_dir, logger, bLa
             plt.plot(to_numpy(rr),
                      to_numpy(func) * to_numpy(ynorm),
                      color=cmap.color(n % 256), linewidth=8, alpha=0.1)
-        if bLatex:
+        if 'latex' in style:
             plt.xlabel(r'$d_{ij}$', fontsize=78)
             plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
         else:
@@ -2671,7 +2686,7 @@ def plot_gravity_continuous(config, config_file,epoch_list, log_dir, logger, bLa
             csv_.append(to_numpy(model.psi(rr, p[n], p[n]).squeeze()))
         plt.xlim([0, 0.02])
         plt.ylim([0, 0.5E6])
-        if bLatex:
+        if 'latex' in style:
             plt.xlabel(r'$d_{ij}$', fontsize=78)
             plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
         else:
@@ -2826,7 +2841,7 @@ def plot_gravity_continuous(config, config_file,epoch_list, log_dir, logger, bLa
         logger.info(f'pysrr_mass relative error wo outliers: {np.round(np.mean(relative_error[pos[:, 0]]), 2)}+/-{np.round(np.std(relative_error[pos[:, 0]]), 2)}')
 
 
-def plot_Coulomb(config, config_file,epoch_list, log_dir, logger, bLatex, device):
+def plot_Coulomb(config, epoch_list, log_dir, logger, style, device):
 
     dataset_name = config.dataset
 
@@ -2849,7 +2864,10 @@ def plot_Coulomb(config, config_file,epoch_list, log_dir, logger, bLatex, device
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
-    mc = 'k'
+    if 'black' in style:
+        mc = 'w'
+    else:
+        mc = 'k'
 
     if epoch_list[0] == 'all':
 
@@ -2955,10 +2973,10 @@ def plot_Coulomb(config, config_file,epoch_list, log_dir, logger, bLatex, device
             config.training.cluster_method = 'distance_plot'
             config.training.cluster_distance_threshold = 0.1
             alpha=0.5
-            accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
+            accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config,embedding_cluster,
                                                                            cmap, index_particles, type_list,
                                                                            n_particle_types, n_particles, ynorm, epoch,
-                                                                           log_dir, alpha, bLatex,device)
+                                                                           log_dir, alpha, style,device)
             print(
                 f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
             logger.info(
@@ -2967,10 +2985,10 @@ def plot_Coulomb(config, config_file,epoch_list, log_dir, logger, bLatex, device
             config.training.cluster_method = 'distance_embedding'
             config.training.cluster_distance_threshold = 0.01
             alpha = 0.5
-            accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
+            accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config,embedding_cluster,
                                                                            cmap, index_particles, type_list,
                                                                            n_particle_types, n_particles, ynorm, epoch,
-                                                                           log_dir, alpha, bLatex,device)
+                                                                           log_dir, alpha, style,device)
             print(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
             logger.info(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
@@ -3007,7 +3025,7 @@ def plot_Coulomb(config, config_file,epoch_list, log_dir, logger, bLatex, device
                 plt.plot(to_numpy(rr),
                          to_numpy(func) * to_numpy(ynorm),
                          color=cmap.color(type), linewidth=8, alpha=0.1)
-            if bLatex:
+            if 'latex' in style:
                 plt.xlabel(r'$d_{ij}$', fontsize=78)
                 plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=78)
             else:
@@ -3032,7 +3050,7 @@ def plot_Coulomb(config, config_file,epoch_list, log_dir, logger, bLatex, device
                 csv_.append(to_numpy(temp.squeeze()))
             plt.xlim([0, 0.02])
             plt.ylim([-0.5E6, 0.5E6])
-            if bLatex:
+            if 'latex' in style:
                 plt.xlabel(r'$d_{ij}$', fontsize=78)
                 plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=78)
             else:
@@ -3143,7 +3161,7 @@ def plot_Coulomb(config, config_file,epoch_list, log_dir, logger, bLatex, device
             plt.savefig(f"./{log_dir}/results/qi_{config_file}_{epoch}.tif", dpi=170)
 
 
-def plot_boids(config, config_file,epoch_list, log_dir, logger, bLatex, device):
+def plot_boids(config, epoch_list, log_dir, logger, style, device):
 
     dataset_name = config.dataset
 
@@ -3169,7 +3187,7 @@ def plot_boids(config, config_file,epoch_list, log_dir, logger, bLatex, device):
     n_particles = x.shape[0]
     if has_cell_division:
         T1_list = []
-        T1_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/T1_list_1.pt', map_location=device))
+        T1_list.append(torch.load(f'graphs_data/{dataset_name}/T1_list_1.pt', map_location=device))
         n_particles_max = np.load(os.path.join(log_dir, 'n_particles_max.npy'))
         config.simulation.n_particles_max = n_particles_max
         type_list = T1_list[0]
@@ -3271,10 +3289,10 @@ def plot_boids(config, config_file,epoch_list, log_dir, logger, bLatex, device):
             alpha = 0.5
             print('clustering ...')
 
-            accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
+            accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config,embedding_cluster,
                                                                            cmap, index_particles, type_list,
                                                                            n_particle_types, n_particles, ynorm, epoch,
-                                                                           log_dir, alpha, bLatex,device)
+                                                                           log_dir, alpha, style,device)
             print(
                 f'final result     accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
             logger.info(
@@ -3285,7 +3303,7 @@ def plot_boids(config, config_file,epoch_list, log_dir, logger, bLatex, device):
 
             print('compare reconstructed interaction with ground truth...')
 
-            p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
+            p = torch.load(f'graphs_data/{dataset_name}/model_p.pt', map_location=device)
             model_B = PDE_B_extract(aggr_type=config.graph_model.aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
 
             fig, ax = fig_init()
@@ -3514,7 +3532,7 @@ def plot_boids(config, config_file,epoch_list, log_dir, logger, bLatex, device):
                 logger.info(f'separation   slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)}  threshold {threshold} ')
 
 
-def plot_wave(config, config_file,epoch_list, log_dir, logger, cc, bLatex, device):
+def plot_wave(config, epoch_list, log_dir, logger, cc, style, device):
 
     dataset_name = config.dataset
 
@@ -3529,15 +3547,15 @@ def plot_wave(config, config_file,epoch_list, log_dir, logger, cc, bLatex, devic
     y_mesh_list = []
     time.sleep(0.5)
     for run in trange(n_runs):
-        x_mesh = torch.load(f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt', map_location=device)
+        x_mesh = torch.load(f'graphs_data/{dataset_name}/x_mesh_list_{run}.pt', map_location=device)
         x_mesh_list.append(x_mesh)
-        h = torch.load(f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt', map_location=device)
+        h = torch.load(f'graphs_data/{dataset_name}/y_mesh_list_{run}.pt', map_location=device)
         y_mesh_list.append(h)
     h = y_mesh_list[0][0].clone().detach()
 
     print(f'hnorm: {to_numpy(hnorm)}')
     time.sleep(0.5)
-    mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_1.pt', map_location=device)
+    mesh_data = torch.load(f'graphs_data/{dataset_name}/mesh_data_1.pt', map_location=device)
     mask_mesh = mesh_data['mask']
 
     x_mesh = x_mesh_list[0][n_frames - 1].clone().detach()
@@ -3585,7 +3603,7 @@ def plot_wave(config, config_file,epoch_list, log_dir, logger, cc, bLatex, devic
         mesh_model.eval()
 
         x_mesh = x_mesh_list[1][7000].clone().detach()
-        mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_1.pt', map_location=device)
+        mesh_data = torch.load(f'graphs_data/{dataset_name}/mesh_data_1.pt', map_location=device)
         dataset_mesh = data.Data(x=x_mesh, edge_index=mesh_data['edge_index'],
                                  edge_attr=mesh_data['edge_weight'], device=device)
         with torch.no_grad():
@@ -3616,7 +3634,7 @@ def plot_wave(config, config_file,epoch_list, log_dir, logger, cc, bLatex, devic
             func_list.append(h)
             # plt.scatter(to_numpy(rr), to_numpy(h), c=f'{coeff[n]}', edgecolors='none',alpha=0.1)
             plt.scatter(to_numpy(rr), to_numpy(h), c=mc,alpha=0.1)
-        if bLatex:
+        if 'latex' in style:
             plt.xlabel(r'$\nabla^2 u_i$', fontsize=78)
             plt.ylabel(r'$\Phi(\ensuremath{\mathbf{a}}_{i},\nabla^2 u_i)$', fontsize=78)
         else:
@@ -3675,7 +3693,7 @@ def plot_wave(config, config_file,epoch_list, log_dir, logger, cc, bLatex, devic
         fig, ax = fig_init()
         # plt.scatter(embedding[pos[:,0], 0], embedding[pos[:,0], 1], c=x_data, s=100, alpha=1, cmap='grey')
         plt.scatter(embedding[pos[:,0], 0], embedding[pos[:,0], 1], c=mc, s=100, alpha=0.1)
-        if bLatex:
+        if 'latex' in style:
             plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
             plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
         else:
@@ -3686,7 +3704,7 @@ def plot_wave(config, config_file,epoch_list, log_dir, logger, cc, bLatex, devic
         plt.close()
 
 
-def plot_particle_field(config, config_file,epoch_list, log_dir, logger, cc, bLatex, device):
+def plot_particle_field(config, epoch_list, log_dir, logger, cc, style, device):
 
     dataset_name = config.dataset
 
@@ -3715,20 +3733,20 @@ def plot_particle_field(config, config_file,epoch_list, log_dir, logger, cc, bLa
 
     x_list = []
     y_list = []
-    x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_1.pt', map_location=device))
-    y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_1.pt', map_location=device))
+    x_list.append(torch.load(f'graphs_data/{dataset_name}/x_list_1.pt', map_location=device))
+    y_list.append(torch.load(f'graphs_data/{dataset_name}/y_list_1.pt', map_location=device))
     ynorm = torch.load(f'./log/try_{dataset_name}/ynorm.pt', map_location=device).to(device)
     vnorm = torch.load(f'./log/try_{dataset_name}/vnorm.pt', map_location=device).to(device)
 
     x_mesh_list = []
     y_mesh_list = []
-    x_mesh = torch.load(f'graphs_data/graphs_{dataset_name}/x_mesh_list_0.pt', map_location=device)
+    x_mesh = torch.load(f'graphs_data/{dataset_name}/x_mesh_list_0.pt', map_location=device)
     x_mesh_list.append(x_mesh)
-    y_mesh = torch.load(f'graphs_data/graphs_{dataset_name}/y_mesh_list_0.pt', map_location=device)
+    y_mesh = torch.load(f'graphs_data/{dataset_name}/y_mesh_list_0.pt', map_location=device)
     y_mesh_list.append(y_mesh)
     hnorm = torch.load(f'./log/try_{dataset_name}/hnorm.pt', map_location=device).to(device)
 
-    mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_0.pt', map_location=device)
+    mesh_data = torch.load(f'graphs_data/{dataset_name}/mesh_data_0.pt', map_location=device)
     mask_mesh = mesh_data['mask']
     mask_mesh = mask_mesh.repeat(batch_size, 1)
 
@@ -3927,16 +3945,16 @@ def plot_particle_field(config, config_file,epoch_list, log_dir, logger, cc, bLa
             config.training.cluster_method = 'distance_plot'
             config.training.cluster_distance_threshold = 0.01
             alpha = 0.1
-            accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
+            accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config,embedding_cluster,
                                                                            cmap, index_particles, type_list,
                                                                            n_particle_types, n_particles, ynorm, epoch,
-                                                                           log_dir, alpha, bLatex,device)
+                                                                           log_dir, alpha, style,device)
             print(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
             logger.info(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
 
             fig, ax = fig_init()
-            p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
+            p = torch.load(f'graphs_data/{dataset_name}/model_p.pt', map_location=device)
             rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
             rmserr_list = []
             for n in range(int(n_particles * (1 - config.training.particle_dropout))):
@@ -3952,7 +3970,7 @@ def plot_particle_field(config, config_file,epoch_list, log_dir, logger, cc, bLa
                 plt.plot(to_numpy(rr),
                          to_numpy(func) * to_numpy(ynorm),
                          color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=2, alpha=0.1)
-            if bLatex:
+            if 'latex' in style:
                 plt.xlabel(r'$d_{ij}$', fontsize=78)
                 plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
             else:
@@ -4216,7 +4234,7 @@ def plot_particle_field(config, config_file,epoch_list, log_dir, logger, cc, bLa
                     logger.info(f'R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}')
 
 
-def plot_RD_RPS(config, config_file,epoch_list, log_dir, logger, cc, bLatex, device):
+def plot_RD_RPS(config, epoch_list, log_dir, logger, cc, style, device):
 
     dataset_name = config.dataset
 
@@ -4236,15 +4254,15 @@ def plot_RD_RPS(config, config_file,epoch_list, log_dir, logger, cc, bLatex, dev
     y_mesh_list = []
     time.sleep(0.5)
     for run in trange(n_runs):
-        x_mesh = torch.load(f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt', map_location=device)
+        x_mesh = torch.load(f'graphs_data/{dataset_name}/x_mesh_list_{run}.pt', map_location=device)
         x_mesh_list.append(x_mesh)
-        h = torch.load(f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt', map_location=device)
+        h = torch.load(f'graphs_data/{dataset_name}/y_mesh_list_{run}.pt', map_location=device)
         y_mesh_list.append(h)
     h = y_mesh_list[0][0].clone().detach()
 
     print(f'hnorm: {to_numpy(hnorm)}')
     time.sleep(0.5)
-    mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_1.pt', map_location=device)
+    mesh_data = torch.load(f'graphs_data/{dataset_name}/mesh_data_1.pt', map_location=device)
     mask_mesh = mesh_data['mask']
     edge_index_mesh = mesh_data['edge_index']
     edge_weight_mesh = mesh_data['edge_weight']
@@ -4309,7 +4327,7 @@ def plot_RD_RPS(config, config_file,epoch_list, log_dir, logger, cc, bLatex, dev
         for nodes_type in np.unique(labels[labels <5]):
             pos = np.argwhere(labels == nodes_type)
             plt.scatter(embedding[pos, 0], embedding[pos, 1], s=400, cmap=cmap.color(nodes_type*2))
-        if bLatex:
+        if 'latex' in style:
             plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
             plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
         else:
@@ -4489,7 +4507,7 @@ def plot_RD_RPS(config, config_file,epoch_list, log_dir, logger, cc, bLatex, dev
             print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}")
 
 
-def plot_synaptic(config, config_file,epoch_list, log_dir, logger, cc, bLatex, device):
+def plot_synaptic(config, epoch_list, log_dir, logger, cc, style, device):
 
     dataset_name = config.dataset
 
@@ -4505,8 +4523,8 @@ def plot_synaptic(config, config_file,epoch_list, log_dir, logger, cc, bLatex, d
     x_list = []
     y_list = []
     for run in trange(2):
-        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
-        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
+        x = torch.load(f'graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device)
+        y = torch.load(f'graphs_data/{dataset_name}/y_list_{run}.pt', map_location=device)
         x_list.append(x)
         y_list.append(y)
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'))
@@ -4541,7 +4559,7 @@ def plot_synaptic(config, config_file,epoch_list, log_dir, logger, cc, bLatex, d
         config.training.cluster_method = 'distance_plot'
         config.training.cluster_distance_threshold = 0.01
         alpha = 0.1
-        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
+        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config,embedding_cluster,
                                                                        cmap, index_particles, type_list,
                                                                        n_particle_types, n_particles, ynorm, epoch,
                                                                        log_dir, alpha, device)
@@ -4821,7 +4839,7 @@ def plot_synaptic(config, config_file,epoch_list, log_dir, logger, cc, bLatex, d
         #     print(formula)
 
 
-def plot_synaptic2(config, config_file,epoch_list, log_dir, logger, cc, bLatex, device):
+def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
     dataset_name = config.dataset
 
@@ -4850,14 +4868,14 @@ def plot_synaptic2(config, config_file,epoch_list, log_dir, logger, cc, bLatex, 
     x_list = []
     y_list = []
     for run in trange(1):
-        if os.path.exists(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt'):
-            x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
-            y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
+        if os.path.exists(f'graphs_data/{dataset_name}/x_list_{run}.pt'):
+            x = torch.load(f'graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device)
+            y = torch.load(f'graphs_data/{dataset_name}/y_list_{run}.pt', map_location=device)
             x = to_numpy(torch.stack(x))
             y = to_numpy(torch.stack(y))
         else:
-            x = np.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy')
-            y = np.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy')
+            x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
+            y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
         x_list.append(x)
         y_list.append(y)
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'))
@@ -4877,22 +4895,25 @@ def plot_synaptic2(config, config_file,epoch_list, log_dir, logger, cc, bLatex, 
     distrib = to_numpy(activity.flatten())
     activity = activity.t()
 
-    if os.path.exists(f'./graphs_data/graphs_{dataset_name}/X1.pt') > 0:
-        X1_first = torch.load(f'./graphs_data/graphs_{dataset_name}/X1.pt', map_location=device)
-        X_msg = torch.load(f'./graphs_data/graphs_{dataset_name}/X_msg.pt', map_location=device)
+    if os.path.exists(f'./graphs_data/{dataset_name}/X1.pt') > 0:
+        X1_first = torch.load(f'./graphs_data/{dataset_name}/X1.pt', map_location=device)
+        X_msg = torch.load(f'./graphs_data/{dataset_name}/X_msg.pt', map_location=device)
     else:
         xc, yc = get_equidistant_points(n_points=n_particles)
         X1_first = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
         perm = torch.randperm(X1_first.size(0))
         X1_first = X1_first[perm]
-        torch.save(X1_first, f'./graphs_data/graphs_{dataset_name}/X1.pt')
+        torch.save(X1_first, f'./graphs_data/{dataset_name}/X1.pt')
         xc, yc = get_equidistant_points(n_points=n_particles ** 2)
         X_msg = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
         perm = torch.randperm(X_msg.size(0))
         X_msg = X_msg[perm]
-        torch.save(X_msg, f'./graphs_data/graphs_{dataset_name}/X_msg.pt')
+        torch.save(X_msg, f'./graphs_data/{dataset_name}/X_msg.pt')
 
-    mc = 'w'
+    if 'black' in style:
+        mc = 'w'
+    else:
+        mc = 'k'
 
     if has_field:
         model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
@@ -5069,7 +5090,7 @@ def plot_synaptic2(config, config_file,epoch_list, log_dir, logger, cc, bLatex, 
                 plt.savefig(f"./{log_dir}/results/all/MLP0_{epoch}.tif", dpi=80)
                 plt.close()
 
-                adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency.pt', map_location=device)
+                adjacency = torch.load(f'./graphs_data/{dataset_name}/adjacency.pt', map_location=device)
                 adjacency_ = adjacency.t().clone().detach()
                 adj_t = torch.abs(adjacency_) > 0
                 edge_index = adj_t.nonzero().t().contiguous()
@@ -5189,7 +5210,7 @@ def plot_synaptic2(config, config_file,epoch_list, log_dir, logger, cc, bLatex, 
         plt.savefig(f'./{log_dir}/results/firing rate.png', dpi=300)
         plt.close()
 
-        adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency.pt', map_location=device)
+        adjacency = torch.load(f'./graphs_data/{dataset_name}/adjacency.pt', map_location=device)
         adjacency_ = adjacency.t().clone().detach()
         adj_t = torch.abs(adjacency_) > 0
         edge_index = adj_t.nonzero().t().contiguous()
@@ -5342,7 +5363,7 @@ def plot_synaptic2(config, config_file,epoch_list, log_dir, logger, cc, bLatex, 
             for n in range(n_particle_types,-1,-1):
                 pos = torch.argwhere(type_list == n).squeeze()
                 plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=200, color=cmap.color(n), alpha=0.1)
-            if bLatex:
+            if 'latex' in style:
                 plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
                 plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
             else:
@@ -5704,7 +5725,7 @@ def plot_synaptic2(config, config_file,epoch_list, log_dir, logger, cc, bLatex, 
                         logger.info(symbolic(n))
 
 
-def plot_synaptic3(config, config_file, epoch_list, log_dir, logger, cc, bLatex, device):
+def plot_synaptic3(config, config_file, epoch_list, log_dir, logger, cc, style, device):
 
     dataset_name = config.dataset
 
@@ -5733,14 +5754,14 @@ def plot_synaptic3(config, config_file, epoch_list, log_dir, logger, cc, bLatex,
     x_list = []
     y_list = []
     for run in trange(1):
-        if os.path.exists(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt'):
-            x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
-            y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
+        if os.path.exists(f'graphs_data/{dataset_name}/x_list_{run}.pt'):
+            x = torch.load(f'graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device)
+            y = torch.load(f'graphs_data/{dataset_name}/y_list_{run}.pt', map_location=device)
             x = to_numpy(torch.stack(x))
             y = to_numpy(torch.stack(y))
         else:
-            x = np.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy')
-            y = np.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy')
+            x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
+            y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
         x_list.append(x)
         y_list.append(y)
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'))
@@ -5771,7 +5792,10 @@ def plot_synaptic3(config, config_file, epoch_list, log_dir, logger, cc, bLatex,
         model_f.to(device=device)
         model_f.train()
 
-    mc = 'w'
+    if 'black' in style:
+        mc = 'w'
+    else:
+        mc = 'k'
 
     if epoch_list[0] == 'all':
 
@@ -5836,7 +5860,7 @@ def plot_synaptic3(config, config_file, epoch_list, log_dir, logger, cc, bLatex,
                     c_list = np.linspace(c1, c2, 100)
                     for k in range(250*n,250*(n+1)):
                         plt.scatter(to_numpy(model.a[k*100:(k+1)*100, 0:1]), to_numpy(model.a[k*100:(k+1)*100, 1:2]), s=10, color=c_list, alpha=0.1, edgecolors='none')
-                if bLatex:
+                if 'latex' in style:
                     plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}(t)$', fontsize=78)
                     plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}(t)$', fontsize=78)
                 else:
@@ -5856,7 +5880,7 @@ def plot_synaptic3(config, config_file, epoch_list, log_dir, logger, cc, bLatex,
                     plt.scatter(to_numpy(model.a[k*25000:(k+1)*25000, 0]), to_numpy(model.a[k*25000:(k+1)*25000, 1]), s=1, color=cmap.color(k),alpha=0.5, edgecolors='none')
                     # plt.scatter(to_numpy(model.a[k * 25000: k * 25000 + 100, 0]),
                     #             to_numpy(model.a[k * 25000: k * 25000 + 100, 1]), s=10, color=c_list, alpha=1)
-                if bLatex:
+                if 'latex' in style:
                     plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}(t)$', fontsize=78)
                     plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}(t)$', fontsize=78)
                 else:
@@ -5938,7 +5962,7 @@ def plot_synaptic3(config, config_file, epoch_list, log_dir, logger, cc, bLatex,
                 plt.savefig(f"./{log_dir}/results/all/MLP1_{epoch}.tif", dpi=80)
                 plt.close()
 
-                adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency.pt', map_location=device)
+                adjacency = torch.load(f'./graphs_data/{dataset_name}/adjacency.pt', map_location=device)
                 adjacency_ = adjacency.t().clone().detach()
                 adj_t = torch.abs(adjacency_) > 0
                 edge_index = adj_t.nonzero().t().contiguous()
@@ -6041,7 +6065,7 @@ def plot_synaptic3(config, config_file, epoch_list, log_dir, logger, cc, bLatex,
                 plt.scatter(to_numpy(model.a[indices[k * 250:(k + 1) * 250], 0]),
                             to_numpy(model.a[indices[k * 250:(k + 1) * 250], 1]), s=10, color=cmap.color(k), alpha=0.5,
                             edgecolors='none')
-            if bLatex:
+            if 'latex' in style:
                 plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}(t)$', fontsize=78)
                 plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}(t)$', fontsize=78)
             else:
@@ -6130,7 +6154,7 @@ def plot_synaptic3(config, config_file, epoch_list, log_dir, logger, cc, bLatex,
         # plt.savefig(f'./{log_dir}/results/firing rate.png', dpi=300)
         # plt.close()
 
-        adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency.pt', map_location=device)
+        adjacency = torch.load(f'./graphs_data/{dataset_name}/adjacency.pt', map_location=device)
         adjacency_ = adjacency.t().clone().detach()
         adj_t = torch.abs(adjacency_) > 0
         edge_index = adj_t.nonzero().t().contiguous()
@@ -6318,7 +6342,7 @@ def plot_synaptic3(config, config_file, epoch_list, log_dir, logger, cc, bLatex,
                     c_list = np.linspace(c1, c2, 100)
                     for k in range(250*n,250*(n+1)):
                         plt.scatter(to_numpy(model.a[k*100:(k+1)*100, 0:1]), to_numpy(model.a[k*100:(k+1)*100, 1:2]), s=10, color=c_list, alpha=0.1, edgecolors='none')
-                if bLatex:
+                if 'latex' in style:
                     plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}(t)$', fontsize=78)
                     plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}(t)$', fontsize=78)
                 else:
@@ -6334,7 +6358,7 @@ def plot_synaptic3(config, config_file, epoch_list, log_dir, logger, cc, bLatex,
                     plt.scatter(to_numpy(model.a[k*25000:(k+1)*25000, 0]), to_numpy(model.a[k*25000:(k+1)*25000, 1]), s=1, color=cmap.color(k),alpha=0.5, edgecolors='none')
                     # plt.scatter(to_numpy(model.a[k * 25000: k * 25000 + 100, 0]),
                     #             to_numpy(model.a[k * 25000: k * 25000 + 100, 1]), s=10, color=c_list, alpha=1)
-                if bLatex:
+                if 'latex' in style:
                     plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}(t)$', fontsize=78)
                     plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}(t)$', fontsize=78)
                 else:
@@ -6348,7 +6372,7 @@ def plot_synaptic3(config, config_file, epoch_list, log_dir, logger, cc, bLatex,
                     fig, ax = fig_init()
                     # plt.scatter(to_numpy(model.a[0:100000, 0]), to_numpy(model.a[0:100000, 1]), s=1, color=mc, alpha=0.25, edgecolors='none')
                     plt.scatter(to_numpy(model.a[k*25000:(k+1)*25000, 0]), to_numpy(model.a[k*25000:(k+1)*25000, 1]), s=1, color=cmap.color(k),alpha=0.5, edgecolors='none')
-                    if bLatex:
+                    if 'latex' in style:
                         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
                         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
                     else:
@@ -6497,7 +6521,7 @@ def plot_synaptic3(config, config_file, epoch_list, log_dir, logger, cc, bLatex,
             plt.close()
 
 
-def plot_agents(config, config_file,epoch_list, log_dir, logger, bLatex, device):
+def plot_agents(config, config_file, epoch_list, log_dir, logger, style, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -6684,7 +6708,7 @@ def plot_agents(config, config_file,epoch_list, log_dir, logger, bLatex, device)
         # plt.savefig(f"./{log_dir}/tmp_training/particle/Fig_{epoch}_{N}.tif", dpi=87)
 
 
-def plot_mouse(config, config_file,epoch_list, log_dir, logger, bLatex, device):
+def plot_mouse(config, config_file, epoch_list, log_dir, logger, style, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -6704,10 +6728,10 @@ def plot_mouse(config, config_file,epoch_list, log_dir, logger, bLatex, device):
     cmap = CustomColorMap(config=config)
 
     x_list = []
-    x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_0.pt', map_location=device)
+    x = torch.load(f'graphs_data/{dataset_name}/x_list_0.pt', map_location=device)
     x_list.append(x)
     edge_p_p_list=[]
-    edge_p_p = np.load(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_0.npz')
+    edge_p_p = np.load(f'graphs_data/{dataset_name}/edge_p_p_list_0.npz')
     edge_p_p_list.append(edge_p_p)
     n_frames = len(x)
     config.simulation.n_frames = n_frames
@@ -7037,13 +7061,13 @@ def plot_mouse(config, config_file,epoch_list, log_dir, logger, bLatex, device):
             plt.close
 
 
-def data_video_validation(config, config_file,epoch_list, log_dir, logger, bLatex, device):
+def data_video_validation(config, config_file, epoch_list, log_dir, logger, style, device):
 
     dataset_name = config.dataset
 
     print(f'Save movie ... {config.graph_model.particle_model_name} {config.graph_model.mesh_model_name}')
 
-    graph_files = glob.glob(f"./graphs_data/graphs_{dataset_name}/generated_data/*")
+    graph_files = glob.glob(f"./graphs_data/{dataset_name}/generated_data/*")
     N_files = len(graph_files)
     recons_files = glob.glob(f"{log_dir}/tmp_recons/*")
 
@@ -7066,7 +7090,7 @@ def data_video_validation(config, config_file,epoch_list, log_dir, logger, bLate
     # print("Video saved as 'output.avi'")
 
 
-def data_video_training(config, config_file,epoch_list, log_dir, logger, bLatex, device):
+def data_video_training(config, config_file, epoch_list, log_dir, logger, style, device):
 
     dataset_name = config.dataset
 
@@ -7176,16 +7200,18 @@ def data_video_training(config, config_file,epoch_list, log_dir, logger, bLatex,
     # ax.tick_params(axis='both', which='major', pad=15)
 
 
-def data_plot(config, config_file, epoch_list, bLatex, device):
+def data_plot(config, epoch_list, style, device):
 
     # plt.rcParams['text.usetex'] = True
     # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     # matplotlib.rcParams['savefig.pad_inches'] = 0
 
-    plt.style.use('dark_background')
-    mc = 'w'
+    if 'black' in style:
+        plt.style.use('dark_background')
+    else:
+        plt.style.use('default')
 
-    if bLatex:
+    if 'latex' in style:
         plt.rcParams['text.usetex'] = True
         rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
@@ -7199,9 +7225,7 @@ def data_plot(config, config_file, epoch_list, bLatex, device):
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file.split('/')[-1]))
     print('log_dir: {}'.format(log_dir))
 
-    logging.basicConfig(filename=f'{log_dir}/results.log', format='%(asctime)s %(message)s', filemode='w')
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
+    log_dir, logger = create_log_dir(config=config, erase=False)
 
     os.makedirs(os.path.join(log_dir, 'results'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'results/all'), exist_ok=True)
@@ -7251,50 +7275,50 @@ def data_plot(config, config_file, epoch_list, bLatex, device):
 
     match config.graph_model.particle_model_name:
         case 'PDE_Agents_A' | 'PDE_Agents_B':
-            plot_agents(config, config_file,epoch_list, log_dir, logger, bLatex, device)
+            plot_agents(config, epoch_list, log_dir, logger, style, device)
         case 'PDE_Cell_A' | 'PDE_Cell_B' | 'PDE_Cell':
             if config.training.do_tracking:
-                plot_cell_tracking(config, config_file,epoch_list, log_dir, logger, bLatex, device)
+                plot_cell_tracking(config, epoch_list, log_dir, logger, style, device)
             else:
-                plot_cell_state(config, config_file,epoch_list, log_dir, logger, bLatex, device)
+                plot_cell_state(config, epoch_list, log_dir, logger, style, device)
         case 'PDE_A':
             if config.simulation.non_discrete_level>0:
-                plot_attraction_repulsion_continuous(config, config_file,epoch_list, log_dir, logger, bLatex, device)
+                plot_attraction_repulsion_continuous(config, epoch_list, log_dir, logger, style, device)
             elif config.training.do_tracking:
-                plot_attraction_repulsion_tracking(config, config_file,epoch_list, log_dir, logger, bLatex, device)
+                plot_attraction_repulsion_tracking(config, epoch_list, log_dir, logger, style, device)
             else:
-                plot_attraction_repulsion(config, config_file,epoch_list, log_dir, logger, bLatex, device)
+                plot_attraction_repulsion(config, epoch_list, log_dir, logger, style, device)
         case 'PDE_A_bis':
-            plot_attraction_repulsion_asym(config, config_file,epoch_list, log_dir, logger, bLatex, device)
+            plot_attraction_repulsion_asym(config, epoch_list, log_dir, logger, style, device)
         case 'PDE_B' | 'PDE_Cell_B':
-            plot_boids(config, config_file,epoch_list, log_dir, logger, bLatex, device)
+            plot_boids(config, epoch_list, log_dir, logger, style, device)
         case 'PDE_ParticleField_B' | 'PDE_ParticleField_A':
-            plot_particle_field(config, config_file,epoch_list, log_dir, logger, 'grey', bLatex, device)
+            plot_particle_field(config, epoch_list, log_dir, logger, 'grey', style, device)
         case 'PDE_E':
-            plot_Coulomb(config, config_file,epoch_list, log_dir, logger, bLatex, device)
+            plot_Coulomb(config, epoch_list, log_dir, logger, style, device)
         case 'PDE_F':
-            plot_falling_particles(config, config_file,epoch_list, log_dir, logger, bLatex, device)
+            plot_falling_particles(config, epoch_list, log_dir, logger, style, device)
         case 'PDE_G':
             if config_file == 'gravity_continuous':
-                plot_gravity_continuous(config, config_file,epoch_list, log_dir, logger, bLatex, device)
+                plot_gravity_continuous(config, epoch_list, log_dir, logger, style, device)
             else:
-                plot_gravity(config, config_file,epoch_list, log_dir, logger, bLatex, device)
+                plot_gravity(config, epoch_list, log_dir, logger, style, device)
         case 'PDE_M':
-                plot_mouse(config, config_file,epoch_list, log_dir, logger, bLatex, device)
+                plot_mouse(config, epoch_list, log_dir, logger, style, device)
 
     match config.graph_model.mesh_model_name:
         case 'WaveMesh':
-            plot_wave(config=config, config_file=config_file, epoch_list=epoch_list, log_dir=log_dir, logger=logger, cc='viridis', bLatex=bLatex, device=device)
+            plot_wave(config=config, epoch_list=epoch_list, log_dir=log_dir, logger=logger, cc='viridis', style=style, device=device)
         case 'RD_RPS_Mesh':
-            plot_RD_RPS(config=config, config_file=config_file, epoch_list=epoch_list, log_dir=log_dir, logger=logger, cc='viridis',  bLatex=bLatex, device=device)
+            plot_RD_RPS(config=config, epoch_list=epoch_list, log_dir=log_dir, logger=logger, cc='viridis',  style=style, device=device)
 
     if config.graph_model.signal_model_name == 'PDE_N':
-        plot_synaptic(config, config_file,epoch_list, log_dir, logger, 'viridis', bLatex, device)
+        plot_synaptic(config, epoch_list, log_dir, logger, 'viridis', style, device)
     elif ('PDE_N' in config.graph_model.signal_model_name):
         if ('PDE_N3' in config.graph_model.signal_model_name):
-            plot_synaptic3(config, config_file,epoch_list, log_dir, logger, 'viridis', bLatex, device)
+            plot_synaptic3(config, epoch_list, log_dir, logger, 'viridis', style, device)
         else:
-            plot_synaptic2(config, config_file,epoch_list, log_dir, logger, 'viridis', bLatex, device)
+            plot_synaptic2(config, epoch_list, log_dir, logger, 'viridis', style, device)
 
     for handler in logger.handlers[:]:
         handler.close()
@@ -7365,7 +7389,7 @@ def get_figures(index):
         case 'synaptic_2':
             for config_file in config_list:
                 config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-                data_plot(config=config, config_file=config_file, epoch_list=epoch_list, device=device, bLatex=True)
+                data_plot(config=config, config_file=config_file, epoch_list=epoch_list, device=device, style=True)
                 data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
                                   best_model='best', run=0, step=100, test_simulation=False,
                                   sample_embedding=False, device=device)
@@ -7374,8 +7398,8 @@ def get_figures(index):
         case 'synaptic_supp1' | 'synaptic_supp6':
             for config_file in config_list:
                 config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-                data_plot(config=config, config_file=config_file, epoch_list=['best'], device=device, bLatex=True)
-                data_plot(config=config, config_file=config_file, epoch_list=['all'], device=device, bLatex=True)
+                data_plot(config=config, config_file=config_file, epoch_list=['best'], device=device, style=True)
+                data_plot(config=config, config_file=config_file, epoch_list=['all'], device=device, style=True)
         case 'synaptic_supp2':
             plt.rcParams['text.usetex'] = True
             rc('font', **{'family': 'serif', 'serif': ['Palatino']})
@@ -7642,18 +7666,23 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N5_l']
     # config_list = ['signal_N3_c1']
-    config_list = ['signal/signal_N2_b1']
-    # config_list = ['arbitrary/arbitrary_3']
+    # config_list = ['signal/signal_N2_b1']
+    config_list = ['arbitrary_3']
 
-    for config_file in config_list:
+    for config_file_ in config_list:
+        
+        config_file, pre_folder = add_pre_folder(config_file_)
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        # data_plot(config=config, config_file=config_file.split('/')[-1], epoch_list=['best'], bLatex=False, device=device)
-        # data_plot(config=config, config_file=config_file.split('/')[-1], epoch_list=['all'], bLatex=False, device=device)
-        data_plot(config=config, config_file=config_file.split('/')[-1], epoch_list=['time'], bLatex=False, device=device)
+        config.dataset = pre_folder + config.dataset
+        config.config_file = pre_folder + config_file_
 
-        # data_plot(config=config, config_file=config_file.split('/')[-1], epoch_list=['all'], bLatex=False, device=device)
+        data_plot(config=config, epoch_list=['best'], style='color', device=device)
+        # data_plot(config=config, config_file=config_file.split('/')[-1], epoch_list=['all'], style=False, device=device)
+        # data_plot(config=config, config_file=config_file.split('/')[-1], epoch_list=['time'], style=False, device=device)
 
-        # plot_generated(config=config, run=0, style='black voronoi color', step = 10, bLatex=False, device=device)
+        # data_plot(config=config, config_file=config_file.split('/')[-1], epoch_list=['all'], style=False, device=device)
+
+        # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 
 

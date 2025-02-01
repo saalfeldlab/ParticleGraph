@@ -1,5 +1,5 @@
 description: 'synaptic network random matrix no recursive loop  noise 1'
-dataset: 'signal_N2_Lorentz_SNR1'
+dataset: 'signal_N2_SNR1'
 
 simulation:
     connectivity_file: '/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/graphs_signal_N2_Lorentz_a/adjacency.pt'

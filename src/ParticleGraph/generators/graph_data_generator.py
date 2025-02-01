@@ -46,7 +46,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
     print('')
     print(f'dataset_name: {dataset_name}')
 
-    if (os.path.isfile(f'./graphs_data/graphs_{dataset_name}/x_list_0.npy')) | (os.path.isfile(f'./graphs_data/graphs_{dataset_name}/x_list_0.pt')):
+    if (os.path.isfile(f'./graphs_data/{dataset_name}/x_list_0.npy')) | (os.path.isfile(f'./graphs_data/{dataset_name}/x_list_0.pt')):
         print('watch out: data already generated')
         # return
 
@@ -99,15 +99,15 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
     dataset_name = config.dataset
     connection_matrix_list = []
 
-    folder = f'./graphs_data/graphs_{dataset_name}/'
+    folder = f'./graphs_data/{dataset_name}/'
     if erase:
         files = glob.glob(f"{folder}/*")
         for f in files:
             if (f[-3:] != 'Fig') & (f[-14:] != 'generated_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (f != 'generation_code.py'):
                 os.remove(f)
     os.makedirs(folder, exist_ok=True)
-    os.makedirs(f'./graphs_data/graphs_{dataset_name}/Fig/', exist_ok=True)
-    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Fig/*')
+    os.makedirs(f'./graphs_data/{dataset_name}/Fig/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
     for f in files:
         os.remove(f)
 
@@ -264,7 +264,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         plt.xticks([])
                         plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=170.7)
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=170.7)
                     plt.close()
 
                 if 'color' in style:
@@ -278,7 +278,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Lut_Fig_{run}_{it}.jpg",
+                        plt.savefig(f"graphs_data/{dataset_name}/Fig/Lut_Fig_{run}_{it}.jpg",
                                     dpi=170.7)
                         plt.close()
 
@@ -291,7 +291,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Rot_{run}_Fig{it}.jpg",
+                        plt.savefig(f"graphs_data/{dataset_name}/Fig/Rot_{run}_Fig{it}.jpg",
                                     dpi=170.7)
                         plt.close()
 
@@ -328,7 +328,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                             plt.yticks([])
                         plt.tight_layout()
                         num = f"{it:06}"
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=70)
+                        plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=70)
                         plt.close()
 
                     elif (model_config.particle_model_name == 'PDE_A') & (dimension == 3):
@@ -341,7 +341,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         ax.set_xlim([0, 1])
                         ax.set_ylim([0, 1])
                         ax.set_zlim([0, 1])
-                        pl.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=170.7)
+                        pl.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=170.7)
                         plt.close()
 
                     else:
@@ -387,27 +387,27 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         plt.tight_layout()
 
                         num = f"{it:06}"
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80) # 170.7)
+                        plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80) # 170.7)
                         plt.close()
 
         if bSave:
 
             x_list = np.array(to_numpy(torch.stack(x_list)))
             y_list = np.array(to_numpy(torch.stack(y_list)))
-            # torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
-            np.save(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy', x_list)
+            # torch.save(x_list, f'graphs_data/{dataset_name}/x_list_{run}.pt')
+            np.save(f'graphs_data/{dataset_name}/x_list_{run}.npy', x_list)
             if has_particle_dropout:
-                torch.save(x_removed_list, f'graphs_data/graphs_{dataset_name}/x_removed_list_{run}.pt')
-                np.save(f'graphs_data/graphs_{dataset_name}/particle_dropout_mask.npy', particle_dropout_mask)
-                np.save(f'graphs_data/graphs_{dataset_name}/inv_particle_dropout_mask.npy', inv_particle_dropout_mask)
-            # torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
-            np.save(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy', y_list)
-            # np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}', *edge_p_p_list)
+                torch.save(x_removed_list, f'graphs_data/{dataset_name}/x_removed_list_{run}.pt')
+                np.save(f'graphs_data/{dataset_name}/particle_dropout_mask.npy', particle_dropout_mask)
+                np.save(f'graphs_data/{dataset_name}/inv_particle_dropout_mask.npy', inv_particle_dropout_mask)
+            # torch.save(y_list, f'graphs_data/{dataset_name}/y_list_{run}.pt')
+            np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list)
+            # np.savez(f'graphs_data/{dataset_name}/edge_p_p_list_{run}', *edge_p_p_list)
 
-            torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
+            torch.save(model.p, f'graphs_data/{dataset_name}/model_p.pt')
 
     if 'PDE_K' in model_config.particle_model_name:
-        torch.save(connection_matrix_list, f'graphs_data/graphs_{dataset_name}/connection_matrix_list.pt')
+        torch.save(connection_matrix_list, f'graphs_data/{dataset_name}/connection_matrix_list.pt')
 
     # for handler in logger.handlers[:]:
     #     handler.close()
@@ -445,7 +445,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
     speedlim = config.plotting.speedlim
 
     # Create log directory
-    log_dir = f'./graphs_data/graphs_{dataset_name}/'
+    log_dir = f'./graphs_data/{dataset_name}/'
     log_file = f'{log_dir}/generator.log'
     os.makedirs(log_dir, exist_ok=True)
     logging.basicConfig(filename=log_file, format='%(asctime)s %(message)s', filemode='w')
@@ -453,7 +453,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
     logger.setLevel(logging.INFO)
     logger.info(config)
 
-    folder = f'./graphs_data/graphs_{dataset_name}/'
+    folder = f'./graphs_data/{dataset_name}/'
     if erase:
         files = glob.glob(f"{folder}/*")
         for f in files:
@@ -461,8 +461,8 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     f != 'generation_code.py'):
                 os.remove(f)
     os.makedirs(folder, exist_ok=True)
-    os.makedirs(f'./graphs_data/graphs_{dataset_name}/Fig/', exist_ok=True)
-    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Fig/*')
+    os.makedirs(f'./graphs_data/{dataset_name}/Fig/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
     for f in files:
         os.remove(f)
     copyfile(os.path.realpath(__file__), os.path.join(folder, 'generation_code.py'))
@@ -514,7 +514,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
         # plt.imshow(to_numpy(im))
         # plt.colorbar()
 
-        torch.save(mesh_data, f'graphs_data/graphs_{dataset_name}/mesh_data_{run}.pt')
+        torch.save(mesh_data, f'graphs_data/{dataset_name}/mesh_data_{run}.pt')
         mask_mesh = mesh_data['mask'].squeeze()
 
         check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=250,
@@ -685,7 +685,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     plt.ylim([-40,1000])
                     plt.tight_layout()
                     # plt.show()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=80)
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=80)
                     plt.close()
 
                     fig = plt.figure(figsize=(8, 8))
@@ -701,7 +701,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     plt.xlim([0,1000])
                     plt.ylim([-40,1000])
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Vel_{run}_{it}.jpg", dpi=80)
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Vel_{run}_{it}.jpg", dpi=80)
                     # plt.show()
                     plt.close()
 
@@ -758,7 +758,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_g_color_{it}.tif", dpi=300)
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_g_color_{it}.tif", dpi=300)
                     plt.close()
 
                 if 'bw' in style:
@@ -780,7 +780,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=170.7)
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=170.7)
                     plt.close()
 
                     if model_config.prediction == '2nd_derivative':
@@ -799,7 +799,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                         plt.xticks([])
                         plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Arrow_{run}_{it}.jpg", dpi=170.7)
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Arrow_{run}_{it}.jpg", dpi=170.7)
 
                 if 'color' in style:
 
@@ -843,7 +843,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                         plt.xticks([])
                         plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=170.7)
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=170.7)
                     plt.close()
 
                     matplotlib.rcParams['savefig.pad_inches'] = 0
@@ -883,27 +883,27 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                         plt.xticks([])
                         plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Arrow_{run}_{it}.jpg", dpi=170.7)
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Arrow_{run}_{it}.jpg", dpi=170.7)
                     plt.close()
 
         if bSave:
 
             x_list_ = np.array(to_numpy(torch.stack(x_list)))
             y_list_ = np.array(to_numpy(torch.stack(y_list)))
-            np.save(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy', x_list_)
+            np.save(f'graphs_data/{dataset_name}/x_list_{run}.npy', x_list_)
             if has_particle_dropout:
-                torch.save(x_removed_list, f'graphs_data/graphs_{dataset_name}/x_removed_list_{run}.pt')
-                np.save(f'graphs_data/graphs_{dataset_name}/particle_dropout_mask.npy', particle_dropout_mask)
-                np.save(f'graphs_data/graphs_{dataset_name}/inv_particle_dropout_mask.npy', inv_particle_dropout_mask)
-            np.save(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy', y_list_)
+                torch.save(x_removed_list, f'graphs_data/{dataset_name}/x_removed_list_{run}.pt')
+                np.save(f'graphs_data/{dataset_name}/particle_dropout_mask.npy', particle_dropout_mask)
+                np.save(f'graphs_data/{dataset_name}/inv_particle_dropout_mask.npy', inv_particle_dropout_mask)
+            np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list_)
             del x_list_, y_list_
 
-            torch.save(x_mesh_list, f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt')
-            torch.save(y_mesh_list, f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt')
-            torch.save(edge_p_p_list, f'graphs_data/graphs_{dataset_name}/edge_p_p_list{run}.pt')
-            torch.save(edge_f_p_list, f'graphs_data/graphs_{dataset_name}/edge_f_p_list{run}.pt')
+            torch.save(x_mesh_list, f'graphs_data/{dataset_name}/x_mesh_list_{run}.pt')
+            torch.save(y_mesh_list, f'graphs_data/{dataset_name}/y_mesh_list_{run}.pt')
+            torch.save(edge_p_p_list, f'graphs_data/{dataset_name}/edge_p_p_list{run}.pt')
+            torch.save(edge_f_p_list, f'graphs_data/{dataset_name}/edge_f_p_list{run}.pt')
 
-            # torch.save(model_p_p.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
+            # torch.save(model_p_p.p, f'graphs_data/{dataset_name}/model_p.pt')
 
 
 
@@ -934,15 +934,15 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
     max_radius_list = []
     edges_len_list = []
-    folder = f'./graphs_data/graphs_{dataset_name}/'
+    folder = f'./graphs_data/{dataset_name}/'
     os.makedirs(folder, exist_ok=True)
-    os.makedirs(f'./graphs_data/graphs_{dataset_name}/Fig/', exist_ok=True)
+    os.makedirs(f'./graphs_data/{dataset_name}/Fig/', exist_ok=True)
     if erase:
         files = glob.glob(f"{folder}/*")
         for f in files:
             if (f[-3:] != 'Fig') & (f[-2:] != 'GT') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (f != 'generation_code.py'):
                 os.remove(f)
-        files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Fig/*')
+        files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
         for f in files:
             os.remove(f)
 
@@ -951,7 +951,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         generate_from_data(config=config, device=device, visualize=visualize)
         return
 
-    logging.basicConfig(filename=f'./graphs_data/graphs_{dataset_name}/generator.log', format='%(asctime)s %(message)s',
+    logging.basicConfig(filename=f'./graphs_data/{dataset_name}/generator.log', format='%(asctime)s %(message)s',
                         filemode='w')
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
@@ -1300,7 +1300,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                         plt.xticks([])
                         plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=170.7)
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=170.7)
                     plt.close()
 
                 if 'color' in style:
@@ -1363,7 +1363,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     plt.yticks([])
                     plt.tight_layout()
                     num = f"{it:06}"
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif",
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif",
                                 dpi=85.35)
                     plt.close()
 
@@ -1387,7 +1387,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 #         # sns.kdeplot(to_numpy(AR1[pos].squeeze()), fill=True, color=cmap.color(n), alpha=0.5)
                 #         # plt.hist(to_numpy(AR1[pos].squeeze()), bins=100, alpha=0.5)
                 # plt.tight_layout()
-                # plt.savefig(f"graphs_data/graphs_{dataset_name}/gen_{run}.jpg", dpi=80)
+                # plt.savefig(f"graphs_data/{dataset_name}/gen_{run}.jpg", dpi=80)
                 # plt.close()
 
                 if 'voronoi' in style:
@@ -1449,7 +1449,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
                         plt.tight_layout()
                         num = f"{it:06}"
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Vor_{run}_{num}.tif", dpi=85.35)
+                        plt.savefig(f"graphs_data/{dataset_name}/Fig/Vor_{run}_{num}.tif", dpi=85.35)
                         plt.close()
 
                     elif dimension == 3:
@@ -1475,7 +1475,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                         plt.tight_layout()
 
                         num = f"{it:06}"
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=85.35)
+                        plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=85.35)
                         plt.close()
 
 
@@ -1494,17 +1494,17 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
 
         if bSave:
-            torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
-            torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
-            torch.save(T1_list, f'graphs_data/graphs_{dataset_name}/type_list_{run}.pt')
-            np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}', *edge_p_p_list)
+            torch.save(x_list, f'graphs_data/{dataset_name}/x_list_{run}.pt')
+            torch.save(y_list, f'graphs_data/{dataset_name}/y_list_{run}.pt')
+            torch.save(T1_list, f'graphs_data/{dataset_name}/type_list_{run}.pt')
+            np.savez(f'graphs_data/{dataset_name}/edge_p_p_list_{run}', *edge_p_p_list)
             if has_inert_model:
-                np.savez(f'graphs_data/graphs_{dataset_name}/vertices_pos_list_{run}', *vertices_pos_list)
-            torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
-            torch.save(CL1, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
-            torch.save(cell_death_rate, f'graphs_data/graphs_{dataset_name}/cell_death_rate.pt')
-            torch.save(DR1, f'graphs_data/graphs_{dataset_name}/cell_death_rate_distrib.pt')
-            torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
+                np.savez(f'graphs_data/{dataset_name}/vertices_pos_list_{run}', *vertices_pos_list)
+            torch.save(cycle_length, f'graphs_data/{dataset_name}/cycle_length.pt')
+            torch.save(CL1, f'graphs_data/{dataset_name}/cycle_length_distrib.pt')
+            torch.save(cell_death_rate, f'graphs_data/{dataset_name}/cell_death_rate.pt')
+            torch.save(DR1, f'graphs_data/{dataset_name}/cell_death_rate_distrib.pt')
+            torch.save(model.p, f'graphs_data/{dataset_name}/model_p.pt')
 
             if run == 0:
                 man_track = to_numpy(man_track)
@@ -1512,7 +1512,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 if len(pos) > 0:
                     man_track[pos, 2] = n_frames
                 man_track = np.int16(man_track)
-                np.savetxt(f'graphs_data/graphs_{dataset_name}/man_track.txt', man_track, fmt="%d", delimiter=" ",
+                np.savetxt(f'graphs_data/{dataset_name}/man_track.txt', man_track, fmt="%d", delimiter=" ",
                            newline="\n")
 
     for handler in logger.handlers[:]:
@@ -1557,27 +1557,27 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         generate_from_data(config=config, device=device, visualize=visualize, folder=folder, step=step)
         return
 
-    folder = f'./graphs_data/graphs_{dataset_name}/'
+    folder = f'./graphs_data/{dataset_name}/'
     if erase:
         files = glob.glob(f"{folder}/*")
         for f in files:
             if  (not('X1.pt' in f)) & (not('Signal' in f)) & (not('Viz' in f)) & (not('Exc' in f)) & (f[-3:] != 'Fig') & (f[-14:] != 'generated_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (f != 'generation_code.py'):
                 os.remove(f)
     os.makedirs(folder, exist_ok=True)
-    os.makedirs(f'./graphs_data/graphs_{dataset_name}/Fig/', exist_ok=True)
-    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Fig/*')
+    os.makedirs(f'./graphs_data/{dataset_name}/Fig/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
     for f in files:
         os.remove(f)
-    os.makedirs(f'./graphs_data/graphs_{dataset_name}/Viz/', exist_ok=True)
-    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Viz/*')
+    os.makedirs(f'./graphs_data/{dataset_name}/Viz/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/{dataset_name}/Viz/*')
     for f in files:
         os.remove(f)
-    os.makedirs(f'./graphs_data/graphs_{dataset_name}/Exc/', exist_ok=True)
-    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Exc/*')
+    os.makedirs(f'./graphs_data/{dataset_name}/Exc/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/{dataset_name}/Exc/*')
     for f in files:
         os.remove(f)
-    os.makedirs(f'./graphs_data/graphs_{dataset_name}/Signal/', exist_ok=True)
-    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Signal/*')
+    os.makedirs(f'./graphs_data/{dataset_name}/Signal/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/{dataset_name}/Signal/*')
     for f in files:
         os.remove(f)
 
@@ -1655,8 +1655,8 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     edge_index, edge_attr = dense_to_sparse(adj_matrix)
     edge_index = edge_index.to(device=device)
 
-    torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency.pt')
-    torch.save(edge_index, f'./graphs_data/graphs_{dataset_name}/edge_index.pt')
+    torch.save(adjacency, f'./graphs_data/{dataset_name}/adjacency.pt')
+    torch.save(edge_index, f'./graphs_data/{dataset_name}/edge_index.pt')
 
     # weights = to_numpy(adjacency.flatten())
     # pos = np.argwhere(weights != 0)
@@ -1669,7 +1669,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     # plt.xticks(fontsize=12)
     # plt.xlim([-0.1, 0.1])
     # plt.tight_layout()
-    # plt.savefig(f"graphs_data/graphs_{dataset_name}/W_distribution.tif", dpi=70)
+    # plt.savefig(f"graphs_data/{dataset_name}/W_distribution.tif", dpi=70)
     # plt.close()
 
     if ('modulation' in model_config.field_type) | ('visual' in model_config.field_type):
@@ -1713,19 +1713,19 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             plt.xticks([])
             plt.yticks([])
             plt.tight_layout()
-            plt.savefig(f"graphs_data/graphs_{dataset_name}/type_distribution.tif", dpi=130)
+            plt.savefig(f"graphs_data/{dataset_name}/type_distribution.tif", dpi=130)
             plt.close()
 
         if run > 0:
-            X1 = torch.load(f'./graphs_data/graphs_{dataset_name}/X1.pt', map_location=device)
-            X_msg = torch.load(f'./graphs_data/graphs_{dataset_name}/X_msg.pt', map_location=device)
+            X1 = torch.load(f'./graphs_data/{dataset_name}/X1.pt', map_location=device)
+            X_msg = torch.load(f'./graphs_data/{dataset_name}/X_msg.pt', map_location=device)
         else:
             xc, yc = get_equidistant_points(n_points=n_particles**2)
             X_msg = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
             perm = torch.randperm(X_msg.size(0))
             X_msg = X_msg[perm]
-            torch.save(X1, f'./graphs_data/graphs_{dataset_name}/X1.pt')
-            torch.save(X_msg, f'./graphs_data/graphs_{dataset_name}/X_msg.pt')
+            torch.save(X1, f'./graphs_data/{dataset_name}/X1.pt')
+            torch.save(X_msg, f'./graphs_data/{dataset_name}/X_msg.pt')
 
         if ('modulation' in field_type):
             if run==0:
@@ -1858,7 +1858,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                         plt.yticks([])
                         plt.tight_layout()
                         num = f"{it:06}"
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Viz/Viz_{run}_{num}.tif", dpi=70)
+                        plt.savefig(f"graphs_data/{dataset_name}/Viz/Viz_{run}_{num}.tif", dpi=70)
                         plt.close()
 
                         fig = plt.figure(figsize=(8, 8))
@@ -1873,7 +1873,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                         plt.yticks([])
                         plt.tight_layout()
                         num = f"{it:06}"
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Exc/Exc_{run}_{num}.tif", dpi=70)
+                        plt.savefig(f"graphs_data/{dataset_name}/Exc/Exc_{run}_{num}.tif", dpi=70)
                         plt.close()
 
                         fig = plt.figure(figsize=(8, 8))
@@ -1888,12 +1888,13 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                         plt.yticks([])
                         plt.tight_layout()
                         num = f"{it:06}"
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Signal/Signal_{run}_{num}.tif", dpi=70)
+                        plt.savefig(f"graphs_data/{dataset_name}/Signal/Signal_{run}_{num}.tif", dpi=70)
                         plt.close()
                     elif 'visual' in field_type:
                         fig = plt.figure(figsize=(8.5, 8))
-                        plt.title('modulation',fontsize=24)
+                        plt.axis('off')
                         plt.subplot(211)
+                        plt.title('modulation',fontsize=24)
                         plt.scatter(to_numpy(X1[0:1024, 1]), to_numpy(X1[0:1024, 0]), s=40, c=to_numpy(A1[0:1024, 0]), cmap='viridis',
                                     vmin=0, vmax=2)
                         plt.scatter(to_numpy(X1[1024:, 1]), to_numpy(X1[1024:, 0]), s=30, c=to_numpy(A1[1024:, 0]), cmap='viridis',
@@ -1932,23 +1933,22 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                         plt.yticks([])
                         plt.tight_layout()
                     num = f"{it:06}"
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=170)
-                    plt.close()
-
-                    im_ = imread(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif")
-                    plt.figure(figsize=(10, 10))
-                    plt.imshow(im_)
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.subplot(3, 3, 1)
-                    plt.imshow(im[800:1000, 800:1000, :])
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=170)
                     plt.close()
 
                     if 'msg' in style:
+                        im_ = imread(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif")
+                        plt.figure(figsize=(10, 10))
+                        plt.imshow(im_)
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.subplot(3, 3, 1)
+                        plt.imshow(im_[800:1000, 800:1000, :])
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+                        plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
+                        plt.close()
 
                         plt.figure(figsize=(10, 10))
                         msg = to_numpy(model.msg)
@@ -1957,10 +1957,10 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Msg_{run}_{num}.tif", dpi=170)
+                        plt.savefig(f"graphs_data/{dataset_name}/Fig/Msg_{run}_{num}.tif", dpi=170)
                         plt.close()
 
-                        im_ = imread(f"graphs_data/graphs_{dataset_name}/Fig/Msg_{run}_{num}.tif")
+                        im_ = imread(f"graphs_data/{dataset_name}/Fig/Msg_{run}_{num}.tif")
                         plt.figure(figsize=(10, 10))
                         plt.imshow(im)
                         plt.xticks([])
@@ -1970,7 +1970,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Msg_{run}_{num}.tif", dpi=80)
+                        plt.savefig(f"graphs_data/{dataset_name}/Fig/Msg_{run}_{num}.tif", dpi=80)
                         plt.close()
 
 
@@ -1995,7 +1995,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             plt.xticks([])
             plt.yticks(fontsize=12)
             plt.tight_layout()
-            plt.savefig(f'graphs_data/graphs_{dataset_name}/activity.png', dpi=300)
+            plt.savefig(f'graphs_data/{dataset_name}/activity.png', dpi=300)
             plt.close()
 
             plt.figure(figsize=(8, 8))
@@ -2005,7 +2005,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             plt.xticks(fontsize=24)
             plt.yticks(fontsize=24)
             plt.tight_layout()
-            plt.savefig(f'graphs_data/graphs_{dataset_name}/signal_distribution.png', dpi=300)
+            plt.savefig(f'graphs_data/{dataset_name}/signal_distribution.png', dpi=300)
 
             plt.figure(figsize=(5, 9))
             i=200
@@ -2026,15 +2026,15 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         if bSave:
             x_list = np.array(x_list)
             y_list = np.array(y_list)
-            # torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
-            np.save(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy', x_list)
+            # torch.save(x_list, f'graphs_data/{dataset_name}/x_list_{run}.pt')
+            np.save(f'graphs_data/{dataset_name}/x_list_{run}.npy', x_list)
             if has_particle_dropout:
-                torch.save(x_removed_list, f'graphs_data/graphs_{dataset_name}/x_removed_list_{run}.pt')
-                np.save(f'graphs_data/graphs_{dataset_name}/particle_dropout_mask.npy', particle_dropout_mask)
-                np.save(f'graphs_data/graphs_{dataset_name}/inv_particle_dropout_mask.npy', inv_particle_dropout_mask)
-            # torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
-            np.save(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy', y_list)
-            torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
+                torch.save(x_removed_list, f'graphs_data/{dataset_name}/x_removed_list_{run}.pt')
+                np.save(f'graphs_data/{dataset_name}/particle_dropout_mask.npy', particle_dropout_mask)
+                np.save(f'graphs_data/{dataset_name}/inv_particle_dropout_mask.npy', inv_particle_dropout_mask)
+            # torch.save(y_list, f'graphs_data/{dataset_name}/y_list_{run}.pt')
+            np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list)
+            torch.save(model.p, f'graphs_data/{dataset_name}/model_p.pt')
 
     # for handler in logger.handlers[:]:
     #     handler.close()
@@ -2077,7 +2077,7 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
     torch.random.fork_rng(devices=device)
     torch.random.manual_seed(training_config.seed)
 
-    folder = f'./graphs_data/graphs_{dataset_name}/'
+    folder = f'./graphs_data/{dataset_name}/'
     if erase:
         files = glob.glob(f"{folder}/*")
         for f in files:
@@ -2085,8 +2085,8 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
                     f != 'model_config.json') & (f != 'generation_code.py'):
                 os.remove(f)
     os.makedirs(folder, exist_ok=True)
-    os.makedirs(f'./graphs_data/graphs_{dataset_name}/Fig/', exist_ok=True)
-    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Fig/*')
+    os.makedirs(f'./graphs_data/{dataset_name}/Fig/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
     for f in files:
         os.remove(f)
 
@@ -2214,11 +2214,11 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
                     plt.tight_layout()
 
                 num = f"{it*time_step:06}"
-                plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
+                plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
                 plt.close()
 
-    torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
-    np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}', *edge_p_p_list)
+    torch.save(x_list, f'graphs_data/{dataset_name}/x_list_{run}.pt')
+    np.savez(f'graphs_data/{dataset_name}/edge_p_p_list_{run}', *edge_p_p_list)
 
 
 
@@ -2246,7 +2246,7 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
     torch.random.fork_rng(devices=device)
     torch.random.manual_seed(training_config.seed)
 
-    folder = f'./graphs_data/graphs_{dataset_name}/'
+    folder = f'./graphs_data/{dataset_name}/'
     if erase:
         files = glob.glob(f"{folder}/*")
         for f in files:
@@ -2254,20 +2254,20 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
                     f != 'model_config.json') & (f != 'generation_code.py'):
                 os.remove(f)
     os.makedirs(folder, exist_ok=True)
-    os.makedirs(f'./graphs_data/graphs_{dataset_name}/Fig/', exist_ok=True)
-    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Fig/*')
+    os.makedirs(f'./graphs_data/{dataset_name}/Fig/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
     for f in files:
         os.remove(f)
-    os.makedirs(f'./graphs_data/graphs_{dataset_name}/Viz/', exist_ok=True)
-    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Viz/*')
+    os.makedirs(f'./graphs_data/{dataset_name}/Viz/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/{dataset_name}/Viz/*')
     for f in files:
         os.remove(f)
-    os.makedirs(f'./graphs_data/graphs_{dataset_name}/Exc/', exist_ok=True)
-    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Exc/*')
+    os.makedirs(f'./graphs_data/{dataset_name}/Exc/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/{dataset_name}/Exc/*')
     for f in files:
         os.remove(f)
-    os.makedirs(f'./graphs_data/graphs_{dataset_name}/Signal/', exist_ok=True)
-    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Signal/*')
+    os.makedirs(f'./graphs_data/{dataset_name}/Signal/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/{dataset_name}/Signal/*')
     for f in files:
         os.remove(f)
 
@@ -2286,15 +2286,15 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
 
     X1 = X1.T
     X1 = torch.tensor(X1, dtype=torch.float32, device=device)
-    torch.save(X1, f'./graphs_data/graphs_{dataset_name}/X1.pt')
+    torch.save(X1, f'./graphs_data/{dataset_name}/X1.pt')
     T1 = torch.tensor(T1, dtype=torch.float32, device=device)
-    torch.save(T1, f'./graphs_data/graphs_{dataset_name}/T1.pt')
+    torch.save(T1, f'./graphs_data/{dataset_name}/T1.pt')
     print('Data loaded ...')
 
 
-    if os.path.isfile(f'./graphs_data/graphs_{dataset_name}/edge_index.pt'):
+    if os.path.isfile(f'./graphs_data/{dataset_name}/edge_index.pt'):
         print('Load local connectivity ...')
-        edge_index = torch.load(f'./graphs_data/graphs_{dataset_name}/edge_index.pt', map_location=device)
+        edge_index = torch.load(f'./graphs_data/{dataset_name}/edge_index.pt', map_location=device)
         print('Local connectivity loaded ...')
     else:
         print('Calculate local connectivity ...')
@@ -2306,7 +2306,7 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
             distance = ((distance < max_radius ** 2) & (distance > min_radius ** 2)) * 1.0
             edge_index = np.array(distance.nonzero())
             edge_index = torch.tensor(edge_index, dtype=torch.int64, device=device)
-            torch.save(edge_index, f'./graphs_data/graphs_{dataset_name}/edge_index.pt')
+            torch.save(edge_index, f'./graphs_data/{dataset_name}/edge_index.pt')
 
         print('Local connectivity calculated ...')
 
@@ -2371,16 +2371,16 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
                     plt.tight_layout()
 
                     num = f"{it:06}"
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=70)
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=70)
                     plt.close()
 
         if bSave:
-            torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
+            torch.save(x_list, f'graphs_data/{dataset_name}/x_list_{run}.pt')
             if has_particle_dropout:
-                torch.save(x_removed_list, f'graphs_data/graphs_{dataset_name}/x_removed_list_{run}.pt')
-                np.save(f'graphs_data/graphs_{dataset_name}/particle_dropout_mask.npy', particle_dropout_mask)
-                np.save(f'graphs_data/graphs_{dataset_name}/inv_particle_dropout_mask.npy', inv_particle_dropout_mask)
-            torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
+                torch.save(x_removed_list, f'graphs_data/{dataset_name}/x_removed_list_{run}.pt')
+                np.save(f'graphs_data/{dataset_name}/particle_dropout_mask.npy', particle_dropout_mask)
+                np.save(f'graphs_data/{dataset_name}/inv_particle_dropout_mask.npy', inv_particle_dropout_mask)
+            torch.save(y_list, f'graphs_data/{dataset_name}/y_list_{run}.pt')
 
 
 
@@ -2393,7 +2393,7 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
             plt.xticks([])
             plt.yticks([])
             plt.tight_layout()
-            plt.savefig(f'graphs_data/graphs_{dataset_name}/type.png', dpi=300)
+            plt.savefig(f'graphs_data/{dataset_name}/type.png', dpi=300)
             plt.close()
 
             plt.figure(figsize=(10, 3))
@@ -2415,7 +2415,7 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
             plt.xticks([])
             plt.yticks(fontsize=12)
             plt.tight_layout()
-            plt.savefig(f'graphs_data/graphs_{dataset_name}/activity.png', dpi=300)
+            plt.savefig(f'graphs_data/{dataset_name}/activity.png', dpi=300)
             plt.close()
 
 
@@ -2438,7 +2438,7 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
     cmap = CustomColorMap(config=config)
     dataset_name = config.dataset
 
-    folder = f'./graphs_data/graphs_{dataset_name}/'
+    folder = f'./graphs_data/{dataset_name}/'
     if erase:
         files = glob.glob(f"{folder}/*")
         for f in files:
@@ -2446,8 +2446,8 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
                     f != 'generation_code.py'):
                 os.remove(f)
     os.makedirs(folder, exist_ok=True)
-    os.makedirs(f'./graphs_data/graphs_{dataset_name}/Fig/', exist_ok=True)
-    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Fig/*')
+    os.makedirs(f'./graphs_data/{dataset_name}/Fig/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
     for f in files:
         os.remove(f)
 
@@ -2457,7 +2457,7 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
 
         mesh_model = choose_mesh_model(config=config, X1_mesh=X1_mesh, device=device)
 
-        torch.save(mesh_data, f'graphs_data/graphs_{dataset_name}/mesh_data_{run}.pt')
+        torch.save(mesh_data, f'graphs_data/{dataset_name}/mesh_data_{run}.pt')
         mask_mesh = mesh_data['mask'].squeeze()
 
         time.sleep(0.5)
@@ -2533,7 +2533,7 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_g_color_{it}.tif", dpi=300)
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_g_color_{it}.tif", dpi=300)
                     plt.close()
 
                 if 'color' in style:
@@ -2611,12 +2611,12 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
                     plt.tight_layout()
 
                     num = f"{it:06}"
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
                     plt.close()
 
         if bSave:
-            torch.save(x_mesh_list, f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt')
-            torch.save(y_mesh_list, f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt')
+            torch.save(x_mesh_list, f'graphs_data/{dataset_name}/x_mesh_list_{run}.pt')
+            torch.save(y_mesh_list, f'graphs_data/{dataset_name}/y_mesh_list_{run}.pt')
 
 
 

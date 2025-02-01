@@ -396,6 +396,50 @@ def calculate_ssim(img1, img2):
     return ssim_score
 
 
+def add_pre_folder(config_file_):
+
+    if 'arbitrary' in config_file_:
+        config_file = os.path.join('arbitrary', config_file_)
+        pre_folder = 'arbitrary/'
+    elif 'boids' in config_file_:
+        config_file = os.path.join('boids', config_file_)
+        pre_folder = 'boids/'
+    elif 'Coulomb' in config_file_:
+        config_file = os.path.join('Coulomb', config_file_)
+        pre_folder = 'Coulomb/'
+    elif 'fluids' in config_file_:
+        config_file = os.path.join('fluids', config_file_)
+        pre_folder = 'fluids/'
+    elif 'gravity' in config_file_:
+        config_file = os.path.join('gravity', config_file_)
+        pre_folder = 'gravity/'
+    elif 'springs' in config_file_:
+        config_file = os.path.join('springs', config_file_)
+        pre_folder = 'springs/'
+    elif 'signal' in config_file_:
+        config_file = os.path.join('signal', config_file_)
+        pre_folder = 'signal/'
+    elif 'falling_water_ramp' in config_file_:
+        config_file = os.path.join('falling_water_ramp', config_file_)
+        pre_folder = 'falling_water_ramp/'
+    elif 'reaction_diffusion' in config_file_:
+        config_file = os.path.join('reaction_diffusion', config_file_)
+        pre_folder = 'reaction_diffusion/'
+    elif 'wave' in config_file_:
+        config_file = os.path.join('wave', config_file_)
+        pre_folder = 'wave/'
+    elif 'cell' in config_file_:
+        config_file = os.path.join('cell', config_file_)
+        pre_folder = 'cell/'
+    elif 'mouse' in config_file_:
+        config_file = os.path.join('mouse', config_file_)
+        pre_folder = 'mouse/'
+    elif 'rat' in config_file_:
+        config_file = os.path.join('rat', config_file_)
+        pre_folder = 'rat/'
+
+    return config_file, pre_folder
+
 def get_log_dir(config=[]):
 
     if 'PDE_A' in config.graph_model.particle_model_name:
@@ -430,39 +474,9 @@ def get_log_dir(config=[]):
     return l_dir
 
 
-def create_log_dir(config=[], config_file=[], erase=True):
-    l_dir = os.path.join('.', 'log')
+def create_log_dir(config=[], erase=True):
 
-    if 'PDE_A' in config.graph_model.particle_model_name:
-        l_dir = os.path.join('./log/arbitrary/')
-    elif 'PDE_B' in config.graph_model.particle_model_name:
-        l_dir = os.path.join('./log/boids/')
-    elif 'PDE_E' in config.graph_model.particle_model_name:
-        l_dir = os.path.join('./log/Coulomb/')
-    elif 'PDE_F' in config.graph_model.particle_model_name:
-        l_dir = os.path.join('./log/fluids/')
-    elif 'PDE_G' in config.graph_model.particle_model_name:
-        l_dir = os.path.join('./log/gravity/')
-    elif 'PDE_K' in config.graph_model.particle_model_name:
-        l_dir = os.path.join('./log/springs/')
-    elif 'PDE_N' in config.graph_model.signal_model_name:
-        l_dir = os.path.join('./log/signal/')
-    elif 'PDE_WF' in config.graph_model.particle_model_name:
-        l_dir = os.path.join('./log/falling_wter_ramp/')
-    elif 'RD_RPS' in config.graph_model.mesh_model_name:
-        l_dir = os.path.join('./log/reaction_diffusion/')
-    elif 'Wave' in config.graph_model.mesh_model_name:
-        l_dir = os.path.join('./log/wave/')
-    elif 'cell' in config.dataset:
-        l_dir = os.path.join('./log/cell/')
-    elif 'mouse' in config.dataset:
-        l_dir = os.path.join('./log/mouse/')
-    elif 'rat' in config.dataset:
-        l_dir = os.path.join('./log/rat/')
-    elif 'celegans' in config.dataset:
-        l_dir = os.path.join('./log/celegans/')
-
-    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
+    log_dir = os.path.join('.', 'log', config.config_file)
     print('log_dir: {}'.format(log_dir))
 
     os.makedirs(log_dir, exist_ok=True)
@@ -513,7 +527,7 @@ def create_log_dir(config=[], config_file=[], erase=True):
     logger.setLevel(logging.INFO)
     logger.info(config)
 
-    return l_dir, log_dir, logger
+    return log_dir, logger
 
 
 def bundle_fields(data: Data, *names: str) -> torch.Tensor:

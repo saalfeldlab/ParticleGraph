@@ -23,7 +23,7 @@ import seaborn as sns
 from sklearn.decomposition import PCA, TruncatedSVD
 from sklearn.manifold import TSNE
 
-def data_train(config=None, config_file=None, erase=False, best_model=None, device=None):
+def data_train(config=None, erase=False, best_model=None, device=None):
     # plt.rcParams['text.usetex'] = True
     # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     # matplotlib.rcParams['savefig.pad_inches'] = 0
@@ -55,38 +55,38 @@ def data_train(config=None, config_file=None, erase=False, best_model=None, devi
     print(f'dataset_name: {dataset_name}')
 
     if 'Agents' in config.graph_model.particle_model_name:
-        data_train_agents(config, config_file, best_model, device)
+        data_train_agents(config, best_model, device)
     elif has_mouse_city:
-        data_train_mouse_city(config, config_file, erase, best_model, device)
+        data_train_mouse_city(config, erase, best_model, device)
     elif has_WBI:
-        data_train_WBI(config, config_file, erase, best_model, device)
+        data_train_WBI(config, erase, best_model, device)
     elif has_particle_field:
-        data_train_particle_field(config, config_file, erase, best_model, device)
+        data_train_particle_field(config, erase, best_model, device)
     elif has_mesh:
-        data_train_mesh(config, config_file, erase, best_model, device)
+        data_train_mesh(config, erase, best_model, device)
     elif has_signal:
         if ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N4' in config.graph_model.signal_model_name) | (
                 'PDE_N5' in config.graph_model.signal_model_name):
-            data_train_synaptic2(config, config_file, erase, best_model, device)
+            data_train_synaptic2(config, erase, best_model, device)
         elif 'PDE_N3' in config.graph_model.signal_model_name:
-            data_train_synaptic2(config, config_file, erase, best_model, device)
+            data_train_synaptic2(config, erase, best_model, device)
         else:
-            data_train_synaptic(config, config_file, erase, best_model, device)
+            data_train_synaptic(config, erase, best_model, device)
     elif do_tracking & has_cell_division:
-        data_train_cell(config, config_file, erase, best_model, device)
+        data_train_cell(config, erase, best_model, device)
     elif do_tracking:
-        data_train_tracking(config, config_file, erase, best_model, device)
+        data_train_tracking(config, erase, best_model, device)
     elif has_cell_division:
-        data_train_cell(config, config_file, erase, best_model, device)
+        data_train_cell(config, erase, best_model, device)
     elif has_state:
-        data_train_particles_with_states(config, config_file, erase, best_model, device)
+        data_train_particles_with_states(config, erase, best_model, device)
     elif 'PDE_GS' in config.graph_model.particle_model_name:
-        data_solar_system(config, config_file, erase, best_model, device)
+        data_solar_system(config, erase, best_model, device)
     else:
-        data_train_particle(config, config_file, erase, best_model, device)
+        data_train_particle(config, erase, best_model, device)
 
 
-def data_train_particle(config, config_file, erase, best_model, device):
+def data_train_particle(config, erase, best_model, device):
     simulation_config = config.simulation
     train_config = config.training
     model_config = config.graph_model
@@ -127,7 +127,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
     embedding_cluster = EmbeddingCluster(config)
     n_runs = train_config.n_runs
 
-    l_dir, log_dir, logger = create_log_dir(config, config_file, erase)
+    log_dir, logger = create_log_dir(config, erase)
     print(f'graph files N: {n_runs}')
     logger.info(f'graph files N: {n_runs}')
     time.sleep(0.5)
@@ -135,7 +135,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
     x_list = []
     y_list = []
     edge_p_p_list = []
-    # edge_saved = os.path.exists(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_0.npz')
+    # edge_saved = os.path.exists(f'graphs_data/{dataset_name}/edge_p_p_list_0.npz')
     edge_saved = False
 
     run_lengths = list()
@@ -143,14 +143,14 @@ def data_train_particle(config, config_file, erase, best_model, device):
     n_particles_max = 0
 
     for run in trange(n_runs):
-        x = np.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy')
-        y = np.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy')
+        x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
+        y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
         if x[0].shape[0] > n_particles_max:
             n_particles_max = x[0].shape[0]
         x_list.append(x)
         y_list.append(y)
         if edge_saved:
-            edge_p_p = np.load(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}.npz')
+            edge_p_p = np.load(f'graphs_data/{dataset_name}/edge_p_p_list_{run}.npz')
             edge_p_p_list.append(edge_p_p)
         run_lengths.append(len(x))
     x = torch.tensor(x_list[0][0], dtype=torch.float32, device=device)
@@ -369,7 +369,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
 
             visualize_embedding = True
             if visualize_embedding & (((epoch < 30) & (N % (Niter // 50) == 0)) | (N == 0)):
-                plot_training(config=config, dataset_name=dataset_name, log_dir=log_dir,
+                plot_training(config=config, log_dir=log_dir,
                               epoch=epoch, N=N, x=x, model=model, n_nodes=0, n_node_types=0, index_nodes=0,
                               dataset_num=1,
                               index_particles=index_particles, n_particles=n_particles,
@@ -487,7 +487,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}_before training function.tif")
+                    plt.savefig(f"./{log_dir}/tmp_training/Fig_{epoch}_before training function.tif")
                     plt.close()
 
                     lr_embedding = 1E-12
@@ -549,11 +549,11 @@ def data_train_particle(config, config_file, erase, best_model, device):
                     logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
+        plt.savefig(f"./{log_dir}/tmp_training/Fig_{epoch}.tif")
         plt.close()
 
 
-def data_solar_system(config, config_file, erase, best_model, device):
+def data_solar_system(config, erase, best_model, device):
     simulation_config = config.simulation
     train_config = config.training
     model_config = config.graph_model
@@ -578,7 +578,7 @@ def data_solar_system(config, config_file, erase, best_model, device):
         get_batch_size = constant_batch_size(target_batch_size)
     batch_size = get_batch_size(0)
 
-    l_dir, log_dir, logger = create_log_dir(config, config_file, erase)
+    log_dir, logger = create_log_dir(config, erase)
     print(f'Graph files N: {n_runs}')
     logger.info(f'Graph files N: {n_runs}')
     time.sleep(0.5)
@@ -586,8 +586,8 @@ def data_solar_system(config, config_file, erase, best_model, device):
     x_list = []
     y_list = []
     for run in trange(n_runs):
-        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
-        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
+        x = torch.load(f'graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device)
+        y = torch.load(f'graphs_data/{dataset_name}/y_list_{run}.pt', map_location=device)
         x_list.append(x)
         y_list.append(y)
 
@@ -687,7 +687,7 @@ def data_solar_system(config, config_file, erase, best_model, device):
                 plt.xticks(fontsize=18.0)
                 plt.yticks(fontsize=18.0)
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/function/func_{dataset_name}_{epoch}_{N}.tif", dpi=87)
+                plt.savefig(f"./{log_dir}/tmp_training/function/func_{epoch}_{N}.tif", dpi=87)
                 plt.close()
 
                 fig, ax = fig_init()
@@ -699,7 +699,7 @@ def data_solar_system(config, config_file, erase, best_model, device):
                 plt.xticks(fontsize=18.0)
                 plt.yticks(fontsize=18.0)
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/embedding/embedding_{dataset_name}_{epoch}_{N}.tif", dpi=87)
+                plt.savefig(f"./{log_dir}/tmp_training/embedding/embedding_{epoch}_{N}.tif", dpi=87)
                 plt.close()
 
                 torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
@@ -723,11 +723,11 @@ def data_solar_system(config, config_file, erase, best_model, device):
         plt.xlabel('Epochs', fontsize=12)
 
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
+        plt.savefig(f"./{log_dir}/tmp_training/Fig_{epoch}.tif")
         plt.close()
 
 
-def data_train_cell(config, config_file, erase, best_model, device):
+def data_train_cell(config, erase, best_model, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -762,13 +762,13 @@ def data_train_cell(config, config_file, erase, best_model, device):
     min_radius = simulation_config.min_radius
     time_step = simulation_config.time_step
 
-    l_dir, log_dir, logger = create_log_dir(config, config_file, erase)
+    log_dir, logger = create_log_dir(config, erase)
     print(f'graph files N: {n_runs}')
     logger.info(f'graph files N: {n_runs}')
     time.sleep(0.5)
 
-    n_cells = np.load(f'graphs_data/graphs_{dataset_name}/n_cells_0.npy')
-    im_dim = np.load(f'graphs_data/graphs_{dataset_name}/im_dim_0.npy')
+    n_cells = np.load(f'graphs_data/{dataset_name}/n_cells_0.npy')
+    im_dim = np.load(f'graphs_data/{dataset_name}/im_dim_0.npy')
 
     print(f'n_cells: {n_cells}, im_dim: {im_dim}')
     logger.info(f'n_cells: {n_cells}, im_dim: {im_dim}')
@@ -777,17 +777,17 @@ def data_train_cell(config, config_file, erase, best_model, device):
     y_list = []
     edge_p_p_list = []
     vertices_pos_list = []
-    # edge_saved = os.path.exists(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_0.npz')
+    # edge_saved = os.path.exists(f'graphs_data/{dataset_name}/edge_p_p_list_0.npz')
     edge_saved = False
 
     print('load data ...')
     for run in trange(n_runs):
-        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
-        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
+        x = torch.load(f'graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device)
+        y = torch.load(f'graphs_data/{dataset_name}/y_list_{run}.pt', map_location=device)
         x_list.append(x)
         y_list.append(y)
         if edge_saved:
-            edge_p_p = np.load(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}.npz')
+            edge_p_p = np.load(f'graphs_data/{dataset_name}/edge_p_p_list_{run}.npz')
             edge_p_p_list.append(edge_p_p)
             
     x = x_list[0][0].clone().detach()
@@ -970,12 +970,12 @@ def data_train_cell(config, config_file, erase, best_model, device):
                         for k in range(n_frames):
                             ids = x_list[0][k][:, -1]
                             id_list.append(ids)
-                        plot_training_state(config=config, id_list=id_list, dataset_name=dataset_name, log_dir=log_dir,
+                        plot_training_state(config=config, id_list=id_list, log_dir=log_dir,
                                             epoch=epoch, N=N, model=model, n_particle_types=n_particle_types,
                                             type_list=type_list, type_stack=type_stack, ynorm=ynorm, cmap=cmap,
                                             device=device)
                     else:
-                        plot_training_cell(config=config, dataset_name=dataset_name, log_dir=log_dir,
+                        plot_training_cell(config=config, log_dir=log_dir,
                                            epoch=epoch, N=N, model=model, n_particle_types=n_particle_types,
                                            type_list=type_list, ynorm=ynorm, cmap=cmap, device=device)
 
@@ -986,13 +986,13 @@ def data_train_cell(config, config_file, erase, best_model, device):
                 plt.xlabel(r'$a_{i0}$', fontsize=48)
                 plt.ylabel(r'$a_{i1}$', fontsize=48)
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif", dpi=87)
+                plt.savefig(f"./{log_dir}/tmp_training/embedding/{epoch}_{N}.tif", dpi=87)
                 plt.close()
 
                 fig, ax = fig_init(fontsize=24)
                 g = to_numpy(model.a.grad)
                 plt.scatter(g[:, 0], g[:, 1], s=2, c='k')
-                plt.savefig(f"./{log_dir}/tmp_training/embedding/grad_{dataset_name}_{epoch}_{N}.tif", dpi=87)
+                plt.savefig(f"./{log_dir}/tmp_training/embedding/grad_{epoch}_{N}.tif", dpi=87)
                 plt.close()
 
 
@@ -1136,7 +1136,7 @@ def data_train_cell(config, config_file, erase, best_model, device):
                                                                                                           visualize=True,
                                                                                                           device=device)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
+            plt.savefig(f"./{log_dir}/tmp_training/Fig_{epoch}.tif")
             plt.close()
 
         # embedding = proj_interaction
@@ -1147,7 +1147,7 @@ def data_train_cell(config, config_file, erase, best_model, device):
         #                                                         n_particle_types, embedding_cluster)
 
 
-def data_train_mouse_city(config, config_file, erase, best_model, device):
+def data_train_mouse_city(config, erase, best_model, device):
     simulation_config = config.simulation
     train_config = config.training
     model_config = config.graph_model
@@ -1179,7 +1179,7 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
 
     has_state = (simulation_config.state_type != 'discrete')
 
-    l_dir, log_dir, logger = create_log_dir(config, config_file, erase)
+    log_dir, logger = create_log_dir(config, erase)
     print(f'Graph files N: {n_runs}')
     logger.info(f'Graph files N: {n_runs}')
     time.sleep(0.5)
@@ -1187,10 +1187,10 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
     os.makedirs(f'./{log_dir}/tmp_training/loss', exist_ok=True)
 
     x_list = []
-    x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_0.pt', map_location=device)
+    x = torch.load(f'graphs_data/{dataset_name}/x_list_0.pt', map_location=device)
     x_list.append(x)
     edge_p_p_list = []
-    edge_p_p = np.load(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_0.npz')
+    edge_p_p = np.load(f'graphs_data/{dataset_name}/edge_p_p_list_0.npz')
     edge_p_p_list.append(edge_p_p)
     n_frames = len(x)
     config.simulation.n_frames = n_frames
@@ -1380,7 +1380,7 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
         torch.save(total_list_loss, os.path.join(log_dir, 'loss.pt'))
 
 
-def data_train_mesh(config, config_file, erase, best_model, device):
+def data_train_mesh(config, erase, best_model, device):
     simulation_config = config.simulation
     train_config = config.training
     model_config = config.graph_model
@@ -1405,7 +1405,7 @@ def data_train_mesh(config, config_file, erase, best_model, device):
     n_runs = train_config.n_runs
     sparsity_freq = train_config.sparsity_freq
 
-    l_dir, log_dir, logger = create_log_dir(config, config_file, erase)
+    log_dir, logger = create_log_dir(config, erase)
     logger.info(f'Graph files N: {n_runs}')
 
     vnorm = torch.tensor(1.0, device=device)
@@ -1420,9 +1420,9 @@ def data_train_mesh(config, config_file, erase, best_model, device):
     y_mesh_list = []
     time.sleep(0.5)
     for run in trange(n_runs):
-        x_mesh = torch.load(f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt', map_location=device)
+        x_mesh = torch.load(f'graphs_data/{dataset_name}/x_mesh_list_{run}.pt', map_location=device)
         x_mesh_list.append(x_mesh)
-        h = torch.load(f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt', map_location=device)
+        h = torch.load(f'graphs_data/{dataset_name}/y_mesh_list_{run}.pt', map_location=device)
         y_mesh_list.append(h)
     h = y_mesh_list[0][0].clone().detach()
     for run in range(n_runs):
@@ -1433,7 +1433,7 @@ def data_train_mesh(config, config_file, erase, best_model, device):
     print(f'hnorm: {to_numpy(hnorm)}')
     logger.info(f'hnorm: {to_numpy(hnorm)}')
     time.sleep(0.5)
-    mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_1.pt', map_location=device)
+    mesh_data = torch.load(f'graphs_data/{dataset_name}/mesh_data_1.pt', map_location=device)
     mask_mesh = mesh_data['mask']
     mask_mesh = mask_mesh.repeat(batch_size, 1)
     edge_index_mesh = mesh_data['edge_index']
@@ -1743,11 +1743,11 @@ def data_train_mesh(config, config_file, erase, best_model, device):
                     logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
+        plt.savefig(f"./{log_dir}/tmp_training/Fig_{epoch}.tif")
         plt.close()
 
 
-def data_train_particle_field(config, config_file, erase, best_model, device):
+def data_train_particle_field(config, erase, best_model, device):
     simulation_config = config.simulation
     train_config = config.training
     model_config = config.graph_model
@@ -1785,7 +1785,7 @@ def data_train_particle_field(config, config_file, erase, best_model, device):
     n_runs = train_config.n_runs
     sparsity_freq = train_config.sparsity_freq
 
-    l_dir, log_dir, logger = create_log_dir(config, config_file, erase)
+    log_dir, logger = create_log_dir(config, erase)
     print(f'Graph files N: {n_runs}')
     logger.info(f'Graph files N: {n_runs}')
     time.sleep(0.5)
@@ -1797,10 +1797,10 @@ def data_train_particle_field(config, config_file, erase, best_model, device):
     edge_f_f_list = []
     edge_f_p_list = []
     for run in trange(n_runs):
-        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device, weights_only=False)
-        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device, weights_only=False)
-        edge_p_p = torch.load(f'graphs_data/graphs_{dataset_name}/edge_p_p_list{run}.pt', map_location=device, weights_only=False)
-        edge_f_p = torch.load(f'graphs_data/graphs_{dataset_name}/edge_f_p_list{run}.pt', map_location=device, weights_only=False)
+        x = torch.load(f'graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device, weights_only=False)
+        y = torch.load(f'graphs_data/{dataset_name}/y_list_{run}.pt', map_location=device, weights_only=False)
+        edge_p_p = torch.load(f'graphs_data/{dataset_name}/edge_p_p_list{run}.pt', map_location=device, weights_only=False)
+        edge_f_p = torch.load(f'graphs_data/{dataset_name}/edge_f_p_list{run}.pt', map_location=device, weights_only=False)
         x_list.append(x)
         y_list.append(y)
         edge_p_p_list.append(edge_p_p)
@@ -1826,9 +1826,9 @@ def data_train_particle_field(config, config_file, erase, best_model, device):
     y_mesh_list = []
     time.sleep(0.5)
     for run in trange(n_runs):
-        x_mesh = torch.load(f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt', map_location=device, weights_only=False)
+        x_mesh = torch.load(f'graphs_data/{dataset_name}/x_mesh_list_{run}.pt', map_location=device, weights_only=False)
         x_mesh_list.append(x_mesh)
-        h = torch.load(f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt', map_location=device, weights_only=False)
+        h = torch.load(f'graphs_data/{dataset_name}/y_mesh_list_{run}.pt', map_location=device, weights_only=False)
         y_mesh_list.append(h)
     h = y_mesh_list[0][0].clone().detach()
     for run in range(n_runs):
@@ -1839,7 +1839,7 @@ def data_train_particle_field(config, config_file, erase, best_model, device):
     print(f'hnorm: {to_numpy(hnorm)}')
     logger.info(f'hnorm: {to_numpy(hnorm)}')
     time.sleep(0.5)
-    mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_1.pt', map_location=device, weights_only=False)
+    mesh_data = torch.load(f'graphs_data/{dataset_name}/mesh_data_1.pt', map_location=device, weights_only=False)
     mask_mesh = mesh_data['mask']
     mask_mesh = mask_mesh.repeat(batch_size, 1)
     edge_index_mesh = mesh_data['edge_index']
@@ -2064,7 +2064,7 @@ def data_train_particle_field(config, config_file, erase, best_model, device):
             visualize_embedding = True
             if visualize_embedding & (((epoch < 30) & (N % (Niter // 50) == 0)) | (N == 0)):
                 plot_training_particle_field(config=config, has_siren=has_siren, has_siren_time=has_siren_time,
-                                             model_f=model_f, dataset_name=dataset_name, n_frames=n_frames,
+                                             model_f=model_f, n_frames=n_frames,
                                              model_name=model_config.particle_model_name, log_dir=log_dir,
                                              epoch=epoch, N=N, x=x, x_mesh=x_mesh, model=model, n_nodes=0,
                                              n_node_types=0, index_nodes=0, dataset_num=1,
@@ -2123,7 +2123,7 @@ def data_train_particle_field(config, config_file, erase, best_model, device):
         plt.ylabel('Embedding 1', fontsize=12)
 
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
+        plt.savefig(f"./{log_dir}/tmp_training/Fig_{epoch}.tif")
         plt.close()
 
         ax = fig.add_subplot(1, 5, 3)
@@ -2194,7 +2194,7 @@ def data_train_particle_field(config, config_file, erase, best_model, device):
                 plt.xticks([])
                 plt.yticks([])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}_before training function.tif")
+                plt.savefig(f"./{log_dir}/tmp_training/Fig_{epoch}_before training function.tif")
 
                 lr_embedding = 1E-12
                 optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
@@ -2244,7 +2244,7 @@ def data_train_particle_field(config, config_file, erase, best_model, device):
                 logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
 
-def data_train_potential_energy(config, config_file, erase, best_model, device):
+def data_train_potential_energy(config, erase, best_model, device):
     model = SIREN(in_features=1, out_features=1, hidden_features=256, hidden_layers=3)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
     criterion = nn.MSELoss()
@@ -2265,7 +2265,7 @@ def data_train_potential_energy(config, config_file, erase, best_model, device):
             print(f'Epoch {epoch}, Loss: {loss.item()}')
 
 
-def data_train_synaptic(config, config_file, erase, best_model, device):
+def data_train_synaptic(config, erase, best_model, device):
     simulation_config = config.simulation
     train_config = config.training
     model_config = config.graph_model
@@ -2294,15 +2294,15 @@ def data_train_synaptic(config, config_file, erase, best_model, device):
     has_siren = 'siren' in model_config.excitation_type
     has_siren_time = 'siren_with_time' in model_config.excitation_type
 
-    l_dir, log_dir, logger = create_log_dir(config, config_file, erase)
+    log_dir, logger = create_log_dir(config, erase)
     print(f'Graph files N: {n_runs}')
     logger.info(f'Graph files N: {n_runs}')
 
     x_list = []
     y_list = []
     for run in trange(n_runs):
-        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
-        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
+        x = torch.load(f'graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device)
+        y = torch.load(f'graphs_data/{dataset_name}/y_list_{run}.pt', map_location=device)
         x_list.append(x)
         y_list.append(y)
     vnorm = torch.tensor(1.0, device=device)
@@ -2398,8 +2398,8 @@ def data_train_synaptic(config, config_file, erase, best_model, device):
     else:
         model_f = []
 
-    model.edges = torch.load(f'./graphs_data/graphs_{dataset_name}/edge_index.pt', map_location=device)
-    adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency.pt', map_location=device)
+    model.edges = torch.load(f'./graphs_data/{dataset_name}/edge_index.pt', map_location=device)
+    adjacency = torch.load(f'./graphs_data/{dataset_name}/adjacency.pt', map_location=device)
 
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
@@ -2733,11 +2733,11 @@ def data_train_synaptic(config, config_file, erase, best_model, device):
 
         plt.tight_layout()
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
+        plt.savefig(f"./{log_dir}/tmp_training/Fig_{epoch}.tif")
         plt.close()
 
 
-def data_train_synaptic2(config, config_file, erase, best_model, device):
+def data_train_synaptic2(config, erase, best_model, device):
     simulation_config = config.simulation
     train_config = config.training
     model_config = config.graph_model
@@ -2774,15 +2774,15 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
 
-    l_dir, log_dir, logger = create_log_dir(config, config_file, erase)
+    log_dir, logger = create_log_dir(config, erase)
     print(f'loading graph files N: {n_runs} ...')
     logger.info(f'Graph files N: {n_runs}')
 
     x_list = []
     y_list = []
     for run in trange(n_runs):
-        x = np.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy')
-        y = np.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy')
+        x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
+        y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
         x_list.append(x)
         y_list.append(y)
     x = x_list[0][n_frames - 1]
@@ -2892,8 +2892,8 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
     logger.info(f'N epochs: {n_epochs}')
     logger.info(f'initial batch_size: {batch_size}')
 
-    adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency.pt', map_location=device)
-    model.edges = torch.load(f'./graphs_data/graphs_{dataset_name}/edge_index.pt', map_location=device)
+    adjacency = torch.load(f'./graphs_data/{dataset_name}/adjacency.pt', map_location=device)
+    model.edges = torch.load(f'./graphs_data/{dataset_name}/edge_index.pt', map_location=device)
     print(f'{to_numpy(torch.sum(model.edges))} edges')
 
     # matrix = to_numpy(adjacency)
@@ -3274,7 +3274,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
         plt.close()
 
 
-def data_train_agents(config, config_file, erase, best_model, device):
+def data_train_agents(config, erase, best_model, device):
     simulation_config = config.simulation
     train_config = config.training
     model_config = config.graph_model
@@ -3303,7 +3303,7 @@ def data_train_agents(config, config_file, erase, best_model, device):
     n_runs = train_config.n_runs
     has_state = (config.simulation.state_type != 'discrete')
 
-    l_dir, log_dir, logger = create_log_dir(config, config_file, erase)
+    log_dir, logger = create_log_dir(config, erase)
     print(f'Graph files N: {n_runs}')
     logger.info(f'Graph files N: {n_runs}')
     time.sleep(0.5)
@@ -3509,7 +3509,7 @@ def data_train_agents(config, config_file, erase, best_model, device):
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
 
-def data_train_WBI(config, config_file, erase, best_model, device):
+def data_train_WBI(config, erase, best_model, device):
     simulation_config = config.simulation
     train_config = config.training
     model_config = config.graph_model
@@ -3540,7 +3540,7 @@ def data_train_WBI(config, config_file, erase, best_model, device):
     n_runs = train_config.n_runs
     has_state = (config.simulation.state_type != 'discrete')
 
-    l_dir, log_dir, logger = create_log_dir(config, config_file, erase)
+    log_dir, logger = create_log_dir(config, erase)
     print(f'Graph files N: {n_runs}')
     logger.info(f'Graph files N: {n_runs}')
     time.sleep(0.5)
@@ -3548,8 +3548,8 @@ def data_train_WBI(config, config_file, erase, best_model, device):
     x_list = []
     y_list = []
     for run in trange(n_runs):
-        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
-        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
+        x = torch.load(f'graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device)
+        y = torch.load(f'graphs_data/{dataset_name}/y_list_{run}.pt', map_location=device)
         x_list.append(x)
         y_list.append(y)
     x = x_list[0][0].clone().detach()
@@ -3603,7 +3603,7 @@ def data_train_WBI(config, config_file, erase, best_model, device):
     logger.info(f'N particles:  {n_particles} {len(torch.unique(type_list))} types')
 
     print('Load local connectivity ...')
-    edges = torch.load(f'./graphs_data/graphs_{dataset_name}/edge_index.pt', map_location=device)
+    edges = torch.load(f'./graphs_data/{dataset_name}/edge_index.pt', map_location=device)
     print('Local connectivity loaded ...')
 
     print("Start training ...")
@@ -3674,7 +3674,7 @@ def data_train_WBI(config, config_file, erase, best_model, device):
                 plt.xticks([])
                 plt.yticks([])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif", dpi=87)
+                plt.savefig(f"./{log_dir}/tmp_training/embedding/{epoch}_{N}.tif", dpi=87)
                 plt.close()
 
                 torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
@@ -3742,11 +3742,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     else:
         has_synaptic_field = False
 
-    l_dir = get_log_dir(config)
-    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
+    log_dir = 'log/' + config.config_file
     files = glob.glob(f"./{log_dir}/tmp_recons/*")
-    # for f in files:
-    #     os.remove(f)
+    for f in files:
+        os.remove(f)
 
     if best_model == 'best':
         files = glob.glob(f"{log_dir}/models/*")
@@ -3775,9 +3774,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         y_mesh_list = []
         time.sleep(0.5)
         for run in trange(n_runs):
-            x_mesh = torch.load(f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt', map_location=device)
+            x_mesh = torch.load(f'graphs_data/{dataset_name}/x_mesh_list_{run}.pt', map_location=device)
             x_mesh_list.append(x_mesh)
-            h = torch.load(f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt', map_location=device)
+            h = torch.load(f'graphs_data/{dataset_name}/y_mesh_list_{run}.pt', map_location=device)
             y_mesh_list.append(h)
         h = y_mesh_list[0][0].clone().detach()
         x_list = x_mesh_list
@@ -3787,11 +3786,11 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         x_list = []
         y_list = []
         x_mesh_list = []
-        x_mesh = torch.load(f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt', map_location=device)
+        x_mesh = torch.load(f'graphs_data/{dataset_name}/x_mesh_list_{run}.pt', map_location=device)
         x_mesh_list.append(x_mesh)
         hnorm = torch.load(f'{log_dir}/hnorm.pt', map_location=device).to(device)
-        x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device))
-        y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device))
+        x_list.append(torch.load(f'graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device))
+        y_list.append(torch.load(f'graphs_data/{dataset_name}/y_list_{run}.pt', map_location=device))
         ynorm = torch.load(f'{log_dir}/ynorm.pt', map_location=device, weights_only=True).to(device)
         vnorm = torch.load(f'{log_dir}/vnorm.pt', map_location=device, weights_only=True).to(device)
         x = x_list[0][0].clone().detach()
@@ -3803,20 +3802,20 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         x_list = []
         y_list = []
         if (model_config.signal_model_name == 'PDE_N'):
-            x = np.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy')
-            y = np.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy')
+            x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
+            y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
             x_list.append(torch.tensor(x, device=device))
             y_list.append(torch.tensor(y, device=device))
         else:
-            if os.path.exists(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt'):
-                x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
-                y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
+            if os.path.exists(f'graphs_data/{dataset_name}/x_list_{run}.pt'):
+                x = torch.load(f'graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device)
+                y = torch.load(f'graphs_data/{dataset_name}/y_list_{run}.pt', map_location=device)
                 x_list.append(x)
                 y_list.append(y)
             else:
-                x = np.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy')
+                x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
                 x = torch.tensor(x, dtype=torch.float32, device=device)
-                y = np.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy')
+                y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
                 y = torch.tensor(y, dtype=torch.float32, device=device)
                 x_list.append(x)
                 y_list.append(y)
@@ -3875,14 +3874,14 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         state_dict = torch.load(net, map_location=device)
         model_ghost.load_state_dict(state_dict['model_state_dict'])
         model_ghost.eval()
-        x_removed_list = torch.load(f'graphs_data/graphs_{dataset_name}/x_removed_list_0.pt', map_location=device)
+        x_removed_list = torch.load(f'graphs_data/{dataset_name}/x_removed_list_0.pt', map_location=device)
         mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
         mask_ghost = np.argwhere(mask_ghost == 1)
         mask_ghost = mask_ghost[:, 0].astype(int)
     if has_mesh:
         hnorm = torch.load(f'{log_dir}/hnorm.pt', map_location=device).to(device)
 
-        mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_{run}.pt', map_location=device)
+        mesh_data = torch.load(f'graphs_data/{dataset_name}/mesh_data_{run}.pt', map_location=device)
         mask_mesh = mesh_data['mask']
         edge_index_mesh = mesh_data['edge_index']
         edge_weight_mesh = mesh_data['edge_weight']
@@ -3904,13 +3903,13 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             edge_index = adj_t.nonzero().t().contiguous()
             edge_attr_adjacency = adjacency[adj_t]
         else:
-            adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency.pt', map_location=device)
+            adjacency = torch.load(f'./graphs_data/{dataset_name}/adjacency.pt', map_location=device)
             adjacency_ = adjacency.t().clone().detach()
             adj_t = torch.abs(adjacency_) > 0
             edge_index = adj_t.nonzero().t().contiguous()
     if 'PDE_N' in model_config.signal_model_name:
-        adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency.pt', map_location=device)
-        edge_index = torch.load(f'./graphs_data/graphs_{dataset_name}/edge_index.pt', map_location=device)
+        adjacency = torch.load(f'./graphs_data/{dataset_name}/adjacency.pt', map_location=device)
+        edge_index = torch.load(f'./graphs_data/{dataset_name}/edge_index.pt', map_location=device)
         edge_index_, edge_attr = dense_to_sparse(adjacency)
         first_dataset = data.Data(x=x.clone().detach(), pos=x[:, 1:3].clone().detach(),
                                   edge_index=edge_index.clone().detach(), edge_attr=edge_attr.clone().detach())
@@ -3931,20 +3930,20 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         neuron_gt_list = []
         neuron_pred_list = []
 
-        if os.path.exists(f'./graphs_data/graphs_{dataset_name}/X1.pt') > 0:
-            X1_first = torch.load(f'./graphs_data/graphs_{dataset_name}/X1.pt', map_location=device)
-            X_msg = torch.load(f'./graphs_data/graphs_{dataset_name}/X_msg.pt', map_location=device)
+        if os.path.exists(f'./graphs_data/{dataset_name}/X1.pt') > 0:
+            X1_first = torch.load(f'./graphs_data/{dataset_name}/X1.pt', map_location=device)
+            X_msg = torch.load(f'./graphs_data/{dataset_name}/X_msg.pt', map_location=device)
         else:
             xc, yc = get_equidistant_points(n_points=n_particles)
             X1_first = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
             perm = torch.randperm(X1_first.size(0))
             X1_first = X1_first[perm]
-            torch.save(X1, f'./graphs_data/graphs_{dataset_name}/X1.pt')
+            torch.save(X1, f'./graphs_data/{dataset_name}/X1.pt')
             xc, yc = get_equidistant_points(n_points=n_particles**2)
             X_msg = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
             perm = torch.randperm(X_msg.size(0))
             X_msg = X_msg[perm]
-            torch.save(X_msg, f'./graphs_data/graphs_{dataset_name}/X_msg.pt')
+            torch.save(X_msg, f'./graphs_data/{dataset_name}/X_msg.pt')
 
     if verbose:
         print(f'Test data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
@@ -3980,9 +3979,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             model.eval()
             mesh_model = None
             if 'PDE_K' in model_config.particle_model_name:
-                model.connection_matrix = torch.load(f'graphs_data/graphs_{dataset_name}/connection_matrix_list.pt',
+                model.connection_matrix = torch.load(f'graphs_data/{dataset_name}/connection_matrix_list.pt',
                                                      map_location=device)
-                timeit = np.load(f'graphs_data/graphs_{dataset_name}/times_train_springs_example.npy',
+                timeit = np.load(f'graphs_data/{dataset_name}/times_train_springs_example.npy',
                                  allow_pickle=True)
                 timeit = timeit[run][0]
                 time_id = 0
