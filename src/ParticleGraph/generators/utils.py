@@ -1,5 +1,5 @@
 
-from ParticleGraph.generators import PDE_A, PDE_B, PDE_E, PDE_F, PDE_G, PDE_K, PDE_N, PDE_N2,  PDE_N3, PDE_N4, PDE_N5, PDE_S, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, PDE_Laplacian, PDE_O
+from ParticleGraph.generators import *
 from ParticleGraph.utils import *
 from ParticleGraph.data_loaders import load_solar_system, load_LG_ODE, load_WaterRampsWall, load_cell_data
 from time import sleep
@@ -157,12 +157,6 @@ def choose_model(config=[], W=[], device=[]):
 
 
     match model_signal_name:
-        case 'PDE_N':
-            p = torch.rand(n_particle_types, 2, device=device) * 100  # comprised between 10 and 50
-            if params[0] != [-1]:
-                for n in range(n_particle_types):
-                    p[n] = torch.tensor(params[n])
-            model = PDE_N(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
         case 'PDE_N2':
             p = torch.rand(n_particle_types, 3, device=device) * 100  # comprised between 10 and 50
             if params[0] != [-1]:
@@ -187,6 +181,12 @@ def choose_model(config=[], W=[], device=[]):
                 for n in range(n_particle_types):
                     p[n] = torch.tensor(params[n])
             model = PDE_N5(aggr_type=aggr_type, p=torch.squeeze(p), W=W, phi=phi)
+        case 'PDE_N6':
+            p = torch.rand(n_particle_types, 5, device=device) * 100  # comprised between 10 and 50
+            if params[0] != [-1]:
+                for n in range(n_particle_types):
+                    p[n] = torch.tensor(params[n])
+            model = PDE_N6(aggr_type=aggr_type, p=torch.squeeze(p), W=W, phi=phi)
 
 
 
@@ -323,7 +323,13 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
         dpos [0:n_wall_particles, :] = 0
         type = torch.cat((torch.zeros(n_wall_particles, device=device),torch.ones(real_n_particles, device=device)),0)
 
-    features = torch.cat((torch.rand((n_particles, 1), device=device) , 0.1 * torch.randn((n_particles, 1), device=device)), 1)
+
+    if config.graph_model.signal_model_name == 'PDE_N6':
+        features = torch.cat((torch.rand((n_particles, 1), device=device), 0.1 * torch.randn((n_particles, 1), device=device),
+                              torch.ones((n_particles, 1), device=device), torch.zeros((n_particles, 1), device=device)), 1)
+    else:
+        features = torch.cat((torch.rand((n_particles, 1), device=device), 0.1 * torch.randn((n_particles, 1), device=device)), 1)
+
 
     type = type[:, None]
     particle_id = torch.arange(n_particles, device=device)

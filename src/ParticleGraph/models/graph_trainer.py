@@ -2411,7 +2411,7 @@ def data_train_synaptic(config, erase, best_model, device):
 
     list_loss = []
     time.sleep(2)
-    for epoch in range(14, n_epochs + 1):
+    for epoch in range(start_epoch, n_epochs + 1):
 
         if (epoch == 20) & (train_config.coeff_anneal_L1 > 0):
             train_config.coeff_L1 = train_config.coeff_anneal_L1

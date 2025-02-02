@@ -60,7 +60,6 @@ class SimulationConfig(BaseModel):
     excitation: str='none'
 
     params: list[list[float]]
-    std_params : list[float] = [2, -2.5, 10, 50]
     func_params: list[tuple] = None
 
     phi: str = 'tanh'

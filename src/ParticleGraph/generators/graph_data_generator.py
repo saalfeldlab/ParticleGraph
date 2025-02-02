@@ -1541,7 +1541,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     has_zarr = 'zarr' in simulation_config.connectivity_file
     excitation = simulation_config.excitation
     noise_level = training_config.noise_level
-    std_params = torch.tensor(simulation_config.std_params, dtype=torch.float32, device=device)
     cmap = CustomColorMap(config=config)
 
     field_type = model_config.field_type
@@ -1613,7 +1612,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         n_particles = adjacency.shape[0]
         config.simulation.n_particles = n_particles
 
-    elif 'random' in simulation_config.connectivity_file:
+    elif simulation_config.connectivity_file=='':
 
         if simulation_config.connectivity_distribution == 'Gaussian':
             adjacency = torch.randn((n_particles, n_particles), dtype=torch.float32, device=device)
@@ -1764,8 +1763,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                 im_ = np.reshape(im_, (n_nodes_per_axis * n_nodes_per_axis))
                 A1[:n_nodes, 0:1] = torch.tensor(im_[:, None], dtype=torch.float32, device=device)
                 A1[n_nodes:n_particles, 0:1] = 1
-            if ('std' in field_type):
-                A1[:,0] = A1[:,0] * U1[:,0]
 
                 # plt.scatter(to_numpy(X1_mesh[:, 1]), to_numpy(X1_mesh[:, 0]), s=40, c=to_numpy(A1), cmap='grey', vmin=0,vmax=1)
 
@@ -1780,13 +1777,15 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             # model prediction
             with torch.no_grad():
                 if ('modulation' in field_type) & (it >= 0):
-                    y, s_tanhu, msg = model(dataset, return_all=True, has_field=True)
+                    y, msg = model(dataset, has_field=True)
                 elif ('visual' in field_type) & (it >= 0):
-                    y, s_tanhu, msg = model(dataset, return_all=True, has_field=True)
+                    y, msg = model(dataset, has_field=True)
                 elif 'PDE_N3' in model_config.signal_model_name:
-                    y, s_tanhu, msg = model(dataset, return_all=True, has_field=False, alpha = it/n_frames)
+                    y, msg = model(dataset, has_field=False, alpha = it/n_frames)
+                elif 'PDE_N6' in model_config.signal_model_name:
+                    y, p, msg = model(dataset, has_field=False)
                 else:
-                    y, s_tanhu, msg = model(dataset, return_all=True, has_field=False)
+                    y, msg = model(dataset, has_field=False)
 
             # append list
             if (it >= 0) & bSave:
@@ -1803,21 +1802,22 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     y_list.append(to_numpy(y))
 
             # Particle update
-            H1[:, 1] = y.squeeze()
-            H1[:, 0] = H1[:, 0] + H1[:, 1] * delta_t
-            if noise_level > 0:
-                H1[:, 0] = H1[:, 0] + torch.randn(n_particles, device=device) * noise_level
-            if 'std' in field_type:
-                H1_norm = (torch.tanh(H1[:, 0]/std_params[2]))**2
-                U1[:, 1] = ((1-U1[:, 0]) * std_params[0] + std_params[1] * U1[:,0]*H1_norm) / std_params[3]
-                U1[:, 0] = U1[:,0] + delta_t * U1[:,1]
-                U1[:, 0] = torch.relu(U1[:, 0])
 
-                # t = torch.linspace(-5, 5, 1000)
-                # s = (torch.tanh(t*4-1) + 1) / 2
-                # fig = plt.figure(figsize=(12, 12))
-                # plt.scatter(to_numpy(t), to_numpy(s), s=10, c='k')
-                # plt.xlim([-1,2])
+            if config.graph_model.signal_model_name == 'PDE_N6':
+
+                H1[:, 1] = y.squeeze()
+                H1[:, 0] = H1[:, 0] + H1[:, 1] * delta_t
+
+                H1[:, 3] = p.squeeze()
+                H1[:, 2] = torch.relu(H1[:, 2] + H1[:, 3] * delta_t)
+
+            else:
+
+                H1[:, 1] = y.squeeze()
+                H1[:, 0] = H1[:, 0] + H1[:, 1] * delta_t
+                if noise_level > 0:
+                    H1[:, 0] = H1[:, 0] + torch.randn(n_particles, device=device) * noise_level
+
 
             # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
             # print(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
@@ -1833,145 +1833,102 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     plt.rcParams['text.usetex'] = True
                     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
-                if 'color' in style:
+                matplotlib.rcParams['savefig.pad_inches'] = 0
+                num = f"{it:06}"
 
-                    matplotlib.rcParams['savefig.pad_inches'] = 0
-
-                    if 'hemibrain' in dataset_name:
-                        fig = plt.figure(figsize=(16, 8))
-                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=40, c=to_numpy(H1[:, 0]), cmap='viridis', vmin=-5,vmax=5)
-                        plt.colorbar()
-                        plt.xlim([-5000, 5000])
-                        plt.ylim([-2500, 2500])
-                        plt.xticks([])
-                        plt.yticks([])
-
-                        fig = plt.figure(figsize=(8, 8))
-                        tmp = y.clone().detach()
-                        tmp = torch.cat((tmp, torch.zeros((3025 - n_particles, 1), device=device)), dim=0)
-                        tmp = torch.reshape(tmp, (int(np.sqrt(len(tmp))), int(np.sqrt(len(tmp)))))
-                        tmp = to_numpy(tmp)
-                        tmp = np.rot90(tmp, k=1)
-                        plt.imshow(tmp, cmap='grey', vmin=-10, vmax=10)
-                        plt.colorbar()
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.tight_layout()
-                        num = f"{it:06}"
-                        plt.savefig(f"graphs_data/{dataset_name}/Viz/Viz_{run}_{num}.tif", dpi=70)
-                        plt.close()
-
-                        fig = plt.figure(figsize=(8, 8))
-                        tmp = excitation[:, None].clone().detach()
-                        tmp = torch.cat((tmp, torch.zeros((3025 - n_particles, 1), device=device)), dim=0)
-                        tmp = torch.reshape(tmp, (int(np.sqrt(len(tmp))), int(np.sqrt(len(tmp)))))
-                        tmp = to_numpy(tmp)
-                        tmp = np.rot90(tmp, k=1)
-                        plt.imshow(tmp, cmap='grey', vmin=-5, vmax=5)
-                        plt.colorbar()
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.tight_layout()
-                        num = f"{it:06}"
-                        plt.savefig(f"graphs_data/{dataset_name}/Exc/Exc_{run}_{num}.tif", dpi=70)
-                        plt.close()
-
-                        fig = plt.figure(figsize=(8, 8))
-                        tmp = H1[:, 0:1].clone().detach()
-                        tmp = torch.cat((tmp, torch.zeros((3025 - n_particles, 1), device=device)), dim=0)
-                        tmp = torch.reshape(tmp, (int(np.sqrt(len(tmp))), int(np.sqrt(len(tmp)))))
-                        tmp = to_numpy(tmp)
-                        tmp = np.rot90(tmp, k=1)
-                        plt.imshow(tmp, cmap='grey', vmin=-5, vmax=5)
-                        plt.colorbar()
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.tight_layout()
-                        num = f"{it:06}"
-                        plt.savefig(f"graphs_data/{dataset_name}/Signal/Signal_{run}_{num}.tif", dpi=70)
-                        plt.close()
-                    elif 'visual' in field_type:
-                        fig = plt.figure(figsize=(8.5, 8))
-                        plt.axis('off')
-                        plt.subplot(211)
-                        plt.title('modulation',fontsize=24)
-                        plt.scatter(to_numpy(X1[0:1024, 1]), to_numpy(X1[0:1024, 0]), s=40, c=to_numpy(A1[0:1024, 0]), cmap='viridis',
-                                    vmin=0, vmax=2)
-                        plt.scatter(to_numpy(X1[1024:, 1]), to_numpy(X1[1024:, 0]), s=30, c=to_numpy(A1[1024:, 0]), cmap='viridis',
-                                    vmin=0, vmax=2)
-                        cbar = plt.colorbar()
-                        cbar.ax.yaxis.set_tick_params(labelsize=8)
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.subplot(212)
-                        plt.title('firing rate $x_i$',fontsize=24)
-                        plt.scatter(to_numpy(X1[0:1024, 1]), to_numpy(X1[0:1024, 0]), s=40, c=to_numpy(H1[0:1024, 0]), cmap='viridis', vmin=-10,vmax=10)
-                        plt.scatter(to_numpy(X1[1024:, 1]), to_numpy(X1[1024:, 0]), s=30, c=to_numpy(H1[1024:, 0]), cmap='viridis', vmin=-10,vmax=10)
-                        cbar = plt.colorbar()
-                        cbar.ax.yaxis.set_tick_params(labelsize=8)
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.tight_layout()
-                    elif 'modulation' in field_type:
-                        fig = plt.figure(figsize=(12, 12))
-                        plt.subplot(221)
-                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=100, c=to_numpy(A1[:, 0]), cmap='viridis', vmin=0,vmax=2)
-                        plt.subplot(222)
-                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=100, c=to_numpy(H1[:, 0]), cmap='viridis', vmin=-5,vmax=5)
-                        if 'std' in field_type:
-                            plt.subplot(223)
-                            plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=100, c=to_numpy(U1[:, 0]), cmap='viridis', vmin=0, vmax=1.2)
-                            plt.text(0, 1.1, f' {np.mean(to_numpy(U1[:, 0])):0.3} +/- {np.std(to_numpy(U1[:, 0])):0.3}', fontsize=8)
-                            plt.subplot(224)
-                            plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=100, c=to_numpy(U1[:, 1]), cmap='viridis', vmin=-0.01, vmax=0.01)
-                            plt.text(0, 1.1, f' {np.mean(to_numpy(U1[:, 1])):0.3} +/- {np.std(to_numpy(U1[:, 1])):0.3}', fontsize=12)
-                    else:
-                        plt.figure(figsize=(10, 10))
-                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=40, c=to_numpy(x[:, 6]),
-                                    cmap='viridis', vmin=-10, vmax=10, edgecolors='k', alpha=1)
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.tight_layout()
-                    num = f"{it:06}"
+                if 'visual' in field_type:
+                    fig = plt.figure(figsize=(8.5, 8))
+                    plt.axis('off')
+                    plt.subplot(211)
+                    plt.title('modulation',fontsize=24)
+                    plt.scatter(to_numpy(X1[0:1024, 1]), to_numpy(X1[0:1024, 0]), s=40, c=to_numpy(A1[0:1024, 0]), cmap='viridis',
+                                vmin=0, vmax=2)
+                    plt.scatter(to_numpy(X1[1024:, 1]), to_numpy(X1[1024:, 0]), s=30, c=to_numpy(A1[1024:, 0]), cmap='viridis',
+                                vmin=0, vmax=2)
+                    cbar = plt.colorbar()
+                    cbar.ax.yaxis.set_tick_params(labelsize=8)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.subplot(212)
+                    plt.title('firing rate $x_i$',fontsize=24)
+                    plt.scatter(to_numpy(X1[0:1024, 1]), to_numpy(X1[0:1024, 0]), s=40, c=to_numpy(H1[0:1024, 0]), cmap='viridis', vmin=-10,vmax=10)
+                    plt.scatter(to_numpy(X1[1024:, 1]), to_numpy(X1[1024:, 0]), s=30, c=to_numpy(H1[1024:, 0]), cmap='viridis', vmin=-10,vmax=10)
+                    cbar = plt.colorbar()
+                    cbar.ax.yaxis.set_tick_params(labelsize=8)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
                     plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=170)
                     plt.close()
 
-                    if 'msg' in style:
-                        im_ = imread(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif")
-                        plt.figure(figsize=(10, 10))
-                        plt.imshow(im_)
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.subplot(3, 3, 1)
-                        plt.imshow(im_[800:1000, 800:1000, :])
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.tight_layout()
-                        plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
-                        plt.close()
+                elif 'modulation' in field_type:
+                    fig = plt.figure(figsize=(12, 12))
+                    plt.subplot(221)
+                    plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=100, c=to_numpy(A1[:, 0]), cmap='viridis', vmin=0,vmax=2)
+                    plt.subplot(222)
+                    plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=100, c=to_numpy(H1[:, 0]), cmap='viridis', vmin=-5,vmax=5)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=170)
+                    plt.close()
 
-                        plt.figure(figsize=(10, 10))
-                        msg = to_numpy(model.msg)
-                        msg = np.reshape(msg, (n_particles**2,1))
-                        plt.scatter(to_numpy(X_msg[:, 0]), to_numpy(X_msg[:, 1]), s=0.1, c=msg ,cmap='viridis', vmin=-0.075, vmax=0.075)
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.tight_layout()
-                        plt.savefig(f"graphs_data/{dataset_name}/Fig/Msg_{run}_{num}.tif", dpi=170)
-                        plt.close()
+                else:
+                    plt.figure(figsize=(10, 10))
 
-                        im_ = imread(f"graphs_data/{dataset_name}/Fig/Msg_{run}_{num}.tif")
-                        plt.figure(figsize=(10, 10))
-                        plt.imshow(im)
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.subplot(3, 3, 1)
-                        plt.imshow(im_[800:1000, 800:1000, :])
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.tight_layout()
-                        plt.savefig(f"graphs_data/{dataset_name}/Fig/Msg_{run}_{num}.tif", dpi=80)
-                        plt.close()
+                    if 'PDE_N6' in model_config.signal_model_name:
+
+                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=300, c=to_numpy(x[:, 8]),
+                                    cmap='grey', vmin=0, vmax=1, edgecolors='k', alpha=1)
+                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=140, c=to_numpy(x[:, 6]),
+                                    cmap='viridis', vmin=-5, vmax=5, edgecolors='k', alpha=1)
+
+                    else:
+                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=140, c=to_numpy(x[:, 6]),
+                                    cmap='viridis', vmin=-10, vmax=10, edgecolors='k', alpha=1)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=170)
+                    plt.close()
+
+                    im_ = imread(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif")
+                    plt.figure(figsize=(10, 10))
+                    plt.imshow(im_)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.subplot(3, 3, 1)
+                    plt.imshow(im_[800:1000, 800:1000, :])
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
+                    plt.close()
+
+                if 'msg' in style:
+                    plt.figure(figsize=(10, 10))
+                    msg = to_numpy(model.msg)
+                    msg = np.reshape(msg, (n_particles**2,1))
+                    plt.scatter(to_numpy(X_msg[:, 0]), to_numpy(X_msg[:, 1]), s=0.1, c=msg ,cmap='viridis', vmin=-0.075, vmax=0.075)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Msg_{run}_{num}.tif", dpi=170)
+                    plt.close()
+
+                    im_ = imread(f"graphs_data/{dataset_name}/Fig/Msg_{run}_{num}.tif")
+                    plt.figure(figsize=(10, 10))
+                    plt.imshow(im)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.subplot(3, 3, 1)
+                    plt.imshow(im_[800:1000, 800:1000, :])
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Msg_{run}_{num}.tif", dpi=80)
+                    plt.close()
+
 
 
         if (run==0):

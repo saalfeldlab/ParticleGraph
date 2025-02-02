@@ -4507,338 +4507,6 @@ def plot_RD_RPS(config, epoch_list, log_dir, logger, cc, style, device):
             print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}")
 
 
-def plot_synaptic(config, epoch_list, log_dir, logger, cc, style, device):
-
-    dataset_name = config.dataset
-
-    n_frames = config.simulation.n_frames
-    n_runs = config.training.n_runs
-    n_particle_types = config.simulation.n_particle_types
-    delta_t = config.simulation.delta_t
-    cmap = CustomColorMap(config=config)
-    dimension = config.simulation.dimension
-
-    embedding_cluster = EmbeddingCluster(config)
-
-    x_list = []
-    y_list = []
-    for run in trange(2):
-        x = torch.load(f'graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device)
-        y = torch.load(f'graphs_data/{dataset_name}/y_list_{run}.pt', map_location=device)
-        x_list.append(x)
-        y_list.append(y)
-    vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'))
-    ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'))
-    print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
-
-    print('Update variables ...')
-    x = x_list[0][n_frames - 1].clone().detach()
-    index_particles = get_index_particles(x, n_particle_types, dimension)
-    type_list = get_type_list(x, dimension)
-    n_particles = x.shape[0]
-    print(f'N particles: {n_particles}')
-    config.simulation.n_particles = n_particles
-
-    if 'mat' in config.simulation.connectivity_file:
-        mat = scipy.io.loadmat(config.simulation.connectivity_file)
-        adjacency = torch.tensor(mat['A'], device=device)
-    else:
-        adjacency = torch.load(config.simulation.connectivity_file, map_location=device)
-    adj_t = adjacency > 0
-    edge_index = adj_t.nonzero().t().contiguous()
-
-    for epoch in epoch_list:
-
-        net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt"
-        model, bc_pos, bc_dpos = choose_training_model(config, device)
-        state_dict = torch.load(net, map_location=device)
-        model.load_state_dict(state_dict['model_state_dict'])
-        model.edges = edge_index
-        print(f'net: {net}')
-
-        config.training.cluster_method = 'distance_plot'
-        config.training.cluster_distance_threshold = 0.01
-        alpha = 0.1
-        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config,embedding_cluster,
-                                                                       cmap, index_particles, type_list,
-                                                                       n_particle_types, n_particles, ynorm, epoch,
-                                                                       log_dir, alpha, device)
-        print(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
-        logger.info(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
-
-        fig, ax = fig_init()
-        ax.xaxis.get_major_formatter()._usetex = False
-        ax.yaxis.get_major_formatter()._usetex = False
-        rr = torch.tensor(np.linspace(0, 4, 1000)).to(device)
-        print(n_particles)
-        func_list, proj_interaction = analyze_edge_function(rr=rr, vizualize=True, config=config,
-                                                            model_MLP=model.lin_phi, model_a=model.a,
-                                                            dataset_number=1,
-                                                            n_particles=int(n_particles * (1 - config.training.particle_dropout)),
-                                                            ynorm=ynorm,
-                                                            type_list=to_numpy(x[:, 5]),
-                                                            cmap=cmap, device=device)
-
-        plt.xlabel(r'$u$', fontsize=78)
-        plt.ylabel(r'Learned $\Phi(u)$', fontsize=78)
-        # plt.ylim([-0.05,0.15])
-        plt.xlim([0,2])
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/reconstructed_phi_u_{config_file}_{epoch}.tif", dpi=170.7)
-        plt.close()
-
-        fig, ax = fig_init()
-        embedding_ = model.a[1, :, :]
-        u = torch.tensor(0.5, device=device).float()
-        u = u * torch.ones((n_particles, 1), device=device)
-        in_features = torch.cat((u, embedding_), dim=1)
-        with torch.no_grad():
-            func = model.lin_phi(in_features.float())
-        func = func[:, 0]
-        proj_interaction = to_numpy(func[:, None])
-        labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
-        for n in range(n_clusters):
-            pos = np.argwhere(labels == n)
-            pos = np.array(pos)
-            if pos.size > 0:
-                plt.scatter(np.ones_like(pos) * 0.5, proj_interaction[pos, 0], color=cmap.color(n), s=400, alpha=0.1)
-        label_list = []
-        for n in range(n_particle_types):
-            tmp = labels[index_particles[n]]
-            label_list.append(np.round(np.median(tmp)))
-        label_list = np.array(label_list)
-        plt.xlabel(r'$u$', fontsize=78)
-        plt.ylabel(r'$\Phi(u)$', fontsize=78)
-        plt.ylim([-0.25, 0.25])
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/cluster_{config_file}_{epoch}.tif", dpi=300)
-        plt.close()
-
-        new_labels = labels.copy()
-        for n in range(n_particle_types):
-            new_labels[labels == label_list[n]] = n
-        accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-        print(f'accuracy: {np.round(accuracy, 2)}   n_clusters: {n_clusters}')
-        logger.info(f'accuracy: {np.round(accuracy, 2)}   n_clusters: {n_clusters}')
-
-        fig, ax = fig_init()
-        for n in np.unique(new_labels):
-            pos = np.argwhere(new_labels == n)
-            plt.scatter(to_numpy(x[pos, 2]), to_numpy(x[pos, 1]), s=200)
-        plt.xlim([-1.2, 1.2])
-        plt.ylim([-1.2, 1.2])
-        plt.xlabel(r'$x$', fontsize=78)
-        plt.ylabel(r'$y$', fontsize=78)
-        plt.xticks(fontsize=48.0)
-        plt.yticks(fontsize=48.0)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/classif_{config_file}_{epoch}.tif", dpi=300)
-        plt.close()
-
-
-        uu = torch.tensor(np.linspace(0, 3, 1000)).to(device)
-        in_features = uu[:, None]
-        with torch.no_grad():
-            func = model.lin_edge(in_features.float())
-            func = func[:, 0]
-        uu = uu.to(dtype=torch.float32)
-        func = func.to(dtype=torch.float32)
-
-        text_trap = StringIO()
-        sys.stdout = text_trap
-
-        model_pysrr = PySRRegressor(
-            niterations=30,  # < Increase me for better results
-            binary_operators=["+", "*"],
-            unary_operators=[
-                "cos",
-                "exp",
-                "sin",
-                "tanh"
-            ],
-            random_state=0,
-            temp_equation_file=False
-        )
-
-        model_pysrr.fit(to_numpy(uu[:, None]), to_numpy(func[:, None]))
-
-        sys.stdout = sys.__stdout__
-
-        expr = model_pysrr.sympy(2).as_terms()[0]
-        coeff = expr[0][1][0][0]
-        print(expr)
-        logger.info(expr)
-
-        A = torch.zeros(n_particles, n_particles, device=device, requires_grad=False, dtype=torch.float32)
-        if 'asymmetric' in config.simulation.adjacency_matrix:
-            A = model.vals
-        else:
-            i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
-            A[i,j] = model.vals
-            A.T[i,j] = model.vals
-
-        fig, ax = fig_init()
-        gt_weight = to_numpy(adjacency[adj_t])
-        pred_weight = to_numpy(A[adj_t]) * coeff
-        x_data = gt_weight
-        y_data = pred_weight.squeeze()
-        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-        residuals = y_data - linear_model(x_data, *lin_fit)
-        ss_res = np.sum(residuals ** 2)
-        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-        r_squared = 1 - (ss_res / ss_tot)
-        plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-        plt.scatter(gt_weight, pred_weight, s=200, c=mc, edgecolors='none')
-        plt.ylabel('Learned $A_{ij}$ values', fontsize=64)
-        plt.xlabel('True network $A_{ij}$ values', fontsize=64)
-        print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   offset: {np.round(lin_fit[1], 2)}  ")
-        logger.info(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   offset: {np.round(lin_fit[1], 2)}  ")
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/Aij_{config_file}_{epoch}.tif", dpi=300)
-        plt.close()
-
-        fig = plt.figure(figsize=(20, 10))
-        ax = fig.add_subplot(1,2,1)
-        plt.imshow(to_numpy(adjacency), cmap='viridis', vmin=0, vmax=0.01)
-        plt.title('True $A_{ij}$', fontsize=64)
-        plt.xticks(fontsize=24.0)
-        plt.yticks(fontsize=24.0)
-        ax = fig.add_subplot(1,2,2)
-        plt.imshow(to_numpy(model.vals)*coeff, cmap='viridis', vmin=0, vmax=0.01)
-        plt.title('Learned $A_{ij}$', fontsize=64)
-        plt.xticks(fontsize=24.0)
-        plt.yticks(fontsize=24.0)
-        plt.tight_layout()
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/Aij_comparison_{config_file}_{epoch}.tif", dpi=300)
-        plt.close()
-
-        fig, ax = fig_init()
-        plt.scatter(to_numpy(adjacency),to_numpy(model.vals)*coeff)
-
-        fig, ax = fig_init()
-        gt_weight = to_numpy(adjacency)
-        pred_weight = to_numpy(model.vals) * coeff
-        x_data = np.reshape(gt_weight, (n_particles * n_particles))
-        y_data =  np.reshape(pred_weight,  (n_particles * n_particles))
-        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-        residuals = y_data - linear_model(x_data, *lin_fit)
-        ss_res = np.sum(residuals ** 2)
-        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-        r_squared = 1 - (ss_res / ss_tot)
-        plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-        plt.scatter(gt_weight, pred_weight, s=200, c=mc, edgecolors='none')
-        plt.ylabel('Learned $A_{ij}$ values', fontsize=64)
-        plt.xlabel('True network $A_{ij}$ values', fontsize=64)
-        print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   offset: {np.round(lin_fit[1], 2)}  ")
-        logger.info(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   offset: {np.round(lin_fit[1], 2)}  ")
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/all_Aij_{config_file}_{epoch}.tif", dpi=300)
-        plt.close()
-
-        true_func = torch.tanh(uu)
-        fig, ax = fig_init()
-        plt.xlabel(r'$u$', fontsize=78)
-        plt.ylabel(r'$f(u)$', fontsize=78)
-        plt.plot(to_numpy(uu), to_numpy(true_func), linewidth=20, c='g', label=r'true $f(u)$')
-        plt.plot(to_numpy(uu), to_numpy(func) / coeff, linewidth=8, c=mc, label=r'learned $f(u)$')
-        plt.legend(fontsize=32.0, loc='upper right')
-        plt.ylim([0,1.4])
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/comparison_f_u_{config_file}_{epoch}.tif", dpi=300)
-        plt.close()
-
-        # Analysis of \Phi(u)
-
-        for type in range(2):
-            uu = torch.tensor(np.linspace(0, 4, 1000)).to(device)
-            uu = uu.to(dtype=torch.float32)
-
-            pos = np.argwhere(to_numpy(x[:, 5]) == type)
-            learned_func = func_list[pos].squeeze()
-            learned_func = torch.median(learned_func, dim=0).values
-            p = config.simulation.params
-            if len(p) > 1:
-                p = torch.tensor(p, device=device)
-            true_func = -to_numpy(uu) * to_numpy(p[type, 0]) + to_numpy(p[type, 1]) * np.tanh(to_numpy(uu))
-
-            fig, ax = fig_init()
-            if type==0:
-                plt.plot(to_numpy(uu), true_func[:,None], linewidth=20, label='true', c='xkcd:sky blue')
-            else:
-                plt.plot(to_numpy(uu), true_func[:,None], linewidth=20, label='true', c='orange')
-            plt.plot(to_numpy(uu), to_numpy(learned_func), linewidth=8, c=mc, label='learned')
-            plt.xlabel(r'$u$', fontsize=78)
-            plt.ylabel(r'$\Phi_0(u)$', fontsize=78)
-            plt.legend(fontsize=32.0)
-            plt.ylim([-0.25, 0.25])
-            plt.xlim([0, 3])
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/comparison_phi_{type}_{config_file}_{epoch}.tif", dpi=300)
-            plt.close()
-
-            text_trap = StringIO()
-            sys.stdout = text_trap
-
-            model_pysrr = PySRRegressor(
-                niterations=100,  # < Increase me for better results
-                unary_operators=[
-                    "tanh"
-                ],
-                nested_constraints={
-                    "tanh": {"tanh": 0},
-                },
-                random_state=0,
-                maxsize=20,
-                maxdepth=6,
-                temp_equation_file=False
-            )
-            model_pysrr.fit(to_numpy(uu[:, None]), to_numpy(learned_func[:, None]))
-
-            sys.stdout = sys.__stdout__
-
-
-
-        # model_pysrr = PySRRegressor(
-        #     niterations=100,  # < Increase me for better results
-        #     unary_operators=[
-        #         "tanh"
-        #     ],
-        #     random_state=0,
-        #     temp_equation_file=False,
-        #     maxsize=20,
-        #     maxdepth=6
-        # )
-        # model_pysrr.fit(to_numpy(uu[:, None]), true_func[:, None])
-
-
-
-
-
-
-
-
-
-        # model_kan = KAN(width=[1, 1], grid=5, k=3, seed=0)
-        # model_kan.train(dataset, opt="LBFGS", steps=20, lamb=0.01, lamb_entropy=10.)
-        # lib = ['x', 'x^2', 'x^3', 'x^4', 'exp', 'log', 'sqrt', 'tanh', 'sin', 'abs']
-        # model_kan.auto_symbolic(lib=lib)
-        # model_kan.train(dataset, steps=20)
-        # formula, variables = model_kan.symbolic_formula()
-        # print(formula)
-        #
-        # model_kan = KAN(width=[1, 5, 1], grid=5, k=3, seed=0)
-        # model_kan.train(dataset, opt="LBFGS", steps=50, lamb=0.01, lamb_entropy=10.)
-        # model_kan = model_kan.prune()
-        # model_kan.train(dataset, opt="LBFGS", steps=50);
-        # for k in range(10):
-        #     lib = ['x', 'x^2', 'x^3', 'x^4', 'exp', 'log', 'sqrt', 'tanh', 'sin', 'abs']
-        #     model_kan.auto_symbolic(lib=lib)
-        #     model_kan.train(dataset, steps=100)
-        #     formula, variables = model_kan.symbolic_formula()
-        #     print(formula)
-
-
 def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
     dataset_name = config.dataset
@@ -5725,7 +5393,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                         logger.info(symbolic(n))
 
 
-def plot_synaptic3(config, config_file, epoch_list, log_dir, logger, cc, style, device):
+def plot_synaptic3(config,epoch_list, log_dir, logger, cc, style, device):
 
     dataset_name = config.dataset
 
@@ -6521,7 +6189,7 @@ def plot_synaptic3(config, config_file, epoch_list, log_dir, logger, cc, style, 
             plt.close()
 
 
-def plot_agents(config, config_file, epoch_list, log_dir, logger, style, device):
+def plot_agents(config, epoch_list, log_dir, logger, style, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -6708,7 +6376,7 @@ def plot_agents(config, config_file, epoch_list, log_dir, logger, style, device)
         # plt.savefig(f"./{log_dir}/tmp_training/particle/Fig_{epoch}_{N}.tif", dpi=87)
 
 
-def plot_mouse(config, config_file, epoch_list, log_dir, logger, style, device):
+def plot_mouse(config, epoch_list, log_dir, logger, style, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -7061,144 +6729,6 @@ def plot_mouse(config, config_file, epoch_list, log_dir, logger, style, device):
             plt.close
 
 
-def data_video_validation(config, config_file, epoch_list, log_dir, logger, style, device):
-
-    dataset_name = config.dataset
-
-    print(f'Save movie ... {config.graph_model.particle_model_name} {config.graph_model.mesh_model_name}')
-
-    graph_files = glob.glob(f"./graphs_data/{dataset_name}/generated_data/*")
-    N_files = len(graph_files)
-    recons_files = glob.glob(f"{log_dir}/tmp_recons/*")
-
-    # import cv2
-    # fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    # out = cv2.VideoWriter(f"video/validation_{dataset_name}.avi", fourcc, 20.0, (1024, 2048))
-
-    os.makedirs(f"video_tmp/{config_file}", exist_ok=True)
-
-    for n in trange(N_files):
-        generated = imread(graph_files[n])
-        reconstructed = imread(recons_files[n])
-        frame = np.concatenate((generated[:, :, 0:3], reconstructed[:, :, 0:3]), axis=1)
-        # out.write(frame)
-        imsave(f"video_tmp/{config_file}/{dataset_name}_{10000 + n}.tif", frame)
-
-    # Release the video writer
-    # out.release()
-
-    # print("Video saved as 'output.avi'")
-
-
-def data_video_training(config, config_file, epoch_list, log_dir, logger, style, device):
-
-    dataset_name = config.dataset
-
-    max_radius = config.simulation.max_radius
-    if config.graph_model.particle_model_name != '':
-        config_model = config.graph_model.particle_model_name
-    elif config.graph_model.signal_model_name != '':
-        config_model = config.graph_model.signal_model_name
-    elif config.graph_model.mesh_model_name != '':
-        config_model = config.graph_model.mesh_model_name
-
-    print(f'Save movie ... {config.graph_model.particle_model_name} {config.graph_model.mesh_model_name}')
-
-    embedding = imread(f"{log_dir}/embedding.tif")
-    function = imread(f"{log_dir}/function.tif")
-    # field = imread(f"{log_dir}/field.tif")
-
-    # matplotlib.use("Qt5Agg")
-
-    os.makedirs(f"video_tmp/{config_file}_training", exist_ok=True)
-
-    for n in trange(embedding.shape[0]):
-        fig = plt.figure(figsize=(16, 8))
-        ax = fig.add_subplot(1, 2, 1)
-        ax.imshow(embedding[n, :, :, 0:3])
-        plt.xlabel(r'$a_{i0}$', fontsize=32)
-        plt.ylabel(r'$a_{i1}$', fontsize=32)
-        plt.xticks([])
-        plt.yticks([])
-        match config_file:
-            case 'wave_slit':
-                if n < 50:
-                    plt.text(0, 1.1, f'epoch = 0,   it = {n * 200}', ha='left', va='top', transform=ax.transAxes,
-                             fontsize=32)
-                else:
-                    plt.text(0, 1.1, f'Epoch={n - 49}', ha='left', va='top', transform=ax.transAxes, fontsize=32)
-            case 'arbitrary_3':
-                if n < 17:
-                    plt.text(0, 1.1, f'epoch = 0,   it = {n * 200}', ha='left', va='top', transform=ax.transAxes,
-                             fontsize=32)
-                else:
-                    plt.text(0, 1.1, f'epoch = {n - 16}', ha='left', va='top', transform=ax.transAxes, fontsize=32)
-            case 'arbitrary_3_field_video_bison_siren_with_time':
-                if n < 13 * 3:
-                    plt.text(0, 1.1, f'epoch= {n // 13} ,   it = {(n % 13) * 500}', ha='left', va='top',
-                             transform=ax.transAxes, fontsize=32)
-                else:
-                    plt.text(0, 1.1, f'epoch = {n - 13 * 3 + 3}', ha='left', va='top', transform=ax.transAxes,
-                             fontsize=32)
-            case 'arbitrary_64_256':
-                if n < 51:
-                    plt.text(0, 1.1, f'epoch= 0 ,   it = {n * 200}', ha='left', va='top', transform=ax.transAxes,
-                             fontsize=32)
-                else:
-                    plt.text(0, 1.1, f'epoch = {n - 50}', ha='left', va='top', transform=ax.transAxes, fontsize=32)
-            case 'boids_16_256' | 'gravity_16':
-                if n < 50:
-                    plt.text(0, 1.1, f'epoch = 0,   it = {n * 200}', ha='left', va='top', transform=ax.transAxes,
-                             fontsize=32)
-                else:
-                    plt.text(0, 1.1, f'Epoch={n - 49}', ha='left', va='top', transform=ax.transAxes, fontsize=32)
-
-        ax = fig.add_subplot(1, 2, 2)
-        ax.imshow(function[n, :, :, 0:3])
-        # plt.ylabel(r'$f(a_i,d_{ij})$', fontsize=32)
-        # plt.xlabel(r'$d_{ij}$', fontsize=32)
-        plt.ylabel('x', fontsize=32)
-        plt.xlabel('y', fontsize=32)
-        plt.xticks(fontsize=16.0)
-        plt.yticks(fontsize=16.0)
-        ax.xaxis.set_major_locator(plt.MaxNLocator(5))
-        ax.yaxis.set_major_locator(plt.MaxNLocator(5))
-        # fmt = lambda x, pos: '{:.3f}'.format(x / 1000 * max_radius, pos)
-        # ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-
-        match config_file:
-            case 'wave_slit':
-                fmt = lambda x, pos: '{:.1f}'.format((x / 1000), pos)
-                ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-                fmt = lambda x, pos: '{:.1f}'.format((1 - x / 1000), pos)
-                ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-            case 'arbitrary_3_field_video_bison_siren_with_time':
-                fmt = lambda x, pos: '{:.2f}'.format(-x / 1000 * 0.7 + 0.3, pos)
-                ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-            case 'arbitrary_3':
-                fmt = lambda x, pos: '{:.2f}'.format(-x / 1000 * 0.7 + 0.3, pos)
-                ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-            case 'arbitrary_64_256':
-                fmt = lambda x, pos: '{:.2f}'.format(-x / 1000 * 0.7 + 0.3, pos)
-                ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-            case 'boids_16_256':
-                fmt = lambda x, pos: '{:.2f}e-4'.format((-x / 1000 + 0.5) * 2, pos)
-                ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-            case 'boids_16_256' | 'gravity_16':
-                fmt = lambda x, pos: '{:.1f}e5'.format((1 - x / 1000) * 5, pos)
-                ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-
-        # ax = fig.add_subplot(1, 3, 3)
-        # ax.imshow(field[n, :, :, 0:3],cmap='grey')
-
-        plt.tight_layout()
-        plt.tight_layout()
-        plt.savefig(f"video_tmp/{config_file}_training/training_{config_file}_{10000 + n}.tif", dpi=64)
-        plt.close()
-
-    # plt.text(0, 1.05, f'Frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=32)
-    # ax.tick_params(axis='both', which='major', pad=15)
-
 
 def data_plot(config, epoch_list, style, device):
 
@@ -7208,8 +6738,10 @@ def data_plot(config, epoch_list, style, device):
 
     if 'black' in style:
         plt.style.use('dark_background')
+        mc ='w'
     else:
         plt.style.use('default')
+        mc = 'k'
 
     if 'latex' in style:
         plt.rcParams['text.usetex'] = True
@@ -7312,9 +6844,7 @@ def data_plot(config, epoch_list, style, device):
         case 'RD_RPS_Mesh':
             plot_RD_RPS(config=config, epoch_list=epoch_list, log_dir=log_dir, logger=logger, cc='viridis',  style=style, device=device)
 
-    if config.graph_model.signal_model_name == 'PDE_N':
-        plot_synaptic(config, epoch_list, log_dir, logger, 'viridis', style, device)
-    elif ('PDE_N' in config.graph_model.signal_model_name):
+    if ('PDE_N' in config.graph_model.signal_model_name):
         if ('PDE_N3' in config.graph_model.signal_model_name):
             plot_synaptic3(config, epoch_list, log_dir, logger, 'viridis', style, device)
         else:
@@ -7665,9 +7195,9 @@ if __name__ == '__main__':
 
 
     # config_list = ['signal_N5_l']
-    # config_list = ['signal_N3_c1']
+    # config_list = ['signal_N3_c4']
     # config_list = ['signal/signal_N2_b1']
-    config_list = ['arbitrary_3']
+    # config_list = ['arbitrary_3']
 
     for config_file_ in config_list:
         

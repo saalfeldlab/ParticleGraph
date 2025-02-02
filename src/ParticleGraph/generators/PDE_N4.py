@@ -116,7 +116,7 @@ class PDE_N4(pyg.nn.MessagePassing):
         self.W = W
         self.phi = phi
 
-    def forward(self, data=[], return_all=False, has_field=False):
+    def forward(self, data=[], has_field=False):
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
         # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         particle_type = to_numpy(x[:, 5])
@@ -138,10 +138,8 @@ class PDE_N4(pyg.nn.MessagePassing):
 
         du = -c * u + s * self.phi(u) + g * msg
 
-        if return_all:
-            return du, s * self.phi(u), g * msg
-        else:
-            return du
+        return du, g * msg
+
 
     def message(self, edge_index_i, edge_index_j, u_j, t_i, field_i):
 

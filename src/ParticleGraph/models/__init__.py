@@ -5,7 +5,6 @@ from .Interaction_Cell import Interaction_Cell
 from .Cell_Area import Cell_Area
 from .Interaction_Particle_Field import Interaction_Particle_Field
 from .Interaction_Mouse import Interaction_Mouse
-from .Signal_Propagation import Signal_Propagation
 from .Signal_Propagation2 import Signal_Propagation2
 from .Siren_Network import Siren_Network, Siren
 from .Mesh_RPS import Mesh_RPS
@@ -17,6 +16,6 @@ from .Gumbel import sample_gumbel, gumbel_softmax_sample, gumbel_softmax
 from .WBI_Communication import WBI_Communication
 
 __all__ = [graph_trainer, Interaction_Agent, Interaction_Particle, Interaction_Falling_Water_Wall,
-           Interaction_Cell, Cell_Area, Interaction_Particle_Field, Interaction_Mouse, Siren_Network, Siren, Signal_Propagation,
+           Interaction_Cell, Cell_Area, Interaction_Particle_Field, Interaction_Mouse, Siren_Network, Siren,
            Signal_Propagation2, Mesh_RPS, Mesh_Laplacian, Ghost_Particles, KoLeoLoss, get_embedding, get_embedding_time_series, choose_training_model, constant_batch_size,
            increasing_batch_size, set_trainable_parameters, set_trainable_division_parameters, plot_training, sample_gumbel, gumbel_softmax_sample, gumbel_softmax, WBI_Communication]
