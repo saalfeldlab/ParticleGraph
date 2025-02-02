@@ -4868,13 +4868,14 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
         plt.figure(figsize=(15, 10))
         n = np.random.permutation(n_particles)
-        for i in range(25):
+        for i in range(1):
             plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=2)
         plt.xlabel('time', fontsize=64)
         plt.ylabel('$x_{i}$', fontsize=64)
         plt.xticks([0, 10000], fontsize=48)
         plt.yticks(fontsize=48)
         plt.tight_layout()
+        plt.show()
         plt.savefig(f'./{log_dir}/results/firing rate.png', dpi=300)
         plt.close()
 

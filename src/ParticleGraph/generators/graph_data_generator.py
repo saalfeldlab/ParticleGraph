@@ -1538,7 +1538,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     n_frames = simulation_config.n_frames
     has_particle_dropout = training_config.particle_dropout > 0
     dataset_name = config.dataset
-    has_zarr = 'zarr' in simulation_config.connectivity_file
     excitation = simulation_config.excitation
     noise_level = training_config.noise_level
     cmap = CustomColorMap(config=config)
@@ -1595,7 +1594,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         mat = scipy.io.loadmat(simulation_config.connectivity_file)
         adjacency = torch.tensor(mat['A'], device=device)
 
-    elif has_zarr:
+    elif 'zarr' in simulation_config.connectivity_file:
         print('loading zarr ...')
         dataset = xr.open_zarr(simulation_config.connectivity_file)
         trained_weights = dataset["trained"]  # alpha * sign * N
@@ -1612,7 +1611,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         n_particles = adjacency.shape[0]
         config.simulation.n_particles = n_particles
 
-    elif simulation_config.connectivity_file=='':
+    else:
 
         if simulation_config.connectivity_distribution == 'Gaussian':
             adjacency = torch.randn((n_particles, n_particles), dtype=torch.float32, device=device)
@@ -1929,57 +1928,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     plt.savefig(f"graphs_data/{dataset_name}/Fig/Msg_{run}_{num}.tif", dpi=80)
                     plt.close()
 
-
-
-        if (run==0):
-
-            plt.figure(figsize=(10, 3))
-            plt.subplot(121)
-            ax = sns.heatmap(to_numpy(X), center=0, cbar_kws={'fraction': 0.046})
-            ax.invert_yaxis()
-            # plt.title('firing rate', fontsize=12)
-            plt.ylabel('units', fontsize=12)
-            plt.xlabel('Time', fontsize=12)
-            plt.xticks([])
-            plt.yticks([0, 999], [1, 1000], fontsize=12)
-
-            plt.subplot(122)
-            # plt.title('Firing rate samples', fontsize=12)
-            for i in range(50):
-                plt.plot(to_numpy(X[i, :]), linewidth=1)
-            plt.xlabel('time', fontsize=12)
-            plt.ylabel('r$x_i$', fontsize=12)
-            plt.xticks([])
-            plt.yticks(fontsize=12)
-            plt.tight_layout()
-            plt.savefig(f'graphs_data/{dataset_name}/activity.png', dpi=300)
-            plt.close()
-
-            plt.figure(figsize=(8, 8))
-            plt.hist(to_numpy(X.flatten()), bins=100, color='k', alpha=0.5)
-            plt.ylabel(r'counts', fontsize=64)
-            plt.xlabel(r'$x$', fontsize=64)
-            plt.xticks(fontsize=24)
-            plt.yticks(fontsize=24)
-            plt.tight_layout()
-            plt.savefig(f'graphs_data/{dataset_name}/signal_distribution.png', dpi=300)
-
-            plt.figure(figsize=(5, 9))
-            i=200
-            plt.subplot(211)
-            window_size = 50
-            # Create the window array
-            window = np.ones(window_size) / window_size
-            moving_average = np.convolve(to_numpy(X[i, :]), window, mode='valid')
-            moving_average = np.concatenate((np.zeros(window_size//2-1), moving_average,np.zeros(window_size//2)))
-            plt.plot(to_numpy(X[i, :]), linewidth=1, c='k')
-            plt.plot(moving_average, linewidth=1, c='r')
-
-
-            # Compute the moving average
-            # moving_average = np.convolve(data, window, mode='valid')
-
-
         if bSave:
             x_list = np.array(x_list)
             y_list = np.array(y_list)
@@ -1993,9 +1941,30 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list)
             torch.save(model.p, f'graphs_data/{dataset_name}/model_p.pt')
 
-    # for handler in logger.handlers[:]:
-    #     handler.close()
-    #     logger.removeHandler(handler)
+    # for F in trange(1,6):
+    #     activity = np.load(f'graphs_data/signal/signal_N6_a{F}/x_list_0.npy')
+    #     activity = activity[:, :, 8:9]
+    #     activity = activity.squeeze(axis=-1)
+    #     activity = activity.T
+    #
+    #     plt.figure(figsize=(15, 10))
+    #     n = np.random.permutation(1000)
+    #     act = activity[n[0].astype(int), :]
+    #     N=100
+    #     indices=np.arange(0, act.shape[0], act.shape[0]//N)
+    #     plt.plot(act, linewidth=2)
+    #     plt.plot(indices, act[indices.astype(int)], c='r')
+    #     plt.xlabel('time', fontsize=64)
+    #     plt.ylabel('$plasticity$', fontsize=64)
+    #     plt.xlim([20000, 100000])
+    #     plt.ylim([0, 0.6])
+    #     # plt.xticks([0, 10000], fontsize=48)
+    #     plt.yticks(fontsize=24)
+    #     plt.yticks(fontsize=24)
+    #     plt.tight_layout()
+    #     plt.show()
+    #     plt.savefig(f"./{log_dir}/modulation_{F}.tif")
+    #     plt.close()
 
 
 
