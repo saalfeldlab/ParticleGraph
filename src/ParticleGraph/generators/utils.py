@@ -569,3 +569,5 @@ def init_synapse_map(config, x, edge_attr_adjacency, device):
     # for k,p in pos.items():
     #     X1[k,:] = torch.tensor([p[0],p[1]], device=device)
 
+
+

@@ -1656,20 +1656,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     torch.save(adjacency, f'./graphs_data/{dataset_name}/adjacency.pt')
     torch.save(edge_index, f'./graphs_data/{dataset_name}/edge_index.pt')
 
-    # weights = to_numpy(adjacency.flatten())
-    # pos = np.argwhere(weights != 0)
-    # weights = weights[pos]
-    # plt.figure(figsize=(10, 10))
-    # plt.hist(weights, bins=1000, color='k', alpha=0.5)
-    # plt.ylabel(r'counts', fontsize=64)
-    # plt.xlabel(r'$W$', fontsize=64)
-    # plt.yticks(fontsize=12)
-    # plt.xticks(fontsize=12)
-    # plt.xlim([-0.1, 0.1])
-    # plt.tight_layout()
-    # plt.savefig(f"graphs_data/{dataset_name}/W_distribution.tif", dpi=70)
-    # plt.close()
-
     if ('modulation' in model_config.field_type) | ('visual' in model_config.field_type):
         im = imread(f"graphs_data/{simulation_config.node_value_map}")
 
@@ -1873,36 +1859,55 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     plt.close()
 
                 else:
-                    plt.figure(figsize=(10, 10))
 
                     if 'PDE_N6' in model_config.signal_model_name:
-
-                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=300, c=to_numpy(x[:, 8]),
-                                    cmap='grey', vmin=0, vmax=1, edgecolors='k', alpha=1)
-                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=140, c=to_numpy(x[:, 6]),
+                        plt.figure(figsize=(12, 5.6))
+                        plt.axis('off')
+                        plt.axis('off')
+                        plt.subplot(121)
+                        plt.title('activity $x_i$', fontsize=24)
+                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=50, c=to_numpy(x[:, 6]),
                                     cmap='viridis', vmin=-5, vmax=5, edgecolors='k', alpha=1)
+                        cbar = plt.colorbar()
+                        cbar.ax.yaxis.set_tick_params(labelsize=12)
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.subplot(122)
+                        plt.title('short term plasticity $y_i$', fontsize=24)
+                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=50, c=to_numpy(x[:, 8]),
+                                    cmap='grey', vmin=0, vmax=0.5, edgecolors='k', alpha=1)
+                        cbar = plt.colorbar()
+                        cbar.ax.yaxis.set_tick_params(labelsize=12)
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+                        plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=170)
+                        plt.close()
 
                     else:
+                        plt.figure(figsize=(10, 10))
                         plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=140, c=to_numpy(x[:, 6]),
                                     cmap='viridis', vmin=-10, vmax=10, edgecolors='k', alpha=1)
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.tight_layout()
-                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=170)
-                    plt.close()
+                        cbar = plt.colorbar()
+                        cbar.ax.yaxis.set_tick_params(labelsize=8)
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+                        plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=170)
+                        plt.close()
 
-                    im_ = imread(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif")
-                    plt.figure(figsize=(10, 10))
-                    plt.imshow(im_)
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.subplot(3, 3, 1)
-                    plt.imshow(im_[800:1000, 800:1000, :])
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.tight_layout()
-                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
-                    plt.close()
+                        im_ = imread(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif")
+                        plt.figure(figsize=(10, 10))
+                        plt.imshow(im_)
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.subplot(3, 3, 1)
+                        plt.imshow(im_[800:1000, 800:1000, :])
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+                        plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
+                        plt.close()
 
                 if 'msg' in style:
                     plt.figure(figsize=(10, 10))
@@ -1941,30 +1946,31 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list)
             torch.save(model.p, f'graphs_data/{dataset_name}/model_p.pt')
 
-    # for F in trange(1,6):
-    #     activity = np.load(f'graphs_data/signal/signal_N6_a{F}/x_list_0.npy')
-    #     activity = activity[:, :, 8:9]
-    #     activity = activity.squeeze(axis=-1)
-    #     activity = activity.T
-    #
-    #     plt.figure(figsize=(15, 10))
-    #     n = np.random.permutation(1000)
-    #     act = activity[n[0].astype(int), :]
-    #     N=100
-    #     indices=np.arange(0, act.shape[0], act.shape[0]//N)
-    #     plt.plot(act, linewidth=2)
-    #     plt.plot(indices, act[indices.astype(int)], c='r')
-    #     plt.xlabel('time', fontsize=64)
-    #     plt.ylabel('$plasticity$', fontsize=64)
-    #     plt.xlim([20000, 100000])
-    #     plt.ylim([0, 0.6])
-    #     # plt.xticks([0, 10000], fontsize=48)
-    #     plt.yticks(fontsize=24)
-    #     plt.yticks(fontsize=24)
-    #     plt.tight_layout()
-    #     plt.show()
-    #     plt.savefig(f"./{log_dir}/modulation_{F}.tif")
-    #     plt.close()
+        # if (run == run_vizualized) & (config.graph_model.signal_model_name == 'PDE_N6'):
+        #
+        #     synapse_plasticity = x_list[0]
+        #     synapse_plasticity = synapse_plasticity[:, :, 8:9]
+        #     synapse_plasticity = synapse_plasticity.squeeze(axis=-1)
+        #     synapse_plasticity = synapse_plasticity.T
+        #
+        #     plt.figure(figsize=(15, 10))
+        #     n = np.random.permutation(1000)
+        #     act = synapse_plasticity[n[0].astype(int), :]
+        #     N=100
+        #     indices=np.arange(0, act.shape[0], act.shape[0]//N)
+        #     plt.plot(act, linewidth=2)
+        #     plt.plot(indices, act[indices.astype(int)], c='r')
+        #     plt.xlabel('time', fontsize=64)
+        #     plt.ylabel('$synapse plasticity$', fontsize=64)
+        #     plt.xlim([0, 100000])
+        #     plt.ylim([0, 0.6])
+        #     # plt.xticks([0, 10000], fontsize=48)
+        #     plt.yticks(fontsize=24)
+        #     plt.yticks(fontsize=24)
+        #     plt.tight_layout()
+        #     plt.show()
+        #     plt.savefig(f'graphs_data/{dataset_name}/modulation_{run}.tif')
+        #     plt.close()
 
 
 

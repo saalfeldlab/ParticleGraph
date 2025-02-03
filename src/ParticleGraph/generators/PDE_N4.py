@@ -52,44 +52,6 @@ def constructRandomMatrices(n_neurons=1000, density=1.0, connectivity_mask=[], d
     return W
 
 
-def runNetworkSimulation(W, n_neurons, density, I,
-                         g=2.0, s=1.0,
-                         Tmax=100, dt=0.01, tau=1.0, phi=np.tanh, showplots=True, device=[]):
-    """
-    Wee = random connectivity matrix
-    n_neurons = number of units
-    density = desnity of connectivity
-    g = Overall global coupling parameter
-    s = self coupling
-    Tmax = Number of total time
-    dt = time steps
-    phi = transfer function (default: np.phi)
-    """
-
-    T = torch.arange(0, Tmax, dt)
-
-    # Initial conditions and empty arrays
-    X = torch.zeros((n_neurons, len(T)), device=device)
-    Xinit = torch.rand(n_neurons, )  # Initial conditions
-    X[:, 0] = Xinit
-
-    for t in range(len(T) - 1):
-        # Solve using Euler Method
-        k1 = -X[:, t]
-        k1 += s * phi(X[:, t])
-        k1 += g * torch.matmul(W, torch.tanh(X[:, t])) + I[:, t]
-        k1 = k1 / tau
-        #
-        X[:, t + 1] = X[:, t] + k1 * dt
-
-    # W_ = W.detach().cpu().numpy()
-    # X_ = X.detach().cpu().numpy()
-    # tmp_numpy = np.dot(W_, np.tanh(X_[:, t]))
-    # tmp_torch = torch.matmul(W, torch.tanh(X[:, t]))
-
-
-    return X
-
 
 class PDE_N4(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
