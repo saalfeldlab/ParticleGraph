@@ -60,7 +60,7 @@ class SineLayer(nn.Module):
 class Siren(nn.Module):
     def __init__(self, in_features, hidden_features, hidden_layers, out_features, outermost_linear=False,
                  first_omega_0=30, hidden_omega_0=30.):
-        super().__init__()
+        super(Siren, self).__init__()
 
         self.net = []
         self.net.append(SineLayer(in_features, hidden_features,
@@ -85,9 +85,9 @@ class Siren(nn.Module):
         self.net = nn.Sequential(*self.net)
 
     def forward(self, coords):
-        coords = coords.clone().detach().requires_grad_(True)  # allows to take derivative w.r.t. input
+
         output = self.net(coords)
-        return output, coords
+        return output
 
     def forward_with_activations(self, coords, retain_grad=False):
         '''Returns not only model output, but also intermediate activations.
@@ -119,7 +119,14 @@ class Siren(nn.Module):
         return activations
 
 
+class SirenCollection(nn.Module):
+    def __init__(self, in_features, hidden_features, hidden_layers, out_features, outermost_linear=False, first_omega_0=30, hidden_omega_0=30.):
+        super(SirenCollection, self).__init__()
+        self.sirens = nn.ModuleList([Siren(in_features, hidden_features, hidden_layers, out_features, outermost_linear, first_omega_0, hidden_omega_0) for _ in range(100)])
 
+    def forward(self, x, n):
+        outputs = self.sirens[n](x)
+        return outputs
 
 
 def laplace(y, x):
@@ -313,7 +320,7 @@ if __name__ == '__main__':
 
         # model = MLP(input_size=1, output_size=1, nlayers=nlayers, hidden_size=512, device=device)
 
-        model = Siren(in_features=1, out_features=1, hidden_features=256,hidden_layers=3, first_omega_0=80, hidden_omega_0=80., outermost_linear=True)
+        model = SirenCollection(in_features=1, out_features=1, hidden_features=128,hidden_layers=3, first_omega_0=30, hidden_omega_0=30, outermost_linear=True)
 
         # model = TimeCoordinatedSineMLP(input_size=1, hidden_size=256, output_size=1, num_layers=3, omega_0=80)
 
@@ -329,18 +336,30 @@ if __name__ == '__main__':
         y = activity[0][indices]
         y = y[None,0:1000,None]
 
+        y_list = list([])
+        for k in range(100):
+            y = activity[k][indices]
+            y = y[None,0:1000,None]
+            y_list.append(y)
 
-        for epoch in trange(10000):
+        batch_size = 100
+
+
+        for epoch in trange(40000):
+
+            k = np.random.randint(0,100)
+            time = np.random.randint(0,1000,100).astype(int)
+
             optimizer.zero_grad()
-            pred = model(t)[0]
-            loss = (pred- y).norm(2)
+            pred = model(t[:,time,:],k)[0]
+            loss = (pred- y_list[k][:,time,:]).norm(2)
             loss.backward()
             optimizer.step()
 
-            if epoch%1000==0:
-
+            if (epoch+1)%1000==0:
+                pred = model(t,k)[0]
                 fig = plt.figure()
-                plt.plot(to_numpy(t.squeeze()), to_numpy(y.squeeze()), linewidth=2)
+                plt.plot(to_numpy(t.squeeze()), to_numpy(y_list[k].squeeze()), linewidth=2)
                 plt.plot(to_numpy(t.squeeze()), to_numpy(pred.squeeze()), linewidth=2)
                 plt.tight_layout()
                 plt.show()
