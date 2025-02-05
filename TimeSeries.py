@@ -122,38 +122,15 @@ class Siren(nn.Module):
 class SirenCollection(nn.Module):
     def __init__(self, in_features, hidden_features, hidden_layers, out_features, outermost_linear=False, first_omega_0=30, hidden_omega_0=30.):
         super(SirenCollection, self).__init__()
-        self.sirens = nn.ModuleList([Siren(in_features, hidden_features, hidden_layers, out_features, outermost_linear, first_omega_0, hidden_omega_0) for _ in range(100)])
+
+        self.sirens = nn.ModuleList([Siren(in_features=in_features, hidden_features=hidden_features, hidden_layers=hidden_layers, out_features=out_features, outermost_linear=outermost_linear, first_omega_0=first_omega_0, hidden_omega_0=hidden_omega_0) for _ in range(100)])
+        # self.sirens = nn.ModuleList([Siren(in_features=in_features, hidden_features=hidden_features, hidden_layers=hidden_layers-1, out_features=hidden_features, outermost_linear=False, first_omega_0=first_omega_0, hidden_omega_0=hidden_omega_0) for _ in range(100)])
+        # self.common = Siren(in_features=hidden_features, hidden_features=hidden_features, hidden_layers=1, out_features=out_features, outermost_linear=True, first_omega_0=first_omega_0, hidden_omega_0=hidden_omega_0)
 
     def forward(self, x, n):
         outputs = self.sirens[n](x)
+        # outputs = self.common(outputs)
         return outputs
-
-
-def laplace(y, x):
-    grad = gradient(y, x)
-    return divergence(grad, x)
-def divergence(y, x):
-    div = 0.
-    for i in range(y.shape[-1]):
-        div += torch.autograd.grad(y[..., i], x, torch.ones_like(y[..., i]), create_graph=True)[0][..., i:i+1]
-    return div
-def gradient(y, x, grad_outputs=None):
-    if grad_outputs is None:
-        grad_outputs = torch.ones_like(y)
-    grad = torch.autograd.grad(y, [x], grad_outputs=grad_outputs, create_graph=True)[0]
-    return grad
-
-
-def get_cameraman_tensor(sidelength):
-    img = Image.fromarray(skimage.data.camera())
-    transform = Compose([
-        Resize(sidelength),
-        ToTensor(),
-        Normalize(torch.Tensor([0.5]), torch.Tensor([0.5]))
-    ])
-    img = transform(img)
-    return img
-
 
 class MLP(nn.Module):
 
@@ -192,20 +169,6 @@ class MLP(nn.Module):
         return x
 
 
-class ImageFitting(Dataset):
-    def __init__(self, sidelength):
-        super().__init__()
-        img = get_cameraman_tensor(sidelength)
-        self.pixels = img.permute(1, 2, 0).view(-1, 1)
-        self.coords = get_mgrid(sidelength, 2)
-
-    def __len__(self):
-        return 1
-
-    def __getitem__(self, idx):
-        if idx > 0: raise IndexError
-
-        return self.coords, self.pixels
 
 
 
@@ -285,46 +248,18 @@ if __name__ == '__main__':
         # plt.show()
 
 
-        # img_siren = Siren(in_features=2, out_features=1, hidden_features=256,
-        #                   hidden_layers=3, outermost_linear=True, first_omega_0=80, hidden_omega_0=80.)
-        # img_siren.cuda()
-        #
-        # total_steps = 500  # Since the whole image is our dataset, this just means 500 gradient descent steps.
-        # steps_til_summary = 10
-        #
-        # optim = torch.optim.Adam(lr=1e-4, params=img_siren.parameters())
-        # ground_truth = activity[0:256,0:256].flatten()
-        # ground_truth = ground_truth[None, :, None]
-        # model_input = get_mgrid(256, 2).cuda()
-        # model_input = model_input[None,:,:]
-        #
-        # for step in trange(total_steps):
-        #     model_output, coords = img_siren(model_input)
-        #     loss = ((model_output - ground_truth) ** 2).mean()
-        #
-        #     if not step % steps_til_summary:
-        #         print("Step %d, Total loss %0.6f" % (step, loss))
-        #         fig, axes = plt.subplots(1, 2, figsize=(12, 6))
-        #         axes[0].imshow(model_output.cpu().view(256, 256).detach().numpy())
-        #         axes[1].imshow(ground_truth.cpu().view(256, 256).detach().numpy())
-        #         plt.show()
-        #
-        #     optim.zero_grad()
-        #     loss.backward()
-        #     optim.step()
-
-
-
 
         nlayers = 32
 
         # model = MLP(input_size=1, output_size=1, nlayers=nlayers, hidden_size=512, device=device)
+        model = SirenCollection(in_features=1, out_features=1, hidden_features=64,hidden_layers=3, first_omega_0=30, hidden_omega_0=30, outermost_linear=True)
+        model.to(device)
 
-        model = SirenCollection(in_features=1, out_features=1, hidden_features=128,hidden_layers=3, first_omega_0=30, hidden_omega_0=30, outermost_linear=True)
 
-        # model = TimeCoordinatedSineMLP(input_size=1, hidden_size=256, output_size=1, num_layers=3, omega_0=80)
+        def count_parameters(model):
+            return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-        model.cuda()
+        print(f'number of learnable parameters: {count_parameters(model) //100}')
 
         optimizer = optim.Adam(model.parameters(), lr=1E-4)
         model.train()
@@ -345,10 +280,10 @@ if __name__ == '__main__':
         batch_size = 100
 
 
-        for epoch in trange(40000):
+        for epoch in trange(100000):
 
-            k = np.random.randint(0,100)
-            time = np.random.randint(0,1000,100).astype(int)
+            k = np.random.randint(0,10)
+            time = np.random.randint(0,1000,10).astype(int)
 
             optimizer.zero_grad()
             pred = model(t[:,time,:],k)[0]
@@ -356,13 +291,14 @@ if __name__ == '__main__':
             loss.backward()
             optimizer.step()
 
-            if (epoch+1)%1000==0:
+            if (epoch+1)%2500==0:
                 pred = model(t,k)[0]
                 fig = plt.figure()
                 plt.plot(to_numpy(t.squeeze()), to_numpy(y_list[k].squeeze()), linewidth=2)
                 plt.plot(to_numpy(t.squeeze()), to_numpy(pred.squeeze()), linewidth=2)
                 plt.tight_layout()
-                plt.show()
+                plt.savefig(f'./tmp/siren_{epoch+1}.png')
+                plt.close()
 
 
 

@@ -1656,7 +1656,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     torch.save(adjacency, f'./graphs_data/{dataset_name}/adjacency.pt')
     torch.save(edge_index, f'./graphs_data/{dataset_name}/edge_index.pt')
 
-    if ('modulation' in model_config.field_type) | ('visual' in model_config.field_type):
+    if (('modulation' in model_config.field_type) | ('visual' in model_config.field_type)) & ('PDE_N6' not in model_config.signal_model_name):
         im = imread(f"graphs_data/{simulation_config.node_value_map}")
 
     model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, device=device)
@@ -1946,31 +1946,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list)
             torch.save(model.p, f'graphs_data/{dataset_name}/model_p.pt')
 
-        # if (run == run_vizualized) & (config.graph_model.signal_model_name == 'PDE_N6'):
-        #
-        #     synapse_plasticity = x_list[0]
-        #     synapse_plasticity = synapse_plasticity[:, :, 8:9]
-        #     synapse_plasticity = synapse_plasticity.squeeze(axis=-1)
-        #     synapse_plasticity = synapse_plasticity.T
-        #
-        #     plt.figure(figsize=(15, 10))
-        #     n = np.random.permutation(1000)
-        #     act = synapse_plasticity[n[0].astype(int), :]
-        #     N=100
-        #     indices=np.arange(0, act.shape[0], act.shape[0]//N)
-        #     plt.plot(act, linewidth=2)
-        #     plt.plot(indices, act[indices.astype(int)], c='r')
-        #     plt.xlabel('time', fontsize=64)
-        #     plt.ylabel('$synapse plasticity$', fontsize=64)
-        #     plt.xlim([0, 100000])
-        #     plt.ylim([0, 0.6])
-        #     # plt.xticks([0, 10000], fontsize=48)
-        #     plt.yticks(fontsize=24)
-        #     plt.yticks(fontsize=24)
-        #     plt.tight_layout()
-        #     plt.show()
-        #     plt.savefig(f'graphs_data/{dataset_name}/modulation_{run}.tif')
-        #     plt.close()
+
 
 
 

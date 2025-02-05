@@ -74,7 +74,7 @@ def get_in_features(rr, embedding_, config_model, max_radius):
         case 'PDE_E':
             in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                      rr[:, None] / max_radius, embedding_, embedding_), dim=1)
-        case 'PDE_N2' | 'PDE_N3' :
+        case 'PDE_N2' | 'PDE_N3' | 'PDE_N6' :
             in_features = torch.cat((rr[:, None], embedding_), dim=1)
         case 'PDE_N4':
             in_features = torch.cat((rr[:, None], embedding_), dim=1)
@@ -97,16 +97,6 @@ def plot_training_signal(config, model, type_stack, adjacency, ynorm, log_dir, e
         fig, ax = fig_init()
         plt.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), s=1, color='k', alpha=0.1, edgecolor='none')
 
-
-        # fig, ax = fig_init()
-        # for n in range(n_particle_types):
-        #     pos = torch.argwhere(type_stack == n).squeeze()
-        #     if len(pos) > 1E5:
-        #         pos = pos[np.random.permutation(len(pos))[:int(1E5)]]
-        #     if len(pos) > 0:
-        #         plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=1, color=cmap.color(n), alpha=0.1,
-        #                     edgecolor='none')
-
     else:
         fig = plt.figure(figsize=(8, 8))
         for n in range(n_particle_types):
@@ -125,9 +115,7 @@ def plot_training_signal(config, model, type_stack, adjacency, ynorm, log_dir, e
     fig = plt.figure(figsize=(8, 8))
     rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
     for n in range(n_particles):
-        if ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N3' in config.graph_model.signal_model_name):
-            in_features = rr[:, None]
-        elif 'PDE_N4' in config.graph_model.signal_model_name:
+        if ('PDE_N4' in config.graph_model.signal_model_name) :
             embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
             in_features = torch.cat((rr[:, None], embedding_), dim=1)
         elif 'PDE_N5' in config.graph_model.signal_model_name:
@@ -135,7 +123,6 @@ def plot_training_signal(config, model, type_stack, adjacency, ynorm, log_dir, e
             in_features = torch.cat((rr[:, None], embedding_, embedding_), dim=1)
         else:
             in_features = rr[:, None]
-
         with torch.no_grad():
             func = model.lin_edge(in_features.float())
         if (n % 2 == 0):
@@ -146,19 +133,8 @@ def plot_training_signal(config, model, type_stack, adjacency, ynorm, log_dir, e
     fig = plt.figure(figsize=(8, 8))
     rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
     for n in range(n_particles):
-        if ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N3' in config.graph_model.signal_model_name):
-            embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-            in_features = torch.cat((rr[:, None], embedding_), dim=1)
-        elif 'PDE_N4' in config.graph_model.signal_model_name:
-            embedding_ = model.a[n, 0:2] * torch.ones((1000, 2), device=device)
-            in_features = torch.cat((rr[:, None], embedding_), dim=1)
-        elif 'PDE_N5' in config.graph_model.signal_model_name:
-            embedding_ = model.a[n, 0:2] * torch.ones((1000, 2), device=device)
-            in_features = torch.cat((rr[:, None], embedding_), dim=1)
-        else:
-            embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-            in_features = torch.cat((rr[:, None], embedding_), dim=1)
-
+        embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+        in_features = torch.cat((rr[:, None], embedding_), dim=1)
         with torch.no_grad():
             func = model.lin_phi(in_features.float())
         if (n % 2 == 0):
@@ -913,16 +889,8 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
             rr = torch.tensor(np.logspace(7, 9, 1000)).to(device)
         elif config_model == 'PDE_E':
             rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-        elif 'PDE_N2' in config_model:
-            rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
-        elif 'PDE_N3' in config_model:
-            rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
-        elif 'PDE_N4' in config_model:
-            rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
-        elif 'PDE_N5' in config_model:
-            rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
         elif 'PDE_N' in config_model:
-            rr = torch.tensor(np.linspace(0, 0.9, 1000)).to(device)
+            rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
         else:
             rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
 
@@ -931,7 +899,7 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
     for n in range(n_particles):
         if config.training.do_tracking:
             embedding_ = model_a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-        elif ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N3' in config.graph_model.signal_model_name) | ('PDE_N4' in config.graph_model.signal_model_name) | ('PDE_N5' in config.graph_model.signal_model_name):
+        elif 'PDE_N' in config.graph_model.signal_model_name :
             embedding_ = model_a[n_nodes + n, :] * torch.ones((1000, config.graph_model.embedding_dim),device=device)
         else:
             embedding_ = model_a[dataset_number, n_nodes+n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
@@ -1050,7 +1018,7 @@ def choose_training_model(model_config=None, device=None, projections=None):
             model.edges = []
     model_name = model_config.graph_model.signal_model_name
     match model_name:
-        case 'PDE_N2' | 'PDE_N3':
+        case 'PDE_N2' | 'PDE_N3' | 'PDE_N6':
             model = Signal_Propagation2(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, projections=projections)
             model.edges = []
         case 'PDE_N4':

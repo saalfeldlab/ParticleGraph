@@ -498,25 +498,6 @@ def init_mesh(config, device):
     if (config.graph_model.particle_model_name == 'PDE_ParticleField_A')  | (config.graph_model.particle_model_name == 'PDE_ParticleField_B'):
         type_mesh = 0 * type_mesh
 
-    # if config.graph_model.particle_model_name == 'PDE_ParticleField_B':
-    #
-    #     a1 = 1E-2  # diffusion coefficient
-    #     a2 = 8E-5  # positive rate coefficient
-    #     a3 = 6.65E-5  # negative rate coefficient
-    #
-    #     i0 = imread(f'graphs_data/{config.simulation.node_diffusion_map}')
-    #     index = np.round(
-    #         i0[(to_numpy(x_mesh[:, 1]) * 255).astype(int), (to_numpy(x_mesh[:, 2]) * 255).astype(int)]).astype(int)
-    #     coeff_diff = a1 * np.array(config.simulation.diffusion_coefficients)[index]
-    #     model.coeff_diff = torch.tensor(coeff_diff, device=device)
-    #     i0 = imread(f'graphs_data/{config.simulation.node_proliferation_map}')
-    #     index = np.round(
-    #         i0[(to_numpy(x_mesh[:, 0]) * 255).astype(int), (to_numpy(x_mesh[:, 1]) * 255).astype(int)]).astype(int)
-    #     pos_rate = a2 * np.array(config.simulation.pos_rate)[index]
-    #     model.pos_rate = torch.tensor(pos_rate, device=device)
-    #     model.neg_rate = - torch.ones_like(model.pos_rate) * a3 * torch.tensor(config.simulation.pos_rate[0], device=device)
-    #
-    #     type_mesh = -1.0 + type_mesh * -1.0
 
     a_mesh = torch.zeros_like(type_mesh)
     type_mesh = type_mesh.to(dtype=torch.float32)

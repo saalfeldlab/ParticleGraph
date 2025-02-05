@@ -12,6 +12,7 @@ simulation:
     min_radius: 1.0
     max_radius: 1.0E6
     n_particles: 1024
+    n_nodes: 1024
     n_particle_types: 4
     n_interactions: 4
     n_frames: 100000
@@ -21,6 +22,7 @@ simulation:
     start_frame: -2000
 
 graph_model:
+    field_type: 'modulation_a'
     signal_model_name: 'PDE_N6'
     particle_model_name: ''
     mesh_model_name: ''
@@ -28,7 +30,7 @@ graph_model:
     input_size: 1
     output_size: 1
     hidden_dim: 64
-    n_mp_layers: 10
+    n_mp_layers: 3
     input_size_update: 3
     n_layers_update: 3
     hidden_dim_update: 64
@@ -51,11 +53,12 @@ training:
     n_runs: 2
     sparsity: 'none'
     rotation_augmentation: False
-    data_augmentation_loop: 100
+    data_augmentation_loop: 50
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     device: 'auto'
-    sparsity: 'replace_embedding_function'
     sparsity_freq: 4
     learning_rate_start: 1.0E-4
     learning_rate_embedding_start: 1.0E-4
+    coeff_diff: 100
+    learning_rate_NNR: 1.0E-6

@@ -56,12 +56,12 @@ if __name__ == '__main__':
             best_model = None
     else:
         task = 'generate'
-        best_model = 'None'
+        best_model = None
         # config_list = ['fluids/fluids_m']
         # config_list = ['falling_water_ramp_x6_11']
         # config_list =['arbitrary/arbitrary_3_11']
         # config_list =['wave/wave_2']
-        config_list = ['signal_N6_a1']
+        config_list = ['signal_N6_a6']
 
     for config_file_ in config_list:
 
@@ -75,7 +75,7 @@ if __name__ == '__main__':
         print(f'folder  {config.dataset}')
 
         if 'generate' in task:
-            data_generate(config, device=device, visualize=True, run_vizualized=0, style='black color', alpha=1, erase=False, bSave=True, step=200)  #config.simulation.n_frames // 100)
+            data_generate(config, device=device, visualize=True, run_vizualized=0, style='black color', alpha=1, erase=False, bSave=True, step=100)  #config.simulation.n_frames // 100)
         if 'train' in task:
             data_train(config=config, erase=False, best_model=best_model, device=device)
         if 'test' in task:
@@ -91,18 +91,7 @@ if __name__ == '__main__':
             # data_test(config=config, config_file=config_file, visualize=True, style='black color', verbose=False, best_model='best', run=15, plot_data=False,
             #           test_simulation=False, sample_embedding=False, fixed=True, bounce=True, step=4, device=device)
 
+
+
 # bsub -n 4 -gpu "num=1" -q gpu_h100 -Is "python GNN_particles_Ntype.py"
 
-
-    # for f in ['agents','arbitrary','boids','celegans', 'cell','Coulomb', 'diffusion','fluids','gravity','falling_water_ramp', 'mouse_city', 'rat_city', 'springs', 'wave' ]:
-    #     # Define the directory where the folders are located
-    #     directory = f'/groups/saalfeld/home/allierc/Py/ParticleGraph/log/{f}/'
-    #     # Loop through all items in the directory
-    #     for item in os.listdir(directory):
-    #         # Check if the item is a directory and starts with 'arbitrary_'
-    #         if os.path.isdir(os.path.join(directory, item)) and item.startswith('try_'):
-    #             # Extract the new name by removing 'arbitrary_'
-    #             new_name = item[len('try_'):]
-    #             # Rename the directory
-    #             print(item, new_name)
-    #             os.rename(os.path.join(directory, item), os.path.join(directory, new_name))

@@ -1,8 +1,8 @@
-description: 'synaptic network random matrix no recursive loop  noise 7.2'
-dataset: 'signal_N2_SNR7_1'
+description: 'synaptic network random matrix no recursive loop 1000 neurons 4 types lorentz std 0.03'
+dataset: 'signal_N2_a19'
 
 simulation:
-    connectivity_file: '/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/graphs_signal_N2_Lorentz_a/adjacency.pt'
+    connectivity_file: 'random'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
     connectivity_distribution: 'Lorentz'
@@ -14,7 +14,7 @@ simulation:
     n_particles: 1000
     n_particle_types: 4
     n_interactions: 4
-    n_frames: 100000
+    n_frames: 30000
     delta_t: 0.01
     dpos_init:  0
     boundary: 'no'
@@ -35,6 +35,7 @@ graph_model:
     aggr_type: 'add'
     embedding_dim: 2
     update_type: 'none'
+
 
 plotting:
     colormap: 'tab10'
@@ -58,4 +59,3 @@ training:
     sparsity_freq: 4
     learning_rate_start: 1.0E-4
     learning_rate_embedding_start: 1.0E-4
-    noise_level: 7.2
