@@ -1,5 +1,5 @@
 description: 'synaptic network random matrix no recursive loop 1000 neurons 4 types lorentz std 0.03'
-dataset: 'signal_N6_a6'
+dataset: 'signal_N6_a1'
 
 simulation:
     connectivity_file: ''
@@ -11,11 +11,11 @@ simulation:
     tau: 1.0
     min_radius: 1.0
     max_radius: 1.0E6
-    n_particles: 256
-    n_nodes: 256
+    n_particles: 1024
+    n_nodes: 1024
     n_particle_types: 4
     n_interactions: 4
-    n_frames: 10000
+    n_frames: 100000
     delta_t: 0.01
     dpos_init:  0
     boundary: 'no'
@@ -27,22 +27,13 @@ graph_model:
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
-
     input_size: 1
     output_size: 1
     hidden_dim: 64
-    n_mp_layers: 8
-
+    n_mp_layers: 3
     input_size_update: 3
     n_layers_update: 3
     hidden_dim_update: 64
-
-    input_size_nnr: 3
-    n_layers_nnr:  5
-    hidden_dim_nnr:  128
-    output_size_nnr:  1
-    omega:  80.0
-
     aggr_type: 'add'
     embedding_dim: 2
     update_type: 'none'
@@ -62,7 +53,7 @@ training:
     n_runs: 2
     sparsity: 'none'
     rotation_augmentation: False
-    data_augmentation_loop: 50
+    data_augmentation_loop: 25
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     device: 'auto'

@@ -249,9 +249,9 @@ if __name__ == '__main__':
 
 
 
-        nlayers = 32
-
+        # nlayers = 32
         # model = MLP(input_size=1, output_size=1, nlayers=nlayers, hidden_size=512, device=device)
+
         model = SirenCollection(in_features=1, out_features=1, hidden_features=64,hidden_layers=3, first_omega_0=30, hidden_omega_0=30, outermost_linear=True)
         model.to(device)
 

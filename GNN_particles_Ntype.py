@@ -59,9 +59,9 @@ if __name__ == '__main__':
         best_model = None
         # config_list = ['fluids/fluids_m']
         # config_list = ['falling_water_ramp_x6_11']
-        # config_list =['arbitrary/arbitrary_3_11']
+        config_list =['arbitrary_3_1']
         # config_list =['wave/wave_2']
-        config_list = ['signal_N3_c14']
+        # config_list = ['signal_N3_c14']
 
     for config_file_ in config_list:
 

@@ -116,6 +116,7 @@ def data_train_particle(config, erase, best_model, device):
         get_batch_size = increasing_batch_size(target_batch_size)
     else:
         get_batch_size = constant_batch_size(target_batch_size)
+    particle_batch_ratio = train_config.particle_batch_ratio
     batch_size = get_batch_size(0)
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     embedding_cluster = EmbeddingCluster(config)
@@ -257,7 +258,7 @@ def data_train_particle(config, erase, best_model, device):
             sin_phi = torch.sin(phi)
 
             dataset_batch = []
-            for batch in range(batch_size):
+            for batch in range(batch_size * particle_batch_ratio):
 
                 run = 1 + np.random.randint(n_runs - 1)
                 k = time_window + np.random.randint(run_lengths[run] - 1 - time_window - time_step - recursive_loop)
@@ -288,6 +289,9 @@ def data_train_particle(config, erase, best_model, device):
                     edges = edge_p_p_list[run][f'arr_{k}']
                 else:
                     distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                    if particle_batch_ratio>1:      # select a given number of particles
+                        ids = np.random.permutation(n_particles)[:n_particles // particle_batch_ratio]
+                        distance[ids,:] = -1
                     adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
                     edges = adj_t.nonzero().t().contiguous()
 
@@ -305,10 +309,12 @@ def data_train_particle(config, erase, best_model, device):
                     dataset_batch.append(dataset)
 
                 if sub_sampling > 1:
-                    # predict position, does not work with rotation_augmentation
+                    # predict position, does not work with rotation_augmentation, does not work with particle_batch_ratio>1
                     y = x_next[:, 1:dimension + 1]
                 else:
                     y = torch.tensor(y_list[run][k], dtype=torch.float32, device=device).clone().detach()
+                    if particle_batch_ratio > 1:
+                        y = y[ids, :]
                     if noise_level > 0:
                         y = y * (1 + torch.randn_like(y) * noise_level)
                     y[:,0:dimension] = y[:,0:dimension] / ynorm
@@ -320,10 +326,10 @@ def data_train_particle(config, erase, best_model, device):
                     y[:, 1] = new_y
 
                 if batch == 0:
-                    data_id = torch.ones((x.shape[0],1), dtype=torch.int) * run
+                    data_id = torch.ones((y.shape[0],1), dtype=torch.int) * run
                     y_batch = y
                 else:
-                    data_id = torch.cat((data_id, torch.ones((x.shape[0],1), dtype=torch.int) * run), dim = 0)
+                    data_id = torch.cat((data_id, torch.ones((y.shape[0],1), dtype=torch.int) * run), dim = 0)
                     y_batch = torch.cat((y_batch, y), dim=0)
 
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)

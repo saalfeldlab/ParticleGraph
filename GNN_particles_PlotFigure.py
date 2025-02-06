@@ -6727,7 +6727,6 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
             plt.close
 
 
-
 def data_plot(config, epoch_list, style, device):
 
     # plt.rcParams['text.usetex'] = True
@@ -6851,7 +6850,6 @@ def data_plot(config, epoch_list, style, device):
     for handler in logger.handlers[:]:
         handler.close()
         logger.removeHandler(handler)
-
 
 
 def get_figures(index):
