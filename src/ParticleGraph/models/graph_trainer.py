@@ -2467,15 +2467,16 @@ def data_train_synaptic2(config, erase, best_model, device):
         for N in trange(Niter):
 
             run = 1 + np.random.randint(n_runs-1)
-            k = np.random.randint(n_frames - 5)
 
             if has_field:
                 optimizer_f.zero_grad()
-
             optimizer.zero_grad()
 
+            dataset_batch = []
+            loss = 0
             for batch in range(batch_size):
 
+                k = np.random.randint(n_frames - 5)
                 in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[0:n_particles]), dim=1)
                 func_phi = model.lin_phi(in_features.float())
                 x = torch.tensor(x_list[run][k], device=device)
@@ -2497,6 +2498,8 @@ def data_train_synaptic2(config, erase, best_model, device):
                     func_edge = model.lin_edge(in_features.float())
                     diff = torch.relu(model.lin_edge(x[:, 6:7].clone().detach()) - model.lin_edge(x[:, 6:7].clone().detach() + 0.1)).norm(2)
 
+                loss += model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + coeff_diff * diff
+
                 if has_field:
                     if 'visual' in field_type:
                         x[:n_nodes, 8:9] = model_f(time=k / n_frames) ** 2
@@ -2505,20 +2508,32 @@ def data_train_synaptic2(config, erase, best_model, device):
                         x[:, 8:9] = model_f(time=k / n_frames) ** 2
 
                 dataset = data.Data(x=x, edge_index=model.edges)
-                pred = model(dataset, data_id=run, has_field=has_field, k=k)
-                y = torch.tensor(y_list[run][k], device=device) / ynorm
+                dataset_batch.append(dataset)
 
+                y = torch.tensor(y_list[run][k], device=device) / ynorm
                 if noise_level > 0:
                     y = y * (1 + torch.randn_like(y) * noise_level)
 
-                loss = (pred - y).norm(2) + model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + coeff_diff * diff
+                if batch == 0:
+                    y_batch = y
+                    k_batch = torch.ones((x.shape[0],1), dtype=torch.int) * k
+                else:
+                    y_batch = torch.cat((y_batch, y), dim=0)
+                    k_batch = torch.cat((k_batch, torch.ones((x.shape[0],1), dtype=torch.int) * k), dim = 0)
 
-                if ('PDE_N3' in model_config.signal_model_name):
-                    loss = loss + train_config.coeff_model_a * (model.a[ind_a+1] - model.a[ind_a]).norm(2)
+            batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
 
+            for batch in batch_loader:
+                pred = model(batch, data_id=run, has_field=has_field, k=k_batch)
+
+            batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
+
+            loss = loss + (pred - y_batch).norm(2)
+
+            if ('PDE_N3' in model_config.signal_model_name):
+                loss = loss + train_config.coeff_model_a * (model.a[ind_a+1] - model.a[ind_a]).norm(2)
 
             loss.backward()
-
             optimizer.step()
             if has_field:
                 optimizer_f.step()
