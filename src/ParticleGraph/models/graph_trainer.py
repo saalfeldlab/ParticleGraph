@@ -2362,7 +2362,6 @@ def data_train_synaptic2(config, erase, best_model, device):
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Embedding_init.tif")
         plt.close()
-
     else:
         projections = None
 
@@ -2392,7 +2391,6 @@ def data_train_synaptic2(config, erase, best_model, device):
             net = f'{log_dir}/models/best_model_f_with_{n_runs - 1}_graphs_{best_model}.pt'
             state_dict = torch.load(net, map_location=device)
             model_f.load_state_dict(state_dict['model_state_dict'])
-
     else:
         start_epoch = 0
 
@@ -2400,7 +2398,6 @@ def data_train_synaptic2(config, erase, best_model, device):
     lr_embedding = train_config.learning_rate_embedding_start
     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
     model.train()
-
 
     if has_field:
         optimizer_f = torch.optim.Adam(lr=train_config.learning_rate_NNR, params=model_f.parameters())
@@ -2443,7 +2440,7 @@ def data_train_synaptic2(config, erase, best_model, device):
     print("start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
-    Niter = int(n_frames * data_augmentation_loop // batch_size * n_runs / 10)
+    Niter = int(n_frames * data_augmentation_loop // batch_size * n_runs)
 
     print(f'plot every {Niter // 10} iterations')
 
@@ -2478,6 +2475,7 @@ def data_train_synaptic2(config, erase, best_model, device):
 
             if has_field:
                 optimizer_f.zero_grad()
+
             optimizer.zero_grad()
 
             for batch in range(batch_size):
@@ -2510,74 +2508,18 @@ def data_train_synaptic2(config, erase, best_model, device):
                     else:
                         x[:, 8:9] = model_f(time=k / n_frames) ** 2
 
-                match recursive_loop:
-                    case 1:
-                        dataset = data.Data(x=x, edge_index=model.edges)
-                        pred = model(dataset, data_id=run, has_field=has_field, k=k)
-                        y = torch.tensor(y_list[run][k], device=device) / ynorm
+                dataset = data.Data(x=x, edge_index=model.edges)
+                pred = model(dataset, data_id=run, has_field=has_field, k=k)
+                y = torch.tensor(y_list[run][k], device=device) / ynorm
 
-                        if noise_level > 0:
-                            y = y * (1 + torch.randn_like(y) * noise_level)
+                if noise_level > 0:
+                    y = y * (1 + torch.randn_like(y) * noise_level)
 
-                        loss = (pred - y).norm(2) + model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + coeff_diff * diff
+                loss = (pred - y).norm(2) + model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + coeff_diff * diff
 
-                        if ('PDE_N3' in model_config.signal_model_name):
-                            loss = loss + train_config.coeff_model_a * (model.a[ind_a+1] - model.a[ind_a]).norm(2)
+                if ('PDE_N3' in model_config.signal_model_name):
+                    loss = loss + train_config.coeff_model_a * (model.a[ind_a+1] - model.a[ind_a]).norm(2)
 
-                    case 2:
-                        dataset = data.Data(x=x, edge_index=model.edges)
-                        pred1 = model(dataset, data_id=run, has_field=has_field, k=k)
-                        x_ = x.clone().detach()
-                        x_[:, 6:7] += pred1 * delta_t
-                        dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred2 = model(dataset, data_id=run, has_field=has_field, k=k)
-                        y1 = torch.tensor(y_list[run][k], device=device) / ynorm
-                        y2 = torch.tensor(y_list[run][k + 1], device=device) / ynorm
-                        loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + model.W.norm(1) * coeff_L1 + func_phi.norm(
-                            2) + func_edge.norm(2) + diff * coeff_diff
-                    case 3:
-                        dataset = data.Data(x=x, edge_index=model.edges)
-                        pred1 = model(dataset, data_id=run, has_field=has_field, k=k)
-                        x_ = x.clone().detach()
-                        x_[:, 6:7] += pred1 * delta_t
-                        dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred2 = model(dataset, data_id=run, has_field=has_field, k=k)
-                        x_ = x.clone().detach()
-                        x_[:, 6:7] += (pred1 + pred2) * delta_t
-                        dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred3 = model(dataset, data_id=run, has_field=has_field, k=k)
-                        y1 = torch.tensor(y_list[run][k], device=device) / ynorm
-                        y2 = torch.tensor(y_list[run][k + 1], device=device) / ynorm
-                        y3 = torch.tensor(y_list[run][k + 2], device=device) / ynorm
-                        loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2) + model.W.norm(
-                            1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * coeff_diff
-                    case 5:
-                        dataset = data.Data(x=x, edge_index=model.edges)
-                        pred1 = model(dataset, data_id=run, has_field=has_field, k=k)
-                        x_ = x.clone().detach()
-                        x_[:, 6:7] += pred1 * delta_t
-                        dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred2 = model(dataset, data_id=run, has_field=has_field, k=k)
-                        x_ = x.clone().detach()
-                        x_[:, 6:7] += (pred1 + pred2) * delta_t
-                        dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred3 = model(dataset, data_id=run, has_field=has_field, k=k)
-                        x_ = x.clone().detach()
-                        x_[:, 6:7] += (pred1 + pred2 + pred3) * delta_t
-                        dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred4 = model(dataset, data_id=run, has_field=has_field, k=k)
-                        x_ = x.clone().detach()
-                        x_[:, 6:7] += (pred1 + pred2 + pred3 + pred4) * delta_t
-                        dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred5 = model(dataset, data_id=run, has_field=has_field, k=k)
-                        y1 = y_list[run][k].clone().detach() / ynorm
-                        y2 = y_list[run][k + 1].clone().detach() / ynorm
-                        y3 = y_list[run][k + 2].clone().detach() / ynorm
-                        y4 = y_list[run][k + 3].clone().detach() / ynorm
-                        y5 = y_list[run][k + 4].clone().detach() / ynorm
-
-                        loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2) + (pred4 - y4).norm(
-                            2) + (pred5 - y5).norm(2) + model.W.norm(1) * coeff_L1 + func_f.norm(2)
 
             loss.backward()
 

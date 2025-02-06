@@ -79,6 +79,8 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                                         alpha=0.2, ratio=ratio,
                                         scenario=scenario, device=device, bSave=bSave)
 
+    plt.style.use('default')
+
 
 def data_generate_particle(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1, scenario='none', device=None, bSave=True):
     simulation_config = config.simulation
