@@ -2515,18 +2515,18 @@ def data_train_synaptic2(config, erase, best_model, device):
                     y = y * (1 + torch.randn_like(y) * noise_level)
 
                 if batch == 0:
+                    data_id = torch.ones((x.shape[0], 1), dtype=torch.int) * run
                     y_batch = y
                     k_batch = torch.ones((x.shape[0],1), dtype=torch.int) * k
                 else:
+                    data_id = torch.cat((data_id, torch.ones((x.shape[0], 1), dtype=torch.int) * run), dim=0)
                     y_batch = torch.cat((y_batch, y), dim=0)
                     k_batch = torch.cat((k_batch, torch.ones((x.shape[0],1), dtype=torch.int) * k), dim = 0)
 
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
 
             for batch in batch_loader:
-                pred = model(batch, data_id=run, has_field=has_field, k=k_batch)
-
-            batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
+                pred = model(batch, data_id=run, has_field=data_id * has_field, k=k_batch)
 
             loss = loss + (pred - y_batch).norm(2)
 
