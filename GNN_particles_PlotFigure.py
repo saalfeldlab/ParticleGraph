@@ -343,7 +343,7 @@ def plot_embedding_func_cluster_tracking(model, config, embedding_cluster, cmap,
         plt.xlim(config.plotting.embedding_lim)
         plt.ylim(config.plotting.embedding_lim)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/all_embedding_{config_file}_{epoch}.tif", dpi=170.7)
+        plt.savefig(f"./{log_dir}/results/all_embedding_{epoch}.tif", dpi=170.7)
         plt.close()
     else:
         fig, ax = fig_init()
@@ -361,7 +361,7 @@ def plot_embedding_func_cluster_tracking(model, config, embedding_cluster, cmap,
         plt.xlim(config.plotting.embedding_lim)
         plt.ylim(config.plotting.embedding_lim)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/all_embedding_{config_file}_{epoch}.tif", dpi=170.7)
+        plt.savefig(f"./{log_dir}/results/all_embedding_{epoch}.tif", dpi=170.7)
         plt.close()
 
     func_list, proj_interaction = analyze_edge_function_tracking(rr=[], vizualize=False, config=config,
@@ -385,7 +385,7 @@ def plot_embedding_func_cluster_tracking(model, config, embedding_cluster, cmap,
     plt.xlim([-0.2, 1.2])
     plt.ylim([-0.2, 1.2])
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/UMAP_{config_file}_{epoch}.tif", dpi=170.7)
+    plt.savefig(f"./{log_dir}/results/UMAP_{epoch}.tif", dpi=170.7)
     plt.close()
 
     embedding = to_numpy(model.a.clone().detach())
@@ -423,7 +423,7 @@ def plot_embedding_func_cluster_state(model, config,embedding_cluster, cmap, typ
         plt.xlabel(r'$a_{i0}$', fontsize=78)
         plt.ylabel(r'$a_{i1}$', fontsize=78)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{epoch}.tif", dpi=170.7)
+    plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=170.7)
     plt.close()
 
     fig, ax = fig_init()
@@ -431,7 +431,7 @@ def plot_embedding_func_cluster_state(model, config,embedding_cluster, cmap, typ
                                                         model=model,
                                                         id_list=id_list, type_list=type_list, ynorm=ynorm,
                                                         cmap=cmap, visualize=True, device=device)
-    plt.savefig(f"./{log_dir}/results/function_{config_file}_{epoch}.tif", dpi=170.7)
+    plt.savefig(f"./{log_dir}/results/function_{epoch}.tif", dpi=170.7)
     plt.close()
 
     fig, ax = fig_init()
@@ -444,7 +444,7 @@ def plot_embedding_func_cluster_state(model, config,embedding_cluster, cmap, typ
     plt.xlim([-0.2, 1.2])
     plt.ylim([-0.2, 1.2])
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/UMAP_{config_file}_{epoch}.tif", dpi=170.7)
+    plt.savefig(f"./{log_dir}/results/UMAP_{epoch}.tif", dpi=170.7)
     plt.close()
 
 
@@ -1051,7 +1051,7 @@ def plot_cell_rates(config, device, log_dir, n_particle_types, type_list, x_list
     ax.xaxis.set_major_formatter(FormatStrFormatter('%.0f'))
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/cell_alive_{config_file}.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/results/cell_alive.tif", dpi=300)
     plt.close()
 
     fig, ax = fig_init()
@@ -1063,7 +1063,7 @@ def plot_cell_rates(config, device, log_dir, n_particle_types, type_list, x_list
     ax.xaxis.set_major_formatter(FormatStrFormatter('%.0f'))
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/cell_dead_{config_file}.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/results/cell_dead.tif", dpi=300)
     plt.close()
 
     #         6,7 H1 cell status dim=2  H1[:,0] = cell alive flag, alive : 0 , death : 0 , H1[:,1] = cell division flag, dividing : 1
@@ -1099,7 +1099,7 @@ def plot_cell_rates(config, device, log_dir, n_particle_types, type_list, x_list
     plt.xlabel(r'True cell cycle length', fontsize=54)
     plt.ylabel(r'Learned cell cycle length', fontsize=54)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/cell_cycle_length_{config_file}.tif", dpi=170)
+    plt.savefig(f"./{log_dir}/results/cell_cycle_length.tif", dpi=170)
     plt.close()
 
 
@@ -1675,7 +1675,7 @@ def plot_cell_state(config, epoch_list, log_dir, logger, style, device):
                 plt.xlabel(r'$d_{ij}$', fontsize=78)
                 plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=78)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/results/true_func.tif", dpi=170.7)
             plt.close()
 
             learned_time_series = np.reshape(new_labels, (n_frames + 1, n_particles))
@@ -1691,7 +1691,7 @@ def plot_cell_state(config, epoch_list, log_dir, logger, style, device):
             plt.xlabel('frame', fontsize=78)
             plt.ylabel('cell_id', fontsize=78)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/true_kinograph_{config_file}.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/results/true_kinograph.tif", dpi=170.7)
             plt.close()
 
             fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
@@ -1699,7 +1699,7 @@ def plot_cell_state(config, epoch_list, log_dir, logger, style, device):
             plt.xlabel('frame', fontsize=78)
             plt.ylabel('cell_id', fontsize=78)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/learned_kinograph_{config_file}.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/results/learned_kinograph.tif", dpi=170.7)
             plt.close()
 
 
@@ -1852,7 +1852,7 @@ def plot_cell_tracking(config, epoch_list, log_dir, logger, style, device):
             plt.xlabel(r'True particle index', fontsize=32)
             plt.ylabel(r'Particle index in next frame', fontsize=32)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/proxy_tracking_{config_file}_{epoch}.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/results/proxy_tracking_{epoch}.tif", dpi=170.7)
             plt.close()
             print(f'tracking index: {np.round(tracking_index,3)}')
             logger.info(f'tracking index: {np.round(tracking_index,3)}')
@@ -1869,7 +1869,7 @@ def plot_cell_tracking(config, epoch_list, log_dir, logger, style, device):
             plt.ylabel(r'tracking errors', fontsize=78)
             plt.xlabel(r'frame', fontsize=78)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/tracking_error_{config_file}_{epoch}.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/results/tracking_error_{epoch}.tif", dpi=170.7)
             plt.close()
 
             print(f'tracking errors: {np.sum(tracking_index_list)}')
@@ -1970,24 +1970,24 @@ def plot_cell_tracking(config, epoch_list, log_dir, logger, style, device):
                 plt.xlabel(r'$d_{ij}$', fontsize=78)
                 plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=78)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/results/true_func.tif", dpi=170.7)
             plt.close()
 
             fig, ax = fig_init()
             plt.plot(tracking_index_list_, color=mc, linewidth=2)
             plt.ylabel(r'tracking_index', fontsize=78)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/tracking_index_list_{config_file}.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/results/tracking_index_list.tif", dpi=170.7)
             fig, ax = fig_init()
             plt.plot(accuracy_list_, color=mc, linewidth=2)
             plt.ylabel(r'accuracy', fontsize=78)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/accuracy_list_{config_file}.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/results/accuracy_list.tif", dpi=170.7)
             fig, ax = fig_init()
             plt.plot(tracking_errors_list_, color=mc, linewidth=2)
             plt.ylabel(r'tracking_errors', fontsize=78)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/tracking_errors_list_{config_file}.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/results/tracking_errors_list.tif", dpi=170.7)
 
 
 def plot_attraction_repulsion_asym(config, epoch_list, log_dir, logger, style, device):
@@ -2073,7 +2073,7 @@ def plot_attraction_repulsion_asym(config, epoch_list, log_dir, logger, style, d
         plt.ylim(config.plotting.ylim)
         plt.xlim([0, max_radius])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/func_{config_file}_{epoch}.tif", dpi=170.7)
+        plt.savefig(f"./{log_dir}/results/func_{epoch}.tif", dpi=170.7)
         plt.close()
 
         fig, ax = fig_init()
@@ -2092,7 +2092,7 @@ def plot_attraction_repulsion_asym(config, epoch_list, log_dir, logger, style, d
         plt.ylim(config.plotting.ylim)
         plt.xlim([0, max_radius])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif", dpi=170.7)
+        plt.savefig(f"./{log_dir}/results/true_func.tif", dpi=170.7)
         plt.close()
 
         true_func_list = []
@@ -2158,7 +2158,7 @@ def plot_attraction_repulsion_continuous(config, epoch_list, log_dir, logger, st
             plt.xlabel(r'$a_{i0}$', fontsize=78)
             plt.ylabel(r'$a_{i1}$', fontsize=78)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/first_embedding_{config_file}_{epoch}.tif", dpi=170.7)
+        plt.savefig(f"./{log_dir}/results/first_embedding_{epoch}.tif", dpi=170.7)
         plt.close()
 
         fig, ax = fig_init()
@@ -2184,7 +2184,7 @@ def plot_attraction_repulsion_continuous(config, epoch_list, log_dir, logger, st
         plt.xlim([0, max_radius])
         plt.ylim(config.plotting.ylim)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/func_{config_file}_{epoch}.tif", dpi=170.7)
+        plt.savefig(f"./{log_dir}/results/func_{epoch}.tif", dpi=170.7)
         plt.close()
 
         fig, ax = fig_init()
@@ -2208,9 +2208,9 @@ def plot_attraction_repulsion_continuous(config, epoch_list, log_dir, logger, st
         plt.xlim([0, max_radius])
         plt.ylim(config.plotting.ylim)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif", dpi=170.7)
-        np.save(f"./{log_dir}/results/true_func_{config_file}_{epoch}.npy", csv_)
-        np.savetxt(f"./{log_dir}/results/true_func_{config_file}_{epoch}.txt", csv_)
+        plt.savefig(f"./{log_dir}/results/true_func.tif", dpi=170.7)
+        np.save(f"./{log_dir}/results/true_func_{epoch}.npy", csv_)
+        np.savetxt(f"./{log_dir}/results/true_func_{epoch}.txt", csv_)
         plt.close()
 
         func_list = torch.stack(func_list) * ynorm
@@ -2476,10 +2476,10 @@ def plot_gravity(config, epoch_list, log_dir, logger, style, device):
                     plt.xlim([0, 5.5])
                     plt.ylim([0, 5.5])
                     plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/results/mass_{config_file}.tif", dpi=170.7)
+                    plt.savefig(f"./{log_dir}/results/mass.tif", dpi=170.7)
                     # csv_ = np.array(csv_)
-                    # np.save(f"./{log_dir}/results/mass_{config_file}.npy", csv_)
-                    # np.savetxt(f"./{log_dir}/results/mass_{config_file}.txt", csv_)
+                    # np.save(f"./{log_dir}/results/mass.npy", csv_)
+                    # np.savetxt(f"./{log_dir}/results/mass.txt", csv_)
                     plt.close()
 
                     relative_error = np.abs(popt_list[:, 0] - p_list.squeeze()) / p_list.squeeze() * 100
@@ -2502,9 +2502,9 @@ def plot_gravity(config, epoch_list, log_dir, logger, style, device):
                     plt.xlabel(r'True mass', fontsize=78)
                     plt.ylabel(r'Learned exponent', fontsize=78)
                     plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/results/exponent_{config_file}.tif", dpi=170)
-                    np.save(f"./{log_dir}/results/exponent_{config_file}.npy", csv_)
-                    np.savetxt(f"./{log_dir}/results/exponent_{config_file}.txt", csv_)
+                    plt.savefig(f"./{log_dir}/results/exponent.tif", dpi=170)
+                    np.save(f"./{log_dir}/results/exponent.npy", csv_)
+                    np.savetxt(f"./{log_dir}/results/exponent.txt", csv_)
                     plt.close()
 
                     print(f'exponent: {np.round(np.mean(-popt_list[:, 1]), 2)}+/-{np.round(np.std(-popt_list[:, 1]), 2)}')
@@ -2571,7 +2571,7 @@ def plot_gravity(config, epoch_list, log_dir, logger, style, device):
                 plt.xlim([0, 5.5])
                 plt.ylim([0, 5.5])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/pysrr_mass_{config_file}.tif", dpi=300)
+                plt.savefig(f"./{log_dir}/results/pysrr_mass.tif", dpi=300)
                 plt.close()
 
                 relative_error = np.abs(popt_list - p_list.squeeze()) / p_list.squeeze() * 100
@@ -2631,7 +2631,7 @@ def plot_gravity_continuous(config, epoch_list, log_dir, logger, style, device):
             plt.xlabel(r'$a_{i0}$', fontsize=78)
             plt.ylabel(r'$a_{i1}$', fontsize=78)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/embedding_{config_file}.tif", dpi=170)
+        plt.savefig(f"./{log_dir}/results/embedding.tif", dpi=170)
         plt.close()
 
         fig, ax = fig_init(formatx='%.3f', formaty='%.0f')
@@ -2665,10 +2665,10 @@ def plot_gravity_continuous(config, epoch_list, log_dir, logger, style, device):
         plt.xlim([0, 0.02])
         plt.ylim([0, 0.5E6])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/func_{config_file}.tif", dpi=170)
+        plt.savefig(f"./{log_dir}/results/func.tif", dpi=170)
         csv_ = np.array(csv_)
-        np.save(f"./{log_dir}/results/func_{config_file}.npy", csv_)
-        np.savetxt(f"./{log_dir}/results/func_{config_file}.txt", csv_)
+        np.save(f"./{log_dir}/results/func.npy", csv_)
+        np.savetxt(f"./{log_dir}/results/func.txt", csv_)
         plt.close()
 
         rmserr_list = torch.stack(rmserr_list)
@@ -2693,10 +2693,10 @@ def plot_gravity_continuous(config, epoch_list, log_dir, logger, style, device):
             plt.xlabel(r'$d_{ij}$', fontsize=78)
             plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=78)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/true_func.tif", dpi=300)
         csv_ = np.array(csv_)
-        np.save(f"./{log_dir}/results/true_func_{config_file}.npy", csv_)
-        np.savetxt(f"./{log_dir}/results/true_func_{config_file}.txt", csv_)
+        np.save(f"./{log_dir}/results/true_func.npy", csv_)
+        np.savetxt(f"./{log_dir}/results/true_func.txt", csv_)
         plt.close()
 
         rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
@@ -2745,7 +2745,7 @@ def plot_gravity_continuous(config, epoch_list, log_dir, logger, style, device):
         plt.xlim([0, 5.5])
         plt.ylim([0, 5.5])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/mass_{config_file}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/mass.tif", dpi=300)
         plt.close()
 
         relative_error = np.abs(popt_list[:, 0] - p_list.squeeze()) / p_list.squeeze() * 100
@@ -2768,9 +2768,9 @@ def plot_gravity_continuous(config, epoch_list, log_dir, logger, style, device):
         plt.xlabel(r'True mass', fontsize=78)
         plt.ylabel(r'Learned exponent', fontsize=78)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/exponent_{config_file}.tif", dpi=300)
-        np.save(f"./{log_dir}/results/exponent_{config_file}.npy", csv_)
-        np.savetxt(f"./{log_dir}/results/exponent_{config_file}.txt", csv_)
+        plt.savefig(f"./{log_dir}/results/exponent.tif", dpi=300)
+        np.save(f"./{log_dir}/results/exponent.npy", csv_)
+        np.savetxt(f"./{log_dir}/results/exponent.txt", csv_)
         plt.close()
 
         print(f'exponent: {np.round(np.mean(-popt_list[:, 1]), 2)}+/-{np.round(np.std(-popt_list[:, 1]), 2)}')
@@ -2827,10 +2827,10 @@ def plot_gravity_continuous(config, epoch_list, log_dir, logger, style, device):
         plt.xlim([0, 5.5])
         plt.ylim([0, 5.5])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/pysrr_mass_{config_file}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/pysrr_mass.tif", dpi=300)
         # csv_ = np.array(csv_)
-        # np.save(f"./{log_dir}/results/mass_{config_file}.npy", csv_)
-        # np.savetxt(f"./{log_dir}/results/mass_{config_file}.txt", csv_)
+        # np.save(f"./{log_dir}/results/mass.npy", csv_)
+        # np.savetxt(f"./{log_dir}/results/mass.txt", csv_)
         plt.close()
 
         relative_error = np.abs(popt_list - p_list.squeeze()) / p_list.squeeze() * 100
@@ -3057,9 +3057,9 @@ def plot_Coulomb(config, epoch_list, log_dir, logger, style, device):
                 plt.xlabel(r'$d_{ij}$', fontsize=78)
                 plt.ylabel(r'$f(a_i, a_j, d_{ij})$', fontsize=78)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/true_func_{config_file}_{epoch}.tif", dpi=170.7)
-            np.save(f"./{log_dir}/results/true_func_{config_file}_{epoch}.npy", csv_)
-            np.savetxt(f"./{log_dir}/results/true_func_{config_file}_{epoch}.txt", csv_)
+            plt.savefig(f"./{log_dir}/results/true_func_{epoch}.tif", dpi=170.7)
+            np.save(f"./{log_dir}/results/true_func_{epoch}.npy", csv_)
+            np.savetxt(f"./{log_dir}/results/true_func_{epoch}.txt", csv_)
             plt.close()
 
             func_list = torch.stack(func_list)
@@ -3108,7 +3108,7 @@ def plot_Coulomb(config, epoch_list, log_dir, logger, style, device):
             plt.ylabel(r'Learned $q_i q_j$', fontsize=64)
             plt.xlabel(r'True $q_i q_j$', fontsize=64)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/qiqj_{config_file}_{epoch}.tif", dpi=170)
+            plt.savefig(f"./{log_dir}/results/qiqj_{epoch}.tif", dpi=170)
             plt.close()
 
             print(f'slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)}   threshold: {threshold} ')
@@ -3158,7 +3158,7 @@ def plot_Coulomb(config, epoch_list, log_dir, logger, style, device):
             plt.xlabel('iteration',fontsize=78)
             plt.ylabel(r'$q_i$',fontsize=78)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/qi_{config_file}_{epoch}.tif", dpi=170)
+            plt.savefig(f"./{log_dir}/results/qi_{epoch}.tif", dpi=170)
 
 
 def plot_boids(config, epoch_list, log_dir, logger, style, device):
@@ -3483,7 +3483,7 @@ def plot_boids(config, epoch_list, log_dir, logger, style, device):
                 plt.xlabel(r'True cohesion coeff. ', fontsize=56)
                 plt.ylabel(r'Fitted cohesion coeff. ', fontsize=56)
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/cohesion_{config_file}_{epoch}.tif", dpi=300)
+                plt.savefig(f"./{log_dir}/results/cohesion_{epoch}.tif", dpi=300)
                 plt.close()
                 print()
                 print(f'cohesion slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)}   threshold {threshold} ')
@@ -3505,7 +3505,7 @@ def plot_boids(config, epoch_list, log_dir, logger, style, device):
                 plt.xlabel(r'True alignement coeff. ', fontsize=56)
                 plt.ylabel(r'Fitted alignement coeff. ', fontsize=56)
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/alignment_{config_file}_{epoch}.tif", dpi=300)
+                plt.savefig(f"./{log_dir}/results/alignment_{epoch}.tif", dpi=300)
                 plt.close()
                 print(f'alignment   slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)}  threshold {threshold} ')
                 logger.info(f'alignment   slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)}  threshold {threshold} ')
@@ -3526,7 +3526,7 @@ def plot_boids(config, epoch_list, log_dir, logger, style, device):
                 plt.xlabel(r'True separation coeff. ', fontsize=56)
                 plt.ylabel(r'Fitted separation coeff. ', fontsize=56)
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/separation_{config_file}_{epoch}.tif", dpi=300)
+                plt.savefig(f"./{log_dir}/results/separation_{epoch}.tif", dpi=300)
                 plt.close()
                 print(f'separation   slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)}  threshold {threshold} ')
                 logger.info(f'separation   slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)}  threshold {threshold} ')
@@ -3575,7 +3575,7 @@ def plot_wave(config, epoch_list, log_dir, logger, cc, style, device):
     plt.xlabel(r'$x$', fontsize=78)
     plt.ylabel(r'$y$', fontsize=78)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/true_wave_coeff_{config_file}.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/results/true_wave_coeff.tif", dpi=300)
     plt.close
     fig, ax = fig_init()
     fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
@@ -3587,7 +3587,7 @@ def plot_wave(config, epoch_list, log_dir, logger, cc, style, device):
     cbar = plt.colorbar(shrink=0.5)
     cbar.ax.tick_params(labelsize=32)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/true_wave_coeff_{config_file}_cbar.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/results/true_wave_coeff_cbar.tif", dpi=300)
     plt.close
 
     for epoch in epoch_list:
@@ -3641,7 +3641,7 @@ def plot_wave(config, epoch_list, log_dir, logger, cc, style, device):
             plt.xlabel(r'$\nabla^2 u_i$', fontsize=78)
             plt.ylabel(r'$\Phi(a_{i},\nabla^2 u_i)$', fontsize=78)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/functions_{config_file}_{epoch}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/functions_{epoch}.tif", dpi=300)
         plt.close()
 
         func_list = torch.stack(func_list)
@@ -3670,7 +3670,7 @@ def plot_wave(config, epoch_list, log_dir, logger, cc, style, device):
         ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
         ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/scatter_coeff_{config_file}_{epoch}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/scatter_coeff_{epoch}.tif", dpi=300)
         plt.close()
 
         t = np.array(popt_list)
@@ -3686,7 +3686,7 @@ def plot_wave(config, epoch_list, log_dir, logger, cc, style, device):
         plt.ylabel(r'$y$', fontsize=78)
         fmt = lambda x, pos: '{:.3%}'.format(x)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/wave_coeff_{config_file}_{epoch}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/wave_coeff_{epoch}.tif", dpi=300)
         plt.close()
 
         embedding = get_embedding(mesh_model.a, 1)
@@ -3700,7 +3700,7 @@ def plot_wave(config, epoch_list, log_dir, logger, cc, style, device):
             plt.xlabel(r'$a_{i0}$', fontsize=78)
             plt.ylabel(r'$a_{i1}$', fontsize=78)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{epoch}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=300)
         plt.close()
 
 
@@ -4194,10 +4194,10 @@ def plot_particle_field(config, epoch_list, log_dir, logger, cc, style, device):
                     # cbar.ax.tick_params(labelsize=32)
                     # cbar.set_label(r'$Coupling$',fontsize=78)
                     plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/results/field_{config_file}_{epoch}.tif", dpi=300)
-                    # np.save(f"./{log_dir}/results/embedding_{config_file}.npy", csv_)
+                    plt.savefig(f"./{log_dir}/results/field_{epoch}.tif", dpi=300)
+                    # np.save(f"./{log_dir}/results/embedding.npy", csv_)
                     # csv_= np.reshape(csv_,(csv_.shape[0]*csv_.shape[1],2))
-                    # np.savetxt(f"./{log_dir}/results/embedding_{config_file}.txt", csv_)
+                    # np.savetxt(f"./{log_dir}/results/embedding.txt", csv_)
                     plt.close()
                     rmse = np.sqrt(np.mean((target - pts) ** 2))
                     print(f'RMSE: {rmse}')
@@ -4228,7 +4228,7 @@ def plot_particle_field(config, epoch_list, log_dir, logger, cc, style, device):
                     plt.xlim([0, 2])
                     plt.ylim([-0, 2])
                     plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/results/field_scatter_{config_file}_{epoch}.tif", dpi=300)
+                    plt.savefig(f"./{log_dir}/results/field_scatter_{epoch}.tif", dpi=300)
 
                     print(f'R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}')
                     logger.info(f'R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}')
@@ -4283,7 +4283,7 @@ def plot_RD_RPS(config, epoch_list, log_dir, logger, cc, style, device):
     plt.xlabel(r'$x$', fontsize=78)
     plt.ylabel(r'$y$', fontsize=78)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/true_coeff_{config_file}.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/results/true_coeff.tif", dpi=300)
     plt.close()
     fig, ax = fig_init()
     fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
@@ -4295,7 +4295,7 @@ def plot_RD_RPS(config, epoch_list, log_dir, logger, cc, style, device):
     cbar = plt.colorbar(shrink=0.5)
     cbar.ax.tick_params(labelsize=32)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/true_coeff_{config_file}_cbar.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/results/true_coeff_cbar.tif", dpi=300)
     plt.close()
 
     for epoch in epoch_list:
@@ -4320,7 +4320,7 @@ def plot_RD_RPS(config, epoch_list, log_dir, logger, cc, style, device):
         plt.xlabel(r'$x$', fontsize=78)
         plt.ylabel(r'$y$', fontsize=78)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/labels_map_{config_file}_cbar.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/labels_map_cbar.tif", dpi=300)
         plt.close
 
         fig, ax = fig_init()
@@ -4334,7 +4334,7 @@ def plot_RD_RPS(config, epoch_list, log_dir, logger, cc, style, device):
             plt.xlabel(r'$a_{i0}$', fontsize=78)
             plt.ylabel(r'$a_{i1}$', fontsize=78)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{epoch}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=300)
         plt.close()
 
         if True:
@@ -4426,7 +4426,7 @@ def plot_RD_RPS(config, epoch_list, log_dir, logger, cc, style, device):
             ax.set_xticks(x + width, cp, fontsize=36)
             plt.title('First equation', fontsize=56)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/first_equation_{config_file}_{epoch}.tif", dpi=300)
+            plt.savefig(f"./{log_dir}/results/first_equation_{epoch}.tif", dpi=300)
             plt.close()
             cp = ['uu', 'uv', 'uw', 'vv', 'vw', 'ww', 'u', 'v', 'w']
             results = {
@@ -4445,7 +4445,7 @@ def plot_RD_RPS(config, epoch_list, log_dir, logger, cc, style, device):
             ax.set_xticks(x + width, cp, fontsize=36)
             plt.title('Second equation', fontsize=56)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/second_equation_{config_file}_{epoch}.tif", dpi=300)
+            plt.savefig(f"./{log_dir}/results/second_equation_{epoch}.tif", dpi=300)
             plt.close()
             cp = ['uu', 'uv', 'uw', 'vv', 'vw', 'ww', 'u', 'v', 'w']
             results = {
@@ -4464,7 +4464,7 @@ def plot_RD_RPS(config, epoch_list, log_dir, logger, cc, style, device):
             ax.set_xticks(x + width, cp, fontsize=36)
             plt.title('Third equation', fontsize=56)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/third_equation_{config_file}_{epoch}.tif", dpi=300)
+            plt.savefig(f"./{log_dir}/results/third_equation_{epoch}.tif", dpi=300)
             plt.close()
 
             true_diffusion_coeff = [0.01, 0.02, 0.03, 0.04]
@@ -4484,7 +4484,7 @@ def plot_RD_RPS(config, epoch_list, log_dir, logger, cc, style, device):
             r_squared = 1 - (ss_res / ss_tot)
             plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/scatter_{config_file}_{epoch}.tif", dpi=300)
+            plt.savefig(f"./{log_dir}/results/scatter_{epoch}.tif", dpi=300)
             plt.close()
 
             print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}")
@@ -4868,7 +4868,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
         plt.figure(figsize=(15, 10))
         n = np.random.permutation(n_particles)
-        for i in range(1):
+        for i in range(25):
             plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=2)
         plt.xlabel('time', fontsize=64)
         plt.ylabel('$x_{i}$', fontsize=64)
@@ -5039,7 +5039,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 plt.xlabel(r'$a_{i0}$', fontsize=78)
                 plt.ylabel(r'$a_{i1}$', fontsize=78)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/all_embedding_{config_file}_{epoch}.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/results/all_embedding_{epoch}.tif", dpi=170.7)
             plt.close()
 
             fig, ax = fig_init()
@@ -5207,7 +5207,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.xlim([-0.2, 1.2])
             plt.ylim([-0.2, 1.2])
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/UMAP_{config_file}_{epoch}.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/results/UMAP_{epoch}.tif", dpi=170.7)
             plt.close()
 
             config.training.cluster_distance_threshold = 0.2
@@ -5236,7 +5236,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.xticks([])
             plt.yticks([])
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/true_types_{config_file}_{epoch}.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/results/true_types_{epoch}.tif", dpi=170.7)
             plt.close()
 
             plt.figure(figsize=(10, 10))
@@ -5244,7 +5244,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.xticks([])
             plt.yticks([])
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/learned_types_{config_file}_{epoch}.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/results/learned_types_{epoch}.tif", dpi=170.7)
             plt.close()
             plt.style.use('default')
 
@@ -5394,7 +5394,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                         logger.info(symbolic(n))
 
 
-def plot_synaptic3(config,epoch_list, log_dir, logger, cc, style, device):
+def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
 
     dataset_name = config.dataset
 
@@ -5540,7 +5540,7 @@ def plot_synaptic3(config,epoch_list, log_dir, logger, cc, style, device):
                 # plt.xlim([0.7, 1.2])
                 # plt.ylim([0.7, 1.2])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/all/all_embedding_0_{config_file}_{epoch}.tif", dpi=80)
+                plt.savefig(f"./{log_dir}/results/all/all_embedding_0_{epoch}.tif", dpi=80)
                 plt.close()
 
                 fig, ax = fig_init()
@@ -5560,7 +5560,7 @@ def plot_synaptic3(config,epoch_list, log_dir, logger, cc, style, device):
                 # plt.xlim([0.7, 1.2])
                 # plt.ylim([0.7, 1.2])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/all/all_embedding_1_{config_file}_{epoch}.tif", dpi=80)
+                plt.savefig(f"./{log_dir}/results/all/all_embedding_1_{epoch}.tif", dpi=80)
                 plt.close()
 
                 correction = torch.load(f'{log_dir}/correction.pt',map_location=device)
@@ -5746,7 +5746,7 @@ def plot_synaptic3(config,epoch_list, log_dir, logger, cc, style, device):
             # plt.ylim([0.7, 1.2])
 
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/all2/all_embedding_1_{config_file}_{n}.tif", dpi=80)
+            plt.savefig(f"./{log_dir}/results/all2/all_embedding_1_{n}.tif", dpi=80)
             plt.close()
 
             # rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
@@ -5984,7 +5984,7 @@ def plot_synaptic3(config,epoch_list, log_dir, logger, cc, style, device):
                     plt.xlim([0, 2])
                     ax.set_zlim([-2, 3.5])
                     plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/results/embedding_{k}_{config_file}_{epoch}.tif", dpi=80)
+                    plt.savefig(f"./{log_dir}/results/embedding_{k}_{epoch}.tif", dpi=80)
                     plt.close()
 
                 fig = plt.figure(figsize=(10, 10))
@@ -5999,7 +5999,7 @@ def plot_synaptic3(config,epoch_list, log_dir, logger, cc, style, device):
                 plt.xlim([0, 1.5])
                 ax.set_zlim([-2, 2.5])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/all_embedding_{config_file}_{epoch}.tif", dpi=80)
+                plt.savefig(f"./{log_dir}/results/all_embedding_{epoch}.tif", dpi=80)
                 plt.close()
 
             else:
@@ -6018,7 +6018,7 @@ def plot_synaptic3(config,epoch_list, log_dir, logger, cc, style, device):
                     plt.xlabel(r'$a_{i0}(t)$', fontsize=78)
                     plt.ylabel(r'$a_{i1}(t)$', fontsize=78)
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/all_embedding_0_{config_file}_{epoch}.tif", dpi=80)
+                plt.savefig(f"./{log_dir}/results/all_embedding_0_{epoch}.tif", dpi=80)
                 plt.close()
 
                 fig, ax = fig_init()
@@ -6034,7 +6034,7 @@ def plot_synaptic3(config,epoch_list, log_dir, logger, cc, style, device):
                     plt.xlabel(r'$a_{i0}(t)$', fontsize=78)
                     plt.ylabel(r'$a_{i1}(t)$', fontsize=78)
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/all_embedding_1_{config_file}_{epoch}.tif", dpi=80)
+                plt.savefig(f"./{log_dir}/results/all_embedding_1_{epoch}.tif", dpi=80)
                 plt.close()
 
                 for k in range(n_particle_types):
@@ -6048,7 +6048,7 @@ def plot_synaptic3(config,epoch_list, log_dir, logger, cc, style, device):
                         plt.xlabel(r'$a_{i0}$', fontsize=78)
                         plt.ylabel(r'$a_{i1}$', fontsize=78)
                     plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/results/embedding_{k}_{config_file}_{epoch}.tif", dpi=80)
+                    plt.savefig(f"./{log_dir}/results/embedding_{k}_{epoch}.tif", dpi=80)
                     plt.close()
 
 
@@ -7197,7 +7197,7 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N5_l']
     # config_list = ['signal_N3_c4']
-    # config_list = ['signal/signal_N2_b1']
+    config_list = ['signal_N2_b1']
     # config_list = ['arbitrary_3']
 
     for config_file_ in config_list:
@@ -7207,7 +7207,7 @@ if __name__ == '__main__':
         config.dataset = pre_folder + config.dataset
         config.config_file = pre_folder + config_file_
 
-        data_plot(config=config, epoch_list=['best'], style='color', device=device)
+        data_plot(config=config, epoch_list=['best'], style='color latex', device=device)
         # data_plot(config=config, config_file=config_file.split('/')[-1], epoch_list=['all'], style=False, device=device)
         # data_plot(config=config, config_file=config_file.split('/')[-1], epoch_list=['time'], style=False, device=device)
 

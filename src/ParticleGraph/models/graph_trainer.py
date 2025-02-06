@@ -2485,6 +2485,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                 in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[0:n_particles]), dim=1)
                 func_phi = model.lin_phi(in_features.float())
                 x = torch.tensor(x_list[run][k], device=device)
+
                 if (model_config.signal_model_name == 'PDE_N4'):
                     in_features = torch.zeros((n_particles, dimension + 1), device=device)
                     func_edge = model.lin_edge(in_features.float())
