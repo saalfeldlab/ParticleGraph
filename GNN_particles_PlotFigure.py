@@ -4489,8 +4489,6 @@ def plot_RD_RPS(config, epoch_list, log_dir, logger, cc, style, device):
 
             print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}")
 
-
-
             fig, ax = fig_init(formatx='%.3f', formaty='%.3f')
             x_data = coeff_true.flatten()
             y_data = coeff_reconstructed.flatten()
@@ -4859,7 +4857,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
         ax.invert_yaxis()
         plt.ylabel('neurons', fontsize=64)
         plt.xlabel('time', fontsize=64)
-        plt.xticks([1000, 9900], [1000, 10000], fontsize=48)
+        plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
         plt.yticks([0, 999], [1, 1000], fontsize=48)
         plt.xticks(rotation=0)
         plt.tight_layout()
@@ -4875,7 +4873,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
         plt.xticks([0, 10000], fontsize=48)
         plt.yticks(fontsize=48)
         plt.tight_layout()
-        plt.show()
         plt.savefig(f'./{log_dir}/results/firing rate.png', dpi=300)
         plt.close()
 
@@ -6856,6 +6853,7 @@ def data_plot(config, epoch_list, style, device):
         logger.removeHandler(handler)
 
 
+
 def get_figures(index):
 
     epoch_list = ['20']
@@ -7197,7 +7195,7 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N5_l']
     # config_list = ['signal_N3_c4']
-    config_list = ['signal_N2_b1']
+    config_list = ['signal_N2_a11_bis']
     # config_list = ['arbitrary_3']
 
     for config_file_ in config_list:
@@ -7207,7 +7205,7 @@ if __name__ == '__main__':
         config.dataset = pre_folder + config.dataset
         config.config_file = pre_folder + config_file_
 
-        data_plot(config=config, epoch_list=['best'], style='color latex', device=device)
+        data_plot(config=config, epoch_list=['best'], style='color', device=device)
         # data_plot(config=config, config_file=config_file.split('/')[-1], epoch_list=['all'], style=False, device=device)
         # data_plot(config=config, config_file=config_file.split('/')[-1], epoch_list=['time'], style=False, device=device)
 
