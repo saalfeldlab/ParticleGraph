@@ -1,12 +1,12 @@
-description: 'synaptic network small g   1000 neurons 4 types phi neuron dependent lorentz std 0.03 20 runs omega 30'
-dataset: 'signal_N2_Lorentz_m11_shuffle'
+description: 'synaptic network random matrix cluster embedding distance 0.2 1000 neurons 4 types phi neuron dependent lorentz std 0.03 20 runs omega 30'
+dataset: 'signal_N2_Lorentz_m6_shuffle'
 
 simulation:
     connectivity_file: 'random'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
     connectivity_distribution: 'Lorentz'
-    params: [[6.0,1.0,1.0,1.0],[6.0,2.0,1.0,2.0],[6.0,1.0,1.2,4.0],[6.0,2.0,1.2,8.0]]
+    params: [[10.0,1.0,1.0,1.0],[10.0,2.0,1.0,2.0],[10.0,1.0,1.2,4.0],[10.0,2.0,1.2,8.0]]
     phi: 'tanh'
     tau: 1.0
     min_radius: 1.0
@@ -49,13 +49,12 @@ training:
     n_epochs: 20
     n_epochs_init: 5
     recursive_loop: 1
-    batch_size: 1
+    batch_size: 32
     small_init_batch_size: False
     n_runs: 20
-    large_range: False
     sparsity: 'none'
     rotation_augmentation: False
-    data_augmentation_loop: 100
+    data_augmentation_loop: 50
     cluster_method: 'kmeans_auto_embedding'
     cluster_distance_threshold: 0.2
     fix_cluster_embedding: True

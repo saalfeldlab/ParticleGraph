@@ -74,10 +74,12 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
 
     def get_interp_a(self, k, particle_id):
 
-        id = particle_id * 100 + k // self.embedding_step
-        alpha = (k % self.embedding_step) / self.embedding_step
+        id = particle_id * 100 + to_numpy(k) // self.embedding_step
+        id = id.squeeze()
+        alpha = (to_numpy(k) % self.embedding_step) / self.embedding_step
+        alpha = torch.tensor(alpha, dtype=torch.float32, device=self.device).repeat(1,2)
 
-        return alpha * self.a[id+1, :] + (1 - alpha) * self.a[id, :]
+        return alpha * self.a[id+1, :].squeeze() + (1.0 - alpha) * self.a[id, :]
 
 
     def forward(self, data=[], data_id=[], return_all=False, has_field=False, k = 0):
@@ -94,7 +96,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             field = torch.ones_like(x[:,6:7])
 
         if self.model == 'PDE_N3':
-            particle_id = to_numpy(x[:, 0])
+            particle_id = to_numpy(x[:, 0:1])
             embedding = self.get_interp_a(k, particle_id)
         else:
             particle_id = to_numpy(x[:, 0])
@@ -128,9 +130,9 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         T = self.W * self.mask
 
         if self.return_all:
-            self.msg = T[to_numpy(edge_index_i),to_numpy(edge_index_j)][:,None] * self.lin_edge(u_j) * field_i
+            self.msg = T[to_numpy(edge_index_i)%self.n_particles,to_numpy(edge_index_j%self.n_particles)][:,None] * self.lin_edge(u_j) * field_i
 
-        return T[to_numpy(edge_index_i),to_numpy(edge_index_j)][:,None] * self.lin_edge(in_features) * field_i
+        return T[to_numpy(edge_index_i)%self.n_particles,to_numpy(edge_index_j)%self.n_particles][:,None] * self.lin_edge(in_features) * field_i
 
 
 

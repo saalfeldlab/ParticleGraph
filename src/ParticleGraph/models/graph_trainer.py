@@ -2436,8 +2436,7 @@ def data_train_synaptic2(config, erase, best_model, device):
     print("start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
-    Niter = int(n_frames * data_augmentation_loop // batch_size * n_runs)
-
+    Niter = int(n_frames * data_augmentation_loop // batch_size * (n_runs-1))
     print(f'plot every {Niter // 10} iterations')
 
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
@@ -2525,8 +2524,10 @@ def data_train_synaptic2(config, erase, best_model, device):
 
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
 
+            has_field_batch = torch.ones_like(data_id) * has_field
+
             for batch in batch_loader:
-                pred = model(batch, data_id=run, has_field=data_id * has_field, k=k_batch)
+                pred = model(batch, data_id=data_id, has_field=has_field_batch, k=k_batch)
 
             loss = loss + (pred - y_batch).norm(2)
 

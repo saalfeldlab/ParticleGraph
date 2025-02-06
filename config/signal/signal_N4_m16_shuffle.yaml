@@ -15,7 +15,7 @@ simulation:
     n_nodes: 1024
     n_particle_types: 4
     shuffle_particle_types: True
-    n_frames: 10000
+    n_frames: 200000
     delta_t: 0.01
     dpos_init:  0
     boundary: 'no'
@@ -49,9 +49,9 @@ training:
     n_epochs: 20
     n_epochs_init: 5
     recursive_loop: 1
-    batch_size: 4
+    batch_size: 1
     small_init_batch_size: False
-    n_runs: 20
+    n_runs: 2
     sparsity: 'none'
     rotation_augmentation: False
     data_augmentation_loop: 50
