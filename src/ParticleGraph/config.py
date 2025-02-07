@@ -161,7 +161,7 @@ class TrainingConfig(BaseModel):
     n_epochs: int = 20
     n_epochs_init: int = 2
     batch_size: int = 1
-    particle_batch_ratio: int = 1
+    particle_batch_ratio: float = 1
     small_init_batch_size: bool = True
     do_tracking: bool = False
     ctrl_tracking: bool = False

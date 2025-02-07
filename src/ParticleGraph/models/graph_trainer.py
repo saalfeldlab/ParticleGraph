@@ -222,11 +222,6 @@ def data_train_particle(config, erase, best_model, device):
         mask_ghost = mask_ghost[:, 0].astype(int)
 
     print("start training ...")
-    print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
-    logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
-    Niter = n_frames * data_augmentation_loop // batch_size
-    print(f'plot every {Niter // 50} iterations')
-
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
 
     list_loss = []
@@ -237,7 +232,7 @@ def data_train_particle(config, erase, best_model, device):
         logger.info(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
         logger.info(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
 
-        batch_size = get_batch_size(epoch)
+        batch_size = int(get_batch_size(epoch) / particle_batch_ratio)
         logger.info(f'batch_size: {batch_size}')
 
         if (epoch == 1) & (has_ghost):
@@ -246,10 +241,17 @@ def data_train_particle(config, erase, best_model, device):
             mask_ghost = np.argwhere(mask_ghost == 1)
             mask_ghost = mask_ghost[:, 0].astype(int)
 
-        total_loss = 0
         Niter = n_frames * data_augmentation_loop // batch_size
+        if particle_batch_ratio < 1:
+            Niter = int(n_frames * data_augmentation_loop // batch_size / particle_batch_ratio)
+        plot_frequency = int(Niter // 50)
+        if epoch==0:
+            print(f'{Niter} iterations per epoch')
+            logger.info(f'{Niter} iterations per epoch')
+            print(f'plot every {plot_frequency} iterations')
 
         time.sleep(1)
+        total_loss = 0
 
         for N in trange(Niter):
 
@@ -258,7 +260,10 @@ def data_train_particle(config, erase, best_model, device):
             sin_phi = torch.sin(phi)
 
             dataset_batch = []
-            for batch in range(batch_size * particle_batch_ratio):
+            ids = np.random.permutation(n_particles)[:int(n_particles * (1 - particle_batch_ratio))]
+            ids = np.sort(ids)
+
+            for batch in range(batch_size):
 
                 run = 1 + np.random.randint(n_runs - 1)
                 k = time_window + np.random.randint(run_lengths[run] - 1 - time_window - time_step - recursive_loop)
@@ -289,10 +294,8 @@ def data_train_particle(config, erase, best_model, device):
                     edges = edge_p_p_list[run][f'arr_{k}']
                 else:
                     distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                    if particle_batch_ratio>1:      # select a given number of particles
-                        ids = np.random.permutation(n_particles)[:n_particles // particle_batch_ratio]
-                        ids = np.sort(ids)
-                        distance[ids,:] = -1
+                    if particle_batch_ratio<1:      # remove a given number of particles
+                        distance[:, ids] = -1
                     adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
                     edges = adj_t.nonzero().t().contiguous()
 
@@ -314,8 +317,6 @@ def data_train_particle(config, erase, best_model, device):
                     y = x_next[:, 1:dimension + 1]
                 else:
                     y = torch.tensor(y_list[run][k], dtype=torch.float32, device=device).clone().detach()
-                    if particle_batch_ratio > 1:
-                        y = y[ids]
                     if noise_level > 0:
                         y = y * (1 + torch.randn_like(y) * noise_level)
                     y[:,0:dimension] = y[:,0:dimension] / ynorm
@@ -369,7 +370,7 @@ def data_train_particle(config, erase, best_model, device):
             total_loss += loss.item()
 
             visualize_embedding = True
-            if visualize_embedding & (((epoch < 30) & (N % (Niter // 50) == 0)) | (N == 0)):
+            if visualize_embedding & (((epoch < 30) & (N % plot_frequency == 0)) | (N == 0)):
                 plot_training(config=config, log_dir=log_dir,
                               epoch=epoch, N=N, x=x, model=model, n_nodes=0, n_node_types=0, index_nodes=0,
                               dataset_num=1,
