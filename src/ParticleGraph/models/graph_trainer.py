@@ -291,12 +291,10 @@ def data_train_particle(config, erase, best_model, device):
                     distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
                     if particle_batch_ratio>1:      # select a given number of particles
                         ids = np.random.permutation(n_particles)[:n_particles // particle_batch_ratio]
+                        ids = np.sort(ids)
                         distance[ids,:] = -1
                     adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
                     edges = adj_t.nonzero().t().contiguous()
-
-                    pos = torch.argwhere(edges[0,:]==ids[0])
-                    print(len(pos))
 
                 if time_window == 0:
                     dataset = data.Data(x=x[:, :], edge_index=edges, num_nodes=x.shape[0])
@@ -316,6 +314,8 @@ def data_train_particle(config, erase, best_model, device):
                     y = x_next[:, 1:dimension + 1]
                 else:
                     y = torch.tensor(y_list[run][k], dtype=torch.float32, device=device).clone().detach()
+                    if particle_batch_ratio > 1:
+                        y = y[ids]
                     if noise_level > 0:
                         y = y * (1 + torch.randn_like(y) * noise_level)
                     y[:,0:dimension] = y[:,0:dimension] / ynorm
@@ -329,16 +329,9 @@ def data_train_particle(config, erase, best_model, device):
                 if batch == 0:
                     data_id = torch.ones((y.shape[0],1), dtype=torch.int) * run
                     y_batch = y
-                    if particle_batch_ratio > 1:
-                        mask = torch.zeros((y.shape[0],1), dtype=torch.int)
-                        mask[ids] = 1
                 else:
                     data_id = torch.cat((data_id, torch.ones((y.shape[0],1), dtype=torch.int) * run), dim = 0)
                     y_batch = torch.cat((y_batch, y), dim=0)
-                    if particle_batch_ratio > 1:
-                        mask_ = torch.zeros((y.shape[0],1), dtype=torch.int)
-                        mask_[ids] = 1
-                        mask = torch.cat((mask, mask_), dim=0)
 
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
@@ -354,11 +347,7 @@ def data_train_particle(config, erase, best_model, device):
                 # predict position, does not work with rotation_augmentation
                 loss = (pred[:,0:dimension] - y_batch).norm(2) * 1E7
             else:
-                if particle_batch_ratio > 1:
-                    mask = mask.clone().detach()
-                    loss = (pred*mask - y_batch*mask).norm(2)
-                else:
-                    loss = (pred - y_batch).norm(2)
+                loss = (pred - y_batch).norm(2)
 
             if (epoch>0) & (coeff_continuous>0):
                 rr = torch.linspace(0, max_radius, 1000, dtype=torch.float32, device=device)
