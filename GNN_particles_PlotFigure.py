@@ -5153,7 +5153,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 psi_list = torch.stack(psi_list)
                 psi_list = psi_list.squeeze()
 
-
             print('interaction functions ...')
 
             fig, ax = fig_init()
@@ -5227,7 +5226,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             print(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}  ')
             logger.info(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method} ')
 
-            plt.style.use('dark_background')
             plt.figure(figsize=(10, 10))
             plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=200, color=cmap.color(to_numpy(type_list).astype(int)))
             plt.xticks([])
@@ -5243,8 +5241,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/learned_types_{epoch}.tif", dpi=170.7)
             plt.close()
-            plt.style.use('default')
-
 
             i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
             A = model.W.clone().detach() / correction
@@ -7193,7 +7189,7 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N5_l']
     # config_list = ['signal_N3_c4']
-    config_list = ['signal_N2_a11_bis']
+    config_list = ['signal_N2_a20','signal_N2_a21','signal_N2_a22','signal_N2_a23','signal_N2_a24','signal_N2_a25','signal_N2_a26']
     # config_list = ['arbitrary_3']
 
     for config_file_ in config_list:
@@ -7203,9 +7199,9 @@ if __name__ == '__main__':
         config.dataset = pre_folder + config.dataset
         config.config_file = pre_folder + config_file_
 
-        data_plot(config=config, epoch_list=['best'], style='color', device=device)
-        # data_plot(config=config, config_file=config_file.split('/')[-1], epoch_list=['all'], style=False, device=device)
-        # data_plot(config=config, config_file=config_file.split('/')[-1], epoch_list=['time'], style=False, device=device)
+        data_plot(config=config, epoch_list=['best'], style='black color', device=device)
+        # data_plot(config=config, epoch_list=['all'], style='black color', device=device)
+        # data_plot(config=config, epoch_list=['time'], style=False, device=device)
 
         # data_plot(config=config, config_file=config_file.split('/')[-1], epoch_list=['all'], style=False, device=device)
 
