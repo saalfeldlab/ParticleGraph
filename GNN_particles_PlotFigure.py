@@ -5157,7 +5157,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 plt.xlim([-0.2,0.2])
                 plt.ylim([-0.2,0.2])
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/comparison_{epoch}.tif", dpi=87)
+            plt.savefig(f"./{log_dir}/results/first_comparison_{epoch}.tif", dpi=87)
             plt.close()
 
             x_data = np.reshape(gt_weight, (n_particles * n_particles))
@@ -5173,6 +5173,22 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             second_correction = lin_fit[0]
             print(f'second_correction: {second_correction:0.2f}')
             np.save(f'{log_dir}/second_correction.npy', second_correction)
+
+            fig, ax = fig_init()
+            gt_weight = to_numpy(adjacency)
+            pred_weight = to_numpy(A)
+            plt.scatter(gt_weight, pred_weight / second_correction, s=0.1, c=mc, alpha=0.1)
+            plt.xlabel(r'true $W_{ij}$', fontsize=78)
+            plt.ylabel(r'learned $W_{ij}$', fontsize=78)
+            if n_particles == 8000:
+                plt.xlim([-0.05,0.05])
+                plt.ylim([-0.05,0.05])
+            else:
+                plt.xlim([-0.2,0.2])
+                plt.ylim([-0.2,0.2])
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/second_comparison_{epoch}.tif", dpi=87)
+            plt.close()
 
             plt.figure(figsize=(10, 10))
             # plt.title(r'learned $W_{ij}$', fontsize=78)
@@ -7187,8 +7203,8 @@ if __name__ == '__main__':
     # config_list = ['signal_N5_l']
     # config_list = ['signal_N3_c4']
     # config_list = ['signal_N2_a20','signal_N2_a21','signal_N2_a22','signal_N2_a23','signal_N2_a24','signal_N2_a25','signal_N2_a26']
-    config_list = ['signal_N4_v']
-    config_list = ['signal_N4_m6_shuffle','signal_N4_m7_shuffle','signal_N4_m8_shuffle','signal_N4_m9_shuffle','signal_N4_m10_shuffle','signal_N4_m11_shuffle']
+    # config_list = ['signal_N4_v']
+    config_list = ['signal_N4_m1_shuffle']
 
     for config_file_ in config_list:
         
@@ -7197,8 +7213,8 @@ if __name__ == '__main__':
         config.dataset = pre_folder + config.dataset
         config.config_file = pre_folder + config_file_
 
-        # data_plot(config=config, epoch_list=['best'], style='black color', device=device)
-        data_plot(config=config, epoch_list=['all'], style='black color', device=device)
+        data_plot(config=config, epoch_list=['best'], style='color', device=device)
+        # data_plot(config=config, epoch_list=['all'], style='black color', device=device)
 
         # data_plot(config=config, epoch_list=['time'], style=False, device=device)
 

@@ -52,6 +52,7 @@ training:
     n_epochs_init: 5
     recursive_loop: 1
     batch_size: 1
+    particle_batch_ratio: 0.25
     small_init_batch_size: False
     n_runs: 20
     sparsity: 'none'
