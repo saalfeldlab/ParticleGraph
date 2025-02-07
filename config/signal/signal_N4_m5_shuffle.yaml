@@ -1,5 +1,5 @@
-description: 'synaptic network random matrix cluster embedding distance 0.2 1000 neurons 4 types phi neuron dependent lorentz std 0.03'
-dataset: 'signal_N2_Lorentz_m2'
+description: 'synaptic network random matrix cluster embedding distance 0.2 1000 neurons 4 types phi neuron dependent lorentz std 0.03 20 runs omega 30'
+dataset: 'signal_N4_m_shuffle'
 
 simulation:
     connectivity_file: 'random'
@@ -14,7 +14,7 @@ simulation:
     n_particles: 1024
     n_nodes: 1024
     n_particle_types: 4
-    n_interactions: 4
+    shuffle_particle_types: True
     n_frames: 10000
     delta_t: 0.01
     dpos_init:  0
@@ -38,23 +38,26 @@ graph_model:
     aggr_type: 'add'
     embedding_dim: 2
     update_type: 'none'
+    omega:  30.0
 
 
 plotting:
     colormap: 'tab10'
     arrow_length: 1
+    xlim: [ -5,5 ]
+    ylim: [ -8,8 ]
 
 training:
-    n_epochs: 40
+    n_epochs: 20
     n_epochs_init: 5
     recursive_loop: 1
     batch_size: 1
+    particle_batch_ratio: 0.25
     small_init_batch_size: False
-    n_runs: 10
-    large_range: False
+    n_runs: 20
     sparsity: 'none'
     rotation_augmentation: False
-    data_augmentation_loop: 100
+    data_augmentation_loop: 50
     cluster_method: 'kmeans_auto_embedding'
     cluster_distance_threshold: 0.2
     fix_cluster_embedding: True
@@ -64,4 +67,4 @@ training:
     learning_rate_start: 1.0E-4
     learning_rate_embedding_start: 1.0E-4
     coeff_diff: 100
-    learning_rate_NNR: 1.0E-5
+    learning_rate_NNR: 1.0E-6

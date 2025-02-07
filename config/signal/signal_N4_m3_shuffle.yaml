@@ -1,5 +1,5 @@
 description: 'synaptic network random matrix cluster embedding distance 0.2 1000 neurons 4 types phi neuron dependent lorentz std 0.03 20 runs omega 30'
-dataset: 'signal_N2_Lorentz_m6_shuffle'
+dataset: 'signal_N4_m_shuffle'
 
 simulation:
     connectivity_file: 'random'
@@ -45,12 +45,13 @@ plotting:
     colormap: 'tab10'
     arrow_length: 1
     xlim: [ -5,5 ]
+    ylim: [ -8,8 ]
 
 training:
     n_epochs: 20
     n_epochs_init: 5
     recursive_loop: 1
-    batch_size: 4
+    batch_size: 1
     small_init_batch_size: False
     n_runs: 20
     sparsity: 'none'

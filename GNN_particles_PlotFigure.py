@@ -7179,11 +7179,6 @@ if __name__ == '__main__':
     except:
         pass
 
-    # try:
-    #     matplotlib.use("Qt5Agg")
-    # except:
-    #     pass
-
     # f_list = ['synaptic_supp6']
     # for f in f_list:
     #     config_list,epoch_list = get_figures(f)

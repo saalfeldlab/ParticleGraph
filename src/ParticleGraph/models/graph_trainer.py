@@ -2288,6 +2288,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         get_batch_size = increasing_batch_size(target_batch_size)
     else:
         get_batch_size = constant_batch_size(target_batch_size)
+    particle_batch_ratio = train_config.particle_batch_ratio
     batch_size = get_batch_size(0)
     embedding_cluster = EmbeddingCluster(config)
     cmap = CustomColorMap(config=config)
@@ -2442,13 +2443,9 @@ def data_train_synaptic2(config, erase, best_model, device):
         ind_a = ind_a[pos]
 
     print("start training ...")
-    print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
-    logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
-    Niter = int(n_frames * data_augmentation_loop // batch_size * (n_runs-1))
-    print(f'plot every {Niter // 10} iterations')
 
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
-    torch.autograd.set_detect_anomaly(True)
+    # torch.autograd.set_detect_anomaly(True)
 
     list_loss = []
     time.sleep(2)
@@ -2462,14 +2459,24 @@ def data_train_synaptic2(config, erase, best_model, device):
             coeff_diff = 0
         logger.info(f'coeff_L1: {coeff_L1} coeff_diff: {coeff_diff}')
 
-        batch_size = get_batch_size(epoch)
+        batch_size = int(get_batch_size(epoch) / particle_batch_ratio)
         logger.info(f'batch_size: {batch_size}')
+
+        Niter = n_frames * data_augmentation_loop // batch_size
+        if particle_batch_ratio < 1:
+            Niter = int(n_frames * data_augmentation_loop // batch_size / particle_batch_ratio * 0.2)
+        else:
+            Niter = int(n_frames * data_augmentation_loop // batch_size * n_runs / 10)
+
+        plot_frequency = int(Niter // 50)
+        if epoch==0:
+            print(f'{Niter} iterations per epoch')
+            logger.info(f'{Niter} iterations per epoch')
+            print(f'plot every {plot_frequency} iterations')
 
         total_loss = 0
 
-        Niter = int(n_frames * data_augmentation_loop // batch_size * n_runs / 10)
-        print(f'Niter = {Niter}')
-        logger.info(f'Niter = {Niter}')
+
 
         for N in trange(Niter):
 
@@ -2480,6 +2487,9 @@ def data_train_synaptic2(config, erase, best_model, device):
             optimizer.zero_grad()
 
             dataset_batch = []
+            ids = np.random.permutation(n_particles)[:int(n_particles * (1 - particle_batch_ratio))]
+            ids = np.sort(ids)
+
             loss = 0
             for batch in range(batch_size):
 
@@ -2514,7 +2524,12 @@ def data_train_synaptic2(config, erase, best_model, device):
                     else:
                         x[:, 8:9] = model_f(time=k / n_frames) ** 2
 
-                dataset = data.Data(x=x, edge_index=model.edges)
+                edges = model.edges
+                if particle_batch_ratio < 1:
+                    mask = ~torch.isin(edges[1, :], torch.tensor(ids, device=device))
+                    edges = edges[:, mask]
+
+                dataset = data.Data(x=x, edge_index=edges)
                 dataset_batch.append(dataset)
 
                 y = torch.tensor(y_list[run][k], device=device) / ynorm
@@ -2550,7 +2565,7 @@ def data_train_synaptic2(config, erase, best_model, device):
             total_loss += loss.item()
 
             visualize_embedding = True
-            if visualize_embedding & (((epoch < 30) & (N % (Niter // 10) == 0)) | (N == 0)):
+            if visualize_embedding & (((epoch < 30) & (N % plot_frequency == 0)) | (N == 0)):
 
                 plot_training_signal(config, model, type_stack, adjacency, ynorm, log_dir, epoch, N, n_particles,
                                      n_particle_types, type_list, cmap, device)
