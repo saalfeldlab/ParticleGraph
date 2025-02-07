@@ -39,6 +39,7 @@ graph_model:
     embedding_dim: 2
     update_type: 'none'
     omega:  30.0
+    xlim: [ -5,5 ]
 
 
 plotting:

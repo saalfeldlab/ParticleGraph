@@ -4922,109 +4922,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             model.edges = edge_index
             print(f'net: {net}')
 
-            if has_field:
-
-                im = imread(f"graphs_data/{simulation_config.node_value_map}")
-
-                net = f'{log_dir}/models/best_model_f_with_{n_runs-1}_graphs_{epoch}.pt'
-                state_dict = torch.load(net, map_location=device)
-                model_f.load_state_dict(state_dict['model_state_dict'])
-
-                os.makedirs(f"./{log_dir}/results/field", exist_ok=True)
-                x = x_list[0][0]
-
-                slope_list = list([])
-                im_list=list([])
-                pred_list=list([])
-
-                for frame in trange(0, n_frames, n_frames//100):
-
-                    fig, ax = fig_init()
-                    im_ = np.zeros((44,44))
-                    if (frame>=0) & (frame<n_frames):
-                        im_ =  im[int(frame / n_frames * 256)].squeeze()
-                    plt.imshow(im_,cmap='gray',vmin=0,vmax=2)
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/results/field/true_field{epoch}_{frame}.tif", dpi=80)
-                    plt.close()
-
-
-                    pred = model_f(time=frame / n_frames, enlarge=True) ** 2
-                    # pred = torch.reshape(pred, (n_nodes_per_axis, n_nodes_per_axis))
-                    pred = torch.reshape(pred, (640, 640))
-                    pred = to_numpy(pred)
-                    pred = np.flipud(pred)
-                    pred = np.rot90(pred, 1)
-                    pred = np.fliplr(pred)
-                    fig, ax = fig_init()
-                    plt.imshow(pred,cmap='gray',vmin=0,vmax=2)
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/results/field/reconstructed_field_HR {epoch}_{frame}.tif", dpi=80)
-                    plt.close()
-
-                    pred = model_f(time=frame / n_frames, enlarge=False) ** 2
-                    pred = torch.reshape(pred, (n_nodes_per_axis, n_nodes_per_axis))
-                    pred = to_numpy(pred)
-                    pred = np.flipud(pred)
-                    pred = np.rot90(pred, 1)
-                    pred = np.fliplr(pred)
-                    fig, ax = fig_init()
-                    plt.imshow(pred,cmap='gray',vmin=0,vmax=2)
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/results/field/reconstructed_field_LR {epoch}_{frame}.tif", dpi=80)
-                    plt.close()
-
-                    x_data = np.reshape(im_, (n_nodes_per_axis * n_nodes_per_axis))
-                    y_data = np.reshape(pred, (n_nodes_per_axis * n_nodes_per_axis))
-                    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-                    residuals = y_data - linear_model(x_data, *lin_fit)
-                    ss_res = np.sum(residuals ** 2)
-                    ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-                    r_squared = 1 - (ss_res / ss_tot)
-                    print(f'R^2$: {r_squared:0.4f}  slope: {np.round(lin_fit[0], 4)}')
-                    slope_list.append(lin_fit[0])
-
-                    fig, ax = fig_init()
-                    plt.scatter(im_,pred, s=10, c=mc)
-                    plt.xlim([0.3,1.6])
-                    plt.ylim([0.3,1.6])
-                    plt.xlabel(r'true $\Omega_i$', fontsize=78)
-                    plt.ylabel(r'learned $\Omega_i$', fontsize=78)
-                    plt.text(0.5, 1.4, f'$R^2$: {r_squared:0.2f}  slope: {np.round(lin_fit[0], 2)}', fontsize=48)
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/results/field/comparison {epoch}_{frame}.tif", dpi=80)
-                    plt.close()
-                    im_list.append(im_)
-                    pred_list.append(pred)
-
-                im_list = np.array(np.array(im_list))
-                pred_list = np.array(np.array(pred_list))
-
-                fig, ax = fig_init()
-                plt.scatter(im_list, pred_list, s=1, c=mc, alpha=0.1)
-                plt.xlim([0.3, 1.6])
-                plt.ylim([0.3, 1.6])
-                plt.xlabel(r'true $\Omega_i$', fontsize=78)
-                plt.ylabel(r'learned $\Omega_i$', fontsize=78)
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/field/all_comparison {epoch}.tif", dpi=80)
-                plt.close()
-
-                x_data = np.reshape(im_list, (100 * n_nodes_per_axis * n_nodes_per_axis))
-                y_data = np.reshape(pred_list, (100 * n_nodes_per_axis * n_nodes_per_axis))
-                lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-                residuals = y_data - linear_model(x_data, *lin_fit)
-                ss_res = np.sum(residuals ** 2)
-                ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-                r_squared = 1 - (ss_res / ss_tot)
-                print(f'R^2$: {r_squared:0.4f}  slope: {np.round(lin_fit[0], 4)}')
-
             fig, ax = fig_init()
             for n in range(n_particle_types,-1,-1):
                 pos = torch.argwhere(type_list == n).squeeze()
@@ -5042,7 +4939,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             fig, ax = fig_init()
             rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
             func_list = []
-            for n in trange(0,n_particles,n_particles):
+            for n in trange(0,n_particles,n_particles//10):
                 if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
                     embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
                     in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
@@ -5060,8 +4957,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             func_list = torch.stack(func_list)
             plt.xlabel(r'$x_i$', fontsize=78)
             plt.ylabel(r'Learned $\psi^*(a_i, x_i)$', fontsize=78)
-            if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
-                plt.ylim([-0.5,0.5])
+            # if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
+            #     plt.ylim([-0.5,0.5])
             plt.xlim([-5,5])
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/raw_psi.tif", dpi=170.7)
@@ -5071,6 +4968,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             print(f'correction: {correction:0.2f}')
             torch.save(correction, f'{log_dir}/correction.pt')
 
+
+            print('update functions ...')
             if model_config.signal_model_name == 'PDE_N5':
                 psi_list = []
                 fig, ax = fig_init()
@@ -5112,7 +5011,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 plt.close()
                 psi_list = torch.stack(psi_list)
                 psi_list = psi_list.squeeze()
-
             else:
                 psi_list = []
                 fig, ax = fig_init()
@@ -5293,6 +5191,110 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.tight_layout()
             plt.savefig(f'./{log_dir}/results/learned connectivity.png', dpi=300)
             plt.close()
+
+
+            if has_field:
+                im = imread(f"graphs_data/{simulation_config.node_value_map}")
+
+                net = f'{log_dir}/models/best_model_f_with_{n_runs - 1}_graphs_{epoch}.pt'
+                state_dict = torch.load(net, map_location=device)
+                model_f.load_state_dict(state_dict['model_state_dict'])
+
+                os.makedirs(f"./{log_dir}/results/field", exist_ok=True)
+                x = x_list[0][0]
+
+                slope_list = list([])
+                im_list = list([])
+                pred_list = list([])
+
+                for frame in trange(0, n_frames, n_frames // 100):
+
+                    fig, ax = fig_init()
+                    im_ = np.zeros((44, 44))
+                    if (frame >= 0) & (frame < n_frames):
+                        im_ = im[int(frame / n_frames * 256)].squeeze()
+                    plt.imshow(im_, cmap='gray', vmin=0, vmax=2)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/field/true_field{epoch}_{frame}.tif", dpi=80)
+                    plt.close()
+
+                    pred = model_f(time=frame / n_frames, enlarge=True) ** 2 * second_correction / 10
+                    pred = torch.reshape(pred, (640, 640))
+                    pred = to_numpy(pred)
+                    pred = np.flipud(pred)
+                    pred = np.rot90(pred, 1)
+                    pred = np.fliplr(pred)
+                    fig, ax = fig_init()
+                    plt.imshow(pred, cmap='gray', vmin=0, vmax=2)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/field/reconstructed_field_HR {epoch}_{frame}.tif", dpi=80)
+                    plt.close()
+
+                    pred = model_f(time=frame / n_frames, enlarge=False) ** 2 * second_correction / 10
+                    pred = torch.reshape(pred, (n_nodes_per_axis, n_nodes_per_axis))
+                    pred = to_numpy(pred)
+                    pred = np.flipud(pred)
+                    pred = np.rot90(pred, 1)
+                    pred = np.fliplr(pred)
+                    fig, ax = fig_init()
+                    plt.imshow(pred, cmap='gray', vmin=0, vmax=2)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/field/reconstructed_field_LR {epoch}_{frame}.tif", dpi=80)
+                    plt.close()
+
+                    x_data = np.reshape(im_, (n_nodes_per_axis * n_nodes_per_axis))
+                    y_data = np.reshape(pred, (n_nodes_per_axis * n_nodes_per_axis))
+                    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+                    residuals = y_data - linear_model(x_data, *lin_fit)
+                    ss_res = np.sum(residuals ** 2)
+                    ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+                    r_squared = 1 - (ss_res / ss_tot)
+                    print(f'R^2$: {r_squared:0.4f}  slope: {np.round(lin_fit[0], 4)}')
+                    slope_list.append(lin_fit[0])
+
+                    fig, ax = fig_init()
+                    plt.scatter(im_, pred, s=10, c=mc)
+                    plt.xlim([0.3, 1.6])
+                    plt.ylim([0.3, 1.6])
+                    plt.xlabel(r'true $\Omega_i$', fontsize=78)
+                    plt.ylabel(r'learned $\Omega_i$', fontsize=78)
+                    plt.text(0.5, 1.4, f'$R^2$: {r_squared:0.2f}  slope: {np.round(lin_fit[0], 2)}', fontsize=48)
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/field/comparison {epoch}_{frame}.tif", dpi=80)
+                    plt.close()
+                    im_list.append(im_)
+                    pred_list.append(pred)
+
+                im_list = np.array(np.array(im_list))
+                pred_list = np.array(np.array(pred_list))
+
+                fig, ax = fig_init()
+                plt.scatter(im_list, pred_list, s=1, c=mc, alpha=0.1)
+                plt.xlim([0.3, 1.6])
+                plt.ylim([0.3, 1.6])
+                plt.xlabel(r'true $\Omega_i$', fontsize=78)
+                plt.ylabel(r'learned $\Omega_i$', fontsize=78)
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/all_comparison {epoch}.tif", dpi=80)
+                plt.close()
+
+                x_data = np.reshape(im_list, (100 * n_nodes_per_axis * n_nodes_per_axis))
+                y_data = np.reshape(pred_list, (100 * n_nodes_per_axis * n_nodes_per_axis))
+                lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+                residuals = y_data - linear_model(x_data, *lin_fit)
+                ss_res = np.sum(residuals ** 2)
+                ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+                r_squared = 1 - (ss_res / ss_tot)
+                print(f'R^2$: {r_squared:0.4f}  slope: {np.round(lin_fit[0], 4)}')
+
+
+
 
             if False:
                 print ('symbolic regression ...')
@@ -7189,8 +7191,9 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N5_l']
     # config_list = ['signal_N3_c4']
-    config_list = ['signal_N2_a20','signal_N2_a21','signal_N2_a22','signal_N2_a23','signal_N2_a24','signal_N2_a25','signal_N2_a26']
-    # config_list = ['arbitrary_3']
+    # config_list = ['signal_N2_a20','signal_N2_a21','signal_N2_a22','signal_N2_a23','signal_N2_a24','signal_N2_a25','signal_N2_a26']
+    config_list = ['signal_N4_v']
+    config_list = ['signal_N4_m6_shuffle','signal_N4_m7_shuffle','signal_N4_m8_shuffle','signal_N4_m9_shuffle','signal_N4_m10_shuffle','signal_N4_m11_shuffle']
 
     for config_file_ in config_list:
         
@@ -7199,8 +7202,9 @@ if __name__ == '__main__':
         config.dataset = pre_folder + config.dataset
         config.config_file = pre_folder + config_file_
 
-        data_plot(config=config, epoch_list=['best'], style='black color', device=device)
-        # data_plot(config=config, epoch_list=['all'], style='black color', device=device)
+        # data_plot(config=config, epoch_list=['best'], style='black color', device=device)
+        data_plot(config=config, epoch_list=['all'], style='black color', device=device)
+
         # data_plot(config=config, epoch_list=['time'], style=False, device=device)
 
         # data_plot(config=config, config_file=config_file.split('/')[-1], epoch_list=['all'], style=False, device=device)
