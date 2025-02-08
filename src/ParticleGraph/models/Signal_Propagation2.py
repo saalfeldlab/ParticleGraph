@@ -87,7 +87,6 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         self.return_all = return_all
         x, edge_index = data.x, data.edge_index
 
-
         u = data.x[:, 6:7]
 
         if has_field[0]:
@@ -99,7 +98,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             particle_id = to_numpy(x[:, 0:1])
             embedding = self.get_interp_a(k, particle_id)
         else:
-            particle_id = to_numpy(x[:, 0])
+            particle_id = x[:, 0].long()
             embedding = self.a[particle_id, :]
 
         in_features = torch.cat([u, embedding], dim=1)
