@@ -1734,35 +1734,32 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         for it in trange(simulation_config.start_frame, n_frames + 1):
 
             # calculate type change
-            if simulation_config.state_type == 'sequence':
-                sample = torch.rand((len(T1), 1), device=device)
-                sample = (sample < (1 / config.simulation.state_params[0])) * torch.randint(0, n_particle_types,(len(T1), 1), device=device)
-                T1 = (T1 + sample) % n_particle_types
-
-            if ('modulation' in field_type)  & (it >= 0):
-                im_ = im[int(it/n_frames*256)].squeeze()
-                im_ = np.rot90(im_, 3)
-                im_ = np.reshape(im_, (n_nodes_per_axis * n_nodes_per_axis))
-                A1[:,0:1]=torch.tensor(im_[:,None], dtype=torch.float32, device=device)
-            if ('visual' in field_type) & (it >= 0):
-                im_ = im[int(it / n_frames * 256)].squeeze()
-                im_ = np.rot90(im_, 3)
-                im_ = np.reshape(im_, (n_nodes_per_axis * n_nodes_per_axis))
-                A1[:n_nodes, 0:1] = torch.tensor(im_[:, None], dtype=torch.float32, device=device)
-                A1[n_nodes:n_particles, 0:1] = 1
-
-                # plt.scatter(to_numpy(X1_mesh[:, 1]), to_numpy(X1_mesh[:, 0]), s=40, c=to_numpy(A1), cmap='grey', vmin=0,vmax=1)
-
-            x = torch.concatenate(
-                (N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
-                 H1.clone().detach(), A1.clone().detach(), U1.clone().detach()), 1)
-
-            X[:, it] = H1[:, 0].clone().detach()
-
-            dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr)
-
-            # model prediction
             with torch.no_grad():
+                if simulation_config.state_type == 'sequence':
+                    sample = torch.rand((len(T1), 1), device=device)
+                    sample = (sample < (1 / config.simulation.state_params[0])) * torch.randint(0, n_particle_types,(len(T1), 1), device=device)
+                    T1 = (T1 + sample) % n_particle_types
+                if ('modulation' in field_type)  & (it >= 0):
+                    im_ = im[int(it/n_frames*256)].squeeze()
+                    im_ = np.rot90(im_, 3)
+                    im_ = np.reshape(im_, (n_nodes_per_axis * n_nodes_per_axis))
+                    A1[:,0:1]=torch.tensor(im_[:,None], dtype=torch.float32, device=device)
+                if ('visual' in field_type) & (it >= 0):
+                    im_ = im[int(it / n_frames * 256)].squeeze()
+                    im_ = np.rot90(im_, 3)
+                    im_ = np.reshape(im_, (n_nodes_per_axis * n_nodes_per_axis))
+                    A1[:n_nodes, 0:1] = torch.tensor(im_[:, None], dtype=torch.float32, device=device)
+                    A1[n_nodes:n_particles, 0:1] = 1
+
+                    # plt.scatter(to_numpy(X1_mesh[:, 1]), to_numpy(X1_mesh[:, 0]), s=40, c=to_numpy(A1), cmap='grey', vmin=0,vmax=1)
+
+                x = torch.concatenate(
+                    (N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
+                     H1.clone().detach(), A1.clone().detach(), U1.clone().detach()), 1)
+                X[:, it] = H1[:, 0].clone().detach()
+                dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr)
+
+                # model prediction
                 if ('modulation' in field_type) & (it >= 0):
                     y, msg = model(dataset, has_field=True)
                 elif ('visual' in field_type) & (it >= 0):
@@ -1789,7 +1786,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     y_list.append(to_numpy(y))
 
             # Particle update
-
             if config.graph_model.signal_model_name == 'PDE_N6':
 
                 H1[:, 1] = y.squeeze()
@@ -1805,13 +1801,18 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                 if noise_level > 0:
                     H1[:, 0] = H1[:, 0] + torch.randn(n_particles, device=device) * noise_level
 
-
             # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
             # print(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
 
 
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
+
+                torch.cuda.memory_allocated(device)
+                gc.collect()
+                torch.cuda.empty_cache()
+                print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
+                print(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
 
                 if 'black' in style:
                     plt.style.use('dark_background')
@@ -1947,8 +1948,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             # torch.save(y_list, f'graphs_data/{dataset_name}/y_list_{run}.pt')
             np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list)
             torch.save(model.p, f'graphs_data/{dataset_name}/model_p.pt')
-
-
 
 
 

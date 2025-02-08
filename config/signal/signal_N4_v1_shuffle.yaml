@@ -1,5 +1,5 @@
 description: 'synaptic network random matrix cluster embedding distance 0.2 2048 neurons 4 types phi neuron dependent lorentz std 0.03 20 runs modulation on 1024 neurons'
-dataset: 'signal_N4_v1'
+dataset: 'signal_N4_v1_shuffle'
 
 simulation:
     connectivity_file: 'random'
@@ -14,6 +14,7 @@ simulation:
     n_particles: 2048
     n_nodes: 1024
     n_particle_types: 4
+    shuffle_particle_types: True
     n_interactions: 4
     n_frames: 100000
     delta_t: 0.01

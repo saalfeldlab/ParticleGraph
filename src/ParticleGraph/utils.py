@@ -440,6 +440,7 @@ def add_pre_folder(config_file_):
 
     return config_file, pre_folder
 
+
 def get_log_dir(config=[]):
 
     if 'PDE_A' in config.graph_model.particle_model_name:
