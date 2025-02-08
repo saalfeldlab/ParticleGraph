@@ -90,7 +90,6 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         self.sin_phi = torch.sin(phi)
         self.training = training
         self.has_field = has_field
-
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
@@ -101,8 +100,8 @@ class Interaction_Particle(pyg.nn.MessagePassing):
 
         pos = x[:, 1:self.dimension+1]
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
-        particle_id = x[:, 0:1]
-        embedding = self.a[self.data_id.clone().detach(), to_numpy(particle_id), :].squeeze()
+        particle_id = x[:, 0:1].long()
+        embedding = self.a[self.data_id.clone().detach(), particle_id, :].squeeze()
 
         out = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
 

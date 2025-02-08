@@ -1808,12 +1808,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
 
-                torch.cuda.memory_allocated(device)
-                gc.collect()
-                torch.cuda.empty_cache()
-                print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
-                print(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
-
                 if 'black' in style:
                     plt.style.use('dark_background')
 
@@ -1949,6 +1943,11 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list)
             torch.save(model.p, f'graphs_data/{dataset_name}/model_p.pt')
 
+        # torch.cuda.memory_allocated(device)
+        # gc.collect()
+        # torch.cuda.empty_cache()
+        # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
+        # print(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
 
 
 def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2,

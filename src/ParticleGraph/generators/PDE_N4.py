@@ -102,12 +102,30 @@ class PDE_N4(pyg.nn.MessagePassing):
 
         return du, g * msg
 
+    def forward(self, data=[], has_field=False):
+        x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
+        particle_type = x[:, 5].long()
+        parameters = self.p[particle_type]
+        g = parameters[:, 0:1]
+        s = parameters[:, 1:2]
+        c = parameters[:, 2:3]
+        t = parameters[:, 3:4]
+
+        u = x[:, 6:7]
+        if has_field:
+            field = x[:, 8:9]
+        else:
+            field = torch.ones_like(x[:, 6:7])
+
+        msg = self.propagate(edge_index, u=u, t=t, field=field)
+
+        du = -c * u + s * self.phi(u) + g * msg
+
+        return du, g * msg
 
     def message(self, edge_index_i, edge_index_j, u_j, t_i, field_i):
-
         T = self.W
-        return T[to_numpy(edge_index_i), to_numpy(edge_index_j)][:, None]  * self.phi(u_j/t_i) * field_i
-
+        return T[edge_index_i, edge_index_j][:, None] * self.phi(u_j / t_i) * field_i
 
     def func(self, u, type, function):
 

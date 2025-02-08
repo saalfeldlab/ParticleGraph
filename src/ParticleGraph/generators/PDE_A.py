@@ -61,7 +61,7 @@ class PDE_A(pyg.nn.MessagePassing):
             field = torch.ones_like(x[:,0:1])
 
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        particle_type = x[:, 1 + 2*self.dimension]
+        particle_type = x[:, 1 + 2*self.dimension].long()
         parameters = self.p[ to_numpy(particle_type),:]
         d_pos = self.propagate(edge_index, pos=x[:, 1:self.dimension+1], particle_type=particle_type[:,None], parameters=parameters.squeeze(), field=field, )
 
@@ -77,7 +77,6 @@ class PDE_A(pyg.nn.MessagePassing):
 
         f1 = (parameters_i[:, 0] * torch.exp(-distance_squared ** parameters_i[:, 1] / (2 * self.sigma ** 2)) - parameters_i[:, 2] * torch.exp(-distance_squared ** parameters_i[:, 3] / (2 * self.sigma ** 2)))
         f1 = f1[:, None] * self.bc_dpos(pos_j - pos_i) * field_j
-
         f2 = parameters_i[:, 0] * torch.tanh((distance-parameters_i[:, 1])*parameters_i[:, 2]) / distance
         # f2[torch.isinf(f2)] = -parameters_i[torch.isinf(f2), 0]
         # if torch.isinf(f2).sum() > 0:
@@ -85,10 +84,8 @@ class PDE_A(pyg.nn.MessagePassing):
 
         f2 = f2[:, None] * self.bc_dpos(pos_j - pos_i) * field_j
 
-
-
         for n in range(self.p.shape[0]):
-            pos = torch.argwhere( particle_type_i == n)
+            pos = torch.argwhere(particle_type_i == n)
             if pos.numel() > 0:
                 pos = pos[:, 0]
                 if self.func_p[n][0] == 'arbitrary':
@@ -96,15 +93,13 @@ class PDE_A(pyg.nn.MessagePassing):
                 if self.func_p[n][0] == 'tanh':
                     d_pos[pos] = f2[pos]
 
-
         return d_pos
 
-        f = parameters_i[:, 0] * torch.tanh((distance - parameters_i[:, 1]) * parameters_i[:, 2])
-        fig = plt.figure()
-        plt.scatter(to_numpy(distance[pos]), to_numpy(f[pos]),s=0.1)
-
-        fig = plt.figure()
-        plt.hist(to_numpy(distance[pos]), bins=100)
+        # f = parameters_i[:, 0] * torch.tanh((distance - parameters_i[:, 1]) * parameters_i[:, 2])
+        # fig = plt.figure()
+        # plt.scatter(to_numpy(distance[pos]), to_numpy(f[pos]),s=0.1)
+        # fig = plt.figure()
+        # plt.hist(to_numpy(distance[pos]), bins=100)
 
 
     def psi(self, r, p, func='arbitrary'):
