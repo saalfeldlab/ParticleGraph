@@ -56,7 +56,7 @@ training:
     n_runs: 2
     sparsity: 'none'
     rotation_augmentation: False
-    data_augmentation_loop: 100
+    data_augmentation_loop: 40
     cluster_method: 'kmeans_auto_embedding'
     cluster_distance_threshold: 0.2
     fix_cluster_embedding: True

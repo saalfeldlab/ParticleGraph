@@ -74,12 +74,12 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
 
     def get_interp_a(self, k, particle_id):
 
-        id = particle_id * 100 + to_numpy(k) // self.embedding_step
-        id = id.squeeze()
-        alpha = (to_numpy(k) % self.embedding_step) / self.embedding_step
-        alpha = torch.tensor(alpha, dtype=torch.float32, device=self.device).repeat(1,2)
+        k = k.to(self.device)
+        id = particle_id * 100 + k // self.embedding_step
+        alpha = (k % self.embedding_step) / self.embedding_step
+        alpha = alpha.repeat(1,2)
 
-        return alpha * self.a[id+1, :].squeeze() + (1.0 - alpha) * self.a[id, :]
+        return alpha * self.a[id.squeeze()+1, :] + (1.0 - alpha) * self.a[id.squeeze(), :]
 
 
     def forward(self, data=[], data_id=[], return_all=False, has_field=False, k = 0):
@@ -95,7 +95,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             field = torch.ones_like(x[:,6:7])
 
         if self.model == 'PDE_N3':
-            particle_id = to_numpy(x[:, 0:1])
+            particle_id = x[:, 0:1].long()
             embedding = self.get_interp_a(k, particle_id)
         else:
             particle_id = x[:, 0].long()
