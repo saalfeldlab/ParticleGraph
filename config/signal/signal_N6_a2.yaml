@@ -1,34 +1,36 @@
 description: 'synaptic network random matrix no recursive loop 1000 neurons 4 types lorentz std 0.03'
-dataset: 'signal_N6_a2'
+dataset: 'signal_N6_a1'
 
 simulation:
     connectivity_file: ''
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
     connectivity_distribution: 'Lorentz'
-    params: [[10.0, 1.0, 1.0, 100, 0.04], [10.0, 2.0, 1.0, 100, 0.04], [10.0, 1.0, 2.0, 100, 0.04], [10.0, 2.0, 2.0, 100, 0.04]]
+    params: [[10.0, 1.0, 1.0, 100, 0.02], [10.0, 2.0, 1.0, 100, 0.02], [10.0, 1.0, 2.0, 100, 0.02], [10.0, 2.0, 2.0, 100, 0.02]]
     phi: 'tanh'
     tau: 1.0
     min_radius: 1.0
     max_radius: 1.0E6
     n_particles: 1024
+    n_nodes: 1024
     n_particle_types: 4
     n_interactions: 4
     n_frames: 100000
     delta_t: 0.01
     dpos_init:  0
     boundary: 'no'
-    start_frame: -1000
+    start_frame: -2000
 
 graph_model:
-    signal_model_name: 'PDE_N6'
+    field_type: ''
+    signal_model_name: 'PDE_N2'
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
     input_size: 1
     output_size: 1
     hidden_dim: 64
-    n_mp_layers: 10
+    n_mp_layers: 3
     input_size_update: 3
     n_layers_update: 3
     hidden_dim_update: 64
@@ -51,11 +53,12 @@ training:
     n_runs: 2
     sparsity: 'none'
     rotation_augmentation: False
-    data_augmentation_loop: 100
+    data_augmentation_loop: 50
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     device: 'auto'
-    sparsity: 'replace_embedding_function'
     sparsity_freq: 4
     learning_rate_start: 1.0E-4
     learning_rate_embedding_start: 1.0E-4
+    coeff_diff: 100
+    learning_rate_NNR: 1.0E-6
