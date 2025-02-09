@@ -4940,7 +4940,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
             func_list = []
             for n in trange(0,n_particles,n_particles//100):
-                print(n)
                 if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
                     embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
                     in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
@@ -5268,7 +5267,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     ss_res = np.sum(residuals ** 2)
                     ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
                     r_squared = 1 - (ss_res / ss_tot)
-                    print(f'R^2$: {r_squared:0.4f}  slope: {np.round(lin_fit[0], 4)}')
+                    # print(f'R^2$: {r_squared:0.4f}  slope: {np.round(lin_fit[0], 4)}')
                     slope_list.append(lin_fit[0])
 
                     fig, ax = fig_init()
