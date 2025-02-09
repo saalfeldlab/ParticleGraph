@@ -4870,7 +4870,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=2)
         plt.xlabel('time', fontsize=64)
         plt.ylabel('$x_{i}$', fontsize=64)
-        plt.xticks([0, 10000], fontsize=48)
+        plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
         plt.yticks(fontsize=48)
         plt.tight_layout()
         plt.savefig(f'./{log_dir}/results/firing rate.png', dpi=300)
@@ -4939,7 +4939,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             fig, ax = fig_init()
             rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
             func_list = []
-            for n in trange(0,n_particles,n_particles//10):
+            for n in trange(0,n_particles,n_particles//100):
+                print(n)
                 if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
                     embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
                     in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
@@ -4947,14 +4948,10 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     in_features = rr[:, None]
                 with torch.no_grad():
                     func = model.lin_edge(in_features.float())
-                if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
-                    if n<250:
-                        func_list.append(func)
-                else:
-                    func_list.append(func)
+                func_list.append(func)
                 plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)),
                          linewidth=8 // ( 1 + (n_particle_types>16)*1.0), alpha=0.25)
-            func_list = torch.stack(func_list)
+            func_list = torch.stack(func_list).squeeze()
             plt.xlabel(r'$x_i$', fontsize=78)
             plt.ylabel(r'Learned $\psi^*(a_i, x_i)$', fontsize=78)
             # if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
@@ -4964,10 +4961,12 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.savefig(f"./{log_dir}/results/raw_psi.tif", dpi=170.7)
             plt.close()
 
-            correction = 1 / torch.mean(torch.mean(func_list[:,900:1000], dim=0))
-            print(f'correction: {correction:0.2f}')
+            upper = func_list[:,950:1000].flatten()
+            upper = torch.sort(upper, descending=True).values
+            correction = 1 / torch.mean(upper[:upper.shape[0]//10])
+            # correction = 1 / torch.mean(torch.mean(func_list[:,900:1000], dim=0))
+            print(f'correction: {to_numpy(correction):0.2f}')
             torch.save(correction, f'{log_dir}/correction.pt')
-
 
             print('update functions ...')
             if model_config.signal_model_name == 'PDE_N5':
@@ -5113,8 +5112,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
             print(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}  ')
             logger.info(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method} ')
-
-
 
             config.training.cluster_method = 'kmeans_auto_embedding'
             labels, n_clusters, new_labels = sparsify_cluster(config.training.cluster_method, proj_interaction, embedding,
@@ -5308,8 +5305,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
                 r_squared = 1 - (ss_res / ss_tot)
                 print(f'R^2$: {r_squared:0.4f}  slope: {np.round(lin_fit[0], 4)}')
-
-
 
 
             if False:
@@ -7190,10 +7185,10 @@ if __name__ == '__main__':
     print(f'device {device}')
     print(' ')
 
-    try:
-        matplotlib.use("Qt5Agg")
-    except:
-        pass
+    # try:
+    #     matplotlib.use("Qt5Agg")
+    # except:
+    #     pass
 
     # f_list = ['synaptic_supp6']
     # for f in f_list:
@@ -7204,7 +7199,7 @@ if __name__ == '__main__':
     # config_list = ['signal_N3_c4']
     # config_list = ['signal_N2_a20','signal_N2_a21','signal_N2_a22','signal_N2_a23','signal_N2_a24','signal_N2_a25','signal_N2_a26']
     # config_list = ['signal_N4_v']
-    config_list = ['signal_N4_m1_shuffle']
+    config_list = ['signal_N4_m2_shuffle','signal_N4_m3_shuffle']
 
     for config_file_ in config_list:
         
@@ -7213,12 +7208,9 @@ if __name__ == '__main__':
         config.dataset = pre_folder + config.dataset
         config.config_file = pre_folder + config_file_
 
-        data_plot(config=config, epoch_list=['best'], style='color', device=device)
+        data_plot(config=config, epoch_list=['best'], style='latex color', device=device)
         # data_plot(config=config, epoch_list=['all'], style='black color', device=device)
-
         # data_plot(config=config, epoch_list=['time'], style=False, device=device)
-
-        # data_plot(config=config, config_file=config_file.split('/')[-1], epoch_list=['all'], style=False, device=device)
 
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
