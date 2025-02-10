@@ -593,6 +593,33 @@ def get_uniform_points(vertices, num_points=100):
 
     return points
 
+def viz_3d_cell(x, edges, posnorm, cell_of_interest):
+    # Extract the x, y, and z coordinates
+    x_coords = to_numpy(x[:, 1])
+    y_coords = to_numpy(x[:, 2])
+    z_coords = to_numpy(x[:, 3])
+    # Create a 3D scatter plot
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(x_coords, y_coords, z_coords, c='b', marker='o', alpha=0.1, edgecolor='None')
+    neighbors = edges[1, edges[0] == cell_of_interest]
+    point_coords = x[cell_of_interest, 1:4].cpu().numpy()
+    neighbor_coords = x[neighbors, 1:4].cpu().numpy()
+    ax.scatter(point_coords[0], point_coords[1], point_coords[2], c='r', marker='o', label='Point 100')
+    ax.scatter(neighbor_coords[:, 0], neighbor_coords[:, 1], neighbor_coords[:, 2], c='r', marker='o',
+               label='Neighbors')
+    # # Draw edges between point 100 and its neighbors
+    # for neighbor in neighbor_coords:
+    #     ax.plot([point_coords[0], neighbor[0]], [point_coords[1], neighbor[1]],
+    #             [point_coords[2], neighbor[2]], c='k')
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    plt.xlim([0, to_numpy(posnorm)])
+    plt.ylim([0, to_numpy(posnorm)])
+    ax.set_zlim([0, to_numpy(posnorm)])
+    plt.show()
+
 
 def visualize_mesh(mesh_file):
     # Load the mesh file

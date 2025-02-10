@@ -83,7 +83,7 @@ class Interaction_Cell(pyg.nn.MessagePassing):
             field = torch.ones_like(x[:,6:7])
         pos = x[:, 1:self.dimension+1]
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
-        features = x[:, 14:-1]
+        features = x[:, 10:-1]
 
         if self.do_tracking | self.has_state:
             embedding = self.a[to_numpy(x[:, -1][:, None]), :].squeeze()
@@ -122,22 +122,10 @@ class Interaction_Cell(pyg.nn.MessagePassing):
             dpos_y_j = new_dpos_y_j
 
         match self.model:
-
-            case 'PDE_Cell_A':
-                in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
-
-            case 'PDE_Cell_A_area':
-                in_features = torch.cat((delta_pos, r[:, None], area_i * 1E3, area_j * 1E3, embedding_i, embedding_j), dim=-1)
-
-            case 'PDE_Cell_B':
-                in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
-                                         dpos_y_j[:, None], embedding_i), dim=-1)
-            case 'PDE_Cell_B_area':
-                in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
-                                         dpos_y_j[:, None], area_i, area_j, embedding_i, embedding_j), dim=-1)
-
             case 'PDE_Cell':
-                in_features = torch.cat((delta_pos, r[:, None], embedding_i, features_i, features_j), dim=-1)
+                in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
+            case 'PDE_Cell_area':
+                in_features = torch.cat((delta_pos, r[:, None], features_i[:,0:1] /100, features_j[:,0:1]  /100, embedding_i), dim=-1)
 
         out = self.lin_edge(in_features) * field_j
 

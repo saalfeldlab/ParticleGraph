@@ -823,7 +823,7 @@ def data_train_cell(config, erase, best_model, device):
             id_list.append(ids)
             n_particles_max += len(type)
             if do_tracking:
-                x_list[0][k][:, 3:5] = 0
+                x_list[0][k][:, 1+dimension:1+2*dimension] = 0
         config.simulation.n_particles_max = n_particles_max + 1
         n_particles = n_particles_max / n_frames
     else:
@@ -910,6 +910,8 @@ def data_train_cell(config, erase, best_model, device):
                 dataset = data.Data(x=x[:, :], edge_index=edges)
                 dataset_batch.append(dataset)
 
+                # viz_3d_cell(x, edges, posnorm, 100)
+
                 y = y_list[run][k].clone().detach()
                 if noise_level > 0:
                     y = y * (1 + torch.randn_like(y) * noise_level)
@@ -934,16 +936,16 @@ def data_train_cell(config, erase, best_model, device):
 
             if do_tracking:
                 x_next = x_list[run][k + time_step]
-                x_pos_next = x_next[:, 1:3].clone().detach()
+                x_pos_next = x_next[:, 1:dimension + 1].clone().detach()
                 if model_config.prediction == '2nd_derivative':
-                    x_pos_pred = (x[:, 1:3] + delta_t * time_step * (x[:, 3:5] + delta_t * time_step * pred * ynorm))
+                    x_pos_pred = (x[:, 1:dimension + 1] + delta_t * time_step * (x[:, dimension + 1:2*dimension + 1] + delta_t * time_step * pred * ynorm))
                 else:
-                    x_pos_pred = (x[:, 1:3] + delta_t * time_step * pred * ynorm)
+                    x_pos_pred = (x[:, 1:dimension + 1] + delta_t * time_step * pred * ynorm)
                 distance = torch.sum(bc_dpos(x_pos_pred[:, None, :] - x_pos_next[None, :, :]) ** 2, dim=2)
                 result = distance.min(dim=1)
                 min_value = result.values
                 indices = result.indices
-                loss = min_value.norm(2) * 1E3
+                loss = min_value.norm(2) * 1E3 / posnorm
             else:
                 loss = (pred - y_batch).norm(2)
 
@@ -974,29 +976,26 @@ def data_train_cell(config, erase, best_model, device):
                                            epoch=epoch, N=N, model=model, n_particle_types=n_particle_types,
                                            type_list=type_list, ynorm=ynorm, cmap=cmap, device=device)
 
-                print(loss)
+                    print(loss)
 
-                fig, ax = fig_init(fontsize=24)
-                plt.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), s=2, color='k',alpha=0.5, edgecolor='none')
-                plt.xlabel(r'$a_{i0}$', fontsize=48)
-                plt.ylabel(r'$a_{i1}$', fontsize=48)
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/embedding/{epoch}_{N}.tif", dpi=87)
-                plt.close()
+                    fig, ax = fig_init(fontsize=24)
+                    plt.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), s=2, color='k',alpha=0.5, edgecolor='none')
+                    plt.xlabel(r'$a_{i0}$', fontsize=48)
+                    plt.ylabel(r'$a_{i1}$', fontsize=48)
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/tmp_training/embedding/{epoch}_{N}.tif", dpi=87)
+                    plt.close()
 
-                fig, ax = fig_init(fontsize=24)
-                g = to_numpy(model.a.grad)
-                plt.scatter(g[:, 0], g[:, 1], s=2, c='k')
-                plt.savefig(f"./{log_dir}/tmp_training/embedding/grad_{epoch}_{N}.tif", dpi=87)
-                plt.close()
-
-
+                    fig, ax = fig_init(fontsize=24)
+                    g = to_numpy(model.a.grad)
+                    plt.scatter(g[:, 0], g[:, 1], s=2, c='k')
+                    plt.savefig(f"./{log_dir}/tmp_training/embedding/grad_{epoch}_{N}.tif", dpi=87)
+                    plt.close()
                 torch.save({'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict()},
                            os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
-
-            check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 20,
-                                   memory_percentage_threshold=0.6)
+                check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 20,
+                                       memory_percentage_threshold=0.6)
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
@@ -3073,7 +3072,7 @@ def data_train_WBI(config, erase, best_model, device):
 
 
 def data_test(config=None, config_file=None, visualize=False, style='color frame', verbose=True, best_model=20, step=15,
-              ratio=1, run=1, plot_data=False, test_simulation=False, sample_embedding=False, fixed=False, bounce=False, particle_of_interest=1, device=[]):
+              ratio=1, run=1, test_mode='', sample_embedding=False, particle_of_interest=1, device=[]):
     dataset_name = config.dataset
     simulation_config = config.simulation
     model_config = config.graph_model
@@ -3096,9 +3095,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     time_step = simulation_config.time_step
     sub_sampling = simulation_config.sub_sampling
     bounce_coeff = simulation_config.bounce_coeff
-
-    cmap = CustomColorMap(config=config)  # creat
-    # e colormap for given model_config
+    cmap = CustomColorMap(config=config)
     dimension = simulation_config.dimension
     has_siren_time = 'siren_with_time' in model_config.field_type
     has_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
@@ -3109,9 +3106,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     if field_type != '':
         n_nodes = simulation_config.n_nodes
         n_nodes_per_axis = int(np.sqrt(n_nodes))
-        has_synaptic_field = True
-    else:
-        has_synaptic_field = False
 
     log_dir = 'log/' + config.config_file
     files = glob.glob(f"./{log_dir}/tmp_recons/*")
@@ -3149,7 +3143,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             x_mesh_list.append(x_mesh)
             h = torch.load(f'graphs_data/{dataset_name}/y_mesh_list_{run}.pt', map_location=device)
             y_mesh_list.append(h)
-        h = y_mesh_list[0][0].clone().detach()
         x_list = x_mesh_list
         y_list = y_mesh_list
         x = x_list[run][0].clone().detach()
@@ -3209,13 +3202,13 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
     if do_tracking | has_state:
         for k in range(len(x_list[0])):
-            type = x_list[0][k][:, 5]
+            type = x_list[0][k][:, 2*dimension+1]
             if k == 0:
                 type_list = type
             else:
                 type_list = torch.concatenate((type_list, type))
         n_particles_max = len(type_list)
-        config.simulation.n_particles_max = n_particles_max
+        config.simulation.n_particles_max = n_particles_max + 1
 
     if ratio > 1:
         new_nparticles = int(n_particles * ratio)
@@ -3336,7 +3329,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         param = parameter.numel()
         table.add_row([name, param])
         total_params += param
-    if test_simulation:
+    if 'test_simulation' in 'test_mode':
         model, bc_pos, bc_dpos = choose_model(config, device=device)
     else:
         if has_mesh:
@@ -3406,7 +3399,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     x = x_list[0][start_it].clone().detach()
     n_particles = x.shape[0]
 
-    x_list[0] = torch.cat((x_list[0],x_list[0],x_list[0],x_list[0]), dim=0)
+
+    # x_list[0] = torch.cat((x_list[0],x_list[0],x_list[0],x_list[0]), dim=0)
     x_inference_list = []
 
     for it in trange(start_it, stop_it):
@@ -3512,7 +3506,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             # compute connectivity and prediction
             if has_adjacency_matrix:
                 dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
-                if test_simulation:
+                if 'test_simulation' in test_mode:
                     y = y0 / ynorm
                 else:
                     with torch.no_grad():
@@ -3532,7 +3526,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 else:
                     dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
 
-                if test_simulation:
+                if 'test_simulation' in test_mode:
                     y = y0 / ynorm
                     pred = y
                 else:
@@ -3543,7 +3537,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 if has_ghost:
                     y = y[mask_ghost]
 
-            if plot_data:
+            if 'plot_data' in test_mode:
                 y = y0.clone().detach() / ynorm
 
             if sub_sampling > 1:
@@ -3570,7 +3564,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     else:
                         x[:, dimension + 1:2 * dimension + 1] = y
 
-                if bounce=='bottom':
+                if 'bounce_bottom' in test_mode:
                     x[:, 1:dimension + 1] = x[:, 1:dimension + 1] + x[:, dimension + 1:2 * dimension + 1] * delta_t
                     bouncing_pos = torch.argwhere((x[:, 2] <= 0) ).squeeze()
                     if bouncing_pos.numel() > 0:
@@ -3580,7 +3574,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 else:
                     x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1] + x[:, dimension + 1:2 * dimension + 1] * delta_t)  # position update
 
-            if bounce=='all':
+            if 'bounce_all' in test_mode:
 
                 # gap = 0.104
                 # boundary = torch.cat((1 - gap - x[:, 1:2], x[:, 1:2] - gap, 1 - gap - x[:, 2:3], x[:, 2:3] - gap), dim=-1)
@@ -3599,7 +3593,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             if time_window:
                 moving_pos = torch.argwhere(x[:,5]!=0)
                 x_list[0][it+1,moving_pos.squeeze(),1:2 * dimension + 1] = x[moving_pos.squeeze(), 1:2 * dimension + 1].clone().detach()
-            if fixed:
+            if 'fixed' in test_mode:
                 fixed_pos = torch.argwhere(x[:,5]==0)
                 x[fixed_pos.squeeze(), 1:2 * dimension + 1] = x_list[0][it+1,fixed_pos.squeeze(),1:2 * dimension + 1].clone().detach()
 
@@ -3664,7 +3658,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     # plt.yticks([])
                     # plt.axis('off')
             elif ('visual' in field_type) & ('PDE_N' in model_config.signal_model_name):
-                if plot_data:
+                if 'plot_data' in test_mode:
 
                     plt.close()
 
@@ -3702,35 +3696,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
                 plt.style.use('dark_background')
                 matplotlib.rcParams['savefig.pad_inches'] = 0
-
-                if False:  # plot_data:
-                    plt.figure(figsize=(10, 10))
-                    edge_colors = to_numpy(msg) / 10
-                    edge_colors = np.minimum(1, edge_colors)
-                    edge_colors = np.maximum(-1, edge_colors)
-                    cmap = plt.cm.viridis
-                    edge_colors = cmap((edge_colors + 1) / 2)
-                    nx.draw(G_first, pos=first_positions, with_labels=False, edge_color=edge_colors, node_size=0,
-                            alpha=0.5, cmap='bwr')
-                    # plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=200, c=to_numpy(x[:, 6]), cmap='viridis', vmin=-10,vmax=10, edgecolors='None',alpha=0.9)
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.xlim([-1.03, 1.03])
-                    plt.ylim([-1.03, 1.03])
-                    plt.savefig(f"./{log_dir}/tmp_recons/Edges_{config_file}_{num}.tif", dpi=170.7)
-                    plt.close()
-                    im = imread(f"./{log_dir}/tmp_recons/Edges_{config_file}_{num}.tif")
-                    plt.figure(figsize=(10, 10))
-                    plt.imshow(im)
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.subplot(3, 3, 1)
-                    plt.imshow(im[800:1000, 800:1000, :])
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_recons/Edges_{config_file}_{num}.tif", dpi=80)
-                    plt.close()
 
                 plt.figure(figsize=(10, 10))
                 plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=200, c=to_numpy(x[:, 6]),
