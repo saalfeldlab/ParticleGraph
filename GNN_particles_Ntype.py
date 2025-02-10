@@ -55,7 +55,7 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        task = 'test'
+        task = 'train'
         best_model = None
         config_list = ['cell_gland_SMG2_smooth10_1']
         # config_list = ['falling_water_ramp_x6_11']

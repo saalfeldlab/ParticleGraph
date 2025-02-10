@@ -804,6 +804,8 @@ def data_train_cell(config, erase, best_model, device):
         ynorm = torch.tensor([1.0], dtype=torch.float32, device=device)
     torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
     torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
+    torch.save(posnorm, os.path.join(log_dir, 'posnorm.pt'))
+    torch.save(bounding_box, os.path.join(log_dir, 'bounding_box.pt'))
     time.sleep(0.5)
     print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
     logger.info(f'vnorm ynorm: {to_numpy(vnorm)} {to_numpy(ynorm)}')
