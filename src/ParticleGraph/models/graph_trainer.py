@@ -3414,6 +3414,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         if has_mesh:
             x[:, 1:5] = x0[:, 1:5].clone().detach()
             dataset_mesh = data.Data(x=x, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
+        if do_tracking:
+            x = x0.clone().detach()
 
         # error calculations
         if 'PDE_N' in model_config.signal_model_name:
@@ -3500,8 +3502,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
             data_id = torch.ones((n_particles, 1), dtype=torch.int) * run
 
-            x_ = x
             if has_ghost:
+                x_ = x
                 x_ghost = model_ghost.get_pos(dataset_id=run, frame=it, bc_pos=bc_pos)
                 x_ = torch.cat((x_, x_ghost), 0)
 
@@ -3566,7 +3568,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 indices = result.indices
                 loss = torch.std(torch.sqrt(min_value))
                 pred_err_list.append(to_numpy(torch.sqrt(loss)))
-
                 if 'inference' in test_mode:
                     x[:,dimension+1:2*dimension+1] = pred.clone().detach() / (delta_t * time_step)
             else:
