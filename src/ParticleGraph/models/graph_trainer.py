@@ -3403,11 +3403,11 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     # x_list[0] = torch.cat((x_list[0],x_list[0],x_list[0],x_list[0]), dim=0)
     x_inference_list = []
 
-    for it in trange(start_it, stop_it):
+    for it in trange(start_it, stop_it-time_step):
 
         if it < n_frames - 4:
             x0 = x_list[0][it].clone().detach()
-            x0_next = x_list[0][(it+1)].clone().detach()
+            x0_next = x_list[0][(it+time_step)].clone().detach()
             y0 = y_list[0][it].clone().detach()
         if has_mesh:
             x[:, 1:5] = x0[:, 1:5].clone().detach()
@@ -3551,6 +3551,22 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 x[:, 1:dimension + 1] = x_next
                 loss = (x[:, 1:dimension + 1] - x0_next[:, 1:dimension + 1]).norm(2)
                 pred_err_list.append(to_numpy(torch.sqrt(loss)))
+            elif do_tracking:
+                x_pos_next = x0_next[:, 1:dimension + 1].clone().detach()
+                # pred = torch.cat((pred, torch.zeros(pred.shape[0], 1, device=pred.device)), dim=1)
+                if model_config.prediction == '2nd_derivative':
+                    x_pos_pred = (x[:, 1:dimension + 1] + delta_t * time_step * (x[:, dimension + 1:2*dimension + 1] + delta_t * time_step * pred * ynorm))
+                else:
+                    x_pos_pred = (x[:, 1:dimension + 1] + delta_t * time_step * pred * ynorm)
+                distance = torch.sum(bc_dpos(x_pos_pred[:, None, :] - x_pos_next[None, :, :]) ** 2, dim=2)
+                result = distance.min(dim=1)
+                min_value = result.values
+                indices = result.indices
+                loss = torch.std(torch.sqrt(min_value))
+                pred_err_list.append(to_numpy(torch.sqrt(loss)))
+
+                if 'inference' in test_mode:
+                    x[:,dimension+1:2*dimension+1] = pred.clone().detach() / (delta_t * time_step)
             else:
                 loss = (pred[:, 0:dimension] * ynorm - y0).norm(2)
                 pred_err_list.append(to_numpy(torch.sqrt(loss)))
@@ -3597,7 +3613,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 fixed_pos = torch.argwhere(x[:,5]==0)
                 x[fixed_pos.squeeze(), 1:2 * dimension + 1] = x_list[0][it+1,fixed_pos.squeeze(),1:2 * dimension + 1].clone().detach()
 
-            x_inference_list.append(x)
+            if 'inference' in test_mode:
+                x_inference_list.append(x)
 
         # vizualization
         if (it % step == 0) & (it >= 0) & visualize:
@@ -3719,8 +3736,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=80)
                 plt.close()
 
-
-
                 plt.figure(figsize=(10, 10))
                 msg = to_numpy(model.msg) / 10
                 msg = np.reshape(msg, (n_particles ** 2, 1))
@@ -3759,11 +3774,11 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.xlim([-3, 3])
                 plt.ylim([-3, 3])
             elif do_tracking:
-                plt.scatter(to_numpy(x0[:, 2]), to_numpy(x0[:, 1]), s=20, c='k')
-                plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=20, c='r')
+                plt.scatter(to_numpy(x0[0:50, 2]), to_numpy(x0[0:50, 1]), s=1, c=mc)
+                plt.scatter(to_numpy(x_pos_pred[:, 1]), to_numpy(x_pos_pred[:, 0]), s=1, c='r')
                 try:
-                    x1 = x_list[0][it + 1].clone().detach()
-                    plt.scatter(to_numpy(x1[:, 2]), to_numpy(x1[:, 1]), s=20, c='g')
+                    x1 = x_list[0][it + time_step].clone().detach()
+                    plt.scatter(to_numpy(x1[:, 2]), to_numpy(x1[:, 1]), s=1, c='g')
                 except:
                     pass
                 plt.xticks([])
@@ -3994,7 +4009,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.savefig(f"./{log_dir}/tmp_recons/Ghost3_{config_file}_{it}.tif", dpi=170.7)
                 plt.close()
 
-    torch.save(x_inference_list, f"./{log_dir}/x_inference_list_{run}.pt")
+    if 'inference' in test_mode:
+        torch.save(x_inference_list, f"./{log_dir}/x_inference_list_{run}.pt")
 
     print('prediction error {:.3e}+/-{:.3e}'.format(np.mean(pred_err_list), np.std(pred_err_list)))
 
@@ -4033,7 +4049,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         plt.close()
 
     else:
-
         if geomloss_list == []:
             geomloss_list = [0, 0]
         r = [np.mean(rmserr_list), np.std(rmserr_list), np.mean(geomloss_list), np.std(geomloss_list)]
@@ -4045,7 +4060,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
             x_ = np.arange(len(rmserr_list))
             y_ = rmserr_list
-            plt.scatter(x_, y_, c='k')
+            plt.scatter(x_, y_, c=mc)
             plt.xticks(fontsize=48)
             plt.yticks(fontsize=48)
             plt.xlabel(r'$Epochs$', fontsize=78)

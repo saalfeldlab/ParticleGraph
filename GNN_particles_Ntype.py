@@ -81,7 +81,7 @@ if __name__ == '__main__':
             data_train(config=config, erase=False, best_model=best_model, device=device)
         if 'test' in task:
             data_test(config=config, visualize=True, style='black zoom color', verbose=False, best_model='best', run=0, test_mode='inference',
-                      sample_embedding=False, step=10, particle_of_interest=4400, device=device)
+                      sample_embedding=False, step=10, particle_of_interest=400, device=device)
         if 'try_func' in task:
             try_func(max_radius=config.simulation.max_radius, device=device)
 
