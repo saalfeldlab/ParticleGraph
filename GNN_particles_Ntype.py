@@ -57,13 +57,13 @@ if __name__ == '__main__':
     else:
         task = 'train'
         best_model = None
-        # config_list = ['fluids/fluids_m']
+        config_list = ['cell_gland_SMG2_smooth10']
         # config_list = ['falling_water_ramp_x6_11']
-        # config_list =['signal_N4_m3_shuffle']
+        # config_list =['signal_N4_m4_shuffle']
         # config_list =['signal_N4_v1_shuffle']
         # config_list =['wave/wave_2']
         # config_list = ['arbitrary_3_bis']
-        config_list = ['signal_N3_c16']
+        # config_list = ['signal_N3_c16']
     for config_file_ in config_list:
 
         config_file, pre_folder = add_pre_folder(config_file_)

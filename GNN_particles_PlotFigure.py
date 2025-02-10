@@ -5745,8 +5745,8 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
             else:
                 plt.xlabel(r'$a_{i0}(t)$', fontsize=78)
                 plt.ylabel(r'$a_{i1}(t)$', fontsize=78)
-            plt.xlim([0.94, 1.02])
-            plt.ylim([0.96, 1.12])
+            plt.xlim([0.94, 1.08])
+            plt.ylim([0.9, 1.10])
             # plt.xlim([0.9, 1.1])
             # plt.ylim([0.7, 1.2])
 
@@ -7198,7 +7198,7 @@ if __name__ == '__main__':
     # config_list = ['signal_N3_c4']
     # config_list = ['signal_N2_a20','signal_N2_a21','signal_N2_a22','signal_N2_a23','signal_N2_a24','signal_N2_a25','signal_N2_a26']
     # config_list = ['signal_N4_v']
-    config_list = ['signal_N4_m2_shuffle','signal_N4_m3_shuffle']
+    config_list = ['signal_N3_c16']
 
     for config_file_ in config_list:
         
@@ -7207,9 +7207,9 @@ if __name__ == '__main__':
         config.dataset = pre_folder + config.dataset
         config.config_file = pre_folder + config_file_
 
-        data_plot(config=config, epoch_list=['best'], style='latex color', device=device)
+        # data_plot(config=config, epoch_list=['best'], style='latex color', device=device)
         # data_plot(config=config, epoch_list=['all'], style='black color', device=device)
-        # data_plot(config=config, epoch_list=['time'], style=False, device=device)
+        data_plot(config=config, epoch_list=['time'], style='black color', device=device)
 
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

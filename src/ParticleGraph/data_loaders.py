@@ -542,6 +542,7 @@ def load_3D_cell_data(config, device, visualize):
 
     data_folder_name = config.data_folder_name
     dataset_name = config.dataset
+    data_folder_mesh_name = config.data_folder_mesh_name
 
     simulation_config = config.simulation
     train_config = config.training
@@ -555,8 +556,79 @@ def load_3D_cell_data(config, device, visualize):
 
     bc_pos, bc_dpos = choose_boundary_values('no')
 
-    mesh_file = '/groups/wang/wanglab/GNN/240408-LVpD80-E10-IAI/SMG2-processed/masks_smooth2_mesh_vtp/240408-E14-SMG-LVpD80-E10-IAI-SMG2-combined-rcan-t049_cp_masks.vtp'
-    visualize_mesh(mesh_file)
+    files = os.listdir(data_folder_name)
+    files = [f for f in files if f.endswith('.csv')]
+
+    mesh_files = os.listdir(data_folder_mesh_name)
+    mesh_files = [f for f in mesh_files if f.endswith('.csv')]
+
+    n_cells = 1
+    n_cells_max = 0
+    run = 0
+    x_list = []
+    y_list = []
+
+    for it in trange(len(files)):
+        object_properties = np.array(pd.read_csv(data_folder_name + files[it], header=0))
+
+        faces = np.array(pd.read_csv(data_folder_mesh_name + mesh_files[3*it+0], header=0))
+        cells = np.array(pd.read_csv(data_folder_mesh_name + mesh_files[3*it+1], header=0))
+        mesh_pos = np.array(pd.read_csv(data_folder_mesh_name + mesh_files[3*it+2], header=0))
+
+        # 0 label
+        # 1 volume
+        # 2 surface area
+        # 3 x
+        # 4 y
+        # 5 z
+        # 6 elongation
+        # 7 eigenvector x
+        # 8 eigenvector y
+        # 9 eigenvector z
+        # 10 sphericity
+        # 11 mean_intensity
+        # 12 std_intensity
+        # 13 snr
+
+        N = np.arange(object_properties.shape[0], dtype=np.float32)[:, None]
+        X = object_properties[:,3:6]
+        empty_columns = np.zeros((X.shape[0], 6))
+        Volume = object_properties[:,1:2]
+        Surface = object_properties[:,2:3]
+        Sphericity = object_properties[:,10:11]
+        Fluo = object_properties[:,11:12]
+        Fluo_std = object_properties[:,12:13]
+        ID = n_cells + np.arange(object_properties.shape[0])[:, None]
+
+        x = np.concatenate((N.astype(int), X, empty_columns, Volume, Surface, Sphericity, Fluo, Fluo_std, ID.astype(int) -1), axis=1)
+        x = torch.tensor(x, dtype=torch.float32, device=device)
+        x_list.append(x)
+
+        y = torch.zeros((x.shape[0], 2), dtype=torch.float32, device=device)
+        y_list.append(y)
+
+        if len(x)> n_cells_max:
+            n_cells_max = len(x)
+
+    print(f'n_cells_max: {n_cells_max}')
+
+    torch.save(x_list, f'graphs_data/{dataset_name}/x_list_{run}.pt')
+    torch.save(y_list, f'graphs_data/{dataset_name}/y_list_{run}.pt')
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # mesh_file = '/groups/wang/wanglab/GNN/240408-LVpD80-E10-IAI/SMG2-processed/masks_smooth2_mesh_vtp/240408-E14-SMG-LVpD80-E10-IAI-SMG2-combined-rcan-t049_cp_masks.vtp'
+    # visualize_mesh(mesh_file)
 
 
 

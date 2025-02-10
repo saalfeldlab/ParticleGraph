@@ -159,6 +159,20 @@ def norm_velocity(xx, dimension, device):
     return torch.tensor([vx], device=device)
 
 
+def norm_position(xx, dimension, device):
+    if dimension == 2:
+        bounding_box = get_2d_bounding_box(xx[:, 1:3]* 1.1)
+        posnorm = max(bounding_box.values())
+
+        return torch.tensor(posnorm, dtype=torch.float32, device=device), torch.tensor([bounding_box['x_max']/posnorm, bounding_box['y_max']/posnorm], dtype=torch.float32, device=device)
+    else:
+
+        bounding_box = get_3d_bounding_box(xx[:, 1:4]* 1.1)
+        posnorm = max(bounding_box.values())
+
+        return torch.tensor(posnorm, dtype=torch.float32, device=device), torch.tensor([bounding_box['x_max']/posnorm, bounding_box['y_max']/posnorm, bounding_box['z_max']/posnorm], dtype=torch.float32, device=device)
+
+
 def norm_acceleration(yy, device):
     ax = torch.std(yy[:, 0])
     ay = torch.std(yy[:, 1])
@@ -675,7 +689,6 @@ def get_matrix_rank(matrix):
 # rank = get_matrix_rank(matrix)
 # print(f"The rank of the matrix is: {rank}")
 
-
 def compute_spectral_density(matrix, bins=100):
     # Compute eigenvalues
     eigenvalues = np.linalg.eigvals(matrix)
@@ -688,6 +701,34 @@ def compute_spectral_density(matrix, bins=100):
 
     return centers, density
 
-# Example usage
-# matrix = np.random.rand(100, 100)
-# centers, density = compute_spectral_density(matrix)
+
+def get_2d_bounding_box(xx):
+
+    x_min, y_min = torch.min(xx, dim=0).values
+    x_max, y_max = torch.max(xx, dim=0).values
+
+    bounding_box = {
+        'x_min': x_min.item(),
+        'x_max': x_max.item(),
+        'y_min': y_min.item(),
+        'y_max': y_max.item()
+    }
+
+    return bounding_box
+
+
+def get_3d_bounding_box(xx):
+
+    x_min, y_min, z_min = torch.min(xx, dim=0).values
+    x_max, y_max, z_max = torch.max(xx, dim=0).values
+
+    bounding_box = {
+        'x_min': x_min.item(),
+        'x_max': x_max.item(),
+        'y_min': y_min.item(),
+        'y_max': y_max.item(),
+        'z_min': z_min.item(),
+        'z_max': z_max.item()
+    }
+
+    return bounding_box

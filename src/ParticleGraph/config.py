@@ -200,6 +200,7 @@ class TrainingConfig(BaseModel):
     coeff_loss2: float = 1
     coeff_loss3: float = 1
     coeff_diff: float = 10
+    coeff_W_std: float = 10
     coeff_model_a: float = 0
     coeff_continuous: float = 0
 
@@ -223,6 +224,7 @@ class ParticleGraphConfig(BaseModel):
     description: Optional[str] = 'ParticleGraph'
     dataset: str
     data_folder_name: str = 'none'
+    data_folder_mesh_name: str = 'none'
     config_file: str = 'none'
     simulation: SimulationConfig
     graph_model: GraphModelConfig

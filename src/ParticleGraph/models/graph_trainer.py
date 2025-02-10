@@ -769,12 +769,6 @@ def data_train_cell(config, erase, best_model, device):
     logger.info(f'graph files N: {n_runs}')
     time.sleep(0.5)
 
-    n_cells = np.load(f'graphs_data/{dataset_name}/n_cells_0.npy')
-    im_dim = np.load(f'graphs_data/{dataset_name}/im_dim_0.npy')
-
-    print(f'n_cells: {n_cells}, im_dim: {im_dim}')
-    logger.info(f'n_cells: {n_cells}, im_dim: {im_dim}')
-
     x_list = []
     y_list = []
     edge_p_p_list = []
@@ -802,6 +796,7 @@ def data_train_cell(config, erase, best_model, device):
                 y = torch.cat((y, y_list[run][k].clone().detach()), 0)
         time.sleep(0.5)
 
+    posnorm, bounding_box = norm_position(x, dimension, device)
     vnorm = norm_velocity(x, dimension, device)
     ynorm = norm_acceleration(y, device)
     if do_tracking:
@@ -831,7 +826,6 @@ def data_train_cell(config, erase, best_model, device):
                 x_list[0][k][:, 3:5] = 0
         config.simulation.n_particles_max = n_particles_max + 1
         n_particles = n_particles_max / n_frames
-        initial_node_id = id_list
     else:
         for k in range(n_frames + 1):
             type = x_list[0][k][:, 5]
@@ -854,7 +848,6 @@ def data_train_cell(config, erase, best_model, device):
     else:
         start_epoch = 0
         net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs.pt"
-
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -1013,133 +1006,6 @@ def data_train_cell(config, erase, best_model, device):
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
-        if False: # do_tracking:
-
-            id_list_ = []
-            for k in range(0, n_frames + 1):
-                ids = x_list[1][k][:, -1]
-                if k == 0:
-                    id_list_ = ids
-                else:
-                    id_list_ = torch.cat((id_list_, ids), 0)
-            print(f'N tracks: {len(torch.unique(id_list_))}')
-            logger.info(f'N tracks: {len(torch.unique(id_list_))}')
-            tracking_index_list = []
-            if epoch == 0:
-                distance_threshold = 1E-3
-            elif epoch == 1:
-                distance_threshold = 1E-3
-            else:
-                distance_threshold = 1E-4
-            for k in trange(n_frames):
-                x = x_list[1][k].clone().detach()
-                x_list[1][k + 1][:, -1] = initial_node_id[k + 1]
-
-                edges = edge_p_p_list[1][f'arr_{k}']
-                edges = torch.tensor(edges, dtype=torch.int64, device=device)
-                dataset = data.Data(x=x[:, :], edge_index=edges)
-
-                pred = model(dataset, training=True, phi=torch.zeros(1, device=device))
-
-                x_next = x_list[1][k + 1]
-                x_pos_next = x_next[:, 1:3].clone().detach()
-                if config.graph_model.prediction == '2nd_derivative':
-                    x_pos_pred = (x[:, 1:3] + delta_t * (x[:, 3:5] + delta_t * pred * ynorm))
-                else:
-                    x_pos_pred = (x[:, 1:3] + delta_t * pred * ynorm)
-                distance = torch.sum(bc_dpos(x_pos_pred[:, None, :] - x_pos_next[None, :, :]) ** 2, dim=2)
-                result = distance.min(dim=1)
-                min_distance_value = result.values
-                min_index = result.indices
-
-                first_cell_id = to_numpy(x[:, 0])
-                next_cell_id = to_numpy(x_next[min_index, 0])
-
-                tracking_distance = torch.sqrt(min_distance_value)
-
-                bVisu = False
-
-                if bVisu:
-                    fig = plt.figure(figsize=(8, 8))
-                    plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=10, c='k')
-                pos = torch.argwhere(tracking_distance < distance_threshold)
-                if len(pos) > 0:  # reduce dimension of latent space, the connected cell inherit the cell_id from the previous frame
-                    if bVisu:
-                        plt.scatter(to_numpy(x_pos_pred[pos, 0]), to_numpy(x_pos_pred[pos, 1]), s=10, c='g', alpha=0.5)
-
-                    list_first = np.arange(len(x))[to_numpy(pos).astype(int)].squeeze()
-                    list_next = to_numpy(min_index[to_numpy(pos).astype(int)]).squeeze()
-                    list = np.concatenate((list_first[:, None], list_next[:, None]), axis=1)
-
-                    node_id_first = to_numpy(x_list[1][k][list_first, -1])
-                    node_id_next = to_numpy(x_list[1][k + 1][list_next, -1])
-
-                    with torch.no_grad():
-                        model.a[node_id_next] = model.a[node_id_first].clone().detach()
-
-                    x_list[1][k + 1][list_next, -1] = x_list[1][k][list_first, -1].clone().detach()
-                    if (model_config.prediction == '2nd_derivative'):
-                        new_velocity = (x_list[1][k + 1][list_next, 1:3].clone().detach() - x_list[1][k][list_first,
-                                                                                            1:3].clone().detach()) / delta_t
-                        x_list[1][k + 1][list_next, 3:5] = new_velocity.clone().detach()
-
-                tracking_index_list.append(np.sum((first_cell_id == next_cell_id) * 1.0) / len(x) * 100)
-
-                if bVisu:
-                    pos = torch.argwhere(tracking_distance >= distance_threshold)
-                    if len(pos) > 0:
-                        plt.scatter(to_numpy(x_pos_pred[pos, 0]), to_numpy(x_pos_pred[pos, 1]), s=10, c='r', alpha=0.5)
-                    for n in range(len(x)):
-                        plt.text(to_numpy(x[n, 1]) + 0.005, to_numpy(x[n, 2]) - 0.005,
-                                 str(int(to_numpy(x_list[1][k][n, -1]))), fontsize=6)
-                    plt.xlim([-0.2, 1.2])
-                    plt.ylim([-0.2, 1.2])
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_recons/tracking_{epoch}_{k}.tif")
-                    plt.close()
-
-                # fig = plt.figure(figsize=(8, 8))
-                # plt.scatter(to_numpy(x[:, 1]),to_numpy(x[:, 2]),s=10,c='k')
-                # plt.scatter(to_numpy(x_pos_next[:, 0]),to_numpy(x_pos_next[:, 1]),s=10,c='k',alpha=0.5)
-                # pos = np.argwhere(first_cell_id!=next_cell_id)
-                # plt.scatter(to_numpy(x[pos, 1]),to_numpy(x[pos, 2]),s=10,c='r',alpha=1)
-                # plt.scatter(to_numpy(x_pos_pred[pos, 0]),to_numpy(x_pos_pred[pos, 1]),s=10,c='r',alpha=0.5)
-
-            fig = plt.figure(figsize=(22, 4))
-
-            ax = fig.add_subplot(1, 5, 1)
-            id_list = []
-            id_list_ = []
-            for k in range(0, n_frames + 1):
-                ids = x_list[1][k][:, -1]
-                id_list.append(ids)
-                if k == 0:
-                    id_list_ = ids
-                else:
-                    id_list_ = torch.cat((id_list_, ids), 0)
-                if k % 10 == 0:
-                    for n in range(n_particle_types):
-                        pos = torch.argwhere(type_list[k] == n)
-                        if len(pos) > 0:
-                            plt.scatter(to_numpy(model.a[to_numpy(ids[pos]), 0]),
-                                        to_numpy(model.a[to_numpy(ids[pos]), 1]), s=5, color=cmap.color(n), alpha=0.5)
-
-            print(f'N tracks: {len(torch.unique(id_list_))}')
-            logger.info(f'N tracks: {len(torch.unique(id_list_))}')
-
-            ax = fig.add_subplot(1, 5, 2)
-            func_list, true_type_list, short_model_a_list, proj_interaction = analyze_edge_function_state(rr=[],
-                                                                                                          config=config,
-                                                                                                          model=model,
-                                                                                                          id_list=id_list,
-                                                                                                          type_list=type_list,
-                                                                                                          ynorm=ynorm,
-                                                                                                          cmap=cmap,
-                                                                                                          visualize=True,
-                                                                                                          device=device)
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/Fig_{epoch}.tif")
-            plt.close()
 
         # embedding = proj_interaction
         # labels, n_clusters, new_labels = sparsify_cluster_state(config.training.cluster_method,
@@ -2292,6 +2158,7 @@ def data_train_synaptic2(config, erase, best_model, device):
     batch_size = get_batch_size(0)
     embedding_cluster = EmbeddingCluster(config)
     cmap = CustomColorMap(config=config)
+    coeff_W_std = train_config.coeff_W_std
     n_runs = train_config.n_runs
     noise_level = train_config.noise_level
     field_type = model_config.field_type
@@ -2476,8 +2343,6 @@ def data_train_synaptic2(config, erase, best_model, device):
 
         total_loss = 0
 
-
-
         for N in trange(Niter):
 
             run = 1 + np.random.randint(n_runs-1)
@@ -2515,7 +2380,13 @@ def data_train_synaptic2(config, erase, best_model, device):
                     func_edge = model.lin_edge(in_features.float())
                     diff = torch.relu(model.lin_edge(x[:, 6:7].clone().detach()) - model.lin_edge(x[:, 6:7].clone().detach() + 0.1)).norm(2)
 
-                loss += model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + coeff_diff * diff
+
+                t = torch.std(model.W)
+                print(coeff_W_std * (torch.std(model.W) - 1).norm(2))
+
+                loss += model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + coeff_diff * diff + coeff_W_std * (torch.std(model.W) - 1).norm(2)
+
+                print(loss)
 
                 if has_field:
                     if 'visual' in field_type:
