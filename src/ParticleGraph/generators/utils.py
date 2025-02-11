@@ -454,6 +454,13 @@ def init_mesh(config, device):
         case '' :
             features_mesh = torch.zeros((n_nodes, 2), device=device)
 
+    # i0 = imread(f'graphs_data/{node_type_map}')
+    # values = i0[(to_numpy(x_mesh[:, 0]) * 255).astype(int), (to_numpy(y_mesh[:, 0]) * 255).astype(int)]
+    # if np.max(values) > 0:
+    #     values = np.round(values / np.max(values) * (simulation_config.n_node_types-1))
+    # type_mesh = torch.tensor(values, device=device)
+    # type_mesh = type_mesh[:, None]
+
     type_mesh = torch.zeros((n_nodes, 1), device=device)
 
     node_id_mesh = torch.arange(n_nodes, device=device)
@@ -497,7 +504,6 @@ def init_mesh(config, device):
 
     if (config.graph_model.particle_model_name == 'PDE_ParticleField_A')  | (config.graph_model.particle_model_name == 'PDE_ParticleField_B'):
         type_mesh = 0 * type_mesh
-
 
     a_mesh = torch.zeros_like(type_mesh)
     type_mesh = type_mesh.to(dtype=torch.float32)

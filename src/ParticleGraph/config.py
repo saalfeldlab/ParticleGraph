@@ -43,7 +43,6 @@ class SimulationConfig(BaseModel):
     n_node_types: Optional[int] = None
     node_coeff_map: Optional[str] = None
     node_value_map: Optional[str] = 'pattern_Null.tif'
-    node_type_map: Optional[str] = 'pattern_Null.tif'
     node_proliferation_map: Optional[str] = None
 
     adjacency_matrix: str = ''

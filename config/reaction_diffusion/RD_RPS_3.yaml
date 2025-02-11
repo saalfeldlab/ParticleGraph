@@ -15,9 +15,10 @@ simulation:
   delta_t: 0.05
   boundary: 'periodic'
   node_value_map: 'input_data/pattern_10.tif'
-  node_type_map: 'input_data/pattern_17.tif'
+  node_coeff_map: 'input_data/pics_quadrants_bis.tif'
 
 graph_model:
+  field_grid: 'voronoi'
   particle_model_name: ''
   mesh_model_name: 'RD_RPS_Mesh_bis'
   prediction: 'first_derivative'

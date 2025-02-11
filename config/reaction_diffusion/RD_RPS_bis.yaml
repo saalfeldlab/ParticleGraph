@@ -19,6 +19,7 @@ simulation:
   beta: 1
 
 graph_model:
+  node_coeff_map: 'pics_quadrants.tif'
   particle_model_name: ''
   mesh_model_name: 'RD_RPS_Mesh'
   prediction: 'first_derivative'

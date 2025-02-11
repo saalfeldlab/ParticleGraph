@@ -19,6 +19,7 @@ simulation:
   beta: 1
 
 graph_model:
+  field_grid: 'voronoi'
   particle_model_name: ''
   mesh_model_name: 'RD_RPS_Mesh'
   prediction: 'first_derivative'
