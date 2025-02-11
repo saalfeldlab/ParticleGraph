@@ -5203,6 +5203,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
 
             if has_field:
+                print('plot field ...')
                 im = imread(f"graphs_data/{simulation_config.node_value_map}")
 
                 net = f'{log_dir}/models/best_model_f_with_{n_runs - 1}_graphs_{epoch}.pt'
@@ -7195,7 +7196,7 @@ if __name__ == '__main__':
     # config_list = ['signal_N3_c4']
     # config_list = ['signal_N2_a20','signal_N2_a21','signal_N2_a22','signal_N2_a23','signal_N2_a24','signal_N2_a25','signal_N2_a26']
     # config_list = ['signal_N4_v']
-    config_list = ['signal_N4_m2_shuffle', 'signal_N4_m3_shuffle', 'signal_N4_v1_shuffle']
+    config_list = ['signal_N3_c16']
 
     for config_file_ in config_list:
         

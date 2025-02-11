@@ -2159,7 +2159,6 @@ def data_train_synaptic2(config, erase, best_model, device):
     batch_size = get_batch_size(0)
     embedding_cluster = EmbeddingCluster(config)
     cmap = CustomColorMap(config=config)
-    coeff_W_std = train_config.coeff_W_std
     n_runs = train_config.n_runs
     noise_level = train_config.noise_level
     field_type = model_config.field_type
@@ -2381,13 +2380,8 @@ def data_train_synaptic2(config, erase, best_model, device):
                     func_edge = model.lin_edge(in_features.float())
                     diff = torch.relu(model.lin_edge(x[:, 6:7].clone().detach()) - model.lin_edge(x[:, 6:7].clone().detach() + 0.1)).norm(2)
 
+                loss += model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + coeff_diff * diff
 
-                t = torch.std(model.W)
-                print(coeff_W_std * (torch.std(model.W) - 1).norm(2))
-
-                loss += model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + coeff_diff * diff + coeff_W_std * (torch.std(model.W) - 1).norm(2)
-
-                print(loss)
 
                 if has_field:
                     if 'visual' in field_type:

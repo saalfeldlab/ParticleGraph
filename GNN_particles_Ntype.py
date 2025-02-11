@@ -55,11 +55,11 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        task = 'test'
+        task = 'generate'
         best_model = None
-        config_list = ['cell_gland_SMG2_smooth10_8','cell_gland_SMG2_smooth10_9','cell_gland_SMG2_smooth10_10','cell_gland_SMG2_smooth10_5','cell_gland_SMG2_smooth10_6','cell_gland_SMG2_smooth10_7']
+        # config_list = ['cell_gland_SMG2_smooth10_1','cell_gland_SMG2_smooth10_9','cell_gland_SMG2_smooth10_10','cell_gland_SMG2_smooth10_5','cell_gland_SMG2_smooth10_6','cell_gland_SMG2_smooth10_7']
         # config_list = ['falling_water_ramp_x6_11']
-        # config_list =['signal_N4_m4_shuffle']
+        config_list =['signal_N4_m3_shuffle']
         # config_list =['signal_N4_v1_shuffle']
         # config_list =['wave/wave_2']
         # config_list = ['arbitrary_3_bis']
