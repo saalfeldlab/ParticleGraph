@@ -382,8 +382,8 @@ def data_train_particle(config, erase, best_model, device):
                 torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
                            os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
-            check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 50,
-                                   memory_percentage_threshold=0.6)
+                check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 50,
+                                       memory_percentage_threshold=0.6)
 
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()},
@@ -3401,7 +3401,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     x = x_list[0][start_it].clone().detach()
     n_particles = x.shape[0]
 
-
     # x_list[0] = torch.cat((x_list[0],x_list[0],x_list[0],x_list[0]), dim=0)
     x_inference_list = []
 
@@ -3555,9 +3554,15 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 x[:, 1:dimension + 1] = x_next
                 loss = (x[:, 1:dimension + 1] - x0_next[:, 1:dimension + 1]).norm(2)
                 pred_err_list.append(to_numpy(torch.sqrt(loss)))
+
             elif do_tracking:
+
+                # x[:, dimension + 1:2 * dimension + 1] = y
+                # x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1] + x[:, dimension + 1:2 * dimension + 1] * delta_t)
+
                 x_pos_next = x0_next[:, 1:dimension + 1].clone().detach()
-                # pred = torch.cat((pred, torch.zeros(pred.shape[0], 1, device=pred.device)), dim=1)
+                if pred.shape[1] != dimension:
+                    pred = torch.cat((pred, torch.zeros(pred.shape[0], 1, device=pred.device)), dim= 1)
                 if model_config.prediction == '2nd_derivative':
                     x_pos_pred = (x[:, 1:dimension + 1] + delta_t * time_step * (x[:, dimension + 1:2*dimension + 1] + delta_t * time_step * pred * ynorm))
                 else:
@@ -3570,6 +3575,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 pred_err_list.append(to_numpy(torch.sqrt(loss)))
                 if 'inference' in test_mode:
                     x[:,dimension+1:2*dimension+1] = pred.clone().detach() / (delta_t * time_step)
+
             else:
                 loss = (pred[:, 0:dimension] * ynorm - y0).norm(2)
                 pred_err_list.append(to_numpy(torch.sqrt(loss)))
@@ -3594,13 +3600,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1] + x[:, dimension + 1:2 * dimension + 1] * delta_t)  # position update
 
             if 'bounce_all' in test_mode:
-
-                # gap = 0.104
-                # boundary = torch.cat((1 - gap - x[:, 1:2], x[:, 1:2] - gap, 1 - gap - x[:, 2:3], x[:, 2:3] - gap), dim=-1)
-                # boundary = torch.clamp(boundary / 0.015, -1, 1)
-                #
-                # x[:,7:] = boundary
-                # Bounce on walls
                 gap = 0.005
                 bouncing_pos = torch.argwhere((x[:, 1] <= 0.1-gap) | (x[:, 1] >= 0.9+gap)).squeeze()
                 if bouncing_pos.numel() > 0:
@@ -3776,16 +3775,28 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
                 plt.xlim([-3, 3])
                 plt.ylim([-3, 3])
+
             elif do_tracking:
-                plt.scatter(to_numpy(x0[0:50, 2]), to_numpy(x0[0:50, 1]), s=1, c=mc)
-                plt.scatter(to_numpy(x_pos_pred[:, 1]), to_numpy(x_pos_pred[:, 0]), s=1, c='r')
-                try:
-                    x1 = x_list[0][it + time_step].clone().detach()
-                    plt.scatter(to_numpy(x1[:, 2]), to_numpy(x1[:, 1]), s=1, c='g')
-                except:
-                    pass
+
+                # plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c='w', alpha=0.25)
+                plt.scatter(to_numpy(x0[:, 2]), to_numpy(x0[:, 1]), s=10, c='w', alpha=0.5)
+                plt.scatter(to_numpy(x_pos_pred[:, 1]), to_numpy(x_pos_pred[:, 0]), s=10, c='r')
+                x1 = x_list[0][it + time_step].clone().detach()
+                plt.scatter(to_numpy(x1[:, 2]), to_numpy(x1[:, 1]), s=10, c='g')
+
                 plt.xticks([])
                 plt.yticks([])
+
+                if 'zoom' in style:
+                    for m in range(x.shape[0]):
+                            plt.arrow(x=to_numpy(x0[m, 2]), y=to_numpy(x0[m, 1]), dx=to_numpy(x[m, dimension+2]) * delta_t,
+                                      dy=to_numpy(x[m, dimension+1]) * delta_t, head_width=0.004,
+                                      length_includes_head=True, color='g')
+                    plt.xlim([300,400])
+                    plt.ylim([300,400])
+                else:
+                    plt.xlim([0,700])
+                    plt.ylim([0,700])
                 plt.tight_layout()
             else:
                 s_p = 25

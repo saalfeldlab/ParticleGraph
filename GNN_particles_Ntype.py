@@ -57,7 +57,7 @@ if __name__ == '__main__':
     else:
         task = 'test'
         best_model = None
-        config_list = ['cell_gland_SMG2_smooth10_1']
+        config_list = ['cell_gland_SMG2_smooth10_8','cell_gland_SMG2_smooth10_9','cell_gland_SMG2_smooth10_10','cell_gland_SMG2_smooth10_5','cell_gland_SMG2_smooth10_6','cell_gland_SMG2_smooth10_7']
         # config_list = ['falling_water_ramp_x6_11']
         # config_list =['signal_N4_m4_shuffle']
         # config_list =['signal_N4_v1_shuffle']
@@ -81,7 +81,7 @@ if __name__ == '__main__':
             data_train(config=config, erase=False, best_model=best_model, device=device)
         if 'test' in task:
             data_test(config=config, visualize=True, style='black zoom color', verbose=False, best_model='best', run=0, test_mode='inference',
-                      sample_embedding=False, step=10, particle_of_interest=400, device=device)
+                      sample_embedding=False, step=1, particle_of_interest=400, device=device)
         if 'try_func' in task:
             try_func(max_radius=config.simulation.max_radius, device=device)
 

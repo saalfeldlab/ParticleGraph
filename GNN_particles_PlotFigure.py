@@ -1724,12 +1724,19 @@ def plot_cell_tracking(config, epoch_list, log_dir, logger, style, device):
 
     n_particles_max = 0
     id_list = []
-    type_list=[]
+    type_list = []
     for k in range(n_frames):
         type = x_list[0][k][:, 5]
         type_list.append(type)
+        if k == 0:
+            type_stack = type
+        else:
+            type_stack = torch.cat((type_stack, type), 0)
         ids = x_list[0][k][:, -1]
         id_list.append(ids)
+        n_particles_max += len(type)
+    config.simulation.n_particles_max = n_particles_max + 1
+    n_particles = n_particles_max / n_frames
 
     index_particles = get_index_particles(x_list[0][0], n_particle_types, dimension)
 
@@ -1751,22 +1758,12 @@ def plot_cell_tracking(config, epoch_list, log_dir, logger, style, device):
         files = glob.glob(f"{log_dir}/models/best_model_with_0_graphs_*.pt")
         files.sort(key=sort_key)
 
-        # flag = True
-        # file_id = 0
-        # while (flag):
-        #     if sort_key(files[file_id])//1E7 == 2:
-        #         flag = False
-        #     file_id += 1
-        #
-        # file_id_list0 = np.arange(0,file_id,2)
-        # file_id_list1 = np.arange(file_id, len(files), (len(files)-file_id) // 100)
-        # file_id_list = np.concatenate((file_id_list0,file_id_list1))
-
-        file_id_list =  np.arange(0, len(files))
+        file_id_list =  np.arange(0, len(files),len(files)//50)
 
         for file_id_ in trange(0,len(file_id_list)):
             file_id = file_id_list[file_id_]
             if sort_key(files[file_id]) % 1E7 != 0:
+
                 epoch = files[file_id].split('graphs')[1][1:-3]
                 net = f"{log_dir}/models/best_model_with_0_graphs_{epoch}.pt"
                 state_dict = torch.load(net, map_location=device)
@@ -1774,13 +1771,13 @@ def plot_cell_tracking(config, epoch_list, log_dir, logger, style, device):
                 model.eval()
 
                 plt.style.use('dark_background')
-
+                indices = np.random.choice(model.a.shape[0], 1000000, replace=False)
                 fig, ax = fig_init(fontsize=24)
-                plt.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), s=2, color='w',alpha=0.5, edgecolor='none')
+                plt.scatter(to_numpy(model.a[indices, 0]), to_numpy(model.a[indices, 1]), s=10, color='w')
                 plt.xlabel(r'$a_{i0}$', fontsize=48)
                 plt.ylabel(r'$a_{i1}$', fontsize=48)
-                # plt.xlim([-2, 2])
-                # plt.ylim([-2, 2])
+                plt.xticks([])
+                plt.yticks([])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/all/embedding_{epoch}.tif", dpi=80)
                 plt.close()
@@ -1788,7 +1785,7 @@ def plot_cell_tracking(config, epoch_list, log_dir, logger, style, device):
 
         for epoch in epoch_list:
 
-            net = f"{log_dir}/models/best_model_with_1_graphs_{epoch}.pt"
+            net = f"{log_dir}/models/best_model_with_0_graphs_{epoch}.pt"
             print(f'network: {net}')
             state_dict = torch.load(net, map_location=device)
             model.load_state_dict(state_dict['model_state_dict'])
@@ -1799,7 +1796,7 @@ def plot_cell_tracking(config, epoch_list, log_dir, logger, style, device):
             tracking_index_list = []
 
             for k in trange(n_frames):
-                x = x_list[1][k].clone().detach()
+                x = x_list[0][k].clone().detach()
                 distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
                 adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
                 edges = adj_t.nonzero().t().contiguous()
@@ -6813,7 +6810,7 @@ def data_plot(config, epoch_list, style, device):
     match config.graph_model.particle_model_name:
         case 'PDE_Agents_A' | 'PDE_Agents_B':
             plot_agents(config, epoch_list, log_dir, logger, style, device)
-        case 'PDE_Cell_A' | 'PDE_Cell_B' | 'PDE_Cell':
+        case 'PDE_Cell_A' | 'PDE_Cell_B' | 'PDE_Cell' | 'PDE_Cell_area':
             if config.training.do_tracking:
                 plot_cell_tracking(config, epoch_list, log_dir, logger, style, device)
             else:
@@ -7198,7 +7195,8 @@ if __name__ == '__main__':
     # config_list = ['signal_N3_c4']
     # config_list = ['signal_N2_a20','signal_N2_a21','signal_N2_a22','signal_N2_a23','signal_N2_a24','signal_N2_a25','signal_N2_a26']
     # config_list = ['signal_N4_v']
-    config_list = ['signal_N3_c16']
+    # config_list = ['signal_N3_c16']
+    config_list = ['cell_gland_SMG2_smooth10_8','cell_gland_SMG2_smooth10_9','cell_gland_SMG2_smooth10_10','cell_gland_SMG2_smooth10_5','cell_gland_SMG2_smooth10_6','cell_gland_SMG2_smooth10_7']
 
     for config_file_ in config_list:
         
@@ -7208,8 +7206,8 @@ if __name__ == '__main__':
         config.config_file = pre_folder + config_file_
 
         # data_plot(config=config, epoch_list=['best'], style='latex color', device=device)
-        # data_plot(config=config, epoch_list=['all'], style='black color', device=device)
-        data_plot(config=config, epoch_list=['time'], style='black color', device=device)
+        data_plot(config=config, epoch_list=['all'], style='black color', device=device)
+        # data_plot(config=config, epoch_list=['time'], style='black color', device=device)
 
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

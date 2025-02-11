@@ -7,18 +7,18 @@ import torch_geometric.utils as pyg_utils
 
 from ParticleGraph.utils import to_numpy
 from ParticleGraph.models.Siren_Network import *
+from ParticleGraph.utils import *
 
 # from ParticleGraph.models.utils import reparameterize
 # from ParticleGraph.models.Siren_Network import Siren
 import torch.nn as nn
 import numpy as np
 import matplotlib.pyplot as plt
-import plotly.graph_objects as go
-import plotly.io as pio
+# import plotly.graph_objects as go
+# import plotly.io as pio
 import napari
 from tifffile import imwrite
-
-
+import scipy.ndimage
 
 def density_laplace(y, x):
     grad = density_gradient(y, x)
@@ -37,11 +37,6 @@ def density_gradient(y, x, grad_outputs=None):
         grad_outputs = torch.ones_like(y)
     grad = torch.autograd.grad(y, [x], grad_outputs=grad_outputs, create_graph=True)[0]
     return grad
-
-
-
-
-
 
 class Operator_smooth3D(pyg.nn.MessagePassing):
 
@@ -171,9 +166,9 @@ class Operator_smooth3D(pyg.nn.MessagePassing):
             kernel_modified = torch.exp(-2 * (mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2 + mgrid[:, 2] ** 2) / (self.kernel_var))[:, None]
 
             grad_autograd = -density_gradient(kernel_modified, mgrid)
-            laplace_autograd = density_laplace(kernel_modified, mgrid)
+            # laplace_autograd = density_laplace(kernel_modified, mgrid)
 
-            self.kernel_operators = torch.cat((kernel_modified, grad_autograd, laplace_autograd), dim=-1)
+            self.kernel_operators = torch.cat((kernel_modified, grad_autograd), dim=-1)
 
             return density_kernel
 
@@ -347,74 +342,102 @@ if __name__ == '__main__':
     phi = torch.zeros(1, device=device)
     threshold = 0.05
 
+    config_list = ['cell_gland_SMG2_smooth10_8', 'cell_gland_SMG2_smooth10_9', 'cell_gland_SMG2_smooth10_10',
+                   'cell_gland_SMG2_smooth10_5', 'cell_gland_SMG2_smooth10_6', 'cell_gland_SMG2_smooth10_7']
 
-    x_list = torch.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/log/cell/cell_gland_SMG2_smooth10_1/x_inference_list_0.pt', map_location=device, weights_only=True)
-    posnorm = torch.load('/groups/saalfeld/home/allierc/Py/ParticleGraph/log/cell/cell_gland_SMG2_smooth10_1/posnorm.pt', map_location=device, weights_only=True)
-    bounding_box = torch.load('/groups/saalfeld/home/allierc/Py/ParticleGraph/log/cell/cell_gland_SMG2_smooth10_1/bounding_box.pt', map_location=device, weights_only=True)
+    for config_file in config_list:
 
-    xz_ratio = bounding_box[2] / bounding_box[0]
-    grid_size = 100
-    gx = torch.linspace(0, bounding_box[0] * posnorm, steps=grid_size)
-    gy = torch.linspace(0, bounding_box[0] * posnorm, steps=grid_size)
-    gz = torch.linspace(0, bounding_box[2] * posnorm, steps=int(grid_size*xz_ratio))
-    gx, gy, gz = torch.meshgrid(gx, gy, gz)
-    mgrid = torch.stack([gx, gy, gz], dim=-1).reshape(-1, 3)
-    mgrid = torch.cat((torch.ones((mgrid.shape[0], 1)), mgrid, torch.zeros((mgrid.shape[0], 3))), 1)
-    mgrid = mgrid.to(device)
+        x_list = torch.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/log/cell/{config_file}/x_inference_list_0.pt', map_location=device, weights_only=True)
+        posnorm = torch.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/log/cell/{config_file}/posnorm.pt', map_location=device, weights_only=True)
+        bounding_box = torch.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/log/cell/{config_file}/bounding_box.pt', map_location=device, weights_only=True)
 
-    for frame in trange(0,len(x_list),2):
-
-        x = x_list[frame]
-
-        distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-        adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
-        edge_index = adj_t.nonzero().t().contiguous()
-        data_id = torch.zeros((x.shape[0], 1), dtype=torch.int)
-        dataset = data.Data(x=x, pos=x[:, 1:dimension + 1], edge_index=edge_index)
-
-        pred = model(dataset, data_id=data_id, training=False, phi=phi)
-        density = model.density.clone().detach()
-
-        distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - mgrid[None, :, 1:dimension + 1]) ** 2, dim=2)
-        adj_t = ((distance < max_radius ** 2) & (distance > 0)).float() * 1
-        edge_index_mgrid = adj_t.nonzero().t().contiguous()
-        xp = torch.cat((mgrid, x[:, 0:2 * dimension + 1]), 0)
-        edge_index_mgrid[0, :] = edge_index_mgrid[0, :] + mgrid.shape[0]
-        edge_index_mgrid, _ = pyg_utils.remove_self_loops(edge_index_mgrid)
-
-        dataset = data.Data(x=xp, pos=xp[:, 1:dimension + 1], edge_index=edge_index_mgrid)
-        data_id = torch.zeros((xp.shape[0], 1), dtype=torch.int)
-        pred_field = model(dataset, data_id=data_id, training=False, phi=phi, continuous_field=True, continuous_field_size=mgrid.shape)[0: mgrid.shape[0]]
-        density_field = model.density[0: mgrid.shape[0]]
-
-        density_field = density_field.detach().cpu().numpy()
-        velocity_field = pred_field[:,0:1].detach().cpu().numpy()
-        grid_shape = (grid_size, grid_size, int(grid_size * (bounding_box[2] / bounding_box[0])))
-        density_field = density_field.reshape(grid_shape)
-        velocity_field = velocity_field.reshape(grid_shape)
-
-        # # Create a napari viewer
-        # viewer = napari.Viewer()
-        # viewer.add_image(velocity_field, name='Density Field', colormap='viridis', contrast_limits=[0, 1])
-        # viewer.dims.ndisplay = 3
-        # viewer.camera.zoom = 12.5
-        # viewer.camera.angles = (49, 37, 10)
-
-        viewer = napari.Viewer()
-        viewer.add_image(density_field, name='Density Field', colormap='viridis', contrast_limits=[0, 75])
-        viewer.dims.ndisplay = 3
-        viewer.camera.zoom = 12.5
-        viewer.camera.angles = (113, 62, 20)
-        viewer.camera.center = (51.6, 38, 6.84)
-        screenshot = viewer.screenshot()
-        screenshot = screenshot[:, :, 0:3]
-        viewer.close()
-
-        imwrite(f"/groups/saalfeld/home/allierc/Py/ParticleGraph/log/cell/cell_gland_SMG2_smooth10_1/tmp_recons/density_field_{frame}.tiff", screenshot, photometric='rgb')
+        xz_ratio = bounding_box[2] / bounding_box[0]
+        grid_size = 80
+        gx = torch.linspace(0, bounding_box[0] * posnorm, steps=grid_size)
+        gy = torch.linspace(0, bounding_box[0] * posnorm, steps=grid_size)
+        gz = torch.linspace(0, bounding_box[2] * posnorm, steps=int(grid_size*xz_ratio))
+        gx, gy, gz = torch.meshgrid(gx, gy, gz)
+        mgrid = torch.stack([gx, gy, gz], dim=-1).reshape(-1, 3)
+        mgrid = torch.cat((torch.ones((mgrid.shape[0], 1)), mgrid, torch.zeros((mgrid.shape[0], 3))), 1)
+        mgrid = mgrid.to(device)
 
 
-        # # Start the napari event loop
-        # napari.run()
+        for frame in trange(0,len(x_list)):
+
+            x = x_list[frame]
+
+            check_and_clear_memory(device=device, iteration_number=frame, every_n_iterations=len(x_list) // 10,
+                                   memory_percentage_threshold=0.6)
+
+            # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
+            # print(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
+
+            optimizer.zero_grad()
+            distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+            adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
+            edge_index = adj_t.nonzero().t().contiguous()
+            data_id = torch.zeros((x.shape[0], 1), dtype=torch.int)
+            dataset = data.Data(x=x, pos=x[:, 1:dimension + 1], edge_index=edge_index)
+
+            pred = model(dataset, data_id=data_id, training=False, phi=phi)
+            density = model.density.clone().detach()
+
+            optimizer.zero_grad()
+            distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - mgrid[None, :, 1:dimension + 1]) ** 2, dim=2)
+            adj_t = ((distance < max_radius ** 2) & (distance > 0)).float() * 1
+            edge_index_mgrid = adj_t.nonzero().t().contiguous()
+            xp = torch.cat((mgrid, x[:, 0:2 * dimension + 1]), 0)
+            edge_index_mgrid[0, :] = edge_index_mgrid[0, :] + mgrid.shape[0]
+            edge_index_mgrid, _ = pyg_utils.remove_self_loops(edge_index_mgrid)
+
+            dataset = data.Data(x=xp, pos=xp[:, 1:dimension + 1], edge_index=edge_index_mgrid)
+            data_id = torch.zeros((xp.shape[0], 1), dtype=torch.int)
+            pred_field = model(dataset, data_id=data_id, training=False, phi=phi, continuous_field=True, continuous_field_size=mgrid.shape)[0: mgrid.shape[0]]
+            density_field = model.density[0: mgrid.shape[0]]
+
+            density_field = density_field.detach().cpu().numpy()
+            velocity_field = pred_field[:,0:1].detach().cpu().numpy()
+            grid_shape = (grid_size, grid_size, int(grid_size * (bounding_box[2] / bounding_box[0])))
+            density_field = density_field.reshape(grid_shape)
+            velocity_field = velocity_field.reshape(grid_shape)
+
+            np.save(f"/groups/saalfeld/home/allierc/Py/ParticleGraph/log/cell/{config_file}/tmp/velocity_field_{frame}.npy",velocity_field)
+            np.save(f"/groups/saalfeld/home/allierc/Py/ParticleGraph/log/cell/{config_file}/tmp/density_field_{frame}.npy",density_field)
+
+
+            fig = plt.figure(figsize=(24, 8.5))
+            ax = fig.add_subplot(1,3,1)
+            plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c='w')
+            pixel = 7020
+            plt.scatter(mgrid[pixel, 2].detach().cpu().numpy(),
+                        mgrid[pixel, 1].detach().cpu().numpy(), s=2, c='r')
+            pos = torch.argwhere(edge_index_mgrid[1, :] == pixel).squeeze()
+            if pos.numel()>0:
+                plt.scatter(xp[edge_index_mgrid[0, pos], 2].detach().cpu().numpy(), xp[edge_index_mgrid[0, pos], 1].detach().cpu().numpy(), s=1,c='b')
+            plt.xticks([])
+            plt.yticks([])
+            plt.xlim([0,800])
+            plt.ylim([0,800])
+            plt.title('nucleus positions (2D projection)', fontsize=12)
+
+            ax = fig.add_subplot(1,3,2)
+            plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c=to_numpy(density), vmin=0, vmax=30)
+            plt.xticks([])
+            plt.yticks([])
+            plt.xlim([0,800])
+            plt.ylim([0,800])
+            plt.title('density (2D projection)', fontsize=12)
+
+            ax = fig.add_subplot(1,3,3)
+            plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c=to_numpy(pred[:,0]),  vmin=0, vmax=18)
+            plt.xticks([])
+            plt.yticks([])
+            plt.xlim([0,800])
+            plt.ylim([0,800])
+            plt.title('velocity (2D projection)', fontsize=12)
+            plt.tight_layout()
+            plt.savefig(f"/groups/saalfeld/home/allierc/Py/ParticleGraph/log/cell/{config_file}/tmp_recons2D/frame_{frame}.png")
+            plt.close()
 
 
 
@@ -422,6 +445,55 @@ if __name__ == '__main__':
 
 
 
+
+
+
+
+
+
+
+
+
+
+            # velocity_field = np.load(f"/groups/saalfeld/home/allierc/Py/ParticleGraph/log/cell/{config_file}/tmp/velocity_field_{frame}.npy")
+            # density_field = np.load(f"/groups/saalfeld/home/allierc/Py/ParticleGraph/log/cell/{config_file}/tmp/density_field_{frame}.npy")
+            #
+            # # upscale_factor = 4  # Adjust the factor as needed
+            # # velocity_field = scipy.ndimage.zoom(velocity_field, upscale_factor, order=1)
+            # # density_field = scipy.ndimage.zoom(density_field, upscale_factor, order=1)
+            #
+            # viewer = napari.Viewer()
+            # viewer.add_image(velocity_field, name='Density Field', colormap='viridis', contrast_limits=[0, 1])
+            # viewer.dims.ndisplay = 3
+            # viewer.camera.zoom = 12
+            # viewer.camera.angles = (113, 62, 20)
+            # viewer.camera.center = (51.6, 38, 6.84)
+            # screenshot = viewer.screenshot()
+            # screenshot = screenshot[:, :, 0:3]
+            # viewer.close()
+            # imwrite(f"/groups/saalfeld/home/allierc/Py/ParticleGraph/log/cell/cell_gland_SMG2_smooth10_1/tmp_recons3D/velocity_field_{frame}.tiff", screenshot, photometric='rgb')
+            #
+            # viewer = napari.Viewer()
+            # viewer.add_image(density_field, name='Density Field', colormap='viridis', contrast_limits=[0, 75])
+            # viewer.dims.ndisplay = 3
+            # viewer.camera.zoom = 12
+            # viewer.camera.angles = (113, 62, 20)
+            # viewer.camera.center = (51.6, 38, 6.84)
+            # screenshot = viewer.screenshot()
+            # screenshot = screenshot[:, :, 0:3]
+            # viewer.close()
+            # imwrite(f"/groups/saalfeld/home/allierc/Py/ParticleGraph/log/cell/cell_gland_SMG2_smooth10_1/tmp_recons3D/density_field_{frame}.tiff", screenshot, photometric='rgb')
+            #
+            # napari.run()
+            #
+            #
+            #
+            #
+            #
+            #
+            #
+            #
+            #
 
 
 
@@ -452,39 +524,7 @@ if __name__ == '__main__':
         # fig.show()
         # pio.write_image(fig, '3d_density_field.png')
 
-        #
-        # fig = plt.figure(figsize=(24, 12))
-        # ax = fig.add_subplot(2,4,1)
-        # plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c='w')
-        # pixel = 7020
-        # plt.scatter(mgrid[pixel, 2].detach().cpu().numpy(),
-        #             mgrid[pixel, 1].detach().cpu().numpy(), s=2, c='r')
-        # pos = torch.argwhere(edge_index_mgrid[1, :] == pixel).squeeze()
-        # if pos.numel()>0:
-        #     plt.scatter(xp[edge_index_mgrid[0, pos], 2].detach().cpu().numpy(), xp[edge_index_mgrid[0, pos], 1].detach().cpu().numpy(), s=1,c='b')
-        # plt.xticks([])
-        # plt.yticks([])
-        # plt.title('pos', fontsize=12)
-        #
-        # ax = fig.add_subplot(2,4,2)
-        # plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c=to_numpy(density), vmin=0, vmax=30)
-        # plt.xticks([])
-        # plt.yticks([])
-        # plt.title('density discrete', fontsize=12)
-        #
-        # ax = fig.add_subplot(2,4,3)
-        # plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c=to_numpy(pred[:,0]),  vmin=0, vmax=5E-1)
-        # plt.xticks([])
-        # plt.yticks([])
-        # plt.title('velocity discrete', fontsize=12)
-        #
-        # ax = fig.add_subplot(2,4,5)
-        # plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=10, c=to_numpy(density_field), vmin=0, vmax=10, alpha=0.1)
-        # plt.xticks([])
-        # plt.yticks([])
-        # plt.title('density_field', fontsize=8)
-        #
-        # plt.close()
+
 
 
 
