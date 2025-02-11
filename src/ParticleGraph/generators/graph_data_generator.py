@@ -1950,6 +1950,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         # print(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
 
 
+
 def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2,
                            ratio=1, scenario='none', device=None, bSave=True):
 

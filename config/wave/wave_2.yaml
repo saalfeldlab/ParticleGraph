@@ -15,8 +15,8 @@ simulation:
   delta_t: 0.125
   dpos_init: 0
   boundary: 'periodic'
-  node_value_map: 'pattern_10.tif'
-  node_coeff_map: 'pattern_25.tif'
+  node_value_map: 'input_data/pattern_10.tif'
+  node_coeff_map: 'input_data/pattern_25.tif'
 
   start_frame: 0
 
