@@ -2267,13 +2267,17 @@ def data_train_synaptic2(config, erase, best_model, device):
     model.train()
 
     if has_field:
-
         if 'PDE_N6' in model_config.signal_model_name:
-            model_f = SirenCollection(n_nodes = n_nodes, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.n_layers_nnr,
-                                      hidden_layers=model_config.n_layers_nnr, first_omega_0=omega, hidden_omega_0=omega, outermost_linear=True)
+            # model_f = SirenCollection(n_nodes = n_nodes, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.n_layers_nnr,
+            #                           hidden_layers=model_config.n_layers_nnr, first_omega_0=omega, hidden_omega_0=omega, outermost_linear=True)
+
+            model_f = Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.n_layers_nnr,
+                                       hidden_layers=model_config.n_layers_nnr, first_omega_0=omega, hidden_omega_0=omega, outermost_linear=True)
+
             modulation = torch.tensor(x_list[1], device=device)
             modulation = modulation[:, :, 8:9].squeeze()
             modulation = modulation.t()
+
         else:
             model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
                                     out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
@@ -2395,8 +2399,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                     if 'PDE_N6' in model_config.signal_model_name:
                         t = torch.zeros((1,1,1), dtype=torch.float32, device=device)
                         t[:,0,:] = torch.tensor(k / n_frames, dtype=torch.float32, device=device)
-                        for nn in range(n_nodes):
-                            x[nn, 8:9] = model_f(t, nn) ** 2
+                        x[:, 8] = model_f(t) ** 2
                     elif 'visual' in field_type:
                         x[:n_nodes, 8:9] = model_f(time=k / n_frames) ** 2
                         x[n_nodes:n_particles, 8:9] = 1
@@ -2452,15 +2455,27 @@ def data_train_synaptic2(config, erase, best_model, device):
                 if (has_field):
                     if 'PDE_N6' in model_config.signal_model_name:
                         fig = plt.figure(figsize=(12, 12))
-                        t = torch.arange(0, n_frames + 1, (n_frames + 1) // 1000, dtype=torch.float32,device=device) / n_frames
+                        t = torch.arange(0, n_frames + 1, (n_frames + 1) // 100, dtype=torch.float32,device=device) / n_frames
                         t = t[None, :, None]
-                        tmp = model_f(t, 200)
-                        plt.plot(to_numpy(tmp.squeeze()),c='k')
-                        tmp = modulation[200,to_numpy(t.squeeze())]
-                        plt.plot(to_numpy(tmp.squeeze()), c='g')
+                        tmp = model_f(t).squeeze().t()
+                        ax=fig.add_subplot(2,2,1)
+                        plt.imshow(to_numpy(tmp[0:100,:]), cmap='viridis')
+                        plt.colorbar
                         plt.xticks([])
                         plt.yticks([])
+                        ax=fig.add_subplot(2,2,2)
+                        plt.plot(to_numpy(tmp[200,:]),c='k')
+                        plt.xticks([])
+                        ax = fig.add_subplot(2, 2, 3)
+                        t = torch.arange(0, n_frames + 1, (n_frames + 1) // 100, dtype=torch.float32,device=device)
+                        plt.imshow(to_numpy(modulation[0:100,to_numpy(t)]), cmap='viridis')
+                        plt.autoscale(True)
+                        plt.xticks([])
+                        plt.yticks([])
+                        ax = fig.add_subplot(2, 2, 4)
+                        plt.plot(to_numpy(modulation[200,to_numpy(t)]),c='k')
                         plt.tight_layout()
+                        plt.xticks([])
                         plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
                         plt.close()
                     else:

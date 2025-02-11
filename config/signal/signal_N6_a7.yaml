@@ -39,10 +39,10 @@ graph_model:
     update_type: 'none'
 
     input_size_nnr: 1
-    n_layers_nnr: 5
-    hidden_dim_nnr: 64
+    n_layers_nnr: 16
+    hidden_dim_nnr: 256
     output_size_nnr: 1024
-    omega: 30
+    omega: 80
 
 
 plotting:
