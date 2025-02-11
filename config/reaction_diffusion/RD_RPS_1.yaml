@@ -14,9 +14,8 @@ simulation:
   n_frames: 4000
   delta_t: 0.05
   boundary: 'periodic'
-  node_value_map: 'pattern_10.tif'
-  node_coeff_map: 'pics_quadrants.tif'
-  beta: 1
+  node_value_map: 'input_data/pattern_10.tif'
+  node_coeff_map: 'input_data/pics_quadrants.tif'
 
 graph_model:
   field_grid: 'voronoi'

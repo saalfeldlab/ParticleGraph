@@ -1365,7 +1365,7 @@ def data_train_mesh(config, erase, best_model, device):
         if (batch_size == 1):
             Niter = Niter // 4
 
-        for N in range(Niter):
+        for N in trange(Niter):
 
             run = 1 + np.random.randint(n_runs - 1)
 
@@ -3476,6 +3476,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             geomloss_list.append(geomloss.item())
         rmserr_list.append(rmserr.item())
 
+        data_id = torch.ones((n_particles, 1), dtype=torch.int) * run
+
         # update calculations
         if model_config.mesh_model_name == 'DiffMesh':
             with torch.no_grad():
@@ -3483,12 +3485,12 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             x[:, 6:7] += pred * hnorm * delta_t
         elif model_config.mesh_model_name == 'WaveMesh':
             with torch.no_grad():
-                pred = mesh_model(dataset_mesh, data_id=1)
+                pred = mesh_model(dataset_mesh, data_id=data_id)
             x[mask_mesh.squeeze(), 7:8] += pred[mask_mesh.squeeze()] * hnorm * delta_t
             x[mask_mesh.squeeze(), 6:7] += x[mask_mesh.squeeze(), 7:8] * delta_t
         elif 'RD_RPS_Mesh' in model_config.mesh_model_name == 'RD_RPS_Mesh':
             with torch.no_grad():
-                pred = mesh_model(dataset_mesh, data_id=1)
+                pred = mesh_model(dataset_mesh, data_id=data_id)
                 x[mask_mesh.squeeze(), 6:9] += pred[mask_mesh.squeeze()] * hnorm * delta_t
                 x[mask_mesh.squeeze(), 6:9] = torch.clamp(x[mask_mesh.squeeze(), 6:9], 0, 1)
         elif has_field:
@@ -3533,8 +3535,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
             x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t)
         else:
-
-            data_id = torch.ones((n_particles, 1), dtype=torch.int) * run
 
             if has_ghost:
                 x_ = x
