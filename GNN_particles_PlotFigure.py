@@ -4765,8 +4765,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
                 fig, ax = fig_init()
                 gt_weight = to_numpy(adjacency)
-                pred_weight = to_numpy(A)
-                plt.scatter(gt_weight, pred_weight / 10 , s=0.1, c=mc, alpha=0.1)
+                pred_weight = to_numpy(A) / second_correction
+                plt.scatter(gt_weight, pred_weight, s=0.1, c=mc, alpha=0.1)
                 plt.xlabel(r'true $W_{ij}$', fontsize=78)
                 plt.ylabel(r'learned $W_{ij}$', fontsize=78)
                 if n_particles == 8000:
@@ -5300,7 +5300,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 ss_res = np.sum(residuals ** 2)
                 ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
                 r_squared = 1 - (ss_res / ss_tot)
-                print(f'R^2$: {r_squared:0.4f}  slope: {np.round(lin_fit[0], 4)}')
+                print(f'field R^2$: {r_squared:0.4f}  slope: {np.round(lin_fit[0], 4)}')
 
 
             if False:
@@ -7195,8 +7195,7 @@ if __name__ == '__main__':
     # config_list = ['signal_N3_c4']
     # config_list = ['signal_N2_a20','signal_N2_a21','signal_N2_a22','signal_N2_a23','signal_N2_a24','signal_N2_a25','signal_N2_a26']
     # config_list = ['signal_N4_v']
-    # config_list = ['signal_N3_c16']
-    config_list = ['cell_gland_SMG2_smooth10_8','cell_gland_SMG2_smooth10_9','cell_gland_SMG2_smooth10_10','cell_gland_SMG2_smooth10_5','cell_gland_SMG2_smooth10_6','cell_gland_SMG2_smooth10_7']
+    config_list = ['signal_N4_m2_shuffle', 'signal_N4_m3_shuffle', 'signal_N4_v1_shuffle']
 
     for config_file_ in config_list:
         
@@ -7205,7 +7204,7 @@ if __name__ == '__main__':
         config.dataset = pre_folder + config.dataset
         config.config_file = pre_folder + config_file_
 
-        # data_plot(config=config, epoch_list=['best'], style='latex color', device=device)
+        data_plot(config=config, epoch_list=['best'], style='latex color', device=device)
         data_plot(config=config, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['time'], style='black color', device=device)
 
