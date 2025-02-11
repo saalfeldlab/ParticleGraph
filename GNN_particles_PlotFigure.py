@@ -5780,8 +5780,6 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
             # plt.savefig(f"./{log_dir}/results/all/MLP0_{epoch}.tif", dpi=80)
             # plt.close()
 
-
-
     else:
 
         fig_init(formatx='%.0f', formaty='%.0f')

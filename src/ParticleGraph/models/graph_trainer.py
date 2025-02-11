@@ -2271,6 +2271,9 @@ def data_train_synaptic2(config, erase, best_model, device):
         if 'PDE_N6' in model_config.signal_model_name:
             model_f = SirenCollection(n_nodes = n_nodes, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.n_layers_nnr,
                                       hidden_layers=model_config.n_layers_nnr, first_omega_0=omega, hidden_omega_0=omega, outermost_linear=True)
+            modulation = torch.tensor(x_list[1], device=device)
+            modulation = modulation[:, :, 8:9].squeeze()
+            modulation = modulation.t()
         else:
             model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
                                     out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
@@ -2388,12 +2391,12 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                 loss += model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + coeff_diff * diff
 
-
                 if has_field:
                     if 'PDE_N6' in model_config.signal_model_name:
+                        t = torch.zeros((1,1,1), dtype=torch.float32, device=device)
+                        t[:,0,:] = torch.tensor(k / n_frames, dtype=torch.float32, device=device)
                         for nn in range(n_nodes):
-                            time = torch.tensor(k / n_frames, dtype=torch.float32, device=device)
-                            x[nn, 8:9] = model_f(k / n_frames, nn) ** 2
+                            x[nn, 8:9] = model_f(t, nn) ** 2
                     elif 'visual' in field_type:
                         x[:n_nodes, 8:9] = model_f(time=k / n_frames) ** 2
                         x[n_nodes:n_particles, 8:9] = 1
@@ -2437,7 +2440,6 @@ def data_train_synaptic2(config, erase, best_model, device):
             optimizer.step()
             if has_field:
                 optimizer_f.step()
-
             total_loss += loss.item()
 
             visualize_embedding = True
@@ -2448,19 +2450,33 @@ def data_train_synaptic2(config, erase, best_model, device):
                 torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
                            os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
                 if (has_field):
-                    if 'visual' in field_type:
-                        tmp = torch.reshape(x[:n_nodes, 8:9], (n_nodes_per_axis, n_nodes_per_axis))
+                    if 'PDE_N6' in model_config.signal_model_name:
+                        fig = plt.figure(figsize=(12, 12))
+                        t = torch.arange(0, n_frames + 1, (n_frames + 1) // 1000, dtype=torch.float32,device=device) / n_frames
+                        t = t[None, :, None]
+                        tmp = model_f(t, 200)
+                        plt.plot(to_numpy(tmp.squeeze()),c='k')
+                        tmp = modulation[200,to_numpy(t.squeeze())]
+                        plt.plot(to_numpy(tmp.squeeze()), c='g')
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+                        plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
+                        plt.close()
                     else:
-                        tmp = torch.reshape(x[:, 8:9], (n_nodes_per_axis, n_nodes_per_axis))
-                    tmp = to_numpy(torch.sqrt(tmp))
-                    tmp = np.rot90(tmp, k=1)
-                    fig = plt.figure(figsize=(12, 12))
-                    plt.imshow(tmp, cmap='grey')
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
-                    plt.close()
+                        if 'visual' in field_type:
+                            tmp = torch.reshape(x[:n_nodes, 8:9], (n_nodes_per_axis, n_nodes_per_axis))
+                        else:
+                            tmp = torch.reshape(x[:, 8:9], (n_nodes_per_axis, n_nodes_per_axis))
+                        tmp = to_numpy(torch.sqrt(tmp))
+                        tmp = np.rot90(tmp, k=1)
+                        fig = plt.figure(figsize=(12, 12))
+                        plt.imshow(tmp, cmap='grey')
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+                        plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
+                        plt.close()
                     torch.save({'model_state_dict': model_f.state_dict(),
                                 'optimizer_state_dict': optimizer_f.state_dict()},
                                os.path.join(log_dir, 'models', f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
