@@ -76,7 +76,7 @@ class Siren(nn.Module):
         self.net = nn.Sequential(*self.net)
 
     def forward(self, coords):
-        coords = coords.clone().detach().requires_grad_(True)  # allows to take derivative w.r.t. input
+        # coords = coords.clone().detach().requires_grad_(True)  # allows to take derivative w.r.t. input
         output = self.net(coords)
         return output, coords
 
@@ -201,6 +201,20 @@ class Siren_Network(nn.Module):
         output = self.net(coords)
         return output
 
+class SirenCollection(nn.Module):
+    def __init__(self, n_nodes, in_features, hidden_features, hidden_layers, out_features, outermost_linear=False, first_omega_0=30, hidden_omega_0=30.):
+        super(SirenCollection, self).__init__()
+
+        self.sirens = nn.ModuleList([Siren(in_features=in_features, hidden_features=hidden_features, hidden_layers=hidden_layers, out_features=out_features, outermost_linear=outermost_linear, first_omega_0=first_omega_0, hidden_omega_0=hidden_omega_0) for _ in range(n_nodes)])
+        # self.sirens = nn.ModuleList([Siren(in_features=in_features, hidden_features=hidden_features, hidden_layers=hidden_layers-1, out_features=hidden_features, outermost_linear=False, first_omega_0=first_omega_0, hidden_omega_0=hidden_omega_0) for _ in range(100)])
+        # self.common = Siren(in_features=hidden_features, hidden_features=hidden_features, hidden_layers=1, out_features=out_features, outermost_linear=True, first_omega_0=first_omega_0, hidden_omega_0=hidden_omega_0)
+
+    def forward(self, x, n):
+        outputs = self.sirens[n](x)
+        # outputs = self.common(outputs)
+        return outputs
+
+
 def get_mgrid(sidelen, dim=2):
     '''Generates a flattened grid of (x,y,...) coordinates in a range of -1 to 1.
     sidelen: int
@@ -209,7 +223,6 @@ def get_mgrid(sidelen, dim=2):
     mgrid = torch.stack(torch.meshgrid(*tensors), dim=-1)
     mgrid = mgrid.reshape(-1, dim)
     return mgrid
-
 
 
 def laplace(y, x):

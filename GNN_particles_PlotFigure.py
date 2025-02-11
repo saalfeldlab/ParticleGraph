@@ -694,7 +694,7 @@ def plot_focused_on_cell(config, run, style, step, cell_id, device):
                     plt.yticks(fontsize=48.0)
 
                 elif 'frame' in style:
-                    plt.xlabel('x', fontsize=13)
+                    plt.xlabel(r'x_i', fontsize=13)
                     plt.ylabel('y', fontsize=16)
                     plt.xticks(fontsize=16.0)
                     plt.yticks(fontsize=16.0)
@@ -905,7 +905,7 @@ def plot_generated(config, run, style, step, device):
                     plt.xticks(fontsize=48.0)
                     plt.yticks(fontsize=48.0)
                 elif 'frame' in style:
-                    plt.xlabel('x', fontsize=13)
+                    plt.xlabel(r'x_i', fontsize=13)
                     plt.ylabel('y', fontsize=16)
                     plt.xticks(fontsize=16.0)
                     plt.yticks(fontsize=16.0)
@@ -953,7 +953,7 @@ def plot_generated(config, run, style, step, device):
                     plt.xticks(fontsize=48.0)
                     plt.yticks(fontsize=48.0)
                 elif 'frame' in style:
-                    plt.xlabel('x', fontsize=13)
+                    plt.xlabel(r'x_i', fontsize=13)
                     plt.ylabel('y', fontsize=16)
                     plt.xticks(fontsize=16.0)
                     plt.yticks(fontsize=16.0)
@@ -4633,8 +4633,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     state_dict = torch.load(net, map_location=device)
                     model_f.load_state_dict(state_dict['model_state_dict'])
 
-                # plt.style.use('dark_background')
-
                 amax = torch.max(model.a, dim=0).values
                 amin = torch.min(model.a, dim=0).values
                 model_a = (model.a - amin) / (amax - amin)
@@ -4693,8 +4691,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                                 in_features = torch.cat((rr[:, None], embedding0, embedding1), dim=1)
                                 func = model.lin_edge(in_features.float()) * correction
                                 plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(k), linewidth=8, alpha=0.25)
-                        # plt.xlabel('x', fontsize=78)
-                        # plt.ylabel(r'learned $MLP_1(x)$', fontsize=78)
+                        # plt.xlabel(r'x_i', fontsize=78)
+                        # plt.ylabel(r'learned $MLP_1(x_i)$', fontsize=78)
                         plt.ylim([-1.6, 1.6])
                         plt.xlim([-5, 5])
                     plt.tight_layout()
@@ -4712,8 +4710,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                             in_features = torch.cat((rr[:, None], embedding0), dim=1)
                             func = model.lin_edge(in_features.float()) * correction
                             plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(k), linewidth=8, alpha=0.25)
-                    plt.xlabel('x', fontsize=78)
-                    plt.ylabel(r'learned $MLP_1(x)$', fontsize=78)
+                    plt.xlabel(r'x_i', fontsize=78)
+                    plt.ylabel(r'learned $MLP_1(x_i)$', fontsize=68)
                     plt.ylim([-1.6, 1.6])
                     plt.xlim([-5,5])
                     plt.tight_layout()
@@ -4727,7 +4725,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     plt.plot(to_numpy(rr), to_numpy(func), color=mc, linewidth=8, label=r'learned')
                     plt.xlabel(r'$x_i$', fontsize=78)
                     # plt.ylabel(r'learned $\psi^*(a_i, x_i)$', fontsize=78)
-                    plt.ylabel(r'learned $MLP_1(a_i, x_i)$', fontsize=78)
+                    plt.ylabel(r'learned $MLP_1(a_i, x_i)$', fontsize=68)
                     plt.ylim([-1.5, 1.5])
                     plt.xlim([-5,5])
                     plt.tight_layout()
@@ -5519,8 +5517,6 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                     state_dict = torch.load(net, map_location=device)
                     model_f.load_state_dict(state_dict['model_state_dict'])
 
-                # plt.style.use('dark_background')
-
                 amax = torch.max(model.a, dim=0).values
                 amin = torch.min(model.a, dim=0).values
                 model_a = (model.a - amin) / (amax - amin)
@@ -5538,8 +5534,8 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                 else:
                     plt.xlabel(r'$a_{i0}(t)$', fontsize=78)
                     plt.ylabel(r'$a_{i1}(t)$', fontsize=78)
-                plt.xlim([0.94, 1.06])
-                plt.ylim([0.94, 1.18])
+                plt.xlim([0.94, 1.08])
+                plt.ylim([0.9, 1.10])
                 # plt.xlim([0.7, 1.2])
                 # plt.ylim([0.7, 1.2])
                 plt.tight_layout()
@@ -5558,8 +5554,8 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                 else:
                     plt.xlabel(r'$a_{i0}(t)$', fontsize=78)
                     plt.ylabel(r'$a_{i1}(t)$', fontsize=78)
-                plt.xlim([0.94, 1.06])
-                plt.ylim([0.94, 1.18])
+                plt.xlim([0.94, 1.08])
+                plt.ylim([0.9, 1.10])
                 # plt.xlim([0.7, 1.2])
                 # plt.ylim([0.7, 1.2])
                 plt.tight_layout()
@@ -5610,12 +5606,12 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                     # plt.plot(to_numpy(rr), to_numpy(true_func), c=mc, linewidth=1)
                     # true_func = true_model.func(rr, it + 1, 'update')
                     # plt.plot(to_numpy(rr), to_numpy(true_func), c=mc, linewidth=1)
-                    plt.xlabel(r'$x_i$', fontsize=16)
-                    # plt.ylabel(r'Learned $\phi^*(a_i(t), x_i)$', fontsize=78)
-                    plt.ylabel(r'Learned $MLP_0(a_i(t), x_i)$', fontsize=16)
-                    plt.ylim([-8, 8])
-                    plt.xlim([-5, 5])
-                    plt.tight_layout()
+                plt.xlabel(r'$x_i$', fontsize=16)
+                # plt.ylabel(r'Learned $\phi^*(a_i(t), x_i)$', fontsize=78)
+                plt.ylabel(r'Learned $MLP_0(a_i(t), x_i)$', fontsize=14)
+                plt.ylim([-8, 8])
+                plt.xlim([-5, 5])
+                plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/all/MLP0_{epoch}.tif", dpi=80)
                 plt.close()
 
@@ -7182,10 +7178,10 @@ if __name__ == '__main__':
     print(f'device {device}')
     print(' ')
 
-    # try:
-    #     matplotlib.use("Qt5Agg")
-    # except:
-    #     pass
+    try:
+        matplotlib.use("Qt5Agg")
+    except:
+        pass
 
     # f_list = ['synaptic_supp6']
     # for f in f_list:
@@ -7196,7 +7192,7 @@ if __name__ == '__main__':
     # config_list = ['signal_N3_c4']
     # config_list = ['signal_N2_a20','signal_N2_a21','signal_N2_a22','signal_N2_a23','signal_N2_a24','signal_N2_a25','signal_N2_a26']
     # config_list = ['signal_N4_v']
-    config_list = ['signal_N3_c16']
+    config_list = ['signal_N6_a3']
 
     for config_file_ in config_list:
         
@@ -7205,7 +7201,7 @@ if __name__ == '__main__':
         config.dataset = pre_folder + config.dataset
         config.config_file = pre_folder + config_file_
 
-        data_plot(config=config, epoch_list=['best'], style='latex color', device=device)
+        # data_plot(config=config, epoch_list=['best'], style='latex color', device=device)
         data_plot(config=config, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['time'], style='black color', device=device)
 

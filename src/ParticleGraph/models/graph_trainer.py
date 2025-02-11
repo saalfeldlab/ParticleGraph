@@ -2267,10 +2267,16 @@ def data_train_synaptic2(config, erase, best_model, device):
     model.train()
 
     if has_field:
-        model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
-                                out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
-                                hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device,
-                                first_omega_0=omega, hidden_omega_0=omega)
+
+        if 'PDE_N6' in model_config.signal_model_name:
+            model_f = SirenCollection(n_nodes = n_nodes, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.n_layers_nnr,
+                                      hidden_layers=model_config.n_layers_nnr, first_omega_0=omega, hidden_omega_0=omega, outermost_linear=True)
+        else:
+            model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
+                                    out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
+                                    hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device,
+                                    first_omega_0=omega, hidden_omega_0=omega)
+
         model_f.to(device=device)
         optimizer_f = torch.optim.Adam(lr=train_config.learning_rate_NNR, params=model_f.parameters())
         model_f.train()
@@ -2304,7 +2310,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         if simulation_config.connectivity_filling_factor > 0:
             supp = (torch.rand(adjacency.shape, device=device) < simulation_config.connectivity_filling_factor) * 1.0
             model.mask = torch.max(model.mask, supp)
-    if ('PDE_N3' in model_config.signal_model_name):
+    if 'PDE_N3' in model_config.signal_model_name:
         ind_a = torch.tensor(np.arange(1, n_particles*100), device=device)
         pos = torch.argwhere(ind_a % 100 != 99).squeeze()
         ind_a = ind_a[pos]
@@ -2384,7 +2390,11 @@ def data_train_synaptic2(config, erase, best_model, device):
 
 
                 if has_field:
-                    if 'visual' in field_type:
+                    if 'PDE_N6' in model_config.signal_model_name:
+                        for nn in range(n_nodes):
+                            time = torch.tensor(k / n_frames, dtype=torch.float32, device=device)
+                            x[nn, 8:9] = model_f(k / n_frames, nn) ** 2
+                    elif 'visual' in field_type:
                         x[:n_nodes, 8:9] = model_f(time=k / n_frames) ** 2
                         x[n_nodes:n_particles, 8:9] = 1
                     else:

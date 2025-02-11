@@ -283,7 +283,7 @@ if __name__ == '__main__':
         for epoch in trange(100000):
 
             k = np.random.randint(0,10)
-            time = np.random.randint(0,1000,10).astype(int)
+            time = np.random.randint(0,1000,100).astype(int)
 
             optimizer.zero_grad()
             pred = model(t[:,time,:],k)[0]
@@ -294,8 +294,8 @@ if __name__ == '__main__':
             if (epoch+1)%2500==0:
                 pred = model(t,k)[0]
                 fig = plt.figure()
-                plt.plot(to_numpy(t.squeeze()), to_numpy(y_list[k].squeeze()), linewidth=2)
-                plt.plot(to_numpy(t.squeeze()), to_numpy(pred.squeeze()), linewidth=2)
+                plt.plot(to_numpy(t.squeeze()), to_numpy(y_list[k].squeeze()), linewidth=1)
+                plt.plot(to_numpy(t.squeeze()), to_numpy(pred.squeeze()), linewidth=1)
                 plt.tight_layout()
                 plt.savefig(f'./tmp/siren_{epoch+1}.png')
                 plt.close()
