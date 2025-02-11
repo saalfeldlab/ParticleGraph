@@ -55,7 +55,7 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        task = 'test'
+        task = 'train'
         best_model = None
         # config_list = ['cell_gland_SMG2_smooth10_1','cell_gland_SMG2_smooth10_9','cell_gland_SMG2_smooth10_10','cell_gland_SMG2_smooth10_5','cell_gland_SMG2_smooth10_6','cell_gland_SMG2_smooth10_7']
         # config_list = ['falling_water_ramp_x6_11']
@@ -76,12 +76,12 @@ if __name__ == '__main__':
         print(f'folder  {config.dataset}')
 
         if 'generate' in task:
-            data_generate(config, device=device, visualize=True, run_vizualized=0, style='black color', alpha=1, erase=False, bSave=True, step=10)  #config.simulation.n_frames // 100)
+            data_generate(config, device=device, visualize=True, run_vizualized=1, style='black color', alpha=1, erase=False, bSave=True, step=40)  #config.simulation.n_frames // 100)
         if 'train' in task:
             data_train(config=config, erase=False, best_model=best_model, device=device)
         if 'test' in task:
-            data_test(config=config, visualize=True, style='black zoom color', verbose=False, best_model='best', run=0, test_mode='inference',
-                      sample_embedding=False, step=1, particle_of_interest=10, device=device)
+            data_test(config=config, visualize=True, style='black zoom color', verbose=False, best_model='best', run=1, test_mode='inference',
+                      sample_embedding=False, step=10, particle_of_interest=10, device=device)
         if 'try_func' in task:
             try_func(max_radius=config.simulation.max_radius, device=device)
 
