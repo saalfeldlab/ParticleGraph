@@ -350,10 +350,6 @@ if __name__ == '__main__':
         y_mesh = torch.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/graphs_{dataset_name}/y_mesh_list_0.pt', map_location=device, weights_only=True)
         y_mesh_list.append(y_mesh)
 
-    matplotlib.use("Qt5Agg")
-
-
-
     for epoch in range(0, 5000):
         if mode == 'gaussian':
 
@@ -361,10 +357,9 @@ if __name__ == '__main__':
 
             for batch in range(batch_size):
 
-
                 x = x0.clone().detach() + 0.05 * torch.randn_like(x0)
                 # x = x[torch.randperm(x.size(0))[:int(0.5 * x.size(0))]] # removal of 10%
-                u, grad_u, laplace_u = arbitrary_gaussian_grad_laplace(mgrid = x[:,1:3], n_gaussian = 5, device=device)
+                u, grad_u, laplace_u = arbitrary_gaussian_grad_laplace(mgrid=x[:, 1:3], n_gaussian=5, device=device)
                 L_u = laplace_u.clone().detach()
                 x[:, 6:7] = u[:, None].clone().detach()
 
@@ -379,10 +374,10 @@ if __name__ == '__main__':
                 dataset_batch.append(dataset)
 
                 if batch == 0:
-                    data_id = torch.ones((x.shape[0],1), dtype=torch.int)
+                    data_id = torch.ones((x.shape[0], 1), dtype=torch.int)
                     y_batch = L_u
                 else:
-                    data_id = torch.cat((data_id, torch.ones((x.shape[0],1), dtype=torch.int)), dim = 0)
+                    data_id = torch.cat((data_id, torch.ones((x.shape[0], 1), dtype=torch.int)), dim=0)
                     y_batch = torch.cat((y_batch, L_u), dim=0)
 
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
@@ -402,8 +397,7 @@ if __name__ == '__main__':
 
             print(epoch, loss)
 
-            if epoch%10==0:
-
+            if epoch % 10 == 0:
                 pred = pred[-x.shape[0]:]
 
                 fig = plt.figure(figsize=(16, 6))
@@ -413,27 +407,27 @@ if __name__ == '__main__':
                 plt.scatter(to_numpy(x[edge_index[1, pos], 1]), to_numpy(x[edge_index[1, pos], 2]), s=10, c='r')
                 ax.invert_yaxis()
                 plt.title('density')
-                plt.xlim([-0.1,1.1])
-                plt.ylim([-0.1,1.1])
+                plt.xlim([-0.1, 1.1])
+                plt.ylim([-0.1, 1.1])
                 ax = fig.add_subplot(242)
                 plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(u))
                 ax.invert_yaxis()
-                plt.xlim([-0.1,1.1])
-                plt.ylim([-0.1,1.1])
+                plt.xlim([-0.1, 1.1])
+                plt.ylim([-0.1, 1.1])
                 plt.title('u')
                 ax = fig.add_subplot(243)
                 # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u[:,0]))
                 plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(L_u), vmin=-200, vmax=10)
-                plt.xlim([-0.1,1.1])
-                plt.ylim([-0.1,1.1])
+                plt.xlim([-0.1, 1.1])
+                plt.ylim([-0.1, 1.1])
                 plt.colorbar()
                 ax.invert_yaxis()
                 plt.title('true L_u')
                 ax = fig.add_subplot(244)
                 # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
                 plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(pred), vmin=-200, vmax=10)
-                plt.xlim([-0.1,1.1])
-                plt.ylim([-0.1,1.1])
+                plt.xlim([-0.1, 1.1])
+                plt.ylim([-0.1, 1.1])
                 plt.colorbar()
                 ax.invert_yaxis()
                 plt.title('pred L_u')
@@ -441,14 +435,14 @@ if __name__ == '__main__':
                 indices = torch.randperm(x.shape[0])[:1000]
                 plt.scatter(to_numpy(model.delta_pos[indices, 0]), to_numpy(model.delta_pos[indices, 1]), s=50,
                             c=to_numpy(model.modulation[indices]))
-                plt.xlim([-max_radius,max_radius])
-                plt.ylim([-max_radius,max_radius])
+                plt.xlim([-max_radius, max_radius])
+                plt.ylim([-max_radius, max_radius])
                 plt.colorbar()
                 ax = fig.add_subplot(246)
                 plt.scatter(to_numpy(model.delta_pos[indices, 0]), to_numpy(model.delta_pos[indices, 1]), s=50,
                             c=to_numpy(model.kernel_operators[indices, 3:4]))
-                plt.xlim([-max_radius,max_radius])
-                plt.ylim([-max_radius,max_radius])
+                plt.xlim([-max_radius, max_radius])
+                plt.ylim([-max_radius, max_radius])
                 plt.colorbar()
                 plt.tight_layout()
                 # plt.show()
@@ -497,12 +491,11 @@ if __name__ == '__main__':
                 dataset_batch.append(dataset)
 
                 if batch == 0:
-                    data_id = torch.ones((x.shape[0],1), dtype=torch.int)
+                    data_id = torch.ones((x.shape[0], 1), dtype=torch.int)
                     y_batch = L_u
                 else:
-                    data_id = torch.cat((data_id, torch.ones((x.shape[0],1), dtype=torch.int)), dim = 0)
+                    data_id = torch.cat((data_id, torch.ones((x.shape[0], 1), dtype=torch.int)), dim=0)
                     y_batch = torch.cat((y_batch, L_u), dim=0)
-
 
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
@@ -515,29 +508,27 @@ if __name__ == '__main__':
             loss.backward()
             optimizer.step()
 
-
             print(epoch, loss)
 
-            if epoch%10==0:
-
+            if epoch % 10 == 0:
                 pred = pred[-x.shape[0]:]
 
                 fig = plt.figure(figsize=(24, 12.4))
                 ax = fig.add_subplot(241)
                 plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=0.5, c='w')
-                pos = torch.argwhere(edge_index[0,:]==5050)
-                plt.scatter(to_numpy(x[edge_index[1,pos], 1]), to_numpy(x[edge_index[1,pos], 2]), s=4, c='r')
+                pos = torch.argwhere(edge_index[0, :] == 5050)
+                plt.scatter(to_numpy(x[edge_index[1, pos], 1]), to_numpy(x[edge_index[1, pos], 2]), s=4, c='r')
                 ax.invert_yaxis()
                 # plt.colorbar()
                 plt.title('nodes', fontsize=16)
                 ax = fig.add_subplot(245)
                 plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=50, c='w')
-                pos = torch.argwhere(edge_index[0,:]==5050)
-                plt.scatter(to_numpy(x[edge_index[1,pos], 1]), to_numpy(x[edge_index[1,pos], 2]), s=50, c='r')
-                cx = to_numpy(x[edge_index[0,pos[0]], 1])
+                pos = torch.argwhere(edge_index[0, :] == 5050)
+                plt.scatter(to_numpy(x[edge_index[1, pos], 1]), to_numpy(x[edge_index[1, pos], 2]), s=50, c='r')
+                cx = to_numpy(x[edge_index[0, pos[0]], 1])
                 cy = to_numpy(x[edge_index[0, pos[0]], 2])
-                plt.xlim([cx-2*max_radius,cx+2*max_radius])
-                plt.ylim([cy-2*max_radius,cy+2*max_radius])
+                plt.xlim([cx - 2 * max_radius, cx + 2 * max_radius])
+                plt.ylim([cy - 2 * max_radius, cy + 2 * max_radius])
                 ax.invert_yaxis()
                 # plt.colorbar()
                 plt.title('nodes', fontsize=16)
@@ -563,15 +554,15 @@ if __name__ == '__main__':
                 indices = torch.randperm(x.shape[0])[:1000]
                 plt.scatter(to_numpy(model.delta_pos[indices, 0]), to_numpy(model.delta_pos[indices, 1]), s=10,
                             c=to_numpy(model.modulation[indices]))
-                plt.xlim([-max_radius,max_radius])
-                plt.ylim([-max_radius,max_radius])
+                plt.xlim([-max_radius, max_radius])
+                plt.ylim([-max_radius, max_radius])
                 # plt.colorbar()
                 plt.title('NNR modulation', fontsize=16)
                 ax = fig.add_subplot(247)
                 plt.scatter(to_numpy(model.delta_pos[indices, 0]), to_numpy(model.delta_pos[indices, 1]), s=10,
                             c=to_numpy(model.kernel_operators[indices, 3:4]))
-                plt.xlim([-max_radius,max_radius])
-                plt.ylim([-max_radius,max_radius])
+                plt.xlim([-max_radius, max_radius])
+                plt.ylim([-max_radius, max_radius])
                 # plt.colorbar()
                 plt.title('learned kernel operator', fontsize=16)
                 ax = fig.add_subplot(248)
@@ -579,8 +570,8 @@ if __name__ == '__main__':
                 plt.scatter(to_numpy(L_u), to_numpy(pred), s=1, c='w', alpha=0.5)
                 plt.xlabel('true Laplacian(u)', fontsize=16)
                 plt.ylabel('learned Laplacian(u)', fontsize=16)
-                plt.xlim([-30,30])
-                plt.ylim([-30,30])
+                plt.xlim([-30, 30])
+                plt.ylim([-30, 30])
                 plt.tight_layout()
                 plt.savefig(f'tmp/learning_{epoch}.tif')
                 plt.close()
