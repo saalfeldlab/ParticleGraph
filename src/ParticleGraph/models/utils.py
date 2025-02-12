@@ -1010,6 +1010,9 @@ def choose_training_model(model_config=None, device=None, projections=None):
         case 'WaveMesh':
             model = Mesh_Laplacian(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
+        case 'WaveMeshSmooth':
+            model = Mesh_Smooth(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
+            model.edges = []
         case 'RD_RPS_Mesh':
             model = Mesh_RPS(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []

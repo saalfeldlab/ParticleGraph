@@ -19,15 +19,11 @@ import matplotlib.pyplot as plt
 def density_laplace(y, x):
     grad = density_gradient(y, x)
     return density_divergence(grad, x)
-
-
 def density_divergence(y, x):
     div = 0.
     for i in range(y.shape[-1]):
         div += torch.autograd.grad(y[..., i], x, torch.ones_like(y[..., i]), create_graph=True)[0][..., i:i + 1]
     return div
-
-
 def density_gradient(y, x, grad_outputs=None):
     if grad_outputs is None:
         grad_outputs = torch.ones_like(y)
