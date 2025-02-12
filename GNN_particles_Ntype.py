@@ -55,8 +55,8 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        task = 'generate test'
-        best_model = 'best'
+        task = 'test'
+        best_model = '0'
         # config_list = ['cell_gland_SMG2_smooth10_1','cell_gland_SMG2_smooth10_9','cell_gland_SMG2_smooth10_10','cell_gland_SMG2_smooth10_5','cell_gland_SMG2_smooth10_6','cell_gland_SMG2_smooth10_7']
         # config_list = ['falling_water_ramp_x6_11']
         config_list = ['RD_RPS_3']

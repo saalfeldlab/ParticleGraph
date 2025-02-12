@@ -39,9 +39,9 @@ class RD_RPS(pyg.nn.MessagePassing):
         p = torch.sum(uvw, axis=1)
 
         # This is equivalent to the nonlinear reaction diffusion equation:
-        #   du = D * laplace_u + u * (1 - p - a * v)
-        #   dv = D * laplace_v + v * (1 - p - a * w)
-        #   dw = D * laplace_w + w * (1 - p - a * u)
+        #   du = D * laplace_u + u * (1 - u + v + w - a * v)
+        #   dv = D * laplace_v + v * (1 - u + v + w - a * w)
+        #   dw = D * laplace_w + w * (1 - u + v + w - a * u)
         d_uvw = laplace_uvw + uvw * (1 - p[:,None] - self.a * uvw[:, [1, 2, 0]])
 
         return d_uvw
