@@ -3167,7 +3167,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         index = np.arange(n_particles * n // n_particle_types, n_particles * (n + 1) // n_particle_types)
         first_cell_id_particles.append(index)
 
-    print('load data ...')
+    print(f'load data run {run} ...')
+
     if only_mesh:
         vnorm = torch.tensor(1.0, device=device)
         ynorm = torch.tensor(1.0, device=device)
@@ -3181,7 +3182,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         y_mesh_list.append(h)
         x_list = x_mesh_list
         y_list = y_mesh_list
-        x = x_list[run][0].clone().detach()
     elif has_field:
         x_list = []
         y_list = []
@@ -3432,7 +3432,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         start_it = 0
         stop_it = n_frames-1
 
-    x = x_list[run][start_it].clone().detach()
+    x = x_list[0][start_it].clone().detach()
     n_particles = x.shape[0]
 
     # x_list[0] = torch.cat((x_list[0],x_list[0],x_list[0],x_list[0]), dim=0)
