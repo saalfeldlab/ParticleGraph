@@ -74,12 +74,10 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
 
     def get_interp_a(self, k, particle_id):
 
-        k = k.to(self.device)
         id = particle_id * 100 + k // self.embedding_step
         alpha = (k % self.embedding_step) / self.embedding_step
-        alpha = alpha.repeat(1,2)
 
-        return alpha * self.a[id.squeeze()+1, :] + (1.0 - alpha) * self.a[id.squeeze(), :]
+        return alpha * self.a[id+1, :] + (1 - alpha) * self.a[id, :]
 
 
     def forward(self, data=[], data_id=[], return_all=False, has_field=False, k = 0):
@@ -87,32 +85,32 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         self.return_all = return_all
         x, edge_index = data.x, data.edge_index
 
+
         u = data.x[:, 6:7]
 
-        if has_field[0]:
+        if has_field:
             field = x[:, 8:9]
         else:
             field = torch.ones_like(x[:,6:7])
 
         if self.model == 'PDE_N3':
-            particle_id = x[:, 0:1].long()
+            particle_id = to_numpy(x[:, 0])
             embedding = self.get_interp_a(k, particle_id)
         else:
-            particle_id = x[:, 0].long()
+            particle_id = to_numpy(x[:, 0])
             embedding = self.a[particle_id, :]
 
         in_features = torch.cat([u, embedding], dim=1)
 
-        # if (self.model=='PDE_N4') | (self.model=='PDE_N5'):
-        #     msg = self.propagate(edge_index, u=u, embedding=embedding, field=field)
-        # elif self.model=='PDE_N6':
-        #     msg = torch.matmul(self.W * self.mask, self.lin_edge(u)) * field
-        # else:
-        #     msg = torch.matmul(self.W * self.mask, self.lin_edge(u))
-        #     if self.return_all:
-        #         self.msg = self.W * self.mask * self.lin_edge(u)
+        if (self.model=='PDE_N4') | (self.model=='PDE_N5'):
+            msg = self.propagate(edge_index, u=u, embedding=embedding, field=field)
+        elif self.model=='PDE_N6':
+            msg = torch.matmul(self.W * self.mask, self.lin_edge(u)) * field
+        else:
+            msg = torch.matmul(self.W * self.mask, self.lin_edge(u))
+            if self.return_all:
+                self.msg = self.W * self.mask * self.lin_edge(u)
 
-        msg = self.propagate(edge_index, u=u, embedding=embedding, field=field)
         pred = self.lin_phi(in_features) + msg
 
         return pred
@@ -123,15 +121,13 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             in_features = torch.cat([u_j, embedding_i], dim=1)
         elif (self.model=='PDE_N5'):
             in_features = torch.cat([u_j, embedding_i, embedding_j], dim=1)
-        else:
-            in_features = u_j
 
         T = self.W * self.mask
 
         if self.return_all:
-            self.msg = T[to_numpy(edge_index_i)%self.n_particles,to_numpy(edge_index_j%self.n_particles)][:,None] * self.lin_edge(u_j) * field_i
+            self.msg = T[to_numpy(edge_index_i),to_numpy(edge_index_j)][:,None] * self.lin_edge(u_j) * field_i
 
-        return T[to_numpy(edge_index_i)%self.n_particles,to_numpy(edge_index_j)%self.n_particles][:,None] * self.lin_edge(in_features) * field_i
+        return T[to_numpy(edge_index_i),to_numpy(edge_index_j)][:,None] * self.lin_edge(in_features) * field_i
 
 
 
