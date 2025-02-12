@@ -2264,7 +2264,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         model_f.to(device=device)
         optimizer_f = torch.optim.Adam(lr=train_config.learning_rate_NNR, params=model_f.parameters())
         model_f.train()
-    if best_model != None:
+    if (best_model != None) & (best_model != '') & (best_model != 'None'):
         net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{best_model}.pt"
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
