@@ -55,13 +55,13 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        task = 'train'
+        task = 'generate'
         best_model = ''
         # config_list = ['cell_gland_SMG2_smooth10_1','cell_gland_SMG2_smooth10_9','cell_gland_SMG2_smooth10_10','cell_gland_SMG2_smooth10_5','cell_gland_SMG2_smooth10_6','cell_gland_SMG2_smooth10_7']
         # config_list = ['falling_water_ramp_x6_11']
         # config_list = ['RD_RPS_3']
-        config_list =['signal_N4_m6_shuffle']
-        # config_list =['wave_2']
+        # config_list =['signal_N6_a16']
+        config_list =['wave_slit_bis']
         # config_list = ['arbitrary_3_bis']
         # config_list = ['signal_N3_c16']
     for config_file_ in config_list:

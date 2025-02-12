@@ -129,9 +129,9 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         T = self.W * self.mask
 
         if self.return_all:
-            self.msg = T[to_numpy(edge_index_i)%self.n_particles,to_numpy(edge_index_j%self.n_particles)][:,None] * self.lin_edge(u_j) * field_i
+            self.msg = T[edge_index_i%self.n_particles, edge_index_j%self.n_particles][:,None] * self.lin_edge(u_j) * field_i
 
-        return T[edge_index_i%self.n_particles,edge_index_j][:,None] * self.lin_edge(in_features) * field_i
+        return T[edge_index_i%self.n_particles, edge_index_j%self.n_particles][:,None] * self.lin_edge(in_features) * field_i
 
 
 

@@ -87,7 +87,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
     training_config = config.training
     model_config = config.graph_model
 
-    print(f'Generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+    print(f'generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
     dimension = simulation_config.dimension
     max_radius = simulation_config.max_radius
@@ -114,7 +114,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         os.remove(f)
 
     if config.data_folder_name != 'none':
-        print(f'Generating from data ...')
+        print(f'generating from data ...')
         generate_from_data(config=config, device=device, visualize=visualize, step=step, cmap=cmap)
         return
 
@@ -427,7 +427,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
     training_config = config.training
     model_config = config.graph_model
 
-    print(f'Generating data ... {config} {model_config.particle_model_name} {model_config.mesh_model_name}')
+    print(f'generating data ... {config} {model_config.particle_model_name} {model_config.mesh_model_name}')
 
     dimension = simulation_config.dimension
     max_radius = simulation_config.max_radius
@@ -1480,7 +1480,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                         plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=85.35)
                         plt.close()
 
-
         # check consistency between man_track and x_list[0]
         # for n in range(man_track.shape[0]):
         #     track_id = man_track[n, 0]
@@ -1493,7 +1492,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         #             end = i
         #     if (int(start)!=int(man_track[n, 1])) | ((int(end)!=int(man_track[n, 2])) & (int(end)!=n_frames)):
         #         print(f'pb *cell_id {n}  track_id-1 {int(track_id-1)}    x_list {int(start)} {int(end)}  man_track {int(man_track[n, 1])} {int(man_track[n, 2])}')
-
 
         if bSave:
             torch.save(x_list, f'graphs_data/{dataset_name}/x_list_{run}.pt')
@@ -1969,7 +1967,7 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
     torch.random.fork_rng(devices=device)
     torch.random.manual_seed(42)
 
-    print(f'Generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+    print(f'generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
     dimension = simulation_config.dimension
     min_radius = simulation_config.min_radius
@@ -2140,7 +2138,7 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
     torch.random.fork_rng(devices=device)
     torch.random.manual_seed(42)
 
-    print(f'Generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+    print(f'generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
     dimension = simulation_config.dimension
     min_radius = simulation_config.min_radius
@@ -2340,7 +2338,7 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
     training_config = config.training
     model_config = config.graph_model
 
-    print(f'Generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+    print(f'generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
     delta_t = simulation_config.delta_t
     n_frames = simulation_config.n_frames

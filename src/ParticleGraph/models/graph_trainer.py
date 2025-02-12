@@ -1407,11 +1407,8 @@ def data_train_mesh(config, erase, best_model, device):
                             'optimizer_state_dict': optimizer.state_dict()},
                            os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
-                plot_training(config=config, dataset_name=dataset_name,
-                              log_dir=log_dir,
-                              epoch=epoch, N=N, x=x_mesh, model=model, n_nodes=n_nodes, n_node_types=n_node_types,
-                              index_nodes=index_nodes, dataset_num=1,
-                              index_particles=[], n_particles=[],
+                plot_training(config=config, log_dir=log_dir, epoch=epoch, N=N, x=x_mesh, model=model, n_nodes=n_nodes, n_node_types=n_node_types,
+                              index_nodes=index_nodes, dataset_num=1, index_particles=[], n_particles=[],
                               n_particle_types=[], ynorm=ynorm, cmap=cmap, axis=True, device=device)
 
                 torch.save({'model_state_dict': model.state_dict(),
@@ -1621,7 +1618,7 @@ def data_train_particle_field(config, erase, best_model, device):
     train_config = config.training
     model_config = config.graph_model
 
-    print(f'Training particle field data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+    print(f'training particle field data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
     dimension = simulation_config.dimension
     n_epochs = train_config.n_epochs
@@ -1735,8 +1732,8 @@ def data_train_particle_field(config, erase, best_model, device):
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-    logger.info(f"Total Trainable Params: {n_total_params}")
-    logger.info(f'Learning rates: {lr}, {lr_embedding}')
+    logger.info(f"total trainable Params: {n_total_params}")
+    logger.info(f'learning rates: {lr}, {lr_embedding}')
     model.train()
 
     net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs.pt"
@@ -2687,7 +2684,7 @@ def data_train_agents(config, erase, best_model, device):
     train_config = config.training
     model_config = config.graph_model
 
-    print(f'Training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+    print(f'training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
     dimension = simulation_config.dimension
     n_epochs = train_config.n_epochs
@@ -2760,8 +2757,8 @@ def data_train_agents(config, erase, best_model, device):
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-    logger.info(f"Total Trainable Params: {n_total_params}")
-    logger.info(f'Learning rates: {lr}, {lr_embedding}')
+    logger.info(f"total trainable Params: {n_total_params}")
+    logger.info(f'learning rates: {lr}, {lr_embedding}')
     model.train()
 
     net = f"{log_dir}/models/best_model_with_1_graphs.pt"
@@ -2922,7 +2919,7 @@ def data_train_WBI(config, erase, best_model, device):
     train_config = config.training
     model_config = config.graph_model
 
-    print(f'Training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+    print(f'training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
     dimension = simulation_config.dimension
     n_epochs = train_config.n_epochs
@@ -2989,8 +2986,8 @@ def data_train_WBI(config, erase, best_model, device):
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-    logger.info(f"Total Trainable Params: {n_total_params}")
-    logger.info(f'Learning rates: {lr}, {lr_embedding}')
+    logger.info(f"total trainable Params: {n_total_params}")
+    logger.info(f'learning rates: {lr}, {lr_embedding}')
     model.train()
 
     net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs.pt"
@@ -3347,11 +3344,11 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             torch.save(X_msg, f'./graphs_data/{dataset_name}/X_msg.pt')
 
     if verbose:
-        print(f'Test data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+        print(f'test data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
         print('log_dir: {}'.format(log_dir))
         print(f'network: {net}')
         print(table)
-        print(f"Total Trainable Params: {total_params}")
+        print(f"total trainable Params: {total_params}")
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
     model.ynorm = ynorm
