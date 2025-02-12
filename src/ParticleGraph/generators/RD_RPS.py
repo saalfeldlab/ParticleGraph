@@ -22,11 +22,11 @@ class RD_RPS(pyg.nn.MessagePassing):
         
     """
 
-    def __init__(self, aggr_type=[], bc_dpos=[]):
+    def __init__(self, aggr_type=[], bc_dpos=[], coeff=[]):
         super(RD_RPS, self).__init__(aggr='add')  # "mean" aggregation.
 
         self.bc_dpos = bc_dpos
-        self.coeff = []
+        self.coeff = coeff
 
         self.a = 0.6
 
@@ -34,7 +34,6 @@ class RD_RPS(pyg.nn.MessagePassing):
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
 
         c = self.coeff
-
         uvw = data.x[:, 6:9]
         laplace_uvw = c * self.propagate(data.edge_index, uvw=uvw, discrete_laplacian=data.edge_attr)
         p = torch.sum(uvw, axis=1)

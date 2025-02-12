@@ -212,17 +212,27 @@ def choose_mesh_model(config, X1_mesh, device):
         #     for n in range(n_node_types):
         #         c[n] = torch.tensor(config.simulation.diffusion_coefficients[n])
 
+        if config.simulation.node_coeff_map !='' :
+            i0 = imread(f'graphs_data/{config.simulation.node_coeff_map}')
+        else:
+            i0 = imread(f'graphs_data/pattern_Null.tif')
+        i0 = np.flipud(i0)
+        values = i0[(to_numpy(X1_mesh[:, 1]) * 255).astype(int), (to_numpy(X1_mesh[:, 0]) * 255).astype(int)]
+        values = np.reshape(values,len(X1_mesh))
+        torch.tensor(values, device=device, dtype=torch.float32)[:, None]
+
+
         match mesh_model_name:
             case 'RD_Gray_Scott_Mesh':
                 mesh_model = RD_Gray_Scott(aggr_type=aggr_type, c=torch.squeeze(c), bc_dpos=bc_dpos)
             case 'RD_FitzHugh_Nagumo_Mesh':
                 mesh_model = RD_FitzHugh_Nagumo(aggr_type=aggr_type, c=torch.squeeze(c), bc_dpos=bc_dpos)
             case 'RD_RPS_Mesh':
-                mesh_model = RD_RPS(aggr_type=aggr_type, bc_dpos=bc_dpos)
+                mesh_model = RD_RPS(aggr_type=aggr_type, bc_dpos=bc_dpos, coeff=values)
             case 'RD_RPS_Mesh_bis':
                 mesh_model = RD_RPS(aggr_type=aggr_type, bc_dpos=bc_dpos)
             case 'DiffMesh' | 'WaveMesh':
-                mesh_model = PDE_Laplacian(aggr_type=aggr_type, bc_dpos=bc_dpos)
+                mesh_model = PDE_Laplacian(aggr_type=aggr_type, bc_dpos=bc_dpos, coeff=values)
             case 'WaveSmoothParticle':
                 mesh_model = PDE_S(aggr_type=aggr_type, bc_dpos=bc_dpos, p=torch.tensor(params, dtype=torch.float32, device=device),
                           dimension=dimension, delta_t=delta_t, max_radius=max_radius, field_type=config.graph_model.field_type)

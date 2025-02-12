@@ -3475,7 +3475,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             geomloss_list.append(geomloss.item())
         rmserr_list.append(rmserr.item())
 
-        data_id = torch.ones((n_particles, 1), dtype=torch.int) * run
+        data_id = torch.ones((n_particles, 1), dtype=torch.int)
 
         # update calculations
         if model_config.mesh_model_name == 'DiffMesh':
