@@ -293,7 +293,7 @@ if __name__ == '__main__':
 
     remove_files_from_folder('tmp')
 
-    mode = 'cell_MDCK'
+    mode = 'gaussian'
 
     if mode == 'gaussian':
         config = ParticleGraphConfig.from_yaml('/groups/saalfeld/home/allierc/Py/ParticleGraph/config/test_smooth_particle.yaml')
@@ -353,482 +353,263 @@ if __name__ == '__main__':
     matplotlib.use("Qt5Agg")
 
 
-    def tmp():
-        for epoch in range(0, 5000):
-            if mode == 'gaussian':
 
-                dataset_batch = []
+    for epoch in range(0, 5000):
+        if mode == 'gaussian':
 
-                for batch in range(batch_size):
+            dataset_batch = []
 
-
-                    x = x0.clone().detach() + 0.05 * torch.randn_like(x0)
-                    # x = x[torch.randperm(x.size(0))[:int(0.5 * x.size(0))]] # removal of 10%
-                    u, grad_u, laplace_u = arbitrary_gaussian_grad_laplace(mgrid = x[:,1:3], n_gaussian = 5, device=device)
-                    L_u = laplace_u.clone().detach()
-                    x[:, 6:7] = u[:, None].clone().detach()
-
-                    # discrete_pos = torch.argwhere((u >= threshold) | (u <= -threshold))
-                    # x = x[discrete_pos].squeeze()
-                    # L_u = L_u[discrete_pos].squeeze()
-
-                    distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                    adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
-                    edge_index = adj_t.nonzero().t().contiguous()
-                    dataset = data.Data(x=x, pos=x[:, 1:dimension + 1], edge_index=edge_index)
-                    dataset_batch.append(dataset)
-
-                    if batch == 0:
-                        data_id = torch.ones((x.shape[0],1), dtype=torch.int)
-                        y_batch = L_u
-                    else:
-                        data_id = torch.cat((data_id, torch.ones((x.shape[0],1), dtype=torch.int)), dim = 0)
-                        y_batch = torch.cat((y_batch, L_u), dim=0)
-
-                batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
-                optimizer.zero_grad()
-
-                for batch in batch_loader:
-                    pred = model(batch, data_id=data_id, training=True, phi=phi)
-
-                loss = (pred - y_batch).norm(2)
-
-                loss.backward()
-                optimizer.step()
-
-                # u = u[discrete_pos]
-                # grad_u = grad_u[discrete_pos]
-                # laplace_u = laplace_u[discrete_pos]
-
-                print(epoch, loss)
-
-                if epoch%10==0:
-
-                    pred = pred[-x.shape[0]:]
-
-                    fig = plt.figure(figsize=(16, 6))
-                    ax = fig.add_subplot(241)
-                    plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=1, c='w')
-                    pos = torch.argwhere(edge_index[0, :] == 350)
-                    plt.scatter(to_numpy(x[edge_index[1, pos], 1]), to_numpy(x[edge_index[1, pos], 2]), s=10, c='r')
-                    ax.invert_yaxis()
-                    plt.title('density')
-                    plt.xlim([-0.1,1.1])
-                    plt.ylim([-0.1,1.1])
-                    ax = fig.add_subplot(242)
-                    plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(u))
-                    ax.invert_yaxis()
-                    plt.xlim([-0.1,1.1])
-                    plt.ylim([-0.1,1.1])
-                    plt.title('u')
-                    ax = fig.add_subplot(243)
-                    # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u[:,0]))
-                    plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(L_u), vmin=-200, vmax=10)
-                    plt.xlim([-0.1,1.1])
-                    plt.ylim([-0.1,1.1])
-                    plt.colorbar()
-                    ax.invert_yaxis()
-                    plt.title('true L_u')
-                    ax = fig.add_subplot(244)
-                    # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
-                    plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(pred), vmin=-200, vmax=10)
-                    plt.xlim([-0.1,1.1])
-                    plt.ylim([-0.1,1.1])
-                    plt.colorbar()
-                    ax.invert_yaxis()
-                    plt.title('pred L_u')
-                    ax = fig.add_subplot(245)
-                    indices = torch.randperm(x.shape[0])[:1000]
-                    plt.scatter(to_numpy(model.delta_pos[indices, 0]), to_numpy(model.delta_pos[indices, 1]), s=50,
-                                c=to_numpy(model.modulation[indices]))
-                    plt.xlim([-max_radius,max_radius])
-                    plt.ylim([-max_radius,max_radius])
-                    plt.colorbar()
-                    ax = fig.add_subplot(246)
-                    plt.scatter(to_numpy(model.delta_pos[indices, 0]), to_numpy(model.delta_pos[indices, 1]), s=50,
-                                c=to_numpy(model.kernel_operators[indices, 3:4]))
-                    plt.xlim([-max_radius,max_radius])
-                    plt.ylim([-max_radius,max_radius])
-                    plt.colorbar()
-                    plt.tight_layout()
-                    # plt.show()
-                    plt.savefig(f'tmp/learning_{epoch}.tif')
-                    plt.close()
-
-                # # matplotlib.use("Qt5Agg")
-                # fig = plt.figure(figsize=(12, 3))
-                # ax = fig.add_subplot(141)
-                # plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1,
-                #             c=to_numpy(model.kernel_operators[:, 0:1]))
-                # plt.title('kernel')
-                # ax = fig.add_subplot(142)
-                # plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1,
-                #             c=to_numpy(model.kernel_operators[:, 1:2]))
-                # plt.title('grad_x')
-                # ax = fig.add_subplot(143)
-                # plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1,
-                #             c=to_numpy(model.kernel_operators[:, 2:3]))
-                # plt.title('grad_y')
-                # ax = fig.add_subplot(144)
-                # plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1,
-                #             c=to_numpy(model.kernel_operators[:, 3:4]))
-                # plt.title('laplace')
-                # plt.tight_layout()
-                # # plt.show()
-                # plt.savefig(f'tmp/kernels_{epoch}.tif')
-                # plt.close()
-            elif mode == 'wave':
-
-                dataset_batch = []
-
-                for batch in range(batch_size):
-
-                    k = np.random.randint(n_frames - 1)
-                    x = x_mesh_list[0][k].clone().detach()
-                    L_u = y_mesh_list[0][k].clone().detach()
-                    L_u = torch.where(torch.isnan(L_u), torch.zeros_like(L_u), L_u)
-                    u = x[:, 6:7].clone().detach()
-
-                    distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                    adj_t = ((distance < max_radius ** 2) & (distance >= 0)).float() * 1
-                    edge_index = adj_t.nonzero().t().contiguous()
-                    dataset = data.Data(x=x, pos=x[:, 1:dimension + 1], edge_index=edge_index)
-
-                    dataset_batch.append(dataset)
-
-                    if batch == 0:
-                        data_id = torch.ones((x.shape[0],1), dtype=torch.int)
-                        y_batch = L_u
-                    else:
-                        data_id = torch.cat((data_id, torch.ones((x.shape[0],1), dtype=torch.int)), dim = 0)
-                        y_batch = torch.cat((y_batch, L_u), dim=0)
+            for batch in range(batch_size):
 
 
-                batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
-                optimizer.zero_grad()
+                x = x0.clone().detach() + 0.05 * torch.randn_like(x0)
+                # x = x[torch.randperm(x.size(0))[:int(0.5 * x.size(0))]] # removal of 10%
+                u, grad_u, laplace_u = arbitrary_gaussian_grad_laplace(mgrid = x[:,1:3], n_gaussian = 5, device=device)
+                L_u = laplace_u.clone().detach()
+                x[:, 6:7] = u[:, None].clone().detach()
 
-                for batch in batch_loader:
-                    pred = model(batch, data_id=data_id, training=True, phi=phi)
+                # discrete_pos = torch.argwhere((u >= threshold) | (u <= -threshold))
+                # x = x[discrete_pos].squeeze()
+                # L_u = L_u[discrete_pos].squeeze()
 
-                loss = (pred - y_batch).norm(2)
+                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
+                edge_index = adj_t.nonzero().t().contiguous()
+                dataset = data.Data(x=x, pos=x[:, 1:dimension + 1], edge_index=edge_index)
+                dataset_batch.append(dataset)
 
-                loss.backward()
-                optimizer.step()
+                if batch == 0:
+                    data_id = torch.ones((x.shape[0],1), dtype=torch.int)
+                    y_batch = L_u
+                else:
+                    data_id = torch.cat((data_id, torch.ones((x.shape[0],1), dtype=torch.int)), dim = 0)
+                    y_batch = torch.cat((y_batch, L_u), dim=0)
 
+            batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
+            optimizer.zero_grad()
 
-                print(epoch, loss)
+            for batch in batch_loader:
+                pred = model(batch, data_id=data_id, training=True, phi=phi)
 
-                if epoch%10==0:
+            loss = (pred - y_batch).norm(2)
 
-                    pred = pred[-x.shape[0]:]
+            loss.backward()
+            optimizer.step()
 
-                    fig = plt.figure(figsize=(24, 12.4))
-                    ax = fig.add_subplot(241)
-                    plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=0.5, c='w')
-                    pos = torch.argwhere(edge_index[0,:]==5050)
-                    plt.scatter(to_numpy(x[edge_index[1,pos], 1]), to_numpy(x[edge_index[1,pos], 2]), s=4, c='r')
-                    ax.invert_yaxis()
-                    # plt.colorbar()
-                    plt.title('nodes', fontsize=16)
-                    ax = fig.add_subplot(245)
-                    plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=50, c='w')
-                    pos = torch.argwhere(edge_index[0,:]==5050)
-                    plt.scatter(to_numpy(x[edge_index[1,pos], 1]), to_numpy(x[edge_index[1,pos], 2]), s=50, c='r')
-                    cx = to_numpy(x[edge_index[0,pos[0]], 1])
-                    cy = to_numpy(x[edge_index[0, pos[0]], 2])
-                    plt.xlim([cx-2*max_radius,cx+2*max_radius])
-                    plt.ylim([cy-2*max_radius,cy+2*max_radius])
-                    ax.invert_yaxis()
-                    # plt.colorbar()
-                    plt.title('nodes', fontsize=16)
-                    ax = fig.add_subplot(242)
-                    plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(u), vmin=-1000, vmax=1000)
-                    ax.invert_yaxis()
-                    # plt.colorbar()
-                    plt.title('signal u', fontsize=16)
-                    ax = fig.add_subplot(243)
-                    # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u[:,0]))
-                    plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(L_u), vmin=-30, vmax=30)
-                    # plt.colorbar()
-                    ax.invert_yaxis()
-                    plt.title('true voronoi Laplacian(u) - Voronoi', fontsize=16)
-                    ax = fig.add_subplot(244)
-                    # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
-                    plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(pred), vmin=-30, vmax=30)
-                    # plt.colorbar()
-                    ax.invert_yaxis()
-                    plt.title('learned Laplacian(u)', fontsize=16)
+            # u = u[discrete_pos]
+            # grad_u = grad_u[discrete_pos]
+            # laplace_u = laplace_u[discrete_pos]
 
-                    ax = fig.add_subplot(246)
-                    indices = torch.randperm(x.shape[0])[:1000]
-                    plt.scatter(to_numpy(model.delta_pos[indices, 0]), to_numpy(model.delta_pos[indices, 1]), s=10,
-                                c=to_numpy(model.modulation[indices]))
-                    plt.xlim([-max_radius,max_radius])
-                    plt.ylim([-max_radius,max_radius])
-                    # plt.colorbar()
-                    plt.title('NNR modulation', fontsize=16)
-                    ax = fig.add_subplot(247)
-                    plt.scatter(to_numpy(model.delta_pos[indices, 0]), to_numpy(model.delta_pos[indices, 1]), s=10,
-                                c=to_numpy(model.kernel_operators[indices, 3:4]))
-                    plt.xlim([-max_radius,max_radius])
-                    plt.ylim([-max_radius,max_radius])
-                    # plt.colorbar()
-                    plt.title('learned kernel operator', fontsize=16)
-                    ax = fig.add_subplot(248)
-                    # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
-                    plt.scatter(to_numpy(L_u), to_numpy(pred), s=1, c='w', alpha=0.5)
-                    plt.xlabel('true Laplacian(u)', fontsize=16)
-                    plt.ylabel('learned Laplacian(u)', fontsize=16)
-                    plt.xlim([-30,30])
-                    plt.ylim([-30,30])
-                    plt.tight_layout()
-                    plt.savefig(f'tmp/learning_{epoch}.tif')
-                    plt.close()
+            print(epoch, loss)
 
-                # # matplotlib.use("Qt5Agg")
-                # fig = plt.figure(figsize=(22, 5))
-                # ax = fig.add_subplot(141)
-                # plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=100,
-                #             c=to_numpy(model.kernel_operators[:, 0:1]))
-                # plt.title('kernel')
-                # ax = fig.add_subplot(142)
-                # plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=100,
-                #             c=to_numpy(model.kernel_operators[:, 1:2]))
-                # plt.title('grad_x')
-                # ax = fig.add_subplot(143)
-                # plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=100,
-                #             c=to_numpy(model.kernel_operators[:, 2:3]))
-                # plt.title('grad_y')
-                # ax = fig.add_subplot(144)
-                # plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=100,
-                #             c=to_numpy(model.kernel_operators[:, 3:4]))
-                # plt.title('laplace')
-                # plt.tight_layout()
-                # # plt.show()
-                # plt.savefig(f'tmp/kernels_{epoch}.tif')
-                # plt.close()
+            if epoch%10==0:
 
+                pred = pred[-x.shape[0]:]
 
+                fig = plt.figure(figsize=(16, 6))
+                ax = fig.add_subplot(241)
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=1, c='w')
+                pos = torch.argwhere(edge_index[0, :] == 350)
+                plt.scatter(to_numpy(x[edge_index[1, pos], 1]), to_numpy(x[edge_index[1, pos], 2]), s=10, c='r')
+                ax.invert_yaxis()
+                plt.title('density')
+                plt.xlim([-0.1,1.1])
+                plt.ylim([-0.1,1.1])
+                ax = fig.add_subplot(242)
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(u))
+                ax.invert_yaxis()
+                plt.xlim([-0.1,1.1])
+                plt.ylim([-0.1,1.1])
+                plt.title('u')
+                ax = fig.add_subplot(243)
+                # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u[:,0]))
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(L_u), vmin=-200, vmax=10)
+                plt.xlim([-0.1,1.1])
+                plt.ylim([-0.1,1.1])
+                plt.colorbar()
+                ax.invert_yaxis()
+                plt.title('true L_u')
+                ax = fig.add_subplot(244)
+                # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(pred), vmin=-200, vmax=10)
+                plt.xlim([-0.1,1.1])
+                plt.ylim([-0.1,1.1])
+                plt.colorbar()
+                ax.invert_yaxis()
+                plt.title('pred L_u')
+                ax = fig.add_subplot(245)
+                indices = torch.randperm(x.shape[0])[:1000]
+                plt.scatter(to_numpy(model.delta_pos[indices, 0]), to_numpy(model.delta_pos[indices, 1]), s=50,
+                            c=to_numpy(model.modulation[indices]))
+                plt.xlim([-max_radius,max_radius])
+                plt.ylim([-max_radius,max_radius])
+                plt.colorbar()
+                ax = fig.add_subplot(246)
+                plt.scatter(to_numpy(model.delta_pos[indices, 0]), to_numpy(model.delta_pos[indices, 1]), s=50,
+                            c=to_numpy(model.kernel_operators[indices, 3:4]))
+                plt.xlim([-max_radius,max_radius])
+                plt.ylim([-max_radius,max_radius])
+                plt.colorbar()
+                plt.tight_layout()
+                # plt.show()
+                plt.savefig(f'tmp/learning_{epoch}.tif')
+                plt.close()
 
-    x_list = torch.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/cell/cell_MDCK_4/full_vertice_list0.pt', map_location=device, weights_only=True)
-    for frame in trange(0,len(x_list)):
+            # # matplotlib.use("Qt5Agg")
+            # fig = plt.figure(figsize=(12, 3))
+            # ax = fig.add_subplot(141)
+            # plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1,
+            #             c=to_numpy(model.kernel_operators[:, 0:1]))
+            # plt.title('kernel')
+            # ax = fig.add_subplot(142)
+            # plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1,
+            #             c=to_numpy(model.kernel_operators[:, 1:2]))
+            # plt.title('grad_x')
+            # ax = fig.add_subplot(143)
+            # plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1,
+            #             c=to_numpy(model.kernel_operators[:, 2:3]))
+            # plt.title('grad_y')
+            # ax = fig.add_subplot(144)
+            # plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=0.1,
+            #             c=to_numpy(model.kernel_operators[:, 3:4]))
+            # plt.title('laplace')
+            # plt.tight_layout()
+            # # plt.show()
+            # plt.savefig(f'tmp/kernels_{epoch}.tif')
+            # plt.close()
+        elif mode == 'wave':
 
-        x = x_list[frame]
-        x[:,1:3] = x[:,1:3] / 1024
+            dataset_batch = []
 
-        tensors = tuple(dimension * [torch.linspace(0, 1, steps=100)])
-        mgrid = torch.stack(torch.meshgrid(*tensors), dim=-1)
-        mgrid = mgrid.reshape(-1, dimension)
-        mgrid = torch.cat((torch.ones((mgrid.shape[0], 1)), mgrid, torch.zeros((mgrid.shape[0], 2))), 1)
-        mgrid = mgrid.to(device)
+            for batch in range(batch_size):
 
-        distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-        adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
-        edge_index = adj_t.nonzero().t().contiguous()
-        data_id = torch.zeros((x.shape[0], 1), dtype=torch.int)
-        dataset = data.Data(x=x, pos=x[:, 1:dimension + 1], edge_index=edge_index)
+                k = np.random.randint(n_frames - 1)
+                x = x_mesh_list[0][k].clone().detach()
+                L_u = y_mesh_list[0][k].clone().detach()
+                L_u = torch.where(torch.isnan(L_u), torch.zeros_like(L_u), L_u)
+                u = x[:, 6:7].clone().detach()
 
-        pred = model(dataset, data_id=data_id, training=False, phi=phi)
-        density = model.density.clone().detach()
+                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                adj_t = ((distance < max_radius ** 2) & (distance >= 0)).float() * 1
+                edge_index = adj_t.nonzero().t().contiguous()
+                dataset = data.Data(x=x, pos=x[:, 1:dimension + 1], edge_index=edge_index)
 
-        distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - mgrid[None, :, 1:dimension + 1]) ** 2, dim=2)
-        adj_t = ((distance < max_radius ** 2) & (distance > 0)).float() * 1
-        edge_index_mgrid = adj_t.nonzero().t().contiguous()
-        xp = torch.cat((mgrid, x[:, 0:2 * dimension + 1]), 0)
-        edge_index_mgrid[0, :] = edge_index_mgrid[0, :] + mgrid.shape[0]
-        edge_index_mgrid, _ = pyg_utils.remove_self_loops(edge_index_mgrid)
+                dataset_batch.append(dataset)
 
-        dataset = data.Data(x=xp, pos=xp[:, 1:dimension + 1], edge_index=edge_index_mgrid)
-        data_id = torch.zeros((xp.shape[0], 1), dtype=torch.int)
-        pred_field = model(dataset, data_id=data_id, training=False, phi=phi, continuous_field=True, continuous_field_size=mgrid.shape)[0: mgrid.shape[0]]
-        density_field = model.density[0: mgrid.shape[0]]
-
-        # matplotlib.use("Qt5Agg")
-        # fig = plt.figure(figsize=(8, 8))
-        # ax = fig.add_subplot(111)
-        # plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=10, c=to_numpy(density_field))
-        # Q = ax.quiver(to_numpy(x[:, 2]), to_numpy(x[:, 1]), -10*to_numpy(pred[:,1]), -10*to_numpy(pred[:,0]), color='w')
-        # plt.show()
-
-        fig = plt.figure(figsize=(24, 12))
-        ax = fig.add_subplot(2,4,1)
-        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c='w')
-        pixel = 7020
-        plt.scatter(mgrid[pixel, 2].detach().cpu().numpy(),
-                    mgrid[pixel, 1].detach().cpu().numpy(), s=2, c='r')
-        pos = torch.argwhere(edge_index_mgrid[1, :] == pixel).squeeze()
-        if pos.numel()>0:
-            plt.scatter(xp[edge_index_mgrid[0, pos], 2].detach().cpu().numpy(), xp[edge_index_mgrid[0, pos], 1].detach().cpu().numpy(), s=1,c='b')
-        plt.xticks([])
-        plt.yticks([])
-        plt.title('pos', fontsize=8)
-        ax = fig.add_subplot(2,4,5)
-        plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=10, c=to_numpy(density_field))
-        plt.xticks([])
-        plt.yticks([])
-        plt.title('density_field', fontsize=8)
-        # ax = fig.add_subplot(2,4,6)
-        # plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=10, c=to_numpy(pred_field[:,0]))
-        # plt.xticks([])
-        # plt.yticks([])
-        # plt.title('density_field_x', fontsize=8)
-        # ax = fig.add_subplot(2,4,7)
-        # plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=10, c=to_numpy(pred_field[:,1]))
-        # plt.xticks([])
-        # plt.yticks([])
-        plt.title('density_field_y', fontsize=8)
-        ax = fig.add_subplot(2,4,2)
-        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c=to_numpy(density))
-        plt.xticks([])
-        plt.yticks([])
-        plt.title('density', fontsize=8)
-        ax = fig.add_subplot(2,4,3)
-        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c=to_numpy(pred[:,0]))
-        plt.xticks([])
-        plt.yticks([])
-        plt.title('density_y', fontsize=8)
-        ax = fig.add_subplot(2,4,4)
-        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c=to_numpy(pred[:,1]))
-        plt.xticks([])
-        plt.yticks([])
-        plt.title('density_x', fontsize=8)
-
-        plt.savefig(f'tmp/kernels_{frame}.tif')
-        plt.close()
+                if batch == 0:
+                    data_id = torch.ones((x.shape[0],1), dtype=torch.int)
+                    y_batch = L_u
+                else:
+                    data_id = torch.cat((data_id, torch.ones((x.shape[0],1), dtype=torch.int)), dim = 0)
+                    y_batch = torch.cat((y_batch, L_u), dim=0)
 
 
-    x_list = torch.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/graphs_boids_16_256/x_list_0.pt', map_location=device, weights_only=True)
+            batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
+            optimizer.zero_grad()
 
-    for frame in trange(4000,4001,20):
+            for batch in batch_loader:
+                pred = model(batch, data_id=data_id, training=True, phi=phi)
 
-        x = x_list[frame]
+            loss = (pred - y_batch).norm(2)
 
-        tensors = tuple(dimension * [torch.linspace(0, 1, steps=100)])
-        mgrid = torch.stack(torch.meshgrid(*tensors), dim=-1)
-        mgrid = mgrid.reshape(-1, dimension)
-        mgrid = torch.cat((torch.ones((mgrid.shape[0], 1)), mgrid, torch.zeros((mgrid.shape[0], 2))), 1)
-        mgrid = mgrid.to(device)
+            loss.backward()
+            optimizer.step()
 
-        distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-        adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
-        edge_index = adj_t.nonzero().t().contiguous()
-        data_id = torch.ones((x.shape[0], 1), dtype=torch.int)
-        dataset = data.Data(x=x, pos=x[:, 1:dimension + 1], edge_index=edge_index)
 
-        pred = model(dataset, data_id=data_id, training=False, phi=phi)
-        density = model.density
+            print(epoch, loss)
 
-        distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - mgrid[None, :, 1:dimension + 1]) ** 2, dim=2)
-        adj_t = ((distance < max_radius ** 2) & (distance > 0)).float() * 1
-        edge_index_mgrid = adj_t.nonzero().t().contiguous()
-        xp = torch.cat((mgrid, x[:, 0:2 * dimension + 1]), 0)
-        edge_index_mgrid[0, :] = edge_index_mgrid[0, :] + mgrid.shape[0]
-        edge_index_mgrid, _ = pyg_utils.remove_self_loops(edge_index_mgrid)
+            if epoch%10==0:
 
-        dataset = data.Data(x=xp, pos=xp[:, 1:dimension + 1], edge_index=edge_index_mgrid)
-        data_id = torch.ones((xp.shape[0], 1), dtype=torch.int)
-        pred_field = model(dataset, data_id=data_id, training=False, phi=phi, continuous_field=True, continuous_field_size=mgrid.shape)[0: mgrid.shape[0]]
-        density_field = model.density[0: mgrid.shape[0]]
+                pred = pred[-x.shape[0]:]
 
-        matplotlib.use("Qt5Agg")
-        fig = plt.figure(figsize=(8, 8))
-        ax = fig.add_subplot(111)
-        plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=10, c=to_numpy(density_field))
-        # Q = ax.quiver(to_numpy(x[:, 2]), to_numpy(x[:, 1]), -to_numpy(pred[:,1]), -to_numpy(pred[:,0]), color='w')
-        plt.show()
+                fig = plt.figure(figsize=(24, 12.4))
+                ax = fig.add_subplot(241)
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=0.5, c='w')
+                pos = torch.argwhere(edge_index[0,:]==5050)
+                plt.scatter(to_numpy(x[edge_index[1,pos], 1]), to_numpy(x[edge_index[1,pos], 2]), s=4, c='r')
+                ax.invert_yaxis()
+                # plt.colorbar()
+                plt.title('nodes', fontsize=16)
+                ax = fig.add_subplot(245)
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=50, c='w')
+                pos = torch.argwhere(edge_index[0,:]==5050)
+                plt.scatter(to_numpy(x[edge_index[1,pos], 1]), to_numpy(x[edge_index[1,pos], 2]), s=50, c='r')
+                cx = to_numpy(x[edge_index[0,pos[0]], 1])
+                cy = to_numpy(x[edge_index[0, pos[0]], 2])
+                plt.xlim([cx-2*max_radius,cx+2*max_radius])
+                plt.ylim([cy-2*max_radius,cy+2*max_radius])
+                ax.invert_yaxis()
+                # plt.colorbar()
+                plt.title('nodes', fontsize=16)
+                ax = fig.add_subplot(242)
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(u), vmin=-1000, vmax=1000)
+                ax.invert_yaxis()
+                # plt.colorbar()
+                plt.title('signal u', fontsize=16)
+                ax = fig.add_subplot(243)
+                # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(L_u[:,0]))
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(L_u), vmin=-30, vmax=30)
+                # plt.colorbar()
+                ax.invert_yaxis()
+                plt.title('true voronoi Laplacian(u) - Voronoi', fontsize=16)
+                ax = fig.add_subplot(244)
+                # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=4, c=to_numpy(pred), vmin=-30, vmax=30)
+                # plt.colorbar()
+                ax.invert_yaxis()
+                plt.title('learned Laplacian(u)', fontsize=16)
 
-        fig = plt.figure(figsize=(12, 12))
-        ax = fig.add_subplot(4,4,1)
-        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c='w')
-        pixel = 7020
-        plt.scatter(mgrid[pixel, 2].detach().cpu().numpy(),
-                    mgrid[pixel, 1].detach().cpu().numpy(), s=2, c='r')
-        pos = torch.argwhere(edge_index_mgrid[1, :] == pixel).squeeze()
-        if pos.numel()>0:
-            plt.scatter(xp[edge_index_mgrid[0, pos], 2].detach().cpu().numpy(), xp[edge_index_mgrid[0, pos], 1].detach().cpu().numpy(), s=1,c='b')
-        plt.xticks([])
-        plt.yticks([])
-        plt.title('pos', fontsize=8)
-        ax = fig.add_subplot(4,4,2)
-        plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=1, c=to_numpy(density_field))
-        plt.xticks([])
-        plt.yticks([])
-        plt.title('density_field', fontsize=8)
-        ax = fig.add_subplot(4,4,3)
-        plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=1, c=to_numpy(pred_field[:,0]))
-        plt.xticks([])
-        plt.yticks([])
-        plt.title('density_field_x', fontsize=8)
-        ax = fig.add_subplot(4,4,4)
-        plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=1, c=to_numpy(pred_field[:,1]))
-        plt.xticks([])
-        plt.yticks([])
-        plt.title('density_field_y', fontsize=8)
-        ax = fig.add_subplot(4,4,5)
-        plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=1, c=to_numpy(pred_field[:,2]))
-        plt.xticks([])
-        plt.yticks([])
-        plt.title('velocity_field', fontsize=8)
-        ax = fig.add_subplot(4,4,6)
-        plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=1, c=to_numpy(pred_field[:,3]))
-        plt.xticks([])
-        plt.yticks([])
-        plt.title('velocity_field_x', fontsize=8)
-        ax = fig.add_subplot(4,4,7)
-        plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=1, c=to_numpy(pred_field[:,4]))
-        plt.xticks([])
-        plt.yticks([])
-        plt.title('velocity_field_y', fontsize=8)
+                ax = fig.add_subplot(246)
+                indices = torch.randperm(x.shape[0])[:1000]
+                plt.scatter(to_numpy(model.delta_pos[indices, 0]), to_numpy(model.delta_pos[indices, 1]), s=10,
+                            c=to_numpy(model.modulation[indices]))
+                plt.xlim([-max_radius,max_radius])
+                plt.ylim([-max_radius,max_radius])
+                # plt.colorbar()
+                plt.title('NNR modulation', fontsize=16)
+                ax = fig.add_subplot(247)
+                plt.scatter(to_numpy(model.delta_pos[indices, 0]), to_numpy(model.delta_pos[indices, 1]), s=10,
+                            c=to_numpy(model.kernel_operators[indices, 3:4]))
+                plt.xlim([-max_radius,max_radius])
+                plt.ylim([-max_radius,max_radius])
+                # plt.colorbar()
+                plt.title('learned kernel operator', fontsize=16)
+                ax = fig.add_subplot(248)
+                # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=4, c=to_numpy(pred))
+                plt.scatter(to_numpy(L_u), to_numpy(pred), s=1, c='w', alpha=0.5)
+                plt.xlabel('true Laplacian(u)', fontsize=16)
+                plt.ylabel('learned Laplacian(u)', fontsize=16)
+                plt.xlim([-30,30])
+                plt.ylim([-30,30])
+                plt.tight_layout()
+                plt.savefig(f'tmp/learning_{epoch}.tif')
+                plt.close()
 
-        ax = fig.add_subplot(4,4,8)
-        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c=to_numpy(density))
-        plt.xticks([])
-        plt.yticks([])
-        plt.title('density_kernel', fontsize=8)
-        ax = fig.add_subplot(4,4,9)
-        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c=to_numpy(pred[:,0]))
-        plt.xticks([])
-        plt.yticks([])
-        plt.title('density_y', fontsize=8)
-        ax = fig.add_subplot(4,4,10)
-        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c=to_numpy(pred[:,1]))
-        plt.xticks([])
-        plt.yticks([])
-        plt.title('density_x', fontsize=8)
-        ax = fig.add_subplot(4,4,11)
-        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c=to_numpy(torch.sum(x[:,3:5]**2, dim=1)))
-        plt.xticks([])
-        plt.yticks([])
-        plt.title('velocity', fontsize=8)
-        ax = fig.add_subplot(4,4,12)
-        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c=to_numpy(x[:,3:4]))
-        plt.xticks([])
-        plt.yticks([])
-        plt.title('velocity-x', fontsize=8)
-        ax = fig.add_subplot(4,4,13)
-        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c=to_numpy(x[:,4:5]))
-        plt.xticks([])
-        plt.yticks([])
-        plt.title('velocity-y', fontsize=8)
-        ax = fig.add_subplot(4,4,14)
-        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c=to_numpy(pred[:,2]))
-        plt.xticks([])
-        plt.yticks([])
-        plt.title('velocity_kernel', fontsize=8)
-        ax = fig.add_subplot(4,4,15)
-        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c=to_numpy(pred[:,3]))
-        plt.xticks([])
-        plt.yticks([])
-        plt.title('velocity_kernel_y', fontsize=8)
-        ax = fig.add_subplot(4,4,16)
-        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c=to_numpy(pred[:,4]))
-        plt.xticks([])
-        plt.yticks([])
-        plt.title('velocity_kernel_x', fontsize=8)
-        plt.show()
+            # # matplotlib.use("Qt5Agg")
+            # fig = plt.figure(figsize=(22, 5))
+            # ax = fig.add_subplot(141)
+            # plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=100,
+            #             c=to_numpy(model.kernel_operators[:, 0:1]))
+            # plt.title('kernel')
+            # ax = fig.add_subplot(142)
+            # plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=100,
+            #             c=to_numpy(model.kernel_operators[:, 1:2]))
+            # plt.title('grad_x')
+            # ax = fig.add_subplot(143)
+            # plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=100,
+            #             c=to_numpy(model.kernel_operators[:, 2:3]))
+            # plt.title('grad_y')
+            # ax = fig.add_subplot(144)
+            # plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), s=100,
+            #             c=to_numpy(model.kernel_operators[:, 3:4]))
+            # plt.title('laplace')
+            # plt.tight_layout()
+            # # plt.show()
+            # plt.savefig(f'tmp/kernels_{epoch}.tif')
+            # plt.close()
 
-        plt.savefig(f'tmp/kernels_{frame}.tif')
-        plt.close()
+
+
 
 
 
