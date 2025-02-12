@@ -111,7 +111,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             if self.return_all:
                 self.msg = torch.matmul(self.W * self.mask, self.lin_edge(u))
 
-        msg = self.propagate(edge_index, u=u, embedding=embedding, field=field)
+        # msg = self.propagate(edge_index, u=u, embedding=embedding, field=field)
 
         pred = self.lin_phi(in_features) + msg
 

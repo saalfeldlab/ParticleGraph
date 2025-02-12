@@ -2243,6 +2243,27 @@ def data_train_synaptic2(config, erase, best_model, device):
 
     print('create models ...')
     model, bc_pos, bc_dpos = choose_training_model(model_config=config, device=device, projections=projections)
+    if has_field:
+        if 'PDE_N6' in model_config.signal_model_name:
+            # model_f = SirenCollection(n_nodes = n_nodes, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.n_layers_nnr,
+            #                           hidden_layers=model_config.n_layers_nnr, first_omega_0=omega, hidden_omega_0=omega, outermost_linear=True)
+
+            model_f = Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.n_layers_nnr,
+                                       hidden_layers=model_config.n_layers_nnr, first_omega_0=omega, hidden_omega_0=omega, outermost_linear=True)
+
+            modulation = torch.tensor(x_list[1], device=device)
+            modulation = modulation[:, :, 8:9].squeeze()
+            modulation = modulation.t()
+
+        else:
+            model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
+                                    out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
+                                    hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device,
+                                    first_omega_0=omega, hidden_omega_0=omega)
+
+        model_f.to(device=device)
+        optimizer_f = torch.optim.Adam(lr=train_config.learning_rate_NNR, params=model_f.parameters())
+        model_f.train()
     if best_model != None:
         net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{best_model}.pt"
         state_dict = torch.load(net, map_location=device)
@@ -2266,27 +2287,7 @@ def data_train_synaptic2(config, erase, best_model, device):
     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
     model.train()
 
-    if has_field:
-        if 'PDE_N6' in model_config.signal_model_name:
-            # model_f = SirenCollection(n_nodes = n_nodes, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.n_layers_nnr,
-            #                           hidden_layers=model_config.n_layers_nnr, first_omega_0=omega, hidden_omega_0=omega, outermost_linear=True)
 
-            model_f = Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.n_layers_nnr,
-                                       hidden_layers=model_config.n_layers_nnr, first_omega_0=omega, hidden_omega_0=omega, outermost_linear=True)
-
-            modulation = torch.tensor(x_list[1], device=device)
-            modulation = modulation[:, :, 8:9].squeeze()
-            modulation = modulation.t()
-
-        else:
-            model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
-                                    out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
-                                    hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device,
-                                    first_omega_0=omega, hidden_omega_0=omega)
-
-        model_f.to(device=device)
-        optimizer_f = torch.optim.Adam(lr=train_config.learning_rate_NNR, params=model_f.parameters())
-        model_f.train()
 
     net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs.pt"
     print(f'network: {net}')
