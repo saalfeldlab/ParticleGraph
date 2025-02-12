@@ -3175,11 +3175,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         x_mesh_list = []
         y_mesh_list = []
         time.sleep(0.5)
-        for run in trange(n_runs):
-            x_mesh = torch.load(f'graphs_data/{dataset_name}/x_mesh_list_{run}.pt', map_location=device)
-            x_mesh_list.append(x_mesh)
-            h = torch.load(f'graphs_data/{dataset_name}/y_mesh_list_{run}.pt', map_location=device)
-            y_mesh_list.append(h)
+        x_mesh = torch.load(f'graphs_data/{dataset_name}/x_mesh_list_{run}.pt', map_location=device)
+        x_mesh_list.append(x_mesh)
+        h = torch.load(f'graphs_data/{dataset_name}/y_mesh_list_{run}.pt', map_location=device)
+        y_mesh_list.append(h)
         x_list = x_mesh_list
         y_list = y_mesh_list
         x = x_list[run][0].clone().detach()
@@ -3433,7 +3432,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         start_it = 0
         stop_it = n_frames-1
 
-    x = x_list[0][start_it].clone().detach()
+    x = x_list[run][start_it].clone().detach()
     n_particles = x.shape[0]
 
     # x_list[0] = torch.cat((x_list[0],x_list[0],x_list[0],x_list[0]), dim=0)
@@ -3575,9 +3574,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 if has_ghost:
                     y = y[mask_ghost]
 
-            if 'plot_data' in test_mode:
-                y = y0.clone().detach() / ynorm
-
             if sub_sampling > 1:
                 # predict position, does not work with rotation_augmentation
                 if time_step == 1:
@@ -3652,6 +3648,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
             if 'inference' in test_mode:
                 x_inference_list.append(x)
+
+        if 'plot_data' in test_mode:
+            x = x0.clone().detach()
 
         # vizualization
         if (it % step == 0) & (it >= 0) & visualize:
