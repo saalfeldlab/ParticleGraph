@@ -2290,10 +2290,6 @@ def data_train_synaptic2(config, erase, best_model, device):
         print(f'best_model: {best_model}  start_epoch: {start_epoch}')
         logger.info(f'best_model: {best_model}  start_epoch: {start_epoch}')
 
-        # from ParticleGraph.models.MLP import MLP
-        # model.lin_edge_plus = MLP(input_size=model.input_size, output_size=model.output_size, nlayers=model.n_layers,
-        #                     hidden_size=model.hidden_dim * 4, device=model.device)
-
         if has_field:
             net = f'{log_dir}/models/best_model_f_with_{n_runs - 1}_graphs_{best_model}.pt'
             state_dict = torch.load(net, map_location=device)
@@ -2302,7 +2298,8 @@ def data_train_synaptic2(config, erase, best_model, device):
         start_epoch = 0
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
-    optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+    lr_modulation = train_config.learning_rate_modulation_start
+    optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr, lr_modulation)
     model.train()
 
     net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs.pt"
@@ -2338,6 +2335,10 @@ def data_train_synaptic2(config, erase, best_model, device):
         ind_a = torch.tensor(np.arange(1, n_particles*100), device=device)
         pos = torch.argwhere(ind_a % 100 != 99).squeeze()
         ind_a = ind_a[pos]
+    if 'PDE_N6' in model_config.signal_model_name:
+        modulation = torch.tensor(x_list[1], device=device)
+        modulation = modulation[:, :, 8:9].squeeze()
+        modulation = modulation.t()
 
     print("start training ...")
 
@@ -2386,9 +2387,13 @@ def data_train_synaptic2(config, erase, best_model, device):
             ids = np.sort(ids)
 
             loss = 0
+
+            k = np.random.randint(n_frames - 5 - batch_size)
+
             for batch in range(batch_size):
 
-                k = np.random.randint(n_frames - 5)
+                k = k+1
+
                 in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[0:n_particles]), dim=1)
                 func_phi = model.lin_phi(in_features.float())
                 x = torch.tensor(x_list[run][k], device=device)
@@ -2474,6 +2479,9 @@ def data_train_synaptic2(config, erase, best_model, device):
                     tmp = to_numpy(model.b[:,to_numpy(t)])**2
                     ax = fig.add_subplot(2, 2, 1)
                     plt.imshow(tmp[0:100], cmap='viridis')
+                    plt.autoscale(True)
+                    plt.xticks([])
+                    plt.yticks([])
                     ax=fig.add_subplot(2,2,2)
                     plt.plot(tmp[200,:],c='k')
                     plt.xticks([])
@@ -2485,8 +2493,8 @@ def data_train_synaptic2(config, erase, best_model, device):
                     plt.yticks([])
                     ax = fig.add_subplot(2, 2, 4)
                     plt.plot(to_numpy(modulation[200,to_numpy(t)]),c='k')
-                    plt.tight_layout()
                     plt.xticks([])
+                    plt.tight_layout()
                     plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
                     plt.close()
                 if (has_field):

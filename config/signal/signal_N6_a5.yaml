@@ -68,4 +68,4 @@ training:
     learning_rate_embedding_start: 1.0E-4
     learning_rate_modulation_start: 1.0E-4
     coeff_diff: 100
-    coeff_model_b: 5.0
+    coeff_model_b: 50
