@@ -296,7 +296,30 @@ def plot_training (config,  log_dir, epoch, N, x, index_particles, n_particles, 
 
     matplotlib.rcParams['savefig.pad_inches'] = 0
 
-    if model_config.mesh_model_name == 'WaveMesh':
+    if 'WaveMesh' in model_config.mesh_model_name:
+
+        if model_config.mesh_model_name == 'WaveMeshSmooth':
+
+            fig = plt.figure(figsize=(10, 4.3))
+            ax = fig.add_subplot(121)
+            indices = torch.randperm(x.shape[0])[:10000]
+            plt.scatter(to_numpy(model.delta_pos[indices, 0]), to_numpy(model.delta_pos[indices, 1]), s=50,
+                        c=to_numpy(model.modulation[indices]))
+            plt.xlim([-max_radius, max_radius])
+            plt.ylim([-max_radius, max_radius])
+            plt.colorbar()
+            ax = fig.add_subplot(122)
+            plt.scatter(to_numpy(model.delta_pos[indices, 0]), to_numpy(model.delta_pos[indices, 1]), s=50,
+                        c=to_numpy(model.kernel_operators[indices, 3:4]))
+            plt.xlim([-max_radius, max_radius])
+            plt.ylim([-max_radius, max_radius])
+            plt.colorbar()
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/tmp_training/matrix/kernel_{epoch}_{N}.tif",
+                        dpi=87)
+            plt.close()
+
+
         fig = plt.figure(figsize=(8, 8))
         rr = torch.tensor(np.linspace(-150, 150, 200)).to(device)
         popt_list = []

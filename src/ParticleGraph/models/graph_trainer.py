@@ -1312,7 +1312,7 @@ def data_train_mesh(config, erase, best_model, device):
 
     h = []
 
-    print('Create models ...')
+    print('create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
     # net = f"{log_dir}/models/best_model_with_1_graphs_17.pt"
     # state_dict = torch.load(net,map_location=device)
@@ -1347,9 +1347,8 @@ def data_train_mesh(config, erase, best_model, device):
         index = np.argwhere(x_mesh[:, 5].detach().cpu().numpy() == n)
         index_nodes.append(index.squeeze())
 
-    print("Start training mesh ...")
-    print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
-    logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
+    print("start training mesh ...")
+
 
     list_loss = []
     time.sleep(1)
@@ -1358,6 +1357,14 @@ def data_train_mesh(config, erase, best_model, device):
         old_batch_size = batch_size
         batch_size = get_batch_size(epoch)
         logger.info(f'batch_size: {batch_size}')
+
+        Niter = n_frames * data_augmentation_loop // batch_size
+        plot_frequency = int(Niter // 50)
+        if epoch==0:
+            print(f'{Niter} iterations per epoch')
+            logger.info(f'{Niter} iterations per epoch')
+            print(f'plot every {plot_frequency} iterations')
+
         if epoch == 1:
             repeat_factor = batch_size // old_batch_size
             mask_mesh = mask_mesh.repeat(repeat_factor, 1)
@@ -1410,6 +1417,13 @@ def data_train_mesh(config, erase, best_model, device):
             for batch in batch_loader:
                 pred = model(batch, data_id = data_id)
 
+                # fig = plt.figure(figsize=(8, 8))
+                # plt.ion()
+                # pos = torch.argwhere(edge_index_mesh[0,:]==4850)
+                # plt.scatter(to_numpy(x_mesh[:, 1]), to_numpy(x_mesh[:, 2]), s=10, c=to_numpy(model.density))
+                # plt.scatter(to_numpy(x_mesh[edge_index_mesh[1, pos], 1]), to_numpy(x_mesh[edge_index_mesh[1, pos], 2]), s=10, c='r')
+                # plt.show()
+
             loss = ((pred - y_batch) * mask_mesh).norm(2)
             loss.backward()
             optimizer.step()
@@ -1417,7 +1431,7 @@ def data_train_mesh(config, erase, best_model, device):
             total_loss += loss.item()
 
             visualize_embedding = ('Wave' in model_config.mesh_model_name)
-            if visualize_embedding & (((epoch < 10) & (N % (Niter // 50) == 0)) | (N == 0)):
+            if visualize_embedding & (((epoch < 10) & (N % plot_frequency == 0)) | (N == 0)):
                 torch.save({'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict()},
                            os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
@@ -2663,8 +2677,6 @@ def data_train_synaptic2(config, erase, best_model, device):
     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
     model.train()
 
-
-
     net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs.pt"
     print(f'network: {net}')
     print(f'initial batch_size: {batch_size}')
@@ -2734,6 +2746,10 @@ def data_train_synaptic2(config, erase, best_model, device):
         total_loss = 0
 
         for N in trange(Niter):
+
+            phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
+            cos_phi = torch.cos(phi)
+            sin_phi = torch.sin(phi)
 
             run = 1 + np.random.randint(n_runs-1)
 
@@ -2809,7 +2825,7 @@ def data_train_synaptic2(config, erase, best_model, device):
             has_field_batch = torch.ones_like(data_id) * has_field
 
             for batch in batch_loader:
-                pred = model(batch, data_id=data_id, has_field=has_field_batch, k=k_batch)
+                pred = model(batch, data_id=data_id, has_field=has_field_batch, k=k_batch, training=True, phi=phi)
 
             loss = loss + (pred - y_batch).norm(2)
 
@@ -3861,7 +3877,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             x[:, 6:7] += pred * hnorm * delta_t
         elif model_config.mesh_model_name == 'WaveMesh':
             with torch.no_grad():
-                pred = mesh_model(dataset_mesh, data_id=data_id)
+                pred = mesh_model(dataset_mesh, data_id=data_id, training=False, phi=torch.zeros(1, device=device))
             x[mask_mesh.squeeze(), 7:8] += pred[mask_mesh.squeeze()] * hnorm * delta_t
             x[mask_mesh.squeeze(), 6:7] += x[mask_mesh.squeeze(), 7:8] * delta_t
         elif 'RD_RPS_Mesh' in model_config.mesh_model_name == 'RD_RPS_Mesh':

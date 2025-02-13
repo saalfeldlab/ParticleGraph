@@ -5534,10 +5534,10 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                 else:
                     plt.xlabel(r'$a_{i0}(t)$', fontsize=78)
                     plt.ylabel(r'$a_{i1}(t)$', fontsize=78)
-                plt.xlim([0.94, 1.08])
-                plt.ylim([0.9, 1.10])
-                # plt.xlim([0.7, 1.2])
-                # plt.ylim([0.7, 1.2])
+                # plt.xlim([0.94, 1.08])
+                # plt.ylim([0.9, 1.10])
+                plt.xlim([0.7, 1.2])
+                plt.ylim([0.7, 1.2])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/all/all_embedding_0_{epoch}.tif", dpi=80)
                 plt.close()
@@ -5554,10 +5554,10 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                 else:
                     plt.xlabel(r'$a_{i0}(t)$', fontsize=78)
                     plt.ylabel(r'$a_{i1}(t)$', fontsize=78)
-                plt.xlim([0.94, 1.08])
-                plt.ylim([0.9, 1.10])
-                # plt.xlim([0.7, 1.2])
-                # plt.ylim([0.7, 1.2])
+                # plt.xlim([0.94, 1.08])
+                # plt.ylim([0.9, 1.10])
+                plt.xlim([0.7, 1.2])
+                plt.ylim([0.7, 1.2])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/all/all_embedding_1_{epoch}.tif", dpi=80)
                 plt.close()
@@ -5606,11 +5606,11 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                     # plt.plot(to_numpy(rr), to_numpy(true_func), c=mc, linewidth=1)
                     # true_func = true_model.func(rr, it + 1, 'update')
                     # plt.plot(to_numpy(rr), to_numpy(true_func), c=mc, linewidth=1)
-                plt.xlabel(r'$x_i$', fontsize=16)
-                # plt.ylabel(r'Learned $\phi^*(a_i(t), x_i)$', fontsize=78)
-                plt.ylabel(r'Learned $MLP_0(a_i(t), x_i)$', fontsize=14)
-                plt.ylim([-8, 8])
-                plt.xlim([-5, 5])
+                    plt.xlabel(r'$x_i$', fontsize=24)
+                    # plt.ylabel(r'Learned $\phi^*(a_i(t), x_i)$', fontsize=78)
+                    plt.ylabel(r'Learned $MLP_0(a_i(t), x_i)$', fontsize=24)
+                    plt.ylim([-8, 8])
+                    plt.xlim([-5, 5])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/all/MLP0_{epoch}.tif", dpi=80)
                 plt.close()
@@ -5723,6 +5723,9 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
         model.load_state_dict(state_dict['model_state_dict'])
         print(f'net: {net}')
 
+        adjacency = torch.load(f'./graphs_data/{dataset_name}/adjacency.pt', map_location=device)
+        true_model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, device=device)
+
         for n in trange(100):
 
             indices = np.arange(n_particles)*100+n
@@ -5731,7 +5734,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
             plt.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), s=1, color=mc, alpha=0.01)
             for k in range(n_particle_types):
                 plt.scatter(to_numpy(model.a[indices[k * 250:(k + 1) * 250], 0]),
-                            to_numpy(model.a[indices[k * 250:(k + 1) * 250], 1]), s=10, color=cmap.color(k), alpha=0.5,
+                            to_numpy(model.a[indices[k * 250:(k + 1) * 250], 1]), s=100, color=cmap.color(k), alpha=0.5,
                             edgecolors='none')
             if 'latex' in style:
                 plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}(t)$', fontsize=78)
@@ -5739,14 +5742,44 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
             else:
                 plt.xlabel(r'$a_{i0}(t)$', fontsize=78)
                 plt.ylabel(r'$a_{i1}(t)$', fontsize=78)
-            plt.xlim([0.94, 1.08])
+            plt.xlim([0.92, 1.08])
             plt.ylim([0.9, 1.10])
             # plt.xlim([0.9, 1.1])
+            plt.text(0.93, 1.08, f'time: {n}', fontsize=48)
+            # plt.xlim([0.7, 1.2])
             # plt.ylim([0.7, 1.2])
+            # plt.text(0.72, 1.16, f'time: {n}', fontsize=48)
 
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/all2/all_embedding_1_{n}.tif", dpi=80)
             plt.close()
+
+
+            rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
+            func_list = []
+            fig, ax = fig_init()
+            plt.axis('off')
+            ax = plt.subplot(2, 2, 1)
+            for it, k in enumerate(indices):
+                if (it%250 == 0) and (it>0):
+                    ax = plt.subplot(2, 2, it//250+1)
+                embedding_ = model.a[k, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
+                with torch.no_grad():
+                    func = model.lin_phi(in_features.float())
+                    plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(it//250), alpha=0.5)
+                    plt.xlabel(r'$x_i$', fontsize=24)
+                    plt.ylabel(r'learned $MLP_0(a_i(t), x_i)$', fontsize=24)
+                plt.ylim([-8,8])
+                plt.xlim([-5,5])
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/all2/phi_{n}.tif", dpi=80)
+            plt.close()
+
+
+
+            fig, ax = fig_init()
+
 
             # rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
             # k_list = [0, 250, 500, 750]
@@ -7190,7 +7223,7 @@ if __name__ == '__main__':
     # config_list = ['signal_N3_c4']
     # config_list = ['signal_N2_a20','signal_N2_a21','signal_N2_a22','signal_N2_a23','signal_N2_a24','signal_N2_a25','signal_N2_a26']
     # config_list = ['signal_N4_v']
-    config_list = ['signal_N6_a3']
+    config_list = ['signal_N3_c16']
 
     for config_file_ in config_list:
         
@@ -7200,8 +7233,8 @@ if __name__ == '__main__':
         config.config_file = pre_folder + config_file_
 
         # data_plot(config=config, epoch_list=['best'], style='latex color', device=device)
-        data_plot(config=config, epoch_list=['all'], style='black color', device=device)
-        # data_plot(config=config, epoch_list=['time'], style='black color', device=device)
+        # data_plot(config=config, epoch_list=['all'], style='black color', device=device)
+        data_plot(config=config, epoch_list=['time'], style='black color', device=device)
 
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

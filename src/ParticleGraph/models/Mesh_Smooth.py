@@ -47,8 +47,10 @@ class Mesh_Smooth(pyg.nn.MessagePassing):
 
         simulation_config = config.simulation
         model_config = config.graph_model
+        train_config = config.training
 
         self.device = device
+        self.dimension = simulation_config.dimension
         self.input_size = model_config.input_size
         self.output_size = model_config.output_size
         self.hidden_dim = model_config.hidden_dim
@@ -61,6 +63,10 @@ class Mesh_Smooth(pyg.nn.MessagePassing):
         self.output_size_nnr= model_config.output_size_nnr
         self.hidden_dim_nnr = model_config.hidden_dim_nnr
         self.omega = model_config.omega
+
+        self.max_radius = simulation_config.max_radius
+        self.kernel_var = self.max_radius ** 2
+        self.rotation_augmentation = train_config.rotation_augmentation
 
         self.lin_phi = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                            hidden_size=self.hidden_dim, device=self.device)
@@ -77,8 +83,13 @@ class Mesh_Smooth(pyg.nn.MessagePassing):
 
 
 
-    def forward(self, data, data_id):
+    def forward(self, data, data_id, training=[], phi=[]):
+
         self.data_id = data_id
+        self.cos_phi = torch.cos(phi)
+        self.sin_phi = torch.sin(phi)
+        self.training = training
+
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
         # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         # deg = pyg_utils.degree(edge_index[0], data.num_nodes)
@@ -94,6 +105,7 @@ class Mesh_Smooth(pyg.nn.MessagePassing):
         self.density = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, density=density_null)
         self.mode = 'mlp'
         laplacian_u = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, density=self.density)
+
         pred = self.lin_phi(torch.cat((laplacian_u, embedding), dim=-1))
 
         self.laplacian_u = laplacian_u
@@ -106,26 +118,33 @@ class Mesh_Smooth(pyg.nn.MessagePassing):
         delta_pos = self.bc_dpos(pos_j - pos_i)
         self.delta_pos = delta_pos
 
+        if self.rotation_augmentation & (self.training == True):
+            new_delta_pos_x = self.cos_phi * delta_pos[:, 0] + self.sin_phi * delta_pos[:, 1]
+            new_delta_pos_y = -self.sin_phi * delta_pos[:, 0] + self.cos_phi * delta_pos[:, 1]
+            delta_pos[:, 0] = new_delta_pos_x
+            delta_pos[:, 1] = new_delta_pos_y
+
         if self.mode == 'pre_mlp':
 
             mgrid = delta_pos.clone().detach()
             mgrid.requires_grad = True
             density_kernel = torch.exp(-(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / self.kernel_var)[:,None]
 
-            self.modulation = self.siren(coords=mgrid) * max_radius **2
+            self.modulation = self.siren(coords=mgrid) * self.max_radius**2
             kernel_modified = torch.exp(-2*(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / (20*self.kernel_var))[:, None] * self.modulation
 
             grad_autograd = -density_gradient(kernel_modified, mgrid)
-            laplace_autograd = density_laplace(kernel_modified, mgrid)
+            laplace_autograd = -density_laplace(kernel_modified, mgrid)
 
             self.kernel_operators = torch.cat((kernel_modified, grad_autograd, laplace_autograd), dim=-1)
 
             return density_kernel
 
-            # kernel_modified = torch.exp(-2 * (mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / (20*self.kernel_var))[:, None]
-            # fig = plt.figure(figsize=(6, 6))
-            # plt.scatter(to_numpy(mgrid[:,0]), to_numpy(mgrid[:,1]), s=10, c=to_numpy(kernel_modified))
-            # plt.show()
+            kernel_modified = torch.exp(-2 * (mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / (20*self.kernel_var))[:, None]
+            fig = plt.figure(figsize=(6, 6))
+            plt.ion()
+            plt.scatter(to_numpy(mgrid[:,0]), to_numpy(mgrid[:,1]), s=10, c=to_numpy(kernel_modified))
+            plt.show()
 
         else:
 
@@ -133,10 +152,10 @@ class Mesh_Smooth(pyg.nn.MessagePassing):
 
             return out
 
-    def message(self, u_j, discrete_laplacian):
-        L = discrete_laplacian[:,None] * u_j
-
-        return L
+    # def message(self, u_j, discrete_laplacian):
+    #     L = discrete_laplacian[:,None] * u_j
+    #
+    #     return L
 
     def update(self, aggr_out):
         return aggr_out  # self.lin_node(aggr_out)

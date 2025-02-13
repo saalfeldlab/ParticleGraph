@@ -61,7 +61,7 @@ if __name__ == '__main__':
         # config_list = ['falling_water_ramp_x6_11']
         # config_list = ['RD_RPS_3']
         # config_list =['signal_N6_a16']
-        config_list =['wave_smooth_1']
+        config_list =['wave_smooth_5']
         # config_list = ['arbitrary_3_bis']
         # config_list = ['signal_N3_c16']
     for config_file_ in config_list:
