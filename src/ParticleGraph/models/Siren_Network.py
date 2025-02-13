@@ -116,8 +116,6 @@ class Siren_Network(nn.Module):
 
         self.device = device 
         self.image_width = image_width
-        
-        print('omega: ',first_omega_0, hidden_omega_0)
 
         self.net = []
         self.net.append(SineLayer(in_features, hidden_features, 

@@ -2380,7 +2380,6 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
             dataset_mesh = data.Data(x=x_mesh, edge_index=mesh_data['edge_index'],
                                      edge_attr=mesh_data['edge_weight'], device=device)
 
-
             match config.graph_model.mesh_model_name:
                 case 'DiffMesh':
                     with torch.no_grad():
