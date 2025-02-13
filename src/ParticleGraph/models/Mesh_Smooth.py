@@ -134,7 +134,7 @@ class Mesh_Smooth(pyg.nn.MessagePassing):
             kernel_modified = torch.exp(-2*(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / (20*self.kernel_var))[:, None] * self.modulation
 
             grad_autograd = -density_gradient(kernel_modified, mgrid)
-            laplace_autograd = -density_laplace(kernel_modified, mgrid)
+            laplace_autograd = density_laplace(kernel_modified, mgrid)
 
             self.kernel_operators = torch.cat((kernel_modified, grad_autograd, laplace_autograd), dim=-1)
 
@@ -148,7 +148,7 @@ class Mesh_Smooth(pyg.nn.MessagePassing):
 
         else:
 
-            out = field_j * self.kernel_operators[:, 3:4] / density_j
+            out = -field_j * self.kernel_operators[:, 3:4] / density_j
 
             return out
 

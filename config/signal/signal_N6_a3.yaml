@@ -22,7 +22,7 @@ simulation:
     start_frame: -2000
 
 graph_model:
-    field_type: 'modulation'
+    field_type: ''
     signal_model_name: 'PDE_N6'
     particle_model_name: ''
     mesh_model_name: ''
@@ -68,3 +68,4 @@ training:
     learning_rate_embedding_start: 1.0E-4
     coeff_diff: 100
     learning_rate_NNR: 1.0E-6
+    coeff_model_b: 5.0

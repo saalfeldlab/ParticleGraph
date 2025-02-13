@@ -66,10 +66,18 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         else:
             self.a = nn.Parameter(torch.tensor(projections, device=self.device, requires_grad=True, dtype=torch.float32))
 
+        if self.model == 'PDE_N6':
+            self.b = nn.Parameter(
+                torch.ones((int(self.n_particles), 1000), device=self.device, requires_grad=True,dtype=torch.float32))
+            self.embedding_step = self.n_frames // 1000
+
+
         self.W = nn.Parameter(torch.randn((int(self.n_particles),int(self.n_particles)), device=self.device, requires_grad=True, dtype=torch.float32))
 
         self.mask = torch.ones((int(self.n_particles),int(self.n_particles)), device=self.device, requires_grad=False, dtype=torch.float32)
         self.mask.fill_diagonal_(0)
+
+
 
 
     def get_interp_a(self, k, particle_id):
@@ -88,17 +96,22 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
 
         u = data.x[:, 6:7]
 
-        if has_field[0]:
-            field = x[:, 8:9]
-        else:
-            field = torch.ones_like(x[:,6:7])
-
         if self.model == 'PDE_N3':
             particle_id = x[:, 0:1].long()
             embedding = self.get_interp_a(k, particle_id)
         else:
             particle_id = x[:, 0].long()
             embedding = self.a[particle_id, :]
+
+        if self.model == 'PDE_N6':
+            field = self.b[particle_id, k.squeeze() // self.embedding_step]**2
+            field = field[:,None]
+        elif has_field[0]:
+            field = x[:, 8:9]
+        else:
+            field = torch.ones_like(x[:,6:7])
+
+
 
         in_features = torch.cat([u, embedding], dim=1)
 

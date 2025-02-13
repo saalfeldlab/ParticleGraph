@@ -1310,6 +1310,12 @@ def data_train_mesh(config, erase, best_model, device):
     edge_index_mesh = mesh_data['edge_index']
     edge_weight_mesh = mesh_data['edge_weight']
 
+    if 'WaveMeshSmooth' in model_config.mesh_model_name:
+        with torch.no_grad():
+            distance = torch.sum((mesh_data['mesh_pos'][:, None, :] - mesh_data['mesh_pos'][None, :, :]) ** 2, dim=2)
+            adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
+            edge_index_mesh = adj_t.nonzero().t().contiguous()
+
     h = []
 
     print('create models ...')
@@ -1333,7 +1339,7 @@ def data_train_mesh(config, erase, best_model, device):
     logger.info(f'N epochs: {n_epochs}')
     logger.info(f'initial batch_size: {batch_size}')
 
-    print('Update variables ...')
+    print('update variables ...')
     # update variable if particle_dropout, cell_division, etc ...
     x_mesh = x_mesh_list[1][n_frames - 1].clone().detach()
     type_list = x_mesh[:, 5:6].clone().detach()
@@ -1394,11 +1400,6 @@ def data_train_mesh(config, erase, best_model, device):
 
                 if train_config.noise_level > 0:
                     x_mesh[:, 6:7] = x_mesh[:, 6:7] + train_config.noise_level * torch.randn_like(x_mesh[:, 6:7])
-
-                if 'WaveMeshSmooth' in model_config.mesh_model_name:
-                    distance = torch.sum((x_mesh[:, None, 1:dimension + 1] - x_mesh[None, :, 1:dimension + 1]) ** 2, dim=2)
-                    adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
-                    edge_index_mesh = adj_t.nonzero().t().contiguous()
 
                     # fig = plt.figure(figsize=(8, 8))
                     # plt.ion()
@@ -2274,23 +2275,10 @@ def data_train_synaptic2(config, erase, best_model, device):
     print('create models ...')
     model, bc_pos, bc_dpos = choose_training_model(model_config=config, device=device, projections=projections)
     if has_field:
-        if 'PDE_N6' in model_config.signal_model_name:
-            # model_f = SirenCollection(n_nodes = n_nodes, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.n_layers_nnr,
-            #                           hidden_layers=model_config.n_layers_nnr, first_omega_0=omega, hidden_omega_0=omega, outermost_linear=True)
-
-            model_f = Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.n_layers_nnr,
-                                       hidden_layers=model_config.n_layers_nnr, first_omega_0=omega, hidden_omega_0=omega, outermost_linear=True)
-
-            modulation = torch.tensor(x_list[1], device=device)
-            modulation = modulation[:, :, 8:9].squeeze()
-            modulation = modulation.t()
-
-        else:
-            model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
-                                    out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
-                                    hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device,
-                                    first_omega_0=omega, hidden_omega_0=omega)
-
+        model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
+                                out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
+                                hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device,
+                                first_omega_0=omega, hidden_omega_0=omega)
         model_f.to(device=device)
         optimizer_f = torch.optim.Adam(lr=train_config.learning_rate_NNR, params=model_f.parameters())
         model_f.train()
@@ -2425,11 +2413,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                 loss += model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + coeff_diff * diff
 
                 if has_field:
-                    if 'PDE_N6' in model_config.signal_model_name:
-                        t = torch.zeros((1,1,1), dtype=torch.float32, device=device)
-                        t[:,0,:] = torch.tensor(k / n_frames, dtype=torch.float32, device=device)
-                        x[:, 8] = model_f(t) ** 2
-                    elif 'visual' in field_type:
+                    if 'visual' in field_type:
                         x[:n_nodes, 8:9] = model_f(time=k / n_frames) ** 2
                         x[n_nodes:n_particles, 8:9] = 1
                     else:
@@ -2467,6 +2451,8 @@ def data_train_synaptic2(config, erase, best_model, device):
 
             if ('PDE_N3' in model_config.signal_model_name):
                 loss = loss + train_config.coeff_model_a * (model.a[ind_a+1] - model.a[ind_a]).norm(2)
+            elif ('PDE_N6' in model_config.signal_model_name):
+                loss = loss + train_config.coeff_model_b * (model.b[:,1:] - model.b[:,:-1]).norm(2)
 
             loss.backward()
             optimizer.step()
@@ -2481,46 +2467,42 @@ def data_train_synaptic2(config, erase, best_model, device):
                                      n_particle_types, type_list, cmap, device)
                 torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
                            os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+
+                if 'PDE_N6' in model_config.signal_model_name:
+                    t = torch.arange(0, 1000, 10, dtype=torch.float32, device=device)
+                    fig = plt.figure(figsize=(12, 12))
+                    tmp = to_numpy(model.b[:,to_numpy(t)])**2
+                    ax = fig.add_subplot(2, 2, 1)
+                    plt.imshow(tmp[0:100], cmap='viridis')
+                    ax=fig.add_subplot(2,2,2)
+                    plt.plot(tmp[200,:],c='k')
+                    plt.xticks([])
+                    ax = fig.add_subplot(2, 2, 3)
+                    t = torch.arange(0, n_frames + 1, (n_frames + 1) // 100, dtype=torch.float32, device=device)
+                    plt.imshow(to_numpy(modulation[0:100,to_numpy(t)]), cmap='viridis')
+                    plt.autoscale(True)
+                    plt.xticks([])
+                    plt.yticks([])
+                    ax = fig.add_subplot(2, 2, 4)
+                    plt.plot(to_numpy(modulation[200,to_numpy(t)]),c='k')
+                    plt.tight_layout()
+                    plt.xticks([])
+                    plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
+                    plt.close()
                 if (has_field):
-                    if 'PDE_N6' in model_config.signal_model_name:
-                        fig = plt.figure(figsize=(12, 12))
-                        t = torch.arange(0, n_frames + 1, (n_frames + 1) // 100, dtype=torch.float32,device=device) / n_frames
-                        t = t[None, :, None]
-                        tmp = model_f(t).squeeze().t()
-                        ax=fig.add_subplot(2,2,1)
-                        plt.imshow(to_numpy(tmp[0:100,:]), cmap='viridis')
-                        plt.colorbar
-                        plt.xticks([])
-                        plt.yticks([])
-                        ax=fig.add_subplot(2,2,2)
-                        plt.plot(to_numpy(tmp[200,:]),c='k')
-                        plt.xticks([])
-                        ax = fig.add_subplot(2, 2, 3)
-                        t = torch.arange(0, n_frames + 1, (n_frames + 1) // 100, dtype=torch.float32,device=device)
-                        plt.imshow(to_numpy(modulation[0:100,to_numpy(t)]), cmap='viridis')
-                        plt.autoscale(True)
-                        plt.xticks([])
-                        plt.yticks([])
-                        ax = fig.add_subplot(2, 2, 4)
-                        plt.plot(to_numpy(modulation[200,to_numpy(t)]),c='k')
-                        plt.tight_layout()
-                        plt.xticks([])
-                        plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
-                        plt.close()
+                    if 'visual' in field_type:
+                        tmp = torch.reshape(x[:n_nodes, 8:9], (n_nodes_per_axis, n_nodes_per_axis))
                     else:
-                        if 'visual' in field_type:
-                            tmp = torch.reshape(x[:n_nodes, 8:9], (n_nodes_per_axis, n_nodes_per_axis))
-                        else:
-                            tmp = torch.reshape(x[:, 8:9], (n_nodes_per_axis, n_nodes_per_axis))
-                        tmp = to_numpy(torch.sqrt(tmp))
-                        tmp = np.rot90(tmp, k=1)
-                        fig = plt.figure(figsize=(12, 12))
-                        plt.imshow(tmp, cmap='grey')
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.tight_layout()
-                        plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
-                        plt.close()
+                        tmp = torch.reshape(x[:, 8:9], (n_nodes_per_axis, n_nodes_per_axis))
+                    tmp = to_numpy(torch.sqrt(tmp))
+                    tmp = np.rot90(tmp, k=1)
+                    fig = plt.figure(figsize=(12, 12))
+                    plt.imshow(tmp, cmap='grey')
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
+                    plt.close()
                     torch.save({'model_state_dict': model_f.state_dict(),
                                 'optimizer_state_dict': optimizer_f.state_dict()},
                                os.path.join(log_dir, 'models', f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))

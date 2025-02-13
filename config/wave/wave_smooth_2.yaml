@@ -50,6 +50,7 @@ training:
   small_init_batch_size: True
   n_runs: 2
   sparsity: 'none'
+  data_augmentation_loop: 150
   rotation_augmentation: True
   cluster_method: 'distance_embedding'
   cluster_distance_threshold: 0.1
