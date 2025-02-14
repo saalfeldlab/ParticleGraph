@@ -2360,7 +2360,6 @@ def data_train_synaptic2(config, erase, best_model, device):
         batch_size = int(get_batch_size(epoch) / particle_batch_ratio)
         logger.info(f'batch_size: {batch_size}')
 
-        Niter = n_frames * data_augmentation_loop // batch_size
         if particle_batch_ratio < 1:
             Niter = int(n_frames * data_augmentation_loop // batch_size / particle_batch_ratio * 0.2)
         else:
@@ -2577,7 +2576,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         print(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
         logger.info(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
 
-        if ('PDE_N3' not in model_config.signal_model_name):
+        if ('PDE_N3' not in model_config.signal_model_name) & ('PDE_N6' not in model_config.signal_model_name):
 
             ax = fig.add_subplot(2, 5, 6)
             embedding = to_numpy(model.a.squeeze())

@@ -3,6 +3,7 @@ from shutil import copyfile
 import argparse
 import networkx as nx
 import scipy.io
+import umap
 import torch
 import torch.nn as nn
 import torch_geometric.data as data
@@ -52,7 +53,7 @@ if __name__ == '__main__':
     else:
         action = 'generate'
         best_model = None
-        config_list = ['rat_city_a']
+        config_list = ['rat_city_b']
 
     for config_file in config_list:
 

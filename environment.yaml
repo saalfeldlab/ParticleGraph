@@ -24,6 +24,7 @@ dependencies:
   - scikit-image
   - pysr
   - shapely
+  - seaborn
   - pip:
     - geomloss
     - torch_geometric
