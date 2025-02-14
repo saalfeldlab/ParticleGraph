@@ -51,24 +51,28 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        action = 'generate'
+        action = 'train'
         best_model = None
-        config_list = ['rat_city_b']
+        config_list = ['rat_city_a']
 
-    for config_file in config_list:
+    for config_file_ in config_list:
+
+        config_file, pre_folder = add_pre_folder(config_file_)
 
         print('')
         print(f'config_file {config_file}')
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+        config.dataset = pre_folder + config.dataset
+        config.config_file = pre_folder + config_file_
+
         device = set_device(config.training.device)
         print(f'device {device}')
         if 'generate' in action:
             data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=False, bSave=True, step=10)  #config.simulation.n_frames // 100)
         if 'train' in action:
-            data_train(config=config, config_file=config_file, erase=False, best_model=best_model, device=device)
+            data_train(config=config, erase=False, best_model=best_model, device=device)
         if 'test' in action:
-            data_test(config=config, config_file=config_file, visualize=True, style='black arrow speed acc_learned', verbose=False, best_model='best', run=2, plot_data=False,
-                      test_simulation=False, sample_embedding=False, device=device, fixed=True, bounce=True, step=4) # config.simulation.n_frames // 200, )  arrow speed acc_learned
+            data_test(config=config, visualize=True, style='black arrow speed acc_learned', verbose=False, best_model='best', run=2,  test_mode='', sample_embedding=False, device=device, step=4) # config.simulation.n_frames // 200, )  arrow speed acc_learned
 
             # data_test(config=config, config_file=config_file, visualize=True, style='black arrow speed acc', verbose=False, best_model='best', run=1, plot_data=False,
             #           test_simulation=False, sample_embedding=False, device=device, fixed=True, step=80, time_ratio=20) # config.simulation.n_frames // 200, )  arrow speed acc_learned

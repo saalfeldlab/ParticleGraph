@@ -25,10 +25,11 @@ from torch_geometric.utils import dense_to_sparse
 import torch_geometric.utils as pyg_utils
 from scipy.ndimage import zoom
 import re
+import imageio
 
 def extract_number(filename):
-    match = re.search(r'_(\d+)\.txt$', filename)
-    return int(match.group(1)) if match else -1
+    match = re.search(r'0-(\d+)\.jpg$', filename)
+    return int(match.group(1)) if match else None
 
 
 
@@ -2161,6 +2162,10 @@ def data_generate_rat_city(config, visualize=True, run_vizualized=0, style='colo
     dataset_name = config.dataset
     run = 0
 
+    pic_folder = config.plotting.pic_folder
+    pic_format = config.plotting.pic_format
+    pic_size = config.plotting.pic_size
+
     torch.random.fork_rng(devices=device)
     torch.random.manual_seed(training_config.seed)
 
@@ -2178,15 +2183,16 @@ def data_generate_rat_city(config, visualize=True, run_vizualized=0, style='colo
         os.remove(f)
 
     print(f'Loading data ...')
-    files = glob.glob(f'{data_folder_name}/*.txt')
+
 
     dataframe = pd.read_csv(data_folder_name, sep=" ")
-    position_columns = ["id","frame_id", "y", "x","previous_yolo_id"]  # replace with your position columns
-
+    position_columns = ["id","frame_id", "x", "y","previous_yolo_id"]  # replace with your position columns
     values = dataframe[position_columns].to_numpy()
-    values[:, 1:2] = values[:, 1:2] # y axis
-    values[:, 2:3] = values[:, 2:3] # x axis
-    values[:, 1] = values[:, ] - 1
+    values[:, 1] = values[:, 1] - 1
+
+    if os.path.exists(pic_folder):
+        files = glob.glob(f'{pic_folder}/*.jpg')
+        sorted_files = sorted(files, key=extract_number)
 
     x_list = []
     edge_f_p_list = []
@@ -2198,32 +2204,23 @@ def data_generate_rat_city(config, visualize=True, run_vizualized=0, style='colo
         if (it%1000 == 0):
             print(f'frame {it} ...')
 
-        pos = torch.argwhere(values[:, 0] == it)
+        pos = np.argwhere(values[:, 1] == it)
         if len(pos) == 0:
             print(f'pb with frame{it}')
         else:
             pos = pos.squeeze()
 
+            ID1 = torch.tensor(values[pos, 0:1], dtype=torch.float32, device=device)
+            PREV_ID1 = torch.tensor(values[pos, 4:5], dtype=torch.float32, device=device)
             N1 = torch.arange(len(pos), dtype=torch.float32, device=device)[:, None]
-            X1 = torch.tensor(data_values[:, 1:3], dtype=torch.float32, device=device)
+            X1 = torch.tensor(values[pos, 2:4], dtype=torch.float32, device=device)
             X1[:, 1] = 1-X1[:, 1]
-            if 'rat_city' in dataset_name:
-                X1[:, 0] = X1[:, 0] * 2
-
-            # speed
-            V1 = 0 * X1
-            # mouse ID
-            T1 = torch.tensor(data_values[:, 0:1], dtype=torch.float32, device=device)
-            # W H confidence
-            H1 = torch.tensor(data_values[:, 3:6], dtype=torch.float32, device=device)
-
-            if (it == simulation_config.start_frame):
-                ID1 = torch.arange(len(N1), device=device)[:, None]
-            else:
-                ID1 = torch.arange(int(ID1[-1] + 1), int(ID1[-1] + len(N1) + 1), device=device)[:, None]
+            V1 = torch.zeros_like(X1)
+            T1 = torch.zeros_like(ID1)
+            H1 = torch.zeros_like(X1)
 
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
-                                   H1.clone().detach(), ID1.clone().detach(), ID1.clone().detach()), 1)
+                                   H1.clone().detach(), PREV_ID1.clone().detach(), ID1.clone().detach()), 1)
 
             # compute connectivity rules
             edge_index = torch.sum((x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
@@ -2271,19 +2268,21 @@ def data_generate_rat_city(config, visualize=True, run_vizualized=0, style='colo
 
                     plt.style.use('dark_background')
 
-                    fig, ax = plt.subplots(figsize=(8, 4))
-                    ax.axvline(x=1.05, ymin=0, ymax=0.7, color='r', linestyle='--', linewidth=2)
-                    # plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=200, c='w', alpha=0.5)
-                    plt.xlim([0, 2])
-                    plt.ylim([0, 1])
-
-                    pos=x[:, 1:3]
+                    fig, ax = plt.subplots(figsize=(16, 8))
+                    if os.path.exists(pic_folder):
+                        im = imageio.imread(sorted_files[it])
+                        im = np.flipud(im)
+                        plt.imshow(im)
+                        plt.axis('off')
+                    pos = x[:, 1:3].clone().detach()
+                    pos[:,0] = 1110 * pos[:,0]
+                    pos[:,1] = 1000 * pos[:,1]
                     dataset = data.Data(x=x, pos=pos, edge_index=edge_index)
                     vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-                    nx.draw_networkx(vis, pos=to_numpy(pos), node_size=0, linewidths=0, with_labels=False, ax=ax, edge_color='g',
-                                     width=1)
-
+                    nx.draw_networkx(vis, pos=to_numpy(pos), node_size=0, linewidths=0, with_labels=False, ax=ax, edge_color='g',width=1)
                     plt.tight_layout()
+                    plt.xlim([0,2300])
+                    plt.ylim([0,1000])
 
                 else:
 

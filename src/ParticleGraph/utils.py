@@ -14,7 +14,7 @@ from torchvision.transforms import CenterCrop
 import gc
 from torch import cuda
 import subprocess
-
+import re
 
 def sort_key(filename):
             # Extract the numeric parts using regular expressions
@@ -446,11 +446,11 @@ def add_pre_folder(config_file_):
         config_file = os.path.join('cell', config_file_)
         pre_folder = 'cell/'
     elif 'mouse' in config_file_:
-        config_file = os.path.join('mouse', config_file_)
-        pre_folder = 'mouse/'
+        config_file = os.path.join('mouse_city', config_file_)
+        pre_folder = 'mouse_city/'
     elif 'rat' in config_file_:
-        config_file = os.path.join('rat', config_file_)
-        pre_folder = 'rat/'
+        config_file = os.path.join('rat_city', config_file_)
+        pre_folder = 'rat_city/'
 
     return config_file, pre_folder
 
@@ -630,6 +630,19 @@ def reparameterize(mu, logvar):
     return eps.mul(std).add_(mu)
 
 
+def get_sorted_image_files(pic_folder, pic_format):
+    # Check if the folder exists
+    if not os.path.exists(pic_folder):
+        raise FileNotFoundError(f"The folder `{pic_folder}` does not exist.")
+
+    # Get the list of image files with the specified format
+    image_files = glob.glob(os.path.join(pic_folder, f"*.{pic_format}"))
+
+    # Sort the files based on the number in the filename
+    image_files.sort(key=lambda f: int(re.search(r'(\d+)', os.path.basename(f)).group(1)))
+
+    return image_files
+
 
 def check_and_clear_memory(
         device: str = None,
@@ -732,3 +745,6 @@ def get_3d_bounding_box(xx):
     }
 
     return bounding_box
+
+
+

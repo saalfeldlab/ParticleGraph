@@ -140,6 +140,9 @@ class PlottingConfig(BaseModel):
     ylim: list[float] = [-0.1, 0.1]
     embedding_lim: list[float] = [-40, 40]
     speedlim: list[float] = [0, 1]
+    pic_folder: str = 'none'
+    pic_format: str = 'jpg'
+    pic_size: list[int] = [1000, 1100]
 
 
 class ImageData(BaseModel):

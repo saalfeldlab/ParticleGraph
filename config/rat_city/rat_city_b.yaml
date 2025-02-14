@@ -1,6 +1,6 @@
 description: 'mouse_city trial1_active_1 time_step = 5 0.25s LR 1.0E-4'
 dataset: 'rat_city_b'
-data_folder_name: '/groups/saalfeld/home/allierc/signaling/RatCity/annotation.txt'
+data_folder_name: '/groups/saalfeld/home/allierc/signaling/RatCity/annotation_yolo_with_gt_mapping.txt'
 
 simulation:
   params: [[-1]]
@@ -42,6 +42,9 @@ plotting:
   arrow_length: 2
   xlim: [0.94, 1.06]
   ylim: [0.94, 1.06]
+  pic_folder: '/nrs/karpova/forCedric/gnn/rat_city/cohort2_exp1/datasets/images/train'
+  pic_format: 'jpg'
+  pic_size: [1000, 1100]
 
 training:
   seed: 40
