@@ -55,15 +55,15 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        task = 'train'
-        best_model = ''
-        # config_list = ['cell_gland_SMG2_smooth10_1','cell_gland_SMG2_smooth10_9','cell_gland_SMG2_smooth10_10','cell_gland_SMG2_smooth10_5','cell_gland_SMG2_smooth10_6','cell_gland_SMG2_smooth10_7']
+        task = 'test'
+        best_model = 'best'
         # config_list = ['falling_water_ramp_x6_11']
         # config_list = ['RD_RPS_3']
-        config_list =['signal_N6_a8']
-        # config_list =['wave_smooth_2']
+        config_list =['signal_N2_a11']
+        # config_list =['wave_smooth_3']
         # config_list = ['arbitrary_3_bis']
         # config_list = ['signal_N3_c16']
+
     for config_file_ in config_list:
 
         config_file, pre_folder = add_pre_folder(config_file_)
@@ -80,8 +80,8 @@ if __name__ == '__main__':
         if 'train' in task:
             data_train(config=config, erase=False, best_model=best_model, device=device)
         if 'test' in task:
-            data_test(config=config, visualize=True, style='black color', verbose=False, best_model='best', run=0, test_mode='',
-                      sample_embedding=False, step=20, particle_of_interest=10, device=device)
+            data_test(config=config, visualize=True, style='black color', verbose=False, best_model='best', run=1, test_mode='plot_data',
+                      sample_embedding=False, step=20, particle_of_interest=100, device=device)
         if 'try_func' in task:
             try_func(max_radius=config.simulation.max_radius, device=device)
 

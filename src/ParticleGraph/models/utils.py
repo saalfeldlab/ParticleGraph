@@ -581,14 +581,13 @@ def plot_training (config,  log_dir, epoch, N, x, index_particles, n_particles, 
             plt.savefig(f"./{log_dir}/tmp_training/matrix/M_{epoch}_{N}.tif", dpi=87)
             plt.close()
 
-def plot_training_mouse(config, id_list, frame_list,  log_dir, epoch, N, model, n_particle_types, type_stack, ynorm, cmap, device):
+def plot_training_mouse(config, log_dir, epoch, N, model):
 
     simulation_config = config.simulation
     train_config = config.training
     model_config = config.graph_model
 
-    model_a = model.a[to_numpy(id_list)]
-    type_stack = type_stack[to_numpy(id_list)]
+    model_a = model.a.clone().detach()
 
     amax = torch.max(model_a, dim=0)[0]
     amin = torch.min(model_a, dim=0)[0]
@@ -597,9 +596,9 @@ def plot_training_mouse(config, id_list, frame_list,  log_dir, epoch, N, model, 
     plt.figure(figsize=(8, 8))
     plt.scatter(to_numpy(model_a[:, 0]), to_numpy(model_a[:, 1]), s=1, color='b', alpha=0.25)
     embedding_size = model.a.shape[0]
-    plt.text(0.05, 0.9, f'Embedding size: {embedding_size}', fontsize=12)
-    plt.xlim([0,2])
-    plt.ylim([0,2])
+    # plt.text(0.05, 0.9, f'Embedding size: {embedding_size}', fontsize=12)
+    plt.xlim([0,1])
+    plt.ylim([0,1])
     plt.xticks([])
     plt.yticks([])
     # ax = plt.subplot(1, 2, 2)

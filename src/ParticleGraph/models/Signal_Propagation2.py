@@ -93,7 +93,6 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         self.return_all = return_all
         x, edge_index = data.x, data.edge_index
 
-
         u = data.x[:, 6:7]
 
         if self.model == 'PDE_N3':
@@ -106,12 +105,10 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         if self.model == 'PDE_N6':
             field = self.b[particle_id, k.squeeze() // self.embedding_step]**2
             field = field[:,None]
-        elif has_field[0]:
+        elif (self.model == 'PDE_N4') | (self.model == 'PDE_N5'):
             field = x[:, 8:9]
         else:
             field = torch.ones_like(x[:,6:7])
-
-
 
         in_features = torch.cat([u, embedding], dim=1)
 
@@ -142,10 +139,10 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         T = self.W * self.mask
 
         if self.return_all:
-            self.msg = T[edge_index_i%self.n_particles, edge_index_j%self.n_particles][:,None] * self.lin_edge(u_j) * field_i
-
-        return T[edge_index_i%self.n_particles, edge_index_j%self.n_particles][:,None] * self.lin_edge(in_features) * field_i
-
+            self.msg = T[edge_index_i%self.n_particles, edge_index_j%self.n_particles][:,None] * self.lin_edge(in_features) * field_i
+            return self.msg
+        else:
+            return T[edge_index_i%self.n_particles, edge_index_j%self.n_particles][:,None] * self.lin_edge(in_features) * field_i
 
 
     def update(self, aggr_out):

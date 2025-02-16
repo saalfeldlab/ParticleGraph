@@ -1240,7 +1240,7 @@ def plot_attraction_repulsion(config,epoch_list, log_dir, logger, style, device)
             config.training.cluster_method = 'distance_plot'
             config.training.cluster_distance_threshold = 0.01
             alpha=0.1
-            accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config,embedding_cluster,
+            accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, embedding_cluster,
                                                                            cmap, index_particles, type_list,
                                                                            n_particle_types, n_particles, ynorm, epoch,
                                                                            log_dir, alpha, style,device)
@@ -1252,7 +1252,7 @@ def plot_attraction_repulsion(config,epoch_list, log_dir, logger, style, device)
             config.training.cluster_method = 'distance_embedding'
             config.training.cluster_distance_threshold = 0.01
             alpha = 0.1
-            accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config,embedding_cluster,
+            accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, embedding_cluster,
                                                                            cmap, index_particles, type_list,
                                                                            n_particle_types, n_particles, ynorm, epoch,
                                                                            log_dir, alpha, style,device)
@@ -4660,8 +4660,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 ax = sns.heatmap(to_numpy(A)/second_correction, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.1,vmax=0.1)
                 cbar = ax.collections[0].colorbar
                 cbar.ax.tick_params(labelsize=48)
-                plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
-                plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+                plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=24)
+                plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=24)
                 plt.subplot(2, 2, 1)
                 ax = sns.heatmap(to_numpy(A[0:20, 0:20])/second_correction, cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
                 plt.xticks([])
@@ -4895,8 +4895,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                          vmin=-0.1, vmax=0.1)
         cbar = ax.collections[0].colorbar
         cbar.ax.tick_params(labelsize=32)
-        plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
-        plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+        plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=24)
+        plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=24)
         plt.xticks(rotation=0)
         plt.subplot(2, 2, 1)
         ax = sns.heatmap(to_numpy(adjacency[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
@@ -7223,7 +7223,7 @@ if __name__ == '__main__':
     # config_list = ['signal_N3_c4']
     # config_list = ['signal_N2_a20','signal_N2_a21','signal_N2_a22','signal_N2_a23','signal_N2_a24','signal_N2_a25','signal_N2_a26']
     # config_list = ['signal_N4_v']
-    config_list = ['signal_N3_c16']
+    config_list = ['signal_N2_a11']
 
     for config_file_ in config_list:
         
@@ -7234,7 +7234,7 @@ if __name__ == '__main__':
 
         # data_plot(config=config, epoch_list=['best'], style='latex color', device=device)
         # data_plot(config=config, epoch_list=['all'], style='black color', device=device)
-        data_plot(config=config, epoch_list=['time'], style='black color', device=device)
+        data_plot(config=config, epoch_list=['best'], style='black color', device=device)
 
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
