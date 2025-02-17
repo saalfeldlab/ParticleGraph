@@ -4641,8 +4641,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 for n in range(n_particle_types-1,-1,-1):
                     pos = torch.argwhere(type_list == n).squeeze()
                     plt.scatter(to_numpy(model_a[pos, 0]), to_numpy(model_a[pos, 1]), s=100, color=cmap.color(n), alpha=0.5)
-                plt.xlabel(r'$a_{i0}$', fontsize=78)
-                plt.ylabel(r'$a_{i1}$', fontsize=78)
+                plt.xlabel(r'$a_{i0}$', fontsize=68)
+                plt.ylabel(r'$a_{i1}$', fontsize=68)
                 plt.xlim([-0.1, 1.1])
                 plt.ylim([-0.1, 1.1])
                 plt.tight_layout()
@@ -4723,7 +4723,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     with torch.no_grad():
                         func = model.lin_edge(in_features.float()) * correction
                     plt.plot(to_numpy(rr), to_numpy(func), color=mc, linewidth=8, label=r'learned')
-                    plt.xlabel(r'$x_i$', fontsize=78)
+                    plt.xlabel(r'$x_i$', fontsize=68)
                     # plt.ylabel(r'learned $\psi^*(a_i, x_i)$', fontsize=78)
                     plt.ylabel(r'learned $MLP_1(a_i, x_i)$', fontsize=68)
                     plt.ylim([-1.5, 1.5])
@@ -4742,9 +4742,9 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                         func = model.lin_phi(in_features.float())
                     func = func[:, 0]
                     plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm), color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8 // ( 1 + (n_particle_types>16)*1.0), alpha=0.25)
-                plt.xlabel(r'$x_i$', fontsize=78)
+                plt.xlabel(r'$x_i$', fontsize=68)
                 # plt.ylabel(r'learned $\phi^*(a_i, x_i)$', fontsize=78)
-                plt.ylabel(r'learned $MLP_0(a_i, x_i)$', fontsize=78)
+                plt.ylabel(r'learned $MLP_0(a_i, x_i)$', fontsize=68)
                 plt.xlim(config.plotting.xlim)
                 plt.ylim(config.plotting.ylim)
                 plt.tight_layout()
@@ -4765,17 +4765,14 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 gt_weight = to_numpy(adjacency)
                 pred_weight = to_numpy(A) / second_correction
                 plt.scatter(gt_weight, pred_weight, s=0.1, c=mc, alpha=0.1)
-                plt.xlabel(r'true $W_{ij}$', fontsize=78)
-                plt.ylabel(r'learned $W_{ij}$', fontsize=78)
+                plt.xlabel(r'true $W_{ij}$', fontsize=68)
+                plt.ylabel(r'learned $W_{ij}$', fontsize=68)
                 if n_particles == 8000:
                     plt.xlim([-0.05, 0.05])
                     plt.ylim([-0.05, 0.05])
                 else:
                     plt.xlim([-0.2, 0.2])
                     plt.ylim([-0.2, 0.2])
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/all/comparison_{epoch}.tif", dpi=80)
-                plt.close()
 
                 x_data = np.reshape(gt_weight, (n_particles * n_particles))
                 y_data = np.reshape(pred_weight, (n_particles * n_particles))
@@ -4786,6 +4783,13 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 r_squared = 1 - (ss_res / ss_tot)
                 r_squared_list.append(r_squared)
                 slope_list.append(lin_fit[0])
+
+                plt.text(-0.17, 0.15, f'$R^2$: {np.round(r_squared, 3)}', fontsize=34)
+                plt.text(-0.17, 0.12, f'slope: {np.round(lin_fit[0], 2)}', fontsize=34)
+
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/all/comparison_{epoch}.tif", dpi=80)
+                plt.close()
 
                 if has_field:
 
@@ -4820,7 +4824,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
         slope_list = np.array(slope_list) / p[0][0]
         fig, ax = fig_init(formatx='%.0f', formaty='%.2f')
-        plt.plot(slope_list, linewidth=4, c=mc)
+        plt.plot(slope_list*10, linewidth=4, c=mc)
         plt.xlim([0, 100])
         plt.ylim([0, 1.1])
         plt.yticks(fontsize=48)
@@ -4894,7 +4898,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
         ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},
                          vmin=-0.1, vmax=0.1)
         cbar = ax.collections[0].colorbar
-        cbar.ax.tick_params(labelsize=32)
+        cbar.ax.tick_params(labelsize=24)
         plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=24)
         plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=24)
         plt.xticks(rotation=0)
@@ -5116,17 +5120,19 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             logger.info(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method} ')
 
             plt.figure(figsize=(10, 10))
-            plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=200, color=cmap.color(to_numpy(type_list).astype(int)))
+            plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=150, color=cmap.color(to_numpy(type_list).astype(int)))
             plt.xticks([])
             plt.yticks([])
+            plt.axis('off')
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/true_types_{epoch}.tif", dpi=170.7)
             plt.close()
 
             plt.figure(figsize=(10, 10))
-            plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=200, color=cmap.color(new_labels.astype(int)))
+            plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=150, color=cmap.color(new_labels.astype(int)))
             plt.xticks([])
             plt.yticks([])
+            plt.axis('off')
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/learned_types_{epoch}.tif", dpi=170.7)
             plt.close()
@@ -7209,10 +7215,10 @@ if __name__ == '__main__':
     print(f'device {device}')
     print(' ')
 
-    try:
-        matplotlib.use("Qt5Agg")
-    except:
-        pass
+    # try:
+    #     matplotlib.use("Qt5Agg")
+    # except:
+    #     pass
 
     # f_list = ['synaptic_supp6']
     # for f in f_list:
@@ -7223,7 +7229,7 @@ if __name__ == '__main__':
     # config_list = ['signal_N3_c4']
     # config_list = ['signal_N2_a20','signal_N2_a21','signal_N2_a22','signal_N2_a23','signal_N2_a24','signal_N2_a25','signal_N2_a26']
     # config_list = ['signal_N4_v']
-    config_list = ['signal_N2_a11']
+    config_list = ['signal_N2_a12', 'signal_N2_a31', 'signal_N2_a32', 'signal_N2_a33']
 
     for config_file_ in config_list:
         
@@ -7232,9 +7238,9 @@ if __name__ == '__main__':
         config.dataset = pre_folder + config.dataset
         config.config_file = pre_folder + config_file_
 
-        # data_plot(config=config, epoch_list=['best'], style='latex color', device=device)
-        # data_plot(config=config, epoch_list=['all'], style='black color', device=device)
-        data_plot(config=config, epoch_list=['best'], style='black color', device=device)
+        data_plot(config=config, epoch_list=['best'], style='color', device=device)
+        data_plot(config=config, epoch_list=['all'], style='black color', device=device)
+        # data_plot(config=config, epoch_list=['best'], style='black color', device=device)
 
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

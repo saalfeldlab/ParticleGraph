@@ -2297,8 +2297,11 @@ def data_train_synaptic2(config, erase, best_model, device):
         start_epoch = 0
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
+    lr_W = train_config.learning_rate_W_start
     lr_modulation = train_config.learning_rate_modulation_start
-    optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr, lr_modulation)
+
+    optimizer, n_total_params = set_trainable_parameters(model=model, lr_embedding=lr_embedding, lr=lr, lr_w=lr_W, lr_modulation=lr_modulation)
+
     model.train()
 
     net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs.pt"
@@ -2676,19 +2679,21 @@ def data_train_synaptic2(config, erase, best_model, device):
                     lr_embedding = 1E-12
                 else:
                     lr_embedding = train_config.learning_rate_embedding_start
-                optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+                optimizer, n_total_params = set_trainable_parameters(model=model, lr_embedding=lr_embedding, lr=lr, lr_w=lr_W)
                 logger.info(f'Learning rates: {lr}, {lr_embedding}')
             else:
-                if epoch > n_epochs - sparsity_freq:
-                    lr_embedding = train_config.learning_rate_embedding_end
-                    lr = train_config.learning_rate_end
-                    optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-                    logger.info(f'Learning rates: {lr}, {lr_embedding}')
-                else:
-                    lr_embedding = train_config.learning_rate_embedding_start
-                    lr = train_config.learning_rate_start
-                    optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-                    logger.info(f'Learning rates: {lr}, {lr_embedding}')
+                # if epoch > n_epochs - sparsity_freq:
+                #     lr_embedding = train_config.learning_rate_embedding_end
+                #     lr = train_config.learning_rate_end
+                #     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+                #     logger.info(f'Learning rates: {lr}, {lr_embedding}')
+                # else:
+
+                lr_embedding = train_config.learning_rate_embedding_start
+
+                optimizer, n_total_params = set_trainable_parameters(model=model, lr_embedding=lr_embedding, lr=lr, lr_w=lr_W, lr_modulation=lr_modulation)
+                logger.info(f'Learning rates: {lr}, {lr_embedding}')
+
             if (epoch == 20) & (train_config.coeff_anneal_L1 > 0):
                 coeff_L1 = train_config.coeff_anneal_L1
                 logger.info(f'coeff_L1: {coeff_L1}')
@@ -3808,7 +3813,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     plt.close()
 
                     plt.figure(figsize=(10, 10))
-                    msg = to_numpy(model.msg) / 10
+                    msg = to_numpy(model.msg) / 20
                     # msg = np.reshape(msg, (n_particles ** 2, 1))
                     msg = np.reshape(msg, (n_particles, n_particles-1))
                     plt.imshow(msg, cmap='viridis', vmin=-0.05, vmax=0.05)

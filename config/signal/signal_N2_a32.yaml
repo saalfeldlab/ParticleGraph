@@ -1,5 +1,5 @@
-description: 'test 10^5 time points      synaptic network random matrix no recursive loop 1000 neurons 4 types lorentz std 0.03'
-dataset: 'signal_N2_a11'
+description: 'test 3.10^4 time points      synaptic network random matrix no recursive loop 1000 neurons 4 types lorentz std 0.03'
+dataset: 'signal_N2_a32'
 
 simulation:
     connectivity_file: '/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/graphs_signal_N2_Lorentz_a/adjacency.pt'
@@ -14,7 +14,7 @@ simulation:
     n_particles: 1000
     n_particle_types: 4
     n_interactions: 4
-    n_frames: 100000
+    n_frames: 30000
     delta_t: 0.01
     dpos_init:  0
     boundary: 'no'
@@ -51,13 +51,11 @@ training:
     n_runs: 2
     sparsity: 'none'
     rotation_augmentation: False
-    data_augmentation_loop: 50
+    data_augmentation_loop: 333
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     device: 'auto'
     sparsity: 'replace_embedding_function'
     sparsity_freq: 4
-
-    learning_rate_W_start: 1.0E-4
     learning_rate_start: 1.0E-4
     learning_rate_embedding_start: 1.0E-4
