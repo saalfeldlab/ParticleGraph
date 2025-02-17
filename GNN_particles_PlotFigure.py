@@ -4875,6 +4875,128 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
         plt.savefig(f'./{log_dir}/results/firing rate.png', dpi=300)
         plt.close()
 
+        if os.path.exists(f"./{log_dir}/neuron_gt_list.pt"):
+
+            os.makedirs(f"./{log_dir}/results/activity", exist_ok=True)
+
+            neuron_gt_list = torch.load(f"./{log_dir}/neuron_gt_list.pt", map_location=device)
+            neuron_pred_list = torch.load(f"./{log_dir}/neuron_pred_list.pt", map_location=device)
+            neuron_gt_list = torch.cat(neuron_gt_list, 0)
+            neuron_pred_list = torch.cat(neuron_pred_list, 0)
+
+            neuron_gt_list = torch.reshape(neuron_gt_list, (1000, n_particles))
+            neuron_pred_list = torch.reshape(neuron_pred_list, (1000, n_particles))
+
+            r_squared_list = []
+            slope_list = []
+            for i in range(0,750,5):
+                plt.figure(figsize=(20, 10))
+                ax = plt.subplot(121)
+                plt.plot(neuron_gt_list[:, n[0]].detach().cpu().numpy(), c='w', linewidth=8, label='true', alpha=0.25)
+                plt.plot(neuron_pred_list[0:i, n[0]].detach().cpu().numpy(), linewidth=4, c='w', label='learned')
+                plt.legend(fontsize=24)
+                plt.plot(neuron_gt_list[:, n[1:10]].detach().cpu().numpy(), c='w', linewidth=8, alpha=0.25)
+                plt.plot(neuron_pred_list[0:i, n[1:10]].detach().cpu().numpy(), linewidth=4)
+                plt.xlim([0, 750])
+                plt.xlabel('time index', fontsize=48)
+                plt.ylabel(r'$x_i$', fontsize=48)
+                plt.xticks(fontsize=24)
+                plt.yticks(fontsize=24)
+                plt.ylim([-30,30])
+                plt.text(40, 26, f'time: {i}', fontsize=34)
+                ax = plt.subplot(122)
+                plt.scatter(to_numpy(neuron_gt_list[i, :]), to_numpy(neuron_pred_list[i, :]), s=10, c=mc)
+                plt.xlim([-30,30])
+                plt.ylim([-30,30])
+                plt.xticks(fontsize=24)
+                plt.yticks(fontsize=24)
+                x_data = to_numpy(neuron_gt_list[i, :])
+                y_data = to_numpy(neuron_pred_list[i, :])
+                lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+                residuals = y_data - linear_model(x_data, *lin_fit)
+                ss_res = np.sum(residuals ** 2)
+                ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+                r_squared = 1 - (ss_res / ss_tot)
+                r_squared_list.append(r_squared)
+                slope_list.append(lin_fit[0])
+                plt.xlabel(r'true $x_i$', fontsize=48)
+                plt.ylabel(r'learned $x_i$', fontsize=48)
+                plt.text(-28, 25.6, f'$R^2$: {np.round(r_squared, 3)}', fontsize=34)
+                plt.text(-28, 22, f'slope: {np.round(lin_fit[0], 2)}', fontsize=34)
+                plt.tight_layout()
+                plt.savefig(f'./{log_dir}/results/activity/comparison_{i}.png', dpi=80)
+                plt.close()
+
+            plt.figure(figsize=(10, 10))
+            plt.plot(r_squared_list, linewidth=4, label='$R^2$')
+            plt.plot(slope_list, linewidth=4, label='slope')
+            plt.xticks([0,50,100],[0,500,1000],fontsize=24)
+            plt.yticks(fontsize=24)
+            plt.xlabel(r'time', fontsize=48)
+            plt.ylabel(r'true vs learned $x_i$', fontsize=48)
+            plt.legend(fontsize=24)
+            plt.tight_layout()
+
+            plt.figure(figsize=(10, 10))
+            plt.ion()
+            plt.plot(neuron_gt_list[:, 0].detach().cpu().numpy(), c='w', linewidth=8, label='original', alpha=0.5)
+            plt.plot(neuron_pred_list[:, 0].detach().cpu().numpy(), linewidth=4, c='w', label='prediction')
+            plt.legend(fontsize=24)
+            plt.plot(neuron_gt_list[:, 1:6].detach().cpu().numpy(), c='w', linewidth=8, alpha=0.5)
+            plt.plot(neuron_pred_list[:, 1:6].detach().cpu().numpy(), linewidth=4)
+            plt.xlim([0, 1000])
+            plt.xlabel('time index', fontsize=48)
+            plt.ylabel(r'$x_i$', fontsize=48)
+            plt.xticks(fontsize=24)
+            plt.yticks(fontsize=24)
+            plt.tight_layout()
+
+            plt.figure(figsize=(15, 10))
+            n = np.random.permutation(n_particles)
+            for i in range(25):
+                plt.plot(to_numpy(activity[n[i].astype(int), :]), c='w', linewidth=8, label='original', alpha=0.5)
+            plt.plot(inference[n[0].astype(int), :].detach().cpu().numpy(), linewidth=4, c='w', label='prediction')
+            plt.legend(fontsize=24)
+            for i in range(1,25):
+                plt.plot(inference[n[i].astype(int), :].detach().cpu().numpy(), linewidth=4)
+            plt.xlabel('time', fontsize=64)
+            plt.ylabel('$x_{i}$', fontsize=64)
+            plt.xlim([0,500])
+            plt.tight_layout()
+
+
+
+            plt.figure(figsize=(10, 10))
+            plt.plot(neuron_gt_list[:, 0].detach().cpu().numpy(), c='w', linewidth=8, label='original', alpha=0.5)
+            plt.plot(neuron_pred_list[:, 0].detach().cpu().numpy(), linewidth=4, c='w', label='prediction')
+            plt.legend(fontsize=24)
+            plt.plot(neuron_gt_list[:, 1:6].detach().cpu().numpy(), c='w', linewidth=8, alpha=0.5)
+            plt.plot(neuron_pred_list[:, 1:6].detach().cpu().numpy(), linewidth=4)
+            plt.xlim([0, 500])
+            plt.xlabel('time index', fontsize=48)
+            plt.ylabel(r'$x_i$', fontsize=48)
+            plt.xticks(fontsize=24)
+            plt.yticks(fontsize=24)
+            plt.tight_layout()
+
+
+
+        # if 'PDE_N' in model_config.signal_model_name:
+        #     neuron_gt_list = torch.cat(neuron_gt_list, 0)
+        #     neuron_pred_list = torch.cat(neuron_pred_list, 0)
+        #
+        #     neuron_gt_list = torch.reshape(neuron_gt_list, (n_frames - 1, 6))
+        #     neuron_pred_list = torch.reshape(neuron_pred_list, (n_frames - 1, 6))
+        #
+        #     # plt.style.use('dark_background')
+        #     matplotlib.rcParams['savefig.pad_inches'] = 0
+        #
+
+        #     plt.savefig(f"./{log_dir}/results/neuron_signals.tif", dpi=170.7)
+        #     plt.close()
+
+
+
         adjacency = torch.load(f'./graphs_data/{dataset_name}/adjacency.pt', map_location=device)
         adjacency_ = adjacency.t().clone().detach()
         adj_t = torch.abs(adjacency_) > 0
@@ -7229,7 +7351,7 @@ if __name__ == '__main__':
     # config_list = ['signal_N3_c4']
     # config_list = ['signal_N2_a20','signal_N2_a21','signal_N2_a22','signal_N2_a23','signal_N2_a24','signal_N2_a25','signal_N2_a26']
     # config_list = ['signal_N4_v']
-    config_list = ['signal_N2_a12', 'signal_N2_a31', 'signal_N2_a32', 'signal_N2_a33']
+    config_list = ['signal_N2_a12', 'signal_N2_a31']
 
     for config_file_ in config_list:
         
@@ -7238,8 +7360,8 @@ if __name__ == '__main__':
         config.dataset = pre_folder + config.dataset
         config.config_file = pre_folder + config_file_
 
-        data_plot(config=config, epoch_list=['best'], style='color', device=device)
-        data_plot(config=config, epoch_list=['all'], style='black color', device=device)
+        data_plot(config=config, epoch_list=['best'], style='black color', device=device)
+        # data_plot(config=config, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['best'], style='black color', device=device)
 
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)

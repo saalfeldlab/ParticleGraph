@@ -2300,7 +2300,7 @@ def data_train_synaptic2(config, erase, best_model, device):
     lr_W = train_config.learning_rate_W_start
     lr_modulation = train_config.learning_rate_modulation_start
 
-    printf(f'learning rates: lr_W {lr_W}, lr {lr}, lr_embedding {lr_embedding}, lr_modulation {lr_modulation}')
+    print(f'learning rates: lr_W {lr_W}, lr {lr}, lr_embedding {lr_embedding}, lr_modulation {lr_modulation}')
     logger.info(f'learning rates: lr_W {lr_W}, lr {lr}, lr_embedding {lr_embedding}, lr_modulation {lr_modulation}')
 
     optimizer, n_total_params = set_trainable_parameters(model=model, lr_embedding=lr_embedding, lr=lr, lr_W=lr_W, lr_modulation=lr_modulation)
@@ -2310,7 +2310,6 @@ def data_train_synaptic2(config, erase, best_model, device):
     net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs.pt"
     print(f'network: {net}')
     print(f'initial batch_size: {batch_size}')
-    print('')
     logger.info(f'network: {net}')
     logger.info(f'N epochs: {n_epochs}')
     logger.info(f'initial batch_size: {batch_size}')
@@ -3356,7 +3355,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         #         X1_first[node, :] = torch.tensor([pos[0], pos[1]], device=device)
         #     print('done ...')
 
-        neuron_index = torch.randint(0, n_particles, (6,))
+        # neuron_index = torch.randint(0, n_particles, (6,))
         neuron_gt_list = []
         neuron_pred_list = []
 
@@ -3469,7 +3468,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     # x_list[0] = torch.cat((x_list[0],x_list[0],x_list[0],x_list[0]), dim=0)
     x_inference_list = []
 
-    for it in trange(start_it, stop_it-time_step):
+    for it in trange(start_it, min(1000,stop_it-time_step)):
 
         check_and_clear_memory(device=device, iteration_number=it, every_n_iterations=25, memory_percentage_threshold=0.6)
         # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
@@ -3488,8 +3487,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             # error calculations
             if 'PDE_N' in model_config.signal_model_name:
                 rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 6:7] - x0[:, 6:7]) ** 2, axis=1)))
-                neuron_gt_list.append(x0[neuron_index, 6:7])
-                neuron_pred_list.append(x[neuron_index, 6:7])
+                neuron_gt_list.append(x0[:, 6:7])
+                neuron_pred_list.append(x[:, 6:7].clone().detach())
             elif model_config.mesh_model_name == 'WaveMesh':
                 rmserr = torch.sqrt(torch.mean((x[mask_mesh.squeeze(), 6:7] - x0[mask_mesh.squeeze(), 6:7]) ** 2))
             elif model_config.mesh_model_name == 'RD_RPS_Mesh':
@@ -4119,36 +4118,17 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         print('average u {:.3e}+/-{:.3e}'.format(np.mean(h), np.std(h)))
 
     if 'PDE_N' in model_config.signal_model_name:
-        neuron_gt_list = torch.cat(neuron_gt_list, 0)
-        neuron_pred_list = torch.cat(neuron_pred_list, 0)
 
-        neuron_gt_list = torch.reshape(neuron_gt_list, (n_frames - 1, 6))
-        neuron_pred_list = torch.reshape(neuron_pred_list, (n_frames - 1, 6))
-
-        # plt.style.use('dark_background')
-        matplotlib.rcParams['savefig.pad_inches'] = 0
-
-        plt.figure(figsize=(10, 10))
-        plt.plot(neuron_gt_list[:, 0].detach().cpu().numpy(), c='w', linewidth=8, label='original', alpha=0.5)
-        plt.plot(neuron_pred_list[:, 0].detach().cpu().numpy(), linewidth=4, c='w', label='prediction')
-        plt.legend(fontsize=24)
-        plt.plot(neuron_gt_list[:, 1:6].detach().cpu().numpy(), c='w', linewidth=8, alpha=0.5)
-        plt.plot(neuron_pred_list[:, 1:6].detach().cpu().numpy(), linewidth=4)
-        plt.xlim([0, 500])
-        plt.xlabel('time index', fontsize=48)
-        plt.ylabel(r'$x_i$', fontsize=48)
-        plt.xticks(fontsize=24)
-        plt.yticks(fontsize=24)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/neuron_signals.tif", dpi=170.7)
-        plt.close()
+        torch.save(neuron_gt_list, f"./{log_dir}/neuron_gt_list.pt")
+        torch.save(neuron_pred_list, f"./{log_dir}/neuron_pred_list.pt")
 
     else:
-        if geomloss_list == []:
+        if False:
+            # geomloss_list == []:
             geomloss_list = [0, 0]
-        r = [np.mean(rmserr_list), np.std(rmserr_list), np.mean(geomloss_list), np.std(geomloss_list)]
-        print('average rollout Sinkhorn div. {:.3e}+/-{:.3e}'.format(np.mean(geomloss_list), np.std(geomloss_list)))
-        np.save(f"./{log_dir}/rmserr_geomloss_{config_file}.npy", r)
+            r = [np.mean(rmserr_list), np.std(rmserr_list), np.mean(geomloss_list), np.std(geomloss_list)]
+            print('average rollout Sinkhorn div. {:.3e}+/-{:.3e}'.format(np.mean(geomloss_list), np.std(geomloss_list)))
+            np.save(f"./{log_dir}/rmserr_geomloss_{config_file}.npy", r)
 
         if False:
             rmserr_list = np.array(rmserr_list)
