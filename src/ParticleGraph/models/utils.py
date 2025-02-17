@@ -1091,10 +1091,13 @@ def set_trainable_parameters(model=[], lr_embedding=[], lr=[], lr_W=[], lr_modul
         if (parameter.requires_grad) & (name!='a'):
             if name=='b':
                 optimizer.add_param_group({'params': parameter, 'lr': lr_modulation})
+                # print(f'lr_modulation: {name} {lr_modulation}')
             elif 'W' in name:
                 optimizer.add_param_group({'params': parameter, 'lr': lr_W})
+                # print(f'lr_W: {name} {lr_W}')
             else:
                 optimizer.add_param_group({'params': parameter, 'lr': lr})
+                # print(f'lr: {name} {lr}')
 
     return optimizer, n_total_params
 
