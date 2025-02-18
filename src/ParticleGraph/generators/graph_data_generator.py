@@ -27,9 +27,6 @@ from scipy.ndimage import zoom
 import re
 import imageio
 
-def extract_number(filename):
-    match = re.search(r'0-(\d+)\.jpg$', filename)
-    return int(match.group(1)) if match else None
 
 
 

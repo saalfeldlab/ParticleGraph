@@ -644,6 +644,11 @@ def get_sorted_image_files(pic_folder, pic_format):
     return image_files
 
 
+def extract_number(filename):
+    match = re.search(r'0-(\d+)\.jpg$', filename)
+    return int(match.group(1)) if match else None
+
+
 def check_and_clear_memory(
         device: str = None,
         iteration_number: int = None,

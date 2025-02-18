@@ -55,7 +55,7 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        task = 'train'
+        task = 'test'
         best_model = ''
         # config_list = ['falling_water_ramp_x6_11']
         # config_list = ['RD_RPS_3']
@@ -64,7 +64,7 @@ if __name__ == '__main__':
         # config_list =['wave_smooth_3']
         # config_list = ['arbitrary_3_bis']
         # config_list = ['signal_N3_c16']
-        config_list = ['signal_N6_a5']
+        config_list = ['signal_N2_b1']
 
     for config_file_ in config_list:
         print(' ')

@@ -3170,18 +3170,15 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         filename = filename.split('graphs')[-1][1:-3]
         best_model = filename
         print(f'best model: {best_model}')
-
     net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{best_model}.pt"
 
     n_sub_population = n_particles // n_particle_types
-
     first_cell_id_particles = []
     for n in range(n_particle_types):
         index = np.arange(n_particles * n // n_particle_types, n_particles * (n + 1) // n_particle_types)
         first_cell_id_particles.append(index)
 
     print(f'load data run {run} ...')
-
     if only_mesh:
         vnorm = torch.tensor(1.0, device=device)
         ynorm = torch.tensor(1.0, device=device)
@@ -3219,6 +3216,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
             x_list.append(torch.tensor(x, device=device))
             y_list.append(torch.tensor(y, device=device))
+        elif (model_config.particle_model_name == 'PDE_M'):
+            x = torch.load(f'graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device)
+            x_list.append(x)
         else:
             if os.path.exists(f'graphs_data/{dataset_name}/x_list_{run}.pt'):
                 x = torch.load(f'graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device)
@@ -3257,7 +3257,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             else:
                 type_list = torch.concatenate((type_list, type))
         n_particles_max = len(type_list)
-        config.simulation.n_particles_max = n_particles_max + 1
+        config.simulation.n_particles_max = n_particles_max
 
     if ratio > 1:
         new_nparticles = int(n_particles * ratio)
@@ -3467,7 +3467,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             if it < n_frames - 4:
                 x0 = x_list[0][it].clone().detach()
                 x0_next = x_list[0][(it+time_step)].clone().detach()
-                y0 = y_list[0][it].clone().detach()
+                if not(model_config.particle_model_name == 'PDE_M'):
+                    y0 = y_list[0][it].clone().detach()
             if has_mesh:
                 x[:, 1:5] = x0[:, 1:5].clone().detach()
                 dataset_mesh = data.Data(x=x, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
@@ -3877,9 +3878,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                         plt.tight_layout()
                         plt.savefig(f'./{log_dir}/results/comparison_{it}.png', dpi=80)
                         plt.close()
-
-
-
                 elif 'PDE_K' in model_config.particle_model_name:
 
                     plt.close()

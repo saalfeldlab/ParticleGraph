@@ -4971,7 +4971,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
         plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=24)
         plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=24)
         plt.xticks(rotation=0)
-        plt.subplot(2, 2, 1)
+        plt.subplot(3, 3, 1)
         ax = sns.heatmap(to_numpy(adjacency[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
         plt.xticks([])
         plt.yticks([])
@@ -6500,6 +6500,13 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
     min_radius = simulation_config.min_radius
     n_runs = train_config.n_runs
     cmap = CustomColorMap(config=config)
+    pic_folder = config.plotting.pic_folder
+    pic_format = config.plotting.pic_format
+    pic_size = config.plotting.pic_size
+
+    if os.path.exists(pic_folder):
+        files = glob.glob(f'{pic_folder}/*.jpg')
+        sorted_files = sorted(files, key=extract_number)
 
     x_list = []
     x = torch.load(f'graphs_data/{dataset_name}/x_list_0.pt', map_location=device)
@@ -6678,7 +6685,7 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
         embedding = to_numpy(model.a.clone().detach())
         map_behavior = np.zeros((15,2000))
 
-        for N in trange(0, 2000): #n_frames-1):
+        for N in trange(0, 1000): #n_frames-1):
 
             k = N
             x = x_list[0][k].clone().detach()
@@ -6704,40 +6711,52 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
             indices = result.indices
             loss = torch.sum(min_value)*1E5
 
-
             if 'rat_city' in dataset_name:
 
                 # matplotlib.use("Qt5Agg")
                 fig = plt.figure(figsize=(16, 10))
                 ax = fig.add_subplot(2, 2, 1)
-                ax.axvline(x=1.05, ymin=0, ymax=0.7, color='r', linestyle='--', linewidth=2)
-                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=100, c='b')
-                plt.scatter(to_numpy(x_next[:, 1]), to_numpy(x_next[:, 2]), s=100, c='g', alpha=0.5)
+                if os.path.exists(pic_folder):
+                    im = imageio.imread(sorted_files[N])
+                    im = np.flipud(im)
+                    plt.imshow(im)
+                    plt.axis('off')
+                pos = x[:, 1:3].clone().detach()
+                pos[:, 0] = 1110 * pos[:, 0]
+                pos[:, 1] = 1000 * pos[:, 1]
+                # ax.axvline(x=1.05, ymin=0, ymax=0.7, color='r', linestyle='--', linewidth=2)
+                plt.scatter(to_numpy(pos[:, 0]), to_numpy(pos[:, 1]), s=100, c='b')
+                plt.scatter(to_numpy(x_next[:, 1])*1110, to_numpy(x_next[:, 2])*1000, s=100, c='g', alpha=0.5)
                 for n in range(len(x)):
-                    plt.arrow(x=to_numpy(x[n, 1]), y=to_numpy(x[n, 2]), dx=to_numpy(V[n, 0]), dy=to_numpy(V[n, 1]),
+                    plt.arrow(x=to_numpy(pos[n, 0]), y=to_numpy(pos[n, 1]), dx=to_numpy(V[n, 0])*1110, dy=to_numpy(V[n, 1])*1000,
                               head_width=0.01, length_includes_head=True)
-                plt.xlim([0, 2])
-                plt.ylim([0, 1])
+                plt.xlim([0, 2300])
+                plt.ylim([0, 1000])
                 plt.title('GNN tracking')
                 plt.xticks([])
                 plt.yticks([])
+
                 ax = fig.add_subplot(2, 2, 2)
-                ax.axvline(x=1.05, ymin=0, ymax=0.7, color='r', linestyle='--', linewidth=2)
-                pos = x[:, 1:3]
+                if os.path.exists(pic_folder):
+                    im = imageio.imread(sorted_files[N])
+                    im = np.flipud(im)
+                    plt.imshow(im)
+                    plt.axis('off')
+                # ax.axvline(x=1.05, ymin=0, ymax=0.7, color='r', linestyle='--', linewidth=2)
                 particle_id = to_numpy(x[:, -1])
                 dataset = data.Data(x=x, pos=pos, edge_index=edges)
                 vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
                 nx.draw_networkx(vis, pos=to_numpy(pos), node_size=0, linewidths=0, with_labels=False, ax=ax, edge_color='g', width=1, alpha=0.5)
-                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=100, c='b')
-                plt.scatter(to_numpy(x_next[:, 1]), to_numpy(x_next[:, 2]), s=100, c='g', alpha=0.5)
                 for n in range(edges.shape[1]):
-                    plt.arrow(x=to_numpy(model.pos[n, 0]), y=to_numpy(model.pos[n, 1]), dx=to_numpy(model.msg[n, 0]), dy=to_numpy(model.msg[n, 1]), head_width=0.01, length_includes_head=True, alpha=0.5)
+                    plt.arrow(x=to_numpy(model.pos[n, 0])*1110, y=to_numpy(model.pos[n, 1])*1000, dx=to_numpy(model.msg[n, 0])*1110, dy=to_numpy(model.msg[n, 1])*1000, head_width=0.01, length_includes_head=True, alpha=0.5)
                 for n, id in enumerate(particle_id.astype(int)):
-                    plt.text(to_numpy(x[n, 1])+0.025, to_numpy(x[n, 2]), f'{n}', fontsize=9, color='w')
-                plt.xlim([0, 2])
-                plt.ylim([0, 1])
+                    plt.text(to_numpy(x[n, 1])*1110+25, to_numpy(x[n, 2])*1000, f'{n}', fontsize=9, color='w')
+                plt.xlim([0, 2300])
+                plt.ylim([0, 1000])
                 plt.xticks([])
                 plt.yticks([])
+                plt.tight_layout()
+
                 ax = fig.add_subplot(2, 3, 5)
                 plt.title('embedding : rat state')
                 plt.scatter(embedding[:, 0], embedding[:, 1], s=1, c='g', alpha=0.25, edgecolors='None')
@@ -6766,28 +6785,29 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
                     plt.ylim([-0.2, 0.2])
                 plt.xticks([])
                 plt.yticks([])
-                if (N+1)%40 == 0:
-                    ax = fig.add_subplot(2, 3, 4)
-                    xp = x[0:4, :]
-                    xp[:, 1:3] = torch.randn_like(xp[:, 1:3]) * 0.01
-                    xp[0, 1:3] = 0 * xp[0, 1:3]
-                    pos_i = xp[0, 1:3]
-                    pos_j = xp[1:, 1:3]
-                    r = torch.sqrt(torch.sum(bc_dpos(pos_j - pos_i) ** 2, dim=1)) / max_radius
-                    delta_pos = bc_dpos(pos_j - pos_i) / max_radius
-                    embedding_size = embedding.shape[0]
-                    point_list = []
-                    for n in range(200000):
-                        particle_id = torch.randint(0, embedding_size, (1,),device=device).repeat(3,1)
-                        embedding_i = model.a[to_numpy(particle_id), :].squeeze()
-                        in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
-                        out = torch.mean(model.lin_edge(in_features.float()), dim=0)
-                        point_list.append(out)
-                    point_list = torch.stack(point_list)
-                    plt.scatter(to_numpy(point_list[:, 0]), to_numpy(point_list[:, 1]), s=10, c='w', alpha=0.1, edgecolors='None')
-                    plt.scatter(to_numpy(xp[:, 1]), to_numpy(xp[:, 2]), s=100, c='g', alpha=1)
-                    plt.ylim([-0.02, 0.022])
-                    plt.xlim([-0.02, 0.022])
+
+                # if (N+1)%40 == 0:
+                #     ax = fig.add_subplot(2, 3, 4)
+                #     xp = x[0:4, :]
+                #     xp[:, 1:3] = torch.randn_like(xp[:, 1:3]) * 0.01
+                #     xp[0, 1:3] = 0 * xp[0, 1:3]
+                #     pos_i = xp[0, 1:3]
+                #     pos_j = xp[1:, 1:3]
+                #     r = torch.sqrt(torch.sum(bc_dpos(pos_j - pos_i) ** 2, dim=1)) / max_radius
+                #     delta_pos = bc_dpos(pos_j - pos_i) / max_radius
+                #     embedding_size = embedding.shape[0]
+                #     point_list = []
+                #     for n in range(200000):
+                #         particle_id = torch.randint(0, embedding_size, (1,),device=device).repeat(3,1)
+                #         embedding_i = model.a[to_numpy(particle_id), :].squeeze()
+                #         in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
+                #         out = torch.mean(model.lin_edge(in_features.float()), dim=0)
+                #         point_list.append(out)
+                #     point_list = torch.stack(point_list)
+                #     plt.scatter(to_numpy(point_list[:, 0]), to_numpy(point_list[:, 1]), s=10, c='w', alpha=0.1, edgecolors='None')
+                #     plt.scatter(to_numpy(xp[:, 1]), to_numpy(xp[:, 2]), s=100, c='g', alpha=1)
+                #     plt.ylim([-0.02, 0.022])
+                #     plt.xlim([-0.02, 0.022])
                 # plt.show()
 
                 plt.tight_layout()
@@ -7300,7 +7320,8 @@ if __name__ == '__main__':
     # config_list = ['signal_N4_v']
     # config_list =['signal_N2_a36', 'signal_N2_a34', 'signal_N2_a35', 'signal_N2_a37', 'signal_N2_a38', 'signal_N2_a39']
     # config_list = ['signal_N2_a11', 'signal_N2_a12', 'signal_N2_a13', 'signal_N2_a32', 'signal_N2_a33']
-    config_list = ['signal_N2_a31']
+    # config_list = ['signal_N2_a37']
+    config_list = ['rat_city_d']
 
     for config_file_ in config_list:
 
@@ -7314,7 +7335,7 @@ if __name__ == '__main__':
         print(f'config_file  {config.config_file}')
 
         data_plot(config=config, epoch_list=['best'], style='black color', device=device)
-        data_plot(config=config, epoch_list=['all'], style='black color', device=device)
+        # data_plot(config=config, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['best'], style='black color', device=device)
 
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)

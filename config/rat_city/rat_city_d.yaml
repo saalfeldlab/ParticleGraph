@@ -35,7 +35,7 @@ graph_model:
   aggr_type: 'mean'
   embedding_dim: 2
   update_type: 'none'
-  field_type: 'siren_with_time'
+  field_type: ''
 
 plotting:
   colormap: 'tab20'
@@ -61,7 +61,7 @@ training:
   learning_rate_embedding_start: 0.001
   fix_cluster_embedding: True
   device: 'auto'
-  do_tracking: False
+  do_tracking: True
   distance_threshold: 1.0E-2
   epoch_distance_replace: 20
   learning_rate_start: 1.0E-4

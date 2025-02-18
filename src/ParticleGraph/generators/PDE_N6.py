@@ -36,7 +36,7 @@ class PDE_N6(pyg.nn.MessagePassing):
         particle_type = to_numpy(x[:, 5])
         parameters = self.p[particle_type]
         g = parameters[:, 0:1]
-        s = parameters[:, 1:2] * 0
+        s = parameters[:, 1:2]
         c = parameters[:, 2:3]
         tau = parameters[:, 3:4]
         alpha = parameters[:, 4:5]
