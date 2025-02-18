@@ -23,7 +23,7 @@ simulation:
 
 graph_model:
     field_type: ''
-    signal_model_name: 'PDE_N2'
+    signal_model_name: 'PDE_N6'
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'

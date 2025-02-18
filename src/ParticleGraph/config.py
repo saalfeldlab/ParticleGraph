@@ -217,6 +217,7 @@ class TrainingConfig(BaseModel):
     coeff_diff: float = 10
     coeff_model_a: float = 0
     coeff_model_b: float = 0
+    coeff_lin_modulation: float = 0
     coeff_continuous: float = 0
 
     noise_level: float = 0

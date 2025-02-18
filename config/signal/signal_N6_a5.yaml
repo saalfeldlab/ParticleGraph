@@ -23,20 +23,27 @@ simulation:
 
 graph_model:
     field_type: ''
-    signal_model_name: 'PDE_N2'
+    signal_model_name: 'PDE_N6'
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
+    aggr_type: 'add'
+    embedding_dim: 2
+
     input_size: 1
     output_size: 1
     hidden_dim: 64
     n_mp_layers: 3
+
     input_size_update: 3
     n_layers_update: 3
     hidden_dim_update: 64
-    aggr_type: 'add'
-    embedding_dim: 2
-    update_type: 'none'
+
+
+    input_size_modulation: 2
+    n_layers_modulation: 3
+    hidden_dim_modulation: 64
+    output_size_modulation: 1
 
 
 plotting:
@@ -61,6 +68,7 @@ training:
     learning_rate_start: 1.0E-4
 
     coeff_diff: 100
+    coeff_lin_modulation: 1.0E-2
 
     learning_rate_W_start: 1.0E-4
     learning_rate_start: 5.0E-5

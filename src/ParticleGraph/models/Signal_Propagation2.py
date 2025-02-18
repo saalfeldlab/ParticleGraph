@@ -31,20 +31,30 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         model_config = config.graph_model
 
         self.device = device
-        self.input_size = model_config.input_size
-        self.output_size = model_config.output_size
-        self.hidden_dim = model_config.hidden_dim
-        self.n_layers = model_config.n_mp_layers
+        self.model = model_config.signal_model_name
         self.embedding_dim = model_config.embedding_dim
         self.n_particles = simulation_config.n_particles
         self.n_dataset = config.training.n_runs
         self.n_frames = simulation_config.n_frames
+
+        self.input_size = model_config.input_size
+        self.output_size = model_config.output_size
+        self.hidden_dim = model_config.hidden_dim
+        self.n_layers = model_config.n_mp_layers
+
         self.n_layers_update = model_config.n_layers_update
         self.hidden_dim_update = model_config.hidden_dim_update
         self.input_size_update = model_config.input_size_update
+
+        self.input_size_modulation = model_config.input_size_modulation
+        self.output_size_modulation = model_config.output_size_modulation
+        self.hidden_dim_modulation = model_config.hidden_dim_modulation
+        self.n_layers_modulation = model_config.n_layers_modulation
+
         self.bc_dpos = bc_dpos
         self.adjacency_matrix = simulation_config.adjacency_matrix
-        self.model = model_config.signal_model_name
+
+
 
         if self.model == 'PDE_N3':
             self.embedding_evolves = True
