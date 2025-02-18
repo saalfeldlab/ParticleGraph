@@ -4887,9 +4887,11 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             neuron_gt_list = torch.reshape(neuron_gt_list, (1000, n_particles))
             neuron_pred_list = torch.reshape(neuron_pred_list, (1000, n_particles))
 
+            n = [20, 30, 100, 150, 260, 270, 520, 620, 720, 820]
+
             r_squared_list = []
             slope_list = []
-            for i in trange(0,700,5):
+            for i in trange(0,750,5):
                 plt.figure(figsize=(20, 10))
                 ax = plt.subplot(121)
                 plt.plot(neuron_gt_list[:, n[0]].detach().cpu().numpy(), c='w', linewidth=8, label='true', alpha=0.25)
@@ -4930,11 +4932,12 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.figure(figsize=(10, 10))
             plt.plot(r_squared_list, linewidth=4, label='$R^2$')
             plt.plot(slope_list, linewidth=4, label='slope')
-            plt.xticks([0,70,140],[0,350,700],fontsize=24)
+            plt.xticks([0,75,150],[0,375,750],fontsize=24)
             plt.yticks(fontsize=24)
             plt.ylim([0,1.4])
+            plt.xlim([0,150])
             plt.xlabel(r'time', fontsize=48)
-            plt.ylabel(r'true vs learned $x_i$', fontsize=48)
+            plt.title(r'true vs learned $x_i$', fontsize=48)
             plt.legend(fontsize=24)
             plt.tight_layout()
             plt.savefig(f'./{log_dir}/results/activity_comparison.png', dpi=80)
@@ -5177,13 +5180,13 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             print(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}  ')
             logger.info(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method} ')
 
-            config.training.cluster_method = 'kmeans_auto_embedding'
-            labels, n_clusters, new_labels = sparsify_cluster(config.training.cluster_method, proj_interaction, embedding,
-                                                              config.training.cluster_distance_threshold, type_list,
-                                                              n_particle_types, embedding_cluster)
-            accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-            print(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}  ')
-            logger.info(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method} ')
+            # config.training.cluster_method = 'kmeans_auto_embedding'
+            # labels, n_clusters, new_labels = sparsify_cluster(config.training.cluster_method, proj_interaction, embedding,
+            #                                                   config.training.cluster_distance_threshold, type_list,
+            #                                                   n_particle_types, embedding_cluster)
+            # accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
+            # print(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}  ')
+            # logger.info(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method} ')
 
             plt.figure(figsize=(10, 10))
             plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=150, color=cmap.color(to_numpy(type_list).astype(int)))
@@ -7295,17 +7298,23 @@ if __name__ == '__main__':
     # config_list = ['signal_N3_c4']
     # config_list = ['signal_N2_a20','signal_N2_a21','signal_N2_a22','signal_N2_a23','signal_N2_a24','signal_N2_a25','signal_N2_a26']
     # config_list = ['signal_N4_v']
-    config_list = ['signal_N2_a11', 'signal_N2_a12', 'signal_N2_a31']
+    # config_list =['signal_N2_a36', 'signal_N2_a34', 'signal_N2_a35', 'signal_N2_a37', 'signal_N2_a38', 'signal_N2_a39']
+    # config_list = ['signal_N2_a11', 'signal_N2_a12', 'signal_N2_a13', 'signal_N2_a32', 'signal_N2_a33']
+    config_list = ['signal_N2_a31']
 
     for config_file_ in config_list:
+
+        print(' ')
         
         config_file, pre_folder = add_pre_folder(config_file_)
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         config.dataset = pre_folder + config.dataset
         config.config_file = pre_folder + config_file_
 
+        print(f'config_file  {config.config_file}')
+
         data_plot(config=config, epoch_list=['best'], style='black color', device=device)
-        # data_plot(config=config, epoch_list=['all'], style='black color', device=device)
+        data_plot(config=config, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['best'], style='black color', device=device)
 
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)

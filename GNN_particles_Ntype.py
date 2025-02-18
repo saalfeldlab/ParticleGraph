@@ -59,11 +59,12 @@ if __name__ == '__main__':
         best_model = ''
         # config_list = ['falling_water_ramp_x6_11']
         # config_list = ['RD_RPS_3']
-        config_list =['signal_N2_a11', 'signal_N2_a12', 'signal_N2_a13', 'signal_N2_a32', 'signal_N2_a33']
+        # config_list =['signal_N2_a11', 'signal_N2_a12', 'signal_N2_a13', 'signal_N2_a32', 'signal_N2_a33']
         # config_list =['signal_N2_a34', 'signal_N2_a35', 'signal_N2_a36', 'signal_N2_a37', 'signal_N2_a38', 'signal_N2_a39']
         # config_list =['wave_smooth_3']
         # config_list = ['arbitrary_3_bis']
         # config_list = ['signal_N3_c16']
+        config_list = ['signal_N2_a31']
 
     for config_file_ in config_list:
         print(' ')
