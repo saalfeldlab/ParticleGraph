@@ -6732,11 +6732,11 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
                               head_width=0.01, length_includes_head=True)
                 plt.xlim([0, 2300])
                 plt.ylim([0, 1000])
-                plt.title('GNN tracking')
+                # plt.title('GNN tracking')
                 plt.xticks([])
                 plt.yticks([])
 
-                ax = fig.add_subplot(2, 2, 2)
+                ax = fig.add_subplot(2, 2, 3)
                 if os.path.exists(pic_folder):
                     im = imageio.imread(sorted_files[N])
                     im = np.flipud(im)
@@ -6746,9 +6746,11 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
                 particle_id = to_numpy(x[:, -1])
                 dataset = data.Data(x=x, pos=pos, edge_index=edges)
                 vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-                nx.draw_networkx(vis, pos=to_numpy(pos), node_size=0, linewidths=0, with_labels=False, ax=ax, edge_color='g', width=1, alpha=0.5)
+                nx.draw_networkx(vis, pos=to_numpy(pos), node_size=0, linewidths=0, with_labels=False, ax=ax, edge_color='g', width=1, alpha=0.25)
                 for n in range(edges.shape[1]):
-                    plt.arrow(x=to_numpy(model.pos[n, 0])*1110, y=to_numpy(model.pos[n, 1])*1000, dx=to_numpy(model.msg[n, 0])*1110, dy=to_numpy(model.msg[n, 1])*1000, head_width=0.01, length_includes_head=True, alpha=0.5)
+                    plt.arrow(x=to_numpy(model.pos[n, 0])*1110, y=to_numpy(model.pos[n, 1])*1000, dx=to_numpy(model.msg[n, 0])*1110, dy=to_numpy(model.msg[n, 1])*1000, head_width=0.01, length_includes_head=True, alpha=0.2)
+                for n in range(len(x)):
+                    plt.arrow(x=to_numpy(pos[n, 0]), y=to_numpy(pos[n, 1]), dx=to_numpy(V[n, 0])*1110, dy=to_numpy(V[n, 1])*1000, head_width=0.01, length_includes_head=True)
                 for n, id in enumerate(particle_id.astype(int)):
                     plt.text(to_numpy(x[n, 1])*1110+25, to_numpy(x[n, 2])*1000, f'{n}', fontsize=9, color='w')
                 plt.xlim([0, 2300])
@@ -6757,17 +6759,21 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
                 plt.yticks([])
                 plt.tight_layout()
 
-                ax = fig.add_subplot(2, 3, 5)
-                plt.title('embedding : rat state')
-                plt.scatter(embedding[:, 0], embedding[:, 1], s=1, c='g', alpha=0.25, edgecolors='None')
+                ax = fig.add_subplot(2, 4, 3)
+                plt.axis('off')
+                # plt.title('embedding : rat state')
+                plt.scatter(embedding[:, 0], embedding[:, 1], s=1, c='g', alpha=1, edgecolors='None')
                 for n, id in enumerate(particle_id.astype(int)):
-                    plt.scatter(embedding[id, 0], embedding[id, 1], s=40, alpha=1, edgecolors='None')
-                    plt.text(embedding[id, 0]+0.05, embedding[id, 1], f'{n}', fontsize=9, color='w')
+                    # plt.scatter(embedding[id, 0], embedding[id, 1], s=30, alpha=1, color='w', edgecolors='None')
+                    plt.text(embedding[id, 0], embedding[id, 1], f'{n}', fontsize=8, color='w')
                 plt.xticks([])
                 plt.yticks([])
+                plt.xlim([0,2])
+                plt.ylim([0,2])
 
-                ax = fig.add_subplot(2, 3, 6)
-                plt.title('MLP plot : rat small action')
+                ax = fig.add_subplot(2, 4, 7)
+                plt.axis('off')
+                # plt.title('MLP plot : rat small action')
                 rr = torch.tensor(np.linspace(0, 0.6, 1000)).to(device)
                 for n, id in enumerate(particle_id.astype(int)):
                     embedding_ = model.a[id] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
@@ -6776,11 +6782,9 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
                     with torch.no_grad():
                         func = model.lin_edge(in_features.float())
                         func = func[:, 0]
-
                     map_behavior[n,N] = to_numpy(func[500])
-
-                    plt.plot(to_numpy(rr),to_numpy(func) * to_numpy(ynorm), linewidth=2, alpha=1)
-                    plt.text(to_numpy(rr[200 + 50*n]), to_numpy(func[200 + 50*n]) * to_numpy(ynorm) + 0.0035, f'{n}', fontsize=9, color='w')
+                    plt.plot(to_numpy(rr),to_numpy(func) * to_numpy(ynorm), linewidth=1, alpha=1, color='w')
+                    plt.text(to_numpy(rr[200 + 50*n]), to_numpy(func[200 + 50*n]) * to_numpy(ynorm) + 0.0035, f'{n}', fontsize=8, color='w')
                 if 'rat_city' in dataset_name:
                     plt.ylim([-0.2, 0.2])
                 plt.xticks([])
@@ -7321,7 +7325,7 @@ if __name__ == '__main__':
     # config_list =['signal_N2_a36', 'signal_N2_a34', 'signal_N2_a35', 'signal_N2_a37', 'signal_N2_a38', 'signal_N2_a39']
     # config_list = ['signal_N2_a11', 'signal_N2_a12', 'signal_N2_a13', 'signal_N2_a32', 'signal_N2_a33']
     # config_list = ['signal_N2_a37']
-    config_list = ['rat_city_d']
+    config_list = ['rat_city_d','rat_city_c','rat_city_b','rat_city_a']
 
     for config_file_ in config_list:
 
