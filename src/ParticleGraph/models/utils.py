@@ -90,7 +90,7 @@ def get_in_features(rr, embedding_, config_model, max_radius):
 
     return in_features
 
-def plot_training_signal(config, model, type_stack, adjacency, ynorm, log_dir, epoch, N, n_particles, n_particle_types, type_list, cmap, device):
+def plot_training_signal(config, model, adjacency, ynorm, log_dir, epoch, N, n_particles, n_particle_types, type_list, cmap, device):
 
     if 'PDE_N3' in config.graph_model.signal_model_name:
 

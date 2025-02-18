@@ -2228,14 +2228,6 @@ def data_train_synaptic2(config, erase, best_model, device):
     print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
     logger.info(f'vnorm ynorm: {to_numpy(vnorm)} {to_numpy(ynorm)}')
 
-    print('compute type_stack ...')
-    for k in range(n_frames):
-        type = torch.tensor(x_list[0][k][:, 5], dtype=torch.float32, device=device)
-        if k == 0:
-            type_stack = type
-        else:
-            type_stack = torch.cat((type_stack, type), 0)
-
     if model_config.embedding_init !='':
         print('compute init embedding ...')
         for j in trange(n_frames):
@@ -2471,7 +2463,7 @@ def data_train_synaptic2(config, erase, best_model, device):
             visualize_embedding = True
             if visualize_embedding & (((epoch < 30) & (N % plot_frequency == 0)) | (N == 0)):
 
-                plot_training_signal(config, model, type_stack, adjacency, ynorm, log_dir, epoch, N, n_particles,
+                plot_training_signal(config, model, adjacency, ynorm, log_dir, epoch, N, n_particles,
                                      n_particle_types, type_list, cmap, device)
                 torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
                            os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
