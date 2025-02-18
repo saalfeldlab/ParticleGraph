@@ -3133,6 +3133,7 @@ def data_train_WBI(config, erase, best_model, device):
 
 def data_test(config=None, config_file=None, visualize=False, style='color frame', verbose=True, best_model=20, step=15,
               ratio=1, run=1, test_mode='', sample_embedding=False, particle_of_interest=1, device=[]):
+
     dataset_name = config.dataset
     simulation_config = config.simulation
     model_config = config.graph_model
@@ -3385,7 +3386,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     model.ynorm = ynorm
     model.vnorm = vnorm
     model.particle_of_interest = particle_of_interest
-
 
     table = PrettyTable(["Modules", "Parameters"])
     total_params = 0
@@ -3688,10 +3688,11 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             if 'inference' in test_mode:
                 x_inference_list.append(x)
 
+        # vizualization
         with torch.no_grad():
             if 'plot_data' in test_mode:
                 x = x0.clone().detach()
-            # vizualization
+
             if (it % step == 0) & (it >= 0) & visualize:
 
                 num = f"{it:06}"
@@ -3841,6 +3842,54 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/tmp_recons/Msg_{config_file}_{num}.tif", dpi=80)
                     plt.close()
+
+                    if (it%200 == 0) and (it>0):
+
+                        n=[20,30,100,150,260,270,520,620,720,820]
+
+                        neuron_gt_list_ = torch.cat(neuron_gt_list, 0)
+                        neuron_pred_list_ = torch.cat(neuron_pred_list, 0)
+                        neuron_gt_list_ = torch.reshape(neuron_gt_list_, (neuron_gt_list_.shape[0]//n_particles, n_particles))
+                        neuron_pred_list_ = torch.reshape(neuron_pred_list_, (neuron_pred_list_.shape[0]//n_particles, n_particles))
+
+                        plt.figure(figsize=(20, 10))
+                        ax = plt.subplot(121)
+                        plt.plot(neuron_gt_list_[:, n[0]].detach().cpu().numpy(), c='w', linewidth=8, label='true',
+                                 alpha=0.25)
+                        plt.plot(neuron_pred_list_[:, n[0]].detach().cpu().numpy(), linewidth=4, c='w',
+                                 label='learned')
+                        plt.legend(fontsize=24)
+                        plt.plot(neuron_gt_list_[:, n[1:10]].detach().cpu().numpy(), c='w', linewidth=8, alpha=0.25)
+                        plt.plot(neuron_pred_list_[:, n[1:10]].detach().cpu().numpy(), linewidth=4)
+                        plt.xlim([0, 750])
+                        plt.xlabel('time index', fontsize=48)
+                        plt.ylabel(r'$x_i$', fontsize=48)
+                        plt.xticks(fontsize=24)
+                        plt.yticks(fontsize=24)
+                        plt.ylim([-30, 30])
+                        plt.text(40, 26, f'time: {it}', fontsize=34)
+                        ax = plt.subplot(122)
+                        plt.scatter(to_numpy(neuron_gt_list_[-1, :]), to_numpy(neuron_pred_list_[-1, :]), s=10, c=mc)
+                        plt.xlim([-30, 30])
+                        plt.ylim([-30, 30])
+                        plt.xticks(fontsize=24)
+                        plt.yticks(fontsize=24)
+                        x_data = to_numpy(neuron_gt_list_[-1, :])
+                        y_data = to_numpy(neuron_pred_list_[-1, :])
+                        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+                        residuals = y_data - linear_model(x_data, *lin_fit)
+                        ss_res = np.sum(residuals ** 2)
+                        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+                        r_squared = 1 - (ss_res / ss_tot)
+                        plt.xlabel(r'true $x_i$', fontsize=48)
+                        plt.ylabel(r'learned $x_i$', fontsize=48)
+                        plt.text(-28, 25.6, f'$R^2$: {np.round(r_squared, 3)}', fontsize=34)
+                        plt.text(-28, 22, f'slope: {np.round(lin_fit[0], 2)}', fontsize=34)
+                        plt.tight_layout()
+                        plt.savefig(f'./{log_dir}/results/comparison_{it}.png', dpi=80)
+                        plt.close()
+
+
 
                 elif 'PDE_K' in model_config.particle_model_name:
 

@@ -59,19 +59,21 @@ if __name__ == '__main__':
         best_model = ''
         # config_list = ['falling_water_ramp_x6_11']
         # config_list = ['RD_RPS_3']
-        config_list =['signal_N2_a11', 'signal_N2_a12', 'signal_N2_a31']
+        config_list =['signal_N2_a11', 'signal_N2_a12', 'signal_N2_a13', 'signal_N2_a32', 'signal_N2_a33']
+        # config_list =['signal_N2_a34', 'signal_N2_a35', 'signal_N2_a36', 'signal_N2_a37', 'signal_N2_a38', 'signal_N2_a39']
         # config_list =['wave_smooth_3']
         # config_list = ['arbitrary_3_bis']
         # config_list = ['signal_N3_c16']
 
     for config_file_ in config_list:
-
+        print(' ')
         config_file, pre_folder = add_pre_folder(config_file_)
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         config.dataset = pre_folder + config.dataset
         config.config_file = pre_folder + config_file_
-
         device = set_device(config.training.device)
+
+        print(f'config_file  {config.config_file}')
         print(f'device  {device}')
         print(f'folder  {config.dataset}')
 

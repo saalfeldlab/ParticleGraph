@@ -4881,15 +4881,15 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
             neuron_gt_list = torch.load(f"./{log_dir}/neuron_gt_list.pt", map_location=device)
             neuron_pred_list = torch.load(f"./{log_dir}/neuron_pred_list.pt", map_location=device)
+
             neuron_gt_list = torch.cat(neuron_gt_list, 0)
             neuron_pred_list = torch.cat(neuron_pred_list, 0)
-
             neuron_gt_list = torch.reshape(neuron_gt_list, (1000, n_particles))
             neuron_pred_list = torch.reshape(neuron_pred_list, (1000, n_particles))
 
             r_squared_list = []
             slope_list = []
-            for i in range(0,750,5):
+            for i in trange(0,700,5):
                 plt.figure(figsize=(20, 10))
                 ax = plt.subplot(121)
                 plt.plot(neuron_gt_list[:, n[0]].detach().cpu().numpy(), c='w', linewidth=8, label='true', alpha=0.25)
@@ -4930,8 +4930,9 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.figure(figsize=(10, 10))
             plt.plot(r_squared_list, linewidth=4, label='$R^2$')
             plt.plot(slope_list, linewidth=4, label='slope')
-            plt.xticks([0,50,100],[0,500,1000],fontsize=24)
+            plt.xticks([0,70,140],[0,350,700],fontsize=24)
             plt.yticks(fontsize=24)
+            plt.ylim([0,1.4])
             plt.xlabel(r'time', fontsize=48)
             plt.ylabel(r'true vs learned $x_i$', fontsize=48)
             plt.legend(fontsize=24)
@@ -7294,7 +7295,7 @@ if __name__ == '__main__':
     # config_list = ['signal_N3_c4']
     # config_list = ['signal_N2_a20','signal_N2_a21','signal_N2_a22','signal_N2_a23','signal_N2_a24','signal_N2_a25','signal_N2_a26']
     # config_list = ['signal_N4_v']
-    config_list = ['signal_N2_a12', 'signal_N2_a31']
+    config_list = ['signal_N2_a11', 'signal_N2_a12', 'signal_N2_a31']
 
     for config_file_ in config_list:
         
