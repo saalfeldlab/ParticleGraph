@@ -108,6 +108,7 @@ class GraphModelConfig(BaseModel):
     hidden_dim: int
     n_mp_layers: int
     aggr_type: str
+
     mesh_aggr_type: str = 'add'
     embedding_dim: int = 2
     embedding_init: str = ''
@@ -123,6 +124,11 @@ class GraphModelConfig(BaseModel):
     hidden_dim_nnr: int = 128
     output_size_nnr: int = 1
     omega : float = 80.0
+
+    input_size_modulation: int = 2
+    n_layers_modulation: int = 3
+    hidden_dim_modulation: int = 64
+    output_size_modulation: int = 1
 
 
 

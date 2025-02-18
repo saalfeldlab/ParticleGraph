@@ -1089,7 +1089,7 @@ def set_trainable_parameters(model=[], lr_embedding=[], lr=[], lr_W=[], lr_modul
     optimizer = torch.optim.Adam([model.a], lr=lr_embedding)
     for name, parameter in model.named_parameters():
         if (parameter.requires_grad) & (name!='a'):
-            if name=='b':
+            if (name=='b') or ('lin_modulation' in name):
                 optimizer.add_param_group({'params': parameter, 'lr': lr_modulation})
                 # print(f'lr_modulation: {name} {lr_modulation}')
             elif 'W' in name:

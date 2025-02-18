@@ -69,7 +69,11 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         if self.model == 'PDE_N6':
             self.b = nn.Parameter(
                 torch.ones((int(self.n_particles), 1000 + 10), device=self.device, requires_grad=True,dtype=torch.float32))
+
             self.embedding_step = self.n_frames // 1000
+
+            self.lin_modulation = MLP(input_size=self.input_size_modulation, output_size=self.output_size_modulation, nlayers=self.n_layers_modulation,
+                                hidden_size=self.hidden_dim_modulation, device=self.device)
 
 
         self.W = nn.Parameter(torch.randn((int(self.n_particles),int(self.n_particles)), device=self.device, requires_grad=True, dtype=torch.float32))
@@ -103,8 +107,9 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             embedding = self.a[particle_id, :]
 
         if self.model == 'PDE_N6':
-            field = self.b[particle_id, k.squeeze() // self.embedding_step]**2
-            field = field[:,None]
+            field = x[:, 8:9]
+            # field = self.b[particle_id, k.squeeze() // self.embedding_step]**2
+            # field = field[:,None]
         elif (self.model == 'PDE_N4') | (self.model == 'PDE_N5'):
             field = x[:, 8:9]
         else:
