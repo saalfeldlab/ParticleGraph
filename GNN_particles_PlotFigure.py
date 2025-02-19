@@ -6756,7 +6756,6 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
             else:
                 x_pos_pred = (x[:,1:3] + delta_t * pred * ynorm)
 
-
             V = (x_pos_pred - x[:, 1:3])
 
             distance = torch.sum(bc_dpos(x_pos_pred[:, None, :] - x_pos_next[None, :, :]) ** 2, dim=2)
@@ -6828,7 +6827,6 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
                 plt.yticks([])
                 plt.tight_layout()
 
-
                 detection_id = to_numpy(x[:,-1]).astype(int)
                 ax = fig.add_subplot(2, 4, 3)
                 # plt.axis('off')
@@ -6853,7 +6851,7 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
                     with torch.no_grad():
                         func = model.lin_edge(in_features.float())
                         func = func[:, 0]
-                    map_behavior[particle_id[n].astype(int),k] = to_numpy(func[500])
+                    map_behavior[particle_id[n].astype(int)-1,k] = to_numpy(func[500])
                     plt.plot(to_numpy(rr),to_numpy(func) * to_numpy(ynorm), linewidth=1, alpha=1, color='w')
                     plt.text(to_numpy(rr[200 + 50*n]), to_numpy(func[200 + 50*n]) * to_numpy(ynorm) + 0.0035, f'{particle_id[n].astype(int)}', fontsize=8, color='w')
                 if 'rat_city' in dataset_name:
@@ -6863,7 +6861,7 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
 
                 ax = fig.add_subplot(2, 4, 8)
                 # plt.axis('off')
-                plt.imshow(map_behavior[0:to_numpy(next_id-1).astype(int), 0:1000], aspect='auto', cmap=cbm, vmin=-0.2, vmax=0.2)
+                plt.imshow(map_behavior[0:to_numpy(next_id-1).astype(int), 0:1000], aspect='auto', cmap=cbm, vmin=-0.15, vmax=0.15)
                 plt.xticks(fontsize=8)
                 plt.yticks(np.arange(0, to_numpy(next_id-1).astype(int)), np.arange(1, to_numpy(next_id).astype(int)), fontsize=8)
 
