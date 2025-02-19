@@ -2181,11 +2181,17 @@ def data_generate_rat_city(config, visualize=True, run_vizualized=0, style='colo
 
     print(f'Loading data ...')
 
+    if 'txt' in data_folder_name:
+        dataframe = pd.read_csv(data_folder_name, sep=" ")
+        position_columns = ["id","frame_id", "x", "y","previous_yolo_id"]  # replace with your position columns
+        values = dataframe[position_columns].to_numpy()
 
-    dataframe = pd.read_csv(data_folder_name, sep=" ")
-    position_columns = ["id","frame_id", "x", "y","previous_yolo_id"]  # replace with your position columns
-    values = dataframe[position_columns].to_numpy()
-    values[:, 1] = values[:, 1] - 1
+        values[:, 1] = values[:, 1] - 1
+    elif 'csv' in data_folder_name:
+        dataframe = pd.read_csv(data_folder_name, sep=" ", header=None)
+        values = dataframe.to_numpy()
+        values[:, [2, 3]] = values[:, [3, 2]]
+        values[:, 1] = values[:, 1] - 1
 
     if os.path.exists(pic_folder):
         files = glob.glob(f'{pic_folder}/*.jpg')
