@@ -4875,6 +4875,52 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
         plt.savefig(f'./{log_dir}/results/firing rate.png', dpi=300)
         plt.close()
 
+        plt.figure(figsize=(15, 10))
+        window_size = 25
+        window_end = 50000
+        ts = to_numpy(activity[600, :])
+        ts_avg = np.convolve(ts, np.ones(window_size) / window_size, mode='valid')
+        plt.plot(ts[window_size//2:window_end+window_size//2], linewidth=1)
+        plt.plot(ts_avg, linewidth=2)
+        plt.plot(ts[window_size//2:window_end+window_size//2]-ts_avg[0:window_end])
+        plt.xlim([window_end-5000,window_end])
+        plt.show()
+        signal_power = np.mean(ts_avg[window_size//2:window_end+window_size//2] ** 2)
+        # Compute the noise power
+        noise_power = np.mean((ts[window_size//2:window_end+window_size//2] - ts_avg[0:window_end]) ** 2)
+        # Calculate the signal-to-noise ratio (SNR)
+        snr = signal_power / noise_power
+        print(f"Signal-to-Noise Ratio (SNR): {snr:0.2f} 10log10 {10*np.log10(snr):0.2f}")
+
+        # Parameters
+        fs = 1000  # Sampling frequency
+        t = np.arange(0, 1, 1 / fs)  # Time vector
+        frequency = 5  # Frequency of the sine wave
+        desired_snr_db = snr  # Desired SNR in dB
+        # Generate a clean signal (sine wave)
+        clean_signal = np.sin(2 * np.pi * frequency * t)
+        # Calculate the power of the clean signal
+        signal_power = np.mean(clean_signal ** 2)
+        # Calculate the noise power required to achieve the desired SNR
+        desired_snr_linear = 10 ** (desired_snr_db / 10)
+        noise_power = signal_power / desired_snr_linear
+        # Generate noise with the calculated power
+        noise = np.sqrt(noise_power) * np.random.randn(len(t))
+        # Create a noisy signal by adding noise to the clean signal
+        noisy_signal = clean_signal + noise
+        # Plot the clean signal and the noisy signal
+        plt.figure(figsize=(15, 10))
+        plt.subplot(2, 1, 1)
+        plt.plot(t, clean_signal)
+        plt.title('Clean Signal')
+        plt.subplot(2, 1, 2)
+        plt.plot(t, noisy_signal)
+        plt.plot(t, noise)
+        plt.title(f'Noisy Signal with SNR = {desired_snr_db} dB')
+        plt.tight_layout()
+        plt.show()
+
+
         if os.path.exists(f"./{log_dir}/neuron_gt_list.pt"):
 
             os.makedirs(f"./{log_dir}/results/activity", exist_ok=True)
@@ -6746,13 +6792,13 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
                 particle_id = to_numpy(x[:, -1])
                 dataset = data.Data(x=x, pos=pos, edge_index=edges)
                 vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-                nx.draw_networkx(vis, pos=to_numpy(pos), node_size=0, linewidths=0, with_labels=False, ax=ax, edge_color='g', width=1, alpha=0.25)
+                nx.draw_networkx(vis, pos=to_numpy(pos), node_size=0, linewidths=0, with_labels=False, ax=ax, edge_color='g', width=1, alpha=0.4)
                 for n in range(edges.shape[1]):
                     plt.arrow(x=to_numpy(model.pos[n, 0])*1110, y=to_numpy(model.pos[n, 1])*1000, dx=to_numpy(model.msg[n, 0])*1110, dy=to_numpy(model.msg[n, 1])*1000, head_width=0.01, length_includes_head=True, alpha=0.2)
                 for n in range(len(x)):
                     plt.arrow(x=to_numpy(pos[n, 0]), y=to_numpy(pos[n, 1]), dx=to_numpy(V[n, 0])*1110, dy=to_numpy(V[n, 1])*1000, head_width=0.01, length_includes_head=True)
                 for n, id in enumerate(particle_id.astype(int)):
-                    plt.text(to_numpy(x[n, 1])*1110+25, to_numpy(x[n, 2])*1000, f'{n}', fontsize=9, color='w')
+                    plt.text(to_numpy(x[n, 1])*1110+25, to_numpy(x[n, 2])*1000, f'{n}', fontsize=8, color='w')
                 plt.xlim([0, 2300])
                 plt.ylim([0, 1000])
                 plt.xticks([])
@@ -7324,8 +7370,8 @@ if __name__ == '__main__':
     # config_list = ['signal_N4_v']
     # config_list =['signal_N2_a36', 'signal_N2_a34', 'signal_N2_a35', 'signal_N2_a37', 'signal_N2_a38', 'signal_N2_a39']
     # config_list = ['signal_N2_a11', 'signal_N2_a12', 'signal_N2_a13', 'signal_N2_a32', 'signal_N2_a33']
-    # config_list = ['signal_N2_a37']
-    config_list = ['rat_city_d','rat_city_c','rat_city_b','rat_city_a']
+    config_list = ['signal_N2_a1_SNR7']
+    # config_list = ['rat_city_d','rat_city_c','rat_city_b','rat_city_a']
 
     for config_file_ in config_list:
 
@@ -7339,7 +7385,7 @@ if __name__ == '__main__':
         print(f'config_file  {config.config_file}')
 
         data_plot(config=config, epoch_list=['best'], style='black color', device=device)
-        # data_plot(config=config, epoch_list=['all'], style='black color', device=device)
+        data_plot(config=config, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['best'], style='black color', device=device)
 
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)

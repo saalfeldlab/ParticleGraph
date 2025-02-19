@@ -36,7 +36,6 @@ graph_model:
     embedding_dim: 2
     update_type: 'none'
 
-
 plotting:
     colormap: 'tab10'
     arrow_length: 1

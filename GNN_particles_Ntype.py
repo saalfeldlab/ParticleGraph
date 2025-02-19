@@ -64,7 +64,7 @@ if __name__ == '__main__':
         # config_list =['wave_smooth_3']
         # config_list = ['arbitrary_3_bis']
         # config_list = ['signal_N3_c16']
-        config_list = ['signal_N2_b1']
+        config_list = ['signal_N2_a22','signal_N2_a23']
 
     for config_file_ in config_list:
         print(' ')
