@@ -54,6 +54,8 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         self.bc_dpos = bc_dpos
         self.adjacency_matrix = simulation_config.adjacency_matrix
 
+        self.short_term_plasticity = model_config.short_term_plasticity
+
 
 
         if self.model == 'PDE_N3':
@@ -117,9 +119,16 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             embedding = self.a[particle_id, :]
 
         if self.model == 'PDE_N6':
-            field = x[:, 8:9]
-            # field = self.b[particle_id, k.squeeze() // self.embedding_step]**2
-            # field = field[:,None]
+
+            if self.short_term_plasticity == 'learnable':
+                field = self.b[particle_id, k.squeeze() // self.embedding_step]**2
+                field = field[:,None]
+            if self.short_term_plasticity != '':
+                field = x[:, 8:9]
+            else:
+                field = torch.ones_like(x[:, 6:7])
+
+
         elif (self.model == 'PDE_N4') | (self.model == 'PDE_N5'):
             field = x[:, 8:9]
         else:

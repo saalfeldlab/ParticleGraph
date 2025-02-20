@@ -3326,7 +3326,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             adjacency_ = adjacency.t().clone().detach()
             adj_t = torch.abs(adjacency_) > 0
             edge_index = adj_t.nonzero().t().contiguous()
+
     if 'PDE_N' in model_config.signal_model_name:
+        has_adjacency_matrix = True
         adjacency = torch.load(f'./graphs_data/{dataset_name}/adjacency.pt', map_location=device)
         edge_index = torch.load(f'./graphs_data/{dataset_name}/edge_index.pt', map_location=device)
         edge_index_, edge_attr = dense_to_sparse(adjacency)

@@ -23,7 +23,7 @@ simulation:
 
 graph_model:
     field_type: ''
-    short_term_plasticity: 'observed'
+    short_term_plasticity: 'recursive'
     signal_model_name: 'PDE_N6'
     particle_model_name: ''
     mesh_model_name: ''

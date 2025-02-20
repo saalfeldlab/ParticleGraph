@@ -1,12 +1,12 @@
 description: 'synaptic network test learning with modulation     random matrix no recursive loop 1000 neurons 4 types lorentz std 0.03'
-dataset: 'signal_N6_a6'
+dataset: 'signal_N6_a7'
 
 simulation:
     connectivity_file: ''
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
     connectivity_distribution: 'Lorentz'
-    params: [[10.0, 1.0, 1.0, 100, 0.02], [10.0, 2.0, 1.0, 100, 0.02], [10.0, 1.0, 2.0, 100, 0.02], [10.0, 2.0, 2.0, 100, 0.02]]
+    params: [[10.0, 0.0, 1.0, 100, 0.02], [10.0, 0.0, 1.0, 100, 0.02], [10.0, 0.0, 2.0, 100, 0.02], [10.0, 0.0, 2.0, 100, 0.02]]
     phi: 'tanh'
     tau: 1.0
     min_radius: 1.0

@@ -7416,7 +7416,7 @@ if __name__ == '__main__':
         print(f'config_file  {config.config_file}')
 
         data_plot(config=config, epoch_list=['best'], style='black color', device=device)
-        data_plot(config=config, epoch_list=['all'], style='black color', device=device)
+        # data_plot(config=config, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['best'], style='black color', device=device)
 
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)

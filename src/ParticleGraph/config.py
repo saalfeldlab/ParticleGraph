@@ -97,6 +97,7 @@ class GraphModelConfig(BaseModel):
 
     field_type: str = ''
     field_grid: Optional[str] = ''
+    short_term_plasticity: str = ''
 
     pre_input_size: int = 1
     pre_output_size: int = 1
