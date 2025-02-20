@@ -226,7 +226,10 @@ class TrainingConfig(BaseModel):
     rotation_augmentation: bool = False
     translation_augmentation: bool = False
     data_augmentation_loop: int = 40
+
     recursive_loop: int = 0
+    recursive_parameters: list[float] = [0, 0]
+
     regul_matrix: bool = False
     sub_batches: int = 1
     sequence: list[str] = ['to track','to cell']

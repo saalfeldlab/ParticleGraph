@@ -1,12 +1,12 @@
 description: 'synaptic network test learning with modulation     random matrix no recursive loop 1000 neurons 4 types lorentz std 0.03'
-dataset: 'signal_N6_a1'
+dataset: 'signal_N6_a8'
 
 simulation:
     connectivity_file: ''
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
     connectivity_distribution: 'Lorentz'
-    params: [[10.0, 0.0, 1.0, 100, 0.02], [10.0, 0.0, 1.0, 100, 0.02], [10.0, 0.0, 2.0, 100, 0.02], [10.0, 0.0, 2.0, 100, 0.02]]
+    params: [[10.0, 1.0, 1.0, 100, 0.02], [10.0, 2.0, 1.0, 100, 0.02], [10.0, 1.0, 2.0, 100, 0.02], [10.0, 2.0, 2.0, 100, 0.02]]
     phi: 'tanh'
     tau: 1.0
     min_radius: 1.0
@@ -23,6 +23,7 @@ simulation:
 
 graph_model:
     field_type: ''
+    short_term_plasticity: 'recursive'
     signal_model_name: 'PDE_N6'
     particle_model_name: ''
     mesh_model_name: ''
@@ -39,7 +40,6 @@ graph_model:
     n_layers_update: 3
     hidden_dim_update: 64
 
-
     input_size_modulation: 2
     n_layers_modulation: 3
     hidden_dim_modulation: 64
@@ -54,13 +54,17 @@ plotting:
 
 training:
     n_epochs: 20
-    recursive_loop: 0
+
+    recursive_loop: 10
+    recursive_parameters: [0.0, 0.0]
+
     batch_size: 1
     small_init_batch_size: False
+
     n_runs: 2
     sparsity: 'none'
     rotation_augmentation: False
-    data_augmentation_loop: 50
+    data_augmentation_loop: 2
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     device: 'auto'

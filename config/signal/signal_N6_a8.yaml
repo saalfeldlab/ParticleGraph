@@ -1,5 +1,5 @@
 description: 'synaptic network test learning with modulation     random matrix no recursive loop 1000 neurons 4 types lorentz std 0.03'
-dataset: 'signal_N6_a6'
+dataset: 'signal_N6_a8'
 
 simulation:
     connectivity_file: ''
@@ -54,9 +54,13 @@ plotting:
 
 training:
     n_epochs: 20
+
     recursive_loop: 1
+    recursive_parameters: [0.0, 0.0]
+
     batch_size: 1
     small_init_batch_size: False
+
     n_runs: 2
     sparsity: 'none'
     rotation_augmentation: False
