@@ -1,12 +1,12 @@
 description: 'test 10^5 time points  LRs 1E-4 5E-5 5E-4     synaptic network random matrix no recursive loop 1000 neurons 4 types lorentz std 0.03'
-dataset: 'signal_N2_a1_SNR3'
+dataset: 'signal_N2_a15'
 
 simulation:
-    connectivity_file: '/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/graphs_signal_N2_Lorentz_a/adjacency.pt'
+    connectivity_file: 'random'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
     connectivity_distribution: 'Lorentz'
-    params: [[10.0,1.0,1.0],[10.0,2.0,1.0],[10.0,1.0,2.0],[10.0,2.0,2.0]]
+    params: [[10.0,0.0,1.0],[10.0,0.0,1.0],[10.0,0.0,2.0],[10.0,0.0,2.0]]
     phi: 'tanh'
     tau: 1.0
     min_radius: 1.0
@@ -61,5 +61,4 @@ training:
     learning_rate_W_start: 1.0E-4
     learning_rate_start: 5.0E-5
     learning_rate_embedding_start: 5.0E-4
-    noise_level: 1
 

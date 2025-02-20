@@ -6730,7 +6730,7 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
 
         # print('clustering ...')
         embedding = to_numpy(model.a.clone().detach())
-        map_behavior = np.zeros((100,2000))
+        map_behavior = np.zeros((100,6000))
 
         # Define the colors: black for zero, and two other colors
         colors = [(0, 0, 1), (1, 1, 1), (1, 0, 0)]  # Black, Red, Blue
@@ -6741,7 +6741,7 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
         cbm = LinearSegmentedColormap.from_list(cmap_name, colors, N=n_bins)
 
         next_id = max(x_list[0][0][:, -1]) + 1
-        for k in trange(0, 1000): #n_frames-1):
+        for k in trange(0, 6000): #n_frames-1):
             x = x_list[0][k]
             edges = edge_p_p_list[0][f'arr_{k}']
             edges = torch.tensor(edges, dtype=torch.int64, device=device)
@@ -6861,7 +6861,7 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
 
                 ax = fig.add_subplot(2, 4, 8)
                 # plt.axis('off')
-                plt.imshow(map_behavior[0:to_numpy(next_id-1).astype(int), 0:1000], aspect='auto', cmap=cbm, vmin=-0.15, vmax=0.15)
+                plt.imshow(map_behavior[0:to_numpy(next_id-1).astype(int), :], aspect='auto', cmap=cbm, vmin=-0.1, vmax=0.1)
                 plt.xticks(fontsize=8)
                 plt.yticks(np.arange(0, to_numpy(next_id-1).astype(int)), np.arange(1, to_numpy(next_id).astype(int)), fontsize=8)
 
@@ -7401,7 +7401,7 @@ if __name__ == '__main__':
     # config_list = ['signal_N4_v']
     # config_list =['signal_N2_a36', 'signal_N2_a34', 'signal_N2_a35', 'signal_N2_a37', 'signal_N2_a38', 'signal_N2_a39']
     # config_list = ['signal_N2_a11', 'signal_N2_a12', 'signal_N2_a13', 'signal_N2_a32', 'signal_N2_a33']
-    # config_list = ['signal_N2_a1_SNR7']
+    # config_list = ['signal_N2_a37']
     config_list = ['rat_city_d']
 
     for config_file_ in config_list:
