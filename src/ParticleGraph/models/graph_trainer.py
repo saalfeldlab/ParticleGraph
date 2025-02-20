@@ -2438,8 +2438,8 @@ def data_train_synaptic2(config, erase, best_model, device):
                 dataset_batch.append(dataset)
 
                 y = torch.tensor(y_list[run][k], device=device) / ynorm
-                if noise_level > 0:
-                    y = y * (1 + torch.randn_like(y) * noise_level)
+                # if noise_level > 0:
+                #     y = y * (1 + torch.randn_like(y) * noise_level)
 
                 if batch == 0:
                     data_id = torch.ones((x.shape[0], 1), dtype=torch.int) * run
