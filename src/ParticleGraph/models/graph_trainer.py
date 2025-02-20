@@ -2531,15 +2531,15 @@ def data_train_synaptic2(config, erase, best_model, device):
                         ax = fig.add_subplot(2, 2, 1)
                         plt.imshow(to_numpy(modulation[:,np.arange(0,10000,10)]))
                         ax = fig.add_subplot(2, 2, 2)
-                        plt.imshow(to_numpy(model.b))
+                        plt.imshow(to_numpy(model.b** 2))
                         ax = fig.add_subplot(2, 2, 3)
-                        plt.scatter(to_numpy(modulation[:,np.arange(0,10000,10)]), to_numpy(model.b[:,0:1000]), s=0.1, color='k')
+                        plt.scatter(to_numpy(modulation[:,np.arange(0,10000,10)]), to_numpy(model.b[:,0:1000]** 2), s=0.1, color='k')
                         ax = fig.add_subplot(2, 2, 4)
                         true_d_modulation = (1 - x[:, 8:9]) / 100 - 0.02 * x[:, 8:9] * torch.abs(x[:, 6:7])
                         plt.scatter(to_numpy(d_modulation[:, k:k + 1] / modulation_norm),
                                     to_numpy(true_d_modulation / modulation_norm), s=1, color='g')
                         plt.scatter(to_numpy(d_modulation[:, k:k + 1] / modulation_norm), to_numpy(pred_modulation),
-                                    s=10, color='k')
+                                    s=1, color='k')
                         plt.xlim([-2, 2])
                         plt.ylim([-2, 2])
                     else:
@@ -2548,7 +2548,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                         plt.scatter(to_numpy(d_modulation[:, k:k + 1] / modulation_norm),
                                     to_numpy(true_d_modulation / modulation_norm), s=1, color='g')
                         plt.scatter(to_numpy(d_modulation[:, k:k + 1] / modulation_norm), to_numpy(pred_modulation),
-                                    s=10, color='k')
+                                    s=1, color='k')
                         plt.xlim([-2, 2])
                         plt.ylim([-2, 2])
 
