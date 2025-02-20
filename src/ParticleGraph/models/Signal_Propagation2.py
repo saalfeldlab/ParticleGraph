@@ -79,8 +79,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             self.a = nn.Parameter(torch.tensor(projections, device=self.device, requires_grad=True, dtype=torch.float32))
 
         if self.model == 'PDE_N6':
-            self.b = nn.Parameter(
-                torch.ones((int(self.n_particles), 1000 + 10), device=self.device, requires_grad=True,dtype=torch.float32))
+            self.b = nn.Parameter(torch.ones((int(self.n_particles), 1000 + 10), device=self.device, requires_grad=True,dtype=torch.float32)*0.2)
 
             self.embedding_step = self.n_frames // 1000
 
@@ -118,21 +117,13 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             particle_id = x[:, 0].long()
             embedding = self.a[particle_id, :]
 
+        field = torch.ones_like(x[:,6:7])
         if self.model == 'PDE_N6':
-
-            if self.short_term_plasticity == 'learnable':
-                field = self.b[particle_id, k.squeeze() // self.embedding_step]**2
-                field = field[:,None]
             if self.short_term_plasticity != '':
                 field = x[:, 8:9]
-            else:
-                field = torch.ones_like(x[:, 6:7])
-
-
-        elif (self.model == 'PDE_N4') | (self.model == 'PDE_N5'):
+        if (self.model == 'PDE_N4') | (self.model == 'PDE_N5'):
             field = x[:, 8:9]
-        else:
-            field = torch.ones_like(x[:,6:7])
+
 
         in_features = torch.cat([u, embedding], dim=1)
 

@@ -2402,26 +2402,34 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                 for loop in range(recursive_loop):
 
+                    if (loop == 0) and ('learnable' in model.short_term_plasticity):
+                        x[:,8] = model.b[:, k // model.embedding_step] ** 2
+
                     dataset = data.Data(x=x, edge_index=model.edges)
                     y = torch.tensor(y_list[run][k], device=device) / ynorm
+
                     pred = model(dataset, data_id=data_id, has_field=has_field_batch, k=k_batch)
                     loss = loss + (pred - y).norm(2)
 
                     in_modulation = torch.cat((x[:, 6:7], x[:, 8:9]), dim=1)
                     pred_modulation = model.lin_modulation(in_modulation)
-                    loss = loss +((pred_modulation - d_modulation[:, k:k + 1] / modulation_norm).norm(2)).norm(2) * coeff_lin_modulation
+                    if 'learnable' not in model.short_term_plasticity:
+                        loss = loss +((pred_modulation - d_modulation[:, k:k + 1] / modulation_norm).norm(2)).norm(2) * coeff_lin_modulation
 
                     k=k+1
 
                     x_next = torch.tensor(x_list[run][k], device=device).clone().detach()
                     x[:, 6:7] = (x[:, 6:7] + delta_t * pred) * recursive_parameters[0] + (1-recursive_parameters[0]) * x_next[:, 6:7]
-                    x[:, 8:9] = (x[:, 8:9] + delta_t * pred_modulation) * recursive_parameters[1] + (1-recursive_parameters[1]) * x_next[:, 8:9]
+
+                    if 'learnable' in model.short_term_plasticity:
+                        x[:, 8:9] = (x[:, 8:9] + delta_t * pred_modulation)
+                    else:
+                        x[:, 8:9] = (x[:, 8:9] + delta_t * pred_modulation) * recursive_parameters[1] + (1-recursive_parameters[1]) * x_next[:, 8:9]
 
                 loss.backward()
                 optimizer.step()
 
                 total_loss += loss.item()
-
 
             else:
 
@@ -2483,8 +2491,6 @@ def data_train_synaptic2(config, erase, best_model, device):
                     dataset_batch.append(dataset)
 
                     y = torch.tensor(y_list[run][k], device=device) / ynorm
-                    # if noise_level > 0:
-                    #     y = y * (1 + torch.randn_like(y) * noise_level)
 
                     if batch == 0:
                         data_id = torch.ones((x.shape[0], 1), dtype=torch.int) * run
@@ -2510,10 +2516,6 @@ def data_train_synaptic2(config, erase, best_model, device):
                 total_loss += loss.item()
 
 
-
-
-
-
             visualize_embedding = True
             if visualize_embedding & (((epoch < 30) & (N % plot_frequency == 0)) | (N == 0)):
 
@@ -2523,15 +2525,42 @@ def data_train_synaptic2(config, erase, best_model, device):
                            os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
                 if 'PDE_N6' in model_config.signal_model_name:
-                    fig = plt.figure(figsize=(12, 12))
-                    true_d_modulation = (1-x[:,8:9])/100 - 0.02 * x[:,8:9] * torch.abs(x[:,6:7])
-                    plt.scatter(to_numpy(d_modulation[:, k:k+1]/modulation_norm), to_numpy(true_d_modulation/modulation_norm), s=10, color='g')
-                    plt.scatter(to_numpy(d_modulation[:, k:k+1]/modulation_norm),to_numpy(pred_modulation),s=10, color='k')
-                    plt.xlim([-2,2])
-                    plt.ylim([-2,2])
+
+                    if 'learnable' in model.short_term_plasticity:
+                        fig = plt.figure(figsize=(12, 12))
+                        ax = fig.add_subplot(2, 2, 1)
+                        plt.imshow(to_numpy(modulation[:,np.arange(0,10000,10)]))
+                        ax = fig.add_subplot(2, 2, 2)
+                        plt.imshow(to_numpy(model.b))
+                        ax = fig.add_subplot(2, 2, 3)
+                        plt.scatter(to_numpy(modulation[:,np.arange(0,10000,10)]), to_numpy(model.b[:,0:1000]), s=0.1, color='k')
+                        ax = fig.add_subplot(2, 2, 4)
+                        true_d_modulation = (1 - x[:, 8:9]) / 100 - 0.02 * x[:, 8:9] * torch.abs(x[:, 6:7])
+                        plt.scatter(to_numpy(d_modulation[:, k:k + 1] / modulation_norm),
+                                    to_numpy(true_d_modulation / modulation_norm), s=1, color='g')
+                        plt.scatter(to_numpy(d_modulation[:, k:k + 1] / modulation_norm), to_numpy(pred_modulation),
+                                    s=10, color='k')
+                        plt.xlim([-2, 2])
+                        plt.ylim([-2, 2])
+                    else:
+                        fig = plt.figure(figsize=(12, 12))
+                        true_d_modulation = (1 - x[:, 8:9]) / 100 - 0.02 * x[:, 8:9] * torch.abs(x[:, 6:7])
+                        plt.scatter(to_numpy(d_modulation[:, k:k + 1] / modulation_norm),
+                                    to_numpy(true_d_modulation / modulation_norm), s=1, color='g')
+                        plt.scatter(to_numpy(d_modulation[:, k:k + 1] / modulation_norm), to_numpy(pred_modulation),
+                                    s=10, color='k')
+                        plt.xlim([-2, 2])
+                        plt.ylim([-2, 2])
+
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
                     plt.close()
+
+
+
+
+
+
                 if (has_field):
                     if 'visual' in field_type:
                         tmp = torch.reshape(x[:n_nodes, 8:9], (n_nodes_per_axis, n_nodes_per_axis))
