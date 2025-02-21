@@ -4876,50 +4876,49 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
         plt.savefig(f'./{log_dir}/results/firing rate.png', dpi=300)
         plt.close()
 
-        plt.figure(figsize=(15, 10))
-        window_size = 25
-        window_end = 50000
-        ts = to_numpy(activity[600, :])
-        ts_avg = np.convolve(ts, np.ones(window_size) / window_size, mode='valid')
-        plt.plot(ts[window_size//2:window_end+window_size//2], linewidth=1)
-        plt.plot(ts_avg, linewidth=2)
-        plt.plot(ts[window_size//2:window_end+window_size//2]-ts_avg[0:window_end])
-        plt.xlim([window_end-5000,window_end])
-        plt.show()
-        signal_power = np.mean(ts_avg[window_size//2:window_end+window_size//2] ** 2)
-        # Compute the noise power
-        noise_power = np.mean((ts[window_size//2:window_end+window_size//2] - ts_avg[0:window_end]) ** 2)
-        # Calculate the signal-to-noise ratio (SNR)
-        snr = signal_power / noise_power
-        print(f"Signal-to-Noise Ratio (SNR): {snr:0.2f} 10log10 {10*np.log10(snr):0.2f}")
-
-        # Parameters
-        fs = 1000  # Sampling frequency
-        t = np.arange(0, 1, 1 / fs)  # Time vector
-        frequency = 5  # Frequency of the sine wave
-        desired_snr_db = snr  # Desired SNR in dB
-        # Generate a clean signal (sine wave)
-        clean_signal = np.sin(2 * np.pi * frequency * t)
-        # Calculate the power of the clean signal
-        signal_power = np.mean(clean_signal ** 2)
-        # Calculate the noise power required to achieve the desired SNR
-        desired_snr_linear = 10 ** (desired_snr_db / 10)
-        noise_power = signal_power / desired_snr_linear
-        # Generate noise with the calculated power
-        noise = np.sqrt(noise_power) * np.random.randn(len(t))
-        # Create a noisy signal by adding noise to the clean signal
-        noisy_signal = clean_signal + noise
-        # Plot the clean signal and the noisy signal
-        plt.figure(figsize=(15, 10))
-        plt.subplot(2, 1, 1)
-        plt.plot(t, clean_signal)
-        plt.title('Clean Signal')
-        plt.subplot(2, 1, 2)
-        plt.plot(t, noisy_signal)
-        plt.plot(t, noise)
-        plt.title(f'Noisy Signal with SNR = {desired_snr_db} dB')
-        plt.tight_layout()
-        plt.show()
+        # plt.figure(figsize=(15, 10))
+        # window_size = 25
+        # window_end = 50000
+        # ts = to_numpy(activity[600, :])
+        # ts_avg = np.convolve(ts, np.ones(window_size) / window_size, mode='valid')
+        # plt.plot(ts[window_size//2:window_end+window_size//2], linewidth=1)
+        # plt.plot(ts_avg, linewidth=2)
+        # plt.plot(ts[window_size//2:window_end+window_size//2]-ts_avg[0:window_end])
+        # plt.xlim([window_end-5000,window_end])
+        # plt.show()
+        # signal_power = np.mean(ts_avg[window_size//2:window_end+window_size//2] ** 2)
+        # # Compute the noise power
+        # noise_power = np.mean((ts[window_size//2:window_end+window_size//2] - ts_avg[0:window_end]) ** 2)
+        # # Calculate the signal-to-noise ratio (SNR)
+        # snr = signal_power / noise_power
+        # print(f"Signal-to-Noise Ratio (SNR): {snr:0.2f} 10log10 {10*np.log10(snr):0.2f}")
+        # # Parameters
+        # fs = 1000  # Sampling frequency
+        # t = np.arange(0, 1, 1 / fs)  # Time vector
+        # frequency = 5  # Frequency of the sine wave
+        # desired_snr_db = snr  # Desired SNR in dB
+        # # Generate a clean signal (sine wave)
+        # clean_signal = np.sin(2 * np.pi * frequency * t)
+        # # Calculate the power of the clean signal
+        # signal_power = np.mean(clean_signal ** 2)
+        # # Calculate the noise power required to achieve the desired SNR
+        # desired_snr_linear = 10 ** (desired_snr_db / 10)
+        # noise_power = signal_power / desired_snr_linear
+        # # Generate noise with the calculated power
+        # noise = np.sqrt(noise_power) * np.random.randn(len(t))
+        # # Create a noisy signal by adding noise to the clean signal
+        # noisy_signal = clean_signal + noise
+        # # Plot the clean signal and the noisy signal
+        # plt.figure(figsize=(15, 10))
+        # plt.subplot(2, 1, 1)
+        # plt.plot(t, clean_signal)
+        # plt.title('Clean Signal')
+        # plt.subplot(2, 1, 2)
+        # plt.plot(t, noisy_signal)
+        # plt.plot(t, noise)
+        # plt.title(f'Noisy Signal with SNR = {desired_snr_db} dB')
+        # plt.tight_layout()
+        # plt.show()
 
 
         if os.path.exists(f"./{log_dir}/neuron_gt_list.pt"):
@@ -6741,7 +6740,7 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
         cbm = LinearSegmentedColormap.from_list(cmap_name, colors, N=n_bins)
 
         next_id = max(x_list[0][0][:, -1]) + 1
-        for k in trange(0, 6000): #n_frames-1):
+        for k in trange(1000, 6000): #n_frames-1):
             x = x_list[0][k]
             edges = edge_p_p_list[0][f'arr_{k}']
             edges = torch.tensor(edges, dtype=torch.int64, device=device)
@@ -7395,15 +7394,8 @@ if __name__ == '__main__':
     # for f in f_list:
     #     config_list,epoch_list = get_figures(f)
 
-
-    # config_list = ['signal_N5_l']
-    # config_list = ['signal_N3_c4']
-    # config_list = ['signal_N2_a20','signal_N2_a21','signal_N2_a22','signal_N2_a23','signal_N2_a24','signal_N2_a25','signal_N2_a26']
-    # config_list = ['signal_N4_v']
-    # config_list =['signal_N2_a36', 'signal_N2_a34', 'signal_N2_a35', 'signal_N2_a37', 'signal_N2_a38', 'signal_N2_a39']
-    # config_list = ['signal_N2_a11', 'signal_N2_a12', 'signal_N2_a13', 'signal_N2_a32', 'signal_N2_a33']
-    # config_list = ['signal_N3_c16']
-    config_list = ['rat_city_d']
+    config_list = ['signal_N2_a22', 'signal_N2_a23']
+    # config_list = ['rat_city_d']
 
     for config_file_ in config_list:
 
@@ -7416,7 +7408,7 @@ if __name__ == '__main__':
 
         print(f'config_file  {config.config_file}')
 
-        # data_plot(config=config, epoch_list=['best'], style='black color', device=device)
+        data_plot(config=config, epoch_list=['best'], style='black color', device=device)
         data_plot(config=config, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['best'], style='black color', device=device)
 

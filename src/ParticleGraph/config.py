@@ -170,13 +170,19 @@ class TrainingConfig(BaseModel):
     
     n_epochs: int = 20
     n_epochs_init: int = 2
+    n_epochs_init: int = 2
     batch_size: int = 1
     particle_batch_ratio: float = 1
     small_init_batch_size: bool = True
+
     do_tracking: bool = False
+    motile_tracking_file: str = ''
     ctrl_tracking: bool = False
     distance_threshold: float = 0.1
     epoch_distance_replace: int = 20
+
+
+
     time_window: int=0
 
     n_runs: int = 2

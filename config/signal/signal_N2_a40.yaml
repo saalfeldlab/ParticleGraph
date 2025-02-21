@@ -2,7 +2,7 @@ description: 'test 10^5 time points  LRs 1E-4 5E-5 5E-4     synaptic network ran
 dataset: 'signal_N2_a11'
 
 simulation:
-    connectivity_file: '/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/graphs_signal_N2_Lorentz_a/adjacency.pt'
+    connectivity_file: 'random'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
     connectivity_distribution: 'Lorentz'

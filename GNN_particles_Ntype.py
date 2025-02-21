@@ -35,10 +35,10 @@ if __name__ == '__main__':
 
     warnings.filterwarnings("ignore", category=FutureWarning)
 
-    try:
-        matplotlib.use("Qt5Agg")
-    except:
-        pass
+    # try:
+    #     matplotlib.use("Qt5Agg")
+    # except:
+    #     pass
 
     parser = argparse.ArgumentParser(description="ParticleGraph")
     parser.add_argument('-o', '--option', nargs='+', help='Option that takes multiple values')
@@ -55,16 +55,14 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        task = 'train'
-        best_model = ''
+        task = 'test'
+        best_model = None
         # config_list = ['falling_water_ramp_x6_11']
-        # config_list = ['RD_RPS_3']
-        # config_list =['signal_N2_a11', 'signal_N2_a12', 'signal_N2_a13', 'signal_N2_a32', 'signal_N2_a33']
-        # config_list =['signal_N2_a34', 'signal_N2_a35', 'signal_N2_a36', 'signal_N2_a37', 'signal_N2_a38', 'signal_N2_a39']
+        config_list =['signal_N2_a40']
         # config_list =['wave_smooth_3']
         # config_list = ['arbitrary_3_bis']
-        config_list = ['signal_N6_a15']
-        # config_list = ['rat_city_e']
+        # config_list = ['signal_N6_a15']
+        # config_list = ['rat_city_f']
 
     for config_file_ in config_list:
         print(' ')

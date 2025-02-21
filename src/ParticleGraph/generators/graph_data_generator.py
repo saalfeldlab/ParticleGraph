@@ -2193,6 +2193,13 @@ def data_generate_rat_city(config, visualize=True, run_vizualized=0, style='colo
         values[:, [2, 3]] = values[:, [3, 2]]
         values[:, 1] = values[:, 1] - 1
 
+    if training_config.motile_tracking_file != '':
+        dataframe = pd.read_csv(training_config.motile_tracking_file, sep=" ", header=None)
+        motile = dataframe.to_numpy()
+        motile[:,1] = motile[:,1] - 1
+        motile[:,3] = motile[:,3] - 1
+        motile = torch.tensor(motile, dtype=torch.float32, device=device)
+
     if os.path.exists(pic_folder):
         files = glob.glob(f'{pic_folder}/*.jpg')
         sorted_files = sorted(files, key=extract_number)
@@ -2200,7 +2207,7 @@ def data_generate_rat_city(config, visualize=True, run_vizualized=0, style='colo
     x_list = []
     edge_f_p_list = []
     edge_p_p_list = []
-
+    t_x =[]
 
     for it in trange(n_frames):
 
@@ -2221,6 +2228,18 @@ def data_generate_rat_city(config, visualize=True, run_vizualized=0, style='colo
             V1 = torch.zeros_like(X1)
             T1 = torch.zeros_like(ID1)
             H1 = torch.zeros_like(X1)
+
+            if (training_config.motile_tracking_file != '') and (it>0):
+                PREV_ID1 = PREV_ID1*0
+                pos = torch.argwhere(motile[:, 1] == it-1)
+                if len(pos) > 0:
+                    pos = pos.squeeze()
+                    motile_pos = motile[pos, :]
+                    for id, m in enumerate(ID1):
+                        pos = torch.argwhere(motile_pos[:, 2] == m)
+                        if len(pos) > 0:
+                            pos = pos.squeeze()
+                            PREV_ID1[id] = motile_pos[pos, 0]
 
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                                    H1.clone().detach(), PREV_ID1.clone().detach(), ID1.clone().detach()), 1)
