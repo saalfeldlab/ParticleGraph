@@ -336,11 +336,11 @@ def plot_embedding_func_cluster_tracking(model, config, embedding_cluster, cmap,
             pos = np.argwhere(type_list == n).squeeze().astype(int)
             plt.scatter(embedding[pos, 0], embedding[pos, 1], s=1, alpha=0.25)
         if 'latex' in style:
-            plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
-            plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
+            plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
+            plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
         else:
-            plt.xlabel(r'$a_{i0}$', fontsize=78)
-            plt.ylabel(r'$a_{i1}$', fontsize=78)
+            plt.xlabel(r'$a_{i0}$', fontsize=68)
+            plt.ylabel(r'$a_{i1}$', fontsize=68)
         plt.xlim(config.plotting.embedding_lim)
         plt.ylim(config.plotting.embedding_lim)
         plt.tight_layout()
@@ -354,11 +354,11 @@ def plot_embedding_func_cluster_tracking(model, config, embedding_cluster, cmap,
                 plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=1,
                             color=cmap.color(n), alpha=0.025)
         if 'latex' in style:
-            plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
-            plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
+            plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
+            plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
         else:
-            plt.xlabel(r'$a_{i0}$', fontsize=78)
-            plt.ylabel(r'$a_{i1}$', fontsize=78)
+            plt.xlabel(r'$a_{i0}$', fontsize=68)
+            plt.ylabel(r'$a_{i1}$', fontsize=68)
         plt.xlim(config.plotting.embedding_lim)
         plt.ylim(config.plotting.embedding_lim)
         plt.tight_layout()
@@ -381,8 +381,8 @@ def plot_embedding_func_cluster_tracking(model, config, embedding_cluster, cmap,
         for n in range(n_particle_types):
             plt.scatter(proj_interaction[index_particles[n], 0],
                         proj_interaction[index_particles[n], 1], color=cmap.color(n), s=1, alpha=0.25)
-    plt.xlabel(r'UMAP 0', fontsize=78)
-    plt.ylabel(r'UMAP 1', fontsize=78)
+    plt.xlabel(r'UMAP 0', fontsize=68)
+    plt.ylabel(r'UMAP 1', fontsize=68)
     plt.xlim([-0.2, 1.2])
     plt.ylim([-0.2, 1.2])
     plt.tight_layout()
@@ -418,11 +418,11 @@ def plot_embedding_func_cluster_state(model, config,embedding_cluster, cmap, typ
         pos = torch.argwhere(type_stack == n).squeeze()
         plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=1, color=cmap.color(n), alpha=0.25)
     if 'latex' in style:
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
     else:
-        plt.xlabel(r'$a_{i0}$', fontsize=78)
-        plt.ylabel(r'$a_{i1}$', fontsize=78)
+        plt.xlabel(r'$a_{i0}$', fontsize=68)
+        plt.ylabel(r'$a_{i1}$', fontsize=68)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=170.7)
     plt.close()
@@ -440,8 +440,8 @@ def plot_embedding_func_cluster_state(model, config,embedding_cluster, cmap, typ
         pos = np.argwhere(true_type_list == n).squeeze().astype(int)
         if len(pos)>0:
             plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=100, alpha=0.25, edgecolors='none')
-    plt.xlabel(r'UMAP 0', fontsize=78)
-    plt.ylabel(r'UMAP 1', fontsize=78)
+    plt.xlabel(r'UMAP 0', fontsize=68)
+    plt.ylabel(r'UMAP 1', fontsize=68)
     plt.xlim([-0.2, 1.2])
     plt.ylim([-0.2, 1.2])
     plt.tight_layout()
@@ -512,11 +512,11 @@ def plot_embedding_func_cluster(model, config,embedding_cluster, cmap, index_par
             if len(pos) > 0:
                 plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=10)
     if 'latex' in style:
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
     else:
-        plt.xlabel(r'$a_{i0}$', fontsize=78)
-        plt.ylabel(r'$a_{i1}$', fontsize=78)
+        plt.xlabel(r'$a_{i0}$', fontsize=68)
+        plt.ylabel(r'$a_{i1}$', fontsize=68)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=170.7)
     plt.close()
@@ -543,8 +543,8 @@ def plot_embedding_func_cluster(model, config,embedding_cluster, cmap, index_par
         if len(pos) > 0:
             plt.scatter(proj_interaction[pos, 0],
                         proj_interaction[pos, 1], color=cmap.color(n), s=200, alpha=0.1)
-    plt.xlabel(r'UMAP 0', fontsize=78)
-    plt.ylabel(r'UMAP 1', fontsize=78)
+    plt.xlabel(r'UMAP 0', fontsize=68)
+    plt.ylabel(r'UMAP 1', fontsize=68)
     plt.xlim([-0.2, 1.2])
     plt.ylim([-0.2, 1.2])
     plt.tight_layout()
@@ -563,11 +563,11 @@ def plot_embedding_func_cluster(model, config,embedding_cluster, cmap, index_par
         if pos.size > 0:
             plt.scatter(embedding[pos, 0], embedding[pos, 1], s=10)
     if 'latex' in style:
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
     else:
-        plt.xlabel(r'$a_{i0}$', fontsize=78)
-        plt.ylabel(r'$a_{i1}$', fontsize=78)
+        plt.xlabel(r'$a_{i0}$', fontsize=68)
+        plt.ylabel(r'$a_{i1}$', fontsize=68)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/clustered_embedding_{epoch}.tif", dpi=170.7)
     plt.close()
@@ -588,8 +588,8 @@ def plot_embedding_func_cluster(model, config,embedding_cluster, cmap, index_par
     #     pos = np.argwhere(labels == n)
     #     if pos.size > 0:
     #         plt.scatter(embedding[pos, 0], embedding[pos, 1],s=10)
-    # plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
-    # plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
+    # plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
+    # plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
     # plt.tight_layout()
     # plt.savefig(f"./{log_dir}/results/UMAP_clustered_embedding_{epoch}.tif", dpi=170.7)
     # plt.close()
@@ -689,8 +689,8 @@ def plot_focused_on_cell(config, run, style, step, cell_id, device):
                     plt.scatter(to_numpy(X1[dead_cell[:, 0].squeeze(), 0]), to_numpy(X1[dead_cell[:, 0].squeeze(), 1]),
                                 s=2, color=mc, alpha=0.5)
                 if 'latex' in style:
-                    plt.xlabel(r'$x$', fontsize=78)
-                    plt.ylabel(r'$y$', fontsize=78)
+                    plt.xlabel(r'$x$', fontsize=68)
+                    plt.ylabel(r'$y$', fontsize=68)
                     plt.xticks(fontsize=48.0)
                     plt.yticks(fontsize=48.0)
 
@@ -901,8 +901,8 @@ def plot_generated(config, run, style, step, device):
                     plt.scatter(to_numpy(X1[dead_cell[:, 0].squeeze(), 0]), to_numpy(X1[dead_cell[:, 0].squeeze(), 1]),
                                 s=2, color=mc, alpha=0.5)
                 if 'latex' in style:
-                    plt.xlabel(r'$x$', fontsize=78)
-                    plt.ylabel(r'$y$', fontsize=78)
+                    plt.xlabel(r'$x$', fontsize=68)
+                    plt.ylabel(r'$y$', fontsize=68)
                     plt.xticks(fontsize=48.0)
                     plt.yticks(fontsize=48.0)
                 elif 'frame' in style:
@@ -949,8 +949,8 @@ def plot_generated(config, run, style, step, device):
                     plt.scatter(to_numpy(X1[dead_cell[:, 0].squeeze(), 0]), to_numpy(X1[dead_cell[:, 0].squeeze(), 1]),
                                 s=2, color=mc, alpha=0.5)
                 if 'latex' in style:
-                    plt.xlabel(r'$x$', fontsize=78)
-                    plt.ylabel(r'$y$', fontsize=78)
+                    plt.xlabel(r'$x$', fontsize=68)
+                    plt.ylabel(r'$y$', fontsize=68)
                     plt.xticks(fontsize=48.0)
                     plt.yticks(fontsize=48.0)
                 elif 'frame' in style:
@@ -1059,8 +1059,8 @@ def plot_cell_rates(config, device, log_dir, n_particle_types, type_list, x_list
     for k in range(n_particle_types):
         plt.plot(np.arange(last_frame_growth), N_cells_dead[:, k], color=cmap.color(k), linewidth=4,
                  label=f'Cell type {k} dead')
-    plt.xlabel(r'Frame', fontsize=78)
-    plt.ylabel(r'Number of dead cells', fontsize=78)
+    plt.xlabel(r'Frame', fontsize=68)
+    plt.ylabel(r'Number of dead cells', fontsize=68)
     ax.xaxis.set_major_formatter(FormatStrFormatter('%.0f'))
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
     plt.tight_layout()
@@ -1278,11 +1278,11 @@ def plot_attraction_repulsion(config,epoch_list, log_dir, logger, style, device)
                          to_numpy(func) * to_numpy(ynorm),
                          color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
             if 'latex' in style:
-                plt.xlabel(r'$d_{ij}$', fontsize=78)
-                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
+                plt.xlabel(r'$d_{ij}$', fontsize=68)
+                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=68)
             else:
-                plt.xlabel(r'$d_{ij}$', fontsize=78)
-                plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=78)
+                plt.xlabel(r'$d_{ij}$', fontsize=68)
+                plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=68)
             plt.xlim([0, max_radius])
             plt.ylim(config.plotting.ylim)
             plt.tight_layout()
@@ -1302,11 +1302,11 @@ def plot_attraction_repulsion(config,epoch_list, log_dir, logger, style, device)
             plt.xlim([0, max_radius])
             plt.ylim(config.plotting.ylim)
             if 'latex' in style:
-                plt.xlabel(r'$d_{ij}$', fontsize=78)
-                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
+                plt.xlabel(r'$d_{ij}$', fontsize=68)
+                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=68)
             else:
-                plt.xlabel(r'$d_{ij}$', fontsize=78)
-                plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=78)
+                plt.xlabel(r'$d_{ij}$', fontsize=68)
+                plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=68)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/true_func.tif", dpi=170.7)
             plt.close()
@@ -1470,11 +1470,11 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
                          to_numpy(func) * to_numpy(ynorm),
                          color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
             if 'latex' in style:
-                plt.xlabel(r'$d_{ij}$', fontsize=78)
-                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
+                plt.xlabel(r'$d_{ij}$', fontsize=68)
+                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=68)
             else:
-                plt.xlabel(r'$d_{ij}$', fontsize=78)
-                plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=78)
+                plt.xlabel(r'$d_{ij}$', fontsize=68)
+                plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=68)
             plt.xlim([0, max_radius])
             plt.ylim(config.plotting.ylim)
             plt.tight_layout()
@@ -1494,11 +1494,11 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
             plt.xlim([0, max_radius])
             plt.ylim(config.plotting.ylim)
             if 'latex' in style:
-                plt.xlabel(r'$d_{ij}$', fontsize=78)
-                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
+                plt.xlabel(r'$d_{ij}$', fontsize=68)
+                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=68)
             else:
-                plt.xlabel(r'$d_{ij}$', fontsize=78)
-                plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=78)
+                plt.xlabel(r'$d_{ij}$', fontsize=68)
+                plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=68)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/true_func.tif", dpi=170.7)
             plt.close()
@@ -1670,11 +1670,11 @@ def plot_cell_state(config, epoch_list, log_dir, logger, style, device):
             plt.xlim([0, max_radius])
             plt.ylim(config.plotting.ylim)
             if 'latex' in style:
-                plt.xlabel(r'$d_{ij}$', fontsize=78)
-                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
+                plt.xlabel(r'$d_{ij}$', fontsize=68)
+                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=68)
             else:
-                plt.xlabel(r'$d_{ij}$', fontsize=78)
-                plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=78)
+                plt.xlabel(r'$d_{ij}$', fontsize=68)
+                plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=68)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/true_func.tif", dpi=170.7)
             plt.close()
@@ -1689,16 +1689,16 @@ def plot_cell_state(config, epoch_list, log_dir, logger, style, device):
 
             fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
             plt.imshow(np.rot90(GT_time_series[:,selected.astype(int)]), aspect='auto', cmap=cm,vmin=0, vmax=2)
-            plt.xlabel('frame', fontsize=78)
-            plt.ylabel('cell_id', fontsize=78)
+            plt.xlabel('frame', fontsize=68)
+            plt.ylabel('cell_id', fontsize=68)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/true_kinograph.tif", dpi=170.7)
             plt.close()
 
             fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
             plt.imshow(np.rot90(learned_time_series[:,selected.astype(int)]), aspect='auto', cmap=cm,vmin=0, vmax=2)
-            plt.xlabel('frame', fontsize=78)
-            plt.ylabel('cell_id', fontsize=78)
+            plt.xlabel('frame', fontsize=68)
+            plt.ylabel('cell_id', fontsize=68)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/learned_kinograph.tif", dpi=170.7)
             plt.close()
@@ -1864,8 +1864,8 @@ def plot_cell_tracking(config, epoch_list, log_dir, logger, style, device):
 
             fig,ax = fig_init(formatx='%.0f', formaty='%.0f')
             plt.plot(np.arange(n_frames), tracking_index_list, color=mc, linewidth=2)
-            plt.ylabel(r'tracking errors', fontsize=78)
-            plt.xlabel(r'frame', fontsize=78)
+            plt.ylabel(r'tracking errors', fontsize=68)
+            plt.xlabel(r'frame', fontsize=68)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/tracking_error_{epoch}.tif", dpi=170.7)
             plt.close()
@@ -1911,11 +1911,11 @@ def plot_cell_tracking(config, epoch_list, log_dir, logger, style, device):
                              to_numpy(func),
                              color=cmap.color(int(type_list[int(n)])), linewidth=2, alpha=0.1)
                 if 'latex' in style:
-                    plt.xlabel(r'$d_{ij}$', fontsize=78)
-                    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
+                    plt.xlabel(r'$d_{ij}$', fontsize=68)
+                    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=68)
                 else:
-                    plt.xlabel(r'$d_{ij}$', fontsize=78)
-                    plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=78)
+                    plt.xlabel(r'$d_{ij}$', fontsize=68)
+                    plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=68)
                 plt.xlim([0, max_radius])
                 plt.ylim(config.plotting.ylim)
                 plt.tight_layout()
@@ -1941,11 +1941,11 @@ def plot_cell_tracking(config, epoch_list, log_dir, logger, style, device):
                     rmserr_list.append(torch.sqrt(torch.mean((func - true_func.squeeze()) ** 2)))
                     plt.plot(to_numpy(rr), to_numpy(func), color=cmap.color(int(type_list[n,0])), linewidth=2, alpha=0.1)
                 if 'latex' in style:
-                    plt.xlabel(r'$d_{ij}$', fontsize=78)
-                    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
+                    plt.xlabel(r'$d_{ij}$', fontsize=68)
+                    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=68)
                 else:
-                    plt.xlabel(r'$d_{ij}$', fontsize=78)
-                    plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=78)
+                    plt.xlabel(r'$d_{ij}$', fontsize=68)
+                    plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=68)
                 plt.xlim([0, max_radius])
                 plt.ylim(config.plotting.ylim)
                 plt.tight_layout()
@@ -1962,28 +1962,28 @@ def plot_cell_tracking(config, epoch_list, log_dir, logger, style, device):
             plt.xlim([0, max_radius])
             plt.ylim(config.plotting.ylim)
             if 'latex' in style:
-                plt.xlabel(r'$d_{ij}$', fontsize=78)
-                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
+                plt.xlabel(r'$d_{ij}$', fontsize=68)
+                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=68)
             else:
-                plt.xlabel(r'$d_{ij}$', fontsize=78)
-                plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=78)
+                plt.xlabel(r'$d_{ij}$', fontsize=68)
+                plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=68)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/true_func.tif", dpi=170.7)
             plt.close()
 
             fig, ax = fig_init()
             plt.plot(tracking_index_list_, color=mc, linewidth=2)
-            plt.ylabel(r'tracking_index', fontsize=78)
+            plt.ylabel(r'tracking_index', fontsize=68)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/tracking_index_list.tif", dpi=170.7)
             fig, ax = fig_init()
             plt.plot(accuracy_list_, color=mc, linewidth=2)
-            plt.ylabel(r'accuracy', fontsize=78)
+            plt.ylabel(r'accuracy', fontsize=68)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/accuracy_list.tif", dpi=170.7)
             fig, ax = fig_init()
             plt.plot(tracking_errors_list_, color=mc, linewidth=2)
-            plt.ylabel(r'tracking_errors', fontsize=78)
+            plt.ylabel(r'tracking_errors', fontsize=68)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/tracking_errors_list.tif", dpi=170.7)
 
@@ -2063,11 +2063,11 @@ def plot_attraction_repulsion_asym(config, epoch_list, log_dir, logger, style, d
                      to_numpy(func) * to_numpy(ynorm),
                      color=cmap.color(type), linewidth=8)
         if 'latex' in style:
-            plt.xlabel(r'$d_{ij}$', fontsize=78)
-            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
+            plt.xlabel(r'$d_{ij}$', fontsize=68)
+            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=68)
         else:
-            plt.xlabel('$d_{ij}$', fontsize=78)
-            plt.ylabel('$f(a_i, d_{ij})$', fontsize=78)
+            plt.xlabel('$d_{ij}$', fontsize=68)
+            plt.ylabel('$f(a_i, d_{ij})$', fontsize=68)
         plt.ylim(config.plotting.ylim)
         plt.xlim([0, max_radius])
         plt.tight_layout()
@@ -2082,11 +2082,11 @@ def plot_attraction_repulsion_asym(config, epoch_list, log_dir, logger, style, d
                 true_func.append(model.psi(rr, p[n, m].squeeze(), p[n, m].squeeze()))
                 plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n,m], p[n,m]).squeeze()), color=cmap.color(n), linewidth=8)
         if 'latex' in style:
-            plt.xlabel(r'$d_{ij}$', fontsize=78)
-            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
+            plt.xlabel(r'$d_{ij}$', fontsize=68)
+            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=68)
         else:
-            plt.xlabel('$d_{ij}$', fontsize=78)
-            plt.ylabel('$f(a_i, d_{ij})$', fontsize=78)
+            plt.xlabel('$d_{ij}$', fontsize=68)
+            plt.ylabel('$f(a_i, d_{ij})$', fontsize=68)
         plt.ylim(config.plotting.ylim)
         plt.xlim([0, max_radius])
         plt.tight_layout()
@@ -2150,11 +2150,11 @@ def plot_attraction_repulsion_continuous(config, epoch_list, log_dir, logger, st
             plt.scatter(embedding[index_particles[n], 0],
                         embedding[index_particles[n], 1], color=cmap.color(n), s=400, alpha=0.1)
         if 'latex' in style:
-            plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
-            plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
+            plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
+            plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
         else:
-            plt.xlabel(r'$a_{i0}$', fontsize=78)
-            plt.ylabel(r'$a_{i1}$', fontsize=78)
+            plt.xlabel(r'$a_{i0}$', fontsize=68)
+            plt.ylabel(r'$a_{i1}$', fontsize=68)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/first_embedding_{epoch}.tif", dpi=170.7)
         plt.close()
@@ -2174,11 +2174,11 @@ def plot_attraction_repulsion_continuous(config, epoch_list, log_dir, logger, st
                      to_numpy(func) * to_numpy(ynorm),
                      color=cmap.color(n // 1600), linewidth=2, alpha=0.1)
         if 'latex' in style:
-            plt.xlabel(r'$d_{ij}$', fontsize=78)
-            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
+            plt.xlabel(r'$d_{ij}$', fontsize=68)
+            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=68)
         else:
-            plt.xlabel('$d_{ij}$', fontsize=78)
-            plt.ylabel('$f(a_i, d_{ij})$', fontsize=78)
+            plt.xlabel('$d_{ij}$', fontsize=68)
+            plt.ylabel('$f(a_i, d_{ij})$', fontsize=68)
         plt.xlim([0, max_radius])
         plt.ylim(config.plotting.ylim)
         plt.tight_layout()
@@ -2196,11 +2196,11 @@ def plot_attraction_repulsion_continuous(config, epoch_list, log_dir, logger, st
             true_func_list.append(model.psi(rr, p[n], p[n]))
             csv_.append(to_numpy(model.psi(rr, p[n], p[n]).squeeze()))
         if 'latex' in style:
-            plt.xlabel(r'$d_{ij}$', fontsize=78)
-            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
+            plt.xlabel(r'$d_{ij}$', fontsize=68)
+            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=68)
         else:
-            plt.xlabel(r'$d_{ij}$', fontsize=78)
-            plt.ylabel('$f(a_i, d_{ij})$', fontsize=78)
+            plt.xlabel(r'$d_{ij}$', fontsize=68)
+            plt.ylabel('$f(a_i, d_{ij})$', fontsize=68)
         plt.xticks(fontsize=32)
         plt.yticks(fontsize=32)
         plt.xlim([0, max_radius])
@@ -2386,11 +2386,11 @@ def plot_gravity(config, epoch_list, log_dir, logger, style, device):
                          to_numpy(func) * to_numpy(ynorm),
                          color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
             if 'latex' in style:
-                plt.xlabel(r'$d_{ij}$', fontsize=78)
-                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
+                plt.xlabel(r'$d_{ij}$', fontsize=68)
+                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=68)
             else:
-                plt.xlabel(r'$d_{ij}$', fontsize=78)
-                plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=78)
+                plt.xlabel(r'$d_{ij}$', fontsize=68)
+                plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=68)
             plt.xlim([0, 0.02])
             plt.ylim([0, 0.5E6])
             ax.xaxis.set_major_formatter(FormatStrFormatter('%.3f'))
@@ -2412,11 +2412,11 @@ def plot_gravity(config, epoch_list, log_dir, logger, style, device):
             plt.xlim([0, 0.02])
             plt.ylim([0, 0.5E6])
             if 'latex' in style:
-                plt.xlabel(r'$d_{ij}$', fontsize=78)
-                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
+                plt.xlabel(r'$d_{ij}$', fontsize=68)
+                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=68)
             else:
-                plt.xlabel(r'$d_{ij}$', fontsize=78)
-                plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=78)
+                plt.xlabel(r'$d_{ij}$', fontsize=68)
+                plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=68)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/true_func.tif", dpi=170.7)
             plt.close()
@@ -2497,8 +2497,8 @@ def plot_gravity(config, epoch_list, log_dir, logger, style, device):
                     plt.scatter(p_list, -popt_list[:, 1], color='w', s=50, alpha=0.5)
                     plt.xlim([0, 5.5])
                     plt.ylim([-4, 0])
-                    plt.xlabel(r'True mass', fontsize=78)
-                    plt.ylabel(r'Learned exponent', fontsize=78)
+                    plt.xlabel(r'True mass', fontsize=68)
+                    plt.ylabel(r'Learned exponent', fontsize=68)
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/results/exponent.tif", dpi=170)
                     np.save(f"./{log_dir}/results/exponent.npy", csv_)
@@ -2623,11 +2623,11 @@ def plot_gravity_continuous(config, epoch_list, log_dir, logger, style, device):
                         s=400,
                         alpha=0.5)
         if 'latex' in style:
-            plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
-            plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
+            plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
+            plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
         else:
-            plt.xlabel(r'$a_{i0}$', fontsize=78)
-            plt.ylabel(r'$a_{i1}$', fontsize=78)
+            plt.xlabel(r'$a_{i0}$', fontsize=68)
+            plt.ylabel(r'$a_{i1}$', fontsize=68)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/embedding.tif", dpi=170)
         plt.close()
@@ -2654,11 +2654,11 @@ def plot_gravity_continuous(config, epoch_list, log_dir, logger, style, device):
                      to_numpy(func) * to_numpy(ynorm),
                      color=cmap.color(n % 256), linewidth=8, alpha=0.1)
         if 'latex' in style:
-            plt.xlabel(r'$d_{ij}$', fontsize=78)
-            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
+            plt.xlabel(r'$d_{ij}$', fontsize=68)
+            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=68)
         else:
-            plt.xlabel(r'$d_{ij}$', fontsize=78)
-            plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=78)
+            plt.xlabel(r'$d_{ij}$', fontsize=68)
+            plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=68)
         plt.xlim([0, max_radius])
         plt.xlim([0, 0.02])
         plt.ylim([0, 0.5E6])
@@ -2685,11 +2685,11 @@ def plot_gravity_continuous(config, epoch_list, log_dir, logger, style, device):
         plt.xlim([0, 0.02])
         plt.ylim([0, 0.5E6])
         if 'latex' in style:
-            plt.xlabel(r'$d_{ij}$', fontsize=78)
-            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
+            plt.xlabel(r'$d_{ij}$', fontsize=68)
+            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=68)
         else:
-            plt.xlabel(r'$d_{ij}$', fontsize=78)
-            plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=78)
+            plt.xlabel(r'$d_{ij}$', fontsize=68)
+            plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=68)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/true_func.tif", dpi=300)
         csv_ = np.array(csv_)
@@ -2763,8 +2763,8 @@ def plot_gravity_continuous(config, epoch_list, log_dir, logger, style, device):
         plt.scatter(p_list, -popt_list[:, 1], color=mc, s=50, alpha=0.5)
         plt.xlim([0, 5.5])
         plt.ylim([-4, 0])
-        plt.xlabel(r'True mass', fontsize=78)
-        plt.ylabel(r'Learned exponent', fontsize=78)
+        plt.xlabel(r'True mass', fontsize=68)
+        plt.ylabel(r'Learned exponent', fontsize=68)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/exponent.tif", dpi=300)
         np.save(f"./{log_dir}/results/exponent.npy", csv_)
@@ -3024,11 +3024,11 @@ def plot_Coulomb(config, epoch_list, log_dir, logger, style, device):
                          to_numpy(func) * to_numpy(ynorm),
                          color=cmap.color(type), linewidth=8, alpha=0.1)
             if 'latex' in style:
-                plt.xlabel(r'$d_{ij}$', fontsize=78)
-                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=78)
+                plt.xlabel(r'$d_{ij}$', fontsize=68)
+                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=68)
             else:
-                plt.xlabel(r'$d_{ij}$', fontsize=78)
-                plt.ylabel(r'$f(a_i, a_j, d_{ij})$', fontsize=78)
+                plt.xlabel(r'$d_{ij}$', fontsize=68)
+                plt.ylabel(r'$f(a_i, a_j, d_{ij})$', fontsize=68)
             plt.xlim([0, 0.02])
             plt.ylim([-0.5E6, 0.5E6])
             plt.tight_layout()
@@ -3049,11 +3049,11 @@ def plot_Coulomb(config, epoch_list, log_dir, logger, style, device):
             plt.xlim([0, 0.02])
             plt.ylim([-0.5E6, 0.5E6])
             if 'latex' in style:
-                plt.xlabel(r'$d_{ij}$', fontsize=78)
-                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=78)
+                plt.xlabel(r'$d_{ij}$', fontsize=68)
+                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=68)
             else:
-                plt.xlabel(r'$d_{ij}$', fontsize=78)
-                plt.ylabel(r'$f(a_i, a_j, d_{ij})$', fontsize=78)
+                plt.xlabel(r'$d_{ij}$', fontsize=68)
+                plt.ylabel(r'$f(a_i, a_j, d_{ij})$', fontsize=68)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/true_func_{epoch}.tif", dpi=170.7)
             np.save(f"./{log_dir}/results/true_func_{epoch}.npy", csv_)
@@ -3153,8 +3153,8 @@ def plot_Coulomb(config, epoch_list, log_dir, logger, style, device):
             plt.plot(qiqj_list[:, 0], linewidth=4)
             plt.plot(qiqj_list[:, 1], linewidth=4)
             plt.plot(qiqj_list[:, 2], linewidth=4)
-            plt.xlabel('iteration',fontsize=78)
-            plt.ylabel(r'$q_i$',fontsize=78)
+            plt.xlabel('iteration',fontsize=68)
+            plt.ylabel(r'$q_i$',fontsize=68)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/qi_{epoch}.tif", dpi=170)
 
@@ -3329,8 +3329,8 @@ def plot_boids(config, epoch_list, log_dir, logger, style, device):
             func_list = torch.stack(func_list)
             true_func_list = torch.stack(true_func_list)
             plt.ylim([-1E-4, 1E-4])
-            plt.xlabel(r'$x_j-x_i$', fontsize=78)
-            plt.ylabel(r'$f_{ij}$', fontsize=78)
+            plt.xlabel(r'$x_j-x_i$', fontsize=68)
+            plt.ylabel(r'$f_{ij}$', fontsize=68)
             ax.xaxis.set_major_locator(plt.MaxNLocator(3))
             ax.yaxis.set_major_locator(plt.MaxNLocator(5))
             ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
@@ -3345,8 +3345,8 @@ def plot_boids(config, epoch_list, log_dir, logger, style, device):
                 true_func = model_B.psi(rr, p[n])
                 plt.plot(to_numpy(rr), to_numpy(true_func), color=cmap.color(n), linewidth=4)
             plt.ylim([-1E-4, 1E-4])
-            plt.xlabel(r'$x_j-x_i$', fontsize=78)
-            plt.ylabel(r'$f_{ij}$', fontsize=78)
+            plt.xlabel(r'$x_j-x_i$', fontsize=68)
+            plt.ylabel(r'$f_{ij}$', fontsize=68)
             ax.xaxis.set_major_locator(plt.MaxNLocator(3))
             ax.yaxis.set_major_locator(plt.MaxNLocator(5))
             ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
@@ -3570,8 +3570,8 @@ def plot_wave(config, epoch_list, log_dir, logger, cc, style, device):
     ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
     ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
     plt.imshow(coeff, cmap='grey', vmin=0, vmax=vm)
-    plt.xlabel(r'$x$', fontsize=78)
-    plt.ylabel(r'$y$', fontsize=78)
+    plt.xlabel(r'$x$', fontsize=68)
+    plt.ylabel(r'$y$', fontsize=68)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/true_wave_coeff.tif", dpi=300)
     plt.close
@@ -3580,8 +3580,8 @@ def plot_wave(config, epoch_list, log_dir, logger, cc, style, device):
     ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
     ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
     plt.imshow(coeff, cmap='grey', vmin=0, vmax=vm)
-    plt.xlabel(r'$x$', fontsize=78)
-    plt.ylabel(r'$y$', fontsize=78)
+    plt.xlabel(r'$x$', fontsize=68)
+    plt.ylabel(r'$y$', fontsize=68)
     cbar = plt.colorbar(shrink=0.5)
     cbar.ax.tick_params(labelsize=32)
     plt.tight_layout()
@@ -3633,11 +3633,11 @@ def plot_wave(config, epoch_list, log_dir, logger, cc, style, device):
             # plt.scatter(to_numpy(rr), to_numpy(h), c=f'{coeff[n]}', edgecolors='none',alpha=0.1)
             plt.scatter(to_numpy(rr), to_numpy(h), c=mc,alpha=0.1)
         if 'latex' in style:
-            plt.xlabel(r'$\nabla^2 u_i$', fontsize=78)
-            plt.ylabel(r'$\Phi(\ensuremath{\mathbf{a}}_{i},\nabla^2 u_i)$', fontsize=78)
+            plt.xlabel(r'$\nabla^2 u_i$', fontsize=68)
+            plt.ylabel(r'$\Phi(\ensuremath{\mathbf{a}}_{i},\nabla^2 u_i)$', fontsize=68)
         else:
-            plt.xlabel(r'$\nabla^2 u_i$', fontsize=78)
-            plt.ylabel(r'$\Phi(a_{i},\nabla^2 u_i)$', fontsize=78)
+            plt.xlabel(r'$\nabla^2 u_i$', fontsize=68)
+            plt.ylabel(r'$\Phi(a_{i},\nabla^2 u_i)$', fontsize=68)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/functions_{epoch}.tif", dpi=300)
         plt.close()
@@ -3662,8 +3662,8 @@ def plot_wave(config, epoch_list, log_dir, logger, cc, style, device):
         fig, ax = fig_init(formatx='%.5f', formaty='%.5f')
         plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
         plt.scatter(x_data, y_data, s=200, c=mc, alpha=0.1)
-        plt.xlabel('True wave coeff.', fontsize=78)
-        plt.ylabel('Learned wave coeff.', fontsize=78)
+        plt.xlabel('True wave coeff.', fontsize=68)
+        plt.ylabel('Learned wave coeff.', fontsize=68)
         fmt = lambda x, pos: '{:.1f}e-3'.format((x) * 1e3, pos)
         ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
         ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
@@ -3680,8 +3680,8 @@ def plot_wave(config, epoch_list, log_dir, logger, cc, style, device):
         ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
         ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
         plt.imshow(t, cmap='grey')
-        plt.xlabel(r'$x$', fontsize=78)
-        plt.ylabel(r'$y$', fontsize=78)
+        plt.xlabel(r'$x$', fontsize=68)
+        plt.ylabel(r'$y$', fontsize=68)
         fmt = lambda x, pos: '{:.3%}'.format(x)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/wave_coeff_{epoch}.tif", dpi=300)
@@ -3692,11 +3692,11 @@ def plot_wave(config, epoch_list, log_dir, logger, cc, style, device):
         # plt.scatter(embedding[pos[:,0], 0], embedding[pos[:,0], 1], c=x_data, s=100, alpha=1, cmap='grey')
         plt.scatter(embedding[pos[:,0], 0], embedding[pos[:,0], 1], c=mc, s=100, alpha=0.1)
         if 'latex' in style:
-            plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
-            plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
+            plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
+            plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
         else:
-            plt.xlabel(r'$a_{i0}$', fontsize=78)
-            plt.ylabel(r'$a_{i1}$', fontsize=78)
+            plt.xlabel(r'$a_{i0}$', fontsize=68)
+            plt.ylabel(r'$a_{i1}$', fontsize=68)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=300)
         plt.close()
@@ -3772,11 +3772,11 @@ def plot_particle_field(config, epoch_list, log_dir, logger, cc, style, device):
     fmty = lambda x, pos: '{:.1f}'.format((100 - x) / 100, pos)
     ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmty))
     ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmtx))
-    plt.xlabel(r'$x$', fontsize=78)
-    plt.ylabel(r'$y$', fontsize=78)
+    plt.xlabel(r'$x$', fontsize=68)
+    plt.ylabel(r'$y$', fontsize=68)
     # cbar = plt.colorbar(shrink=0.5)
     # cbar.ax.tick_params(labelsize=32)
-    # cbar.set_label(r'$Coupling$',fontsize=78)
+    # cbar.set_label(r'$Coupling$',fontsize=68)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/target_field.tif", dpi=300)
     plt.close()
@@ -3969,11 +3969,11 @@ def plot_particle_field(config, epoch_list, log_dir, logger, cc, style, device):
                          to_numpy(func) * to_numpy(ynorm),
                          color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=2, alpha=0.1)
             if 'latex' in style:
-                plt.xlabel(r'$d_{ij}$', fontsize=78)
-                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
+                plt.xlabel(r'$d_{ij}$', fontsize=68)
+                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=68)
             else:
-                plt.xlabel(r'$d_{ij}$', fontsize=78)
-                plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=78)
+                plt.xlabel(r'$d_{ij}$', fontsize=68)
+                plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=68)
             plt.xlim([0, max_radius])
             plt.ylim(config.plotting.ylim)
             plt.tight_layout()
@@ -4087,8 +4087,8 @@ def plot_particle_field(config, epoch_list, log_dir, logger, cc, style, device):
                         # pred = np.fliplr(pred)
                         # # pred = np.flipud(pred)
                         # plt.imshow(pred, cmap=cc, vmin=0, vmax=vm)
-                        # # plt.xlabel(r'$x$', fontsize=78)
-                        # # plt.ylabel(r'$y$', fontsize=78)
+                        # # plt.xlabel(r'$x$', fontsize=68)
+                        # # plt.ylabel(r'$y$', fontsize=68)
                         # fmtx = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
                         # fmty = lambda x, pos: '{:.1f}'.format((100-x) / 100, pos)
                         # ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmty))
@@ -4149,8 +4149,8 @@ def plot_particle_field(config, epoch_list, log_dir, logger, cc, style, device):
 
                     fig, ax = fig_init()
                     plt.scatter(np.linspace(0, n_frames, len(SSIM_list)), SSIM_list, color=mc, linewidth=4)
-                    plt.xlabel(r'$Frame$', fontsize=78)
-                    plt.ylabel(r'$SSIM$', fontsize=78)
+                    plt.xlabel(r'$Frame$', fontsize=68)
+                    plt.ylabel(r'$SSIM$', fontsize=68)
                     plt.ylim([0, 1])
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/results/ssim_{epoch}.tif", dpi=150)
@@ -4160,8 +4160,8 @@ def plot_particle_field(config, epoch_list, log_dir, logger, cc, style, device):
 
                     fig, ax = fig_init()
                     plt.scatter(np.linspace(0, n_frames, len(SSIM_list)), RMSE_list, color=mc, linewidth=4)
-                    plt.xlabel(r'$Frame$', fontsize=78)
-                    plt.ylabel(r'RMSE', fontsize=78)
+                    plt.xlabel(r'$Frame$', fontsize=68)
+                    plt.ylabel(r'RMSE', fontsize=68)
                     plt.ylim([0, 1])
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/results/rmse_{epoch}.tif", dpi=150)
@@ -4169,8 +4169,8 @@ def plot_particle_field(config, epoch_list, log_dir, logger, cc, style, device):
 
                     fig, ax = fig_init()
                     plt.scatter(np.linspace(0, n_frames, len(SSIM_list)), PSNR_list, color=mc, linewidth=4)
-                    plt.xlabel(r'$Frame$', fontsize=78)
-                    plt.ylabel(r'PSNR', fontsize=78)
+                    plt.xlabel(r'$Frame$', fontsize=68)
+                    plt.ylabel(r'PSNR', fontsize=68)
                     plt.ylim([0, 50])
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/results/psnr_{epoch}.tif", dpi=150)
@@ -4186,11 +4186,11 @@ def plot_particle_field(config, epoch_list, log_dir, logger, cc, style, device):
                     fmty = lambda x, pos: '{:.1f}'.format((100 - x) / 100, pos)
                     ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmty))
                     ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmtx))
-                    plt.xlabel(r'$x$', fontsize=78)
-                    plt.ylabel(r'$y$', fontsize=78)
+                    plt.xlabel(r'$x$', fontsize=68)
+                    plt.ylabel(r'$y$', fontsize=68)
                     # cbar = plt.colorbar(shrink=0.5)
                     # cbar.ax.tick_params(labelsize=32)
-                    # cbar.set_label(r'$Coupling$',fontsize=78)
+                    # cbar.set_label(r'$Coupling$',fontsize=68)
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/results/field_{epoch}.tif", dpi=300)
                     # np.save(f"./{log_dir}/results/embedding.npy", csv_)
@@ -4203,8 +4203,8 @@ def plot_particle_field(config, epoch_list, log_dir, logger, cc, style, device):
 
                     fig, ax = fig_init()
                     plt.scatter(target, pts, c=mc, s=10, alpha=0.1)
-                    plt.xlabel(r'True $b_i$', fontsize=78)
-                    plt.ylabel(r'Recons. $b_i$', fontsize=78)
+                    plt.xlabel(r'True $b_i$', fontsize=68)
+                    plt.ylabel(r'Recons. $b_i$', fontsize=68)
 
                     x_data = np.reshape(pts, (n_nodes))
                     y_data = np.reshape(target, (n_nodes))
@@ -4278,8 +4278,8 @@ def plot_RD_RPS(config, epoch_list, log_dir, logger, cc, style, device):
     ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
     ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
     plt.imshow(np.flipud(coeff), vmin=0, vmax=vm, cmap='grey')
-    plt.xlabel(r'$x$', fontsize=78)
-    plt.ylabel(r'$y$', fontsize=78)
+    plt.xlabel(r'$x$', fontsize=68)
+    plt.ylabel(r'$y$', fontsize=68)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/true_coeff.tif", dpi=300)
     plt.close()
@@ -4288,8 +4288,8 @@ def plot_RD_RPS(config, epoch_list, log_dir, logger, cc, style, device):
     ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
     ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
     plt.imshow(coeff, vmin=0, vmax=vm, cmap='grey')
-    plt.xlabel(r'$x$', fontsize=78)
-    plt.ylabel(r'$y$', fontsize=78)
+    plt.xlabel(r'$x$', fontsize=68)
+    plt.ylabel(r'$y$', fontsize=68)
     cbar = plt.colorbar(shrink=0.5)
     cbar.ax.tick_params(labelsize=32)
     plt.tight_layout()
@@ -4315,8 +4315,8 @@ def plot_RD_RPS(config, epoch_list, log_dir, logger, cc, style, device):
         fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
         ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
         ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-        plt.xlabel(r'$x$', fontsize=78)
-        plt.ylabel(r'$y$', fontsize=78)
+        plt.xlabel(r'$x$', fontsize=68)
+        plt.ylabel(r'$y$', fontsize=68)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/labels_map_cbar.tif", dpi=300)
         plt.close
@@ -4326,11 +4326,11 @@ def plot_RD_RPS(config, epoch_list, log_dir, logger, cc, style, device):
             pos = np.argwhere(labels == nodes_type)
             plt.scatter(embedding[pos, 0], embedding[pos, 1], s=400, cmap=cmap.color(nodes_type*2))
         if 'latex' in style:
-            plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
-            plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
+            plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
+            plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
         else:
-            plt.xlabel(r'$a_{i0}$', fontsize=78)
-            plt.ylabel(r'$a_{i1}$', fontsize=78)
+            plt.xlabel(r'$a_{i0}$', fontsize=68)
+            plt.ylabel(r'$a_{i1}$', fontsize=68)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=300)
         plt.close()
@@ -4420,7 +4420,7 @@ def plot_RD_RPS(config, epoch_list, log_dir, logger, cc, style, device):
                 offset = width * multiplier
                 rects = ax.bar(x + offset, measurement, width, label=attribute)
                 multiplier += 1
-            ax.set_ylabel('Polynomial coefficient', fontsize=78)
+            ax.set_ylabel('Polynomial coefficient', fontsize=68)
             ax.set_xticks(x + width, cp, fontsize=36)
             plt.title('First equation', fontsize=56)
             plt.tight_layout()
@@ -4439,7 +4439,7 @@ def plot_RD_RPS(config, epoch_list, log_dir, logger, cc, style, device):
                 offset = width * multiplier
                 rects = ax.bar(x + offset, measurement, width, label=attribute)
                 multiplier += 1
-            ax.set_ylabel('Polynomial coefficient', fontsize=78)
+            ax.set_ylabel('Polynomial coefficient', fontsize=68)
             ax.set_xticks(x + width, cp, fontsize=36)
             plt.title('Second equation', fontsize=56)
             plt.tight_layout()
@@ -4458,7 +4458,7 @@ def plot_RD_RPS(config, epoch_list, log_dir, logger, cc, style, device):
                 offset = width * multiplier
                 rects = ax.bar(x + offset, measurement, width, label=attribute)
                 multiplier += 1
-            ax.set_ylabel('Polynomial coefficient', fontsize=78)
+            ax.set_ylabel('Polynomial coefficient', fontsize=68)
             ax.set_xticks(x + width, cp, fontsize=36)
             plt.title('Third equation', fontsize=56)
             plt.tight_layout()
@@ -4692,8 +4692,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                                 in_features = torch.cat((rr[:, None], embedding0, embedding1), dim=1)
                                 func = model.lin_edge(in_features.float()) * correction
                                 plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(k), linewidth=8, alpha=0.25)
-                        # plt.xlabel(r'x_i', fontsize=78)
-                        # plt.ylabel(r'learned $MLP_1(x_i)$', fontsize=78)
+                        # plt.xlabel(r'x_i', fontsize=68)
+                        # plt.ylabel(r'learned $MLP_1(x_i)$', fontsize=68)
                         plt.ylim([-1.6, 1.6])
                         plt.xlim([-5, 5])
                     plt.tight_layout()
@@ -4711,7 +4711,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                             in_features = torch.cat((rr[:, None], embedding0), dim=1)
                             func = model.lin_edge(in_features.float()) * correction
                             plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(k), linewidth=8, alpha=0.25)
-                    plt.xlabel(r'x_i', fontsize=78)
+                    plt.xlabel(r'x_i', fontsize=68)
                     plt.ylabel(r'learned $MLP_1(x_i)$', fontsize=68)
                     plt.ylim([-1.6, 1.6])
                     plt.xlim([-5,5])
@@ -4725,7 +4725,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                         func = model.lin_edge(in_features.float()) * correction
                     plt.plot(to_numpy(rr), to_numpy(func), color=mc, linewidth=8, label=r'learned')
                     plt.xlabel(r'$x_i$', fontsize=68)
-                    # plt.ylabel(r'learned $\psi^*(a_i, x_i)$', fontsize=78)
+                    # plt.ylabel(r'learned $\psi^*(a_i, x_i)$', fontsize=68)
                     plt.ylabel(r'learned $MLP_1(a_i, x_i)$', fontsize=68)
                     plt.ylim([-1.5, 1.5])
                     plt.xlim([-5,5])
@@ -4744,7 +4744,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     func = func[:, 0]
                     plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm), color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8 // ( 1 + (n_particle_types>16)*1.0), alpha=0.25)
                 plt.xlabel(r'$x_i$', fontsize=68)
-                # plt.ylabel(r'learned $\phi^*(a_i, x_i)$', fontsize=78)
+                # plt.ylabel(r'learned $\phi^*(a_i, x_i)$', fontsize=68)
                 plt.ylabel(r'learned $MLP_0(a_i, x_i)$', fontsize=68)
                 plt.xlim(config.plotting.xlim)
                 plt.ylim(config.plotting.ylim)
@@ -5042,11 +5042,11 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 pos = torch.argwhere(type_list == n).squeeze()
                 plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=200, color=cmap.color(n), alpha=0.1)
             if 'latex' in style:
-                plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
-                plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
+                plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
+                plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
             else:
-                plt.xlabel(r'$a_{i0}$', fontsize=78)
-                plt.ylabel(r'$a_{i1}$', fontsize=78)
+                plt.xlabel(r'$a_{i0}$', fontsize=68)
+                plt.ylabel(r'$a_{i1}$', fontsize=68)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/all_embedding_{epoch}.tif", dpi=170.7)
             plt.close()
@@ -5066,8 +5066,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)),
                          linewidth=8 // ( 1 + (n_particle_types>16)*1.0), alpha=0.25)
             func_list = torch.stack(func_list).squeeze()
-            plt.xlabel(r'$x_i$', fontsize=78)
-            plt.ylabel(r'Learned $\psi^*(a_i, x_i)$', fontsize=78)
+            plt.xlabel(r'$x_i$', fontsize=68)
+            plt.ylabel(r'Learned $\psi^*(a_i, x_i)$', fontsize=68)
             # if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
             #     plt.ylim([-0.5,0.5])
             plt.xlim([-5,5])
@@ -5149,13 +5149,13 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                         plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
                     else:
                         plt.plot(to_numpy(rr), to_numpy(func), 2, color=mc, linewidth=2, alpha=0.25)
-                plt.xlabel(r'$x_i$', fontsize=78)
+                plt.xlabel(r'$x_i$', fontsize=68)
                 if model_config.signal_model_name == 'PDE_N4':
-                    plt.ylabel(r'learned $\psi^*(a_i, x_i)$', fontsize=78)
+                    plt.ylabel(r'learned $\psi^*(a_i, x_i)$', fontsize=68)
                 elif model_config.signal_model_name == 'PDE_N5':
-                    plt.ylabel(r'learned $\psi^*(a_i, a_j, x_i)$', fontsize=78)
+                    plt.ylabel(r'learned $\psi^*(a_i, a_j, x_i)$', fontsize=68)
                 else:
-                    plt.ylabel(r'learned $\psi^*(x_i)$', fontsize=78)
+                    plt.ylabel(r'learned $\psi^*(x_i)$', fontsize=68)
                 plt.ylim([-1.1, 1.1])
                 plt.xlim(config.plotting.xlim)
                 plt.tight_layout()
@@ -5185,8 +5185,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                          color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=2, alpha=0.25)
             phi_list = torch.stack(phi_list)
             func_list_ = to_numpy(phi_list)
-            plt.xlabel(r'$x_i$', fontsize=78)
-            plt.ylabel(r'learned $\phi^*(a_i, x_i)$', fontsize=78)
+            plt.xlabel(r'$x_i$', fontsize=68)
+            plt.ylabel(r'learned $\phi^*(a_i, x_i)$', fontsize=68)
             plt.tight_layout()
             plt.xlim(config.plotting.xlim)
             plt.ylim(config.plotting.ylim)
@@ -5209,8 +5209,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 if len(pos) > 0:
                     plt.scatter(proj_interaction[pos, 0],
                                 proj_interaction[pos, 1], s=200, alpha=0.1)
-            plt.xlabel(r'UMAP 0', fontsize=78)
-            plt.ylabel(r'UMAP 1', fontsize=78)
+            plt.xlabel(r'UMAP 0', fontsize=68)
+            plt.ylabel(r'UMAP 1', fontsize=68)
             plt.xlim([-0.2, 1.2])
             plt.ylim([-0.2, 1.2])
             plt.tight_layout()
@@ -5261,8 +5261,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             gt_weight = to_numpy(adjacency)
             pred_weight = to_numpy(A)
             plt.scatter(gt_weight, pred_weight / 10 , s=0.1, c=mc, alpha=0.1)
-            plt.xlabel(r'true $W_{ij}$', fontsize=78)
-            plt.ylabel(r'learned $W_{ij}$', fontsize=78)
+            plt.xlabel(r'true $W_{ij}$', fontsize=68)
+            plt.ylabel(r'learned $W_{ij}$', fontsize=68)
             if n_particles == 8000:
                 plt.xlim([-0.05,0.05])
                 plt.ylim([-0.05,0.05])
@@ -5291,8 +5291,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             gt_weight = to_numpy(adjacency)
             pred_weight = to_numpy(A)
             plt.scatter(gt_weight, pred_weight / second_correction, s=0.1, c=mc, alpha=0.1)
-            plt.xlabel(r'true $W_{ij}$', fontsize=78)
-            plt.ylabel(r'learned $W_{ij}$', fontsize=78)
+            plt.xlabel(r'true $W_{ij}$', fontsize=68)
+            plt.ylabel(r'learned $W_{ij}$', fontsize=68)
             if n_particles == 8000:
                 plt.xlim([-0.05,0.05])
                 plt.ylim([-0.05,0.05])
@@ -5304,7 +5304,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.close()
 
             plt.figure(figsize=(10, 10))
-            # plt.title(r'learned $W_{ij}$', fontsize=78)
+            # plt.title(r'learned $W_{ij}$', fontsize=68)
             ax = sns.heatmap(to_numpy(A)/second_correction, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.1,vmax=0.1)
             cbar = ax.collections[0].colorbar
             # here set the labelsize by 20
@@ -5392,8 +5392,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     plt.scatter(im_, pred, s=10, c=mc)
                     plt.xlim([0.3, 1.6])
                     plt.ylim([0.3, 1.6])
-                    plt.xlabel(r'true $\Omega_i$', fontsize=78)
-                    plt.ylabel(r'learned $\Omega_i$', fontsize=78)
+                    plt.xlabel(r'true $\Omega_i$', fontsize=68)
+                    plt.ylabel(r'learned $\Omega_i$', fontsize=68)
                     plt.text(0.5, 1.4, f'$R^2$: {r_squared:0.2f}  slope: {np.round(lin_fit[0], 2)}', fontsize=48)
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/results/field/comparison {epoch}_{frame}.tif", dpi=80)
@@ -5408,8 +5408,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 plt.scatter(im_list, pred_list, s=1, c=mc, alpha=0.1)
                 plt.xlim([0.3, 1.6])
                 plt.ylim([0.3, 1.6])
-                plt.xlabel(r'true $\Omega_i$', fontsize=78)
-                plt.ylabel(r'learned $\Omega_i$', fontsize=78)
+                plt.xlabel(r'true $\Omega_i$', fontsize=68)
+                plt.ylabel(r'learned $\Omega_i$', fontsize=68)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/all_comparison {epoch}.tif", dpi=80)
                 plt.close()
@@ -5651,15 +5651,15 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                     for k in range(250*n,250*(n+1)):
                         plt.scatter(to_numpy(model.a[k*100:(k+1)*100, 0:1]), to_numpy(model.a[k*100:(k+1)*100, 1:2]), s=10, color=c_list, alpha=0.1, edgecolors='none')
                 if 'latex' in style:
-                    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}(t)$', fontsize=78)
-                    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}(t)$', fontsize=78)
+                    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}(t)$', fontsize=68)
+                    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}(t)$', fontsize=68)
                 else:
-                    plt.xlabel(r'$a_{i0}(t)$', fontsize=78)
-                    plt.ylabel(r'$a_{i1}(t)$', fontsize=78)
-                # plt.xlim([0.94, 1.08])
-                # plt.ylim([0.9, 1.10])
-                plt.xlim([0.7, 1.2])
-                plt.ylim([0.7, 1.2])
+                    plt.xlabel(r'$a_{i0}(t)$', fontsize=68)
+                    plt.ylabel(r'$a_{i1}(t)$', fontsize=68)
+                plt.xlim([0.94, 1.08])
+                plt.ylim([0.9, 1.10])
+                # plt.xlim([0.7, 1.2])
+                # plt.ylim([0.7, 1.2])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/all/all_embedding_0_{epoch}.tif", dpi=80)
                 plt.close()
@@ -5671,15 +5671,15 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                     # plt.scatter(to_numpy(model.a[k * 25000: k * 25000 + 100, 0]),
                     #             to_numpy(model.a[k * 25000: k * 25000 + 100, 1]), s=10, color=c_list, alpha=1)
                 if 'latex' in style:
-                    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}(t)$', fontsize=78)
-                    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}(t)$', fontsize=78)
+                    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}(t)$', fontsize=68)
+                    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}(t)$', fontsize=68)
                 else:
-                    plt.xlabel(r'$a_{i0}(t)$', fontsize=78)
-                    plt.ylabel(r'$a_{i1}(t)$', fontsize=78)
-                # plt.xlim([0.94, 1.08])
-                # plt.ylim([0.9, 1.10])
-                plt.xlim([0.7, 1.2])
-                plt.ylim([0.7, 1.2])
+                    plt.xlabel(r'$a_{i0}(t)$', fontsize=68)
+                    plt.ylabel(r'$a_{i1}(t)$', fontsize=68)
+                plt.xlim([0.94, 1.08])
+                plt.ylim([0.9, 1.10])
+                # plt.xlim([0.7, 1.2])
+                # plt.ylim([0.7, 1.2])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/all/all_embedding_1_{epoch}.tif", dpi=80)
                 plt.close()
@@ -5729,7 +5729,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                     # true_func = true_model.func(rr, it + 1, 'update')
                     # plt.plot(to_numpy(rr), to_numpy(true_func), c=mc, linewidth=1)
                     plt.xlabel(r'$x_i$', fontsize=24)
-                    # plt.ylabel(r'Learned $\phi^*(a_i(t), x_i)$', fontsize=78)
+                    # plt.ylabel(r'Learned $\phi^*(a_i(t), x_i)$', fontsize=68)
                     plt.ylabel(r'Learned $MLP_0(a_i(t), x_i)$', fontsize=24)
                     plt.ylim([-8, 8])
                     plt.xlim([-5, 5])
@@ -5743,9 +5743,9 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                     with torch.no_grad():
                         func = model.lin_edge(in_features.float()) * correction
                         plt.plot(to_numpy(rr), to_numpy(func), 2, color=mc, linewidth=2, alpha=0.25)
-                plt.xlabel(r'$x_i$', fontsize=78)
-                # plt.ylabel(r'learned $\psi^*(x_i)$', fontsize=78)
-                plt.ylabel(r'learned $MLP_1(x_i)$', fontsize=78)
+                plt.xlabel(r'$x_i$', fontsize=68)
+                # plt.ylabel(r'learned $\psi^*(x_i)$', fontsize=68)
+                plt.ylabel(r'learned $MLP_1(x_i)$', fontsize=68)
                 plt.ylim([-1.1, 1.1])
                 plt.xlim(config.plotting.xlim)
                 plt.tight_layout()
@@ -5765,8 +5765,8 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                 gt_weight = to_numpy(adjacency)
                 pred_weight = to_numpy(A)
                 plt.scatter(gt_weight, pred_weight / 10 , s=0.1, c=mc, alpha=0.1)
-                plt.xlabel(r'true $W_{ij}$', fontsize=78)
-                plt.ylabel(r'learned $W_{ij}$', fontsize=78)
+                plt.xlabel(r'true $W_{ij}$', fontsize=68)
+                plt.ylabel(r'learned $W_{ij}$', fontsize=68)
                 if n_particles == 8000:
                     plt.xlim([-0.05, 0.05])
                     plt.ylim([-0.05, 0.05])
@@ -5859,11 +5859,11 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                             to_numpy(model.a[indices[k * 250:(k + 1) * 250], 1]), s=100, color=cmap.color(k), alpha=0.5,
                             edgecolors='none')
             if 'latex' in style:
-                plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}(t)$', fontsize=78)
-                plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}(t)$', fontsize=78)
+                plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}(t)$', fontsize=68)
+                plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}(t)$', fontsize=68)
             else:
-                plt.xlabel(r'$a_{i0}(t)$', fontsize=78)
-                plt.ylabel(r'$a_{i1}(t)$', fontsize=78)
+                plt.xlabel(r'$a_{i0}(t)$', fontsize=68)
+                plt.ylabel(r'$a_{i1}(t)$', fontsize=68)
             plt.xlim([0.92, 1.08])
             plt.ylim([0.9, 1.10])
             # plt.xlim([0.9, 1.1])
@@ -5916,7 +5916,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
             #             func = model.lin_phi(in_features.float())
             #         plt.plot(to_numpy(rr), to_numpy(func), 2, color=mc, alpha=0.025)
             #     plt.xlabel(r'$x_i$', fontsize=16)
-            #     # plt.ylabel(r'Learned $\phi^*(a_i(t), x_i)$', fontsize=78)
+            #     # plt.ylabel(r'Learned $\phi^*(a_i(t), x_i)$', fontsize=68)
             #     plt.ylabel(r'Learned $MLP_0(a_i(t), x_i)$', fontsize=16)
             #
             #
@@ -6093,8 +6093,8 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                     plt.scatter(im_,pred, s=10, c=mc)
                     plt.xlim([0.3,1.6])
                     plt.ylim([0.3,1.6])
-                    plt.xlabel(r'true $\Omega_i$', fontsize=78)
-                    plt.ylabel(r'learned $\Omega_i$', fontsize=78)
+                    plt.xlabel(r'true $\Omega_i$', fontsize=68)
+                    plt.ylabel(r'learned $\Omega_i$', fontsize=68)
                     plt.text(0.5, 1.4, f'$R^2$: {r_squared:0.2f}  slope: {np.round(lin_fit[0], 2)}', fontsize=48)
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/results/field/comparison {epoch}_{frame}.tif", dpi=80)
@@ -6109,8 +6109,8 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                 plt.scatter(im_list, pred_list, s=1, c=mc, alpha=0.1)
                 plt.xlim([0.3, 1.6])
                 plt.ylim([0.3, 1.6])
-                plt.xlabel(r'true $\Omega_i$', fontsize=78)
-                plt.ylabel(r'learned $\Omega_i$', fontsize=78)
+                plt.xlabel(r'true $\Omega_i$', fontsize=68)
+                plt.ylabel(r'learned $\Omega_i$', fontsize=68)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/field/all_comparison {epoch}.tif", dpi=80)
                 plt.close()
@@ -6164,11 +6164,11 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                     for k in range(250*n,250*(n+1)):
                         plt.scatter(to_numpy(model.a[k*100:(k+1)*100, 0:1]), to_numpy(model.a[k*100:(k+1)*100, 1:2]), s=10, color=c_list, alpha=0.1, edgecolors='none')
                 if 'latex' in style:
-                    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}(t)$', fontsize=78)
-                    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}(t)$', fontsize=78)
+                    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}(t)$', fontsize=68)
+                    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}(t)$', fontsize=68)
                 else:
-                    plt.xlabel(r'$a_{i0}(t)$', fontsize=78)
-                    plt.ylabel(r'$a_{i1}(t)$', fontsize=78)
+                    plt.xlabel(r'$a_{i0}(t)$', fontsize=68)
+                    plt.ylabel(r'$a_{i1}(t)$', fontsize=68)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/all_embedding_0_{epoch}.tif", dpi=80)
                 plt.close()
@@ -6180,11 +6180,11 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                     # plt.scatter(to_numpy(model.a[k * 25000: k * 25000 + 100, 0]),
                     #             to_numpy(model.a[k * 25000: k * 25000 + 100, 1]), s=10, color=c_list, alpha=1)
                 if 'latex' in style:
-                    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}(t)$', fontsize=78)
-                    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}(t)$', fontsize=78)
+                    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}(t)$', fontsize=68)
+                    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}(t)$', fontsize=68)
                 else:
-                    plt.xlabel(r'$a_{i0}(t)$', fontsize=78)
-                    plt.ylabel(r'$a_{i1}(t)$', fontsize=78)
+                    plt.xlabel(r'$a_{i0}(t)$', fontsize=68)
+                    plt.ylabel(r'$a_{i1}(t)$', fontsize=68)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/all_embedding_1_{epoch}.tif", dpi=80)
                 plt.close()
@@ -6194,11 +6194,11 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                     # plt.scatter(to_numpy(model.a[0:100000, 0]), to_numpy(model.a[0:100000, 1]), s=1, color=mc, alpha=0.25, edgecolors='none')
                     plt.scatter(to_numpy(model.a[k*25000:(k+1)*25000, 0]), to_numpy(model.a[k*25000:(k+1)*25000, 1]), s=1, color=cmap.color(k),alpha=0.5, edgecolors='none')
                     if 'latex' in style:
-                        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
-                        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
+                        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
+                        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
                     else:
-                        plt.xlabel(r'$a_{i0}$', fontsize=78)
-                        plt.ylabel(r'$a_{i1}$', fontsize=78)
+                        plt.xlabel(r'$a_{i0}$', fontsize=68)
+                        plt.ylabel(r'$a_{i1}$', fontsize=68)
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/results/embedding_{k}_{epoch}.tif", dpi=80)
                     plt.close()
@@ -6225,8 +6225,8 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                 plt.plot(to_numpy(rr), to_numpy(true_func), c=mc, linewidth=1)
                 true_func = true_model.func(rr, it+1, 'update')
                 plt.plot(to_numpy(rr), to_numpy(true_func), c=mc, linewidth=1)
-                plt.xlabel(r'$x_i$', fontsize=78)
-                plt.ylabel(r'Learned $\phi^*(a_i(t), x_i)$', fontsize=78)
+                plt.xlabel(r'$x_i$', fontsize=68)
+                plt.ylabel(r'Learned $\phi^*(a_i(t), x_i)$', fontsize=68)
                 plt.ylim([-8,8])
                 plt.xlim([-5,5])
                 plt.tight_layout()
@@ -6252,8 +6252,8 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                 plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)),
                          linewidth=8 // ( 1 + (n_particle_types>16)*1.0), alpha=0.25)
             func_list = torch.stack(func_list)
-            plt.xlabel(r'$x_i$', fontsize=78)
-            plt.ylabel(r'Learned $\psi^*(a_i, x_i)$', fontsize=78)
+            plt.xlabel(r'$x_i$', fontsize=68)
+            plt.ylabel(r'Learned $\psi^*(a_i, x_i)$', fontsize=68)
             plt.xlim([-5,5])
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/raw_psi.tif", dpi=170.7)
@@ -6280,8 +6280,8 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                     func = model.lin_edge(in_features.float()) * correction
                     psi_list.append(func)
                     plt.plot(to_numpy(rr), to_numpy(func), 2, color=mc, linewidth=2, alpha=0.25)
-            plt.xlabel(r'$x_i$', fontsize=78)
-            plt.ylabel(r'learned $\psi^*(x_i)$', fontsize=78)
+            plt.xlabel(r'$x_i$', fontsize=68)
+            plt.ylabel(r'learned $\psi^*(x_i)$', fontsize=68)
             plt.ylim([-1.1, 1.1])
             plt.xlim(config.plotting.xlim)
             plt.tight_layout()
@@ -6297,8 +6297,8 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
             gt_weight = to_numpy(adjacency)
             pred_weight = to_numpy(A)
             plt.scatter(gt_weight, pred_weight / 10 , s=0.1, c=mc, alpha=0.1)
-            plt.xlabel(r'true $W_{ij}$', fontsize=78)
-            plt.ylabel(r'learned $W_{ij}$', fontsize=78)
+            plt.xlabel(r'true $W_{ij}$', fontsize=68)
+            plt.ylabel(r'learned $W_{ij}$', fontsize=68)
             if n_particles == 8000:
                 plt.xlim([-0.05,0.05])
                 plt.ylim([-0.05,0.05])
@@ -6324,7 +6324,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
             np.save(f'{log_dir}/second_correction.npy', second_correction)
 
             plt.figure(figsize=(10, 10))
-            # plt.title(r'learned $W_{ij}$', fontsize=78)
+            # plt.title(r'learned $W_{ij}$', fontsize=68)
             ax = sns.heatmap(to_numpy(A)/second_correction, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.1,vmax=0.1)
             cbar = ax.collections[0].colorbar
             # here set the labelsize by 20
@@ -6780,6 +6780,7 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
                             next_id += 1
                     t = to_numpy(x_list[0][k])
                     t_prev = to_numpy(x_list[0][k-1])
+                    t_prev_prev = to_numpy(x_list[0][k - 2])
 
                 # matplotlib.use("Qt5Agg")
                 fig = plt.figure(figsize=(16, 10))
@@ -7003,8 +7004,8 @@ def data_plot(config, epoch_list, style, device):
         fig, ax = fig_init(formatx='%.0f', formaty='%.5f')
         plt.plot(loss, color=mc, linewidth=4)
         plt.xlim([0, 20])
-        plt.ylabel('loss', fontsize=78)
-        plt.xlabel('epochs', fontsize=78)
+        plt.ylabel('loss', fontsize=68)
+        plt.xlabel('epochs', fontsize=68)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/loss.tif", dpi=170.7)
         plt.close()
@@ -7401,7 +7402,7 @@ if __name__ == '__main__':
     # config_list = ['signal_N4_v']
     # config_list =['signal_N2_a36', 'signal_N2_a34', 'signal_N2_a35', 'signal_N2_a37', 'signal_N2_a38', 'signal_N2_a39']
     # config_list = ['signal_N2_a11', 'signal_N2_a12', 'signal_N2_a13', 'signal_N2_a32', 'signal_N2_a33']
-    # config_list = ['signal_N2_a37']
+    # config_list = ['signal_N3_c16']
     config_list = ['rat_city_d']
 
     for config_file_ in config_list:
@@ -7415,8 +7416,8 @@ if __name__ == '__main__':
 
         print(f'config_file  {config.config_file}')
 
-        data_plot(config=config, epoch_list=['best'], style='black color', device=device)
-        # data_plot(config=config, epoch_list=['all'], style='black color', device=device)
+        # data_plot(config=config, epoch_list=['best'], style='black color', device=device)
+        data_plot(config=config, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['best'], style='black color', device=device)
 
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)

@@ -79,7 +79,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             self.a = nn.Parameter(torch.tensor(projections, device=self.device, requires_grad=True, dtype=torch.float32))
 
         if self.model == 'PDE_N6':
-            self.b = nn.Parameter(torch.ones((int(self.n_particles), 1000 + 10), device=self.device, requires_grad=True,dtype=torch.float32)*0.2)
+            self.b = nn.Parameter(torch.ones((int(self.n_particles), 1000 + 10), device=self.device, requires_grad=True,dtype=torch.float32)*0.44)
 
             self.embedding_step = self.n_frames // 1000
 

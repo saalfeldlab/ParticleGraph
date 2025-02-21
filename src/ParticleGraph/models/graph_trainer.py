@@ -2193,6 +2193,7 @@ def data_train_synaptic2(config, erase, best_model, device):
     noise_level = train_config.noise_level
     field_type = model_config.field_type
     coeff_lin_modulation = train_config.coeff_lin_modulation
+    coeff_model_b = train_config.coeff_model_b
 
     if field_type != '':
         n_nodes = simulation_config.n_nodes
@@ -2384,7 +2385,6 @@ def data_train_synaptic2(config, erase, best_model, device):
             if (recursive_loop>0) & ('PDE_N6' in model_config.signal_model_name):
 
                 data_id = torch.ones((n_particles, 1), dtype=torch.int) * run
-                k_batch = torch.ones((n_particles, 1), dtype=torch.int) * k
                 has_field_batch = torch.ones((n_particles, 1), dtype=torch.int) * has_field
 
                 x = torch.tensor(x_list[run][k], device=device).clone().detach()
@@ -2393,14 +2393,18 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                 optimizer.zero_grad()
 
-                in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[0:n_particles]), dim=1)
-                func_phi = model.lin_phi(in_features.float())
-                in_features = torch.zeros((n_particles, 1), device=device)
-                func_edge = model.lin_edge(in_features.float())
-                diff = torch.relu(model.lin_edge(x[:, 6:7].clone().detach()) - model.lin_edge(x[:, 6:7].clone().detach() + 0.1)).norm(2)
-                loss = loss + model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + coeff_diff * diff
-
                 for loop in range(recursive_loop):
+
+                    in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[0:n_particles]),
+                                            dim=1)
+                    func_phi = model.lin_phi(in_features.float())
+                    in_features = torch.zeros((n_particles, 1), device=device)
+                    func_edge = model.lin_edge(in_features.float())
+                    diff = torch.relu(model.lin_edge(x[:, 6:7].clone().detach()) - model.lin_edge(
+                        x[:, 6:7].clone().detach() + 0.1)).norm(2)
+                    loss = loss + model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + coeff_diff * diff
+
+                    k_batch = torch.ones((n_particles, 1), dtype=torch.int) * k
 
                     if (loop == 0) and ('learnable' in model.short_term_plasticity):
                         x[:,8] = model.b[:, k // model.embedding_step] ** 2
@@ -2415,8 +2419,11 @@ def data_train_synaptic2(config, erase, best_model, device):
                     pred_modulation = model.lin_modulation(in_modulation)
                     if 'learnable' not in model.short_term_plasticity:
                         loss = loss +((pred_modulation - d_modulation[:, k:k + 1] / modulation_norm).norm(2)).norm(2) * coeff_lin_modulation
+                    else:
+                        loss = loss + (model.b[:,1:] - model.b[:,:-1]).norm(2) * coeff_model_b
 
                     k=k+1
+
 
                     x_next = torch.tensor(x_list[run][k], device=device).clone().detach()
                     x[:, 6:7] = (x[:, 6:7] + delta_t * pred) * recursive_parameters[0] + (1-recursive_parameters[0]) * x_next[:, 6:7]
