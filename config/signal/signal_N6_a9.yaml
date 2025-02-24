@@ -23,7 +23,7 @@ simulation:
 
 graph_model:
     field_type: ''
-    short_term_plasticity: 'recursive'
+    short_term_plasticity: 'learnable'
     signal_model_name: 'PDE_N6'
     particle_model_name: ''
     mesh_model_name: ''
@@ -56,7 +56,7 @@ training:
     n_epochs: 20
 
     recursive_loop: 2
-    recursive_parameters: [0.0, 0.0]
+    recursive_parameters: [0.1, 0.1]
 
     batch_size: 1
     small_init_batch_size: False
@@ -71,11 +71,11 @@ training:
     sparsity_freq: 4
     learning_rate_start: 1.0E-4
 
-    coeff_diff: 50
+    coeff_diff: 100
     coeff_lin_modulation: 1.0E-2
 
     learning_rate_W_start: 1.0E-4
     learning_rate_start: 5.0E-5
     learning_rate_embedding_start: 5.0E-4
-    learning_rate_modulation_start: 1.0E-5
+    learning_rate_modulation_start: 1.0E-4
 

@@ -118,12 +118,8 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             embedding = self.a[particle_id, :]
 
         field = torch.ones_like(x[:,6:7])
-        if self.model == 'PDE_N6':
-            if self.short_term_plasticity != '':
-                field = x[:, 8:9]
-        if (self.model == 'PDE_N4') | (self.model == 'PDE_N5'):
+        if (self.model == 'PDE_N4') | (self.model == 'PDE_N5') | (self.model == 'PDE_N6'):
             field = x[:, 8:9]
-
 
         in_features = torch.cat([u, embedding], dim=1)
 

@@ -2376,13 +2376,19 @@ def data_train_synaptic2(config, erase, best_model, device):
             print(f'plot every {plot_frequency} iterations')
 
         total_loss = 0
+        prev_loss = 0
+        draw_sample = 0
+        k = 0
 
         for N in trange(Niter):
 
             run = 1 + np.random.randint(n_runs-1)
-            k = np.random.randint(n_frames - 5 - batch_size - recursive_loop)
 
-            if (recursive_loop>0) & ('PDE_N6' in model_config.signal_model_name):
+            if (recursive_loop>0) & ('PDE_N6' in model_config.signal_model_name) & (has_field==False):
+
+                if (draw_sample == 0) & (k==0):
+                    k = np.random.randint(n_frames - 5 - batch_size - recursive_loop)
+                    prev_k = k
 
                 data_id = torch.ones((n_particles, 1), dtype=torch.int) * run
                 has_field_batch = torch.ones((n_particles, 1), dtype=torch.int) * has_field
@@ -2424,7 +2430,6 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                     k=k+1
 
-
                     x_next = torch.tensor(x_list[run][k], device=device).clone().detach()
                     x[:, 6:7] = (x[:, 6:7] + delta_t * pred) * recursive_parameters[0] + (1-recursive_parameters[0]) * x_next[:, 6:7]
 
@@ -2438,7 +2443,30 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                 total_loss += loss.item()
 
+                print (f'loop: {loop}  k: {k}, loss:{loss.item()}, prev_loss:{prev_loss}, draw_sample: {draw_sample}')
+
+                if draw_sample == 0: # first loop
+                    prev_loss = loss.item()
+                    draw_sample += 1
+                    k = prev_k
+
+                elif loss.item() < prev_loss:
+                    if draw_sample == 1: # loss decreased in first loop
+                        recursive_parameters[0] = min(recursive_parameters[0] / 0.95, 1)
+                    draw_sample = 0
+                    k = 0
+
+                else:
+                    draw_sample += 1
+                    k = prev_k
+                    if draw_sample > 5: # loss dose not decrease for 5 loops
+                        recursive_parameters[0] = max(recursive_parameters[0] * 0.95, 0.1)
+                        draw_sample = 0
+                        k = 0
+
             else:
+
+                k = np.random.randint(n_frames - 5 - batch_size)
 
                 if has_field:
                     optimizer_f.zero_grad()
@@ -2476,11 +2504,6 @@ def data_train_synaptic2(config, erase, best_model, device):
                         diff = torch.relu(model.lin_edge(x[:, 6:7].clone().detach()) - model.lin_edge(x[:, 6:7].clone().detach() + 0.1)).norm(2)
 
                     loss += model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + coeff_diff * diff
-
-                    if ('PDE_N6' in model_config.signal_model_name):
-                        in_modulation = torch.cat((x[:, 6:7], x[:, 8:9]), dim=1)
-                        pred_modulation = model.lin_modulation(in_modulation)
-                        loss += ((pred_modulation - d_modulation[:, k:k+1]/modulation_norm).norm(2)).norm(2) * coeff_lin_modulation
 
                     if has_field:
                         if 'visual' in field_type:
@@ -2531,42 +2554,28 @@ def data_train_synaptic2(config, erase, best_model, device):
                 torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
                            os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
-                if 'PDE_N6' in model_config.signal_model_name:
-
-                    if 'learnable' in model.short_term_plasticity:
-                        fig = plt.figure(figsize=(12, 12))
-                        ax = fig.add_subplot(2, 2, 1)
-                        plt.imshow(to_numpy(modulation[:,np.arange(0,10000,10)]))
-                        ax = fig.add_subplot(2, 2, 2)
-                        plt.imshow(to_numpy(model.b** 2))
-                        ax = fig.add_subplot(2, 2, 3)
-                        plt.scatter(to_numpy(modulation[:,np.arange(0,10000,10)]), to_numpy(model.b[:,0:1000]** 2), s=0.1, color='k')
-                        ax = fig.add_subplot(2, 2, 4)
-                        true_d_modulation = (1 - x[:, 8:9]) / 100 - 0.02 * x[:, 8:9] * torch.abs(x[:, 6:7])
-                        plt.scatter(to_numpy(d_modulation[:, k:k + 1] / modulation_norm),
-                                    to_numpy(true_d_modulation / modulation_norm), s=1, color='g')
-                        plt.scatter(to_numpy(d_modulation[:, k:k + 1] / modulation_norm), to_numpy(pred_modulation),
-                                    s=1, color='k')
-                        plt.xlim([-2, 2])
-                        plt.ylim([-2, 2])
-                    else:
-                        fig = plt.figure(figsize=(12, 12))
-                        true_d_modulation = (1 - x[:, 8:9]) / 100 - 0.02 * x[:, 8:9] * torch.abs(x[:, 6:7])
-                        plt.scatter(to_numpy(d_modulation[:, k:k + 1] / modulation_norm),
-                                    to_numpy(true_d_modulation / modulation_norm), s=1, color='g')
-                        plt.scatter(to_numpy(d_modulation[:, k:k + 1] / modulation_norm), to_numpy(pred_modulation),
-                                    s=1, color='k')
-                        plt.xlim([-2, 2])
-                        plt.ylim([-2, 2])
-
+                if ('PDE_N6' in model_config.signal_model_name) & ('learnable' in model.short_term_plasticity):
+                    fig = plt.figure(figsize=(12, 12))
+                    ax = fig.add_subplot(2, 2, 1)
+                    plt.imshow(to_numpy(modulation[:,np.arange(0,10000,10)]))
+                    ax = fig.add_subplot(2, 2, 2)
+                    plt.imshow(to_numpy(model.b** 2))
+                    ax = fig.add_subplot(2, 2, 3)
+                    plt.scatter(to_numpy(modulation[:,np.arange(0,10000,10)]), to_numpy(model.b[:,0:1000]** 2), s=0.1, color='k', alpha=0.01)
+                    ax = fig.add_subplot(2, 2, 4)
+                    x = torch.tensor(x_list[run][k], device=device).clone().detach()
+                    in_modulation = torch.cat((x[:, 6:7], x[:, 8:9]), dim=1)
+                    with torch.no_grad():
+                        pred_modulation = model.lin_modulation(in_modulation)
+                    true_d_modulation = (1 - x[:, 8:9]) / 100 - 0.02 * x[:, 8:9] * torch.abs(x[:, 6:7])
+                    plt.scatter(to_numpy(d_modulation[:, k:k + 1] / modulation_norm),
+                                to_numpy(true_d_modulation / modulation_norm), s=1, color='g', alpha=0.1)
+                    plt.scatter(to_numpy(d_modulation[:, k:k + 1] / modulation_norm), to_numpy(pred_modulation), s=1, color='k', alpha=0.2)
+                    plt.xlim([-2, 2])
+                    # plt.ylim([-2, 2])
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
                     plt.close()
-
-
-
-
-
 
                 if (has_field):
                     if 'visual' in field_type:
@@ -2590,6 +2599,7 @@ def data_train_synaptic2(config, erase, best_model, device):
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
+        logger.info(f'recursive_parameters: {recursive_parameters[0]:.2f}')
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()},
                    os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
@@ -2815,7 +2825,7 @@ def data_train_agents(config, erase, best_model, device):
 
     print('Load data ...')
 
-    time_series, signal = load_agent_data(dataset_name, device=device)
+    time_series, signal = _load_agent_data(dataset_name, device=device)
 
     velocities = [t.velocity for t in time_series]
     velocities.pop(0)  # the first element is always NaN

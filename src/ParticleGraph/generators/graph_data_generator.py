@@ -1815,24 +1815,26 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                 num = f"{it:06}"
 
                 if 'visual' in field_type:
-                    fig = plt.figure(figsize=(8.5, 8))
+                    fig = plt.figure(figsize=(8, 8))
                     plt.axis('off')
                     plt.subplot(211)
-                    plt.title('modulation',fontsize=24)
-                    plt.scatter(to_numpy(X1[0:1024, 1]), to_numpy(X1[0:1024, 0]), s=40, c=to_numpy(A1[0:1024, 0]), cmap='viridis',
+                    plt.axis('off')
+                    plt.title('neuromodulation $b_i$',fontsize=24)
+                    plt.scatter(to_numpy(X1[0:1024, 1])*0.95, to_numpy(X1[0:1024, 0])*0.95, s=15, c=to_numpy(A1[0:1024, 0]), cmap='viridis',
                                 vmin=0, vmax=2)
-                    plt.scatter(to_numpy(X1[1024:, 1]), to_numpy(X1[1024:, 0]), s=30, c=to_numpy(A1[1024:, 0]), cmap='viridis',
+                    plt.scatter(to_numpy(X1[1024:, 1])*0.95 + 0.2, to_numpy(X1[1024:, 0])*0.95, s=15, c=to_numpy(A1[1024:, 0]), cmap='viridis',
                                 vmin=0, vmax=2)
-                    cbar = plt.colorbar()
-                    cbar.ax.yaxis.set_tick_params(labelsize=8)
+                    # cbar = plt.colorbar()
+                    # cbar.ax.yaxis.set_tick_params(labelsize=8)
                     plt.xticks([])
                     plt.yticks([])
                     plt.subplot(212)
-                    plt.title('firing rate $x_i$',fontsize=24)
-                    plt.scatter(to_numpy(X1[0:1024, 1]), to_numpy(X1[0:1024, 0]), s=40, c=to_numpy(H1[0:1024, 0]), cmap='viridis', vmin=-10,vmax=10)
-                    plt.scatter(to_numpy(X1[1024:, 1]), to_numpy(X1[1024:, 0]), s=30, c=to_numpy(H1[1024:, 0]), cmap='viridis', vmin=-10,vmax=10)
-                    cbar = plt.colorbar()
-                    cbar.ax.yaxis.set_tick_params(labelsize=8)
+                    plt.axis('off')
+                    plt.title('$x_i$',fontsize=24)
+                    plt.scatter(to_numpy(X1[0:1024, 1]), to_numpy(X1[0:1024, 0]), s=15, c=to_numpy(H1[0:1024, 0]), cmap='viridis', vmin=-10,vmax=10)
+                    plt.scatter(to_numpy(X1[1024:, 1]) + 0.2, to_numpy(X1[1024:, 0]), s=15, c=to_numpy(H1[1024:, 0]), cmap='viridis', vmin=-10,vmax=10)
+                    # cbar = plt.colorbar()
+                    # cbar.ax.yaxis.set_tick_params(labelsize=8)
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
