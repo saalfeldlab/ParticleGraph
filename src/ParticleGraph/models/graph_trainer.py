@@ -2384,7 +2384,7 @@ def data_train_synaptic2(config, erase, best_model, device):
 
             run = 1 + np.random.randint(n_runs-1)
 
-            if (recursive_loop>0) & ('PDE_N6' in model_config.signal_model_name) & (has_field==False):
+            if (recursive_loop>1) & ('PDE_N6' in model_config.signal_model_name) & (has_field==False):
 
                 if (draw_sample == 0) & (k==0):
                     k = np.random.randint(n_frames - 5 - batch_size - recursive_loop)
@@ -2423,10 +2423,11 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                     in_modulation = torch.cat((x[:, 6:7], x[:, 8:9]), dim=1)
                     pred_modulation = model.lin_modulation(in_modulation)
+
+                    if ('learnable' in model.short_term_plasticity) & (epoch % 2 ==0):
+                        loss = loss + (model.b[:, 1:] - model.b[:, :-1]).norm(2) * coeff_model_b
                     if 'learnable' not in model.short_term_plasticity:
                         loss = loss +((pred_modulation - d_modulation[:, k:k + 1] / modulation_norm).norm(2)).norm(2) * coeff_lin_modulation
-                    else:
-                        loss = loss + (model.b[:,1:] - model.b[:,:-1]).norm(2) * coeff_model_b
 
                     k=k+1
 
@@ -2443,26 +2444,27 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                 total_loss += loss.item()
 
-                print (f'loop: {loop}  k: {k}, loss:{loss.item()}, prev_loss:{prev_loss}, draw_sample: {draw_sample}')
+                # print (f'loop: {loop}  k: {k}, loss:{loss.item():0.3f}, prev_loss:{prev_loss:0.3f}, draw_sample: {draw_sample}  recursive_parameters: {recursive_parameters:0.3f}')
 
                 if draw_sample == 0: # first loop
-                    prev_loss = loss.item()
+                    prev_loss = loss.clone().detach()
                     draw_sample += 1
                     k = prev_k
 
-                elif loss.item() < prev_loss:
+                elif loss < prev_loss * 0.95:
                     if draw_sample == 1: # loss decreased in first loop
-                        recursive_parameters[0] = min(recursive_parameters[0] / 0.95, 1)
+                        recursive_parameters[0] = min(recursive_parameters[0] / 0.99, 1)
                     draw_sample = 0
                     k = 0
 
                 else:
                     draw_sample += 1
-                    k = prev_k
                     if draw_sample > 5: # loss dose not decrease for 5 loops
-                        recursive_parameters[0] = max(recursive_parameters[0] * 0.95, 0.1)
+                        recursive_parameters[0] = max(recursive_parameters[0] * 0.99, 0.1)
                         draw_sample = 0
                         k = 0
+                    else:
+                        k = prev_k
 
             else:
 
@@ -2562,6 +2564,18 @@ def data_train_synaptic2(config, erase, best_model, device):
                     plt.imshow(to_numpy(model.b** 2))
                     ax = fig.add_subplot(2, 2, 3)
                     plt.scatter(to_numpy(modulation[:,np.arange(0,10000,10)]), to_numpy(model.b[:,0:1000]** 2), s=0.1, color='k', alpha=0.01)
+
+                    x_data = to_numpy(modulation[:,np.arange(0,10000,10)]).flatten()
+                    y_data = to_numpy(model.b[:,0:1000]** 2).flatten()
+                    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+                    residuals = y_data - linear_model(x_data, *lin_fit)
+                    ss_res = np.sum(residuals ** 2)
+                    ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+                    r_squared = 1 - (ss_res / ss_tot)
+
+                    ax.text(0.01, 0.99, f'$R^2$ {r_squared:0.3f}   slope {lin_fit[0]:0.3f}', transform=ax.transAxes,
+                            verticalalignment='top', horizontalalignment='left')
+
                     ax = fig.add_subplot(2, 2, 4)
                     x = torch.tensor(x_list[run][k], device=device).clone().detach()
                     in_modulation = torch.cat((x[:, 6:7], x[:, 8:9]), dim=1)
@@ -2658,6 +2672,9 @@ def data_train_synaptic2(config, erase, best_model, device):
         print(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
         logger.info(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
 
+        ax.text(0.01, 0.99, f'$R^2$ {r_squared:0.3f}   slope {lin_fit[0]:0.3f}', transform=ax.transAxes,
+                verticalalignment='top', horizontalalignment='left')
+
         if ('PDE_N3' not in model_config.signal_model_name) & ('PDE_N6' not in model_config.signal_model_name):
 
             ax = fig.add_subplot(2, 5, 6)
@@ -2691,8 +2708,8 @@ def data_train_synaptic2(config, erase, best_model, device):
                     plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], s=5)
             plt.xlabel('proj 0', fontsize=12)
             plt.ylabel('proj 1', fontsize=12)
-            plt.text(0, 1.1, f'accuracy: {np.round(accuracy, 3)},  {n_clusters} clusters', ha='left', va='top',
-                     transform=ax.transAxes, fontsize=10)
+            ax.text(0.01, 0.99, f'accuracy: {np.round(accuracy, 3)},  {n_clusters} clusters', transform=ax.transAxes,
+                verticalalignment='top', horizontalalignment='left')
 
             ax = fig.add_subplot(2, 5, 8)
             model_a_ = model.a.clone().detach()
@@ -2712,7 +2729,6 @@ def data_train_synaptic2(config, erase, best_model, device):
 
             if (replace_with_cluster) & (epoch % sparsity_freq == sparsity_freq - 1) & (epoch < n_epochs - sparsity_freq):
                 # Constrain embedding domain
-
                 model.a.values = model_a_.clone().detach()
                 print(f'regul_embedding: replaced')
                 logger.info(f'regul_embedding: replaced')
@@ -2737,7 +2753,7 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                     lr_embedding = 1E-12
                     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-                    for sub_epochs in range(20):
+                    for sub_epochs in trange(20):
                         rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
                         pred = []
                         optimizer.zero_grad()
@@ -2756,22 +2772,15 @@ def data_train_synaptic2(config, erase, best_model, device):
                         loss.backward()
                         optimizer.step()
                 if train_config.fix_cluster_embedding:
+                    lr = 1E-12
                     lr_embedding = 1E-12
-                else:
-                    lr_embedding = train_config.learning_rate_embedding_start
-                optimizer, n_total_params = set_trainable_parameters(model=model, lr_embedding=lr_embedding, lr=lr, lr_W=lr_W)
-                logger.info(f'Learning rates: {lr}, {lr_embedding}')
+                    optimizer, n_total_params = set_trainable_parameters(model=model, lr_embedding=lr_embedding, lr=lr, lr_W=lr_W, lr_modulation=lr_modulation)
+                    logger.info(f'learning rates: lr_W {lr_W}, lr {lr}, lr_embedding {lr_embedding}, lr_modulation {lr_modulation}')
             else:
-                # if epoch > n_epochs - sparsity_freq:
-                #     lr_embedding = train_config.learning_rate_embedding_end
-                #     lr = train_config.learning_rate_end
-                #     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-                #     logger.info(f'Learning rates: {lr}, {lr_embedding}')
-                # else:
-
+                lr = train_config.learning_rate_start
                 lr_embedding = train_config.learning_rate_embedding_start
                 optimizer, n_total_params = set_trainable_parameters(model=model, lr_embedding=lr_embedding, lr=lr, lr_W=lr_W, lr_modulation=lr_modulation)
-                logger.info(f'Learning rates: {lr}, {lr_embedding}')
+                logger.info(f'learning rates: lr_W {lr_W}, lr {lr}, lr_embedding {lr_embedding}, lr_modulation {lr_modulation}')
 
             if (epoch == 20) & (train_config.coeff_anneal_L1 > 0):
                 coeff_L1 = train_config.coeff_anneal_L1

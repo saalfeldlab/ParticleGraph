@@ -7427,7 +7427,7 @@ if __name__ == '__main__':
     # for f in f_list:
     #     config_list,epoch_list = get_figures(f)
 
-    config_list = ['signal_N6_a25']
+    config_list = ['signal_N6_a18', 'signal_N6_a28']
     # config_list = ['rat_city_d']
 
     for config_file_ in config_list:
