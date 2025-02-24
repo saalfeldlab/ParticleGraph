@@ -2386,6 +2386,8 @@ def data_train_synaptic2(config, erase, best_model, device):
 
             if (recursive_loop>1) & ('PDE_N6' in model_config.signal_model_name) & (has_field==False):
 
+                # k = np.random.randint(n_frames - 5 - batch_size - recursive_loop)
+
                 if (draw_sample == 0) & (k==0):
                     k = np.random.randint(n_frames - 5 - batch_size - recursive_loop)
                     prev_k = k
@@ -2406,14 +2408,15 @@ def data_train_synaptic2(config, erase, best_model, device):
                     func_phi = model.lin_phi(in_features.float())
                     in_features = torch.zeros((n_particles, 1), device=device)
                     func_edge = model.lin_edge(in_features.float())
-                    diff = torch.relu(model.lin_edge(x[:, 6:7].clone().detach()) - model.lin_edge(
-                        x[:, 6:7].clone().detach() + 0.1)).norm(2)
+                    diff = torch.relu(model.lin_edge(x[:, 6:7].clone().detach()) - model.lin_edge(x[:, 6:7].clone().detach() + 0.1)).norm(2)
                     loss = loss + model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + coeff_diff * diff
 
                     k_batch = torch.ones((n_particles, 1), dtype=torch.int) * k
 
                     if (loop == 0) and ('learnable' in model.short_term_plasticity):
-                        x[:,8] = model.b[:, k // model.embedding_step] ** 2
+
+                        alpha = (k % model.embedding_step) / model.embedding_step
+                        x[:,8] = alpha * model.b[:, k // model.embedding_step + 1] ** 2 + (1 - alpha) * model.b[:, k // model.embedding_step] ** 2
 
                     dataset = data.Data(x=x, edge_index=model.edges)
                     y = torch.tensor(y_list[run][k], device=device) / ynorm
@@ -2426,25 +2429,22 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                     if ('learnable' in model.short_term_plasticity) & (epoch % 2 ==0):
                         loss = loss + (model.b[:, 1:] - model.b[:, :-1]).norm(2) * coeff_model_b
-                    if 'learnable' not in model.short_term_plasticity:
+                    elif 'observed' in model.short_term_plasticity:
                         loss = loss +((pred_modulation - d_modulation[:, k:k + 1] / modulation_norm).norm(2)).norm(2) * coeff_lin_modulation
 
-                    k=k+1
+                    k = k+1
 
                     x_next = torch.tensor(x_list[run][k], device=device).clone().detach()
                     x[:, 6:7] = (x[:, 6:7] + delta_t * pred) * recursive_parameters[0] + (1-recursive_parameters[0]) * x_next[:, 6:7]
-
                     if 'learnable' in model.short_term_plasticity:
                         x[:, 8:9] = (x[:, 8:9] + delta_t * pred_modulation)
-                    else:
+                    elif 'observed' in model.short_term_plasticity:
                         x[:, 8:9] = (x[:, 8:9] + delta_t * pred_modulation) * recursive_parameters[1] + (1-recursive_parameters[1]) * x_next[:, 8:9]
 
                 loss.backward()
                 optimizer.step()
 
                 total_loss += loss.item()
-
-                # print (f'loop: {loop}  k: {k}, loss:{loss.item():0.3f}, prev_loss:{prev_loss:0.3f}, draw_sample: {draw_sample}  recursive_parameters: {recursive_parameters:0.3f}')
 
                 if draw_sample == 0: # first loop
                     prev_loss = loss.clone().detach()
@@ -2675,7 +2675,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         ax.text(0.01, 0.99, f'$R^2$ {r_squared:0.3f}   slope {lin_fit[0]:0.3f}', transform=ax.transAxes,
                 verticalalignment='top', horizontalalignment='left')
 
-        if ('PDE_N3' not in model_config.signal_model_name) & ('PDE_N6' not in model_config.signal_model_name):
+        if ('PDE_N3' not in model_config.signal_model_name):
 
             ax = fig.add_subplot(2, 5, 6)
             embedding = to_numpy(model.a.squeeze())
@@ -3890,7 +3890,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=170)
                     plt.close()
 
-                    im = imread(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif")
                     plt.figure(figsize=(10, 10))
                     plt.imshow(im)
                     plt.axis('off')

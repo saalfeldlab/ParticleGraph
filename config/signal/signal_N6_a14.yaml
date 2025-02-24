@@ -55,16 +55,17 @@ plotting:
 training:
     n_epochs: 20
 
-    recursive_loop: 96
+    recursive_loop: 2
     recursive_parameters: [0.1, 0.1]
 
     batch_size: 1
     small_init_batch_size: False
 
     n_runs: 2
-    sparsity: 'none'
+
+    sparsity: 'replace_embedding_function'
     rotation_augmentation: False
-    data_augmentation_loop: 5
+    data_augmentation_loop: 25
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     device: 'auto'
@@ -73,6 +74,7 @@ training:
 
     coeff_diff: 100
     coeff_lin_modulation: 1.0E-2
+    coeff_model_b: 5.0E-2
 
     learning_rate_W_start: 1.0E-4
     learning_rate_start: 5.0E-5

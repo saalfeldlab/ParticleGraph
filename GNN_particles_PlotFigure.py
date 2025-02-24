@@ -4559,20 +4559,20 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
     distrib = to_numpy(activity.flatten())
     activity = activity.t()
 
-    if os.path.exists(f'./graphs_data/{dataset_name}/X1.pt') > 0:
-        X1_first = torch.load(f'./graphs_data/{dataset_name}/X1.pt', map_location=device)
-        X_msg = torch.load(f'./graphs_data/{dataset_name}/X_msg.pt', map_location=device)
-    else:
-        xc, yc = get_equidistant_points(n_points=n_particles)
-        X1_first = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
-        perm = torch.randperm(X1_first.size(0))
-        X1_first = X1_first[perm]
-        torch.save(X1_first, f'./graphs_data/{dataset_name}/X1.pt')
-        xc, yc = get_equidistant_points(n_points=n_particles ** 2)
-        X_msg = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
-        perm = torch.randperm(X_msg.size(0))
-        X_msg = X_msg[perm]
-        torch.save(X_msg, f'./graphs_data/{dataset_name}/X_msg.pt')
+    # if os.path.exists(f'./graphs_data/{dataset_name}/X1.pt') > 0:
+    #     X1_first = torch.load(f'./graphs_data/{dataset_name}/X1.pt', map_location=device)
+    #     X_msg = torch.load(f'./graphs_data/{dataset_name}/X_msg.pt', map_location=device)
+    # else:
+    xc, yc = get_equidistant_points(n_points=n_particles)
+    X1_first = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
+    perm = torch.randperm(X1_first.size(0))
+    X1_first = X1_first[perm]
+    torch.save(X1_first, f'./graphs_data/{dataset_name}/X1.pt')
+    xc, yc = get_equidistant_points(n_points=n_particles ** 2)
+    X_msg = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
+    perm = torch.randperm(X_msg.size(0))
+    X_msg = X_msg[perm]
+    torch.save(X_msg, f'./graphs_data/{dataset_name}/X_msg.pt')
 
     if 'black' in style:
         mc = 'w'
@@ -5013,11 +5013,11 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
         ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},
                          vmin=-0.1, vmax=0.1)
         cbar = ax.collections[0].colorbar
-        cbar.ax.tick_params(labelsize=24)
-        plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=24)
-        plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=24)
+        cbar.ax.tick_params(labelsize=32)
+        plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+        plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
         plt.xticks(rotation=0)
-        plt.subplot(3, 3, 1)
+        plt.subplot(2, 2, 1)
         ax = sns.heatmap(to_numpy(adjacency[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
         plt.xticks([])
         plt.yticks([])
@@ -5216,7 +5216,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.savefig(f"./{log_dir}/results/UMAP_{epoch}.tif", dpi=170.7)
             plt.close()
 
-            config.training.cluster_distance_threshold = 0.2
+            config.training.cluster_distance_threshold = 0.1
             config.training.cluster_method = 'distance_embedding'
             embedding = to_numpy(model.a.squeeze())
             labels, n_clusters, new_labels = sparsify_cluster(config.training.cluster_method, proj_interaction, embedding,
@@ -5357,8 +5357,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                             plt.savefig(f"./{log_dir}/results/field/comparison {epoch}_{frame}.tif", dpi=80)
                             plt.close()
 
-
-
                 else:
 
                     im = imread(f"graphs_data/{simulation_config.node_value_map}")
@@ -5435,6 +5433,30 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
                     im_list = np.array(np.array(im_list))
                     pred_list = np.array(np.array(pred_list))
+                    im_list_resized = np.resize(im_list_, (1024, 1024))
+
+                    im_list_ = np.reshape(im_list,(100,1024))
+                    pred_list_ = np.reshape(pred_list,(100,1024))
+                    im_list_ = np.rot90(im_list_)
+                    pred_list_ = np.rot90(pred_list_)
+                    im_list_ = scipy.ndimage.zoom(im_list_, (1024 / im_list_.shape[0], 1024 / im_list_.shape[1]))
+                    pred_list_ = scipy.ndimage.zoom(pred_list_, (1024 / pred_list_.shape[0], 1024 / pred_list_.shape[1]))
+
+                    plt.figure(figsize=(20, 10))
+                    plt.subplot(1, 2, 1)
+                    plt.title('true field')
+                    plt.imshow(im_list_, cmap='grey')
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.subplot(1, 2, 2)
+                    plt.title('reconstructed field')
+                    plt.imshow(pred_list_, cmap='grey')
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/pic_comparison {epoch}.tif", dpi=80)
+                    plt.close()
 
                     fig, ax = fig_init()
                     plt.scatter(im_list, pred_list, s=1, c=mc, alpha=0.1)
@@ -5455,6 +5477,34 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     r_squared = 1 - (ss_res / ss_tot)
                     print(f'field R^2$: {r_squared:0.4f}  slope: {np.round(lin_fit[0], 4)}')
 
+            elif 'PDE_N6' in model_config.signal_model_name:
+
+                v = torch.tensor(x_list[0], device=device)
+                modulation = modulation[:, :, 8:9].squeeze()
+                modulation = modulation.t()
+                modulation = modulation.clone().detach()
+                modulation = to_numpy(modulation)
+
+
+                modulation = scipy.ndimage.zoom(modulation, (1024 / modulation.shape[0], 1024 / modulation.shape[1]))
+                pred_list_ = to_numpy(model.b**2)
+                pred_list_ = scipy.ndimage.zoom(pred_list_, (1024 / pred_list_.shape[0], 1024 / pred_list_.shape[1]))
+
+                plt.figure(figsize=(20, 10))
+                plt.subplot(1, 2, 1)
+                plt.title('true field')
+                plt.imshow(modulation, cmap='grey')
+                plt.xticks([])
+                plt.yticks([])
+                plt.subplot(1, 2, 2)
+                plt.title('reconstructed field')
+                plt.imshow(pred_list_, cmap='grey')
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/pic_comparison {epoch}.tif", dpi=80)
+                plt.close()
 
             if False:
                 print ('symbolic regression ...')
@@ -7427,8 +7477,8 @@ if __name__ == '__main__':
     # for f in f_list:
     #     config_list,epoch_list = get_figures(f)
 
-    config_list = ['signal_N6_a18', 'signal_N6_a28']
-    # config_list = ['rat_city_d']
+    # config_list = ['signal_N4_m3_shuffle']
+    config_list = ['signal_N2_b2']
 
     for config_file_ in config_list:
 
@@ -7441,7 +7491,7 @@ if __name__ == '__main__':
 
         print(f'config_file  {config.config_file}')
 
-        data_plot(config=config, epoch_list=['best'], style='black color', device=device)
+        data_plot(config=config, epoch_list=['best'], style='latex color', device=device)
         # data_plot(config=config, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['best'], style='black color', device=device)
 
