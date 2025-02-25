@@ -3508,9 +3508,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             X_msg = torch.load(f'./graphs_data/{dataset_name}/X_msg.pt', map_location=device)
         else:
             xc, yc = get_equidistant_points(n_points=n_particles)
-            X1_first = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
-            perm = torch.randperm(X1_first.size(0))
-            X1_first = X1_first[perm]
+            X1 = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
+            perm = torch.randperm(X1.size(0))
+            X1 = X1[perm]
             torch.save(X1, f'./graphs_data/{dataset_name}/X1.pt')
             xc, yc = get_equidistant_points(n_points=n_particles**2)
             X_msg = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
