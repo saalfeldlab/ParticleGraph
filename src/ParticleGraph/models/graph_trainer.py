@@ -2204,7 +2204,7 @@ def data_train_synaptic2(config, erase, best_model, device):
 
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
-    recursive_parameters = train_config.recursive_parameters
+    recursive_parameters = train_config.recursive_parameters.copy()
 
 
     log_dir, logger = create_log_dir(config, erase)
@@ -2481,7 +2481,6 @@ def data_train_synaptic2(config, erase, best_model, device):
                 # plt.xlabel('True modulation', fontsize=12)
                 # plt.ylabel('Predicted modulation', fontsize=12)
 
-
                 if draw_sample == 0: # first loop
                     prev_loss = loss.clone().detach()
                     draw_sample += 1
@@ -2494,7 +2493,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                 else:
                     draw_sample += 1
                     if draw_sample > 5: # loss dose not decrease for 5 loops
-                        recursive_parameters[0] = max(recursive_parameters[0] * 0.99, train_config.recursive_parameters[0])
+                        recursive_parameters[0] = max(recursive_parameters[0] * 0.98, train_config.recursive_parameters[0])
                         draw_sample = 0
                         k = 0
                     else:
@@ -2663,9 +2662,13 @@ def data_train_synaptic2(config, erase, best_model, device):
 
         if ('PDE_N6' in model_config.signal_model_name) & ('learnable' in model.short_term_plasticity):
             if recursive_parameters[0] > 0.9:
-                recursive_loop += 2
+                recursive_loop += 1
                 logger.info(f'increasing recursive_loop to {recursive_loop}')
-                recursive_parameters[0] = config.training.recursive_parameters[0]
+                recursive_parameters = config.training.recursive_parameters.copy()
+            if recursive_parameters[0] < 1.1 * config.training.recursive_parameters[0]:
+                recursive_loop = max (recursive_loop-1, config.training.recursive_loop)
+                logger.info(f'decreasing recursive_loop to {recursive_loop}')
+                recursive_parameters = config.training.recursive_parameters.copy()
 
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
