@@ -2585,13 +2585,6 @@ def data_train_synaptic2(config, erase, best_model, device):
                 total_loss += loss.item()
 
 
-            torch.cuda.memory_allocated(device)
-            gc.collect()
-            torch.cuda.empty_cache()
-            print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
-            print(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
-
-
             visualize_embedding = True
             if visualize_embedding & (((epoch < 60) & (N % plot_frequency == 0)) | (N == 0)):
 
