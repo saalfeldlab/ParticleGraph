@@ -55,13 +55,13 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        task = 'generate'
-        best_model = None
+        task = 'train'
+        best_model = '29_490000'
         # config_list = ['falling_water_ramp_x6_11']
-        config_list =['signal_N4_v_bis']
+        # config_list =['signal_N4_v_bis']
         # config_list =['wave_smooth_3']
         # config_list = ['arbitrary_3_bis']
-        # config_list = ['signal_N6_a9']
+        config_list = ['signal_N6_a32']
         # config_list = ['rat_city_f']
 
     for config_file_ in config_list:
@@ -86,12 +86,6 @@ if __name__ == '__main__':
         if 'try_func' in task:
             try_func(max_radius=config.simulation.max_radius, device=device)
 
-            # data_test(config=config, config_file=config_file, visualize=True, style='black color', verbose=False, best_model='best', run=1, plot_data=True,
-            #           test_simulation=False, sample_embedding=False, fixed=True, bounce=True, step=4, device=device)
-            # data_test(config=config, config_file=config_file, visualize=True, style='black color', verbose=False, best_model='best', run=2, plot_data=False,
-            #           test_simulation=False, sample_embedding=False, fixed=True, bounce=False, step=4, device=device)
-            # data_test(config=config, config_file=config_file, visualize=True, style='black color', verbose=False, best_model='best', run=15, plot_data=False,
-            #           test_simulation=False, sample_embedding=False, fixed=True, bounce=True, step=4, device=device)
 
 
 

@@ -2350,7 +2350,10 @@ def data_train_synaptic2(config, erase, best_model, device):
     # torch.autograd.set_detect_anomaly(True)
 
     list_loss = []
-    time.sleep(2)
+    time.sleep(0.2)
+
+    start_epoch=31
+
     for epoch in range(start_epoch, n_epochs + 1):
 
         if (epoch < train_config.n_epochs_init):
@@ -2370,7 +2373,7 @@ def data_train_synaptic2(config, erase, best_model, device):
             Niter = int(n_frames * data_augmentation_loop // batch_size * n_runs / 10)
 
         plot_frequency = int(Niter // 50)
-        if epoch==0:
+        if True: #epoch==0:
             print(f'{Niter} iterations per epoch')
             logger.info(f'{Niter} iterations per epoch')
             print(f'plot every {plot_frequency} iterations')
@@ -2401,7 +2404,19 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                 optimizer.zero_grad()
 
+                # true_activity_list = np.transpose(x_list[run][k:k+recursive_loop, :, 6:7].squeeze())
+                # true_modulation_list = np.transpose(x_list[run][k:k+recursive_loop, :, 8:9].squeeze())
+                # pred_activity_list=list([])
+                # pred_modulation_list = list([])
+
+                # matplotlib.use("Qt5Agg")
+                # fig = plt.figure(figsize=(8, 8))
+                # plt.scatter(true_activity_list[:, loop], to_numpy(pred_activity_list[loop].squeeze()), color='k', s=1)
+
                 for loop in range(recursive_loop):
+
+                    # pred_activity_list.append(x[:, 6:7].clone().detach())
+                    # pred_modulation_list.append(x[:, 8:9].clone().detach())
 
                     in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[0:n_particles]),
                                             dim=1)
@@ -2427,7 +2442,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                     in_modulation = torch.cat((x[:, 6:7], x[:, 8:9]), dim=1)
                     pred_modulation = model.lin_modulation(in_modulation)
 
-                    if ('learnable' in model.short_term_plasticity) & (epoch % 2 ==0):
+                    if ('learnable' in model.short_term_plasticity):
                         loss = loss + (model.b[:, 1:] - model.b[:, :-1]).norm(2) * coeff_model_b
                     elif 'observed' in model.short_term_plasticity:
                         loss = loss +((pred_modulation - d_modulation[:, k:k + 1] / modulation_norm).norm(2)).norm(2) * coeff_lin_modulation
@@ -2446,21 +2461,40 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                 total_loss += loss.item()
 
+                # pred_activity_list = to_numpy(torch.stack(pred_activity_list).squeeze().t())
+                # pred_modulation_list = to_numpy(torch.stack(pred_modulation_list).squeeze().t())
+
+                # matplotlib.use("Qt5Agg")
+
+                # fig = plt.figure(figsize=(8, 8))
+                # plt.plot(true_activity_list[256,:])
+                # plt.plot(pred_activity_list[256,:])
+
+                # fig = plt.figure(figsize=(16, 8))
+                # ax = fig.add_subplot(1, 2, 1)
+                # plt.scatter(true_activity_list[:,1], pred_activity_list[:,1], color='k', s=1)
+                # plt.xlabel('True activity', fontsize=12)
+                # plt.ylabel('Predicted activity', fontsize=12)
+                # plt.title('Activity')
+                # ax = fig.add_subplot(1, 2, 2)
+                # plt.scatter(true_modulation_list[:,1], pred_modulation_list[:,1], color='k', s=1)
+                # plt.xlabel('True modulation', fontsize=12)
+                # plt.ylabel('Predicted modulation', fontsize=12)
+
+
                 if draw_sample == 0: # first loop
                     prev_loss = loss.clone().detach()
                     draw_sample += 1
                     k = prev_k
-
                 elif loss < prev_loss * 0.95:
                     if draw_sample == 1: # loss decreased in first loop
-                        recursive_parameters[0] = min(recursive_parameters[0] / 0.99, 1)
+                        recursive_parameters[0] = min(recursive_parameters[0] / 0.9975, 1)
                     draw_sample = 0
                     k = 0
-
                 else:
                     draw_sample += 1
                     if draw_sample > 5: # loss dose not decrease for 5 loops
-                        recursive_parameters[0] = max(recursive_parameters[0] * 0.99, 0.1)
+                        recursive_parameters[0] = max(recursive_parameters[0] * 0.99, train_config.recursive_parameters[0])
                         draw_sample = 0
                         k = 0
                     else:
@@ -2549,7 +2583,7 @@ def data_train_synaptic2(config, erase, best_model, device):
 
 
             visualize_embedding = True
-            if visualize_embedding & (((epoch < 30) & (N % plot_frequency == 0)) | (N == 0)):
+            if visualize_embedding & (((epoch < 60) & (N % plot_frequency == 0)) | (N == 0)):
 
                 plot_training_signal(config, model, adjacency, ynorm, log_dir, epoch, N, n_particles,
                                      n_particle_types, type_list, cmap, device)
@@ -2562,6 +2596,11 @@ def data_train_synaptic2(config, erase, best_model, device):
                     plt.imshow(to_numpy(modulation[:,np.arange(0,10000,10)]))
                     ax = fig.add_subplot(2, 2, 2)
                     plt.imshow(to_numpy(model.b** 2))
+                    ax.text(0.01, 0.99, f'recursive_parameter {recursive_parameters[0]:0.3f} ', transform=ax.transAxes,
+                            verticalalignment='top', horizontalalignment='left', color='w')
+                    ax.text(0.01, 0.89, f'loop {recursive_loop} ', transform=ax.transAxes,
+                            verticalalignment='top', horizontalalignment='left', color='w')
+
                     ax = fig.add_subplot(2, 2, 3)
                     plt.scatter(to_numpy(modulation[:,np.arange(0,10000,10)]), to_numpy(model.b[:,0:1000]** 2), s=0.1, color='k', alpha=0.01)
 
@@ -2621,6 +2660,13 @@ def data_train_synaptic2(config, erase, best_model, device):
             torch.save({'model_state_dict': model_f.state_dict(),
                         'optimizer_state_dict': optimizer_f.state_dict()},
                        os.path.join(log_dir, 'models', f'best_model_f_with_{n_runs - 1}_graphs_{epoch}.pt'))
+
+        if ('PDE_N6' in model_config.signal_model_name) & ('learnable' in model.short_term_plasticity):
+            if recursive_parameters[0] > 0.9:
+                recursive_loop += 2
+                logger.info(f'increasing recursive_loop to {recursive_loop}')
+                recursive_parameters[0] = config.training.recursive_parameters[0]
+
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
@@ -2729,7 +2775,8 @@ def data_train_synaptic2(config, erase, best_model, device):
 
             if (replace_with_cluster) & (epoch % sparsity_freq == sparsity_freq - 1) & (epoch < n_epochs - sparsity_freq):
                 # Constrain embedding domain
-                model.a.values = model_a_.clone().detach()
+                with torch.no_grad():
+                    model.a.copy_(model_a_)
                 print(f'regul_embedding: replaced')
                 logger.info(f'regul_embedding: replaced')
 
