@@ -54,7 +54,8 @@ training:
     batch_size: 1
     small_init_batch_size: False
     n_runs: 2
-    sparsity: 'none'
+
+    sparsity: 'replace_embedding_function'
     rotation_augmentation: False
     data_augmentation_loop: 40
     cluster_method: 'kmeans_auto_embedding'
