@@ -1171,7 +1171,7 @@ def data_train_mouse_city(config, erase, best_model, device):
                     pred[:, 0] = new_x
                     pred[:, 1] = new_y
 
-                if do_tracking:
+                if (do_tracking) | (epoch==0):
                     x_next = x_list[run][k + time_step]
                     x_pos_next = x_next[:, 1:3].clone().detach()
                     if model_config.prediction == '2nd_derivative':
@@ -2194,6 +2194,7 @@ def data_train_synaptic2(config, erase, best_model, device):
     field_type = model_config.field_type
     coeff_lin_modulation = train_config.coeff_lin_modulation
     coeff_model_b = train_config.coeff_model_b
+    time_step = simulation_config.time_step
 
     if field_type != '':
         n_nodes = simulation_config.n_nodes
@@ -2213,7 +2214,7 @@ def data_train_synaptic2(config, erase, best_model, device):
 
     x_list = []
     y_list = []
-    for run in trange(n_runs):
+    for run in trange(1,n_runs):
         x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
         y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
         x_list.append(x)
@@ -2352,8 +2353,6 @@ def data_train_synaptic2(config, erase, best_model, device):
     list_loss = []
     time.sleep(0.2)
 
-    start_epoch=31
-
     for epoch in range(start_epoch, n_epochs + 1):
 
         if (epoch < train_config.n_epochs_init):
@@ -2385,14 +2384,14 @@ def data_train_synaptic2(config, erase, best_model, device):
 
         for N in trange(Niter):
 
-            run = 1 + np.random.randint(n_runs-1)
+            run = np.random.randint(n_runs-1)
 
             if (recursive_loop>1) & ('PDE_N6' in model_config.signal_model_name) & (has_field==False):
 
                 # k = np.random.randint(n_frames - 5 - batch_size - recursive_loop)
 
                 if (draw_sample == 0) & (k==0):
-                    k = np.random.randint(n_frames - 5 - batch_size - recursive_loop)
+                    k = np.random.randint(n_frames - 5 - batch_size - recursive_loop*time_step)
                     prev_k = k
 
                 data_id = torch.ones((n_particles, 1), dtype=torch.int) * run
@@ -2447,14 +2446,14 @@ def data_train_synaptic2(config, erase, best_model, device):
                     elif 'observed' in model.short_term_plasticity:
                         loss = loss +((pred_modulation - d_modulation[:, k:k + 1] / modulation_norm).norm(2)).norm(2) * coeff_lin_modulation
 
-                    k = k+1
+                    k = k + time_step
 
                     x_next = torch.tensor(x_list[run][k], device=device).clone().detach()
-                    x[:, 6:7] = (x[:, 6:7] + delta_t * pred) * recursive_parameters[0] + (1-recursive_parameters[0]) * x_next[:, 6:7]
+                    x[:, 6:7] = (x[:, 6:7] + delta_t * time_step * pred) * recursive_parameters[0] + (1-recursive_parameters[0]) * x_next[:, 6:7]
                     if 'learnable' in model.short_term_plasticity:
-                        x[:, 8:9] = (x[:, 8:9] + delta_t * pred_modulation)
+                        x[:, 8:9] = (x[:, 8:9] + delta_t * time_step * pred_modulation)
                     elif 'observed' in model.short_term_plasticity:
-                        x[:, 8:9] = (x[:, 8:9] + delta_t * pred_modulation) * recursive_parameters[1] + (1-recursive_parameters[1]) * x_next[:, 8:9]
+                        x[:, 8:9] = (x[:, 8:9] + delta_t * time_step * pred_modulation) * recursive_parameters[1] + (1-recursive_parameters[1]) * x_next[:, 8:9]
 
                 loss.backward()
                 optimizer.step()
@@ -2547,7 +2546,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                         else:
                             x[:, 8:9] = model_f(time=k / n_frames) ** 2
 
-                    edges = model.edges
+                    edges = model.edges.clone().detach()
                     if particle_batch_ratio < 1:
                         mask = ~torch.isin(edges[1, :], torch.tensor(ids, device=device))
                         edges = edges[:, mask]
@@ -2567,8 +2566,13 @@ def data_train_synaptic2(config, erase, best_model, device):
                         k_batch = torch.cat((k_batch, torch.ones((x.shape[0],1), dtype=torch.int) * k), dim = 0)
                 batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
                 has_field_batch = torch.ones_like(data_id) * has_field
+
                 for batch in batch_loader:
-                    pred = model(batch, data_id=data_id, has_field=has_field_batch, k=k_batch)
+                    if ('PDE_N3' in model_config.signal_model_name):
+                        pred = model(batch, k=k_batch)
+                    else:
+                        pred = model(batch)
+                    # pred = model(batch, data_id=data_id, has_field=has_field_batch, k=k_batch)
                 loss = loss + (pred - y_batch).norm(2)
 
                 if ('PDE_N3' in model_config.signal_model_name):
@@ -2579,6 +2583,13 @@ def data_train_synaptic2(config, erase, best_model, device):
                 if has_field:
                     optimizer_f.step()
                 total_loss += loss.item()
+
+
+            torch.cuda.memory_allocated(device)
+            gc.collect()
+            torch.cuda.empty_cache()
+            print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
+            print(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
 
 
             visualize_embedding = True
@@ -2597,7 +2608,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                     plt.imshow(to_numpy(model.b** 2))
                     ax.text(0.01, 0.99, f'recursive_parameter {recursive_parameters[0]:0.3f} ', transform=ax.transAxes,
                             verticalalignment='top', horizontalalignment='left', color='w')
-                    ax.text(0.01, 0.89, f'loop {recursive_loop} ', transform=ax.transAxes,
+                    ax.text(0.01, 0.95, f'loop {recursive_loop} ', transform=ax.transAxes,
                             verticalalignment='top', horizontalalignment='left', color='w')
 
                     ax = fig.add_subplot(2, 2, 3)

@@ -1,30 +1,26 @@
-description: 'synaptic network random matrix cluster embedding distance 0.2 2048 neurons 4 types phi neuron dependent lorentz std 0.03 20 runs modulation on 1024 neurons'
-dataset: 'signal_N4_v1_shuffle'
+description: 'synaptic network random matrix cluster embedding distance 0.2 1000 neurons 4 types phi neuron dependent lorentz std 0.03'
+dataset: 'signal_N2_Lorentz_k6'
 
 simulation:
     connectivity_file: 'random'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
     connectivity_distribution: 'Lorentz'
-    params: [[10.0,1.0,1.0,1.0],[10.0,2.0,1.0,2.0],[10.0,1.0,1.2,4.0],[10.0,2.0,1.2,8.0]]
+    params: [[10.0,1.0,1.0,1.0],[10.0,2.0,1.0,2.0],[10.0,1.0,2.0,4.0],[10.0,2.0,2.0,8.0]]
     phi: 'tanh'
     tau: 1.0
     min_radius: 1.0
     max_radius: 1.0E6
-    n_particles: 2048
-    n_nodes: 1024
+    n_particles: 1000
     n_particle_types: 4
-    shuffle_particle_types: True
     n_interactions: 4
     n_frames: 100000
     delta_t: 0.01
     dpos_init:  0
     boundary: 'no'
     start_frame: -1000
-    node_value_map: 'video_bisons_32.tif'
 
 graph_model:
-    field_type: 'visual_a'
     signal_model_name: 'PDE_N4'
     particle_model_name: ''
     mesh_model_name: ''
@@ -39,7 +35,7 @@ graph_model:
     aggr_type: 'add'
     embedding_dim: 2
     update_type: 'none'
-    omega:  30.0
+
 
 plotting:
     colormap: 'tab10'
@@ -49,23 +45,22 @@ plotting:
 
 training:
     n_epochs: 40
-    n_epochs_init: 5
     recursive_loop: 1
     batch_size: 1
     small_init_batch_size: False
     n_runs: 2
     sparsity: 'none'
     rotation_augmentation: False
-    data_augmentation_loop: 40
-    cluster_method: 'kmeans_auto_embedding'
+    data_augmentation_loop: 100
+    cluster_method: 'distance_embedding'
     cluster_distance_threshold: 0.2
     fix_cluster_embedding: True
     device: 'auto'
     sparsity: 'replace_embedding_function'
     sparsity_freq: 4
 
-    learning_rate_start: 1.0E-4
-    learning_rate_embedding_start: 1.0E-4
+    learning_rate_W_start: 1.0E-4
+    learning_rate_start: 5.0E-5
+    learning_rate_embedding_start: 5.0E-4
 
     coeff_diff: 100
-    learning_rate_NNR: 1.0E-6

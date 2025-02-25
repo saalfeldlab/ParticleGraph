@@ -20,6 +20,8 @@ simulation:
     dpos_init:  0
     boundary: 'no'
     start_frame: -2000
+    time_step: 2
+
 
 graph_model:
     field_type: ''
@@ -55,7 +57,7 @@ plotting:
 training:
     n_epochs: 20
 
-    recursive_loop: 4
+    recursive_loop: 2
     recursive_parameters: [0.1, 0.1]
 
     batch_size: 1
@@ -65,7 +67,7 @@ training:
 
     sparsity: 'replace_embedding_function'
     rotation_augmentation: False
-    data_augmentation_loop: 12
+    data_augmentation_loop: 25
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     device: 'auto'

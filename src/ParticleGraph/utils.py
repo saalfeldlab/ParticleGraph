@@ -682,6 +682,7 @@ def check_and_clear_memory(
                 logger.info(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
 
 
+
         elif torch.cuda.memory_allocated(device) > memory_percentage_threshold * torch.cuda.get_device_properties(device).total_memory:
             # logger.info("Memory usage is high. Calling garbage collector and clearing cache.")
             # logger.info(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")

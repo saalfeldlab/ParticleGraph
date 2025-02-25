@@ -103,8 +103,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         return alpha * self.a[id+1, :] + (1 - alpha) * self.a[id, :]
 
 
-    def forward(self, data=[], data_id=[], return_all=False, has_field=False, k = 0):
-        self.data_id = data_id
+    def forward(self, data=[], return_all=False, k = 0):
         self.return_all = return_all
         x, edge_index = data.x, data.edge_index
 
@@ -132,7 +131,10 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         #     if self.return_all:
         #         self.msg = torch.matmul(self.W * self.mask, self.lin_edge(u))
 
-        msg = self.propagate(edge_index, u=u, embedding=embedding, field=field)
+        if (self.model=='PDE_N2'):
+            msg = torch.matmul(self.W * self.mask, self.lin_edge(u))
+        else:
+            msg = self.propagate(edge_index, u=u, embedding=embedding, field=field)
 
         pred = self.lin_phi(in_features) + msg
 
