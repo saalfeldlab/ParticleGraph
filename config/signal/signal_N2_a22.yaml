@@ -1,5 +1,5 @@
 description: 'synaptic network random matrix no recursive loop 1000 neurons 4 types lorentz std 0.03'
-dataset: 'signal_N2_a22'
+dataset: 'signal_N2_a19'
 
 simulation:
     connectivity_file: 'random'
@@ -14,7 +14,7 @@ simulation:
     n_particles: 1000
     n_particle_types: 4
     n_interactions: 4
-    n_frames: 20000
+    n_frames: 30000
     delta_t: 0.01
     dpos_init:  0
     boundary: 'no'
@@ -40,16 +40,21 @@ graph_model:
 plotting:
     colormap: 'tab10'
     arrow_length: 1
+    xlim: [-5,5]
+    ylim: [-8,8]
 
 training:
-    n_epochs: 20
+    n_epochs: 6
+    
     recursive_loop: 1
-    batch_size: 1
     small_init_batch_size: False
     n_runs: 2
-    sparsity: 'none'
+    
+    batch_size: 2
+    small_init_batch_size: False
+
     rotation_augmentation: False
-    data_augmentation_loop: 500
+    data_augmentation_loop: 50
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     device: 'auto'
@@ -57,6 +62,6 @@ training:
     sparsity_freq: 4
 
     learning_rate_W_start: 1.0E-4
-    learning_rate_start: 1.0E-4
-    learning_rate_embedding_start: 1.0E-4
-
+    learning_rate_start: 5.0E-5
+    learning_rate_embedding_start: 5.0E-4
+    learning_rate_modulation_start: 1.0E-5
