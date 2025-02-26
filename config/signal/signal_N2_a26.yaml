@@ -1,5 +1,5 @@
 description: 'synaptic network random matrix no recursive loop 1000 neurons 4 types lorentz std 0.03'
-dataset: 'signal_N2_a19'
+dataset: 'signal_N2_a26'
 
 simulation:
     connectivity_file: 'random'
@@ -50,7 +50,7 @@ training:
     small_init_batch_size: False
     n_runs: 2
     
-    batch_size: 5
+    batch_size: 10
     small_init_batch_size: False
 
     rotation_augmentation: False
@@ -61,7 +61,9 @@ training:
     sparsity: 'replace_embedding_function'
     sparsity_freq: 4
 
-    learning_rate_W_start: 1.0E-4
-    learning_rate_start: 5.0E-5
-    learning_rate_embedding_start: 5.0E-4
-    learning_rate_modulation_start: 1.0E-5
+    learning_rate_W_start: 1.0E-5
+    learning_rate_start: 5.0E-6
+    learning_rate_embedding_start: 5.0E-5
+    learning_rate_modulation_start: 1.0E-6
+
+    noise_level: 1

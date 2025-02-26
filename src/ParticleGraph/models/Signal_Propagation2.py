@@ -50,6 +50,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         self.output_size_modulation = model_config.output_size_modulation
         self.hidden_dim_modulation = model_config.hidden_dim_modulation
         self.n_layers_modulation = model_config.n_layers_modulation
+        self.batch_size = config.training.batch_size
 
         self.bc_dpos = bc_dpos
         self.adjacency_matrix = simulation_config.adjacency_matrix
@@ -131,7 +132,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         #     if self.return_all:
         #         self.msg = torch.matmul(self.W * self.mask, self.lin_edge(u))
 
-        if (self.model=='PDE_N2'):
+        if (self.model=='PDE_N2') & (self.batch_size==1):
             msg = torch.matmul(self.W * self.mask, self.lin_edge(u))
         else:
             msg = self.propagate(edge_index, u=u, embedding=embedding, field=field)
