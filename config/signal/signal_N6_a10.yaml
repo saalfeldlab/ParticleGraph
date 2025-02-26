@@ -55,7 +55,7 @@ plotting:
 training:
     n_epochs: 20
 
-    recursive_loop: 5
+    recursive_loop: 2
     recursive_parameters: [0.1, 0.1]
 
     batch_size: 1
