@@ -77,4 +77,4 @@ training:
     learning_rate_embedding_start: 1.0E-4
     coeff_diff: 100
 
-    learning_rate_NNR: 1.0E-7
+    learning_rate_NNR: 1.0E-6

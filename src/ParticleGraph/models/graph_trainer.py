@@ -2566,7 +2566,6 @@ def data_train_synaptic2(config, erase, best_model, device):
                         y_batch = torch.cat((y_batch, y), dim=0)
                         k_batch = torch.cat((k_batch, torch.ones((x.shape[0],1), dtype=torch.int) * k), dim = 0)
                 batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
-                has_field_batch = torch.ones_like(data_id) * has_field
 
                 for batch in batch_loader:
                     if ('PDE_N3' in model_config.signal_model_name):

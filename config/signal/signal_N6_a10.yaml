@@ -1,5 +1,5 @@
 description: 'synaptic network test learning with modulation     random matrix no recursive loop 1000 neurons 4 types lorentz std 0.03'
-dataset: 'signal_N6_a8'
+dataset: 'signal_N6_a10'
 
 simulation:
     connectivity_file: ''
@@ -81,3 +81,4 @@ training:
     learning_rate_embedding_start: 5.0E-4
     learning_rate_modulation_start: 1.0E-4
 
+    noise_level: 1

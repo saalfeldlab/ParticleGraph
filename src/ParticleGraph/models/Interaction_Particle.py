@@ -77,6 +77,10 @@ class Interaction_Particle(pyg.nn.MessagePassing):
                 torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
                              requires_grad=True, dtype=torch.float32))
 
+        self.a = nn.Parameter(
+                torch.tensor(np.ones(3,1), device=self.device,
+                             requires_grad=True, dtype=torch.float32))
+
         if self.model =='PDE_K':
             self.vals = nn.Parameter(
                 torch.ones((self.n_dataset, int(self.n_particles * (self.n_particles + 1) / 2)), device=self.device,

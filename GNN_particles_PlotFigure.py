@@ -7488,7 +7488,7 @@ if __name__ == '__main__':
     #     config_list,epoch_list = get_figures(f)
 
     # config_list = ['signal_N4_m3_shuffle']
-    config_list = ['signal_N2_e4']
+    config_list = ['signal_N2_d3']
 
     for config_file_ in config_list:
 
