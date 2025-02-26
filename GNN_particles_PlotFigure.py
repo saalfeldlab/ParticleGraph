@@ -5344,7 +5344,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                             modulation_ = modulation[:, frame]
                             pred = model_f(time=frame / n_frames) ** 2
                             plt.scatter(to_numpy(modulation_), to_numpy(pred), s=10, c=mc)
-
                             x_data = to_numpy(modulation_.squeeze())
                             y_data = to_numpy(pred.squeeze())
                             lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
@@ -5479,12 +5478,11 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
             elif 'PDE_N6' in model_config.signal_model_name:
 
-                v = torch.tensor(x_list[0], device=device)
+                modulation = torch.tensor(x_list[0], device=device)
                 modulation = modulation[:, :, 8:9].squeeze()
                 modulation = modulation.t()
                 modulation = modulation.clone().detach()
                 modulation = to_numpy(modulation)
-
 
                 modulation = scipy.ndimage.zoom(modulation, (1024 / modulation.shape[0], 1024 / modulation.shape[1]))
                 pred_list_ = to_numpy(model.b**2)
@@ -5505,6 +5503,18 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/pic_comparison {epoch}.tif", dpi=80)
                 plt.close()
+
+                for frame in trange(0, modulation.shape[1], modulation.shape[1] // 257):
+                    im = modulation[:, frame]
+                    im = np.reshape(im, (32, 32))
+                    plt.figure(figsize=(8, 8))
+                    plt.axis('off')
+                    plt.imshow(im, cmap='gray', vmin=0, vmax=1)
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/field/true_field_{frame}.tif", dpi=80)
+                    plt.close()
+
+
 
             if False:
                 print ('symbolic regression ...')
@@ -7478,7 +7488,7 @@ if __name__ == '__main__':
     #     config_list,epoch_list = get_figures(f)
 
     # config_list = ['signal_N4_m3_shuffle']
-    config_list = ['signal_N2_b2']
+    config_list = ['signal_N2_e4']
 
     for config_file_ in config_list:
 
@@ -7491,8 +7501,8 @@ if __name__ == '__main__':
 
         print(f'config_file  {config.config_file}')
 
-        data_plot(config=config, epoch_list=['best'], style='latex color', device=device)
-        # data_plot(config=config, epoch_list=['all'], style='black color', device=device)
+        # data_plot(config=config, epoch_list=['best'], style='latex color', device=device)
+        data_plot(config=config, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['best'], style='black color', device=device)
 
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)

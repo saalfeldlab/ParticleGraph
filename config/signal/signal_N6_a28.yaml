@@ -53,7 +53,7 @@ plotting:
     ylim: [-8,8]
 
 training:
-    n_epochs: 40
+    n_epochs: 60
 
     recursive_loop: 2
     recursive_parameters: [0.1, 0.1]
@@ -66,7 +66,7 @@ training:
     rotation_augmentation: False
     data_augmentation_loop: 25
 
-    sparsity: 'none'
+    sparsity: 'replace_embedding_function'
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     device: 'auto'

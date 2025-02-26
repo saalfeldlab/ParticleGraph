@@ -2338,7 +2338,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         pos = torch.argwhere(ind_a % 100 != 99).squeeze()
         ind_a = ind_a[pos]
     if 'PDE_N6' in model_config.signal_model_name:
-        modulation = torch.tensor(x_list[1], device=device)
+        modulation = torch.tensor(x_list[0], device=device)
         modulation = modulation[:, :, 8:9].squeeze()
         modulation = modulation.t()
         modulation = modulation.clone().detach()
@@ -2435,7 +2435,10 @@ def data_train_synaptic2(config, erase, best_model, device):
                     dataset = data.Data(x=x, edge_index=model.edges)
                     y = torch.tensor(y_list[run][k], device=device) / ynorm
 
-                    pred = model(dataset, data_id=data_id, has_field=has_field_batch, k=k_batch)
+                    if ('PDE_N3' in model_config.signal_model_name):
+                        pred = model(dataset, k=k_batch)
+                    else:
+                        pred = model(dataset)
                     loss = loss + (pred - y).norm(2)
 
                     in_modulation = torch.cat((x[:, 6:7], x[:, 8:9]), dim=1)
@@ -2500,8 +2503,6 @@ def data_train_synaptic2(config, erase, best_model, device):
 
             else:
 
-                k = np.random.randint(n_frames - 5 - batch_size)
-
                 if has_field:
                     optimizer_f.zero_grad()
                 optimizer.zero_grad()
@@ -2514,7 +2515,7 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                 for batch in range(batch_size):
 
-                    k = k+1
+                    k = np.random.randint(n_frames - 5 - batch_size)
 
                     in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[0:n_particles]), dim=1)
                     func_phi = model.lin_phi(in_features.float())
@@ -3508,10 +3509,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             X_msg = torch.load(f'./graphs_data/{dataset_name}/X_msg.pt', map_location=device)
         else:
             xc, yc = get_equidistant_points(n_points=n_particles)
-            X1 = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
-            perm = torch.randperm(X1.size(0))
-            X1 = X1[perm]
-            torch.save(X1, f'./graphs_data/{dataset_name}/X1.pt')
+            X1_first = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
+            perm = torch.randperm(X1_first.size(0))
+            X1_first = X1_first[perm]
+            torch.save(X1_first, f'./graphs_data/{dataset_name}/X1_first.pt')
             xc, yc = get_equidistant_points(n_points=n_particles**2)
             X_msg = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
             perm = torch.randperm(X_msg.size(0))
@@ -3944,6 +3945,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=170)
                     plt.close()
 
+                    im = imread(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif")
                     plt.figure(figsize=(10, 10))
                     plt.imshow(im)
                     plt.axis('off')
@@ -3955,35 +3957,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     plt.yticks([])
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=80)
-                    plt.close()
-
-                    plt.figure(figsize=(10, 10))
-                    msg = to_numpy(model.msg) / 20
-                    # msg = np.reshape(msg, (n_particles ** 2, 1))
-                    msg = np.reshape(msg, (n_particles, n_particles-1))
-                    plt.imshow(msg, cmap='viridis', vmin=-0.05, vmax=0.05)
-                    plt.axis('off')
-                    # plt.scatter(to_numpy(X_msg[:, 0]), to_numpy(X_msg[:, 1]), s=0.1, c=msg, cmap='viridis', vmin=-0.075,
-                    #             vmax=0.075)
-                    plt.xlim([-50,1050])
-                    plt.ylim([-50,1050])
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_recons/Msg_{config_file}_{num}.tif", dpi=170)
-                    plt.close()
-                    im = imread(f"./{log_dir}/tmp_recons/Msg_{config_file}_{num}.tif")
-                    plt.figure(figsize=(10, 10))
-                    plt.imshow(im)
-                    plt.axis('off')
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.subplot(3, 3, 1)
-                    plt.imshow(im[800:1000, 800:1000, :])
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_recons/Msg_{config_file}_{num}.tif", dpi=80)
                     plt.close()
 
                     if (it%200 == 0) and (it>0):

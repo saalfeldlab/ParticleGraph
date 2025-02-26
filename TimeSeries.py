@@ -247,8 +247,6 @@ if __name__ == '__main__':
         # plt.tight_layout()
         # plt.show()
 
-
-
         # nlayers = 32
         # model = MLP(input_size=1, output_size=1, nlayers=nlayers, hidden_size=512, device=device)
 
@@ -261,29 +259,28 @@ if __name__ == '__main__':
 
         print(f'number of learnable parameters: {count_parameters(model) //100}')
 
-        optimizer = optim.Adam(model.parameters(), lr=1E-4)
+
+
+
+        optimizer = optim.Adam(model.parameters(), lr=1E-5)
         model.train()
 
-        indices = np.arange(0, n_frames+1,100).astype(int)
-        t = torch.linspace(0, n_frames+1,(n_frames+1)//100, dtype=torch.float32, device=device) / 1000
-        t = t[None,:,None]
-
-        y = activity[0][indices]
-        y = y[None,0:1000,None]
+        indices = np.arange(0, n_frames+1).astype(int)
+        t = torch.linspace(0, n_frames+1,(n_frames+1), dtype=torch.float32, device=device) / n_frames
+        t = t[None,0:100000,None]
 
         y_list = list([])
         for k in range(100):
             y = activity[k][indices]
-            y = y[None,0:1000,None]
+            y = y[None,0:100000,None]
             y_list.append(y)
 
-        batch_size = 100
-
+        batch_size = 10
 
         for epoch in trange(100000):
 
             k = np.random.randint(0,10)
-            time = np.random.randint(0,1000,100).astype(int)
+            time = np.random.randint(0,100000,batch_size).astype(int)
 
             optimizer.zero_grad()
             pred = model(t[:,time,:],k)[0]
@@ -291,19 +288,20 @@ if __name__ == '__main__':
             loss.backward()
             optimizer.step()
 
-            if (epoch+1)%2500==0:
+            if (epoch+1)%25000==0:
                 pred = model(t,k)[0]
                 fig = plt.figure()
                 plt.plot(to_numpy(t.squeeze()), to_numpy(y_list[k].squeeze()), linewidth=1)
+
                 plt.plot(to_numpy(t.squeeze()), to_numpy(pred.squeeze()), linewidth=1)
                 plt.tight_layout()
-                plt.savefig(f'./tmp/siren_{epoch+1}.png')
-                plt.close()
 
 
-
-
-
+                fig = plt.figure()
+                plt.plot(to_numpy(t.squeeze()), to_numpy(y_list[k].squeeze()), linewidth=1)
+                pred = model(t[:, time, :], k)[0]
+                plt.scatter(to_numpy(t[:,time,:].squeeze()), to_numpy(pred.squeeze()), c='r', s=10)
+                plt.tight_layout()
 
 
 

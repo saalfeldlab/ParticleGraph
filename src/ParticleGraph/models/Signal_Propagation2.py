@@ -103,7 +103,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         return alpha * self.a[id+1, :] + (1 - alpha) * self.a[id, :]
 
 
-    def forward(self, data=[], return_all=False, k = 0):
+    def forward(self, data=[], return_all=False, data_id=0, k = 0):
         self.return_all = return_all
         x, edge_index = data.x, data.edge_index
 
