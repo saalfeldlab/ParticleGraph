@@ -73,7 +73,7 @@ def data_train(config=None, erase=False, best_model=None, device=None):
     elif has_cell_division:
         data_train_cell(config, erase, best_model, device)
     elif has_state:
-        data_train_cell(config, erase, best_model, device)
+        data_train_particle(config, erase, best_model, device)
     elif 'PDE_GS' in config.graph_model.particle_model_name:
         data_solar_system(config, erase, best_model, device)
     else:
