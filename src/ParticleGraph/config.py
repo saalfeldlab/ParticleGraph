@@ -76,14 +76,15 @@ class SimulationConfig(BaseModel):
     has_cell_division: bool = False
     has_cell_death: bool = False
     has_cell_state: bool = False
-    state_type: Literal['discrete', 'sequence', 'continuous'] = 'discrete'
-    state_params: list[float] =[-1]
     non_discrete_level: float = 0
     cell_active_model_coeff: float = 1
     cell_inert_model_coeff: float = 0
     coeff_area: float = 1
     coeff_perimeter: float = 0
     kill_cell_leaving: bool = False
+
+    state_type: Literal['discrete', 'sequence', 'continuous'] = 'discrete'
+    state_params: list[float] =[-1]
 
 
 class GraphModelConfig(BaseModel):

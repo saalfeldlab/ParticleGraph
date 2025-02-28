@@ -4554,8 +4554,13 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
     config.simulation.n_particles = n_particles
     type_list = torch.tensor(x[:, 1 + 2 * dimension:2 + 2 * dimension], device=device)
 
-    activity = torch.tensor(x_list[0],device=device)
-    activity = activity[:, :, 6:7].squeeze()
+    # activity = torch.tensor(x_list[0],device=device)
+    # activity = activity[:, :, 6:7].squeeze()
+    # distrib = to_numpy(activity.flatten())
+    # activity = activity.t()
+
+    activity = torch.tensor(x_list[0][:, :, 6:7],device=device)
+    activity = activity.squeeze()
     distrib = to_numpy(activity.flatten())
     activity = activity.t()
 
@@ -4674,9 +4679,12 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
                 rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
                 if model_config.signal_model_name == 'PDE_N5':
-                    fig = plt.figure(figsize=(15, 15))
+                    fig, ax = fig_init()
+                    plt.axis('off')
                     for k in range(n_particle_types):
                         ax = fig.add_subplot(2, 2, k + 1)
+                        if k==0:
+                            plt.ylabel(r'learned $MLP_1(x_i, a_i, a_j)$', fontsize=32)
                         for n in range(n_particle_types):
                             for m in range(250):
                                 pos0 = to_numpy(torch.argwhere(type_list == k).squeeze())
@@ -4692,10 +4700,10 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                                 in_features = torch.cat((rr[:, None], embedding0, embedding1), dim=1)
                                 func = model.lin_edge(in_features.float()) * correction
                                 plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(k), linewidth=8, alpha=0.25)
-                        # plt.xlabel(r'x_i', fontsize=68)
-                        # plt.ylabel(r'learned $MLP_1(x_i)$', fontsize=68)
                         plt.ylim([-1.6, 1.6])
                         plt.xlim([-5, 5])
+                        plt.xticks([])
+                        plt.yticks([])
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/results/all/MLP1_{epoch}.tif", dpi=80)
                     plt.close()
@@ -4711,8 +4719,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                             in_features = torch.cat((rr[:, None], embedding0), dim=1)
                             func = model.lin_edge(in_features.float()) * correction
                             plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(k), linewidth=8, alpha=0.25)
-                    plt.xlabel(r'x_i', fontsize=68)
-                    plt.ylabel(r'learned $MLP_1(x_i)$', fontsize=68)
+                    plt.xlabel(r'$x_i$', fontsize=68)
+                    plt.ylabel(r'learned $MLP_1(x_i, a_i)$', fontsize=68)
                     plt.ylim([-1.6, 1.6])
                     plt.xlim([-5,5])
                     plt.tight_layout()
@@ -4838,43 +4846,43 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
     else:
 
-        fig_init(formatx='%.0f', formaty='%.0f')
-        plt.hist(distrib, bins=100, color=mc, alpha=0.5)
-        plt.ylabel('counts', fontsize=64)
-        plt.xlabel('$x_{ij}$', fontsize=64)
-        plt.xticks(fontsize=24)
-        plt.yticks(fontsize=24)
-        plt.tight_layout()
-        plt.savefig(f'./{log_dir}/results/signal_distribution.png', dpi=300)
-        plt.close()
-        print(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
-        logger.info(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
-
-        plt.figure(figsize=(15, 10))
-        ax = sns.heatmap(to_numpy(activity), center=0, cmap='viridis', cbar_kws={'fraction': 0.046})
-        cbar = ax.collections[0].colorbar
-        cbar.ax.tick_params(labelsize=32)
-        ax.invert_yaxis()
-        plt.ylabel('neurons', fontsize=64)
-        plt.xlabel('time', fontsize=64)
-        plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
-        plt.yticks([0, 999], [1, 1000], fontsize=48)
-        plt.xticks(rotation=0)
-        plt.tight_layout()
-        plt.savefig(f'./{log_dir}/results/kinograph.png', dpi=300)
-        plt.close()
-
-        plt.figure(figsize=(15, 10))
-        n = np.random.permutation(n_particles)
-        for i in range(25):
-            plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=2)
-        plt.xlabel('time', fontsize=64)
-        plt.ylabel('$x_{i}$', fontsize=64)
-        plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
-        plt.yticks(fontsize=48)
-        plt.tight_layout()
-        plt.savefig(f'./{log_dir}/results/firing rate.png', dpi=300)
-        plt.close()
+        # fig_init(formatx='%.0f', formaty='%.0f')
+        # plt.hist(distrib, bins=100, color=mc, alpha=0.5)
+        # plt.ylabel('counts', fontsize=64)
+        # plt.xlabel('$x_{ij}$', fontsize=64)
+        # plt.xticks(fontsize=24)
+        # plt.yticks(fontsize=24)
+        # plt.tight_layout()
+        # plt.savefig(f'./{log_dir}/results/signal_distribution.png', dpi=300)
+        # plt.close()
+        # print(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
+        # logger.info(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
+        #
+        # plt.figure(figsize=(15, 10))
+        # ax = sns.heatmap(to_numpy(activity), center=0, cmap='viridis', cbar_kws={'fraction': 0.046})
+        # cbar = ax.collections[0].colorbar
+        # cbar.ax.tick_params(labelsize=32)
+        # ax.invert_yaxis()
+        # plt.ylabel('neurons', fontsize=64)
+        # plt.xlabel('time', fontsize=64)
+        # plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
+        # plt.yticks([0, 999], [1, 1000], fontsize=48)
+        # plt.xticks(rotation=0)
+        # plt.tight_layout()
+        # plt.savefig(f'./{log_dir}/results/kinograph.png', dpi=300)
+        # plt.close()
+        #
+        # plt.figure(figsize=(15, 10))
+        # n = np.random.permutation(n_particles)
+        # for i in range(25):
+        #     plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=2)
+        # plt.xlabel('time', fontsize=64)
+        # plt.ylabel('$x_{i}$', fontsize=64)
+        # plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
+        # plt.yticks(fontsize=48)
+        # plt.tight_layout()
+        # plt.savefig(f'./{log_dir}/results/firing rate.png', dpi=300)
+        # plt.close()
 
         # plt.figure(figsize=(15, 10))
         # window_size = 25
@@ -5432,7 +5440,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
                     im_list = np.array(np.array(im_list))
                     pred_list = np.array(np.array(pred_list))
-                    im_list_resized = np.resize(im_list_, (1024, 1024))
 
                     im_list_ = np.reshape(im_list,(100,1024))
                     pred_list_ = np.reshape(pred_list,(100,1024))
@@ -7476,7 +7483,6 @@ if __name__ == '__main__':
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(' ')
     print(f'device {device}')
-    print(' ')
 
     # try:
     #     matplotlib.use("Qt5Agg")
@@ -7487,8 +7493,8 @@ if __name__ == '__main__':
     # for f in f_list:
     #     config_list,epoch_list = get_figures(f)
 
-    # config_list = ['signal_N4_m3_shuffle']
-    config_list = ['signal_N2_d3']
+    config_list = ['signal_N2_d2', 'signal_N2_d3']
+    # config_list = ['signal_N2_a34', 'signal_N2_a35', 'signal_N2_a36', 'signal_N2_a37', 'signal_N2_a38', 'signal_N2_a39']
 
     for config_file_ in config_list:
 
@@ -7501,7 +7507,7 @@ if __name__ == '__main__':
 
         print(f'config_file  {config.config_file}')
 
-        # data_plot(config=config, epoch_list=['best'], style='latex color', device=device)
+        data_plot(config=config, epoch_list=['best'], style='black color', device=device)
         data_plot(config=config, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['best'], style='black color', device=device)
 

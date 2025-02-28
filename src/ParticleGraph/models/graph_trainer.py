@@ -73,7 +73,7 @@ def data_train(config=None, erase=False, best_model=None, device=None):
     elif has_cell_division:
         data_train_cell(config, erase, best_model, device)
     elif has_state:
-        data_train_particles_with_states(config, erase, best_model, device)
+        data_train_cell(config, erase, best_model, device)
     elif 'PDE_GS' in config.graph_model.particle_model_name:
         data_solar_system(config, erase, best_model, device)
     else:
@@ -220,6 +220,10 @@ def data_train_particle(config, erase, best_model, device):
         mask_ghost = np.tile(mask_ghost, batch_size)
         mask_ghost = np.argwhere(mask_ghost == 1)
         mask_ghost = mask_ghost[:, 0].astype(int)
+    if simulation_config.state_type == 'sequence':
+        ind_a = torch.tensor(np.arange(1, n_particles*100), device=device)
+        pos = torch.argwhere(ind_a % 100 != 99).squeeze()
+        ind_a = ind_a[pos]
 
     print("start training ...")
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
@@ -330,9 +334,11 @@ def data_train_particle(config, erase, best_model, device):
                 if batch == 0:
                     data_id = torch.ones((y.shape[0],1), dtype=torch.int) * run
                     y_batch = y
+                    k_batch = torch.ones((x.shape[0], 1), dtype=torch.int) * k
                 else:
                     data_id = torch.cat((data_id, torch.ones((y.shape[0],1), dtype=torch.int) * run), dim = 0)
                     y_batch = torch.cat((y_batch, y), dim=0)
+                    k_batch = torch.cat((k_batch, torch.ones((x.shape[0], 1), dtype=torch.int) * k), dim=0)
 
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
@@ -340,15 +346,21 @@ def data_train_particle(config, erase, best_model, device):
                 optimizer_ghost_particles.zero_grad()
 
             for batch in batch_loader:
-                pred = model(batch, data_id=data_id, training=True, phi=phi)
+                pred = model(batch, data_id=data_id, training=True, phi=phi, k=k_batch)
 
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
             elif sub_sampling>1:
                 # predict position, does not work with rotation_augmentation
                 loss = (pred[:,0:dimension] - y_batch).norm(2) * 1E7
+            elif simulation_config.state_type == 'sequence':
+                loss = (pred - y_batch).norm(2)
+                loss = loss + train_config.coeff_model_a * (model.a[ind_a + 1] - model.a[ind_a]).norm(2)
             else:
                 loss = (pred - y_batch).norm(2)
+
+            if simulation_config.state_type == 'sequence':
+                loss = loss + train_config.coeff_model_a * (model.a[ind_a + 1] - model.a[ind_a]).norm(2)
 
             if (epoch>0) & (coeff_continuous>0):
                 rr = torch.linspace(0, max_radius, 1000, dtype=torch.float32, device=device)
@@ -778,8 +790,10 @@ def data_train_cell(config, erase, best_model, device):
 
     print('load data ...')
     for run in trange(n_runs):
-        x = torch.load(f'graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device)
-        y = torch.load(f'graphs_data/{dataset_name}/y_list_{run}.pt', map_location=device)
+        x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
+        y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
+        x = torch.tensor(x, dtype=torch.float32, device=device)
+        y = torch.tensor(y, dtype=torch.float32, device=device)
         x_list.append(x)
         y_list.append(y)
         if edge_saved:
@@ -961,27 +975,26 @@ def data_train_cell(config, erase, best_model, device):
 
             total_loss += loss.item()
 
-            visualize_embedding = False
+            visualize_embedding = True
             if ((epoch < 10) & (N % (Niter // 100) == 0)) | (N == 0):
                 if visualize_embedding:
-                    if do_tracking | has_state:
-                        id_list = []
-                        for k in range(n_frames):
-                            ids = x_list[0][k][:, -1]
-                            id_list.append(ids)
-                        plot_training_state(config=config, id_list=id_list, log_dir=log_dir,
-                                            epoch=epoch, N=N, model=model, n_particle_types=n_particle_types,
-                                            type_list=type_list, type_stack=type_stack, ynorm=ynorm, cmap=cmap,
-                                            device=device)
-                    else:
-                        plot_training_cell(config=config, log_dir=log_dir,
-                                           epoch=epoch, N=N, model=model, n_particle_types=n_particle_types,
-                                           type_list=type_list, ynorm=ynorm, cmap=cmap, device=device)
 
-                    print(loss)
+                    # if do_tracking | has_state:
+                    #     id_list = []
+                    #     for k in range(n_frames):
+                    #         ids = x_list[0][k][:, -1]
+                    #         id_list.append(ids)
+                    #     plot_training_state(config=config, id_list=id_list, log_dir=log_dir,
+                    #                         epoch=epoch, N=N, model=model, n_particle_types=n_particle_types,
+                    #                         type_list=type_list, type_stack=type_stack, ynorm=ynorm, cmap=cmap,
+                    #                         device=device)
+                    # else:
+                    #     plot_training_cell(config=config, log_dir=log_dir,
+                    #                        epoch=epoch, N=N, model=model, n_particle_types=n_particle_types,
+                    #                        type_list=type_list, ynorm=ynorm, cmap=cmap, device=device)
 
                     fig, ax = fig_init(fontsize=24)
-                    plt.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), s=2, color='k',alpha=0.5, edgecolor='none')
+                    plt.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), s=0.1, color='g',alpha=0.1, edgecolor='none')
                     plt.xlabel(r'$a_{i0}$', fontsize=48)
                     plt.ylabel(r'$a_{i1}$', fontsize=48)
                     plt.tight_layout()
@@ -990,9 +1003,10 @@ def data_train_cell(config, erase, best_model, device):
 
                     fig, ax = fig_init(fontsize=24)
                     g = to_numpy(model.a.grad)
-                    plt.scatter(g[:, 0], g[:, 1], s=2, c='k')
+                    plt.scatter(g[:, 0], g[:, 1], s=0.1, c='g')
                     plt.savefig(f"./{log_dir}/tmp_training/embedding/grad_{epoch}_{N}.tif", dpi=87)
                     plt.close()
+
                 torch.save({'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict()},
                            os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
@@ -1666,7 +1680,6 @@ def data_train_particle_field(config, erase, best_model, device):
     n_frames = simulation_config.n_frames
     has_siren = 'siren' in model_config.field_type
     has_siren_time = 'siren_with_time' in model_config.field_type
-    has_cell_division = simulation_config.has_cell_division
     rotation_augmentation = train_config.rotation_augmentation
     data_augmentation_loop = train_config.data_augmentation_loop
     target_batch_size = train_config.batch_size
@@ -2388,14 +2401,13 @@ def data_train_synaptic2(config, erase, best_model, device):
 
             if (recursive_loop>1) & ('PDE_N6' in model_config.signal_model_name) & (has_field==False):
 
-                # k = np.random.randint(n_frames - 5 - batch_size - recursive_loop)
+                k = np.random.randint(n_frames - 5 - batch_size - recursive_loop)
 
-                if (draw_sample == 0) & (k==0):
-                    k = np.random.randint(n_frames - 5 - batch_size - recursive_loop*time_step)
-                    prev_k = k
+                # if (draw_sample == 0) & (k==0):
+                #     k = np.random.randint(n_frames - 5 - batch_size - recursive_loop*time_step)
+                #     prev_k = k
 
                 data_id = torch.ones((n_particles, 1), dtype=torch.int) * run
-                has_field_batch = torch.ones((n_particles, 1), dtype=torch.int) * has_field
 
                 x = torch.tensor(x_list[run][k], device=device).clone().detach()
 
@@ -2425,8 +2437,6 @@ def data_train_synaptic2(config, erase, best_model, device):
                     diff = torch.relu(model.lin_edge(x[:, 6:7].clone().detach()) - model.lin_edge(x[:, 6:7].clone().detach() + 0.1)).norm(2)
                     loss = loss + model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + coeff_diff * diff
 
-                    k_batch = torch.ones((n_particles, 1), dtype=torch.int) * k
-
                     if (loop == 0) and ('learnable' in model.short_term_plasticity):
 
                         alpha = (k % model.embedding_step) / model.embedding_step
@@ -2436,6 +2446,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                     y = torch.tensor(y_list[run][k], device=device) / ynorm
 
                     if ('PDE_N3' in model_config.signal_model_name):
+                        k_batch = torch.ones((n_particles, 1), dtype=torch.int) * k
                         pred = model(dataset, k=k_batch)
                     else:
                         pred = model(dataset)
@@ -2483,23 +2494,23 @@ def data_train_synaptic2(config, erase, best_model, device):
                 # plt.xlabel('True modulation', fontsize=12)
                 # plt.ylabel('Predicted modulation', fontsize=12)
 
-                if draw_sample == 0: # first loop
-                    prev_loss = loss.clone().detach()
-                    draw_sample += 1
-                    k = prev_k
-                elif loss < prev_loss * 0.95:
-                    if draw_sample == 1: # loss decreased in first loop
-                        recursive_parameters[0] = min(recursive_parameters[0] / 0.9975, 1)
-                    draw_sample = 0
-                    k = 0
-                else:
-                    draw_sample += 1
-                    if draw_sample > 5: # loss dose not decrease for 5 loops
-                        recursive_parameters[0] = max(recursive_parameters[0] * 0.98, train_config.recursive_parameters[0])
-                        draw_sample = 0
-                        k = 0
-                    else:
-                        k = prev_k
+                # if draw_sample == 0: # first loop
+                #     prev_loss = loss.clone().detach()
+                #     draw_sample += 1
+                #     k = prev_k
+                # elif loss < prev_loss * 0.95:
+                #     if draw_sample == 1: # loss decreased in first loop
+                #         recursive_parameters[0] = min(recursive_parameters[0] / 0.9975, 1)
+                #     draw_sample = 0
+                #     k = 0
+                # else:
+                #     draw_sample += 1
+                #     if draw_sample > 5: # loss dose not decrease for 5 loops
+                #         recursive_parameters[0] = max(recursive_parameters[0] * 0.98, train_config.recursive_parameters[0])
+                #         draw_sample = 0
+                #         k = 0
+                #     else:
+                #         k = prev_k
 
             else:
 
@@ -2669,7 +2680,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                 recursive_loop += 1
                 logger.info(f'increasing recursive_loop to {recursive_loop}')
                 recursive_parameters = config.training.recursive_parameters.copy()
-            if recursive_parameters[0] < 1.1 * config.training.recursive_parameters[0]:
+            elif recursive_parameters[0] < 1.1 * config.training.recursive_parameters[0]:
                 recursive_loop = max (recursive_loop-1, config.training.recursive_loop)
                 logger.info(f'decreasing recursive_loop to {recursive_loop}')
                 recursive_parameters = config.training.recursive_parameters.copy()
@@ -3408,7 +3419,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 type_list = type
             else:
                 type_list = torch.concatenate((type_list, type))
-        n_particles_max = len(type_list)
+        n_particles_max = len(type_list) + 1
         config.simulation.n_particles_max = n_particles_max
 
     if ratio > 1:
@@ -3751,7 +3762,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     pred = y
                 else:
                     with torch.no_grad():
-                        pred = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device))
+                        pred = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device), k=it)
                         y = pred
 
                 if has_ghost:
@@ -4040,7 +4051,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                         plt.ylim([0,700])
                     plt.tight_layout()
                 else:
-                    s_p = 25
+                    s_p = 10
                     index_particles = get_index_particles(x, n_particle_types, dimension)
                     for n in range(n_particle_types):
                         if 'bw' in style:
@@ -4169,7 +4180,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     plt.ylim([-3, 3])
                     plt.xticks(fontsize=24)
                     plt.yticks(fontsize=24)
-
 
                 # save figure
                 if not ('PDE_N' in model_config.signal_model_name):

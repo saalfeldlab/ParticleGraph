@@ -54,12 +54,14 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         self.n_particles = simulation_config.n_particles
         self.embedding_dim = model_config.embedding_dim
 
+        self.n_frames = simulation_config.n_frames
         self.prediction = model_config.prediction
         self.bc_dpos = bc_dpos
         self.max_radius = simulation_config.max_radius
         self.rotation_augmentation = train_config.rotation_augmentation
         self.time_window = train_config.time_window
         self.sub_sampling = simulation_config.sub_sampling
+        self.state = simulation_config.state_type
 
         self.sigma = simulation_config.sigma
         self.n_ghosts = int(train_config.n_ghosts)
@@ -72,22 +74,26 @@ class Interaction_Particle(pyg.nn.MessagePassing):
                                nlayers=self.n_layers_update,
                                hidden_size=self.hidden_dim_update, device=self.device)
 
-
-        self.a = nn.Parameter(
-                torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
-                             requires_grad=True, dtype=torch.float32))
-
-        self.a = nn.Parameter(
-                torch.tensor(np.ones(3,1), device=self.device,
-                             requires_grad=True, dtype=torch.float32))
+        if self.state == 'sequence':
+            self.a = nn.Parameter(torch.ones((int(self.n_particles*100 + 100), self.embedding_dim), device=self.device, requires_grad=True,dtype=torch.float32))
+            self.embedding_step =  self.n_frames // 100
+        else:
+            self.a = nn.Parameter(
+                    torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
+                                 requires_grad=True, dtype=torch.float32))
 
         if self.model =='PDE_K':
             self.vals = nn.Parameter(
                 torch.ones((self.n_dataset, int(self.n_particles * (self.n_particles + 1) / 2)), device=self.device,
                             requires_grad=True, dtype=torch.float32))
 
+    def get_interp_a(self, k, particle_id, data_id):
+        id = particle_id * 100 + k // self.embedding_step
+        alpha = (k % self.embedding_step) / self.embedding_step
+        return alpha * self.a[data_id.clone().detach(), id+1, :] + (1 - alpha) * self.a[clone().detach(), id, :]
 
-    def forward(self, data=[], data_id=[], training=[], phi=[], has_field=False, frame=[]):
+
+    def forward(self, data=[], data_id=[], training=[], phi=[], has_field=False, k=[]):
 
         self.data_id = data_id
         self.cos_phi = torch.cos(phi)
@@ -104,8 +110,12 @@ class Interaction_Particle(pyg.nn.MessagePassing):
 
         pos = x[:, 1:self.dimension+1]
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
-        particle_id = x[:, 0:1].long()
-        embedding = self.a[self.data_id.clone().detach(), particle_id, :].squeeze()
+        if self.state == 'sequence':
+            particle_id = x[:, 0:1].long()
+            embedding = self.get_interp_a(k, particle_id, self.data_id)
+        else:
+            particle_id = x[:, 0:1].long()
+            embedding = self.a[self.data_id.clone().detach(), particle_id, :].squeeze()
 
         out = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
 

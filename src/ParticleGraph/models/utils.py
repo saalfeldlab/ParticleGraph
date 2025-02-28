@@ -354,13 +354,11 @@ def plot_training (config,  log_dir, epoch, N, x, index_particles, n_particles, 
         plt.savefig(f"./{log_dir}/tmp_training/field/mesh_map_{epoch}_{N}.tif",
                     dpi=87)
         plt.close()
-    elif model_config.mesh_model_name == 'RD_RPS_Mesh':
-        fig = plt.figure(figsize=(8, 8))
-        plt.savefig(f"./{log_dir}/tmp_training/field/mesh_map_{epoch}_{N}.tif",
-                    dpi=87)
     else:
         fig = plt.figure(figsize=(8, 8))
         if do_tracking:
+            embedding = to_numpy(model.a)
+        elif simulation_config.state_type == 'sequence':
             embedding = to_numpy(model.a)
         else:
             embedding = get_embedding(model.a, 1)

@@ -58,10 +58,11 @@ if __name__ == '__main__':
         task = 'train'
         best_model = None
         # config_list = ['falling_water_ramp_x6_11']
-        config_list =['signal_N2_a22']
+        # config_list =['signal_N2_a2', 'signal_N2_a3', 'signal_N2_a4', 'signal_N2_a5', 'signal_N2_a10']
+        # config_list = ['arbitrary_3_sequence_a']
         # config_list =['wave_smooth_3']
-        # config_list = ['arbitrary_3_bis']
-        # config_list = ['signal_N2_d1','signal_N2_d2','signal_N2_d3']
+        config_list = ['arbitrary_3_sequence_a']
+        # config_list = ['signal_N2_d2', 'signal_N2_d3']
         # config_list = ['rat_city_f']
 
     for config_file_ in config_list:
@@ -77,12 +78,12 @@ if __name__ == '__main__':
         print(f'folder  {config.dataset}')
 
         if 'generate' in task:
-            data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=False, bSave=True, step=1000)  #config.simulation.n_frames // 100)
+            data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=False, bSave=True, step=10)  #config.simulation.n_frames // 100)
         if 'train' in task:
             data_train(config=config, erase=False, best_model=best_model, device=device)
         if 'test' in task:
             data_test(config=config, visualize=True, style='black color', verbose=False, best_model='best', run=0, test_mode='',
-                      sample_embedding=False, step=100, particle_of_interest=100, device=device)
+                      sample_embedding=False, step=10, device=device) # particle_of_interest=100,
         if 'try_func' in task:
             try_func(max_radius=config.simulation.max_radius, device=device)
 

@@ -84,11 +84,12 @@ class Interaction_Cell(pyg.nn.MessagePassing):
         pos = x[:, 1:self.dimension+1]
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
         features = x[:, 10:-1]
+        particle_id = x[:, -1].long()
 
         if self.do_tracking | self.has_state:
-            embedding = self.a[to_numpy(x[:, -1][:, None]), :].squeeze()
+            embedding = self.a[particle_id, :].squeeze()
         else:
-            embedding = self.a[self.data_id, to_numpy(x[:, 0:1]), :].squeeze()
+            embedding = self.a[self.data_id, particle_id, :].squeeze()
 
         pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding, field=field, features=features)
 
@@ -122,6 +123,8 @@ class Interaction_Cell(pyg.nn.MessagePassing):
             dpos_y_j = new_dpos_y_j
 
         match self.model:
+            case 'PDE_Cell_A':
+                in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
             case 'PDE_Cell':
                 in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
             case 'PDE_Cell_area':

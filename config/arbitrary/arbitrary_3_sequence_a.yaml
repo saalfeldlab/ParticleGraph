@@ -1,11 +1,10 @@
 description: 'attraction-repulsion with 3 types particles and cell sequence state but no division n_particles_max: 600   1000 frames'
-dataset: 'arbitrary_3_cell_sequence_c_bis'
+dataset: 'arbitrary_3_sequence_d'
 
 simulation:
   params: [[1.6233, 1.0413, 1.6012, 1.5615], [1.7667, 1.8308, 1.0855, 1.9055], [1.7226, 1.7850, 1.0584, 1.8579]]
-  cell_cycle_length: [ 129, 250, 248]
-  cell_death_rate: [ 0,0,0 ]
-  final_cell_mass: [ 100, 300, 400]
+  func_params: [['arbitrary', 0, 0], ['arbitrary', 1, 1], ['arbitrary', 2, 2]]
+
   min_radius: 0
   max_radius: 0.075
   n_particles: 4800
@@ -16,16 +15,15 @@ simulation:
   delta_t: 0.1
   dpos_init: 0
   boundary: 'periodic'
-  has_cell_division: True
-  has_cell_death: False
-  has_cell_state: True
+
   state_type: 'sequence'
   state_params: [ 250 ]
+
   cell_inert_model_coeff: 0.0
   cell_active_model_coeff: 1.0
 
 graph_model:
-  particle_model_name: 'PDE_Cell_A'
+  particle_model_name: 'PDE_A'
   mesh_model_name: ''
   prediction: 'first_derivative'
   input_size: 5
@@ -56,6 +54,8 @@ training:
   fix_cluster_embedding: True
   device: 'auto'
   sequence: ['none']
+
+  coeff_model_a: 5.0
 
 
 
