@@ -100,7 +100,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         id = particle_id * 100 + k // self.embedding_step
         alpha = (k % self.embedding_step) / self.embedding_step
 
-        return alpha * self.a[id+1, :] + (1 - alpha) * self.a[id, :]
+        return alpha * self.a[id.squeeze()+1, :] + (1 - alpha) * self.a[id.squeeze(), :]
 
 
     def forward(self, data=[], return_all=False, data_id=0, k = 0):

@@ -55,7 +55,7 @@ training:
   device: 'auto'
   sequence: ['none']
 
-  coeff_model_a: 5.0
+  coeff_model_a: 1
 
 
 

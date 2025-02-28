@@ -62,7 +62,7 @@ if __name__ == '__main__':
         # config_list = ['arbitrary_3_sequence_a']
         # config_list =['wave_smooth_3']
         config_list = ['arbitrary_3_sequence_a']
-        # config_list = ['signal_N2_d2', 'signal_N2_d3']
+        # config_list = ['signal_N3_c16']
         # config_list = ['rat_city_f']
 
     for config_file_ in config_list:

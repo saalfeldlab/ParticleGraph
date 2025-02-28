@@ -334,11 +334,11 @@ def data_train_particle(config, erase, best_model, device):
                 if batch == 0:
                     data_id = torch.ones((y.shape[0],1), dtype=torch.int) * run
                     y_batch = y
-                    k_batch = torch.ones((x.shape[0], 1), dtype=torch.int) * k
+                    k_batch = torch.ones((x.shape[0], 1), dtype=torch.int, device = device) * k
                 else:
                     data_id = torch.cat((data_id, torch.ones((y.shape[0],1), dtype=torch.int) * run), dim = 0)
                     y_batch = torch.cat((y_batch, y), dim=0)
-                    k_batch = torch.cat((k_batch, torch.ones((x.shape[0], 1), dtype=torch.int) * k), dim=0)
+                    k_batch = torch.cat((k_batch, torch.ones((x.shape[0], 1), dtype=torch.int, device = device) * k), dim=0)
 
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
@@ -355,12 +355,9 @@ def data_train_particle(config, erase, best_model, device):
                 loss = (pred[:,0:dimension] - y_batch).norm(2) * 1E7
             elif simulation_config.state_type == 'sequence':
                 loss = (pred - y_batch).norm(2)
-                loss = loss + train_config.coeff_model_a * (model.a[ind_a + 1] - model.a[ind_a]).norm(2)
+                loss = loss + train_config.coeff_model_a * (model.a[run, ind_a + 1] - model.a[run, ind_a]).norm(2)
             else:
                 loss = (pred - y_batch).norm(2)
-
-            if simulation_config.state_type == 'sequence':
-                loss = loss + train_config.coeff_model_a * (model.a[ind_a + 1] - model.a[ind_a]).norm(2)
 
             if (epoch>0) & (coeff_continuous>0):
                 rr = torch.linspace(0, max_radius, 1000, dtype=torch.float32, device=device)
@@ -2571,11 +2568,11 @@ def data_train_synaptic2(config, erase, best_model, device):
                     if batch == 0:
                         data_id = torch.ones((x.shape[0], 1), dtype=torch.int) * run
                         y_batch = y
-                        k_batch = torch.ones((x.shape[0],1), dtype=torch.int) * k
+                        k_batch = torch.ones((x.shape[0],1), dtype=torch.int, device = device) * k
                     else:
                         data_id = torch.cat((data_id, torch.ones((x.shape[0], 1), dtype=torch.int) * run), dim=0)
                         y_batch = torch.cat((y_batch, y), dim=0)
-                        k_batch = torch.cat((k_batch, torch.ones((x.shape[0],1), dtype=torch.int) * k), dim = 0)
+                        k_batch = torch.cat((k_batch, torch.ones((x.shape[0],1), dtype=torch.int, device = device) * k), dim = 0)
                 batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
 
                 for batch in batch_loader:

@@ -75,7 +75,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
                                hidden_size=self.hidden_dim_update, device=self.device)
 
         if self.state == 'sequence':
-            self.a = nn.Parameter(torch.ones((int(self.n_particles*100 + 100), self.embedding_dim), device=self.device, requires_grad=True,dtype=torch.float32))
+            self.a = nn.Parameter(torch.ones((self.n_dataset, int(self.n_particles*100 + 100 ), self.embedding_dim), device=self.device, requires_grad=True,dtype=torch.float32))
             self.embedding_step =  self.n_frames // 100
         else:
             self.a = nn.Parameter(
@@ -90,7 +90,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
     def get_interp_a(self, k, particle_id, data_id):
         id = particle_id * 100 + k // self.embedding_step
         alpha = (k % self.embedding_step) / self.embedding_step
-        return alpha * self.a[data_id.clone().detach(), id+1, :] + (1 - alpha) * self.a[clone().detach(), id, :]
+        return alpha * self.a[data_id.clone().detach(), id+1, :].squeeze() + (1 - alpha) * self.a[data_id.clone().detach(), id, :].squeeze()
 
 
     def forward(self, data=[], data_id=[], training=[], phi=[], has_field=False, k=[]):

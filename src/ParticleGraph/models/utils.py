@@ -96,7 +96,7 @@ def plot_training_signal(config, model, adjacency, ynorm, log_dir, epoch, N, n_p
     if 'PDE_N3' in config.graph_model.signal_model_name:
 
         fig, ax = fig_init()
-        plt.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), s=1, color='k', alpha=0.1, edgecolor='none')
+        plt.scatter(to_numpy(model.a[:-200, 0]), to_numpy(model.a[:-200, 1]), s=1, color='k', alpha=0.1, edgecolor='none')
 
     else:
         fig = plt.figure(figsize=(8, 8))
@@ -358,12 +358,15 @@ def plot_training (config,  log_dir, epoch, N, x, index_particles, n_particles, 
         fig = plt.figure(figsize=(8, 8))
         if do_tracking:
             embedding = to_numpy(model.a)
+            for n in range(n_particle_types):
+                plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n), s=20)
         elif simulation_config.state_type == 'sequence':
-            embedding = to_numpy(model.a)
+            embedding = to_numpy(model.a[1].squeeze())
+            plt.scatter(embedding[:-200, 0], embedding[:-200, 1], color='k', s=0.1)
         else:
             embedding = get_embedding(model.a, 1)
-        for n in range(n_particle_types):
-            plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n), s=20)
+            for n in range(n_particle_types):
+                plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n), s=20)
         plt.xticks([])
         plt.yticks([])
         plt.tight_layout()
