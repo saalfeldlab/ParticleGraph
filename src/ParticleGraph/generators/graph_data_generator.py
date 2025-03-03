@@ -46,7 +46,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
 
     if (os.path.isfile(f'./graphs_data/{dataset_name}/x_list_0.npy')) | (os.path.isfile(f'./graphs_data/{dataset_name}/x_list_0.pt')):
         print('watch out: data already generated')
-        # return
+        return
 
     if has_mouse_city:
         data_generate_rat_city(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
@@ -1659,7 +1659,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
     model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, device=device)
 
-    first_T1 = None
 
     for run in range(config.training.n_runs):
 
@@ -1676,7 +1675,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         U1[:, 1] = 0
 
         if simulation_config.shuffle_particle_types:
-            if first_T1 != None:
+            if run == 0:
                 T1 = first_T1.clone().detach()
             else:
                 index = torch.randperm(n_particles)
@@ -1684,10 +1683,8 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                 first_T1 = T1.clone().detach()
 
         if run == run_vizualized:
-
             if 'black' in style:
                 plt.style.use('dark_background')
-
             plt.figure(figsize=(10, 10))
             for n in range(n_particle_types):
                 pos = torch.argwhere(T1.squeeze() == n)
@@ -1861,7 +1858,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                         plt.axis('off')
                         plt.subplot(121)
                         plt.title('activity $x_i$', fontsize=24)
-                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=50, c=to_numpy(x[:, 6]),
+                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=200, c=to_numpy(x[:, 6]),
                                     cmap='viridis', vmin=-5, vmax=5, edgecolors='k', alpha=1)
                         cbar = plt.colorbar()
                         cbar.ax.yaxis.set_tick_params(labelsize=12)
@@ -1869,8 +1866,8 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                         plt.yticks([])
                         plt.subplot(122)
                         plt.title('short term plasticity $y_i$', fontsize=24)
-                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=50, c=to_numpy(x[:, 8]),
-                                    cmap='grey', vmin=0, vmax=0.5, edgecolors='k', alpha=1)
+                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=200, c=to_numpy(x[:, 8]),
+                                    cmap='grey', vmin=0, vmax=1, edgecolors='k', alpha=1)
                         cbar = plt.colorbar()
                         cbar.ax.yaxis.set_tick_params(labelsize=12)
                         plt.xticks([])

@@ -1,19 +1,19 @@
 description: 'synaptic network random matrix cluster embedding distance 0.2 1000 neurons 4 types phi neuron dependent lorentz std 0.03'
-dataset: 'signal_N4_Lorentz_k1'
+dataset: 'signal_N4_Lorentz_k7'
 
 simulation:
     connectivity_file: 'random'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
     connectivity_distribution: 'Lorentz'
-    params: [[10.0,1.0,1.0,1.0],[10.0,2.0,1.0,2.0],[10.0,1.0,2.0,4.0],[10.0,2.0,2.0,8.0]]
+    params: [[10.0,0.0,1.0,1.0],[10.0,0.0,1.0,2.0],[10.0,0.0,2.0,4.0],[10.0,0.0,2.0,8.0]]
     phi: 'tanh'
     tau: 1.0
     min_radius: 1.0
     max_radius: 1.0E6
-    n_particles: 1000
+    n_particles: 324
     n_particle_types: 4
-    n_frames: 100000
+    n_frames: 20000
     delta_t: 0.01
     dpos_init:  0
     boundary: 'no'
@@ -35,7 +35,6 @@ graph_model:
     embedding_dim: 2
     update_type: 'none'
 
-
 plotting:
     colormap: 'tab10'
     arrow_length: 1
@@ -50,13 +49,15 @@ training:
     n_runs: 2
     sparsity: 'none'
     rotation_augmentation: False
-    data_augmentation_loop: 100
+    data_augmentation_loop: 200
     cluster_method: 'distance_embedding'
     cluster_distance_threshold: 0.2
     fix_cluster_embedding: True
     device: 'auto'
     sparsity: 'replace_embedding_function'
     sparsity_freq: 4
-    learning_rate_start: 1.0E-4
-    learning_rate_embedding_start: 1.0E-4
     coeff_diff: 100
+
+    learning_rate_W_start: 1.0E-4
+    learning_rate_start: 5.0E-5
+    learning_rate_embedding_start: 5.0E-4
