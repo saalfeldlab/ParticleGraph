@@ -3939,10 +3939,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
                     y = model(dataset, data_id=1, return_all=True)
 
-                    plt.style.use('dark_background')
                     matplotlib.rcParams['savefig.pad_inches'] = 0
 
                     plt.figure(figsize=(10, 10))
+
                     plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=200, c=to_numpy(x[:, 6]),
                                 cmap='viridis', vmin=-10, vmax=10, edgecolors='k', alpha=1)
                     plt.axis('off')
@@ -3976,21 +3976,24 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                         neuron_pred_list_ = torch.reshape(neuron_pred_list_, (neuron_pred_list_.shape[0]//n_particles, n_particles))
 
                         plt.figure(figsize=(20, 10))
+                        if 'latex' in style:
+                            plt.rcParams['text.usetex'] = True
+                            rc('font', **{'family': 'serif', 'serif': ['Palatino']})
                         ax = plt.subplot(121)
-                        plt.plot(neuron_gt_list_[:, n[0]].detach().cpu().numpy(), c='w', linewidth=8, label='true',
+                        plt.plot(neuron_gt_list_[:, n[0]].detach().cpu().numpy(), c='k', linewidth=8, label='true',
                                  alpha=0.25)
-                        plt.plot(neuron_pred_list_[:, n[0]].detach().cpu().numpy(), linewidth=4, c='w',
+                        plt.plot(neuron_pred_list_[:, n[0]].detach().cpu().numpy(), linewidth=4, c='k',
                                  label='learned')
                         plt.legend(fontsize=24)
-                        plt.plot(neuron_gt_list_[:, n[1:10]].detach().cpu().numpy(), c='w', linewidth=8, alpha=0.25)
+                        plt.plot(neuron_gt_list_[:, n[1:10]].detach().cpu().numpy(), c='k', linewidth=8, alpha=0.25)
                         plt.plot(neuron_pred_list_[:, n[1:10]].detach().cpu().numpy(), linewidth=4)
                         plt.xlim([0, 750])
-                        plt.xlabel('time index', fontsize=48)
+                        plt.xlabel(r'time-points', fontsize=48)
                         plt.ylabel(r'$x_i$', fontsize=48)
                         plt.xticks(fontsize=24)
                         plt.yticks(fontsize=24)
                         plt.ylim([-30, 30])
-                        plt.text(40, 26, f'time: {it}', fontsize=34)
+                        # plt.text(40, 26, f'time: {it}', fontsize=34)
                         ax = plt.subplot(122)
                         plt.scatter(to_numpy(neuron_gt_list_[-1, :]), to_numpy(neuron_pred_list_[-1, :]), s=10, c=mc)
                         plt.xlim([-30, 30])

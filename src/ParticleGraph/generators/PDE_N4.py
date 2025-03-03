@@ -7,51 +7,6 @@ from tifffile import imread
 import torch
 from ParticleGraph.utils import *
 
-def constructRandomMatrices(n_neurons=1000, density=1.0, connectivity_mask=[], device=[]):
-    """
-    n_neurons = Number
-    density = density of connections
-    """
-    if connectivity_mask=='./graphs_data/':
-        K = n_neurons * density
-        W = np.multiply(np.random.normal(loc=0, scale=1, size=(n_neurons, n_neurons)),
-                        np.random.rand(n_neurons, n_neurons) < density)
-        W = W / np.sqrt(K)
-    elif 'conn' in connectivity_mask:
-        W = imread(connectivity_mask)
-        n_neurons = W.shape[0]
-        polarity = (np.random.rand(W.shape[0],W.shape[1])>0.5)*2-1
-        W = W  / np.max(W)
-        W = W * polarity
-
-        weights = W.flatten()
-        pos = np.argwhere(weights != 0)
-        weights = weights[pos]
-        # plt.figure(figsize=(10, 10))
-        # plt.hist(weights, bins=1000, color='k', alpha=0.5)
-        # plt.ylabel(r'counts', fontsize=64)
-        # plt.xlabel(r'$W$', fontsize=64)
-        # plt.yticks(fontsize=24)
-        # plt.xticks(fontsize=24)
-        # plt.xlim([0, 100])
-        # plt.tight_layout()
-
-
-    else:
-        mask = (imread(connectivity_mask)>0.1)*1.0
-        plt.imshow(mask,vmin=0,vmax=1)
-        density = np.sum(mask) / (n_neurons**2)
-        K = n_neurons * density
-        W = np.multiply(np.random.normal(loc=0, scale=1, size=(n_neurons, n_neurons)),mask)
-        W = W / np.sqrt(K)
-
-    np.fill_diagonal(W, 0)
-
-    W = torch.tensor(W, dtype=torch.float32, device=device)
-
-    return W
-
-
 
 class PDE_N4(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:

@@ -42,12 +42,13 @@ def choose_model(config=[], W=[], device=[]):
     max_radius = config.simulation.max_radius
 
     params = config.simulation.params
+    p = torch.tensor(params, dtype=torch.float32, device=device).squeeze()
 
     # create GNN depending in type specified in config file
     match particle_model_name:
         case 'PDE_A' | 'PDE_ParticleField_A' | 'PDE_Cell_A' :
-            p = torch.ones(n_particle_types, 4, device=device) + torch.rand(n_particle_types, 4, device=device)
             if config.simulation.non_discrete_level>0:
+                p = torch.ones(n_particle_types, 4, device=device) + torch.rand(n_particle_types, 4, device=device)
                 pp=[]
                 n_particle_types = len(params)
                 for n in range(n_particle_types):
@@ -59,71 +60,37 @@ def choose_model(config=[], W=[], device=[]):
                         pp=torch.cat((pp,p[n].repeat(n_particles//n_particle_types,1)),0)
                 p=pp.clone().detach()
                 p=p+torch.randn(n_particles,4,device=device) * config.simulation.non_discrete_level
-            elif params[0] != [-1]:
-                for n in range(n_particle_types):
-                    p[n] = torch.tensor(params[n])
-            else:
-                print(p)
             sigma = config.simulation.sigma
             p = p if n_particle_types == 1 else torch.squeeze(p)
             func_p = config.simulation.func_params
             embedding_step = config.simulation.n_frames // 100
-            model = PDE_A(aggr_type=aggr_type, p=torch.squeeze(p), func_p = func_p, sigma=sigma, bc_dpos=bc_dpos, dimension=dimension, embedding_step=embedding_step)
-        case 'PDE_B' | 'PDE_ParticleField_B' | 'PDE_Cell_B' | 'PDE_Cell_B_area':
-            p = torch.rand(n_particle_types, 3, device=device) * 100  # comprised between 10 and 50
-            if params[0] != [-1]:
-                for n in range(n_particle_types):
-                    p[n] = torch.tensor(params[n])
-            else:
-                print(p)
-            model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos, dimension=dimension)
+            model = PDE_A(aggr_type=aggr_type, p=p, func_p = func_p, sigma=sigma, bc_dpos=bc_dpos, dimension=dimension, embedding_step=embedding_step)
+        case 'PDE_B' | 'PDE_ParticleField_B' | 'PDE_Cell_B' | 'PDE_Cell_B_area':  # comprised between 10 and 50
+            model = PDE_B(aggr_type=aggr_type, p=p, bc_dpos=bc_dpos, dimension=dimension)
         case 'PDE_B_mass':
-            p = torch.rand(n_particle_types, 3, device=device) * 100  # comprised between 10 and 50
-            if params[0] != [-1]:
-                for n in range(n_particle_types):
-                    p[n] = torch.tensor(params[n])
-            else:
-                print(p)
             final_cell_mass = torch.tensor(config.simulation.final_cell_mass, device=device)
-            model = PDE_B_mass(aggr_type=aggr_type, p=torch.squeeze(p), final_mass = final_cell_mass, bc_dpos=bc_dpos)
+            model = PDE_B_mass(aggr_type=aggr_type, p=p, final_mass = final_cell_mass, bc_dpos=bc_dpos)
         case 'PDE_B_bis':
-            p = torch.rand(n_particle_types, 3, device=device) * 100  # comprised between 10 and 50
-            if params[0] != [-1]:
-                for n in range(n_particle_types):
-                    p[n] = torch.tensor(params[n])
-            else:
-                print(p)
-            model = PDE_B_bis(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
+            model = PDE_B_bis(aggr_type=aggr_type, p=p, bc_dpos=bc_dpos)
         case 'PDE_G':
             if params[0] == [-1]:
                 p = np.linspace(0.5, 5, n_particle_types)
                 p = torch.tensor(p, device=device)
-            if len(params) > 1:
-                for n in range(n_particle_types):
-                    p[n] = torch.tensor(params[n])
-            model = PDE_G(aggr_type=aggr_type, p=torch.squeeze(p), clamp=config.training.clamp,
+            model = PDE_G(aggr_type=aggr_type, p=p, clamp=config.training.clamp,
                           pred_limit=config.training.pred_limit, bc_dpos=bc_dpos)
         case 'PDE_GS':
             if params[0] == [-1]:
                 p = np.linspace(0.5, 5, n_particle_types)
                 p = torch.tensor(p, device=device)
-            if len(params) > 1:
-                for n in range(n_particle_types):
-                    p[n] = torch.tensor(params[n])
-            model = PDE_GS(aggr_type=aggr_type, p=torch.squeeze(p), clamp=config.training.clamp,
+            model = PDE_GS(aggr_type=aggr_type, p=p, clamp=config.training.clamp,
                           pred_limit=config.training.pred_limit, bc_dpos=bc_dpos)
         case 'PDE_E':
-            p = initialize_random_values(n_particle_types, device)
-            if len(params) > 0:
-                for n in range(n_particle_types):
-                    p[n] = torch.tensor(params[n])
-            model = PDE_E(aggr_type=aggr_type, p=torch.squeeze(p),
+            model = PDE_E(aggr_type=aggr_type, p=p,
                           clamp=config.training.clamp, pred_limit=config.training.pred_limit,
                           prediction=config.graph_model.prediction, bc_dpos=bc_dpos)
         case 'PDE_F':
             model = PDE_F(aggr_type=aggr_type, p=torch.tensor(params, dtype=torch.float32, device=device), bc_dpos=bc_dpos,
                           dimension=dimension, delta_t=delta_t, max_radius=max_radius, field_type=config.graph_model.field_type)
-
         case 'PDE_K':
             p = params
             edges = np.random.choice(p[0], size=(n_particles, n_particles), p=p[1])
@@ -133,16 +100,9 @@ def choose_model(config=[], W=[], device=[]):
             model = PDE_K(aggr_type=aggr_type, connection_matrix=connection_matrix, bc_dpos=bc_dpos)
 
         case 'PDE_O':
-            p = initialize_random_values(n_particle_types, device)
-            if len(params) > 0:
-                for n in range(n_particle_types):
-                    p[n] = torch.tensor(params[n])
-            model = PDE_O(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos, beta=config.simulation.beta)
+            model = PDE_O(aggr_type=aggr_type, p=p, bc_dpos=bc_dpos, beta=config.simulation.beta)
         case 'Maze':
-            p = torch.rand(n_particle_types, 3, device=device) * 100  # comprised between 10 and 50
-            for n in range(n_particle_types):
-                p[n] = torch.tensor(params[n])
-            model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
+            model = PDE_B(aggr_type=aggr_type, p=p, bc_dpos=bc_dpos)
         case _:
             model = PDE_Z(device=device)
 
@@ -158,36 +118,15 @@ def choose_model(config=[], W=[], device=[]):
 
     match model_signal_name:
         case 'PDE_N2':
-            p = torch.rand(n_particle_types, 3, device=device) * 100  # comprised between 10 and 50
-            if params[0] != [-1]:
-                for n in range(n_particle_types):
-                    p[n] = torch.tensor(params[n])
-            model = PDE_N2(aggr_type=aggr_type, p=torch.squeeze(p), W=W, phi=phi)
+            model = PDE_N2(aggr_type=aggr_type, p=p, W=W, phi=phi)
         case 'PDE_N3':
-            p = torch.rand(n_particle_types+1, 3, device=device) * 100  # comprised between 10 and 50
-            if params[0] != [-1]:
-                for n in range(n_particle_types+1):
-                    p[n] = torch.tensor(params[n])
-            model = PDE_N3(aggr_type=aggr_type, p=torch.squeeze(p), W=W, phi=phi)
+            model = PDE_N3(aggr_type=aggr_type, p=p, W=W, phi=phi)
         case 'PDE_N4':
-            p = torch.rand(n_particle_types, 4, device=device) * 100  # comprised between 10 and 50
-            if params[0] != [-1]:
-                for n in range(n_particle_types):
-                    p[n] = torch.tensor(params[n])
-            model = PDE_N4(aggr_type=aggr_type, p=torch.squeeze(p), W=W, phi=phi)
+            model = PDE_N4(aggr_type=aggr_type, p=p, W=W, phi=phi)
         case 'PDE_N5':
-            p = torch.rand(n_particle_types, 4, device=device) * 100  # comprised between 10 and 50
-            if params[0] != [-1]:
-                for n in range(n_particle_types):
-                    p[n] = torch.tensor(params[n])
-            model = PDE_N5(aggr_type=aggr_type, p=torch.squeeze(p), W=W, phi=phi)
+            model = PDE_N5(aggr_type=aggr_type, p=p, W=W, phi=phi)
         case 'PDE_N6':
-            p = torch.rand(n_particle_types, 5, device=device) * 100  # comprised between 10 and 50
-            if params[0] != [-1]:
-                for n in range(n_particle_types):
-                    p[n] = torch.tensor(params[n])
-            model = PDE_N6(aggr_type=aggr_type, p=torch.squeeze(p), W=W, phi=phi)
-
+            model = PDE_N6(aggr_type=aggr_type, p=p, W=W, phi=phi)
 
 
     return model, bc_pos, bc_dpos

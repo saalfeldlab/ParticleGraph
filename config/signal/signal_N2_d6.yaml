@@ -1,5 +1,5 @@
-description: 'synaptic network random matrix no recursive loop    8000 neurons 4 types  40000 frames lorentz std 0.01 factor coeff_L1: 1E-5 then 0'
-dataset: 'signal_N2_Lorentz_d'
+description: 'synaptic network random matrix no recursive loop    8000 neurons 4 types  100000 frames lorentz std 0.01 factor coeff_L1: 1E-5 then 0'
+dataset: 'signal_N2_Lorentz_d2'
 
 simulation:
     connectivity_file: 'random'
@@ -14,27 +14,24 @@ simulation:
     n_particles: 8000
     n_particle_types: 4
     n_interactions: 4
-    n_frames: 40000
+    n_frames: 100000
     delta_t: 0.01
     dpos_init:  0
     boundary: 'no'
-    start_frame: 0 # -1000
+    start_frame: -1000
 
 graph_model:
     signal_model_name: 'PDE_N2'
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
-
     input_size: 1
     output_size: 1
     hidden_dim: 64
     n_mp_layers: 3
-
     input_size_update: 3
     n_layers_update: 3
     hidden_dim_update: 64
-
     aggr_type: 'add'
     embedding_dim: 2
     update_type: 'none'
@@ -51,17 +48,30 @@ training:
     recursive_loop: 1
     batch_size: 1
     small_init_batch_size: True
-    n_runs: 10
-    sparsity: 'none'
+    n_runs: 2
+
     rotation_augmentation: False
     data_augmentation_loop: 100
+
+    sparsity: 'replace_embedding_function'
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     device: 'auto'
     sparsity: 'replace_embedding_function'
     sparsity_freq: 4
-    learning_rate_start: 1.0E-4
-    learning_rate_embedding_start: 1.0E-4
+
+    n_epochs_init: 2
+    coeff_diff: 200
     first_coeff_L1: 5.0E-5
     coeff_L1: 0
+
+    learning_rate_W_start: 1.0E-4
+    learning_rate_start: 5.0E-5
+    learning_rate_embedding_start: 5.0E-4
+    learning_rate_modulation_start: 1.0E-4
+
+
+
+
+
 

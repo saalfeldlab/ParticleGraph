@@ -4564,6 +4564,52 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
     distrib = to_numpy(activity.flatten())
     activity = activity.t()
 
+    # plt.figure(figsize=(15, 10))
+    # window_size = 25
+    # window_end = 50000
+    # ts = to_numpy(activity[600, :])
+    # ts_avg = np.convolve(ts, np.ones(window_size) / window_size, mode='valid')
+    # plt.plot(ts[window_size // 2:window_end + window_size // 2], linewidth=1)
+    # plt.plot(ts_avg, linewidth=2)
+    # plt.plot(ts[window_size // 2:window_end + window_size // 2] - ts_avg[0:window_end])
+    # plt.xlim([window_end - 5000, window_end])
+    # plt.close
+    # signal_power = np.mean(ts_avg[window_size // 2:window_end + window_size // 2] ** 2)
+    # # Compute the noise power
+    # noise_power = np.mean((ts[window_size // 2:window_end + window_size // 2] - ts_avg[0:window_end]) ** 2)
+    # # Calculate the signal-to-noise ratio (SNR)
+    # snr = signal_power / noise_power
+    # print(f"Signal-to-Noise Ratio (SNR): {snr:0.2f} 10log10 {10 * np.log10(snr):0.2f}")
+
+    # # Parameters
+    # fs = 1000  # Sampling frequency
+    # t = np.arange(0, 1, 1 / fs)  # Time vector
+    # frequency = 5  # Frequency of the sine wave
+    # desired_snr_db = snr  # Desired SNR in dB
+    # # Generate a clean signal (sine wave)
+    # clean_signal = np.sin(2 * np.pi * frequency * t)
+    # # Calculate the power of the clean signal
+    # signal_power = np.mean(clean_signal ** 2)
+    # # Calculate the noise power required to achieve the desired SNR
+    # desired_snr_linear = 10 ** (desired_snr_db / 10)
+    # noise_power = signal_power / desired_snr_linear
+    # # Generate noise with the calculated power
+    # noise = np.sqrt(noise_power) * np.random.randn(len(t))
+    # # Create a noisy signal by adding noise to the clean signal
+    # noisy_signal = clean_signal + noise
+    # # Plot the clean signal and the noisy signal
+    # plt.figure(figsize=(15, 10))
+    # plt.subplot(2, 1, 1)
+    # plt.plot(t, clean_signal)
+    # plt.title('Clean Signal')
+    # plt.subplot(2, 1, 2)
+    # plt.plot(t, noisy_signal)
+    # plt.plot(t, noise)
+    # plt.title(f'Noisy Signal with SNR = {desired_snr_db} dB')
+    # plt.tight_layout()
+    # plt.show()
+
+
     # if os.path.exists(f'./graphs_data/{dataset_name}/X1.pt') > 0:
     #     X1_first = torch.load(f'./graphs_data/{dataset_name}/X1.pt', map_location=device)
     #     X_msg = torch.load(f'./graphs_data/{dataset_name}/X_msg.pt', map_location=device)
@@ -4662,19 +4708,19 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 A = model.W.clone().detach() / correction
                 A[i, i] = 0
 
-                fig, ax = fig_init()
-                ax = sns.heatmap(to_numpy(A)/second_correction, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.1,vmax=0.1)
-                cbar = ax.collections[0].colorbar
-                cbar.ax.tick_params(labelsize=48)
-                plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=24)
-                plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=24)
-                plt.subplot(2, 2, 1)
-                ax = sns.heatmap(to_numpy(A[0:20, 0:20])/second_correction, cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
-                plt.xticks([])
-                plt.yticks([])
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/all/W_{epoch}.tif", dpi=80)
-                plt.close()
+                # fig, ax = fig_init()
+                # ax = sns.heatmap(to_numpy(A)/second_correction, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.1,vmax=0.1)
+                # cbar = ax.collections[0].colorbar
+                # cbar.ax.tick_params(labelsize=48)
+                # plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=24)
+                # plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=24)
+                # plt.subplot(2, 2, 1)
+                # ax = sns.heatmap(to_numpy(A[0:20, 0:20])/second_correction, cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
+                # plt.xticks([])
+                # plt.yticks([])
+                # plt.tight_layout()
+                # plt.savefig(f"./{log_dir}/results/all/W_{epoch}.tif", dpi=80)
+                # plt.close()
 
 
                 rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
@@ -4699,7 +4745,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                                                                          device=device)
                                 in_features = torch.cat((rr[:, None], embedding0, embedding1), dim=1)
                                 func = model.lin_edge(in_features.float()) * correction
-                                plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(k), linewidth=8, alpha=0.25)
+                                plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(k), linewidth=2, alpha=0.25)
                         plt.ylim([-1.6, 1.6])
                         plt.xlim([-5, 5])
                         plt.xticks([])
@@ -4780,8 +4826,10 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     plt.xlim([-0.05, 0.05])
                     plt.ylim([-0.05, 0.05])
                 else:
-                    plt.xlim([-0.2, 0.2])
-                    plt.ylim([-0.2, 0.2])
+                    # plt.xlim([-0.2, 0.2])
+                    # plt.ylim([-0.2, 0.2])
+                    plt.xlim([-0.15, 0.15])
+                    plt.ylim([-0.15, 0.15])
 
                 x_data = np.reshape(gt_weight, (n_particles * n_particles))
                 y_data = np.reshape(pred_weight, (n_particles * n_particles))
@@ -4793,8 +4841,14 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 r_squared_list.append(r_squared)
                 slope_list.append(lin_fit[0])
 
-                plt.text(-0.17, 0.15, f'$R^2$: {np.round(r_squared, 3)}', fontsize=34)
-                plt.text(-0.17, 0.12, f'slope: {np.round(lin_fit[0], 2)}', fontsize=34)
+                if n_particles == 8000:
+                    plt.text(-0.042, 0.042, f'$R^2$: {np.round(r_squared, 3)}', fontsize=34)
+                    plt.text(-0.042, 0.036, f'slope: {np.round(lin_fit[0], 2)}', fontsize=34)
+                else:
+                    # plt.text(-0.17, 0.15, f'$R^2$: {np.round(r_squared, 3)}', fontsize=34)
+                    # plt.text(-0.17, 0.12, f'slope: {np.round(lin_fit[0], 2)}', fontsize=34)
+                    plt.text(-0.13, 0.13, f'$R^2$: {np.round(r_squared, 3)}', fontsize=34)
+                    plt.text(-0.13, 0.11, f'slope: {np.round(lin_fit[0], 2)}', fontsize=34)
 
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/all/comparison_{epoch}.tif", dpi=80)
@@ -4811,6 +4865,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     pred = np.rot90(pred, 1)
                     pred = np.fliplr(pred)
                     plt.imshow(pred, cmap='grey')
+                    plt.ylabel(r'learned $MLP_2(x_i, t)$', fontsize=68)
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
@@ -4846,156 +4901,113 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
     else:
 
-        # fig_init(formatx='%.0f', formaty='%.0f')
-        # plt.hist(distrib, bins=100, color=mc, alpha=0.5)
-        # plt.ylabel('counts', fontsize=64)
-        # plt.xlabel('$x_{ij}$', fontsize=64)
-        # plt.xticks(fontsize=24)
-        # plt.yticks(fontsize=24)
-        # plt.tight_layout()
-        # plt.savefig(f'./{log_dir}/results/signal_distribution.png', dpi=300)
-        # plt.close()
-        # print(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
-        # logger.info(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
+        fig_init(formatx='%.0f', formaty='%.0f')
+        plt.hist(distrib, bins=100, color=mc, alpha=0.5)
+        plt.ylabel('counts', fontsize=64)
+        plt.xlabel('$x_{ij}$', fontsize=64)
+        plt.xticks(fontsize=24)
+        plt.yticks(fontsize=24)
+        plt.tight_layout()
+        plt.savefig(f'./{log_dir}/results/signal_distribution.png', dpi=300)
+        plt.close()
+        print(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
+        logger.info(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
+
+        plt.figure(figsize=(15, 10))
+        ax = sns.heatmap(to_numpy(activity), center=0, cmap='viridis', cbar_kws={'fraction': 0.046})
+        cbar = ax.collections[0].colorbar
+        cbar.ax.tick_params(labelsize=32)
+        ax.invert_yaxis()
+        plt.ylabel('neurons', fontsize=64)
+        plt.xlabel('time', fontsize=64)
+        plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
+        plt.yticks([0, 999], [1, 1000], fontsize=48)
+        plt.xticks(rotation=0)
+        plt.tight_layout()
+        plt.savefig(f'./{log_dir}/results/kinograph.png', dpi=300)
+        plt.close()
+        print (f'./{log_dir}/results/kinograph.png')
+
+        plt.figure(figsize=(15, 10))
+        n = np.random.permutation(n_particles)
+        for i in range(25):
+            plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=2)
+        plt.xlabel('time', fontsize=64)
+        plt.ylabel('$x_{i}$', fontsize=64)
+        plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
+        plt.yticks(fontsize=48)
+        plt.tight_layout()
+        plt.savefig(f'./{log_dir}/results/firing rate.png', dpi=300)
+        plt.close()
+        print(f'./{log_dir}/results/firing rate.png')
+
+        # if os.path.exists(f"./{log_dir}/neuron_gt_list.pt"):
         #
-        # plt.figure(figsize=(15, 10))
-        # ax = sns.heatmap(to_numpy(activity), center=0, cmap='viridis', cbar_kws={'fraction': 0.046})
-        # cbar = ax.collections[0].colorbar
-        # cbar.ax.tick_params(labelsize=32)
-        # ax.invert_yaxis()
-        # plt.ylabel('neurons', fontsize=64)
-        # plt.xlabel('time', fontsize=64)
-        # plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
-        # plt.yticks([0, 999], [1, 1000], fontsize=48)
-        # plt.xticks(rotation=0)
-        # plt.tight_layout()
-        # plt.savefig(f'./{log_dir}/results/kinograph.png', dpi=300)
-        # plt.close()
+        #     os.makedirs(f"./{log_dir}/results/activity", exist_ok=True)
         #
-        # plt.figure(figsize=(15, 10))
-        # n = np.random.permutation(n_particles)
-        # for i in range(25):
-        #     plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=2)
-        # plt.xlabel('time', fontsize=64)
-        # plt.ylabel('$x_{i}$', fontsize=64)
-        # plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
-        # plt.yticks(fontsize=48)
-        # plt.tight_layout()
-        # plt.savefig(f'./{log_dir}/results/firing rate.png', dpi=300)
-        # plt.close()
-
-        # plt.figure(figsize=(15, 10))
-        # window_size = 25
-        # window_end = 50000
-        # ts = to_numpy(activity[600, :])
-        # ts_avg = np.convolve(ts, np.ones(window_size) / window_size, mode='valid')
-        # plt.plot(ts[window_size//2:window_end+window_size//2], linewidth=1)
-        # plt.plot(ts_avg, linewidth=2)
-        # plt.plot(ts[window_size//2:window_end+window_size//2]-ts_avg[0:window_end])
-        # plt.xlim([window_end-5000,window_end])
-        # plt.show()
-        # signal_power = np.mean(ts_avg[window_size//2:window_end+window_size//2] ** 2)
-        # # Compute the noise power
-        # noise_power = np.mean((ts[window_size//2:window_end+window_size//2] - ts_avg[0:window_end]) ** 2)
-        # # Calculate the signal-to-noise ratio (SNR)
-        # snr = signal_power / noise_power
-        # print(f"Signal-to-Noise Ratio (SNR): {snr:0.2f} 10log10 {10*np.log10(snr):0.2f}")
-        # # Parameters
-        # fs = 1000  # Sampling frequency
-        # t = np.arange(0, 1, 1 / fs)  # Time vector
-        # frequency = 5  # Frequency of the sine wave
-        # desired_snr_db = snr  # Desired SNR in dB
-        # # Generate a clean signal (sine wave)
-        # clean_signal = np.sin(2 * np.pi * frequency * t)
-        # # Calculate the power of the clean signal
-        # signal_power = np.mean(clean_signal ** 2)
-        # # Calculate the noise power required to achieve the desired SNR
-        # desired_snr_linear = 10 ** (desired_snr_db / 10)
-        # noise_power = signal_power / desired_snr_linear
-        # # Generate noise with the calculated power
-        # noise = np.sqrt(noise_power) * np.random.randn(len(t))
-        # # Create a noisy signal by adding noise to the clean signal
-        # noisy_signal = clean_signal + noise
-        # # Plot the clean signal and the noisy signal
-        # plt.figure(figsize=(15, 10))
-        # plt.subplot(2, 1, 1)
-        # plt.plot(t, clean_signal)
-        # plt.title('Clean Signal')
-        # plt.subplot(2, 1, 2)
-        # plt.plot(t, noisy_signal)
-        # plt.plot(t, noise)
-        # plt.title(f'Noisy Signal with SNR = {desired_snr_db} dB')
-        # plt.tight_layout()
-        # plt.show()
-
-
-        if os.path.exists(f"./{log_dir}/neuron_gt_list.pt"):
-
-            os.makedirs(f"./{log_dir}/results/activity", exist_ok=True)
-
-            neuron_gt_list = torch.load(f"./{log_dir}/neuron_gt_list.pt", map_location=device)
-            neuron_pred_list = torch.load(f"./{log_dir}/neuron_pred_list.pt", map_location=device)
-
-            neuron_gt_list = torch.cat(neuron_gt_list, 0)
-            neuron_pred_list = torch.cat(neuron_pred_list, 0)
-            neuron_gt_list = torch.reshape(neuron_gt_list, (1000, n_particles))
-            neuron_pred_list = torch.reshape(neuron_pred_list, (1000, n_particles))
-
-            n = [20, 30, 100, 150, 260, 270, 520, 620, 720, 820]
-
-            r_squared_list = []
-            slope_list = []
-            for i in trange(0,750,5):
-                plt.figure(figsize=(20, 10))
-                ax = plt.subplot(121)
-                plt.plot(neuron_gt_list[:, n[0]].detach().cpu().numpy(), c='w', linewidth=8, label='true', alpha=0.25)
-                plt.plot(neuron_pred_list[0:i, n[0]].detach().cpu().numpy(), linewidth=4, c='w', label='learned')
-                plt.legend(fontsize=24)
-                plt.plot(neuron_gt_list[:, n[1:10]].detach().cpu().numpy(), c='w', linewidth=8, alpha=0.25)
-                plt.plot(neuron_pred_list[0:i, n[1:10]].detach().cpu().numpy(), linewidth=4)
-                plt.xlim([0, 750])
-                plt.xlabel('time index', fontsize=48)
-                plt.ylabel(r'$x_i$', fontsize=48)
-                plt.xticks(fontsize=24)
-                plt.yticks(fontsize=24)
-                plt.ylim([-30,30])
-                plt.text(40, 26, f'time: {i}', fontsize=34)
-                ax = plt.subplot(122)
-                plt.scatter(to_numpy(neuron_gt_list[i, :]), to_numpy(neuron_pred_list[i, :]), s=10, c=mc)
-                plt.xlim([-30,30])
-                plt.ylim([-30,30])
-                plt.xticks(fontsize=24)
-                plt.yticks(fontsize=24)
-                x_data = to_numpy(neuron_gt_list[i, :])
-                y_data = to_numpy(neuron_pred_list[i, :])
-                lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-                residuals = y_data - linear_model(x_data, *lin_fit)
-                ss_res = np.sum(residuals ** 2)
-                ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-                r_squared = 1 - (ss_res / ss_tot)
-                r_squared_list.append(r_squared)
-                slope_list.append(lin_fit[0])
-                plt.xlabel(r'true $x_i$', fontsize=48)
-                plt.ylabel(r'learned $x_i$', fontsize=48)
-                plt.text(-28, 25.6, f'$R^2$: {np.round(r_squared, 3)}', fontsize=34)
-                plt.text(-28, 22, f'slope: {np.round(lin_fit[0], 2)}', fontsize=34)
-                plt.tight_layout()
-                plt.savefig(f'./{log_dir}/results/activity/comparison_{i}.png', dpi=80)
-                plt.close()
-
-            plt.figure(figsize=(10, 10))
-            plt.plot(r_squared_list, linewidth=4, label='$R^2$')
-            plt.plot(slope_list, linewidth=4, label='slope')
-            plt.xticks([0,75,150],[0,375,750],fontsize=24)
-            plt.yticks(fontsize=24)
-            plt.ylim([0,1.4])
-            plt.xlim([0,150])
-            plt.xlabel(r'time', fontsize=48)
-            plt.title(r'true vs learned $x_i$', fontsize=48)
-            plt.legend(fontsize=24)
-            plt.tight_layout()
-            plt.savefig(f'./{log_dir}/results/activity_comparison.png', dpi=80)
-            plt.close()
+        #     neuron_gt_list = torch.load(f"./{log_dir}/neuron_gt_list.pt", map_location=device)
+        #     neuron_pred_list = torch.load(f"./{log_dir}/neuron_pred_list.pt", map_location=device)
+        #
+        #     neuron_gt_list = torch.cat(neuron_gt_list, 0)
+        #     neuron_pred_list = torch.cat(neuron_pred_list, 0)
+        #     neuron_gt_list = torch.reshape(neuron_gt_list, (1000, n_particles))
+        #     neuron_pred_list = torch.reshape(neuron_pred_list, (1000, n_particles))
+        #
+        #     n = [20, 30, 100, 150, 260, 270, 520, 620, 720, 820]
+        #
+        #     r_squared_list = []
+        #     slope_list = []
+        #     for i in trange(0,750,5):
+        #         plt.figure(figsize=(20, 10))
+        #         ax = plt.subplot(121)
+        #         plt.plot(neuron_gt_list[:, n[0]].detach().cpu().numpy(), c='w', linewidth=8, label='true', alpha=0.25)
+        #         plt.plot(neuron_pred_list[0:i, n[0]].detach().cpu().numpy(), linewidth=4, c='w', label='learned')
+        #         plt.legend(fontsize=24)
+        #         plt.plot(neuron_gt_list[:, n[1:10]].detach().cpu().numpy(), c='w', linewidth=8, alpha=0.25)
+        #         plt.plot(neuron_pred_list[0:i, n[1:10]].detach().cpu().numpy(), linewidth=4)
+        #         plt.xlim([0, 750])
+        #         plt.xlabel('time index', fontsize=48)
+        #         plt.ylabel(r'$x_i$', fontsize=48)
+        #         plt.xticks(fontsize=24)
+        #         plt.yticks(fontsize=24)
+        #         plt.ylim([-30,30])
+        #         plt.text(40, 26, f'time: {i}', fontsize=34)
+        #         ax = plt.subplot(122)
+        #         plt.scatter(to_numpy(neuron_gt_list[i, :]), to_numpy(neuron_pred_list[i, :]), s=10, c=mc)
+        #         plt.xlim([-30,30])
+        #         plt.ylim([-30,30])
+        #         plt.xticks(fontsize=24)
+        #         plt.yticks(fontsize=24)
+        #         x_data = to_numpy(neuron_gt_list[i, :])
+        #         y_data = to_numpy(neuron_pred_list[i, :])
+        #         lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+        #         residuals = y_data - linear_model(x_data, *lin_fit)
+        #         ss_res = np.sum(residuals ** 2)
+        #         ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+        #         r_squared = 1 - (ss_res / ss_tot)
+        #         r_squared_list.append(r_squared)
+        #         slope_list.append(lin_fit[0])
+        #         plt.xlabel(r'true $x_i$', fontsize=48)
+        #         plt.ylabel(r'learned $x_i$', fontsize=48)
+        #         plt.text(-28, 25.6, f'$R^2$: {np.round(r_squared, 3)}', fontsize=34)
+        #         plt.text(-28, 22, f'slope: {np.round(lin_fit[0], 2)}', fontsize=34)
+        #         plt.tight_layout()
+        #         plt.savefig(f'./{log_dir}/results/activity/comparison_{i}.png', dpi=80)
+        #         plt.close()
+        #
+        #     plt.figure(figsize=(10, 10))
+        #     plt.plot(r_squared_list, linewidth=4, label='$R^2$')
+        #     plt.plot(slope_list, linewidth=4, label='slope')
+        #     plt.xticks([0,75,150],[0,375,750],fontsize=24)
+        #     plt.yticks(fontsize=24)
+        #     plt.ylim([0,1.4])
+        #     plt.xlim([0,150])
+        #     plt.xlabel(r'time', fontsize=48)
+        #     plt.title(r'true vs learned $x_i$', fontsize=48)
+        #     plt.legend(fontsize=24)
+        #     plt.tight_layout()
+        #     plt.savefig(f'./{log_dir}/results/activity_comparison.png', dpi=80)
+        #     plt.close()
 
 
         adjacency = torch.load(f'./graphs_data/{dataset_name}/adjacency.pt', map_location=device)
@@ -5429,9 +5441,9 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                         plt.scatter(im_, pred, s=10, c=mc)
                         plt.xlim([0.3, 1.6])
                         plt.ylim([0.3, 1.6])
-                        plt.xlabel(r'true $\Omega_i$', fontsize=68)
-                        plt.ylabel(r'learned $\Omega_i$', fontsize=68)
-                        plt.text(0.5, 1.4, f'$R^2$: {r_squared:0.2f}  slope: {np.round(lin_fit[0], 2)}', fontsize=48)
+                        plt.xlabel(r'true neuromodulation', fontsize=48)
+                        plt.ylabel(r'learned neuromodulation', fontsize=48)
+                        plt.text(0.35, 1.5, f'$R^2$: {r_squared:0.2f}  slope: {np.round(lin_fit[0], 2)}', fontsize=42)
                         plt.tight_layout()
                         plt.savefig(f"./{log_dir}/results/field/comparison {epoch}_{frame}.tif", dpi=80)
                         plt.close()
@@ -5565,7 +5577,9 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     case 'PDE_N4':
 
                         for k in range(n_particle_types):
-
+                            print('  ')
+                            print('  ')
+                            print('  ')
                             print(f'psi{k} ................')
                             logger.info(f'psi{k} ................')
 
@@ -5577,14 +5591,17 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
                             symbolic = get_pyssr_function(model_pysrr, rr, func)
 
-                            for n in range(0, 5):
-                                print(symbolic(n))
-                                logger.info(symbolic(n))
+                            # for n in range(0, 5):
+                            #     print(symbolic(n))
+                            #     logger.info(symbolic(n))
 
                     case 'PDE_N5':
 
                         for k in range(4**2):
 
+                            print('  ')
+                            print('  ')
+                            print('  ')
                             print(f'psi {k//4} {k%4}................')
                             logger.info(f'psi {k//4} {k%4} ................')
 
@@ -5594,12 +5611,14 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
                             symbolic = get_pyssr_function(model_pysrr, rr, func)
 
-                            for n in range(0, 7):
-                                print(symbolic(n))
-                                logger.info(symbolic(n))
+                            # for n in range(0, 7):
+                            #     print(symbolic(n))
+                            #     logger.info(symbolic(n))
 
                 for k in range(n_particle_types):
-
+                    print('  ')
+                    print('  ')
+                    print('  ')
                     print(f'phi{k} ................')
                     logger.info(f'phi{k} ................')
 
@@ -5611,9 +5630,9 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
                     symbolic = get_pyssr_function(model_pysrr, rr, func)
 
-                    for n in range(4, 7):
-                        print(symbolic(n))
-                        logger.info(symbolic(n))
+                    # for n in range(4, 7):
+                    #     print(symbolic(n))
+                    #     logger.info(symbolic(n))
 
 
 def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
@@ -5742,26 +5761,26 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                 amin = torch.min(model.a, dim=0).values
                 model_a = (model.a - amin) / (amax - amin)
 
-                fig, ax = fig_init()
-                for n in range(n_particle_types):
-                    c1 = cmap.color(n)
-                    c2 = cmap.color((n+1)%4)
-                    c_list = np.linspace(c1, c2, 100)
-                    for k in range(250*n,250*(n+1)):
-                        plt.scatter(to_numpy(model.a[k*100:(k+1)*100, 0:1]), to_numpy(model.a[k*100:(k+1)*100, 1:2]), s=10, color=c_list, alpha=0.1, edgecolors='none')
-                if 'latex' in style:
-                    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}(t)$', fontsize=68)
-                    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}(t)$', fontsize=68)
-                else:
-                    plt.xlabel(r'$a_{i0}(t)$', fontsize=68)
-                    plt.ylabel(r'$a_{i1}(t)$', fontsize=68)
-                plt.xlim([0.94, 1.08])
-                plt.ylim([0.9, 1.10])
-                # plt.xlim([0.7, 1.2])
-                # plt.ylim([0.7, 1.2])
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/all/all_embedding_0_{epoch}.tif", dpi=80)
-                plt.close()
+                # fig, ax = fig_init()
+                # for n in range(n_particle_types):
+                #     c1 = cmap.color(n)
+                #     c2 = cmap.color((n+1)%4)
+                #     c_list = np.linspace(c1, c2, 100)
+                #     for k in range(250*n,250*(n+1)):
+                #         plt.scatter(to_numpy(model.a[k*100:(k+1)*100, 0:1]), to_numpy(model.a[k*100:(k+1)*100, 1:2]), s=10, color=c_list, alpha=0.1, edgecolors='none')
+                # if 'latex' in style:
+                #     plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}(t)$', fontsize=68)
+                #     plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}(t)$', fontsize=68)
+                # else:
+                #     plt.xlabel(r'$a_{i0}(t)$', fontsize=68)
+                #     plt.ylabel(r'$a_{i1}(t)$', fontsize=68)
+                # plt.xlim([0.94, 1.08])
+                # plt.ylim([0.9, 1.10])
+                # # plt.xlim([0.7, 1.2])
+                # # plt.ylim([0.7, 1.2])
+                # plt.tight_layout()
+                # plt.savefig(f"./{log_dir}/results/all/all_embedding_0_{epoch}.tif", dpi=80)
+                # plt.close()
 
                 fig, ax = fig_init()
                 for k in range(n_particle_types):
@@ -5827,11 +5846,14 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                     # plt.plot(to_numpy(rr), to_numpy(true_func), c=mc, linewidth=1)
                     # true_func = true_model.func(rr, it + 1, 'update')
                     # plt.plot(to_numpy(rr), to_numpy(true_func), c=mc, linewidth=1)
-                    plt.xlabel(r'$x_i$', fontsize=24)
+                    # plt.xlabel(r'$x_i$', fontsize=24)
                     # plt.ylabel(r'Learned $\phi^*(a_i(t), x_i)$', fontsize=68)
-                    plt.ylabel(r'Learned $MLP_0(a_i(t), x_i)$', fontsize=24)
+                    if k==0:
+                        plt.ylabel(r'Learned $MLP_0(a_i(t), x_i)$', fontsize=32)
                     plt.ylim([-8, 8])
                     plt.xlim([-5, 5])
+                    plt.xticks([])
+                    plt.yticks([])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/all/MLP0_{epoch}.tif", dpi=80)
                 plt.close()
@@ -5897,6 +5919,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                     pred = np.rot90(pred, 1)
                     pred = np.fliplr(pred)
                     plt.imshow(pred, cmap='grey')
+                    plt.ylabel(r'learned $MLP_2(x_i, t)$', fontsize=68)
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
@@ -5965,8 +5988,8 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                 plt.ylabel(r'$a_{i1}(t)$', fontsize=68)
             plt.xlim([0.92, 1.08])
             plt.ylim([0.9, 1.10])
-            # plt.xlim([0.9, 1.1])
             plt.text(0.93, 1.08, f'time: {n}', fontsize=48)
+
             # plt.xlim([0.7, 1.2])
             # plt.ylim([0.7, 1.2])
             # plt.text(0.72, 1.16, f'time: {n}', fontsize=48)
@@ -5981,16 +6004,17 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
             fig, ax = fig_init()
             plt.axis('off')
             ax = plt.subplot(2, 2, 1)
+            plt.ylabel(r'learned $MLP_0(a_i(t), x_i)$', fontsize=38)
             for it, k in enumerate(indices):
                 if (it%250 == 0) and (it>0):
                     ax = plt.subplot(2, 2, it//250+1)
+                plt.xticks([])
+                plt.yticks([])
                 embedding_ = model.a[k, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
                 in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
                 with torch.no_grad():
                     func = model.lin_phi(in_features.float())
                     plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(it//250), alpha=0.5)
-                    plt.xlabel(r'$x_i$', fontsize=24)
-                    plt.ylabel(r'learned $MLP_0(a_i(t), x_i)$', fontsize=24)
                 plt.ylim([-8,8])
                 plt.xlim([-5,5])
             plt.tight_layout()
@@ -7060,8 +7084,6 @@ def data_plot(config, epoch_list, style, device):
     matplotlib.rcParams['savefig.pad_inches'] = 0
 
     l_dir = get_log_dir(config)
-    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file.split('/')[-1]))
-    print('log_dir: {}'.format(log_dir))
 
     log_dir, logger = create_log_dir(config=config, erase=False)
 
@@ -7241,7 +7263,8 @@ def get_figures(index):
             rc('font', **{'family': 'serif', 'serif': ['Palatino']})
             matplotlib.rcParams['savefig.pad_inches'] = 0
 
-            config_list = [f'signal_N2_a{i}' for i in range(1, 11)]
+            config_list = ['signal_N2_a1', 'signal_N2_a2', 'signal_N2_a3', 'signal_N2_a4', 'signal_N2_a5', 'signal_N2_a10']
+            it_list = [1, 2, 3, 4, 5, 10]
             fig, ax = fig_init(formatx='%.0f', formaty='%.2f')
             plt.xlim([0, 100])
             plt.ylim([0, 1.1])
@@ -7249,11 +7272,14 @@ def get_figures(index):
             plt.xticks([0, 100], [0, 20], fontsize=24)
             plt.ylabel(r'$R^2$', fontsize=48)
             plt.xlabel(r'epoch', fontsize=48)
-            for it, config_file in enumerate(config_list):
+            for it, config_file_ in enumerate(config_list):
+
+                config_file, pre_folder = add_pre_folder(config_file_)
+                config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
                 l_dir = get_log_dir(config)
-                log_dir = os.path.join(l_dir, 'try_{}'.format(config_file.split('/')[-1]))
+                log_dir = os.path.join(l_dir, config_file.split('/')[-1])
                 r_squared_list = np.load(f'./{log_dir}/results/R2.npy')
-                plt.plot(r_squared_list, linewidth = 4, label=f'{(it+1)*10}000')
+                plt.plot(r_squared_list, linewidth = 4, label=f'{(it_list[it])*10000}')
                 plt.legend(fontsize=20)
             plt.tight_layout()
             plt.savefig(f'./{log_dir}/results/R2_all.png', dpi=300)
@@ -7274,9 +7300,12 @@ def get_figures(index):
             plt.xticks([0, 100], [0, 20], fontsize=24)
             plt.ylabel(r'$R^2$', fontsize=48)
             plt.xlabel(r'epoch', fontsize=48)
-            for it, config_file in enumerate(config_list):
+            for it, config_file_ in enumerate(config_list):
+
+                config_file, pre_folder = add_pre_folder(config_file_)
+                config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
                 l_dir = get_log_dir(config)
-                log_dir = os.path.join(l_dir, 'try_{}'.format(config_file.split('/')[-1]))
+                log_dir = os.path.join(l_dir, config_file.split('/')[-1])
                 r_squared_list = np.load(f'./{log_dir}/results/R2.npy')
                 plt.plot(r_squared_list, linewidth = 4, label=labels[it])
                 plt.legend(fontsize=20)
@@ -7489,17 +7518,15 @@ if __name__ == '__main__':
     # except:
     #     pass
 
-    # f_list = ['synaptic_supp6']
-    # for f in f_list:
-    #     config_list,epoch_list = get_figures(f)
 
-    config_list = ['signal_N2_d2', 'signal_N2_d3']
-    # config_list = ['signal_N2_a34', 'signal_N2_a35', 'signal_N2_a36', 'signal_N2_a37', 'signal_N2_a38', 'signal_N2_a39']
+    config_list = ['signal_N2_a1', 'signal_N2_a2', 'signal_N2_a3', 'signal_N2_a4', 'signal_N2_a5', 'signal_N2_a10']
+    config_list = ['signal_N6_a28']
+    config_list = ['signal_N2_a15', 'signal_N4_k5']
 
     for config_file_ in config_list:
 
         print(' ')
-        
+
         config_file, pre_folder = add_pre_folder(config_file_)
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         config.dataset = pre_folder + config.dataset
@@ -7509,10 +7536,14 @@ if __name__ == '__main__':
 
         data_plot(config=config, epoch_list=['best'], style='black color', device=device)
         data_plot(config=config, epoch_list=['all'], style='black color', device=device)
-        # data_plot(config=config, epoch_list=['best'], style='black color', device=device)
+        # data_plot(config=config, epoch_list=['time'], style='black color', device=device)
+    #
+    #     # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)
+    #     # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 
-        # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)
-        # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
+    # f_list = ['synaptic_supp5']
+    # for f in f_list:
+    #     config_list,epoch_list = get_figures(f)
 
 
 
