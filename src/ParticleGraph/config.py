@@ -17,7 +17,6 @@ class SimulationConfig(BaseModel):
     n_frames: int = 1000
     start_frame: int = 0
 
-    time_step: int = 1
     sub_sampling: int = 1
     delta_t: float = 1
 
@@ -231,6 +230,7 @@ class TrainingConfig(BaseModel):
     data_augmentation_loop: int = 40
 
     recursive_loop: int = 0
+    time_step: int = 1
     recursive_parameters: list[float] = [0, 0]
 
     regul_matrix: bool = False

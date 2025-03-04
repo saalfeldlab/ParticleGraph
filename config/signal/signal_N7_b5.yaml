@@ -13,10 +13,10 @@ simulation:
     tau: 1.0
     min_radius: 1.0
     max_radius: 1.0E6
-    n_particles: 324
-    n_nodes: 324
+    n_particles: 1024
+    n_nodes: 1024
     n_particle_types: 4
-    n_frames: 20000
+    n_frames: 100000
     delta_t: 0.01
     dpos_init:  0
     boundary: 'no'
@@ -55,7 +55,8 @@ plotting:
 training:
     n_epochs: 20
 
-    recursive_loop: 1
+    recursive_loop: 2
+    time_step: 1
     recursive_parameters: [0.1, 0.1]
 
     batch_size: 1
@@ -64,9 +65,9 @@ training:
     n_runs: 2
 
     rotation_augmentation: False
-    data_augmentation_loop: 200
+    data_augmentation_loop: 131
 
-    sparsity: 'replace_embedding_function'
+    sparsity: 'none'
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     device: 'auto'
@@ -75,7 +76,7 @@ training:
 
     coeff_diff: 100
     coeff_lin_modulation: 1.0E-2
-    coeff_model_b: 1.0
+    coeff_model_b: 1.0E-1
 
     learning_rate_W_start: 1.0E-4
     learning_rate_start: 5.0E-5

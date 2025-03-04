@@ -1,5 +1,5 @@
-description: 'synaptic network with neuron short term plasticity     random matrix 1000 neurons 4 types lorentz std 0.03'
-dataset: 'signal_N7_b4'
+description: 'synaptic network test learning with modulation     random matrix no recursive loop 1000 neurons 4 types lorentz std 0.03'
+dataset: 'signal_N6_a30'
 
 simulation:
     connectivity_file: 'random'
@@ -8,7 +8,7 @@ simulation:
     connectivity_init: [0,0.1]
     connectivity_distribution: 'Lorentz'
     connectivity_filling_factor: 0.10
-    params: [[10.0, 1.0, 1.0, 1.0, 25, 0.02], [10.0, 2.0, 1.0, 2.0, 25, 0.02], [10.0, 1.0, 2.0, 4.0, 25, 0.02], [10.0, 2.0, 2.0, 8.0, 25, 0.02]]
+    params: [[10.0, 1.0, 1.0, 100, 0.02], [10.0, 2.0, 1.0, 100, 0.02], [10.0, 1.0, 2.0, 100, 0.02], [10.0, 2.0, 2.0, 100, 0.02]]
     phi: 'tanh'
     tau: 1.0
     min_radius: 1.0
@@ -16,22 +16,23 @@ simulation:
     n_particles: 1024
     n_nodes: 1024
     n_particle_types: 4
+    n_interactions: 4
     n_frames: 100000
     delta_t: 0.01
     dpos_init:  0
     boundary: 'no'
-    start_frame: -10000
+    start_frame: -2000
 
 graph_model:
     field_type: 'learnable_short_term_plasticity'
-    signal_model_name: 'PDE_N7'
+    signal_model_name: 'PDE_N6'
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
     aggr_type: 'add'
     embedding_dim: 2
 
-    input_size: 3
+    input_size: 1
     output_size: 1
     hidden_dim: 64
     n_mp_layers: 3
@@ -53,7 +54,7 @@ plotting:
     ylim: [-8,8]
 
 training:
-    n_epochs: 20
+    n_epochs: 60
 
     recursive_loop: 2
     time_step: 4

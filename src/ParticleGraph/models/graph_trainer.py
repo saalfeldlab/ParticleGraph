@@ -2204,7 +2204,6 @@ def data_train_synaptic2(config, erase, best_model, device):
     field_type = model_config.field_type
     coeff_lin_modulation = train_config.coeff_lin_modulation
     coeff_model_b = train_config.coeff_model_b
-    time_step = simulation_config.time_step
 
     if field_type != '':
         n_nodes = simulation_config.n_nodes
@@ -2326,7 +2325,6 @@ def data_train_synaptic2(config, erase, best_model, device):
 
     adjacency = torch.load(f'./graphs_data/{dataset_name}/adjacency.pt', map_location=device)
     edges = torch.load(f'./graphs_data/{dataset_name}/edge_index.pt', map_location=device)
-    print(f'{to_numpy(torch.sum(edges))} edges')
 
     # matrix = to_numpy(adjacency)
     # rank = get_matrix_rank(matrix)
@@ -2343,6 +2341,8 @@ def data_train_synaptic2(config, erase, best_model, device):
     if simulation_config.connectivity_mask:
         model.mask = torch.load(f'./graphs_data/{dataset_name}/mask.pt', map_location=device)
         edges = torch.load(f'./graphs_data/{dataset_name}/edge_index_.pt', map_location=device)
+
+    print(f'{edges.shape[1]} edges')
 
     if 'PDE_N3' in model_config.signal_model_name:
         ind_a = torch.tensor(np.arange(1, n_particles*100), device=device)
@@ -2389,7 +2389,7 @@ def data_train_synaptic2(config, erase, best_model, device):
 
         total_loss = 0
         k = 0
-        time_step = np.random.randint(16)
+        time_step = 1 + np.random.randint(train_config.time_step)
 
         for N in trange(Niter):
 
@@ -2402,8 +2402,8 @@ def data_train_synaptic2(config, erase, best_model, device):
                 x = torch.tensor(x_list[run][k], device=device).clone().detach()
 
                 ids = np.arange(k, k + recursive_loop * time_step, time_step)
-                true_activity_list = np.transpose(x_list[run][ids.astype(int), :, 6:7].squeeze())
-                true_modulation_list = np.transpose(x_list[run][ids.astype(int), :, 8:9].squeeze())
+                # true_activity_list = np.transpose(x_list[run][ids.astype(int), :, 6:7].squeeze())
+                # true_modulation_list = np.transpose(x_list[run][ids.astype(int), :, 8:9].squeeze())
 
                 loss = 0
 
@@ -2413,14 +2413,29 @@ def data_train_synaptic2(config, erase, best_model, device):
                 pred_modulation_list = list([])
                 for loop in range(recursive_loop):
 
-                    pred_activity_list.append(x[:, 6:7].clone().detach())
-                    pred_modulation_list.append(x[:, 8:9].clone().detach())
+                    # pred_activity_list.append(x[:, 6:7].clone().detach())
+                    # pred_modulation_list.append(x[:, 8:9].clone().detach())
 
                     in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[0:n_particles]),dim=1)
                     func_phi = model.lin_phi(in_features.float())
-                    in_features = torch.zeros((n_particles, 1), device=device)
-                    func_edge = model.lin_edge(in_features.float())
-                    diff = torch.relu(model.lin_edge(x[:, 6:7].clone().detach()) - model.lin_edge(x[:, 6:7].clone().detach() + 0.1)).norm(2)
+
+                    if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N7'):
+                        in_features = torch.zeros((n_particles, dimension + 1), device=device)
+                        func_edge = model.lin_edge(in_features.float())
+                        in_features = torch.cat((x[:, 6:7], model.a), dim=1)
+                        in_features_next = torch.cat((x[:, 6:7] + 0.1, model.a), dim=1)
+                        diff = torch.relu(model.lin_edge(in_features) - model.lin_edge(in_features_next)).norm(2)
+                    elif model_config.signal_model_name == 'PDE_N5':
+                        in_features = torch.zeros((n_particles, 2 * dimension + 1), device=device)
+                        func_edge = model.lin_edge(in_features.float())
+                        in_features = torch.cat((x[:, 6:7], model.a, model.a), dim=1)
+                        in_features_next = torch.cat((x[:, 6:7] + 0.1, model.a, model.a), dim=1)
+                        diff = torch.relu(model.lin_edge(in_features) - model.lin_edge(in_features_next)).norm(2)
+                    else:
+                        in_features = torch.zeros((n_particles, 1), device=device)
+                        func_edge = model.lin_edge(in_features.float())
+                        diff = torch.relu(model.lin_edge(x[:, 6:7].clone().detach()) - model.lin_edge(x[:, 6:7].clone().detach() + 0.1)).norm(2)
+
                     loss = loss + model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + coeff_diff * diff
 
                     if (loop == 0):
@@ -2446,12 +2461,10 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                 loss.backward()
                 optimizer.step()
-
-                pred_activity_list = torch.stack(pred_activity_list).squeeze().t()
-                pred_modulation_list = torch.stack(pred_modulation_list).squeeze().t()
-
                 total_loss += loss.item()
 
+                # pred_activity_list = torch.stack(pred_activity_list).squeeze().t()
+                # pred_modulation_list = torch.stack(pred_modulation_list).squeeze().t()
                 # matplotlib.use("Qt5Agg")
                 #
                 # fig = plt.figure(figsize=(12, 12))
@@ -2614,16 +2627,6 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                                 pred_activity_list.append(x[:, 6:7].clone().detach())
                                 pred_modulation_list.append(x[:, 8:9].clone().detach())
-
-                                in_features = torch.cat(
-                                    (torch.zeros((n_particles, 1), device=device), model.a[0:n_particles]), dim=1)
-                                func_phi = model.lin_phi(in_features.float())
-                                in_features = torch.zeros((n_particles, 1), device=device)
-                                func_edge = model.lin_edge(in_features.float())
-                                diff = torch.relu(model.lin_edge(x[:, 6:7].clone().detach()) - model.lin_edge(
-                                    x[:, 6:7].clone().detach() + 0.1)).norm(2)
-                                loss = loss + model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(
-                                    2) + coeff_diff * diff
 
                                 if (loop == 0):
                                     alpha = (kk % model.embedding_step) / model.embedding_step
