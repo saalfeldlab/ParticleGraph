@@ -1,8 +1,9 @@
 description: 'synaptic network random matrix    1000 neurons 4 types lorentz std 0.03   10% filling factor coeff_L1: 1.0E-5'
-dataset: 'signal_N2_e4_bis'
+dataset: 'signal_N2_e5'
 
 simulation:
     connectivity_file: 'random'
+    connectivity_mask: True
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
     connectivity_distribution: 'Lorentz'
@@ -15,7 +16,7 @@ simulation:
     n_particles: 1000
     n_particle_types: 4
     n_interactions: 4
-    n_frames: 10000
+    n_frames: 100000
     delta_t: 0.01
     dpos_init:  0
     boundary: 'no'
@@ -49,7 +50,7 @@ training:
     recursive_loop: 1
     batch_size: 1
     small_init_batch_size: False
-    n_runs: 10
+    n_runs: 2
     sparsity: 'none'
     rotation_augmentation: False
     data_augmentation_loop: 100

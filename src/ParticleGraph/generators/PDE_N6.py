@@ -1,9 +1,9 @@
-
 import torch_geometric as pyg
 import torch_geometric.utils as pyg_utils
 from ParticleGraph.utils import to_numpy
 import torch
 from ParticleGraph.utils import *
+
 
 class PDE_N6(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
@@ -11,7 +11,7 @@ class PDE_N6(pyg.nn.MessagePassing):
 
     """
     Compute network signaling, the transfer functions are neuron-dependent
-    
+
     Inputs
     ----------
     data : a torch_geometric.data object
@@ -20,7 +20,7 @@ class PDE_N6(pyg.nn.MessagePassing):
     -------
     du : float
     the update rate of the signals (dim 1)
-        
+
     """
 
     def __init__(self, aggr_type=[], p=[], W=[], phi=[]):
@@ -38,35 +38,33 @@ class PDE_N6(pyg.nn.MessagePassing):
         g = parameters[:, 0:1]
         s = parameters[:, 1:2]
         c = parameters[:, 2:3]
-        t = parameters[:, 3:4]
-        tau = parameters[:, 4:5]
-        alpha = parameters[:, 5:6]
+        tau = parameters[:, 3:4]
+        alpha = parameters[:, 4:5]
 
         u = x[:, 6:7]
         p = x[:, 8:9]
 
-        # self.msg = self.W*self.phi(u)
-        # msg = torch.matmul(self.W, self.phi(u))
-
-        msg = self.propagate(edge_index, u=u, t=t)
+        self.msg = self.W * self.phi(u)
+        msg = torch.matmul(self.W, self.phi(u))
 
         du = -c * u + s * self.phi(u) + g * p * msg
-        dp = (1-p)/tau - alpha * p * torch.abs(u)
+        dp = (1 - p) / tau - alpha * p * torch.abs(u)
 
-        return du, dp, g * p * msg
+        return du, dp
 
-    def message(self, edge_index_i, edge_index_j, u_j, t_i):
+    def message(self, u_j, edge_attr):
 
-        T = self.W
-        return T[edge_index_i, edge_index_j][:, None] * self.phi(u_j / t_i)
+        self.activation = self.phi(u_j)
+        self.u_j = u_j
 
+        return edge_attr[:, None] * self.phi(u_j)
 
     def func(self, u, type, function):
 
-        if function=='phi':
+        if function == 'phi':
             return self.phi(u)
 
-        elif function=='update':
+        elif function == 'update':
             g, s, c = self.p[type, 0:1], self.p[type, 1:2], self.p[type, 2:3]
             return -c * u + s * self.phi(u)
 

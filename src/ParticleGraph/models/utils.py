@@ -77,7 +77,7 @@ def get_in_features(rr, embedding_, config_model, max_radius):
 
         case 'PDE_N2' | 'PDE_N3' | 'PDE_N6' :
             in_features = torch.cat((rr[:, None], embedding_), dim=1)
-        case 'PDE_N4':
+        case 'PDE_N4' | 'PDE_N7' :
             in_features = torch.cat((rr[:, None], embedding_), dim=1)
         case 'PDE_N5':
             in_features = torch.cat((rr[:, None], embedding_, embedding_), dim=1)
@@ -113,10 +113,29 @@ def plot_training_signal(config, model, adjacency, ynorm, log_dir, epoch, N, n_p
     plt.savefig(f"./{log_dir}/tmp_training/embedding/{epoch}_{N}.tif", dpi=87)
     plt.close()
 
+    fig, ax = fig_init()
+    gt_weight = to_numpy(adjacency)
+    i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+    A = model.W.clone().detach()
+    A[i,i] = 0
+    pred_weight = to_numpy(A)
+    plt.scatter(gt_weight, pred_weight / 10, s=0.1, c='k', alpha=0.1)
+    plt.xlabel(r'true $W_{ij}$', fontsize=68)
+    plt.ylabel(r'learned $W_{ij}$', fontsize=68)
+    if n_particles == 8000:
+        plt.xlim([-0.05, 0.05])
+        plt.ylim([-0.05, 0.05])
+    else:
+        plt.xlim([-0.2, 0.2])
+        plt.ylim([-0.2, 0.2])
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/matrix/comparison_{epoch}_{N}.tif", dpi=87)
+    plt.close()
+
     fig = plt.figure(figsize=(8, 8))
     rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
     for n in range(n_particles):
-        if ('PDE_N4' in config.graph_model.signal_model_name) :
+        if ('PDE_N4' in config.graph_model.signal_model_name) | ('PDE_N7' in config.graph_model.signal_model_name):
             embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
             in_features = torch.cat((rr[:, None], embedding_), dim=1)
         elif 'PDE_N5' in config.graph_model.signal_model_name:
@@ -144,24 +163,24 @@ def plot_training_signal(config, model, adjacency, ynorm, log_dir, epoch, N, n_p
     plt.savefig(f"./{log_dir}/tmp_training/function/lin_phi/func_{epoch}_{N}.tif", dpi=87)
     plt.close()
 
-    i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
-    if (config.graph_model.signal_model_name)!='PDE_N':
-        A = model.W.clone().detach()
-        A[i,i] = 0
-    elif 'asymmetric' in config.simulation.adjacency_matrix:
-        A = model.vals
-    else:
-        A = torch.zeros(n_particles, n_particles, device=device, requires_grad=False, dtype=torch.float32)
-        A[i, j] = model.vals
-        A.T[i, j] = model.vals
-
-    fig = plt.figure(figsize=(8, 8))
-    ax = sns.heatmap(to_numpy(A),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046}, vmin=-1, vmax=1)
-    plt.title('Random connectivity matrix',fontsize=12);
-    plt.xticks([0,n_particles-1],[1,n_particles],fontsize=8)
-    plt.yticks([0,n_particles-1],[1,n_particles],fontsize=8)
-    plt.savefig(f"./{log_dir}/tmp_training/matrix/{epoch}_{N}.tif", dpi=87)
-    plt.close()
+    # i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+    # if (config.graph_model.signal_model_name)!='PDE_N':
+    #     A = model.W.clone().detach()
+    #     A[i,i] = 0
+    # elif 'asymmetric' in config.simulation.adjacency_matrix:
+    #     A = model.vals
+    # else:
+    #     A = torch.zeros(n_particles, n_particles, device=device, requires_grad=False, dtype=torch.float32)
+    #     A[i, j] = model.vals
+    #     A.T[i, j] = model.vals
+    #
+    # fig = plt.figure(figsize=(8, 8))
+    # ax = sns.heatmap(to_numpy(A),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046}, vmin=-1, vmax=1)
+    # plt.title('Random connectivity matrix',fontsize=12);
+    # plt.xticks([0,n_particles-1],[1,n_particles],fontsize=8)
+    # plt.yticks([0,n_particles-1],[1,n_particles],fontsize=8)
+    # plt.savefig(f"./{log_dir}/tmp_training/matrix/{epoch}_{N}.tif", dpi=87)
+    # plt.close()
 
 def plot_training_particle_field(config, has_siren, has_siren_time, model_f,  n_frames, model_name, log_dir, epoch, N, x, x_mesh, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
 
@@ -1026,6 +1045,7 @@ def choose_training_model(model_config=None, device=None, projections=None):
             model = Interaction_Falling_Water_Wall(aggr_type=aggr_type, config=model_config,bc_dpos=bc_dpos, dimension=dimension, device=device)
         case 'PDE_WFS':
             model = Interaction_Falling_Water_Smooth(aggr_type=aggr_type, config=model_config,bc_dpos=bc_dpos, dimension=dimension, device=device)
+
     model_name = model_config.graph_model.mesh_model_name
     match model_name:
         case 'DiffMesh':
@@ -1043,15 +1063,10 @@ def choose_training_model(model_config=None, device=None, projections=None):
         case 'RD_RPS_Mesh_bis':
             model = Mesh_RPS_bis(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
+
     model_name = model_config.graph_model.signal_model_name
     match model_name:
-        case 'PDE_N2' | 'PDE_N3' | 'PDE_N6':
-            model = Signal_Propagation2(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, projections=projections)
-            model.edges = []
-        case 'PDE_N4':
-            model = Signal_Propagation2(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
-            model.edges = []
-        case 'PDE_N5':
+        case 'PDE_N2' | 'PDE_N3' | 'PDE_N4' | 'PDE_N5' | 'PDE_N6' | 'PDE_N7':
             model = Signal_Propagation2(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
         case 'PDE_WBI':

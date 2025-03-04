@@ -5,7 +5,7 @@ from ParticleGraph.utils import to_numpy
 import torch
 from ParticleGraph.utils import *
 
-class PDE_N6(pyg.nn.MessagePassing):
+class PDE_N7(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
@@ -24,7 +24,7 @@ class PDE_N6(pyg.nn.MessagePassing):
     """
 
     def __init__(self, aggr_type=[], p=[], W=[], phi=[]):
-        super(PDE_N6, self).__init__(aggr=aggr_type)
+        super(PDE_N7, self).__init__(aggr=aggr_type)
 
         self.p = p
         self.W = W
@@ -53,7 +53,7 @@ class PDE_N6(pyg.nn.MessagePassing):
         du = -c * u + s * self.phi(u) + g * p * msg
         dp = (1-p)/tau - alpha * p * torch.abs(u)
 
-        return du, dp, g * p * msg
+        return du, dp
 
     def message(self, edge_index_i, edge_index_j, u_j, t_i):
 

@@ -1614,7 +1614,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         if simulation_config.connectivity_distribution == 'Gaussian':
             adjacency = torch.randn((n_particles, n_particles), dtype=torch.float32, device=device)
             adjacency = adjacency / np.sqrt(n_particles)
-            print(f"1/sqrt(N)  {1/np.sqrt(n_particles)}    std {torch.std(adjacency.flatten())}")
+            print(f"Gaussian   1/sqrt(N)  {1/np.sqrt(n_particles)}    std {torch.std(adjacency.flatten())}")
 
         elif simulation_config.connectivity_distribution == 'Lorentz':
 
@@ -1631,7 +1631,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                 s = s / n_particles**0.66
             elif n_particles > 8000:
                 s = s / n_particles**0.5
-            print(f"1/sqrt(N)  {1/np.sqrt(n_particles)}    std {np.std(s)}")
+            print(f"Lorentz   1/sqrt(N)  {1/np.sqrt(n_particles):0.3f}    std {np.std(s):0.3f}")
 
             adjacency = torch.tensor(s, dtype=torch.float32, device=device)
             adjacency = torch.reshape(adjacency, (n_particles, n_particles))
@@ -1643,9 +1643,13 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
         adjacency[i, i] = 0
 
-        if simulation_config.connectivity_filling_factor != 1:
-            mask = torch.rand(adjacency.shape) >  simulation_config.connectivity_filling_factor
-            adjacency[mask] = 0
+    if simulation_config.connectivity_filling_factor != 1:
+        mask = torch.rand(adjacency.shape) >  simulation_config.connectivity_filling_factor
+        adjacency[mask] = 0
+        mask = (adjacency != 0).float()
+        edge_index_ = mask.nonzero().t().contiguous()
+        torch.save(mask, f'./graphs_data/{dataset_name}/mask.pt')
+        torch.save(edge_index_, f'./graphs_data/{dataset_name}/edge_index_.pt')
 
     adj_matrix = torch.ones((n_particles)) - torch.eye(n_particles)
     edge_index, edge_attr = dense_to_sparse(adj_matrix)
@@ -1695,17 +1699,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             plt.savefig(f"graphs_data/{dataset_name}/type_distribution.tif", dpi=130)
             plt.close()
 
-        if run > 0:
-            X1 = torch.load(f'./graphs_data/{dataset_name}/X1.pt', map_location=device)
-            X_msg = torch.load(f'./graphs_data/{dataset_name}/X_msg.pt', map_location=device)
-        else:
-            xc, yc = get_equidistant_points(n_points=n_particles**2)
-            X_msg = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
-            perm = torch.randperm(X_msg.size(0))
-            X_msg = X_msg[perm]
-            torch.save(X1, f'./graphs_data/{dataset_name}/X1.pt')
-            torch.save(X_msg, f'./graphs_data/{dataset_name}/X_msg.pt')
-
         if ('modulation' in field_type):
             if run==0:
                 X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
@@ -1754,15 +1747,17 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
                 # model prediction
                 if ('modulation' in field_type) & (it >= 0):
-                    y, msg = model(dataset, has_field=True)
+                    y = model(dataset, has_field=True)
                 elif ('visual' in field_type) & (it >= 0):
-                    y, msg = model(dataset, has_field=True)
+                    y = model(dataset, has_field=True)
                 elif 'PDE_N3' in model_config.signal_model_name:
-                    y, msg = model(dataset, has_field=False, alpha = it/n_frames)
+                    y = model(dataset, has_field=False, alpha = it/n_frames)
                 elif 'PDE_N6' in model_config.signal_model_name:
-                    y, p, msg = model(dataset, has_field=False)
+                    y, p, = model(dataset, has_field=False)
+                elif 'PDE_N7' in model_config.signal_model_name:
+                     y, p, = model(dataset, has_field=False)
                 else:
-                    y, msg = model(dataset, has_field=False)
+                    y = model(dataset, has_field=False)
 
             # append list
             if (it >= 0) & bSave:
@@ -1779,7 +1774,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     y_list.append(to_numpy(y))
 
             # Particle update
-            if config.graph_model.signal_model_name == 'PDE_N6':
+            if (config.graph_model.signal_model_name == 'PDE_N6') | (config.graph_model.signal_model_name == 'PDE_N7'):
 
                 H1[:, 1] = y.squeeze()
                 H1[:, 0] = H1[:, 0] + H1[:, 1] * delta_t
@@ -1852,7 +1847,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
                 else:
 
-                    if 'PDE_N6' in model_config.signal_model_name:
+                    if ('PDE_N6' in model_config.signal_model_name) | ('PDE_N7' in model_config.signal_model_name):
                         plt.figure(figsize=(12, 5.6))
                         plt.axis('off')
                         plt.axis('off')
@@ -1900,30 +1895,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                         plt.tight_layout()
                         plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
                         plt.close()
-
-                if 'msg' in style:
-                    plt.figure(figsize=(10, 10))
-                    msg = to_numpy(model.msg)
-                    msg = np.reshape(msg, (n_particles**2,1))
-                    plt.scatter(to_numpy(X_msg[:, 0]), to_numpy(X_msg[:, 1]), s=0.1, c=msg ,cmap='viridis', vmin=-0.075, vmax=0.075)
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.tight_layout()
-                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Msg_{run}_{num}.tif", dpi=170)
-                    plt.close()
-
-                    im_ = imread(f"graphs_data/{dataset_name}/Fig/Msg_{run}_{num}.tif")
-                    plt.figure(figsize=(10, 10))
-                    plt.imshow(im)
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.subplot(3, 3, 1)
-                    plt.imshow(im_[800:1000, 800:1000, :])
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.tight_layout()
-                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Msg_{run}_{num}.tif", dpi=80)
-                    plt.close()
 
         if bSave:
             x_list = np.array(x_list)

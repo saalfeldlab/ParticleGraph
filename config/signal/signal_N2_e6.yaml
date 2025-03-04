@@ -3,7 +3,7 @@ dataset: 'signal_N2_e5'
 
 simulation:
     connectivity_file: 'random'
-    connectivity_mask: True
+    connectivity_mask: False
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
     connectivity_distribution: 'Lorentz'

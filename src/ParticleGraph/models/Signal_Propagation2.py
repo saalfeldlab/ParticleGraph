@@ -55,9 +55,6 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         self.bc_dpos = bc_dpos
         self.adjacency_matrix = simulation_config.adjacency_matrix
 
-        self.short_term_plasticity = model_config.short_term_plasticity
-
-
 
         if self.model == 'PDE_N3':
             self.embedding_evolves = True
@@ -79,21 +76,16 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         else:
             self.a = nn.Parameter(torch.tensor(projections, device=self.device, requires_grad=True, dtype=torch.float32))
 
-        if self.model == 'PDE_N6':
+        if (self.model == 'PDE_N6') | (self.model == 'PDE_N7'):
             self.b = nn.Parameter(torch.ones((int(self.n_particles), 1000 + 10), device=self.device, requires_grad=True,dtype=torch.float32)*0.44)
             self.embedding_step = self.n_frames // 1000
-
             self.lin_modulation = MLP(input_size=self.input_size_modulation, output_size=self.output_size_modulation, nlayers=self.n_layers_modulation,
                                 hidden_size=self.hidden_dim_modulation, device=self.device)
-
 
         self.W = nn.Parameter(torch.randn((int(self.n_particles),int(self.n_particles)), device=self.device, requires_grad=True, dtype=torch.float32))
 
         self.mask = torch.ones((int(self.n_particles),int(self.n_particles)), device=self.device, requires_grad=False, dtype=torch.float32)
         self.mask.fill_diagonal_(0)
-
-
-
 
     def get_interp_a(self, k, particle_id):
 
@@ -117,7 +109,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             embedding = self.a[particle_id, :]
 
         field = torch.ones_like(x[:,6:7])
-        if (self.model == 'PDE_N4') | (self.model == 'PDE_N5') | (self.model == 'PDE_N6'):
+        if (self.model == 'PDE_N4') | (self.model == 'PDE_N5') | (self.model == 'PDE_N6') | (self.model == 'PDE_N7'):
             field = x[:, 8:9]
 
         in_features = torch.cat([u, embedding], dim=1)
@@ -142,7 +134,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
 
     def message(self, edge_index_i, edge_index_j, u_j, embedding_i, embedding_j, field_i):
 
-        if (self.model=='PDE_N4'):
+        if (self.model=='PDE_N4') | (self.model=='PDE_N7'):
             in_features = torch.cat([u_j, embedding_i], dim=1)
         elif (self.model=='PDE_N5'):
             in_features = torch.cat([u_j, embedding_i, embedding_j], dim=1)
@@ -155,7 +147,10 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             self.msg = T[edge_index_i%self.n_particles, edge_index_j%self.n_particles][:,None] * self.lin_edge(in_features) * field_i
             return self.msg
         else:
-            return T[edge_index_i%self.n_particles, edge_index_j%self.n_particles][:,None] * self.lin_edge(in_features) * field_i
+            if (self.batch_size==1):
+                return T[edge_index_i, edge_index_j][:, None] * self.lin_edge(in_features) * field_i
+            else:
+                return T[edge_index_i%self.n_particles, edge_index_j%self.n_particles][:,None] * self.lin_edge(in_features) * field_i
 
 
     def update(self, aggr_out):

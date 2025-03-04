@@ -127,6 +127,8 @@ def choose_model(config=[], W=[], device=[]):
             model = PDE_N5(aggr_type=aggr_type, p=p, W=W, phi=phi)
         case 'PDE_N6':
             model = PDE_N6(aggr_type=aggr_type, p=p, W=W, phi=phi)
+        case 'PDE_N7':
+            model = PDE_N7(aggr_type=aggr_type, p=p, W=W, phi=phi)
 
 
     return model, bc_pos, bc_dpos
@@ -273,7 +275,7 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
         type = torch.cat((torch.zeros(n_wall_particles, device=device),torch.ones(real_n_particles, device=device)),0)
 
 
-    if config.graph_model.signal_model_name == 'PDE_N6':
+    if (config.graph_model.signal_model_name == 'PDE_N6') | (config.graph_model.signal_model_name == 'PDE_N7'):
         features = torch.cat((torch.rand((n_particles, 1), device=device), 0.1 * torch.randn((n_particles, 1), device=device),
                               torch.ones((n_particles, 1), device=device), torch.zeros((n_particles, 1), device=device)), 1)
     else:
