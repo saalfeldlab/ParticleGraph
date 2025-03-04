@@ -2555,9 +2555,8 @@ def data_train_synaptic2(config, erase, best_model, device):
                     optimizer_f.step()
                 total_loss += loss.item()
 
-            if simulation_config.connectivity_mask:
-                with torch.no_grad():
-                    model.W.copy_(model.W * model.mask)
+            with torch.no_grad():
+                model.W.copy_(model.W * model.mask)
 
             visualize_embedding = True
             if visualize_embedding & (((epoch < 60) & (N % plot_frequency == 0)) | (N == 0)):

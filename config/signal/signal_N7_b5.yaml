@@ -1,0 +1,84 @@
+description: 'synaptic network with neuron short term plasticity     random matrix 1000 neurons 4 types lorentz std 0.03'
+dataset: 'signal_N7_b4'
+
+simulation:
+    connectivity_file: 'random'
+    connectivity_mask: True
+    adjacency_matrix: ''
+    connectivity_init: [0,0.1]
+    connectivity_distribution: 'Lorentz'
+    connectivity_filling_factor: 0.10
+    params: [[10.0, 1.0, 1.0, 1.0, 25, 0.02], [10.0, 2.0, 1.0, 2.0, 25, 0.02], [10.0, 1.0, 2.0, 4.0, 25, 0.02], [10.0, 2.0, 2.0, 8.0, 25, 0.02]]
+    phi: 'tanh'
+    tau: 1.0
+    min_radius: 1.0
+    max_radius: 1.0E6
+    n_particles: 324
+    n_nodes: 324
+    n_particle_types: 4
+    n_frames: 20000
+    delta_t: 0.01
+    dpos_init:  0
+    boundary: 'no'
+    start_frame: -10000
+
+graph_model:
+    field_type: 'learnable_short_term_plasticity'
+    signal_model_name: 'PDE_N7'
+    particle_model_name: ''
+    mesh_model_name: ''
+    prediction: 'first_derivative'
+    aggr_type: 'add'
+    embedding_dim: 2
+
+    input_size: 3
+    output_size: 1
+    hidden_dim: 64
+    n_mp_layers: 3
+
+    input_size_update: 3
+    n_layers_update: 3
+    hidden_dim_update: 64
+
+    input_size_modulation: 2
+    n_layers_modulation: 3
+    hidden_dim_modulation: 64
+    output_size_modulation: 1
+
+
+plotting:
+    colormap: 'tab10'
+    arrow_length: 1
+    xlim: [-5,5]
+    ylim: [-8,8]
+
+training:
+    n_epochs: 20
+
+    recursive_loop: 1
+    recursive_parameters: [0.1, 0.1]
+
+    batch_size: 1
+    small_init_batch_size: False
+
+    n_runs: 2
+
+    rotation_augmentation: False
+    data_augmentation_loop: 200
+
+    sparsity: 'replace_embedding_function'
+    cluster_method: 'distance_plot'
+    fix_cluster_embedding: True
+    device: 'auto'
+    sparsity_freq: 4
+    learning_rate_start: 1.0E-4
+
+    coeff_diff: 100
+    coeff_lin_modulation: 1.0E-2
+    coeff_model_b: 1.0
+
+    learning_rate_W_start: 1.0E-4
+    learning_rate_start: 5.0E-5
+    learning_rate_embedding_start: 5.0E-4
+    learning_rate_modulation_start: 1.0E-5
+
