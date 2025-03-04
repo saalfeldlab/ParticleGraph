@@ -22,8 +22,7 @@ simulation:
     start_frame: -2000
 
 graph_model:
-    field_type: ''
-    short_term_plasticity: 'learnable'
+    field_type: 'learnable_short_term_plasticity'
     signal_model_name: 'PDE_N6'
     particle_model_name: ''
     mesh_model_name: ''

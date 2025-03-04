@@ -2213,6 +2213,8 @@ def data_train_synaptic2(config, erase, best_model, device):
     else:
         has_field = False
 
+    has_Siren = has_field & ('learnable_short_term_plasticity' not in field_type)
+
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
     recursive_parameters = train_config.recursive_parameters.copy()
@@ -2281,7 +2283,7 @@ def data_train_synaptic2(config, erase, best_model, device):
 
     print('create models ...')
     model, bc_pos, bc_dpos = choose_training_model(model_config=config, device=device, projections=projections)
-    if has_field & ('learnable_short_term_plasticity' not in field_type):
+    if has_Siren:
         model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
                                 out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
                                 hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device,
@@ -2297,7 +2299,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         print(f'best_model: {best_model}  start_epoch: {start_epoch}')
         logger.info(f'best_model: {best_model}  start_epoch: {start_epoch}')
 
-        if has_field:
+        if has_Siren:
             net = f'{log_dir}/models/best_model_f_with_{n_runs - 1}_graphs_{best_model}.pt'
             state_dict = torch.load(net, map_location=device)
             model_f.load_state_dict(state_dict['model_state_dict'])
@@ -2387,85 +2389,85 @@ def data_train_synaptic2(config, erase, best_model, device):
 
         total_loss = 0
         k = 0
+        time_step = 16
 
         for N in trange(Niter):
 
             run = np.random.randint(n_runs-1)
 
-            if (recursive_loop>1) & ('PDE_N6' in model_config.signal_model_name) & (has_field==False):
+            if (recursive_loop>1):
 
-                k = np.random.randint(n_frames - 5 - batch_size - recursive_loop)
-
-                # if (draw_sample == 0) & (k==0):
-                #     k = np.random.randint(n_frames - 5 - batch_size - recursive_loop*time_step)
-                #     prev_k = k
-
-                data_id = torch.ones((n_particles, 1), dtype=torch.int) * run
-
+                k = (k+1) % (n_frames - 5 - batch_size - recursive_loop*time_step)
                 x = torch.tensor(x_list[run][k], device=device).clone().detach()
+
+                ids = np.arange(k, k + recursive_loop * time_step, time_step)
+                true_activity_list = np.transpose(x_list[run][ids.astype(int), :, 6:7].squeeze())
+                true_modulation_list = np.transpose(x_list[run][ids.astype(int), :, 8:9].squeeze())
 
                 loss = 0
 
                 optimizer.zero_grad()
 
-                # true_activity_list = np.transpose(x_list[run][k:k+recursive_loop, :, 6:7].squeeze())
-                # true_modulation_list = np.transpose(x_list[run][k:k+recursive_loop, :, 8:9].squeeze())
-                # pred_activity_list=list([])
-                # pred_modulation_list = list([])
-
-                # matplotlib.use("Qt5Agg")
-                # fig = plt.figure(figsize=(8, 8))
-                # plt.scatter(true_activity_list[:, loop], to_numpy(pred_activity_list[loop].squeeze()), color='k', s=1)
-
+                pred_activity_list=list([])
+                pred_modulation_list = list([])
                 for loop in range(recursive_loop):
 
-                    # pred_activity_list.append(x[:, 6:7].clone().detach())
-                    # pred_modulation_list.append(x[:, 8:9].clone().detach())
+                    pred_activity_list.append(x[:, 6:7].clone().detach())
+                    pred_modulation_list.append(x[:, 8:9].clone().detach())
 
-                    in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[0:n_particles]),
-                                            dim=1)
+                    in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[0:n_particles]),dim=1)
                     func_phi = model.lin_phi(in_features.float())
                     in_features = torch.zeros((n_particles, 1), device=device)
                     func_edge = model.lin_edge(in_features.float())
                     diff = torch.relu(model.lin_edge(x[:, 6:7].clone().detach()) - model.lin_edge(x[:, 6:7].clone().detach() + 0.1)).norm(2)
                     loss = loss + model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + coeff_diff * diff
 
-                    if (loop == 0) and ('learnable' in model.short_term_plasticity):
-
+                    if (loop == 0):
                         alpha = (k % model.embedding_step) / model.embedding_step
                         x[:,8] = alpha * model.b[:, k // model.embedding_step + 1] ** 2 + (1 - alpha) * model.b[:, k // model.embedding_step] ** 2
 
                     dataset = data.Data(x=x, edge_index=edges)
                     y = torch.tensor(y_list[run][k], device=device) / ynorm
 
-                    if ('PDE_N3' in model_config.signal_model_name):
-                        k_batch = torch.ones((n_particles, 1), dtype=torch.int) * k
-                        pred = model(dataset, k=k_batch)
-                    else:
-                        pred = model(dataset)
+                    pred = model(dataset)
                     loss = loss + (pred - y).norm(2)
 
                     in_modulation = torch.cat((x[:, 6:7], x[:, 8:9]), dim=1)
                     pred_modulation = model.lin_modulation(in_modulation)
 
-                    if ('learnable' in model.short_term_plasticity):
-                        loss = loss + (model.b[:, 1:] - model.b[:, :-1]).norm(2) * coeff_model_b
-                    elif 'observed' in model.short_term_plasticity:
-                        loss = loss +((pred_modulation - d_modulation[:, k:k + 1] / modulation_norm).norm(2)).norm(2) * coeff_lin_modulation
+                    # loss = loss + (model.b[:, 1:] - model.b[:, :-1]).norm(2) * coeff_model_b
+                    # loss = loss +((pred_modulation - d_modulation[:, k:k + 1] / modulation_norm).norm(2)).norm(2) * coeff_lin_modulation
 
                     k = k + time_step
 
-                    x_next = torch.tensor(x_list[run][k], device=device).clone().detach()
-                    x[:, 6:7] = (x[:, 6:7] + delta_t * time_step * pred) * recursive_parameters[0] + (1-recursive_parameters[0]) * x_next[:, 6:7]
-                    if 'learnable' in model.short_term_plasticity:
-                        x[:, 8:9] = (x[:, 8:9] + delta_t * time_step * pred_modulation)
-                    elif 'observed' in model.short_term_plasticity:
-                        x[:, 8:9] = (x[:, 8:9] + delta_t * time_step * pred_modulation) * recursive_parameters[1] + (1-recursive_parameters[1]) * x_next[:, 8:9]
+                    x[:, 6:7] = x[:, 6:7] + delta_t * time_step * pred
+                    x[:, 8:9] = x[:, 8:9] + delta_t * time_step * pred_modulation
 
                 loss.backward()
                 optimizer.step()
 
+                pred_activity_list = torch.stack(pred_activity_list).squeeze().t()
+                pred_modulation_list = torch.stack(pred_modulation_list).squeeze().t()
+
                 total_loss += loss.item()
+
+
+                # # matplotlib.use("Qt5Agg")
+                # if N%100 == 0:
+                #     fig = plt.figure(figsize=(12, 12))
+                #     ind_list = [10, 124, 148, 200, 250, 300]
+                #     ax = fig.add_subplot(2, 1, 1)
+                #     for ind in ind_list:
+                #         plt.plot(true_activity_list[ind, :], c = 'k', alpha=0.5, linewidth = 8)
+                #         plt.plot(to_numpy(pred_activity_list[ind, :]))
+                #     plt.text(0.1, 0.9, f'k: {k}   loss: {np.round(loss.item(), 3)}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
+                #     ax = fig.add_subplot(2, 1, 2)
+                #     for ind in ind_list:
+                #         plt.plot(true_modulation_list[ind, :], c = 'k', alpha=0.5, linewidth = 8)
+                #         plt.plot(to_numpy(pred_modulation_list[ind, :]))
+                #     plt.savefig(f"./{log_dir}/tmp_training/field/Fig_{epoch}_{N}.tif")
+                #     plt.close()
+
 
             else:
 
@@ -2529,13 +2531,12 @@ def data_train_synaptic2(config, erase, best_model, device):
                     y = torch.tensor(y_list[run][k], device=device) / ynorm
 
                     if batch == 0:
-                        data_id = torch.ones((x.shape[0], 1), dtype=torch.int) * run
                         y_batch = y
                         k_batch = torch.ones((x.shape[0],1), dtype=torch.int, device = device) * k
                     else:
-                        data_id = torch.cat((data_id, torch.ones((x.shape[0], 1), dtype=torch.int) * run), dim=0)
                         y_batch = torch.cat((y_batch, y), dim=0)
                         k_batch = torch.cat((k_batch, torch.ones((x.shape[0],1), dtype=torch.int, device = device) * k), dim = 0)
+
                 batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
 
                 for batch in batch_loader:
@@ -2560,79 +2561,123 @@ def data_train_synaptic2(config, erase, best_model, device):
 
             visualize_embedding = True
             if visualize_embedding & (((epoch < 60) & (N % plot_frequency == 0)) | (N == 0)):
+                with torch.no_grad():
+                    plot_training_signal(config, model, adjacency, ynorm, log_dir, epoch, N, n_particles,
+                                         n_particle_types, type_list, cmap, device)
+                    torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
+                               os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
-                plot_training_signal(config, model, adjacency, ynorm, log_dir, epoch, N, n_particles,
-                                     n_particle_types, type_list, cmap, device)
-                torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
-                           os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+                    if 'learnable_short_term_plasticity' in field_type:
+                        fig = plt.figure(figsize=(12, 12))
+                        ax = fig.add_subplot(2, 2, 1)
+                        plt.imshow(to_numpy(modulation), aspect='auto')
+                        ax = fig.add_subplot(2, 2, 2)
+                        plt.imshow(to_numpy(model.b** 2), aspect='auto')
+                        ax.text(0.01, 0.99, f'recursive_parameter {recursive_parameters[0]:0.3f} ', transform=ax.transAxes,
+                                verticalalignment='top', horizontalalignment='left', color='w')
+                        ax.text(0.01, 0.95, f'loop {recursive_loop} ', transform=ax.transAxes,
+                                verticalalignment='top', horizontalalignment='left', color='w')
+                        ax = fig.add_subplot(2, 2, 3)
+                        plt.scatter(to_numpy(modulation[:,np.arange(0,20000,20)]), to_numpy(model.b[:,0:1000]** 2), s=0.1, color='k', alpha=0.01)
+                        x_data = to_numpy(modulation[:,np.arange(0,20000,20)]).flatten()
+                        y_data = to_numpy(model.b[:,0:1000]** 2).flatten()
+                        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+                        residuals = y_data - linear_model(x_data, *lin_fit)
+                        ss_res = np.sum(residuals ** 2)
+                        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+                        r_squared = 1 - (ss_res / ss_tot)
+                        ax.text(0.01, 0.99, f'$R^2$ {r_squared:0.3f}   slope {lin_fit[0]:0.3f}', transform=ax.transAxes,
+                                verticalalignment='top', horizontalalignment='left')
+                        ind_list = [10,124,148,200,250,300]
+                        ax = fig.add_subplot(4, 2, 6)
+                        for ind in ind_list:
+                            plt.plot(to_numpy(modulation[ind,:]))
+                        ax = fig.add_subplot(4, 2, 8)
+                        for ind in ind_list:
+                            plt.plot(to_numpy(model.b[ind,:]**2))
+                        plt.tight_layout()
+                        plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
+                        plt.close()
 
-                if ('PDE_N6' in model_config.signal_model_name) | ('PDE_N7' in model_config.signal_model_name):
-                    fig = plt.figure(figsize=(12, 12))
-                    ax = fig.add_subplot(2, 2, 1)
-                    plt.imshow(to_numpy(modulation), aspect='auto')
-                    ax = fig.add_subplot(2, 2, 2)
-                    plt.imshow(to_numpy(model.b** 2), aspect='auto')
-                    ax.text(0.01, 0.99, f'recursive_parameter {recursive_parameters[0]:0.3f} ', transform=ax.transAxes,
-                            verticalalignment='top', horizontalalignment='left', color='w')
-                    ax.text(0.01, 0.95, f'loop {recursive_loop} ', transform=ax.transAxes,
-                            verticalalignment='top', horizontalalignment='left', color='w')
+                        if recursive_loop>1:
 
-                    ax = fig.add_subplot(2, 2, 3)
-                    plt.scatter(to_numpy(modulation[:,np.arange(0,20000,20)]), to_numpy(model.b[:,0:1000]** 2), s=0.1, color='k', alpha=0.01)
+                            k = 256
+                            x = torch.tensor(x_list[run][k], device=device).clone().detach()
+                            true_activity_list = np.transpose(x_list[run][ids.astype(int), :, 6:7].squeeze())
+                            true_modulation_list = np.transpose(x_list[run][ids.astype(int), :, 8:9].squeeze())
 
-                    x_data = to_numpy(modulation[:,np.arange(0,20000,20)]).flatten()
-                    y_data = to_numpy(model.b[:,0:1000]** 2).flatten()
-                    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-                    residuals = y_data - linear_model(x_data, *lin_fit)
-                    ss_res = np.sum(residuals ** 2)
-                    ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-                    r_squared = 1 - (ss_res / ss_tot)
+                            loss = 0
+                            ids = np.arange(k, k + recursive_loop * time_step, time_step)
+                            pred_activity_list = list([])
+                            pred_modulation_list = list([])
+                            for loop in range(recursive_loop):
 
-                    ax.text(0.01, 0.99, f'$R^2$ {r_squared:0.3f}   slope {lin_fit[0]:0.3f}', transform=ax.transAxes,
-                            verticalalignment='top', horizontalalignment='left')
+                                pred_activity_list.append(x[:, 6:7].clone().detach())
+                                pred_modulation_list.append(x[:, 8:9].clone().detach())
 
-                    ind_list = [10,124,148,200,250,300]
-                    ax = fig.add_subplot(4, 2, 6)
-                    for ind in ind_list:
-                        plt.plot(to_numpy(modulation[ind,:]))
-                    ax = fig.add_subplot(4, 2, 8)
-                    for ind in ind_list:
-                        plt.plot(to_numpy(model.b[ind,:]**2))
+                                in_features = torch.cat(
+                                    (torch.zeros((n_particles, 1), device=device), model.a[0:n_particles]), dim=1)
+                                func_phi = model.lin_phi(in_features.float())
+                                in_features = torch.zeros((n_particles, 1), device=device)
+                                func_edge = model.lin_edge(in_features.float())
+                                diff = torch.relu(model.lin_edge(x[:, 6:7].clone().detach()) - model.lin_edge(
+                                    x[:, 6:7].clone().detach() + 0.1)).norm(2)
+                                loss = loss + model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(
+                                    2) + coeff_diff * diff
 
+                                if (loop == 0):
+                                    alpha = (k % model.embedding_step) / model.embedding_step
+                                    x[:, 8] = alpha * model.b[:, k // model.embedding_step + 1] ** 2 + (
+                                                1 - alpha) * model.b[:, k // model.embedding_step] ** 2
 
-                    # ax = fig.add_subplot(2, 2, 4)
-                    # x = torch.tensor(x_list[run][k], device=device).clone().detach()
-                    # in_modulation = torch.cat((x[:, 6:7], x[:, 8:9]), dim=1)
-                    # with torch.no_grad():
-                    #     pred_modulation = model.lin_modulation(in_modulation)
-                    # true_d_modulation = (1 - x[:, 8:9]) / 100 - 0.02 * x[:, 8:9] * torch.abs(x[:, 6:7])
-                    # plt.scatter(to_numpy(d_modulation[:, k:k + 1] / modulation_norm),
-                    #             to_numpy(true_d_modulation / modulation_norm), s=1, color='g', alpha=0.1)
-                    # plt.scatter(to_numpy(d_modulation[:, k:k + 1] / modulation_norm), to_numpy(pred_modulation), s=1, color='k', alpha=0.2)
-                    # plt.xlim([-2, 2])
-                    # # plt.ylim([-2, 2])
+                                dataset = data.Data(x=x, edge_index=edges)
+                                y = torch.tensor(y_list[run][k], device=device) / ynorm
 
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
-                    plt.close()
+                                pred = model(dataset)
+                                loss = loss + (pred - y).norm(2)
 
-                if (has_field) & ('learnable_short_term_plasticity' not in field_type):
-                    if 'visual' in field_type:
-                        tmp = torch.reshape(x[:n_nodes, 8:9], (n_nodes_per_axis, n_nodes_per_axis))
-                    else:
-                        tmp = torch.reshape(x[:, 8:9], (n_nodes_per_axis, n_nodes_per_axis))
-                    tmp = to_numpy(torch.sqrt(tmp))
-                    tmp = np.rot90(tmp, k=1)
-                    fig = plt.figure(figsize=(12, 12))
-                    plt.imshow(tmp, cmap='grey')
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
-                    plt.close()
-                    torch.save({'model_state_dict': model_f.state_dict(),
-                                'optimizer_state_dict': optimizer_f.state_dict()},
-                               os.path.join(log_dir, 'models', f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+                                in_modulation = torch.cat((x[:, 6:7], x[:, 8:9]), dim=1)
+                                pred_modulation = model.lin_modulation(in_modulation)
+
+                                k = k + time_step
+
+                                x[:, 6:7] = x[:, 6:7] + delta_t * time_step * pred
+                                x[:, 8:9] = x[:, 8:9] + delta_t * time_step * pred_modulation
+
+                            pred_activity_list = torch.stack(pred_activity_list).squeeze().t()
+                            pred_modulation_list = torch.stack(pred_modulation_list).squeeze().t()
+
+                            fig = plt.figure(figsize=(12, 12))
+                            ind_list = [10, 124, 148, 200, 250, 300]
+                            ax = fig.add_subplot(2, 1, 1)
+                            for ind in ind_list:
+                                plt.plot(true_activity_list[ind, :], c = 'k', alpha=0.5, linewidth = 8)
+                                plt.plot(to_numpy(pred_activity_list[ind, :]))
+                            plt.text(0.1, 0.9, f'k: {k}   loss: {np.round(loss.item(), 3)}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
+                            ax = fig.add_subplot(2, 1, 2)
+                            for ind in ind_list:
+                                plt.plot(true_modulation_list[ind, :], c = 'k', alpha=0.5, linewidth = 8)
+                                plt.plot(to_numpy(pred_modulation_list[ind, :]))
+                            plt.savefig(f"./{log_dir}/tmp_training/field/Fig_{epoch}_{N}.tif")
+                            plt.close()
+
+                    if has_Siren:
+                        if 'visual' in field_type:
+                            tmp = torch.reshape(x[:n_nodes, 8:9], (n_nodes_per_axis, n_nodes_per_axis))
+                        else:
+                            tmp = torch.reshape(x[:, 8:9], (n_nodes_per_axis, n_nodes_per_axis))
+                        tmp = to_numpy(torch.sqrt(tmp))
+                        tmp = np.rot90(tmp, k=1)
+                        fig = plt.figure(figsize=(12, 12))
+                        plt.imshow(tmp, cmap='grey')
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+                        plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
+                        plt.close()
+                        torch.save({'model_state_dict': model_f.state_dict(),
+                                    'optimizer_state_dict': optimizer_f.state_dict()},
+                                   os.path.join(log_dir, 'models', f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
             # check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 50, memory_percentage_threshold=0.6)
 
@@ -2642,7 +2687,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()},
                    os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
-        if has_field:
+        if has_Siren:
             torch.save({'model_state_dict': model_f.state_dict(),
                         'optimizer_state_dict': optimizer_f.state_dict()},
                        os.path.join(log_dir, 'models', f'best_model_f_with_{n_runs - 1}_graphs_{epoch}.pt'))
