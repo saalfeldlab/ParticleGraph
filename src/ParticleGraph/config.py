@@ -46,6 +46,8 @@ class SimulationConfig(BaseModel):
 
     adjacency_matrix: str = ''
 
+    short_term_plasticity_mode : str = 'depression'
+
     connectivity_file: str = ''
     connectivity_init: list[float] =[-1]
     connectivity_filling_factor: float = 1

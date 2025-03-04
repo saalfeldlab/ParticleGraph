@@ -23,12 +23,13 @@ class PDE_N7(pyg.nn.MessagePassing):
         
     """
 
-    def __init__(self, aggr_type=[], p=[], W=[], phi=[]):
+    def __init__(self, aggr_type=[], p=[], W=[], phi=[], short_term_plasticity_mode=''):
         super(PDE_N7, self).__init__(aggr=aggr_type)
 
         self.p = p
         self.W = W
         self.phi = phi
+        self.short_term_plasticity_mode = short_term_plasticity_mode
 
     def forward(self, data=[], has_field=False):
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
