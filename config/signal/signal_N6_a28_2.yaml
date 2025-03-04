@@ -52,11 +52,11 @@ plotting:
     ylim: [-8,8]
 
 training:
-    n_epochs: 80
+    n_epochs: 60
 
-    recursive_loop: 32
-    time_step: 16
+    recursive_loop: 2
     recursive_parameters: [0.1, 0.1]
+    time_step: 1
 
     batch_size: 1
     small_init_batch_size: False

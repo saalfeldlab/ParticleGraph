@@ -2359,7 +2359,7 @@ def data_train_synaptic2(config, erase, best_model, device):
     print("start training ...")
 
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
-    # torch.autograd.set_detect_anomaly(True)
+    torch.autograd.set_detect_anomaly(True)
 
     list_loss = []
     time.sleep(0.2)
@@ -2400,21 +2400,14 @@ def data_train_synaptic2(config, erase, best_model, device):
                 k = np.random.randint(n_frames - 5 - batch_size - recursive_loop*time_step)
 
                 x = torch.tensor(x_list[run][k], device=device).clone().detach()
-
                 ids = np.arange(k, k + recursive_loop * time_step, time_step)
-                # true_activity_list = np.transpose(x_list[run][ids.astype(int), :, 6:7].squeeze())
-                # true_modulation_list = np.transpose(x_list[run][ids.astype(int), :, 8:9].squeeze())
 
                 loss = 0
 
                 optimizer.zero_grad()
 
-                pred_activity_list=list([])
-                pred_modulation_list = list([])
-                for loop in range(recursive_loop):
 
-                    # pred_activity_list.append(x[:, 6:7].clone().detach())
-                    # pred_modulation_list.append(x[:, 8:9].clone().detach())
+                for loop in range(recursive_loop):
 
                     in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[0:n_particles]),dim=1)
                     func_phi = model.lin_phi(in_features.float())
@@ -2438,7 +2431,7 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                     loss = loss + model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + coeff_diff * diff
 
-                    if (loop == 0):
+                    if (loop == 0) & ('learnable_short_term_plasticity' in field_type):
                         alpha = (k % model.embedding_step) / model.embedding_step
                         x[:,8] = alpha * model.b[:, k // model.embedding_step + 1] ** 2 + (1 - alpha) * model.b[:, k // model.embedding_step] ** 2
 
@@ -2448,38 +2441,21 @@ def data_train_synaptic2(config, erase, best_model, device):
                     pred = model(dataset)
                     loss = loss + (pred - y).norm(2)
 
-                    in_modulation = torch.cat((x[:, 6:7], x[:, 8:9]), dim=1)
-                    pred_modulation = model.lin_modulation(in_modulation)
+                    x[:, 6:7] = x[:, 6:7] + delta_t * time_step * pred
 
-                    # loss = loss + (model.b[:, 1:] - model.b[:, :-1]).norm(2) * coeff_model_b
-                    # loss = loss +((pred_modulation - d_modulation[:, k:k + 1] / modulation_norm).norm(2)).norm(2) * coeff_lin_modulation
+                    if ('learnable_short_term_plasticity' in field_type):
+                        in_modulation = torch.cat((x[:, 6:7], x[:, 8:9]), dim=1)
+                        pred_modulation = model.lin_modulation(in_modulation)
+                        x[:, 8:9] = x[:, 8:9] + delta_t * time_step * pred_modulation
 
                     k = k + time_step
 
-                    x[:, 6:7] = x[:, 6:7] + delta_t * time_step * pred
-                    x[:, 8:9] = x[:, 8:9] + delta_t * time_step * pred_modulation
-
-                loss.backward()
-                optimizer.step()
-                total_loss += loss.item()
-
-                # pred_activity_list = torch.stack(pred_activity_list).squeeze().t()
-                # pred_modulation_list = torch.stack(pred_modulation_list).squeeze().t()
-                # matplotlib.use("Qt5Agg")
-                #
-                # fig = plt.figure(figsize=(12, 12))
-                # ind_list = [10, 124, 148, 200, 250, 300]
-                # ax = fig.add_subplot(2, 1, 1)
-                # for ind in ind_list:
-                #     plt.plot(true_activity_list[ind, :], c = 'k', alpha=0.5, linewidth = 8)
-                #     plt.plot(to_numpy(pred_activity_list[ind, :]))
-                # plt.text(0.1, 0.9, f'k: {k}   loss: {np.round(loss.item(), 3)}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
-                # ax = fig.add_subplot(2, 1, 2)
-                # for ind in ind_list:
-                #     plt.plot(true_modulation_list[ind, :], c = 'k', alpha=0.5, linewidth = 8)
-                #     plt.plot(to_numpy(pred_modulation_list[ind, :]))
-                # plt.savefig(f"./{log_dir}/tmp_training/field/Fig_{epoch}_{N}.tif")
-                # plt.close()
+                if (torch.isnan(loss)) | (torch.isinf(loss)):
+                    continue
+                else:
+                    loss.backward()
+                    optimizer.step()
+                    total_loss += loss.item()
 
             else:
 
@@ -2614,6 +2590,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                         if recursive_loop>1:
 
                             kk = 256
+                            time_step = train_config.time_step
                             x = torch.tensor(x_list[run][kk], device=device).clone().detach()
                             ids = np.arange(kk, kk + recursive_loop * time_step, time_step)
                             true_activity_list = np.transpose(x_list[run][ids.astype(int), :, 6:7].squeeze())
@@ -2622,7 +2599,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                             loss = 0
                             pred_activity_list = list([])
                             pred_modulation_list = list([])
-                            time_step = 16
+
                             for loop in range(recursive_loop):
 
                                 pred_activity_list.append(x[:, 6:7].clone().detach())
@@ -2662,6 +2639,43 @@ def data_train_synaptic2(config, erase, best_model, device):
                             for ind in ind_list:
                                 plt.plot(true_modulation_list[ind, :], c = 'k', alpha=0.5, linewidth = 8)
                                 plt.plot(to_numpy(pred_modulation_list[ind, :]))
+                            plt.savefig(f"./{log_dir}/tmp_training/field/Fig_{epoch}_{N}.tif")
+                            plt.close()
+
+                    if (has_field==False) & (recursive_loop>1):
+
+                            kk = 256
+                            time_step = train_config.time_step
+                            x = torch.tensor(x_list[run][kk], device=device).clone().detach()
+                            ids = np.arange(kk, kk + recursive_loop * time_step, time_step)
+                            true_activity_list = np.transpose(x_list[run][ids.astype(int), :, 6:7].squeeze())
+
+                            loss = 0
+                            pred_activity_list = list([])
+
+                            for loop in range(recursive_loop):
+
+                                pred_activity_list.append(x[:, 6:7].clone().detach())
+
+                                dataset = data.Data(x=x, edge_index=edges)
+                                y = torch.tensor(y_list[run][k], device=device) / ynorm
+
+                                pred = model(dataset)
+                                loss = loss + (pred - y).norm(2)
+
+                                kk = kk + time_step
+
+                                x[:, 6:7] = x[:, 6:7] + delta_t * time_step * pred
+
+                            pred_activity_list = torch.stack(pred_activity_list).squeeze().t()
+                            kk = kk - time_step*recursive_loop
+
+                            fig = plt.figure(figsize=(12, 6))
+                            ind_list = [10, 124, 148, 200, 250, 300]
+                            for ind in ind_list:
+                                plt.plot(true_activity_list[ind, :], c = 'k', alpha=0.5, linewidth = 8)
+                                plt.plot(to_numpy(pred_activity_list[ind, :]))
+                            plt.text(0.05, 0.95, f'k: {kk}   loss: {np.round(loss.item(), 3)}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
                             plt.savefig(f"./{log_dir}/tmp_training/field/Fig_{epoch}_{N}.tif")
                             plt.close()
 

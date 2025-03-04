@@ -55,7 +55,7 @@ training:
     n_epochs: 80
 
     recursive_loop: 32
-    time_step: 16
+    time_step: 18
     recursive_parameters: [0.1, 0.1]
 
     batch_size: 1
