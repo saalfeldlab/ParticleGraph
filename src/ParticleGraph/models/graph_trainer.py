@@ -2283,10 +2283,17 @@ def data_train_synaptic2(config, erase, best_model, device):
     print('create models ...')
     model, bc_pos, bc_dpos = choose_training_model(model_config=config, device=device, projections=projections)
     if has_Siren:
-        model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
-                                out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
-                                hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device,
-                                first_omega_0=omega, hidden_omega_0=omega)
+
+        if 'Siren_short_term_plasticity' in field_type:
+            model_f = Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
+                            hidden_features=model_config.n_layers_nnr,
+                            hidden_layers=model_config.n_layers_nnr, first_omega_0=omega, hidden_omega_0=omega,
+                            outermost_linear=True)
+        else:
+            model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
+                                    out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
+                                    hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device,
+                                    first_omega_0=omega, hidden_omega_0=omega)
         model_f.to(device=device)
         optimizer_f = torch.optim.Adam(lr=train_config.learning_rate_NNR, params=model_f.parameters())
         model_f.train()
