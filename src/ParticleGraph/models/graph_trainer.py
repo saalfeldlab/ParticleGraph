@@ -2285,7 +2285,7 @@ def data_train_synaptic2(config, erase, best_model, device):
     if has_Siren:
 
         if 'Siren_short_term_plasticity' in field_type:
-            model_f = Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
+            model_f = Siren_Network(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
                             hidden_features=model_config.n_layers_nnr,
                             hidden_layers=model_config.n_layers_nnr, first_omega_0=omega, hidden_omega_0=omega,
                             outermost_linear=True)
