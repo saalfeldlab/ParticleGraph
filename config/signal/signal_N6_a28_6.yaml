@@ -86,5 +86,5 @@ training:
     learning_rate_embedding_start: 5.0E-4
     learning_rate_modulation_start: 1.0E-5
 
-    learning_rate_NNR: 1.0E-6
+    learning_rate_NNR: 5.0E-5
 
