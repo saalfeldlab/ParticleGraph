@@ -5347,13 +5347,10 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             if has_field:
 
                 print('plot field ...')
-                net = f'{log_dir}/models/best_model_f_with_{n_runs - 1}_graphs_{epoch}.pt'
-                state_dict = torch.load(net, map_location=device)
-                model_f.load_state_dict(state_dict['model_state_dict'])
 
                 os.makedirs(f"./{log_dir}/results/field", exist_ok=True)
 
-                if 'PDE_N6' in model_config.signal_model_name:
+                if 'learnable_short_term_plasticity' in field_type:
 
                     modulation = torch.tensor(x_list[0], device=device)
                     modulation = modulation[:, :, 8:9].squeeze()
@@ -5362,25 +5359,20 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     d_modulation = (modulation[:, 1:] - modulation[:, :-1]) / delta_t
                     modulation_norm = torch.tensor(1.0E-2, device=device)
 
-                    for frame in trange(0, n_frames, n_frames // 100):
+                    fig = plt.figure(figsize=(12, 12))
+                    ind_list = [320]
+                    ids = np.arange(0, 100000, 100)
+                    ax = fig.add_subplot(2, 1, 1)
+                    for ind in ind_list:
+                        plt.plot(to_numpy(modulation[ind, ids]))
+                        plt.plot(to_numpy(model.b[ind, 0:1000]**2))
 
-                            fig, ax = fig_init()
-                            modulation_ = modulation[:, frame]
-                            pred = model_f(time=frame / n_frames) ** 2
-                            plt.scatter(to_numpy(modulation_), to_numpy(pred), s=10, c=mc)
-                            x_data = to_numpy(modulation_.squeeze())
-                            y_data = to_numpy(pred.squeeze())
-                            lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-                            residuals = y_data - linear_model(x_data, *lin_fit)
-                            ss_res = np.sum(residuals ** 2)
-                            ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-                            r_squared = 1 - (ss_res / ss_tot)
-                            print(f'field R^2$: {r_squared:0.4f}  slope: {np.round(lin_fit[0], 4)}')
-                            plt.tight_layout()
-                            plt.savefig(f"./{log_dir}/results/field/comparison {epoch}_{frame}.tif", dpi=80)
-                            plt.close()
 
                 else:
+
+                    net = f'{log_dir}/models/best_model_f_with_{n_runs - 1}_graphs_{epoch}.pt'
+                    state_dict = torch.load(net, map_location=device)
+                    model_f.load_state_dict(state_dict['model_state_dict'])
 
                     im = imread(f"graphs_data/{simulation_config.node_value_map}")
 
@@ -7525,7 +7517,7 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N2_a1', 'signal_N2_a2', 'signal_N2_a3', 'signal_N2_a4', 'signal_N2_a5', 'signal_N2_a10']
     # config_list = ['signal_N6_a28']
-    config_list = ['signal_N2_e5', 'signal_N2_e6']
+    config_list = ['signal_N6_a28']
 
     for config_file_ in config_list:
 
@@ -7539,7 +7531,7 @@ if __name__ == '__main__':
         print(f'config_file  {config.config_file}')
 
         data_plot(config=config, epoch_list=['best'], style='black color', device=device)
-        data_plot(config=config, epoch_list=['all'], style='black color', device=device)
+        # data_plot(config=config, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['time'], style='black color', device=device)
     #
     #     # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)

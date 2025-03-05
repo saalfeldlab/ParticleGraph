@@ -2380,7 +2380,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         if particle_batch_ratio < 1:
             Niter = int(n_frames * data_augmentation_loop // batch_size / particle_batch_ratio * 0.2)
         else:
-            Niter = int(n_frames * data_augmentation_loop // batch_size * n_runs / 10 // (recursive_loop+1))
+            Niter = int(n_frames * data_augmentation_loop // batch_size * n_runs / 10 // max(recursive_loop,1))
 
         plot_frequency = int(Niter // 50)
         print(f'{Niter} iterations per epoch')
