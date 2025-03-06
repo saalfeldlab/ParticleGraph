@@ -43,7 +43,23 @@ def get_type_time_series(new_labels=None, dataset_number=None, cell_id=None, n_p
 
     return new_labels[indexes]
 
-def get_in_features(rr, embedding_, config_model, max_radius):
+
+def get_in_features_update(rr=None, n_particles=None, model_a=None, model_update_type=None, device=None):
+
+    if rr == None:
+        if model_update_type == 'intricated':
+            in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model_a[0:n_particles], torch.zeros((n_particles, 1), device=device)), dim=1)
+        else:
+            in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model_a[0:n_particles]), dim=1)
+    else:
+        if model_update_type == 'intricated':
+            in_features = torch.cat((rr, model_a[0:n_particles], torch.zeros((n_particles, 1), device=device)), dim=1)
+        else:
+            in_features = torch.cat((rr, model_a[0:n_particles]), dim=1)
+
+    return in_features
+
+def get_in_features(rr, embedding_=[], config_model=[], max_radius=[]):
 
     match config_model:
         case 'PDE_A' | 'PDE_Cell_A':
@@ -154,7 +170,7 @@ def plot_training_signal(config, model, adjacency, ynorm, log_dir, epoch, N, n_p
     rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
     for n in range(n_particles):
         embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-        in_features = torch.cat((rr[:, None], embedding_), dim=1)
+        in_features = get_in_features_update(rr=rr[:, None], n_particles=n_particles, model_a=embedding_, model_update_type=model.update_type, device=device)
         with torch.no_grad():
             func = model.lin_phi(in_features.float())
         if (n % 2 == 0):
@@ -913,7 +929,7 @@ def analyze_edge_function_state(rr=[], config=None, model=None, id_list=None, ty
 
     return func_list, true_type_list, short_model_a_list, proj_interaction
 
-def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], model_a=None, n_nodes=0, dataset_number = 0, n_particles=None, ynorm=None, type_list=None, cmap=None, dimension=2, device=None):
+def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], model_a=None, n_nodes=0, dataset_number = 0, n_particles=None, ynorm=None, type_list=None, cmap=None, update_type=None, device=None):
 
     max_radius = config.simulation.max_radius
     min_radius = config.simulation.min_radius
@@ -947,7 +963,10 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
         else:
             embedding_ = model_a[dataset_number, n_nodes+n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
 
-        in_features = get_in_features(rr, embedding_, config_model, max_radius)
+        if update_type == 'intricated':
+            in_features = get_in_features_update(rr[:, None], n_particles, embedding_, update_type, device)
+        else:
+            in_features = get_in_features(rr, embedding_, config_model, max_radius)
         with torch.no_grad():
             func = model_MLP(in_features.float())
 

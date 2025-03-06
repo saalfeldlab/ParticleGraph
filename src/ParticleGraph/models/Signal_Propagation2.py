@@ -50,7 +50,9 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         self.output_size_modulation = model_config.output_size_modulation
         self.hidden_dim_modulation = model_config.hidden_dim_modulation
         self.n_layers_modulation = model_config.n_layers_modulation
+
         self.batch_size = config.training.batch_size
+        self.update_type = model_config.update_type
 
         self.bc_dpos = bc_dpos
         self.adjacency_matrix = simulation_config.adjacency_matrix
@@ -112,7 +114,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         if (self.model == 'PDE_N4') | (self.model == 'PDE_N5') | (self.model == 'PDE_N6') | (self.model == 'PDE_N7') :
             field = x[:, 8:9]
 
-        in_features = torch.cat([u, embedding], dim=1)
+
 
         # if (self.model=='PDE_N4') | (self.model=='PDE_N5'):
         #     msg = self.propagate(edge_index, u=u, embedding=embedding, field=field)
@@ -129,7 +131,12 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
 
         msg = self.propagate(edge_index, u=u, embedding=embedding, field=field)
 
-        pred = self.lin_phi(in_features) + msg
+        if self.update_type == 'intricated':
+            in_features = torch.cat([u, embedding, msg], dim=1)
+            pred = self.lin_phi(in_features)
+        else:
+            in_features = torch.cat([u, embedding], dim=1)
+            pred = self.lin_phi(in_features) + msg
 
         return pred
 

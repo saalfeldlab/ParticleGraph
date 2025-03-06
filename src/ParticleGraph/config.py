@@ -115,7 +115,7 @@ class GraphModelConfig(BaseModel):
     embedding_dim: int = 2
     embedding_init: str = ''
 
-    update_type: Literal['linear', 'mlp', 'pre_mlp', 'none', 'no_pos', 'embedding_MLP'] = 'none'
+    update_type: Literal['linear', 'mlp', 'pre_mlp', 'none', 'no_pos', 'intricated', 'embedding_MLP'] = 'none'
     input_size_update: int = 3
     n_layers_update: int = 3
     hidden_dim_update: int = 64
@@ -234,6 +234,7 @@ class TrainingConfig(BaseModel):
 
     recursive_loop: int = 0
     time_step: int = 1
+    recursive_sequence: str = ''
     recursive_parameters: list[float] = [0, 0]
 
     regul_matrix: bool = False

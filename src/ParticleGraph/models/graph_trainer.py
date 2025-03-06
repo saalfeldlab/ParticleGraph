@@ -436,7 +436,7 @@ def data_train_particle(config, erase, best_model, device):
                                                                 dataset_number=1,
                                                                 n_particles=n_particles, ynorm=ynorm,
                                                                 type_list=to_numpy(x[:, 1 + 2 * dimension]),
-                                                                cmap=cmap, dimension=dimension, device=device)
+                                                                cmap=cmap, update_type='', device=device)
 
             labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding,
                                                               train_config.cluster_distance_threshold, type_list,
@@ -2042,7 +2042,7 @@ def data_train_particle_field(config, erase, best_model, device):
                                                             dataset_number=1,
                                                             n_particles=n_particles, ynorm=ynorm,
                                                             type_list=to_numpy(x[:, 1 + 2 * dimension]),
-                                                            cmap=cmap, dimension=dimension, device=device)
+                                                            cmap=cmap, update_type='', device=device)
 
         labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding,
                                                           train_config.cluster_distance_threshold, type_list,
@@ -2401,6 +2401,12 @@ def data_train_synaptic2(config, erase, best_model, device):
 
             run = np.random.randint(n_runs-1)
 
+            if (train_config.recursive_loop > 1) & (train_config.recursive_sequence=='alternate'):
+                if N%4 == 0:
+                    recursive_loop = train_config.recursive_loop
+                else:
+                    recursive_loop = 1
+
             if (recursive_loop>1):
 
                 k = np.random.randint(n_frames - 5 - batch_size - recursive_loop*time_step)
@@ -2411,7 +2417,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                     optimizer_f.zero_grad()
                 optimizer.zero_grad()
 
-                in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[0:n_particles]), dim=1)
+                in_features = get_in_features_update(None, n_particles, model.a, model.update_type, device)
                 func_phi = model.lin_phi(in_features.float())
 
                 if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N7'):
@@ -2486,7 +2492,7 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                     k = np.random.randint(n_frames - 5 - batch_size)
 
-                    in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[0:n_particles]), dim=1)
+                    in_features = get_in_features_update(None, n_particles, model.a, model.update_type, device)
                     func_phi = model.lin_phi(in_features.float())
                     x = torch.tensor(x_list[run][k], device=device)
 
@@ -2574,6 +2580,8 @@ def data_train_synaptic2(config, erase, best_model, device):
                     if (recursive_loop>1):
 
                             kk = 256
+
+                            time_step = config.training.time_step
 
                             x = torch.tensor(x_list[run][kk], device=device).clone().detach()
                             ids = np.arange(kk, kk + recursive_loop * time_step, time_step)
@@ -2803,8 +2811,10 @@ def data_train_synaptic2(config, erase, best_model, device):
 
             if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
                 model_MLP = model.lin_edge
+                update_type = ''
             else:
                 model_MLP = model.lin_phi
+                update_type = model.update_type
 
             func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config,
                                                                 model_MLP=model_MLP, model_a=model.a,
@@ -2812,7 +2822,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                                                                 dataset_number=1,
                                                                 n_particles=n_particles, ynorm=ynorm,
                                                                 type_list=to_numpy(x[:, 1 + 2 * dimension]),
-                                                                cmap=cmap, dimension=dimension, device=device)
+                                                                cmap=cmap, update_type = update_type, device=device)
 
             labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding,
                                                               train_config.cluster_distance_threshold, type_list,
@@ -2882,11 +2892,12 @@ def data_train_synaptic2(config, erase, best_model, device):
                         for n in range(n_particles):
                             embedding_ = model.a[n, :].clone().detach() * torch.ones((1000, model_config.embedding_dim),
                                                                                      device=device)
-                            in_features = get_in_features(rr, embedding_, config.graph_model.signal_model_name,
-                                                          config.simulation.max_radius)
                             if (model_config.signal_model_name == 'PDE_N4'):
+                                in_features = get_in_features(rr, embedding_, config.graph_model.signal_model_name,
+                                                              config.simulation.max_radius)
                                 pred.append(model.lin_edge(in_features.float()))
                             else:
+                                in_features = get_in_features_update(rr[:,None], n_particles, embedding_, model.update_type, device)
                                 pred.append(model.lin_phi(in_features.float()))
                         pred = torch.stack(pred)
                         loss = (pred[:, :, 0] - y_func_list.clone().detach()).norm(2)
