@@ -95,7 +95,7 @@ class Operator_smooth(pyg.nn.MessagePassing):
         self.model_density = model_density
         self.sub_sampling = simulation_config.sub_sampling
         self.prediction = model_config.prediction
-        self.kernel_var = self.max_radius ** 2
+        self.kernel_var = 2 * self.max_radius ** 2
 
         self.kernel_norm = np.pi * self.kernel_var * (1 - np.exp(-self.max_radius ** 2/ self.kernel_var))
         self.field_type = model_config.field_type
@@ -163,20 +163,20 @@ class Operator_smooth(pyg.nn.MessagePassing):
 
             # self.modulation = self.siren(coords=mgrid) * max_radius **2
             # kernel_modified = torch.exp(-2*(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / (20*self.kernel_var))[:, None] * self.modulation
-
             kernel_modified = torch.exp(-2 * (mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / (20 * self.kernel_var))[:, None]
 
-            grad_autograd = -density_gradient(kernel_modified, mgrid)
-            laplace_autograd = density_laplace(kernel_modified, mgrid)
+            grad_autograd = -density_gradient(density_kernel, mgrid)
+            laplace_autograd = density_laplace(density_kernel, mgrid)
 
-            self.kernel_operators = torch.cat((kernel_modified, grad_autograd, laplace_autograd), dim=-1)
+            self.kernel_operators = torch.cat((density_kernel, grad_autograd, laplace_autograd), dim=-1)
 
             return density_kernel
 
-            # kernel_modified = torch.exp(-2 * (mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / (20*self.kernel_var))[:, None]
-            # fig = plt.figure(figsize=(6, 6))
-            # plt.scatter(to_numpy(mgrid[:,0]), to_numpy(mgrid[:,1]), s=10, c=to_numpy(kernel_modified))
-            # plt.show()
+            kernel_modified = torch.exp(-2 * (mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / (self.kernel_var))[:, None]
+            fig = plt.figure(figsize=(8, 6))
+            plt.scatter(to_numpy(mgrid[:,0]), to_numpy(mgrid[:,1]), s=10, c=to_numpy(kernel_modified), vmin=0, vmax=1)
+            plt.colorbar()
+            plt.show()
 
         else:
             # out = self.lin_edge(field_j) * self.kernel_operators[:,1:2] / density_j
@@ -306,7 +306,7 @@ if __name__ == '__main__':
 
     device = 'cuda:0'
     dimension = 2
-    bc_pos, bc_dpos = choose_boundary_values('no')
+    bc_pos, bc_dpos = choose_boundary_values('periodic')
     max_radius = config.simulation.max_radius
     min_radius = config.simulation.min_radius
     lr = config.training.learning_rate_start
@@ -609,8 +609,10 @@ if __name__ == '__main__':
                 # plt.close()
 
 
-
     x_list = torch.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/cell/cell_MDCK_4/full_vertice_list0.pt', map_location=device, weights_only=True)
+    x_list = torch.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/cell/cell_MDCK_4/x_list_0.pt', map_location=device, weights_only=True)
+
+
     for frame in trange(0,len(x_list)):
 
         x = x_list[frame]
@@ -664,6 +666,7 @@ if __name__ == '__main__':
         plt.title('pos', fontsize=8)
         ax = fig.add_subplot(2,4,5)
         plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=10, c=to_numpy(density_field))
+        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c='w')
         plt.xticks([])
         plt.yticks([])
         plt.title('density_field', fontsize=8)
@@ -676,7 +679,7 @@ if __name__ == '__main__':
         # plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=10, c=to_numpy(pred_field[:,1]))
         # plt.xticks([])
         # plt.yticks([])
-        plt.title('density_field_y', fontsize=8)
+        # plt.title('density_field_y', fontsize=8)
         ax = fig.add_subplot(2,4,2)
         plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c=to_numpy(density))
         plt.xticks([])
@@ -692,7 +695,7 @@ if __name__ == '__main__':
         plt.xticks([])
         plt.yticks([])
         plt.title('density_x', fontsize=8)
-
+        plt.show()
         plt.savefig(f'tmp/kernels_{frame}.tif')
         plt.close()
 
@@ -731,9 +734,14 @@ if __name__ == '__main__':
         density_field = model.density[0: mgrid.shape[0]]
 
         matplotlib.use("Qt5Agg")
-        fig = plt.figure(figsize=(8, 8))
+
+        density_field = np.reshape(density_field.detach().cpu().numpy(), (100, 100))
+
+        fig = plt.figure(figsize=(9, 8))
         ax = fig.add_subplot(111)
-        plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=10, c=to_numpy(density_field))
+        plt.imshow(density_field, cmap='viridis', extent=[0, 1, 0, 1])
+        # plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=10, c=to_numpy(density_field))
+        plt.colorbar()
         # Q = ax.quiver(to_numpy(x[:, 2]), to_numpy(x[:, 1]), -to_numpy(pred[:,1]), -to_numpy(pred[:,0]), color='w')
         plt.show()
 
@@ -829,6 +837,13 @@ if __name__ == '__main__':
 
         plt.savefig(f'tmp/kernels_{frame}.tif')
         plt.close()
+
+
+
+    model_f = Siren_Network(image_width=100, in_features=model_config.input_size_nnr,
+                            out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
+                            hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device,
+                            first_omega_0=30, hidden_omega_0=30)
 
 
 

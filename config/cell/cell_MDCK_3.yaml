@@ -9,10 +9,8 @@ simulation:
   n_particles: 96
   has_cell_division: True
   has_cell_death: True
-  n_particles_max: 8603
   n_particle_types: 16
-  n_interactions: 16
-  n_frames: 92
+  n_frames: 64
   delta_t: 1
   boundary: 'no'
   start_frame: 0

@@ -12,6 +12,7 @@ from .PDE_N4 import *
 from .PDE_N5 import *
 from .PDE_N6 import *
 from .PDE_N7 import *
+from .PDE_N8 import *
 from .PDE_O import PDE_O
 from .PDE_S import PDE_S
 from .PDE_V import PDE_V
@@ -24,5 +25,5 @@ from .utils import choose_model, choose_mesh_model, init_particles, init_mesh
 from .cell_utils import *
 
 __all__ = [utils, cell_utils, graph_data_generator, PDE_Laplacian, PDE_A, PDE_B, PDE_E, PDE_F, PDE_G, PDE_K,
-           PDE_N, PDE_N2, PDE_N3, PDE_N4, PDE_N5, PDE_N6, PDE_N7, PDE_O, PDE_V, PDE_Z, PDE_S,
+           PDE_N, PDE_N2, PDE_N3, PDE_N4, PDE_N5, PDE_N6, PDE_N7, PDE_N8, PDE_O, PDE_V, PDE_Z, PDE_S,
            RD_FitzHugh_Nagumo, RD_Gray_Scott, RD_RPS, choose_model, choose_mesh_model, init_particles, init_mesh]

@@ -56,14 +56,18 @@ def extract_object_properties(segmentation_image, fluorescence_image=[]):
         pos_y_weighted = region.weighted_centroid[1]
         # Calculate the area of the object
         area = region.area
-        # Calculate the perimeter of the object
+
         if area > 8:
+            # Calculate the perimeter of the object
             perimeter = region.perimeter
             # Calculate the aspect ratio of the bounding box
             aspect_ratio = region.major_axis_length / (region.minor_axis_length + 1e-6)
             # Calculate the orientation of the object
             orientation = region.orientation
-            object_properties.append((cell_id, pos_x_weighted, pos_y_weighted, area, perimeter, aspect_ratio, orientation))
+            # calculate median intensity
+            index = int(max(region.intensity_image[region.intensity_image > 0]))
+
+            object_properties.append((cell_id, pos_x_weighted, pos_y_weighted, area, perimeter, aspect_ratio, orientation, index))
 
     return object_properties
 
@@ -350,7 +354,7 @@ def load_2D_cell_data(config, device, visualize):
     run = 0
     x_list = []
     y_list = []
-
+    track_list = []
     full_vertice_list = []
 
     for it in range(len(files)):
@@ -364,11 +368,6 @@ def load_2D_cell_data(config, device, visualize):
 
         object_properties = extract_object_properties(im_seg, im_fluo[:,:,image_data.membrane_channel])
         object_properties = np.array(object_properties, dtype=float)
-
-        if image_data.tracking_file != '':
-            tracking_properties = extract_object_properties(im_tracking[it], im_tracking[it])
-            tracking_properties = np.array(tracking_properties, dtype=float)
-            track_id = tracking_properties[:,0]
 
         N = np.arange(object_properties.shape[0], dtype=np.float32)[:, None]
         X = object_properties[:,1:3]
@@ -386,11 +385,6 @@ def load_2D_cell_data(config, device, visualize):
         y = torch.zeros((x.shape[0], 2), dtype=torch.float32, device=device)
         y_list.append(y)
 
-
-
-
-
-
         vertices_list = []
         for n in trange(1, len(x)):
             mask = (im_seg == n)
@@ -407,6 +401,27 @@ def load_2D_cell_data(config, device, visualize):
         vertices_list = torch.stack(vertices_list)
         vertices_list = torch.reshape(vertices_list, (-1, vertices_list.shape[2]))
         vertices = vertices_list
+
+        if image_data.tracking_file != '':
+            tracking_properties = extract_object_properties(im_tracking[it], im_tracking[it])
+            tracking_properties = np.array(tracking_properties, dtype=float)
+            N = tracking_properties[:,-1]
+            X = tracking_properties[:,1:3]
+            empty_columns = np.zeros((X.shape[0], 11))
+            AR = object_properties[:, 3:4]
+            P = object_properties[:, 4:5]
+            ASR = object_properties[:, 5:6]
+            OR = object_properties[:, 6:7]
+
+            track = np.concatenate((N[:,None], X, empty_columns), axis=1)
+
+            # plt.imshow(im_tracking[it])
+            # plt.scatter(X[:,1], X[:,0],s=10)
+            # plt.text(X[:,1]+5, X[:,0], f'{N}', fontsize=4, color='w')
+
+            track = torch.tensor(track, dtype=torch.float32, device=device)
+            track_list.append(track)
+
 
         params = torch.tensor([[1.6233, 1.0413, 1.6012, 1.5615]], dtype=torch.float32, device=device)
         model_vertices = PDE_V(aggr_type='mean', p=torch.squeeze(params), sigma=30, bc_dpos=bc_dpos, dimension=2)
@@ -451,7 +466,7 @@ def load_2D_cell_data(config, device, visualize):
         plt.yticks([])
         plt.tight_layout()
         # plt.show()
-        plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/{files[it]}", dpi=80)
+        plt.savefig(f"graphs_data/{dataset_name}/Fig/{files[it]}", dpi=80)
         plt.close()
 
         n_cells = ID[-1] + 1
@@ -539,9 +554,10 @@ def load_2D_cell_data(config, device, visualize):
             plt.scatter(to_numpy(X1[:,1]*im_dim[1]),to_numpy(X1[:,0]*im_dim[0]),s=10,c='r')
 
 
-    torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
-    torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
-    torch.save(full_vertice_list, f'graphs_data/graphs_{dataset_name}/full_vertice_list{run}.pt')
+    torch.save(x_list, f'graphs_data/{dataset_name}/x_list_{run}.pt')
+    torch.save(y_list, f'graphs_data/{dataset_name}/y_list_{run}.pt')
+    torch.save(track_list, f'graphs_data/{dataset_name}/track_list_{run}.pt')
+    torch.save(full_vertice_list, f'graphs_data/{dataset_name}/full_vertice_list{run}.pt')
 
 
     print(f'n_cells: {n_cells}')

@@ -205,13 +205,13 @@ if __name__ == '__main__':
 
         if not step % steps_til_summary:
             print("Step %d, Total loss %0.6f" % (step, loss))
-            # img_grad = gradient(model_output, coords)
-            # img_laplacian = laplace(model_output, coords)
+            img_grad = gradient(model_output, coords)
+            img_laplacian = laplace(model_output, coords)
 
             fig, axes = plt.subplots(1, 3, figsize=(18, 6))
             axes[0].imshow(model_output.cpu().view(256, 256).detach().numpy())
-            # axes[1].imshow(img_grad.norm(dim=-1).cpu().view(256, 256).detach().numpy())
-            # axes[2].imshow(img_laplacian.cpu().view(256, 256).detach().numpy())
+            axes[1].imshow(img_grad.norm(dim=-1).cpu().view(256, 256).detach().numpy())
+            axes[2].imshow(img_laplacian.cpu().view(256, 256).detach().numpy())
             plt.show()
             # plt.savefig(f"tmp/output_{step}.png")
             # plt.close()

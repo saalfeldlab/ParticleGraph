@@ -5,16 +5,15 @@ data_folder_name: '/groups/saalfeld/home/allierc/signaling/MDCK/Leica SGFP2 and 
 simulation:
   params: [[-1]]
   min_radius: 0
-  max_radius: 0.05
+  max_radius: 0.2
   n_particles: 96
   has_cell_division: True
   has_cell_death: True
-  n_particles_max: 8603
   n_particle_types: 16
   n_interactions: 16
-  n_frames: 92
+  n_frames: 64
   delta_t: 1
-  boundary: 'no'
+  boundary: 'periodic'
   start_frame: 0
 
 image_data:

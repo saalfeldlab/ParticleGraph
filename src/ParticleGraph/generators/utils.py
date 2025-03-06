@@ -133,6 +133,8 @@ def choose_model(config=[], W=[], device=[]):
             model = PDE_N6(aggr_type=aggr_type, p=p, W=W, phi=phi, short_term_plasticity_mode = short_term_plasticity_mode)
         case 'PDE_N7':
             model = PDE_N7(aggr_type=aggr_type, p=p, W=W, phi=phi, short_term_plasticity_mode = short_term_plasticity_mode)
+        case 'PDE_N8':
+            model = PDE_N8(aggr_type=aggr_type, p=p, W=W, phi=phi)
 
 
     return model, bc_pos, bc_dpos

@@ -144,6 +144,8 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
 
         if (self.model=='PDE_N4') | (self.model=='PDE_N7'):
             in_features = torch.cat([u_j, embedding_i], dim=1)
+        if (self.model=='PDE_N8'):
+            in_features = torch.cat([u_j, embedding_j], dim=1)
         elif (self.model=='PDE_N5'):
             in_features = torch.cat([u_j, embedding_i, embedding_j], dim=1)
         else:

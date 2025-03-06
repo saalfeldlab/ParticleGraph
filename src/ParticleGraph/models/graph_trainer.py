@@ -2420,7 +2420,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                 in_features = get_in_features_update(None, n_particles, model.a, model.update_type, device)
                 func_phi = model.lin_phi(in_features.float())
 
-                if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N7'):
+                if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N7') | (model_config.signal_model_name == 'PDE_N8'):
                     in_features = torch.zeros((n_particles, dimension + 1), device=device)
                     func_edge = model.lin_edge(in_features.float())
                     in_features = torch.cat((x[:, 6:7], model.a), dim=1)
@@ -2496,7 +2496,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                     func_phi = model.lin_phi(in_features.float())
                     x = torch.tensor(x_list[run][k], device=device)
 
-                    if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N7'):
+                    if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N7') | (model_config.signal_model_name == 'PDE_N8'):
                         in_features = torch.zeros((n_particles, dimension + 1), device=device)
                         func_edge = model.lin_edge(in_features.float())
                         in_features = torch.cat((x[:, 6:7], model.a), dim=1)
@@ -2717,7 +2717,6 @@ def data_train_synaptic2(config, erase, best_model, device):
                                     'optimizer_state_dict': optimizer_f.state_dict()},
                                    os.path.join(log_dir, 'models', f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
-
                     elif has_Siren:
 
                         if 'visual' in field_type:
@@ -2809,7 +2808,7 @@ def data_train_synaptic2(config, erase, best_model, device):
             ax = fig.add_subplot(2, 5, 6)
             embedding = to_numpy(model.a.squeeze())
 
-            if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
+            if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5') | (model_config.signal_model_name == 'PDE_N8'):
                 model_MLP = model.lin_edge
                 update_type = ''
             else:
@@ -2892,7 +2891,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                         for n in range(n_particles):
                             embedding_ = model.a[n, :].clone().detach() * torch.ones((1000, model_config.embedding_dim),
                                                                                      device=device)
-                            if (model_config.signal_model_name == 'PDE_N4'):
+                            if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N8'):
                                 in_features = get_in_features(rr, embedding_, config.graph_model.signal_model_name,
                                                               config.simulation.max_radius)
                                 pred.append(model.lin_edge(in_features.float()))
