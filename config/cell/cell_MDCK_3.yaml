@@ -14,16 +14,16 @@ simulation:
   n_interactions: 16
   n_frames: 92
   delta_t: 1
-  time_step: 2
   boundary: 'no'
   start_frame: 0
 
 image_data:
     file_type: '2D fluo'
-    cellpose_channel: 0
     cellpose_diameter: 75
     cellpose_model: '/groups/saalfeld/home/allierc/signaling/MDCK/Leica SGFP2 and H42 nuclear marker/training/models/CP_20250109_093212'
     cellpose_channel: [2, 1]
+    membrane_channel: 1
+    tracking_file: '/groups/saalfeld/home/allierc/signaling/MDCK/Leica SGFP2 and H42 nuclear marker/Position1-Center/tracking.tif'
 
 graph_model:
   particle_model_name: 'PDE_Cell'

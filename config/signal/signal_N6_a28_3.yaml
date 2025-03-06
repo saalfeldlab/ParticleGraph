@@ -45,10 +45,10 @@ graph_model:
     output_size_modulation: 1
 
     input_size_nnr: 1
-    n_layers_nnr: 5
+    n_layers_nnr: 10
     hidden_dim_nnr: 64
     output_size_nnr: 1024
-    omega: 80
+    omega: 30
 
 plotting:
     colormap: 'tab10'
@@ -86,5 +86,5 @@ training:
     learning_rate_embedding_start: 5.0E-4
     learning_rate_modulation_start: 1.0E-5
 
-    learning_rate_NNR: 1.0E-6
+    learning_rate_NNR: 1.0E-5
 

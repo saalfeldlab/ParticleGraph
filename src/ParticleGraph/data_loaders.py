@@ -267,7 +267,7 @@ def load_LG_ODE(config, device=None, visualize=False, step=1000):
     torch.save(connection_matrix_list, f'graphs_data/graphs_{dataset_name}/connection_matrix_list.pt')
 
 
-def load_cell_data(config, device, visualize):
+def load_2D_cell_data(config, device, visualize):
 
     plt.style.use('dark_background')
 
@@ -286,39 +286,44 @@ def load_cell_data(config, device, visualize):
 
     bc_pos, bc_dpos = choose_boundary_values('no')
 
-    if image_data.file_type == '3D masks meshes':
-
-        load_3D_cell_data(config, device, visualize)
-        return
-
-
     # Loading Data
+
+    folder = f'./graphs_data/{dataset_name}/'
+    os.makedirs(folder, exist_ok=True)
+    os.makedirs(f'./graphs_data/{dataset_name}/Fig/', exist_ok=True)
+
+    files = glob.glob(f"{folder}/*")
+    for f in files:
+        if (f[-3:] != 'Fig') & (f[-2:] != 'GT') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (f != 'generation_code.py'):
+            os.remove(f)
+    files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
+    for f in files:
+        os.remove(f)
 
     files = os.listdir(data_folder_name)
     files = [f for f in files if f.endswith('.tif')]
     files.sort()
 
-    if image_data.file_type == '2D fluo':
-        os.makedirs(f"{data_folder_name}/SEG", exist_ok=True)
+    os.makedirs(f"{data_folder_name}/SEG", exist_ok=True)
 
-        model_path = image_data.cellpose_model
-        model_custom = models.CellposeModel(gpu=True, pretrained_model=model_path)
+    model_path = image_data.cellpose_model
+    model_custom = models.CellposeModel(gpu=True, pretrained_model=model_path)
 
-        # model_cyto1 = models.CellposeModel(gpu=True, model_type='cyto3', nchan=2)
-        # model_cyto2 = models.CellposeModel(gpu=True, model_type='cyto2', nchan=2)
-        # model_cyto3 = models.CellposeModel(gpu=True, model_type='cyto2_cp3', nchan=2)
+    # model_cyto1 = models.CellposeModel(gpu=True, model_type='cyto3', nchan=2)
+    # model_cyto2 = models.CellposeModel(gpu=True, model_type='cyto2', nchan=2)
+    # model_cyto3 = models.CellposeModel(gpu=True, model_type='cyto2_cp3', nchan=2)
 
-        print('generate segmentation masks with Cellpose ...')
-        if False:
-            for it in trange(len(files)):
-                im = tifffile.imread(data_folder_name + files[it])
-                im = np.array(im)
-                masks, flows, styles = model_custom.eval(im, diameter=120, flow_threshold=0.0, invert=False, normalize=True, channels=image_data.cellpose_channel)
-                tifffile.imsave(data_folder_name + 'SEG/' + files[it], masks)
-                # matplotlib.use("Qt5Agg")
-                # fig = plt.subplots(figsize=(8, 8))
-                # plt.imshow(masks)
-                # plt.show()
+    print('generate segmentation masks with Cellpose ...')
+
+    # for it in trange(len(files)):
+    #     im = tifffile.imread(data_folder_name + files[it])
+    #     im = np.array(im)
+    #     masks, flows, styles = model_custom.eval(im, diameter=120, flow_threshold=0.0, invert=False, normalize=True, channels=image_data.cellpose_channel)
+    #     tifffile.imsave(data_folder_name + 'SEG/' + files[it], masks)
+        # matplotlib.use("Qt5Agg")
+        # fig = plt.subplots(figsize=(8, 8))
+        # plt.imshow(masks)
+        # plt.show()
 
 
     # 0 N1 cell index dim=1
@@ -337,7 +342,11 @@ def load_cell_data(config, device, visualize):
     # 16 ASR1 aspect ratio
     # 17 OR1 orientation
 
-    n_cells = 1
+    if image_data.tracking_file != '':
+        im_tracking = tifffile.imread(image_data.tracking_file)
+        im_tracking = np.array(im_tracking)
+
+    n_cells = 0
     run = 0
     x_list = []
     y_list = []
@@ -349,16 +358,17 @@ def load_cell_data(config, device, visualize):
         print (f'{files[it]}')
 
         im_fluo = np.array(tifffile.imread(data_folder_name + files[it]))
-        im = np.array(tifffile.imread(data_folder_name + 'SEG/' + files[it]))
+        im_seg = np.array(tifffile.imread(data_folder_name + 'SEG/' + files[it]))
 
-        im_dim = im.shape
+        im_dim = im_seg.shape
 
-        if len(image_data.cellpose_channel) == 2:
-            object_properties = extract_object_properties(im, im_fluo[:,:,image_data.cellpose_channel[1]-1])
-        else:
-            object_properties = extract_object_properties(im, im)
-
+        object_properties = extract_object_properties(im_seg, im_fluo[:,:,image_data.membrane_channel])
         object_properties = np.array(object_properties, dtype=float)
+
+        if image_data.tracking_file != '':
+            tracking_properties = extract_object_properties(im_tracking[it], im_tracking[it])
+            tracking_properties = np.array(tracking_properties, dtype=float)
+            track_id = tracking_properties[:,0]
 
         N = np.arange(object_properties.shape[0], dtype=np.float32)[:, None]
         X = object_properties[:,1:3]
@@ -376,32 +386,32 @@ def load_cell_data(config, device, visualize):
         y = torch.zeros((x.shape[0], 2), dtype=torch.float32, device=device)
         y_list.append(y)
 
+
+
+
+
+
         vertices_list = []
         for n in trange(1, len(x)):
-            mask = (im == n)
+            mask = (im_seg == n)
             if np.sum(mask)>0:
-                vertices = mask_to_vertices(mask=(im == n), num_vertices=20)
+                vertices = mask_to_vertices(mask=(im_seg == n), num_vertices=20)
                 uniform_points = get_uniform_points(vertices, num_points=20)
-
-                N = n*20 + np.arange(20, dtype=np.float32)[:, None]
+                N = (n-1)*20 + np.arange(20, dtype=np.float32)[:, None]
                 X = uniform_points
                 empty_columns = np.zeros((X.shape[0], 2))
-                T = n_cells + n * np.ones((X.shape[0], 1))
+                T = n_cells + (n-1) * np.ones((X.shape[0], 1))
                 vertices = np.concatenate((N.astype(int), X, empty_columns, T, N.astype(int)), axis=1)
-
                 vertices = torch.tensor(vertices, dtype=torch.float32, device=device)
                 vertices_list.append(vertices)
-
         vertices_list = torch.stack(vertices_list)
         vertices_list = torch.reshape(vertices_list, (-1, vertices_list.shape[2]))
         vertices = vertices_list
 
         params = torch.tensor([[1.6233, 1.0413, 1.6012, 1.5615]], dtype=torch.float32, device=device)
         model_vertices = PDE_V(aggr_type='mean', p=torch.squeeze(params), sigma=30, bc_dpos=bc_dpos, dimension=2)
-
         max_radius=50
         min_radius=0
-
         for epoch in trange(2):
             distance = torch.sum(bc_dpos(vertices[:, None, 1:dimension + 1] - vertices[None, :, 1:dimension + 1]) ** 2, dim=2)
             adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
@@ -418,6 +428,7 @@ def load_cell_data(config, device, visualize):
         fig = plt.subplots(figsize=(16, 14))
         plt.xticks([])
         plt.yticks([])
+        plt.axis('off')
         ax = plt.subplot(211)
         plt.imshow(im_fluo)
         for n in range(len(x)):
@@ -451,14 +462,14 @@ def load_cell_data(config, device, visualize):
             matplotlib.use("Qt5Agg")
             fig = plt.figure(figsize=(13, 10.5))
             ax = fig.add_subplot(221)
-            plt.imshow(im>0)
+            plt.imshow(im_seg>0)
             plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=5, c='k', alpha=0.75)
             plt.xticks([])
             plt.yticks([])
             plt.xlim([0, im_dim[1]])
             plt.ylim([0, im_dim[0]])
             ax = fig.add_subplot(222)
-            plt.imshow(im*0)
+            plt.imshow(im_seg*0)
             plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=5, c='w')
             for k in range(len(x)):
                 plt.text(to_numpy(x[k, 2]) + 5, to_numpy(x[k, 1]), f'{int(to_numpy(x[k, -1]))}', fontsize=4, color='w')
@@ -468,7 +479,7 @@ def load_cell_data(config, device, visualize):
             plt.ylim([0, im_dim[0]])
 
             ax = fig.add_subplot(223)
-            plt.imshow(im>0)
+            plt.imshow(im_seg>0)
             edge_index = torch.sum((x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
             edge_index = ((edge_index < max_radius ** 2) & (edge_index > min_radius ** 2)).float() * 1
             edge_index = edge_index.nonzero().t().contiguous()
@@ -509,7 +520,6 @@ def load_cell_data(config, device, visualize):
             plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{it}.tif", dpi=120)
             plt.close()
 
-
             vor.vertices = vor.vertices * im_dim
 
             matplotlib.use("Qt5Agg")
@@ -521,7 +531,7 @@ def load_cell_data(config, device, visualize):
             plt.imshow(im_fluo[:,:,1])
             plt.show()
             fig = plt.figure(figsize=(13, 10.5))
-            plt.imshow(im>0)
+            plt.imshow(im_seg>0)
             plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=5, c='k', alpha=0.75)
             vor, vertices_pos, vertices_per_cell, all_points = get_vertices(points=X1, device=device)
             voronoi_plot_2d(vor, ax=ax, show_vertices=False, line_colors='green', line_width=1, line_alpha=1,
@@ -629,8 +639,6 @@ def load_3D_cell_data(config, device, visualize):
 
     # mesh_file = '/groups/wang/wanglab/GNN/240408-LVpD80-E10-IAI/SMG2-processed/masks_smooth2_mesh_vtp/240408-E14-SMG-LVpD80-E10-IAI-SMG2-combined-rcan-t049_cp_masks.vtp'
     # visualize_mesh(mesh_file)
-
-
 
 
 

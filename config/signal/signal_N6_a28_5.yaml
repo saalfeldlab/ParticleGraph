@@ -46,7 +46,7 @@ graph_model:
 
     input_size_nnr: 1
     n_layers_nnr: 5
-    hidden_dim_nnr: 64
+    hidden_dim_nnr: 256
     output_size_nnr: 1024
     omega: 30
 
@@ -62,7 +62,7 @@ training:
     recursive_loop: 1
     time_step: 1
 
-    batch_size: 1
+    batch_size: 4
     small_init_batch_size: False
 
     n_runs: 2

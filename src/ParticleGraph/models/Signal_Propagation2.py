@@ -108,8 +108,8 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             particle_id = x[:, 0].long()
             embedding = self.a[particle_id, :]
 
-        field = torch.ones_like(x[:,6:7])
-        if (self.model == 'PDE_N4') | (self.model == 'PDE_N5') | (self.model == 'PDE_N6') | (self.model == 'PDE_N7'):
+        field = torch.ones((self.n_particles,1), requires_grad=False, dtype=torch.float32, device=self.device)
+        if (self.model == 'PDE_N4') | (self.model == 'PDE_N5') | (self.model == 'PDE_N6') | (self.model == 'PDE_N7') :
             field = x[:, 8:9]
 
         in_features = torch.cat([u, embedding], dim=1)
@@ -123,10 +123,11 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         #     if self.return_all:
         #         self.msg = torch.matmul(self.W * self.mask, self.lin_edge(u))
 
-        if (self.model=='PDE_N2') & (self.batch_size==1):
-            msg = torch.matmul(self.W * self.mask, self.lin_edge(u))
-        else:
-            msg = self.propagate(edge_index, u=u, embedding=embedding, field=field)
+        # if (self.model=='PDE_N2') & (self.batch_size==1):
+        #     msg = torch.matmul(self.W * self.mask, self.lin_edge(u))
+        # else:
+
+        msg = self.propagate(edge_index, u=u, embedding=embedding, field=field)
 
         pred = self.lin_phi(in_features) + msg
 

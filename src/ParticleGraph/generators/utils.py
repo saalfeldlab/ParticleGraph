@@ -1,7 +1,7 @@
 
 from ParticleGraph.generators import *
 from ParticleGraph.utils import *
-from ParticleGraph.data_loaders import load_solar_system, load_LG_ODE, load_WaterRampsWall, load_cell_data
+from ParticleGraph.data_loaders import load_solar_system, load_LG_ODE, load_WaterRampsWall, load_2D_cell_data, load_3D_cell_data
 from time import sleep
 from scipy.spatial import Delaunay
 from tifffile import imread, imsave
@@ -23,7 +23,10 @@ def generate_from_data(config, device, visualize=True, step=None, cmap=None):
     elif 'WaterRamps' in data_folder_name:
         load_WaterRampsWall(config, device, visualize, step, cmap)
     elif image_data.file_type != 'none':
-        load_cell_data(config, device, visualize)
+        if image_data.file_type == '3D masks meshes':
+            load_3D_cell_data(config, device, visualize)
+        if image_data.file_type == '2D fluo':
+            load_2D_cell_data(config, device, visualize)
     else:
         raise ValueError(f'Unknown data folder name {data_folder_name}')
 

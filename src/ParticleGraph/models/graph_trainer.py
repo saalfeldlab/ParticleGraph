@@ -2632,8 +2632,6 @@ def data_train_synaptic2(config, erase, best_model, device):
                             plt.savefig(f"./{log_dir}/tmp_training/field/Field_{epoch}_{N}.tif")
                             plt.close()
 
-
-
                     if 'learnable_short_term_plasticity' in field_type:
                         fig = plt.figure(figsize=(12, 12))
                         ax = fig.add_subplot(2, 2, 1)

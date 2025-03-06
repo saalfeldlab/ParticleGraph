@@ -46,7 +46,7 @@ graph_model:
 
     input_size_nnr: 1
     n_layers_nnr: 5
-    hidden_dim_nnr: 64
+    hidden_dim_nnr: 256
     output_size_nnr: 1024
     omega: 30
 
@@ -86,5 +86,5 @@ training:
     learning_rate_embedding_start: 5.0E-4
     learning_rate_modulation_start: 1.0E-5
 
-    learning_rate_NNR: 5.0E-6
+    learning_rate_NNR: 1.0E-5
 
