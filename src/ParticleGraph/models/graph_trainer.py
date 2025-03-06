@@ -2389,7 +2389,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         else:
             Niter = int(n_frames * data_augmentation_loop // batch_size * n_runs / 10 // max(recursive_loop,1))
 
-        plot_frequency = int(Niter // 10)
+        plot_frequency = int(Niter // 20)
         print(f'{Niter} iterations per epoch')
         logger.info(f'{Niter} iterations per epoch')
         print(f'plot every {plot_frequency} iterations')
@@ -2621,14 +2621,16 @@ def data_train_synaptic2(config, erase, best_model, device):
                             fig = plt.figure(figsize=(12, 12))
                             ind_list = [10, 124, 148, 200, 250, 300]
                             ax = fig.add_subplot(2, 1, 1)
+                            ids = np.arange(0, recursive_loop * time_step, time_step)
                             for ind in ind_list:
-                                plt.plot(true_activity_list[ind, :], c = 'k', alpha=0.5, linewidth = 8)
-                                plt.plot(to_numpy(pred_activity_list[ind, :]))
+                                plt.plot(ids, true_activity_list[ind, :], c = 'k', alpha=0.5, linewidth = 8)
+                                plt.plot(ids, to_numpy(pred_activity_list[ind, :]))
                             plt.text(0.05, 0.95, f'k: {kk}   loss: {np.round(loss.item(), 3)}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
-                            ax = fig.add_subplot(2, 1, 2)
-                            for ind in ind_list:
-                                plt.plot(true_modulation_list[ind, :], c = 'k', alpha=0.5, linewidth = 8)
-                                plt.plot(to_numpy(pred_modulation_list[ind, :]))
+                            if ('learnable_short_term_plasticity' in field_type):
+                                ax = fig.add_subplot(2, 1, 2)
+                                for ind in ind_list:
+                                    plt.plot(ids, true_modulation_list[ind, :], c = 'k', alpha=0.5, linewidth = 8)
+                                    plt.plot(ids, to_numpy(pred_modulation_list[ind, :]))
                             plt.savefig(f"./{log_dir}/tmp_training/field/Field_{epoch}_{N}.tif")
                             plt.close()
 
@@ -3360,7 +3362,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     n_frames = simulation_config.n_frames
     delta_t = simulation_config.delta_t
     time_window = training_config.time_window
-    time_step = simulation_config.time_step
+    time_step = 1  #training_config.time_step
     sub_sampling = simulation_config.sub_sampling
     bounce_coeff = simulation_config.bounce_coeff
     cmap = CustomColorMap(config=config)
