@@ -2366,7 +2366,7 @@ def data_train_synaptic2(config, erase, best_model, device):
     print("start training ...")
 
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
-    torch.autograd.set_detect_anomaly(True)
+    # torch.autograd.set_detect_anomaly(True)
 
     list_loss = []
     time.sleep(0.2)
