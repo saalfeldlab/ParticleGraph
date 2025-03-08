@@ -1644,15 +1644,21 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         mask = torch.rand(adjacency.shape) >  simulation_config.connectivity_filling_factor
         adjacency[mask] = 0
         mask = (adjacency != 0).float()
-        edge_index_ = mask.nonzero().t().contiguous()
+        # edge_index_, edge_attr_ = dense_to_sparse(adjacency)
+        if n_particles>10000:
+            edge_index = large_tensor_nonzero(mask)
+            print (f'edge_index {edge_index.shape}')
+        else:
+            edge_index = mask.nonzero().t().contiguous()
+        edge_attr = adjacency[edge_index[0], edge_index[1]]
         torch.save(mask, f'./graphs_data/{dataset_name}/mask.pt')
-        torch.save(edge_index_, f'./graphs_data/{dataset_name}/edge_index_.pt')
+        torch.save(adjacency, f'./graphs_data/{dataset_name}/adjacency.pt')
+    else:
+        adj_matrix = torch.ones((n_particles)) - torch.eye(n_particles)
+        torch.save(adj_matrix, f'./graphs_data/{dataset_name}/adjacency.pt')
+        edge_index, edge_attr = dense_to_sparse(adj_matrix)
 
-    adj_matrix = torch.ones((n_particles)) - torch.eye(n_particles)
-    edge_index, edge_attr = dense_to_sparse(adj_matrix)
     edge_index = edge_index.to(device=device)
-
-    torch.save(adjacency, f'./graphs_data/{dataset_name}/adjacency.pt')
     torch.save(edge_index, f'./graphs_data/{dataset_name}/edge_index.pt')
 
     if (('modulation' in model_config.field_type) | ('visual' in model_config.field_type)) & ('PDE_N6' not in model_config.signal_model_name):
@@ -1870,7 +1876,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
                     else:
                         plt.figure(figsize=(10, 10))
-                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=140, c=to_numpy(x[:, 6]),
+                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=10, c=to_numpy(x[:, 6]),
                                     cmap='viridis', vmin=-10, vmax=10, edgecolors='k', alpha=1)
                         cbar = plt.colorbar()
                         cbar.ax.yaxis.set_tick_params(labelsize=8)

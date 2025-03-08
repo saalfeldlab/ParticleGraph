@@ -690,7 +690,17 @@ def check_and_clear_memory(
             gc.collect()
             torch.cuda.empty_cache()
 
-
+def large_tensor_nonzero(tensor, chunk_size=2**30):
+    indices = []
+    num_chunks = (tensor.numel() + chunk_size - 1) // chunk_size
+    for i in range(num_chunks):
+        chunk = tensor.flatten()[i * chunk_size:(i + 1) * chunk_size]
+        chunk_indices = chunk.nonzero(as_tuple=True)[0] + i * chunk_size
+        indices.append(chunk_indices)
+    indices = torch.cat(indices)
+    row_indices = indices // tensor.size(1)
+    col_indices = indices % tensor.size(1)
+    return torch.stack([row_indices, col_indices])
 
 def get_equidistant_points(n_points=1024):
     indices = np.arange(0, n_points, dtype=float) + 0.5
@@ -751,6 +761,9 @@ def get_3d_bounding_box(xx):
     }
 
     return bounding_box
+
+
+
 
 
 

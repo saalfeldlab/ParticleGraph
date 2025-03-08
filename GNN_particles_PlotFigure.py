@@ -7522,7 +7522,7 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N2_a1', 'signal_N2_a2', 'signal_N2_a3', 'signal_N2_a4', 'signal_N2_a5', 'signal_N2_a10']
     # config_list = ['signal_N6_a28']
-    config_list = ['signal_N8_k1']
+    config_list = ['signal_N2_d3']
 
     for config_file_ in config_list:
 
@@ -7538,9 +7538,9 @@ if __name__ == '__main__':
         data_plot(config=config, epoch_list=['best'], style='black color', device=device)
         data_plot(config=config, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['time'], style='black color', device=device)
-    #
-    #     # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)
-    #     # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
+
+        # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)
+        # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 
     # f_list = ['synaptic_supp5']
     # for f in f_list:
