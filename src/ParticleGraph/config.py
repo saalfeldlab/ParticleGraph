@@ -221,6 +221,7 @@ class TrainingConfig(BaseModel):
     coeff_loss2: float = 1
     coeff_loss3: float = 1
     coeff_diff: float = 10
+    coeff_diff_update: float = 10
     coeff_model_a: float = 0
     coeff_model_b: float = 0
     coeff_lin_modulation: float = 0

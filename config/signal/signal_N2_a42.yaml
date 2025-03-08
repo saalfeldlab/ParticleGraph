@@ -1,5 +1,5 @@
 description: 'test 10^5 time points  LRs 1E-4 5E-5 5E-4     synaptic network random matrix no recursive loop 1000 neurons 4 types lorentz std 0.03'
-dataset: 'signal_N2_a11'
+dataset: 'signal_N2_a42'
 
 simulation:
     connectivity_file: 'random'
@@ -32,7 +32,7 @@ graph_model:
     n_mp_layers: 3
 
     input_size_update: 4
-    n_layers_update: 3
+    n_layers_update: 5
     hidden_dim_update: 64
 
     aggr_type: 'add'
@@ -62,6 +62,8 @@ training:
     sparsity_freq: 4
 
     learning_rate_W_start: 1.0E-4
-    learning_rate_start: 5.0E-6
+    learning_rate_start: 5.0E-5
     learning_rate_embedding_start: 5.0E-4
+
+    noise_level: 1
 

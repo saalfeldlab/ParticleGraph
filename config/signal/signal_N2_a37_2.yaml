@@ -25,16 +25,19 @@ graph_model:
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
+
     input_size: 1
     output_size: 1
     hidden_dim: 64
     n_mp_layers: 3
-    input_size_update: 3
-    n_layers_update: 3
+
+    input_size_update: 4
+    n_layers_update: 5
     hidden_dim_update: 64
+
     aggr_type: 'add'
     embedding_dim: 2
-    update_type: 'none'
+    update_type: 'intricated'
 
 
 plotting:
@@ -44,13 +47,12 @@ plotting:
     ylim: [-8,8]
 
 training:
-    n_epochs: 40
-    recursive_loop: 16
-    time_step: 1
-
+    n_epochs: 20
+    recursive_loop: 1
     batch_size: 1
     small_init_batch_size: False
     n_runs: 2
+
     sparsity: 'none'
     rotation_augmentation: False
     data_augmentation_loop: 50

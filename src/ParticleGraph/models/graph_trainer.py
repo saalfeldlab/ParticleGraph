@@ -2376,9 +2376,11 @@ def data_train_synaptic2(config, erase, best_model, device):
         if (epoch < train_config.n_epochs_init):
             coeff_L1 = train_config.first_coeff_L1
             coeff_diff = train_config.coeff_diff
+            coeff_diff_update = train_config.coeff_diff_update
         else:
             coeff_L1 = train_config.coeff_L1
             coeff_diff = 0
+            coeff_diff_update = 0
         logger.info(f'coeff_L1: {coeff_L1} coeff_diff: {coeff_diff}')
 
         batch_size = int(get_batch_size(epoch) / particle_batch_ratio)
@@ -2501,19 +2503,26 @@ def data_train_synaptic2(config, erase, best_model, device):
                         func_edge = model.lin_edge(in_features.float())
                         in_features = torch.cat((x[:, 6:7], model.a), dim=1)
                         in_features_next = torch.cat((x[:, 6:7] + 0.1, model.a), dim=1)
-                        diff = torch.relu(model.lin_edge(in_features) - model.lin_edge(in_features_next)).norm(2)
+                        diff = torch.relu(model.lin_edge(in_features) - model.lin_edge(in_features_next)).norm(2) * coeff_diff
                     elif model_config.signal_model_name == 'PDE_N5':
                         in_features = torch.zeros((n_particles, 2 * dimension + 1), device=device)
                         func_edge = model.lin_edge(in_features.float())
                         in_features = torch.cat((x[:, 6:7], model.a, model.a), dim=1)
                         in_features_next = torch.cat((x[:, 6:7] + 0.1, model.a, model.a), dim=1)
-                        diff = torch.relu(model.lin_edge(in_features) - model.lin_edge(in_features_next)).norm(2)
+                        diff = torch.relu(model.lin_edge(in_features) - model.lin_edge(in_features_next)).norm(2) * coeff_diff
                     else:
                         in_features = torch.zeros((n_particles, 1), device=device)
                         func_edge = model.lin_edge(in_features.float())
-                        diff = torch.relu(model.lin_edge(x[:, 6:7].clone().detach()) - model.lin_edge(x[:, 6:7].clone().detach() + 0.1)).norm(2)
+                        diff = torch.relu(model.lin_edge(x[:, 6:7].clone().detach()) - model.lin_edge(x[:, 6:7].clone().detach() + 0.1)).norm(2) * coeff_diff
+                    if model.update_type == 'intricated':
+                        in_features = get_in_features_update(x[:, 6:7].clone().detach(), n_particles, model.a, model.update_type, device)
+                        in_features[:,-1] = x[:, 6]
+                        in_features = in_features.clone().detach()
+                        in_features_next = in_features.clone().detach()
+                        in_features_next[:,-1] = in_features[:,-1] + 0.1
+                        diff = diff + torch.relu(model.lin_phi(in_features) - model.lin_phi(in_features_next)).norm(2) * coeff_diff_update
 
-                    loss += model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + coeff_diff * diff
+                    loss += model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff
 
                     if has_field:
                         if 'visual' in field_type:
