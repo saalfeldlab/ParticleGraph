@@ -53,9 +53,8 @@ training:
     n_runs: 2
     n_epochs_init: 10
 
-    coeff_diff_update: 1.0E5
+    coeff_diff_update: 10000
 
-    sparsity: 'none'
     rotation_augmentation: False
     data_augmentation_loop: 50
     cluster_method: 'distance_plot'
@@ -65,7 +64,7 @@ training:
     sparsity_freq: 4
 
     learning_rate_W_start: 1.0E-4
-    learning_rate_start: 5.0E-5
+    learning_rate_start: 1.0E-6
     learning_rate_embedding_start: 5.0E-4
 
     noise_level: 1

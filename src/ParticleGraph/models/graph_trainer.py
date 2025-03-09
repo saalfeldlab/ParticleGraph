@@ -2219,7 +2219,6 @@ def data_train_synaptic2(config, erase, best_model, device):
     sparsity_freq = train_config.sparsity_freq
     recursive_parameters = train_config.recursive_parameters.copy()
 
-
     log_dir, logger = create_log_dir(config, erase)
     print(f'loading graph files N: {n_runs} ...')
     logger.info(f'Graph files N: {n_runs}')
@@ -2286,9 +2285,9 @@ def data_train_synaptic2(config, erase, best_model, device):
     if has_Siren:
         if 'Siren_short_term_plasticity' in field_type:
             model_f = Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
-                            hidden_features=model_config.n_layers_nnr,
+                            hidden_features=model_config.hidden_dim_nnr,
                             hidden_layers=model_config.n_layers_nnr, first_omega_0=omega, hidden_omega_0=omega,
-                            outermost_linear=True)
+                            outermost_linear=model_config.outermost_linear_nnr)
         else:
             model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
                                     out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
@@ -2304,6 +2303,10 @@ def data_train_synaptic2(config, erase, best_model, device):
         start_epoch = int(best_model.split('_')[0])
         print(f'best_model: {best_model}  start_epoch: {start_epoch}')
         logger.info(f'best_model: {best_model}  start_epoch: {start_epoch}')
+
+        # with torch.no_grad():
+        #     model.W.copy_(model.W * 0)
+        #     model.a.copy_(model.a * 0)
 
         if has_Siren:
             net = f'{log_dir}/models/best_model_f_with_{n_runs - 1}_graphs_{best_model}.pt'
@@ -2532,12 +2535,28 @@ def data_train_synaptic2(config, erase, best_model, device):
                             alpha = (k % model.embedding_step) / model.embedding_step
                             x[:, 8] = alpha * model.b[:, k // model.embedding_step + 1] ** 2 + (1 - alpha) * model.b[:,k // model.embedding_step] ** 2
                             loss = loss + (model.b[:, 1:] - model.b[:, :-1]).norm(2) * coeff_model_b
+                        elif 'Siren_short_term_plasticity_2' in field_type:
+                            t = torch.zeros((1, n_particles, 1), dtype=torch.float32, device=device)
+                            t[0] = torch.tensor(k / n_frames, dtype=torch.float32, device=device).repeat(n_particles, 1)
+                            if 'derivative' in field_type:
+                                t.requires_grad = True
+                                m = model_f(t) ** 2
+                                x[:, 8] = m.squeeze()
+                                grad_outputs = torch.ones_like(m)
+                                grad = torch.autograd.grad(m, [t], grad_outputs=grad_outputs, create_graph=True)[0]
+                                in_modulation = torch.cat((x[:, 6:7].clone().detach(), m[0]), dim=1)
+                                pred_modulation = model.lin_modulation(in_modulation)
+                                loss = loss + (grad[0] - pred_modulation).norm(2) * coeff_lin_modulation
+                            else:
+                                m = model_f(t) ** 2
+                                x[:, 8] = m.squeeze()
                         elif 'Siren_short_term_plasticity' in field_type:
                             t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
                             t[:, 0, :] = torch.tensor(k / n_frames, dtype=torch.float32, device=device)
                             x[:, 8] = model_f(t) ** 2
                         else:
                             x[:, 8:9] = model_f(time=k / n_frames) ** 2
+
 
                     # edges = model.edges.clone().detach()
                     # if particle_batch_ratio < 1:
@@ -2588,68 +2607,67 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                     if (recursive_loop>1):
 
-                            kk = 256
+                        kk = 256
+                        time_step = config.training.time_step
 
-                            time_step = config.training.time_step
+                        x = torch.tensor(x_list[run][kk], device=device).clone().detach()
+                        ids = np.arange(kk, kk + recursive_loop * time_step, time_step)
+                        true_activity_list = np.transpose(x_list[run][ids.astype(int), :, 6:7].squeeze())
+                        true_modulation_list = np.transpose(x_list[run][ids.astype(int), :, 8:9].squeeze())
 
-                            x = torch.tensor(x_list[run][kk], device=device).clone().detach()
-                            ids = np.arange(kk, kk + recursive_loop * time_step, time_step)
-                            true_activity_list = np.transpose(x_list[run][ids.astype(int), :, 6:7].squeeze())
-                            true_modulation_list = np.transpose(x_list[run][ids.astype(int), :, 8:9].squeeze())
+                        loss = 0
+                        pred_activity_list = list([])
+                        pred_modulation_list = list([])
 
-                            loss = 0
-                            pred_activity_list = list([])
-                            pred_modulation_list = list([])
+                        for loop in range(recursive_loop):
 
-                            for loop in range(recursive_loop):
+                            pred_activity_list.append(x[:, 6:7].clone().detach())
 
-                                pred_activity_list.append(x[:, 6:7].clone().detach())
+                            if (loop == 0) & ('learnable_short_term_plasticity' in field_type):
+                                alpha = (kk % model.embedding_step) / model.embedding_step
+                                x[:, 8] = alpha * model.b[:, kk // model.embedding_step + 1] ** 2 + (
+                                            1 - alpha) * model.b[:, kk // model.embedding_step] ** 2
+                            elif 'Siren_short_term_plasticity' in field_type:
+                                t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
+                                t[:, 0, :] = torch.tensor(kk / n_frames, dtype=torch.float32, device=device)
+                                x[:, 8] = model_f(t.clone().detach()) ** 2
 
-                                if (loop == 0) & ('learnable_short_term_plasticity' in field_type):
-                                    alpha = (kk % model.embedding_step) / model.embedding_step
-                                    x[:, 8] = alpha * model.b[:, kk // model.embedding_step + 1] ** 2 + (
-                                                1 - alpha) * model.b[:, kk // model.embedding_step] ** 2
-                                elif 'Siren_short_term_plasticity' in field_type:
-                                    t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
-                                    t[:, 0, :] = torch.tensor(kk / n_frames, dtype=torch.float32, device=device)
-                                    x[:, 8] = model_f(t.clone().detach()) ** 2
+                            pred_modulation_list.append(x[:, 8:9].clone().detach())
 
-                                pred_modulation_list.append(x[:, 8:9].clone().detach())
+                            dataset = data.Data(x=x, edge_index=edges)
+                            y = torch.tensor(y_list[run][k], device=device) / ynorm
 
-                                dataset = data.Data(x=x, edge_index=edges)
-                                y = torch.tensor(y_list[run][k], device=device) / ynorm
+                            pred = model(dataset)
+                            loss = loss + (pred - y).norm(2)
 
-                                pred = model(dataset)
-                                loss = loss + (pred - y).norm(2)
+                            kk = kk + time_step
 
-                                kk = kk + time_step
+                            if 'learnable_short_term_plasticity' in field_type:
+                                in_modulation = torch.cat((x[:, 6:7], x[:, 8:9]), dim=1)
+                                pred_modulation = model.lin_modulation(in_modulation)
+                                x[:, 8:9] = x[:, 8:9] + delta_t * time_step * pred_modulation
 
-                                if 'learnable_short_term_plasticity' in field_type:
-                                    in_modulation = torch.cat((x[:, 6:7], x[:, 8:9]), dim=1)
-                                    pred_modulation = model.lin_modulation(in_modulation)
-                                    x[:, 8:9] = x[:, 8:9] + delta_t * time_step * pred_modulation
+                            x[:, 6:7] = x[:, 6:7] + delta_t * time_step * pred
 
-                                x[:, 6:7] = x[:, 6:7] + delta_t * time_step * pred
+                        pred_activity_list = torch.stack(pred_activity_list).squeeze().t()
+                        pred_modulation_list = torch.stack(pred_modulation_list).squeeze().t()
+                        kk = kk - time_step*recursive_loop
 
-                            pred_activity_list = torch.stack(pred_activity_list).squeeze().t()
-                            pred_modulation_list = torch.stack(pred_modulation_list).squeeze().t()
-                            kk = kk - time_step*recursive_loop
-
-                            fig = plt.figure(figsize=(12, 12))
-                            ind_list = [10, 124, 148, 200, 250, 300]
-                            ax = fig.add_subplot(2, 1, 1)
-                            ids = np.arange(0, recursive_loop * time_step, time_step)
+                        fig = plt.figure(figsize=(12, 12))
+                        ind_list = [10, 124, 148, 200, 250, 300]
+                        ax = fig.add_subplot(2, 1, 1)
+                        ids = np.arange(0, recursive_loop * time_step, time_step)
+                        for ind in ind_list:
+                            plt.plot(ids, true_activity_list[ind, :], c = 'k', alpha=0.5, linewidth = 8)
+                            plt.plot(ids, to_numpy(pred_activity_list[ind, :]))
+                        plt.text(0.05, 0.95, f'k: {kk}   loss: {np.round(loss.item(), 3)}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
+                        if ('learnable_short_term_plasticity' in field_type):
+                            ax = fig.add_subplot(2, 1, 2)
                             for ind in ind_list:
-                                plt.plot(ids, true_activity_list[ind, :], c = 'k', alpha=0.5, linewidth = 8)
-                                plt.plot(ids, to_numpy(pred_activity_list[ind, :]))
-                            plt.text(0.05, 0.95, f'k: {kk}   loss: {np.round(loss.item(), 3)}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
-                            if ('learnable_short_term_plasticity' in field_type):
-                                ax = fig.add_subplot(2, 1, 2)
-                                for ind in ind_list:
-                                    plt.plot(ids, true_modulation_list[ind, :], c = 'k', alpha=0.5, linewidth = 8)
-                                    plt.plot(ids, to_numpy(pred_modulation_list[ind, :]))
-                            plt.savefig(f"./{log_dir}/tmp_training/field/Field_{epoch}_{N}.tif")
-                            plt.close()
+                                plt.plot(ids, true_modulation_list[ind, :], c = 'k', alpha=0.5, linewidth = 8)
+                                plt.plot(ids, to_numpy(pred_modulation_list[ind, :]))
+                        plt.savefig(f"./{log_dir}/tmp_training/field/Field_{epoch}_{N}.tif")
+                        plt.close()
 
                     if 'learnable_short_term_plasticity' in field_type:
                         fig = plt.figure(figsize=(12, 12))
@@ -2684,16 +2702,17 @@ def data_train_synaptic2(config, erase, best_model, device):
                         plt.close()
 
                     elif 'Siren_short_term_plasticity' in field_type:
-
                         fig = plt.figure(figsize=(12, 12))
                         ax = fig.add_subplot(2, 2, 1)
                         plt.imshow(to_numpy(modulation), aspect='auto')
                         ax = fig.add_subplot(2, 2, 2)
-                        plt.xticks([])
-                        plt.yticks([])
-                        t = torch.zeros((1, 100000, 1), dtype=torch.float32, device=device)
-                        t[0] = torch.linspace(0,1,100000, dtype=torch.float32, device=device)[:,None]
-                        prediction = model_f(t)**2
+                        if 'Siren_short_term_plasticity_2' in field_type:
+                            t = torch.zeros((100000, n_particles , 1), dtype=torch.float32, device=device)
+                            t[:, :, 0] = torch.linspace(0, 1, 100000, dtype=torch.float32, device=device)[:, None]
+                        else:
+                            t = torch.zeros((1, 100000, 1), dtype=torch.float32, device=device)
+                            t[0] = torch.linspace(0, 1, 100000, dtype=torch.float32, device=device)[:, None]
+                        prediction = model_f(t) ** 2
                         prediction = prediction.squeeze()
                         prediction = prediction.t()
                         plt.imshow(to_numpy(prediction), aspect='auto')
@@ -3691,13 +3710,15 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         start_it = 0
         stop_it = n_frames-1
 
+    # start_it = 1000
+
     x = x_list[0][start_it].clone().detach()
     n_particles = x.shape[0]
 
     # x_list[0] = torch.cat((x_list[0],x_list[0],x_list[0],x_list[0]), dim=0)
     x_inference_list = []
 
-    for it in trange(start_it, min(1000,stop_it-time_step)):
+    for it in trange(start_it, min(1000+start_it,stop_it-time_step)):
 
         check_and_clear_memory(device=device, iteration_number=it, every_n_iterations=25, memory_percentage_threshold=0.6)
         # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")

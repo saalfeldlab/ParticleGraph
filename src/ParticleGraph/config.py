@@ -125,14 +125,13 @@ class GraphModelConfig(BaseModel):
     n_layers_nnr: int = 5
     hidden_dim_nnr: int = 128
     output_size_nnr: int = 1
+    outermost_linear_nnr: bool = True
     omega : float = 80.0
 
     input_size_modulation: int = 2
     n_layers_modulation: int = 3
     hidden_dim_modulation: int = 64
     output_size_modulation: int = 1
-
-
 
     # def get_instance(self, **kwargs):
     #     return GraphModel(**self.model_dump(), **kwargs)

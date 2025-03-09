@@ -22,7 +22,7 @@ simulation:
     start_frame: -2000
 
 graph_model:
-    field_type: 'Siren_short_term_plasticity'
+    field_type: 'Siren_short_term_plasticity_2_derivative'
     signal_model_name: 'PDE_N6'
     particle_model_name: ''
     mesh_model_name: ''
@@ -45,9 +45,11 @@ graph_model:
     output_size_modulation: 1
 
     input_size_nnr: 1
-    n_layers_nnr: 5
-    hidden_dim_nnr: 256
-    output_size_nnr: 1024
+    n_layers_nnr: 3
+    hidden_dim_nnr: 64
+    output_size_nnr: 1
+    outermost_linear_nnr: True
+
     omega: 30
 
 plotting:
@@ -62,7 +64,7 @@ training:
     recursive_loop: 1
     time_step: 1
 
-    batch_size: 8
+    batch_size: 1
     small_init_batch_size: False
 
     n_runs: 2

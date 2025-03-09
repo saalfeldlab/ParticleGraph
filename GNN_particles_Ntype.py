@@ -55,12 +55,12 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        task = 'generate'
-        best_model = None
+        task = 'train'
+        best_model = ''
         # config_list = ['falling_water_ramp_x6_11']
-        # config_list = ['signal_N6_a28_8']
-        # config_list = ['signal_N4_k6']
-        config_list = ['signal_N2_a50_1', 'signal_N2_a50_2']
+        # config_list = ['signal_N6_a28_1','signal_N6_a28_2','signal_N6_a28_3','signal_N6_a28_4','signal_N6_a28_5','signal_N6_a28_6','signal_N6_a28_7','signal_N6_a28_8','signal_N6_a28_9','signal_N6_a28_10']
+        config_list = ['signal_N6_a28_11']
+        # config_list = ['signal_N2_a50_1', 'signal_N2_a50_2']
         # config_list = ['arbitrary_3_test']
         # config_list = ['wave_smooth_3']
         # config_list = ['signal_N2_e5']
@@ -84,7 +84,7 @@ if __name__ == '__main__':
         if 'train' in task:
             data_train(config=config, erase=False, best_model=best_model, device=device)
         if 'test' in task:
-            data_test(config=config, visualize=True, style='black color', verbose=False, best_model='best', run=0, test_mode='',
+            data_test(config=config, visualize=True, style='color', verbose=False, best_model='best', run=0, test_mode='',
                       sample_embedding=False, step=100, device=device) # particle_of_interest=100,
         if 'try_func' in task:
             try_func(max_radius=config.simulation.max_radius, device=device)

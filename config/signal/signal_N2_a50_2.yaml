@@ -57,7 +57,7 @@ training:
     data_augmentation_loop: 50
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
-    device: 'auto'
+    device: 'cpu'
     sparsity: 'replace_embedding_function'
     sparsity_freq: 4
 
@@ -65,5 +65,4 @@ training:
     learning_rate_start: 5.0E-5
     learning_rate_embedding_start: 5.0E-4
 
-    noise_level: 1
 
