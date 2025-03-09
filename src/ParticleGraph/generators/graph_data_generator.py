@@ -1876,10 +1876,12 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
                     else:
                         plt.figure(figsize=(10, 10))
-                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=10, c=to_numpy(x[:, 6]),
-                                    cmap='viridis', vmin=-10, vmax=10, edgecolors='k', alpha=1)
-                        cbar = plt.colorbar()
-                        cbar.ax.yaxis.set_tick_params(labelsize=8)
+                        # plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=10, c=to_numpy(x[:, 6]),
+                        #             cmap='viridis', vmin=-10, vmax=10, edgecolors='k', alpha=1)
+                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=2, c=to_numpy(x[:, 6]),
+                                    cmap='viridis', vmin=-10, vmax=10, alpha=1)
+                        # cbar = plt.colorbar()
+                        # cbar.ax.yaxis.set_tick_params(labelsize=8)
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
