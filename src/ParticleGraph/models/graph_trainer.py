@@ -2358,7 +2358,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         ind_a = torch.tensor(np.arange(1, n_particles*100), device=device)
         pos = torch.argwhere(ind_a % 100 != 99).squeeze()
         ind_a = ind_a[pos]
-    if ('PDE_N6' in model_config.signal_model_name) | ('PDE_N7' in model_config.signal_model_name):
+    if has_field:
         modulation = torch.tensor(x_list[0], device=device)
         modulation = modulation[:, :, 8:9].squeeze()
         modulation = modulation.t()

@@ -23,22 +23,30 @@ simulation:
     node_value_map: 'video_bisons_32.tif'
 
 graph_model:
-    field_type: 'modulation'
+    field_type: 'Siren_short_term_plasticity'
     signal_model_name: 'PDE_N4'
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
+
     input_size: 3
     output_size: 1
     hidden_dim: 64
     n_mp_layers: 3
+
     input_size_update: 3
     n_layers_update: 3
     hidden_dim_update: 64
+
+    input_size_nnr: 1
+    n_layers_nnr: 5
+    hidden_dim_nnr: 128
+    output_size_nnr: 1024
+    omega: 30.0
+
     aggr_type: 'add'
     embedding_dim: 2
     update_type: 'none'
-    omega:  30.0
 
 
 plotting:
