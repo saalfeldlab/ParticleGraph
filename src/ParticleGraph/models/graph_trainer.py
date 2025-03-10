@@ -2708,19 +2708,18 @@ def data_train_synaptic2(config, erase, best_model, device):
                         plt.imshow(to_numpy(prediction), aspect='auto')
                         plt.xticks([])
                         plt.yticks([])
-                        if 'Siren_short_term_plasticity_2' not in field_type:
-                            ax = fig.add_subplot(2, 2, 3)
-                            ids = np.arange(0,100000,100).astype(int)
-                            plt.scatter(to_numpy(modulation[:,ids]), to_numpy(prediction[:,ids]), s=0.1, color='k', alpha=0.01)
-                            x_data = to_numpy(modulation[:,ids]).flatten()
-                            y_data = to_numpy(prediction[:,ids]).flatten()
-                            lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-                            residuals = y_data - linear_model(x_data, *lin_fit)
-                            ss_res = np.sum(residuals ** 2)
-                            ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-                            r_squared = 1 - (ss_res / ss_tot)
-                            ax.text(0.01, 0.99, f'$R^2$ {r_squared:0.3f}   slope {lin_fit[0]:0.3f}', transform=ax.transAxes,
-                                    verticalalignment='top', horizontalalignment='left')
+                        ax = fig.add_subplot(2, 2, 3)
+                        ids = np.arange(0,100000,100).astype(int)
+                        plt.scatter(to_numpy(modulation[:,ids]), to_numpy(prediction[:,ids]), s=0.1, color='k', alpha=0.01)
+                        x_data = to_numpy(modulation[:,ids]).flatten()
+                        y_data = to_numpy(prediction[:,ids]).flatten()
+                        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+                        residuals = y_data - linear_model(x_data, *lin_fit)
+                        ss_res = np.sum(residuals ** 2)
+                        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+                        r_squared = 1 - (ss_res / ss_tot)
+                        ax.text(0.01, 0.99, f'$R^2$ {r_squared:0.3f}   slope {lin_fit[0]:0.3f}', transform=ax.transAxes,
+                                verticalalignment='top', horizontalalignment='left')
                         ind_list = [10,124,148,200,250,300]
                         ax = fig.add_subplot(4, 2, 6)
                         for ind in ind_list:
@@ -3396,7 +3395,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     bounce_coeff = simulation_config.bounce_coeff
     cmap = CustomColorMap(config=config)
     dimension = simulation_config.dimension
-    has_siren_time = 'siren_with_time' in model_config.field_type
     has_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
 
     do_tracking = training_config.do_tracking
@@ -3580,9 +3578,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         has_adjacency_matrix = True
         adjacency = torch.load(f'./graphs_data/{dataset_name}/adjacency.pt', map_location=device)
         edge_index = torch.load(f'./graphs_data/{dataset_name}/edge_index.pt', map_location=device)
-        edge_index_, edge_attr = dense_to_sparse(adjacency)
-        first_dataset = data.Data(x=x.clone().detach(), pos=x[:, 1:3].clone().detach(),
-                                  edge_index=edge_index.clone().detach(), edge_attr=edge_attr.clone().detach())
         if ('modulation' in model_config.field_type) | ('visual' in model_config.field_type):
             print('load b_i movie ...')
             im = imread(f"graphs_data/{simulation_config.node_value_map}")
@@ -3599,6 +3594,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         # neuron_index = torch.randint(0, n_particles, (6,))
         neuron_gt_list = []
         neuron_pred_list = []
+        modulation_gt_list = []
+        modulation_pred_list = []
 
         if os.path.exists(f'./graphs_data/{dataset_name}/X1.pt') > 0:
             X1_first = torch.load(f'./graphs_data/{dataset_name}/X1.pt', map_location=device)
@@ -3655,11 +3652,34 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                                  allow_pickle=True)
                 timeit = timeit[run][0]
                 time_id = 0
+            if 'PDE_N' in model_config.signal_model_name:
+                if 'Siren_short_term_plasticity' in model_config.field_type:
+                    model_f = Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
+                                    hidden_features=model_config.hidden_dim_nnr,
+                                    hidden_layers=model_config.n_layers_nnr, first_omega_0=model_config.omega, hidden_omega_0=model_config.omega,
+                                    outermost_linear=model_config.outermost_linear_nnr)
+                    net = f'{log_dir}/models/best_model_f_with_1_graphs_{best_model}.pt'
+                    state_dict = torch.load(net, map_location=device)
+                    model_f.load_state_dict(state_dict['model_state_dict'])
+                    model_f.to(device=device)
+                    model_f.eval()
+                if 'modulation' in model_config.field_type:
+                    model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
+                                            out_features=model_config.output_size_nnr,
+                                            hidden_features=model_config.hidden_dim_nnr,
+                                            hidden_layers=model_config.n_layers_nnr, outermost_linear=True,
+                                            device=device,
+                                            first_omega_0=model_config.omega, hidden_omega_0=model_config.omega)
+                    net = f'{log_dir}/models/best_model_f_with_1_graphs_{best_model}.pt'
+                    state_dict = torch.load(net, map_location=device)
+                    model_f.load_state_dict(state_dict['model_state_dict'])
+                    model_f.to(device=device)
+                    model_f.eval()
 
         if has_field:
             model_f_p = model
             image_width = int(np.sqrt(n_nodes))
-            if has_siren_time:
+            if 'siren_with_time' in model_config.field_type:
                 model_f = Siren_Network(image_width=image_width, in_features=3, out_features=1, hidden_features=128,
                                         hidden_layers=5, outermost_linear=True, device=device, first_omega_0=80,
                                         hidden_omega_0=80.)
@@ -3701,7 +3721,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         start_it = 0
         stop_it = n_frames-1
 
-    # start_it = 1000
+    start_it = 1000
 
     x = x_list[0][start_it].clone().detach()
     n_particles = x.shape[0]
@@ -3709,7 +3729,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     # x_list[0] = torch.cat((x_list[0],x_list[0],x_list[0],x_list[0]), dim=0)
     x_inference_list = []
 
-    for it in trange(start_it, min(1000+start_it,stop_it-time_step)):
+    for it in trange(start_it, min(1600+start_it,stop_it-time_step)):
 
         check_and_clear_memory(device=device, iteration_number=it, every_n_iterations=25, memory_percentage_threshold=0.6)
         # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
@@ -3731,6 +3751,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 6:7] - x0[:, 6:7]) ** 2, axis=1)))
                 neuron_gt_list.append(x0[:, 6:7])
                 neuron_pred_list.append(x[:, 6:7].clone().detach())
+                if 'Siren_short_term_plasticity' in model_config.field_type:
+                    modulation_gt_list.append(x0[:, 8:9])
+                    modulation_pred_list.append(x[:, 8:9].clone().detach())
+
             elif model_config.mesh_model_name == 'WaveMesh':
                 rmserr = torch.sqrt(torch.mean((x[mask_mesh.squeeze(), 6:7] - x0[mask_mesh.squeeze(), 6:7]) ** 2))
             elif model_config.mesh_model_name == 'RD_RPS_Mesh':
@@ -3823,6 +3847,19 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
             # compute connectivity and prediction
             if has_adjacency_matrix:
+
+                if 'PDE_N' in model_config.signal_model_name:
+                    if 'visual' in field_type:
+                        x[:n_nodes, 8:9] = model_f(time=it / n_frames) ** 2
+                        x[n_nodes:n_particles, 8:9] = 1
+                    elif 'learnable_short_term_plasticity' in field_type:
+                        alpha = (k % model.embedding_step) / model.embedding_step
+                        x[:, 8] = alpha * model.b[:, it // model.embedding_step + 1] ** 2 + (1 - alpha) * model.b[:,it // model.embedding_step] ** 2
+                    elif 'Siren_short_term_plasticity' in model_config.field_type:
+                        t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
+                        t[:, 0, :] = torch.tensor(it / n_frames, dtype=torch.float32, device=device)
+                        x[:, 8] = model_f(t).squeeze() ** 2
+
                 dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
                 if 'test_simulation' in test_mode:
                     y = y0 / ynorm
@@ -3834,6 +3871,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
                 adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
                 edge_index = adj_t.nonzero().t().contiguous()
+
+
 
                 if time_window > 0:
                     xt = []
@@ -4077,17 +4116,17 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                         plt.legend(fontsize=24)
                         plt.plot(neuron_gt_list_[:, n[1:10]].detach().cpu().numpy(), c='k', linewidth=8, alpha=0.25)
                         plt.plot(neuron_pred_list_[:, n[1:10]].detach().cpu().numpy(), linewidth=4)
-                        plt.xlim([0, 750])
+                        plt.xlim([0, 1400])
                         plt.xlabel(r'time-points', fontsize=48)
                         plt.ylabel(r'$x_i$', fontsize=48)
                         plt.xticks(fontsize=24)
                         plt.yticks(fontsize=24)
-                        plt.ylim([-30, 30])
+                        plt.ylim([-10, 10])
                         # plt.text(40, 26, f'time: {it}', fontsize=34)
                         ax = plt.subplot(122)
                         plt.scatter(to_numpy(neuron_gt_list_[-1, :]), to_numpy(neuron_pred_list_[-1, :]), s=10, c=mc)
-                        plt.xlim([-30, 30])
-                        plt.ylim([-30, 30])
+                        plt.xlim([-10, 10])
+                        plt.ylim([-10, 10])
                         plt.xticks(fontsize=24)
                         plt.yticks(fontsize=24)
                         x_data = to_numpy(neuron_gt_list_[-1, :])
@@ -4099,11 +4138,68 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                         r_squared = 1 - (ss_res / ss_tot)
                         plt.xlabel(r'true $x_i$', fontsize=48)
                         plt.ylabel(r'learned $x_i$', fontsize=48)
-                        plt.text(-28, 25.6, f'$R^2$: {np.round(r_squared, 3)}', fontsize=34)
-                        plt.text(-28, 22, f'slope: {np.round(lin_fit[0], 2)}', fontsize=34)
+                        plt.text(-8.5, 8.6, f'$R^2$: {np.round(r_squared, 3)}', fontsize=34)
+                        plt.text(-8.5, 7.6, f'slope: {np.round(lin_fit[0], 2)}', fontsize=34)
                         plt.tight_layout()
-                        plt.savefig(f'./{log_dir}/results/comparison_{it}.png', dpi=80)
+                        plt.savefig(f'./{log_dir}/results/comparison_xi_{it}.png', dpi=80)
                         plt.close()
+
+                        if 'Siren_short_term_plasticity' in model_config.field_type:
+
+                            modulation_gt_list_ = torch.cat(modulation_gt_list, 0)
+                            modulation_pred_list_ = torch.cat(modulation_pred_list, 0)
+                            modulation_gt_list_ = torch.reshape(modulation_gt_list_,
+                                                            (modulation_gt_list_.shape[0] // n_particles, n_particles))
+                            modulation_pred_list_ = torch.reshape(modulation_pred_list_,
+                                                              (modulation_pred_list_.shape[0] // n_particles, n_particles))
+
+                            plt.figure(figsize=(20, 10))
+                            if 'latex' in style:
+                                plt.rcParams['text.usetex'] = True
+                                rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+
+                            ax = plt.subplot(122)
+                            plt.scatter(to_numpy(modulation_gt_list_[-1, :]), to_numpy(modulation_pred_list_[-1, :]), s=10,
+                                        c=mc)
+                            plt.xlim([0, 1])
+                            plt.ylim([0, 1])
+                            plt.xticks(fontsize=24)
+                            plt.yticks(fontsize=24)
+                            x_data = to_numpy(modulation_gt_list_[-1, :])
+                            y_data = to_numpy(modulation_pred_list_[-1, :])
+                            lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+                            residuals = y_data - linear_model(x_data, *lin_fit)
+                            ss_res = np.sum(residuals ** 2)
+                            ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+                            r_squared = 1 - (ss_res / ss_tot)
+                            plt.xlabel(r'true modulation', fontsize=48)
+                            plt.ylabel(r'learned modulation', fontsize=48)
+                            plt.text(0.05, 0.9, f'$R^2$: {np.round(r_squared, 3)}', fontsize=34)
+                            plt.text(0.05, 0.85, f'slope: {np.round(lin_fit[0], 2)}', fontsize=34)
+
+                            ax = plt.subplot(121)
+                            plt.plot(modulation_gt_list_[:, n[0]].detach().cpu().numpy(), c='k', linewidth=8, label='true',
+                                     alpha=0.25)
+                            plt.plot(modulation_pred_list_[:, n[0]].detach().cpu().numpy(), linewidth=4, c='k',
+                                     label='learned')
+                            plt.legend(fontsize=24)
+                            plt.plot(modulation_gt_list_[:, n[1:10]].detach().cpu().numpy(), c='k', linewidth=8, alpha=0.25)
+                            plt.plot(modulation_pred_list_[:, n[1:10]].detach().cpu().numpy(), linewidth=4)
+                            plt.xlim([0, 1400])
+                            plt.xlabel(r'time-points', fontsize=48)
+                            plt.ylabel(r'modulation', fontsize=48)
+                            plt.xticks(fontsize=24)
+                            plt.yticks(fontsize=24)
+                            plt.ylim([0, 1])
+                            # plt.text(40, 26, f'time: {it}', fontsize=34)
+
+
+
+
+                            plt.tight_layout()
+                            plt.savefig(f'./{log_dir}/results/comparison_modulation_{it}.png', dpi=80)
+                            plt.close()
+
                 elif 'PDE_K' in model_config.particle_model_name:
 
                     plt.close()
