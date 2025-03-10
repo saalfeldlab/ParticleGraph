@@ -3663,7 +3663,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     model_f.load_state_dict(state_dict['model_state_dict'])
                     model_f.to(device=device)
                     model_f.eval()
-                if 'modulation' in model_config.field_type:
+                if ('modulation' in model_config.field_type) | ('visual' in model_config.field_type):
                     model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
                                             out_features=model_config.output_size_nnr,
                                             hidden_features=model_config.hidden_dim_nnr,
@@ -3751,7 +3751,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 6:7] - x0[:, 6:7]) ** 2, axis=1)))
                 neuron_gt_list.append(x0[:, 6:7])
                 neuron_pred_list.append(x[:, 6:7].clone().detach())
-                if 'Siren_short_term_plasticity' in model_config.field_type:
+                if ('Siren_short_term_plasticity' in field_type) | ('modulation' in field_type):
                     modulation_gt_list.append(x0[:, 8:9])
                     modulation_pred_list.append(x[:, 8:9].clone().detach())
 
@@ -3859,6 +3859,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                         t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
                         t[:, 0, :] = torch.tensor(it / n_frames, dtype=torch.float32, device=device)
                         x[:, 8] = model_f(t).squeeze() ** 2
+                    elif 'modulation' in field_type:
+                        x[:, 8:9] = model_f(time=it / n_frames) ** 2
 
                 dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
                 if 'test_simulation' in test_mode:
@@ -3871,8 +3873,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
                 adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
                 edge_index = adj_t.nonzero().t().contiguous()
-
-
 
                 if time_window > 0:
                     xt = []
@@ -4094,111 +4094,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=80)
                     plt.close()
-
-                    if (it%200 == 0) and (it>0):
-
-                        n=[20,30,100,150,260,270,520,620,720,820]
-
-                        neuron_gt_list_ = torch.cat(neuron_gt_list, 0)
-                        neuron_pred_list_ = torch.cat(neuron_pred_list, 0)
-                        neuron_gt_list_ = torch.reshape(neuron_gt_list_, (neuron_gt_list_.shape[0]//n_particles, n_particles))
-                        neuron_pred_list_ = torch.reshape(neuron_pred_list_, (neuron_pred_list_.shape[0]//n_particles, n_particles))
-
-                        plt.figure(figsize=(20, 10))
-                        if 'latex' in style:
-                            plt.rcParams['text.usetex'] = True
-                            rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-                        ax = plt.subplot(121)
-                        plt.plot(neuron_gt_list_[:, n[0]].detach().cpu().numpy(), c='k', linewidth=8, label='true',
-                                 alpha=0.25)
-                        plt.plot(neuron_pred_list_[:, n[0]].detach().cpu().numpy(), linewidth=4, c='k',
-                                 label='learned')
-                        plt.legend(fontsize=24)
-                        plt.plot(neuron_gt_list_[:, n[1:10]].detach().cpu().numpy(), c='k', linewidth=8, alpha=0.25)
-                        plt.plot(neuron_pred_list_[:, n[1:10]].detach().cpu().numpy(), linewidth=4)
-                        plt.xlim([0, 1400])
-                        plt.xlabel(r'time-points', fontsize=48)
-                        plt.ylabel(r'$x_i$', fontsize=48)
-                        plt.xticks(fontsize=24)
-                        plt.yticks(fontsize=24)
-                        plt.ylim([-10, 10])
-                        # plt.text(40, 26, f'time: {it}', fontsize=34)
-                        ax = plt.subplot(122)
-                        plt.scatter(to_numpy(neuron_gt_list_[-1, :]), to_numpy(neuron_pred_list_[-1, :]), s=10, c=mc)
-                        plt.xlim([-10, 10])
-                        plt.ylim([-10, 10])
-                        plt.xticks(fontsize=24)
-                        plt.yticks(fontsize=24)
-                        x_data = to_numpy(neuron_gt_list_[-1, :])
-                        y_data = to_numpy(neuron_pred_list_[-1, :])
-                        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-                        residuals = y_data - linear_model(x_data, *lin_fit)
-                        ss_res = np.sum(residuals ** 2)
-                        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-                        r_squared = 1 - (ss_res / ss_tot)
-                        plt.xlabel(r'true $x_i$', fontsize=48)
-                        plt.ylabel(r'learned $x_i$', fontsize=48)
-                        plt.text(-8.5, 8.6, f'$R^2$: {np.round(r_squared, 3)}', fontsize=34)
-                        plt.text(-8.5, 7.6, f'slope: {np.round(lin_fit[0], 2)}', fontsize=34)
-                        plt.tight_layout()
-                        plt.savefig(f'./{log_dir}/results/comparison_xi_{it}.png', dpi=80)
-                        plt.close()
-
-                        if 'Siren_short_term_plasticity' in model_config.field_type:
-
-                            modulation_gt_list_ = torch.cat(modulation_gt_list, 0)
-                            modulation_pred_list_ = torch.cat(modulation_pred_list, 0)
-                            modulation_gt_list_ = torch.reshape(modulation_gt_list_,
-                                                            (modulation_gt_list_.shape[0] // n_particles, n_particles))
-                            modulation_pred_list_ = torch.reshape(modulation_pred_list_,
-                                                              (modulation_pred_list_.shape[0] // n_particles, n_particles))
-
-                            plt.figure(figsize=(20, 10))
-                            if 'latex' in style:
-                                plt.rcParams['text.usetex'] = True
-                                rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-
-                            ax = plt.subplot(122)
-                            plt.scatter(to_numpy(modulation_gt_list_[-1, :]), to_numpy(modulation_pred_list_[-1, :]), s=10,
-                                        c=mc)
-                            plt.xlim([0, 1])
-                            plt.ylim([0, 1])
-                            plt.xticks(fontsize=24)
-                            plt.yticks(fontsize=24)
-                            x_data = to_numpy(modulation_gt_list_[-1, :])
-                            y_data = to_numpy(modulation_pred_list_[-1, :])
-                            lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-                            residuals = y_data - linear_model(x_data, *lin_fit)
-                            ss_res = np.sum(residuals ** 2)
-                            ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-                            r_squared = 1 - (ss_res / ss_tot)
-                            plt.xlabel(r'true modulation', fontsize=48)
-                            plt.ylabel(r'learned modulation', fontsize=48)
-                            plt.text(0.05, 0.9, f'$R^2$: {np.round(r_squared, 3)}', fontsize=34)
-                            plt.text(0.05, 0.85, f'slope: {np.round(lin_fit[0], 2)}', fontsize=34)
-
-                            ax = plt.subplot(121)
-                            plt.plot(modulation_gt_list_[:, n[0]].detach().cpu().numpy(), c='k', linewidth=8, label='true',
-                                     alpha=0.25)
-                            plt.plot(modulation_pred_list_[:, n[0]].detach().cpu().numpy(), linewidth=4, c='k',
-                                     label='learned')
-                            plt.legend(fontsize=24)
-                            plt.plot(modulation_gt_list_[:, n[1:10]].detach().cpu().numpy(), c='k', linewidth=8, alpha=0.25)
-                            plt.plot(modulation_pred_list_[:, n[1:10]].detach().cpu().numpy(), linewidth=4)
-                            plt.xlim([0, 1400])
-                            plt.xlabel(r'time-points', fontsize=48)
-                            plt.ylabel(r'modulation', fontsize=48)
-                            plt.xticks(fontsize=24)
-                            plt.yticks(fontsize=24)
-                            plt.ylim([0, 1])
-                            # plt.text(40, 26, f'time: {it}', fontsize=34)
-
-
-
-
-                            plt.tight_layout()
-                            plt.savefig(f'./{log_dir}/results/comparison_modulation_{it}.png', dpi=80)
-                            plt.close()
 
                 elif 'PDE_K' in model_config.particle_model_name:
 
@@ -4459,6 +4354,108 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/tmp_recons/Ghost3_{config_file}_{it}.tif", dpi=170.7)
                     plt.close()
+
+                if ('PDE_N' in model_config.signal_model_name) & (it % 200 == 0) & (it > 0):
+
+                    n = [20, 30, 100, 150, 260, 270, 520, 620, 720, 820]
+
+                    neuron_gt_list_ = torch.cat(neuron_gt_list, 0)
+                    neuron_pred_list_ = torch.cat(neuron_pred_list, 0)
+                    neuron_gt_list_ = torch.reshape(neuron_gt_list_,
+                                                    (neuron_gt_list_.shape[0] // n_particles, n_particles))
+                    neuron_pred_list_ = torch.reshape(neuron_pred_list_,
+                                                      (neuron_pred_list_.shape[0] // n_particles, n_particles))
+
+                    plt.figure(figsize=(20, 10))
+                    if 'latex' in style:
+                        plt.rcParams['text.usetex'] = True
+                        rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+                    ax = plt.subplot(121)
+                    plt.plot(neuron_gt_list_[:, n[0]].detach().cpu().numpy(), c='k', linewidth=8, label='true',
+                             alpha=0.25)
+                    plt.plot(neuron_pred_list_[:, n[0]].detach().cpu().numpy(), linewidth=4, c='k',
+                             label='learned')
+                    plt.legend(fontsize=24)
+                    plt.plot(neuron_gt_list_[:, n[1:10]].detach().cpu().numpy(), c='k', linewidth=8, alpha=0.25)
+                    plt.plot(neuron_pred_list_[:, n[1:10]].detach().cpu().numpy(), linewidth=4)
+                    plt.xlim([0, 1400])
+                    plt.xlabel(r'time-points', fontsize=48)
+                    plt.ylabel(r'$x_i$', fontsize=48)
+                    plt.xticks(fontsize=24)
+                    plt.yticks(fontsize=24)
+                    plt.ylim([-30, 30])
+                    # plt.text(40, 26, f'time: {it}', fontsize=34)
+                    ax = plt.subplot(122)
+                    plt.scatter(to_numpy(neuron_gt_list_[-1, :]), to_numpy(neuron_pred_list_[-1, :]), s=10, c=mc)
+                    plt.xlim([-30, 30])
+                    plt.ylim([-30, 30])
+                    plt.xticks(fontsize=24)
+                    plt.yticks(fontsize=24)
+                    x_data = to_numpy(neuron_gt_list_[-1, :])
+                    y_data = to_numpy(neuron_pred_list_[-1, :])
+                    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+                    residuals = y_data - linear_model(x_data, *lin_fit)
+                    ss_res = np.sum(residuals ** 2)
+                    ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+                    r_squared = 1 - (ss_res / ss_tot)
+                    plt.xlabel(r'true $x_i$', fontsize=48)
+                    plt.ylabel(r'learned $x_i$', fontsize=48)
+                    plt.text(-28.5, 26, f'$R^2$: {np.round(r_squared, 3)}', fontsize=34)
+                    plt.text(-28.5, 22, f'slope: {np.round(lin_fit[0], 2)}', fontsize=34)
+                    plt.tight_layout()
+                    plt.savefig(f'./{log_dir}/results/comparison_xi_{it}.png', dpi=80)
+                    plt.close()
+
+                    if ('Siren_short_term_plasticity' in field_type) | ('modulation' in field_type):
+
+                        modulation_gt_list_ = torch.cat(modulation_gt_list, 0)
+                        modulation_pred_list_ = torch.cat(modulation_pred_list, 0)
+                        modulation_gt_list_ = torch.reshape(modulation_gt_list_,
+                                                            (modulation_gt_list_.shape[0] // n_particles, n_particles))
+                        modulation_pred_list_ = torch.reshape(modulation_pred_list_,
+                                                              (modulation_pred_list_.shape[0] // n_particles,
+                                                               n_particles))
+
+                        plt.figure(figsize=(20, 10))
+                        if 'latex' in style:
+                            plt.rcParams['text.usetex'] = True
+                            rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+
+                        ax = plt.subplot(122)
+                        plt.scatter(to_numpy(modulation_gt_list_[-1, :]), to_numpy(modulation_pred_list_[-1, :]), s=10,
+                                    c=mc)
+                        plt.xticks(fontsize=24)
+                        plt.yticks(fontsize=24)
+                        x_data = to_numpy(modulation_gt_list_[-1, :])
+                        y_data = to_numpy(modulation_pred_list_[-1, :])
+                        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+                        residuals = y_data - linear_model(x_data, *lin_fit)
+                        ss_res = np.sum(residuals ** 2)
+                        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+                        r_squared = 1 - (ss_res / ss_tot)
+                        plt.xlabel(r'true modulation', fontsize=48)
+                        plt.ylabel(r'learned modulation', fontsize=48)
+                        # plt.text(0.05, 0.9 * lin_fit[0], f'$R^2$: {np.round(r_squared, 3)}', fontsize=34)
+                        # plt.text(0.05, 0.8 * lin_fit[0], f'slope: {np.round(lin_fit[0], 2)}', fontsize=34)
+                        ax = plt.subplot(121)
+                        plt.plot(modulation_gt_list_[:, n[0]].detach().cpu().numpy(), c='k', linewidth=8, label='true',
+                                 alpha=0.25)
+                        plt.plot(modulation_pred_list_[:, n[0]].detach().cpu().numpy() / lin_fit[0], linewidth=4, c='k',
+                                 label='learned')
+                        plt.legend(fontsize=24)
+                        plt.plot(modulation_gt_list_[:, n[1:10]].detach().cpu().numpy(), c='k', linewidth=8, alpha=0.25)
+                        plt.plot(modulation_pred_list_[:, n[1:10]].detach().cpu().numpy() / lin_fit[0], linewidth=4)
+                        plt.xlim([0, 1400])
+                        plt.xlabel(r'time-points', fontsize=48)
+                        plt.ylabel(r'modulation', fontsize=48)
+                        plt.xticks(fontsize=24)
+                        plt.yticks(fontsize=24)
+                        plt.ylim([0, 2])
+                        # plt.text(40, 26, f'time: {it}', fontsize=34)
+                        plt.tight_layout()
+                        plt.tight_layout()
+                        plt.savefig(f'./{log_dir}/results/comparison_modulation_{it}.png', dpi=80)
+                        plt.close()
 
     if 'inference' in test_mode:
         torch.save(x_inference_list, f"./{log_dir}/x_inference_list_{run}.pt")
