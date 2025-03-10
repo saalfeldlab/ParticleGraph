@@ -2535,25 +2535,19 @@ def data_train_synaptic2(config, erase, best_model, device):
                             alpha = (k % model.embedding_step) / model.embedding_step
                             x[:, 8] = alpha * model.b[:, k // model.embedding_step + 1] ** 2 + (1 - alpha) * model.b[:,k // model.embedding_step] ** 2
                             loss = loss + (model.b[:, 1:] - model.b[:, :-1]).norm(2) * coeff_model_b
-                        elif 'Siren_short_term_plasticity_2' in field_type:
-                            t = torch.zeros((1, n_particles, 1), dtype=torch.float32, device=device)
-                            t[0] = torch.tensor(k / n_frames, dtype=torch.float32, device=device).repeat(n_particles, 1)
-                            if 'derivative' in field_type:
-                                t.requires_grad = True
-                                m = model_f(t) ** 2
-                                x[:, 8] = m.squeeze()
-                                grad_outputs = torch.ones_like(m)
-                                grad = torch.autograd.grad(m, [t], grad_outputs=grad_outputs, create_graph=True)[0]
-                                in_modulation = torch.cat((x[:, 6:7].clone().detach(), m[0]), dim=1)
-                                pred_modulation = model.lin_modulation(in_modulation)
-                                loss = loss + (grad[0] - pred_modulation).norm(2) * coeff_lin_modulation
-                            else:
-                                m = model_f(t) ** 2
-                                x[:, 8] = m.squeeze()
                         elif 'Siren_short_term_plasticity' in field_type:
                             t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
                             t[:, 0, :] = torch.tensor(k / n_frames, dtype=torch.float32, device=device)
-                            x[:, 8] = model_f(t) ** 2
+                            if 'derivative' in field_type:
+                                m = model_f(t).squeeze() ** 2
+                                x[:, 8] = m
+                                m_next = model_f(t + 1.0E-3).squeeze() ** 2
+                                grad = (m_next - m) / 1.0E-3
+                                in_modulation = torch.cat((x[:, 6:7].clone().detach(), m[:, None]), dim=1)
+                                pred_modulation = model.lin_modulation(in_modulation)
+                                loss += (grad - pred_modulation.squeeze()).norm(2) * coeff_lin_modulation
+                            else:
+                                x[:, 8] = model_f(t) ** 2
                         else:
                             x[:, 8:9] = model_f(time=k / n_frames) ** 2
 
@@ -2706,12 +2700,8 @@ def data_train_synaptic2(config, erase, best_model, device):
                         ax = fig.add_subplot(2, 2, 1)
                         plt.imshow(to_numpy(modulation), aspect='auto')
                         ax = fig.add_subplot(2, 2, 2)
-                        if 'Siren_short_term_plasticity_2' in field_type:
-                            t = torch.zeros((10000, n_particles , 1), dtype=torch.float32, device=device)
-                            t[:, :, 0] = torch.linspace(0, 1, 10000, dtype=torch.float32, device=device)[:, None]
-                        else:
-                            t = torch.zeros((1, 100000, 1), dtype=torch.float32, device=device)
-                            t[0] = torch.linspace(0, 1, 100000, dtype=torch.float32, device=device)[:, None]
+                        t = torch.zeros((1, 100000, 1), dtype=torch.float32, device=device)
+                        t[0] = torch.linspace(0, 1, 100000, dtype=torch.float32, device=device)[:, None]
                         prediction = model_f(t) ** 2
                         prediction = prediction.squeeze()
                         prediction = prediction.t()
@@ -3665,9 +3655,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                                  allow_pickle=True)
                 timeit = timeit[run][0]
                 time_id = 0
+
         if has_field:
             model_f_p = model
-
             image_width = int(np.sqrt(n_nodes))
             if has_siren_time:
                 model_f = Siren_Network(image_width=image_width, in_features=3, out_features=1, hidden_features=128,

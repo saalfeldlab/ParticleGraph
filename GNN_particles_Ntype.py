@@ -55,8 +55,8 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        task = 'train'
-        best_model = '44'
+        task = 'test'
+        best_model = ''
         # config_list = ['falling_water_ramp_x6_11']
         # config_list = ['signal_N6_a28_1','signal_N6_a28_2','signal_N6_a28_3','signal_N6_a28_4','signal_N6_a28_5','signal_N6_a28_6','signal_N6_a28_7','signal_N6_a28_8','signal_N6_a28_9','signal_N6_a28_10']
         config_list = ['signal_N6_a28_2']
