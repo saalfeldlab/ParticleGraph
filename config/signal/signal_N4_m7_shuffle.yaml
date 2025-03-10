@@ -57,21 +57,24 @@ plotting:
 
 training:
     n_epochs: 20
+    n_runs: 2
+    device: 'auto'
+
     n_epochs_init: 5
     recursive_loop: 1
     batch_size: 1
     small_init_batch_size: False
-    n_runs: 2
-    sparsity: 'none'
+
     rotation_augmentation: False
     data_augmentation_loop: 50
     cluster_method: 'kmeans_auto_embedding'
     cluster_distance_threshold: 0.2
     fix_cluster_embedding: True
-    device: 'auto'
-    sparsity: 'replace_embedding_function'
+
+    sparsity: 'none'
     sparsity_freq: 4
     learning_rate_start: 1.0E-4
     learning_rate_embedding_start: 1.0E-4
     coeff_diff: 100
+
     learning_rate_NNR: 1.0E-6
