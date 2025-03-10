@@ -68,7 +68,7 @@ training:
     n_runs: 2
 
     rotation_augmentation: False
-    data_augmentation_loop: 25
+    data_augmentation_loop: 50
 
     sparsity: 'none'
     cluster_method: 'distance_plot'

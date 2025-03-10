@@ -57,23 +57,21 @@ plotting:
     ylim: [-8,8]
 
 training:
-    n_epochs: 60
+    n_epochs: 20
+    device: 'auto'
+    n_runs: 2
 
     recursive_loop: 1
     time_step: 1
 
     batch_size: 1
     small_init_batch_size: False
-
-    n_runs: 2
-
     rotation_augmentation: False
-    data_augmentation_loop: 25
+    data_augmentation_loop: 50
 
     sparsity: 'none'
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
-    device: 'auto'
     sparsity_freq: 4
     learning_rate_start: 1.0E-4
 

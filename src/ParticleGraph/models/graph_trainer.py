@@ -2707,8 +2707,8 @@ def data_train_synaptic2(config, erase, best_model, device):
                         plt.imshow(to_numpy(modulation), aspect='auto')
                         ax = fig.add_subplot(2, 2, 2)
                         if 'Siren_short_term_plasticity_2' in field_type:
-                            t = torch.zeros((100000, n_particles , 1), dtype=torch.float32, device=device)
-                            t[:, :, 0] = torch.linspace(0, 1, 100000, dtype=torch.float32, device=device)[:, None]
+                            t = torch.zeros((10000, n_particles , 1), dtype=torch.float32, device=device)
+                            t[:, :, 0] = torch.linspace(0, 1, 10000, dtype=torch.float32, device=device)[:, None]
                         else:
                             t = torch.zeros((1, 100000, 1), dtype=torch.float32, device=device)
                             t[0] = torch.linspace(0, 1, 100000, dtype=torch.float32, device=device)[:, None]
@@ -2718,18 +2718,19 @@ def data_train_synaptic2(config, erase, best_model, device):
                         plt.imshow(to_numpy(prediction), aspect='auto')
                         plt.xticks([])
                         plt.yticks([])
-                        ax = fig.add_subplot(2, 2, 3)
-                        ids = np.arange(0,100000,100).astype(int)
-                        plt.scatter(to_numpy(modulation[:,ids]), to_numpy(prediction[:,ids]), s=0.1, color='k', alpha=0.01)
-                        x_data = to_numpy(modulation[:,ids]).flatten()
-                        y_data = to_numpy(prediction[:,ids]).flatten()
-                        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-                        residuals = y_data - linear_model(x_data, *lin_fit)
-                        ss_res = np.sum(residuals ** 2)
-                        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-                        r_squared = 1 - (ss_res / ss_tot)
-                        ax.text(0.01, 0.99, f'$R^2$ {r_squared:0.3f}   slope {lin_fit[0]:0.3f}', transform=ax.transAxes,
-                                verticalalignment='top', horizontalalignment='left')
+                        if 'Siren_short_term_plasticity_2' not in field_type:
+                            ax = fig.add_subplot(2, 2, 3)
+                            ids = np.arange(0,100000,100).astype(int)
+                            plt.scatter(to_numpy(modulation[:,ids]), to_numpy(prediction[:,ids]), s=0.1, color='k', alpha=0.01)
+                            x_data = to_numpy(modulation[:,ids]).flatten()
+                            y_data = to_numpy(prediction[:,ids]).flatten()
+                            lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+                            residuals = y_data - linear_model(x_data, *lin_fit)
+                            ss_res = np.sum(residuals ** 2)
+                            ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+                            r_squared = 1 - (ss_res / ss_tot)
+                            ax.text(0.01, 0.99, f'$R^2$ {r_squared:0.3f}   slope {lin_fit[0]:0.3f}', transform=ax.transAxes,
+                                    verticalalignment='top', horizontalalignment='left')
                         ind_list = [10,124,148,200,250,300]
                         ax = fig.add_subplot(4, 2, 6)
                         for ind in ind_list:
