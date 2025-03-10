@@ -72,6 +72,16 @@ def extract_object_properties(segmentation_image, fluorescence_image=[]):
     return object_properties
 
 
+def find_closest_neighbors(track, x):
+    closest_neighbors = []
+    for row in track:
+        distances = torch.sqrt(torch.sum((x[:, 1:3] - row[1:3]) ** 2, dim=1))
+        closest_index = torch.argmin(distances)
+        closest_neighbors.append(closest_index.item())
+    return closest_neighbors
+
+
+
 def get_index_particles(x, n_particle_types, dimension):
     index_particles = []
     for n in range(n_particle_types):
@@ -402,27 +412,6 @@ def load_2D_cell_data(config, device, visualize):
         vertices_list = torch.reshape(vertices_list, (-1, vertices_list.shape[2]))
         vertices = vertices_list
 
-        if image_data.tracking_file != '':
-            tracking_properties = extract_object_properties(im_tracking[it], im_tracking[it])
-            tracking_properties = np.array(tracking_properties, dtype=float)
-            N = tracking_properties[:,-1]
-            X = tracking_properties[:,1:3]
-            empty_columns = np.zeros((X.shape[0], 11))
-            AR = object_properties[:, 3:4]
-            P = object_properties[:, 4:5]
-            ASR = object_properties[:, 5:6]
-            OR = object_properties[:, 6:7]
-
-            track = np.concatenate((N[:,None], X, empty_columns), axis=1)
-
-            # plt.imshow(im_tracking[it])
-            # plt.scatter(X[:,1], X[:,0],s=10)
-            # plt.text(X[:,1]+5, X[:,0], f'{N}', fontsize=4, color='w')
-
-            track = torch.tensor(track, dtype=torch.float32, device=device)
-            track_list.append(track)
-
-
         params = torch.tensor([[1.6233, 1.0413, 1.6012, 1.5615]], dtype=torch.float32, device=device)
         model_vertices = PDE_V(aggr_type='mean', p=torch.squeeze(params), sigma=30, bc_dpos=bc_dpos, dimension=2)
         max_radius=50
@@ -439,7 +428,39 @@ def load_2D_cell_data(config, device, visualize):
             vertices[:, 2:3] = torch.clip(vertices[:, 2:3], 0, im_dim[1])
         full_vertice_list.append(vertices)
 
-        matplotlib.use("Qt5Agg")
+
+        if image_data.tracking_file != '':
+            tracking_properties = extract_object_properties(im_tracking[it], im_tracking[it])
+            tracking_properties = np.array(tracking_properties, dtype=float)
+            N = tracking_properties[:,-1]
+            X = tracking_properties[:,1:3]
+            V = np.zeros((X.shape[0], 2))
+            empty_columns = np.zeros((X.shape[0], 11))
+            AR = object_properties[:, 3:4]
+            P = object_properties[:, 4:5]
+            ASR = object_properties[:, 5:6]
+            OR = object_properties[:, 6:7]
+            ID_CELL = np.zeros((X.shape[0], 1))
+
+            if it>0:
+                for n in range(len(X)):
+                    pos = torch.argwhere(track[:,0] == torch.tensor(N[n], device=device))
+                    if len(pos)>0:
+                        V[n] = (X[n] - to_numpy(track[:,1:3][pos[0]].squeeze()))
+
+            track = np.concatenate((N[:,None], X, V, empty_columns), axis=1)
+
+            # plt.imshow(im_tracking[it])
+            # plt.scatter(X[:,1], X[:,0],s=10)
+            # plt.text(X[:,1]+5, X[:,0], f'{N}', fontsize=4, color='w')
+
+            track = torch.tensor(track, dtype=torch.float32, device=device)
+            closest_neighbors = find_closest_neighbors(track, x)
+            closest_neighbors = torch.tensor(closest_neighbors, dtype=torch.float32, device=track.device)
+            track = torch.cat((track, x[closest_neighbors[:, None].long(),0]), 1)
+
+            track_list.append(track)
+
         fig = plt.subplots(figsize=(16, 14))
         plt.xticks([])
         plt.yticks([])
@@ -449,6 +470,9 @@ def load_2D_cell_data(config, device, visualize):
         for n in range(len(x)):
             pos = torch.argwhere(vertices[:, 5:6] == torch.tensor(n_cells+n,dtype=torch.float32,device=device))
             plt.plot(to_numpy(vertices[pos, 2]), to_numpy(vertices[pos, 1]), c='w', linewidth=1)
+            # plt.text(to_numpy(x[n, 2]), to_numpy(x[n, 1]), f'{to_numpy(x[n,0]):0.0f}', fontsize=12, color='w')
+        # for n in range(len(X)):
+        #     plt.text(X[n, 1], X[n, 0], f'{to_numpy(track[n,-1]):0.0f}', fontsize=12, color='w')
         plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=50, c='w', alpha=0.75)
         plt.xlim([0 , im_dim[1]])
         plt.ylim([0 , im_dim[0]])
