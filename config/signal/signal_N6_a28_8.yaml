@@ -46,7 +46,7 @@ graph_model:
 
     input_size_nnr: 1
     n_layers_nnr: 10
-    hidden_dim_nnr: 64
+    hidden_dim_nnr: 10
     output_size_nnr: 1024
     omega: 30
 
