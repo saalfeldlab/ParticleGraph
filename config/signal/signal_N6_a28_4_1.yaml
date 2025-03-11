@@ -21,7 +21,7 @@ simulation:
     start_frame: -2000
 
 graph_model:
-    field_type: 'Siren_short_term_plasticity_derivative'
+    field_type: 'Siren_short_term_plasticity'
     signal_model_name: 'PDE_N6'
     particle_model_name: ''
     mesh_model_name: ''
@@ -45,7 +45,7 @@ graph_model:
 
     input_size_nnr: 1
     n_layers_nnr: 5
-    hidden_dim_nnr: 256
+    hidden_dim_nnr: 32
     output_size_nnr: 1024
     omega: 30
 
@@ -69,7 +69,7 @@ training:
     rotation_augmentation: False
     data_augmentation_loop: 25
 
-    sparsity: 'none'
+    sparsity: 'replace_embedding_function'
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     device: 'auto'

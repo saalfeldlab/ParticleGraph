@@ -4636,6 +4636,12 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
         model_f.to(device=device)
         model_f.train()
 
+        modulation = torch.tensor(x_list[0], device=device)
+        modulation = modulation[:, :, 8:9].squeeze()
+        modulation = modulation.t()
+        modulation = modulation.clone().detach()
+        d_modulation = (modulation[:, 1:] - modulation[:, :-1]) / delta_t
+
     if epoch_list[0] == 'all':
 
         files = glob.glob(f"{log_dir}/models/*.pt")
@@ -4671,7 +4677,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
 
         with torch.no_grad():
-            for file_id_ in trange(0, 100):
+            for file_id_ in trange(95, 100):
                 file_id = file_id_list[file_id_]
 
                 epoch = files[file_id].split('graphs')[1][1:-3]
@@ -4863,6 +4869,51 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
                 if has_field:
 
+                    if 'Siren_short_term_plasticity' in field_type:
+                        fig, ax = fig_init()
+                        t = torch.zeros((1, 100000, 1), dtype=torch.float32, device=device)
+                        t[0] = torch.linspace(0, 1, 100000, dtype=torch.float32, device=device)[:, None]
+                        prediction = model_f(t) ** 2
+                        prediction = prediction.squeeze()
+                        prediction = prediction.t()
+                        plt.imshow(to_numpy(prediction), aspect='auto')
+                        plt.title(r'learned $MLP_2(i,t)$', fontsize=68)
+                        plt.xlabel(r'$t$', fontsize=68)
+                        plt.ylabel(r'$i$', fontsize=68)
+                        plt.xticks([10000,100000], [10000, 100000], fontsize=48)
+                        plt.yticks([0, 512, 1024], [0, 512, 1024], fontsize=48)
+                        plt.tight_layout()
+                        plt.savefig(f"./{log_dir}/results/all/yi_{epoch}.tif", dpi=80)
+                        plt.close()
+
+                        prediction = prediction * torch.tensor(second_correction,device=device)
+
+                        fig, ax = fig_init()
+                        ids = np.arange(0,100000,100).astype(int)
+                        plt.scatter(to_numpy(modulation[:,ids]), to_numpy(prediction[:,ids]), s=1, color=mc, alpha=0.1)
+                        plt.xlim([0,0.5])
+                        plt.ylim([0,2])
+                        plt.xticks([0,0.5], [0,0.5], fontsize=48)
+                        plt.yticks([0,1,2], [0,1,2], fontsize=48)
+                        x_data = to_numpy(modulation[:,ids]).flatten()
+                        y_data = to_numpy(prediction[:,ids]).flatten()
+                        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+                        residuals = y_data - linear_model(x_data, *lin_fit)
+                        ss_res = np.sum(residuals ** 2)
+                        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+                        r_squared = 1 - (ss_res / ss_tot)
+                        ax.text(0.05, 0.94, f'$R^2$: {r_squared:0.2f}', transform=ax.transAxes,
+                                verticalalignment='top', horizontalalignment='left', fontsize=32)
+                        ax.text(0.05, 0.88, f'slope: {lin_fit[0]:0.2f}', transform=ax.transAxes,
+                                verticalalignment='top', horizontalalignment='left', fontsize=32)
+                        plt.xlabel(r'true $y_i(t)$', fontsize=68)
+                        plt.ylabel(r'learned $y_i(t)$', fontsize=68)
+                        plt.tight_layout()
+                        plt.savefig(f"./{log_dir}/results/all/comparison_yi_{epoch}.tif", dpi=80)
+                        plt.close()
+
+                else:
+
                     fig, ax = fig_init()
                     pred = model_f(time=file_id_ / len(file_id_list), enlarge=True) ** 2
                     # pred = torch.reshape(pred, (n_nodes_per_axis, n_nodes_per_axis))
@@ -4878,6 +4929,70 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/results/all/field_{epoch}.tif", dpi=80)
                     plt.close()
+
+                if 'derivative' in field_type:
+
+                    y = torch.linspace(0, 1, 400)
+                    x = torch.linspace(-6, 6, 400)
+                    grid_y, grid_x = torch.meshgrid(y, x)
+                    grid = torch.stack((grid_x, grid_y), dim=-1)
+                    grid = grid.to(device)
+                    pred_modulation = model.lin_modulation(grid) / 20
+                    tau = 100
+                    alpha = 0.02
+                    true_derivative = (1 - grid_y) / tau - alpha * grid_y * torch.abs(grid_x)
+
+                    fig = plt.figure(figsize=(12, 12))
+                    # plt.subplot(1, 2, 1)
+                    # plt.title(r'true $\dot{y_i}$', fontsize=48)
+                    # # plt.title(r'$\dot{y_i}=(1-y)/100 - 0.02 x_iy_i$', fontsize=48)
+                    # plt.imshow(to_numpy(true_derivative))
+                    # plt.xticks([0, 50, 100, 150, 200], [-8, -4, 0, 4, 8], fontsize=24)
+                    # plt.yticks([0, 100, 200, 300, 400], [0, 0.25, 0.5, 0.75, 1], fontsize=24)
+                    # plt.xlabel(r'$x_i$', fontsize=48)
+                    # plt.ylabel(r'$y_i$', fontsize=48)
+                    # # plt.colorbar()
+                    # plt.subplot(1, 2, 2)
+                    plt.title(r'learned $MLP_3(x_i, y_i)$', fontsize=68)
+                    plt.imshow(to_numpy(pred_modulation), vmin=-0.1, vmax=0)
+                    # plt.xticks([0, 50, 100, 150, 200], [-8, -4, 0, 4, 8], fontsize=24)
+                    # plt.yticks([0, 100, 200, 300, 400], [0, 0.25, 0.5, 0.75, 1], fontsize=24)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.xlabel(r'$x_i$', fontsize=68)
+                    plt.ylabel(r'$y_i$', fontsize=68)
+                    # plt.colorbar()
+                    plt.tight_layout
+                    plt.savefig(f"./{log_dir}/results/all/derivative_yi_{epoch}.tif", dpi=80)
+                    plt.close()
+
+                    fig = plt.figure(figsize=(12, 12))
+                    plt.scatter(to_numpy(true_derivative.flatten()), to_numpy(pred_modulation.flatten()), s=5, color=mc, alpha=0.1)
+                    x_data = to_numpy(true_derivative.flatten())
+                    y_data = to_numpy(pred_modulation.flatten())
+                    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+                    residuals = y_data - linear_model(x_data, *lin_fit)
+                    ss_res = np.sum(residuals ** 2)
+                    ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+                    r_squared = 1 - (ss_res / ss_tot)
+                    plt.text(0.05, 0.75, f'$R^2$: {r_squared:0.2f}', transform=ax.transAxes,
+                                verticalalignment='top', horizontalalignment='left', fontsize=32)
+                    plt.text(0.05, 0.7, f'slope: {lin_fit[0]:0.2f}', transform=ax.transAxes,
+                                verticalalignment='top', horizontalalignment='left', fontsize=32)
+                    plt.xlabel(r'true $\dot{y_i}(t)$', fontsize=68)
+                    plt.ylabel(r'learned $\dot{y_i}(t)$', fontsize=68)
+
+                    plt.xticks([-0.1, 0], [-0.1, 0], fontsize=48)
+                    plt.yticks([-0.1, 0], [-0.1, 0], fontsize=48)
+                    plt.xlim([-0.2,0.025])
+                    plt.ylim([-0.2,0.025])
+
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/all/comparison_derivative_yi_{epoch}.tif", dpi=80)
+                    plt.close()
+
+
+
 
 
         fig, ax = fig_init(formatx='%.0f', formaty='%.2f')
@@ -4908,45 +5023,43 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
     else:
 
-        # fig_init(formatx='%.0f', formaty='%.0f')
-        # plt.hist(distrib, bins=100, color=mc, alpha=0.5)
-        # plt.ylabel('counts', fontsize=64)
-        # plt.xlabel('$x_{ij}$', fontsize=64)
-        # plt.xticks(fontsize=24)
-        # plt.yticks(fontsize=24)
-        # plt.tight_layout()
-        # plt.savefig(f'./{log_dir}/results/signal_distribution.png', dpi=300)
-        # plt.close()
-        # print(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
-        # logger.info(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
-        #
-        # plt.figure(figsize=(15, 10))
-        # ax = sns.heatmap(to_numpy(activity), center=0, cmap='viridis', cbar_kws={'fraction': 0.046})
-        # cbar = ax.collections[0].colorbar
-        # cbar.ax.tick_params(labelsize=32)
-        # ax.invert_yaxis()
-        # plt.ylabel('neurons', fontsize=64)
-        # plt.xlabel('time', fontsize=64)
-        # plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
-        # plt.yticks([0, 999], [1, 1000], fontsize=48)
-        # plt.xticks(rotation=0)
-        # plt.tight_layout()
-        # plt.savefig(f'./{log_dir}/results/kinograph.png', dpi=300)
-        # plt.close()
-        # print (f'./{log_dir}/results/kinograph.png')
-        #
-        # plt.figure(figsize=(15, 10))
-        # n = np.random.permutation(n_particles)
-        # for i in range(25):
-        #     plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=2)
-        # plt.xlabel('time', fontsize=64)
-        # plt.ylabel('$x_{i}$', fontsize=64)
-        # plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
-        # plt.yticks(fontsize=48)
-        # plt.tight_layout()
-        # plt.savefig(f'./{log_dir}/results/firing rate.png', dpi=300)
-        # plt.close()
-        # print(f'./{log_dir}/results/firing rate.png')
+        fig_init(formatx='%.0f', formaty='%.0f')
+        plt.hist(distrib, bins=100, color=mc, alpha=0.5)
+        plt.ylabel('counts', fontsize=64)
+        plt.xlabel('$x_{ij}$', fontsize=64)
+        plt.xticks(fontsize=24)
+        plt.yticks(fontsize=24)
+        plt.tight_layout()
+        plt.savefig(f'./{log_dir}/results/signal_distribution.png', dpi=300)
+        plt.close()
+        print(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
+        logger.info(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
+
+        plt.figure(figsize=(15, 10))
+        ax = sns.heatmap(to_numpy(activity), center=0, cmap='viridis', cbar_kws={'fraction': 0.046})
+        cbar = ax.collections[0].colorbar
+        cbar.ax.tick_params(labelsize=32)
+        ax.invert_yaxis()
+        plt.ylabel('neurons', fontsize=64)
+        plt.xlabel('time', fontsize=64)
+        plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
+        plt.yticks([0, 999], [1, 1000], fontsize=48)
+        plt.xticks(rotation=0)
+        plt.tight_layout()
+        plt.savefig(f'./{log_dir}/results/kinograph.png', dpi=300)
+        plt.close()
+
+        plt.figure(figsize=(15, 10))
+        n = np.random.permutation(n_particles)
+        for i in range(25):
+            plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=2)
+        plt.xlabel('time', fontsize=64)
+        plt.ylabel('$x_{i}$', fontsize=64)
+        plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
+        plt.yticks(fontsize=48)
+        plt.tight_layout()
+        plt.savefig(f'./{log_dir}/results/firing rate.png', dpi=300)
+        plt.close()
         #
         # # if os.path.exists(f"./{log_dir}/neuron_gt_list.pt"):
         # #
@@ -5355,23 +5468,47 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
                 os.makedirs(f"./{log_dir}/results/field", exist_ok=True)
 
-                if 'learnable_short_term_plasticity' in field_type:
+                if 'derivative' in field_type:
 
-                    modulation = torch.tensor(x_list[0], device=device)
-                    modulation = modulation[:, :, 8:9].squeeze()
-                    modulation = modulation.t()
-                    modulation = modulation.clone().detach()
-                    d_modulation = (modulation[:, 1:] - modulation[:, :-1]) / delta_t
-                    modulation_norm = torch.tensor(1.0E-2, device=device)
+                    y = torch.linspace(0, 1, 400)
+                    x = torch.linspace(-6, 6, 200)
+                    grid_y, grid_x = torch.meshgrid(y, x)
+                    grid = torch.stack((grid_x, grid_y), dim=-1)
+                    grid = grid.to(device)
+                    pred_modulation = model.lin_modulation(grid)
+                    tau = 100
+                    alpha = 0.02
+                    true_derivative = (1 - grid_y) / tau - alpha * grid_y * torch.abs(grid_x)
 
-                    fig = plt.figure(figsize=(12, 12))
-                    ind_list = [320]
-                    ids = np.arange(0, 100000, 100)
-                    ax = fig.add_subplot(2, 1, 1)
-                    for ind in ind_list:
-                        plt.plot(to_numpy(modulation[ind, ids]))
-                        plt.plot(to_numpy(model.b[ind, 0:1000]**2))
+                    fig = plt.figure(figsize=(16, 12))
+                    plt.subplot(1, 2, 1)
+                    plt.title(r'true $\dot{y_i}$', fontsize=48)
+                    # plt.title(r'$\dot{y_i}=(1-y)/100 - 0.02 x_iy_i$', fontsize=48)
+                    plt.imshow(to_numpy(true_derivative))
+                    plt.xticks([0, 50, 100, 150, 200], [-6, -3, 0, 3, 6], fontsize=24)
+                    plt.yticks([0, 100, 200, 300, 400], [0, 0.25, 0.5, 0.75, 1], fontsize=24)
+                    plt.xlabel(r'$x_i$', fontsize=48)
+                    plt.ylabel(r'$y_i$', fontsize=48)
+                    # plt.colorbar()
+                    plt.subplot(1, 2, 2)
+                    plt.title(r'learned $\dot{y_i}$', fontsize=48)
+                    plt.imshow(to_numpy(pred_modulation))
+                    plt.xticks([0, 50, 100, 150, 200], [-6, -3, 0, 3, 6], fontsize=24)
+                    plt.yticks([0, 100, 200, 300, 400], [0, 0.25, 0.5, 0.75, 1], fontsize=24)
+                    plt.xlabel(r'$x_i$', fontsize=48)
+                    plt.ylabel(r'$y_i$', fontsize=48)
+                    # plt.colorbar()
+                    plt.tight_layout
+                    plt.savefig(f"./{log_dir}/results/field_derivative.tif", dpi=80)
+                    plt.close()
 
+                    # fig = plt.figure(figsize=(12, 12))
+                    # ind_list = [320]
+                    # ids = np.arange(0, 100000, 100)
+                    # ax = fig.add_subplot(2, 1, 1)
+                    # for ind in ind_list:
+                    #     plt.plot(to_numpy(modulation[ind, ids]))
+                    #     plt.plot(to_numpy(model.b[ind, 0:1000]**2))
 
                 else:
 
@@ -7522,7 +7659,7 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N2_a1', 'signal_N2_a2', 'signal_N2_a3', 'signal_N2_a4', 'signal_N2_a5', 'signal_N2_a10']
     # config_list = ['signal_N6_a28']
-    config_list = ['signal_N2_d3']
+    config_list = ['signal_N6_a28_11_3']
 
     for config_file_ in config_list:
 
@@ -7535,7 +7672,7 @@ if __name__ == '__main__':
 
         print(f'config_file  {config.config_file}')
 
-        data_plot(config=config, epoch_list=['best'], style='black color', device=device)
+        # data_plot(config=config, epoch_list=['best'], style='black color', device=device)
         data_plot(config=config, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['time'], style='black color', device=device)
 

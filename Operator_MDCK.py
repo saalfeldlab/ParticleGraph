@@ -186,19 +186,20 @@ class Operator_smooth(pyg.nn.MessagePassing):
 
             grad_density = self.kernel_operators[:, 1:3]  # d_rho_x d_rho_y
 
-            # velocity = self.kernel_operators[:, 0:1] * torch.sum(d_pos_j**2, dim=1)[:,None] / density_j
+            velocity = self.kernel_operators[:, 0:1] * torch.sum(d_pos_j**2, dim=1)[:,None] / density_j
+
             # grad_velocity = self.kernel_operators[:, 1:3] * torch.sum(d_pos_j**2, dim=1)[:,None].repeat(1,2) / density_j.repeat(1,2)
             # out = torch.cat((grad_density, velocity, grad_velocity), dim = 1) # d_rho_x d_rho_y, velocity
             # out = field_j * self.kernel_operators[:, 1:2] / density_j  # grad_x
 
-            if 'laplacian' in self.field_type:
-                out = field_j * self.kernel_operators[:, 3:4] / density_j  # laplacian
-            elif 'grad_density' in self.field_type:
-                out = grad_density
-            else:
-                out = grad_density
+            # if 'laplacian' in self.field_type:
+            #     out = field_j * self.kernel_operators[:, 3:4] / density_j  # laplacian
+            # elif 'grad_density' in self.field_type:
+            #     out = grad_density
+            # else:
+            #     out = grad_density
 
-            return out
+            return velocity
 
 
         fig = plt.figure(figsize=(6, 6))
@@ -269,31 +270,9 @@ if __name__ == '__main__':
     phi = torch.zeros(1, device=device)
     threshold = 0.05
 
-
-    if mode == 'gaussian':
-        tensors = tuple(dimension * [torch.linspace(0, 1, steps=100)])
-        x = torch.stack(torch.meshgrid(*tensors), dim=-1)
-        x = x.reshape(-1, dimension)
-        x = torch.cat((torch.arange(x.shape[0])[:, None], x, torch.zeros((x.shape[0], 9))), 1)
-        x = x.to(device)
-        x.requires_grad = False
-        size = np.sqrt(x.shape[0]).astype(int)
-        x0 = x
-    elif mode=='wave':
-        dataset_name = config.dataset
-        n_frames = config.simulation.n_frames
-        x_mesh_list = []
-        y_mesh_list = []
-        x_mesh = torch.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/graphs_{dataset_name}/x_mesh_list_0.pt', map_location=device, weights_only=True)
-        x_mesh_list.append(x_mesh)
-        y_mesh = torch.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/graphs_{dataset_name}/y_mesh_list_0.pt', map_location=device, weights_only=True)
-        y_mesh_list.append(y_mesh)
-
-    matplotlib.use("Qt5Agg")
-
-
-    x_list = torch.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/cell/cell_MDCK_3/full_vertice_list0.pt', map_location=device, weights_only=True)
+    # x_list = torch.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/cell/cell_MDCK_3/full_vertice_list0.pt', map_location=device, weights_only=True)
     # x_list = torch.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/cell/cell_MDCK_3/x_list_0.pt', map_location=device, weights_only=True)
+    x_list = torch.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/cell/cell_MDCK_3/track_list_0.pt',map_location=device, weights_only=True)
 
 
     for frame in trange(0,n_frames):
@@ -335,96 +314,91 @@ if __name__ == '__main__':
         # Q = ax.quiver(to_numpy(x[:, 2]), to_numpy(x[:, 1]), -10*to_numpy(pred[:,1]), -10*to_numpy(pred[:,0]), color='w')
         # plt.show()
 
+        sp = 100
+
         fig = plt.figure(figsize=(24, 12))
         ax = fig.add_subplot(2,4,1)
-        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c='w')
-        pixel = 7020
+        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=sp, c='w')
+        pixel = 5020
         plt.scatter(mgrid[pixel, 2].detach().cpu().numpy(),
-                    mgrid[pixel, 1].detach().cpu().numpy(), s=2, c='r')
+                    mgrid[pixel, 1].detach().cpu().numpy(), s=sp, c='r')
         pos = torch.argwhere(edge_index_mgrid[1, :] == pixel).squeeze()
         if pos.numel()>0:
-            plt.scatter(xp[edge_index_mgrid[0, pos], 2].detach().cpu().numpy(), xp[edge_index_mgrid[0, pos], 1].detach().cpu().numpy(), s=1,c='b')
-        plt.xticks([])
-        plt.yticks([])
+            plt.scatter(xp[edge_index_mgrid[0, pos], 2].detach().cpu().numpy(), xp[edge_index_mgrid[0, pos], 1].detach().cpu().numpy(), s=sp,c='b')
+        # plt.xticks([])
+        # plt.yticks([])
         plt.title('pos', fontsize=8)
-        ax = fig.add_subplot(2,4,5)
-        plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=10, c=to_numpy(density_field))
+        ax = fig.add_subplot(2,4,6)
+        plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=sp, c=to_numpy(density_field), vmin=0, vmax=10)
         plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c='w')
         plt.xticks([])
         plt.yticks([])
         plt.title('density_field', fontsize=8)
-        # ax = fig.add_subplot(2,4,6)
-        # plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=10, c=to_numpy(pred_field[:,0]))
-        # plt.xticks([])
-        # plt.yticks([])
-        # plt.title('density_field_x', fontsize=8)
-        # ax = fig.add_subplot(2,4,7)
-        # plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=10, c=to_numpy(pred_field[:,1]))
-        # plt.xticks([])
-        # plt.yticks([])
-        # plt.title('density_field_y', fontsize=8)
         ax = fig.add_subplot(2,4,2)
-        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c=to_numpy(density))
+        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=sp, c=to_numpy(density), vmin=0, vmax=10)
         plt.xticks([])
         plt.yticks([])
         plt.title('density', fontsize=8)
         ax = fig.add_subplot(2,4,3)
-        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c=to_numpy(pred[:,0]))
+        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=sp, c=to_numpy(pred), vmin=0, vmax=10)
         plt.xticks([])
         plt.yticks([])
-        plt.title('density_y', fontsize=8)
-        ax = fig.add_subplot(2,4,4)
-        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c=to_numpy(pred[:,1]))
+        plt.title('velocity', fontsize=8)
+        ax = fig.add_subplot(2,4,7)
+        plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=sp, c=to_numpy(pred_field), vmin=0, vmax=10)
+        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c='w')
         plt.xticks([])
         plt.yticks([])
-        plt.title('density_x', fontsize=8)
+        plt.title('velocity_field', fontsize=8)
         # plt.show()
+        plt.savefig(f'tmp/fig_{frame}.tif')
         plt.close()
 
+        train_NNR = False
+        if train_NNR:
+            model_f = Siren_Network(image_width=100, in_features=model_config.input_size_nnr,
+                                    out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
+                                    hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device,
+                                    first_omega_0=30.0, hidden_omega_0=30.0)
 
-        model_f = Siren_Network(image_width=100, in_features=model_config.input_size_nnr,
-                                out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
-                                hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device,
-                                first_omega_0=5, hidden_omega_0=5)
+            optimizer_f = torch.optim.Adam(lr=1E-4, params=model_f.parameters())
+            model_f.train()
 
-        optimizer_f = torch.optim.Adam(lr=1E-4, params=model_f.parameters())
-        model_f.train()
+            if frame==0:
+                total_steps = 2000  # Since the whole image is our dataset, this just means 500 gradient descent steps.
+            else:
+                total_steps = 2000
+            steps_til_summary = 500
 
-        if frame==0:
-            total_steps = 2000  # Since the whole image is our dataset, this just means 500 gradient descent steps.
-        else:
-            total_steps = 1000
-        steps_til_summary = 500
+            for step in range(total_steps):
 
-        for step in range(total_steps):
+                optimizer_f.zero_grad()
 
-            optimizer_f.zero_grad()
+                model_output = model_f(time=frame/n_frames) ** 2
+                # model_output = laplace(model_output, coords)
+                loss = (model_output - density_field.clone().detach()).norm(2)
 
-            model_output = model_f(time=frame/n_frames) ** 2
-            # model_output = laplace(model_output, coords)
-            loss = (model_output - density_field.clone().detach()).norm(2)
+                loss.backward()
+                optimizer_f.step()
 
-            if not step % steps_til_summary:
-                print("Step %d, Total loss %0.6f" % (step, loss))
+                if not step % steps_til_summary:
+                    print("Step %d, Total loss %0.6f" % (step, loss))
 
-            loss.backward()
-            optimizer_f.step()
-
-        fig = plt.figure(figsize=(18, 6))
-        ax = fig.add_subplot(1,3,1)
-        plt.imshow(density_field.cpu().view(100, 100).detach().numpy(), vmin=0, vmax=300)
-        plt.scatter(to_numpy(100*x[:, 2]), to_numpy(100*x[:, 1]), s=1, c='w')
-        plt.xlim([0,100])
-        plt.ylim([0,100])
-        ax = fig.add_subplot(1,3,2)
-        plt.imshow(np.flipud(density_field.cpu().view(100, 100).detach().numpy()), vmin=0, vmax=300)
-        ax = fig.add_subplot(1,3,3)
-        plt.imshow(np.flipud(model_output.cpu().view(100, 100).detach().numpy()), vmin=0, vmax=300)
-        # axes[1].imshow(img_grad.norm(dim=-1).cpu().view(256, 256).detach().numpy())
-        # axes[2].imshow(img_laplacian.cpu().view(256, 256).detach().numpy())
-        plt.savefig(f'tmp/kernels_{frame}.tif')
-        # plt.show()
-        plt.close()
+            fig = plt.figure(figsize=(18, 6))
+            ax = fig.add_subplot(1,3,1)
+            plt.imshow(density_field.cpu().view(100, 100).detach().numpy(),vmin=0, vmax=300)
+            plt.scatter(to_numpy(100*x[:, 2]), to_numpy(100*x[:, 1]), s=1, c='w')
+            plt.xlim([0,100])
+            plt.ylim([0,100])
+            ax = fig.add_subplot(1,3,2)
+            plt.imshow(np.flipud(density_field.cpu().view(100, 100).detach().numpy()),vmin=0, vmax=300)
+            ax = fig.add_subplot(1,3,3)
+            plt.imshow(np.flipud(model_output.cpu().view(100, 100).detach().numpy()),vmin=0, vmax=300)
+            # axes[1].imshow(img_grad.norm(dim=-1).cpu().view(256, 256).detach().numpy())
+            # axes[2].imshow(img_laplacian.cpu().view(256, 256).detach().numpy())
+            plt.savefig(f'tmp/kernels_{frame}.tif')
+            # plt.show()
+            plt.close()
 
 
 
