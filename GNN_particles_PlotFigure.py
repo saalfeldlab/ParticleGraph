@@ -339,8 +339,8 @@ def plot_embedding_func_cluster_tracking(model, config, embedding_cluster, cmap,
             plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
             plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
         else:
-            plt.xlabel(r'$a_{i0}$', fontsize=68)
-            plt.ylabel(r'$a_{i1}$', fontsize=68)
+            plt.xlabel(r'$a_{0}$', fontsize=68)
+            plt.ylabel(r'$a_{1}$', fontsize=68)
         plt.xlim(config.plotting.embedding_lim)
         plt.ylim(config.plotting.embedding_lim)
         plt.tight_layout()
@@ -357,8 +357,8 @@ def plot_embedding_func_cluster_tracking(model, config, embedding_cluster, cmap,
             plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
             plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
         else:
-            plt.xlabel(r'$a_{i0}$', fontsize=68)
-            plt.ylabel(r'$a_{i1}$', fontsize=68)
+            plt.xlabel(r'$a_{0}$', fontsize=68)
+            plt.ylabel(r'$a_{1}$', fontsize=68)
         plt.xlim(config.plotting.embedding_lim)
         plt.ylim(config.plotting.embedding_lim)
         plt.tight_layout()
@@ -421,8 +421,8 @@ def plot_embedding_func_cluster_state(model, config,embedding_cluster, cmap, typ
         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
     else:
-        plt.xlabel(r'$a_{i0}$', fontsize=68)
-        plt.ylabel(r'$a_{i1}$', fontsize=68)
+        plt.xlabel(r'$a_{0}$', fontsize=68)
+        plt.ylabel(r'$a_{1}$', fontsize=68)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=170.7)
     plt.close()
@@ -515,8 +515,8 @@ def plot_embedding_func_cluster(model, config,embedding_cluster, cmap, index_par
         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
     else:
-        plt.xlabel(r'$a_{i0}$', fontsize=68)
-        plt.ylabel(r'$a_{i1}$', fontsize=68)
+        plt.xlabel(r'$a_{0}$', fontsize=68)
+        plt.ylabel(r'$a_{1}$', fontsize=68)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=170.7)
     plt.close()
@@ -566,8 +566,8 @@ def plot_embedding_func_cluster(model, config,embedding_cluster, cmap, index_par
         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
     else:
-        plt.xlabel(r'$a_{i0}$', fontsize=68)
-        plt.ylabel(r'$a_{i1}$', fontsize=68)
+        plt.xlabel(r'$a_{0}$', fontsize=68)
+        plt.ylabel(r'$a_{1}$', fontsize=68)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/clustered_embedding_{epoch}.tif", dpi=170.7)
     plt.close()
@@ -1189,8 +1189,8 @@ def plot_attraction_repulsion(config,epoch_list, log_dir, logger, style, device)
                     pos = to_numpy(pos)
                     if len(pos) > 0:
                         plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=100, alpha=0.1)
-                plt.xlabel(r'$a_{i0}$', fontsize=48)
-                plt.ylabel(r'$a_{i1}$', fontsize=48)
+                plt.xlabel(r'$a_{0}$', fontsize=48)
+                plt.ylabel(r'$a_{1}$', fontsize=48)
                 match config.dataset:
                     case 'arbitrary_3':
                         plt.xlim([0.5, 1.5])
@@ -1380,8 +1380,8 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
                     pos = to_numpy(pos)
                     if len(pos) > 0:
                         plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=100, alpha=0.1)
-                plt.xlabel(r'$a_{i0}$', fontsize=48)
-                plt.ylabel(r'$a_{i1}$', fontsize=48)
+                plt.xlabel(r'$a_{0}$', fontsize=48)
+                plt.ylabel(r'$a_{1}$', fontsize=48)
                 match config.dataset:
                     case 'arbitrary_3':
                         plt.xlim([0.5, 1.5])
@@ -1575,8 +1575,8 @@ def plot_cell_state(config, epoch_list, log_dir, logger, style, device):
                     if len(pos) > 0:
                         plt.scatter(to_numpy(model.a[1][pos, 0]), to_numpy(model.a[1][pos, 1]), s=2, color=cmap.color(n),
                                     alpha=0.5, edgecolor='none')
-                plt.xlabel(r'$a_{i0}$', fontsize=48)
-                plt.ylabel(r'$a_{i1}$', fontsize=48)
+                plt.xlabel(r'$a_{0}$', fontsize=48)
+                plt.ylabel(r'$a_{1}$', fontsize=48)
                 plt.xlim([-2, 2])
                 plt.ylim([-2, 2])
                 plt.tight_layout()
@@ -1775,8 +1775,8 @@ def plot_cell_tracking(config, epoch_list, log_dir, logger, style, device):
                 indices = np.random.choice(model.a.shape[0], 1000000, replace=False)
                 fig, ax = fig_init(fontsize=24)
                 plt.scatter(to_numpy(model.a[indices, 0]), to_numpy(model.a[indices, 1]), s=10, color='w')
-                plt.xlabel(r'$a_{i0}$', fontsize=48)
-                plt.ylabel(r'$a_{i1}$', fontsize=48)
+                plt.xlabel(r'$a_{0}$', fontsize=48)
+                plt.ylabel(r'$a_{1}$', fontsize=48)
                 plt.xticks([])
                 plt.yticks([])
                 plt.tight_layout()
@@ -2153,8 +2153,8 @@ def plot_attraction_repulsion_continuous(config, epoch_list, log_dir, logger, st
             plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
             plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
         else:
-            plt.xlabel(r'$a_{i0}$', fontsize=68)
-            plt.ylabel(r'$a_{i1}$', fontsize=68)
+            plt.xlabel(r'$a_{0}$', fontsize=68)
+            plt.ylabel(r'$a_{1}$', fontsize=68)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/first_embedding_{epoch}.tif", dpi=170.7)
         plt.close()
@@ -2290,8 +2290,8 @@ def plot_gravity(config, epoch_list, log_dir, logger, style, device):
                     pos = to_numpy(pos)
                     if len(pos) > 0:
                         plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=100, alpha=0.1)
-                plt.xlabel(r'$a_{i0}$', fontsize=48)
-                plt.ylabel(r'$a_{i1}$', fontsize=48)
+                plt.xlabel(r'$a_{0}$', fontsize=48)
+                plt.ylabel(r'$a_{1}$', fontsize=48)
                 match config.dataset:
                     case 'gravity_16':
                         plt.ylim([0, 3])
@@ -2626,8 +2626,8 @@ def plot_gravity_continuous(config, epoch_list, log_dir, logger, style, device):
             plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
             plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
         else:
-            plt.xlabel(r'$a_{i0}$', fontsize=68)
-            plt.ylabel(r'$a_{i1}$', fontsize=68)
+            plt.xlabel(r'$a_{0}$', fontsize=68)
+            plt.ylabel(r'$a_{1}$', fontsize=68)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/embedding.tif", dpi=170)
         plt.close()
@@ -2917,8 +2917,8 @@ def plot_Coulomb(config, epoch_list, log_dir, logger, style, device):
                     pos = torch.argwhere(type_list.squeeze() == n)
                     pos = to_numpy(pos)
                     plt.scatter(model_a[pos, 0], model_a[pos, 1], s=100, color=cmap.color(n), alpha=0.5)
-                plt.xlabel(r'$a_{i0}$', fontsize=48)
-                plt.ylabel(r'$a_{i1}$', fontsize=48)
+                plt.xlabel(r'$a_{0}$', fontsize=48)
+                plt.ylabel(r'$a_{1}$', fontsize=48)
                 plt.xlim([-0.1, 1.1])
                 plt.ylim([-0.1, 1.1])
 
@@ -3237,8 +3237,8 @@ def plot_boids(config, epoch_list, log_dir, logger, style, device):
                     pos = to_numpy(pos)
                     if len(pos) > 0:
                         plt.scatter(embedding[pos, 0], embedding[pos, 1], c=cmap.color(n), s=100, alpha=0.1)
-                plt.xlabel(r'$a_{i0}$', fontsize=48)
-                plt.ylabel(r'$a_{i1}$', fontsize=48)
+                plt.xlabel(r'$a_{0}$', fontsize=48)
+                plt.ylabel(r'$a_{1}$', fontsize=48)
                 match config.dataset:
                     case 'boids_16_256':
                         plt.xlim([-1.5, 2])
@@ -3695,8 +3695,8 @@ def plot_wave(config, epoch_list, log_dir, logger, cc, style, device):
             plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
             plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
         else:
-            plt.xlabel(r'$a_{i0}$', fontsize=68)
-            plt.ylabel(r'$a_{i1}$', fontsize=68)
+            plt.xlabel(r'$a_{0}$', fontsize=68)
+            plt.ylabel(r'$a_{1}$', fontsize=68)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=300)
         plt.close()
@@ -3893,8 +3893,8 @@ def plot_particle_field(config, epoch_list, log_dir, logger, cc, style, device):
                     pos = to_numpy(pos)
                     if len(pos) > 0:
                         plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=100, alpha=0.1)
-                plt.xlabel(r'$a_{i0}$', fontsize=48)
-                plt.ylabel(r'$a_{i1}$', fontsize=48)
+                plt.xlabel(r'$a_{0}$', fontsize=48)
+                plt.ylabel(r'$a_{1}$', fontsize=48)
                 plt.xlim([0.2, 1.6])
                 plt.ylim([0.2, 1.6])
                 plt.tight_layout()
@@ -4329,8 +4329,8 @@ def plot_RD_RPS(config, epoch_list, log_dir, logger, cc, style, device):
             plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
             plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
         else:
-            plt.xlabel(r'$a_{i0}$', fontsize=68)
-            plt.ylabel(r'$a_{i1}$', fontsize=68)
+            plt.xlabel(r'$a_{0}$', fontsize=68)
+            plt.ylabel(r'$a_{1}$', fontsize=68)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=300)
         plt.close()
@@ -4531,7 +4531,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
     x_list = []
     y_list = []
-    for run in trange(1):
+    for run in trange(1,2):
         if os.path.exists(f'graphs_data/{dataset_name}/x_list_{run}.pt'):
             x = torch.load(f'graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device)
             y = torch.load(f'graphs_data/{dataset_name}/y_list_{run}.pt', map_location=device)
@@ -4677,7 +4677,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
 
         with torch.no_grad():
-            for file_id_ in trange(95, 100):
+            for file_id_ in trange(0, 100):
                 file_id = file_id_list[file_id_]
 
                 epoch = files[file_id].split('graphs')[1][1:-3]
@@ -4703,8 +4703,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 for n in range(n_particle_types-1,-1,-1):
                     pos = torch.argwhere(type_list == n).squeeze()
                     plt.scatter(to_numpy(model_a[pos, 0]), to_numpy(model_a[pos, 1]), s=100, color=cmap.color(n), alpha=0.5)
-                plt.xlabel(r'$a_{i0}$', fontsize=68)
-                plt.ylabel(r'$a_{i1}$', fontsize=68)
+                plt.xlabel(r'$a_{0}$', fontsize=68)
+                plt.ylabel(r'$a_{1}$', fontsize=68)
                 plt.xlim([-0.1, 1.1])
                 plt.ylim([-0.1, 1.1])
                 plt.tight_layout()
@@ -4732,7 +4732,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 # plt.savefig(f"./{log_dir}/results/all/W_{epoch}.tif", dpi=80)
                 # plt.close()
 
-
                 rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
                 if model_config.signal_model_name == 'PDE_N5':
                     fig, ax = fig_init()
@@ -4740,7 +4739,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     for k in range(n_particle_types):
                         ax = fig.add_subplot(2, 2, k + 1)
                         if k==0:
-                            plt.ylabel(r'learned $MLP_1(x_i, a_i, a_j)$', fontsize=32)
+                            plt.ylabel(r'learned $MLP_1( a_i, a_j, x_j)$', fontsize=32)
                         for n in range(n_particle_types):
                             for m in range(250):
                                 pos0 = to_numpy(torch.argwhere(type_list == k).squeeze())
@@ -4760,6 +4759,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                         plt.xlim([-5, 5])
                         plt.xticks([])
                         plt.yticks([])
+                    plt.xlabel(r'$x_j$', fontsize=68)
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/results/all/MLP1_{epoch}.tif", dpi=80)
                     plt.close()
@@ -4775,11 +4775,11 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                             in_features = torch.cat((rr[:, None], embedding0), dim=1)
                             func = model.lin_edge(in_features.float()) * correction
                             plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(k), linewidth=8, alpha=0.25)
-                    plt.xlabel(r'$x_i$', fontsize=68)
+                    plt.xlabel(r'$x_j$', fontsize=68)
                     if model_config.signal_model_name == 'PDE_N8':
-                        plt.ylabel(r'learned $MLP_1(x_i, a_j)$', fontsize=68)
+                        plt.ylabel(r'learned $MLP_1(a_j, x_j)$', fontsize=68)
                     else:
-                        plt.ylabel(r'learned $MLP_1(x_i, a_i)$', fontsize=68)
+                        plt.ylabel(r'learned $MLP_1(a_i, x_j)$', fontsize=68)
                     plt.ylim([-1.6, 1.6])
                     plt.xlim([-5,5])
                     plt.tight_layout()
@@ -4791,9 +4791,9 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     with torch.no_grad():
                         func = model.lin_edge(in_features.float()) * correction
                     plt.plot(to_numpy(rr), to_numpy(func), color=mc, linewidth=8, label=r'learned')
-                    plt.xlabel(r'$x_i$', fontsize=68)
+                    plt.xlabel(r'$x_j$', fontsize=68)
                     # plt.ylabel(r'learned $\psi^*(a_i, x_i)$', fontsize=68)
-                    plt.ylabel(r'learned $MLP_1(a_i, x_i)$', fontsize=68)
+                    plt.ylabel(r'learned $MLP_1(a_i, x_j)$', fontsize=68)
                     plt.ylim([-1.5, 1.5])
                     plt.xlim([-5,5])
                     plt.tight_layout()
@@ -4876,7 +4876,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                         prediction = model_f(t) ** 2
                         prediction = prediction.squeeze()
                         prediction = prediction.t()
-                        plt.imshow(to_numpy(prediction), aspect='auto')
+                        plt.imshow(to_numpy(prediction), aspect='auto', cmap='gray')
                         plt.title(r'learned $MLP_2(i,t)$', fontsize=68)
                         plt.xlabel(r'$t$', fontsize=68)
                         plt.ylabel(r'$i$', fontsize=68)
@@ -4886,15 +4886,15 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                         plt.savefig(f"./{log_dir}/results/all/yi_{epoch}.tif", dpi=80)
                         plt.close()
 
-                        prediction = prediction * torch.tensor(second_correction,device=device)
+                        # prediction = prediction * torch.tensor(second_correction,device=device)
 
                         fig, ax = fig_init()
                         ids = np.arange(0,100000,100).astype(int)
                         plt.scatter(to_numpy(modulation[:,ids]), to_numpy(prediction[:,ids]), s=1, color=mc, alpha=0.1)
-                        plt.xlim([0,0.5])
-                        plt.ylim([0,2])
-                        plt.xticks([0,0.5], [0,0.5], fontsize=48)
-                        plt.yticks([0,1,2], [0,1,2], fontsize=48)
+                        # plt.xlim([0,0.5])
+                        # plt.ylim([0,2])
+                        # plt.xticks([0,0.5], [0,0.5], fontsize=48)
+                        # plt.yticks([0,1,2], [0,1,2], fontsize=48)
                         x_data = to_numpy(modulation[:,ids]).flatten()
                         y_data = to_numpy(prediction[:,ids]).flatten()
                         lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
@@ -4912,23 +4912,23 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                         plt.savefig(f"./{log_dir}/results/all/comparison_yi_{epoch}.tif", dpi=80)
                         plt.close()
 
-                else:
+                    else:
 
-                    fig, ax = fig_init()
-                    pred = model_f(time=file_id_ / len(file_id_list), enlarge=True) ** 2
-                    # pred = torch.reshape(pred, (n_nodes_per_axis, n_nodes_per_axis))
-                    pred = torch.reshape(pred, (640, 640))
-                    pred = to_numpy(torch.sqrt(pred))
-                    pred = np.flipud(pred)
-                    pred = np.rot90(pred, 1)
-                    pred = np.fliplr(pred)
-                    plt.imshow(pred, cmap='grey')
-                    plt.ylabel(r'learned $MLP_2(x_i, t)$', fontsize=68)
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/results/all/field_{epoch}.tif", dpi=80)
-                    plt.close()
+                        fig, ax = fig_init()
+                        pred = model_f(time=file_id_ / len(file_id_list), enlarge=True) ** 2
+                        # pred = torch.reshape(pred, (n_nodes_per_axis, n_nodes_per_axis))
+                        pred = torch.reshape(pred, (640, 640))
+                        pred = to_numpy(torch.sqrt(pred))
+                        pred = np.flipud(pred)
+                        pred = np.rot90(pred, 1)
+                        pred = np.fliplr(pred)
+                        plt.imshow(pred, cmap='grey')
+                        plt.ylabel(r'learned $MLP_2(x, y, t)$', fontsize=68)
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+                        plt.savefig(f"./{log_dir}/results/all/field_{epoch}.tif", dpi=80)
+                        plt.close()
 
                 if 'derivative' in field_type:
 
@@ -4937,36 +4937,23 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     grid_y, grid_x = torch.meshgrid(y, x)
                     grid = torch.stack((grid_x, grid_y), dim=-1)
                     grid = grid.to(device)
-                    pred_modulation = model.lin_modulation(grid) / 20
+                    pred_modulation = model.lin_modulation(grid) / 40
                     tau = 100
                     alpha = 0.02
                     true_derivative = (1 - grid_y) / tau - alpha * grid_y * torch.abs(grid_x)
 
-                    fig = plt.figure(figsize=(12, 12))
-                    # plt.subplot(1, 2, 1)
-                    # plt.title(r'true $\dot{y_i}$', fontsize=48)
-                    # # plt.title(r'$\dot{y_i}=(1-y)/100 - 0.02 x_iy_i$', fontsize=48)
-                    # plt.imshow(to_numpy(true_derivative))
-                    # plt.xticks([0, 50, 100, 150, 200], [-8, -4, 0, 4, 8], fontsize=24)
-                    # plt.yticks([0, 100, 200, 300, 400], [0, 0.25, 0.5, 0.75, 1], fontsize=24)
-                    # plt.xlabel(r'$x_i$', fontsize=48)
-                    # plt.ylabel(r'$y_i$', fontsize=48)
-                    # # plt.colorbar()
-                    # plt.subplot(1, 2, 2)
+                    fig, ax = fig_init()
                     plt.title(r'learned $MLP_3(x_i, y_i)$', fontsize=68)
-                    plt.imshow(to_numpy(pred_modulation), vmin=-0.1, vmax=0)
-                    # plt.xticks([0, 50, 100, 150, 200], [-8, -4, 0, 4, 8], fontsize=24)
-                    # plt.yticks([0, 100, 200, 300, 400], [0, 0.25, 0.5, 0.75, 1], fontsize=24)
+                    plt.imshow(to_numpy(pred_modulation))
                     plt.xticks([])
                     plt.yticks([])
                     plt.xlabel(r'$x_i$', fontsize=68)
                     plt.ylabel(r'$y_i$', fontsize=68)
-                    # plt.colorbar()
                     plt.tight_layout
                     plt.savefig(f"./{log_dir}/results/all/derivative_yi_{epoch}.tif", dpi=80)
                     plt.close()
 
-                    fig = plt.figure(figsize=(12, 12))
+                    fig, ax = fig_init()
                     plt.scatter(to_numpy(true_derivative.flatten()), to_numpy(pred_modulation.flatten()), s=5, color=mc, alpha=0.1)
                     x_data = to_numpy(true_derivative.flatten())
                     y_data = to_numpy(pred_modulation.flatten())
@@ -4975,25 +4962,21 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     ss_res = np.sum(residuals ** 2)
                     ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
                     r_squared = 1 - (ss_res / ss_tot)
-                    plt.text(0.05, 0.75, f'$R^2$: {r_squared:0.2f}', transform=ax.transAxes,
-                                verticalalignment='top', horizontalalignment='left', fontsize=32)
-                    plt.text(0.05, 0.7, f'slope: {lin_fit[0]:0.2f}', transform=ax.transAxes,
-                                verticalalignment='top', horizontalalignment='left', fontsize=32)
+                    ax.text(0.05, 0.94, f'$R^2$: {r_squared:0.2f}', transform=ax.transAxes,
+                            verticalalignment='top', horizontalalignment='left', fontsize=32)
+                    ax.text(0.05, 0.88, f'slope: {lin_fit[0]:0.2f}', transform=ax.transAxes,
+                            verticalalignment='top', horizontalalignment='left', fontsize=32)
                     plt.xlabel(r'true $\dot{y_i}(t)$', fontsize=68)
                     plt.ylabel(r'learned $\dot{y_i}(t)$', fontsize=68)
 
-                    plt.xticks([-0.1, 0], [-0.1, 0], fontsize=48)
-                    plt.yticks([-0.1, 0], [-0.1, 0], fontsize=48)
-                    plt.xlim([-0.2,0.025])
-                    plt.ylim([-0.2,0.025])
+                    # plt.xticks([-0.1, 0], [-0.1, 0], fontsize=48)
+                    # plt.yticks([-0.1, 0], [-0.1, 0], fontsize=48)
+                    # plt.xlim([-0.2,0.025])
+                    # plt.ylim([-0.2,0.025])
 
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/results/all/comparison_derivative_yi_{epoch}.tif", dpi=80)
                     plt.close()
-
-
-
-
 
         fig, ax = fig_init(formatx='%.0f', formaty='%.2f')
         plt.plot(r_squared_list, linewidth=4, c=mc)
@@ -5184,8 +5167,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
                 plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
             else:
-                plt.xlabel(r'$a_{i0}$', fontsize=68)
-                plt.ylabel(r'$a_{i1}$', fontsize=68)
+                plt.xlabel(r'$a_{0}$', fontsize=68)
+                plt.ylabel(r'$a_{1}$', fontsize=68)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/all_embedding_{epoch}.tif", dpi=170.7)
             plt.close()
@@ -5471,7 +5454,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 if 'derivative' in field_type:
 
                     y = torch.linspace(0, 1, 400)
-                    x = torch.linspace(-6, 6, 200)
+                    x = torch.linspace(-6, 6, 400)
                     grid_y, grid_x = torch.meshgrid(y, x)
                     grid = torch.stack((grid_x, grid_y), dim=-1)
                     grid = grid.to(device)
@@ -5480,23 +5463,27 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     alpha = 0.02
                     true_derivative = (1 - grid_y) / tau - alpha * grid_y * torch.abs(grid_x)
 
-                    fig = plt.figure(figsize=(16, 12))
-                    plt.subplot(1, 2, 1)
-                    plt.title(r'true $\dot{y_i}$', fontsize=48)
+                    fig, ax = fig_init()
+                    plt.title(r'$\dot{y_i}$', fontsize=68)
                     # plt.title(r'$\dot{y_i}=(1-y)/100 - 0.02 x_iy_i$', fontsize=48)
                     plt.imshow(to_numpy(true_derivative))
-                    plt.xticks([0, 50, 100, 150, 200], [-6, -3, 0, 3, 6], fontsize=24)
-                    plt.yticks([0, 100, 200, 300, 400], [0, 0.25, 0.5, 0.75, 1], fontsize=24)
-                    plt.xlabel(r'$x_i$', fontsize=48)
-                    plt.ylabel(r'$y_i$', fontsize=48)
-                    # plt.colorbar()
-                    plt.subplot(1, 2, 2)
-                    plt.title(r'learned $\dot{y_i}$', fontsize=48)
+                    plt.xticks([0, 100, 200, 300, 400], [-6, -3, 0, 3, 6], fontsize=48)
+                    plt.yticks([0, 100, 200, 300, 400], [0, 0.25, 0.5, 0.75, 1], fontsize=48)
+                    plt.xlabel(r'$x_i$', fontsize=68)
+                    plt.ylabel(r'$y_i$', fontsize=68)
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/true_field_derivative.tif", dpi=80)
+                    plt.close()
+
+
+
+                    fig, ax = fig_init()
+                    plt.title(r'learned $\dot{y_i}$', fontsize=68)
                     plt.imshow(to_numpy(pred_modulation))
-                    plt.xticks([0, 50, 100, 150, 200], [-6, -3, 0, 3, 6], fontsize=24)
-                    plt.yticks([0, 100, 200, 300, 400], [0, 0.25, 0.5, 0.75, 1], fontsize=24)
-                    plt.xlabel(r'$x_i$', fontsize=48)
-                    plt.ylabel(r'$y_i$', fontsize=48)
+                    plt.xticks([0, 100, 200, 300, 400], [-6, -3, 0, 3, 6], fontsize=48)
+                    plt.yticks([0, 100, 200, 300, 400], [0, 0.25, 0.5, 0.75, 1], fontsize=48)
+                    plt.xlabel(r'$x_i$', fontsize=68)
+                    plt.ylabel(r'$y_i$', fontsize=68)
                     # plt.colorbar()
                     plt.tight_layout
                     plt.savefig(f"./{log_dir}/results/field_derivative.tif", dpi=80)
@@ -5509,6 +5496,61 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     # for ind in ind_list:
                     #     plt.plot(to_numpy(modulation[ind, ids]))
                     #     plt.plot(to_numpy(model.b[ind, 0:1000]**2))
+
+                if 'Siren_short_term_plasticity' in field_type:
+
+                    fig, ax = fig_init()
+                    t = torch.zeros((1, 100000, 1), dtype=torch.float32, device=device)
+                    t[0] = torch.linspace(0, 1, 100000, dtype=torch.float32, device=device)[:, None]
+                    prediction = model_f(t) ** 2
+                    prediction = prediction.squeeze()
+                    prediction = prediction.t()
+                    plt.imshow(to_numpy(prediction), aspect='auto')
+                    plt.title(r'learned $MLP_2(i,t)$', fontsize=68)
+                    plt.xlabel(r'$t$', fontsize=68)
+                    plt.ylabel(r'$i$', fontsize=68)
+                    plt.xticks([10000, 100000], [10000, 100000], fontsize=48)
+                    plt.yticks([0, 512, 1024], [0, 512, 1024], fontsize=48)
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/learned_plasticity.tif", dpi=80)
+                    plt.close()
+
+                    fig, ax = fig_init()
+                    plt.imshow(to_numpy(modulation), aspect='auto')
+                    plt.title(r'$y_i$', fontsize=68)
+                    plt.xlabel(r'$t$', fontsize=68)
+                    plt.ylabel(r'$i$', fontsize=68)
+                    plt.xticks([10000, 100000], [10000, 100000], fontsize=48)
+                    plt.yticks([0, 512, 1024], [0, 512, 1024], fontsize=48)
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/true_plasticity.tif", dpi=80)
+                    plt.close()
+
+                    prediction = prediction * torch.tensor(second_correction, device=device)
+
+                    fig, ax = fig_init()
+                    ids = np.arange(0, 100000, 100).astype(int)
+                    plt.scatter(to_numpy(modulation[:, ids]), to_numpy(prediction[:, ids]), s=1, color=mc, alpha=0.1)
+                    plt.xlim([0, 0.5])
+                    plt.ylim([0, 2])
+                    plt.xticks([0, 0.5], [0, 0.5], fontsize=48)
+                    plt.yticks([0, 1, 2], [0, 1, 2], fontsize=48)
+                    x_data = to_numpy(modulation[:, ids]).flatten()
+                    y_data = to_numpy(prediction[:, ids]).flatten()
+                    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+                    residuals = y_data - linear_model(x_data, *lin_fit)
+                    ss_res = np.sum(residuals ** 2)
+                    ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+                    r_squared = 1 - (ss_res / ss_tot)
+                    ax.text(0.05, 0.94, f'$R^2$: {r_squared:0.2f}', transform=ax.transAxes,
+                            verticalalignment='top', horizontalalignment='left', fontsize=32)
+                    ax.text(0.05, 0.88, f'slope: {lin_fit[0]:0.2f}', transform=ax.transAxes,
+                            verticalalignment='top', horizontalalignment='left', fontsize=32)
+                    plt.xlabel(r'true $y_i(t)$', fontsize=68)
+                    plt.ylabel(r'learned $y_i(t)$', fontsize=68)
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/all/comparison_yi_{epoch}.tif", dpi=80)
+                    plt.close()
 
                 else:
 
@@ -5927,15 +5969,15 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                     # plt.scatter(to_numpy(model.a[k * 25000: k * 25000 + 100, 0]),
                     #             to_numpy(model.a[k * 25000: k * 25000 + 100, 1]), s=10, color=c_list, alpha=1)
                 if 'latex' in style:
-                    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}(t)$', fontsize=68)
-                    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}(t)$', fontsize=68)
+                    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{0}(t)$', fontsize=68)
+                    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{1}(t)$', fontsize=68)
                 else:
-                    plt.xlabel(r'$a_{i0}(t)$', fontsize=68)
-                    plt.ylabel(r'$a_{i1}(t)$', fontsize=68)
-                plt.xlim([0.94, 1.08])
-                plt.ylim([0.9, 1.10])
-                # plt.xlim([0.7, 1.2])
-                # plt.ylim([0.7, 1.2])
+                    plt.xlabel(r'$a_{0}(t)$', fontsize=68)
+                    plt.ylabel(r'$a_{1}(t)$', fontsize=68)
+                # plt.xlim([0.94, 1.08])
+                # plt.ylim([0.9, 1.10])
+                plt.xlim([0.7, 1.2])
+                plt.ylim([0.7, 1.2])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/all/all_embedding_1_{epoch}.tif", dpi=80)
                 plt.close()
@@ -5958,7 +6000,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                 plt.xticks([])
                 plt.yticks([])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/all/W_{epoch}.tif", dpi=80)
+                # plt.savefig(f"./{log_dir}/results/all/W_{epoch}.tif", dpi=80)
                 plt.close()
 
                 rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
@@ -6002,9 +6044,9 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                     with torch.no_grad():
                         func = model.lin_edge(in_features.float()) * correction
                         plt.plot(to_numpy(rr), to_numpy(func), 2, color=mc, linewidth=2, alpha=0.25)
-                plt.xlabel(r'$x_i$', fontsize=68)
+                plt.xlabel(r'$x_j$', fontsize=68)
                 # plt.ylabel(r'learned $\psi^*(x_i)$', fontsize=68)
-                plt.ylabel(r'learned $MLP_1(x_i)$', fontsize=68)
+                plt.ylabel(r'learned $MLP_1(x_j)$', fontsize=68)
                 plt.ylim([-1.1, 1.1])
                 plt.xlim(config.plotting.xlim)
                 plt.tight_layout()
@@ -6119,18 +6161,18 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                             to_numpy(model.a[indices[k * 250:(k + 1) * 250], 1]), s=100, color=cmap.color(k), alpha=0.5,
                             edgecolors='none')
             if 'latex' in style:
-                plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}(t)$', fontsize=68)
-                plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}(t)$', fontsize=68)
+                plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i}(t)$', fontsize=68)
+                plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i}(t)$', fontsize=68)
             else:
-                plt.xlabel(r'$a_{i0}(t)$', fontsize=68)
-                plt.ylabel(r'$a_{i1}(t)$', fontsize=68)
-            plt.xlim([0.92, 1.08])
-            plt.ylim([0.9, 1.10])
-            plt.text(0.93, 1.08, f'time: {n}', fontsize=48)
+                plt.xlabel(r'$a_{i}(t)$', fontsize=68)
+                plt.ylabel(r'$a_{i}(t)$', fontsize=68)
+            # plt.xlim([0.92, 1.08])
+            # plt.ylim([0.9, 1.10])
+            # plt.text(0.93, 1.08, f'time: {n}', fontsize=48)
 
-            # plt.xlim([0.7, 1.2])
-            # plt.ylim([0.7, 1.2])
-            # plt.text(0.72, 1.16, f'time: {n}', fontsize=48)
+            plt.xlim([0.7, 1.2])
+            plt.ylim([0.7, 1.2])
+            plt.text(0.72, 1.16, f'time: {n}', fontsize=48)
 
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/all2/all_embedding_1_{n}.tif", dpi=80)
@@ -6158,11 +6200,6 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/all2/phi_{n}.tif", dpi=80)
             plt.close()
-
-
-
-            fig, ax = fig_init()
-
 
             # rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
             # k_list = [0, 250, 500, 750]
@@ -6458,8 +6495,8 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
                         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
                     else:
-                        plt.xlabel(r'$a_{i0}$', fontsize=68)
-                        plt.ylabel(r'$a_{i1}$', fontsize=68)
+                        plt.xlabel(r'$a_{0}$', fontsize=68)
+                        plt.ylabel(r'$a_{1}$', fontsize=68)
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/results/embedding_{k}_{epoch}.tif", dpi=80)
                     plt.close()
@@ -6892,8 +6929,8 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
                     plt.rcParams.update(params)
                     embedding = to_numpy(model.a[idx[0:n_pts]])
                     plt.scatter(embedding[:,0], embedding[:, 1], c='w', s=0.5, alpha=1, edgecolor='None')
-                    plt.xlabel(r'$a_{i0}$', fontsize=48)
-                    plt.ylabel(r'$a_{i1}$', fontsize=48)
+                    plt.xlabel(r'$a_{0}$', fontsize=48)
+                    plt.ylabel(r'$a_{1}$', fontsize=48)
                     plt.xlim(xlim)
                     plt.ylim(ylim)
                     plt.tight_layout()
@@ -6937,8 +6974,8 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
                     for k in np.unique(labels):
                         pos = np.argwhere(labels == k)
                         plt.scatter(embedding[pos, 0], embedding[pos, 1], s=1, c=cmap.color(k), alpha=1, edgecolors='None')
-                    plt.xlabel(r'$a_{i0}$', fontsize=48)
-                    plt.ylabel(r'$a_{i1}$', fontsize=48)
+                    plt.xlabel(r'$a_{0}$', fontsize=48)
+                    plt.ylabel(r'$a_{1}$', fontsize=48)
                     plt.xlim(xlim)
                     plt.ylim(ylim)
                     plt.tight_layout()
@@ -7659,6 +7696,8 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N2_a1', 'signal_N2_a2', 'signal_N2_a3', 'signal_N2_a4', 'signal_N2_a5', 'signal_N2_a10']
     # config_list = ['signal_N6_a28']
+    # config_list = ['signal_N6_a28_11_3']
+
     config_list = ['signal_N6_a28_11_3']
 
     for config_file_ in config_list:
@@ -7672,7 +7711,7 @@ if __name__ == '__main__':
 
         print(f'config_file  {config.config_file}')
 
-        # data_plot(config=config, epoch_list=['best'], style='black color', device=device)
+        data_plot(config=config, epoch_list=['25_0'], style='black color', device=device)
         data_plot(config=config, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['time'], style='black color', device=device)
 

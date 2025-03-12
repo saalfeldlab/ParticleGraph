@@ -1683,11 +1683,11 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
         if simulation_config.shuffle_particle_types:
             if run == 0:
-                T1 = first_T1.clone().detach()
-            else:
                 index = torch.randperm(n_particles)
                 T1 = T1[index]
                 first_T1 = T1.clone().detach()
+            else:
+                T1 = first_T1.clone().detach()
 
         if run == run_vizualized:
             if 'black' in style:
