@@ -4631,8 +4631,16 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
         mc = 'k'
 
     if has_field:
-        model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
-                                        hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device, first_omega_0=omega, hidden_omega_0=omega)
+
+
+        if 'Siren_short_term_plasticity' in field_type:
+            model_f = Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
+                            hidden_features=model_config.hidden_dim_nnr,
+                            hidden_layers=model_config.n_layers_nnr, first_omega_0=omega, hidden_omega_0=omega,
+                            outermost_linear=model_config.outermost_linear_nnr)
+        else:
+            model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
+                                            hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device, first_omega_0=omega, hidden_omega_0=omega)
         model_f.to(device=device)
         model_f.train()
 
@@ -5041,9 +5049,9 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
         plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
         plt.yticks(fontsize=48)
         plt.tight_layout()
-        plt.savefig(f'./{log_dir}/results/firing rate.png', dpi=300)
+        plt.savefig(f'./{log_dir}/results/activity.png', dpi=300)
         plt.close()
-        #
+
         # # if os.path.exists(f"./{log_dir}/neuron_gt_list.pt"):
         # #
         # #     os.makedirs(f"./{log_dir}/results/activity", exist_ok=True)
@@ -5158,6 +5166,11 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             model.load_state_dict(state_dict['model_state_dict'])
             model.edges = edge_index
             print(f'net: {net}')
+
+            if has_field:
+                net = f'{log_dir}/models/best_model_f_with_{n_runs - 1}_graphs_{epoch}.pt'
+                state_dict = torch.load(net, map_location=device)
+                model_f.load_state_dict(state_dict['model_state_dict'])
 
             fig, ax = fig_init()
             for n in range(n_particle_types,-1,-1):
@@ -5475,8 +5488,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     plt.savefig(f"./{log_dir}/results/true_field_derivative.tif", dpi=80)
                     plt.close()
 
-
-
                     fig, ax = fig_init()
                     plt.title(r'learned $\dot{y_i}$', fontsize=68)
                     plt.imshow(to_numpy(pred_modulation))
@@ -5532,9 +5543,9 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     ids = np.arange(0, 100000, 100).astype(int)
                     plt.scatter(to_numpy(modulation[:, ids]), to_numpy(prediction[:, ids]), s=1, color=mc, alpha=0.1)
                     plt.xlim([0, 0.5])
-                    plt.ylim([0, 2])
-                    plt.xticks([0, 0.5], [0, 0.5], fontsize=48)
-                    plt.yticks([0, 1, 2], [0, 1, 2], fontsize=48)
+                    # plt.ylim([0, 2])
+                    # plt.xticks([0, 0.5], [0, 0.5], fontsize=48)
+                    # plt.yticks([0, 1, 2], [0, 1, 2], fontsize=48)
                     x_data = to_numpy(modulation[:, ids]).flatten()
                     y_data = to_numpy(prediction[:, ids]).flatten()
                     lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
@@ -5549,7 +5560,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     plt.xlabel(r'true $y_i(t)$', fontsize=68)
                     plt.ylabel(r'learned $y_i(t)$', fontsize=68)
                     plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/results/all/comparison_yi_{epoch}.tif", dpi=80)
+                    plt.savefig(f"./{log_dir}/results/comparison_yi_{epoch}.tif", dpi=80)
                     plt.close()
 
                 else:
@@ -7696,9 +7707,8 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N2_a1', 'signal_N2_a2', 'signal_N2_a3', 'signal_N2_a4', 'signal_N2_a5', 'signal_N2_a10']
     # config_list = ['signal_N6_a28']
-    # config_list = ['signal_N6_a28_11_3']
-
     config_list = ['signal_N6_a28_11_3']
+    # config_list = ['signal_N4_m8_shuffle']
 
     for config_file_ in config_list:
 
@@ -7711,7 +7721,7 @@ if __name__ == '__main__':
 
         print(f'config_file  {config.config_file}')
 
-        data_plot(config=config, epoch_list=['25_0'], style='black color', device=device)
+        # data_plot(config=config, epoch_list=['best'], style='black color', device=device)
         data_plot(config=config, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['time'], style='black color', device=device)
 

@@ -1655,8 +1655,8 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         torch.save(adjacency, f'./graphs_data/{dataset_name}/adjacency.pt')
     else:
         adj_matrix = torch.ones((n_particles)) - torch.eye(n_particles)
-        torch.save(adj_matrix, f'./graphs_data/{dataset_name}/adjacency.pt')
         edge_index, edge_attr = dense_to_sparse(adj_matrix)
+        torch.save(adjacency, f'./graphs_data/{dataset_name}/adjacency.pt')
 
     edge_index = edge_index.to(device=device)
     torch.save(edge_index, f'./graphs_data/{dataset_name}/edge_index.pt')
