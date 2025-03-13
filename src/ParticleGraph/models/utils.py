@@ -53,9 +53,11 @@ def get_in_features_update(rr=None, n_particles=None, model_a=None, model_update
             in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model_a[0:n_particles]), dim=1)
     else:
         if model_update_type == 'intricated':
-            in_features = torch.cat((rr, model_a[0:n_particles], torch.zeros((n_particles, 1), device=device)), dim=1)
+            # in_features = torch.cat((rr, model_a[0:n_particles], torch.zeros((n_particles, 1), device=device)), dim=1)
+            in_features = torch.cat((rr, model_a, torch.zeros((rr.shape[0], 1), device=device)), dim=1)
         else:
-            in_features = torch.cat((rr, model_a[0:n_particles]), dim=1)
+            # in_features = torch.cat((rr, model_a[0:n_particles]), dim=1)
+            in_features = torch.cat((rr, model_a), dim=1)
 
     return in_features
 

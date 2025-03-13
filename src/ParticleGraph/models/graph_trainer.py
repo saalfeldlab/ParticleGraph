@@ -2205,6 +2205,7 @@ def data_train_synaptic2(config, erase, best_model, device):
     coeff_lin_modulation = train_config.coeff_lin_modulation
     coeff_model_b = train_config.coeff_model_b
     time_step = train_config.time_step
+    train_NNR_only = train_config.train_NNR_only
 
     if field_type != '':
         n_nodes = simulation_config.n_nodes
@@ -2476,6 +2477,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                 loss = loss + (pred_list - y0_list).norm(2)
 
                 loss.backward()
+
                 optimizer.step()
                 if has_Siren:
                     optimizer_f.step()
@@ -2583,7 +2585,8 @@ def data_train_synaptic2(config, erase, best_model, device):
                     loss = loss + train_config.coeff_model_a * (model.a[ind_a+1] - model.a[ind_a]).norm(2)
 
                 loss.backward()
-                optimizer.step()
+                if train_NNR_only == False:
+                    optimizer.step()
                 if has_Siren:
                     optimizer_f.step()
                 total_loss += loss.item()

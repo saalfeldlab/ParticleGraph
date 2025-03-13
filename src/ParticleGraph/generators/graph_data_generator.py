@@ -1663,6 +1663,12 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
     if (('modulation' in model_config.field_type) | ('visual' in model_config.field_type)) & ('PDE_N6' not in model_config.signal_model_name):
         im = imread(f"graphs_data/{simulation_config.node_value_map}")
+    if 'permutation' in model_config.field_type:
+        permutation_indices = torch.randperm(n_particles)
+        inverse_permutation_indices = torch.argsort(permutation_indices)
+        torch.save(permutation_indices, f'./graphs_data/{dataset_name}/permutation_indices.pt')
+        torch.save(inverse_permutation_indices, f'./graphs_data/{dataset_name}/inverse_permutation_indices.pt')
+
 
     model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, device=device)
 
@@ -1732,6 +1738,8 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     im_ = im[int(it/n_frames*256)].squeeze()
                     im_ = np.rot90(im_, 3)
                     im_ = np.reshape(im_, (n_nodes_per_axis * n_nodes_per_axis))
+                    if 'permutation' in model_config.field_type:
+                        im_ = im_[permutation_indices]
                     A1[:,0:1]=torch.tensor(im_[:,None], dtype=torch.float32, device=device)
                 if ('visual' in field_type) & (it >= 0):
                     im_ = im[int(it / n_frames * 256)].squeeze()
@@ -1778,15 +1786,14 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
             # Particle update
             if (config.graph_model.signal_model_name == 'PDE_N6') | (config.graph_model.signal_model_name == 'PDE_N7'):
-
                 H1[:, 1] = y.squeeze()
                 H1[:, 0] = H1[:, 0] + H1[:, 1] * delta_t
-
+                if noise_level > 0:
+                    H1[:, 0] = H1[:, 0] + torch.randn(n_particles, device=device) * noise_level
                 H1[:, 3] = p.squeeze()
                 H1[:, 2] = torch.relu(H1[:, 2] + H1[:, 3] * delta_t)
 
             else:
-
                 H1[:, 1] = y.squeeze()
                 H1[:, 0] = H1[:, 0] + H1[:, 1] * delta_t
                 if noise_level > 0:

@@ -63,7 +63,7 @@ training:
   device: 'auto'
 
   do_tracking: False
-  motile_tracking_file: '/groups/saalfeld/home/allierc/signaling/RatCity/annotation_yolo_with_gt_mapping_ilp.csv'
+  motile_tracking_file: '/groups/saalfeld/home/allierc/signaling/RatCity/annotation_yolo_with_gt_mapping.txt'
 
   distance_threshold: 1.0E-2
   epoch_distance_replace: 20

@@ -4813,14 +4813,18 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 config_model = config.graph_model.signal_model_name
                 for n in range(n_particles):
                     embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-                    in_features = torch.cat((rr[:, None], embedding_), dim=1)
+                    # in_features = torch.cat((rr[:, None], embedding_), dim=1)
+                    in_features = get_in_features_update(rr[:, None], n_particles, embedding_, model.update_type, device)
                     with torch.no_grad():
                         func = model.lin_phi(in_features.float())
                     func = func[:, 0]
                     plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm), color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8 // ( 1 + (n_particle_types>16)*1.0), alpha=0.25)
                 plt.xlabel(r'$x_i$', fontsize=68)
                 # plt.ylabel(r'learned $\phi^*(a_i, x_i)$', fontsize=68)
-                plt.ylabel(r'learned $MLP_0(a_i, x_i)$', fontsize=68)
+                if model.update_type == 'intricated':
+                    plt.ylabel(r'learned $MLP_0(a_i, x_i, NULL)$', fontsize=68)
+                else:
+                    plt.ylabel(r'learned $MLP_0(a_i, x_i)$', fontsize=68)
                 plt.xlim(config.plotting.xlim)
                 plt.ylim(config.plotting.ylim)
                 plt.tight_layout()
@@ -4885,7 +4889,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                         prediction = prediction.squeeze()
                         prediction = prediction.t()
                         plt.imshow(to_numpy(prediction), aspect='auto', cmap='gray')
-                        plt.title(r'learned $MLP_2(i,t)$', fontsize=68)
+                        plt.title(r'learned $FMLP(t)_i$', fontsize=68)
                         plt.xlabel(r'$t$', fontsize=68)
                         plt.ylabel(r'$i$', fontsize=68)
                         plt.xticks([10000,100000], [10000, 100000], fontsize=48)
@@ -4931,7 +4935,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                         pred = np.rot90(pred, 1)
                         pred = np.fliplr(pred)
                         plt.imshow(pred, cmap='grey')
-                        plt.ylabel(r'learned $MLP_2(x, y, t)$', fontsize=68)
+                        plt.ylabel(r'learned $FMLP(s_i, t)$', fontsize=68)
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
@@ -4951,7 +4955,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     true_derivative = (1 - grid_y) / tau - alpha * grid_y * torch.abs(grid_x)
 
                     fig, ax = fig_init()
-                    plt.title(r'learned $MLP_3(x_i, y_i)$', fontsize=68)
+                    plt.title(r'learned $MLP_2(x_i, y_i)$', fontsize=68)
                     plt.imshow(to_numpy(pred_modulation))
                     plt.xticks([])
                     plt.yticks([])
@@ -5315,7 +5319,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             phi_list = []
             for n in trange(n_particles):
                 embedding_ = model.a[n, :] * torch.ones((1500, config.graph_model.embedding_dim), device=device)
-                in_features = torch.cat((rr[:, None], embedding_), dim=1)
+                # in_features = torch.cat((rr[:, None], embedding_), dim=1)
+                in_features = get_in_features_update(rr[:, None], n_particles, embedding_, model.update_type, device)
                 with torch.no_grad():
                     func = model.lin_phi(in_features.float())
                 func = func[:, 0]
@@ -7697,7 +7702,7 @@ if __name__ == '__main__':
 
     warnings.filterwarnings("ignore", category=FutureWarning)
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cpu' if torch.cuda.is_available() else 'cpu'
     print(' ')
     print(f'device {device}')
 
@@ -7709,8 +7714,8 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N6_a28_2_2', 'signal_N6_a28_4', 'signal_N6_a28_4_1'
     #                                                        '', 'signal_N6_a28_5', 'signal_N6_a28_6', 'signal_N6_a28_7']
-    # config_list = ['signal_N6_a28']
-    config_list = ['signal_N6_a28_11_3']
+    config_list = ['signal_N6_a28_11_3','signal_N6_a28_11_4','signal_N6_a29_1','signal_N6_a29_2']
+    # config_list = ['signal_N6_a28_11_3']
     # config_list = ['signal_N4_m8_shuffle']
 
     for config_file_ in config_list:
@@ -7725,7 +7730,7 @@ if __name__ == '__main__':
         print(f'config_file  {config.config_file}')
 
         data_plot(config=config, epoch_list=['best'], style='black color', device=device)
-        # data_plot(config=config, epoch_list=['all'], style='black color', device=device)
+        data_plot(config=config, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['time'], style='black color', device=device)
 
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)
