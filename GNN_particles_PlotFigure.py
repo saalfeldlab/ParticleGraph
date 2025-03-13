@@ -4801,7 +4801,10 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     plt.plot(to_numpy(rr), to_numpy(func), color=mc, linewidth=8, label=r'learned')
                     plt.xlabel(r'$x_j$', fontsize=68)
                     # plt.ylabel(r'learned $\psi^*(a_i, x_i)$', fontsize=68)
-                    plt.ylabel(r'learned $MLP_1(a_i, x_j)$', fontsize=68)
+                    if model.update_type == 'intricated':
+                        plt.ylabel(r'learned $MLP_1(x_j)$', fontsize=68)
+                    else:
+                        plt.ylabel(r'learned $MLP_1(a_i, x_j)$', fontsize=68)
                     plt.ylim([-1.5, 1.5])
                     plt.xlim([-5,5])
                     plt.tight_layout()
@@ -4822,7 +4825,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 plt.xlabel(r'$x_i$', fontsize=68)
                 # plt.ylabel(r'learned $\phi^*(a_i, x_i)$', fontsize=68)
                 if model.update_type == 'intricated':
-                    plt.ylabel(r'learned $MLP_0(a_i, x_i, NULL)$', fontsize=68)
+                    plt.ylabel(r'learned $MLP_0(a_i, x_i, 0)$', fontsize=68)
                 else:
                     plt.ylabel(r'learned $MLP_0(a_i, x_i)$', fontsize=68)
                 plt.xlim(config.plotting.xlim)
@@ -7702,7 +7705,7 @@ if __name__ == '__main__':
 
     warnings.filterwarnings("ignore", category=FutureWarning)
 
-    device = 'cpu' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(' ')
     print(f'device {device}')
 
@@ -7714,7 +7717,7 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N6_a28_2_2', 'signal_N6_a28_4', 'signal_N6_a28_4_1'
     #                                                        '', 'signal_N6_a28_5', 'signal_N6_a28_6', 'signal_N6_a28_7']
-    config_list = ['signal_N6_a28_11_3','signal_N6_a28_11_4','signal_N6_a29_1','signal_N6_a29_2']
+    config_list = ['signal_N2_a42_6']
     # config_list = ['signal_N6_a28_11_3']
     # config_list = ['signal_N4_m8_shuffle']
 
@@ -7729,7 +7732,7 @@ if __name__ == '__main__':
 
         print(f'config_file  {config.config_file}')
 
-        data_plot(config=config, epoch_list=['best'], style='black color', device=device)
+        # data_plot(config=config, epoch_list=['best'], style='black color', device=device)
         data_plot(config=config, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['time'], style='black color', device=device)
 

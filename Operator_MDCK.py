@@ -287,10 +287,10 @@ if __name__ == '__main__':
     phi = torch.zeros(1, device=device)
     threshold = 0.05
 
-    # x_list = torch.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/cell/cell_MDCK_3/full_vertice_list0.pt', map_location=device, weights_only=True)
+    x_list = torch.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/cell/cell_MDCK_3/full_vertice_list0.pt', map_location=device, weights_only=True)
     # x_list = torch.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/cell/cell_MDCK_3/x_list_0.pt', map_location=device, weights_only=True)
 
-    x_list = torch.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/cell/cell_MDCK_3/track_list_0.pt',map_location=device, weights_only=True)
+    # x_list = torch.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/cell/cell_MDCK_3/track_list_0.pt',map_location=device, weights_only=True)
 
 
     for frame in trange(1,n_frames):
@@ -350,7 +350,7 @@ if __name__ == '__main__':
 
         ax = fig.add_subplot(4,4,2)
         plt.title('density', fontsize=18)
-        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=sp, c=to_numpy(density), vmin=0, vmax=100)
+        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=sp, c=to_numpy(density), vmin=0, vmax=10)
         plt.xticks([])
         plt.yticks([])
 
@@ -373,7 +373,7 @@ if __name__ == '__main__':
 
         ax = fig.add_subplot(4,4,6)
         plt.title('density_field', fontsize=18)
-        plt.imshow((pred_field[:,0].cpu().view(100, 100).detach().numpy()),vmin=0, vmax=5)
+        plt.imshow((pred_field[:,0].cpu().view(100, 100).detach().numpy()),vmin=0, vmax=100)
         plt.scatter(to_numpy(x[:, 2])*100, to_numpy(x[:, 1])*100, s=1, c='w')
         plt.xticks([])
         plt.yticks([])
@@ -382,7 +382,7 @@ if __name__ == '__main__':
 
         ax = fig.add_subplot(4,4,10)
         plt.title('density_field_x', fontsize=18)
-        plt.imshow((pred_field[:,2].cpu().view(100, 100).detach().numpy()),vmin=-50, vmax=50, cmap='bwr')
+        plt.imshow((pred_field[:,2].cpu().view(100, 100).detach().numpy()),vmin=-500, vmax=500, cmap='bwr')
         plt.scatter(to_numpy(x[:, 2])*100, to_numpy(x[:, 1])*100, s=1, c='w')
         plt.xticks([])
         plt.yticks([])
@@ -391,7 +391,7 @@ if __name__ == '__main__':
 
         ax = fig.add_subplot(4,4,14)
         plt.title('density_field_y', fontsize=18)
-        plt.imshow((pred_field[:,1].cpu().view(100, 100).detach().numpy()),vmin=-50, vmax=50, cmap='bwr')
+        plt.imshow((pred_field[:,1].cpu().view(100, 100).detach().numpy()),vmin=-500, vmax=500, cmap='bwr')
         plt.scatter(to_numpy(x[:, 2])*100, to_numpy(x[:, 1])*100, s=1, c='w')
         plt.xticks([])
         plt.yticks([])

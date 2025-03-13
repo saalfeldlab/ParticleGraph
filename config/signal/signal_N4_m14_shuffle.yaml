@@ -48,7 +48,6 @@ graph_model:
     embedding_dim: 2
     update_type: 'none'
 
-
 plotting:
     colormap: 'tab10'
     arrow_length: 1
@@ -62,7 +61,7 @@ training:
 
     n_epochs_init: 5
     recursive_loop: 1
-    batch_size: 1
+    batch_size: 10
     small_init_batch_size: False
 
     rotation_augmentation: False
@@ -76,11 +75,11 @@ training:
 
     coeff_diff: 100
 
-    learning_rate_W_start: 1.0E-4
-    learning_rate_start: 5.0E-5
-    learning_rate_embedding_start: 5.0E-4
-    learning_rate_modulation_start: 1.0E-5
+    learning_rate_W_start: 1.0E-3
+    learning_rate_start: 5.0E-4
+    learning_rate_embedding_start: 5.0E-3
+    learning_rate_modulation_start: 1.0E-4
 
-    learning_rate_NNR: 1.0E-6
+    learning_rate_NNR: 1.0E-5
 
     noise_level: 1

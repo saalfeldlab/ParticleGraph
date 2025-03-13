@@ -57,36 +57,31 @@ plotting:
 
 training:
     n_epochs: 60
-    train_NNR_only: True
-
-    recursive_loop: 1
-    time_step: 1
-
-    batch_size: 1
-    small_init_batch_size: False
-
     n_runs: 2
+    device: 'auto'
+
+    n_epochs_init: 5
+    recursive_loop: 1
+    batch_size: 10
+    small_init_batch_size: True
 
     rotation_augmentation: False
-    data_augmentation_loop: 25
+    data_augmentation_loop: 50
+    cluster_method: 'kmeans_auto_embedding'
+    cluster_distance_threshold: 0.2
+    fix_cluster_embedding: True
 
     sparsity: 'none'
-    cluster_method: 'distance_plot'
-    fix_cluster_embedding: True
-    device: 'auto'
     sparsity_freq: 4
-    learning_rate_start: 1.0E-4
 
     coeff_diff: 100
-    coeff_lin_modulation: 1.0E-3
-    coeff_model_b: 1.0E-1
 
-    learning_rate_W_start: 1.0E-4
-    learning_rate_start: 5.0E-5
-    learning_rate_embedding_start: 5.0E-4
-    learning_rate_modulation_start: 1.0E-5
+    learning_rate_W_start: 1.0E-3
+    learning_rate_start: 5.0E-4
+    learning_rate_embedding_start: 5.0E-3
+    learning_rate_modulation_start: 1.0E-4
 
-    learning_rate_NNR: 1.0E-6
+    learning_rate_NNR: 1.0E-5
 
     noise_level: 1
 
