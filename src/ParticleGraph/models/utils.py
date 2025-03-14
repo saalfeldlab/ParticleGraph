@@ -627,24 +627,21 @@ def plot_training_mouse(config, log_dir, epoch, N, model):
     model_config = config.graph_model
 
     model_a = model.a.clone().detach()
+    model_a = torch.reshape(model_a, (model_a.shape[0]*model_a.shape[1], model_config.embedding_dim))
 
     amax = torch.max(model_a, dim=0)[0]
     amin = torch.min(model_a, dim=0)[0]
     model_a = (model_a - amin) / (amax - amin)
 
+    step = model_a.shape[0]*model_a.shape[1]//simulation_config.n_particles
+
     plt.figure(figsize=(8, 8))
-    plt.scatter(to_numpy(model_a[:, 0]), to_numpy(model_a[:, 1]), s=1, color='b', alpha=0.25)
-    embedding_size = model.a.shape[0]
-    # plt.text(0.05, 0.9, f'Embedding size: {embedding_size}', fontsize=12)
-    plt.xlim([0,1])
-    plt.ylim([0,1])
+    for n in range(simulation_config.n_particles):
+        plt.scatter(to_numpy(model_a[step*n:step*(n+1), 0]), to_numpy(model_a[step*n:step*(n+1), 1]), s=1, alpha=0.25)
+    plt.xlim([-0.1,1.1])
+    plt.ylim([-0.1,1.1])
     plt.xticks([])
     plt.yticks([])
-    # ax = plt.subplot(1, 2, 2)
-    # for n in range(config.simulation.n_frames):
-    #     pos = torch.argwhere(frame_list == n).squeeze()
-    #     if len(pos) > 0:
-    #         plt.scatter(to_numpy(model_a[pos, 0]), to_numpy(model_a[pos, 1]), s=1, alpha=0.25, c = np.ones(len(pos))*n/config.simulation.n_frames, cmap='viridis', vmin=0, vmax=1)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/embedding/{epoch}_{N}.tif", dpi=87)
     plt.close()

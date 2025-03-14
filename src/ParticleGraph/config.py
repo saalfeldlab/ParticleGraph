@@ -176,7 +176,7 @@ class TrainingConfig(BaseModel):
     small_init_batch_size: bool = True
 
     do_tracking: bool = False
-    motile_tracking_file: str = ''
+    tracking_gt_file: str = ''
     ctrl_tracking: bool = False
     distance_threshold: float = 0.1
     epoch_distance_replace: int = 20

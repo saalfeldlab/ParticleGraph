@@ -41,6 +41,7 @@ class Interaction_Mouse(pyg.nn.MessagePassing):
         self.hidden_dim = model_config.hidden_dim
         self.n_layers = model_config.n_mp_layers
         self.n_particles = simulation_config.n_particles
+        self.n_frames = simulation_config.n_frames
         self.n_nodes = simulation_config.n_nodes
         self.n_nodes_per_axis = int(np.sqrt(self.n_nodes))
         self.max_radius = simulation_config.max_radius
@@ -63,13 +64,24 @@ class Interaction_Mouse(pyg.nn.MessagePassing):
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device)
 
-        self.a = nn.Parameter(torch.tensor(np.ones((self.n_particles_max, self.embedding_dim)), device=self.device,requires_grad=True, dtype=torch.float32))
+        # self.a = nn.Parameter(torch.tensor(np.ones((self.n_particles_max, self.embedding_dim)), device=self.device,requires_grad=True, dtype=torch.float32))
+
+        self.a = nn.Parameter(torch.ones((int(self.n_particles), 1001, self.embedding_dim), device=self.device, requires_grad=True,
+                                         dtype=torch.float32) * 0.44)
+
+        self.embedding_step = self.n_frames // 1000
 
         if self.update_type != 'none':
             self.lin_update = MLP(input_size=self.output_size + self.embedding_dim + 2, output_size=self.output_size,
                                   nlayers=self.n_layers_update, hidden_size=self.hidden_dim_update, device=self.device)
 
-    def forward(self, data=[], data_id=[], training=[], phi=[], has_field=False):
+    def get_interp_a(self, k, particle_id):
+
+        alpha = (k % self.embedding_step) / self.embedding_step
+
+        return alpha * self.a[particle_id, k // self.embedding_step + 1,:] + (1 - alpha) * self.a[particle_id,k // self.embedding_step,:]
+
+    def forward(self, data=[], data_id=[], training=[], phi=[], has_field=False, k=0):
 
         self.data_id = data_id
         self.cos_phi = torch.cos(phi)
@@ -87,38 +99,23 @@ class Interaction_Mouse(pyg.nn.MessagePassing):
         else:
             field = torch.ones_like(x[:,6:7])
 
-        particle_id = x[:, -1][:, None]
-        embedding = self.a[to_numpy(particle_id), :].squeeze()
+        particle_id = x[:, -1][:, None].long()
+        embedding = self.get_interp_a(k, particle_id).squeeze()
 
-        pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, particle_id=particle_id,  embedding=embedding, field=field)
+        pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
 
         return pred
 
-    def message(self, pos_i, pos_j, d_pos_i, d_pos_j, particle_id_i, particle_id_j, embedding_i, embedding_j, field_j):
+    def message(self, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j, field_j):
         # squared distance
         r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
         delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
-        dpos_x_i = d_pos_i[:, 0] / self.vnorm
-        dpos_y_i = d_pos_i[:, 1] / self.vnorm
-        dpos_x_j = d_pos_j[:, 0] / self.vnorm
-        dpos_y_j = d_pos_j[:, 1] / self.vnorm
-        if self.dimension == 3:
-            dpos_z_i = d_pos_i[:, 2] / self.vnorm
-            dpos_z_j = d_pos_j[:, 2] / self.vnorm
 
         if self.rotation_augmentation & (self.training == True):
             new_delta_pos_x = self.cos_phi * delta_pos[:, 0] + self.sin_phi * delta_pos[:, 1]
             new_delta_pos_y = -self.sin_phi * delta_pos[:, 0] + self.cos_phi * delta_pos[:, 1]
             delta_pos[:, 0] = new_delta_pos_x
             delta_pos[:, 1] = new_delta_pos_y
-            new_dpos_x_i = self.cos_phi * dpos_x_i + self.sin_phi * dpos_y_i
-            new_dpos_y_i = -self.sin_phi * dpos_x_i + self.cos_phi * dpos_y_i
-            dpos_x_i = new_dpos_x_i
-            dpos_y_i = new_dpos_y_i
-            new_dpos_x_j = self.cos_phi * dpos_x_j + self.sin_phi * dpos_y_j
-            new_dpos_y_j = -self.sin_phi * dpos_x_j + self.cos_phi * dpos_y_j
-            dpos_x_j = new_dpos_x_j
-            dpos_y_j = new_dpos_y_j
 
         in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
 

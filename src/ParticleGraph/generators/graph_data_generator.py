@@ -38,7 +38,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
     has_mesh = (config.graph_model.mesh_model_name != '')
     has_cell_division = config.simulation.has_cell_division
     has_WBI = 'WBI' in config.dataset
-    has_mouse_city = ('mouse_city' in config.dataset) | ('rat_city' in config.dataset)
+    has_city = ('mouse_city' in config.dataset) | ('rat_city' in config.dataset)
     dataset_name = config.dataset
 
     print('')
@@ -48,12 +48,12 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
         print('watch out: data already generated')
         # return
 
-    if config.data_folder_name != 'none':
-        generate_from_data(config=config, device=device, visualize=visualize)
-    elif has_mouse_city:
+    if has_city:
         data_generate_rat_city(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
                                         alpha=0.2, ratio=ratio,
                                         scenario=scenario, device=device, bSave=bSave)
+    elif config.data_folder_name != 'none':
+        generate_from_data(config=config, device=device, visualize=visualize)
     elif has_particle_field:
         data_generate_particle_field(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
                                      alpha=0.2, ratio=ratio,
@@ -1985,18 +1985,16 @@ def data_generate_rat_city(config, visualize=True, run_vizualized=0, style='colo
 
     if 'txt' in data_folder_name:
         dataframe = pd.read_csv(data_folder_name, sep=" ")
-        position_columns = ["id","frame_id", "x", "y","previous_yolo_id"]  # replace with your position columns
+        position_columns = ["id","frame_id", "x", "y","previous_id"]  # replace with your position columns
         values = dataframe[position_columns].to_numpy()
-
-        values[:, 1] = values[:, 1] - 1
     elif 'csv' in data_folder_name:
         dataframe = pd.read_csv(data_folder_name, sep=" ", header=None)
         values = dataframe.to_numpy()
         values[:, [2, 3]] = values[:, [3, 2]]
         values[:, 1] = values[:, 1] - 1
 
-    if training_config.motile_tracking_file != '':
-        dataframe = pd.read_csv(training_config.motile_tracking_file, sep=" ", header=None)
+    if training_config.tracking_gt_file != '':
+        dataframe = pd.read_csv(training_config.tracking_gt_file, sep=" ", header=None)
         motile = dataframe.to_numpy()
         motile[:,1] = motile[:,1] - 1
         motile[:,3] = motile[:,3] - 1
@@ -2004,7 +2002,7 @@ def data_generate_rat_city(config, visualize=True, run_vizualized=0, style='colo
 
     if os.path.exists(pic_folder):
         files = glob.glob(f'{pic_folder}/*.jpg')
-        sorted_files = sorted(files, key=extract_number)
+        sorted_files = sorted(files)
 
     x_list = []
     edge_f_p_list = []
@@ -2022,8 +2020,8 @@ def data_generate_rat_city(config, visualize=True, run_vizualized=0, style='colo
         else:
             pos = pos.squeeze()
 
-            ID1 = torch.tensor(values[pos, 0:1], dtype=torch.float32, device=device)
-            PREV_ID1 = torch.tensor(values[pos, 4:5], dtype=torch.float32, device=device)
+            ID1 = torch.tensor(values[pos, 0:1], dtype=torch.float32, device=device) -1
+            TRUE_ID = torch.tensor(values[pos, 4:5], dtype=torch.float32, device=device) -1
             N1 = torch.arange(len(pos), dtype=torch.float32, device=device)[:, None]
             X1 = torch.tensor(values[pos, 2:4], dtype=torch.float32, device=device)
             X1[:, 1] = 1-X1[:, 1]
@@ -2031,20 +2029,39 @@ def data_generate_rat_city(config, visualize=True, run_vizualized=0, style='colo
             T1 = torch.zeros_like(ID1)
             H1 = torch.zeros_like(X1)
 
-            if (training_config.motile_tracking_file != '') and (it>0):
-                PREV_ID1 = PREV_ID1*0
-                pos = torch.argwhere(motile[:, 1] == it-1)
-                if len(pos) > 0:
-                    pos = pos.squeeze()
-                    motile_pos = motile[pos, :]
-                    for id, m in enumerate(ID1):
-                        pos = torch.argwhere(motile_pos[:, 2] == m)
+            if it>0:
+                TRUE_ID1 = torch.zeros_like(ID1)
+                if training_config.tracking_gt_file != '':
+                    # ground truth tracking file inputs
+                    pos = torch.argwhere(motile[:, 1] == it-1)
+                    if len(pos) > 0:
+                        pos = pos.squeeze()
+                        motile_pos = motile[pos, :]
+                        for id, m in enumerate(ID1):
+                            pos = torch.argwhere(motile_pos[:, 2] == m)
+                            if len(pos) > 0:
+                                pos = pos.squeeze()
+                                TRUE_ID1[id] = motile_pos[pos, 0]
+                else:
+                    # get id from prev_id column
+                    ID1_ = x_list[-1][:, 0]
+                    TRUE_ID1_ = x_list[-1][:,-1]
+                    for id, m in enumerate(TRUE_ID):
+                        pos = torch.argwhere(ID1_ == m)
                         if len(pos) > 0:
                             pos = pos.squeeze()
-                            PREV_ID1[id] = motile_pos[pos, 0]
+                            TRUE_ID1[id] = TRUE_ID1_[pos]
+            else:
+                TRUE_ID1 = ID1
 
-            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
-                                   H1.clone().detach(), PREV_ID1.clone().detach(), ID1.clone().detach()), 1)
+
+
+
+            x = torch.concatenate((ID1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
+                                   H1.clone().detach(), TRUE_ID1.clone().detach()), 1)
+
+            if (torch.unique(TRUE_ID1) != torch.arange(len(ID1), device=device)).any():
+                raise ValueError("ID1 and TRUE_ID1 are not consistent.")
 
             # compute connectivity rules
             edge_index = torch.sum((x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
@@ -2073,7 +2090,7 @@ def data_generate_rat_city(config, visualize=True, run_vizualized=0, style='colo
             x_list.append(x)
 
         # output plots
-        if visualize & (run == 0) & (it % step == 0) & (it < 10000):
+        if visualize & (run == 0) & (it % step == 0) & (it < 512):
 
             if 'latex' in style:
                 plt.rcParams['text.usetex'] = True
@@ -2104,6 +2121,8 @@ def data_generate_rat_city(config, visualize=True, run_vizualized=0, style='colo
                     dataset = data.Data(x=x, pos=pos, edge_index=edge_index)
                     vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
                     nx.draw_networkx(vis, pos=to_numpy(pos), node_size=0, linewidths=0, with_labels=False, ax=ax, edge_color='g',width=1)
+                    for n in range(len(pos)):
+                        plt.text(to_numpy(pos[n,0]), to_numpy(pos[n,1]), f'{to_numpy(x[n,-1]):0.0f}', c='w', fontsize=18)
                     plt.tight_layout()
                     plt.xlim([0,2300])
                     plt.ylim([0,1000])

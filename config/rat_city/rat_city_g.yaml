@@ -1,15 +1,15 @@
 description: 'mouse_city trial1_active_1 time_step = 5 0.25s LR 1.0E-4'
 dataset: 'rat_city_g'
-data_folder_name: '/groups/saalfeld/home/allierc/signaling/RatCity/annotation_yolo_with_gt_mapping.txt'
+data_folder_name: '/groups/saalfeld/home/allierc/Py/multi-object-tracking/data/rat_city_cohort2_exp1/annotation-gt.txt'
 
 simulation:
   params: [[-1]]
   min_radius: 0
   max_radius: 4
-  n_particles: 6
+  n_particles: 12
   n_interactions: 4
   n_particles_max: 0
-  n_particle_types: 6
+  n_particle_types: 12
   n_frames: 6000
   delta_t: 1
   boundary: 'no'
@@ -27,10 +27,12 @@ graph_model:
   particle_model_name: 'PDE_M'
   mesh_model_name: ''
   prediction: 'first_derivative'
+
   input_size: 5
   output_size: 2
   hidden_dim: 128
   n_mp_layers: 5
+
   aggr_type: 'mean'
   embedding_dim: 2
   update_type: 'none'
@@ -41,17 +43,20 @@ plotting:
   arrow_length: 2
   xlim: [0.94, 1.06]
   ylim: [0.94, 1.06]
-  pic_folder: '/nrs/karpova/forCedric/gnn/rat_city/cohort2_exp1/datasets/images/train'
+  pic_folder: '/nrs/karpova/forCedric/gnn/rat_city/cohort2_exp1/datasets/images/train_relabelled'
   pic_format: 'jpg'
   pic_size: [1000, 1100]
 
 training:
   seed: 40
   n_epochs: 20
+  n_runs: 1
+  device: 'auto'
+
   time_step: 1
   batch_size: 1
   small_init_batch_size: True
-  n_runs: 1
+
   sparsity: 'none'
   sparsity_freq: 4
   cluster_method: 'kmeans_auto_plot'
@@ -60,15 +65,16 @@ training:
   learning_rate_start: 0.001
   learning_rate_embedding_start: 0.001
   fix_cluster_embedding: True
-  device: 'auto'
 
   do_tracking: False
-  motile_tracking_file: '/groups/saalfeld/home/allierc/signaling/RatCity/annotation_yolo_with_gt_mapping.txt'
 
   distance_threshold: 1.0E-2
   epoch_distance_replace: 20
   learning_rate_start: 1.0E-4
   learning_rate_embedding_start: 1.0E-4
+
+  coeff_model_a: 100
+
 
 
 

@@ -51,7 +51,7 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        action = 'generate'
+        action = 'train'
         best_model = None
         config_list = ['rat_city_g']
 
@@ -68,7 +68,7 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
         if 'generate' in action:
-            data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=False, bSave=True, step=10)  #config.simulation.n_frames // 100)
+            data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=False, bSave=True, step=1)  #config.simulation.n_frames // 100)
         if 'train' in action:
             data_train(config=config, erase=False, best_model=best_model, device=device)
         if 'test' in action:

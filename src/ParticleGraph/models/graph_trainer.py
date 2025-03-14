@@ -57,7 +57,7 @@ def data_train(config=None, erase=False, best_model=None, device=None):
     if 'Agents' in config.graph_model.particle_model_name:
         data_train_agents(config, best_model, device)
     elif has_mouse_city:
-        data_train_mouse_city(config, erase, best_model, device)
+        data_train_rat_city(config, erase, best_model, device)
     elif has_WBI:
         data_train_WBI(config, erase, best_model, device)
     elif has_particle_field:
@@ -1027,7 +1027,7 @@ def data_train_cell(config, erase, best_model, device):
         #                                                         n_particle_types, embedding_cluster)
 
 
-def data_train_mouse_city(config, erase, best_model, device):
+def data_train_rat_city(config, erase, best_model, device):
     simulation_config = config.simulation
     train_config = config.training
     model_config = config.graph_model
@@ -1050,10 +1050,11 @@ def data_train_mouse_city(config, erase, best_model, device):
         get_batch_size = constant_batch_size(target_batch_size)
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
-    time_step = training_config.time_step
+    time_step = train_config.time_step
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     embedding_cluster = EmbeddingCluster(config)
     n_runs = train_config.n_runs
+    coeff_model_a = train_config.coeff_model_a
 
     do_tracking = train_config.do_tracking
 
@@ -1132,11 +1133,6 @@ def data_train_mouse_city(config, erase, best_model, device):
     logger.info(f'N epochs: {n_epochs}')
 
     print("start training ...")
-    print(f'{n_frames * data_augmentation_loop} iterations per epoch')
-    logger.info(f'{n_frames * data_augmentation_loop} iterations per epoch')
-
-    Niter = n_frames * data_augmentation_loop
-    print(f'plot every {Niter // 20 // target_batch_size} iterations')
 
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
 
@@ -1154,6 +1150,11 @@ def data_train_mouse_city(config, erase, best_model, device):
         Niter = n_frames * data_augmentation_loop // batch_size
         time.sleep(1)
 
+        plot_frequency = int(Niter // 100)
+        print(f'{Niter} iterations per epoch')
+        logger.info(f'{Niter} iterations per epoch')
+        print(f'plot every {plot_frequency} iterations')
+
         for N in trange(Niter):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
@@ -1163,47 +1164,41 @@ def data_train_mouse_city(config, erase, best_model, device):
             run = 0
             optimizer.zero_grad()
 
-            loss = torch.zeros(1, dtype=torch.float32, device=device)
+            k = 1 + np.random.randint(n_frames - 2*time_step)
+            # k = np.random.randint(n_frames // 2 - 2) * 2
+            x = x_list[run][k].clone().detach()
 
-            for batch in range(batch_size):
+            loss = (model.a[:, 1:] - model.a[:, :-1]).norm(2) * coeff_model_a
 
-                k = np.random.randint(n_frames - 2*time_step)
-                # k = np.random.randint(n_frames // 2 - 2) * 2
-                x = x_list[run][k].clone().detach()
-                edges = edge_p_p_list[run][f'arr_{k}']
-                edges = torch.tensor(edges, dtype=torch.int64, device=device)
-                dataset = data.Data(x=x[:, :], edge_index=edges)
+            edges = edge_p_p_list[run][f'arr_{k}']
+            edges = torch.tensor(edges, dtype=torch.int64, device=device)
+            dataset = data.Data(x=x[:, :], edge_index=edges)
 
-                pred = model(dataset, data_id=run, training=True, phi=phi, has_field=False)
+            pred = model(dataset, data_id=run, training=True, phi=phi, has_field=False, k=k)
 
-                if rotation_augmentation:
-                    new_x = cos_phi * pred[:, 0] - sin_phi * pred[:, 1]
-                    new_y = sin_phi * pred[:, 0] + cos_phi * pred[:, 1]
-                    pred[:, 0] = new_x
-                    pred[:, 1] = new_y
+            if rotation_augmentation:
+                new_x = cos_phi * pred[:, 0] - sin_phi * pred[:, 1]
+                new_y = sin_phi * pred[:, 0] + cos_phi * pred[:, 1]
+                pred[:, 0] = new_x
+                pred[:, 1] = new_y
 
-                if (do_tracking) | (epoch==0):
-                    x_next = x_list[run][k + time_step]
-                    x_pos_next = x_next[:, 1:3].clone().detach()
-                    if model_config.prediction == '2nd_derivative':
-                        x_pos_pred = (x[:, 1:3] + (delta_t * time_step) * (x[:, 3:5] + delta_t * time_step * pred * ynorm))
-                    else:
-                        x_pos_pred = (x[:, 1:3] + (delta_t * time_step) * pred * ynorm)
-                    distance = torch.sum(bc_dpos(x_pos_pred[:, None, :] - x_pos_next[None, :, :]) ** 2, dim=2)
-                    result = distance.min(dim=1)
-                    min_value = result.values
-                    indices = result.indices
-                    loss += torch.sum(min_value) * 1E5
+            if (do_tracking): # | (epoch==0):
+                x_next = x_list[run][k + time_step]
+                x_pos_next = x_next[:, 1:3].clone().detach()
+                if model_config.prediction == '2nd_derivative':
+                    x_pos_pred = (x[:, 1:3] + (delta_t * time_step) * (x[:, 3:5] + delta_t * time_step * pred * ynorm))
                 else:
-                    x_next = x_list[run][k + time_step]
-                    indices_next = x_list[run][k + time_step][:, -2:-1]
-                    indices = x_list[run][k][:,-1:]
-                    for k in range(len(indices)):
-                        pos = torch.where(indices_next == indices[k])[0]
-                        if len(pos)>0:
-                            pred_pos_next = x[:,1:3][k] + delta_t * time_step * pred[k]
-                            pos_next = x_next[:,1:3][pos[0]]
-                            loss += (pred_pos_next - pos_next).norm(2) * 1E5
+                    x_pos_pred = (x[:, 1:3] + (delta_t * time_step) * pred * ynorm)
+                distance = torch.sum(bc_dpos(x_pos_pred[:, None, :] - x_pos_next[None, :, :]) ** 2, dim=2)
+                result = distance.min(dim=1)
+                min_value = result.values
+                indices = result.indices
+                loss += torch.sum(min_value) * 1E5
+            else:
+                pos_next = x_list[run][k + time_step][:,1:3]
+                indices = x_list[run][k + time_step][:, -1].long()
+                pred_pos_next = x[:,1:3] + delta_t * time_step * pred
+                loss += (pred_pos_next[indices] - pos_next).norm(2) * 1E5
 
                 # if coeff_entropy_loss > 0:
                 #     idx = torch.randperm(len(model.a))
@@ -1218,7 +1213,7 @@ def data_train_mouse_city(config, erase, best_model, device):
             list_frame.append(k)
 
             visualize_embedding = True
-            if visualize_embedding & ((N % (Niter // 20) == 0) | (N == 0)):
+            if visualize_embedding & ((N % plot_frequency == 0) | (N == 0)):
 
                 plot_training_mouse(config=config, log_dir=log_dir, epoch=epoch, N=N, model=model)
 
