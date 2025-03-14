@@ -45,7 +45,7 @@ graph_model:
 
     input_size_nnr: 1
     n_layers_nnr: 5
-    hidden_dim_nnr: 32
+    hidden_dim_nnr: 48
     output_size_nnr: 1024
     omega: 30
 
@@ -75,7 +75,7 @@ training:
     sparsity_freq: 4
 
     coeff_diff: 100
-    coeff_lin_modulation: 1.0E-3
+    coeff_lin_modulation: 1.0
 
     learning_rate_W_start: 1.0E-3
     learning_rate_start: 5.0E-4

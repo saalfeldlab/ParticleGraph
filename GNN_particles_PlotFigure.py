@@ -7715,9 +7715,8 @@ if __name__ == '__main__':
     #     pass
 
 
-    # config_list = ['signal_N6_a28_2_2', 'signal_N6_a28_4', 'signal_N6_a28_4_1'
-    #                                                        '', 'signal_N6_a28_5', 'signal_N6_a28_6', 'signal_N6_a28_7']
-    config_list = ['signal_N2_a42_6']
+    config_list = ['signal_N6_a29_3', 'signal_N6_a29_4', 'signal_N6_a29_5', 'signal_N6_a29_6', 'signal_N6_a28_7']
+    # config_list = ['signal_N2_a42_6']
     # config_list = ['signal_N6_a28_11_3']
     # config_list = ['signal_N4_m8_shuffle']
 
@@ -7732,7 +7731,7 @@ if __name__ == '__main__':
 
         print(f'config_file  {config.config_file}')
 
-        # data_plot(config=config, epoch_list=['best'], style='black color', device=device)
+        data_plot(config=config, epoch_list=['best'], style='black color', device=device)
         data_plot(config=config, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['time'], style='black color', device=device)
 

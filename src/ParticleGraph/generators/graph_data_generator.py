@@ -2135,7 +2135,7 @@ def data_generate_rat_city(config, visualize=True, run_vizualized=0, style='colo
 
     n_particles = simulation_config.n_particles
     delta_t = simulation_config.delta_t
-    time_step = simulation_config.time_step
+    time_step = training_config.time_step
     n_frames = simulation_config.n_frames
     has_particle_dropout = training_config.particle_dropout > 0
     dataset_name = config.dataset

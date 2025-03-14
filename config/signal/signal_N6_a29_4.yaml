@@ -47,7 +47,7 @@ graph_model:
     n_layers_nnr: 5
     hidden_dim_nnr: 32
     output_size_nnr: 1024
-    omega: 30
+    omega: 40
 
 plotting:
     colormap: 'tab10'

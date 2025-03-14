@@ -12,7 +12,6 @@ simulation:
   n_particle_types: 6
   n_frames: 6000
   delta_t: 1
-  time_step: 1
   boundary: 'no'
   has_cell_state: True
   state_type: 'sequence'
@@ -49,6 +48,7 @@ plotting:
 training:
   seed: 40
   n_epochs: 20
+  time_step: 1
   batch_size: 1
   small_init_batch_size: True
   n_runs: 1

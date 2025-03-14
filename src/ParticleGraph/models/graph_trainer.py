@@ -1050,7 +1050,7 @@ def data_train_mouse_city(config, erase, best_model, device):
         get_batch_size = constant_batch_size(target_batch_size)
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
-    time_step = simulation_config.time_step
+    time_step = training_config.time_step
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     embedding_cluster = EmbeddingCluster(config)
     n_runs = train_config.n_runs

@@ -75,7 +75,7 @@ training:
     sparsity_freq: 4
 
     coeff_diff: 100
-    coeff_lin_modulation: 1.0E-3
+    coeff_lin_modulation: 1.0E-2
 
     learning_rate_W_start: 1.0E-3
     learning_rate_start: 5.0E-4
