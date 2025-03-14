@@ -31,7 +31,7 @@ class PDE_N3(pyg.nn.MessagePassing):
         self.phi = phi
 
     def forward(self, data=[], has_field=False, alpha=1.0):
-        x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
+        x, edge_index = data.x, data.edge_index
         # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         particle_type = x[:, 5].long()
         parameters = alpha * self.p[particle_type + 1] + (1-alpha) * self.p[particle_type]

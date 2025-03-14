@@ -7,7 +7,7 @@ from scipy.spatial import Delaunay
 from tifffile import imread, imsave
 from torch_geometric.utils import get_mesh_laplacian
 from tqdm import trange
-
+from torch_geometric.utils import dense_to_sparse
 
 def generate_from_data(config, device, visualize=True, step=None, cmap=None):
 
@@ -512,6 +512,87 @@ def init_synapse_map(config, x, edge_attr_adjacency, device):
     # pos = nx.spring_layout(G, weight='weight', seed=42, k=1)
     # for k,p in pos.items():
     #     X1[k,:] = torch.tensor([p[0],p[1]], device=device)
+    
+    
+def init_adjacency(connectivity_file, connectivity_distribution, connectivity_filling_factor, n_particles, device):
+    
+    if 'adjacency.pt' in connectivity_file:
+        adjacency = torch.load(connectivity_file, map_location=device)
+
+    elif 'mat' in connectivity_file:
+        mat = scipy.io.loadmat(connectivity_file)
+        adjacency = torch.tensor(mat['A'], device=device)
+
+    elif 'zarr' in connectivity_file:
+        print('loading zarr ...')
+        dataset = xr.open_zarr(connectivity_file)
+        trained_weights = dataset["trained"]  # alpha * sign * N
+        print(f'weights {trained_weights.shape}')
+        untrained_weights = dataset["untrained"]  # sign * N
+        values = trained_weights[0:n_particles,0:n_particles]
+        values = np.array(values)
+        values = values / np.max(values)
+        adjacency = torch.tensor(values, dtype=torch.float32, device=device)
+        values=[]
+
+    elif 'tif' in connectivity_file:
+        adjacency = constructRandomMatrices(n_neurons=n_particles, density=1.0, connectivity_mask=f"./graphs_data/{connectivity_file}" ,device=device)
+        n_particles = adjacency.shape[0]
+        config.simulation.n_particles = n_particles
+
+    else:
+
+        if 'Gaussian' in connectivity_distribution:
+            adjacency = torch.randn((n_particles, n_particles), dtype=torch.float32, device=device)
+            adjacency = adjacency / np.sqrt(n_particles)
+            print(f"Gaussian   1/sqrt(N)  {1/np.sqrt(n_particles)}    std {torch.std(adjacency.flatten())}")
+
+        elif 'Lorentz' in connectivity_distribution:
+
+            s = np.random.standard_cauchy(n_particles**2)
+            s[(s < -25) | (s > 25)] = 0
+
+            if n_particles < 2000:
+                s = s / n_particles**0.7
+            elif n_particles <4000:
+                s = s / n_particles**0.675
+            elif n_particles < 8000:
+                s = s / n_particles**0.67
+            elif n_particles == 8000:
+                s = s / n_particles**0.66
+            elif n_particles > 8000:
+                s = s / n_particles**0.5
+            print(f"Lorentz   1/sqrt(N)  {1/np.sqrt(n_particles):0.3f}    std {np.std(s):0.3f}")
+
+            adjacency = torch.tensor(s, dtype=torch.float32, device=device)
+            adjacency = torch.reshape(adjacency, (n_particles, n_particles))
+
+        elif 'uniform' in connectivity_distribution:
+            adjacency = torch.rand((n_particles, n_particles), dtype=torch.float32, device=device)
+            adjacency = adjacency - 0.5
+
+        i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+        adjacency[i, i] = 0
+
+    if connectivity_filling_factor != 1:
+        mask = torch.rand(adjacency.shape) >  connectivity_filling_factor
+        adjacency[mask] = 0
+        mask = (adjacency != 0).float()
+        # edge_index_, edge_attr_ = dense_to_sparse(adjacency)
+        if n_particles>10000:
+            edge_index = large_tensor_nonzero(mask)
+            print (f'edge_index {edge_index.shape}')
+        else:
+            edge_index = mask.nonzero().t().contiguous()
+
+    else:
+        adj_matrix = torch.ones((n_particles)) - torch.eye(n_particles)
+        edge_index, edge_attr = dense_to_sparse(adj_matrix)
+        mask = (adj_matrix != 0).float()
+
+    edge_index = edge_index.to(device=device)
+
+    return edge_index, adjacency, mask
 
 
 

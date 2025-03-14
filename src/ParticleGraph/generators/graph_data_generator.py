@@ -21,7 +21,6 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import pandas as pd
 import tables
 
-from torch_geometric.utils import dense_to_sparse
 import torch_geometric.utils as pyg_utils
 from scipy.ndimage import zoom
 import re
@@ -1582,95 +1581,14 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         inv_particle_dropout_mask = draw[cut:]
         x_removed_list = []
 
-    if 'adjacency.pt' in simulation_config.connectivity_file:
-        adjacency = torch.load(simulation_config.connectivity_file, map_location=device)
-
-    elif 'mat' in simulation_config.connectivity_file:
-        mat = scipy.io.loadmat(simulation_config.connectivity_file)
-        adjacency = torch.tensor(mat['A'], device=device)
-
-    elif 'zarr' in simulation_config.connectivity_file:
-        print('loading zarr ...')
-        dataset = xr.open_zarr(simulation_config.connectivity_file)
-        trained_weights = dataset["trained"]  # alpha * sign * N
-        print(f'weights {trained_weights.shape}')
-        untrained_weights = dataset["untrained"]  # sign * N
-        values = trained_weights[0:n_particles,0:n_particles]
-        values = np.array(values)
-        values = values / np.max(values)
-        adjacency = torch.tensor(values, dtype=torch.float32, device=device)
-        values=[]
-
-    elif 'tif' in simulation_config.connectivity_file:
-        adjacency = constructRandomMatrices(n_neurons=n_particles, density=1.0, connectivity_mask=f"./graphs_data/{simulation_config.connectivity_file}" ,device=device)
-        n_particles = adjacency.shape[0]
-        config.simulation.n_particles = n_particles
-
-    else:
-
-        if simulation_config.connectivity_distribution == 'Gaussian':
-            adjacency = torch.randn((n_particles, n_particles), dtype=torch.float32, device=device)
-            adjacency = adjacency / np.sqrt(n_particles)
-            print(f"Gaussian   1/sqrt(N)  {1/np.sqrt(n_particles)}    std {torch.std(adjacency.flatten())}")
-
-        elif simulation_config.connectivity_distribution == 'Lorentz':
-
-            s = np.random.standard_cauchy(n_particles**2)
-            s[(s < -25) | (s > 25)] = 0
-
-            if n_particles < 2000:
-                s = s / n_particles**0.7
-            elif n_particles <4000:
-                s = s / n_particles**0.675
-            elif n_particles < 8000:
-                s = s / n_particles**0.67
-            elif n_particles == 8000:
-                s = s / n_particles**0.66
-            elif n_particles > 8000:
-                s = s / n_particles**0.5
-            print(f"Lorentz   1/sqrt(N)  {1/np.sqrt(n_particles):0.3f}    std {np.std(s):0.3f}")
-
-            adjacency = torch.tensor(s, dtype=torch.float32, device=device)
-            adjacency = torch.reshape(adjacency, (n_particles, n_particles))
-
-        elif simulation_config.connectivity_distribution == 'uniform':
-            adjacency = torch.rand((n_particles, n_particles), dtype=torch.float32, device=device)
-            adjacency = adjacency - 0.5
-
-        i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
-        adjacency[i, i] = 0
-
-    if simulation_config.connectivity_filling_factor != 1:
-        mask = torch.rand(adjacency.shape) >  simulation_config.connectivity_filling_factor
-        adjacency[mask] = 0
-        mask = (adjacency != 0).float()
-        # edge_index_, edge_attr_ = dense_to_sparse(adjacency)
-        if n_particles>10000:
-            edge_index = large_tensor_nonzero(mask)
-            print (f'edge_index {edge_index.shape}')
-        else:
-            edge_index = mask.nonzero().t().contiguous()
-        edge_attr = adjacency[edge_index[0], edge_index[1]]
-        torch.save(mask, f'./graphs_data/{dataset_name}/mask.pt')
-        torch.save(adjacency, f'./graphs_data/{dataset_name}/adjacency.pt')
-    else:
-        adj_matrix = torch.ones((n_particles)) - torch.eye(n_particles)
-        edge_index, edge_attr = dense_to_sparse(adj_matrix)
-        torch.save(adjacency, f'./graphs_data/{dataset_name}/adjacency.pt')
-
-    edge_index = edge_index.to(device=device)
-    torch.save(edge_index, f'./graphs_data/{dataset_name}/edge_index.pt')
-
     if (('modulation' in model_config.field_type) | ('visual' in model_config.field_type)) & ('PDE_N6' not in model_config.signal_model_name):
         im = imread(f"graphs_data/{simulation_config.node_value_map}")
+
     if 'permutation' in model_config.field_type:
         permutation_indices = torch.randperm(n_particles)
         inverse_permutation_indices = torch.argsort(permutation_indices)
         torch.save(permutation_indices, f'./graphs_data/{dataset_name}/permutation_indices.pt')
         torch.save(inverse_permutation_indices, f'./graphs_data/{dataset_name}/inverse_permutation_indices.pt')
-
-
-    model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, device=device)
 
 
     for run in range(config.training.n_runs):
@@ -1694,6 +1612,15 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                 first_T1 = T1.clone().detach()
             else:
                 T1 = first_T1.clone().detach()
+
+        if run == 0:
+            edge_index, adjacency, mask = init_adjacency(simulation_config.connectivity_file, simulation_config.connectivity_distribution, simulation_config.connectivity_filling_factor, n_particles, device)
+
+            model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, device=device)
+
+            torch.save(edge_index, f'./graphs_data/{dataset_name}/edge_index.pt')
+            torch.save(mask, f'./graphs_data/{dataset_name}/mask.pt')
+            torch.save(adjacency, f'./graphs_data/{dataset_name}/adjacency.pt')
 
         if run == run_vizualized:
             if 'black' in style:
@@ -1754,7 +1681,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     (N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                      H1.clone().detach(), A1.clone().detach(), U1.clone().detach()), 1)
                 X[:, it] = H1[:, 0].clone().detach()
-                dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr)
+                dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
 
                 # model prediction
                 if ('modulation' in field_type) & (it >= 0):
@@ -2053,9 +1980,6 @@ def data_generate_rat_city(config, visualize=True, run_vizualized=0, style='colo
                             TRUE_ID1[id] = TRUE_ID1_[pos]
             else:
                 TRUE_ID1 = ID1
-
-
-
 
             x = torch.concatenate((ID1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                                    H1.clone().detach(), TRUE_ID1.clone().detach()), 1)

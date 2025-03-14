@@ -32,7 +32,7 @@ class PDE_N7(pyg.nn.MessagePassing):
         self.short_term_plasticity_mode = short_term_plasticity_mode
 
     def forward(self, data=[], has_field=False):
-        x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
+        x, edge_index = data.x, data.edge_index
         # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         particle_type = to_numpy(x[:, 5])
         parameters = self.p[particle_type]
