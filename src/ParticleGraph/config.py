@@ -189,7 +189,6 @@ class TrainingConfig(BaseModel):
     seed : int = 40
     clamp: float = 0
     pred_limit: float = 1.E+10
-    train_NNR_only: bool = False
 
     particle_dropout: float = 0
     n_ghosts: int = 0

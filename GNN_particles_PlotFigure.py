@@ -6854,11 +6854,10 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
     train_config = config.training
     model_config = config.graph_model
 
-    time_step = simulation_config.time_step
+    time_step = train_config.time_step
     delta_t = simulation_config.delta_t * time_step
     data_folder_name = config.data_folder_name
     dataset_name = config.dataset
-    time_step = simulation_config.time_step
     entropy_loss = KoLeoLoss()
     xlim = config.plotting.xlim
     ylim = config.plotting.ylim
@@ -6872,7 +6871,6 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
 
     if os.path.exists(pic_folder):
         files = glob.glob(f'{pic_folder}/*.jpg')
-        sorted_files = sorted(files, key=extract_number)
 
     x_list = []
     x = torch.load(f'graphs_data/{dataset_name}/x_list_0.pt', map_location=device)
@@ -7060,7 +7058,7 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
         cbm = LinearSegmentedColormap.from_list(cmap_name, colors, N=n_bins)
 
         next_id = max(x_list[0][0][:, -1]) + 1
-        for k in trange(1000, 6000): #n_frames-1):
+        for k in trange(0, 6000): #n_frames-1):
             x = x_list[0][k]
             edges = edge_p_p_list[0][f'arr_{k}']
             edges = torch.tensor(edges, dtype=torch.int64, device=device)
@@ -7105,19 +7103,22 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
                 fig = plt.figure(figsize=(16, 10))
                 ax = fig.add_subplot(2, 2, 1)
                 if os.path.exists(pic_folder):
-                    im = imageio.imread(sorted_files[k])
+                    im = imageio.imread(files[k])
                     im = np.flipud(im)
                     plt.imshow(im)
                     plt.axis('off')
                 pos = x[:, 1:3].clone().detach()
                 pos[:, 0] = 1110 * pos[:, 0]
                 pos[:, 1] = 1000 * pos[:, 1]
+                x_pos_pred[:, 0] = 1110 * x_pos_pred[:, 0]
+                x_pos_pred[:, 1] = 1000 * x_pos_pred[:, 1]
                 # ax.axvline(x=1.05, ymin=0, ymax=0.7, color='r', linestyle='--', linewidth=2)
-                plt.scatter(to_numpy(pos[:, 0]), to_numpy(pos[:, 1]), s=100, c='b')
-                plt.scatter(to_numpy(x_next[:, 1])*1110, to_numpy(x_next[:, 2])*1000, s=100, c='g', alpha=0.5)
-                for n in range(len(x)):
-                    plt.arrow(x=to_numpy(pos[n, 0]), y=to_numpy(pos[n, 1]), dx=to_numpy(V[n, 0])*1110, dy=to_numpy(V[n, 1])*1000,
-                              head_width=0.01, length_includes_head=True)
+                plt.scatter(to_numpy(pos[:, 0]), to_numpy(pos[:, 1]), s=50, c='b')
+                plt.scatter(to_numpy(x_pos_pred[:, 0]), to_numpy(x_pos_pred[:, 1]), s=30, c='w')
+                plt.scatter(to_numpy(x_next[:, 1])*1110, to_numpy(x_next[:, 2])*1000, s=50, c='g', alpha=0.5)
+                # for n in range(len(x)):
+                #     plt.arrow(x=to_numpy(pos[n, 0]), y=to_numpy(pos[n, 1]), dx=to_numpy(V[n, 0])*1110, dy=to_numpy(V[n, 1])*1000,
+                #               head_width=0.01, length_includes_head=True)
                 plt.xlim([0, 2300])
                 plt.ylim([0, 1000])
                 # plt.title('GNN tracking')
@@ -7126,19 +7127,19 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
 
                 ax = fig.add_subplot(2, 2, 3)
                 if os.path.exists(pic_folder):
-                    im = imageio.imread(sorted_files[k])
+                    im = imageio.imread(files[k])
                     im = np.flipud(im)
                     plt.imshow(im)
                     plt.axis('off')
                 # ax.axvline(x=1.05, ymin=0, ymax=0.7, color='r', linestyle='--', linewidth=2)
-                particle_id = to_numpy(x[:, -3])
+                particle_id = to_numpy(x[:, -1])
                 dataset = data.Data(x=x, pos=pos, edge_index=edges)
                 vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
                 nx.draw_networkx(vis, pos=to_numpy(pos), node_size=0, linewidths=0, with_labels=False, ax=ax, edge_color='g', width=1, alpha=0.4)
-                for n in range(edges.shape[1]):
-                    plt.arrow(x=to_numpy(model.pos[n, 0])*1110, y=to_numpy(model.pos[n, 1])*1000, dx=to_numpy(model.msg[n, 0])*1110, dy=to_numpy(model.msg[n, 1])*1000, head_width=0.01, length_includes_head=True, alpha=0.2)
-                for n in range(len(x)):
-                    plt.arrow(x=to_numpy(pos[n, 0]), y=to_numpy(pos[n, 1]), dx=to_numpy(V[n, 0])*1110, dy=to_numpy(V[n, 1])*1000, head_width=0.01, length_includes_head=True)
+                # for n in range(edges.shape[1]):
+                #     plt.arrow(x=to_numpy(model.pos[n, 0])*1110, y=to_numpy(model.pos[n, 1])*1000, dx=to_numpy(model.msg[n, 0])*1110, dy=to_numpy(model.msg[n, 1])*1000, head_width=0.01, length_includes_head=True, alpha=0.2)
+                # for n in range(len(x)):
+                #     plt.arrow(x=to_numpy(pos[n, 0]), y=to_numpy(pos[n, 1]), dx=to_numpy(V[n, 0])*1110, dy=to_numpy(V[n, 1])*1000, head_width=0.01, length_includes_head=True)
                 for n, id in enumerate(particle_id.astype(int)):
                     plt.text(to_numpy(x[n, 1])*1110+25, to_numpy(x[n, 2])*1000-10, f'{id}', fontsize=8, color='w')
                 plt.xlim([0, 2300])
@@ -7147,43 +7148,65 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
                 plt.yticks([])
                 plt.tight_layout()
 
-                detection_id = to_numpy(x[:,-1]).astype(int)
-                ax = fig.add_subplot(2, 4, 3)
+                ax = fig.add_subplot(2, 2, 2)
+                model_a = model.a.clone().detach()
+                model_a = torch.reshape(model_a, (model_a.shape[0] * model_a.shape[1], model_config.embedding_dim))
+                amax = torch.max(model_a, dim=0)[0]
+                amin = torch.min(model_a, dim=0)[0]
+                model_a = (model_a - amin) / (amax - amin)
+                step = model_a.shape[0] * model_a.shape[1] // simulation_config.n_particles
+                for n in range(simulation_config.n_particles):
+                    plt.scatter(to_numpy(model_a[step * n:step * (n + 1), 0]),
+                                to_numpy(model_a[step * n:step * (n + 1), 1]), s=1, alpha=0.25)
+
+                t = model.get_interp_a(k, particle_id.astype(int))
+                t = (t - amin) / (amax - amin)
+
+                for n in range(len(t)):
+                    plt.scatter(to_numpy(t[n, 0]), to_numpy(t[n, 1]), s=50, c='w', alpha=1, edgecolors='None')
+                    plt.text(to_numpy(t[n, 0]), to_numpy(t[n, 1]), f'{particle_id[n]}', fontsize=8, color='w')
+
+                plt.xlim([-0.1, 1.1])
+                plt.ylim([-0.1, 1.1])
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+
                 # plt.axis('off')
                 # plt.title('embedding : rat state')
-                plt.scatter(embedding[:, 0], embedding[:, 1], s=1, c='g', alpha=1, edgecolors='None')
-                for n, id in enumerate(detection_id):
-                    # plt.scatter(embedding[id, 0], embedding[id, 1], s=30, alpha=1, color='w', edgecolors='None')
-                    plt.text(embedding[id, 0], embedding[id, 1], f'{particle_id[n].astype(int)}', fontsize=8, color='w')
-                plt.xticks([])
-                plt.yticks([])
-                plt.xlim([0,2])
-                plt.ylim([0,2])
+                # plt.scatter(embedding[:, 0], embedding[:, 1], s=10, c='g', alpha=1, edgecolors='None')
+                # for n, id in enumerate(detection_id):
+                #     # plt.scatter(embedding[id, 0], embedding[id, 1], s=30, alpha=1, color='w', edgecolors='None')
+                #     plt.text(embedding[id, 0], embedding[id, 1], f'{particle_id[n].astype(int)}', fontsize=8, color='w')
+                # plt.xticks([])
+                # plt.yticks([])
+                # plt.xlim([0,2])
+                # plt.ylim([0,2])
 
-                ax = fig.add_subplot(2, 4, 7)
-                # plt.axis('off')
-                # plt.title('MLP plot : rat small action')
-                rr = torch.tensor(np.linspace(0, 0.6, 1000)).to(device)
-                for n, id in enumerate(detection_id):
-                    embedding_ = model.a[id] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-                    in_features = torch.cat((rr[:, None], 0 * rr[:, None],
-                                             rr[:, None], embedding_), dim=1)
-                    with torch.no_grad():
-                        func = model.lin_edge(in_features.float())
-                        func = func[:, 0]
-                    map_behavior[particle_id[n].astype(int)-1,k] = to_numpy(func[500])
-                    plt.plot(to_numpy(rr),to_numpy(func) * to_numpy(ynorm), linewidth=1, alpha=1, color='w')
-                    plt.text(to_numpy(rr[200 + 50*n]), to_numpy(func[200 + 50*n]) * to_numpy(ynorm) + 0.0035, f'{particle_id[n].astype(int)}', fontsize=8, color='w')
-                if 'rat_city' in dataset_name:
-                    plt.ylim([-0.2, 0.2])
-                plt.xticks([])
-                plt.yticks([])
-
-                ax = fig.add_subplot(2, 4, 8)
-                # plt.axis('off')
-                plt.imshow(map_behavior[0:to_numpy(next_id-1).astype(int), :], aspect='auto', cmap=cbm, vmin=-0.1, vmax=0.1)
-                plt.xticks(fontsize=8)
-                plt.yticks(np.arange(0, to_numpy(next_id-1).astype(int)), np.arange(1, to_numpy(next_id).astype(int)), fontsize=8)
+                # ax = fig.add_subplot(2, 4, 7)
+                # # plt.axis('off')
+                # # plt.title('MLP plot : rat small action')
+                # rr = torch.tensor(np.linspace(0, 0.6, 1000)).to(device)
+                # for n, id in enumerate(detection_id):
+                #     embedding_ = model.a[id] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                #     in_features = torch.cat((rr[:, None], 0 * rr[:, None],
+                #                              rr[:, None], embedding_), dim=1)
+                #     with torch.no_grad():
+                #         func = model.lin_edge(in_features.float())
+                #         func = func[:, 0]
+                #     map_behavior[particle_id[n].astype(int)-1,k] = to_numpy(func[500])
+                #     plt.plot(to_numpy(rr),to_numpy(func) * to_numpy(ynorm), linewidth=1, alpha=1, color='w')
+                #     plt.text(to_numpy(rr[200 + 50*n]), to_numpy(func[200 + 50*n]) * to_numpy(ynorm) + 0.0035, f'{particle_id[n].astype(int)}', fontsize=8, color='w')
+                # if 'rat_city' in dataset_name:
+                #     plt.ylim([-0.2, 0.2])
+                # plt.xticks([])
+                # plt.yticks([])
+                #
+                # ax = fig.add_subplot(2, 4, 8)
+                # # plt.axis('off')
+                # plt.imshow(map_behavior[0:to_numpy(next_id-1).astype(int), :], aspect='auto', cmap=cbm, vmin=-0.1, vmax=0.1)
+                # plt.xticks(fontsize=8)
+                # plt.yticks(np.arange(0, to_numpy(next_id-1).astype(int)), np.arange(1, to_numpy(next_id).astype(int)), fontsize=8)
 
                 # if (N+1)%40 == 0:
                 #     ax = fig.add_subplot(2, 3, 4)
@@ -7714,11 +7737,10 @@ if __name__ == '__main__':
     # except:
     #     pass
 
-
-    config_list = ['signal_N6_a29_3', 'signal_N6_a29_4', 'signal_N6_a29_5', 'signal_N6_a29_6', 'signal_N6_a28_7']
+    # config_list = ['signal_N6_a29_3', 'signal_N6_a29_4', 'signal_N6_a29_5', 'signal_N6_a29_6', 'signal_N6_a28_7']
     # config_list = ['signal_N2_a42_6']
     # config_list = ['signal_N6_a28_11_3']
-    # config_list = ['signal_N4_m8_shuffle']
+    config_list = ['rat_city_g_3']
 
     for config_file_ in config_list:
 

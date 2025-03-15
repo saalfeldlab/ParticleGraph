@@ -1195,10 +1195,15 @@ def data_train_rat_city(config, erase, best_model, device):
                 indices = result.indices
                 loss += torch.sum(min_value) * 1E5
             else:
-                pos_next = x_list[run][k + time_step][:,1:3]
-                indices = x_list[run][k + time_step][:, -1].long()
+                x_next = x_list[run][k + time_step]
+                sorted_indices = torch.argsort(x_next[:, 8])
+                x_next_sorted = x_next[sorted_indices,1:3]
+
                 pred_pos_next = x[:,1:3] + delta_t * time_step * pred
-                loss += (pred_pos_next[indices] - pos_next).norm(2) * 1E5
+                sorted_indices = torch.argsort(x[:, 8])
+                pred_pos_next_sorted = pred_pos_next[sorted_indices]
+
+                loss += (pred_pos_next_sorted - x_next_sorted).norm(2) * 1E5
 
                 # if coeff_entropy_loss > 0:
                 #     idx = torch.randperm(len(model.a))
@@ -2200,7 +2205,6 @@ def data_train_synaptic2(config, erase, best_model, device):
     coeff_lin_modulation = train_config.coeff_lin_modulation
     coeff_model_b = train_config.coeff_model_b
     time_step = train_config.time_step
-    train_NNR_only = train_config.train_NNR_only
 
     if field_type != '':
         n_nodes = simulation_config.n_nodes
@@ -2582,8 +2586,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                     loss = loss + train_config.coeff_model_a * (model.a[ind_a+1] - model.a[ind_a]).norm(2)
 
                 loss.backward()
-                if train_NNR_only == False:
-                    optimizer.step()
+                optimizer.step()
                 if has_Siren:
                     optimizer_f.step()
                 total_loss += loss.item()

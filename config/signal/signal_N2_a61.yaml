@@ -5,7 +5,7 @@ simulation:
     connectivity_file: 'random'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
-    connectivity_distribution: 'Lorentz_structured'
+    connectivity_distribution: 'Lorentz_structured_0.5'
     params: [[10.0,1.0,1.0],[10.0,2.0,1.0],[10.0,1.0,2.0],[10.0,2.0,2.0]]
     phi: 'tanh'
     tau: 1.0

@@ -48,7 +48,7 @@ training:
     n_epochs: 10
     recursive_loop: 1
     batch_size: 10
-    small_init_batch_size: True
+    small_init_batch_size: False
     n_runs: 2
     device: 'auto'
     

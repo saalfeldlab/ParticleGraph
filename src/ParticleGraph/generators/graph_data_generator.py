@@ -1616,8 +1616,61 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         if run == 0:
             edge_index, adjacency, mask = init_adjacency(simulation_config.connectivity_file, simulation_config.connectivity_distribution, simulation_config.connectivity_filling_factor, n_particles, device)
 
-            if structured in simulation_config.field_type:
-                type_grid = torch.meshgrid(T1, T1)
+            if 'structured' in simulation_config.connectivity_distribution:
+                float_value = float(simulation_config.connectivity_distribution.split('_')[-1])
+                matrix_sign = torch.tensor(stats.bernoulli(float_value).rvs(n_particle_types ** 2) * 2 - 1, dtype=torch.float32, device=device)
+                matrix_sign = matrix_sign.reshape(n_particle_types, n_particle_types)
+
+                plt.imshow(to_numpy(matrix_sign))
+                plt.savefig(f"graphs_data/{dataset_name}/connectivity_sign.tif", dpi=130)
+                plt.close()
+
+                plt.figure(figsize=(10, 10))
+                ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},
+                                 vmin=-0.1, vmax=0.1)
+                cbar = ax.collections[0].colorbar
+                cbar.ax.tick_params(labelsize=32)
+                plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+                plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+                plt.xticks(rotation=0)
+                plt.subplot(2, 2, 1)
+                ax = sns.heatmap(to_numpy(adjacency[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr',
+                                 vmin=-0.1, vmax=0.1)
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+                plt.savefig(f'graphs_data/{dataset_name}/adjacency_before.png', dpi=300)
+                plt.close()
+
+                T1_ = to_numpy(T1.squeeze())
+                xy_grid = np.stack(np.meshgrid(T1_, T1_), -1)
+
+                adjacency = torch.abs(adjacency)
+                T1_ = to_numpy(T1.squeeze())
+                xy_grid = np.stack(np.meshgrid(T1_, T1_), -1)
+                sign_matrix = matrix_sign[xy_grid[..., 0], xy_grid[..., 1]]
+                adjacency *= sign_matrix
+
+                plt.imshow(to_numpy(sign_matrix))
+                plt.savefig(f"graphs_data/{dataset_name}/large_connectivity_sign.tif", dpi=130)
+                plt.close()
+
+                plt.figure(figsize=(10, 10))
+                ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},
+                                 vmin=-0.1, vmax=0.1)
+                cbar = ax.collections[0].colorbar
+                cbar.ax.tick_params(labelsize=32)
+                plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+                plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+                plt.xticks(rotation=0)
+                plt.subplot(2, 2, 1)
+                ax = sns.heatmap(to_numpy(adjacency[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr',
+                                 vmin=-0.1, vmax=0.1)
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+                plt.savefig(f'graphs_data/{dataset_name}/adjacency_after.png', dpi=300)
+                plt.close()
 
             model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, device=device)
 

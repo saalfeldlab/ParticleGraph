@@ -1,5 +1,5 @@
 description: 'test 10^5 time points  LRs 1E-4 5E-5 5E-4     synaptic network random matrix no recursive loop 1000 neurons 4 types lorentz std 0.03'
-dataset: 'signal_N2_a60'
+dataset: 'signal_N2_a63'
 
 simulation:
     connectivity_file: 'random'

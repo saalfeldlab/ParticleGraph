@@ -43,7 +43,6 @@ def get_type_time_series(new_labels=None, dataset_number=None, cell_id=None, n_p
 
     return new_labels[indexes]
 
-
 def get_in_features_update(rr=None, n_particles=None, model_a=None, model_update_type=None, device=None):
 
     if rr == None:
