@@ -65,7 +65,7 @@ if __name__ == '__main__':
         # config_list = ['signal_N2_e5']
         # config_list = ['cell_MDCK_3']
         # config_list = ['rat_city_f']
-        config_list = ['signal_N2_a60']
+        config_list = ['signal_N2_a61']
 
     for config_file_ in config_list:
         print(' ')

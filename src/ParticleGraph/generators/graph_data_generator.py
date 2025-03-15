@@ -1616,6 +1616,9 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         if run == 0:
             edge_index, adjacency, mask = init_adjacency(simulation_config.connectivity_file, simulation_config.connectivity_distribution, simulation_config.connectivity_filling_factor, n_particles, device)
 
+            if structured in simulation_config.field_type:
+                type_grid = torch.meshgrid(T1, T1)
+
             model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, device=device)
 
             torch.save(edge_index, f'./graphs_data/{dataset_name}/edge_index.pt')

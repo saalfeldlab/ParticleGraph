@@ -53,7 +53,7 @@ if __name__ == '__main__':
     else:
         action = 'train'
         best_model = None
-        config_list = ['rat_city_g']
+        config_list = ['rat_city_g_1']
 
     for config_file_ in config_list:
 
