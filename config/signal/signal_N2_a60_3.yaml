@@ -49,12 +49,16 @@ training:
     n_epochs: 20
     recursive_loop: 1
     batch_size: 1
+    small_init_batch_size: True
     n_runs: 2
+    device: 'auto'
+    
     sparsity: 'none'
     rotation_augmentation: False
+    epoch_reset: 1
+
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
-    device: 'auto'
     sparsity: 'replace_embedding_function'
     sparsity_freq: 4
 

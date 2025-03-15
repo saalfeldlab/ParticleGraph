@@ -2300,10 +2300,6 @@ def data_train_synaptic2(config, erase, best_model, device):
         print(f'best_model: {best_model}  start_epoch: {start_epoch}')
         logger.info(f'best_model: {best_model}  start_epoch: {start_epoch}')
 
-        # with torch.no_grad():
-        #     model.W.copy_(model.W * 0)
-        #     model.a.copy_(model.a * 0)
-
         if has_Siren:
             net = f'{log_dir}/models/best_model_f_with_{n_runs - 1}_graphs_{best_model}.pt'
             state_dict = torch.load(net, map_location=device)
@@ -2381,6 +2377,12 @@ def data_train_synaptic2(config, erase, best_model, device):
             coeff_diff = 0
             coeff_diff_update = 0
         logger.info(f'coeff_L1: {coeff_L1} coeff_diff: {coeff_diff}')
+        
+        if epoch == train_config.epoch_reset:
+            with torch.no_grad():
+                model.W.copy_(model.W * 0)
+                model.a.copy_(model.a * 0)
+            logger.info(f'reset W model.a at epoch : {train_config.epoch_reset}')
 
         batch_size = int(get_batch_size(epoch) / particle_batch_ratio)
         logger.info(f'batch_size: {batch_size}')
