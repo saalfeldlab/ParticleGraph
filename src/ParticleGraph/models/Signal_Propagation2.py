@@ -110,11 +110,9 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             particle_id = x[:, 0].long()
             embedding = self.a[particle_id, :]
 
-        field = torch.ones((self.n_particles,1), requires_grad=False, dtype=torch.float32, device=self.device)
+        field = torch.ones((x.shape[0],1), requires_grad=False, dtype=torch.float32, device=self.device)
         if (self.model == 'PDE_N4') | (self.model == 'PDE_N5') | (self.model == 'PDE_N6') | (self.model == 'PDE_N7') :
             field = x[:, 8:9]
-
-
 
         # if (self.model=='PDE_N4') | (self.model=='PDE_N5'):
         #     msg = self.propagate(edge_index, u=u, embedding=embedding, field=field)
