@@ -49,13 +49,14 @@ plotting:
 
 training:
   seed: 40
-  n_epochs: 20
+  n_epochs: 5
   n_runs: 1
   device: 'auto'
 
   time_step: 1
   batch_size: 1
   small_init_batch_size: True
+  embedding_step: 6000
 
   sparsity: 'none'
   sparsity_freq: 4

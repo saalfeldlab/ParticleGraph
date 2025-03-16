@@ -36,11 +36,25 @@ class PDE_N4(pyg.nn.MessagePassing):
     def forward(self, data=[], has_field=False):
         x, edge_index = data.x, data.edge_index
         particle_type = x[:, 5].long()
-        parameters = self.p[particle_type]
-        g = parameters[:, 0:1]
-        s = parameters[:, 1:2]
-        c = parameters[:, 2:3]
-        t = parameters[:, 3:4]
+
+        n_particle_types = torch.max(particle_type).item() + 1
+        n_parameters = self.p.size(0)
+
+        if n_particle_types > n_parameters:
+            parameters = self.p[particle_type // (n_particle_types//n_parameters)]
+            g = parameters[:, 0:1]
+            s = parameters[:, 1:2]
+            c = parameters[:, 2:3]
+            t_ = torch.linspace(1, 8, n_particle_types)[:, None].to(x.device)
+            t = t_[particle_type]
+        else:
+            parameters = self.p[particle_type]
+            g = parameters[:, 0:1]
+            s = parameters[:, 1:2]
+            c = parameters[:, 2:3]
+            t = parameters[:, 3:4]
+
+
 
         u = x[:, 6:7]
         if has_field:

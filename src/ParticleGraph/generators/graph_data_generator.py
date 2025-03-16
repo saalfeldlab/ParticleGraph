@@ -1617,8 +1617,11 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             edge_index, adjacency, mask = init_adjacency(simulation_config.connectivity_file, simulation_config.connectivity_distribution, simulation_config.connectivity_filling_factor, n_particles, device)
 
             if 'structured' in simulation_config.connectivity_distribution:
-                float_value = float(simulation_config.connectivity_distribution.split('_')[-1])
-                matrix_sign = torch.tensor(stats.bernoulli(float_value).rvs(n_particle_types ** 2) * 2 - 1, dtype=torch.float32, device=device)
+                parts = simulation_config.connectivity_distribution.split('_')
+                float_value1 = float(parts[-2]) # repartition pos/neg
+                float_value2 = float(parts[-1]) # filling factor
+
+                matrix_sign = torch.tensor(stats.bernoulli(float_value1).rvs(n_particle_types ** 2) * 2 - 1, dtype=torch.float32, device=device)
                 matrix_sign = matrix_sign.reshape(n_particle_types, n_particle_types)
 
                 plt.imshow(to_numpy(matrix_sign))
@@ -1626,20 +1629,18 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                 plt.close()
 
                 plt.figure(figsize=(10, 10))
-                ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},
-                                 vmin=-0.1, vmax=0.1)
+                ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},vmin=-0.1, vmax=0.1)
                 cbar = ax.collections[0].colorbar
                 cbar.ax.tick_params(labelsize=32)
                 plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
                 plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
                 plt.xticks(rotation=0)
                 plt.subplot(2, 2, 1)
-                ax = sns.heatmap(to_numpy(adjacency[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr',
-                                 vmin=-0.1, vmax=0.1)
+                ax = sns.heatmap(to_numpy(adjacency[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr',vmin=-0.1, vmax=0.1)
                 plt.xticks([])
                 plt.yticks([])
                 plt.tight_layout()
-                plt.savefig(f'graphs_data/{dataset_name}/adjacency_before.png', dpi=300)
+                plt.savefig(f'graphs_data/{dataset_name}/adjacency_0.png', dpi=300)
                 plt.close()
 
                 T1_ = to_numpy(T1.squeeze())
@@ -1664,12 +1665,37 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                 plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
                 plt.xticks(rotation=0)
                 plt.subplot(2, 2, 1)
-                ax = sns.heatmap(to_numpy(adjacency[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr',
-                                 vmin=-0.1, vmax=0.1)
+                ax = sns.heatmap(to_numpy(adjacency[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
                 plt.xticks([])
                 plt.yticks([])
                 plt.tight_layout()
-                plt.savefig(f'graphs_data/{dataset_name}/adjacency_after.png', dpi=300)
+                plt.savefig(f'graphs_data/{dataset_name}/adjacency_1.png', dpi=300)
+                plt.close()
+
+                flat_sign_matrix = sign_matrix.flatten()
+                num_elements = len(flat_sign_matrix)
+                num_ones = int(num_elements * float_value2)
+                indices = np.random.choice(num_elements, num_ones, replace=False)
+                flat_sign_matrix[:] = 0
+                flat_sign_matrix[indices] = 1
+                sign_matrix = flat_sign_matrix.reshape(sign_matrix.shape)
+
+                adjacency *= sign_matrix
+
+                plt.figure(figsize=(10, 10))
+                ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},
+                                 vmin=-0.1, vmax=0.1)
+                cbar = ax.collections[0].colorbar
+                cbar.ax.tick_params(labelsize=32)
+                plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+                plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+                plt.xticks(rotation=0)
+                plt.subplot(2, 2, 1)
+                ax = sns.heatmap(to_numpy(adjacency[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+                plt.savefig(f'graphs_data/{dataset_name}/adjacency_2.png', dpi=300)
                 plt.close()
 
             model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, device=device)

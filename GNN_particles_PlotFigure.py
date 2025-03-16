@@ -7740,7 +7740,7 @@ if __name__ == '__main__':
     # config_list = ['signal_N6_a29_3', 'signal_N6_a29_4', 'signal_N6_a29_5', 'signal_N6_a29_6', 'signal_N6_a28_7']
     # config_list = ['signal_N2_a42_6']
     # config_list = ['signal_N6_a28_11_3']
-    config_list = ['rat_city_g_3']
+    config_list = ['rat_city_g_1']
 
     for config_file_ in config_list:
 

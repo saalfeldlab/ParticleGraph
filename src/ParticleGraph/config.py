@@ -176,6 +176,7 @@ class TrainingConfig(BaseModel):
     batch_size: int = 1
     particle_batch_ratio: float = 1
     small_init_batch_size: bool = True
+    embedding_step: int = 1000
 
     do_tracking: bool = False
     tracking_gt_file: str = ''
