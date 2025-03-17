@@ -5,19 +5,19 @@ simulation:
     connectivity_file: 'random'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
-    connectivity_distribution: 'Lorentz_structured_0.75_0.15'
-    params: [[10.0,1.0,1.0],[10.0,2.0,1.0],[10.0,1.0,2.0],[10.0,2.0,2.0]]
+    connectivity_distribution: 'Lorentz_structured_0.45_1.00'
+    params: [[10.0,1.0,1.0,1.0],[10.0,2.0,1.0,1.2],[10.0,1.0,2.0,1.4],[10.0,2.0,2.0,1.6]]
     phi: 'tanh'
     tau: 1.0
     min_radius: 1.0
     max_radius: 1.0E6
     n_particles: 1024
-    n_particle_types: 32
+    n_particle_types: 4
     n_frames: 100000
     delta_t: 0.01
     dpos_init:  0
     boundary: 'no'
-    start_frame: -1000
+    start_frame: 0
 
 graph_model:
     signal_model_name: 'PDE_N4'
@@ -52,6 +52,7 @@ training:
     recursive_loop: 1
     batch_size: 1
     small_init_batch_size: False
+    epoch_reset: 5
 
     rotation_augmentation: False
     data_augmentation_loop: 100

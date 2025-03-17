@@ -30,14 +30,13 @@ graph_model:
     hidden_dim: 64
     n_mp_layers: 3
 
-    input_size_update: 4
+    input_size_update: 3
     n_layers_update: 5
     hidden_dim_update: 64
 
     aggr_type: 'add'
     embedding_dim: 2
-    update_type: 'intricated'
-
+    update_type: 'none'
 
 plotting:
     colormap: 'tab10'
@@ -46,27 +45,26 @@ plotting:
     ylim: [-8,8]
 
 training:
-    n_epochs: 10
     n_runs: 2
     device: 'auto'
-
-    epoch_reset: 1
+    
+    n_epochs: 10
     recursive_loop: 1
     batch_size: 1
-    small_init_batch_size: False
+    small_init_batch_size: True
 
-    sparsity: 'none'
     rotation_augmentation: False
     data_augmentation_loop: 50
+
+    sparsity: 'none'
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
-
-    sparsity: 'replace_embedding_function'
     sparsity_freq: 4
 
     learning_rate_W_start: 1.0E-4
     learning_rate_start: 5.0E-5
-    learning_rate_embedding_start: 5.0E-4
+    learning_rate_embedding_start: 5.0E-3
+
+    coeff_diff: 100
 
     noise_level: 1
-

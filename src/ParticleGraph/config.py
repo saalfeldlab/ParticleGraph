@@ -171,7 +171,6 @@ class TrainingConfig(BaseModel):
     
     n_epochs: int = 20
     n_epochs_init: int = 2
-    n_epochs_init: int = 2
     epoch_reset: int = -1
     batch_size: int = 1
     particle_batch_ratio: float = 1

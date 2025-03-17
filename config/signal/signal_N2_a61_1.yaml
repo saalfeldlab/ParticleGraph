@@ -5,8 +5,8 @@ simulation:
     connectivity_file: 'random'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
-    connectivity_distribution: 'Lorentz'
-    params: [[10.0,1.0,1.0],[10.0,2.0,1.0],[10.0,1.0,2.0],[10.0,2.0,2.0]]
+    connectivity_distribution: 'Lorentz_structured_0.5_1.0'
+    params: [[1.0,1.0,1.0],[1.0,2.0,1.0],[1.0,1.0,2.0],[1.0,2.0,2.0]]
     phi: 'tanh'
     tau: 1.0
     min_radius: 1.0
@@ -30,13 +30,13 @@ graph_model:
     hidden_dim: 64
     n_mp_layers: 3
 
-    input_size_update: 4
+    input_size_update: 3
     n_layers_update: 5
     hidden_dim_update: 64
 
     aggr_type: 'add'
     embedding_dim: 2
-    update_type: 'intricated'
+    update_type: 'none'
 
 plotting:
     colormap: 'tab10'
@@ -47,7 +47,7 @@ plotting:
 training:
     n_epochs: 10
     recursive_loop: 1
-    batch_size: 10
+    batch_size: 1
     small_init_batch_size: True
     n_runs: 2
     device: 'auto'
@@ -64,6 +64,8 @@ training:
     learning_rate_W_start: 1.0E-3
     learning_rate_start: 5.0E-4
     learning_rate_embedding_start: 5.0E-3
+
+    coeff_diff: 100
 
     noise_level: 1
 

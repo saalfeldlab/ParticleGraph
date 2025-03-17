@@ -37,13 +37,13 @@ graph_model:
     hidden_dim: 64
     n_mp_layers: 3
 
-    input_size_update: 4
+    input_size_update: 3
     n_layers_update: 5
     hidden_dim_update: 64
 
     aggr_type: 'add'
     embedding_dim: 2
-    update_type: 'intricated'
+    update_type: 'none'
 
 plotting:
     colormap: 'tab20'
@@ -54,7 +54,7 @@ plotting:
 training:
     n_epochs: 10
     recursive_loop: 1
-    batch_size: 10
+    batch_size: 1
     small_init_batch_size: True
     n_runs: 2
     device: 'auto'
@@ -71,6 +71,8 @@ training:
     learning_rate_W_start: 1.0E-3
     learning_rate_start: 5.0E-4
     learning_rate_embedding_start: 5.0E-3
+
+    coeff_diff: 100
 
     noise_level: 1
 

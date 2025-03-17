@@ -38,7 +38,6 @@ graph_model:
     embedding_dim: 2
     update_type: 'intricated'
 
-
 plotting:
     colormap: 'tab10'
     arrow_length: 1
@@ -46,23 +45,26 @@ plotting:
     ylim: [-8,8]
 
 training:
-    n_epochs: 20
+    n_epochs: 10
     recursive_loop: 1
-    batch_size: 10
+    batch_size: 1
     small_init_batch_size: True
     n_runs: 2
+    device: 'auto'
+    epoch_reset: 2
+
     sparsity: 'none'
     rotation_augmentation: False
     data_augmentation_loop: 50
+
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
-    device: 'auto'
-    sparsity: 'replace_embedding_function'
     sparsity_freq: 4
 
     learning_rate_W_start: 1.0E-3
     learning_rate_start: 5.0E-4
     learning_rate_embedding_start: 5.0E-3
 
-    noise_level: 1
+    coeff_diff: 100
 
+    noise_level: 1
