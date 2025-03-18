@@ -65,7 +65,7 @@ if __name__ == '__main__':
         # config_list = ['signal_N2_e5']
         # config_list = ['cell_MDCK_3']
         # config_list = ['rat_city_f']
-        config_list = ['signal_N2_a43_1', 'signal_N2_a43_2', 'signal_N2_a43_3', 'signal_N2_a43_4', 'signal_N2_a43_5', 'signal_N2_a44_1', 'signal_N2_a44_2', 'signal_N2_a44_3', 'signal_N2_a44_4', 'signal_N2_a44_5']
+        config_list = ['signal_N4_a2']
         # config_list = ['signal_N2_a37_bis']
 
     for config_file_ in config_list:

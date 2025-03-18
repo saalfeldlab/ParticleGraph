@@ -93,7 +93,7 @@ def get_in_features(rr, embedding_=[], config_model=[], max_radius=[]):
                                      rr[:, None] / max_radius, embedding_, embedding_), dim=1)
 
         case 'PDE_N2' | 'PDE_N3' | 'PDE_N6' :
-            in_features = torch.cat((rr[:, None], embedding_), dim=1)
+            in_features = rr[:, None]
         case 'PDE_N4' | 'PDE_N7' | 'PDE_N8':
             in_features = torch.cat((rr[:, None], embedding_), dim=1)
         case 'PDE_N5':
@@ -963,7 +963,6 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
             embedding_ = model_a[n_nodes + n, :] * torch.ones((1000, config.graph_model.embedding_dim),device=device)
         else:
             embedding_ = model_a[dataset_number, n_nodes+n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-
         if update_type == 'intricated':
             in_features = get_in_features_update(rr[:, None], n_particles, embedding_, update_type, device)
         else:
@@ -974,7 +973,7 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
         func = func[:, 0]
         func_list.append(func)
         if ((n % 5 == 0) | (config.graph_model.particle_model_name=='PDE_GS') | ('PDE_N' in config_model)) & vizualize:
-            plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),2, color=cmap.color(type_list[n].astype(int)), linewidth=4, alpha=0.25)
+            plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),2, color=cmap.color(type_list[n].astype(int)), linewidth=1, alpha=0.25)
 
     func_list = torch.stack(func_list)
     func_list_ = to_numpy(func_list)

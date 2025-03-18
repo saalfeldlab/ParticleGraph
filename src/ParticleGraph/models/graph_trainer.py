@@ -2390,7 +2390,7 @@ def data_train_synaptic2(config, erase, best_model, device):
             coeff_diff_update = 0
         logger.info(f'coeff_L1: {coeff_L1} coeff_diff: {coeff_diff}')
         
-        if epoch == train_config.epoch_reset:
+        if (epoch == train_config.epoch_reset) | ((epoch>0) & (epoch % train_config.epoch_reset_freq == 0)):
             with torch.no_grad():
                 model.W.copy_(model.W * 0)
                 model.a.copy_(model.a * 0)
@@ -2835,16 +2835,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         ax = fig.add_subplot(2, 5, 10)
         rr = torch.linspace(-xnorm, xnorm, 1000, device=device)
         for n in range(n_particles):
-            if ('PDE_N4' in config.graph_model.signal_model_name) | (
-                    'PDE_N7' in config.graph_model.signal_model_name) | (
-                    'PDE_N8' in config.graph_model.signal_model_name):
-                embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-                in_features = torch.cat((rr[:, None], embedding_), dim=1)
-            elif 'PDE_N5' in config.graph_model.signal_model_name:
-                embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-                in_features = torch.cat((rr[:, None], embedding_, embedding_), dim=1)
-            else:
-                in_features = rr[:, None]
+            in_features = get_in_features(rr, model.a.squeeze(), model_config.signal_model_name)
             with torch.no_grad():
                 func = model.lin_edge(in_features.float())
             if model_config.lin_edge_positive:
