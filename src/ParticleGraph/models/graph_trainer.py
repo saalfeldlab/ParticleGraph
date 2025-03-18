@@ -2517,17 +2517,20 @@ def data_train_synaptic2(config, erase, best_model, device):
                         func_edge = model.lin_edge(in_features.float())
                         in_features = torch.cat((x[:, 6:7], model.a), dim=1)
                         in_features_next = torch.cat((x[:, 6:7] + 0.1, model.a), dim=1)
-                        diff = torch.relu(model.lin_edge(in_features) - model.lin_edge(in_features_next)).norm(2) * coeff_diff
                     elif model_config.signal_model_name == 'PDE_N5':
                         in_features = torch.zeros((n_particles, 2 * dimension + 1), device=device)
                         func_edge = model.lin_edge(in_features.float())
                         in_features = torch.cat((x[:, 6:7], model.a, model.a), dim=1)
                         in_features_next = torch.cat((x[:, 6:7] + 0.1, model.a, model.a), dim=1)
-                        diff = torch.relu(model.lin_edge(in_features) - model.lin_edge(in_features_next)).norm(2) * coeff_diff
                     else:
                         in_features = torch.zeros((n_particles, 1), device=device)
                         func_edge = model.lin_edge(in_features.float())
-                        diff = torch.relu(model.lin_edge(x[:, 6:7].clone().detach()) - model.lin_edge(x[:, 6:7].clone().detach() + 0.1)).norm(2) * coeff_diff
+                        in_features = x[:, 6:7]
+                        in_features_next = x[:, 6:7] + 0.1
+                    if model_config.lin_edge_positive:
+                        diff = torch.relu(model.lin_edge(in_features) ** 2 - model.lin_edge(in_features_next) ** 2).norm(2) * coeff_diff
+                    else:
+                        diff = torch.relu(model.lin_edge(in_features) - model.lin_edge(in_features_next)).norm(2) * coeff_diff
                     if model.update_type == 'intricated':
                         in_features = get_in_features_update(x[:, 6:7].clone().detach(), n_particles, model.a, model.update_type, device)
                         in_features[:,-1] = x[:, 6]
@@ -2855,7 +2858,7 @@ def data_train_synaptic2(config, erase, best_model, device):
 
             if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5') | (model_config.signal_model_name == 'PDE_N8'):
                 model_MLP = model.lin_edge
-                update_type = ''
+                update_type = 'NA'
             else:
                 model_MLP = model.lin_phi
                 update_type = model.update_type
