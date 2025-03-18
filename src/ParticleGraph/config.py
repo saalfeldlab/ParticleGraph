@@ -109,6 +109,9 @@ class GraphModelConfig(BaseModel):
     output_size: int
     hidden_dim: int
     n_mp_layers: int
+
+    lin_edge_positive: bool = False
+
     aggr_type: str
 
     mesh_aggr_type: str = 'add'
@@ -229,6 +232,7 @@ class TrainingConfig(BaseModel):
     coeff_continuous: float = 0
 
     noise_level: float = 0
+    measurement_noise_level: float = 0
     time_window_noise: float = 0
     rotation_augmentation: bool = False
     translation_augmentation: bool = False

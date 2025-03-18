@@ -108,7 +108,7 @@ def get_in_features(rr, embedding_=[], config_model=[], max_radius=[]):
 
     return in_features
 
-def plot_training_signal(config, model, adjacency, ynorm, log_dir, epoch, N, n_particles, n_particle_types, type_list, cmap, device):
+def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_particles, n_particle_types, type_list, cmap, device):
 
     if 'PDE_N3' in config.graph_model.signal_model_name:
 
@@ -150,7 +150,7 @@ def plot_training_signal(config, model, adjacency, ynorm, log_dir, epoch, N, n_p
     plt.close()
 
     fig = plt.figure(figsize=(8, 8))
-    rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
+    rr = torch.linspace(-xnorm, xnorm, 1000, device=device)
     for n in range(n_particles):
         if ('PDE_N4' in config.graph_model.signal_model_name) | ('PDE_N7' in config.graph_model.signal_model_name) | ('PDE_N8' in config.graph_model.signal_model_name):
             embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
@@ -162,13 +162,16 @@ def plot_training_signal(config, model, adjacency, ynorm, log_dir, epoch, N, n_p
             in_features = rr[:, None]
         with torch.no_grad():
             func = model.lin_edge(in_features.float())
+        if config.graph_model.lin_edge_positive:
+            func=func**2
         if (n % 2 == 0):
             plt.plot(to_numpy(rr), to_numpy(func),2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
+    plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/func_{epoch}_{N}.tif", dpi=87)
     plt.close()
 
     fig = plt.figure(figsize=(8, 8))
-    rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
+    rr = torch.linspace(-xnorm, xnorm, 1000, device=device)
     for n in range(n_particles):
         embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
         in_features = get_in_features_update(rr=rr[:, None], n_particles=n_particles, model_a=embedding_, model_update_type=model.update_type, device=device)
@@ -176,7 +179,7 @@ def plot_training_signal(config, model, adjacency, ynorm, log_dir, epoch, N, n_p
             func = model.lin_phi(in_features.float())
         if (n % 2 == 0):
             plt.plot(to_numpy(rr), to_numpy(func),2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.1)
-    plt.ylim([-5,5])
+    # plt.ylim([-5,5])
     plt.savefig(f"./{log_dir}/tmp_training/function/lin_phi/func_{epoch}_{N}.tif", dpi=87)
     plt.close()
 
@@ -977,7 +980,7 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
     func_list_ = to_numpy(func_list)
 
     if vizualize:
-        plt.ylim(config.plotting.ylim)
+        # plt.ylim(config.plotting.ylim)
         if config.graph_model.particle_model_name == 'PDE_GS':
             plt.xscale('log')
             plt.yscale('log')

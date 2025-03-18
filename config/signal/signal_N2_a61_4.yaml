@@ -61,6 +61,7 @@ training:
     fix_cluster_embedding: True
     sparsity: 'replace_embedding_function'
     sparsity_freq: 4
+    cluster_distance_threshold: 0.1
 
     learning_rate_W_start: 1.0E-4
     learning_rate_start: 5.0E-5

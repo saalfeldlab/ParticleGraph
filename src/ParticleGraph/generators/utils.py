@@ -116,6 +116,8 @@ def choose_model(config=[], W=[], device=[]):
             phi=torch.tanh
         case 'relu':
             phi=torch.relu
+        case 'sigmoid':
+            phi=torch.sigmoid
         case _:
             phi=torch.sigmoid
 
@@ -285,7 +287,9 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
         features = torch.cat((torch.rand((n_particles, 1), device=device), 0.1 * torch.randn((n_particles, 1), device=device),
                               torch.ones((n_particles, 1), device=device), torch.zeros((n_particles, 1), device=device)), 1)
     else:
-        features = torch.cat((torch.rand((n_particles, 1), device=device), 0.1 * torch.randn((n_particles, 1), device=device)), 1)
+        # features = torch.cat((torch.rand((n_particles, 1), device=device), 0.1 * torch.randn((n_particles, 1), device=device)), 1)
+        features = torch.cat(
+            (torch.randn((n_particles, 1), device=device) * 5 , 0.1 * torch.randn((n_particles, 1), device=device)), 1)
 
 
     type = type[:, None]

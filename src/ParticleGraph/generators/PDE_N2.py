@@ -41,10 +41,14 @@ class PDE_N2(pyg.nn.MessagePassing):
 
         u = x[:, 6:7]
 
-        self.msg = self.W*self.phi(u)
+        if has_field:
+            field = x[:, 8:9]
+        else:
+            field = torch.ones_like(x[:, 6:7])
+
         msg = torch.matmul(self.W, self.phi(u))
 
-        du = -c * u + s * self.phi(u) + g * msg
+        du = -c * u + s * torch.tanh(u) + g * msg * field
 
         return du
 

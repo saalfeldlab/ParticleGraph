@@ -42,6 +42,8 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         self.hidden_dim = model_config.hidden_dim
         self.n_layers = model_config.n_mp_layers
 
+        self.lin_edge_positive = model_config.lin_edge_positive
+
         self.n_layers_update = model_config.n_layers_update
         self.hidden_dim_update = model_config.hidden_dim_update
         self.input_size_update = model_config.input_size_update
@@ -151,14 +153,18 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
 
         T = self.W * self.mask
 
+        line_edge = self.lin_edge(in_features)
+        if self.lin_edge_positive:
+            line_edge = line_edge**2
+
         if self.return_all:
-            self.msg = T[edge_index_i%self.n_particles, edge_index_j%self.n_particles][:,None] * self.lin_edge(in_features) * field_i
+            self.msg = T[edge_index_i%self.n_particles, edge_index_j%self.n_particles][:,None] * line_edge * field_i
             return self.msg
         else:
             if (self.batch_size==1):
-                return T[edge_index_i, edge_index_j][:, None] * self.lin_edge(in_features) * field_i
+                return T[edge_index_i, edge_index_j][:, None] * line_edge * field_i
             else:
-                return T[edge_index_i%self.n_particles, edge_index_j%self.n_particles][:,None] * self.lin_edge(in_features) * field_i
+                return T[edge_index_i%self.n_particles, edge_index_j%self.n_particles][:,None] * line_edge * field_i
 
 
     def update(self, aggr_out):

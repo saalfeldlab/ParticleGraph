@@ -2232,6 +2232,14 @@ def data_train_synaptic2(config, erase, best_model, device):
         y_list.append(y)
     x = x_list[0][n_frames - 1]
 
+    activity = torch.tensor(x_list[0][:, :, 6:7],device=device)
+    activity = activity.squeeze()
+    distrib =activity.flatten()
+    xnorm = torch.round(1.5*torch.std(distrib).to(device))
+    torch.save(xnorm, os.path.join(log_dir, 'xnorm.pt'))
+    print(f'xnorm: {to_numpy(xnorm)}')
+    logger.info(f'xnorm: {to_numpy(xnorm)}')
+
     n_particles = x.shape[0]
     print(f'N particles: {n_particles}')
     logger.info(f'N particles: {n_particles}')
@@ -2597,7 +2605,7 @@ def data_train_synaptic2(config, erase, best_model, device):
             visualize_embedding = True
             if visualize_embedding & ((N % plot_frequency == 0) | (N == 0)):
                 with torch.no_grad():
-                    plot_training_signal(config, model, adjacency, ynorm, log_dir, epoch, N, n_particles,
+                    plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_particles,
                                          n_particle_types, type_list, cmap, device)
                     torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
                                os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
@@ -2824,6 +2832,31 @@ def data_train_synaptic2(config, erase, best_model, device):
         ax.text(0.01, 0.99, f'$R^2$ {r_squared:0.3f}   slope {lin_fit[0]:0.3f}', transform=ax.transAxes,
                 verticalalignment='top', horizontalalignment='left')
 
+        ax = fig.add_subplot(2, 5, 10)
+        rr = torch.linspace(-xnorm, xnorm, 1000, device=device)
+        for n in range(n_particles):
+            if ('PDE_N4' in config.graph_model.signal_model_name) | (
+                    'PDE_N7' in config.graph_model.signal_model_name) | (
+                    'PDE_N8' in config.graph_model.signal_model_name):
+                embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                in_features = torch.cat((rr[:, None], embedding_), dim=1)
+            elif 'PDE_N5' in config.graph_model.signal_model_name:
+                embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                in_features = torch.cat((rr[:, None], embedding_, embedding_), dim=1)
+            else:
+                in_features = rr[:, None]
+            with torch.no_grad():
+                func = model.lin_edge(in_features.float())
+            if model_config.lin_edge_positive:
+                func = func ** 2
+            if (n % 2 == 0):
+                plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)),
+                         linewidth=2, alpha=0.25)
+        if model_config.lin_edge_positive:
+            plt.ylim([0, 2])
+        else:
+            plt.ylim([-1, 1])
+
         if ('PDE_N3' not in model_config.signal_model_name):
 
             ax = fig.add_subplot(2, 5, 6)
@@ -2836,7 +2869,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                 model_MLP = model.lin_phi
                 update_type = model.update_type
 
-            func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config,
+            func_list, proj_interaction = analyze_edge_function(rr=torch.linspace(-xnorm, xnorm, 1000, device=device), vizualize=True, config=config,
                                                                 model_MLP=model_MLP, model_a=model.a,
                                                                 n_nodes=0,
                                                                 dataset_number=1,

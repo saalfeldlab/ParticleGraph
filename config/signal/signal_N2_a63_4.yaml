@@ -62,6 +62,7 @@ training:
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     sparsity_freq: 4
+    cluster_distance_threshold: 0.1
 
     learning_rate_W_start: 1.0E-3
     learning_rate_start: 5.0E-4

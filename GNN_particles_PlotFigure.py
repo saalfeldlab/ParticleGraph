@@ -4585,7 +4585,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
     # fs = 1000  # Sampling frequency
     # t = np.arange(0, 1, 1 / fs)  # Time vector
     # frequency = 5  # Frequency of the sine wave
-    # desired_snr_db = snr  # Desired SNR in dB
+    # desired_snr_db = 10 * np.log10(snr)  # Desired SNR in dB
     # # Generate a clean signal (sine wave)
     # clean_signal = np.sin(2 * np.pi * frequency * t)
     # # Calculate the power of the clean signal

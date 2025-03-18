@@ -45,7 +45,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
 
     if (os.path.isfile(f'./graphs_data/{dataset_name}/x_list_0.npy')) | (os.path.isfile(f'./graphs_data/{dataset_name}/x_list_0.pt')):
         print('watch out: data already generated')
-        # return
+        return
 
     if has_city:
         data_generate_rat_city(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
@@ -1534,6 +1534,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     dataset_name = config.dataset
     excitation = simulation_config.excitation
     noise_level = training_config.noise_level
+    measurement_noise_level = training_config.measurement_noise_level
     cmap = CustomColorMap(config=config)
 
     field_type = model_config.field_type
@@ -1781,14 +1782,14 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
             # append list
             if (it >= 0) & bSave:
-                if has_particle_dropout:
-                    x_ = x[particle_dropout_mask].clone().detach()
-                    x_[:, 0] = torch.arange(len(x_), device=device)
-                    x_list.append(x_)
-                    x_ = x[inv_particle_dropout_mask].clone().detach()
-                    x_[:, 0] = torch.arange(len(x_), device=device)
-                    x_removed_list.append(x[inv_particle_dropout_mask].clone().detach())
-                    y_list.append(y[particle_dropout_mask].clone().detach())
+                if measurement_noise_level>0:
+                    noisex = torch.randn_like(x[:,6]) * measurement_noise_level
+                    noisey = (torch.randn_like(y) * measurement_noise_level - noisex[:,None]) / delta_t
+                    x_ = x
+                    x_[:,6] = x[:,6] + noisex
+                    y_ = y + noisey
+                    x_list.append(to_numpy(x_))
+                    y_list.append(to_numpy(y_))
                 else:
                     x_list.append(to_numpy(x))
                     y_list.append(to_numpy(y))
@@ -1929,6 +1930,90 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             # torch.save(y_list, f'graphs_data/{dataset_name}/y_list_{run}.pt')
             np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list)
             torch.save(model.p, f'graphs_data/{dataset_name}/model_p.pt')
+
+        activity = torch.tensor(x_list[:, :, 6:7], device=device)
+        activity = activity.squeeze()
+        activity = activity.t()
+        plt.figure(figsize=(15, 10))
+        ax = sns.heatmap(to_numpy(activity), center=0, cmap='viridis', cbar_kws={'fraction': 0.046})
+        cbar = ax.collections[0].colorbar
+        cbar.ax.tick_params(labelsize=32)
+        ax.invert_yaxis()
+        plt.ylabel('neurons', fontsize=64)
+        plt.xlabel('time', fontsize=64)
+        plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
+        plt.yticks([0, 999], [1, 1000], fontsize=48)
+        plt.xticks(rotation=0)
+        plt.tight_layout()
+        plt.savefig(f'graphs_data/{dataset_name}/kinograph.png', dpi=300)
+        plt.close()
+
+        plt.figure(figsize=(15, 10))
+        n = np.random.permutation(n_particles)
+        for i in range(25):
+            plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=2)
+        plt.xlabel('time', fontsize=64)
+        plt.ylabel('$x_{i}$', fontsize=64)
+        # plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
+        plt.xticks(fontsize=48)
+        plt.yticks(fontsize=48)
+        plt.tight_layout()
+        plt.savefig(f'graphs_data/{dataset_name}/activity.png', dpi=300)
+        plt.xlim([0, 1000])
+        plt.tight_layout()
+        plt.savefig(f'graphs_data/{dataset_name}/activity_1000.png', dpi=300)
+        plt.close()
+
+        if (noise_level>0) | (measurement_noise_level>0):
+
+            plt.figure(figsize=(15, 10))
+            window_size = 25
+            window_end = 50000
+            ts = to_numpy(activity[600, :])
+            ts_avg = np.convolve(ts, np.ones(window_size) / window_size, mode='valid')
+            plt.plot(ts[window_size // 2:window_end + window_size // 2], linewidth=1)
+            plt.plot(ts_avg, linewidth=2)
+            plt.plot(ts[window_size // 2:window_end + window_size // 2] - ts_avg[0:window_end])
+            plt.xlim([window_end - 5000, window_end])
+            plt.savefig(f'graphs_data/{dataset_name}/noise.png', dpi=300)
+            plt.close()
+            signal_power = np.mean(ts_avg[window_size // 2:window_end + window_size // 2] ** 2)
+            # Compute the noise power
+            noise_power = np.mean((ts[window_size // 2:window_end + window_size // 2] - ts_avg[0:window_end]) ** 2)
+            # Calculate the signal-to-noise ratio (SNR)
+            snr = signal_power / noise_power
+            print(f"Signal-to-Noise Ratio (SNR): {snr:0.2f} 10log10 {10 * np.log10(snr):0.2f}")
+
+            # Parameters
+            fs = 1000  # Sampling frequency
+            t = np.arange(0, 1, 1 / fs)  # Time vector
+            frequency = 5  # Frequency of the sine wave
+            desired_snr_db = 10 * np.log10(snr)  # Desired SNR in dB
+            # Generate a clean signal (sine wave)
+            clean_signal = np.sin(2 * np.pi * frequency * t)
+            # Calculate the power of the clean signal
+            signal_power = np.mean(clean_signal ** 2)
+            # Calculate the noise power required to achieve the desired SNR
+            desired_snr_linear = 10 ** (desired_snr_db / 10)
+            noise_power = signal_power / desired_snr_linear
+            # Generate noise with the calculated power
+            noise = np.sqrt(noise_power) * np.random.randn(len(t))
+            # Create a noisy signal by adding noise to the clean signal
+            noisy_signal = clean_signal + noise
+            # Plot the clean signal and the noisy signal
+            plt.figure(figsize=(15, 10))
+            plt.subplot(2, 1, 1)
+            plt.plot(t, clean_signal)
+            plt.title('Clean Signal')
+            plt.subplot(2, 1, 2)
+            plt.plot(t, noisy_signal)
+            plt.plot(t, noise)
+            plt.title(f'Noisy Signal with SNR = {desired_snr_db} dB')
+            plt.tight_layout()
+            plt.savefig(f'graphs_data/{dataset_name}/noise_on_sinusoid.png', dpi=300)
+            plt.close()
+
+
 
         # torch.cuda.memory_allocated(device)
         # gc.collect()

@@ -14,11 +14,11 @@ simulation:
     n_particles: 1000
     n_particle_types: 4
     n_interactions: 4
-    n_frames: 100000
+    n_frames: 500
     delta_t: 0.01
     dpos_init:  0
     boundary: 'no'
-    start_frame: -1000
+    start_frame: 0
 
 graph_model:
     signal_model_name: 'PDE_N2'
@@ -48,7 +48,7 @@ training:
     recursive_loop: 1
     batch_size: 1
     small_init_batch_size: False
-    n_runs: 2
+    n_runs: 1
     sparsity: 'none'
     rotation_augmentation: False
     data_augmentation_loop: 50
@@ -61,4 +61,6 @@ training:
     learning_rate_W_start: 1.0E-4
     learning_rate_start: 5.0E-5
     learning_rate_embedding_start: 5.0E-4
+
+    noise_level: 1
 

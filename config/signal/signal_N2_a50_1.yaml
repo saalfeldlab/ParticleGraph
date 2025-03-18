@@ -1,21 +1,18 @@
-description: 'test 50,000 nodes'
-dataset: 'signal_N2_a50_1'
+description: 'test 10^5 time points  LRs 1E-4 5E-5 5E-4     synaptic network random matrix no recursive loop 1000 neurons 4 types lorentz std 0.03'
+dataset: 'signal_N2_a50'
 
 simulation:
     connectivity_file: 'random'
-    connectivity_mask: True
     adjacency_matrix: ''
-    connectivity_filling_factor: 0.10
     connectivity_init: [0,0.1]
     connectivity_distribution: 'Lorentz'
-    params: [[10.0,1.0,1.0],[10.0,2.0,1.0],[10.0,1.0,2.0],[10.0,2.0,2.0]]
-    phi: 'tanh'
+    params: [[150.0,1.0,5.0],[150.0,2.0,5.0],[150.0,1.0,10.0],[150.0,2.0,10.0]]
+    phi: 'sigmoid'
     tau: 1.0
     min_radius: 1.0
     max_radius: 1.0E6
-    n_particles: 25000
+    n_particles: 1000
     n_particle_types: 4
-    n_interactions: 4
     n_frames: 100000
     delta_t: 0.01
     dpos_init:  0
@@ -27,13 +24,16 @@ graph_model:
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
+
     input_size: 1
     output_size: 1
     hidden_dim: 64
     n_mp_layers: 3
+
     input_size_update: 3
-    n_layers_update: 3
-    hidden_dim_update: 64
+    n_layers_update: 5
+    hidden_dim_update: 128
+
     aggr_type: 'add'
     embedding_dim: 2
     update_type: 'none'
@@ -42,26 +42,31 @@ plotting:
     colormap: 'tab10'
     arrow_length: 1
     xlim: [-5,5]
-    ylim: [-8,8]
+    ylim: [-30,30]
 
 training:
-    device: 'auto'
     n_runs: 2
+    device: 'auto'
 
-    n_epochs: 20
+    n_epochs: 10
     recursive_loop: 1
     batch_size: 1
-    small_init_batch_size: False
+    small_init_batch_size: True
 
     rotation_augmentation: False
     data_augmentation_loop: 50
 
     sparsity: 'none'
-    sparsity_freq: 4
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
+    sparsity_freq: 4
+    cluster_distance_threshold: 0.1
 
-    learning_rate_W_start: 1.0E-4
-    learning_rate_start: 5.0E-5
+    learning_rate_W_start: 1.0E-3
+    learning_rate_start: 5.0E-4
     learning_rate_embedding_start: 5.0E-4
+
+    coeff_diff: 100
+
+    noise_level: 2
 
