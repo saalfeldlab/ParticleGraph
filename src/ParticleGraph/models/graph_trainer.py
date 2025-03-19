@@ -2394,7 +2394,7 @@ def data_train_synaptic2(config, erase, best_model, device):
             with torch.no_grad():
                 model.W.copy_(model.W * 0)
                 model.a.copy_(model.a * 0)
-            logger.info(f'reset W model.a at epoch : {train_config.epoch_reset}')
+            logger.info(f'reset W model.a at epoch : {epoch}')
 
         batch_size = int(get_batch_size(epoch) / particle_batch_ratio)
         logger.info(f'batch_size: {batch_size}')
@@ -2838,7 +2838,8 @@ def data_train_synaptic2(config, erase, best_model, device):
         ax = fig.add_subplot(2, 5, 10)
         rr = torch.linspace(-xnorm, xnorm, 1000, device=device)
         for n in range(n_particles):
-            in_features = get_in_features(rr, model.a.squeeze(), model_config.signal_model_name)
+            embedding_ = model.a[n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
+            in_features = get_in_features(rr, embedding_, model_config.signal_model_name)
             with torch.no_grad():
                 func = model.lin_edge(in_features.float())
             if model_config.lin_edge_positive:
@@ -2846,22 +2847,22 @@ def data_train_synaptic2(config, erase, best_model, device):
             if (n % 2 == 0):
                 plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)),
                          linewidth=2, alpha=0.25)
-        if model_config.lin_edge_positive:
-            plt.ylim([0, 2])
-        else:
-            plt.ylim([-1, 1])
+        # if model_config.lin_edge_positive:
+        #     plt.ylim([0, 2])
+        # else:
+        #     plt.ylim([-1, 1])
 
         if ('PDE_N3' not in model_config.signal_model_name):
 
             ax = fig.add_subplot(2, 5, 6)
             embedding = to_numpy(model.a.squeeze())
 
-            if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5') | (model_config.signal_model_name == 'PDE_N8'):
-                model_MLP = model.lin_edge
-                update_type = 'NA'
-            else:
-                model_MLP = model.lin_phi
-                update_type = model.update_type
+            # if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5') | (model_config.signal_model_name == 'PDE_N8'):
+            #     model_MLP = model.lin_edge
+            #     update_type = 'NA'
+            # else:
+            model_MLP = model.lin_phi
+            update_type = model.update_type
 
             func_list, proj_interaction = analyze_edge_function(rr=torch.linspace(-xnorm, xnorm, 1000, device=device), vizualize=True, config=config,
                                                                 model_MLP=model_MLP, model_a=model.a,

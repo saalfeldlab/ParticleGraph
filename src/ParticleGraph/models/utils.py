@@ -149,6 +149,7 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
     plt.savefig(f"./{log_dir}/tmp_training/matrix/comparison_{epoch}_{N}.tif", dpi=87)
     plt.close()
 
+    all_func_values = []
     fig = plt.figure(figsize=(8, 8))
     rr = torch.linspace(-xnorm, xnorm, 1000, device=device)
     for n in range(n_particles):
@@ -164,9 +165,12 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
             func = model.lin_edge(in_features.float())
         if config.graph_model.lin_edge_positive:
             func=func**2
+        all_func_values.append(func)
         if (n % 2 == 0):
             plt.plot(to_numpy(rr), to_numpy(func),2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
-    plt.ylim([-1,1])
+    all_func_values = torch.cat(all_func_values)
+    y_min, y_max = all_func_values.min().item(), all_func_values.max().item()
+    plt.ylim([y_min, y_max])
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/func_{epoch}_{N}.tif", dpi=87)
     plt.close()
