@@ -1,5 +1,5 @@
 description: 'test 10^5 time points  LRs 1E-4 5E-5 5E-4     synaptic network random matrix no recursive loop 1000 neurons 4 types lorentz std 0.03'
-dataset: 'signal_N2_a43_4'
+dataset: 'signal_N2_a43_3'
 
 simulation:
     connectivity_file: 'random'
@@ -45,22 +45,24 @@ plotting:
 
 training:
     n_epochs: 20
+    n_runs: 2
+    device: 'auto'
+
     recursive_loop: 1
     batch_size: 1
     small_init_batch_size: False
-    n_runs: 2
-    sparsity: 'none'
+
     rotation_augmentation: False
     data_augmentation_loop: 50
+
+    sparsity: 'none'
+    sparsity_freq: 4
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
-    device: 'auto'
-    sparsity: 'replace_embedding_function'
-    sparsity_freq: 4
 
     learning_rate_W_start: 1.0E-3
     learning_rate_start: 5.0E-4
     learning_rate_embedding_start: 5.0E-3
 
-    measurement_noise_level: 4.0
+    measurement_noise_level: 0.4
 
