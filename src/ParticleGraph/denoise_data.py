@@ -96,7 +96,7 @@ def visualize_signals(original_signal, denoised_signal):
     plt.show()
 
 def to_numpy(tensor):
-    return tensor.cpu().numpy()
+    return tensor.detach().cpu().numpy()
 
 if __name__ == '__main__':
 

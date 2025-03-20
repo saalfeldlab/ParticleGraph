@@ -56,7 +56,7 @@ if __name__ == '__main__':
             best_model = None
     else:
         task = 'train'
-        best_model = '0_900000'
+        best_model = ''
         # config_list = ['falling_water_ramp_x6_11']
         # config_list = ['signal_N6_a29_1']
         # config_list = ['signal_N4_m12_shuffle']
@@ -65,7 +65,7 @@ if __name__ == '__main__':
         # config_list = ['signal_N2_e5']
         # config_list = ['cell_MDCK_3']
         # config_list = ['rat_city_f']
-        config_list = ['signal_N2_a43_10']
+        config_list = ['signal_N2_a43_17']
         # config_list = ['signal_N2_a37_bis']
 
     for config_file_ in config_list:

@@ -141,10 +141,8 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
     plt.ylabel(r'learned $W_{ij}$', fontsize=68)
     if n_particles == 8000:
         plt.xlim([-0.05, 0.05])
-        plt.ylim([-0.05, 0.05])
     else:
         plt.xlim([-0.2, 0.2])
-        plt.ylim([-0.2, 0.2])
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/matrix/comparison_{epoch}_{N}.tif", dpi=87)
     plt.close()
