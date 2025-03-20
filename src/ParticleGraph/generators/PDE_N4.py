@@ -66,7 +66,7 @@ class PDE_N4(pyg.nn.MessagePassing):
 
         msg = self.propagate(edge_index, u=u, t=t, b=b, field=field)
 
-        du = -c * u + s * self.phi(u) + g * msg
+        du = -c * u + s * torch.tanh(u) + g * msg
 
         return du
 

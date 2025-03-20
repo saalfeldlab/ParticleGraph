@@ -6,13 +6,13 @@ simulation:
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
     connectivity_distribution: 'Gaussian'
-    params: [[10.0,1.5,1.0],[10.0,1.5,1.0]]
+    params: [[10.0,1.5,1.0],[10.0,2.5,1.0],[10.0,1.5,2.0],[10.0,2.5,2.0]]
     phi: 'sigmoid'
     tau: 1.0
     min_radius: 1.0
     max_radius: 1.0E6
-    n_particles: 1000
-    n_particle_types: 2
+    n_particles: 1024
+    n_particle_types: 4
     n_frames: 100000
     delta_t: 0.01
     dpos_init:  0

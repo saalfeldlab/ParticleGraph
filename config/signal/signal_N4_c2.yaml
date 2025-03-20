@@ -5,7 +5,7 @@ simulation:
     connectivity_file: 'random'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
-    connectivity_distribution: 'Lorentz'
+    connectivity_distribution: 'Gaussian'
     params: [[10.0,1.5,1.0,1.0,-5.0],[10.0,2.5,1.0,1.0,0.0],[10.0,1.5,2.0,1.0,5.0],[10.0,2.5,2.0,1.0,7.5]]
     phi: 'sigmoid'
     tau: 1.0
@@ -30,13 +30,15 @@ graph_model:
     hidden_dim: 64
     n_mp_layers: 5
 
-    input_size_update: 4
+    lin_edge_positive: True
+
+    input_size_update: 3
     n_layers_update: 5
-    hidden_dim_update: 128
+    hidden_dim_update: 64
 
     aggr_type: 'add'
     embedding_dim: 2
-    update_type: 'intricated'
+    update_type: 'none'
 
 plotting:
     colormap: 'tab10'

@@ -1782,17 +1782,8 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
             # append list
             if (it >= 0) & bSave:
-                if measurement_noise_level>0:
-                    noisex = torch.randn_like(x[:,6]) * measurement_noise_level
-                    noisey = (torch.randn_like(y) * measurement_noise_level - noisex[:,None]) / delta_t
-                    x_ = x
-                    x_[:,6] = x[:,6] + noisex
-                    y_ = y + noisey
-                    x_list.append(to_numpy(x_))
-                    y_list.append(to_numpy(y_))
-                else:
-                    x_list.append(to_numpy(x))
-                    y_list.append(to_numpy(y))
+                x_list.append(to_numpy(x))
+                y_list.append(to_numpy(y))
 
             # Particle update
             if (config.graph_model.signal_model_name == 'PDE_N6') | (config.graph_model.signal_model_name == 'PDE_N7'):
@@ -1931,6 +1922,19 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list)
             torch.save(model.p, f'graphs_data/{dataset_name}/model_p.pt')
 
+        if measurement_noise_level > 0:
+            np.save(f'graphs_data/{dataset_name}/raw_x_list_{run}.npy', x_list)
+            np.save(f'graphs_data/{dataset_name}/raw_y_list_{run}.npy', y_list)
+
+            for k in range(x_list.shape[0]):
+                x_list[k, :, 6] = x_list[k, :, 6] + np.random.normal(0, measurement_noise_level, x_list.shape[1])
+            for k in range(1,x_list.shape[0]-1):
+                y_list[k] = (x_list[k+1, :, 6:7] - x_list[k, :, 6:7]) / delta_t
+
+            np.save(f'graphs_data/{dataset_name}/x_list_{run}.npy', x_list)
+            np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list)
+
+
         activity = torch.tensor(x_list[:, :, 6:7], device=device)
         activity = activity.squeeze()
         activity = activity.t()
@@ -1968,21 +1972,21 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
             plt.figure(figsize=(15, 10))
             window_size = 25
-            window_end = 50000
+            window_end = x_list.shape[0] - window_size
             ts = to_numpy(activity[600, :])
             ts_avg = np.convolve(ts, np.ones(window_size) / window_size, mode='valid')
             plt.plot(ts[window_size // 2:window_end + window_size // 2], linewidth=1)
             plt.plot(ts_avg, linewidth=2)
             plt.plot(ts[window_size // 2:window_end + window_size // 2] - ts_avg[0:window_end])
-            plt.xlim([window_end - 5000, window_end])
-            plt.savefig(f'graphs_data/{dataset_name}/noise.png', dpi=300)
-            plt.close()
+            # plt.xlim([window_end - 5000, window_end])
             signal_power = np.mean(ts_avg[window_size // 2:window_end + window_size // 2] ** 2)
             # Compute the noise power
             noise_power = np.mean((ts[window_size // 2:window_end + window_size // 2] - ts_avg[0:window_end]) ** 2)
             # Calculate the signal-to-noise ratio (SNR)
             snr = signal_power / noise_power
             print(f"Signal-to-Noise Ratio (SNR): {snr:0.2f} 10log10 {10 * np.log10(snr):0.2f}")
+            plt.savefig(f'graphs_data/{dataset_name}/noise.png', dpi=300)
+            plt.close()
 
             # Parameters
             fs = 1000  # Sampling frequency
@@ -2008,7 +2012,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             plt.subplot(2, 1, 2)
             plt.plot(t, noisy_signal)
             plt.plot(t, noise)
-            plt.title(f'Noisy Signal with SNR = {desired_snr_db} dB')
+            plt.title(f'Noisy Signal with SNR = {snr:0.2f} {desired_snr_db:0.2f} dB')
             plt.tight_layout()
             plt.savefig(f'graphs_data/{dataset_name}/noise_on_sinusoid.png', dpi=300)
             plt.close()

@@ -187,6 +187,9 @@ class TrainingConfig(BaseModel):
     distance_threshold: float = 0.1
     epoch_distance_replace: int = 20
 
+    denoise: bool = False
+    denoiser_type: Literal['none', 'LSTM', 'Gaussian_filter', 'wavelet'] = 'none'
+
     time_window: int=0
 
     n_runs: int = 2

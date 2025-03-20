@@ -1,18 +1,21 @@
 description: ''
-dataset: 'signal_N4_a2'
+dataset: 'signal_N4_c3'
 
 simulation:
     connectivity_file: 'random'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
-    connectivity_distribution: 'Lorentz'
-    params: [[2.0,1.0,1.0,1.0, -5.0],[2.0,2.0,1.0,1.0, 0.0],[2.0,1.0,2.0,1.0, 5.0],[2.0,2.0,2.0,1.0,10.0]]
-    phi: 'tanh'
+    connectivity_distribution: 'Gaussian_structured_0.60_1.00'
+    params: [[10.0,1.5,1.0,1.0,-8.0],[10.0,2.5,1.0,1.0,-7.0],[10.0,1.5,2.0,1.0,-6.0],[10.0,2.5,2.0,1.0,-5.0],
+            [10.0,1.5,1.0,1.0,-4.0],[10.0,2.5,1.0,1.0,-3.0],[10.0,1.5,2.0,1.0,-2.0],[10.0,2.5,2.0,1.0,-1.0],
+             [10.0,1.5,1.0,1.0,0.0],[10.0,2.5,1.0,1.0,1.0],[10.0,1.5,2.0,1.0,2.0],[10.0,2.5,2.0,1.0,3.0],
+            [10.0,1.5,1.0,1.0,4.0],[10.0,2.5,1.0,1.0,5.0],[10.0,1.5,2.0,1.0,6.0],[10.0,2.5,2.0,1.0,8.0]]
+    phi: 'sigmoid'
     tau: 1.0
     min_radius: 1.0
     max_radius: 1.0E6
-    n_particles: 1000
-    n_particle_types: 4
+    n_particles: 1024
+    n_particle_types: 16
     n_frames: 100000
     delta_t: 0.01
     dpos_init:  0
@@ -41,7 +44,7 @@ graph_model:
     update_type: 'intricated'
 
 plotting:
-    colormap: 'tab10'
+    colormap: 'tab20'
     arrow_length: 1
     xlim: [-5,5]
     ylim: [-8,8]
@@ -74,5 +77,5 @@ training:
 
     coeff_diff: 100
 
-    noise_level: 1
+    noise_level: 5
 

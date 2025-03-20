@@ -1170,7 +1170,6 @@ def get_type_list(x, dimension):
     return type_list
 
 
-
 class KoLeoLoss(nn.Module):
     """Kozachenko-Leonenko entropic loss regularizer from Sablayrolles et al. - 2018 - Spreading vectors for similarity search"""
 

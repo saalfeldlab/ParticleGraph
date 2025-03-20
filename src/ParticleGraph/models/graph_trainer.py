@@ -22,6 +22,7 @@ import torch.optim as optim
 import seaborn as sns
 from sklearn.decomposition import PCA, TruncatedSVD
 from sklearn.manifold import TSNE
+from ParticleGraph.denoise_data import *
 
 def data_train(config=None, erase=False, best_model=None, device=None):
     # plt.rcParams['text.usetex'] = True
@@ -896,6 +897,8 @@ def data_train_cell(config, erase, best_model, device):
 
         total_loss = 0
         Niter = n_frames * data_augmentation_loop // batch_size
+
+        Niter=2
 
         for N in trange(Niter):
 
@@ -2252,6 +2255,14 @@ def data_train_synaptic2(config, erase, best_model, device):
     time.sleep(0.5)
     print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
     logger.info(f'vnorm ynorm: {to_numpy(vnorm)} {to_numpy(ynorm)}')
+
+    if (train_config.denoise) & (train_config.denoiser_type !='none'):
+        x_list_, y_list_ = denoise_data(config, x_list[0], y_list[0], device)
+        x_list[0] = x_list_
+        y_list[0] = y_list_
+
+
+
 
     if model_config.embedding_init !='':
         print('compute init embedding ...')

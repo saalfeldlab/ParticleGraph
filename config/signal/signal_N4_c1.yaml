@@ -1,17 +1,17 @@
 description: ''
-dataset: 'signal_N4_a2'
+dataset: 'signal_N4_c'
 
 simulation:
     connectivity_file: 'random'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
-    connectivity_distribution: 'Lorentz'
-    params: [[2.0,1.0,1.0,1.0, -5.0],[2.0,2.0,1.0,1.0, 0.0],[2.0,1.0,2.0,1.0, 5.0],[2.0,2.0,2.0,1.0,10.0]]
-    phi: 'tanh'
+    connectivity_distribution: 'Gaussian'
+    params: [[10.0,1.5,1.0,1.0,-5.0],[10.0,2.5,1.0,1.0,0.0],[10.0,1.5,2.0,1.0,5.0],[10.0,2.5,2.0,1.0,7.5]]
+    phi: 'sigmoid'
     tau: 1.0
     min_radius: 1.0
     max_radius: 1.0E6
-    n_particles: 1000
+    n_particles: 1024
     n_particle_types: 4
     n_frames: 100000
     delta_t: 0.01
@@ -30,9 +30,11 @@ graph_model:
     hidden_dim: 64
     n_mp_layers: 5
 
+    lin_edge_positive: True
+
     input_size_update: 4
     n_layers_update: 5
-    hidden_dim_update: 64
+    hidden_dim_update: 128
 
     aggr_type: 'add'
     embedding_dim: 2
