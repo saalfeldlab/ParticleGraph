@@ -556,23 +556,31 @@ def compute_intensity_statistics(raw_image, segmented_image):
     return df
 
 
-def mask_to_vertices(mask, num_vertices=20):
-    # Find contours in the mask
-    contours = find_contours(mask, level=0.5)
+import numpy as np
+from skimage.measure import find_contours, approximate_polygon
 
+
+def mask_to_vertices(mask, num_vertices=20):
+    mask[0:2, :] = False
+    mask[-2:, :] = False
+    mask[:, 0:2] = False
+    mask[:, -2:] = False
+    # Find contours in the mask
+    contours = find_contours(mask, level=0.5) # Slightly adjust level to suit your data
     # Select the largest contour
     largest_contour = max(contours, key=len)
+    # Simplify the contour to approximate the shape
+    simplified_contour = approximate_polygon(largest_contour, tolerance=0.5)
 
-    # Find the convex hull of the largest contour
-    hull = ConvexHull(largest_contour)
+    # If there are more than the desired number of vertices, downsample the simplified contour
+    if len(simplified_contour) > num_vertices:
+        # Create a set of evenly spaced indices from the contour
+        indices = np.linspace(0, len(simplified_contour) - 1, num_vertices, dtype=int)
+        vertices = simplified_contour[indices]
+    else:
+        vertices = simplified_contour
 
-    # Select 20 vertices from the convex hull
-    vertices = largest_contour[hull.vertices]
-
-    # If there are more than 20 vertices, select a subset
-    if len(vertices) > num_vertices:
-        indices = np.linspace(0, len(vertices) - 1, num_vertices, dtype=int)
-        vertices = vertices[indices]
+    vertices = simplified_contour
 
     return vertices
 

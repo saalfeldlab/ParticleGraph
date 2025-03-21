@@ -371,8 +371,8 @@ def load_2D_cell_data(config, device, visualize):
 
         print (f'{files[it]}')
 
-        im_fluo = np.array(tifffile.imread(data_folder_name + files[it]))
-        im_seg = np.array(tifffile.imread(data_folder_name + 'SEG/' + files[it]))
+        im_fluo = np.flipud(np.array(tifffile.imread(data_folder_name + files[it])))
+        im_seg = np.flipud(np.array(tifffile.imread(data_folder_name + 'SEG/' + files[it])))
 
         im_dim = im_seg.shape
 
@@ -389,7 +389,6 @@ def load_2D_cell_data(config, device, visualize):
         ID = n_cells + np.arange(object_properties.shape[0])[:, None]
 
         x = np.concatenate((N.astype(int), X, empty_columns, AR, P, ASR, OR, ID.astype(int) -1), axis=1)
-        x = torch.tensor(x[1:], dtype=torch.float32, device=device)
         x_list.append(x)
 
         y = torch.zeros((x.shape[0], 2), dtype=torch.float32, device=device)
@@ -399,7 +398,7 @@ def load_2D_cell_data(config, device, visualize):
         for n in trange(1, len(x)):
             mask = (im_seg == n)
             if np.sum(mask)>0:
-                vertices = mask_to_vertices(mask=(im_seg == n), num_vertices=20)
+                vertices = mask_to_vertices(mask=mask, num_vertices=20)
                 uniform_points = get_uniform_points(vertices, num_points=20)
                 N = (n-1)*20 + np.arange(20, dtype=np.float32)[:, None]
                 X = uniform_points
@@ -412,85 +411,91 @@ def load_2D_cell_data(config, device, visualize):
         vertices_list = torch.reshape(vertices_list, (-1, vertices_list.shape[2]))
         vertices = vertices_list
 
-        params = torch.tensor([[1.6233, 1.0413, 1.6012, 1.5615]], dtype=torch.float32, device=device)
-        model_vertices = PDE_V(aggr_type='mean', p=torch.squeeze(params), sigma=30, bc_dpos=bc_dpos, dimension=2)
-        max_radius=50
-        min_radius=0
-        for epoch in trange(4):
-            distance = torch.sum(bc_dpos(vertices[:, None, 1:dimension + 1] - vertices[None, :, 1:dimension + 1]) ** 2, dim=2)
-            adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
-            edge_index = adj_t.nonzero().t().contiguous()
-            dataset = data.Data(x=vertices, pos=vertices[:, 1:3], edge_index=edge_index, field=[])
-            with torch.no_grad():
-                y = model_vertices(dataset)
-            vertices[:,1:3] = vertices[:,1:3] + y
-            vertices[:, 1:2] = torch.clip(vertices[:, 1:2], 0, im_dim[0])
-            vertices[:, 2:3] = torch.clip(vertices[:, 2:3], 0, im_dim[1])
+        # params = torch.tensor([[1.6233, 1.0413, 1.6012, 1.5615]], dtype=torch.float32, device=device)
+        # model_vertices = PDE_V(aggr_type='mean', p=torch.squeeze(params), sigma=30, bc_dpos=bc_dpos, dimension=2)
+        # max_radius=50
+        # min_radius=0
+        # for epoch in trange(4):
+        #     distance = torch.sum(bc_dpos(vertices[:, None, 1:dimension + 1] - vertices[None, :, 1:dimension + 1]) ** 2, dim=2)
+        #     adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
+        #     edge_index = adj_t.nonzero().t().contiguous()
+        #     dataset = data.Data(x=vertices, pos=vertices[:, 1:3], edge_index=edge_index, field=[])
+        #     with torch.no_grad():
+        #         y = model_vertices(dataset)
+        #     vertices[:,1:3] = vertices[:,1:3] + y
+        #     vertices[:, 1:2] = torch.clip(vertices[:, 1:2], 0, im_dim[0])
+        #     vertices[:, 2:3] = torch.clip(vertices[:, 2:3], 0, im_dim[1])
         full_vertice_list.append(vertices)
 
 
-        if image_data.tracking_file != '':
-            tracking_properties = extract_object_properties(im_tracking[it], im_tracking[it])
-            tracking_properties = np.array(tracking_properties, dtype=float)
-            N = tracking_properties[:,-1]
-            X = tracking_properties[:,1:3]
-            V = np.zeros((X.shape[0], 2))
-            empty_columns = np.zeros((X.shape[0], 11))
-            AR = object_properties[:, 3:4]
-            P = object_properties[:, 4:5]
-            ASR = object_properties[:, 5:6]
-            OR = object_properties[:, 6:7]
-            ID_CELL = np.zeros((X.shape[0], 1))
-
-            if it>0:
-                for n in range(len(X)):
-                    pos = torch.argwhere(track[:,0] == torch.tensor(N[n], device=device))
-                    if len(pos)>0:
-                        V[n] = (X[n] - to_numpy(track[:,1:3][pos[0]].squeeze()))
-
-            track = np.concatenate((N[:,None], X, V, empty_columns), axis=1)
-
-            # plt.imshow(im_tracking[it])
-            # plt.scatter(X[:,1], X[:,0],s=10)
-            # plt.text(X[:,1]+5, X[:,0], f'{N}', fontsize=4, color='w')
-
-            track = torch.tensor(track, dtype=torch.float32, device=device)
-            closest_neighbors = find_closest_neighbors(track, x)
-            closest_neighbors = torch.tensor(closest_neighbors, dtype=torch.float32, device=track.device)
-            track = torch.cat((track, x[closest_neighbors[:, None].long(),0]), 1)
-
-            track_list.append(track)
+        # if image_data.tracking_file != '':
+        #     tracking_properties = extract_object_properties(im_tracking[it], im_tracking[it])
+        #     tracking_properties = np.array(tracking_properties, dtype=float)
+        #     N = tracking_properties[:,-1]
+        #     X = tracking_properties[:,1:3]
+        #     V = np.zeros((X.shape[0], 2))
+        #     empty_columns = np.zeros((X.shape[0], 11))
+        #     AR = object_properties[:, 3:4]
+        #     P = object_properties[:, 4:5]
+        #     ASR = object_properties[:, 5:6]
+        #     OR = object_properties[:, 6:7]
+        #     ID_CELL = np.zeros((X.shape[0], 1))
+        #
+        #     if it>0:
+        #         for n in range(len(X)):
+        #             pos = torch.argwhere(track[:,0] == torch.tensor(N[n], device=device))
+        #             if len(pos)>0:
+        #                 V[n] = (X[n] - to_numpy(track[:,1:3][pos[0]].squeeze()))
+        #
+        #     track = np.concatenate((N[:,None], X, V, empty_columns), axis=1)
+        #
+        #     # plt.imshow(im_tracking[it])
+        #     # plt.scatter(X[:,1], X[:,0],s=10)
+        #     # plt.text(X[:,1]+5, X[:,0], f'{N}', fontsize=4, color='w')
+        #
+        #     track = torch.tensor(track, dtype=torch.float32, device=device)
+        #     closest_neighbors = find_closest_neighbors(track, x)
+        #     closest_neighbors = torch.tensor(closest_neighbors, dtype=torch.float32, device=track.device)
+        #     track = torch.cat((track, x[closest_neighbors[:, None].long(),0]), 1)
+        #
+        #     track_list.append(track)
 
         fig = plt.subplots(figsize=(18, 20))
         plt.xticks([])
         plt.yticks([])
         plt.axis('off')
         ax = plt.subplot(131)
+        plt.axis('off')
         plt.imshow(im_fluo)
         for n in range(len(x)):
             pos = torch.argwhere(vertices[:, 5:6] == torch.tensor(n_cells+n,dtype=torch.float32,device=device))
             plt.plot(to_numpy(vertices[pos, 2]), to_numpy(vertices[pos, 1]), c='w', linewidth=1)
-            # plt.text(to_numpy(x[n, 2]), to_numpy(x[n, 1]), f'{to_numpy(x[n,0]):0.0f}', fontsize=12, color='w')
+            plt.text(x[n, 2], x[n, 1], f'{x[n,0]:0.0f}', fontsize=12, color='w')
         # for n in range(len(X)):
         #     plt.text(X[n, 1], X[n, 0], f'{to_numpy(track[n,-1]):0.0f}', fontsize=12, color='w')
-        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=10, c='w', alpha=0.75)
+        # plt.scatter(x[:, 2], x[:, 1], s=10, c='w', alpha=0.75)
         plt.xlim([0 , im_dim[1]])
         plt.ylim([0 , im_dim[0]])
         plt.xticks([])
         plt.yticks([])
         ax = plt.subplot(132)
+        plt.axis('off')
         plt.imshow(im_fluo*0)
         for n in range(len(x)):
             pos = torch.argwhere(vertices[:, 5:6] == torch.tensor(n_cells+n,dtype=torch.float32,device=device))
             plt.scatter(to_numpy(vertices[pos, 2]), to_numpy(vertices[pos, 1]), c='w', s=1)
-        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=10, c='w', alpha=0.75)
+        plt.scatter(x[:, 2], x[:, 1], s=10, c='w', alpha=0.75)
         plt.xlim([0 , im_dim[1]])
         plt.ylim([0 , im_dim[0]])
         plt.xticks([])
         plt.yticks([])
         ax = plt.subplot(133)
         plt.imshow(im_fluo*0)
-        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=20, c='w', alpha=1.0)
+        plt.scatter(x[:, 2], x[:, 1], s=10, c='w', alpha=0.75)
+        plt.xlim([0 , im_dim[1]])
+        plt.ylim([0 , im_dim[0]])
+        plt.xticks([])
+        plt.yticks([])
         plt.tight_layout()
         # plt.show()
         plt.savefig(f"graphs_data/{dataset_name}/Fig/{files[it]}", dpi=80)
