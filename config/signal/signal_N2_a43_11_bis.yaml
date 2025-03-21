@@ -1,18 +1,19 @@
-description: ''
-dataset: 'signal_N4_a2'
+description: 'test 10^5 time points  LRs 1E-4 5E-5 5E-4     synaptic network random matrix no recursive loop 1000 neurons 4 types lorentz std 0.03'
+dataset: 'signal_N2_a43_6'
 
 simulation:
     connectivity_file: 'random'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
     connectivity_distribution: 'Lorentz'
-    params: [[2.0,1.0,1.0,1.0, -5.0],[2.0,2.0,1.0,1.0, 0.0],[2.0,1.0,2.0,1.0, 5.0],[2.0,2.0,2.0,1.0,10.0]]
+    params: [[10.0,1.0,1.0],[10.0,2.0,1.0],[10.0,1.0,2.0],[10.0,2.0,2.0]]
     phi: 'tanh'
     tau: 1.0
     min_radius: 1.0
     max_radius: 1.0E6
     n_particles: 1000
     n_particle_types: 4
+    n_interactions: 4
     n_frames: 100000
     delta_t: 0.01
     dpos_init:  0
@@ -20,25 +21,21 @@ simulation:
     start_frame: -1000
 
 graph_model:
-    signal_model_name: 'PDE_N4'
+    signal_model_name: 'PDE_N2'
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
-
-    input_size: 3
+    input_size: 1
     output_size: 1
     hidden_dim: 64
-    n_mp_layers: 5
-
-    lin_edge_positive: True
-
+    n_mp_layers: 3
     input_size_update: 3
-    n_layers_update: 5
+    n_layers_update: 3
     hidden_dim_update: 64
-
     aggr_type: 'add'
     embedding_dim: 2
     update_type: 'none'
+
 
 plotting:
     colormap: 'tab10'
@@ -47,32 +44,29 @@ plotting:
     ylim: [-8,8]
 
 training:
+    n_epochs: 20
     n_runs: 2
     device: 'auto'
 
-    n_epochs: 20
     recursive_loop: 1
     batch_size: 1
-    small_init_batch_size: True
-
-    epoch_reset: 2
-    epoch_reset_freq: 999
-    n_epochs_init: 999
+    small_init_batch_size: False
 
     rotation_augmentation: False
     data_augmentation_loop: 50
-    
-    sparsity: 'replace_embedding_function'
+
+    denoise: True
+    denoiser_type: 'Gaussian_filter'
+    time_step: 16
+
+    sparsity: 'none'
+    sparsity_freq: 4
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
-    sparsity_freq: 5
-    cluster_distance_threshold: 0.1
 
     learning_rate_W_start: 1.0E-3
     learning_rate_start: 5.0E-4
     learning_rate_embedding_start: 5.0E-3
 
-    coeff_diff: 100
-
-    noise_level: 1
+    measurement_noise_level: 2.0
 

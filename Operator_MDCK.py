@@ -4,7 +4,7 @@ import torch
 from ParticleGraph.models.MLP import MLP
 import torch_geometric as pyg
 import torch_geometric.utils as pyg_utils
-
+import tifffile
 from ParticleGraph.utils import to_numpy
 from ParticleGraph.models.Siren_Network import *
 
@@ -162,18 +162,20 @@ class Operator_smooth(pyg.nn.MessagePassing):
             mgrid = delta_pos.clone().detach()
             mgrid.requires_grad = True
 
-            density_kernel = torch.exp(-(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / self.kernel_var * 8)[:,None]
+            density = torch.exp(-(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / self.kernel_var * 8)[:,None]
+            grad_autograd = -density_gradient(density, mgrid)
+            laplace_autograd = density_laplace(density, mgrid)
 
-            # self.modulation = self.siren(coords=mgrid) * max_radius **2
-            # kernel_modified = torch.exp(-2*(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / (20*self.kernel_var))[:, None] * self.modulation
-            # kernel_modified = torch.exp(-2 * (mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / (20 * self.kernel_var))[:, None]
+            self.modulation = self.siren(coords = mgrid) * max_radius**2
+            kernel_modified_1 = density * self.modulation
 
-            grad_autograd = -density_gradient(density_kernel, mgrid)
-            laplace_autograd = density_laplace(density_kernel, mgrid)
+            self.kernel_operators = dict()
+            self.kernel_operators['density'] = density
+            self.kernel_operators['grad'] = grad_autograd
+            self.kernel_operators['laplace'] = laplace_autograd
+            self.kernel_operators['modified_1'] = kernel_modified_1
 
-            self.kernel_operators = torch.cat((density_kernel, grad_autograd, laplace_autograd), dim=-1)
-
-            return density_kernel
+            return density
 
             # kernel_modified = torch.exp(-2 * (mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / (self.kernel_var))[:, None]
             # fig = plt.figure(figsize=(8, 6))
@@ -194,16 +196,16 @@ class Operator_smooth(pyg.nn.MessagePassing):
             # else:
             #     out = grad_density
 
-            density = self.kernel_operators[:, 0:1]
-            grad_density = self.kernel_operators[:, 1:3]  # d_rho_x d_rho_y
-            velocity = self.kernel_operators[:, 0:1] * torch.sum(d_pos_j**2, dim=1)[:,None] / density_j
-            grad_velocity = self.kernel_operators[:, 1:3] * torch.sum(d_pos_j**2, dim=1)[:,None].repeat(1,2) / density_j.repeat(1,2)
-            velocity_x = self.kernel_operators[:, 0:1] * d_pos_j[:,0:1] / density_j
-            grad_velocity_x = self.kernel_operators[:, 1:3] * d_pos_j[:,0:1].repeat(1,2) / density_j.repeat(1,2)
-            velocity_y = self.kernel_operators[:, 1:2] * d_pos_j[:,0:1] / density_j
-            grad_velocity_y = self.kernel_operators[:, 1:3] * d_pos_j[:,1:2].repeat(1,2) / density_j.repeat(1,2)
+            density = self.kernel_operators['density']
+            grad_density = self.kernel_operators['grad']
+            velocity = self.kernel_operators['density'] * torch.sum(d_pos_j**2, dim=1)[:,None] / density_j
+            grad_velocity = self.kernel_operators['grad'] * torch.sum(d_pos_j**2, dim=1)[:,None].repeat(1,2) / density_j.repeat(1,2)
+            velocity_x = self.kernel_operators['density'] * d_pos_j[:,0:1] / density_j
+            grad_velocity_x = self.kernel_operators['grad'][1:2] * d_pos_j[:,0:1].repeat(1,2) / density_j.repeat(1,2)
+            velocity_y = self.kernel_operators['density'] * d_pos_j[:,0:1] / density_j
+            grad_velocity_y = self.kernel_operators['grad'][1:2] * d_pos_j[:,1:2].repeat(1,2) / density_j.repeat(1,2)
 
-            return torch.cat((density, grad_density, velocity, grad_velocity, velocity_x, grad_velocity_x, velocity_y, grad_velocity_y), dim = 1) #
+            return torch.cat((density, grad_density, velocity, grad_velocity, velocity_x, grad_velocity_x, velocity_y, grad_velocity_y), dim = 1)
 
             # 0: rho
             # 1: d_rho_x
@@ -267,7 +269,7 @@ if __name__ == '__main__':
     lr = config.training.learning_rate_start
     batch_size = config.training.batch_size
     n_frames = config.simulation.n_frames
-
+    dataset_name = config.dataset
 
     seed = 42
     torch.manual_seed(seed)
@@ -287,15 +289,17 @@ if __name__ == '__main__':
     phi = torch.zeros(1, device=device)
     threshold = 0.05
 
-    x_list = torch.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/cell/cell_MDCK_3/full_vertice_list0.pt', map_location=device, weights_only=True)
+    # x_list = torch.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/cell/cell_MDCK_3/full_vertice_list0.pt', map_location=device, weights_only=True)
     # x_list = torch.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/cell/cell_MDCK_3/x_list_0.pt', map_location=device, weights_only=True)
+    x_list = torch.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/cell/cell_MDCK_3/track_list_0.pt',map_location=device, weights_only=True)
 
-    # x_list = torch.load(f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/cell/cell_MDCK_3/track_list_0.pt',map_location=device, weights_only=True)
 
+    for frame in trange(0,n_frames):
 
-    for frame in trange(1,n_frames):
+        num = f"{frame:04}"
+        im_ = np.array(tifffile.imread(f"graphs_data/cell/{dataset_name}/Fig/RGB{num}.tif"))
 
-        x = x_list[frame]
+        x = x_list[frame].clone().detach()
         x[:,1:3] = x[:,1:3] / 1024
 
         tensors = tuple(dimension * [torch.linspace(0, 1, steps=100)])
@@ -325,89 +329,90 @@ if __name__ == '__main__':
         pred_field = model(dataset, data_id=data_id, training=False, phi=phi, continuous_field=True, continuous_field_size=mgrid.shape)[0: mgrid.shape[0]]
         density_field = model.density[0: mgrid.shape[0]]
 
-        # matplotlib.use("Qt5Agg")
-        # fig = plt.figure(figsize=(8, 8))
-        # ax = fig.add_subplot(111)
-        # plt.scatter(to_numpy(xp[0: mgrid.shape[0], 2:3]), to_numpy(xp[0: mgrid.shape[0], 1:2]), s=10, c=to_numpy(density_field))
-        # Q = ax.quiver(to_numpy(x[:, 2]), to_numpy(x[:, 1]), -10*to_numpy(pred[:,1]), -10*to_numpy(pred[:,0]), color='w')
-        # plt.show()
-
         sp = 100
 
-        fig = plt.figure(figsize=(24, 24))
+        fig = plt.figure(figsize=(30, 12))
 
-        ax = fig.add_subplot(4,4,1)
-        plt.title('pos', fontsize=18)
-        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=sp, c='w')
-        pixel = 5020
-        plt.scatter(mgrid[pixel, 2].detach().cpu().numpy(),
-                    mgrid[pixel, 1].detach().cpu().numpy(), s=sp/2, c='r')
-        pos = torch.argwhere(edge_index_mgrid[1, :] == pixel).squeeze()
-        if pos.numel()>0:
-            plt.scatter(xp[edge_index_mgrid[0, pos], 2].detach().cpu().numpy(), xp[edge_index_mgrid[0, pos], 1].detach().cpu().numpy(), s=sp/2,c='b')
-        plt.xlim([0,1])
-        plt.ylim([0,1])
-
-        ax = fig.add_subplot(4,4,2)
-        plt.title('density', fontsize=18)
-        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=sp, c=to_numpy(density), vmin=0, vmax=10)
+        ax = fig.add_subplot(2, 7, 1)
+        plt.axis('off')
+        plt.imshow(im_[0:565,350:930])
+        plt.xticks([])
+        plt.yticks([])
+        ax = fig.add_subplot(2, 7, 8)
+        plt.axis('off')
+        plt.imshow(im_[560:, 350:930])
         plt.xticks([])
         plt.yticks([])
 
-        ax = fig.add_subplot(4,4,3)
-        plt.title('velocity', fontsize=18)
-        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=sp, c=to_numpy(pred[:,3]), vmin=0, vmax=50)
-        plt.xticks([])
-        plt.yticks([])
-        plt.xlim([0,1])
-        plt.ylim([0,1])
-
-        ax = fig.add_subplot(4,4,4)
-        plt.title('velocity', fontsize=18)
-        v = torch.sqrt(x[:, 3] ** 2 + x[:, 4] ** 2)
-        plt.scatter(to_numpy(v), to_numpy(pred[:,3]), s=sp, c='w')
+        # ax = fig.add_subplot(2,7,2)
+        # plt.title('pos', fontsize=18)
+        # plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=sp, c='w')
+        # pixel = 5020
+        # plt.scatter(mgrid[pixel, 2].detach().cpu().numpy(),
+        #             mgrid[pixel, 1].detach().cpu().numpy(), s=sp/2, c='r')
+        # pos = torch.argwhere(edge_index_mgrid[1, :] == pixel).squeeze()
+        # if pos.numel()>0:
+        #     plt.scatter(xp[edge_index_mgrid[0, pos], 2].detach().cpu().numpy(), xp[edge_index_mgrid[0, pos], 1].detach().cpu().numpy(), s=sp/2,c='b')
+        # plt.xticks([])
+        # plt.yticks([])
+        # plt.xlim([0,1])
+        # plt.ylim([0,1])
+        #
+        # ax = fig.add_subplot(2,7,3)
+        # plt.title('density', fontsize=18)
+        # plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=sp, c=to_numpy(density), vmin=0, vmax=100)
         # plt.xticks([])
         # plt.yticks([])
         # plt.xlim([0,1])
         # plt.ylim([0,1])
 
-        ax = fig.add_subplot(4,4,6)
+        ax = fig.add_subplot(2,7,2)
         plt.title('density_field', fontsize=18)
-        plt.imshow((pred_field[:,0].cpu().view(100, 100).detach().numpy()),vmin=0, vmax=100)
+        plt.imshow((pred_field[:,0].cpu().view(100, 100).detach().numpy()),vmin=0, vmax=10)
         plt.scatter(to_numpy(x[:, 2])*100, to_numpy(x[:, 1])*100, s=1, c='w')
         plt.xticks([])
         plt.yticks([])
         plt.xlim([0,100])
         plt.ylim([0,100])
 
-        ax = fig.add_subplot(4,4,10)
+        ax = fig.add_subplot(2,7,3)
         plt.title('density_field_x', fontsize=18)
-        plt.imshow((pred_field[:,2].cpu().view(100, 100).detach().numpy()),vmin=-500, vmax=500, cmap='bwr')
+        plt.imshow((pred_field[:,2].cpu().view(100, 100).detach().numpy()),vmin=-100, vmax=100, cmap='bwr')
         plt.scatter(to_numpy(x[:, 2])*100, to_numpy(x[:, 1])*100, s=1, c='w')
         plt.xticks([])
         plt.yticks([])
         plt.xlim([0,100])
         plt.ylim([0,100])
 
-        ax = fig.add_subplot(4,4,14)
+        ax = fig.add_subplot(2,7,4)
         plt.title('density_field_y', fontsize=18)
-        plt.imshow((pred_field[:,1].cpu().view(100, 100).detach().numpy()),vmin=-500, vmax=500, cmap='bwr')
+        plt.imshow((pred_field[:,1].cpu().view(100, 100).detach().numpy()),vmin=-100, vmax=100, cmap='bwr')
         plt.scatter(to_numpy(x[:, 2])*100, to_numpy(x[:, 1])*100, s=1, c='w')
         plt.xticks([])
         plt.yticks([])
         plt.xlim([0,100])
         plt.ylim([0,100])
 
-        ax = fig.add_subplot(4,4,7)
+        # ax = fig.add_subplot(2,7,10)
+        # plt.title('velocity', fontsize=18)
+        # plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=sp, c=to_numpy(pred[:,3]), vmin=0, vmax=20)
+        # plt.quiver(to_numpy(x[:, 2]), to_numpy(x[:, 1]), to_numpy(x[:, 4]), to_numpy(x[:, 3]), color='w')
+        # plt.xticks([])
+        # plt.yticks([])
+        # plt.xlim([0,1])
+        # plt.ylim([0,1])
+
+        ax = fig.add_subplot(2,7,9)
         plt.title('velocity_field', fontsize=18)
-        plt.imshow((pred_field[:,3].cpu().view(100, 100).detach().numpy()),vmin=0, vmax=50, )
+        plt.imshow((pred_field[:,3].cpu().view(100, 100).detach().numpy()),vmin=0, vmax=50)
         plt.scatter(to_numpy(x[:, 2])*100, to_numpy(x[:, 1])*100, s=1, c='w')
+        plt.quiver(to_numpy(x[:, 2])*100, to_numpy(x[:, 1])*100, to_numpy(x[:, 4])*100, to_numpy(x[:, 3])*100, color='w')
         plt.xticks([])
         plt.yticks([])
         plt.xlim([0,100])
         plt.ylim([0,100])
 
-        ax = fig.add_subplot(4,4,11)
+        ax = fig.add_subplot(2,7,10)
         plt.title('velocity_field_x', fontsize=18)
         plt.imshow((pred_field[:,5].cpu().view(100, 100).detach().numpy()),vmin=-500, vmax=500, cmap='bwr')
         plt.scatter(to_numpy(x[:, 2])*100, to_numpy(x[:, 1])*100, s=1, c='w')
@@ -416,7 +421,7 @@ if __name__ == '__main__':
         plt.xlim([0,100])
         plt.ylim([0,100])
 
-        ax = fig.add_subplot(4,4,15)
+        ax = fig.add_subplot(2,7,11)
         plt.title('velocity_field_y', fontsize=18)
         plt.imshow((pred_field[:,4].cpu().view(100, 100).detach().numpy()),vmin=-500, vmax=500, cmap='bwr')
         plt.scatter(to_numpy(x[:, 2])*100, to_numpy(x[:, 1])*100, s=1, c='w')
@@ -425,10 +430,15 @@ if __name__ == '__main__':
         plt.xlim([0,100])
         plt.ylim([0,100])
 
-        # plt.show()
         plt.tight_layout()
         plt.savefig(f'tmp/fig_{frame}.tif')
         plt.close()
+
+
+
+
+        # plt.show()
+
 
         train_NNR = False
         if train_NNR:

@@ -50,7 +50,7 @@ training:
     n_runs: 2
     device: 'auto'
 
-    n_epochs: 10
+    n_epochs: 20
     recursive_loop: 1
     batch_size: 1
     small_init_batch_size: True
@@ -62,10 +62,10 @@ training:
     rotation_augmentation: False
     data_augmentation_loop: 50
     
-    sparsity: 'none'
+    sparsity: 'replace_embedding_function'
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
-    sparsity_freq: 4
+    sparsity_freq: 5
     cluster_distance_threshold: 0.1
 
     learning_rate_W_start: 1.0E-3

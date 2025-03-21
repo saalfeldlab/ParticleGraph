@@ -1,11 +1,11 @@
 description: ''
-dataset: 'signal_N4_c3'
+dataset: 'signal_N4_c11'
 
 simulation:
     connectivity_file: 'random'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
-    connectivity_distribution: 'Gaussian_structured_0.60_1.00'
+    connectivity_distribution: 'Gaussian_structured_0.40_0.01'
     params: [[10.0,1.5,1.0,1.0,-8.0],[10.0,2.5,1.0,1.0,-7.0],[10.0,1.5,2.0,1.0,-6.0],[10.0,2.5,2.0,1.0,-5.0],
             [10.0,1.5,1.0,1.0,-4.0],[10.0,2.5,1.0,1.0,-3.0],[10.0,1.5,2.0,1.0,-2.0],[10.0,2.5,2.0,1.0,-1.0],
              [10.0,1.5,1.0,1.0,0.0],[10.0,2.5,1.0,1.0,1.0],[10.0,1.5,2.0,1.0,2.0],[10.0,2.5,2.0,1.0,3.0],
@@ -35,13 +35,13 @@ graph_model:
 
     lin_edge_positive: True
 
-    input_size_update: 3
+    input_size_update: 4
     n_layers_update: 5
-    hidden_dim_update: 64
+    hidden_dim_update: 128
 
     aggr_type: 'add'
     embedding_dim: 2
-    update_type: 'none'
+    update_type: 'intricated'
 
 plotting:
     colormap: 'tab20'
@@ -53,7 +53,7 @@ training:
     n_runs: 2
     device: 'auto'
 
-    n_epochs: 20
+    n_epochs: 10
     recursive_loop: 1
     batch_size: 1
     small_init_batch_size: True

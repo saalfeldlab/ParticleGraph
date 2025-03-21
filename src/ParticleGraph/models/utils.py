@@ -168,7 +168,7 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
             plt.plot(to_numpy(rr), to_numpy(func),2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
     all_func_values = torch.cat(all_func_values)
     y_min, y_max = all_func_values.min().item(), all_func_values.max().item()
-    plt.ylim([y_min, y_max])
+    plt.ylim([y_min-0.1, y_max*1.1])
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/func_{epoch}_{N}.tif", dpi=87)
     plt.close()

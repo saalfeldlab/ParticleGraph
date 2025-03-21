@@ -334,10 +334,10 @@ def load_2D_cell_data(config, device, visualize):
     #     im = np.array(im)
     #     masks, flows, styles = model_custom.eval(im, diameter=120, flow_threshold=0.0, invert=False, normalize=True, channels=image_data.cellpose_channel)
     #     tifffile.imsave(data_folder_name + 'SEG/' + files[it], masks)
-        # matplotlib.use("Qt5Agg")
-        # fig = plt.subplots(figsize=(8, 8))
-        # plt.imshow(masks)
-        # plt.show()
+    #     # matplotlib.use("Qt5Agg")
+    #     # fig = plt.subplots(figsize=(8, 8))
+    #     # plt.imshow(masks)
+    #     # plt.show()
 
 
     # 0 N1 cell index dim=1
@@ -416,7 +416,7 @@ def load_2D_cell_data(config, device, visualize):
         model_vertices = PDE_V(aggr_type='mean', p=torch.squeeze(params), sigma=30, bc_dpos=bc_dpos, dimension=2)
         max_radius=50
         min_radius=0
-        for epoch in trange(2):
+        for epoch in trange(4):
             distance = torch.sum(bc_dpos(vertices[:, None, 1:dimension + 1] - vertices[None, :, 1:dimension + 1]) ** 2, dim=2)
             adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
             edge_index = adj_t.nonzero().t().contiguous()
@@ -461,11 +461,11 @@ def load_2D_cell_data(config, device, visualize):
 
             track_list.append(track)
 
-        fig = plt.subplots(figsize=(16, 14))
+        fig = plt.subplots(figsize=(18, 20))
         plt.xticks([])
         plt.yticks([])
         plt.axis('off')
-        ax = plt.subplot(211)
+        ax = plt.subplot(131)
         plt.imshow(im_fluo)
         for n in range(len(x)):
             pos = torch.argwhere(vertices[:, 5:6] == torch.tensor(n_cells+n,dtype=torch.float32,device=device))
@@ -473,21 +473,24 @@ def load_2D_cell_data(config, device, visualize):
             # plt.text(to_numpy(x[n, 2]), to_numpy(x[n, 1]), f'{to_numpy(x[n,0]):0.0f}', fontsize=12, color='w')
         # for n in range(len(X)):
         #     plt.text(X[n, 1], X[n, 0], f'{to_numpy(track[n,-1]):0.0f}', fontsize=12, color='w')
-        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=50, c='w', alpha=0.75)
+        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=10, c='w', alpha=0.75)
         plt.xlim([0 , im_dim[1]])
         plt.ylim([0 , im_dim[0]])
         plt.xticks([])
         plt.yticks([])
-        ax = plt.subplot(212)
+        ax = plt.subplot(132)
         plt.imshow(im_fluo*0)
         for n in range(len(x)):
             pos = torch.argwhere(vertices[:, 5:6] == torch.tensor(n_cells+n,dtype=torch.float32,device=device))
             plt.scatter(to_numpy(vertices[pos, 2]), to_numpy(vertices[pos, 1]), c='w', s=1)
-        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=50, c='w', alpha=0.75)
+        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=10, c='w', alpha=0.75)
         plt.xlim([0 , im_dim[1]])
         plt.ylim([0 , im_dim[0]])
         plt.xticks([])
         plt.yticks([])
+        ax = plt.subplot(133)
+        plt.imshow(im_fluo*0)
+        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=20, c='w', alpha=1.0)
         plt.tight_layout()
         # plt.show()
         plt.savefig(f"graphs_data/{dataset_name}/Fig/{files[it]}", dpi=80)
