@@ -55,7 +55,7 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        task = 'generate_train_test'
+        task = 'train_test'
         best_model = ''
         # config_list = ['falling_water_ramp_x6_11']
         # config_list = ['signal_N6_a29_1']
