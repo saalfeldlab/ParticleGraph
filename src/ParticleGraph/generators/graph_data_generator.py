@@ -1516,6 +1516,9 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
 
 def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1, scenario='none', device=None, bSave=True):
+    if 'black' in style:
+        plt.style.use('dark_background')
+
     simulation_config = config.simulation
     training_config = config.training
     model_config = config.graph_model
@@ -1806,9 +1809,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
-
-                if 'black' in style:
-                    plt.style.use('dark_background')
 
                 if 'latex' in style:
                     plt.rcParams['text.usetex'] = True

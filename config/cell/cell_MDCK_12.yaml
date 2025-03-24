@@ -21,7 +21,7 @@ image_data:
     cellpose_model: '/groups/saalfeld/home/allierc/signaling/MDCK/Leica SGFP2 and H42 nuclear marker/training/models/CP_20250109_093212'
     cellpose_channel: [2, 1]
     membrane_channel: 1
-    tracking_file: ''
+    tracking_file: '/groups/saalfeld/home/allierc/signaling/MDCK/MDCK gCAMP7b/Wound region 1/spots.csv'
 
 graph_model:
   particle_model_name: 'PDE_Cell'

@@ -64,10 +64,10 @@ def extract_object_properties(segmentation_image, fluorescence_image=[]):
             aspect_ratio = region.major_axis_length / (region.minor_axis_length + 1e-6)
             # Calculate the orientation of the object
             orientation = region.orientation
-            # calculate median intensity
-            index = int(max(region.intensity_image[region.intensity_image > 0]))
+            # calculate sum intensity
+            fluo_sum = region.mean_intensity * area
 
-            object_properties.append((cell_id, pos_x_weighted, pos_y_weighted, area, perimeter, aspect_ratio, orientation, index))
+            object_properties.append((cell_id, pos_x_weighted, pos_y_weighted, area, perimeter, aspect_ratio, orientation, fluo_sum))
 
     return object_properties
 
@@ -356,9 +356,19 @@ def load_2D_cell_data(config, device, visualize):
     # 16 ASR1 aspect ratio
     # 17 OR1 orientation
 
+    # if image_data.tracking_file != '':
+    #     im_tracking = tifffile.imread(image_data.tracking_file)
+    #     im_tracking = np.array(im_tracking)
+
     if image_data.tracking_file != '':
-        im_tracking = tifffile.imread(image_data.tracking_file)
-        im_tracking = np.array(im_tracking)
+        df = pd.read_csv(image_data.tracking_file)
+        trackmate = dict()
+        trackmate['x'] = np.array(df['POSITION_X'][3:]).astype(float)
+        trackmate['y'] = np.array(df['POSITION_Y'][3:]).astype(float)
+        trackmate['frame'] = np.array(df['FRAME'][3:]).astype(int)
+        trackmate['track_ID'] = np.array(df['TRACK_ID'][3:])
+        trackmate['track_ID'] = pd.Series(trackmate['track_ID']).fillna(-1).astype(int).to_numpy()
+
 
     n_cells = 0
     run = 0
@@ -367,7 +377,8 @@ def load_2D_cell_data(config, device, visualize):
     track_list = []
     full_vertice_list = []
 
-    for it in range(len(files)):
+
+    for it in range(10):
 
         print (f'{files[it]}')
 
@@ -375,6 +386,8 @@ def load_2D_cell_data(config, device, visualize):
         im_seg = np.flipud(np.array(tifffile.imread(data_folder_name + 'SEG/' + files[it])))
 
         im_dim = im_seg.shape
+        if it == 0:
+            trackmate['y'] = im_dim[0] - trackmate['y']
 
         object_properties = extract_object_properties(im_seg, im_fluo[:,:,image_data.membrane_channel])
         object_properties = np.array(object_properties, dtype=float)
@@ -388,7 +401,35 @@ def load_2D_cell_data(config, device, visualize):
         OR = object_properties[:,6:7]
         ID = n_cells + np.arange(object_properties.shape[0])[:, None]
 
-        x = np.concatenate((N.astype(int), X, empty_columns, AR, P, ASR, OR, ID.astype(int) -1), axis=1)
+        pos = np.argwhere(trackmate['frame'] == it)
+        plt.scatter(trackmate['x'][pos], trackmate['y'][pos], s=10, c='w', alpha=0.75)
+        X_trackmate = np.concatenate((trackmate['y'][pos], trackmate['x'][pos]), axis=1)
+        trackID = trackmate['track_ID'][pos]
+
+        # Calculate distances between each point in X and each point in X_trackmate
+        distances = np.linalg.norm(X[:, None, :] - X_trackmate[None, :, :], axis=2)
+        # Find the index of the closest point in X_trackmate for each point in X
+        closest_indices = np.argmin(distances, axis=1)
+        # Map the track_ID from trackmate to X using the closest indices
+        X_track_ID = trackmate['track_ID'][pos][closest_indices]
+
+        # # Calculate distances between each point in X and each point in X_trackmate
+        # distances = np.linalg.norm(X[:, None, :] - X_trackmate[None, :, :], axis=2)
+        # # Initialize a set to keep track of assigned indices
+        # assigned_indices = set()
+        # # Initialize an array to store the closest indices
+        # closest_indices = np.full(X.shape[0], -1)
+        # # Find the closest point in X_trackmate for each point in X
+        # for i in range(X.shape[0]):
+        #     for j in np.argsort(distances[i]):
+        #         if j not in assigned_indices:
+        #             closest_indices[i] = j
+        #             assigned_indices.add(j)
+        #             break
+        # # Map the track_ID from trackmate to X using the closest indices
+        # X_track_ID = trackmate['track_ID'][closest_indices]
+
+        x = np.concatenate((N.astype(int), X, empty_columns, AR, P, ASR, OR, ID.astype(int)-1, X_track_ID), axis=1)
         x_list.append(x)
 
         y = torch.zeros((x.shape[0], 2), dtype=torch.float32, device=device)
@@ -410,6 +451,7 @@ def load_2D_cell_data(config, device, visualize):
         vertices_list = torch.stack(vertices_list)
         vertices_list = torch.reshape(vertices_list, (-1, vertices_list.shape[2]))
         vertices = vertices_list
+        full_vertice_list.append(vertices)
 
         # params = torch.tensor([[1.6233, 1.0413, 1.6012, 1.5615]], dtype=torch.float32, device=device)
         # model_vertices = PDE_V(aggr_type='mean', p=torch.squeeze(params), sigma=30, bc_dpos=bc_dpos, dimension=2)
@@ -425,60 +467,24 @@ def load_2D_cell_data(config, device, visualize):
         #     vertices[:,1:3] = vertices[:,1:3] + y
         #     vertices[:, 1:2] = torch.clip(vertices[:, 1:2], 0, im_dim[0])
         #     vertices[:, 2:3] = torch.clip(vertices[:, 2:3], 0, im_dim[1])
-        full_vertice_list.append(vertices)
 
-
-        # if image_data.tracking_file != '':
-        #     tracking_properties = extract_object_properties(im_tracking[it], im_tracking[it])
-        #     tracking_properties = np.array(tracking_properties, dtype=float)
-        #     N = tracking_properties[:,-1]
-        #     X = tracking_properties[:,1:3]
-        #     V = np.zeros((X.shape[0], 2))
-        #     empty_columns = np.zeros((X.shape[0], 11))
-        #     AR = object_properties[:, 3:4]
-        #     P = object_properties[:, 4:5]
-        #     ASR = object_properties[:, 5:6]
-        #     OR = object_properties[:, 6:7]
-        #     ID_CELL = np.zeros((X.shape[0], 1))
-        #
-        #     if it>0:
-        #         for n in range(len(X)):
-        #             pos = torch.argwhere(track[:,0] == torch.tensor(N[n], device=device))
-        #             if len(pos)>0:
-        #                 V[n] = (X[n] - to_numpy(track[:,1:3][pos[0]].squeeze()))
-        #
-        #     track = np.concatenate((N[:,None], X, V, empty_columns), axis=1)
-        #
-        #     # plt.imshow(im_tracking[it])
-        #     # plt.scatter(X[:,1], X[:,0],s=10)
-        #     # plt.text(X[:,1]+5, X[:,0], f'{N}', fontsize=4, color='w')
-        #
-        #     track = torch.tensor(track, dtype=torch.float32, device=device)
-        #     closest_neighbors = find_closest_neighbors(track, x)
-        #     closest_neighbors = torch.tensor(closest_neighbors, dtype=torch.float32, device=track.device)
-        #     track = torch.cat((track, x[closest_neighbors[:, None].long(),0]), 1)
-        #
-        #     track_list.append(track)
-
-        fig = plt.subplots(figsize=(18, 20))
+        fig = plt.subplots(figsize=(24, 20))
         plt.xticks([])
         plt.yticks([])
         plt.axis('off')
-        ax = plt.subplot(131)
+        ax = plt.subplot(141)
         plt.axis('off')
         plt.imshow(im_fluo)
         for n in range(len(x)):
             pos = torch.argwhere(vertices[:, 5:6] == torch.tensor(n_cells+n,dtype=torch.float32,device=device))
             plt.plot(to_numpy(vertices[pos, 2]), to_numpy(vertices[pos, 1]), c='w', linewidth=1)
-            plt.text(x[n, 2], x[n, 1], f'{x[n,0]:0.0f}', fontsize=12, color='w')
-        # for n in range(len(X)):
-        #     plt.text(X[n, 1], X[n, 0], f'{to_numpy(track[n,-1]):0.0f}', fontsize=12, color='w')
+            # plt.text(x[n, 2], x[n, 1], f'{x[n,0]:0.0f}', fontsize=12, color='w')
         # plt.scatter(x[:, 2], x[:, 1], s=10, c='w', alpha=0.75)
         plt.xlim([0 , im_dim[1]])
         plt.ylim([0 , im_dim[0]])
         plt.xticks([])
         plt.yticks([])
-        ax = plt.subplot(132)
+        ax = plt.subplot(142)
         plt.axis('off')
         plt.imshow(im_fluo*0)
         for n in range(len(x)):
@@ -489,16 +495,30 @@ def load_2D_cell_data(config, device, visualize):
         plt.ylim([0 , im_dim[0]])
         plt.xticks([])
         plt.yticks([])
-        ax = plt.subplot(133)
+        ax = plt.subplot(143)
         plt.imshow(im_fluo*0)
         plt.scatter(x[:, 2], x[:, 1], s=10, c='w', alpha=0.75)
+        for n in range(len(x)):
+            plt.text(x[n, 2], x[n, 1], f'{x[n, -1]:0.0f}', fontsize=8, color='w')
         plt.xlim([0 , im_dim[1]])
         plt.ylim([0 , im_dim[0]])
         plt.xticks([])
         plt.yticks([])
+
+        ax = plt.subplot(144)
+        plt.imshow(im_fluo*0)
+        pos = np.argwhere(trackmate['frame'] == it)
+        plt.scatter(trackmate['x'][pos], trackmate['y'][pos], s=10, c='w', alpha=0.75)
+        for n in range(len(pos)):
+            plt.text(trackmate['x'][pos[n]], trackmate['y'][pos[n]], f'{trackmate["track_ID"][pos[n]]}', fontsize=8, color='w')
+        plt.xlim([0 , im_dim[1]])
+        plt.ylim([0 , im_dim[0]])
+
         plt.tight_layout()
+        plt.xticks([])
+        plt.yticks([])
         # plt.show()
-        plt.savefig(f"graphs_data/{dataset_name}/Fig/{files[it]}", dpi=80)
+        plt.savefig(f"graphs_data/{dataset_name}/Fig/{files[it]}", dpi=300)
         plt.close()
 
         n_cells = ID[-1] + 1
@@ -591,8 +611,10 @@ def load_2D_cell_data(config, device, visualize):
     torch.save(track_list, f'graphs_data/{dataset_name}/track_list_{run}.pt')
     torch.save(full_vertice_list, f'graphs_data/{dataset_name}/full_vertice_list{run}.pt')
 
-
     print(f'n_cells: {n_cells}')
+
+
+
 
 
 def load_3D_cell_data(config, device, visualize):

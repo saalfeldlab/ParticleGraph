@@ -97,7 +97,7 @@ def data_train_particle(config, erase, best_model, device):
     n_particle_types = simulation_config.n_particle_types
     delta_t = simulation_config.delta_t
     time_window = train_config.time_window
-    time_step = simulation_config.time_step
+    time_step = train_config.time_step
     sub_sampling = simulation_config.sub_sampling
 
     noise_level = train_config.noise_level
@@ -183,7 +183,7 @@ def data_train_particle(config, erase, best_model, device):
     model, bc_pos, bc_dpos = choose_training_model(config, device)
     model.ynorm = ynorm
     model.vnorm = vnorm
-    if best_model != None:
+    if (best_model != None) & (best_model != ''):
         net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{best_model}.pt"
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
