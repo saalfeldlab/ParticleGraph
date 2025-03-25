@@ -1,16 +1,16 @@
 description: 'wound healing calcium imaging'
-dataset: 'cell_MDCK_12'
+dataset: 'cell_MDCK_13'
 data_folder_name: '/groups/saalfeld/home/allierc/signaling/MDCK/MDCK gCAMP7b/Wound region 1/merged/'
 
 simulation:
   params: [[-1]]
   min_radius: 0
-  max_radius:  128
+  max_radius: 128
   n_particles: 96
   has_cell_division: True
   has_cell_death: True
   n_particle_types: 16
-  n_frames: 260
+  n_frames: 10
   delta_t: 1
   boundary: 'no'
   start_frame: 0
@@ -24,13 +24,23 @@ image_data:
     tracking_file: '/groups/saalfeld/home/allierc/signaling/MDCK/MDCK gCAMP7b/Wound region 1/spots.csv'
 
 graph_model:
+
   particle_model_name: 'PDE_Cell'
   mesh_model_name: ''
   prediction: 'first_derivative'
+
   input_size: 13
   output_size: 2
   hidden_dim: 128
   n_mp_layers: 5
+
+  input_size_nnr: 2
+  n_layers_nnr: 5
+  hidden_dim_nnr: 128
+  output_size_nnr: 1
+  outermost_linear_nnr: True
+  omega : 80.0
+
   aggr_type: 'add'
   embedding_dim: 2
   update_type: 'none'

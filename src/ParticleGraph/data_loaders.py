@@ -295,6 +295,7 @@ def load_2D_cell_data(config, device, visualize):
     max_radius = simulation_config.max_radius
     min_radius = simulation_config.min_radius
     dimension = simulation_config.dimension
+    n_frames = simulation_config.n_frames
 
     delta_t = simulation_config.delta_t
 
@@ -339,23 +340,6 @@ def load_2D_cell_data(config, device, visualize):
     #     # plt.imshow(masks)
     #     # plt.show()
 
-
-    # 0 N1 cell index dim=1
-    # 1,2 X1 positions dim=2
-    # 3,4 V1 velocities dim=2
-    # 5 T1 cell type dim=1
-    # 6,7 H1 cell status dim=2  H1[:,0] = cell alive flag, alive : 0 , death : 0 , H1[:,1] = cell division flag, dividing : 1
-    # 8 A1 cell age dim=1
-    # 9 S1 cell stage dim=1  0 = G1 , 1 = S, 2 = G2, 3 = M
-    # 10 M1 cell_mass dim=1 (per node)
-    # 11 R1 cell growth rate dim=1
-    # 12 CL1 cell cycle length dim=1
-    # 13 DR1 cell death rate dim=1
-    # 14 AR1 area of the cell
-    # 15 P1 cell perimeter
-    # 16 ASR1 aspect ratio
-    # 17 OR1 orientation
-
     # if image_data.tracking_file != '':
     #     im_tracking = tifffile.imread(image_data.tracking_file)
     #     im_tracking = np.array(im_tracking)
@@ -378,9 +362,7 @@ def load_2D_cell_data(config, device, visualize):
     full_vertice_list = []
 
 
-    for it in range(10):
-
-        print (f'{files[it]}')
+    for it in range(0,n_frames-1):
 
         im_fluo = np.flipud(np.array(tifffile.imread(data_folder_name + files[it])))
         im_seg = np.flipud(np.array(tifffile.imread(data_folder_name + 'SEG/' + files[it])))
@@ -394,11 +376,14 @@ def load_2D_cell_data(config, device, visualize):
 
         N = np.arange(object_properties.shape[0], dtype=np.float32)[:, None]
         X = object_properties[:,1:3]
-        empty_columns = np.zeros((X.shape[0], 11))
-        AR = object_properties[:,3:4]
-        P = object_properties[:,4:5]
-        ASR = object_properties[:,5:6]
-        OR = object_properties[:,6:7]
+        V = np.zeros((X.shape[0], 2))
+        T = np.zeros((X.shape[0], 1))
+        F = np.zeros((X.shape[0], 2))
+        F [:, 1:2] = object_properties[:,7:8]
+        AREA = object_properties[:,3:4]
+        PERIMETER = object_properties[:,4:5]
+        ASPECT = object_properties[:,5:6]
+        ORIENTATION = object_properties[:,6:7]
         ID = n_cells + np.arange(object_properties.shape[0])[:, None]
 
         pos = np.argwhere(trackmate['frame'] == it)
@@ -413,23 +398,35 @@ def load_2D_cell_data(config, device, visualize):
         # Map the track_ID from trackmate to X using the closest indices
         X_track_ID = trackmate['track_ID'][pos][closest_indices]
 
-        # # Calculate distances between each point in X and each point in X_trackmate
-        # distances = np.linalg.norm(X[:, None, :] - X_trackmate[None, :, :], axis=2)
-        # # Initialize a set to keep track of assigned indices
-        # assigned_indices = set()
-        # # Initialize an array to store the closest indices
-        # closest_indices = np.full(X.shape[0], -1)
-        # # Find the closest point in X_trackmate for each point in X
-        # for i in range(X.shape[0]):
-        #     for j in np.argsort(distances[i]):
-        #         if j not in assigned_indices:
-        #             closest_indices[i] = j
-        #             assigned_indices.add(j)
-        #             break
-        # # Map the track_ID from trackmate to X using the closest indices
-        # X_track_ID = trackmate['track_ID'][closest_indices]
+        x = np.concatenate((N.astype(int), X, V, T, F, AREA, PERIMETER, ASPECT, ORIENTATION, X_track_ID, ID.astype(int)-1), axis=1)
 
-        x = np.concatenate((N.astype(int), X, empty_columns, AR, P, ASR, OR, ID.astype(int)-1, X_track_ID), axis=1)
+        if (it>0) & (image_data.tracking_file != ''):
+
+            positions_prev = x_list[-1][:, 1:3]
+            positions_curr = x[:, 1:3]
+            fluo_prev = x_list[-1][:, 7:8]
+            fluo_curr = x[:, 7:8]
+
+            track_ids_prev = x_list[-1][:, 12]
+            track_ids_curr = x[:, 12]
+
+            V = np.zeros_like(positions_curr)
+            # Compute the time step (assuming uniform time step)
+            for i, track_id in enumerate(track_ids_curr):
+                # Find the corresponding index in the previous positions
+                prev_index = np.where((track_ids_prev == track_id)&(track_id>-1))
+                prev_index = prev_index[0]
+                try:
+                    if prev_index.size > 0:
+                        V[i] = (positions_curr[i] - positions_prev[prev_index]) / delta_t
+                        F[i,0] = (fluo_curr[i] - fluo_prev[prev_index]) / fluo_curr[i]
+                except:
+                    print(f'Error: {prev_index}')
+
+
+            x = np.concatenate((N.astype(int), X, V, T, F, AREA, PERIMETER, ASPECT, ORIENTATION, X_track_ID, ID.astype(int) - 1), axis=1)
+
+
         x_list.append(x)
 
         y = torch.zeros((x.shape[0], 2), dtype=torch.float32, device=device)
@@ -446,11 +443,10 @@ def load_2D_cell_data(config, device, visualize):
                 empty_columns = np.zeros((X.shape[0], 2))
                 T = n_cells + (n-1) * np.ones((X.shape[0], 1))
                 vertices = np.concatenate((N.astype(int), X, empty_columns, T, N.astype(int)), axis=1)
-                vertices = torch.tensor(vertices, dtype=torch.float32, device=device)
                 vertices_list.append(vertices)
-        vertices_list = torch.stack(vertices_list)
-        vertices_list = torch.reshape(vertices_list, (-1, vertices_list.shape[2]))
-        vertices = vertices_list
+        # vertices_list = torch.stack(vertices_list)
+        # vertices_list = torch.reshape(vertices_list, (-1, vertices_list.shape[2]))
+        vertices = np.array(vertices_list)
         full_vertice_list.append(vertices)
 
         # params = torch.tensor([[1.6233, 1.0413, 1.6012, 1.5615]], dtype=torch.float32, device=device)
@@ -468,148 +464,89 @@ def load_2D_cell_data(config, device, visualize):
         #     vertices[:, 1:2] = torch.clip(vertices[:, 1:2], 0, im_dim[0])
         #     vertices[:, 2:3] = torch.clip(vertices[:, 2:3], 0, im_dim[1])
 
-        fig = plt.subplots(figsize=(24, 20))
+
+        print (f'{files[it]}')
+        fig = plt.subplots(figsize=(35, 20))
         plt.xticks([])
         plt.yticks([])
         plt.axis('off')
-        ax = plt.subplot(141)
+
+        ax = plt.subplot(161)
         plt.axis('off')
         plt.imshow(im_fluo)
-        for n in range(len(x)):
-            pos = torch.argwhere(vertices[:, 5:6] == torch.tensor(n_cells+n,dtype=torch.float32,device=device))
-            plt.plot(to_numpy(vertices[pos, 2]), to_numpy(vertices[pos, 1]), c='w', linewidth=1)
+        for n in range(vertices.shape[0]):
+            plt.plot(vertices[n,:,2], vertices[n,:,1], c='w', linewidth=1)
             # plt.text(x[n, 2], x[n, 1], f'{x[n,0]:0.0f}', fontsize=12, color='w')
         # plt.scatter(x[:, 2], x[:, 1], s=10, c='w', alpha=0.75)
         plt.xlim([0 , im_dim[1]])
         plt.ylim([0 , im_dim[0]])
         plt.xticks([])
         plt.yticks([])
-        ax = plt.subplot(142)
+
+        ax = plt.subplot(162)
         plt.axis('off')
         plt.imshow(im_fluo*0)
-        for n in range(len(x)):
-            pos = torch.argwhere(vertices[:, 5:6] == torch.tensor(n_cells+n,dtype=torch.float32,device=device))
-            plt.scatter(to_numpy(vertices[pos, 2]), to_numpy(vertices[pos, 1]), c='w', s=1)
+        for n in range(vertices.shape[0]):
+            plt.scatter(vertices[n,:,2], vertices[n,:,1], c='w', s=8, alpha=0.75, edgecolors='none')
         plt.scatter(x[:, 2], x[:, 1], s=10, c='w', alpha=0.75)
-        plt.xlim([0 , im_dim[1]])
-        plt.ylim([0 , im_dim[0]])
-        plt.xticks([])
-        plt.yticks([])
-        ax = plt.subplot(143)
-        plt.imshow(im_fluo*0)
-        plt.scatter(x[:, 2], x[:, 1], s=10, c='w', alpha=0.75)
-        for n in range(len(x)):
-            plt.text(x[n, 2], x[n, 1], f'{x[n, -1]:0.0f}', fontsize=8, color='w')
         plt.xlim([0 , im_dim[1]])
         plt.ylim([0 , im_dim[0]])
         plt.xticks([])
         plt.yticks([])
 
-        ax = plt.subplot(144)
+        ax = plt.subplot(163)
         plt.imshow(im_fluo*0)
-        pos = np.argwhere(trackmate['frame'] == it)
-        plt.scatter(trackmate['x'][pos], trackmate['y'][pos], s=10, c='w', alpha=0.75)
-        for n in range(len(pos)):
-            plt.text(trackmate['x'][pos[n]], trackmate['y'][pos[n]], f'{trackmate["track_ID"][pos[n]]}', fontsize=8, color='w')
+        plt.scatter(x[:, 2], x[:, 1], s=10, c='w', alpha=1)
+        # for n in range(len(x)):
+        #     plt.text(x[n, 2], x[n, 1], f'{x[n, -2]:0.0f}', fontsize=8, color='w')
         plt.xlim([0 , im_dim[1]])
         plt.ylim([0 , im_dim[0]])
+        plt.xticks([])
+        plt.yticks([])
+
+        ax = plt.subplot(164)
+        plt.title('velocity', fontsize=48)
+        plt.scatter(x[:, 2], x[:, 1], s=20, alpha=1, c='w')
+        plt.quiver(x[:, 2], x[:, 1], x[:, 4], x[:, 3], color='w', scale = 250)
+        # plt.colorbar()
+        plt.xlim([0 , im_dim[1]])
+        plt.ylim([0 , im_dim[0]])
+        plt.xticks([])
+        plt.yticks([])
+
+        ax = plt.subplot(165)
+        plt.title('F', fontsize=48)
+        plt.scatter(x[:, 2], x[:, 1], s=100, c=x[:, 7], alpha=1, cmap='viridis', vmin=0, vmax=0.5E6)
+        # plt.colorbar()
+        plt.xlim([0 , im_dim[1]])
+        plt.ylim([0 , im_dim[0]])
+        plt.xticks([])
+        plt.yticks([])
+
+        ax = plt.subplot(166)
+        plt.title('DF/F', fontsize=48)
+        plt.scatter(x[:, 2], x[:, 1], s=100, c=x[:, 6], alpha=1, cmap='viridis', vmin=-0.5, vmax=0.5)
+        # plt.colorbar()
+        plt.xlim([0 , im_dim[1]])
+        plt.ylim([0 , im_dim[0]])
+        plt.xticks([])
+        plt.yticks([])
 
         plt.tight_layout()
         plt.xticks([])
         plt.yticks([])
         # plt.show()
-        plt.savefig(f"graphs_data/{dataset_name}/Fig/{files[it]}", dpi=300)
+        plt.savefig(f"graphs_data/{dataset_name}/Fig/{files[it]}", dpi=100)
         plt.close()
 
         n_cells = ID[-1] + 1
 
-        visualize = False
-        if visualize:
+    np.savez(f'graphs_data/{dataset_name}/x_list_{run}', *x_list)
+    np.savez(f'graphs_data/{dataset_name}/full_vertice_list_{run}', *full_vertice_list)
 
-            matplotlib.use("Qt5Agg")
-            fig = plt.figure(figsize=(13, 10.5))
-            ax = fig.add_subplot(221)
-            plt.imshow(im_seg>0)
-            plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=5, c='k', alpha=0.75)
-            plt.xticks([])
-            plt.yticks([])
-            plt.xlim([0, im_dim[1]])
-            plt.ylim([0, im_dim[0]])
-            ax = fig.add_subplot(222)
-            plt.imshow(im_seg*0)
-            plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=5, c='w')
-            for k in range(len(x)):
-                plt.text(to_numpy(x[k, 2]) + 5, to_numpy(x[k, 1]), f'{int(to_numpy(x[k, -1]))}', fontsize=4, color='w')
-            plt.xticks([])
-            plt.yticks([])
-            plt.xlim([0, im_dim[1]])
-            plt.ylim([0, im_dim[0]])
-
-            ax = fig.add_subplot(223)
-            plt.imshow(im_seg>0)
-            edge_index = torch.sum((x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
-            edge_index = ((edge_index < max_radius ** 2) & (edge_index > min_radius ** 2)).float() * 1
-            edge_index = edge_index.nonzero().t().contiguous()
-
-            pos = x[:, 1:3].clone().detach()
-            pos[:, [0, 1]] = pos[:, [1, 0]]
-
-            dataset = data.Data(x=x, pos=pos, edge_index=edge_index)
-            vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-            nx.draw_networkx(vis, pos=to_numpy(pos), node_size=0, linewidths=0, with_labels=False, ax=ax,
-                             edge_color='w', width=1, alpha=0.75)
-            plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=5, c='k', alpha=0.75)
-            plt.xticks([])
-            plt.yticks([])
-            plt.xlim([0, im_dim[1]])
-            plt.ylim([0, im_dim[0]])
-
-            ax = fig.add_subplot(224)
-
-            X1 = x[:,1:3].clone().detach()
-            X1[:,0]  = X1[:,0] / im_dim[0]
-            X1[:, 1] = X1[:, 1] / im_dim[1]
-            X1[:, [0, 1]] = X1[:, [1, 0]]
-
-            vor, vertices_pos, vertices_per_cell, all_points = get_vertices(points=X1, device=device)
-            voronoi_plot_2d(vor, ax=ax, show_vertices=False, line_colors='green', line_width=1, line_alpha=1,
-                            point_size=0)
-            plt.scatter(to_numpy(X1[:,0]),to_numpy(X1[:,1]),s=10,c='g')
-            plt.xticks([])
-            plt.yticks([])
-            plt.xlim([0, 1])
-            plt.ylim([0, 1])
-
-            plt.tight_layout()
-            plt.show()
-
-            num = f"{it:06}"
-            plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{it}.tif", dpi=120)
-            plt.close()
-
-            vor.vertices = vor.vertices * im_dim
-
-            matplotlib.use("Qt5Agg")
-            fig = plt.figure(figsize=(13, 10.5))
-            plt.imshow(im_fluo[:,:,0])
-            plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=10, c='r', alpha=0.75)
-            plt.show()
-            fig = plt.figure(figsize=(13, 10.5))
-            plt.imshow(im_fluo[:,:,1])
-            plt.show()
-            fig = plt.figure(figsize=(13, 10.5))
-            plt.imshow(im_seg>0)
-            plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=5, c='k', alpha=0.75)
-            vor, vertices_pos, vertices_per_cell, all_points = get_vertices(points=X1, device=device)
-            voronoi_plot_2d(vor, ax=ax, show_vertices=False, line_colors='green', line_width=1, line_alpha=1,
-                            point_size=0)
-            plt.scatter(to_numpy(X1[:,1]*im_dim[1]),to_numpy(X1[:,0]*im_dim[0]),s=10,c='r')
-
-
-    torch.save(x_list, f'graphs_data/{dataset_name}/x_list_{run}.pt')
-    torch.save(y_list, f'graphs_data/{dataset_name}/y_list_{run}.pt')
-    torch.save(track_list, f'graphs_data/{dataset_name}/track_list_{run}.pt')
-    torch.save(full_vertice_list, f'graphs_data/{dataset_name}/full_vertice_list{run}.pt')
+    # torch.save(x_list, f'graphs_data/{dataset_name}/x_list_{run}.pt')
+    # torch.save(y_list, f'graphs_data/{dataset_name}/y_list_{run}.pt')
+    # torch.save(full_vertice_list, f'graphs_data/{dataset_name}/full_vertice_list{run}.pt')
 
     print(f'n_cells: {n_cells}')
 

@@ -1,0 +1,96 @@
+description: ''
+dataset: 'signal_N4_all_1'
+
+simulation:
+    connectivity_file: 'random'
+    adjacency_matrix: ''
+    connectivity_init: [0,0.1]
+    connectivity_distribution: 'Lorentz_structured_0.40_0.05'
+    params: [[10.0,1.5,1.0,1.0,-8.0],[10.0,2.5,1.0,1.0,-7.0],[10.0,1.5,2.0,1.0,-6.0],[10.0,2.5,2.0,1.0,-5.0],
+            [10.0,1.5,1.0,1.0,-4.0],[10.0,2.5,1.0,1.0,-3.0],[10.0,1.5,2.0,1.0,-2.0],[10.0,2.5,2.0,1.0,-1.0],
+             [10.0,1.5,1.0,1.0,0.0],[10.0,2.5,1.0,1.0,1.0],[10.0,1.5,2.0,1.0,2.0],[10.0,2.5,2.0,1.0,3.0],
+            [10.0,1.5,1.0,1.0,4.0],[10.0,2.5,1.0,1.0,5.0],[10.0,1.5,2.0,1.0,6.0],[10.0,2.5,2.0,1.0,8.0]]
+    phi: 'sigmoid'
+    tau: 1.0
+    min_radius: 1.0
+    max_radius: 1.0E6
+    n_particles: 1024
+    n_nodes: 1024
+    n_particle_types: 16
+    shuffle_particle_types: False
+    n_frames: 100000
+    delta_t: 0.01
+    dpos_init:  0
+    boundary: 'no'
+    start_frame: -10000
+    node_value_map: 'video_bisons_32.tif'
+
+graph_model:
+    field_type: 'Siren_short_term_plasticity_permutation' # 'modulation_permutation' # 
+    signal_model_name: 'PDE_N9'
+    particle_model_name: ''
+    mesh_model_name: ''
+    prediction: 'first_derivative'
+
+    input_size: 4
+    output_size: 1
+    hidden_dim: 64
+    n_mp_layers: 5
+
+    input_size_update: 4
+    n_layers_update: 5
+    hidden_dim_update: 128
+
+    input_size_nnr: 1
+    n_layers_nnr: 5
+    hidden_dim_nnr: 128
+    output_size_nnr: 1024
+    omega: 30.0
+
+    aggr_type: 'add'
+    embedding_dim: 2
+    update_type: 'intricated'
+    
+    lin_edge_positive: True
+
+
+plotting:
+    colormap: 'tab20'
+    arrow_length: 1
+    xlim: [ -5,5 ]
+    ylim: [ -8,8 ]
+
+training:
+    n_epochs: 20
+    n_runs: 2
+    device: 'auto'
+
+    n_epochs_init: 5
+    recursive_loop: 1
+    batch_size: 10
+    small_init_batch_size: True
+    
+    epoch_reset: 2
+    epoch_reset_freq: 999
+    n_epochs_init: 999
+
+    rotation_augmentation: False
+    data_augmentation_loop: 50
+    
+    sparsity: 'none'
+    sparsity_freq: 4
+    cluster_method: 'distance_plot'
+    cluster_distance_threshold: 0.1
+    fix_cluster_embedding: True
+
+    coeff_diff: 100
+    coeff_diff_update: 10 
+
+    learning_rate_W_start: 1.0E-3
+    learning_rate_start: 5.0E-4
+    learning_rate_embedding_start: 5.0E-3
+    learning_rate_modulation_start: 1.0E-4
+
+    learning_rate_NNR: 1.0E-5
+
+    noise_level: 1

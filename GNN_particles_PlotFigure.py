@@ -5635,28 +5635,49 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
                 if 'Siren_short_term_plasticity' in field_type:
 
-                    for frame in trange(0, n_frames, n_frames // 200):
-                        x = x_list[0][frame]
+                    for frame in trange(0, n_frames, n_frames // 100):
+                        t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
+                        t[:, 0, :] = torch.tensor(frame / n_frames, dtype=torch.float32, device=device)
+                        m = model_f(t).squeeze() ** 2
+                        if 'permutation' in model_config.field_type:
+                            inverse_permutation_indices = torch.load(f'./graphs_data/{dataset_name}/inverse_permutation_indices.pt', map_location=device)
+                            modulation = m #[inverse_permutation_indices]
+                        else:
+                            modulation = m
+                        modulation = torch.reshape(modulation, (32, 32)) * torch.tensor(second_correction, device=device) / 10
                         fig = plt.figure(figsize=(10, 10.5))
                         plt.axis('off')
                         plt.xticks([])
                         plt.xticks([])
-                        plt.scatter(x[:,1], x[:,2], s=160, c=to_numpy(modulation[:,frame]),
-                                    vmin=0, vmax=2, cmap='viridis')
-                        plt.title(r'neuromodulation $b_i$', fontsize=48)
-                        plt.tight_layout()
-                        plt.savefig(f"./{log_dir}/results/field/bi_{frame}.tif", dpi=80)
-                        plt.close()
-                        fig = plt.figure(figsize=(10, 10.5))
-                        plt.axis('off')
-                        plt.xticks([])
-                        plt.xticks([])
-                        plt.scatter(x[:,1], x[:,2], s=160, c=x[:,6],
-                                    vmin=-20, vmax=20, cmap='viridis')
-                        plt.title(r'$x_i$', fontsize=48)
+                        plt.imshow(to_numpy(modulation), cmap='gray')
+                        # plt.title(r'neuromodulation $b_i$', fontsize=48)
                         plt.tight_layout()
                         plt.savefig(f"./{log_dir}/results/field/xi_{frame}.tif", dpi=80)
                         plt.close()
+
+
+
+                        # x = x_list[0][frame]
+                        # fig = plt.figure(figsize=(10, 10.5))
+                        # plt.axis('off')
+                        # plt.xticks([])
+                        # plt.xticks([])
+                        # plt.scatter(x[:,1], x[:,2], s=160, c=to_numpy(modulation[:,frame]),
+                        #             vmin=0, vmax=2, cmap='viridis')
+                        # plt.title(r'neuromodulation $b_i$', fontsize=48)
+                        # plt.tight_layout()
+                        # plt.savefig(f"./{log_dir}/results/field/bi_{frame}.tif", dpi=80)
+                        # plt.close()
+                        # fig = plt.figure(figsize=(10, 10.5))
+                        # plt.axis('off')
+                        # plt.xticks([])
+                        # plt.xticks([])
+                        # plt.scatter(x[:,1], x[:,2], s=160, c=x[:,6],
+                        #             vmin=-20, vmax=20, cmap='viridis')
+                        # plt.title(r'$x_i$', fontsize=48)
+                        # plt.tight_layout()
+                        # plt.savefig(f"./{log_dir}/results/field/xi_{frame}.tif", dpi=80)
+                        # plt.close()
 
                     fig, ax = fig_init()
                     t = torch.zeros((1, 100000, 1), dtype=torch.float32, device=device)
@@ -5710,8 +5731,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/results/comparison_yi_{epoch}.tif", dpi=80)
                     plt.close()
-
-
 
                 else:
 
@@ -5873,8 +5892,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/results/field/true_field_{frame}.tif", dpi=80)
                     plt.close()
-
-
 
             if False:
                 print ('symbolic regression ...')
@@ -7878,8 +7895,8 @@ if __name__ == '__main__':
     #     pass
 
     # config_list = ['signal_N6_a29_12']
-    config_list = ['signal_N2_a43_10']
-    # config_list = ['signal_N4_m14_shuffle']
+    # config_list = ['signal_N2_a43_10']
+    config_list = ['signal_N4_m13_shuffle']
     # config_list = ['rat_city_g_1']
 
     for config_file_ in config_list:
@@ -7894,7 +7911,7 @@ if __name__ == '__main__':
         print(f'config_file  {config.config_file}')
 
         data_plot(config=config, epoch_list=['best'], style='black color', device=device)
-        data_plot(config=config, epoch_list=['all'], style='black color', device=device)
+        # data_plot(config=config, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['time'], style='black color', device=device)
 
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)

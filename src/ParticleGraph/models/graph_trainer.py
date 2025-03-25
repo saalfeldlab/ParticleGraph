@@ -2524,35 +2524,6 @@ def data_train_synaptic2(config, erase, best_model, device):
                     func_phi = model.lin_phi(in_features.float())
                     x = torch.tensor(x_list[run][k], device=device)
 
-                    if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N7') | (model_config.signal_model_name == 'PDE_N8'):
-                        in_features = torch.zeros((n_particles, dimension + 1), device=device)
-                        func_edge = model.lin_edge(in_features.float())
-                        in_features = torch.cat((x[:, 6:7], model.a), dim=1)
-                        in_features_next = torch.cat((x[:, 6:7] + 0.1, model.a), dim=1)
-                    elif model_config.signal_model_name == 'PDE_N5':
-                        in_features = torch.zeros((n_particles, 2 * dimension + 1), device=device)
-                        func_edge = model.lin_edge(in_features.float())
-                        in_features = torch.cat((x[:, 6:7], model.a, model.a), dim=1)
-                        in_features_next = torch.cat((x[:, 6:7] + 0.1, model.a, model.a), dim=1)
-                    else:
-                        in_features = torch.zeros((n_particles, 1), device=device)
-                        func_edge = model.lin_edge(in_features.float())
-                        in_features = x[:, 6:7]
-                        in_features_next = x[:, 6:7] + 0.1
-                    if model_config.lin_edge_positive:
-                        diff = torch.relu(model.lin_edge(in_features) ** 2 - model.lin_edge(in_features_next) ** 2).norm(2) * coeff_diff
-                    else:
-                        diff = torch.relu(model.lin_edge(in_features) - model.lin_edge(in_features_next)).norm(2) * coeff_diff
-                    if model.update_type == 'intricated':
-                        in_features = get_in_features_update(x[:, 6:7].clone().detach(), n_particles, model.a, model.update_type, device)
-                        in_features[:,-1] = x[:, 6]
-                        in_features = in_features.clone().detach()
-                        in_features_next = in_features.clone().detach()
-                        in_features_next[:,-1] = in_features[:,-1] + 0.1
-                        diff = diff + torch.relu(model.lin_phi(in_features) - model.lin_phi(in_features_next)).norm(2) * coeff_diff_update
-
-                    loss += model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff
-
                     if has_field:
                         if 'visual' in field_type:
                             x[:n_nodes, 8:9] = model_f(time=k / n_frames) ** 2
@@ -2573,9 +2544,48 @@ def data_train_synaptic2(config, erase, best_model, device):
                                 pred_modulation = model.lin_modulation(in_modulation)
                                 loss += (grad - pred_modulation.squeeze()).norm(2) * coeff_lin_modulation
                             else:
-                                x[:, 8] = model_f(t) ** 2
+                                if (model_config.signal_model_name == 'PDE_N9'):
+                                    x[:, 8] = model_f(t)
+                                else:
+                                    x[:, 8] = model_f(t) ** 2
                         else:
                             x[:, 8:9] = model_f(time=k / n_frames) ** 2
+
+                    if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N7') | (model_config.signal_model_name == 'PDE_N8'):
+                        in_features = torch.zeros((n_particles, dimension + 1), device=device)
+                        func_edge = model.lin_edge(in_features.float())
+                        in_features = torch.cat((x[:, 6:7], model.a), dim=1)
+                        in_features_next = torch.cat((x[:, 6:7] + 0.1, model.a), dim=1)
+                    elif model_config.signal_model_name == 'PDE_N5':
+                        in_features = torch.zeros((n_particles, 2 * dimension + 1), device=device)
+                        func_edge = model.lin_edge(in_features.float())
+                        in_features = torch.cat((x[:, 6:7], model.a, model.a), dim=1)
+                        in_features_next = torch.cat((x[:, 6:7] + 0.1, model.a, model.a), dim=1)
+                    elif (model_config.signal_model_name == 'PDE_N9'):
+                        in_features = torch.zeros((n_particles, dimension + 2), device=device)
+                        func_edge = model.lin_edge(in_features.float())
+                        in_features = torch.cat((x[:, 6:7], model.a, x[:, 8:9]), dim=1)
+                        in_features_next = torch.cat((x[:, 6:7] + 0.1, model.a, x[:, 8:9]), dim=1)
+                    else:
+                        in_features = torch.zeros((n_particles, 1), device=device)
+                        func_edge = model.lin_edge(in_features.float())
+                        in_features = x[:, 6:7]
+                        in_features_next = x[:, 6:7] + 0.1
+                    if model_config.lin_edge_positive:
+                        diff = torch.relu(model.lin_edge(in_features) ** 2 - model.lin_edge(in_features_next) ** 2).norm(2) * coeff_diff
+                    else:
+                        diff = torch.relu(model.lin_edge(in_features) - model.lin_edge(in_features_next)).norm(2) * coeff_diff
+                    if model.update_type == 'intricated':
+                        in_features = get_in_features_update(x[:, 6:7].clone().detach(), n_particles, model.a, model.update_type, device)
+                        in_features[:,-1] = x[:, 6]
+                        in_features = in_features.clone().detach()
+                        in_features_next = in_features.clone().detach()
+                        in_features_next[:,-1] = in_features[:,-1] + 0.1
+                        diff = diff + torch.relu(model.lin_phi(in_features) - model.lin_phi(in_features_next)).norm(2) * coeff_diff_update
+
+                    loss += model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff
+
+
 
                     # edges = model.edges.clone().detach()
                     # if particle_batch_ratio < 1:
@@ -2878,7 +2888,7 @@ def data_train_synaptic2(config, erase, best_model, device):
             ax = fig.add_subplot(2, 5, 6)
             embedding = to_numpy(model.a.squeeze())
 
-            if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5') | (model_config.signal_model_name == 'PDE_N8'):
+            if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5') | (model_config.signal_model_name == 'PDE_N8') | (model_config.signal_model_name == 'PDE_N9'):
                 model_MLP = model.lin_edge
                 update_type = 'NA'
             else:
