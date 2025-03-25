@@ -71,7 +71,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         self.lin_phi = MLP(input_size=self.input_size_update, output_size=self.output_size, nlayers=self.n_layers_update,
                             hidden_size=self.hidden_dim_update, device=self.device)
 
-        if (self.update_type != '2steps+field'):
+        if self.update_type == '2steps+field':
             self.lin_phi2 = MLP(input_size=3, output_size=self.output_size,
                                nlayers=self.n_layers_update,
                                hidden_size=self.hidden_dim_update, device=self.device)
@@ -131,7 +131,10 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         if self.update_type == '2steps+field':
             in_features1 = torch.cat([u, embedding], dim=1)
             pred1 = self.lin_phi(in_features1)
-            field = x[:, 8:9]
+            if self.lin_edge_positive:
+                field = x[:, 8:9]**2
+            else:
+                field = x[:, 8:9]
             in_features2 = torch.cat([pred1, msg, field], dim=1)
             pred = self.lin_phi2(in_features2)
         elif self.update_type == '2steps':

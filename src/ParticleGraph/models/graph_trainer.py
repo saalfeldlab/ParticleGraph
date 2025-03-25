@@ -2585,8 +2585,6 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                     loss += model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff
 
-
-
                     # edges = model.edges.clone().detach()
                     # if particle_batch_ratio < 1:
                     #     mask = ~torch.isin(edges[1, :], torch.tensor(ids, device=device))
