@@ -70,11 +70,11 @@ class PDE_N4(pyg.nn.MessagePassing):
 
         return du
 
-    def message(self, edge_index_i, edge_index_j, u_j, t_i, b_i, field_i):
+    def message(self, edge_index_i, edge_index_j, u_j, t_j, b_j, field_i):
 
         T = self.W
 
-        return T[edge_index_i, edge_index_j][:, None] * self.phi((u_j-b_i) / t_i) * field_i
+        return T[edge_index_i, edge_index_j][:, None] * self.phi((u_j-b_j) / t_j) * field_i
 
     def func(self, u, type, function):
 

@@ -32,12 +32,12 @@ graph_model:
     mesh_model_name: ''
     prediction: 'first_derivative'
 
-    input_size: 4
+    input_size: 3
     output_size: 1
     hidden_dim: 64
     n_mp_layers: 5
 
-    input_size_update: 3
+    input_size_update: 4
     n_layers_update: 5
     hidden_dim_update: 128
 

@@ -160,7 +160,7 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
         elif 'PDE_N5' in config.graph_model.signal_model_name:
             embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
             in_features = torch.cat((rr[:, None], embedding_, embedding_), dim=1)
-        if ('PDE_N9' in config.graph_model.signal_model_name):
+        elif ('PDE_N9' in config.graph_model.signal_model_name):
             embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
             in_features = torch.cat((rr[:, None], embedding_, torch.ones_like(rr[:,None])), dim=1)
         else:
