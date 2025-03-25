@@ -27,7 +27,7 @@ simulation:
 
 graph_model:
     field_type: 'Siren_short_term_plasticity_permutation' # 'modulation_permutation' # 
-    signal_model_name: 'PDE_N4'
+    signal_model_name: 'PDE_N9'
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
@@ -38,8 +38,8 @@ graph_model:
     n_mp_layers: 5
 
     input_size_update: 3
-    n_layers_update: 5
-    hidden_dim_update: 128
+    n_layers_update: 3
+    hidden_dim_update: 64
 
     input_size_nnr: 1
     n_layers_nnr: 5
@@ -49,7 +49,7 @@ graph_model:
 
     aggr_type: 'add'
     embedding_dim: 2
-    update_type: 'intricated'
+    update_type: '2steps'
     
     lin_edge_positive: True
 
@@ -84,7 +84,7 @@ training:
     fix_cluster_embedding: True
 
     coeff_diff: 100
-    coeff_diff_update: 10
+    coeff_diff_update: 10 
 
     learning_rate_W_start: 1.0E-3
     learning_rate_start: 5.0E-4

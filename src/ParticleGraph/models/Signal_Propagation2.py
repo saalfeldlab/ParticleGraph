@@ -71,6 +71,15 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         self.lin_phi = MLP(input_size=self.input_size_update, output_size=self.output_size, nlayers=self.n_layers_update,
                             hidden_size=self.hidden_dim_update, device=self.device)
 
+        if (self.update_type != '2steps+field'):
+            self.lin_phi2 = MLP(input_size=3, output_size=self.output_size,
+                               nlayers=self.n_layers_update,
+                               hidden_size=self.hidden_dim_update, device=self.device)
+        if self.update_type == '2steps':
+            self.lin_phi2 = MLP(input_size=2, output_size=self.output_size,
+                               nlayers=self.n_layers_update,
+                               hidden_size=self.hidden_dim_update, device=self.device)
+
         if self.model == 'PDE_N3':
             self.a = nn.Parameter(
                 torch.ones((int(self.n_particles*100 + 1000), self.embedding_dim), device=self.device, requires_grad=True,dtype=torch.float32))
@@ -113,25 +122,24 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             embedding = self.a[particle_id, :]
 
         field = torch.ones((x.shape[0],1), requires_grad=False, dtype=torch.float32, device=self.device)
-        if (self.model == 'PDE_N4') | (self.model == 'PDE_N5') | (self.model == 'PDE_N6') | (self.model == 'PDE_N7') :
+
+        if (self.update_type != '2steps+field') & ((self.model == 'PDE_N4') | (self.model == 'PDE_N5') | (self.model == 'PDE_N6') | (self.model == 'PDE_N7') | (self.model == 'PDE_N9')):
             field = x[:, 8:9]
-
-        # if (self.model=='PDE_N4') | (self.model=='PDE_N5'):
-        #     msg = self.propagate(edge_index, u=u, embedding=embedding, field=field)
-        # elif self.model=='PDE_N6':
-        #     msg = torch.matmul(self.W * self.mask, self.lin_edge(u)) * field
-        # else:
-        #     msg = torch.matmul(self.W * self.mask, self.lin_edge(u))
-        #     if self.return_all:
-        #         self.msg = torch.matmul(self.W * self.mask, self.lin_edge(u))
-
-        # if (self.model=='PDE_N2') & (self.batch_size==1):
-        #     msg = torch.matmul(self.W * self.mask, self.lin_edge(u))
-        # else:
 
         msg = self.propagate(edge_index, u=u, embedding=embedding, field=field)
 
-        if self.update_type == 'intricated':
+        if self.update_type == '2steps+field':
+            in_features1 = torch.cat([u, embedding], dim=1)
+            pred1 = self.lin_phi(in_features1)
+            field = x[:, 8:9]
+            in_features2 = torch.cat([pred1, msg, field], dim=1)
+            pred = self.lin_phi2(in_features2)
+        elif self.update_type == '2steps':
+            in_features1 = torch.cat([u, embedding], dim=1)
+            pred1 = self.lin_phi(in_features1)
+            in_features2 = torch.cat([pred1, msg], dim=1)
+            pred = self.lin_phi2(in_features2)
+        elif self.update_type == 'intricated':
             in_features = torch.cat([u, embedding, msg], dim=1)
             pred = self.lin_phi(in_features)
         else:
@@ -177,3 +185,17 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
 
     def psi(self, r, p):
         return p * r
+
+
+
+
+# if (self.model=='PDE_N4') | (self.model=='PDE_N5'):
+#     msg = self.propagate(edge_index, u=u, embedding=embedding, field=field)
+# elif self.model=='PDE_N6':
+#     msg = torch.matmul(self.W * self.mask, self.lin_edge(u)) * field
+# else:
+#     msg = torch.matmul(self.W * self.mask, self.lin_edge(u))
+#     if self.return_all:
+#         self.msg = torch.matmul(self.W * self.mask, self.lin_edge(u))
+# if (self.model=='PDE_N2') & (self.batch_size==1):
+#     msg = torch.matmul(self.W * self.mask, self.lin_edge(u))
