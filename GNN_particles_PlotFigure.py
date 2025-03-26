@@ -7902,7 +7902,7 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N6_a29_12']
     # config_list = ['signal_N2_a43_10']
-    config_list = ['signal_N4_all_7','signal_N4_all_8','signal_N4_all_11']
+    config_list = ['signal_N4_all_1','signal_N4_all_2','signal_N4_all_3','signal_N4_all_4','signal_N4_all_5','signal_N4_all_6']
     # config_list = ['rat_city_g_1']
 
     for config_file_ in config_list:
