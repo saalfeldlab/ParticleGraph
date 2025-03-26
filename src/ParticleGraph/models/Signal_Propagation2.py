@@ -47,6 +47,9 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         self.n_layers_update = model_config.n_layers_update
         self.hidden_dim_update = model_config.hidden_dim_update
         self.input_size_update = model_config.input_size_update
+        self.n_layers_update2 = model_config.n_layers_update2
+        self.hidden_dim_update2 = model_config.hidden_dim_update2
+        self.input_size_update2 = model_config.input_size_update2
 
         self.input_size_modulation = model_config.input_size_modulation
         self.output_size_modulation = model_config.output_size_modulation
@@ -72,13 +75,14 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
                             hidden_size=self.hidden_dim_update, device=self.device)
 
         if self.update_type == '2steps+field':
-            self.lin_phi2 = MLP(input_size=3, output_size=self.output_size,
-                               nlayers=self.n_layers_update,
-                               hidden_size=self.hidden_dim_update, device=self.device)
+            self.lin_phi2 = MLP(input_size=self.input_size_update2, output_size=self.output_size,
+                               nlayers=self.n_layers_update2,
+                               hidden_size=self.hidden_dim_update2, device=self.device)
+
         if self.update_type == '2steps':
-            self.lin_phi2 = MLP(input_size=2, output_size=self.output_size,
-                               nlayers=self.n_layers_update,
-                               hidden_size=self.hidden_dim_update, device=self.device)
+            self.lin_phi2 = MLP(input_size=self.input_size_update2, output_size=self.output_size,
+                               nlayers=self.n_layers_update2,
+                               hidden_size=self.hidden_dim_update2, device=self.device)
 
         if self.model == 'PDE_N3':
             self.a = nn.Parameter(

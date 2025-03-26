@@ -48,7 +48,7 @@ class PDE_N6(pyg.nn.MessagePassing):
         self.msg = self.W * self.phi(u)
         msg = torch.matmul(self.W, self.phi(u))
 
-        du = -c * u + s * self.phi(u) + g * p * msg
+        du = -c * u + s * torch.tanh(u) + g * p * msg
         dp = (1 - p) / tau - alpha * p * torch.abs(u)
 
         return du, dp
@@ -67,5 +67,5 @@ class PDE_N6(pyg.nn.MessagePassing):
 
         elif function == 'update':
             g, s, c = self.p[type, 0:1], self.p[type, 1:2], self.p[type, 2:3]
-            return -c * u + s * self.phi(u)
+            return -c * u + s * torch.tanh(u)
 

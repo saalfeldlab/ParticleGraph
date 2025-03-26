@@ -44,7 +44,7 @@ class PDE_N3(pyg.nn.MessagePassing):
         # msg = self.propagate(edge_index, u=u, edge_attr=edge_attr)
         msg = torch.matmul(self.W, self.phi(u))
 
-        du = -c * u + s * self.phi(u) + g * msg
+        du = -c * u + s * torch.tanh(u) + g * msg
 
         return du
 
@@ -64,5 +64,5 @@ class PDE_N3(pyg.nn.MessagePassing):
 
         elif function=='update':
             g, s, c = self.p[type, 0:1], self.p[type, 1:2], self.p[type, 2:3]
-            return -c * u + s * self.phi(u)
+            return -c * u + s * torch.tanh(u)
 

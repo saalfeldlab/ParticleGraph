@@ -41,6 +41,10 @@ graph_model:
     n_layers_update: 3
     hidden_dim_update: 64
 
+    input_size_update2: 3
+    n_layers_update2: 3
+    hidden_dim_update2: 64
+
     input_size_nnr: 1
     n_layers_nnr: 5
     hidden_dim_nnr: 32
@@ -67,7 +71,7 @@ training:
 
     n_epochs_init: 5
     recursive_loop: 1
-    batch_size: 10
+    batch_size: 1
     small_init_batch_size: True
     
     epoch_reset: 2

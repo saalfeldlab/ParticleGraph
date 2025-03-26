@@ -37,9 +37,13 @@ graph_model:
     hidden_dim: 64
     n_mp_layers: 5
 
-    input_size_update: 4
-    n_layers_update: 5
-    hidden_dim_update: 128
+    input_size_update: 3
+    n_layers_update: 3
+    hidden_dim_update: 64
+
+    input_size_update2: 3
+    n_layers_update2: 3
+    hidden_dim_update2: 32
 
     input_size_nnr: 1
     n_layers_nnr: 5
@@ -49,7 +53,7 @@ graph_model:
 
     aggr_type: 'add'
     embedding_dim: 2
-    update_type: 'intricated'
+    update_type: '2steps+field'
     
     lin_edge_positive: True
 

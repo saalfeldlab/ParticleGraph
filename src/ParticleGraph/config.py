@@ -119,10 +119,16 @@ class GraphModelConfig(BaseModel):
     embedding_init: str = ''
 
     update_type: Literal['linear', 'mlp', 'pre_mlp', '2steps', '2steps+field', 'none', 'no_pos', 'intricated', 'embedding_MLP'] = 'none'
+
     input_size_update: int = 3
     n_layers_update: int = 3
     hidden_dim_update: int = 64
     output_size_update: int = 1
+
+    input_size_update2: int = 3
+    n_layers_update2: int = 3
+    hidden_dim_update2: int = 64
+    output_size_update2: int = 1
 
     input_size_nnr: int = 3
     n_layers_nnr: int = 5

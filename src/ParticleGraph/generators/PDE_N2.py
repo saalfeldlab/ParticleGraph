@@ -68,5 +68,5 @@ class PDE_N2(pyg.nn.MessagePassing):
 
         elif function=='update':
             g, s, c = self.p[type, 0:1], self.p[type, 1:2], self.p[type, 2:3]
-            return -c * u + s * self.phi(u)
+            return -c * u + s * torch.tanh(u)
 
