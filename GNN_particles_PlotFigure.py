@@ -5322,7 +5322,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.ylabel(r'Learned $\psi^*(a_i, x_i)$', fontsize=68)
             # if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
             #     plt.ylim([-0.5,0.5])
-            plt.xlim([-to_numpy(xnorm) // 2, to_numpy(xnorm) // 2])
+            plt.xlim([-to_numpy(xnorm), to_numpy(xnorm)])
             # plt.ylim([0,0.05])
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/raw_psi.tif", dpi=170.7)
@@ -5420,7 +5420,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     plt.ylim([-0.2, 1.2])
                 else:
                     plt.ylim([-1.6, 1.6])
-                plt.xlim([-to_numpy(xnorm) // 2, to_numpy(xnorm) // 2])
+                plt.xlim([-to_numpy(xnorm), to_numpy(xnorm)])
                 # plt.xlim(config.plotting.xlim)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/learned_psi.tif", dpi=170.7)
@@ -5643,15 +5643,20 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                         m = model_f(t).squeeze() ** 2
                         if 'permutation' in model_config.field_type:
                             inverse_permutation_indices = torch.load(f'./graphs_data/{dataset_name}/inverse_permutation_indices.pt', map_location=device)
-                            modulation = m #[inverse_permutation_indices]
+                            modulation_ = m[inverse_permutation_indices]
                         else:
-                            modulation = m
-                        modulation = torch.reshape(modulation, (32, 32)) * torch.tensor(second_correction, device=device) / 10
+                            modulation_ = m
+                        modulation_ = torch.reshape(modulation_, (32, 32)) * torch.tensor(second_correction, device=device) / 10
+
                         fig = plt.figure(figsize=(10, 10.5))
                         plt.axis('off')
                         plt.xticks([])
                         plt.xticks([])
-                        plt.imshow(to_numpy(modulation), cmap='gray')
+                        im_ = to_numpy(modulation_)
+                        im_ = np.rot90(im_, k=-1)
+                        im_ = np.flipud(im_)
+                        im_ = np.fliplr(im_)
+                        plt.imshow(im_, cmap='gray')
                         # plt.title(r'neuromodulation $b_i$', fontsize=48)
                         plt.tight_layout()
                         plt.savefig(f"./{log_dir}/results/field/xi_{frame}.tif", dpi=80)
@@ -7898,7 +7903,7 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N6_a29_12']
     # config_list = ['signal_N2_a43_10']
-    config_list = ['signal_N4_all_7']
+    config_list = ['signal_N4_all_8']
     # config_list = ['rat_city_g_1']
 
     for config_file_ in config_list:
