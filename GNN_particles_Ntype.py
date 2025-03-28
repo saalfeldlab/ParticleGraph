@@ -56,10 +56,10 @@ if __name__ == '__main__':
             best_model = None
     else:
         task = 'train'
-        best_model = ''
+        best_model = '6_0'
         # config_list = ['falling_water_ramp_x6_11']
-        config_list = ['signal_N4_all_10']
-        # config_list = ['signal_N4_all']
+        # config_list = ['signal_N4_m13_shuffle_ter']
+        config_list = ['signal_N4_all_1']
         # config_list = ['arbitrary_3_test']
         # config_list = ['wave_smooth_3']
         # config_list = ['signal_N2_e5']

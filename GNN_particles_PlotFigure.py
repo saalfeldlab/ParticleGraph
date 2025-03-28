@@ -4790,7 +4790,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/results/all/MLP1_{epoch}.tif", dpi=80)
                     plt.close()
-                elif (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N8'):
+                elif (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N8') | (model_config.signal_model_name == 'PDE_N9'):
                     fig, ax = fig_init()
                     for k in range(n_particle_types):
                         for m in range(250):
@@ -4799,7 +4799,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                             n0 = pos0[n0, 0]
                             embedding0 = model.a[n0, :] * torch.ones((1000, config.graph_model.embedding_dim),
                                                                      device=device)
-                            in_features = torch.cat((rr[:, None], embedding0), dim=1)
+                            # in_features = torch.cat((rr[:, None], embedding0), dim=1)
+                            in_features = get_in_features(rr, embedding0, model_config.signal_model_name, max_radius)
                             if config.graph_model.lin_edge_positive:
                                 func = model.lin_edge(in_features.float()) ** 2 * correction
                             else:
@@ -5452,7 +5453,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.xlabel(r'$x_i$', fontsize=68)
             plt.ylabel(r'learned $\phi^*(a_i, x_i)$', fontsize=68)
             plt.tight_layout()
-            plt.xlim(config.plotting.xlim)
+            plt.xlim([-to_numpy(xnorm), to_numpy(xnorm)])
             plt.ylim(config.plotting.ylim)
             plt.savefig(f'./{log_dir}/results/learned phi.png', dpi=300)
             plt.close()
@@ -5639,7 +5640,25 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     for frame in trange(0, n_frames, n_frames // 100):
                         t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
                         t[:, 0, :] = torch.tensor(frame / n_frames, dtype=torch.float32, device=device)
-                        m = model_f(t).squeeze() ** 2
+
+                        # if model_config.signal_model_name == 'PDE_N9':
+                        #     if model_config.update_type == '2steps':
+                        #         m_ = torch.abs(model_f(t).squeeze())
+                        #         m_ = m_[:,None]
+                        #         sigma = xnorm/1.5
+                        #         x_ = torch.ones_like(m_) * xnorm
+                        #         embedding_ = model.a
+                        #         in_features= torch.cat((x_, embedding_, m_), dim=1)
+                        #         m = model.lin_edge(in_features0) ** 2
+
+                        if (model_config.signal_model_name == 'PDE_N9') & (model_config.update_type == '2steps+field'):
+                                m_ = model_f(t).squeeze() ** 2
+                                m_ = m_[:,None]
+                                in_features= torch.cat((torch.zeros_like(m_), torch.ones_like(m_)*xnorm, m_), dim=1)
+                                m = model.lin_phi2(in_features)
+                        else:
+                            m = model_f(t).squeeze() ** 2
+
                         if 'permutation' in model_config.field_type:
                             inverse_permutation_indices = torch.load(f'./graphs_data/{dataset_name}/inverse_permutation_indices.pt', map_location=device)
                             modulation_ = m[inverse_permutation_indices]
@@ -7902,11 +7921,9 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N6_a29_12']
     # config_list = ['signal_N2_a43_10']
-    config_list = ['signal_N4_all_1','signal_N4_all_2','signal_N4_all_3','signal_N4_all_4','signal_N4_all_5','signal_N4_all_6']
-    # config_list = ['rat_city_g_1']
+    config_list = ['signal_N4_all_7_bis']
 
     for config_file_ in config_list:
-
         print(' ')
 
         config_file, pre_folder = add_pre_folder(config_file_)
@@ -7916,8 +7933,8 @@ if __name__ == '__main__':
 
         print(f'config_file  {config.config_file}')
 
-        data_plot(config=config, epoch_list=['best'], style='black color', device=device)
-        # data_plot(config=config, epoch_list=['all'], style='black color', device=device)
+        #data_plot(config=config, epoch_list=['best'], style='black color', device=device)
+        data_plot(config=config, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['time'], style='black color', device=device)
 
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)

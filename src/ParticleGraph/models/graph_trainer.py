@@ -2318,6 +2318,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         model_f.train()
     if (best_model != None) & (best_model != '') & (best_model != 'None'):
         net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{best_model}.pt"
+        print(f'load {net} ...')
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
         start_epoch = int(best_model.split('_')[0])
@@ -2407,6 +2408,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                 model.W.copy_(model.W * 0)
                 model.a.copy_(model.a * 0)
             logger.info(f'reset W model.a at epoch : {epoch}')
+            print(f'reset W model.a at epoch : {epoch}')
 
         batch_size = int(get_batch_size(epoch) / particle_batch_ratio)
         logger.info(f'batch_size: {batch_size}')
@@ -2550,6 +2552,8 @@ def data_train_synaptic2(config, erase, best_model, device):
                                     x[:, 8] = model_f(t) ** 2
                         else:
                             x[:, 8:9] = model_f(time=k / n_frames) ** 2
+                    else:
+                        x[:, 8:9] = torch.ones_like(x[:, 0:1])
 
                     if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N7') | (model_config.signal_model_name == 'PDE_N8'):
                         in_features = torch.zeros((n_particles, dimension + 1), device=device)
