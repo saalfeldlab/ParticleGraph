@@ -4809,7 +4809,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     if model_config.signal_model_name == 'PDE_N8':
                         plt.ylabel(r'learned $MLP_1(a_j, x_j)$', fontsize=68)
                     else:
-                        plt.ylabel(r'learned $MLP_1(a_i, x_j)$', fontsize=68)
+                        plt.ylabel(r'learned $MLP_1(a_j, x_j)$', fontsize=68)
                     if config.graph_model.lin_edge_positive:
                         plt.ylim([-0.2, 1.2])
                     else:
@@ -4831,7 +4831,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     if model.update_type == 'intricated':
                         plt.ylabel(r'learned $MLP_1(x_j)$', fontsize=68)
                     else:
-                        plt.ylabel(r'learned $MLP_1(a_i, x_j)$', fontsize=68)
+                        plt.ylabel(r'learned $MLP_1(a_j, x_j)$', fontsize=68)
                     plt.ylim([-1.5, 1.5])
                     plt.xlim([-5,5])
                     plt.tight_layout()
@@ -7902,7 +7902,7 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N6_a29_12']
     # config_list = ['signal_N2_a43_10']
-    config_list = ['signal_N4_all_1','signal_N4_all_2','signal_N4_all_3','signal_N4_all_4','signal_N4_all_5','signal_N4_all_6']
+    config_list = ['signal_N4_m13_shuffle_ter']
     # config_list = ['rat_city_g_1']
 
     for config_file_ in config_list:
@@ -7916,8 +7916,8 @@ if __name__ == '__main__':
 
         print(f'config_file  {config.config_file}')
 
-        data_plot(config=config, epoch_list=['best'], style='black color', device=device)
-        # data_plot(config=config, epoch_list=['all'], style='black color', device=device)
+        # data_plot(config=config, epoch_list=['best'], style='black color', device=device)
+        data_plot(config=config, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['time'], style='black color', device=device)
 
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)

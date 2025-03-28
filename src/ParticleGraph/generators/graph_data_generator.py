@@ -27,8 +27,6 @@ import re
 import imageio
 
 
-
-
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
 
@@ -1762,12 +1760,19 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     A1[n_nodes:n_particles, 0:1] = 1
 
                     # plt.scatter(to_numpy(X1_mesh[:, 1]), to_numpy(X1_mesh[:, 0]), s=40, c=to_numpy(A1), cmap='grey', vmin=0,vmax=1)
+                if 'excitation_single' in field_type:
+                    parts = field_type.split('_')
+                    period = int(parts[-2])
+                    amplitude = float(parts[-1])
+                    if it % period == 0:
+                        H1[:, 0] = H1[:, 0] + torch.tensor(amplitude, dtype=torch.float32, device=device)
 
                 x = torch.concatenate(
                     (N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                      H1.clone().detach(), A1.clone().detach(), U1.clone().detach()), 1)
                 X[:, it] = H1[:, 0].clone().detach()
                 dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
+
 
                 # model prediction
                 if ('modulation' in field_type) & (it >= 0):
@@ -1782,6 +1787,8 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                      y, p, = model(dataset, has_field=False)
                 else:
                     y = model(dataset, has_field=False)
+
+
 
             # append list
             if (it >= 0) & bSave:
@@ -1953,8 +1960,13 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         plt.close()
 
         plt.figure(figsize=(15, 10))
-        n = np.random.permutation(n_particles)
-        for i in range(25):
+        if n_particles > 2:
+            n = np.random.permutation(n_particles)
+            NN = 25
+        else:
+            n = np.arange(n_particles)
+            NN = 2
+        for i in range(NN):
             plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=2)
         plt.xlabel('time', fontsize=64)
         plt.ylabel('$x_{i}$', fontsize=64)
