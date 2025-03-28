@@ -7921,12 +7921,10 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N6_a29_12']
     # config_list = ['signal_N2_a43_10']
-<<<<<<< HEAD
-    config_list = ['signal_N4_all_7_bis']
-=======
+
     config_list = ['signal_N4_m13_shuffle_ter']
     # config_list = ['rat_city_g_1']
->>>>>>> origin/main
+
 
     for config_file_ in config_list:
         print(' ')
@@ -7938,14 +7936,9 @@ if __name__ == '__main__':
 
         print(f'config_file  {config.config_file}')
 
-<<<<<<< HEAD
         #data_plot(config=config, epoch_list=['best'], style='black color', device=device)
-=======
-        # data_plot(config=config, epoch_list=['best'], style='black color', device=device)
->>>>>>> origin/main
         data_plot(config=config, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['time'], style='black color', device=device)
-
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 
