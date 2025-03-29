@@ -36,6 +36,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         self.n_particles = simulation_config.n_particles
         self.n_dataset = config.training.n_runs
         self.n_frames = simulation_config.n_frames
+        self.field_type = model_config.field_type
 
         self.input_size = model_config.input_size
         self.output_size = model_config.output_size
@@ -127,7 +128,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
 
         field = torch.ones((x.shape[0],1), requires_grad=False, dtype=torch.float32, device=self.device)
 
-        if (self.update_type != '2steps+field') & ((self.model == 'PDE_N4') | (self.model == 'PDE_N5') | (self.model == 'PDE_N6') | (self.model == 'PDE_N7') | (self.model == 'PDE_N9')):
+        if (self.update_type != '2steps+field') & (self.update_type != 'intricated+field') & ((self.model == 'PDE_N4') | (self.model == 'PDE_N5') | (self.model == 'PDE_N6') | (self.model == 'PDE_N7') | (self.model == 'PDE_N9')):
             field = x[:, 8:9]
 
         msg = self.propagate(edge_index, u=u, embedding=embedding, field=field)
@@ -135,12 +136,13 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         if self.update_type == '2steps+field':
             in_features1 = torch.cat([u, embedding], dim=1)
             pred1 = self.lin_phi(in_features1)
-            if self.lin_edge_positive:
-                field = x[:, 8:9]**2
-            else:
-                field = x[:, 8:9]
+            field = x[:, 8:9]
             in_features2 = torch.cat([pred1, msg, field], dim=1)
             pred = self.lin_phi2(in_features2)
+        elif self.update_type == 'intricated+field':
+            field = x[:, 8:9]
+            in_features = torch.cat([u, embedding, msg, field], dim=1)
+            pred = self.lin_phi(in_features)
         elif self.update_type == '2steps':
             in_features1 = torch.cat([u, embedding], dim=1)
             pred1 = self.lin_phi(in_features1)

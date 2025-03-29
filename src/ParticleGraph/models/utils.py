@@ -47,13 +47,16 @@ def get_type_time_series(new_labels=None, dataset_number=None, cell_id=None, n_p
 def get_in_features_update(rr=None, n_particles=None, model_a=None, model_update_type=None, device=None):
 
     if rr == None:
-        if model_update_type == 'intricated':
+        if model_update_type == 'intricated+field':
+            in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model_a[0:n_particles], torch.zeros((n_particles, 1), device=device), torch.ones((n_particles, 1), device=device)), dim=1)
+        elif model_update_type == 'intricated':
             in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model_a[0:n_particles], torch.zeros((n_particles, 1), device=device)), dim=1)
         else:
             in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model_a[0:n_particles]), dim=1)
     else:
-        if model_update_type == 'intricated':
-            # in_features = torch.cat((rr, model_a[0:n_particles], torch.zeros((n_particles, 1), device=device)), dim=1)
+        if model_update_type == 'intricated+field':
+            in_features = torch.cat((rr, model_a, torch.zeros((rr.shape[0], 1), device=device), torch.ones((rr.shape[0], 1), device=device)), dim=1)
+        elif model_update_type == 'intricated':
             in_features = torch.cat((rr, model_a, torch.zeros((rr.shape[0], 1), device=device)), dim=1)
         else:
             # in_features = torch.cat((rr, model_a[0:n_particles]), dim=1)

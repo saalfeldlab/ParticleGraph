@@ -43,7 +43,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
 
     if (os.path.isfile(f'./graphs_data/{dataset_name}/x_list_0.npy')) | (os.path.isfile(f'./graphs_data/{dataset_name}/x_list_0.pt')):
         print('watch out: data already generated')
-        # return
+        return
 
     if has_city:
         data_generate_rat_city(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,

@@ -7919,9 +7919,10 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N6_a29_12']
     # config_list = ['signal_N2_a43_10']
+    #
+    # config_list = ['signal_N4_m13_shuffle_ter']
 
-    config_list = ['signal_N4_m13_shuffle_ter']
-    # config_list = ['rat_city_g_1']
+    config_list = ['gravity_16']
 
 
     for config_file_ in config_list:

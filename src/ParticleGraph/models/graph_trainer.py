@@ -2397,10 +2397,12 @@ def data_train_synaptic2(config, erase, best_model, device):
             coeff_L1 = train_config.first_coeff_L1
             coeff_diff = train_config.coeff_diff
             coeff_diff_update = train_config.coeff_diff_update
+            coeff_diff_update2 = train_config.coeff_diff_update2
         else:
             coeff_L1 = train_config.coeff_L1
             coeff_diff = 0
             coeff_diff_update = 0
+            coeff_diff_update2 = 0
         logger.info(f'coeff_L1: {coeff_L1} coeff_diff: {coeff_diff}')
         
         if (epoch == train_config.epoch_reset) | ((epoch>0) & (epoch % train_config.epoch_reset_freq == 0)):
@@ -2579,13 +2581,17 @@ def data_train_synaptic2(config, erase, best_model, device):
                         diff = torch.relu(model.lin_edge(in_features) ** 2 - model.lin_edge(in_features_next) ** 2).norm(2) * coeff_diff
                     else:
                         diff = torch.relu(model.lin_edge(in_features) - model.lin_edge(in_features_next)).norm(2) * coeff_diff
-                    if model.update_type == 'intricated':
+                    if 'intricated' in model.update_type:
                         in_features = get_in_features_update(x[:, 6:7].clone().detach(), n_particles, model.a, model.update_type, device)
                         in_features[:,-1] = x[:, 6]
                         in_features = in_features.clone().detach()
                         in_features_next = in_features.clone().detach()
                         in_features_next[:,-1] = in_features[:,-1] + 0.1
                         diff = diff + torch.relu(model.lin_phi(in_features) - model.lin_phi(in_features_next)).norm(2) * coeff_diff_update
+                    if coeff_diff_update2 > 0:
+                        in_features2 = torch.cat((torch.ones((n_particles, 2), device=device), x[:, 8:9].clone().detach()), dim = 1)
+                        in_features2_next = torch.cat((torch.ones((n_particles, 2), device=device), x[:, 8:9].clone().detach() + 0.1), dim = 1)
+                        diff = diff + torch.relu(model.lin_phi2(in_features2) - model.lin_phi2(in_features2_next)).norm(2) * coeff_diff_update2
 
                     loss += model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff
 
@@ -2885,7 +2891,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         y_min, y_max = all_func_values.min().item(), all_func_values.max().item()
         plt.ylim([y_min-0.1, y_max*1.1])
 
-        if ('PDE_N3' not in model_config.signal_model_name):
+        if False: #('PDE_N3' not in model_config.signal_model_name):
 
             ax = fig.add_subplot(2, 5, 6)
             embedding = to_numpy(model.a.squeeze())

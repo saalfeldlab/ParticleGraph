@@ -118,7 +118,7 @@ class GraphModelConfig(BaseModel):
     embedding_dim: int = 2
     embedding_init: str = ''
 
-    update_type: Literal['linear', 'mlp', 'pre_mlp', '2steps', '2steps+field', 'none', 'no_pos', 'intricated', 'embedding_MLP'] = 'none'
+    update_type: Literal['linear', 'mlp', 'pre_mlp', '2steps', '2steps+field', 'none', 'no_pos', 'intricated', 'intricated+field', 'embedding_MLP'] = 'none'
 
     input_size_update: int = 3
     n_layers_update: int = 3
@@ -236,6 +236,8 @@ class TrainingConfig(BaseModel):
     coeff_loss3: float = 1
     coeff_diff: float = 10
     coeff_diff_update: float = 10
+    coeff_diff_update2: float = 0
+
     coeff_model_a: float = 0
     coeff_model_b: float = 0
     coeff_lin_modulation: float = 0
