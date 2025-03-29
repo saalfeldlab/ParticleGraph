@@ -4756,10 +4756,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 plt.savefig(f"./{log_dir}/results/all/W_{epoch}.tif", dpi=80)
                 plt.close()
 
-                if config.graph_model.lin_edge_positive:
-                    rr = torch.linspace(-xnorm//2, xnorm//2, 1000).to(device)
-                else:
-                    rr = torch.linspace(-5, 5, 1000).to(device)
+
+                rr = torch.linspace(-xnorm//2, xnorm//2, 1000).to(device)
                 if model_config.signal_model_name == 'PDE_N5':
                     fig, ax = fig_init()
                     plt.axis('off')
