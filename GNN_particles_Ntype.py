@@ -30,7 +30,6 @@ from ParticleGraph.models.utils import *
 from ParticleGraph.utils import *
 import warnings
 
-
 if __name__ == '__main__':
 
     warnings.filterwarnings("ignore", category=FutureWarning)
@@ -60,7 +59,7 @@ if __name__ == '__main__':
         best_model = ''
         # config_list = ['falling_water_ramp_x6_11']
         config_list = ['signal_N4_e_1']
-        # config_list = ['signal_N4_all']
+        # config_list = ['signal_N4_all_1']
         # config_list = ['arbitrary_3_test']
         # config_list = ['wave_smooth_3']
         # config_list = ['signal_N2_e5']

@@ -8,6 +8,8 @@ from tifffile import imread, imsave
 from torch_geometric.utils import get_mesh_laplacian
 from tqdm import trange
 from torch_geometric.utils import dense_to_sparse
+from scipy import stats
+import seaborn as sns
 
 def generate_from_data(config, device, visualize=True, step=None, cmap=None):
 
@@ -288,10 +290,11 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
     if (config.graph_model.signal_model_name == 'PDE_N6') | (config.graph_model.signal_model_name == 'PDE_N7'):
         features = torch.cat((torch.rand((n_particles, 1), device=device), 0.1 * torch.randn((n_particles, 1), device=device),
                               torch.ones((n_particles, 1), device=device), torch.zeros((n_particles, 1), device=device)), 1)
+    elif 'excitation_single' in config.graph_model.field_type:
+        features = torch.zeros((n_particles, 2), device=device)
     else:
         # features = torch.cat((torch.rand((n_particles, 1), device=device), 0.1 * torch.randn((n_particles, 1), device=device)), 1)
-        features = torch.cat(
-            (torch.randn((n_particles, 1), device=device) * 5 , 0.1 * torch.randn((n_particles, 1), device=device)), 1)
+        features = torch.cat((torch.randn((n_particles, 1), device=device) * 5 , 0.1 * torch.randn((n_particles, 1), device=device)), 1)
 
 
     type = type[:, None]
@@ -520,8 +523,8 @@ def init_synapse_map(config, x, edge_attr_adjacency, device):
     #     X1[k,:] = torch.tensor([p[0],p[1]], device=device)
     
     
-def init_adjacency(connectivity_file, connectivity_distribution, connectivity_filling_factor, n_particles, device):
-    
+def init_adjacency(connectivity_file, connectivity_distribution, connectivity_filling_factor, T1, n_particles, n_particle_types, dataset_name, device):
+
     if 'adjacency.pt' in connectivity_file:
         adjacency = torch.load(connectivity_file, map_location=device)
 
@@ -545,6 +548,14 @@ def init_adjacency(connectivity_file, connectivity_distribution, connectivity_fi
         adjacency = constructRandomMatrices(n_neurons=n_particles, density=1.0, connectivity_mask=f"./graphs_data/{connectivity_file}" ,device=device)
         n_particles = adjacency.shape[0]
         config.simulation.n_particles = n_particles
+
+    elif 'values' in connectivity_file:
+        parts = connectivity_file.split('_')
+        w01 = float(parts[-2])
+        w10 = float(parts[-1])
+        adjacency =[[0, w01], [w10, 0]]
+        adjacency = np.array(adjacency)
+        adjacency = torch.tensor(adjacency, dtype=torch.float32, device=device)
 
     else:
 
@@ -595,6 +606,88 @@ def init_adjacency(connectivity_file, connectivity_distribution, connectivity_fi
         adj_matrix = torch.ones((n_particles)) - torch.eye(n_particles)
         edge_index, edge_attr = dense_to_sparse(adj_matrix)
         mask = (adj_matrix != 0).float()
+
+    if 'structured' in connectivity_distribution:
+        parts = connectivity_distribution.split('_')
+        float_value1 = float(parts[-2])  # repartition pos/neg
+        float_value2 = float(parts[-1])  # filling factor
+
+        matrix_sign = torch.tensor(stats.bernoulli(float_value1).rvs(n_particle_types ** 2) * 2 - 1,
+                                   dtype=torch.float32, device=device)
+        matrix_sign = matrix_sign.reshape(n_particle_types, n_particle_types)
+
+        plt.figure(figsize=(10, 10))
+        ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},
+                         vmin=-0.1, vmax=0.1)
+        cbar = ax.collections[0].colorbar
+        cbar.ax.tick_params(labelsize=32)
+        plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+        plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+        plt.xticks(rotation=0)
+        plt.subplot(2, 2, 1)
+        ax = sns.heatmap(to_numpy(adjacency[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1,
+                         vmax=0.1)
+        plt.xticks([])
+        plt.yticks([])
+        plt.tight_layout()
+        plt.savefig(f'graphs_data/{dataset_name}/adjacency_0.png', dpi=300)
+        plt.close()
+
+        T1_ = to_numpy(T1.squeeze())
+        xy_grid = np.stack(np.meshgrid(T1_, T1_), -1)
+        adjacency = torch.abs(adjacency)
+        T1_ = to_numpy(T1.squeeze())
+        xy_grid = np.stack(np.meshgrid(T1_, T1_), -1)
+        sign_matrix = matrix_sign[xy_grid[..., 0], xy_grid[..., 1]]
+        adjacency *= sign_matrix
+
+        plt.imshow(to_numpy(sign_matrix))
+        plt.savefig(f"graphs_data/{dataset_name}/large_connectivity_sign.tif", dpi=130)
+        plt.close()
+
+        plt.figure(figsize=(10, 10))
+        ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},
+                         vmin=-0.1, vmax=0.1)
+        cbar = ax.collections[0].colorbar
+        cbar.ax.tick_params(labelsize=32)
+        plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+        plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+        plt.xticks(rotation=0)
+        plt.subplot(2, 2, 1)
+        ax = sns.heatmap(to_numpy(adjacency[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1,
+                         vmax=0.1)
+        plt.xticks([])
+        plt.yticks([])
+        plt.tight_layout()
+        plt.savefig(f'graphs_data/{dataset_name}/adjacency_1.png', dpi=300)
+        plt.close()
+
+        flat_sign_matrix = sign_matrix.flatten()
+        num_elements = len(flat_sign_matrix)
+        num_ones = int(num_elements * float_value2)
+        indices = np.random.choice(num_elements, num_ones, replace=False)
+        flat_sign_matrix[:] = 0
+        flat_sign_matrix[indices] = 1
+        sign_matrix = flat_sign_matrix.reshape(sign_matrix.shape)
+
+        adjacency *= sign_matrix
+
+        plt.figure(figsize=(10, 10))
+        ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},
+                         vmin=-0.1, vmax=0.1)
+        cbar = ax.collections[0].colorbar
+        cbar.ax.tick_params(labelsize=32)
+        plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+        plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+        plt.xticks(rotation=0)
+        plt.subplot(2, 2, 1)
+        ax = sns.heatmap(to_numpy(adjacency[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1,
+                         vmax=0.1)
+        plt.xticks([])
+        plt.yticks([])
+        plt.tight_layout()
+        plt.savefig(f'graphs_data/{dataset_name}/adjacency_2.png', dpi=300)
+        plt.close()
 
     edge_index = edge_index.to(device=device)
 

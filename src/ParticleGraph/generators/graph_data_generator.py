@@ -1543,6 +1543,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         n_nodes = simulation_config.n_nodes
         n_nodes_per_axis = int(np.sqrt(n_nodes))
 
+
     torch.random.fork_rng(devices=device)
     torch.random.manual_seed(training_config.seed)
 
@@ -1586,12 +1587,15 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     if (('modulation' in model_config.field_type) | ('visual' in model_config.field_type)) & ('PDE_N6' not in model_config.signal_model_name):
         im = imread(f"graphs_data/{simulation_config.node_value_map}")
 
-    if 'permutation' in model_config.field_type:
+    if 'permutation' in field_type:
         permutation_indices = torch.randperm(n_particles)
         inverse_permutation_indices = torch.argsort(permutation_indices)
         torch.save(permutation_indices, f'./graphs_data/{dataset_name}/permutation_indices.pt')
         torch.save(inverse_permutation_indices, f'./graphs_data/{dataset_name}/inverse_permutation_indices.pt')
-
+    if 'excitation_single' in field_type:
+        parts = field_type.split('_')
+        period = int(parts[-2])
+        amplitude = float(parts[-1])
 
     for run in range(config.training.n_runs):
 
@@ -1616,89 +1620,8 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                 T1 = first_T1.clone().detach()
 
         if run == 0:
-            edge_index, adjacency, mask = init_adjacency(simulation_config.connectivity_file, simulation_config.connectivity_distribution, simulation_config.connectivity_filling_factor, n_particles, device)
-
-            if 'structured' in simulation_config.connectivity_distribution:
-                parts = simulation_config.connectivity_distribution.split('_')
-                float_value1 = float(parts[-2]) # repartition pos/neg
-                float_value2 = float(parts[-1]) # filling factor
-
-                matrix_sign = torch.tensor(stats.bernoulli(float_value1).rvs(n_particle_types ** 2) * 2 - 1, dtype=torch.float32, device=device)
-                matrix_sign = matrix_sign.reshape(n_particle_types, n_particle_types)
-
-                plt.imshow(to_numpy(matrix_sign))
-                plt.savefig(f"graphs_data/{dataset_name}/connectivity_sign.tif", dpi=130)
-                plt.close()
-
-                plt.figure(figsize=(10, 10))
-                ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},vmin=-0.1, vmax=0.1)
-                cbar = ax.collections[0].colorbar
-                cbar.ax.tick_params(labelsize=32)
-                plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
-                plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
-                plt.xticks(rotation=0)
-                plt.subplot(2, 2, 1)
-                ax = sns.heatmap(to_numpy(adjacency[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr',vmin=-0.1, vmax=0.1)
-                plt.xticks([])
-                plt.yticks([])
-                plt.tight_layout()
-                plt.savefig(f'graphs_data/{dataset_name}/adjacency_0.png', dpi=300)
-                plt.close()
-
-                T1_ = to_numpy(T1.squeeze())
-                xy_grid = np.stack(np.meshgrid(T1_, T1_), -1)
-
-                adjacency = torch.abs(adjacency)
-                T1_ = to_numpy(T1.squeeze())
-                xy_grid = np.stack(np.meshgrid(T1_, T1_), -1)
-                sign_matrix = matrix_sign[xy_grid[..., 0], xy_grid[..., 1]]
-                adjacency *= sign_matrix
-
-                plt.imshow(to_numpy(sign_matrix))
-                plt.savefig(f"graphs_data/{dataset_name}/large_connectivity_sign.tif", dpi=130)
-                plt.close()
-
-                plt.figure(figsize=(10, 10))
-                ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},
-                                 vmin=-0.1, vmax=0.1)
-                cbar = ax.collections[0].colorbar
-                cbar.ax.tick_params(labelsize=32)
-                plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
-                plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
-                plt.xticks(rotation=0)
-                plt.subplot(2, 2, 1)
-                ax = sns.heatmap(to_numpy(adjacency[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
-                plt.xticks([])
-                plt.yticks([])
-                plt.tight_layout()
-                plt.savefig(f'graphs_data/{dataset_name}/adjacency_1.png', dpi=300)
-                plt.close()
-
-                flat_sign_matrix = sign_matrix.flatten()
-                num_elements = len(flat_sign_matrix)
-                num_ones = int(num_elements * float_value2)
-                indices = np.random.choice(num_elements, num_ones, replace=False)
-                flat_sign_matrix[:] = 0
-                flat_sign_matrix[indices] = 1
-                sign_matrix = flat_sign_matrix.reshape(sign_matrix.shape)
-
-                adjacency *= sign_matrix
-
-                plt.figure(figsize=(10, 10))
-                ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},
-                                 vmin=-0.1, vmax=0.1)
-                cbar = ax.collections[0].colorbar
-                cbar.ax.tick_params(labelsize=32)
-                plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
-                plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
-                plt.xticks(rotation=0)
-                plt.subplot(2, 2, 1)
-                ax = sns.heatmap(to_numpy(adjacency[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
-                plt.xticks([])
-                plt.yticks([])
-                plt.tight_layout()
-                plt.savefig(f'graphs_data/{dataset_name}/adjacency_2.png', dpi=300)
-                plt.close()
+            edge_index, adjacency, mask = init_adjacency(simulation_config.connectivity_file, simulation_config.connectivity_distribution,
+                                                         simulation_config.connectivity_filling_factor, T1, n_particles, n_particle_types, dataset_name, device)
 
             model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, device=device)
 
@@ -1764,15 +1687,13 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     parts = field_type.split('_')
                     period = int(parts[-2])
                     amplitude = float(parts[-1])
-                    if it % period == 0:
-                        H1[:, 0] = H1[:, 0] + torch.tensor(amplitude, dtype=torch.float32, device=device)
+                    if (it-100) % period == 0:
+                        H1[0, 0] = H1[0, 0] + torch.tensor(amplitude, dtype=torch.float32, device=device)
 
-                x = torch.concatenate(
-                    (N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
+                x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                      H1.clone().detach(), A1.clone().detach(), U1.clone().detach()), 1)
                 X[:, it] = H1[:, 0].clone().detach()
                 dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
-
 
                 # model prediction
                 if ('modulation' in field_type) & (it >= 0):
@@ -1787,8 +1708,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                      y, p, = model(dataset, has_field=False)
                 else:
                     y = model(dataset, has_field=False)
-
-
 
             # append list
             if (it >= 0) & bSave:

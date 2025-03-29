@@ -2,11 +2,11 @@ description: ''
 dataset: 'signal_N4_e_1'
 
 simulation:
-    connectivity_file: 'random'
+    connectivity_file: 'values_-10.0_20.0'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
-    connectivity_distribution: 'Lorentz_structured_0.5_1.0'
-    params: [[10.0,1.0,1.0,0.0],[10.0,1.0,1.0,0.0]]
+    connectivity_distribution: 'uniform'
+    params: [[1.0,0.0,1.0,1.0,10.0],[1.0,0.0,0.1,1.0,10.0]]
     phi: 'sigmoid'
     tau: 1.0
     min_radius: 1.0
@@ -23,7 +23,7 @@ simulation:
     node_value_map: 'video_bisons_32.tif'
 
 graph_model:
-    field_type: 'excitation_single_100_20' #
+    field_type: 'excitation_single_500_10' #
     signal_model_name: 'PDE_N4'
     particle_model_name: ''
     mesh_model_name: ''
