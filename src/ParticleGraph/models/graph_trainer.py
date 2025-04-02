@@ -2548,10 +2548,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                                 pred_modulation = model.lin_modulation(in_modulation)
                                 loss += (grad - pred_modulation.squeeze()).norm(2) * coeff_lin_modulation
                             else:
-                                if (model_config.signal_model_name == 'PDE_N9'):
-                                    x[:, 8] = model_f(t)
-                                else:
-                                    x[:, 8] = model_f(t) ** 2
+                                x[:, 8] = model_f(t) ** 2
                         else:
                             x[:, 8:9] = model_f(time=k / n_frames) ** 2
                     else:
@@ -2567,11 +2564,6 @@ def data_train_synaptic2(config, erase, best_model, device):
                         func_edge = model.lin_edge(in_features.float())
                         in_features = torch.cat((x[:, 6:7], model.a, model.a), dim=1)
                         in_features_next = torch.cat((x[:, 6:7] + 0.1, model.a, model.a), dim=1)
-                    elif (model_config.signal_model_name == 'PDE_N9'):
-                        in_features = torch.zeros((n_particles, dimension + 2), device=device)
-                        func_edge = model.lin_edge(in_features.float())
-                        in_features = torch.cat((x[:, 6:7], model.a, x[:, 8:9]), dim=1)
-                        in_features_next = torch.cat((x[:, 6:7] + 0.1, model.a, x[:, 8:9]), dim=1)
                     else:
                         in_features = torch.zeros((n_particles, 1), device=device)
                         func_edge = model.lin_edge(in_features.float())
