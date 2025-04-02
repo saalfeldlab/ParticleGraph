@@ -1,4 +1,4 @@
-description: 'synaptic network random matrix    1000 neurons 4 types lorentz std 0.03   10% filling factor coeff_L1: 1.0E-5'
+description: 'test sparsity   synaptic network 100.000 points'
 dataset: 'signal_N2_e5'
 
 simulation:
@@ -15,7 +15,6 @@ simulation:
     max_radius: 1.0E6
     n_particles: 1000
     n_particle_types: 4
-    n_interactions: 4
     n_frames: 100000
     delta_t: 0.01
     dpos_init:  0

@@ -1,5 +1,5 @@
-description: 'synaptic network random matrix no recursive loop    8000 neurons 4 types  100000 frames lorentz std 0.01 factor coeff_L1: 1E-5 then 0'
-dataset: 'signal_N2_Lorentz_d2'
+description: 'synaptic network 8000 neurons'
+dataset: 'signal_N2_d2'
 
 simulation:
     connectivity_file: 'random'
@@ -13,7 +13,6 @@ simulation:
     max_radius: 1.0E6
     n_particles: 8000
     n_particle_types: 4
-    n_interactions: 4
     n_frames: 100000
     delta_t: 0.01
     dpos_init:  0

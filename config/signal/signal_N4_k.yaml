@@ -1,5 +1,5 @@
-description: 'synaptic network random matrix cluster embedding distance 0.2 1000 neurons 4 types phi neuron dependent lorentz std 0.03'
-dataset: 'signal_N2_Lorentz_k'
+description: 'test neuron_dependent functions'
+dataset: 'signal_N2_k'
 
 simulation:
     connectivity_file: 'random'
@@ -13,7 +13,6 @@ simulation:
     max_radius: 1.0E6
     n_particles: 1000
     n_particle_types: 4
-    n_interactions: 4
     n_frames: 10000
     delta_t: 0.01
     dpos_init:  0
