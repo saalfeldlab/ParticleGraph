@@ -17,7 +17,6 @@ simulation:
   boundary: 'periodic'
   node_value_map: 'input_data/pattern_10.tif'
   node_coeff_map: 'input_data/pics_logo.tif'
-  beta: 1.E-2
   start_frame: 0
 
 graph_model:

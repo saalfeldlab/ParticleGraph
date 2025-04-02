@@ -3809,7 +3809,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     # x_list[0] = torch.cat((x_list[0],x_list[0],x_list[0],x_list[0]), dim=0)
     x_inference_list = []
 
-    for it in trange(start_it, min(1600+start_it,stop_it-time_step)):
+    for it in trange(start_it, min(1600000+start_it,stop_it-time_step)):
 
         check_and_clear_memory(device=device, iteration_number=it, every_n_iterations=25, memory_percentage_threshold=0.6)
         # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
@@ -4055,6 +4055,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 x = x0.clone().detach()
 
             if (it % step == 0) & (it >= 0) & visualize:
+
+                # print(f'acceleration {torch.max(y[:, 0])}')
+                # print(f'speed {torch.max(x[:, 3])}')
 
                 num = f"{it:06}"
 
@@ -4541,8 +4544,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         torch.save(x_inference_list, f"./{log_dir}/x_inference_list_{run}.pt")
 
     print('prediction error {:.3e}+/-{:.3e}'.format(np.mean(pred_err_list), np.std(pred_err_list)))
-
     print('average rollout RMSE {:.3e}+/-{:.3e}'.format(np.mean(rmserr_list), np.std(rmserr_list)))
+
     if has_mesh:
         h = x_mesh_list[0][0][:, 6:7]
         for k in range(n_frames):
@@ -4578,9 +4581,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             plt.savefig(f"./{log_dir}/results/rmserr_{config_file}_plot.tif", dpi=170.7)
 
         if False:
-
             x0_next = x_list[0][it].clone().detach()
-
             fig = plt.figure(figsize=(12, 12))
             ax = fig.add_subplot(1, 1, 1)
             temp1 = torch.cat((x, x0_next), 0)
@@ -4647,28 +4648,4 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         plt.xlim([-90,90])
         plt.savefig(f"./{log_dir}/results/angle.tif", dpi=170.7)
         plt.close
-
-
-
-    # run = 0
-    # k = 32
-    # x = x_list[run][k]
-    # y = y_list[run][k]
-    #
-    # x_next = x_list[run][k + 1].clone().detach()
-    # x_prev = x_list[run][k - 1].clone().detach()
-    # print('')
-    # print(x[1200])
-    # print((x[1200, 1:3] - x_prev[1200, 1:3]) / delta_t)
-    # print(x[1200, 3:5])
-    # print(x_next[1200])
-    # print((x_next[1200, 1:3] - x[1200, 1:3]) / delta_t)
-    # print(x_next[1200, 3:5])
-    # acc = ((x_next[1200, 1:3] - x[1200, 1:3]) / delta_t - (x[1200, 1:3] - x_prev[1200, 1:3]) / delta_t) / delta_t
-    # print(acc)
-    # print((x_next[1200, 1:3] - 2 * x[1200, 1:3] + x_prev[1200, 1:3]) / delta_t ** 2)
-    # print(y[1200])
-
-
-
 

@@ -42,4 +42,8 @@ training:
     data_augmentation_loop: 100
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
+    
+    learning_rate_embedding_start: 1.0E-20
+    learning_rate_embedding_end: 1.0E-26
+    
     device: 'auto'

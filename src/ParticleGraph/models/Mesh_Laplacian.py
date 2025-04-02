@@ -59,7 +59,7 @@ class Mesh_Laplacian(pyg.nn.MessagePassing):
         laplacian_u = self.propagate(edge_index, u=u, discrete_laplacian=edge_attr)
 
         particle_id = x[:, 0:1].long()
-        embedding = self.a[self.data_id.clone().detach(), particle_id, :].squeeze()
+        embedding = self.a[self.data_id, particle_id, :].squeeze()
         pred = self.lin_phi(torch.cat((laplacian_u, embedding), dim=-1))
 
         self.laplacian_u = laplacian_u

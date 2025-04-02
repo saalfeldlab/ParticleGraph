@@ -33,6 +33,7 @@ from scipy.spatial import Voronoi, voronoi_plot_2d
 from sklearn.mixture import GaussianMixture
 import warnings
 import seaborn as sns
+import glob
 
 # from pysr import PySRRegressor
 
@@ -300,6 +301,44 @@ class Mesh_RPS_extract(MessagePassing):
         return p * r
 
 
+def get_training_files(log_dir, n_runs):
+    files = glob.glob(f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs_*.pt")
+    files.sort(key=sort_key)
+    flag = True
+    file_id = 0
+    while (flag):
+        if sort_key(files[file_id]) > 0:
+            flag = False
+            file_id = file_id - 1
+        file_id += 1
+
+    files = files[file_id:]
+
+    files_with_0 = [file for file in files if f'_0_' in file]
+    files_without_0 = [file for file in files if '_0_' not in file]
+
+    # Generate 50 evenly spaced indices for each list
+    indices_with_0 = np.linspace(0, len(files_with_0) - 1, 50, dtype=int)
+    indices_without_0 = np.linspace(0, len(files_without_0) - 1, 50, dtype=int)
+
+    # Select the files using the generated indices
+    selected_files_with_0 = [files_with_0[i] for i in indices_with_0]
+    selected_files_without_0 = [files_without_0[i] for i in indices_without_0]
+
+    # Combine the selected files into one list
+    selected_files = selected_files_with_0 + selected_files_without_0
+
+    return selected_files, np.arange(0, len(selected_files), 1)
+
+    # len_files = len(files)
+    # print(len_files, len_files//10, len_files//500, len_files//10, len_files, len_files//50)
+    # file_id_list0 = np.arange(0, len_files//10, len_files//500)
+    # file_id_list1 = np.arange(len_files//10, len_files, len_files//50)
+    # file_id_list = np.concatenate((file_id_list0, file_id_list1))
+    # # file_id_list = np.arange(0, len(files), (len(files) / 100)).astype(int)
+    # return files, file_id_list
+
+
 def load_training_data(dataset_name, n_runs, log_dir, device):
     x_list = []
     y_list = []
@@ -528,7 +567,7 @@ def plot_embedding_func_cluster(model, config,embedding_cluster, cmap, index_par
         model_MLP_ = model.lin_phi
     else:
         model_MLP_ = model.lin_edge
-    func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config, model_MLP=model_MLP_, model_a=model.a, type_list=to_numpy(type_list), n_particles=n_particles, dataset_number=1, ynorm=ynorm, cmap=cmap, device=device)
+    func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config, model_MLP=model_MLP_, model_a=model.a, type_list=to_numpy(type_list), n_particles=n_particles, dataset_number=1, ynorm=ynorm, cmap=cmap, update_type='NA', device=device)
     plt.close()
 
     # trans = umap.UMAP(n_neighbors=100, n_components=2, init='spectral').fit(func_list_)
@@ -1154,25 +1193,12 @@ def plot_attraction_repulsion(config,epoch_list, log_dir, logger, style, device)
         plt.rc('text', usetex=False)
         matplotlib.rcParams['savefig.pad_inches'] = 0
 
-        files = glob.glob(f"{log_dir}/models/best_model_with_1_graphs_*.pt")
-        files.sort(key=sort_key)
+        files, file_id_list = get_training_files(log_dir, n_runs)
 
-        flag = True
-        file_id = 0
-        while (flag):
-            if sort_key(files[file_id])//1E7 == 2:
-                flag = False
-            file_id += 1
-
-        file_id_list0 = np.arange(0,1200,20)
-        file_id_list1 = np.arange(1200,file_id,(file_id-40)//60)
-        file_id_list2 = np.arange(file_id, len(files), (len(files)-file_id) // 100)
-        file_id_list = np.concatenate((file_id_list0,file_id_list1, file_id_list2))
-
-        for file_id_ in trange(0,len(file_id_list)):
-            file_id = file_id_list[file_id_]
-            if sort_key(files[file_id]) % 1E7 != 0:
-                epoch = files[file_id].split('graphs')[1][1:-3]
+        with torch.no_grad():
+            it = 0
+            for file_id_ in trange(0,len(file_id_list)):
+                epoch = files[file_id_].split('graphs')[1][1:-3]
                 print(epoch)
 
                 net = f"{log_dir}/models/best_model_with_1_graphs_{epoch}.pt"
@@ -1193,13 +1219,13 @@ def plot_attraction_repulsion(config,epoch_list, log_dir, logger, style, device)
                         plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=100, alpha=0.1)
                 plt.xlabel(r'$a_{0}$', fontsize=48)
                 plt.ylabel(r'$a_{1}$', fontsize=48)
-                match config.dataset:
-                    case 'arbitrary_3':
-                        plt.xlim([0.5, 1.5])
-                        plt.ylim([0.5, 1.5])
-                    case 'arbitrary_16':
-                        plt.xlim([-2.5, 2.5])
-                        plt.ylim([-2.5, 2.5])
+                plt.xlim([0.5, 1.5])
+                plt.ylim([0.5, 1.5])
+                plt.xticks([])
+                plt.yticks([])
+                    # case 'arbitrary_16':
+                    #     plt.xlim([-2.5, 2.5])
+                    #     plt.ylim([-2.5, 2.5])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/all/embedding_{epoch}.tif", dpi=80)
                 plt.close()
@@ -1222,13 +1248,33 @@ def plot_attraction_repulsion(config,epoch_list, log_dir, logger, style, device)
                 plt.xlim([0, max_radius])
                 plt.ylim(config.plotting.ylim)
                 plt.tight_layout()
-                match config.dataset:
-                    case 'arbitrary_3':
-                        plt.ylim([-0.04, 0.03])
-                    case 'arbitrary_16':
-                        plt.ylim([-0.1, 0.1])
+                plt.ylim([-0.04, 0.03])
+                plt.xticks([])
+                plt.yticks([])
+                    # case 'arbitrary_16':
+                    #     plt.ylim([-0.1, 0.1])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/all/function_{epoch}.tif", dpi=80)
+                plt.close()
+
+                im0 = imread(f"./{log_dir}/results/all/embedding_{epoch}.tif")
+                im1 = imread(f"./{log_dir}/results/all/function_{epoch}.tif")
+                fig = plt.figure(figsize=(16, 8))
+                plt.axis('off')
+                plt.subplot(1, 2, 1)
+                plt.axis('off')
+                plt.imshow(im0)
+                plt.xticks([])
+                plt.yticks([])
+                plt.subplot(1, 2, 2)
+                plt.axis('off')
+                plt.imshow(im1)
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+                it = it +1
+                num = str(it).zfill(4)
+                plt.savefig(f"./{log_dir}/results/training/fig_{num}.tif", dpi=80)
                 plt.close()
 
     else:
@@ -2257,27 +2303,13 @@ def plot_gravity(config, epoch_list, log_dir, logger, style, device):
         plt.rc('text', usetex=False)
         matplotlib.rcParams['savefig.pad_inches'] = 0
 
+        files, file_id_list = get_training_files(log_dir, n_runs)
 
-        files = glob.glob(f"{log_dir}/models/best_model_with_1_graphs_*.pt")
-        files.sort(key=sort_key)
+        with torch.no_grad():
+            it = 0
+            for file_id_ in trange(0,len(file_id_list)):
 
-        flag = True
-        file_id = 0
-        while (flag):
-            if sort_key(files[file_id])//1E7 == 2:
-                flag = False
-            file_id += 1
-
-        file_id_list0 = np.arange(0,60)
-        file_id_list1 = np.arange(40,file_id,(file_id-40)//60)
-        file_id_list2 = np.arange(file_id, len(files), (len(files)-file_id) // 100)
-        file_id_list = np.concatenate((file_id_list0,file_id_list1, file_id_list2))
-
-
-        for file_id_ in trange(0,len(file_id_list)):
-            file_id = file_id_list[file_id_]
-            if sort_key(files[file_id]) % 1E7 != 0:
-                epoch = files[file_id].split('graphs')[1][1:-3]
+                epoch = files[file_id_].split('graphs')[1][1:-3]
                 net = f"{log_dir}/models/best_model_with_1_graphs_{epoch}.pt"
                 state_dict = torch.load(net, map_location=device)
                 model.load_state_dict(state_dict['model_state_dict'])
@@ -2294,14 +2326,13 @@ def plot_gravity(config, epoch_list, log_dir, logger, style, device):
                         plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=100, alpha=0.1)
                 plt.xlabel(r'$a_{0}$', fontsize=48)
                 plt.ylabel(r'$a_{1}$', fontsize=48)
-                match config.dataset:
-                    case 'gravity_16':
-                        plt.ylim([0, 3])
-                        plt.xlim([-1, 2])
+                plt.ylim([-1.5, 1.5])
+                plt.xlim([-1, 2.5])
+                plt.xticks([])
+                plt.yticks([])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/all/embedding_{epoch}.tif", dpi=80)
                 plt.close()
-
 
                 fig, ax = fig_init(fontsize=24)
                 rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
@@ -2318,16 +2349,34 @@ def plot_gravity(config, epoch_list, log_dir, logger, style, device):
                              to_numpy(func) * to_numpy(ynorm),
                              color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
                 plt.xlabel('$d_{ij}$', fontsize=48)
-                plt.ylabel('$f(a_i, d_{ij})$', fontsize=48)
-                plt.xlim([0, max_radius])
-                plt.ylim(config.plotting.ylim)
-                match config.dataset:
-                    case 'gravity_16':
-                        plt.xlim([0, 0.02])
-                        plt.ylim([0, 0.5E6])
-                        plt.yticks([])
+                plt.ylabel('$MLP(a_i, d_{ij})$', fontsize=48)
+                # plt.ylim(config.plotting.xlim)
+                # plt.ylim(config.plotting.ylim)
+                plt.xlim([0, 0.02])
+                plt.ylim([0, 0.5E6])
+                plt.yticks([])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/all/function_{epoch}.tif", dpi=80)
+                plt.close()
+
+                im0 = imread(f"./{log_dir}/results/all/embedding_{epoch}.tif")
+                im1 = imread(f"./{log_dir}/results/all/function_{epoch}.tif")
+                fig = plt.figure(figsize=(16, 8))
+                plt.axis('off')
+                plt.subplot(1, 2, 1)
+                plt.axis('off')
+                plt.imshow(im0)
+                plt.xticks([])
+                plt.yticks([])
+                plt.subplot(1, 2, 2)
+                plt.axis('off')
+                plt.imshow(im1)
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+                it = it +1
+                num = str(it).zfill(4)
+                plt.savefig(f"./{log_dir}/results/training/fig_{num}.tif", dpi=80)
                 plt.close()
 
     else:
@@ -2446,7 +2495,7 @@ def plot_gravity(config, epoch_list, log_dir, logger, style, device):
             y_data = popt_list[:, 0]
             lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
 
-            if '20' in epoch:
+            if False: # '20' in epoch:
 
                 threshold = 0.4
                 relative_error = np.abs(y_data - x_data) / x_data
@@ -3204,25 +3253,12 @@ def plot_boids(config, epoch_list, log_dir, logger, style, device):
         plt.rc('text', usetex=False)
         matplotlib.rcParams['savefig.pad_inches'] = 0
 
-        files = glob.glob(f"{log_dir}/models/best_model_with_1_graphs_*.pt")
-        files.sort(key=sort_key)
+        files, file_id_list = get_training_files(log_dir, n_runs)
 
-        flag = True
-        file_id = 0
-        while (flag):
-            if sort_key(files[file_id]) // 1E7 == 2:
-                flag = False
-            file_id += 1
-
-        file_id_list0 = np.arange(0,60)
-        file_id_list1 = np.arange(60,file_id,(file_id-60)//60)
-        file_id_list2 = np.arange(file_id, len(files), (len(files)-file_id) // 100)
-        file_id_list = np.concatenate((file_id_list0,file_id_list1, file_id_list2))
-
-        for file_id_ in trange(0, len(file_id_list)):
-            file_id = file_id_list[file_id_]
-            if sort_key(files[file_id]) % 1E7 != 0:
-                epoch = files[file_id].split('graphs')[1][1:-3]
+        with torch.no_grad():
+            it = 0
+            for file_id_ in trange(0,len(file_id_list)):
+                epoch = files[file_id_].split('graphs')[1][1:-3]
                 print(epoch)
                 net = f"{log_dir}/models/best_model_with_1_graphs_{epoch}.pt"
                 state_dict = torch.load(net, map_location=device)
@@ -3238,13 +3274,13 @@ def plot_boids(config, epoch_list, log_dir, logger, style, device):
                     pos = torch.argwhere(type_list == n)
                     pos = to_numpy(pos)
                     if len(pos) > 0:
-                        plt.scatter(embedding[pos, 0], embedding[pos, 1], c=cmap.color(n), s=100, alpha=0.1)
+                        plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=100, alpha=0.1)
                 plt.xlabel(r'$a_{0}$', fontsize=48)
                 plt.ylabel(r'$a_{1}$', fontsize=48)
-                match config.dataset:
-                    case 'boids_16_256':
-                        plt.xlim([-1.5, 2])
-                        plt.ylim([-1.5, 3])
+                plt.xlim([-1.5, 2])
+                plt.ylim([-1.5, 3])
+                plt.xticks([])
+                plt.yticks([])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/all/embedding_{epoch}.tif", dpi=80)
                 plt.close()
@@ -3268,9 +3304,29 @@ def plot_boids(config, epoch_list, log_dir, logger, style, device):
                                      color=cmap.color(type), linewidth=4, alpha=0.25)
                 plt.ylim([-1, 1])
                 plt.xlabel('$d_{ij}$', fontsize=48)
-                plt.ylabel('$f(a_i, d_{ij})$', fontsize=48)
+                plt.ylabel('$MLP(a_i, d_{ij})$', fontsize=48)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/all/function_{epoch}.tif", dpi=80)
+                plt.close()
+
+                im0 = imread(f"./{log_dir}/results/all/embedding_{epoch}.tif")
+                im1 = imread(f"./{log_dir}/results/all/function_{epoch}.tif")
+                fig = plt.figure(figsize=(16, 8))
+                plt.axis('off')
+                plt.subplot(1, 2, 1)
+                plt.axis('off')
+                plt.imshow(im0)
+                plt.xticks([])
+                plt.yticks([])
+                plt.subplot(1, 2, 2)
+                plt.axis('off')
+                plt.imshow(im1)
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+                it = it +1
+                num = str(it).zfill(4)
+                plt.savefig(f"./{log_dir}/results/training/fig_{num}.tif", dpi=80)
                 plt.close()
 
     else:
@@ -3541,6 +3597,11 @@ def plot_wave(config, epoch_list, log_dir, logger, cc, style, device):
     n_frames = config.simulation.n_frames
     n_runs = config.training.n_runs
 
+    if 'black' in style:
+        mc = 'w'
+    else:
+        mc = 'k'
+
     hnorm = torch.load(f'{log_dir}/hnorm.pt', map_location=device).to(device)
 
     x_mesh_list = []
@@ -3590,118 +3651,160 @@ def plot_wave(config, epoch_list, log_dir, logger, cc, style, device):
     plt.savefig(f"./{log_dir}/results/true_wave_coeff_cbar.tif", dpi=300)
     plt.close
 
-    for epoch in epoch_list:
+    if epoch_list[0] == 'all':
 
-        net = f"{log_dir}/models/best_model_with_1_graphs_{epoch}.pt"
-        print(f'network: {net}')
+        plt.rcParams['text.usetex'] = False
+        plt.rc('font', family='sans-serif')
+        plt.rc('text', usetex=False)
+        matplotlib.rcParams['savefig.pad_inches'] = 0
 
-        mesh_model_gene = choose_mesh_model(config=config, X1_mesh=x_mesh[:,1:3], device=device)
+        files, file_id_list = get_training_files(log_dir, n_runs)
 
-        mesh_model, bc_pos, bc_dpos = choose_training_model(config, device)
-        state_dict = torch.load(net, map_location=device)
-        mesh_model.load_state_dict(state_dict['model_state_dict'])
-        mesh_model.eval()
-
-        x_mesh = x_mesh_list[1][7000].clone().detach()
-        mesh_data = torch.load(f'graphs_data/{dataset_name}/mesh_data_1.pt', map_location=device)
-        dataset_mesh = data.Data(x=x_mesh, edge_index=mesh_data['edge_index'],
-                                 edge_attr=mesh_data['edge_weight'], device=device)
         with torch.no_grad():
-            pred_gene = mesh_model_gene(dataset_mesh)
-            pred = mesh_model(dataset_mesh, data_id=1)
+            it = 0
+            for file_id_ in trange(0,len(file_id_list)):
 
-        fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
-        plt.scatter(to_numpy(pred_gene),to_numpy(pred)*to_numpy(hnorm),s=1,c=mc,alpha=0.1)
-        plt.close()
-        fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
-        plt.scatter(to_numpy(mesh_model_gene.laplacian_u),to_numpy(mesh_model.laplacian_u),s=1,alpha=0.1)
-        plt.close()
+                epoch = files[file_id_].split('graphs')[1][1:-3]
+                net = f"{log_dir}/models/best_model_with_1_graphs_{epoch}.pt"
 
-        fig, ax = fig_init(formatx='%.0f', formaty='%.1f')
-        rr = torch.tensor(np.linspace(-1800, 1800, 200)).to(device)
-        coeff = np.reshape(to_numpy(mesh_model_gene.coeff)/vm/255, (n_nodes_per_axis * n_nodes_per_axis))
-        coeff = np.clip(coeff, a_min=0, a_max=1)
-        popt_list = []
-        func_list = []
-        for n in trange(n_nodes):
-            embedding_ = mesh_model.a[1, n, :] * torch.ones((200, 2), device=device)
-            in_features = torch.cat((rr[:, None], embedding_), dim=1)
-            with torch.no_grad():
-                h = mesh_model.lin_phi(in_features.float()) * hnorm
-            h = h[:, 0]
-            popt, pcov = curve_fit(linear_model, to_numpy(rr.squeeze()), to_numpy(h.squeeze()))
-            popt_list.append(popt)
-            func_list.append(h)
-            # plt.scatter(to_numpy(rr), to_numpy(h), c=f'{coeff[n]}', edgecolors='none',alpha=0.1)
-            plt.scatter(to_numpy(rr), to_numpy(h), c=mc,alpha=0.1)
-        if 'latex' in style:
-            plt.xlabel(r'$\nabla^2 u_i$', fontsize=68)
-            plt.ylabel(r'$\Phi(\ensuremath{\mathbf{a}}_{i},\nabla^2 u_i)$', fontsize=68)
-        else:
-            plt.xlabel(r'$\nabla^2 u_i$', fontsize=68)
-            plt.ylabel(r'$\Phi(a_{i},\nabla^2 u_i)$', fontsize=68)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/functions_{epoch}.tif", dpi=300)
-        plt.close()
+                mesh_model_gene = choose_mesh_model(config=config, X1_mesh=x_mesh[:, 1:3], device=device)
+                mesh_model, bc_pos, bc_dpos = choose_training_model(config, device)
+                state_dict = torch.load(net, map_location=device)
+                mesh_model.load_state_dict(state_dict['model_state_dict'])
+                mesh_model.eval()
 
-        func_list = torch.stack(func_list)
-        popt_list = np.array(popt_list)
+                x_mesh = x_mesh_list[1][7000].clone().detach()
+                mesh_data = torch.load(f'graphs_data/{dataset_name}/mesh_data_1.pt', map_location=device)
+                dataset_mesh = data.Data(x=x_mesh, edge_index=mesh_data['edge_index'],
+                                         edge_attr=mesh_data['edge_weight'], device=device)
 
-        threshold=-1
-        x_data = np.reshape(to_numpy(mesh_model_gene.coeff)/100, (n_nodes_per_axis*n_nodes_per_axis))
-        y_data = popt_list[:, 0]
-        # discard borders
-        pos = np.argwhere(to_numpy(mask_mesh) == 1)
-        x_data = x_data[pos[:, 0]]
-        y_data = y_data[pos[:, 0]]
+                pred_gene = mesh_model_gene(dataset_mesh)
+                pred = mesh_model(dataset_mesh, data_id=1)
 
-        lin_fit, r_squared, relative_error, not_outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
-        print(
-            f'slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  N points {len(x_data)} ')
-        logger.info(
-            f'slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}   N points {len(x_data)} ')
+                fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
+                plt.scatter(to_numpy(pred_gene),to_numpy(pred)*to_numpy(hnorm),s=1,c=mc,alpha=0.1)
+                plt.close()
+                fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
+                plt.scatter(to_numpy(mesh_model_gene.laplacian_u),to_numpy(mesh_model.laplacian_u),s=1,alpha=0.1)
+                plt.close()
 
-        fig, ax = fig_init(formatx='%.5f', formaty='%.5f')
-        plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-        plt.scatter(x_data, y_data, s=200, c=mc, alpha=0.1)
-        plt.xlabel('True wave coeff.', fontsize=68)
-        plt.ylabel('Learned wave coeff.', fontsize=68)
-        fmt = lambda x, pos: '{:.1f}e-3'.format((x) * 1e3, pos)
-        ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-        ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/scatter_coeff_{epoch}.tif", dpi=300)
-        plt.close()
+                fig, ax = fig_init(formatx='%.0f', formaty='%.1f')
+                rr = torch.tensor(np.linspace(-1800, 1800, 200)).to(device)
+                coeff = np.reshape(to_numpy(mesh_model_gene.coeff)/vm/255, (n_nodes_per_axis * n_nodes_per_axis))
+                coeff = np.clip(coeff, a_min=0, a_max=1)
+                popt_list = []
+                func_list = []
+                for n in trange(n_nodes):
+                    embedding_ = mesh_model.a[1, n, :] * torch.ones((200, 2), device=device)
+                    in_features = torch.cat((rr[:, None], embedding_), dim=1)
+                    with torch.no_grad():
+                        h = mesh_model.lin_phi(in_features.float()) * hnorm
+                    h = h[:, 0]
+                    popt, pcov = curve_fit(linear_model, to_numpy(rr.squeeze()), to_numpy(h.squeeze()))
+                    popt_list.append(popt)
+                    func_list.append(h)
+                    # plt.scatter(to_numpy(rr), to_numpy(h), c=f'{coeff[n]}', edgecolors='none',alpha=0.1)
+                    plt.scatter(to_numpy(rr), to_numpy(h), c=mc,alpha=0.1)
+                if 'latex' in style:
+                    plt.xlabel(r'$\nabla^2 u_i$', fontsize=68)
+                    plt.ylabel(r'$MLP(\ensuremath{\mathbf{a}}_{i},\nabla^2 u_i)$', fontsize=68)
+                else:
+                    plt.xlabel(r'$\nabla^2 u_i$', fontsize=68)
+                    plt.ylabel(r'$MLP(a_{i},\nabla^2 u_i)$', fontsize=68)
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/all/functions_{epoch}.tif", dpi=80)
+                plt.close()
 
-        t = np.array(popt_list)
-        t = t[:, 0]
-        t = np.reshape(t, (n_nodes_per_axis, n_nodes_per_axis))
-        t = np.flipud(t)
-        fig, ax = fig_init()
-        fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
-        ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-        ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-        plt.imshow(t, cmap='grey')
-        plt.xlabel(r'$x$', fontsize=68)
-        plt.ylabel(r'$y$', fontsize=68)
-        fmt = lambda x, pos: '{:.3%}'.format(x)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/wave_coeff_{epoch}.tif", dpi=300)
-        plt.close()
+                func_list = torch.stack(func_list)
+                popt_list = np.array(popt_list)
 
-        embedding = get_embedding(mesh_model.a, 1)
-        fig, ax = fig_init()
-        # plt.scatter(embedding[pos[:,0], 0], embedding[pos[:,0], 1], c=x_data, s=100, alpha=1, cmap='grey')
-        plt.scatter(embedding[pos[:,0], 0], embedding[pos[:,0], 1], c=mc, s=100, alpha=0.1)
-        if 'latex' in style:
-            plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
-            plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
-        else:
-            plt.xlabel(r'$a_{0}$', fontsize=68)
-            plt.ylabel(r'$a_{1}$', fontsize=68)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=300)
-        plt.close()
+                threshold=-1
+                x_data = np.reshape(to_numpy(mesh_model_gene.coeff)/100, (n_nodes_per_axis*n_nodes_per_axis))
+                y_data = popt_list[:, 0]
+                # discard borders
+                pos = np.argwhere(to_numpy(mask_mesh) == 1)
+                x_data = x_data[pos[:, 0]]
+                y_data = y_data[pos[:, 0]]
+
+                lin_fit, r_squared, relative_error, not_outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
+                print(
+                    f'slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  N points {len(x_data)} ')
+                logger.info(
+                    f'slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}   N points {len(x_data)} ')
+
+                fig, ax = fig_init(formatx='%.5f', formaty='%.5f')
+                plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+                plt.scatter(x_data, y_data, s=200, c=mc, alpha=0.1)
+                plt.xlabel('True wave coeff.', fontsize=68)
+                plt.ylabel('Learned wave coeff.', fontsize=68)
+                fmt = lambda x, pos: '{:.1f}e-3'.format((x) * 1e3, pos)
+                ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+                ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/all/scatter_coeff_{epoch}.tif", dpi=80)
+                plt.close()
+
+                t = np.array(popt_list)
+                t = t[:, 0]
+                t = np.reshape(t, (n_nodes_per_axis, n_nodes_per_axis))
+                t = np.flipud(t)
+                fig, ax = fig_init()
+                fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
+                ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+                ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+                plt.imshow(t, cmap='viridis')
+                plt.xlabel(r'$x$', fontsize=68)
+                plt.ylabel(r'$y$', fontsize=68)
+                fmt = lambda x, pos: '{:.3%}'.format(x)
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/all/wave_coeff_{epoch}.tif", dpi=80)
+                plt.close()
+
+                embedding = get_embedding(mesh_model.a, 1)
+                fig, ax = fig_init()
+                plt.scatter(embedding[pos[:,0], 0], embedding[pos[:,0], 1], c=x_data, s=100, alpha=1, cmap='viridis')
+                # plt.scatter(embedding[pos[:,0], 0], embedding[pos[:,0], 1], c=mc, s=100, alpha=0.1)
+                if 'latex' in style:
+                    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
+                    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
+                else:
+                    plt.xlabel(r'$a_{0}$', fontsize=68)
+                    plt.ylabel(r'$a_{1}$', fontsize=68)
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/all/embedding_{epoch}.tif", dpi=80)
+                plt.close()
+
+                im0 = imread(f"./{log_dir}/results/all/embedding_{epoch}.tif")
+                im1 = imread(f"./{log_dir}/results/all/wave_coeff_{epoch}.tif")
+                im2 = imread(f"./{log_dir}/results/all/functions_{epoch}.tif")
+                im3 = imread(f"./{log_dir}/results/all/scatter_coeff_{epoch}.tif")
+                fig = plt.figure(figsize=(16, 16))
+                plt.axis('off')
+                plt.subplot(2, 2, 1)
+                plt.axis('off')
+                plt.imshow(im0)
+                plt.xticks([])
+                plt.yticks([])
+                plt.subplot(2, 2, 2)
+                plt.axis('off')
+                plt.imshow(im1)
+                plt.xticks([])
+                plt.yticks([])
+                plt.subplot(2, 2, 3)
+                plt.axis('off')
+                plt.imshow(im2)
+                plt.xticks([])
+                plt.yticks([])
+                plt.subplot(2, 2, 4)
+                plt.axis('off')
+                plt.imshow(im3)
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+                it = it +1
+                num = str(it).zfill(4)
+                plt.savefig(f"./{log_dir}/results/training/fig_{num}.tif", dpi=80)
+                plt.close()
 
 
 def plot_particle_field(config, epoch_list, log_dir, logger, cc, style, device):
@@ -4665,8 +4768,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
         d_modulation = (modulation[:, 1:] - modulation[:, :-1]) / delta_t
 
     if epoch_list[0] == 'all':
-
-
         files = glob.glob(f"{log_dir}/models/*.pt")
         files.sort(key=os.path.getmtime)
 
@@ -4677,33 +4778,14 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
         # plt.rc('text', usetex=False)
         # matplotlib.rcParams['savefig.pad_inches'] = 0
 
-        files = glob.glob(f"{log_dir}/models/best_model_with_{n_runs-1}_graphs_*.pt")
-        files.sort(key=sort_key)
+        files, file_id_list = get_training_files(log_dir, n_runs)
 
-        flag = True
-        file_id = 0
-        while (flag):
-            if sort_key(files[file_id]) >0:
-                flag = False
-                file_id = file_id - 1
-            file_id += 1
-
-        files = files[file_id:]
-
-        # file_id_list0 = np.arange(0, file_id, file_id // 90)
-        # file_id_list1 = np.arange(file_id, len(files), (len(files) - file_id) // 40)
-        # file_id_list = np.concatenate((file_id_list0, file_id_list1))
-
-        file_id_list = np.arange(0, len(files), (len(files)/100)).astype(int)
         r_squared_list = []
         slope_list = []
-
+        it = 0
         with torch.no_grad():
-
-            # for file_id in trange(0, 150):
-            for file_id_ in trange(0, 100):
+            for file_id_ in trange(0,len(file_id_list)):
                 file_id = file_id_list[file_id_]
-
                 epoch = files[file_id].split('graphs')[1][1:-3]
                 net = f"{log_dir}/models/best_model_with_{n_runs-1}_graphs_{epoch}.pt"
                 state_dict = torch.load(net, map_location=device)
@@ -4757,12 +4839,15 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 plt.close()
 
 
-                rr = torch.linspace(-xnorm//2, xnorm//2, 1000).to(device)
+                rr = torch.linspace(-xnorm.squeeze(), xnorm.squeeze(), 1000).to(device)
                 if model_config.signal_model_name == 'PDE_N5':
                     fig, ax = fig_init()
                     plt.axis('off')
                     for k in range(n_particle_types):
                         ax = fig.add_subplot(2, 2, k + 1)
+                        for spine in ax.spines.values():
+                            spine.set_edgecolor(cmap.color(k))  # Set the color of the outline
+                            spine.set_linewidth(3)
                         if k==0:
                             plt.ylabel(r'learned $MLP_1( a_i, a_j, x_j)$', fontsize=32)
                         for n in range(n_particle_types):
@@ -4779,7 +4864,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                                                                          device=device)
                                 in_features = torch.cat((rr[:, None], embedding0, embedding1), dim=1)
                                 func = model.lin_edge(in_features.float()) * correction
-                                plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(k), linewidth=2, alpha=0.25)
+                                plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(n), linewidth=3, alpha=0.25)
                         plt.ylim([-1.6, 1.6])
                         plt.xlim([-5, 5])
                         plt.xticks([])
@@ -5018,6 +5103,40 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     plt.savefig(f"./{log_dir}/results/all/comparison_derivative_yi_{epoch}.tif", dpi=80)
                     plt.close()
 
+
+                im0 = imread(f"./{log_dir}/results/all/comparison_{epoch}.tif")
+                im1 = imread(f"./{log_dir}/results/all/embedding_{epoch}.tif")
+                im2 = imread(f"./{log_dir}/results/all/MLP0_{epoch}.tif")
+                im3 = imread(f"./{log_dir}/results/all/MLP1_{epoch}.tif")
+                fig = plt.figure(figsize=(16, 16))
+                plt.axis('off')
+                plt.subplot(2, 2, 1)
+                plt.axis('off')
+                plt.imshow(im0)
+                plt.xticks([])
+                plt.yticks([])
+                plt.subplot(2, 2, 2)
+                plt.axis('off')
+                plt.imshow(im1)
+                plt.xticks([])
+                plt.yticks([])
+                plt.axis('off')
+                plt.subplot(2, 2, 3)
+                plt.axis('off')
+                plt.imshow(im2)
+                plt.xticks([])
+                plt.yticks([])
+                plt.subplot(2, 2, 4)
+                plt.axis('off')
+                plt.imshow(im3)
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+                it = it +1
+                num = str(it).zfill(4)
+                plt.savefig(f"./{log_dir}/results/training/fig_{num}.tif", dpi=80)
+                plt.close()
+
         fig, ax = fig_init(formatx='%.0f', formaty='%.2f')
         plt.plot(r_squared_list, linewidth=4, c=mc)
         plt.xlim([0, 100])
@@ -5223,7 +5342,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 state_dict = torch.load(net, map_location=device)
                 model_f.load_state_dict(state_dict['model_state_dict'])
 
-                if False: #'Siren_short_term_plasticity' in field_type:
+                if 'Siren_short_term_plasticity' in field_type:
 
                     fig, ax = fig_init()
                     t = torch.zeros((1, 1000, 1), dtype=torch.float32, device=device)
@@ -5301,7 +5420,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.close()
 
             fig, ax = fig_init()
-            rr = torch.linspace(-xnorm.squeeze() , xnorm.squeeze() , 1000).to(device)
+            rr = torch.linspace(-xnorm.squeeze()*2 , xnorm.squeeze()*2 , 1000).to(device)
             func_list = []
             for n in trange(0,n_particles,n_particles//100):
                 if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5') | (model_config.signal_model_name == 'PDE_N8') |  (model_config.signal_model_name == 'PDE_N9'):
@@ -5321,7 +5440,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.ylabel(r'Learned $\psi^*(a_i, x_i)$', fontsize=68)
             # if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
             #     plt.ylim([-0.5,0.5])
-            plt.xlim([-to_numpy(xnorm), to_numpy(xnorm)])
+            plt.xlim([-to_numpy(xnorm)*2, to_numpy(xnorm)*2])
             # plt.ylim([0,0.05])
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/raw_psi.tif", dpi=170.7)
@@ -5338,15 +5457,18 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             if model_config.signal_model_name == 'PDE_N5':
                 psi_list = []
                 fig, ax = fig_init()
-                rr = torch.linspace(-xnorm.squeeze(), xnorm.squeeze(), 1500).to(device)
+                rr = torch.linspace(-xnorm.squeeze()*2, xnorm.squeeze()*2, 1500).to(device)
                 ax.set_frame_on(False)
                 ax.get_xaxis().set_visible(False)
                 ax.get_yaxis().set_visible(False)
                 for k in range(n_particle_types):
                     ax = fig.add_subplot(2, 2, k + 1)
+                    for spine in ax.spines.values():
+                        spine.set_edgecolor(cmap.color(k))  # Set the color of the outline
+                        spine.set_linewidth(3)
                     for m in range(n_particle_types):
                         true_func = true_model.func(rr, k, m, 'phi')
-                        plt.plot(to_numpy(rr), to_numpy(true_func), c=mc, linewidth=8, label='original', alpha=0.21)
+                        plt.plot(to_numpy(rr), to_numpy(true_func), c=mc, linewidth=3, label='original', alpha=0.21)
                     for n in range(n_particle_types):
                         for m in range(250):
                             pos0 = to_numpy(torch.argwhere(type_list == k).squeeze())
@@ -5358,11 +5480,25 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                             embedding0 = model.a[n0, :] * torch.ones((1500, config.graph_model.embedding_dim), device=device)
                             embedding1 = model.a[n1, :] * torch.ones((1500, config.graph_model.embedding_dim), device=device)
                             in_features = torch.cat((rr[:,None],embedding0, embedding1), dim=1)
-                            func = model.lin_edge(in_features.float()) * correction
+                     
+                            if config.graph_model.lin_edge_positive:
+                            	func = model.lin_edge(in_features.float()) ** 2 * correction
+                            else:
+                            	func = model.lin_edge(in_features.float()) * correction
+                            if model.update_type == '2steps+field':
+                            	field = torch.ones_like(rr[:,None])
+                            	u = torch.zeros_like(rr[:,None])
+                            	in_features2 = torch.cat([u, func, field], dim=1)
+                            	func = model.lin_phi2(in_features2)
+                            elif model.update_type == 'intricated+field':
+                            	field = torch.ones_like(rr[:,None])
+                            	u = torch.zeros_like(rr[:,None])
+                            	in_features = torch.cat([u, embedding0, func, field], dim=1)
+                            	func = model.lin_phi(in_features)
                             psi_list.append(func)
-                            plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(k),linewidth=1, alpha=0.25)
-                    plt.ylim([-1.1, 1.1])
-                    plt.xlim([-to_numpy(xnorm), to_numpy(xnorm)])
+                            plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(n),linewidth=3, alpha=0.25)
+                    # plt.ylim([-1.1, 1.1])
+                    plt.xlim([-to_numpy(xnorm)*2, to_numpy(xnorm)*2])
                     plt.xticks(fontsize=18)
                     plt.yticks(fontsize=18)
                     # plt.ylabel(r'learned $\psi^*(a_i, a_j, x_i)$', fontsize=24)
@@ -5586,7 +5722,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             if has_field:
 
                 print('plot field ...')
-
                 os.makedirs(f"./{log_dir}/results/field", exist_ok=True)
 
                 if 'derivative' in field_type:
@@ -5678,8 +5813,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                         plt.savefig(f"./{log_dir}/results/field/xi_{frame}.tif", dpi=80)
                         plt.close()
 
-
-
                         # x = x_list[0][frame]
                         # fig = plt.figure(figsize=(10, 10.5))
                         # plt.axis('off')
@@ -5756,11 +5889,9 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     plt.close()
 
                 else:
-
                     net = f'{log_dir}/models/best_model_f_with_{n_runs - 1}_graphs_{epoch}.pt'
                     state_dict = torch.load(net, map_location=device)
                     model_f.load_state_dict(state_dict['model_state_dict'])
-
                     im = imread(f"graphs_data/{simulation_config.node_value_map}")
 
                     x = x_list[0][0]
@@ -5780,20 +5911,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                         plt.yticks([])
                         plt.tight_layout()
                         plt.savefig(f"./{log_dir}/results/field/true_field{epoch}_{frame}.tif", dpi=80)
-                        plt.close()
-
-                        pred = model_f(time=frame / n_frames, enlarge=True) ** 2 * second_correction / 10
-                        pred = torch.reshape(pred, (640, 640))
-                        pred = to_numpy(pred)
-                        pred = np.flipud(pred)
-                        pred = np.rot90(pred, 1)
-                        pred = np.fliplr(pred)
-                        fig, ax = fig_init()
-                        plt.imshow(pred, cmap='gray', vmin=0, vmax=2)
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.tight_layout()
-                        plt.savefig(f"./{log_dir}/results/field/reconstructed_field_HR {epoch}_{frame}.tif", dpi=80)
                         plt.close()
 
                         pred = model_f(time=frame / n_frames, enlarge=False) ** 2 * second_correction / 10
@@ -5823,7 +5940,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                         fig, ax = fig_init()
                         plt.scatter(im_, pred, s=10, c=mc)
                         plt.xlim([0.3, 1.6])
-                        plt.ylim([0.3, 1.6])
+                        # plt.ylim([0.3, 1.6])
                         plt.xlabel(r'true neuromodulation', fontsize=48)
                         plt.ylabel(r'learned neuromodulation', fontsize=48)
                         plt.text(0.35, 1.5, f'$R^2$: {r_squared:0.2f}  slope: {np.round(lin_fit[0], 2)}', fontsize=42)
@@ -5832,6 +5949,20 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                         plt.close()
                         im_list.append(im_)
                         pred_list.append(pred)
+
+                        pred = model_f(time=frame / n_frames, enlarge=True) ** 2 * second_correction / 10 # /lin_fit[0]
+                        pred = torch.reshape(pred, (640, 640)) 
+                        pred = to_numpy(pred)
+                        pred = np.flipud(pred)
+                        pred = np.rot90(pred, 1)
+                        pred = np.fliplr(pred)
+                        fig, ax = fig_init()
+                        plt.imshow(pred, cmap='gray')
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+                        plt.savefig(f"./{log_dir}/results/field/reconstructed_field_HR {epoch}_{frame}.tif", dpi=80)
+                        plt.close()
 
                     im_list = np.array(np.array(im_list))
                     pred_list = np.array(np.array(pred_list))
@@ -7488,6 +7619,10 @@ def data_plot(config, epoch_list, style, device):
 
     os.makedirs(os.path.join(log_dir, 'results'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'results/all'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'results/training'), exist_ok=True)
+    files = glob.glob(f"{log_dir}/results/training/*")
+    for f in files:
+        os.remove(f)
     # files = glob.glob(f"{log_dir}/results/all/*")
     # for f in files:
     #     os.remove(f)
@@ -7495,6 +7630,7 @@ def data_plot(config, epoch_list, style, device):
     files = glob.glob(f"{log_dir}/results/field/*")
     for f in files:
         os.remove(f)
+
 
     if epoch_list==['best']:
         files = glob.glob(f"{log_dir}/models/*")
@@ -7919,11 +8055,12 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N6_a29_12']
     # config_list = ['signal_N2_a43_10']
-    #
     # config_list = ['signal_N4_m13_shuffle_ter']
-
-    config_list = ['gravity_16']
-
+    # config_list = ['boids_16_256']
+    config_list = ['signal_N5_v1','signal_N5_v2','signal_N5_v3','signal_N5_v4','signal_N5_v5','signal_N5_v6']
+    # config_list = ['signal_N5_l3']
+    # config_list = ['gravity_16_1']
+    # config_list = ['wave_slit_bis']
 
     for config_file_ in config_list:
         print(' ')
@@ -7935,8 +8072,8 @@ if __name__ == '__main__':
 
         print(f'config_file  {config.config_file}')
 
-        #data_plot(config=config, epoch_list=['best'], style='black color', device=device)
-        data_plot(config=config, epoch_list=['all'], style='black color', device=device)
+        data_plot(config=config, epoch_list=['best'], style='black color', device=device)
+        # data_plot(config=config, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['time'], style='black color', device=device)
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

@@ -1,12 +1,6 @@
 from typing import Optional, Literal, Annotated, Dict
-
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
-
-# from ParticleGraph import (
-#     GraphModel,
-# )
-
 
 # Sub-config schemas for ParticleGraph
 
@@ -26,15 +20,17 @@ class SimulationConfig(BaseModel):
     min_radius: float = 0.0
     max_radius: Annotated[float, Field(gt=0)]
 
-    diffusion_coefficients: list[list[float]] = None
     n_particles: int = 1000
     n_particles_max: int = 20000
     max_edges: float = 1.0E6
     n_particle_types: int = 5
-    n_interactions: int = 3
+    n_particle_type_distribution: list[int] = [0]
     shuffle_particle_types: bool = False
-    dpos_init: float = 0
     pos_init: str = 'uniform'
+    dpos_init: float = 0
+
+    diffusion_coefficients: list[list[float]] = None
+
     angular_sigma: float = 0
     angular_Bernouilli: list[float] = [-1]
 
@@ -141,9 +137,6 @@ class GraphModelConfig(BaseModel):
     n_layers_modulation: int = 3
     hidden_dim_modulation: int = 64
     output_size_modulation: int = 1
-
-    # def get_instance(self, **kwargs):
-    #     return GraphModel(**self.model_dump(), **kwargs)
 
 
 class PlottingConfig(BaseModel):
