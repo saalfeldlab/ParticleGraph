@@ -126,10 +126,10 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             particle_id = x[:, 0].long()
             embedding = self.a[particle_id, :]
 
-        field = torch.ones((x.shape[0],1), requires_grad=False, dtype=torch.float32, device=self.device)
-
         if (self.update_type != '2steps+field') & (self.update_type != 'intricated+field') & ((self.model == 'PDE_N4') | (self.model == 'PDE_N5') | (self.model == 'PDE_N6') | (self.model == 'PDE_N7') | (self.model == 'PDE_N9')):
             field = x[:, 8:9]
+        else:
+            field = torch.ones((x.shape[0], 1), requires_grad=False, dtype=torch.float32, device=self.device)
 
         msg = self.propagate(edge_index, u=u, embedding=embedding, field=field)
 
@@ -174,17 +174,10 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         if self.lin_edge_positive:
             line_edge = line_edge**2
 
-        if self.return_all:
-            self.msg = T[edge_index_i%self.n_particles, edge_index_j%self.n_particles][:,None] * line_edge * field_i
-            return self.msg
+        if (self.batch_size==1):
+            return T[edge_index_i, edge_index_j][:, None] * line_edge * field_i
         else:
-
-            if (self.model == 'PDE_N9'):
-                return T[edge_index_i, edge_index_j][:, None] * line_edge
-            elif (self.batch_size==1):
-                return T[edge_index_i, edge_index_j][:, None] * line_edge * field_i
-            else:
-                return T[edge_index_i%self.n_particles, edge_index_j%self.n_particles][:,None] * line_edge * field_i
+            return T[edge_index_i%self.n_particles, edge_index_j%self.n_particles][:,None] * line_edge * field_i
 
 
     def update(self, aggr_out):
