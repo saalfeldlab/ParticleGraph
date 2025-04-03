@@ -62,7 +62,7 @@ if __name__ == '__main__':
         # config_list = ['signal_N4_all_1']
         # config_list = ['arbitrary_3_test']
         # config_list = ['wave_smooth_3']
-        config_list = ['signal_N5_v1']
+        config_list = ['signal_N4_m15_shuffle']
         # config_list = ['gravity_16']
         # config_list = ['cell_MDCK_12']
         # config_list = ['signal_N2_a43_17']

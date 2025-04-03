@@ -82,7 +82,6 @@ training:
 
     coeff_L1: 1.0E-5
     coeff_diff: 100
-    coeff_diff_update: 10
 
     learning_rate_W_start: 1.0E-3
     learning_rate_start: 5.0E-4

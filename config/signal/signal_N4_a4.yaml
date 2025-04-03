@@ -80,9 +80,8 @@ training:
     cluster_distance_threshold: 0.1
     fix_cluster_embedding: True
 
-    coeff_L1: 1.0E-6
+    coeff_L1: 0.0
     coeff_diff: 100
-    coeff_diff_update: 10
 
     learning_rate_W_start: 1.0E-3
     learning_rate_start: 5.0E-4

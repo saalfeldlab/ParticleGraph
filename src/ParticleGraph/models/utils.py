@@ -18,6 +18,8 @@ from tifffile import imsave
 import torch.nn as nn
 import torch.nn.functional as F
 import seaborn as sns
+from scipy.optimize import curve_fit
+from ParticleGraph.fitting_models import linear_model
 
 def linear_model(x, a, b):
     return a * x + b
@@ -208,6 +210,151 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
     # plt.yticks([0,n_particles-1],[1,n_particles],fontsize=8)
     # plt.savefig(f"./{log_dir}/tmp_training/matrix/{epoch}_{N}.tif", dpi=87)
     # plt.close()
+
+
+def plot_training_signal_field(recursive_loop, kk, time_step, x_list, run, model, field_type, model_f, edges, y_list, ynorm, delta_t, n_frames, log_dir, epoch, N, recursive_parameters, modulation, device):
+    if recursive_loop > 1:
+        x = torch.tensor(x_list[run][kk], device=device).clone().detach()
+        ids = np.arange(kk, kk + recursive_loop * time_step, time_step)
+        true_activity_list = np.transpose(x_list[run][ids.astype(int), :, 6:7].squeeze())
+        true_modulation_list = np.transpose(x_list[run][ids.astype(int), :, 8:9].squeeze())
+
+        loss = 0
+        pred_activity_list = list([])
+        pred_modulation_list = list([])
+
+        for loop in range(recursive_loop):
+            pred_activity_list.append(x[:, 6:7].clone().detach())
+
+            if (loop == 0) & ('learnable_short_term_plasticity' in field_type):
+                alpha = (kk % model.embedding_step) / model.embedding_step
+                x[:, 8] = alpha * model.b[:, kk // model.embedding_step + 1] ** 2 + (1 - alpha) * model.b[:, kk // model.embedding_step] ** 2
+            elif ('Siren_short_term_plasticity' in field_type):
+                t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
+                t[:, 0, :] = torch.tensor(kk / n_frames, dtype=torch.float32, device=device)
+                x[:, 8] = model_f(t.clone().detach()) ** 2
+
+            pred_modulation_list.append(x[:, 8:9].clone().detach())
+
+            dataset = data.Data(x=x, edge_index=edges)
+            y = torch.tensor(y_list[run][kk], device=device) / ynorm
+
+            pred = model(dataset)
+            loss = loss + (pred - y).norm(2)
+
+            kk = kk + time_step
+
+            if 'learnable_short_term_plasticity' in field_type:
+                in_modulation = torch.cat((x[:, 6:7], x[:, 8:9]), dim=1)
+                pred_modulation = model.lin_modulation(in_modulation)
+                x[:, 8:9] = x[:, 8:9] + delta_t * time_step * pred_modulation
+
+            x[:, 6:7] = x[:, 6:7] + delta_t * time_step * pred
+
+        pred_activity_list = torch.stack(pred_activity_list).squeeze().t()
+        pred_modulation_list = torch.stack(pred_modulation_list).squeeze().t()
+        kk = kk - time_step * recursive_loop
+
+        fig = plt.figure(figsize=(12, 12))
+        ind_list = [10, 124, 148, 200, 250, 300]
+        ax = fig.add_subplot(2, 1, 1)
+        ids = np.arange(0, recursive_loop * time_step, time_step)
+        for ind in ind_list:
+            plt.plot(ids, true_activity_list[ind, :], c='k', alpha=0.5, linewidth=8)
+            plt.plot(ids, to_numpy(pred_activity_list[ind, :]))
+        plt.text(0.05, 0.95, f'k: {kk}   loss: {np.round(loss.item(), 3)}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
+        if 'learnable_short_term_plasticity' in field_type:
+            ax = fig.add_subplot(2, 1, 2)
+            for ind in ind_list:
+                plt.plot(ids, true_modulation_list[ind, :], c='k', alpha=0.5, linewidth=8)
+                plt.plot(ids, to_numpy(pred_modulation_list[ind, :]))
+        plt.savefig(f"./{log_dir}/tmp_training/field/Field_{epoch}_{N}.tif")
+        plt.close()
+
+    if 'learnable_short_term_plasticity' in field_type:
+        fig = plt.figure(figsize=(12, 12))
+        ax = fig.add_subplot(2, 2, 1)
+        plt.imshow(to_numpy(modulation), aspect='auto')
+        ax = fig.add_subplot(2, 2, 2)
+        plt.imshow(to_numpy(model.b ** 2), aspect='auto')
+        ax.text(0.01, 0.99, f'recursive_parameter {recursive_parameters[0]:0.3f} ', transform=ax.transAxes,
+                verticalalignment='top', horizontalalignment='left', color='w')
+        ax.text(0.01, 0.95, f'loop {recursive_loop} ', transform=ax.transAxes,
+                verticalalignment='top', horizontalalignment='left', color='w')
+        ax = fig.add_subplot(2, 2, 3)
+        plt.scatter(to_numpy(modulation[:, np.arange(0, 100000, 100)]), to_numpy(model.b[:, 0:1000] ** 2), s=0.1, color='k', alpha=0.01)
+        x_data = to_numpy(modulation[:, np.arange(0, 100000, 100)]).flatten()
+        y_data = to_numpy(model.b[:, 0:1000] ** 2).flatten()
+        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+        residuals = y_data - linear_model(x_data, *lin_fit)
+        ss_res = np.sum(residuals ** 2)
+        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+        r_squared = 1 - (ss_res / ss_tot)
+        ax.text(0.01, 0.99, f'$R^2$ {r_squared:0.3f}   slope {lin_fit[0]:0.3f}', transform=ax.transAxes,
+                verticalalignment='top', horizontalalignment='left')
+        ind_list = [10, 124, 148, 200, 250, 300]
+        ax = fig.add_subplot(4, 2, 6)
+        for ind in ind_list:
+            plt.plot(to_numpy(modulation[ind, :]))
+        ax = fig.add_subplot(4, 2, 8)
+        for ind in ind_list:
+            plt.plot(to_numpy(model.b[ind, :] ** 2))
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
+        plt.close()
+
+    elif ('Siren_short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
+        fig = plt.figure(figsize=(12, 12))
+        ax = fig.add_subplot(2, 2, 1)
+        plt.imshow(to_numpy(modulation), aspect='auto')
+        ax = fig.add_subplot(2, 2, 2)
+        t = torch.zeros((1, 100000, 1), dtype=torch.float32, device=device)
+        t[0] = torch.linspace(0, 1, 100000, dtype=torch.float32, device=device)[:, None]
+        prediction = model_f(t) ** 2
+        prediction = prediction.squeeze()
+        prediction = prediction.t()
+        plt.imshow(to_numpy(prediction), aspect='auto')
+        plt.xticks([])
+        plt.yticks([])
+        ax = fig.add_subplot(2, 2, 3)
+        ids = np.arange(0, 100000, 100).astype(int)
+        plt.scatter(to_numpy(modulation[:, ids]), to_numpy(prediction[:, ids]), s=0.1, color='k', alpha=0.01)
+        x_data = to_numpy(modulation[:, ids]).flatten()
+        y_data = to_numpy(prediction[:, ids]).flatten()
+        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+        residuals = y_data - linear_model(x_data, *lin_fit)
+        ss_res = np.sum(residuals ** 2)
+        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+        r_squared = 1 - (ss_res / ss_tot)
+        ax.text(0.01, 0.99, f'$R^2$ {r_squared:0.3f}   slope {lin_fit[0]:0.3f}', transform=ax.transAxes,
+                verticalalignment='top', horizontalalignment='left')
+        ind_list = [10, 124, 148, 200, 250, 300]
+        ax = fig.add_subplot(4, 2, 6)
+        for ind in ind_list:
+            plt.plot(to_numpy(modulation[ind, :]))
+        ax = fig.add_subplot(4, 2, 8)
+        for ind in ind_list:
+            plt.plot(to_numpy(prediction[ind, :]))
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
+        plt.close()
+
+    elif has_Siren:
+        if 'visual' in field_type:
+            tmp = torch.reshape(x[:n_nodes, 8:9], (n_nodes_per_axis, n_nodes_per_axis))
+        else:
+            tmp = torch.reshape(x[:, 8:9], (n_nodes_per_axis, n_nodes_per_axis))
+        tmp = to_numpy(torch.sqrt(tmp))
+        tmp = np.rot90(tmp, k=1)
+        fig = plt.figure(figsize=(12, 12))
+        plt.imshow(tmp, cmap='grey')
+        plt.xticks([])
+        plt.yticks([])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
+        plt.close()
+
+
 
 def plot_training_particle_field(config, has_siren, has_siren_time, model_f,  n_frames, model_name, log_dir, epoch, N, x, x_mesh, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
 
