@@ -8040,7 +8040,7 @@ if __name__ == '__main__':
     # config_list = ['signal_N2_a43_10']
     # config_list = ['signal_N4_m13_shuffle_ter']
     # config_list = ['boids_16_256']
-    config_list = ['signal_N5_v2']
+    config_list = ['signal_N5_v1']
     # config_list = ['signal_N5_l3']
     # config_list = ['gravity_16_1']
     # config_list = ['wave_slit_bis']

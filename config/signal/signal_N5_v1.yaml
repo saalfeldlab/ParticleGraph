@@ -1,4 +1,4 @@
-description: 'synaptic network random matrix cluster embedding distance 0.2 2048 neurons 4 types phi neuron dependent lorentz std 0.03 20 runs modulation on 1024 neurons'
+description: 'test neuro-neuron dependent structure matrix modulation'
 dataset: 'signal_N5_v'
 
 simulation:
@@ -30,7 +30,7 @@ graph_model:
     mesh_model_name: ''
     prediction: 'first_derivative'
 
-    input_size: 4
+    input_size: 5
     output_size: 1
     hidden_dim: 64
     n_mp_layers: 5

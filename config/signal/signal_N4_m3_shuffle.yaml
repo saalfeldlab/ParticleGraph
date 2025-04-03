@@ -1,4 +1,4 @@
-description: 'synaptic network random matrix cluster embedding distance 0.2 1000 neurons 4 types phi neuron dependent lorentz std 0.03 20 runs omega 30'
+description: 'test modulation'
 dataset: 'signal_N4_m3_shuffle'
 
 simulation:
