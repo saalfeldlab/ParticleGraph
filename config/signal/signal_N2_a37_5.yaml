@@ -1,4 +1,4 @@
-description: 'test intricated   synaptic network 100.000 points'
+description: 'test batch size   synaptic network 100.000 points'
 dataset: 'signal_N2_a37'
 
 simulation:
@@ -24,7 +24,7 @@ graph_model:
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
-
+    
     input_size: 1
     output_size: 1
     hidden_dim: 64
@@ -38,6 +38,7 @@ graph_model:
     embedding_dim: 2
     update_type: 'none'
 
+
 plotting:
     colormap: 'tab10'
     arrow_length: 1
@@ -45,26 +46,32 @@ plotting:
     ylim: [-8,8]
 
 training:
-    n_epochs: 10
-    recursive_loop: 1
-    batch_size: 1
-    small_init_batch_size: True
+    n_epochs: 20
     n_runs: 2
     device: 'auto'
-    epoch_reset: 2
 
-    sparsity: 'none'
+    recursive_loop: 1
+    batch_size: 5
+    small_init_batch_size: False
+
+    epoch_reset: 2
+    epoch_reset_freq: 999
+
     rotation_augmentation: False
     data_augmentation_loop: 50
 
-    cluster_method: 'distance_plot'
-    fix_cluster_embedding: True
+    sparsity: 'none'
     sparsity_freq: 4
+    cluster_method: 'distance_plot'
     cluster_distance_threshold: 0.1
+    fix_cluster_embedding: True
+
+    coeff_L1: 1.0E-5
+    coeff_diff: 100
+    coeff_diff_update: 10
 
     learning_rate_W_start: 1.0E-3
     learning_rate_start: 5.0E-4
     learning_rate_embedding_start: 5.0E-3
-
-    coeff_diff: 100
+    learning_rate_modulation_start: 1.0E-4
 

@@ -2384,6 +2384,11 @@ def data_train_synaptic2(config, erase, best_model, device):
         d_modulation = (modulation[:, 1:] - modulation[:, :-1]) / delta_t
         modulation_norm = torch.tensor(1.0E-2, device=device)
 
+    coeff_L1 = train_config.coeff_L1
+    coeff_diff = train_config.coeff_diff
+    logger.info(f'coeff_L1: {coeff_L1} coeff_diff: {coeff_diff}')
+    print(f'coeff_L1: {coeff_L1} coeff_diff: {coeff_diff}')
+
     print("start training ...")
 
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
@@ -2392,20 +2397,10 @@ def data_train_synaptic2(config, erase, best_model, device):
     list_loss = []
     time.sleep(0.2)
 
+
+
     for epoch in range(start_epoch, n_epochs + 1):
 
-        if (epoch < train_config.n_epochs_init):
-            coeff_L1 = train_config.first_coeff_L1
-            coeff_diff = train_config.coeff_diff
-            coeff_diff_update = train_config.coeff_diff_update
-            coeff_diff_update2 = train_config.coeff_diff_update2
-        else:
-            coeff_L1 = train_config.coeff_L1
-            coeff_diff = 0
-            coeff_diff_update = 0
-            coeff_diff_update2 = 0
-        logger.info(f'coeff_L1: {coeff_L1} coeff_diff: {coeff_diff}')
-        
         if (epoch == train_config.epoch_reset) | ((epoch>0) & (epoch % train_config.epoch_reset_freq == 0)):
             with torch.no_grad():
                 model.W.copy_(model.W * 0)
