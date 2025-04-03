@@ -2246,6 +2246,7 @@ def data_train_synaptic2(config, erase, best_model, device):
     print(f'xnorm: {to_numpy(xnorm)}')
     logger.info(f'xnorm: {to_numpy(xnorm)}')
 
+
     n_particles = x.shape[0]
     print(f'N particles: {n_particles}')
     logger.info(f'N particles: {n_particles}')
@@ -2524,8 +2525,6 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                     k = np.random.randint(n_frames - 5 - batch_size - time_step)
 
-                    in_features = get_in_features_update(None, n_particles, model.a, model.update_type, device)
-                    func_phi = model.lin_phi(in_features.float())
                     x = torch.tensor(x_list[run][k], device=device)
 
                     if has_field:
@@ -2554,37 +2553,40 @@ def data_train_synaptic2(config, erase, best_model, device):
                     else:
                         x[:, 8:9] = torch.ones_like(x[:, 0:1])
 
+                    # regularisation
+                    in_features = get_in_features_update(None, n_particles, model.a, model.update_type, device)
+                    func_phi = model.lin_phi(in_features.float())
+
+                    # sparsity on Wij and phi(0)=0
+                    loss += model.W.norm(1) * coeff_L1 + func_phi.norm(2)
+
+                    # lin.edge monotonic positive
                     if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N7') | (model_config.signal_model_name == 'PDE_N8'):
-                        in_features = torch.zeros((n_particles, dimension + 1), device=device)
-                        func_edge = model.lin_edge(in_features.float())
                         in_features = torch.cat((x[:, 6:7], model.a), dim=1)
-                        in_features_next = torch.cat((x[:, 6:7] + 0.1, model.a), dim=1)
+                        in_features_next = torch.cat((x[:, 6:7] + xnorm/50, model.a), dim=1)
                     elif model_config.signal_model_name == 'PDE_N5':
-                        in_features = torch.zeros((n_particles, 2 * dimension + 1), device=device)
-                        func_edge = model.lin_edge(in_features.float())
                         in_features = torch.cat((x[:, 6:7], model.a, model.a), dim=1)
-                        in_features_next = torch.cat((x[:, 6:7] + 0.1, model.a, model.a), dim=1)
+                        in_features_next = torch.cat((x[:, 6:7] + xnorm/50, model.a, model.a), dim=1)
                     else:
-                        in_features = torch.zeros((n_particles, 1), device=device)
-                        func_edge = model.lin_edge(in_features.float())
                         in_features = x[:, 6:7]
-                        in_features_next = x[:, 6:7] + 0.1
+                        in_features_next = x[:, 6:7] + xnorm/50
+                    if model_config.lin_edge_positive:
+                        diff = torch.relu(model.lin_edge(in_features)**2 - model.lin_edge(in_features_next)**2).norm(2) * coeff_diff
+                    else:
+                        diff = torch.relu(model.lin_edge(in_features) - model.lin_edge(in_features_next)).norm(2) * coeff_diff
+                    loss +=  diff
 
-                    diff = torch.relu(model.lin_edge(in_features) - model.lin_edge(in_features_next)).norm(2) * coeff_diff
-
-                    if 'intricated' in model.update_type:
-                        in_features = get_in_features_update(x[:, 6:7].clone().detach(), n_particles, model.a, model.update_type, device)
-                        in_features[:,-1] = x[:, 6]
-                        in_features = in_features.clone().detach()
-                        in_features_next = in_features.clone().detach()
-                        in_features_next[:,-1] = in_features[:,-1] + 0.1
-                        diff = diff + torch.relu(model.lin_phi(in_features) - model.lin_phi(in_features_next)).norm(2) * coeff_diff_update
-                    if '2steps+field' in model.update_type:
-                        in_features2 = torch.cat((torch.ones((n_particles, 2), device=device), x[:, 8:9].clone().detach()), dim = 1)
-                        in_features2_next = torch.cat((torch.ones((n_particles, 2), device=device), x[:, 8:9].clone().detach() + 0.1), dim = 1)
-                        diff = diff + torch.relu(model.lin_phi2(in_features2) - model.lin_phi2(in_features2_next)).norm(2) * coeff_diff_update2
-
-                    loss += model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff
+                    # if 'generic' in model.update_type:
+                    #     in_features = get_in_features_update(x[:, 6:7].clone().detach(), n_particles, model.a, model.update_type, device)
+                    #     in_features[:,-1] = x[:, 6]
+                    #     in_features = in_features.clone().detach()
+                    #     in_features_next = in_features.clone().detach()
+                    #     in_features_next[:,-1] = in_features[:,-1] + 0.1
+                    #     diff = diff + torch.relu(model.lin_phi(in_features) - model.lin_phi(in_features_next)).norm(2) * coeff_diff_update
+                    # if '2steps' in model.update_type:
+                    #     in_features2 = torch.cat((torch.ones((n_particles, 2), device=device), x[:, 8:9].clone().detach()), dim = 1)
+                    #     in_features2_next = torch.cat((torch.ones((n_particles, 2), device=device), x[:, 8:9].clone().detach() + 0.1), dim = 1)
+                    #     diff = diff + torch.relu(model.lin_phi2(in_features2) - model.lin_phi2(in_features2_next)).norm(2) * coeff_diff_update2
 
                     # edges = model.edges.clone().detach()
                     # if particle_batch_ratio < 1:
@@ -2882,7 +2884,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         y_min, y_max = all_func_values.min().item(), all_func_values.max().item()
         plt.ylim([y_min-0.1, y_max*1.1])
 
-        if False: #('PDE_N3' not in model_config.signal_model_name):
+        if ('PDE_N3' not in model_config.signal_model_name):
 
             ax = fig.add_subplot(2, 5, 6)
             embedding = to_numpy(model.a.squeeze())

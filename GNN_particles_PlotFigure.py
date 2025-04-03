@@ -4912,10 +4912,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     plt.plot(to_numpy(rr), to_numpy(func), color=mc, linewidth=8, label=r'learned')
                     plt.xlabel(r'$x_j$', fontsize=68)
                     # plt.ylabel(r'learned $\psi^*(a_i, x_i)$', fontsize=68)
-                    if model.update_type == 'intricated':
-                        plt.ylabel(r'learned $MLP_1(x_j)$', fontsize=68)
-                    else:
-                        plt.ylabel(r'learned $MLP_1(a_j, x_j)$', fontsize=68)
+                    plt.ylabel(r'learned $MLP_1(a_j, x_j)$', fontsize=68)
                     plt.ylim([-1.5, 1.5])
                     plt.xlim([-5,5])
                     plt.tight_layout()
@@ -4935,10 +4932,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm), color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8 // ( 1 + (n_particle_types>16)*1.0), alpha=0.25)
                 plt.xlabel(r'$x_i$', fontsize=68)
                 # plt.ylabel(r'learned $\phi^*(a_i, x_i)$', fontsize=68)
-                if model.update_type == 'intricated':
-                    plt.ylabel(r'learned $MLP_0(a_i, x_i, 0)$', fontsize=68)
-                else:
-                    plt.ylabel(r'learned $MLP_0(a_i, x_i)$', fontsize=68)
+                plt.ylabel(r'learned $MLP_0(a_i, x_i)$', fontsize=68)
                 plt.xlim(config.plotting.xlim)
                 plt.ylim(config.plotting.ylim)
                 plt.tight_layout()
@@ -5443,7 +5437,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.xlim([-to_numpy(xnorm)*2, to_numpy(xnorm)*2])
             # plt.ylim([0,0.05])
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/raw_psi.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/results/raw_psi_{epoch}.tif", dpi=170.7)
             plt.close()
 
             upper = func_list[:,950:1000].flatten()
@@ -5485,12 +5479,12 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                             	func = model.lin_edge(in_features.float()) ** 2 * correction
                             else:
                             	func = model.lin_edge(in_features.float()) * correction
-                            if model.update_type == '2steps+field':
+                            if model.update_type == '2steps':
                             	field = torch.ones_like(rr[:,None])
                             	u = torch.zeros_like(rr[:,None])
                             	in_features2 = torch.cat([u, func, field], dim=1)
                             	func = model.lin_phi2(in_features2)
-                            elif model.update_type == 'intricated+field':
+                            elif model.update_type == 'generic':
                             	field = torch.ones_like(rr[:,None])
                             	u = torch.zeros_like(rr[:,None])
                             	in_features = torch.cat([u, embedding0, func, field], dim=1)
@@ -5507,7 +5501,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     # plt.xlim([-5, 5])
 
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/learned_psi.tif", dpi=170.7)
+                plt.savefig(f"./{log_dir}/results/learned_psi_{epoch}.tif", dpi=170.7)
                 plt.close()
                 psi_list = torch.stack(psi_list)
                 psi_list = psi_list.squeeze()
@@ -5555,7 +5549,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 plt.xlim([-to_numpy(xnorm), to_numpy(xnorm)])
                 # plt.xlim(config.plotting.xlim)
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/learned_psi.tif", dpi=170.7)
+                plt.savefig(f"./{log_dir}/results/learned_psi_{epoch}.tif", dpi=170.7)
                 plt.close()
                 psi_list = torch.stack(psi_list)
                 psi_list = psi_list.squeeze()
@@ -5587,7 +5581,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.tight_layout()
             plt.xlim([-to_numpy(xnorm), to_numpy(xnorm)])
             plt.ylim(config.plotting.ylim)
-            plt.savefig(f'./{log_dir}/results/learned phi.png', dpi=300)
+            plt.savefig(f'./{log_dir}/results/learned phi_{epoch}.png', dpi=300)
             plt.close()
 
             print('UMAP reduction ...')
@@ -5772,7 +5766,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                         t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
                         t[:, 0, :] = torch.tensor(frame / n_frames, dtype=torch.float32, device=device)
 
-                        if (model_config.update_type == '2steps+field'):
+                        if (model_config.update_type == '2steps'):
                                 m_ = model_f(t).squeeze() ** 2
                                 m_ = m_[:,None]
                                 in_features= torch.cat((torch.zeros_like(m_), torch.ones_like(m_)*xnorm, m_), dim=1)
@@ -8033,6 +8027,7 @@ if __name__ == '__main__':
     warnings.filterwarnings("ignore", category=FutureWarning)
 
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+
     print(' ')
     print(f'device {device}')
 
@@ -8045,7 +8040,7 @@ if __name__ == '__main__':
     # config_list = ['signal_N2_a43_10']
     # config_list = ['signal_N4_m13_shuffle_ter']
     # config_list = ['boids_16_256']
-    config_list = ['signal_N5_v1','signal_N5_v2','signal_N5_v3','signal_N5_v4','signal_N5_v5','signal_N5_v6']
+    config_list = ['signal_N5_v2']
     # config_list = ['signal_N5_l3']
     # config_list = ['gravity_16_1']
     # config_list = ['wave_slit_bis']
