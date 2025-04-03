@@ -126,12 +126,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             particle_id = x[:, 0].long()
             embedding = self.a[particle_id, :]
 
-        if (self.update_type != '2steps+field') & (self.update_type != 'intricated+field') & ((self.model == 'PDE_N4') | (self.model == 'PDE_N5') | (self.model == 'PDE_N6') | (self.model == 'PDE_N7') | (self.model == 'PDE_N9')):
-            field = x[:, 8:9]
-        else:
-            field = torch.ones((x.shape[0], 1), requires_grad=False, dtype=torch.float32, device=self.device)
-
-        msg = self.propagate(edge_index, u=u, embedding=embedding, field=field)
+        msg = self.propagate(edge_index, u=u, embedding=embedding)
 
         if self.update_type == '2steps+field':
             in_features1 = torch.cat([u, embedding], dim=1)
@@ -139,25 +134,22 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             field = x[:, 8:9]
             in_features2 = torch.cat([pred1, msg, field], dim=1)
             pred = self.lin_phi2(in_features2)
+        elif self.update_type == 'intricated':
+            field = x[:, 8:9]
+            in_features = torch.cat([u, embedding, msg * field], dim=1)
+            pred = self.lin_phi(in_features)
         elif self.update_type == 'intricated+field':
             field = x[:, 8:9]
             in_features = torch.cat([u, embedding, msg, field], dim=1)
             pred = self.lin_phi(in_features)
-        elif self.update_type == '2steps':
-            in_features1 = torch.cat([u, embedding], dim=1)
-            pred1 = self.lin_phi(in_features1)
-            in_features2 = torch.cat([pred1, msg], dim=1)
-            pred = self.lin_phi2(in_features2)
-        elif self.update_type == 'intricated':
-            in_features = torch.cat([u, embedding, msg], dim=1)
-            pred = self.lin_phi(in_features)
         else:
+            field = x[:, 8:9]
             in_features = torch.cat([u, embedding], dim=1)
-            pred = self.lin_phi(in_features) + msg
+            pred = self.lin_phi(in_features) + msg * field
 
         return pred
 
-    def message(self, edge_index_i, edge_index_j, u_j, embedding_i, embedding_j, field_i):
+    def message(self, edge_index_i, edge_index_j, u_j, embedding_i, embedding_j):
 
         if (self.model=='PDE_N4') | (self.model=='PDE_N7'):
             in_features = torch.cat([u_j, embedding_i], dim=1)
@@ -175,9 +167,9 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             line_edge = line_edge**2
 
         if (self.batch_size==1):
-            return T[edge_index_i, edge_index_j][:, None] * line_edge * field_i
+            return T[edge_index_i, edge_index_j][:, None] * line_edge
         else:
-            return T[edge_index_i%self.n_particles, edge_index_j%self.n_particles][:,None] * line_edge * field_i
+            return T[edge_index_i%self.n_particles, edge_index_j%self.n_particles][:,None] * line_edge
 
 
     def update(self, aggr_out):

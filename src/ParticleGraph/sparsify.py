@@ -11,17 +11,11 @@ import time
 
 class EmbeddingCluster:
     def __init__(self, config):
-        self.n_interactions = config.simulation.n_interactions
         self.cluster_connectivity = config.training.cluster_connectivity    # 'single' (default) or 'average'
 
     def get(self, data, method, thresh=2.5):
 
         match method:
-            case 'kmeans':
-                kmeans = KMeans(init="random", n_clusters=self.n_interactions, n_init=1000, max_iter=10000, random_state=10)
-                k = kmeans.fit(data)
-                clusters = k.labels_
-                n_clusters = self.n_interactions
             case 'kmeans_auto':
                 silhouette_avg_list = []
                 silhouette_max = 0
@@ -158,8 +152,6 @@ def sparsify_cluster_state(cluster_method, proj_interaction, embedding, cluster_
 
 if __name__ == '__main__':
     # generate 3 clusters of each around 100 points and one orphan point
-    n_interactions = 3
-    embedding_cluster = EmbeddingCluster(n_interactions)
 
     N = 100
     data = np.random.randn(3 * N, 2)

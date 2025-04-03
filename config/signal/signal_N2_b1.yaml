@@ -1,5 +1,5 @@
-description: 'synaptic network random matrix no recursive loop    1000 neurons 32 types lorentz std 0.03'
-dataset: 'signal_N2_Lorentz_b1'
+description: 'test 32 type   synaptic network 100.000 points'
+dataset: 'signal_N2_b1'
 
 simulation:
     connectivity_file: 'random'
@@ -20,7 +20,6 @@ simulation:
     max_radius: 1.0E6
     n_particles: 1000
     n_particle_types: 32
-    n_interactions: 32
     n_frames: 100000
     delta_t: 0.01
     dpos_init:  0
