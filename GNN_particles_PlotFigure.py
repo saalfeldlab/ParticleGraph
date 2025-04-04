@@ -5550,9 +5550,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
 
 
-
-
-
             print('update functions ...')
             if model_config.signal_model_name == 'PDE_N5':
                 psi_list = []
@@ -5617,27 +5614,27 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N8') :
                     for n in range(n_particle_types):
                         true_func = true_model.func(rr, n, 'phi')
-                        plt.plot(to_numpy(rr), to_numpy(true_func), c = 'k', linewidth = 16, label = 'original', alpha = 0.21)
+                        plt.plot(to_numpy(rr), to_numpy(true_func), c = mc, linewidth = 16, label = 'original', alpha = 0.21)
                 else:
                     true_func = true_model.func(rr, 0, 'phi')
-                    plt.plot(to_numpy(rr), to_numpy(true_func), c = 'k', linewidth = 16, label = 'original', alpha = 0.21)
+                    plt.plot(to_numpy(rr), to_numpy(true_func), c = mc, linewidth = 16, label = 'original', alpha = 0.21)
 
-                for n in trange(0,n_particles):
-                    if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5') | (model_config.signal_model_name == 'PDE_N8'):
-                        embedding_ = model.a[n, :] * torch.ones((1500, config.graph_model.embedding_dim), device=device)
-                        in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
-                    else:
-                        in_features = rr[:, None]
-                    with torch.no_grad():
-                        if config.graph_model.lin_edge_positive:
-                            func = model.lin_edge(in_features.float()) ** 2 * correction
-                        else:
-                            func = model.lin_edge(in_features.float()) * correction
-                        psi_list.append(func)
-                    if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5') | (model_config.signal_model_name == 'PDE_N8'):
-                        plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
-                    else:
-                        plt.plot(to_numpy(rr), to_numpy(func), 2, color=mc, linewidth=2, alpha=0.25)
+                # for n in trange(0,n_particles):
+                #     if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5') | (model_config.signal_model_name == 'PDE_N8'):
+                #         embedding_ = model.a[n, :] * torch.ones((1500, config.graph_model.embedding_dim), device=device)
+                #         in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
+                #     else:
+                #         in_features = rr[:, None]
+                #     with torch.no_grad():
+                #         if config.graph_model.lin_edge_positive:
+                #             func = model.lin_edge(in_features.float()) ** 2 * correction
+                #         else:
+                #             func = model.lin_edge(in_features.float()) * correction
+                #         psi_list.append(func)
+                #     if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5') | (model_config.signal_model_name == 'PDE_N8'):
+                #         plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
+                #     else:
+                #         plt.plot(to_numpy(rr), to_numpy(func), 2, color=mc, linewidth=2, alpha=0.25)
                 plt.xlabel(r'$x_i$', fontsize=68)
                 if (model_config.signal_model_name == 'PDE_N4'):
                     plt.ylabel(r'learned $\psi^*(a_i, x_i)$', fontsize=68)
@@ -8145,8 +8142,8 @@ if __name__ == '__main__':
     # config_list = ['signal_N2_a43_10']
     # config_list = ['signal_N4_m13_shuffle_ter']
     # config_list = ['boids_16_256']
-    config_list = ['signal_N5_v1', 'signal_N5_v2', 'signal_N5_v3', 'signal_N5_v4', 'signal_N4_a1', 'signal_N4_a2', 'signal_N4_a3', 'signal_N4_a4']
-    # config_list = ['signal_N5_l3']
+    # config_list = ['signal_N5_v1', 'signal_N5_v2', 'signal_N5_v3', 'signal_N5_v4', 'signal_N4_a1', 'signal_N4_a2', 'signal_N4_a3', 'signal_N4_a4']
+    config_list = ['signal_N4_m15_shuffle']
     # config_list = ['gravity_16_1']
     # config_list = ['wave_slit_bis']
 
@@ -8160,7 +8157,7 @@ if __name__ == '__main__':
 
         print(f'config_file  {config.config_file}')
 
-        data_plot(config=config, epoch_list=['best'], style='black color', device=device)
+        data_plot(config=config, epoch_list=['0_500000'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['time'], style='black color', device=device)
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)

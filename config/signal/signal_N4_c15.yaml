@@ -63,7 +63,7 @@ training:
     n_epochs_init: 999
 
     rotation_augmentation: False
-    data_augmentation_loop: 50
+    data_augmentation_loop: 10
     
     sparsity: 'none'
     cluster_method: 'distance_plot'
