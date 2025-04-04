@@ -55,10 +55,10 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'generate'
+        task = 'train'
         best_model = ''
         # config_list = ['falling_water_ramp_x6_11']
-        config_list = ['signal_N4_m14_shuffle']
+        config_list = ['signal_N4_c15']
         # config_list = ['signal_N4_all_1']
         # config_list = ['arbitrary_3_test']
         # config_list = ['wave_smooth_3']
@@ -82,7 +82,7 @@ if __name__ == '__main__':
         print(f'folder  {config.dataset}')
 
         if 'generate' in task:
-            data_generate(config, device=device, visualize=True, run_vizualized=0, style='black color', alpha=1, erase=False, bSave=True, step=1000)  #config.simulation.n_frames // 100)
+            data_generate(config, device=device, visualize=True, run_vizualized=0, style='black color', alpha=1, erase=False, bSave=True, step=10000)  #config.simulation.n_frames // 100)
         if 'train' in task:
             data_train(config=config, erase=False, best_model=best_model, device=device)
         if 'test' in task:

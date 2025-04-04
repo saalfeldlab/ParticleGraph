@@ -2579,8 +2579,8 @@ def data_train_synaptic2(config, erase, best_model, device):
                         in_feature_update = torch.cat((torch.zeros((n_particles,1), device=device), model.a, msg0, torch.ones((n_particles,1), device=device)), dim=1)
                         in_feature_update_next = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg1, torch.ones((n_particles, 1), device=device)), dim=1)
                         diff = diff + torch.relu(model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next)).norm(2) * coeff_diff_update
-                        in_feature_update_next_bis = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg1, torch.ones((n_particles, 1), device=device)*1.1), dim=1)
-                        diff = diff + (model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next_bis)).norm(2) * coeff_diff_update
+                        # in_feature_update_next_bis = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg1, torch.ones((n_particles, 1), device=device)*1.1), dim=1)
+                        # diff = diff + (model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next_bis)).norm(2) * coeff_diff_update
                     loss += diff
 
 
