@@ -74,7 +74,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
 
         self.lin_phi = MLP(input_size=self.input_size_update, output_size=self.output_size, nlayers=self.n_layers_update,
                             hidden_size=self.hidden_dim_update, device=self.device)
-
+        # if self.update_type=='2steps':
         self.lin_phi2 = MLP(input_size=self.input_size_update2, output_size=self.output_size,
                            nlayers=self.n_layers_update2,
                            hidden_size=self.hidden_dim_update2, device=self.device)
@@ -137,7 +137,10 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             in_features = torch.cat([u, embedding], dim=1)
             pred = self.lin_phi(in_features) + msg * field  # MLP1(u, embedding) + field * \sum MLP0(u, embedding)
 
-        return pred
+        if return_all:
+            return pred, in_features
+        else:
+            return pred
 
     def message(self, edge_index_i, edge_index_j, u_j, embedding_i, embedding_j):
 

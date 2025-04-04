@@ -1,5 +1,5 @@
 description: 'test modulation with permutation'
-dataset: 'signal_N4_m13_shuffle'
+dataset: 'signal_N4_m14_shuffle'
 
 simulation:
     connectivity_file: 'random'
@@ -48,6 +48,7 @@ graph_model:
     embedding_dim: 2
     update_type: 'none'
 
+
 plotting:
     colormap: 'tab10'
     arrow_length: 1
@@ -62,7 +63,7 @@ training:
     n_epochs_init: 5
     recursive_loop: 1
     batch_size: 10
-    small_init_batch_size: False
+    small_init_batch_size: True
 
     rotation_augmentation: False
     data_augmentation_loop: 50

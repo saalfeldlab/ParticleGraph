@@ -26,7 +26,7 @@ simulation:
     node_value_map: 'video_bisons_32.tif'
 
 graph_model:
-    field_type: 'Siren_short_term_plasticity_permutation' # 'modulation_permutation' # 
+    field_type: 'modulation_permutation'
     signal_model_name: 'PDE_N4'
     particle_model_name: ''
     mesh_model_name: ''
@@ -80,7 +80,7 @@ training:
     cluster_distance_threshold: 0.1
     fix_cluster_embedding: True
 
-    coeff_L1: 1.0E-6
+    coeff_L1: 1.0E-5
     coeff_diff: 100
 
     learning_rate_W_start: 1.0E-3

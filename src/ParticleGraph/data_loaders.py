@@ -81,7 +81,6 @@ def find_closest_neighbors(track, x):
     return closest_neighbors
 
 
-
 def get_index_particles(x, n_particle_types, dimension):
     index_particles = []
     for n in range(n_particle_types):
@@ -549,8 +548,6 @@ def load_2D_cell_data(config, device, visualize):
     # torch.save(full_vertice_list, f'graphs_data/{dataset_name}/full_vertice_list{run}.pt')
 
     print(f'n_cells: {n_cells}')
-
-
 
 
 

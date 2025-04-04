@@ -1,12 +1,12 @@
 description: 'test neuro-neuron dependent structure matrix modulation'
-dataset: 'signal_N5_v'
+dataset: 'signal_N5_v1'
 
 simulation:
     connectivity_file: 'random'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
     connectivity_distribution: 'Lorentz_structured_0.40_0.05'
-    params: [[10.0,1.0,1.0,1.0],[10.0,2.0,1.0,2.0],[10.0,1.0,2.0,4.0],[10.0,2.0,2.0,8.0]]
+    params: [[10.0,1.0,1.0,1.0],[10.0,2.0,1.0,1.2],[10.0,1.0,2.0,1.4],[10.0,2.0,2.0,1.6]]
     phi: 'sigmoid'
 
     tau: 1.0
@@ -79,7 +79,7 @@ training:
     cluster_distance_threshold: 0.1
     fix_cluster_embedding: True
 
-    coeff_L1: 1.0E-6
+    coeff_L1: 1.0E-5
     coeff_diff: 100
     coeff_diff_update: 10
 

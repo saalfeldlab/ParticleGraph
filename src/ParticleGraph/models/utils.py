@@ -212,7 +212,7 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
     # plt.close()
 
 
-def plot_training_signal_field(recursive_loop, kk, time_step, x_list, run, model, field_type, model_f, edges, y_list, ynorm, delta_t, n_frames, log_dir, epoch, N, recursive_parameters, modulation, device):
+def plot_training_signal_field(x, n_nodes,n_nodes_per_axis, recursive_loop, kk, time_step, x_list, run, model, field_type, model_f, edges, y_list, ynorm, delta_t, n_frames, log_dir, epoch, N, recursive_parameters, modulation, device):
     if recursive_loop > 1:
         x = torch.tensor(x_list[run][kk], device=device).clone().detach()
         ids = np.arange(kk, kk + recursive_loop * time_step, time_step)
@@ -339,7 +339,7 @@ def plot_training_signal_field(recursive_loop, kk, time_step, x_list, run, model
         plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
         plt.close()
 
-    elif has_Siren:
+    else:
         if 'visual' in field_type:
             tmp = torch.reshape(x[:n_nodes, 8:9], (n_nodes_per_axis, n_nodes_per_axis))
         else:

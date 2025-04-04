@@ -2217,6 +2217,8 @@ def data_train_synaptic2(config, erase, best_model, device):
         n_nodes_per_axis = int(np.sqrt(n_nodes))
         has_field = True
     else:
+        n_nodes = n_particles
+        n_nodes_per_axis = int(np.sqrt(n_nodes))
         has_field = False
 
     has_Siren = has_field & ('learnable_short_term_plasticity' not in field_type)
@@ -2386,8 +2388,9 @@ def data_train_synaptic2(config, erase, best_model, device):
 
     coeff_L1 = train_config.coeff_L1
     coeff_diff = train_config.coeff_diff
-    logger.info(f'coeff_L1: {coeff_L1} coeff_diff: {coeff_diff}')
-    print(f'coeff_L1: {coeff_L1} coeff_diff: {coeff_diff}')
+    coeff_diff_update = train_config.coeff_diff_update
+    logger.info(f'coeff_L1: {coeff_L1} coeff_diff: {coeff_diff} coeff_diff_update: {coeff_diff_update}')
+    print(f'coeff_L1: {coeff_L1} coeff_diff: {coeff_diff} coeff_diff_update: {coeff_diff_update}')
 
     print("start training ...")
 
@@ -2565,10 +2568,21 @@ def data_train_synaptic2(config, erase, best_model, device):
                         in_features = x[:, 6:7]
                         in_features_next = x[:, 6:7] + xnorm/50
                     if model_config.lin_edge_positive:
-                        diff = torch.relu(model.lin_edge(in_features)**2 - model.lin_edge(in_features_next)**2).norm(2) * coeff_diff
+                        msg0 = model.lin_edge(in_features)**2
+                        msg1 = model.lin_edge(in_features_next)**2
+                        diff = torch.relu(msg0 - msg1).norm(2) * coeff_diff
                     else:
-                        diff = torch.relu(model.lin_edge(in_features) - model.lin_edge(in_features_next)).norm(2) * coeff_diff
-                    loss +=  diff
+                        msg0 = model.lin_edge(in_features)
+                        msg1 = model.lin_edge(in_features_next)
+                        diff = torch.relu(msg0 - msg1).norm(2) * coeff_diff
+                    if model.update_type == 'generic':
+                        in_feature_update = torch.cat((torch.zeros((n_particles,1), device=device), model.a, msg0, torch.ones((n_particles,1), device=device)), dim=1)
+                        in_feature_update_next = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg1, torch.ones((n_particles, 1), device=device)), dim=1)
+                        diff = diff + torch.relu(model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next)).norm(2) * coeff_diff_update
+                        in_feature_update_next_bis = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg1, torch.ones((n_particles, 1), device=device)*1.1), dim=1)
+                        diff = diff + (model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next_bis)).norm(2) * coeff_diff_update
+                    loss += diff
+
 
                     # if 'generic' in model.update_type:
                     #     in_features = get_in_features_update(x[:, 6:7].clone().detach(), n_particles, model.a, model.update_type, device)
@@ -2636,7 +2650,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                                          n_particle_types, type_list, cmap, device)
 
                     if has_field:
-                        plot_training_signal_field(recursive_loop, k, time_step, x_list, run, model, field_type, model_f,
+                        plot_training_signal_field(x, n_nodes, n_nodes_per_axis, recursive_loop, k, time_step, x_list, run, model, field_type, model_f,
                                                    edges, y_list, ynorm, delta_t, n_frames, log_dir, epoch, N,
                                                    recursive_parameters, modulation, device)
                         if 'learnable_short_term_plasticity' not in field_type:
@@ -3642,7 +3656,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         start_it = 0
         stop_it = n_frames-1
 
-    start_it = 1000
+    start_it = 0
 
     x = x_list[0][start_it].clone().detach()
     n_particles = x.shape[0]
@@ -3650,7 +3664,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     # x_list[0] = torch.cat((x_list[0],x_list[0],x_list[0],x_list[0]), dim=0)
     x_inference_list = []
 
-    for it in trange(start_it, min(1600000+start_it,stop_it-time_step)):
+    for it in trange(start_it, min(1600+start_it,stop_it-time_step)):
 
         check_and_clear_memory(device=device, iteration_number=it, every_n_iterations=25, memory_percentage_threshold=0.6)
         # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
@@ -4295,12 +4309,12 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                         plt.rcParams['text.usetex'] = True
                         rc('font', **{'family': 'serif', 'serif': ['Palatino']})
                     ax = plt.subplot(121)
-                    plt.plot(neuron_gt_list_[:, n[0]].detach().cpu().numpy(), c='k', linewidth=8, label='true',
+                    plt.plot(neuron_gt_list_[:, n[0]].detach().cpu().numpy(), c=mc, linewidth=8, label='true',
                              alpha=0.25)
                     plt.plot(neuron_pred_list_[:, n[0]].detach().cpu().numpy(), linewidth=4, c='k',
                              label='learned')
                     plt.legend(fontsize=24)
-                    plt.plot(neuron_gt_list_[:, n[1:10]].detach().cpu().numpy(), c='k', linewidth=8, alpha=0.25)
+                    plt.plot(neuron_gt_list_[:, n[1:10]].detach().cpu().numpy(), c=mc, linewidth=8, alpha=0.25)
                     plt.plot(neuron_pred_list_[:, n[1:10]].detach().cpu().numpy(), linewidth=4)
                     plt.xlim([0, 1400])
                     plt.xlabel(r'time-points', fontsize=48)

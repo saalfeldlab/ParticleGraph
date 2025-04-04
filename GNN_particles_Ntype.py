@@ -55,14 +55,14 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'train'
+        task = 'generate'
         best_model = ''
         # config_list = ['falling_water_ramp_x6_11']
-        # config_list = ['signal_N4_e_1']
+        config_list = ['signal_N4_m14_shuffle']
         # config_list = ['signal_N4_all_1']
         # config_list = ['arbitrary_3_test']
         # config_list = ['wave_smooth_3']
-        config_list = ['signal_N4_m15_shuffle']
+        # config_list = ['signal_N2_a37']
         # config_list = ['gravity_16']
         # config_list = ['cell_MDCK_12']
         # config_list = ['signal_N2_a43_17']
@@ -86,7 +86,7 @@ if __name__ == '__main__':
         if 'train' in task:
             data_train(config=config, erase=False, best_model=best_model, device=device)
         if 'test' in task:
-            data_test(config=config, visualize=True, style='black color', verbose=False, best_model='best', run=1, test_mode='',sample_embedding=False, step=5, device=device) # particle_of_interest=100,
+            data_test(config=config, visualize=True, style='black color', verbose=False, best_model='best', run=1, test_mode='',sample_embedding=False, step=100, device=device) # particle_of_interest=100,
         if 'try_func' in task:
             try_func(max_radius=config.simulation.max_radius, device=device)
 
