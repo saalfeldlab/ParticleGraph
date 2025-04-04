@@ -220,7 +220,7 @@ class TrainingConfig(BaseModel):
 
     learning_rate_NNR: float = 0.0001
 
-    coeff_L1: float = 1.0E-5
+    coeff_L1: float = 0.0
     coeff_anneal_L1: float = 0
     coeff_entropy_loss: float = 0
     coeff_loss1: float = 1
