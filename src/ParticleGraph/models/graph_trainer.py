@@ -2560,13 +2560,13 @@ def data_train_synaptic2(config, erase, best_model, device):
                     # lin.edge monotonic positive
                     if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N7') | (model_config.signal_model_name == 'PDE_N8'):
                         in_features = torch.cat((x[:, 6:7], model.a), dim=1)
-                        in_features_next = torch.cat((x[:, 6:7] +0.1, model.a), dim=1)
+                        in_features_next = torch.cat((x[:, 6:7] + xnorm/150, model.a), dim=1)
                     elif model_config.signal_model_name == 'PDE_N5':
                         in_features = torch.cat((x[:, 6:7], model.a, model.a), dim=1)
-                        in_features_next = torch.cat((x[:, 6:7] +0.1, model.a, model.a), dim=1)
+                        in_features_next = torch.cat((x[:, 6:7] + xnorm/150, model.a, model.a), dim=1)
                     else:
                         in_features = x[:, 6:7]
-                        in_features_next = x[:, 6:7] +0.1
+                        in_features_next = x[:, 6:7] + xnorm/150
                     if model_config.lin_edge_positive:
                         msg0 = model.lin_edge(in_features)**2
                         msg1 = model.lin_edge(in_features_next)**2
