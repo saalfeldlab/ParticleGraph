@@ -2217,7 +2217,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         n_nodes_per_axis = int(np.sqrt(n_nodes))
         has_field = True
     else:
-        n_nodes = n_particles
+        n_nodes = simulation_config.n_particles
         n_nodes_per_axis = int(np.sqrt(n_nodes))
         has_field = False
 
