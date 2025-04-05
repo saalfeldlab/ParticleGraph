@@ -51,7 +51,7 @@ training:
     batch_size: 10
     small_init_batch_size: False
 
-    time_step: 8
+    time_step: 1
 
     epoch_reset: 2
     epoch_reset_freq: 999

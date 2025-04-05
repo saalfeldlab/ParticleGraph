@@ -5614,9 +5614,11 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N8') :
                     for n in range(n_particle_types):
                         true_func = true_model.func(rr, n, 'phi')
+                        psi_list.append(func)
                         plt.plot(to_numpy(rr), to_numpy(true_func), c = mc, linewidth = 16, label = 'original', alpha = 0.21)
                 else:
                     true_func = true_model.func(rr, 0, 'phi')
+                    psi_list.append(true_func)
                     plt.plot(to_numpy(rr), to_numpy(true_func), c = mc, linewidth = 16, label = 'original', alpha = 0.21)
 
                 # for n in trange(0,n_particles):
@@ -8142,8 +8144,8 @@ if __name__ == '__main__':
     # config_list = ['signal_N2_a43_10']
     # config_list = ['signal_N4_m13_shuffle_ter']
     # config_list = ['boids_16_256']
-    # config_list = ['signal_N5_v1', 'signal_N5_v2', 'signal_N5_v3', 'signal_N5_v4', 'signal_N4_a1', 'signal_N4_a2', 'signal_N4_a3', 'signal_N4_a4']
-    config_list = ['signal_N4_m15_shuffle']
+    config_list = ['signal_N4_a1']
+    # config_list = ['signal_N4_m15_shuffle']
     # config_list = ['gravity_16_1']
     # config_list = ['wave_slit_bis']
 
@@ -8157,7 +8159,7 @@ if __name__ == '__main__':
 
         print(f'config_file  {config.config_file}')
 
-        data_plot(config=config, epoch_list=['0_500000'], style='black color', device=device)
+        data_plot(config=config, epoch_list=['best'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['time'], style='black color', device=device)
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)
