@@ -1,23 +1,21 @@
-description: ''
-dataset: 'signal_N4_a1'
+description: 'test neuro-neuron dependent structure matrix modulation'
+dataset: 'signal_N5_v1'
 
 simulation:
     connectivity_file: 'random'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
     connectivity_distribution: 'Lorentz_structured_0.40_0.05'
-    params: [[10.0,1.5,1.0,1.0,-8.0],[10.0,2.5,1.0,1.0,-7.0],[10.0,1.5,2.0,1.0,-6.0],[10.0,2.5,2.0,1.0,-5.0],
-            [10.0,1.5,1.0,1.0,-4.0],[10.0,2.5,1.0,1.0,-3.0],[10.0,1.5,2.0,1.0,-2.0],[10.0,2.5,2.0,1.0,-1.0],
-             [10.0,1.5,1.0,1.0,0.0],[10.0,2.5,1.0,1.0,1.0],[10.0,1.5,2.0,1.0,2.0],[10.0,2.5,2.0,1.0,3.0],
-            [10.0,1.5,1.0,1.0,4.0],[10.0,2.5,1.0,1.0,5.0],[10.0,1.5,2.0,1.0,6.0],[10.0,2.5,2.0,1.0,8.0]]
+    params: [[10.0,1.0,1.0,1.0],[10.0,2.0,1.0,1.2],[10.0,1.0,2.0,1.4],[10.0,2.0,2.0,1.6]]
     phi: 'sigmoid'
+
     tau: 1.0
     min_radius: 1.0
     max_radius: 1.0E6
-    n_particles: 1024
+    n_particles: 2048
     n_nodes: 1024
-    n_particle_types: 16
-    shuffle_particle_types: False
+    n_particle_types: 4
+    shuffle_particle_types: True
     n_frames: 100000
     delta_t: 0.01
     dpos_init:  0
@@ -26,13 +24,13 @@ simulation:
     node_value_map: 'video_bisons_32.tif'
 
 graph_model:
-    field_type: 'modulation_permutation'
-    signal_model_name: 'PDE_N4'
+    field_type: 'visual'
+    signal_model_name: 'PDE_N5'
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
 
-    input_size: 3
+    input_size: 5
     output_size: 1
     hidden_dim: 64
     n_mp_layers: 5
@@ -41,23 +39,24 @@ graph_model:
     n_layers_update: 5
     hidden_dim_update: 64
 
-    input_size_nnr: 1
+    input_size_nnr: 3
     n_layers_nnr: 5
-    hidden_dim_nnr: 32
-    output_size_nnr: 1024
-    omega: 30.0
+    hidden_dim_nnr: 128
+    output_size_nnr: 1
+    outermost_linear_nnr: True
+    omega: 30
 
     aggr_type: 'add'
     embedding_dim: 2
     update_type: 'generic'
-    
+
     lin_edge_positive: True
 
 plotting:
-    colormap: 'tab20'
+    colormap: 'tab10'
     arrow_length: 1
-    xlim: [ -5,5 ]
-    ylim: [ -8,8 ]
+    xlim: [-5,5]
+    ylim: [-8,8]
 
 training:
     n_epochs: 20
@@ -82,6 +81,7 @@ training:
 
     coeff_L1: 1.0E-5
     coeff_diff: 100
+    coeff_diff_update: 0.5
 
     learning_rate_W_start: 1.0E-3
     learning_rate_start: 5.0E-4

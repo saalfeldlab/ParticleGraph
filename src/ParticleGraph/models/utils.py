@@ -95,7 +95,7 @@ def get_in_features(rr, embedding_=[], config_model=[], max_radius=[]):
 
         case 'PDE_N2' | 'PDE_N3' | 'PDE_N6' :
             in_features = rr[:, None]
-        case 'PDE_N4' | 'PDE_N7' | 'PDE_N8':
+        case 'PDE_N4' | 'PDE_N7':
             in_features = torch.cat((rr[:, None], embedding_), dim=1)
         case 'PDE_N9':
             in_features = torch.cat((rr[:, None], embedding_, torch.ones_like(rr[:, None])), dim=1)
@@ -154,7 +154,7 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
     fig = plt.figure(figsize=(8, 8))
     rr = torch.linspace(-xnorm, xnorm, 1000, device=device)
     for n in range(n_particles):
-        if ('PDE_N4' in config.graph_model.signal_model_name) | ('PDE_N7' in config.graph_model.signal_model_name) | ('PDE_N8' in config.graph_model.signal_model_name):
+        if ('PDE_N4' in config.graph_model.signal_model_name) | ('PDE_N7' in config.graph_model.signal_model_name):
             embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
             in_features = torch.cat((rr[:, None], embedding_), dim=1)
         elif 'PDE_N5' in config.graph_model.signal_model_name:
@@ -1239,7 +1239,7 @@ def choose_training_model(model_config=None, device=None, projections=None):
 
     model_name = model_config.graph_model.signal_model_name
     match model_name:
-        case 'PDE_N2' | 'PDE_N3' | 'PDE_N4' | 'PDE_N5' | 'PDE_N6' | 'PDE_N7' | 'PDE_N8' | 'PDE_N9':
+        case 'PDE_N2' | 'PDE_N3' | 'PDE_N4' | 'PDE_N5' | 'PDE_N6' | 'PDE_N7' | 'PDE_N9':
             model = Signal_Propagation2(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
         case 'PDE_WBI':
