@@ -230,7 +230,7 @@ class TrainingConfig(BaseModel):
     coeff_diff_update: float = 10
     coeff_diff_update2: float = 0
 
-    diff_update_type: str = 'none'
+    diff_update_regul: str = 'none'
 
     coeff_model_a: float = 0
     coeff_model_b: float = 0

@@ -1,5 +1,5 @@
 description: 'test noise / batchsize    synaptic network 100.000 points'
-dataset: 'signal_N2_a43_2'
+dataset: 'signal_N2_a43_3'
 
 simulation:
     connectivity_file: 'random'
@@ -48,10 +48,10 @@ training:
     device: 'auto'
 
     recursive_loop: 1
-    batch_size: 10
+    batch_size: 20
     small_init_batch_size: False
 
-    time_step: 8
+    time_step: 20
 
     epoch_reset: 2
     epoch_reset_freq: 999
@@ -73,4 +73,6 @@ training:
     learning_rate_start: 5.0E-4
     learning_rate_embedding_start: 5.0E-3
     learning_rate_modulation_start: 1.0E-4
+
+    measurement_noise_level: 0.4
 

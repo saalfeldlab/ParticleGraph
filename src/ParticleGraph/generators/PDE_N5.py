@@ -76,7 +76,12 @@ class PDE_N5(pyg.nn.MessagePassing):
 
             t = self.p[type_i, 3:4]
             l = torch.log(self.p[type_j, 3:4])
-            return self.phi(u/t) - u*l/50
+            if self.p.shape[1] < 5:
+                b = torch.zeros_like(t)
+            else:
+                b = self.p[:, 4:5]
+
+            return self.phi((u-b)/t) - u*l/50
 
         elif function=='update':
             g, s, c = self.p[type_i, 0:1], self.p[type_i, 1:2], self.p[type_i, 2:3]

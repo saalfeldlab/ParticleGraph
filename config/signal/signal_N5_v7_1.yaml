@@ -83,8 +83,7 @@ training:
     coeff_L1: 1.0E-5
     coeff_diff: 0
     coeff_diff_update: 0
-
-    diff_update_type: 'positive'
+    diff_update_regul: 'positive'
 
     learning_rate_W_start: 1.0E-3
     learning_rate_start: 5.0E-4

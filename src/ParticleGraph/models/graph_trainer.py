@@ -2585,11 +2585,11 @@ def data_train_synaptic2(config, erase, best_model, device):
                     if (model.update_type == 'generic') & (coeff_diff_update>0):
                         in_feature_update = torch.cat((torch.zeros((n_particles,1), device=device), model.a, msg0, torch.ones((n_particles,1), device=device)), dim=1)
                         in_feature_update_next = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg1, torch.ones((n_particles, 1), device=device)), dim=1)
-                        if 'positive' in train_config.update_type:
+                        if 'positive' in train_config.diff_update_regul:
                             in_feature_update = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg0, torch.ones((n_particles, 1), device=device)), dim=1)
                             in_feature_update_next = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg1, torch.ones((n_particles, 1), device=device)), dim=1)
                             loss = loss + torch.relu(model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next)).norm(2) * coeff_diff_update
-                        if 'TV' in train_config.update_type:
+                        if 'TV' in train_config.diff_update_regul:
                             in_feature_update_next_bis = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg1, torch.ones((n_particles, 1), device=device)*1.1), dim=1)
                             loss = loss + (model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next_bis)).norm(2) * coeff_diff_update
 
