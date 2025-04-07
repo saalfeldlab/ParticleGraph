@@ -1,5 +1,5 @@
-description: 'test modulation with permutation'
-dataset: 'signal_N4_m13_shuffle'
+description: 'test modulation with permutation   trainin no modulation no embedding'
+dataset: 'signal_N4_m13'
 
 simulation:
     connectivity_file: 'random'
@@ -23,7 +23,7 @@ simulation:
     node_value_map: 'video_bisons_32.tif'
 
 graph_model:
-    field_type: 'Siren_short_term_plasticity_permutation'
+    field_type: ''
     signal_model_name: 'PDE_N4'
     particle_model_name: ''
     mesh_model_name: ''
@@ -78,7 +78,7 @@ training:
 
     learning_rate_W_start: 1.0E-3
     learning_rate_start: 5.0E-4
-    learning_rate_embedding_start: 5.0E-3
+    learning_rate_embedding_start: 5.0E-20
     learning_rate_modulation_start: 1.0E-4
 
     learning_rate_NNR: 1.0E-5

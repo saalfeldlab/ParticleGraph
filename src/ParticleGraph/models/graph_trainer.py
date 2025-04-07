@@ -2409,7 +2409,12 @@ def data_train_synaptic2(config, erase, best_model, device):
                 model.a.copy_(model.a * 0)
             logger.info(f'reset W model.a at epoch : {epoch}')
             print(f'reset W model.a at epoch : {epoch}')
-
+        if epoch==train_config.n_epochs_init:
+            coeff_diff = 0
+            coeff_diff_update = 0
+            logger.info(f'coeff_L1: {coeff_L1} coeff_diff: {coeff_diff} coeff_diff_update: {coeff_diff_update}')
+            print(f'coeff_L1: {coeff_L1} coeff_diff: {coeff_diff} coeff_diff_update: {coeff_diff_update}')
+            
         batch_size = int(get_batch_size(epoch) / particle_batch_ratio)
         logger.info(f'batch_size: {batch_size}')
 
@@ -2567,21 +2572,27 @@ def data_train_synaptic2(config, erase, best_model, device):
                     else:
                         in_features = x[:, 6:7]
                         in_features_next = x[:, 6:7] + xnorm/150
-                    if model_config.lin_edge_positive:
-                        msg0 = model.lin_edge(in_features)**2
-                        msg1 = model.lin_edge(in_features_next)**2
-                        diff = torch.relu(msg0 - msg1).norm(2) * coeff_diff
-                    else:
-                        msg0 = model.lin_edge(in_features)
-                        msg1 = model.lin_edge(in_features_next)
-                        diff = torch.relu(msg0 - msg1).norm(2) * coeff_diff
-                    if model.update_type == 'generic':
+
+                    if coeff_diff > 0:
+                        if model_config.lin_edge_positive:
+                            msg0 = model.lin_edge(in_features)**2
+                            msg1 = model.lin_edge(in_features_next)**2
+                        else:
+                            msg0 = model.lin_edge(in_features)
+                            msg1 = model.lin_edge(in_features_next)
+                        loss = loss + torch.relu(msg0 - msg1).norm(2) * coeff_diff
+
+                    if (model.update_type == 'generic') & (coeff_diff_update>0):
                         in_feature_update = torch.cat((torch.zeros((n_particles,1), device=device), model.a, msg0, torch.ones((n_particles,1), device=device)), dim=1)
                         in_feature_update_next = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg1, torch.ones((n_particles, 1), device=device)), dim=1)
-                        diff = diff + torch.relu(model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next)).norm(2) * coeff_diff_update
-                        # in_feature_update_next_bis = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg1, torch.ones((n_particles, 1), device=device)*1.1), dim=1)
-                        # diff = diff + (model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next_bis)).norm(2) * coeff_diff_update
-                    loss += diff
+                        if 'positive' in train_config.update_type:
+                            in_feature_update = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg0, torch.ones((n_particles, 1), device=device)), dim=1)
+                            in_feature_update_next = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg1, torch.ones((n_particles, 1), device=device)), dim=1)
+                            loss = loss + torch.relu(model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next)).norm(2) * coeff_diff_update
+                        if 'TV' in train_config.update_type:
+                            in_feature_update_next_bis = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg1, torch.ones((n_particles, 1), device=device)*1.1), dim=1)
+                            loss = loss + (model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next_bis)).norm(2) * coeff_diff_update
+
 
 
                     # if 'generic' in model.update_type:

@@ -1,5 +1,5 @@
-description: 'test modulation with permutation'
-dataset: 'signal_N4_m13_shuffle'
+description: 'test modulation'
+dataset: 'signal_N4_m3'
 
 simulation:
     connectivity_file: 'random'
@@ -23,7 +23,7 @@ simulation:
     node_value_map: 'video_bisons_32.tif'
 
 graph_model:
-    field_type: ''
+    field_type: 'modulation'
     signal_model_name: 'PDE_N4'
     particle_model_name: ''
     mesh_model_name: ''
@@ -38,15 +38,10 @@ graph_model:
     n_layers_update: 3
     hidden_dim_update: 64
 
-    input_size_nnr: 1
-    n_layers_nnr: 5
-    hidden_dim_nnr: 32
-    output_size_nnr: 1024
-    omega: 30.0
-
     aggr_type: 'add'
     embedding_dim: 2
     update_type: 'none'
+    omega:  30.0
 
 
 plotting:
@@ -57,30 +52,21 @@ plotting:
 
 training:
     n_epochs: 20
-    n_runs: 2
-    device: 'auto'
-
     n_epochs_init: 5
     recursive_loop: 1
-    batch_size: 10
-    small_init_batch_size: True
-
+    batch_size: 1
+    small_init_batch_size: False
+    n_runs: 2
+    sparsity: 'none'
     rotation_augmentation: False
     data_augmentation_loop: 50
     cluster_method: 'kmeans_auto_embedding'
     cluster_distance_threshold: 0.2
     fix_cluster_embedding: True
-
-    sparsity: 'none'
+    device: 'auto'
+    sparsity: 'replace_embedding_function'
     sparsity_freq: 4
-
+    learning_rate_start: 1.0E-4
+    learning_rate_embedding_start: 1.0E-4
     coeff_diff: 100
-
-    learning_rate_W_start: 1.0E-3
-    learning_rate_start: 5.0E-4
-    learning_rate_embedding_start: 5.0E-3
-    learning_rate_modulation_start: 1.0E-4
-
-    learning_rate_NNR: 1.0E-5
-
-    noise_level: 1
+    learning_rate_NNR: 1.0E-6

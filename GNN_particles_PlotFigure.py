@@ -5476,8 +5476,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 plt.savefig(f'./{log_dir}/results/generic_MLP0_{epoch}.png', dpi=300)
                 plt.close()
 
-                for n in range(in_features.shape[1]):
-                    print(f'feature {n}: {to_numpy(torch.mean(in_features[:, n])):0.4f}  std: {to_numpy(torch.std(in_features[:, n])):0.4f}')
+                # for n in range(in_features.shape[1]):
+                #     print(f'feature {n}: {to_numpy(torch.mean(in_features[:, n])):0.4f}  std: {to_numpy(torch.std(in_features[:, n])):0.4f}')
 
 
                 u = 0 * torch.linspace(-xnorm, xnorm, 400, device=device)
@@ -5504,25 +5504,25 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
                 if model_config.signal_model_name == 'PDE_N5':
 
-                    fig, ax = fig_init()
-                    for m in range(n_particle_types):
-                        u = torch.linspace(-xnorm.squeeze()*2, xnorm.squeeze()*2, 400).to(device)
-                        true_func = true_model.func(u, 0, m, 'phi')
-                        embedding0 = model.a[0, :] * torch.ones((400, config.graph_model.embedding_dim), device=device)
-                        embedding1 = model.a[n_particles//n_particle_types*m, :] * torch.ones((400, config.graph_model.embedding_dim), device=device)
-                        field = torch.ones((400, 1), device=device)
-                        in_features = torch.cat((u[:, None], embedding0, embedding1), dim=1)
-                        if config.graph_model.lin_edge_positive:
-                            MLP0_func = model.lin_edge(in_features.float()) ** 2 * correction
-                        in_features = torch.cat((u[:, None]*0, embedding0, MLP0_func, field), dim=1)
-                        MLP1_func = model.lin_phi(in_features)
-                        plt.plot(to_numpy(u), to_numpy(true_func), c='g', linewidth=3, label='true')
-                        plt.plot(to_numpy(u), to_numpy(MLP0_func), c='r', linewidth=3, label='MLP')
-                        plt.plot(to_numpy(u), to_numpy(MLP1_func), c='w', linewidth=3, label='MLPoMLP')
-                        # plt.legend(fontsize=24)
-                    plt.tight_layout()
-                    plt.savefig(f'./{log_dir}/results/generic_MLP0_{epoch}.png', dpi=300)
-                    plt.close()
+                    for n in range(n_particle_types):
+                        fig, ax = fig_init()
+                        for m in range(n_particle_types):
+                            u = torch.linspace(-xnorm.squeeze()*2, xnorm.squeeze()*2, 400).to(device)
+                            true_func = true_model.func(u, n, m, 'phi')
+                            embedding0 = model.a[n_particles//n_particle_types*n, :] * torch.ones((400, config.graph_model.embedding_dim), device=device)
+                            embedding1 = model.a[n_particles//n_particle_types*m, :] * torch.ones((400, config.graph_model.embedding_dim), device=device)
+                            field = torch.ones((400, 1), device=device)
+                            in_features = torch.cat((u[:, None], embedding0, embedding1), dim=1)
+                            if config.graph_model.lin_edge_positive:
+                                MLP0_func = model.lin_edge(in_features.float()) ** 2 * correction
+                            in_features = torch.cat((u[:, None]*0, embedding0, MLP0_func, field), dim=1)
+                            MLP1_func = model.lin_phi(in_features)
+                            plt.plot(to_numpy(u), to_numpy(true_func), c='g', linewidth=3, label='true')
+                            plt.plot(to_numpy(u), to_numpy(MLP0_func), c='r', linewidth=3, label='MLP')
+                            plt.plot(to_numpy(u), to_numpy(MLP1_func), c='w', linewidth=3, label='MLPoMLP')
+                        plt.tight_layout()
+                        plt.savefig(f'./{log_dir}/results/generic_MLP0_{n}_{epoch}.png', dpi=300)
+                        plt.close()
 
                 elif model_config.signal_model_name == 'PDE_N4':
 
@@ -5634,6 +5634,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 #         plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
                 #     else:
                 #         plt.plot(to_numpy(rr), to_numpy(func), 2, color=mc, linewidth=2, alpha=0.25)
+
                 plt.xlabel(r'$x_i$', fontsize=68)
                 if (model_config.signal_model_name == 'PDE_N4'):
                     plt.ylabel(r'learned $\psi^*(a_i, x_i)$', fontsize=68)
@@ -8139,8 +8140,9 @@ if __name__ == '__main__':
     # config_list = ['signal_N2_a43_10']
     # config_list = ['signal_N4_m13_shuffle_ter']
     # config_list = ['boids_16_256']
-    config_list = ['signal_N4_a1']
-    # config_list = ['signal_N4_m15_shuffle']
+    config_list = ['signal_N5_v7_1']
+    # config_list = ['signal_N4_a3','signal_N4_a4']
+    # config_list = ['signal_N2_a43_2_2_t8','signal_N2_a43_2_5_t8','signal_N2_a43_2_10_t8']
     # config_list = ['gravity_16_1']
     # config_list = ['wave_slit_bis']
 

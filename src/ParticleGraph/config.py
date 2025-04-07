@@ -172,7 +172,7 @@ class TrainingConfig(BaseModel):
     device: Annotated[str, Field(pattern=r'^(auto|cpu|cuda:\d+)$')] = 'auto'
     
     n_epochs: int = 20
-    n_epochs_init: int = 2
+    n_epochs_init: int = 99999
     epoch_reset: int = -1
     epoch_reset_freq: int = 99999
     batch_size: int = 1
@@ -229,6 +229,8 @@ class TrainingConfig(BaseModel):
     coeff_diff: float = 10
     coeff_diff_update: float = 10
     coeff_diff_update2: float = 0
+
+    diff_update_type: str = 'none'
 
     coeff_model_a: float = 0
     coeff_model_b: float = 0

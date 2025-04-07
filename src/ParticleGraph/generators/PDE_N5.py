@@ -44,13 +44,18 @@ class PDE_N5(pyg.nn.MessagePassing):
         t = parameters[:, 3:4]
         l = torch.log(parameters[:, 3:4])
 
+        if parameters.shape[1] < 5:
+            b = torch.zeros_like(t)
+        else:
+            b = parameters[:, 4:5]
+
         u = x[:, 6:7]
         if has_field:
             field = x[:, 8:9]
         else:
             field = torch.ones_like(x[:, 6:7])
 
-        msg = self.propagate(edge_index, u=u, t=t, l=l, field=field)
+        msg = self.propagate(edge_index, u=u, t=t, l=l, b=b, field=field)
         # msg_ = torch.matmul(self.W, self.phi(u))
 
         du = -c * u + s * torch.tanh(u) + g * msg
@@ -59,10 +64,10 @@ class PDE_N5(pyg.nn.MessagePassing):
         return du
 
 
-    def message(self, edge_index_i, edge_index_j, u_j, t_i, l_j, field_i):
+    def message(self, edge_index_i, edge_index_j, u_j, t_i, l_j, b_j, field_i):
 
         T = self.W
-        return T[edge_index_i, edge_index_j][:, None]  * (self.phi(u_j/t_i) - u_j*l_j/50) * field_i
+        return T[edge_index_i, edge_index_j][:, None]  * (self.phi((u_j-b_j)/t_i) - u_j*l_j/50) * field_i
 
 
     def func(self, u, type_i, type_j, function):

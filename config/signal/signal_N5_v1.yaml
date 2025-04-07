@@ -6,7 +6,7 @@ simulation:
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
     connectivity_distribution: 'Lorentz_structured_0.40_0.05'
-    params: [[10.0,1.0,1.0,1.0],[10.0,2.0,1.0,1.2],[10.0,1.0,2.0,1.4],[10.0,2.0,2.0,1.6]]
+    params: [[10.0,1.0,1.0,1.0,-4.0],[10.0,2.0,1.0,1.2,-2.0],[10.0,1.0,2.0,1.4,0.0],[10.0,2.0,2.0,1.6,2.0]]
     phi: 'sigmoid'
 
     tau: 1.0
@@ -69,6 +69,7 @@ training:
 
     epoch_reset: 2
     epoch_reset_freq: 999
+    n_epochs_init: 2
 
     rotation_augmentation: False
     data_augmentation_loop: 50
@@ -80,8 +81,9 @@ training:
     fix_cluster_embedding: True
 
     coeff_L1: 1.0E-5
-    coeff_diff: 100
-    coeff_diff_update: 10
+    coeff_diff: 10
+    coeff_diff_update: 0.5
+    diff_update_type: 'positive'
 
     learning_rate_W_start: 1.0E-3
     learning_rate_start: 5.0E-4
