@@ -1,5 +1,5 @@
 description: 'test neuro-neuron dependent structure matrix modulation'
-dataset: 'signal_N5_v1'
+dataset: 'signal_N5_v7'
 
 simulation:
     connectivity_file: 'random'
