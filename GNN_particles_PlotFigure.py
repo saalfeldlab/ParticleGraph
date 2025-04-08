@@ -6081,7 +6081,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     embedding0 = model.a[id0, :] * torch.ones((400, config.graph_model.embedding_dim), device=device)
                     embedding1 = model.a[id1, :] * torch.ones((400, config.graph_model.embedding_dim), device=device)
                     in_features = torch.cat((u[:, None], embedding0, embedding1), dim=1)
-                    msg = model.lin_edge(in_features.float()) ** 2
+                    msg = model.lin_edge(in_features.float()) ** 2 * correction
                     in_features = torch.cat((torch.zeros((400, 1), device=device), embedding0, msg,
                                              f * torch.ones((400, 1), device=device)), dim=1)
                     plt.scatter(to_numpy(u), to_numpy(msg), s=5, c='g', alpha=0.15)
@@ -6095,12 +6095,16 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 msg_list = torch.stack(msg_list).squeeze()
                 y_min, y_max = msg_list.min().item(), msg_list.max().item()
                 plt.xlabel(r'$x_i$', fontsize=68)
-                plt.ylabel(r'Learned MLPs', fontsize=68)
-                plt.ylim([y_min-y_max*, y_max * 3])
+                plt.ylabel(r'learned MLPs', fontsize=68)
+                plt.ylim([y_min-y_max, y_max * 3])
+                plt.tight_layout()
                 plt.savefig(f'./{log_dir}/results/generic_{epoch}.png', dpi=300)
                 plt.close()
 
                 print('symbolic regression ...')
+
+                text_trap = StringIO()
+                sys.stdout = text_trap
 
                 model_pysrr = PySRRegressor(
                     niterations=30,  # < Increase me for better results
@@ -6129,7 +6133,9 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 idx = torch.randperm(len(rr))[:5000]
 
                 model_pysrr.fit(to_numpy(rr[idx]), to_numpy(func[idx]))
-                model_pysrr.sympy
+
+                sys.stdout = sys.__stdout__
+
 
                 # if model_config.signal_model_name == 'PDE_N4':
                 #
@@ -6152,7 +6158,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 #     plt.tight_layout()
                 #     plt.savefig(f'./{log_dir}/results/generic_MLP0_{epoch}.png', dpi=300)
                 #     plt.close()
-
 
             if False:
                 print ('symbolic regression ...')

@@ -2409,8 +2409,8 @@ def data_train_synaptic2(config, erase, best_model, device):
             logger.info(f'reset W model.a at epoch : {epoch}')
             print(f'reset W model.a at epoch : {epoch}')
         if epoch==train_config.n_epochs_init:
-            coeff_diff = 0
-            coeff_diff_update = 0
+            coeff_diff = coeff_diff_update / 100
+            coeff_diff_update = coeff_diff_update / 100
             logger.info(f'coeff_L1: {coeff_L1} coeff_diff: {coeff_diff} coeff_diff_update: {coeff_diff_update}')
             print(f'coeff_L1: {coeff_L1} coeff_diff: {coeff_diff} coeff_diff_update: {coeff_diff_update}')
 
@@ -2563,20 +2563,25 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                     # lin.edge monotonic positive
                     if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N7'):
+                        in_features_prev = torch.cat((x[:, 6:7] - xnorm/150, model.a), dim=1)
                         in_features = torch.cat((x[:, 6:7], model.a), dim=1)
                         in_features_next = torch.cat((x[:, 6:7] + xnorm/150, model.a), dim=1)
                     elif model_config.signal_model_name == 'PDE_N5':
+                        in_features_prev = torch.cat((x[:, 6:7] - xnorm / 150, model.a, model.a), dim=1)
                         in_features = torch.cat((x[:, 6:7], model.a, model.a), dim=1)
                         in_features_next = torch.cat((x[:, 6:7] + xnorm/150, model.a, model.a), dim=1)
                     else:
                         in_features = x[:, 6:7]
                         in_features_next = x[:, 6:7] + xnorm/150
+                        in_features_prev = x[:, 6:7] - xnorm / 150
 
                     if coeff_diff > 0:
                         if model_config.lin_edge_positive:
+                            msg_1 = model.lin_edge(in_features_prev) ** 2
                             msg0 = model.lin_edge(in_features)**2
                             msg1 = model.lin_edge(in_features_next)**2
                         else:
+                            msg_1 = model.lin_edge(in_features_prev)
                             msg0 = model.lin_edge(in_features)
                             msg1 = model.lin_edge(in_features_next)
                         loss = loss + torch.relu(msg0 - msg1).norm(2) * coeff_diff
@@ -2585,12 +2590,13 @@ def data_train_synaptic2(config, erase, best_model, device):
                         in_feature_update = torch.cat((torch.zeros((n_particles,1), device=device), model.a, msg0, torch.ones((n_particles,1), device=device)), dim=1)
                         in_feature_update_next = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg1, torch.ones((n_particles, 1), device=device)), dim=1)
                         if 'positive' in train_config.diff_update_regul:
-                            in_feature_update = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg0, torch.ones((n_particles, 1), device=device)), dim=1)
-                            in_feature_update_next = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg1, torch.ones((n_particles, 1), device=device)), dim=1)
                             loss = loss + torch.relu(model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next)).norm(2) * coeff_diff_update
                         if 'TV' in train_config.diff_update_regul:
                             in_feature_update_next_bis = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg1, torch.ones((n_particles, 1), device=device)*1.1), dim=1)
                             loss = loss + (model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next_bis)).norm(2) * coeff_diff_update
+                        if 'second_derivative' in train_config.diff_update_regul:
+                            in_feature_update_prev = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg_1, torch.ones((n_particles, 1), device=device)), dim=1)
+                            loss = loss + (model.lin_phi(in_feature_update_prev) + model.lin_phi(in_feature_update_next) - 2* model.lin_phi(in_feature_update)).norm(2) * coeff_diff_update
 
 
                     # edges = model.edges.clone().detach()
