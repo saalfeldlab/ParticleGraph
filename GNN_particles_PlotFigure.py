@@ -5471,12 +5471,11 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 fig, ax = fig_init()
                 plt.scatter(to_numpy(pred), to_numpy(pred_2), s=1, c='w')
                 plt.tight_layout()
-                plt.savefig(f'./{log_dir}/results/generic_MLP0_{epoch}.png', dpi=300)
+                # plt.savefig(f'./{log_dir}/results/generic_MLP0_{epoch}.png', dpi=300)
                 plt.close()
 
                 # for n in range(in_features.shape[1]):
                 #     print(f'feature {n}: {to_numpy(torch.mean(in_features[:, n])):0.4f}  std: {to_numpy(torch.std(in_features[:, n])):0.4f}')
-
 
                 u = 0 * torch.linspace(-xnorm, xnorm, 400, device=device)
                 msg = torch.linspace(0, 10, 400, device=device)
@@ -5497,7 +5496,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 plt.xlabel(r'$msg_i$', fontsize=68)
                 plt.xticks(fontsize=18)
                 plt.yticks(fontsize=18)
-                plt.savefig(f'./{log_dir}/results/generic_MLP0_{epoch}.png', dpi=300)
+                # plt.savefig(f'./{log_dir}/results/generic_MLP0_{epoch}.png', dpi=300)
                 plt.close()
 
                 if model_config.signal_model_name == 'PDE_N5':
@@ -8135,7 +8134,7 @@ if __name__ == '__main__':
     # config_list = ['signal_N2_a43_10']
     # config_list = ['signal_N4_m13_shuffle_ter']
     # config_list = ['boids_16_256']
-    config_list = ['signal_N4_a1']
+    config_list = ['signal_N5_v1','signal_N5_v2','signal_N5_v3','signal_N5_v4','signal_N5_v5','signal_N5_v7','signal_N5_v7_1']
     # config_list = ['signal_N4_a3','signal_N4_a4']
     # config_list = ['signal_N2_a43_2_2_t8','signal_N2_a43_2_5_t8','signal_N2_a43_2_10_t8']
     # config_list = ['gravity_16_1']

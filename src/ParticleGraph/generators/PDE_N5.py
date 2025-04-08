@@ -79,7 +79,7 @@ class PDE_N5(pyg.nn.MessagePassing):
             if self.p.shape[1] < 5:
                 b = torch.zeros_like(t)
             else:
-                b = self.p[:, 4:5]
+                b = self.p[type_j, 4:5]
 
             return self.phi((u-b)/t) - u*l/50
 
