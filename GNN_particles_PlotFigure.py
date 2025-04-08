@@ -35,7 +35,7 @@ import warnings
 import seaborn as sns
 import glob
 
-# from pysr import PySRRegressor
+from pysr import PySRRegressor
 
 
 class Interaction_Particle_extract(MessagePassing):
@@ -5424,7 +5424,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     func = func ** 2
                 func_list.append(func)
                 plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)),
-                         linewidth=8 // ( 1 + (n_particle_types>16)*1.0), alpha=0.25)
+                         linewidth=2 // ( 1 + (n_particle_types>16)*1.0), alpha=0.25)
             func_list = torch.stack(func_list).squeeze()
             y_min, y_max = func_list.min().item(), func_list.max().item()
             plt.xlabel(r'$x_i$', fontsize=68)
@@ -5444,160 +5444,68 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             print(f'upper: {to_numpy(1/correction):0.4f}  correction: {to_numpy(correction):0.2f}')
             torch.save(correction, f'{log_dir}/correction.pt')
 
-            if model.update_type == 'generic':
-                k = np.random.randint(n_frames - 50)
-                x = torch.tensor(x_list[0][k], device=device)
-                if has_field:
-                    if 'visual' in field_type:
-                        x[:n_nodes, 8:9] = model_f(time=k / n_frames) ** 2
-                        x[n_nodes:n_particles, 8:9] = 1
-                    elif 'learnable_short_term_plasticity' in field_type:
-                        alpha = (k % model.embedding_step) / model.embedding_step
-                        x[:, 8] = alpha * model.b[:, k // model.embedding_step + 1] ** 2 + (1 - alpha) * model.b[:,k // model.embedding_step] ** 2
-                    elif ('Siren_short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
-                        t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
-                        t[:, 0, :] = torch.tensor(k / n_frames, dtype=torch.float32, device=device)
-                        x[:, 8] = model_f(t) ** 2
-                    else:
-                        x[:, 8:9] = model_f(time=k / n_frames) ** 2
-                else:
-                    x[:, 8:9] = torch.ones_like(x[:, 0:1])
-
-                dataset = data.Data(x=x, edge_index=edge_index)
-                pred, in_features = model(data=dataset, return_all=True)
-                # in_features[:, 0] = 1
-                # in_features[:, -1] = 1
-                pred_2 = model.lin_phi(in_features)
-                fig, ax = fig_init()
-                plt.scatter(to_numpy(pred), to_numpy(pred_2), s=1, c='w')
-                plt.tight_layout()
-                # plt.savefig(f'./{log_dir}/results/generic_MLP0_{epoch}.png', dpi=300)
-                plt.close()
-
-                # for n in range(in_features.shape[1]):
-                #     print(f'feature {n}: {to_numpy(torch.mean(in_features[:, n])):0.4f}  std: {to_numpy(torch.std(in_features[:, n])):0.4f}')
-
-                u = 0 * torch.linspace(-xnorm, xnorm, 400, device=device)
-                msg = torch.linspace(0, 10, 400, device=device)
-                embedding = model.a[0, :] * torch.ones((400*400, config.graph_model.embedding_dim), device=device)
-                field = torch.ones((400*400, 1), device=device)
-                grid_u, grid_msg= torch.meshgrid(u, msg)
-                grid = torch.stack((grid_u, grid_msg), dim=-1)
-                grid = torch.reshape(grid, (400*400, 2))
-                grid = grid.to(device)
-                grid = torch.cat((grid[:,0:1], embedding, grid[:,1:2], field), dim=1)
-                func = model.lin_phi(grid)
-                func = torch.reshape(func, (400, 400))
-                fig, ax = fig_init()
-                plt.imshow(to_numpy(func), cmap='viridis')
-                plt.colorbar()
-                plt.tight_layout()
-                plt.ylabel(r'$x_i$', fontsize=68)
-                plt.xlabel(r'$msg_i$', fontsize=68)
-                plt.xticks(fontsize=18)
-                plt.yticks(fontsize=18)
-                # plt.savefig(f'./{log_dir}/results/generic_MLP0_{epoch}.png', dpi=300)
-                plt.close()
-
-                if model_config.signal_model_name == 'PDE_N5':
-
-                    for n in range(n_particle_types):
-                        fig, ax = fig_init()
-                        for m in range(n_particle_types):
-                            u = torch.linspace(-xnorm.squeeze()*2, xnorm.squeeze()*2, 400).to(device)
-                            true_func = true_model.func(u, n, m, 'phi')
-                            embedding0 = model.a[n_particles//n_particle_types*n, :] * torch.ones((400, config.graph_model.embedding_dim), device=device)
-                            embedding1 = model.a[n_particles//n_particle_types*m, :] * torch.ones((400, config.graph_model.embedding_dim), device=device)
-                            field = torch.ones((400, 1), device=device)
-                            in_features = torch.cat((u[:, None], embedding0, embedding1), dim=1)
-                            if config.graph_model.lin_edge_positive:
-                                MLP0_func = model.lin_edge(in_features.float()) ** 2 * correction
-                            in_features = torch.cat((u[:, None]*0, embedding0, MLP0_func, field), dim=1)
-                            MLP1_func = model.lin_phi(in_features)
-                            plt.plot(to_numpy(u), to_numpy(true_func), c='g', linewidth=3, label='true')
-                            plt.plot(to_numpy(u), to_numpy(MLP0_func), c='r', linewidth=3, label='MLP')
-                            plt.plot(to_numpy(u), to_numpy(MLP1_func), c='w', linewidth=3, label='MLPoMLP')
-                        plt.tight_layout()
-                        plt.savefig(f'./{log_dir}/results/generic_MLP0_{n}_{epoch}.png', dpi=300)
-                        plt.close()
-
-                elif model_config.signal_model_name == 'PDE_N4':
-
-                    fig, ax = fig_init()
-                    for m in range(n_particle_types):
-                        u = torch.linspace(-xnorm.squeeze()*2, xnorm.squeeze()*2, 400).to(device)
-                        true_func = true_model.func(u, m, 'phi')
-                        embedding0 = model.a[m*n_particles//n_particle_types, :] * torch.ones((400, config.graph_model.embedding_dim), device=device)
-                        field = torch.ones((400, 1), device=device)
-                        in_features = torch.cat((u[:, None], embedding0), dim=1)
-                        if config.graph_model.lin_edge_positive:
-                            MLP0_func = model.lin_edge(in_features.float()) ** 2 * correction
-                        in_features = torch.cat((u[:, None]*0, embedding0, MLP0_func, field), dim=1)
-                        MLP1_func = model.lin_phi(in_features)
-                        plt.plot(to_numpy(u), to_numpy(true_func), c='g', linewidth=3, label='true')
-                        plt.plot(to_numpy(u), to_numpy(MLP0_func), c='r', linewidth=3, label='MLP')
-                        plt.plot(to_numpy(u), to_numpy(MLP1_func), c='w', linewidth=3, label='MLPoMLP')
-                        # plt.legend(fontsize=24)
-                    plt.tight_layout()
-                    plt.savefig(f'./{log_dir}/results/generic_MLP0_{epoch}.png', dpi=300)
-                    plt.close()
-
-
             print('update functions ...')
             if model_config.signal_model_name == 'PDE_N5':
                 psi_list = []
-                fig, ax = fig_init()
-                rr = torch.linspace(-xnorm.squeeze()*2, xnorm.squeeze()*2, 1500).to(device)
-                ax.set_frame_on(False)
-                ax.get_xaxis().set_visible(False)
-                ax.get_yaxis().set_visible(False)
-                for k in range(n_particle_types):
-                    ax = fig.add_subplot(2, 2, k + 1)
-                    for spine in ax.spines.values():
-                        spine.set_edgecolor(cmap.color(k))  # Set the color of the outline
-                        spine.set_linewidth(3)
-                    for m in range(n_particle_types):
-                        true_func = true_model.func(rr, k, m, 'phi')
-                        plt.plot(to_numpy(rr), to_numpy(true_func), c=mc, linewidth=3, label='original', alpha=0.21)
-                    for n in range(n_particle_types):
-                        for m in range(250):
-                            pos0 = to_numpy(torch.argwhere(type_list == k).squeeze())
-                            pos1 = to_numpy(torch.argwhere(type_list == n).squeeze())
-                            n0 = np.random.randint(len(pos0))
-                            n0 = pos0[n0,0]
-                            n1 = np.random.randint(len(pos1))
-                            n1 = pos1[n1,0]
-                            embedding0 = model.a[n0, :] * torch.ones((1500, config.graph_model.embedding_dim), device=device)
-                            embedding1 = model.a[n1, :] * torch.ones((1500, config.graph_model.embedding_dim), device=device)
-                            in_features = torch.cat((rr[:,None],embedding0, embedding1), dim=1)
-                            if config.graph_model.lin_edge_positive:
-                            	func = model.lin_edge(in_features.float()) ** 2 * correction
-                            else:
-                            	func = model.lin_edge(in_features.float()) * correction
-                            if model.update_type == '2steps':
-                            	field = torch.ones_like(rr[:,None])
-                            	u = torch.zeros_like(rr[:,None])
-                            	in_features2 = torch.cat([u, func, field], dim=1)
-                            	func = model.lin_phi2(in_features2)
-                            elif model.update_type == 'generic':
-                            	field = torch.ones_like(rr[:,None])
-                            	u = torch.zeros_like(rr[:,None])
-                            	in_features = torch.cat([u, embedding0, func, field], dim=1)
-                            	func = model.lin_phi(in_features)
-                            psi_list.append(func)
-                            plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(n),linewidth=3, alpha=0.25)
-                    # plt.ylim([-1.1, 1.1])
-                    plt.xlim([-to_numpy(xnorm)*2, to_numpy(xnorm)*2])
-                    plt.xticks(fontsize=18)
-                    plt.yticks(fontsize=18)
-                    # plt.ylabel(r'learned $\psi^*(a_i, a_j, x_i)$', fontsize=24)
-                    # plt.xlabel(r'$x_i$', fontsize=24)
-                    # plt.ylim([-1.5, 1.5])
-                    # plt.xlim([-5, 5])
+                if model.update_type == 'generic':
+                    r_list = ['','generic']
+                elif model.update_type == '2steps':
+                    r_list = ['','2steps']
 
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/learned_psi_{epoch}.tif", dpi=170.7)
-                plt.close()
+                r_list = ['']
+                for r in r_list:
+                    fig, ax = fig_init()
+                    rr = torch.linspace(-xnorm.squeeze()*2, xnorm.squeeze()*2, 1500).to(device)
+                    ax.set_frame_on(False)
+                    ax.get_xaxis().set_visible(False)
+                    ax.get_yaxis().set_visible(False)
+                    for k in range(n_particle_types):
+                        ax = fig.add_subplot(2, 2, k + 1)
+                        for spine in ax.spines.values():
+                            spine.set_edgecolor(cmap.color(k))  # Set the color of the outline
+                            spine.set_linewidth(3)
+                        for m in range(n_particle_types):
+                            true_func = true_model.func(rr, k, m, 'phi')
+                            plt.plot(to_numpy(rr), to_numpy(true_func), c=mc, linewidth=1, label='original', alpha=0.21)
+                        for n in range(n_particle_types):
+                            for m in range(250):
+                                pos0 = to_numpy(torch.argwhere(type_list == k).squeeze())
+                                pos1 = to_numpy(torch.argwhere(type_list == n).squeeze())
+                                n0 = np.random.randint(len(pos0))
+                                n0 = pos0[n0,0]
+                                n1 = np.random.randint(len(pos1))
+                                n1 = pos1[n1,0]
+                                embedding0 = model.a[n0, :] * torch.ones((1500, config.graph_model.embedding_dim), device=device)
+                                embedding1 = model.a[n1, :] * torch.ones((1500, config.graph_model.embedding_dim), device=device)
+                                in_features = torch.cat((rr[:,None],embedding0, embedding1), dim=1)
+                                if config.graph_model.lin_edge_positive:
+                                    func = model.lin_edge(in_features.float()) ** 2 * correction
+                                else:
+                                    func = model.lin_edge(in_features.float()) * correction
+                                if r == '2steps':
+                                    field = torch.ones_like(rr[:,None])
+                                    u = torch.zeros_like(rr[:,None])
+                                    in_features2 = torch.cat([u, func, field], dim=1)
+                                    func = model.lin_phi2(in_features2)
+                                elif r == 'generic':
+                                    field = torch.ones_like(rr[:,None])
+                                    u = torch.zeros_like(rr[:,None])
+                                    in_features = torch.cat([u, embedding0, func.detach().clone(), field], dim=1)
+                                    func = model.lin_phi(in_features)
+                                psi_list.append(func)
+                                plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(n),linewidth=1, alpha=0.25)
+                        # plt.ylim([-1.1, 1.1])
+                        plt.xlim([-to_numpy(xnorm)*2, to_numpy(xnorm)*2])
+                        plt.xticks(fontsize=18)
+                        plt.yticks(fontsize=18)
+                        # plt.ylabel(r'learned $\psi^*(a_i, a_j, x_i)$', fontsize=24)
+                        # plt.xlabel(r'$x_i$', fontsize=24)
+                        # plt.ylim([-1.5, 1.5])
+                        # plt.xlim([-5, 5])
+
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/learned_psi_{epoch}_{r}.tif", dpi=170.7)
+                    plt.close()
                 psi_list = torch.stack(psi_list)
                 psi_list = psi_list.squeeze()
             else:
@@ -5991,6 +5899,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
                         pred = model_f(time=frame / n_frames, enlarge=False) ** 2 * second_correction / 10
                         pred = torch.reshape(pred, (n_nodes_per_axis, n_nodes_per_axis))
+
                         pred = to_numpy(pred)
                         pred = np.flipud(pred)
                         pred = np.rot90(pred, 1)
@@ -6085,7 +5994,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     r_squared = 1 - (ss_res / ss_tot)
                     print(f'field R^2$: {r_squared:0.4f}  slope: {np.round(lin_fit[0], 4)}')
 
-            elif 'PDE_N6' in model_config.signal_model_name:
+            if 'PDE_N6' in model_config.signal_model_name:
 
                 modulation = torch.tensor(x_list[0], device=device)
                 modulation = modulation[:, :, 8:9].squeeze()
@@ -6122,6 +6031,128 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/results/field/true_field_{frame}.tif", dpi=80)
                     plt.close()
+
+            if (model.update_type == 'generic') & (model_config.signal_model_name == 'PDE_N5'):
+
+                k = np.random.randint(n_frames - 50)
+                x = torch.tensor(x_list[0][k], device=device)
+                if has_field:
+                    if 'visual' in field_type:
+                        x[:n_nodes, 8:9] = model_f(time=k / n_frames) ** 2
+                        x[n_nodes:n_particles, 8:9] = 1
+                    elif 'learnable_short_term_plasticity' in field_type:
+                        alpha = (k % model.embedding_step) / model.embedding_step
+                        x[:, 8] = alpha * model.b[:, k // model.embedding_step + 1] ** 2 + (1 - alpha) * model.b[:,
+                                                                                                         k // model.embedding_step] ** 2
+                    elif ('Siren_short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
+                        t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
+                        t[:, 0, :] = torch.tensor(k / n_frames, dtype=torch.float32, device=device)
+                        x[:, 8] = model_f(t) ** 2
+                    else:
+                        x[:, 8:9] = model_f(time=k / n_frames) ** 2
+                else:
+                    x[:, 8:9] = torch.ones_like(x[:, 0:1])
+                dataset = data.Data(x=x, edge_index=edge_index)
+                pred, in_features_ = model(data=dataset, return_all=True)
+                feature_list = ['u', 'embedding0', 'embedding1', 'msg', 'field']
+                for n in range(in_features_.shape[1]):
+                    print(
+                        f'feature {feature_list[n]}: {to_numpy(torch.mean(in_features_[:, n])):0.4f}  std: {to_numpy(torch.std(in_features_[:, n])):0.4f}')
+
+                fig, ax = fig_init()
+                plt.hist(to_numpy(in_features_[:, -1]), 150)
+                plt.tight_layout()
+
+                fig, ax = fig_init()
+                f = torch.reshape(x[:n_nodes, 8:9], (n_nodes_per_axis, n_nodes_per_axis))
+                plt.imshow(to_numpy(f), cmap='viridis', vmin=-1, vmax=10)
+                plt.tight_layout()
+
+                fig, ax = fig_init()
+                msg_list = []
+                func_list = []
+                true_func_list = []
+                rr_list = []
+                u = torch.linspace(-xnorm.squeeze(), xnorm.squeeze(), 400).to(device)
+                for sample in range(150):
+                    id0 = np.random.randint(0, n_particles)
+                    id1 = np.random.randint(0, n_particles)
+                    f = x[id0, 8:9]
+                    embedding0 = model.a[id0, :] * torch.ones((400, config.graph_model.embedding_dim), device=device)
+                    embedding1 = model.a[id1, :] * torch.ones((400, config.graph_model.embedding_dim), device=device)
+                    in_features = torch.cat((u[:, None], embedding0, embedding1), dim=1)
+                    msg = model.lin_edge(in_features.float()) ** 2
+                    in_features = torch.cat((torch.zeros((400, 1), device=device), embedding0, msg,
+                                             f * torch.ones((400, 1), device=device)), dim=1)
+                    plt.scatter(to_numpy(u), to_numpy(msg), s=5, c='g', alpha=0.15)
+                    plt.scatter(to_numpy(u), to_numpy(model.lin_phi(in_features)), s=5, c='r', alpha=0.15)
+                    # plt.scatter(to_numpy(u), to_numpy(f*msg), s=1, c='w', alpha=0.1)
+                    func_list.append(model.lin_phi(in_features))
+                    true_func_list.append(msg * f)
+                    msg_list.append(msg)
+                    rr_list.append(torch.cat((msg, f * torch.ones((400, 1), device=device)), dim=1))
+                plt.tight_layout()
+                msg_list = torch.stack(msg_list).squeeze()
+                y_min, y_max = msg_list.min().item(), msg_list.max().item()
+                plt.xlabel(r'$x_i$', fontsize=68)
+                plt.ylabel(r'Learned MLPs', fontsize=68)
+                plt.ylim([y_min-y_max*, y_max * 3])
+                plt.savefig(f'./{log_dir}/results/generic_{epoch}.png', dpi=300)
+                plt.close()
+
+                print('symbolic regression ...')
+
+                model_pysrr = PySRRegressor(
+                    niterations=30,  # < Increase me for better results
+                    binary_operators=["+", "*"],
+                    unary_operators=[
+                        "cos",
+                        "exp",
+                        "sin",
+                        "tanh"
+                    ],
+                    random_state=0,
+                    temp_equation_file=False
+                )
+
+                # rr_ = torch.rand((4000, 2), device=device)
+                # func_ = rr_[:,0] * rr_[:,1]
+                # model_pysrr.fit(to_numpy(rr_), to_numpy(func_))
+                # model_pysrr.sympy
+
+                func_list = torch.stack(func_list).squeeze()
+                true_func_list = torch.stack(true_func_list).squeeze()
+                rr_list = torch.stack(rr_list).squeeze()
+                func = torch.reshape(func_list, (func_list.shape[0] * func_list.shape[1], 1))
+                true_func = torch.reshape(true_func_list, (func_list.shape[0] * func_list.shape[1], 1))
+                rr = torch.reshape(rr_list, (func_list.shape[0] * func_list.shape[1], 2))
+                idx = torch.randperm(len(rr))[:5000]
+
+                model_pysrr.fit(to_numpy(rr[idx]), to_numpy(func[idx]))
+                model_pysrr.sympy
+
+                # if model_config.signal_model_name == 'PDE_N4':
+                #
+                #     fig, ax = fig_init()
+                #     for m in range(n_particle_types):
+                #         u = torch.linspace(-xnorm.squeeze() * 2, xnorm.squeeze() * 2, 400).to(device)
+                #         true_func = true_model.func(u, m, 'phi')
+                #         embedding0 = model.a[m * n_particles // n_particle_types, :] * torch.ones(
+                #             (400, config.graph_model.embedding_dim), device=device)
+                #         field = torch.ones((400, 1), device=device)
+                #         in_features = torch.cat((u[:, None], embedding0), dim=1)
+                #         if config.graph_model.lin_edge_positive:
+                #             MLP0_func = model.lin_edge(in_features.float()) ** 2 * correction
+                #         in_features = torch.cat((u[:, None] * 0, embedding0, MLP0_func, field), dim=1)
+                #         MLP1_func = model.lin_phi(in_features)
+                #         plt.plot(to_numpy(u), to_numpy(true_func), c='g', linewidth=3, label='true')
+                #         plt.plot(to_numpy(u), to_numpy(MLP0_func), c='r', linewidth=3, label='MLP')
+                #         plt.plot(to_numpy(u), to_numpy(MLP1_func), c='w', linewidth=3, label='MLPoMLP')
+                #         # plt.legend(fontsize=24)
+                #     plt.tight_layout()
+                #     plt.savefig(f'./{log_dir}/results/generic_MLP0_{epoch}.png', dpi=300)
+                #     plt.close()
+
 
             if False:
                 print ('symbolic regression ...')
@@ -8134,7 +8165,7 @@ if __name__ == '__main__':
     # config_list = ['signal_N2_a43_10']
     # config_list = ['signal_N4_m13_shuffle_ter']
     # config_list = ['boids_16_256']
-    config_list = ['signal_N5_v1','signal_N5_v2','signal_N5_v3','signal_N5_v4','signal_N5_v5','signal_N5_v7','signal_N5_v7_1']
+    config_list = ['signal_N5_v1','signal_N5_v2','signal_N5_v3','signal_N5_v4','signal_N5_v5']
     # config_list = ['signal_N4_a3','signal_N4_a4']
     # config_list = ['signal_N2_a43_2_2_t8','signal_N2_a43_2_5_t8','signal_N2_a43_2_10_t8']
     # config_list = ['gravity_16_1']

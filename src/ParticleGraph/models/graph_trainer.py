@@ -2592,17 +2592,6 @@ def data_train_synaptic2(config, erase, best_model, device):
                             in_feature_update_next_bis = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg1, torch.ones((n_particles, 1), device=device)*1.1), dim=1)
                             loss = loss + (model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next_bis)).norm(2) * coeff_diff_update
 
-                    # if 'generic' in model.update_type:
-                    #     in_features = get_in_features_update(x[:, 6:7].clone().detach(), n_particles, model.a, model.update_type, device)
-                    #     in_features[:,-1] = x[:, 6]
-                    #     in_features = in_features.clone().detach()
-                    #     in_features_next = in_features.clone().detach()
-                    #     in_features_next[:,-1] = in_features[:,-1] + 0.1
-                    #     diff = diff + torch.relu(model.lin_phi(in_features) - model.lin_phi(in_features_next)).norm(2) * coeff_diff_update
-                    # if '2steps' in model.update_type:
-                    #     in_features2 = torch.cat((torch.ones((n_particles, 2), device=device), x[:, 8:9].clone().detach()), dim = 1)
-                    #     in_features2_next = torch.cat((torch.ones((n_particles, 2), device=device), x[:, 8:9].clone().detach() + 0.1), dim = 1)
-                    #     diff = diff + torch.relu(model.lin_phi2(in_features2) - model.lin_phi2(in_features2_next)).norm(2) * coeff_diff_update2
 
                     # edges = model.edges.clone().detach()
                     # if particle_batch_ratio < 1:
