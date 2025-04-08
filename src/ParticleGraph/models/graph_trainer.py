@@ -2429,7 +2429,6 @@ def data_train_synaptic2(config, erase, best_model, device):
 
         total_loss = 0
         k = 0
-        Niter = 2
 
         for N in trange(Niter):
 
@@ -2592,8 +2591,6 @@ def data_train_synaptic2(config, erase, best_model, device):
                         if 'TV' in train_config.diff_update_regul:
                             in_feature_update_next_bis = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg1, torch.ones((n_particles, 1), device=device)*1.1), dim=1)
                             loss = loss + (model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next_bis)).norm(2) * coeff_diff_update
-
-
 
                     # if 'generic' in model.update_type:
                     #     in_features = get_in_features_update(x[:, 6:7].clone().detach(), n_particles, model.a, model.update_type, device)

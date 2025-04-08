@@ -4749,8 +4749,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
     if has_field:
 
-
-        if 'Siren_short_term_plasticity' in field_type:
+        if ('Siren_short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
             model_f = Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
                             hidden_features=model_config.hidden_dim_nnr,
                             hidden_layers=model_config.n_layers_nnr, first_omega_0=omega, hidden_omega_0=omega,
@@ -5399,7 +5398,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             fig, ax = fig_init()
             for n in range(n_particle_types,-1,-1):
                 pos = torch.argwhere(type_list == n).squeeze()
-                plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=200, color=cmap.color(n), alpha=0.1)
+                plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=200, color=cmap.color(n), alpha=0.25, edgecolors='none')
             if 'latex' in style:
                 plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
                 plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
@@ -5427,12 +5426,13 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)),
                          linewidth=8 // ( 1 + (n_particle_types>16)*1.0), alpha=0.25)
             func_list = torch.stack(func_list).squeeze()
+            y_min, y_max = func_list.min().item(), func_list.max().item()
             plt.xlabel(r'$x_i$', fontsize=68)
             plt.ylabel(r'Learned $\psi^*(a_i, x_i)$', fontsize=68)
             # if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
             #     plt.ylim([-0.5,0.5])
             plt.xlim([-to_numpy(xnorm)*2, to_numpy(xnorm)*2])
-            # plt.ylim([0,0.05])
+            plt.ylim([y_min,y_max*1.1])
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/raw_psi_{epoch}.tif", dpi=170.7)
             plt.close()
@@ -5443,8 +5443,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             # correction = 1 / torch.mean(torch.mean(func_list[:,900:1000], dim=0))
             print(f'upper: {to_numpy(1/correction):0.4f}  correction: {to_numpy(correction):0.2f}')
             torch.save(correction, f'{log_dir}/correction.pt')
-
-
 
             if model.update_type == 'generic':
                 k = np.random.randint(n_frames - 50)
@@ -5546,7 +5544,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     plt.close()
 
 
-
             print('update functions ...')
             if model_config.signal_model_name == 'PDE_N5':
                 psi_list = []
@@ -5611,29 +5608,27 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 if (model_config.signal_model_name == 'PDE_N4'):
                     for n in range(n_particle_types):
                         true_func = true_model.func(rr, n, 'phi')
-                        psi_list.append(func)
                         plt.plot(to_numpy(rr), to_numpy(true_func), c = mc, linewidth = 16, label = 'original', alpha = 0.21)
                 else:
                     true_func = true_model.func(rr, 0, 'phi')
-                    psi_list.append(true_func)
                     plt.plot(to_numpy(rr), to_numpy(true_func), c = mc, linewidth = 16, label = 'original', alpha = 0.21)
 
-                # for n in trange(0,n_particles):
-                #     if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
-                #         embedding_ = model.a[n, :] * torch.ones((1500, config.graph_model.embedding_dim), device=device)
-                #         in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
-                #     else:
-                #         in_features = rr[:, None]
-                #     with torch.no_grad():
-                #         if config.graph_model.lin_edge_positive:
-                #             func = model.lin_edge(in_features.float()) ** 2 * correction
-                #         else:
-                #             func = model.lin_edge(in_features.float()) * correction
-                #         psi_list.append(func)
-                #     if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
-                #         plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
-                #     else:
-                #         plt.plot(to_numpy(rr), to_numpy(func), 2, color=mc, linewidth=2, alpha=0.25)
+                for n in trange(0,n_particles):
+                    if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
+                        embedding_ = model.a[n, :] * torch.ones((1500, config.graph_model.embedding_dim), device=device)
+                        in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
+                    else:
+                        in_features = rr[:, None]
+                    with torch.no_grad():
+                        if config.graph_model.lin_edge_positive:
+                            func = model.lin_edge(in_features.float()) ** 2 * correction
+                        else:
+                            func = model.lin_edge(in_features.float()) * correction
+                        psi_list.append(func)
+                    if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
+                        plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
+                    else:
+                        plt.plot(to_numpy(rr), to_numpy(func), 2, color=mc, linewidth=2, alpha=0.25)
 
                 plt.xlabel(r'$x_i$', fontsize=68)
                 if (model_config.signal_model_name == 'PDE_N4'):
@@ -5860,7 +5855,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     #     plt.plot(to_numpy(modulation[ind, ids]))
                     #     plt.plot(to_numpy(model.b[ind, 0:1000]**2))
 
-                if 'Siren_short_term_plasticity' in field_type:
+                if ('Siren_short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
 
                     for frame in trange(0, n_frames, n_frames // 100):
                         t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
@@ -8140,7 +8135,7 @@ if __name__ == '__main__':
     # config_list = ['signal_N2_a43_10']
     # config_list = ['signal_N4_m13_shuffle_ter']
     # config_list = ['boids_16_256']
-    config_list = ['signal_N5_v7_1']
+    config_list = ['signal_N4_a1']
     # config_list = ['signal_N4_a3','signal_N4_a4']
     # config_list = ['signal_N2_a43_2_2_t8','signal_N2_a43_2_5_t8','signal_N2_a43_2_10_t8']
     # config_list = ['gravity_16_1']
