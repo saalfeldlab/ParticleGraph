@@ -69,7 +69,7 @@ training:
 
     epoch_reset: 2
     epoch_reset_freq: 999
-    n_epochs_init: 2
+    n_epochs_init: 3
 
     rotation_augmentation: False
     data_augmentation_loop: 50

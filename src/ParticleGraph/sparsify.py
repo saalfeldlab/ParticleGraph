@@ -23,11 +23,14 @@ class EmbeddingCluster:
                 for n in range(2, 10):
                     clusterer = KMeans(n_clusters=n, random_state=10, n_init='auto')
                     cluster_labels = clusterer.fit_predict(data)
-                    silhouette_avg = silhouette_score(data, cluster_labels)
-                    silhouette_avg_list.append(silhouette_avg)
-                    if silhouette_avg > silhouette_max:
-                        silhouette_max = silhouette_avg
-                        n_clusters = n
+                    if (np.unique(cluster_labels) == [0]):
+                        n_clusters = 1
+                    else:
+                        silhouette_avg = silhouette_score(data, cluster_labels)
+                        silhouette_avg_list.append(silhouette_avg)
+                        if silhouette_avg > silhouette_max:
+                            silhouette_max = silhouette_avg
+                            n_clusters = n
                 kmeans = KMeans(n_clusters=n_clusters, random_state=10, n_init='auto')
                 k = kmeans.fit(data)
                 clusters = k.labels_

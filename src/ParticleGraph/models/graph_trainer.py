@@ -2400,7 +2400,6 @@ def data_train_synaptic2(config, erase, best_model, device):
     list_loss = []
     time.sleep(0.2)
 
-
     for epoch in range(start_epoch, n_epochs + 1):
 
         if (epoch == train_config.epoch_reset) | ((epoch>0) & (epoch % train_config.epoch_reset_freq == 0)):
@@ -2430,6 +2429,7 @@ def data_train_synaptic2(config, erase, best_model, device):
 
         total_loss = 0
         k = 0
+        Niter = 2
 
         for N in trange(Niter):
 
