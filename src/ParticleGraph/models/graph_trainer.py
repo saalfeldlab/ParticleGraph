@@ -2844,7 +2844,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                     plt.tight_layout()
 
                     lr_embedding = 1E-12
-                    optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+                    optimizer, n_total_params = set_trainable_parameters(model=model, lr_embedding=lr_embedding, lr=lr, lr_update=lr_update, lr_W=lr_W, lr_modulation=lr_modulation)
                     for sub_epochs in trange(20):
                         rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
                         pred = []
@@ -2866,12 +2866,12 @@ def data_train_synaptic2(config, erase, best_model, device):
                 if train_config.fix_cluster_embedding:
                     lr = 1E-12
                     lr_embedding = 1E-12
-                    optimizer, n_total_params = set_trainable_parameters(model=model, lr_embedding=lr_embedding, lr=lr, lr_W=lr_W, lr_modulation=lr_modulation)
+                    optimizer, n_total_params = set_trainable_parameters(model=model, lr_embedding=lr_embedding, lr=lr, lr_update=lr_update, lr_W=lr_W, lr_modulation=lr_modulation)
                     logger.info(f'learning rates: lr_W {lr_W}, lr {lr}, lr_embedding {lr_embedding}, lr_modulation {lr_modulation}')
             else:
                 lr = train_config.learning_rate_start
                 lr_embedding = train_config.learning_rate_embedding_start
-                optimizer, n_total_params = set_trainable_parameters(model=model, lr_embedding=lr_embedding, lr=lr, lr_W=lr_W, lr_modulation=lr_modulation)
+                optimizer, n_total_params = set_trainable_parameters(model=model, lr_embedding=lr_embedding, lr=lr, lr_update=lr_update, lr_W=lr_W, lr_modulation=lr_modulation)
                 logger.info(f'learning rates: lr_W {lr_W}, lr {lr}, lr_embedding {lr_embedding}, lr_modulation {lr_modulation}')
 
             if (epoch == 20) & (train_config.coeff_anneal_L1 > 0):

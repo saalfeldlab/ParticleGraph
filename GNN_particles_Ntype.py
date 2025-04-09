@@ -58,9 +58,9 @@ if __name__ == '__main__':
         task = 'train'
         best_model = ''
         # config_list = ['falling_water_ramp_x6_11']
-        config_list = ['signal_N5_v6_1']
+        # config_list = ['signal_N5_v6_1']
         # config_list = ['signal_N4_all_1']
-        # config_list = ['arbitrary_3_test']
+        config_list = ['arbitrary_3_test']
         # config_list = ['wave_smooth_3']
         # config_list = ['signal_N2_a37']
         # config_list = ['gravity_16']
