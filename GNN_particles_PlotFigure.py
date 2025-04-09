@@ -5134,9 +5134,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
                     fig, ax = fig_init()
                     msg_list = []
-                    func_list = []
-                    true_func_list = []
-                    rr_list = []
                     u = torch.linspace(-xnorm.squeeze(), xnorm.squeeze(), 400).to(device)
                     for sample in range(150):
                         id0 = np.random.randint(0, n_particles)
@@ -5150,22 +5147,22 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                         msg = model.lin_edge(in_features.float()) ** 2 * correction
                         in_features = torch.cat((torch.zeros((400, 1), device=device), embedding0, msg,
                                                  f * torch.ones((400, 1), device=device)), dim=1)
-                        plt.scatter(to_numpy(u), to_numpy(msg), s=5, c='g', alpha=0.15)
-                        plt.scatter(to_numpy(u), to_numpy(model.lin_phi(in_features)), s=5, c='r', alpha=0.15)
+                        plt.scatter(to_numpy(u), to_numpy(msg), s=5, c=cmap.color(to_numpy(x[id0, 5]).astype(int)),
+                                    alpha=0.15)
+                        # plt.scatter(to_numpy(u), to_numpy(model.lin_phi(in_features)), s=5, c='r', alpha=0.15)
                         # plt.scatter(to_numpy(u), to_numpy(f*msg), s=1, c='w', alpha=0.1)
-                        func_list.append(model.lin_phi(in_features))
-                        true_func_list.append(msg * f)
                         msg_list.append(msg)
-                        rr_list.append(torch.cat((msg, f * torch.ones((400, 1), device=device)), dim=1))
                     plt.tight_layout()
                     msg_list = torch.stack(msg_list).squeeze()
                     y_min, y_max = msg_list.min().item(), msg_list.max().item()
                     plt.xlabel(r'$x_i$', fontsize=68)
                     plt.ylabel(r'learned MLPs', fontsize=68)
-                    plt.ylim([y_min - y_max, y_max * 3])
+                    plt.ylim([y_min - y_max/2, y_max * 1.5])
                     plt.tight_layout()
-                    plt.savefig(f'./{log_dir}/results/all/generic_{epoch}.png', dpi=300)
+                    plt.savefig(f'./{log_dir}/results/all/learned_multiple_psi_{epoch}.png', dpi=300)
                     plt.close()
+
+
 
         fig, ax = fig_init(formatx='%.0f', formaty='%.2f')
         plt.plot(r_squared_list, linewidth=4, c=mc)
@@ -6110,9 +6107,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
                 fig, ax = fig_init()
                 msg_list = []
-                func_list = []
-                true_func_list = []
-                rr_list = []
                 u = torch.linspace(-xnorm.squeeze(), xnorm.squeeze(), 400).to(device)
                 for sample in range(150):
                     id0 = np.random.randint(0, n_particles)
@@ -6124,21 +6118,18 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     msg = model.lin_edge(in_features.float()) ** 2 * correction
                     in_features = torch.cat((torch.zeros((400, 1), device=device), embedding0, msg,
                                              f * torch.ones((400, 1), device=device)), dim=1)
-                    plt.scatter(to_numpy(u), to_numpy(msg), s=5, c='g', alpha=0.15)
-                    plt.scatter(to_numpy(u), to_numpy(model.lin_phi(in_features)), s=5, c='r', alpha=0.15)
+                    plt.scatter(to_numpy(u), to_numpy(msg), s=5, c=cmap.color(to_numpy(x[id0, 5]).astype(int)), alpha=0.15)
+                    # plt.scatter(to_numpy(u), to_numpy(model.lin_phi(in_features)), s=5, c='r', alpha=0.15)
                     # plt.scatter(to_numpy(u), to_numpy(f*msg), s=1, c='w', alpha=0.1)
-                    func_list.append(model.lin_phi(in_features))
-                    true_func_list.append(msg * f)
                     msg_list.append(msg)
-                    rr_list.append(torch.cat((msg, f * torch.ones((400, 1), device=device)), dim=1))
                 plt.tight_layout()
                 msg_list = torch.stack(msg_list).squeeze()
                 y_min, y_max = msg_list.min().item(), msg_list.max().item()
                 plt.xlabel(r'$x_i$', fontsize=68)
                 plt.ylabel(r'learned MLPs', fontsize=68)
-                plt.ylim([y_min-y_max, y_max * 3])
+                plt.ylim([y_min - y_max / 2, y_max * 1.5])
                 plt.tight_layout()
-                plt.savefig(f'./{log_dir}/results/generic_{epoch}.png', dpi=300)
+                plt.savefig(f'./{log_dir}/results/learned_multiple_psi_{epoch}.png', dpi=300)
                 plt.close()
 
                 fig, ax = fig_init()
@@ -6152,8 +6143,32 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 plt.ylabel(r'true functions', fontsize=68)
                 plt.ylim([y_min-y_max, y_max * 3])
                 plt.tight_layout()
-                plt.savefig(f'./{log_dir}/results/true_psi.png', dpi=300)
+                plt.savefig(f'./{log_dir}/results/true_multiple_psi.png', dpi=300)
                 plt.close()
+
+                msg_start = torch.mean(in_features_[:, 3]) - torch.std(in_features_[:, 3])
+                msg_end = torch.mean(in_features_[:, 3]) + torch.std(in_features_[:, 3])
+                msgs = torch.linspace(msg_start, msg_end, 400).to(device)
+                fig, ax = fig_init()
+                func_list = []
+                rr_list = []
+                for sample in range(150):
+                    id0 = np.random.randint(0, n_particles)
+                    embedding0 = model.a[id0, :] * torch.ones((400, config.graph_model.embedding_dim), device=device)
+                    in_features = torch.cat((torch.zeros((400, 1), device=device), embedding0, msgs[:,None], torch.ones((400, 1), device=device)), dim=1)
+                    pred = model.lin_phi(in_features)
+                    plt.scatter(to_numpy(msgs), to_numpy(pred), s=5, c=cmap.color(to_numpy(x[id0, 5]).astype(int)), alpha=0.15)
+                    func_list.append(pred)
+                    rr_list.append(msgs)
+                plt.xlabel(r'$x_i$', fontsize=68)
+                plt.ylabel(r'$MLP_0(a_i, x_i)$', fontsize=68)
+                plt.tight_layout()
+                plt.savefig(f'./{log_dir}/results/learned_multivariate_phi_{epoch}.png', dpi=300)
+                plt.close()
+
+
+
+
 
                 print('symbolic regression ...')
 
@@ -6179,11 +6194,9 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 # model_pysrr.sympy
 
                 func_list = torch.stack(func_list).squeeze()
-                true_func_list = torch.stack(true_func_list).squeeze()
                 rr_list = torch.stack(rr_list).squeeze()
                 func = torch.reshape(func_list, (func_list.shape[0] * func_list.shape[1], 1))
-                true_func = torch.reshape(true_func_list, (func_list.shape[0] * func_list.shape[1], 1))
-                rr = torch.reshape(rr_list, (func_list.shape[0] * func_list.shape[1], 2))
+                rr = torch.reshape(rr_list, (func_list.shape[0] * func_list.shape[1], 1))
                 idx = torch.randperm(len(rr))[:5000]
 
                 model_pysrr.fit(to_numpy(rr[idx]), to_numpy(func[idx]))
