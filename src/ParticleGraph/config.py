@@ -210,6 +210,7 @@ class TrainingConfig(BaseModel):
 
     learning_rate_start: float = 0.001
     learning_rate_embedding_start: float = 0.001
+    learning_rate_update_start: float = 0.0
     learning_rate_modulation_start: float = 0.0001
     learning_rate_W_start: float = 0.0001
 

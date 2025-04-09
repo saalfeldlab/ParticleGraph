@@ -2335,14 +2335,18 @@ def data_train_synaptic2(config, erase, best_model, device):
     else:
         start_epoch = 0
     lr = train_config.learning_rate_start
+    if train_config.learning_rate_update_start==0:
+        lr_update = train_config.learning_rate_start
+    else:
+        lr_update = train_config.learning_rate_update_start
     lr_embedding = train_config.learning_rate_embedding_start
     lr_W = train_config.learning_rate_W_start
     lr_modulation = train_config.learning_rate_modulation_start
 
-    print(f'learning rates: lr_W {lr_W}, lr {lr}, lr_embedding {lr_embedding}, lr_modulation {lr_modulation}')
-    logger.info(f'learning rates: lr_W {lr_W}, lr {lr}, lr_embedding {lr_embedding}, lr_modulation {lr_modulation}')
+    print(f'learning rates: lr_W {lr_W}, lr {lr}, lr_update {lr_update}, lr_embedding {lr_embedding}, lr_modulation {lr_modulation}')
+    logger.info(f'learning rates: lr_W {lr_W}, lr {lr}, lr_update {lr_update}, lr_embedding {lr_embedding}, lr_modulation {lr_modulation}')
 
-    optimizer, n_total_params = set_trainable_parameters(model=model, lr_embedding=lr_embedding, lr=lr, lr_W=lr_W, lr_modulation=lr_modulation)
+    optimizer, n_total_params = set_trainable_parameters(model=model, lr_embedding=lr_embedding, lr=lr, lr_update=lr_update, lr_W=lr_W, lr_modulation=lr_modulation)
 
     model.train()
 

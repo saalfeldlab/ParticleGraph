@@ -1264,7 +1264,7 @@ def increasing_batch_size(batch_size):
 
     return get_batch_size
 
-def set_trainable_parameters(model=[], lr_embedding=[], lr=[], lr_W=[], lr_modulation=[]):
+def set_trainable_parameters(model=[], lr_embedding=[], lr=[],  lr_update=[], lr_W=[], lr_modulation=[]):
 
     trainable_params = [param for _, param in model.named_parameters() if param.requires_grad]
     n_total_params = sum(p.numel() for p in trainable_params) + torch.numel(model.a)
@@ -1282,6 +1282,9 @@ def set_trainable_parameters(model=[], lr_embedding=[], lr=[], lr_W=[], lr_modul
             if (name=='b') or ('lin_modulation' in name):
                 optimizer.add_param_group({'params': parameter, 'lr': lr_modulation})
                 # print(f'lr_modulation: {name} {lr_modulation}')
+            elif 'lin_phi' in name:
+                optimizer.add_param_group({'params': parameter, 'lr': lr_update})
+                # print(f'lr_W: {name} {lr_W}')
             elif 'W' in name:
                 optimizer.add_param_group({'params': parameter, 'lr': lr_W})
                 # print(f'lr_W: {name} {lr_W}')
