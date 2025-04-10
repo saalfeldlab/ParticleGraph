@@ -2359,6 +2359,7 @@ def data_train_synaptic2(config, erase, best_model, device):
 
     adjacency = torch.load(f'./graphs_data/{dataset_name}/adjacency.pt', map_location=device)
     edges = torch.load(f'./graphs_data/{dataset_name}/edge_index.pt', map_location=device)
+    edges_all = edges.clone().detach()
 
     # matrix = to_numpy(adjacency)
     # rank = get_matrix_rank(matrix)
@@ -2418,13 +2419,13 @@ def data_train_synaptic2(config, erase, best_model, device):
             logger.info(f'coeff_L1: {coeff_L1} coeff_diff: {coeff_diff} coeff_diff_update: {coeff_diff_update}')
             print(f'coeff_L1: {coeff_L1} coeff_diff: {coeff_diff} coeff_diff_update: {coeff_diff_update}')
 
-        batch_size = int(get_batch_size(epoch) / particle_batch_ratio)
+        batch_size = get_batch_size(epoch)
         logger.info(f'batch_size: {batch_size}')
 
         if particle_batch_ratio < 1:
             Niter = int(n_frames * data_augmentation_loop // batch_size / particle_batch_ratio * 0.2)
         else:
-            Niter = int(n_frames * data_augmentation_loop // batch_size * n_runs / 10 // max(recursive_loop,1))
+            Niter = int(n_frames * data_augmentation_loop // batch_size * 0.2 // max(recursive_loop,1))
 
         plot_frequency = int(Niter // 20)
         print(f'{Niter} iterations per epoch')
@@ -2521,8 +2522,12 @@ def data_train_synaptic2(config, erase, best_model, device):
                 optimizer.zero_grad()
 
                 dataset_batch = []
-                ids = np.random.permutation(n_particles)[:int(n_particles * (1 - particle_batch_ratio))]
-                ids = np.sort(ids)
+
+                if particle_batch_ratio < 1:
+                    ids = np.random.permutation(n_particles)[:int(n_particles * particle_batch_ratio)]
+                    ids = np.sort(ids)
+                else:
+                    ids = np.arange(n_particles).astype(int)
 
                 loss = 0
 
@@ -2602,11 +2607,10 @@ def data_train_synaptic2(config, erase, best_model, device):
                             in_feature_update_prev = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg_1, torch.ones((n_particles, 1), device=device)), dim=1)
                             loss = loss + (model.lin_phi(in_feature_update_prev) + model.lin_phi(in_feature_update_next) - 2* model.lin_phi(in_feature_update)).norm(2) * coeff_diff_update
 
-
-                    # edges = model.edges.clone().detach()
-                    # if particle_batch_ratio < 1:
-                    #     mask = ~torch.isin(edges[1, :], torch.tensor(ids, device=device))
-                    #     edges = edges[:, mask]
+                    if particle_batch_ratio < 1:
+                         edges = edges_all.clone().detach()
+                         mask = torch.isin(edges[1, :], torch.tensor(ids, device=device))
+                         edges = edges[:, mask]
 
                     dataset = data.Data(x=x, edge_index=edges)
                     dataset_batch.append(dataset)
@@ -2632,12 +2636,18 @@ def data_train_synaptic2(config, erase, best_model, device):
                         pred = model(batch, k=k_batch)
                     else:
                         pred = model(batch)
-
+                if batch_size > 1:
+                    ids = np.concatenate([ids + n * n_particles for n in range(batch_size)], axis=0)
                 if time_step == 1:
-                    loss = loss + (pred - y_batch).norm(2)
+                    if particle_batch_ratio < 1:
+                        loss = loss + (pred[ids] - y_batch[ids]).norm(2)
+                    else:
+                        loss = loss + (pred - y_batch).norm(2)
                 else:
-                    loss = loss + (x_batch + pred * delta_t * time_step - y_batch).norm(2) / time_step
-
+                    if particle_batch_ratio < 1:
+                        loss = loss + (x_batch + pred * delta_t * time_step - y_batch).norm(2) / time_step
+                    else:
+                        loss = loss + (x_batch + pred[ids] * delta_t * time_step - y_batch[ids]).norm(2) / time_step
                 if ('PDE_N3' in model_config.signal_model_name):
                     loss = loss + train_config.coeff_model_a * (model.a[ind_a+1] - model.a[ind_a]).norm(2)
 

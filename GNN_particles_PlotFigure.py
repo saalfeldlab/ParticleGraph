@@ -6121,7 +6121,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     msg = model.lin_edge(in_features.float()) ** 2 * correction
                     in_features = torch.cat((torch.zeros((400, 1), device=device), embedding0, msg,
                                              f * torch.ones((400, 1), device=device)), dim=1)
-                    plt.scatter(to_numpy(u), to_numpy(msg), s=5, c=cmap.color(to_numpy(x[id0, 5]).astype(int)), alpha=0.15)
+                    plt.plot(to_numpy(u), to_numpy(msg), c=cmap.color(to_numpy(x[id0, 5]).astype(int)), linewidth=2, alpha=0.15)
                     # plt.scatter(to_numpy(u), to_numpy(model.lin_phi(in_features)), s=5, c='r', alpha=0.15)
                     # plt.scatter(to_numpy(u), to_numpy(f*msg), s=1, c='w', alpha=0.1)
                     msg_list.append(msg)
@@ -6129,7 +6129,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 msg_list = torch.stack(msg_list).squeeze()
                 y_min, y_max = msg_list.min().item(), msg_list.max().item()
                 plt.xlabel(r'$x_i$', fontsize=68)
-                plt.ylabel(r'learned MLPs', fontsize=68)
+                plt.ylabel(r'learned $MLP_0$', fontsize=68)
                 plt.ylim([y_min - y_max / 2, y_max * 1.5])
                 plt.tight_layout()
                 plt.savefig(f'./{log_dir}/results/learned_multiple_psi_{epoch}.png', dpi=300)
@@ -6143,7 +6143,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                         plt.plot(to_numpy(u), to_numpy(true_func), c=cmap.color(n), linewidth=3)
                 plt.xlabel(r'$x_i$', fontsize=68)
                 plt.ylabel(r'true functions', fontsize=68)
-                plt.ylim([y_min-y_max, y_max * 3])
+                plt.ylim([y_min - y_max / 2, y_max * 1.5])
                 plt.tight_layout()
                 plt.savefig(f'./{log_dir}/results/true_multiple_psi.png', dpi=300)
                 plt.close()
@@ -6154,16 +6154,16 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 fig, ax = fig_init()
                 func_list = []
                 rr_list = []
-                for sample in range(150):
+                for sample in range(n_particles):
                     id0 = np.random.randint(0, n_particles)
                     embedding0 = model.a[id0, :] * torch.ones((400, config.graph_model.embedding_dim), device=device)
                     in_features = torch.cat((torch.zeros((400, 1), device=device), embedding0, msgs[:,None], torch.ones((400, 1), device=device)), dim=1)
                     pred = model.lin_phi(in_features)
-                    plt.scatter(to_numpy(msgs), to_numpy(pred), s=5, c=cmap.color(to_numpy(x[id0, 5]).astype(int)), alpha=0.15)
+                    plt.plot(to_numpy(msgs), to_numpy(pred), c=cmap.color(to_numpy(x[id0, 5]).astype(int)),  linewidth=2, alpha=0.25)
                     func_list.append(pred)
                     rr_list.append(msgs)
-                plt.xlabel(r'$x_i$', fontsize=68)
-                plt.ylabel(r'$MLP_0(a_i, x_i)$', fontsize=68)
+                plt.xlabel(r'$sum_i$', fontsize=68)
+                plt.ylabel(r'$MLP_0(a_i, x_i=0, sum_i, g_i=1)$', fontsize=48)
                 plt.tight_layout()
                 plt.savefig(f'./{log_dir}/results/learned_multivariate_phi_{epoch}.png', dpi=300)
                 plt.close()
@@ -8236,8 +8236,9 @@ if __name__ == '__main__':
     # config_list = ['signal_N2_a43_10']
     # config_list = ['signal_N4_m13_shuffle_ter']
     # config_list = ['boids_16_256']
-    config_list = ['signal_N5_v6','signal_N5_v6_0','signal_N5_v6_1','signal_N5_v6_2', 'signal_N5_v6_3', 'signal_N5_v7_1','signal_N5_v7_2','signal_N5_v7_3' 'signal_N5_v8','signal_N5_v9','signal_N5_v10',
-                   'signal_N5_v11','signal_N5_v12','signal_N5_v13','signal_N5_v14','signal_N5_v15']
+    # config_list = ['signal_N5_v6','signal_N5_v6_0','signal_N5_v6_1','signal_N5_v6_2', 'signal_N5_v6_3', 'signal_N5_v7_1','signal_N5_v7_2','signal_N5_v7_3', 'signal_N5_v8','signal_N5_v9','signal_N5_v10',
+    #                'signal_N5_v11','signal_N5_v12','signal_N5_v13','signal_N5_v14','signal_N5_v15']
+    config_list = ['signal_N5_v11']
     # config_list = ['signal_N4_a3','signal_N4_a4']
     # config_list = ['signal_N2_a43_3_1_t8','signal_N2_a43_3_5_t8','signal_N2_a43_3_10_t8','signal_N2_a43_3_20_t8','signal_N2_a43_3_1_t16','signal_N2_a43_3_5_t16',
     #                'signal_N2_a43_3_10_t16','signal_N2_a43_3_20_t16','signal_N2_a43_3_20_t20','signal_N2_a43_3_20_t24','signal_N2_a43_3_20_t28']
