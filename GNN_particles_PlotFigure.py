@@ -8236,7 +8236,7 @@ if __name__ == '__main__':
     # config_list = ['signal_N2_a43_10']
     # config_list = ['signal_N4_m13_shuffle_ter']
     # config_list = ['boids_16_256']
-    # config_list = ['signal_N5_v6','signal_N5_v6_0','signal_N5_v6_1','signal_N5_v6_2', 'signal_N5_v6_3', 'signal_N5_v7_1','signal_N5_v7_2','signal_N5_v7_3', 'signal_N5_v8','signal_N5_v9','signal_N5_v10',
+    #config_list = ['signal_N5_v6','signal_N5_v6_0','signal_N5_v6_1','signal_N5_v6_2', 'signal_N5_v6_3', 'signal_N5_v7_1','signal_N5_v7_2','signal_N5_v7_3', 'signal_N5_v8','signal_N5_v9','signal_N5_v10',
     #                'signal_N5_v11','signal_N5_v12','signal_N5_v13','signal_N5_v14','signal_N5_v15']
     config_list = ['signal_N5_v11']
     # config_list = ['signal_N4_a3','signal_N4_a4']

@@ -108,6 +108,7 @@ def data_train_particle(config, erase, best_model, device):
     data_augmentation_loop = train_config.data_augmentation_loop
     recursive_loop = train_config.recursive_loop
     coeff_continuous = train_config.coeff_continuous
+    coeff_sign = train_config.coeff_sign
     target_batch_size = train_config.batch_size
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
@@ -227,7 +228,7 @@ def data_train_particle(config, erase, best_model, device):
         pos = torch.argwhere(ind_a % 100 != 99).squeeze()
         ind_a = ind_a[pos]
 
-    print("start training ...")
+    print("start training particles ...")
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
 
     list_loss = []
@@ -360,6 +361,9 @@ def data_train_particle(config, erase, best_model, device):
                 loss = loss + train_config.coeff_model_a * (model.a[run, ind_a + 1] - model.a[run, ind_a]).norm(2)
             else:
                 loss = (pred - y_batch).norm(2)
+                if coeff_sign>0:
+                    loss = loss + (torch.sign(pred) - torch.sign(y_batch)).norm(2)
+                
 
             if (epoch>0) & (coeff_continuous>0):
                 rr = torch.linspace(0, max_radius, 1000, dtype=torch.float32, device=device)

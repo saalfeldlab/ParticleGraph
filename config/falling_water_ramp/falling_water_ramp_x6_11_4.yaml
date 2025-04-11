@@ -1,0 +1,68 @@
+description: 'system of particles falling down in a box'
+dataset: 'falling_water_ramp_wall'
+data_folder_name: '/groups/saalfeld/saalfeldlab/projects/gnn/learning-to-simulate/WaterRamps/'
+
+simulation:
+  params: [[0, 0.2, 0.4, 0.6, 0.8], [0.2, 0.2, 0.2, 0.2, 0.2]]
+  min_radius: 0
+  max_radius: 0.05
+  n_particles: 2800
+  n_particle_types: 2
+  n_frames: 600
+  delta_t: 0.0025
+  dpos_init: 1.0
+  boundary: 'no'
+  start_frame: 0
+
+graph_model:
+  particle_model_name: 'PDE_WF'
+  mesh_model_name: ''
+  prediction: '2nd_derivative'
+
+  input_size: 18
+  output_size: 512
+  hidden_dim: 512
+  n_mp_layers: 4
+  aggr_type: 'add'
+  embedding_dim: 2
+
+  update_type: 'mlp'
+  input_size_update: 520
+  n_layers_update: 4
+  hidden_dim_update: 128
+  output_size_update: 2
+
+plotting:
+  colormap: 'tab10'
+  arrow_length: 2
+  ylim: [-0.001, 0]
+
+training:
+  n_epochs: 20
+  batch_size: 8
+  small_init_batch_size: False
+  n_runs: 500
+  time_window: 4
+  time_window_noise: 0
+  time_window_noise: 1.0E-5
+
+  sparsity: 'none'
+  sparsity_freq: 3
+  cluster_method: 'kmeans_auto_embedding'
+  rotation_augmentation: False
+  translation_augmentation: True
+  data_augmentation_loop: 5000
+  fix_cluster_embedding: True
+  device: 'auto'
+
+  learning_rate_start: 5E-5
+  learning_rate_embedding_start: 5E-5
+  
+  coeff_sign: 10
+
+
+
+
+
+
+
