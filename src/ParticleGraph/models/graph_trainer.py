@@ -105,6 +105,8 @@ def data_train_particle(config, erase, best_model, device):
     n_frames = simulation_config.n_frames
     rotation_augmentation = train_config.rotation_augmentation
     translation_augmentation = train_config.translation_augmentation
+    reflection_augmentation = train_config.reflection_augmentation
+    velocity_augmentation = train_config.velocity_augmentation
     data_augmentation_loop = train_config.data_augmentation_loop
     recursive_loop = train_config.recursive_loop
     coeff_continuous = train_config.coeff_continuous
@@ -282,6 +284,11 @@ def data_train_particle(config, erase, best_model, device):
                     displacement = displacement.repeat(x.shape[0], 1)
                     x[:, 1:dimension + 1] = x[:, 1:dimension + 1] + displacement
                     x_next[:, 1:dimension + 1] = x_next[:, 1:dimension + 1] + displacement
+                if reflection_augmentation:
+                    x[:, 2:3] = 1 - x[:, 2:3]
+                    x[: dimension + 2: dimension + 3] = - x[: dimension + 2: dimension + 3]
+                if velocity_augmentation:
+                    x[:, dimension + 1: 2*dimension + 1] = x[:, dimension + 1: 2*dimension + 1] + torch.randn((1,2),device=device).repeat(x.shape[0],1) * vnorm
 
                 if has_ghost:
                     x_ghost = ghosts_particles.get_pos(dataset_id=run, frame=k, bc_pos=bc_pos)
@@ -333,6 +340,9 @@ def data_train_particle(config, erase, best_model, device):
                     new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
                     y[:, 0] = new_x
                     y[:, 1] = new_y
+                if reflection_augmentation:
+                    y[:, 1] = -y[:, 1]
+
 
                 if batch == 0:
                     data_id = torch.ones((y.shape[0],1), dtype=torch.int) * run

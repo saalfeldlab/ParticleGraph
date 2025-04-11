@@ -244,6 +244,8 @@ class TrainingConfig(BaseModel):
     time_window_noise: float = 0
     rotation_augmentation: bool = False
     translation_augmentation: bool = False
+    reflection_augmentation: bool = False
+    velocity_augmentation: bool = False
     data_augmentation_loop: int = 40
 
     recursive_loop: int = 0
