@@ -362,8 +362,7 @@ def data_train_particle(config, erase, best_model, device):
             else:
                 loss = (pred - y_batch).norm(2)
                 if coeff_sign>0:
-                    loss = loss + (torch.sign(pred) - torch.sign(y_batch)).norm(2)
-                
+                    loss = loss + (torch.sign(pred) - torch.sign(y_batch)).norm(2) * coeff_sign
 
             if (epoch>0) & (coeff_continuous>0):
                 rr = torch.linspace(0, max_radius, 1000, dtype=torch.float32, device=device)

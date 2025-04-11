@@ -58,7 +58,7 @@ training:
   learning_rate_start: 5E-5
   learning_rate_embedding_start: 5E-5
   
-  coeff_sign: 100
+  coeff_sign: 5
 
 
 
