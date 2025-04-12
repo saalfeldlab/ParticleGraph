@@ -550,7 +550,6 @@ def load_2D_cell_data(config, device, visualize):
     print(f'n_cells: {n_cells}')
 
 
-
 def load_3D_cell_data(config, device, visualize):
 
 
@@ -645,7 +644,6 @@ def load_3D_cell_data(config, device, visualize):
     # visualize_mesh(mesh_file)
 
 
-
 def load_WaterRampsWall(config, device=None, visualize=None, step=None, cmap=None):
     # create output folder, empty it if bErase=True, copy files into it
     data_folder_name = config.data_folder_name
@@ -663,6 +661,8 @@ def load_WaterRampsWall(config, device=None, visualize=None, step=None, cmap=Non
     delta_t = simulation_config.delta_t
     bc_pos, bc_dpos = choose_boundary_values('no')
 
+    cmap = CustomColorMap(config=config)
+
 
     # Loading Data
 
@@ -672,7 +672,7 @@ def load_WaterRampsWall(config, device=None, visualize=None, step=None, cmap=Non
     n_wall_particles = 400
     n_max_particles = 0
 
-    for run in range(n_runs):
+    for run in range(0, n_runs):
         x_list = []
         y_list = []
 
@@ -702,15 +702,15 @@ def load_WaterRampsWall(config, device=None, visualize=None, step=None, cmap=Non
         position[:, :, [0, 1]] = position[:, :, [1, 0]]
         position = torch.tensor(position, dtype=torch.float32, device=device)
         type = np.load(data_folder_name + 'particle_type.' + str(run) + '.npy', allow_pickle=True)
+        print(f'types: {np.unique(type)}')
         type = torch.tensor(type, dtype=torch.float32, device=device)
-        type = (type-3)/2
+        # type = (type-3)/2
+        type = type-4
         type = torch.cat((torch.zeros(n_wall_particles, device=device), type), 0)
         type = type[:, None]
 
         for frame in trange(1,position.shape[0]-2):
 
-            if len(x_list)==31:
-                a=1
 
             pos_prev = position[frame-1].squeeze()
             pos_next = position[frame+1].squeeze()
@@ -748,15 +748,14 @@ def load_WaterRampsWall(config, device=None, visualize=None, step=None, cmap=Non
             # plt.scatter(to_numpy(pos[:, 0]), to_numpy(pos[:, 1]), s=100, c='g')
             # plt.scatter(to_numpy(pos_next[:, 0]), to_numpy(pos_next[:, 1]), s=100, c='r')
 
-            if run <4:
+            if (run <10) & (frame%20==0):
                 plt.style.use('dark_background')
                 fig = plt.figure(figsize=(18, 10))
                 ax = fig.add_subplot(121)
                 s_p = 20
                 index_particles = get_index_particles(x, n_particle_types, dimension)
                 for n in range(n_particle_types):
-                    plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
-                                s=s_p, color=cmap.color(n))
+                    plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]), s=s_p, color=cmap.color(n))
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
                 plt.xticks([])
@@ -770,7 +769,7 @@ def load_WaterRampsWall(config, device=None, visualize=None, step=None, cmap=Non
                 plt.yticks([])
                 plt.tight_layout()
                 num = f"{frame-1:06}"
-                plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)  # 170.7)
+                plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)  # 170.7)
                 plt.close()
 
         # torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
@@ -778,8 +777,8 @@ def load_WaterRampsWall(config, device=None, visualize=None, step=None, cmap=Non
 
         x_list = np.array(to_numpy(torch.stack(x_list)))
         y_list = np.array(to_numpy(torch.stack(y_list)))
-        np.save(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy', x_list)
-        np.save(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy', y_list)
+        np.save(f'graphs_data/{dataset_name}/x_list_{run}.npy', x_list)
+        np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list)
 
     print (f'n_max_particles: {n_max_particles}')
 
@@ -796,6 +795,7 @@ def load_WaterRampsWall(config, device=None, visualize=None, step=None, cmap=Non
     #     position_seq = position_seq[:, :-1]
     #     # target_position = torch.from_numpy(target_position)
     #     position_seq = torch.from_numpy(position_seq)
+
 
 
 def load_shrofflab_celegans(

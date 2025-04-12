@@ -436,6 +436,9 @@ def add_pre_folder(config_file_):
     elif 'falling_water_ramp' in config_file_:
         config_file = os.path.join('falling_water_ramp', config_file_)
         pre_folder = 'falling_water_ramp/'
+    elif 'multimaterial' in config_file_:
+        config_file = os.path.join('multimaterial', config_file_)
+        pre_folder = 'multimaterial/'
     elif 'RD_RPS' in config_file_:
         config_file = os.path.join('reaction_diffusion', config_file_)
         pre_folder = 'reaction_diffusion/'

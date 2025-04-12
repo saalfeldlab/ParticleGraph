@@ -24,6 +24,8 @@ def generate_from_data(config, device, visualize=True, step=None, cmap=None):
         load_WaterDropSmall(config, device, visualize, step, cmap)
     elif 'WaterRamps' in data_folder_name:
         load_WaterRampsWall(config, device, visualize, step, cmap)
+    elif 'MultiMaterial' in data_folder_name:
+        load_WaterRampsWall(config, device, visualize, step, cmap)
     elif image_data.file_type != 'none':
         if image_data.file_type == '3D masks meshes':
             load_3D_cell_data(config, device, visualize)
