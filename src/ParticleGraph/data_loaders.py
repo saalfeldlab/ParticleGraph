@@ -644,7 +644,7 @@ def load_3D_cell_data(config, device, visualize):
     # visualize_mesh(mesh_file)
 
 
-def load_WaterRampsWall(config, device=None, visualize=None, step=None, cmap=None):
+def load_Goole_data(config, device=None, visualize=None, step=None, cmap=None):
     # create output folder, empty it if bErase=True, copy files into it
     data_folder_name = config.data_folder_name
     dataset_name = config.dataset
@@ -704,8 +704,10 @@ def load_WaterRampsWall(config, device=None, visualize=None, step=None, cmap=Non
         type = np.load(data_folder_name + 'particle_type.' + str(run) + '.npy', allow_pickle=True)
         print(f'types: {np.unique(type)}')
         type = torch.tensor(type, dtype=torch.float32, device=device)
-        # type = (type-3)/2
-        type = type-4
+        if config.dataset=='multimaterial':
+            type = type - 4     # type = 5,6,7
+        elif config.dataset=='falling_water_ramp_wall':
+            type = (type-3)/2   # type = 3,5
         type = torch.cat((torch.zeros(n_wall_particles, device=device), type), 0)
         type = type[:, None]
 

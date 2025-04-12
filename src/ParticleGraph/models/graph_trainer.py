@@ -253,7 +253,7 @@ def data_train_particle(config, erase, best_model, device):
         Niter = n_frames * data_augmentation_loop // batch_size
         if particle_batch_ratio < 1:
             Niter = int(n_frames * data_augmentation_loop // batch_size / particle_batch_ratio)
-        plot_frequency = int(Niter // 50)
+        plot_frequency = int(Niter // 20)
         if epoch==0:
             print(f'{Niter} iterations per epoch')
             logger.info(f'{Niter} iterations per epoch')
@@ -405,7 +405,6 @@ def data_train_particle(config, erase, best_model, device):
             if ((epoch == 0) & (N % (Niter // 200) == 0)):
                 torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
                            os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
-
                 check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 50,
                                        memory_percentage_threshold=0.6)
 
@@ -435,7 +434,7 @@ def data_train_particle(config, erase, best_model, device):
         plt.ylabel('Loss', fontsize=12)
         plt.xlabel('Epochs', fontsize=12)
 
-        if (simulation_config.n_interactions < 100) & (has_bounding_box == False) & ('PDE_K' not in model_config.particle_model_name) & ('PDE_F' not in model_config.particle_model_name) & ('PDE_WF' not in model_config.particle_model_name):
+        if (has_bounding_box == False) & ('PDE_K' not in model_config.particle_model_name) & ('PDE_F' not in model_config.particle_model_name) & ('PDE_WF' not in model_config.particle_model_name):
             ax = fig.add_subplot(1, 5, 2)
             embedding = get_embedding(model.a, 1)
             for n in range(n_particle_types):

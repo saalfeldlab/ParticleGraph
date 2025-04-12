@@ -41,7 +41,7 @@ training:
   n_epochs: 20
   batch_size: 8
   small_init_batch_size: False
-  n_runs: 500
+  n_runs: 999
   time_window: 4
   time_window_noise: 0
   time_window_noise: 1.0E-5
@@ -55,7 +55,7 @@ training:
   fix_cluster_embedding: True
   device: 'auto'
 
-  learning_rate_start: 5E-5
+  learning_rate_start: 1E-5
   learning_rate_embedding_start: 5E-5
 
 

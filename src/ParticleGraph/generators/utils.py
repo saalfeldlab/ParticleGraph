@@ -1,7 +1,7 @@
 
 from ParticleGraph.generators import *
 from ParticleGraph.utils import *
-from ParticleGraph.data_loaders import load_solar_system, load_LG_ODE, load_WaterRampsWall, load_2D_cell_data, load_3D_cell_data
+from ParticleGraph.data_loaders import load_solar_system, load_LG_ODE, load_Goole_data, load_2D_cell_data, load_3D_cell_data
 from time import sleep
 from scipy.spatial import Delaunay
 from tifffile import imread, imsave
@@ -23,9 +23,9 @@ def generate_from_data(config, device, visualize=True, step=None, cmap=None):
     elif 'WaterDropSmall' in data_folder_name:
         load_WaterDropSmall(config, device, visualize, step, cmap)
     elif 'WaterRamps' in data_folder_name:
-        load_WaterRampsWall(config, device, visualize, step, cmap)
+        load_Goole_data(config, device, visualize, step, cmap)
     elif 'MultiMaterial' in data_folder_name:
-        load_WaterRampsWall(config, device, visualize, step, cmap)
+        load_Goole_data(config, device, visualize, step, cmap)
     elif image_data.file_type != 'none':
         if image_data.file_type == '3D masks meshes':
             load_3D_cell_data(config, device, visualize)
