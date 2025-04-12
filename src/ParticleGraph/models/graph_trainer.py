@@ -3922,7 +3922,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 if bouncing_pos.numel() > 0:
                     x[bouncing_pos, 4] = - 0.7 * x[bouncing_pos, 4]
 
-            if (time_window) & ('plot_data' not in test_mode):
+            if (time_window>1) & ('plot_data' not in test_mode):
                 moving_pos = torch.argwhere(x[:,5]!=0)
                 x_list[0][it+1,moving_pos.squeeze(),1:2 * dimension + 1] = x[moving_pos.squeeze(), 1:2 * dimension + 1].clone().detach()
             if 'fixed' in test_mode:

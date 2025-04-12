@@ -57,8 +57,8 @@ if __name__ == '__main__':
 
         task = 'test'
         best_model = ''
-        config_list = ['falling_water_ramp_x6_11']
-        # config_list = ['multimaterial_1','multimaterial_2','multimaterial_3']
+        # config_list = ['falling_water_ramp_x6_11']
+        config_list = ['multimaterial_1','multimaterial_2','multimaterial_3','multimaterial_4','falling_water_ramp_x6_11_1']
         # config_list = ['falling_water_ramp_x6_11_1','falling_water_ramp_x6_11_3','falling_water_ramp_x6_11_4','falling_water_ramp_x6_11_5',
         # config_list = ['falling_water_ramp_x6_11_6','falling_water_ramp_x6_11_7','falling_water_ramp_x6_11_8','falling_water_ramp_x6_11_9',
         # config_list = ['falling_water_ramp_x6_11_11','falling_water_ramp_x6_11_12']
