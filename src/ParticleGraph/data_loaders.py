@@ -704,15 +704,14 @@ def load_Goole_data(config, device=None, visualize=None, step=None, cmap=None):
         type = np.load(data_folder_name + 'particle_type.' + str(run) + '.npy', allow_pickle=True)
         print(f'types: {np.unique(type)}')
         type = torch.tensor(type, dtype=torch.float32, device=device)
-        if config.dataset=='multimaterial':
+        if 'multimaterial' in config.dataset:
             type = type - 4     # type = 5,6,7
-        elif config.dataset=='falling_water_ramp_wall':
+        elif 'falling_water_ramp_wall' in config.dataset:
             type = (type-3)/2   # type = 3,5
         type = torch.cat((torch.zeros(n_wall_particles, device=device), type), 0)
         type = type[:, None]
 
         for frame in trange(1,position.shape[0]-2):
-
 
             pos_prev = position[frame-1].squeeze()
             pos_next = position[frame+1].squeeze()
@@ -750,21 +749,20 @@ def load_Goole_data(config, device=None, visualize=None, step=None, cmap=None):
             # plt.scatter(to_numpy(pos[:, 0]), to_numpy(pos[:, 1]), s=100, c='g')
             # plt.scatter(to_numpy(pos_next[:, 0]), to_numpy(pos_next[:, 1]), s=100, c='r')
 
-            if (run <10) & (frame%20==0):
+            if (run <21) & (frame%20==0):
                 plt.style.use('dark_background')
-                fig = plt.figure(figsize=(18, 10))
+                fig = plt.figure(figsize=(19, 10))
                 ax = fig.add_subplot(121)
-                s_p = 20
                 index_particles = get_index_particles(x, n_particle_types, dimension)
                 for n in range(n_particle_types):
-                    plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]), s=s_p, color=cmap.color(n))
+                    plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]), s=10, color=cmap.color(n))
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
                 plt.xticks([])
                 plt.yticks([])
                 ax = fig.add_subplot(122)
                 plt.scatter(x[:, 2].detach().cpu().numpy(),
-                            x[:, 1].detach().cpu().numpy(), s=10, c=x[:, -1].detach().cpu().numpy(), vmin=0, vmax=1)
+                            x[:, 1].detach().cpu().numpy(), s=1, c='w', vmin=0, vmax=1)
                 plt.xlim([0,1])
                 plt.ylim([0,1])
                 plt.xticks([])

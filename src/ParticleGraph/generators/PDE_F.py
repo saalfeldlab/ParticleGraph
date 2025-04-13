@@ -5,8 +5,6 @@ from ParticleGraph.utils import *
 
 
 class PDE_F(pyg.nn.MessagePassing):
-    """Interaction Network as proposed in this paper:
-    https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
     """
     Compute the acceleration of fluidic particles.
@@ -64,7 +62,6 @@ class PDE_F(pyg.nn.MessagePassing):
             out = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, particle_type=particle_type, density=self.density)
 
         # out[:,0:self.dimension] = out[:,0:self.dimension] / (self.density.repeat(1,self.dimension) + 1E-7)        # divide force by density
-
         # out = torch.where(torch.isinf(out), torch.zeros_like(out), out)
         # out = torch.where(torch.isnan(out), torch.zeros_like(out), out)
 
@@ -75,7 +72,6 @@ class PDE_F(pyg.nn.MessagePassing):
         # if torch.isinf(out).any():
         #     print('inf')
 
-
         return out
 
     def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, field_i, field_j, particle_type_i, particle_type, density_i, density_j):
@@ -84,38 +80,41 @@ class PDE_F(pyg.nn.MessagePassing):
         self.delta_pos = delta_pos
 
         if self.mode == 'kernel':
-            self.mgrid = delta_pos.clone().detach()
-            self.mgrid.requires_grad = True
-            density_kernel = torch.exp(-4*(self.mgrid[:, 0] ** 2 + self.mgrid[:, 1] ** 2) / self.kernel_var)[:, None] / 2
+            mgrid = delta_pos.clone().detach()
+            mgrid.requires_grad = True
+            
+            Gaussian_kernel = torch.exp(-4*(mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / self.kernel_var)[:, None] / 2
 
-            if 'gaussian' in self.field_type:
-                pressure_kernel = density_kernel
-            elif 'triangle' in self.field_type:
-                dist = torch.sqrt(torch.sum(self.mgrid ** 2, dim=1))
-                pressure_kernel = ((self.max_radius - dist)**2 / self.kernel_var)[:, None] / 1.309
+            dist = torch.sqrt(torch.sum(mgrid ** 2, dim=1))
+            triangle_kernel = ((self.max_radius - dist)**2 / self.kernel_var)[:, None] / 1.309
 
-            grad_density_kernel = density_gradient(density_kernel, self.mgrid)
-            grad_pressure_kernel = density_gradient(pressure_kernel, self.mgrid)
-            grad_pressure_kernel = torch.where(torch.isnan(grad_pressure_kernel), torch.zeros_like(grad_pressure_kernel), grad_pressure_kernel)
-            laplace_autograd = density_laplace(density_kernel, self.mgrid)
+            grad_Gaussian_kernel = density_gradient(Gaussian_kernel, mgrid)
+            grad_triangle_kernel = density_gradient(triangle_kernel, mgrid)
+            grad_triangle_kernel = torch.where(torch.isnan(grad_triangle_kernel), torch.zeros_like(grad_triangle_kernel), grad_triangle_kernel)
+            laplacian_kernel = density_laplace(Gaussian_kernel, mgrid)
 
-            self.kernel_operators = torch.cat((density_kernel, grad_density_kernel, grad_pressure_kernel, laplace_autograd), dim=-1)
+            # self.kernel_operators = torch.cat((Gaussian_kernel, grad_Gaussian_kernel, grad_triangle_kernel, laplacian_kernel), dim=-1)
+            self.kernel_operators = dict()
+            self.kernel_operators['Gaussian'] = Gaussian_kernel
+            self.kernel_operators['grad_Gaussian'] = grad_Gaussian_kernel
+            self.kernel_operators['grad_triangle'] = grad_triangle_kernel
+            self.kernel_operators['laplacian'] = laplacian_kernel
 
-            return density_kernel
+            return Gaussian_kernel
 
         elif self.mode == 'message_passing':
 
-            pressure_force = torch.relu((density_i+density_j)/2 - self.p[2]/2) * self.kernel_operators[:, 3:5] * self.p[1] / density_j.repeat(1,2)
-            viscosity_force = (d_pos_j-d_pos_i) * self.p[3] * self.kernel_operators[:, 0:1].repeat(1,2) / density_j.repeat(1,2)
+            pressure_force = self.p[1] * torch.relu((density_i+density_j)/2 - self.p[2]/2) * self.kernel_operators['grad_triangle'] / density_j.repeat(1,2)
+            viscosity_force = self.p[3] * (d_pos_j-d_pos_i) * self.kernel_operators['Gaussian'] .repeat(1,2) / density_j.repeat(1,2)
 
-            # viscosity_force = d_pos_j * self.p[3] * self.kernel_operators[:, 5:7] / density_j.repeat(1,2)
-            # convection_force_x = d_pos_i[:,0:1] * self.kernel_operators[:, 1:2] *  d_pos_j[:,0:1] + d_pos_i[:,1:2] * self.kernel_operators[:, 2:3] *  d_pos_j[:,0:1]
-            # convection_force_y = d_pos_i[:, 0:1] * self.kernel_operators[:, 1:2] * d_pos_j[:, 1:2] + d_pos_i[:,1:2] * self.kernel_operators[:, 2:3] * d_pos_j[:, 1:2]
-            # convection_force = -torch.cat((convection_force_x, convection_force_y), dim=1) / density_j.repeat(1,2) * self.p[4]
+            # viscosity_force = self.p[3] * d_pos_j* self.kernel_operators['laplacian'] / density_j.repeat(1,2)
+            # convection_force_x = d_pos_i[:,0:1] * self.kernel_operators['Gaussian'][0:1] *  d_pos_j[:,0:1] + d_pos_i[:,1:2] * self.kernel_operators['Gaussian'][1:2] *  d_pos_j[:,0:1] / density_j
+            # convection_force_y = d_pos_i[:, 0:1] * self.kernel_operators['Gaussian'][0:1] * d_pos_j[:, 1:2] + d_pos_i[:,1:2] * elf.kernel_operators['Gaussian'][0:1] * d_pos_j[:, 1:2] /density_j
+            # convection_force = - self.p[4] * torch.cat((convection_force_x, convection_force_y), dim=1)
 
             force = pressure_force + viscosity_force # + convection_force
 
-            velocity = self.kernel_operators[:, 0:1] * torch.sum(d_pos_j ** 2, dim=1)[:, None] / density_j
+            velocity = self.kernel_operators['Gaussian']  * torch.sum(d_pos_j ** 2, dim=1)[:, None] / density_j
 
             out = torch.cat((force / density_i, velocity), dim=1)
 

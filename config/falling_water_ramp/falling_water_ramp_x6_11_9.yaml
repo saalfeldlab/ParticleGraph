@@ -1,4 +1,4 @@
-description: 'system of particles falling down in a box  redo 6_11 smaller LR'
+description: 'system of particles falling down   redo 6_11 time_window 2'
 dataset: 'falling_water_ramp_wall'
 data_folder_name: '/groups/saalfeld/saalfeldlab/projects/gnn/learning-to-simulate/WaterRamps/'
 
@@ -19,7 +19,7 @@ graph_model:
   mesh_model_name: ''
   prediction: '2nd_derivative'
 
-  input_size: 18
+  input_size: 10
   output_size: 512
   hidden_dim: 512
   n_mp_layers: 4
@@ -27,7 +27,7 @@ graph_model:
   embedding_dim: 2
 
   update_type: 'mlp'
-  input_size_update: 520
+  input_size_update: 516
   n_layers_update: 4
   hidden_dim_update: 128
   output_size_update: 2
@@ -42,7 +42,7 @@ training:
   batch_size: 8
   small_init_batch_size: False
   n_runs: 500
-  time_window: 4
+  time_window: 2
   time_window_noise: 0
   time_window_noise: 1.0E-5
 
@@ -55,8 +55,8 @@ training:
   fix_cluster_embedding: True
   device: 'auto'
 
-  learning_rate_start: 5E-6
-  learning_rate_embedding_start: 1E-5
+  learning_rate_start: 5E-5
+  learning_rate_embedding_start: 5E-5
   
   coeff_sign: 0
 

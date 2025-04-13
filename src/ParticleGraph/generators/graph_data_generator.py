@@ -548,6 +548,8 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 dataset_p_p = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
                 y = model(dataset_p_p)
                 y = y[:, 0: dimension]
+                y0 = y.clone().detach()
+                y1 = y.clone().detach()
                 density = model.density
 
                 distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x_mesh[None, :, 1:dimension + 1]) ** 2, dim=2)
@@ -655,7 +657,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 if 'latex' in style:
                     plt.rcParams['text.usetex'] = True
                     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-
 
                 if 'field' in style:
 
@@ -848,8 +849,8 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     matplotlib.rcParams['savefig.pad_inches'] = 0
 
                     if model_config.prediction == '2nd_derivative':
-                        V0_ = y0  * delta_t
-                        V1_ = y1  * delta_t
+                        V0_ = y0 * delta_t
+                        V1_ = y1 * delta_t
                     else:
                         V0_ = y0
                         V1_ = y1
