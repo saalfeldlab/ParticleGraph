@@ -35,7 +35,7 @@ import warnings
 import seaborn as sns
 import glob
 
-from pysr import PySRRegressor
+# from pysr import PySRRegressor
 
 
 class Interaction_Particle_extract(MessagePassing):
@@ -1375,12 +1375,29 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
 
     embedding_cluster = EmbeddingCluster(config)
 
-    x_list, y_list, vnorm, ynorm = load_training_data(dataset_name, n_runs, log_dir, device)
-    logger.info("vnorm:{:.2e},  ynorm:{:.2e}".format(to_numpy(vnorm), to_numpy(ynorm)))
-    x = x_list[1][0].clone().detach()
+    # x_list, y_list, vnorm, ynorm = load_training_data(dataset_name, n_runs, log_dir, device)
+
+    run = 17
+
+    x_list = []
+    y_list = []
+
+    x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
+    x = torch.tensor(x, dtype=torch.float32, device=device)
+    y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
+    y = torch.tensor(y, dtype=torch.float32, device=device)
+    x_list.append(x)
+    y_list.append(y)
+
+    x = x_list[0][0].clone().detach()
+    ynorm = torch.load(f'{log_dir}/ynorm.pt', map_location=device, weights_only=True)
+    vnorm = torch.load(f'{log_dir}/vnorm.pt', map_location=device, weights_only=True)
+
     index_particles = get_index_particles(x, n_particle_types, dimension)
+    config.simulation.n_particles = n_particles
     type_list = get_type_list(x, dimension)
     n_particles = x.shape[0]
+    n_frames = len(x_list[0])
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
@@ -1471,84 +1488,27 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
     else:
         for epoch in epoch_list:
 
-            net = f"{log_dir}/models/best_model_with_1_graphs_{epoch}.pt"
+            net = f"{log_dir}/models/best_model_with_{n_runs-1}_graphs_{epoch}.pt"
             print(f'network: {net}')
             state_dict = torch.load(net, map_location=device)
             model.load_state_dict(state_dict['model_state_dict'])
             model.eval()
 
-            config.training.cluster_method = 'distance_plot'
-            config.training.cluster_distance_threshold = 0.01
-            alpha=0.1
-            accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config,embedding_cluster,
-                                                                           cmap, index_particles, type_list,
-                                                                           n_particle_types, n_particles, ynorm, epoch,
-                                                                           log_dir, alpha, style,device)
-            print(
-                f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
-            logger.info(
-                f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
-
-
-            config.training.cluster_method = 'kmeans_auto_embedding'
-            config.training.cluster_distance_threshold = 0.01
-            alpha = 0.1
-            accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config,embedding_cluster,
-                                                                           cmap, index_particles, type_list,
-                                                                           n_particle_types, n_particles, ynorm, epoch,
-                                                                           log_dir, alpha, style,device)
-            print(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
-            logger.info(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
-
             fig, ax = fig_init()
-            p = torch.load(f'graphs_data/{dataset_name}/model_p.pt', map_location=device)
-            rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
-            rmserr_list = []
-            for n in range(int(n_particles * (1 - config.training.particle_dropout))):
-                embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                         rr[:, None] / max_radius, embedding_), dim=1)
-                with torch.no_grad():
-                    func = model.lin_edge(in_features.float())
-                    func = func[:, 0]
-                true_func = model.psi(rr, p[to_numpy(type_list[n]).astype(int)].squeeze(),
-                                      p[to_numpy(type_list[n]).astype(int)].squeeze())
-                rmserr_list.append(torch.sqrt(torch.mean((func * ynorm - true_func.squeeze()) ** 2)))
-                plt.plot(to_numpy(rr),
-                         to_numpy(func) * to_numpy(ynorm),
-                         color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
-            if 'latex' in style:
-                plt.xlabel(r'$d_{ij}$', fontsize=68)
-                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=68)
-            else:
-                plt.xlabel(r'$d_{ij}$', fontsize=68)
-                plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=68)
-            plt.xlim([0, max_radius])
-            plt.ylim(config.plotting.ylim)
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/learned_function_{epoch}.tif", dpi=170.7)
-            rmserr_list = torch.stack(rmserr_list)
-            rmserr_list = to_numpy(rmserr_list)
-            print("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
-            logger.info("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
-            plt.close()
-
-            fig, ax = fig_init()
-            plots = []
-            plots.append(rr)
+            embedding = get_embedding(model.a, run)
             for n in range(n_particle_types):
-                plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n), linewidth=8)
-                plots.append(model.psi(rr, p[n], p[n]).squeeze())
-            plt.xlim([0, max_radius])
-            plt.ylim(config.plotting.ylim)
+                pos = torch.argwhere(type_list == n)
+                pos = to_numpy(pos)
+                if len(pos) > 0:
+                    plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=10)
             if 'latex' in style:
-                plt.xlabel(r'$d_{ij}$', fontsize=68)
-                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=68)
+                plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
+                plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
             else:
-                plt.xlabel(r'$d_{ij}$', fontsize=68)
-                plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=68)
+                plt.xlabel(r'$a_{0}$', fontsize=68)
+                plt.ylabel(r'$a_{1}$', fontsize=68)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/true_func.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=170.7)
             plt.close()
 
 
@@ -7869,7 +7829,7 @@ def data_plot(config, epoch_list, style, device):
             plot_particle_field(config, epoch_list, log_dir, logger, 'grey', style, device)
         case 'PDE_E':
             plot_Coulomb(config, epoch_list, log_dir, logger, style, device)
-        case 'PDE_F':
+        case 'PDE_F' | 'PDE_F_A' | 'PDE_F_B' | 'PDE_C' | 'PDE_WF':
             plot_falling_particles(config, epoch_list, log_dir, logger, style, device)
         case 'PDE_G':
             if config_file == 'gravity_continuous':
@@ -8238,7 +8198,14 @@ if __name__ == '__main__':
     # config_list = ['boids_16_256']
     #config_list = ['signal_N5_v6','signal_N5_v6_0','signal_N5_v6_1','signal_N5_v6_2', 'signal_N5_v6_3', 'signal_N5_v7_1','signal_N5_v7_2','signal_N5_v7_3', 'signal_N5_v8','signal_N5_v9','signal_N5_v10',
     #                'signal_N5_v11','signal_N5_v12','signal_N5_v13','signal_N5_v14','signal_N5_v15']
-    config_list = ['signal_N5_v11']
+    # config_list = ['multimaterial_3','multimaterial_4','multimaterial_7','multimaterial_8']
+    config_list = ['multimaterial_8','multimaterial_8_1','multimaterial_8_2','multimaterial_8_3']
+
+    # config_list = ['falling_water_ramp_x6_11_1', 'falling_water_ramp_x6_11_2',
+    #                'falling_water_ramp_x6_11_3', 'falling_water_ramp_x6_11_4',
+    #                'falling_water_ramp_x6_11_5', 'falling_water_ramp_x6_11_6', 'falling_water_ramp_x6_11_7',
+    #                'falling_water_ramp_x6_11_8',
+    #                'falling_water_ramp_x6_11_9']
     # config_list = ['signal_N4_a3','signal_N4_a4']
     # config_list = ['signal_N2_a43_3_1_t8','signal_N2_a43_3_5_t8','signal_N2_a43_3_10_t8','signal_N2_a43_3_20_t8','signal_N2_a43_3_1_t16','signal_N2_a43_3_5_t16',
     #                'signal_N2_a43_3_10_t16','signal_N2_a43_3_20_t16','signal_N2_a43_3_20_t20','signal_N2_a43_3_20_t24','signal_N2_a43_3_20_t28']
@@ -8256,7 +8223,7 @@ if __name__ == '__main__':
         print(f'config_file  {config.config_file}')
 
         data_plot(config=config, epoch_list=['best'], style='black color', device=device)
-        data_plot(config=config, epoch_list=['all'], style='black color', device=device)
+        # data_plot(config=config, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['time'], style='black color', device=device)
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

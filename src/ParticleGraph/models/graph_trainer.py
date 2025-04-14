@@ -3691,53 +3691,53 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     # x_list[0] = torch.cat((x_list[0],x_list[0],x_list[0],x_list[0]), dim=0)
     x_inference_list = []
 
-    for it in trange(start_it, min(1600+start_it,stop_it-time_step)):
+    for it in trange(start_it, min(9600+start_it,stop_it-time_step)):
 
         check_and_clear_memory(device=device, iteration_number=it, every_n_iterations=25, memory_percentage_threshold=0.6)
         # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
         # print(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
 
-        with torch.no_grad():
-            if it < n_frames - 4:
-                x0 = x_list[0][it].clone().detach()
-                x0_next = x_list[0][(it+time_step)].clone().detach()
-                if not(model_config.particle_model_name == 'PDE_M'):
-                    y0 = y_list[0][it].clone().detach()
-            if has_mesh:
-                x[:, 1:5] = x0[:, 1:5].clone().detach()
-                dataset_mesh = data.Data(x=x, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
-            if do_tracking:
-                x = x0.clone().detach()
-            # error calculations
-            if 'PDE_N' in model_config.signal_model_name:
-                rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 6:7] - x0[:, 6:7]) ** 2, axis=1)))
-                neuron_gt_list.append(x0[:, 6:7])
-                neuron_pred_list.append(x[:, 6:7].clone().detach())
-                if ('Siren_short_term_plasticity' in field_type) | ('modulation' in field_type):
-                    modulation_gt_list.append(x0[:, 8:9])
-                    modulation_pred_list.append(x[:, 8:9].clone().detach())
+        # with torch.no_grad():
+        if it < n_frames - 4:
+            x0 = x_list[0][it].clone().detach()
+            x0_next = x_list[0][(it+time_step)].clone().detach()
+            if not(model_config.particle_model_name == 'PDE_M'):
+                y0 = y_list[0][it].clone().detach()
+        if has_mesh:
+            x[:, 1:5] = x0[:, 1:5].clone().detach()
+            dataset_mesh = data.Data(x=x, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
+        if do_tracking:
+            x = x0.clone().detach()
+        # error calculations
+        if 'PDE_N' in model_config.signal_model_name:
+            rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 6:7] - x0[:, 6:7]) ** 2, axis=1)))
+            neuron_gt_list.append(x0[:, 6:7])
+            neuron_pred_list.append(x[:, 6:7].clone().detach())
+            if ('Siren_short_term_plasticity' in field_type) | ('modulation' in field_type):
+                modulation_gt_list.append(x0[:, 8:9])
+                modulation_pred_list.append(x[:, 8:9].clone().detach())
 
-            elif model_config.mesh_model_name == 'WaveMesh':
-                rmserr = torch.sqrt(torch.mean((x[mask_mesh.squeeze(), 6:7] - x0[mask_mesh.squeeze(), 6:7]) ** 2))
-            elif model_config.mesh_model_name == 'RD_RPS_Mesh':
-                rmserr = torch.sqrt(
-                    torch.mean(torch.sum((x[mask_mesh.squeeze(), 6:9] - x0[mask_mesh.squeeze(), 6:9]) ** 2, axis=1)))
-            elif has_bounding_box:
-                rmserr = torch.sqrt(
-                    torch.mean(torch.sum(bc_dpos(x[:, 1:dimension + 1] - x0[:, 1:dimension + 1]) ** 2, axis=1)))
+        elif model_config.mesh_model_name == 'WaveMesh':
+            rmserr = torch.sqrt(torch.mean((x[mask_mesh.squeeze(), 6:7] - x0[mask_mesh.squeeze(), 6:7]) ** 2))
+        elif model_config.mesh_model_name == 'RD_RPS_Mesh':
+            rmserr = torch.sqrt(
+                torch.mean(torch.sum((x[mask_mesh.squeeze(), 6:9] - x0[mask_mesh.squeeze(), 6:9]) ** 2, axis=1)))
+        elif has_bounding_box:
+            rmserr = torch.sqrt(
+                torch.mean(torch.sum(bc_dpos(x[:, 1:dimension + 1] - x0[:, 1:dimension + 1]) ** 2, axis=1)))
+        else:
+            if (do_tracking) | (x.shape[0]!=x0.shape[0]):
+                rmserr = torch.zeros(1, device=device)
             else:
-                if (do_tracking) | (x.shape[0]!=x0.shape[0]):
-                    rmserr = torch.zeros(1, device=device)
-                else:
-                    rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 1:dimension + 1] - x0[:, 1:dimension + 1]) ** 2, axis=1)))
-                if x.shape[0] > 5000:
-                    geomloss = gloss(x[0:5000, 1:3], x0[0:5000, 1:3])
-                else:
-                    geomloss = gloss(x[:, 1:3], x0[:, 1:3])
-                geomloss_list.append(geomloss.item())
-            rmserr_list.append(rmserr.item())
+                rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 1:dimension + 1] - x0[:, 1:dimension + 1]) ** 2, axis=1)))
+            if x.shape[0] > 5000:
+                geomloss = gloss(x[0:5000, 1:3], x0[0:5000, 1:3])
+            else:
+                geomloss = gloss(x[:, 1:3], x0[:, 1:3])
+            geomloss_list.append(geomloss.item())
+        rmserr_list.append(rmserr.item())
 
-            data_id = torch.ones((n_particles, 1), dtype=torch.int) * run
+        data_id = torch.ones((n_particles, 1), dtype=torch.int) * run
 
         # update calculations
         if model_config.mesh_model_name == 'DiffMesh':
@@ -3809,7 +3809,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
             # compute connectivity and prediction
             if has_adjacency_matrix:
-
                 if 'PDE_N' in model_config.signal_model_name:
                     if 'visual' in field_type:
                         x[:n_nodes, 8:9] = model_f(time=it / n_frames) ** 2
@@ -3823,7 +3822,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                         x[:, 8] = model_f(t).squeeze() ** 2
                     elif 'modulation' in field_type:
                         x[:, 8:9] = model_f(time=it / n_frames) ** 2
-
                 dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
                 if 'test_simulation' in test_mode:
                     y = y0 / ynorm
@@ -3849,87 +3847,88 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     y = y0 / ynorm
                     pred = y
                 else:
-                    with torch.no_grad():
-                        pred = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device), k=it)
-                        y = pred
+                    pred = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device), k=it)
+                    y = pred
 
                 if has_ghost:
                     y = y[mask_ghost]
 
-            if sub_sampling > 1:
-                # predict position, does not work with rotation_augmentation
-                if time_step == 1:
-                    x_next = bc_pos(y[:,0:dimension])
-                elif time_step == 2:
-                    x_next = bc_pos(y[:,dimension:2*dimension])
 
-                x[:, dimension + 1:2 * dimension + 1] = (x_next - x[:, 1:dimension + 1]) / delta_t
-                x[:, 1:dimension + 1] = x_next
-                loss = (x[:, 1:dimension + 1] - x0_next[:, 1:dimension + 1]).norm(2)
-                pred_err_list.append(to_numpy(torch.sqrt(loss)))
+            with torch.no_grad():
+                if sub_sampling > 1:
+                    # predict position, does not work with rotation_augmentation
+                    if time_step == 1:
+                        x_next = bc_pos(y[:,0:dimension])
+                    elif time_step == 2:
+                        x_next = bc_pos(y[:,dimension:2*dimension])
 
-            elif do_tracking:
+                    x[:, dimension + 1:2 * dimension + 1] = (x_next - x[:, 1:dimension + 1]) / delta_t
+                    x[:, 1:dimension + 1] = x_next
+                    loss = (x[:, 1:dimension + 1] - x0_next[:, 1:dimension + 1]).norm(2)
+                    pred_err_list.append(to_numpy(torch.sqrt(loss)))
 
-                # x[:, dimension + 1:2 * dimension + 1] = y
-                # x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1] + x[:, dimension + 1:2 * dimension + 1] * delta_t)
+                elif do_tracking:
 
-                x_pos_next = x0_next[:, 1:dimension + 1].clone().detach()
-                if pred.shape[1] != dimension:
-                    pred = torch.cat((pred, torch.zeros(pred.shape[0], 1, device=pred.device)), dim= 1)
-                if model_config.prediction == '2nd_derivative':
-                    x_pos_pred = (x[:, 1:dimension + 1] + delta_t * time_step * (x[:, dimension + 1:2*dimension + 1] + delta_t * time_step * pred * ynorm))
-                else:
-                    x_pos_pred = (x[:, 1:dimension + 1] + delta_t * time_step * pred * ynorm)
-                distance = torch.sum(bc_dpos(x_pos_pred[:, None, :] - x_pos_next[None, :, :]) ** 2, dim=2)
-                result = distance.min(dim=1)
-                min_value = result.values
-                indices = result.indices
-                loss = torch.std(torch.sqrt(min_value))
-                pred_err_list.append(to_numpy(torch.sqrt(loss)))
-                if 'inference' in test_mode:
-                    x[:,dimension+1:2*dimension+1] = pred.clone().detach() / (delta_t * time_step)
+                    # x[:, dimension + 1:2 * dimension + 1] = y
+                    # x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1] + x[:, dimension + 1:2 * dimension + 1] * delta_t)
 
-            else:
-                loss = (pred[:, 0:dimension] * ynorm - y0).norm(2)
-                pred_err_list.append(to_numpy(torch.sqrt(loss)))
-                if model_config.prediction == '2nd_derivative':
-                    y = y * ynorm * delta_t
-                    x[:, dimension + 1:2 * dimension + 1] = x[:, dimension + 1:2 * dimension + 1] + y  # speed update
-                else:
-                    y = y * vnorm
-                    if 'PDE_N' in model_config.signal_model_name:
-                        x[:, 6:7] += y * delta_t  # signal update
+                    x_pos_next = x0_next[:, 1:dimension + 1].clone().detach()
+                    if pred.shape[1] != dimension:
+                        pred = torch.cat((pred, torch.zeros(pred.shape[0], 1, device=pred.device)), dim= 1)
+                    if model_config.prediction == '2nd_derivative':
+                        x_pos_pred = (x[:, 1:dimension + 1] + delta_t * time_step * (x[:, dimension + 1:2*dimension + 1] + delta_t * time_step * pred * ynorm))
                     else:
-                        x[:, dimension + 1:2 * dimension + 1] = y
+                        x_pos_pred = (x[:, 1:dimension + 1] + delta_t * time_step * pred * ynorm)
+                    distance = torch.sum(bc_dpos(x_pos_pred[:, None, :] - x_pos_next[None, :, :]) ** 2, dim=2)
+                    result = distance.min(dim=1)
+                    min_value = result.values
+                    indices = result.indices
+                    loss = torch.std(torch.sqrt(min_value))
+                    pred_err_list.append(to_numpy(torch.sqrt(loss)))
+                    if 'inference' in test_mode:
+                        x[:,dimension+1:2*dimension+1] = pred.clone().detach() / (delta_t * time_step)
 
-                if 'bounce_bottom' in test_mode:
-                    x[:, 1:dimension + 1] = x[:, 1:dimension + 1] + x[:, dimension + 1:2 * dimension + 1] * delta_t
-                    bouncing_pos = torch.argwhere((x[:, 2] <= 0) ).squeeze()
-                    if bouncing_pos.numel() > 0:
-                        x[bouncing_pos, dimension + 2] = - bounce_coeff * x[bouncing_pos, dimension + 2]
-                        x[bouncing_pos, 2] = - x[bouncing_pos, 2] # 1E-6  #  + torch.rand(bouncing_pos.numel(), device=device) * 0.05
-                    x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1])
                 else:
-                    x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1] + x[:, dimension + 1:2 * dimension + 1] * delta_t)  # position update
+                    loss = (pred[:, 0:dimension] * ynorm - y0).norm(2)
+                    pred_err_list.append(to_numpy(torch.sqrt(loss)))
+                    if model_config.prediction == '2nd_derivative':
+                        y = y * ynorm * delta_t
+                        x[:, dimension + 1:2 * dimension + 1] = x[:, dimension + 1:2 * dimension + 1] + y  # speed update
+                    else:
+                        y = y * vnorm
+                        if 'PDE_N' in model_config.signal_model_name:
+                            x[:, 6:7] += y * delta_t  # signal update
+                        else:
+                            x[:, dimension + 1:2 * dimension + 1] = y
 
-            if 'bounce_all' in test_mode:
-                gap = 0.005
-                bouncing_pos = torch.argwhere((x[:, 1] <= 0.1-gap) | (x[:, 1] >= 0.9+gap)).squeeze()
-                if bouncing_pos.numel() > 0:
-                    x[bouncing_pos, 3] = - 0.7 * x[bouncing_pos, 3]
-                bouncing_pos = torch.argwhere((x[:, 2] <= 0.1-gap) | (x[:, 2] >= 0.9+gap)).squeeze()
-                if bouncing_pos.numel() > 0:
-                    x[bouncing_pos, 4] = - 0.7 * x[bouncing_pos, 4]
+                    if 'bounce_bottom' in test_mode:
+                        x[:, 1:dimension + 1] = x[:, 1:dimension + 1] + x[:, dimension + 1:2 * dimension + 1] * delta_t
+                        bouncing_pos = torch.argwhere((x[:, 2] <= 0) ).squeeze()
+                        if bouncing_pos.numel() > 0:
+                            x[bouncing_pos, dimension + 2] = - bounce_coeff * x[bouncing_pos, dimension + 2]
+                            x[bouncing_pos, 2] = - x[bouncing_pos, 2] # 1E-6  #  + torch.rand(bouncing_pos.numel(), device=device) * 0.05
+                        x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1])
+                    else:
+                        x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1] + x[:, dimension + 1:2 * dimension + 1] * delta_t)  # position update
 
-            if (time_window>1) & ('plot_data' not in test_mode):
-                moving_pos = torch.argwhere(x[:,5]!=0)
-                x_list[0][it+1,moving_pos.squeeze(),1:2 * dimension + 1] = x[moving_pos.squeeze(), 1:2 * dimension + 1].clone().detach()
-            if 'fixed' in test_mode:
-                fixed_pos = torch.argwhere(x[:,5]==0)
-                x[fixed_pos.squeeze(), 1:2 * dimension + 1] = x_list[0][it+1,fixed_pos.squeeze(),1:2 * dimension + 1].clone().detach()
+                if 'bounce_all' in test_mode:
+                    gap = 0.005
+                    bouncing_pos = torch.argwhere((x[:, 1] <= 0.1-gap) | (x[:, 1] >= 0.9+gap)).squeeze()
+                    if bouncing_pos.numel() > 0:
+                        x[bouncing_pos, 3] = - 0.7 * x[bouncing_pos, 3]
+                    bouncing_pos = torch.argwhere((x[:, 2] <= 0.1-gap) | (x[:, 2] >= 0.9+gap)).squeeze()
+                    if bouncing_pos.numel() > 0:
+                        x[bouncing_pos, 4] = - 0.7 * x[bouncing_pos, 4]
 
-            if 'inference' in test_mode:
-                x_inference_list.append(x)
+                if (time_window>1) & ('plot_data' not in test_mode):
+                    moving_pos = torch.argwhere(x[:,5]!=0)
+                    x_list[0][it+1,moving_pos.squeeze(),1:2 * dimension + 1] = x[moving_pos.squeeze(), 1:2 * dimension + 1].clone().detach()
+                if 'fixed' in test_mode:
+                    fixed_pos = torch.argwhere(x[:,5]==0)
+                    x[fixed_pos.squeeze(), 1:2 * dimension + 1] = x_list[0][it+1,fixed_pos.squeeze(),1:2 * dimension + 1].clone().detach()
+
+                if 'inference' in test_mode:
+                    x_inference_list.append(x)
 
         # vizualization
         with torch.no_grad():

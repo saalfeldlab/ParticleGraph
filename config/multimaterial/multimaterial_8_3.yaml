@@ -20,7 +20,7 @@ graph_model:
   mesh_model_name: ''
   prediction: '2nd_derivative'
 
-  input_size: 11
+  input_size: 12
   output_size: 2
   hidden_dim: 256
   n_mp_layers: 5

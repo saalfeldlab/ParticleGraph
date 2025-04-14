@@ -144,7 +144,6 @@ class Interaction_Smooth_Particle(pyg.nn.MessagePassing):
             dist = torch.sqrt(torch.sum(mgrid ** 2, dim=1))
             triangle_kernel = ((self.max_radius - dist) ** 2 / self.kernel_var)[:, None] / 1.309
 
-
             grad_triangle_kernel = density_gradient(triangle_kernel, mgrid)
             grad_triangle_kernel = torch.where(torch.isnan(grad_triangle_kernel),
                                                torch.zeros_like(grad_triangle_kernel), grad_triangle_kernel)
@@ -164,8 +163,10 @@ class Interaction_Smooth_Particle(pyg.nn.MessagePassing):
 
         elif self.mode == 'message_passing':
 
-            in_features = torch.cat((d_pos_i - d_pos_j, embedding_i, embedding_j, density_i, density_j,
-                                     self.kernel_operators['grad_triangle'], self.kernel_operators['Gaussian'] ), dim=-1)
+            if self.model == 'PDE_F_B':
+                in_features = torch.cat((d_pos_i - d_pos_j, embedding_i, embedding_j, density_i, density_j, self.kernel_operators['Gaussian'],self.kernel_operators['grad_Gaussian'],self.kernel_operators['laplacian']), dim=-1)
+            else:
+                in_features = torch.cat((d_pos_i - d_pos_j, embedding_i, embedding_j, density_i, density_j, self.kernel_operators['grad_triangle'], self.kernel_operators['Gaussian'] ), dim=-1)
 
             out = self.lin_edge(in_features) / density_j.repeat(1,2)
 

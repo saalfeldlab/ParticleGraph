@@ -552,18 +552,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 y1 = y.clone().detach()
                 density = model.density
 
-                # distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x_mesh[None, :, 1:dimension + 1]) ** 2, dim=2)
-                # adj_t = ((distance < max_radius ** 2) & (distance >= 0)).float() * 1
-                # edge_index = adj_t.nonzero().t().contiguous()
-                # xp = torch.cat((x_mesh[:, 0: 2 + 2*dimension], x[:, 0: 2 + 2*dimension]), 0)
-                # edge_index[0, :] = edge_index[0, :] + x_mesh.shape[0]
-                # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-                # dataset = data.Data(x=xp, pos=xp[:, 1:dimension + 1], edge_index=edge_index)
-                #
-                # y_field = model(dataset, continuous_field=True, continuous_field_size=x_mesh.shape)[0: x_mesh.shape[0]]
-                # density_field = model.density[0: x_mesh.shape[0]]
-                # velocity_field = y_field[0: x_mesh.shape[0],2]
-
             else:
 
                 distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)

@@ -16,7 +16,7 @@ simulation:
   start_frame: 0
 
 graph_model:
-  particle_model_name: 'PDE_F_B'
+  particle_model_name: 'PDE_F_A'
   mesh_model_name: ''
   prediction: '2nd_derivative'
 
@@ -52,8 +52,8 @@ training:
   fix_cluster_embedding: True
   device: 'auto'
 
-  learning_rate_start: 1E-6
-  learning_rate_embedding_start: 5E-6
+  learning_rate_start: 5.0E-4
+  learning_rate_embedding_start: 5.0E-3
 
 
 
