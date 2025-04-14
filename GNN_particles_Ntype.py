@@ -55,15 +55,17 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'generate'
+        task = 'train'
         best_model = ''
         # config_list = ['falling_water_ramp_x6_11']
         # config_list = ['falling_water_ramp_x6_11_1']
-        # config_list = ['multimaterial_bis','multimaterial_2','multimaterial_3','multimaterial_4']
-        # config_list = ['falling_water_ramp_x6_11_1','falling_water_ramp_x6_11_3','falling_water_ramp_x6_11_4','falling_water_ramp_x6_11_5',
-        # config_list = ['falling_water_ramp_x6_11_6','falling_water_ramp_x6_11_7','falling_water_ramp_x6_11_8','falling_water_ramp_x6_11_9',
+        # config_list = ['multimaterial_1','multimaterial_2','multimaterial_3','multimaterial_4',
+        # config_list = ['falling_water_ramp_x6_11_1','falling_water_ramp_x6_11_2','falling_water_ramp_x6_11_3','falling_water_ramp_x6_11_4',
+        #         'falling_water_ramp_x6_11_5','falling_water_ramp_x6_11_6','falling_water_ramp_x6_11_7','falling_water_ramp_x6_11_8',
+        #         'falling_water_ramp_x6_11_9']
         # config_list = ['falling_water_ramp_x6_11_11','falling_water_ramp_x6_11_12']
-        config_list = ['fluids_a']
+
+        config_list = ['fluids_m14']
         # config_list = ['signal_N4_all_1']
         # config_list = ['arbitrary_3_test']
         # config_list = ['wave_smooth_3']
@@ -91,7 +93,7 @@ if __name__ == '__main__':
         if 'train' in task:
             data_train(config=config, erase=False, best_model=best_model, device=device)
         if 'test' in task:
-            data_test(config=config, visualize=True, style='black color', verbose=False, best_model='1_0', run=2, test_mode='fixed_bounce_all', sample_embedding=False, step=4, device=device) # particle_of_interest=100,
+            data_test(config=config, visualize=True, style='black color', verbose=False, best_model='best', run=2, test_mode='fixed_bounce_all', sample_embedding=False, step=4, device=device) # particle_of_interest=100,
         if 'try_func' in task:
             try_func(max_radius=config.simulation.max_radius, device=device)
 

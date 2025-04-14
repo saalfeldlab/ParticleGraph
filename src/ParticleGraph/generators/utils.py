@@ -96,7 +96,8 @@ def choose_model(config=[], W=[], device=[]):
             model = PDE_E(aggr_type=aggr_type, p=p,
                           clamp=config.training.clamp, pred_limit=config.training.pred_limit,
                           prediction=config.graph_model.prediction, bc_dpos=bc_dpos)
-        case 'PDE_F':
+
+        case 'PDE_F' |'PDE_F_A' | 'PDE_F_B' :
             model = PDE_F(aggr_type=aggr_type, p=torch.tensor(params, dtype=torch.float32, device=device), bc_dpos=bc_dpos,
                           dimension=dimension, delta_t=delta_t, max_radius=max_radius, field_type=config.graph_model.field_type)
         case 'PDE_K':

@@ -327,11 +327,11 @@ class CustomColorMap:
                 case 2:
                     color = (1, 0, 0)
                 case 3:
-                    color = (0, 0.75, 0)
-                case 4:
-                    color = (0.5, 0, 0.75)
-                case 5:
                     color = (0.5, 0.75, 0)
+                case 4:
+                    color = (0, 0.75, 0)
+                case 5:
+                    color = (0.5, 0, 0.25)
                 case _:
                     color = (1, 1, 1)
         elif self.model_name == 'PDE_E':

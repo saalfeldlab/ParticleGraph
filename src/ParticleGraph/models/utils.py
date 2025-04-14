@@ -211,7 +211,6 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
     # plt.savefig(f"./{log_dir}/tmp_training/matrix/{epoch}_{N}.tif", dpi=87)
     # plt.close()
 
-
 def plot_training_signal_field(x, n_nodes,n_nodes_per_axis, recursive_loop, kk, time_step, x_list, run, model, field_type, model_f, edges, y_list, ynorm, delta_t, n_frames, log_dir, epoch, N, recursive_parameters, modulation, device):
     if recursive_loop > 1:
         x = torch.tensor(x_list[run][kk], device=device).clone().detach()
@@ -353,8 +352,6 @@ def plot_training_signal_field(x, n_nodes,n_nodes_per_axis, recursive_loop, kk, 
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
         plt.close()
-
-
 
 def plot_training_particle_field(config, has_siren, has_siren_time, model_f,  n_frames, model_name, log_dir, epoch, N, x, x_mesh, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
 
@@ -1210,8 +1207,8 @@ def choose_training_model(model_config=None, device=None, projections=None):
             model.edges = torch.tensor(e, dtype=torch.long, device=device)
         case 'PDE_Cell_A' | 'PDE_Cell_B' | 'PDE_Cell_B_area' | 'PDE_Cell_A_area':
             model = Interaction_Cell(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
-        case 'PDE_F':
-            model = Interaction_Particle(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
+        case 'PDE_F_A' |'PDE_F_B' :
+            model = Interaction_Smooth_Particle(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             model.edges = []
             # model = Interaction_Falling_Water(aggr_type=aggr_type, config=model_config,bc_dpos=bc_dpos, dimension=dimension, device=device)
         case 'PDE_WF':

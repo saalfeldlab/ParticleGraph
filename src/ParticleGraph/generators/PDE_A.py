@@ -43,14 +43,12 @@ class PDE_A(pyg.nn.MessagePassing):
                 if self.func_p[n][1] != self.func_p[n][2]:
                     self_evolving_function == True
 
-
     def get_interp_a(self, k, particle_id):
 
         id = particle_id * 100 + k // self.embedding_step
         alpha = (k % self.embedding_step) / self.embedding_step
 
         return alpha * self.a[id+1, :] + (1 - alpha) * self.a[id, :]
-
 
     def forward(self, data=[], has_field=False, k=0):
         x, edge_index = data.x, data.edge_index
@@ -62,11 +60,10 @@ class PDE_A(pyg.nn.MessagePassing):
 
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         particle_type = x[:, 1 + 2*self.dimension].long()
-        parameters = self.p[ to_numpy(particle_type),:]
+        parameters = self.p[to_numpy(particle_type),:]
         d_pos = self.propagate(edge_index, pos=x[:, 1:self.dimension+1], particle_type=particle_type[:,None], parameters=parameters.squeeze(), field=field, )
 
         return d_pos
-
 
     def message(self, pos_i, pos_j, particle_type_i, parameters_i, field_j):
 
@@ -100,7 +97,6 @@ class PDE_A(pyg.nn.MessagePassing):
         # plt.scatter(to_numpy(distance[pos]), to_numpy(f[pos]),s=0.1)
         # fig = plt.figure()
         # plt.hist(to_numpy(distance[pos]), bins=100)
-
 
     def psi(self, r, p, func='arbitrary'):
 

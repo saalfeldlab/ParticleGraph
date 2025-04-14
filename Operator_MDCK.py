@@ -40,8 +40,6 @@ def density_gradient(y, x, grad_outputs=None):
 
 
 
-
-
 class Operator_smooth(pyg.nn.MessagePassing):
 
     """

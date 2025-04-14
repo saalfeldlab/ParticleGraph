@@ -142,6 +142,7 @@ class Mesh_Smooth(pyg.nn.MessagePassing):
 
             kernel_modified = torch.exp(-2 * (mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / (20*self.kernel_var))[:, None]
             fig = plt.figure(figsize=(6, 6))
+
             plt.ion()
             plt.scatter(to_numpy(mgrid[:,0]), to_numpy(mgrid[:,1]), s=10, c=to_numpy(kernel_modified))
             plt.show()

@@ -424,7 +424,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
     training_config = config.training
     model_config = config.graph_model
 
-    print(f'generating data ... {config} {model_config.particle_model_name} {model_config.mesh_model_name}')
+    print(f'generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
     dimension = simulation_config.dimension
     max_radius = simulation_config.max_radius
@@ -552,17 +552,17 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 y1 = y.clone().detach()
                 density = model.density
 
-                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x_mesh[None, :, 1:dimension + 1]) ** 2, dim=2)
-                adj_t = ((distance < max_radius ** 2) & (distance >= 0)).float() * 1
-                edge_index = adj_t.nonzero().t().contiguous()
-                xp = torch.cat((x_mesh[:, 0: 2 + 2*dimension], x[:, 0: 2 + 2*dimension]), 0)
-                edge_index[0, :] = edge_index[0, :] + x_mesh.shape[0]
-                edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-                dataset = data.Data(x=xp, pos=xp[:, 1:dimension + 1], edge_index=edge_index)
-
-                y_field = model(dataset, continuous_field=True, continuous_field_size=x_mesh.shape)[0: x_mesh.shape[0]]
-                density_field = model.density[0: x_mesh.shape[0]]
-                velocity_field = y_field[0: x_mesh.shape[0],2]
+                # distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x_mesh[None, :, 1:dimension + 1]) ** 2, dim=2)
+                # adj_t = ((distance < max_radius ** 2) & (distance >= 0)).float() * 1
+                # edge_index = adj_t.nonzero().t().contiguous()
+                # xp = torch.cat((x_mesh[:, 0: 2 + 2*dimension], x[:, 0: 2 + 2*dimension]), 0)
+                # edge_index[0, :] = edge_index[0, :] + x_mesh.shape[0]
+                # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+                # dataset = data.Data(x=xp, pos=xp[:, 1:dimension + 1], edge_index=edge_index)
+                #
+                # y_field = model(dataset, continuous_field=True, continuous_field_size=x_mesh.shape)[0: x_mesh.shape[0]]
+                # density_field = model.density[0: x_mesh.shape[0]]
+                # velocity_field = y_field[0: x_mesh.shape[0],2]
 
             else:
 
@@ -666,38 +666,41 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     # pos = torch.argwhere(edge_index[1,:]==3393)
                     # pos = edge_index[0,pos.squeeze()]
 
-                    density_field = to_numpy(density_field)
+                    # density_field = to_numpy(density_field)
+                    #
+                    # # matplotlib.use("Qt5Agg")
+                    # fig = plt.figure(figsize=(8, 8))
+                    # plt.xticks([])
+                    # plt.yticks([])
+                    # im = np.reshape(density_field, (100, 100))
+                    # # im = np.flipud(im)
+                    # im_resized = zoom(im, 10)
+                    # plt.imshow(im_resized, vmin=0, vmax=16, cmap='bwr')
+                    # # plt.scatter(to_numpy(x_mesh[:, 1] * 1000), to_numpy(x_mesh[:, 2] * 1000), c=density_field, s=40, vmin=2, vmax=6, cmap='bwr')
+                    # # plt.text(20, 950, f'{np.mean(density_field):0.3}+/-{np.std(density_field):0.3}', c='k', fontsize=18)
+                    # plt.scatter(to_numpy(x[:, 1]*1000), to_numpy(x[:, 2]*1000), s=1, c='k')
+                    # # plt.scatter(to_numpy(x[pos, 1] * 1000), to_numpy(x[pos, 2] * 1000), s=10, c='b')
+                    # plt.axis('off')
+                    # plt.xlim([0,1000])
+                    # plt.ylim([-40,1000])
+                    # plt.tight_layout()
+                    # # plt.show()
+                    # plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=80)
+                    # plt.close()
 
-                    # matplotlib.use("Qt5Agg")
                     fig = plt.figure(figsize=(8, 8))
                     plt.xticks([])
                     plt.yticks([])
-                    im = np.reshape(density_field, (100, 100))
-                    # im = np.flipud(im)
-                    im_resized = zoom(im, 10)
-                    plt.imshow(im_resized, vmin=0, vmax=16, cmap='bwr')
-                    # plt.scatter(to_numpy(x_mesh[:, 1] * 1000), to_numpy(x_mesh[:, 2] * 1000), c=density_field, s=40, vmin=2, vmax=6, cmap='bwr')
-                    # plt.text(20, 950, f'{np.mean(density_field):0.3}+/-{np.std(density_field):0.3}', c='k', fontsize=18)
-                    plt.scatter(to_numpy(x[:, 1]*1000), to_numpy(x[:, 2]*1000), s=1, c='k')
-                    # plt.scatter(to_numpy(x[pos, 1] * 1000), to_numpy(x[pos, 2] * 1000), s=10, c='b')
                     plt.axis('off')
-                    plt.xlim([0,1000])
-                    plt.ylim([-40,1000])
-                    plt.tight_layout()
-                    # plt.show()
-                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=80)
-                    plt.close()
-
-                    fig = plt.figure(figsize=(8, 8))
-                    plt.xticks([])
-                    plt.yticks([])
-                    velocity_field = to_numpy(velocity_field)
-                    im = np.reshape(velocity_field, (100, 100))
-                    plt.axis('off')
+                    # velocity_field = to_numpy(velocity_field)
+                    # im = np.reshape(velocity_field, (100, 100))
                     # im = np.flipud(im)
-                    im_resized = zoom(im, 10)
-                    plt.imshow(im_resized, cmap='viridis', vmin=speedlim[0], vmax=speedlim[1])
-                    plt.scatter(to_numpy(x[:, 1]*1000), to_numpy(x[:, 2]*1000), s=1, c='w')
+                    # im_resized = zoom(im, 10)
+                    # plt.imshow(im_resized, cmap='viridis', vmin=speedlim[0], vmax=speedlim[1])
+                    for n in range(n_particle_types):
+                            plt.scatter(to_numpy(x[index_particles[n], 1]*1000), to_numpy(x[index_particles[n], 2]*1000),
+                                        s=2, color=cmap.color(n))
+                    # plt.scatter(to_numpy(x[:, 1]*1000), to_numpy(x[:, 2]*1000), s=1, c='w')
                     plt.xlim([0,1000])
                     plt.ylim([-40,1000])
                     plt.tight_layout()
