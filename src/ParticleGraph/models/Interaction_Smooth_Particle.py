@@ -61,6 +61,7 @@ class Interaction_Smooth_Particle(pyg.nn.MessagePassing):
         self.max_radius = simulation_config.max_radius
         self.rotation_augmentation = train_config.rotation_augmentation
         self.time_window = train_config.time_window
+        self.time_window_noise = train_config.time_window_noise
         self.sub_sampling = simulation_config.sub_sampling
         self.state = simulation_config.state_type
 
@@ -112,6 +113,10 @@ class Interaction_Smooth_Particle(pyg.nn.MessagePassing):
             field = torch.ones_like(x[:,6:7])
 
         pos = x[:, 1:self.dimension+1]
+        if training & (self.time_window_noise > 0):
+            noise = torch.randn_like(pos) * self.time_window_noise
+            pos = pos + noise
+
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
         if self.state == 'sequence':
             particle_id = x[:, 0:1].long()
@@ -150,7 +155,6 @@ class Interaction_Smooth_Particle(pyg.nn.MessagePassing):
 
             self.kernel_operators = dict()
             self.kernel_operators['Gaussian'] = Gaussian_kernel.clone().detach()
-
             self.kernel_operators['grad_triangle'] = grad_triangle_kernel.clone().detach()
 
             if self.model == 'PDE_F_B':
@@ -163,10 +167,11 @@ class Interaction_Smooth_Particle(pyg.nn.MessagePassing):
 
         elif self.mode == 'message_passing':
 
-            if self.model == 'PDE_F_B':
-                in_features = torch.cat((d_pos_i - d_pos_j, embedding_i, embedding_j, density_i, density_j, self.kernel_operators['Gaussian'],self.kernel_operators['grad_Gaussian'],self.kernel_operators['laplacian']), dim=-1)
-            else:
+            if self.model == 'PDE_F_A':
                 in_features = torch.cat((d_pos_i - d_pos_j, embedding_i, embedding_j, density_i, density_j, self.kernel_operators['grad_triangle'], self.kernel_operators['Gaussian'] ), dim=-1)
+            elif self.model == 'PDE_F_B':
+                in_features = torch.cat((d_pos_i - d_pos_j, embedding_i, embedding_j, density_i, density_j, self.kernel_operators['Gaussian'],self.kernel_operators['grad_Gaussian'],self.kernel_operators['laplacian']), dim=-1)
+
 
             out = self.lin_edge(in_features) / density_j.repeat(1,2)
 

@@ -1377,7 +1377,7 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
 
     # x_list, y_list, vnorm, ynorm = load_training_data(dataset_name, n_runs, log_dir, device)
 
-    run = 17
+    run = 1
 
     x_list = []
     y_list = []
@@ -8199,13 +8199,16 @@ if __name__ == '__main__':
     #config_list = ['signal_N5_v6','signal_N5_v6_0','signal_N5_v6_1','signal_N5_v6_2', 'signal_N5_v6_3', 'signal_N5_v7_1','signal_N5_v7_2','signal_N5_v7_3', 'signal_N5_v8','signal_N5_v9','signal_N5_v10',
     #                'signal_N5_v11','signal_N5_v12','signal_N5_v13','signal_N5_v14','signal_N5_v15']
     # config_list = ['multimaterial_3','multimaterial_4','multimaterial_7','multimaterial_8']
-    config_list = ['multimaterial_8','multimaterial_8_1','multimaterial_8_2','multimaterial_8_3']
+    # config_list = ['multimaterial_8','multimaterial_8_1','multimaterial_8_2','multimaterial_8_3']
 
     # config_list = ['falling_water_ramp_x6_11_1', 'falling_water_ramp_x6_11_2',
     #                'falling_water_ramp_x6_11_3', 'falling_water_ramp_x6_11_4',
     #                'falling_water_ramp_x6_11_5', 'falling_water_ramp_x6_11_6', 'falling_water_ramp_x6_11_7',
     #                'falling_water_ramp_x6_11_8',
     #                'falling_water_ramp_x6_11_9']
+
+    config_list = ['fluids_m14']
+
     # config_list = ['signal_N4_a3','signal_N4_a4']
     # config_list = ['signal_N2_a43_3_1_t8','signal_N2_a43_3_5_t8','signal_N2_a43_3_10_t8','signal_N2_a43_3_20_t8','signal_N2_a43_3_1_t16','signal_N2_a43_3_5_t16',
     #                'signal_N2_a43_3_10_t16','signal_N2_a43_3_20_t16','signal_N2_a43_3_20_t20','signal_N2_a43_3_20_t24','signal_N2_a43_3_20_t28']

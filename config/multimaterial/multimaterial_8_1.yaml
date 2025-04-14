@@ -43,6 +43,8 @@ training:
   small_init_batch_size: False
   n_runs: 999
 
+  time_window_noise: 1.0E-5
+
   sparsity: 'none'
   sparsity_freq: 3
   cluster_method: 'kmeans_auto_embedding'
@@ -52,8 +54,8 @@ training:
   fix_cluster_embedding: True
   device: 'auto'
 
-  learning_rate_start: 5.0E-4
-  learning_rate_embedding_start: 5.0E-3
+  learning_rate_start: 5.0E-5
+  learning_rate_embedding_start: 5.0E-4
 
 
 
