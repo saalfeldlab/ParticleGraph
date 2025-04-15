@@ -103,7 +103,7 @@ def get_in_features(rr, embedding_=[], config_model=[], max_radius=[]):
             in_features = torch.cat((rr[:, None], embedding_, embedding_), dim=1)
         case 'PDE_K':
             in_features = torch.cat((0 * rr[:, None], rr[:, None] / max_radius), dim=1)
-        case 'PDE_F'| 'PDE_F1' | 'PDE_F2' | 'PDE_F3':
+        case 'PDE_F':
             in_features = torch.cat((0 * rr[:, None], rr[:, None] / max_radius, rr[:, None] / max_radius, embedding_, embedding_), dim=-1)
         case 'PDE_WF':
             in_features = torch.cat((rr[:, None] / max_radius, rr[:, None] / max_radius, embedding_, embedding_), dim=-1)
@@ -1207,7 +1207,7 @@ def choose_training_model(model_config=None, device=None, projections=None):
             model.edges = torch.tensor(e, dtype=torch.long, device=device)
         case 'PDE_Cell_A' | 'PDE_Cell_B' | 'PDE_Cell_B_area' | 'PDE_Cell_A_area':
             model = Interaction_Cell(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
-        case 'PDE_F_A' |'PDE_F_B' :
+        case 'PDE_F_A' |'PDE_F_B'|'PDE_F_C'|'PDE_F_D'|'PDE_F_E' :
             model = Interaction_Smooth_Particle(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             model.edges = []
             # model = Interaction_Falling_Water(aggr_type=aggr_type, config=model_config,bc_dpos=bc_dpos, dimension=dimension, device=device)

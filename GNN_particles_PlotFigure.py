@@ -7829,7 +7829,7 @@ def data_plot(config, epoch_list, style, device):
             plot_particle_field(config, epoch_list, log_dir, logger, 'grey', style, device)
         case 'PDE_E':
             plot_Coulomb(config, epoch_list, log_dir, logger, style, device)
-        case 'PDE_F' | 'PDE_F_A' | 'PDE_F_B' | 'PDE_C' | 'PDE_WF':
+        case 'PDE_F' | 'PDE_F_A' | 'PDE_F_B' | 'PDE_C' | 'PDE_D' | 'PDE_E' | 'PDE_WF':
             plot_falling_particles(config, epoch_list, log_dir, logger, style, device)
         case 'PDE_G':
             if config_file == 'gravity_continuous':

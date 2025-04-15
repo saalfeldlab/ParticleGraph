@@ -76,6 +76,10 @@ class Interaction_Smooth_Particle(pyg.nn.MessagePassing):
                                nlayers=self.n_layers_update,
                                hidden_size=self.hidden_dim_update, device=self.device)
 
+        if (self.model =='PDE_F_C') | (self.model == 'PDE_F_E'):
+            self.lin_mass = MLP(input_size=self.embedding_dim, output_size=1, nlayers=2,
+                                    hidden_size=4, device=self.device)
+
         if self.state == 'sequence':
             self.a = nn.Parameter(torch.ones((self.n_dataset, int(self.n_particles*100 + 100 ), self.embedding_dim), device=self.device, requires_grad=True,dtype=torch.float32))
             self.embedding_step =  self.n_frames // 100
@@ -83,11 +87,6 @@ class Interaction_Smooth_Particle(pyg.nn.MessagePassing):
             self.a = nn.Parameter(
                     torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
                                  requires_grad=True, dtype=torch.float32))
-
-        if self.model =='PDE_K':
-            self.vals = nn.Parameter(
-                torch.ones((self.n_dataset, int(self.n_particles * (self.n_particles + 1) / 2)), device=self.device,
-                            requires_grad=True, dtype=torch.float32))
 
         self.kernel_var = self.max_radius ** 2
 
@@ -125,17 +124,22 @@ class Interaction_Smooth_Particle(pyg.nn.MessagePassing):
             particle_id = x[:, 0:1].long()
             embedding = self.a[self.data_id.clone().detach(), particle_id, :].squeeze()
 
+        if (self.model == 'PDE_F_C') | (self.model == 'PDE_F_E'):
+            self.mass = self.lin_mass(embedding)
+        else:
+            self.mass = torch.ones_like(embedding[:, 0:1])
+
         self.mode = 'kernel'
-        self.density = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, density=torch.zeros_like(x[:, 0:1]))
+        self.density = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, density=torch.zeros_like(x[:, 0:1]), mass=self.mass)
         self.mode = 'message_passing'
-        out = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, density=self.density)
+        out = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, density=self.density, mass=self.mass)
 
         if self.update_type == 'mlp':
             out = self.lin_phi(torch.cat((out, embedding, d_pos), dim=-1))
 
         return out
 
-    def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, field_i, embedding_i, embedding_j, field_j, density_i, density_j):
+    def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, field_i, embedding_i, embedding_j, field_j, density_i, density_j, mass_i, mass_j):
 
         delta_pos = self.bc_dpos(pos_j - pos_i)
         self.delta_pos = delta_pos
@@ -163,7 +167,9 @@ class Interaction_Smooth_Particle(pyg.nn.MessagePassing):
                 self.kernel_operators['grad_Gaussian'] = grad_Gaussian_kernel.clone().detach()
                 self.kernel_operators['laplacian'] = laplacian_kernel.clone().detach()
 
-            return Gaussian_kernel.clone().detach()
+            density = Gaussian_kernel * mass_j
+
+            return density.clone().detach()
 
         elif self.mode == 'message_passing':
 
@@ -171,7 +177,16 @@ class Interaction_Smooth_Particle(pyg.nn.MessagePassing):
                 in_features = torch.cat((d_pos_i - d_pos_j, embedding_i, embedding_j, density_i, density_j, self.kernel_operators['grad_triangle'], self.kernel_operators['Gaussian'] ), dim=-1)
             elif self.model == 'PDE_F_B':
                 in_features = torch.cat((d_pos_i - d_pos_j, embedding_i, embedding_j, density_i, density_j, self.kernel_operators['Gaussian'],self.kernel_operators['grad_Gaussian'],self.kernel_operators['laplacian']), dim=-1)
-
+            elif self.model == 'PDE_F_C':
+                in_features = torch.cat((mass_i, mass_j, d_pos_i - d_pos_j, embedding_i, embedding_j, density_i, density_j, self.kernel_operators['Gaussian'],self.kernel_operators['grad_triangle']), dim=-1)
+            elif self.model == 'PDE_F_D':
+                r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
+                delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
+                in_features = torch.cat((delta_pos, r[:, None], d_pos_i - d_pos_j, embedding_i, embedding_j, density_i, density_j, self.kernel_operators['Gaussian'],self.kernel_operators['grad_triangle']), dim=-1)
+            elif self.model == 'PDE_F_E':
+                r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
+                delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
+                in_features = torch.cat((delta_pos, r[:, None], mass_i, mass_j, d_pos_i - d_pos_j, embedding_i, embedding_j, density_i, density_j, self.kernel_operators['Gaussian'],self.kernel_operators['grad_triangle']), dim=-1)
 
             out = self.lin_edge(in_features) / density_j.repeat(1,2)
 
