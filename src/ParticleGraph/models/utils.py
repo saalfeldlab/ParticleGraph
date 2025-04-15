@@ -9,6 +9,7 @@ from GNN_particles_Ntype import *
 import matplotlib as mpl
 import networkx as nx
 from torch_geometric.utils.convert import to_networkx
+from torch_geometric.loader import DataLoader
 import warnings
 import numpy as np
 import time
@@ -20,6 +21,7 @@ import torch.nn.functional as F
 import seaborn as sns
 from scipy.optimize import curve_fit
 from ParticleGraph.fitting_models import linear_model
+from concurrent.futures import ThreadPoolExecutor
 
 def linear_model(x, a, b):
     return a * x + b
@@ -1320,6 +1322,54 @@ def get_index_particles(x, n_particle_types, dimension):
 def get_type_list(x, dimension):
     type_list = x[:, 1 + 2 * dimension:2 + 2 * dimension].clone().detach()
     return type_list
+
+def prepare_sample(batch_idx, x_list, y_list, run_lengths, time_window, time_step, recursive_loop,
+                   n_runs, bc_dpos, max_radius, min_radius, particle_batch_ratio, ids, dimension, device):
+
+    run = 1 + np.random.randint(n_runs - 1)
+    k = time_window + np.random.randint(run_lengths[run] - 1 - time_window - time_step - recursive_loop)
+    x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
+
+    distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+    if particle_batch_ratio < 1:
+        distance[:, ids] = -1
+
+    adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float()
+    edges = adj_t.nonzero().t().contiguous()
+
+    dataset = Data(x=x[:, :], edge_index=edges, num_nodes=x.shape[0])
+    y = torch.tensor(y_list[run][k], dtype=torch.float32, device=device).clone().detach()
+
+    return dataset, y, run, k
+
+def prepare_batch_parallel(batch_size, x_list, y_list, run_lengths, time_window, time_step, recursive_loop,
+                           n_runs, bc_dpos, max_radius, min_radius, particle_batch_ratio, ids, dimension, device):
+
+    dataset_batch = []
+    y_batch_list = []
+    data_id_batch_list = []
+    k_batch_list = []
+
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = [executor.submit(
+            prepare_sample, i, x_list, y_list, run_lengths, time_window, time_step, recursive_loop,
+            n_runs, bc_dpos, max_radius, min_radius, particle_batch_ratio, ids, dimension, device
+        ) for i in range(batch_size)]
+
+        for future in futures:
+            dataset, y, data_id, k = future.result()
+            dataset_batch.append(dataset)
+            y_batch_list.append(y)
+            data_id_batch_list.append(np.ones(y.shape[0])*data_id)
+            k_batch_list.append(np.ones(y.shape[0])*k)
+
+    y_batch = torch.cat(y_batch_list, dim=0).to(device)
+    data_id_batch =  torch.tensor(np.array(data_id_batch_list), dtype=torch.float32, device=device).flatten()
+    k_batch = torch.tensor(np.array(k_batch_list), dtype=torch.float32, device=device).flatten()
+
+    batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False, num_workers=0)
+
+    return batch_loader, y_batch, data_id_batch[:,None], k_batch[:,None]
 
 
 class KoLeoLoss(nn.Module):

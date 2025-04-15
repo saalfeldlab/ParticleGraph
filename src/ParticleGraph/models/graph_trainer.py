@@ -24,6 +24,7 @@ import seaborn as sns
 from sklearn.decomposition import PCA, TruncatedSVD
 from sklearn.manifold import TSNE
 from ParticleGraph.denoise_data import *
+from concurrent.futures import ThreadPoolExecutor
 
 def data_train(config=None, erase=False, best_model=None, device=None):
     # plt.rcParams['text.usetex'] = True
@@ -262,7 +263,7 @@ def data_train_particle(config, erase, best_model, device):
         time.sleep(1)
         total_loss = 0
 
-        for N in trange(Niter):
+        for N in range(Niter):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -272,93 +273,118 @@ def data_train_particle(config, erase, best_model, device):
             ids = np.random.permutation(n_particles)[:int(n_particles * (1 - particle_batch_ratio))]
             ids = np.sort(ids)
 
-            for batch in range(batch_size):
+            start = time.time()
 
-                run = 1 + np.random.randint(n_runs - 1)
-                k = time_window + np.random.randint(run_lengths[run] - 1 - time_window - time_step - recursive_loop)
-                x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
-                x_next = torch.tensor(x_list[run][k + time_step], dtype=torch.float32, device=device).clone().detach()
+            # for batch in range(batch_size):
+            #
+            #     run = 1 + np.random.randint(n_runs - 1)
+            #     k = time_window + np.random.randint(run_lengths[run] - 1 - time_window - time_step - recursive_loop)
+            #     x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
+            #     x_next = torch.tensor(x_list[run][k + time_step], dtype=torch.float32, device=device).clone().detach()
 
-                if translation_augmentation:
-                    displacement = torch.randn(1, dimension, dtype=torch.float32, device=device) * 5
-                    displacement = displacement.repeat(x.shape[0], 1)
-                    x[:, 1:dimension + 1] = x[:, 1:dimension + 1] + displacement
-                    x_next[:, 1:dimension + 1] = x_next[:, 1:dimension + 1] + displacement
-                if reflection_augmentation:
-                    x[:, 2:3] = 1 - x[:, 2:3]
-                    x[: dimension + 2: dimension + 3] = - x[: dimension + 2: dimension + 3]
-                if velocity_augmentation:
-                    x[:, dimension + 1: 2*dimension + 1] = x[:, dimension + 1: 2*dimension + 1] + torch.randn((1,2),device=device).repeat(x.shape[0],1) * vnorm
+                # if translation_augmentation:
+                #     displacement = torch.randn(1, dimension, dtype=torch.float32, device=device) * 5
+                #     displacement = displacement.repeat(x.shape[0], 1)
+                #     x[:, 1:dimension + 1] = x[:, 1:dimension + 1] + displacement
+                #     x_next[:, 1:dimension + 1] = x_next[:, 1:dimension + 1] + displacement
+                # if reflection_augmentation:
+                #     x[:, 2:3] = 1 - x[:, 2:3]
+                #     x[: dimension + 2: dimension + 3] = - x[: dimension + 2: dimension + 3]
+                # if velocity_augmentation:
+                #     x[:, dimension + 1: 2*dimension + 1] = x[:, dimension + 1: 2*dimension + 1] + torch.randn((1,2),device=device).repeat(x.shape[0],1) * vnorm
+                #
+                # if has_ghost:
+                #     x_ghost = ghosts_particles.get_pos(dataset_id=run, frame=k, bc_pos=bc_pos)
+                #     if ghosts_particles.boids:
+                #         distance = torch.sum(
+                #             bc_dpos(x_ghost[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                #         dist_np = to_numpy(distance)
+                #         ind_np = torch.min(distance, axis=1)[1]
+                #         x_ghost[:, 3:5] = x[ind_np, 3:5].clone().detach()
+                #     x = torch.cat((x, x_ghost), 0)
+                #     with torch.no_grad():
+                #         model.a[run, n_particles:n_particles + n_ghosts] = model.a[
+                #             run, ghosts_particles.embedding_index].clone().detach()  # sample ghost embedding
 
-                if has_ghost:
-                    x_ghost = ghosts_particles.get_pos(dataset_id=run, frame=k, bc_pos=bc_pos)
-                    if ghosts_particles.boids:
-                        distance = torch.sum(
-                            bc_dpos(x_ghost[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                        dist_np = to_numpy(distance)
-                        ind_np = torch.min(distance, axis=1)[1]
-                        x_ghost[:, 3:5] = x[ind_np, 3:5].clone().detach()
-                    x = torch.cat((x, x_ghost), 0)
+                # if edge_saved:
+                #     edges = edge_p_p_list[run][f'arr_{k}']
+                # else:
+                #     distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                #     if particle_batch_ratio<1:      # remove a given number of particles
+                #         distance[:, ids] = -1
+                #     adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
+                #     edges = adj_t.nonzero().t().contiguous()
+                #
+                # if time_window == 0:
+                #     dataset = data.Data(x=x[:, :], edge_index=edges, num_nodes=x.shape[0])
+                #     dataset_batch.append(dataset)
+                # else:
+                #     xt = []
+                #     for t in range(time_window):
+                #         x_ = torch.tensor(x_list[run][k - t], dtype=torch.float32, device=device)
+                #         if translation_augmentation:
+                #             x_[:, 1:dimension + 1] = x_[:, 1:dimension + 1] + displacement
+                #         xt.append(x_[:, :])
+                #     dataset = data.Data(x=xt, edge_index=edges, num_nodes=x.shape[0])
+                #     dataset_batch.append(dataset)
+                #
+                # if sub_sampling > 1:
+                #     # predict position, does not work with rotation_augmentation, does not work with particle_batch_ratio>1
+                #     y = x_next[:, 1:dimension + 1]
+                # else:
+                #     y = torch.tensor(y_list[run][k], dtype=torch.float32, device=device).clone().detach()
+                #     if noise_level > 0:
+                #         y = y * (1 + torch.randn_like(y) * noise_level)
+                #     y[:,0:dimension] = y[:,0:dimension] / ynorm
 
-                    with torch.no_grad():
-                        model.a[run, n_particles:n_particles + n_ghosts] = model.a[
-                            run, ghosts_particles.embedding_index].clone().detach()  # sample ghost embedding
 
-                if edge_saved:
-                    edges = edge_p_p_list[run][f'arr_{k}']
-                else:
-                    distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                    if particle_batch_ratio<1:      # remove a given number of particles
-                        distance[:, ids] = -1
-                    adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
-                    edges = adj_t.nonzero().t().contiguous()
+                # dataset_batch.append(dataset)
+                #
+                # if rotation_augmentation:
+                #     new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
+                #     new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
+                #     y[:, 0] = new_x
+                #     y[:, 1] = new_y
+                # if reflection_augmentation:
+                #     y[:, 1] = -y[:, 1]
+                #
+                # if batch == 0:
+                #     data_id = torch.ones((y.shape[0],1), dtype=torch.int) * run
+                #     y_batch = y
+                #     k_batch = torch.ones((x.shape[0], 1), dtype=torch.int, device = device) * k
+                # else:
+                #     data_id = torch.cat((data_id, torch.ones((y.shape[0],1), dtype=torch.int) * run), dim = 0)
+                #     y_batch = torch.cat((y_batch, y), dim=0)
+                #     k_batch = torch.cat((k_batch, torch.ones((x.shape[0], 1), dtype=torch.int, device = device) * k), dim=0)
 
-                if time_window == 0:
-                    dataset = data.Data(x=x[:, :], edge_index=edges, num_nodes=x.shape[0])
-                    dataset_batch.append(dataset)
-                else:
-                    xt = []
-                    for t in range(time_window):
-                        x_ = torch.tensor(x_list[run][k - t], dtype=torch.float32, device=device)
-                        if translation_augmentation:
-                            x_[:, 1:dimension + 1] = x_[:, 1:dimension + 1] + displacement
-                        xt.append(x_[:, :])
-                    dataset = data.Data(x=xt, edge_index=edges, num_nodes=x.shape[0])
-                    dataset_batch.append(dataset)
 
-                if sub_sampling > 1:
-                    # predict position, does not work with rotation_augmentation, does not work with particle_batch_ratio>1
-                    y = x_next[:, 1:dimension + 1]
-                else:
-                    y = torch.tensor(y_list[run][k], dtype=torch.float32, device=device).clone().detach()
-                    if noise_level > 0:
-                        y = y * (1 + torch.randn_like(y) * noise_level)
-                    y[:,0:dimension] = y[:,0:dimension] / ynorm
+            batch_loader, y_batch, data_id, k_batch = prepare_batch_parallel(
+                batch_size=batch_size,
+                x_list=x_list,
+                y_list=y_list,
+                run_lengths=run_lengths,
+                time_window=time_window,
+                time_step=time_step,
+                recursive_loop=recursive_loop,
+                n_runs=n_runs,
+                bc_dpos=bc_dpos,
+                max_radius=max_radius,
+                min_radius=min_radius,
+                particle_batch_ratio=particle_batch_ratio,
+                ids=ids,
+                dimension=dimension,
+                device=device
+            )
 
-                if rotation_augmentation:
-                    new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
-                    new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
-                    y[:, 0] = new_x
-                    y[:, 1] = new_y
-                if reflection_augmentation:
-                    y[:, 1] = -y[:, 1]
 
-                if batch == 0:
-                    data_id = torch.ones((y.shape[0],1), dtype=torch.int) * run
-                    y_batch = y
-                    k_batch = torch.ones((x.shape[0], 1), dtype=torch.int, device = device) * k
-                else:
-                    data_id = torch.cat((data_id, torch.ones((y.shape[0],1), dtype=torch.int) * run), dim = 0)
-                    y_batch = torch.cat((y_batch, y), dim=0)
-                    k_batch = torch.cat((k_batch, torch.ones((x.shape[0], 1), dtype=torch.int, device = device) * k), dim=0)
 
-            batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
+            # batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
             if has_ghost:
                 optimizer_ghost_particles.zero_grad()
 
             for batch in batch_loader:
-                pred = model(batch, data_id=data_id, training=True, phi=phi, k=k_batch)
+                pred = model(batch, data_id=data_id, training=True, phi=phi*0, k=k_batch)
 
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
@@ -389,6 +415,9 @@ def data_train_particle(config, erase, best_model, device):
 
             if has_ghost:
                 optimizer_ghost_particles.step()
+
+            end = time.time()
+            print(f"iter time: {end - start:.4f} seconds")
 
             total_loss += loss.item()
 

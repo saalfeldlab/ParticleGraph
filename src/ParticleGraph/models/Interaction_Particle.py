@@ -115,7 +115,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
             embedding = self.get_interp_a(k, particle_id, self.data_id)
         else:
             particle_id = x[:, 0:1].long()
-            embedding = self.a[self.data_id.clone().detach(), particle_id, :].squeeze()
+            embedding = self.a[self.data_id.long(), particle_id, :].squeeze()
 
         out = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
 
