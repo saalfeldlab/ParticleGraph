@@ -262,7 +262,7 @@ def data_train_particle(config, erase, best_model, device):
         time.sleep(1)
         total_loss = 0
 
-        for N in trange(Niter):
+        for N in range(Niter):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -271,6 +271,8 @@ def data_train_particle(config, erase, best_model, device):
             dataset_batch = []
             ids = np.random.permutation(n_particles)[:int(n_particles * (1 - particle_batch_ratio))]
             ids = np.sort(ids)
+
+            start = time.time()
 
             for batch in range(batch_size):
 
@@ -389,6 +391,9 @@ def data_train_particle(config, erase, best_model, device):
 
             if has_ghost:
                 optimizer_ghost_particles.step()
+
+            end = time.time()
+            print(f"iter time: {end - start:.4f} seconds")
 
             total_loss += loss.item()
 
