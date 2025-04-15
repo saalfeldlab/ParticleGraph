@@ -96,14 +96,12 @@ class Interaction_Particle(pyg.nn.MessagePassing):
     def forward(self, data=[], data_id=[], training=[], phi=[], has_field=False, k=[]):
 
         self.data_id = data_id
-        self.cos_phi = torch.cos(phi)
-        self.sin_phi = torch.sin(phi)
+        cos_phi = torch.cos(phi)
+        sin_phi = torch.sin(phi)
         self.training = training
         self.has_field = has_field
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-
-        print('GNN ', phi)
 
         if has_field:
             field = x[:,6:7]
@@ -119,7 +117,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
             particle_id = x[:, 0:1].long()
             embedding = self.a[self.data_id.long(), particle_id, :].squeeze()
 
-        out = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
+        out = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field, cos_phi=cos_phi, sin_phi=sin_phi)
 
         if self.sub_sampling>1:
 
@@ -143,7 +141,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
 
         return out
 
-    def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j, field_j):
+    def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j, field_j, cos_phi_i, sin_phi_i):
 
         # distance normalized by the max radius
         r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
@@ -154,16 +152,16 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         dpos_y_j = d_pos_j[:, 1] / self.vnorm
 
         if self.rotation_augmentation & (self.training == True):
-            new_delta_pos_x = self.cos_phi * delta_pos[:, 0] + self.sin_phi * delta_pos[:, 1]
-            new_delta_pos_y = -self.sin_phi * delta_pos[:, 0] + self.cos_phi * delta_pos[:, 1]
+            new_delta_pos_x = cos_phi_i.squeeze() * delta_pos[:, 0] + sin_phi_i.squeeze() * delta_pos[:, 1]
+            new_delta_pos_y = -sin_phi_i.squeeze() * delta_pos[:, 0] + cos_phi_i.squeeze() * delta_pos[:, 1]
             delta_pos[:, 0] = new_delta_pos_x
             delta_pos[:, 1] = new_delta_pos_y
-            new_dpos_x_i = self.cos_phi * dpos_x_i + self.sin_phi * dpos_y_i
-            new_dpos_y_i = -self.sin_phi * dpos_x_i + self.cos_phi * dpos_y_i
+            new_dpos_x_i = cos_phi_i.squeeze() * dpos_x_i + sin_phi_i.squeeze() * dpos_y_i
+            new_dpos_y_i = -sin_phi_i.squeeze() * dpos_x_i + cos_phi_i.squeeze() * dpos_y_i
             dpos_x_i = new_dpos_x_i
             dpos_y_i = new_dpos_y_i
-            new_dpos_x_j = self.cos_phi * dpos_x_j + self.sin_phi * dpos_y_j
-            new_dpos_y_j = -self.sin_phi * dpos_x_j + self.cos_phi * dpos_y_j
+            new_dpos_x_j = cos_phi_i.squeeze() * dpos_x_j + sin_phi_i.squeeze() * dpos_y_j
+            new_dpos_y_j = -sin_phi_i.squeeze() * dpos_x_j + cos_phi_i.squeeze() * dpos_y_j
             dpos_x_j = new_dpos_x_j
             dpos_y_j = new_dpos_y_j
 
