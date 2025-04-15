@@ -1,4 +1,3 @@
-
 description: 'system of particles falling down in a box  n_runs 5'
 dataset: 'multimaterial'
 data_folder_name: '/groups/saalfeld/saalfeldlab/projects/gnn/learning-to-simulate/MultiMaterial/'
@@ -42,6 +41,8 @@ training:
   batch_size: 8
   small_init_batch_size: False
   n_runs: 999
+
+  time_window_noise: 1.0E-5
 
   sparsity: 'none'
   sparsity_freq: 3

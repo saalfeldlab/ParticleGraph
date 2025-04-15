@@ -1,4 +1,4 @@
-description: 'system of particles falling down in a box  redo 6_11 nrun onbly 5'
+description: 'system of particles falling down in a box  redo 6_11 nrun only 5'
 dataset: 'falling_water_ramp_wall'
 data_folder_name: '/groups/saalfeld/saalfeldlab/projects/gnn/learning-to-simulate/WaterRamps/'
 
