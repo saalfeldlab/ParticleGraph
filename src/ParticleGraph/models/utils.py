@@ -1324,11 +1324,15 @@ def get_type_list(x, dimension):
     return type_list
 
 def prepare_sample(batch_idx, x_list, y_list, run_lengths, time_window, time_step, recursive_loop,
-                   n_runs, bc_dpos, max_radius, min_radius, particle_batch_ratio, ids, dimension, device):
+                   n_runs, bc_dpos, max_radius, min_radius, particle_batch_ratio, ids, dimension, phi,
+                   rotation_augmentation, translation_augmentation, reflection_augmentation, velocity_augmentation,
+                   device):
 
     run = 1 + np.random.randint(n_runs - 1)
     k = time_window + np.random.randint(run_lengths[run] - 1 - time_window - time_step - recursive_loop)
     x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
+    cos_phi = torch.cos(phi)
+    sin_phi = torch.sin(phi)
 
     distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
     if particle_batch_ratio < 1:
@@ -1340,10 +1344,29 @@ def prepare_sample(batch_idx, x_list, y_list, run_lengths, time_window, time_ste
     dataset = Data(x=x[:, :], edge_index=edges, num_nodes=x.shape[0])
     y = torch.tensor(y_list[run][k], dtype=torch.float32, device=device).clone().detach()
 
+    if translation_augmentation:
+        displacement = torch.randn(1, dimension, dtype=torch.float32, device=device) * 5
+        displacement = displacement.repeat(x.shape[0], 1)
+        x[:, 1:dimension + 1] = x[:, 1:dimension + 1] + displacement
+        x_next[:, 1:dimension + 1] = x_next[:, 1:dimension + 1] + displacement
+    if reflection_augmentation:
+        x[:, 2:3] = 1 - x[:, 2:3]
+        x[: dimension + 2: dimension + 3] = - x[: dimension + 2: dimension + 3]
+        y[:, 1] = -y[:, 1]
+    if velocity_augmentation:
+        x[:, dimension + 1: 2*dimension + 1] = x[:, dimension + 1: 2*dimension + 1] + torch.randn((1,2),device=device).repeat(x.shape[0],1) * vnorm
+    if rotation_augmentation:
+        new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
+        new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
+        y[:, 0] = new_x
+        y[:, 1] = new_y
+
     return dataset, y, run, k
 
 def prepare_batch_parallel(batch_size, x_list, y_list, run_lengths, time_window, time_step, recursive_loop,
-                           n_runs, bc_dpos, max_radius, min_radius, particle_batch_ratio, ids, dimension, device):
+                           n_runs, bc_dpos, max_radius, min_radius, particle_batch_ratio, ids, dimension, phi,
+                           rotation_augmentation, translation_augmentation, reflection_augmentation, velocity_augmentation,
+                           device):
 
     dataset_batch = []
     y_batch_list = []
@@ -1353,7 +1376,8 @@ def prepare_batch_parallel(batch_size, x_list, y_list, run_lengths, time_window,
     with ThreadPoolExecutor(max_workers=10) as executor:
         futures = [executor.submit(
             prepare_sample, i, x_list, y_list, run_lengths, time_window, time_step, recursive_loop,
-            n_runs, bc_dpos, max_radius, min_radius, particle_batch_ratio, ids, dimension, device
+            n_runs, bc_dpos, max_radius, min_radius, particle_batch_ratio, ids, dimension, phi,
+            rotation_augmentation, translation_augmentation, reflection_augmentation, velocity_augmentation, device
         ) for i in range(batch_size)]
 
         for future in futures:

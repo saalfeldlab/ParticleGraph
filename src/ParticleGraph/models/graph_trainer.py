@@ -263,7 +263,7 @@ def data_train_particle(config, erase, best_model, device):
         time.sleep(1)
         total_loss = 0
 
-        for N in range(Niter):
+        for N in trange(Niter):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -273,7 +273,7 @@ def data_train_particle(config, erase, best_model, device):
             ids = np.random.permutation(n_particles)[:int(n_particles * (1 - particle_batch_ratio))]
             ids = np.sort(ids)
 
-            start = time.time()
+            # start = time.time()
 
             # for batch in range(batch_size):
             #
@@ -357,6 +357,8 @@ def data_train_particle(config, erase, best_model, device):
                 #     y_batch = torch.cat((y_batch, y), dim=0)
                 #     k_batch = torch.cat((k_batch, torch.ones((x.shape[0], 1), dtype=torch.int, device = device) * k), dim=0)
 
+            # batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
+
 
             batch_loader, y_batch, data_id, k_batch = prepare_batch_parallel(
                 batch_size=batch_size,
@@ -373,18 +375,20 @@ def data_train_particle(config, erase, best_model, device):
                 particle_batch_ratio=particle_batch_ratio,
                 ids=ids,
                 dimension=dimension,
+                phi = phi,
+                rotation_augmentation=rotation_augmentation,
+                translation_augmentation=translation_augmentation,
+                reflection_augmentation=reflection_augmentation,
+                velocity_augmentation=velocity_augmentation,
                 device=device
             )
 
-
-
-            # batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
             if has_ghost:
                 optimizer_ghost_particles.zero_grad()
 
             for batch in batch_loader:
-                pred = model(batch, data_id=data_id, training=True, phi=phi*0, k=k_batch)
+                pred = model(batch, data_id=data_id, training=True, phi=phi, k=k_batch)
 
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
@@ -416,8 +420,8 @@ def data_train_particle(config, erase, best_model, device):
             if has_ghost:
                 optimizer_ghost_particles.step()
 
-            end = time.time()
-            print(f"iter time: {end - start:.4f} seconds")
+            # end = time.time()
+            # print(f"iter time: {end - start:.4f} seconds")
 
             total_loss += loss.item()
 
