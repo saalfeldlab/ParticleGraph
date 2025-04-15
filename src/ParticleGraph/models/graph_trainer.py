@@ -263,11 +263,11 @@ def data_train_particle(config, erase, best_model, device):
         time.sleep(1)
         total_loss = 0
 
-        for N in trange(Niter):
+        for N in range(Niter):
 
-            phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
-            cos_phi = torch.cos(phi)
-            sin_phi = torch.sin(phi)
+            # phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
+            # cos_phi = torch.cos(phi)
+            # sin_phi = torch.sin(phi)
 
             dataset_batch = []
             ids = np.random.permutation(n_particles)[:int(n_particles * (1 - particle_batch_ratio))]
@@ -360,7 +360,7 @@ def data_train_particle(config, erase, best_model, device):
             # batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
 
 
-            batch_loader, y_batch, data_id, k_batch = prepare_batch_parallel(
+            batch_loader, y_batch, data_id, k_batch, phi = prepare_batch_parallel(
                 batch_size=batch_size,
                 x_list=x_list,
                 y_list=y_list,
@@ -375,7 +375,6 @@ def data_train_particle(config, erase, best_model, device):
                 particle_batch_ratio=particle_batch_ratio,
                 ids=ids,
                 dimension=dimension,
-                phi = phi,
                 rotation_augmentation=rotation_augmentation,
                 translation_augmentation=translation_augmentation,
                 reflection_augmentation=reflection_augmentation,

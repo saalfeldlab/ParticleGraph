@@ -103,6 +103,8 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
+        print('GNN ', phi)
+
         if has_field:
             field = x[:,6:7]
         else:

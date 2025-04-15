@@ -1331,6 +1331,7 @@ def prepare_sample(batch_idx, x_list, y_list, run_lengths, time_window, time_ste
     run = 1 + np.random.randint(n_runs - 1)
     k = time_window + np.random.randint(run_lengths[run] - 1 - time_window - time_step - recursive_loop)
     x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
+
     cos_phi = torch.cos(phi)
     sin_phi = torch.sin(phi)
 
@@ -1361,12 +1362,16 @@ def prepare_sample(batch_idx, x_list, y_list, run_lengths, time_window, time_ste
         y[:, 0] = new_x
         y[:, 1] = new_y
 
-    return dataset, y, run, k
+    print('thread ', phi)
+
+    return dataset, y, run, k, phi
+
 
 def prepare_batch_parallel(batch_size, x_list, y_list, run_lengths, time_window, time_step, recursive_loop,
-                           n_runs, bc_dpos, max_radius, min_radius, particle_batch_ratio, ids, dimension, phi,
+                           n_runs, bc_dpos, max_radius, min_radius, particle_batch_ratio, ids, dimension,
                            rotation_augmentation, translation_augmentation, reflection_augmentation, velocity_augmentation,
                            device):
+    phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
 
     dataset_batch = []
     y_batch_list = []
@@ -1381,7 +1386,7 @@ def prepare_batch_parallel(batch_size, x_list, y_list, run_lengths, time_window,
         ) for i in range(batch_size)]
 
         for future in futures:
-            dataset, y, data_id, k = future.result()
+            dataset, y, data_id, k, phi = future.result()
             dataset_batch.append(dataset)
             y_batch_list.append(y)
             data_id_batch_list.append(np.ones(y.shape[0])*data_id)
@@ -1393,7 +1398,7 @@ def prepare_batch_parallel(batch_size, x_list, y_list, run_lengths, time_window,
 
     batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False, num_workers=0)
 
-    return batch_loader, y_batch, data_id_batch[:,None], k_batch[:,None]
+    return batch_loader, y_batch, data_id_batch[:,None], k_batch[:,None], phi
 
 
 class KoLeoLoss(nn.Module):
