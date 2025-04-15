@@ -1209,7 +1209,7 @@ def choose_training_model(model_config=None, device=None, projections=None):
             model.edges = torch.tensor(e, dtype=torch.long, device=device)
         case 'PDE_Cell_A' | 'PDE_Cell_B' | 'PDE_Cell_B_area' | 'PDE_Cell_A_area':
             model = Interaction_Cell(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
-        case 'PDE_F_A' |'PDE_F_B' :
+        case 'PDE_F_A' | 'PDE_F_B' | 'PDE_F_C' | 'PDE_F_D' | 'PDE_F_E' :
             model = Interaction_Smooth_Particle(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             model.edges = []
             # model = Interaction_Falling_Water(aggr_type=aggr_type, config=model_config,bc_dpos=bc_dpos, dimension=dimension, device=device)
@@ -1331,6 +1331,7 @@ def prepare_sample(batch_idx, x_list, y_list, run_lengths, time_window, time_ste
     run = 1 + np.random.randint(n_runs - 1)
     k = time_window + np.random.randint(run_lengths[run] - 1 - time_window - time_step - recursive_loop)
     x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
+    x_next = torch.tensor(x_list[run][k + time_step], dtype=torch.float32, device=device).clone().detach()
 
     phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
     cos_phi = torch.cos(phi)

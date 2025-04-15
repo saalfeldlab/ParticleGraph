@@ -263,7 +263,7 @@ def data_train_particle(config, erase, best_model, device):
         time.sleep(1)
         total_loss = 0
 
-        for N in range(Niter):
+        for N in trange(Niter):
 
             # phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             # cos_phi = torch.cos(phi)

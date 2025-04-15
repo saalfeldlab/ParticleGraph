@@ -16,11 +16,11 @@ simulation:
   start_frame: 0
 
 graph_model:
-  particle_model_name: 'PDE_F_A'
+  particle_model_name: 'PDE_F_D'
   mesh_model_name: ''
   prediction: '2nd_derivative'
 
-  input_size: 11
+  input_size: 14
   output_size: 2
   hidden_dim: 256
   n_mp_layers: 5
@@ -41,7 +41,7 @@ training:
   n_epochs: 20
   batch_size: 8
   small_init_batch_size: False
-  n_runs: 999
+  n_runs: 9
 
   time_window_noise: 1.0E-5
 
