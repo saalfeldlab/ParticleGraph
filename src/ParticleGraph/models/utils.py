@@ -22,6 +22,7 @@ import seaborn as sns
 from scipy.optimize import curve_fit
 from ParticleGraph.fitting_models import linear_model
 from concurrent.futures import ThreadPoolExecutor
+from multiprocessing import Pool
 
 def linear_model(x, a, b):
     return a * x + b
@@ -1323,83 +1324,6 @@ def get_type_list(x, dimension):
     type_list = x[:, 1 + 2 * dimension:2 + 2 * dimension].clone().detach()
     return type_list
 
-def prepare_sample(batch_idx, x_list, y_list, run_lengths, time_window, time_step, recursive_loop,
-                   n_runs, bc_dpos, max_radius, min_radius, dimension, rotation_augmentation, translation_augmentation,
-                   reflection_augmentation, velocity_augmentation, seed, device):
-
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-
-    run = 1 + np.random.randint(n_runs - 1)
-    k = time_window + np.random.randint(run_lengths[run] - 1 - time_window - time_step - recursive_loop)
-    x = torch.tensor(x_list[run][k], dtype=torch.float32, device='cpu').clone().detach()
-
-    phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device='cpu') * np.pi * 2
-    cos_phi = torch.cos(phi)
-    sin_phi = torch.sin(phi)
-
-    distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-    adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float()
-    edges = adj_t.nonzero().t().contiguous()
-
-    dataset = Data(x=x[:, :], edge_index=edges, num_nodes=x.shape[0])
-    y = torch.tensor(y_list[run][k], dtype=torch.float32, device='cpu').clone().detach()
-
-    if translation_augmentation:
-        displacement = torch.randn(1, dimension, dtype=torch.float32, device='cpu') * 5
-        displacement = displacement.repeat(x.shape[0], 1)
-        x[:, 1:dimension + 1] = x[:, 1:dimension + 1] + displacement
-    if reflection_augmentation:
-        x[:, 2:3] = 1 - x[:, 2:3]
-        x[: dimension + 2: dimension + 3] = - x[: dimension + 2: dimension + 3]
-        y[:, 1] = -y[:, 1]
-    if velocity_augmentation:
-        x[:, dimension + 1: 2*dimension + 1] = x[:, dimension + 1: 2*dimension + 1] + torch.randn((1,2),device='cpu').repeat(x.shape[0],1) * vnorm
-    if rotation_augmentation:
-        new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
-        new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
-        y[:, 0] = new_x
-        y[:, 1] = new_y
-
-    return dataset, y, run, k, phi
-
-
-def prepare_batch_parallel(batch_size, x_list, y_list, run_lengths, time_window, time_step, recursive_loop,
-                           n_runs, bc_dpos, max_radius, min_radius, dimension, rotation_augmentation, translation_augmentation,
-                           reflection_augmentation, velocity_augmentation, device):
-
-    seeds = np.random.randint(0, 1e6, size=batch_size)
-    dataset_batch = []
-    y_batch_list = []
-    data_id_batch_list = []
-    k_batch_list = []
-    phi_batch_list = []
-
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = [executor.submit(
-            prepare_sample, i, x_list, y_list, run_lengths, time_window, time_step, recursive_loop,
-            n_runs, bc_dpos, max_radius, min_radius, dimension, rotation_augmentation, translation_augmentation, reflection_augmentation, velocity_augmentation, seeds[i], device
-        ) for i in range(batch_size)]
-
-        for future in futures:
-            dataset, y, data_id, k, phi = future.result()
-            dataset_batch.append(dataset)
-            y_batch_list.append(y)
-            if data_id_batch_list==[]:
-                data_id_batch_list = torch.ones((y.shape[0],1), dtype=torch.float32, device='cpu')*data_id
-                k_batch_list = torch.ones((y.shape[0],1), dtype=torch.float32, device='cpu')*k
-                phi_batch_list = torch.ones((y.shape[0],1), dtype=torch.float32, device='cpu') * phi
-            else:
-                data_id_batch_list = torch.cat((data_id_batch_list, torch.ones((y.shape[0],1), dtype=torch.float32, device='cpu')*data_id), dim=0)
-                k_batch_list = torch.cat((k_batch_list, torch.ones((y.shape[0],1), dtype=torch.float32, device='cpu')*k), dim=0)
-                phi_batch_list = torch.cat((phi_batch_list, torch.ones((y.shape[0],1), dtype=torch.float32, device='cpu') * phi), dim=0)
-
-    batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False, num_workers=0)
-    y_batch = torch.cat(y_batch_list, dim=0)
-
-    return batch_loader, y_batch, data_id_batch_list, k_batch_list, phi_batch_list
-
-
 class KoLeoLoss(nn.Module):
     """Kozachenko-Leonenko entropic loss regularizer from Sablayrolles et al. - 2018 - Spreading vectors for similarity search"""
 
@@ -1438,6 +1362,98 @@ class KoLeoLoss(nn.Module):
             loss = -torch.log(distances + eps).mean()
 
         return loss
+
+def prepare_sample_mp(args):
+    (batch_idx, x_list, y_list, run_lengths, time_window, time_step, recursive_loop,
+     n_runs, max_radius, min_radius, dimension, rotation_augmentation,
+     translation_augmentation, reflection_augmentation, velocity_augmentation,
+     vnorm, seed) = args
+
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+    run = 1 + np.random.randint(n_runs - 1)
+    k = time_window + np.random.randint(run_lengths[run] - 1 - time_window - time_step - recursive_loop)
+
+    x = torch.tensor(x_list[run][k], dtype=torch.float32).clone()
+    x_next = torch.tensor(x_list[run][k + time_step], dtype=torch.float32).clone()
+    y = torch.tensor(y_list[run][k], dtype=torch.float32).clone()
+
+    phi = torch.randn(1).item() * np.pi * 2
+    cos_phi = np.cos(phi)
+    sin_phi = np.sin(phi)
+
+    pos_diff = torch.remainder(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]- 0.5, 1.0) - 0.5
+    distance = torch.sum(pos_diff ** 2, dim=2)
+    adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float()
+    edges = adj_t.nonzero().t().contiguous()
+
+    if translation_augmentation:
+        displacement = torch.randn(1, dimension) * 5
+        x[:, 1:dimension + 1] += displacement
+        x_next[:, 1:dimension + 1] += displacement
+
+    if reflection_augmentation:
+        x[:, 2:3] = 1 - x[:, 2:3]
+        x[:, dimension + 2: dimension + 3] = -x[:, dimension + 2: dimension + 3]
+        y[:, 1] = -y[:, 1]
+
+    if velocity_augmentation:
+        velocity_noise = torch.randn((x.shape[0], 2)) * vnorm
+        x[:, dimension + 1: 2 * dimension + 1] += velocity_noise
+
+    if rotation_augmentation:
+        new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
+        new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
+        y[:, 0] = new_x
+        y[:, 1] = new_y
+
+    dataset = Data(x=x, edge_index=edges, num_nodes=x.shape[0])
+
+    return dataset, y, run, k, phi
+
+def prepare_batch_parallel_mp(batch_size, x_list, y_list, run_lengths, time_window, time_step, recursive_loop,
+                              n_runs, max_radius, min_radius, dimension,
+                              rotation_augmentation, translation_augmentation, reflection_augmentation,
+                              velocity_augmentation, vnorm, device):
+
+    seeds = np.random.randint(0, 1e6, size=batch_size)
+
+    args_list = [
+        (i, x_list, y_list, run_lengths, time_window, time_step, recursive_loop, n_runs,
+         max_radius, min_radius, dimension, rotation_augmentation,
+         translation_augmentation, reflection_augmentation, velocity_augmentation,
+         vnorm, int(seeds[i]))
+        for i in range(batch_size)
+    ]
+
+    dataset_batch = []
+    y_batch_list = []
+    data_id_batch_list = []
+    k_batch_list = []
+    phi_batch_list = []
+
+    with Pool(processes=min(batch_size, os.cpu_count())) as pool:
+        results = pool.map(prepare_sample_mp, args_list)
+
+    for dataset, y, data_id, k, phi in results:
+        dataset_batch.append(dataset)
+        y_batch_list.append(y)
+        data_id_batch_list.append(np.ones(y.shape[0]) * data_id)
+        k_batch_list.append(np.ones(y.shape[0]) * k)
+        phi_batch_list.append(torch.ones((y.shape[0], 1)) * phi)
+
+    # Move to GPU after multiprocessing is done
+    y_batch = torch.cat(y_batch_list, dim=0).to(device)
+    data_id_batch = torch.tensor(np.concatenate(data_id_batch_list), dtype=torch.float32, device=device).unsqueeze(1)
+    k_batch = torch.tensor(np.concatenate(k_batch_list), dtype=torch.float32, device=device).unsqueeze(1)
+    phi_batch = torch.cat(phi_batch_list, dim=0).to(device)
+
+    batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False, num_workers=0)
+
+    return batch_loader, y_batch, data_id_batch, k_batch, phi_batch
+
+
 
 
 

@@ -263,7 +263,7 @@ def data_train_particle(config, erase, best_model, device):
         time.sleep(1)
         total_loss = 0
 
-        batch_loader, y_batch, data_id, k_batch, phi = prepare_batch_parallel(
+        batch_loader, y_batch, data_id, k_batch, phi = prepare_batch_parallel_mp(
             batch_size=batch_size,
             x_list=x_list,
             y_list=y_list,
@@ -272,7 +272,6 @@ def data_train_particle(config, erase, best_model, device):
             time_step=time_step,
             recursive_loop=recursive_loop,
             n_runs=n_runs,
-            bc_dpos=bc_dpos,
             max_radius=max_radius,
             min_radius=min_radius,
             dimension=dimension,
@@ -280,6 +279,7 @@ def data_train_particle(config, erase, best_model, device):
             translation_augmentation=translation_augmentation,
             reflection_augmentation=reflection_augmentation,
             velocity_augmentation=velocity_augmentation,
+            vnorm = vnorm,
             device=device
         )
 

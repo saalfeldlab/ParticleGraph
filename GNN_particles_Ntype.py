@@ -29,8 +29,11 @@ from ParticleGraph.models.Ghost_Particles import Ghost_Particles
 from ParticleGraph.models.utils import *
 from ParticleGraph.utils import *
 import warnings
+import multiprocessing as mp
 
 if __name__ == '__main__':
+
+    mp.set_start_method('spawn', force=True)
 
     warnings.filterwarnings("ignore", category=FutureWarning)
 
@@ -57,7 +60,7 @@ if __name__ == '__main__':
 
         task = 'train'
         best_model = ''
-        config_list = ['multimaterial_8']
+        config_list = ['arbitrary_3_test']
 
 
     for config_file_ in config_list:
@@ -80,8 +83,6 @@ if __name__ == '__main__':
             data_test(config=config, visualize=True, style='black color', verbose=False, best_model='best', run=1, test_mode='black_bounce_all', sample_embedding=False, step=10, device=device) # particle_of_interest=100,
         if 'try_func' in task:
             try_func(max_radius=config.simulation.max_radius, device=device)
-
-
 
 
 # bsub -n 4 -gpu "num=1" -q gpu_h100 -Is "python GNN_particles_Ntype.py"
