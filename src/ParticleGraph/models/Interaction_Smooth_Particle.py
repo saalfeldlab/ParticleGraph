@@ -122,7 +122,7 @@ class Interaction_Smooth_Particle(pyg.nn.MessagePassing):
             embedding = self.get_interp_a(k, particle_id, self.data_id)
         else:
             particle_id = x[:, 0:1].long()
-            embedding = self.a[self.data_id.clone().detach(), particle_id, :].squeeze()
+            embedding = self.a[self.data_id.long(), particle_id, :].squeeze()
 
         if (self.model == 'PDE_F_C') | (self.model == 'PDE_F_E'):
             self.mass = self.lin_mass(embedding)

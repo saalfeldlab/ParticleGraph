@@ -1346,7 +1346,7 @@ def prepare_sample(batch_idx, x_list, y_list, run_lengths, time_window, time_ste
     y = torch.tensor(y_list[run][k], dtype=torch.float32, device='cpu').clone().detach()
 
     if translation_augmentation:
-        displacement = torch.randn(1, dimension, dtype=torch.float32, device=device) * 5
+        displacement = torch.randn(1, dimension, dtype=torch.float32, device='cpu') * 5
         displacement = displacement.repeat(x.shape[0], 1)
         x[:, 1:dimension + 1] = x[:, 1:dimension + 1] + displacement
     if reflection_augmentation:
@@ -1354,7 +1354,7 @@ def prepare_sample(batch_idx, x_list, y_list, run_lengths, time_window, time_ste
         x[: dimension + 2: dimension + 3] = - x[: dimension + 2: dimension + 3]
         y[:, 1] = -y[:, 1]
     if velocity_augmentation:
-        x[:, dimension + 1: 2*dimension + 1] = x[:, dimension + 1: 2*dimension + 1] + torch.randn((1,2),device=device).repeat(x.shape[0],1) * vnorm
+        x[:, dimension + 1: 2*dimension + 1] = x[:, dimension + 1: 2*dimension + 1] + torch.randn((1,2),device='cpu').repeat(x.shape[0],1) * vnorm
     if rotation_augmentation:
         new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
         new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
@@ -1385,21 +1385,19 @@ def prepare_batch_parallel(batch_size, x_list, y_list, run_lengths, time_window,
             dataset, y, data_id, k, phi = future.result()
             dataset_batch.append(dataset)
             y_batch_list.append(y)
-            data_id_batch_list.append(np.ones(y.shape[0])*data_id)
-            k_batch_list.append(np.ones(y.shape[0])*k)
-            phi_batch_list.append(torch.ones((y.shape[0],1),dtype=torch.float32, device='cpu') * phi)
-
-
-    y_batch = torch.cat(y_batch_list, dim=0)
-    y_batch = y_batch.to(device)
-    data_id_batch =  torch.tensor(np.array(data_id_batch_list), dtype=torch.float32, device=device).flatten()
-    k_batch = torch.tensor(np.array(k_batch_list), dtype=torch.float32, device=device).flatten()
-    phi_batch = torch.cat(phi_batch_list, dim=0)
-    phi_batch = phi_batch.to(device)
+            if data_id_batch_list==[]:
+                data_id_batch_list = torch.ones((y.shape[0],1), dtype=torch.float32, device='cpu')*data_id
+                k_batch_list = torch.ones((y.shape[0],1), dtype=torch.float32, device='cpu')*k
+                phi_batch_list = torch.ones((y.shape[0],1), dtype=torch.float32, device='cpu') * phi
+            else:
+                data_id_batch_list = torch.cat((data_id_batch_list, torch.ones((y.shape[0],1), dtype=torch.float32, device='cpu')*data_id), dim=0)
+                k_batch_list = torch.cat((k_batch_list, torch.ones((y.shape[0],1), dtype=torch.float32, device='cpu')*k), dim=0)
+                phi_batch_list = torch.cat((phi_batch_list, torch.ones((y.shape[0],1), dtype=torch.float32, device='cpu') * phi), dim=0)
 
     batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False, num_workers=0)
+    y_batch = torch.cat(y_batch_list, dim=0)
 
-    return batch_loader, y_batch, data_id_batch[:,None], k_batch[:,None], phi_batch
+    return batch_loader, y_batch, data_id_batch_list, k_batch_list, phi_batch_list
 
 
 class KoLeoLoss(nn.Module):

@@ -288,7 +288,7 @@ def data_train_particle(config, erase, best_model, device):
             optimizer.zero_grad()
 
             for batch in batch_loader:
-                pred = model(batch.to(device), data_id=data_id, training=True, phi=phi, k=k_batch)
+                pred = model(batch.to(device), data_id=data_id.to(device), training=True, phi=phi.to(device), k=k_batch.to(device))
 
             loss = (pred - y_batch.to(device)).norm(2)
 
