@@ -1377,7 +1377,7 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
 
     # x_list, y_list, vnorm, ynorm = load_training_data(dataset_name, n_runs, log_dir, device)
 
-    run = 1
+    run = 17
 
     x_list = []
     y_list = []
@@ -1494,19 +1494,37 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
             model.load_state_dict(state_dict['model_state_dict'])
             model.eval()
 
-            fig, ax = fig_init()
-            embedding = get_embedding(model.a, run)
+            fig = plt.figure(figsize=(16, 8))
+            ax = fig.add_subplot(1, 2, 1)
+            if n_runs > 10:
+                for run_ in range(0,n_runs,n_runs//10):
+                    embedding = get_embedding(model.a, run_)
+                    for n in range(n_particle_types):
+                        pos = torch.argwhere(type_list == n)
+                        pos = to_numpy(pos)
+                        if len(pos) > 0:
+                            plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=5, alpha=1.0, edgecolors='none')
+                plt.xlabel(r'$a_{0}$', fontsize=28)
+                plt.ylabel(r'$a_{1}$', fontsize=28)
+            else:
+                for run_ in range(n_runs):
+                    embedding = get_embedding(model.a, run_)
+                    for n in range(n_particle_types):
+                        pos = torch.argwhere(type_list == n)
+                        pos = to_numpy(pos)
+                        if len(pos) > 0:
+                            plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=5, alpha=1.0, edgecolors='none')
+                plt.xlabel(r'$a_{0}$', fontsize=28)
+                plt.ylabel(r'$a_{1}$', fontsize=28)
+            ax = fig.add_subplot(1, 2, 2)
+            embedding = get_embedding(model.a, min(run,n_runs-1))
             for n in range(n_particle_types):
                 pos = torch.argwhere(type_list == n)
                 pos = to_numpy(pos)
                 if len(pos) > 0:
-                    plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=10)
-            if 'latex' in style:
-                plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
-                plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
-            else:
-                plt.xlabel(r'$a_{0}$', fontsize=68)
-                plt.ylabel(r'$a_{1}$', fontsize=68)
+                    plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=5)
+            plt.xlabel(r'$a_{0}$', fontsize=28)
+            plt.ylabel(r'$a_{1}$', fontsize=28)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=170.7)
             plt.close()
@@ -8200,13 +8218,23 @@ if __name__ == '__main__':
     #                'signal_N5_v11','signal_N5_v12','signal_N5_v13','signal_N5_v14','signal_N5_v15']
 
 
-    # config_list = ['falling_water_ramp_x6_11_1', 'falling_water_ramp_x6_11_2',
-    #                'falling_water_ramp_x6_11_3', 'falling_water_ramp_x6_11_4',
-    #                'falling_water_ramp_x6_11_5', 'falling_water_ramp_x6_11_6', 'falling_water_ramp_x6_11_7',
-    #                'falling_water_ramp_x6_11_8',
-    #                'falling_water_ramp_x6_11_9']
+    config_list = ['falling_water_ramp_x6_11_1', 'falling_water_ramp_x6_11_2',
+                   'falling_water_ramp_x6_11_3', 'falling_water_ramp_x6_11_4',
+                   'falling_water_ramp_x6_11_5', 'falling_water_ramp_x6_11_6', 'falling_water_ramp_x6_11_7',
+                   'falling_water_ramp_x6_11_8',
+                   'falling_water_ramp_x6_11_9']
+    #
+    # config_list = ['fluids_m14']
 
-    config_list = ['fluids_m14']
+    # config_list = ['multimaterial_8', 'multimaterial_8_1', 'multimaterial_8_2', 'multimaterial_8_3',
+    #                'multimaterial_8_4',
+    #                'multimaterial_8_5',
+    #                'multimaterial_2_1', 'multimaterial_2_2', 'multimaterial_3', 'multimaterial_4']
+
+    # config_list = ['falling_water_ramp_x6_11_1','falling_water_ramp_x6_11_2','falling_water_ramp_x6_11_3','falling_water_ramp_x6_11_4',
+    #         'falling_water_ramp_x6_11_5','falling_water_ramp_x6_11_6','falling_water_ramp_x6_11_7','falling_water_ramp_x6_11_8',
+
+    config_list = ['falling_water_ramp_x6_11_10', 'falling_water_ramp_x6_11_11']
 
     # config_list = ['signal_N4_a3','signal_N4_a4']
     # config_list = ['signal_N2_a43_3_1_t8','signal_N2_a43_3_5_t8','signal_N2_a43_3_10_t8','signal_N2_a43_3_20_t8','signal_N2_a43_3_1_t16','signal_N2_a43_3_5_t16',

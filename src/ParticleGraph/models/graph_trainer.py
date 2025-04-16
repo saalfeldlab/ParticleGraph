@@ -145,6 +145,8 @@ def data_train_particle(config, erase, best_model, device):
     for run in trange(n_runs):
         x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
         y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
+        if np.isnan(x).any() | np.isnan(y).any():
+            print('Pb isnan')
         if x[0].shape[0] > n_particles_max:
             n_particles_max = x[0].shape[0]
         x_list.append(x)
@@ -169,6 +171,8 @@ def data_train_particle(config, erase, best_model, device):
                     print(f'Error in run {run} frame {k}')
                 y = torch.cat((y, torch.tensor(y_list[run][k], dtype=torch.float32, device=device)), 0)
         time.sleep(0.5)
+    if torch.isnan(x).any() | torch.isnan(y).any():
+        print('Pb isnan')
     vnorm = norm_velocity(x, dimension, device)
     ynorm = norm_acceleration(y, device)
     torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
@@ -241,7 +245,7 @@ def data_train_particle(config, erase, best_model, device):
         logger.info(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
         logger.info(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
 
-        batch_size = int(get_batch_size(epoch) / particle_batch_ratio)
+        batch_size = int(get_batch_size(epoch))
         logger.info(f'batch_size: {batch_size}')
 
         if (epoch == 1) & (has_ghost):
@@ -250,9 +254,11 @@ def data_train_particle(config, erase, best_model, device):
             mask_ghost = np.argwhere(mask_ghost == 1)
             mask_ghost = mask_ghost[:, 0].astype(int)
 
-        Niter = n_frames * data_augmentation_loop // batch_size
+
         if particle_batch_ratio < 1:
             Niter = int(n_frames * data_augmentation_loop // batch_size / particle_batch_ratio)
+        else:
+            Niter = n_frames * data_augmentation_loop // batch_size
         plot_frequency = int(Niter // 20)
         if epoch==0:
             print(f'{Niter} iterations per epoch')
@@ -269,8 +275,12 @@ def data_train_particle(config, erase, best_model, device):
             sin_phi = torch.sin(phi)
 
             dataset_batch = []
-            ids = np.random.permutation(n_particles)[:int(n_particles * (1 - particle_batch_ratio))]
-            ids = np.sort(ids)
+
+            if particle_batch_ratio < 1:
+                ids = np.random.permutation(n_particles)[:int(n_particles * particle_batch_ratio)]
+                ids = np.sort(ids)
+            else:
+                ids = np.arange(n_particles).astype(int)
 
             # start = time.time()
 
@@ -310,10 +320,12 @@ def data_train_particle(config, erase, best_model, device):
                     edges = edge_p_p_list[run][f'arr_{k}']
                 else:
                     distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                    if particle_batch_ratio<1:      # remove a given number of particles
-                        distance[:, ids] = -1
                     adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
                     edges = adj_t.nonzero().t().contiguous()
+
+                if particle_batch_ratio < 1:
+                    mask = torch.isin(edges[1, :], torch.tensor(ids, device=device))
+                    edges = edges[:, mask]
 
                 if time_window == 0:
                     dataset = data.Data(x=x[:, :], edge_index=edges, num_nodes=x.shape[0])
@@ -361,6 +373,8 @@ def data_train_particle(config, erase, best_model, device):
 
             for batch in batch_loader:
                 pred = model(batch, data_id=data_id, training=True, phi=phi, k=k_batch)
+            if batch_size > 1:
+                ids = np.concatenate([ids + n * n_particles for n in range(batch_size)], axis=0)
 
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
@@ -371,9 +385,10 @@ def data_train_particle(config, erase, best_model, device):
                 loss = (pred - y_batch).norm(2)
                 loss = loss + train_config.coeff_model_a * (model.a[run, ind_a + 1] - model.a[run, ind_a]).norm(2)
             else:
-                loss = (pred - y_batch).norm(2)
-                if coeff_sign>0:
-                    loss = loss + (torch.sign(pred) - torch.sign(y_batch)).norm(2) * coeff_sign
+                if particle_batch_ratio < 1:
+                    loss = (pred[ids] - y_batch[ids]).norm(2)
+                else:
+                    loss = (pred - y_batch).norm(2)
 
             if (epoch>0) & (coeff_continuous>0):
                 rr = torch.linspace(0, max_radius, 1000, dtype=torch.float32, device=device)
@@ -406,10 +421,10 @@ def data_train_particle(config, erase, best_model, device):
                               n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
                 torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
                            os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
-            if ((epoch == 0) & (N % (Niter // 200) == 0)):
-                torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
-                           os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
-                check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 50,
+            # if ((epoch == 0) & (N % (Niter // 200) == 0)):
+            #     torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
+            #                os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+            check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 50,
                                        memory_percentage_threshold=0.6)
 
         torch.save({'model_state_dict': model.state_dict(),
