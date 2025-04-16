@@ -55,24 +55,10 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'test'
+        task = 'train'
         best_model = ''
-        # config_list = ['falling_water_ramp_x6_11']
-        # config_list = ['falling_water_ramp_x6_11_1']
-        # config_list = ['multimaterial_8', 'multimaterial_8_3','multimaterial_8_4', 'multimaterial_8_1', 'multimaterial_8_2', 'multimaterial_2_1', 'multimaterial_2_2', 'multimaterial_2_3', 'multimaterial_1', 'multimaterial_3', 'multimaterial_4']
-        # config_list = ['falling_water_ramp_x6_11_1','falling_water_ramp_x6_11_2','falling_water_ramp_x6_11_3','falling_water_ramp_x6_11_4',
-        #         'falling_water_ramp_x6_11_5','falling_water_ramp_x6_11_6','falling_water_ramp_x6_11_7','falling_water_ramp_x6_11_8', 'falling_water_ramp_x6_11_9','falling_water_ramp_x6_11_10', 'falling_water_ramp_x6_11_11']
-        config_list = ['fluids_m14']
-        # config_list = ['signal_N4_all_1']
-        # config_list = ['arbitrary_3_test']
-        # config_list = ['multimaterial_1']
-        # config_list = ['wave_smooth_3']
-        # config_list = ['signal_N2_a38_1']
-        # config_list = ['gravity_16']
-        # config_list = ['cell_MDCK_12']
-        # config_list = ['signal_N2_a43_17']
-        # config_list = ['signal_N4_c11_bis']
-        # config_list = ['gravity_16_1', 'gravity_16_2']
+        config_list = ['arbitrary_3_test']
+
 
     for config_file_ in config_list:
         print(' ')

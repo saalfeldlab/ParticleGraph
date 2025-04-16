@@ -593,7 +593,7 @@ def plot_training (config,  log_dir, epoch, N, x, index_particles, n_particles, 
                                  to_numpy(func * ynorm),
                                  linewidth=2,
                                  color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
-                plt.ylim(config.plotting.ylim)
+                # plt.ylim(config.plotting.ylim)
                 if (model_config.particle_model_name == 'PDE_G') | (model_config.particle_model_name == 'PDE_E'):
                     plt.xlim([0, 0.02])
                 plt.tight_layout()
@@ -1324,9 +1324,8 @@ def get_type_list(x, dimension):
     return type_list
 
 def prepare_sample(batch_idx, x_list, y_list, run_lengths, time_window, time_step, recursive_loop,
-                   n_runs, bc_dpos, max_radius, min_radius, particle_batch_ratio, ids, dimension,
-                   rotation_augmentation, translation_augmentation, reflection_augmentation, velocity_augmentation,
-                   device):
+                   n_runs, bc_dpos, max_radius, min_radius, dimension, rotation_augmentation, translation_augmentation,
+                   reflection_augmentation, velocity_augmentation, device):
 
     run = 1 + np.random.randint(n_runs - 1)
     k = time_window + np.random.randint(run_lengths[run] - 1 - time_window - time_step - recursive_loop)
@@ -1338,9 +1337,6 @@ def prepare_sample(batch_idx, x_list, y_list, run_lengths, time_window, time_ste
     sin_phi = torch.sin(phi)
 
     distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-    if particle_batch_ratio < 1:
-        distance[:, ids] = -1
-
     adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float()
     edges = adj_t.nonzero().t().contiguous()
 
@@ -1370,9 +1366,8 @@ def prepare_sample(batch_idx, x_list, y_list, run_lengths, time_window, time_ste
 
 
 def prepare_batch_parallel(batch_size, x_list, y_list, run_lengths, time_window, time_step, recursive_loop,
-                           n_runs, bc_dpos, max_radius, min_radius, particle_batch_ratio, ids, dimension,
-                           rotation_augmentation, translation_augmentation, reflection_augmentation, velocity_augmentation,
-                           device):
+                           n_runs, bc_dpos, max_radius, min_radius, dimension, rotation_augmentation, translation_augmentation,
+                           reflection_augmentation, velocity_augmentation, device):
 
 
     dataset_batch = []
@@ -1384,8 +1379,7 @@ def prepare_batch_parallel(batch_size, x_list, y_list, run_lengths, time_window,
     with ThreadPoolExecutor(max_workers=10) as executor:
         futures = [executor.submit(
             prepare_sample, i, x_list, y_list, run_lengths, time_window, time_step, recursive_loop,
-            n_runs, bc_dpos, max_radius, min_radius, particle_batch_ratio, ids, dimension,
-            rotation_augmentation, translation_augmentation, reflection_augmentation, velocity_augmentation, device
+            n_runs, bc_dpos, max_radius, min_radius, dimension, rotation_augmentation, translation_augmentation, reflection_augmentation, velocity_augmentation, device
         ) for i in range(batch_size)]
 
         for future in futures:
