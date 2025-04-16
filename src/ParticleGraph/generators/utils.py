@@ -262,12 +262,12 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
     if (simulation_config.params == 'continuous') | (config.simulation.non_discrete_level > 0):  # TODO: params is a list[list[float]]; this can never happen?
         type = torch.tensor(np.arange(n_particles), device=device)
 
-    if 'PDE_F_special' in config.graph_model.particle_model_name:
-        n_wall_particles = 1000
-        real_n_particles = n_particles - n_wall_particles
-        pos = torch.rand(real_n_particles, dimension, device=device)
-        pos[:, 0] = pos[:, 0] * 0.2 + 0.75
-        pos[:, 1] = pos[:, 1] * 0.95 + 0.025
+    if config.graph_model.particle_model_name=='PDE_F':
+        n_wall_particles = n_particles // n_particle_types
+        # real_n_particles = n_particles - n_wall_particles
+        # pos = torch.rand(real_n_particles, dimension, device=device)
+        # pos[:, 0] = pos[:, 0] * 0.2 + 0.75
+        # pos[:, 1] = pos[:, 1] * 0.95 + 0.025
         n_particles_wall = n_wall_particles // 4
         wall_pos = torch.linspace(0, 1, n_particles_wall, device=device)
         wall0 = torch.zeros(n_particles_wall, 2, device=device)
@@ -280,12 +280,11 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
         wall3 = torch.zeros(n_particles_wall, 2, device=device)
         wall3[:,1] = wall_pos
         wall3[:,0] = 1
-        pos = torch.cat((wall0,wall1,wall2,wall3,pos), dim=0)
+        pos_ = torch.cat((wall0,wall1,wall2,wall3), dim=0)
+        pos_ = pos_ + torch.randn((n_wall_particles,dimension), device=device) * 0.001
 
-        pos = pos + torch.randn((n_particles,dimension), device=device) * 0.001
-
-        dpos [0:n_wall_particles, :] = 0
-        type = torch.cat((torch.zeros(n_wall_particles, device=device),torch.ones(real_n_particles, device=device)),0)
+        dpos [0:n_wall_particles] = 0
+        pos [0:n_wall_particles:] = pos_
 
 
     if (config.graph_model.signal_model_name == 'PDE_N6') | (config.graph_model.signal_model_name == 'PDE_N7'):

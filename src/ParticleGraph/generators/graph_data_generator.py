@@ -545,11 +545,19 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
                 adj_t = ((distance < max_radius ** 2) & (distance >= 0)).float() * 1
                 edge_index = adj_t.nonzero().t().contiguous()
+                # pos = torch.argwhere(edge_index[0, :] > 2000)
+                # edge_index = edge_index[:, pos.squeeze()]
                 dataset_p_p = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
                 y = model(dataset_p_p)
-                y = y[:, 0: dimension]
+                y = y[:, 0: dimension] - 1E-4 * x[:, 3:5] / delta_t
+                # y = y + torch.randn(y.shape, device=device) * 0.001
                 y0 = y.clone().detach()
                 y1 = y.clone().detach()
+
+                if bounce:
+                    V1[0:n_particles // n_particle_types] = 0
+                    y[0:n_particles // n_particle_types] = 0
+
                 density = model.density
 
             else:
@@ -608,6 +616,8 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 else:
                     x_list.append(x.clone().detach())
                     y_list.append(y.clone().detach())
+                    if torch.isnan(x).any() | torch.isnan(y).any():
+                        print('nan')
 
             # Particle update
             with torch.no_grad():

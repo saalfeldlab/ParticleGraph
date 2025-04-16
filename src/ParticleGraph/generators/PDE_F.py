@@ -2,6 +2,8 @@ import torch
 import torch_geometric as pyg
 import torch_geometric.utils as pyg_utils
 from ParticleGraph.utils import *
+from matplotlib import pyplot as plt
+import matplotlib
 
 
 class PDE_F(pyg.nn.MessagePassing):
@@ -41,6 +43,7 @@ class PDE_F(pyg.nn.MessagePassing):
         parameters = self.p[particle_type, :]
         pos = x[:, 1:self.dimension+1]
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
+        mass = self.p[particle_type, -1:]
 
         pos = pos + 1 * d_pos * self.delta_t
 
@@ -49,23 +52,23 @@ class PDE_F(pyg.nn.MessagePassing):
         if continuous_field:
             self.mode = 'kernel'
             previous_density = self.density
-            self.density = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, parameters=parameters, density=torch.zeros_like(x[:, 0:1]))
+            self.density = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, parameters=parameters, density=torch.zeros_like(x[:, 0:1]), mass=mass)
             density = torch.zeros_like(x[:, 0:1])
             density[continuous_field_size[0]:] = previous_density
             self.mode = 'message_passing'
-            out = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, parameters=parameters, density=density)
+            out = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, parameters=parameters, density=density, mass=mass)
         else:
             self.mode = 'kernel'
-            self.density = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, parameters=parameters, density=torch.zeros_like(x[:, 0:1]))
+            self.density = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, parameters=parameters, density=torch.zeros_like(x[:, 0:1]), mass=mass)
             self.mode = 'message_passing'
-            out = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, parameters=parameters, density=self.density)
+            out = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, parameters=parameters, density=self.density, mass=mass)
 
         out[:, 1] = out[:, 1] + torch.ones_like(out[:, 1]) * parameters[:,0] * 9.8
 
         return out
 
 
-    def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, field_i, field_j, parameters_i, density_i, density_j):
+    def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, field_i, field_j, parameters_i, density_i, density_j, mass_i, mass_j):
 
         delta_pos = self.bc_dpos(pos_j - pos_i)
         self.delta_pos = delta_pos
@@ -90,20 +93,28 @@ class PDE_F(pyg.nn.MessagePassing):
             self.kernel_operators['grad_triangle'] = grad_triangle_kernel
             self.kernel_operators['laplacian'] = laplacian_kernel
 
-            return Gaussian_kernel
+            density = Gaussian_kernel * mass_j
+
+            return density
+
+            # fig=plt.figure()
+            # plt.scatter(mgrid[:, 0].detach().cpu().numpy(), mgrid[:, 1].detach().cpu().numpy(), c=grad_triangle_kernel[:,0].detach().cpu().numpy(), cmap='viridis')
+            # plt.show()
 
         elif self.mode == 'message_passing':
 
-            pressure_force = parameters_i[:,1:2] * torch.relu((density_i+density_j)/2 - parameters_i[:,2:3]/2) * self.kernel_operators['grad_triangle'] / density_j.repeat(1,2)
-            viscosity_force = parameters_i[:,3:4] * (d_pos_j-d_pos_i) * self.kernel_operators['Gaussian'].repeat(1,2) / density_j.repeat(1,2)
+            pressure_force = mass_j * parameters_i[:,1:2] * torch.relu((density_i+density_j)/2 - parameters_i[:,2:3]/2) * self.kernel_operators['grad_triangle'] / density_j.repeat(1,2)
+            viscosity_force = mass_j * parameters_i[:,3:4] * (d_pos_j-d_pos_i) * self.kernel_operators['Gaussian'].repeat(1,2) / density_j.repeat(1,2)
+            convection_force_x = d_pos_i[:,0:1] * self.kernel_operators['Gaussian'][0:1] *  d_pos_j[:,0:1] + d_pos_i[:,1:2] * self.kernel_operators['Gaussian'][1:2] *  d_pos_j[:,0:1] / density_j
+            convection_force_y = d_pos_i[:, 0:1] * self.kernel_operators['Gaussian'][0:1] * d_pos_j[:, 1:2] + d_pos_i[:,1:2] * self.kernel_operators['Gaussian'][0:1] * d_pos_j[:, 1:2] /density_j
+            convection_force = convection_force_x + convection_force_y
 
-            force = pressure_force + viscosity_force # + convection_force
-
-            velocity = self.kernel_operators['Gaussian'] * torch.sum(d_pos_j ** 2, dim=1)[:, None] / density_j
-
-            out = torch.cat((force / density_i, velocity), dim=1)
+            force = pressure_force + viscosity_force - convection_force / 100
+            out = force / density_i
 
             return out
+
+            # velocity = self.kernel_operators['Gaussian'] * torch.sum(d_pos_j ** 2, dim=1)[:, None] / density_j
 
 
 

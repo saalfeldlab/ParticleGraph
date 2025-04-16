@@ -8198,8 +8198,7 @@ if __name__ == '__main__':
     # config_list = ['boids_16_256']
     #config_list = ['signal_N5_v6','signal_N5_v6_0','signal_N5_v6_1','signal_N5_v6_2', 'signal_N5_v6_3', 'signal_N5_v7_1','signal_N5_v7_2','signal_N5_v7_3', 'signal_N5_v8','signal_N5_v9','signal_N5_v10',
     #                'signal_N5_v11','signal_N5_v12','signal_N5_v13','signal_N5_v14','signal_N5_v15']
-    # config_list = ['multimaterial_3','multimaterial_4','multimaterial_7','multimaterial_8']
-    # config_list = ['multimaterial_8','multimaterial_8_1','multimaterial_8_2','multimaterial_8_3']
+
 
     # config_list = ['falling_water_ramp_x6_11_1', 'falling_water_ramp_x6_11_2',
     #                'falling_water_ramp_x6_11_3', 'falling_water_ramp_x6_11_4',
