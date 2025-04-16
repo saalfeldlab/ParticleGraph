@@ -65,7 +65,7 @@ if __name__ == '__main__':
         # config_list = ['falling_water_ramp_x6_11_1','falling_water_ramp_x6_11_2','falling_water_ramp_x6_11_3','falling_water_ramp_x6_11_4',
         #         'falling_water_ramp_x6_11_5','falling_water_ramp_x6_11_6','falling_water_ramp_x6_11_7','falling_water_ramp_x6_11_8', 'falling_water_ramp_x6_11_9','falling_water_ramp_x6_11_10', 'falling_water_ramp_x6_11_11']
         # config_list = ['falling_water_ramp_x6_11_1']
-        config_list = ['fluids_m17_1']
+        config_list = ['multimaterial_9_1']
         # config_list = ['wave_smooth_3']
         # config_list = ['signal_N2_a38_1']
         # config_list = ['gravity_16']
@@ -91,7 +91,7 @@ if __name__ == '__main__':
         if 'train' in task:
             data_train(config=config, erase=False, best_model=best_model, device=device)
         if 'test' in task:
-            data_test(config=config, visualize=True, style='black color', verbose=False, best_model='best', run=1, test_mode='', sample_embedding=False, step=4, device=device) # particle_of_interest=100,
+            data_test(config=config, visualize=True, style='black color', verbose=False, best_model='best', run=17, test_mode='fixed_bounce_all', sample_embedding=False, step=4, device=device) # particle_of_interest=100,
         if 'try_func' in task:
             try_func(max_radius=config.simulation.max_radius, device=device)
 

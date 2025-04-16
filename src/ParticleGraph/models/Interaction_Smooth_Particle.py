@@ -104,7 +104,7 @@ class Interaction_Smooth_Particle(pyg.nn.MessagePassing):
         self.training = training
         self.has_field = has_field
         x, edge_index = data.x, data.edge_index
-        edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+        # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
         if has_field:
             field = x[:,6:7]

@@ -409,6 +409,13 @@ def data_train_particle(config, erase, best_model, device):
             if has_ghost:
                 optimizer_ghost_particles.step()
 
+            if False:
+                for name, param in model.lin_edge.named_parameters():
+                    if param.requires_grad:
+                        print(f"Gradient of {name}: {param.grad}")
+                for name, param in model.lin_edge.named_parameters():
+                    if param.requires_grad:
+                        print(f"{name}: {param.data}")
             # end = time.time()
             # print(f"iter time: {end - start:.4f} seconds")
 

@@ -7847,7 +7847,7 @@ def data_plot(config, epoch_list, style, device):
             plot_particle_field(config, epoch_list, log_dir, logger, 'grey', style, device)
         case 'PDE_E':
             plot_Coulomb(config, epoch_list, log_dir, logger, style, device)
-        case 'PDE_F' | 'PDE_F_A' | 'PDE_F_B' | 'PDE_C' | 'PDE_D' | 'PDE_E' | 'PDE_WF':
+        case 'PDE_F' | 'PDE_F_A' | 'PDE_F_B' | 'PDE_F_C' | 'PDE_F_D' | 'PDE_F_E' | 'PDE_WF':
             plot_falling_particles(config, epoch_list, log_dir, logger, style, device)
         case 'PDE_G':
             if config_file == 'gravity_continuous':
@@ -8218,23 +8218,22 @@ if __name__ == '__main__':
     #                'signal_N5_v11','signal_N5_v12','signal_N5_v13','signal_N5_v14','signal_N5_v15']
 
 
-    config_list = ['falling_water_ramp_x6_11_1', 'falling_water_ramp_x6_11_2',
-                   'falling_water_ramp_x6_11_3', 'falling_water_ramp_x6_11_4',
-                   'falling_water_ramp_x6_11_5', 'falling_water_ramp_x6_11_6', 'falling_water_ramp_x6_11_7',
-                   'falling_water_ramp_x6_11_8',
-                   'falling_water_ramp_x6_11_9']
+    # config_list = ['falling_water_ramp_x6_11_1', 'falling_water_ramp_x6_11_2',
+    #                'falling_water_ramp_x6_11_3', 'falling_water_ramp_x6_11_4',
+    #                'falling_water_ramp_x6_11_5', 'falling_water_ramp_x6_11_6', 'falling_water_ramp_x6_11_7',
+    #                'falling_water_ramp_x6_11_8',
+    #                'falling_water_ramp_x6_11_9']
     #
     # config_list = ['fluids_m14']
 
     # config_list = ['multimaterial_8', 'multimaterial_8_1', 'multimaterial_8_2', 'multimaterial_8_3',
     #                'multimaterial_8_4',
-    #                'multimaterial_8_5',
+    config_list = ['multimaterial_8_5','multimaterial_8_6','multimaterial_8_7']
     #                'multimaterial_2_1', 'multimaterial_2_2', 'multimaterial_3', 'multimaterial_4']
 
     # config_list = ['falling_water_ramp_x6_11_1','falling_water_ramp_x6_11_2','falling_water_ramp_x6_11_3','falling_water_ramp_x6_11_4',
     #         'falling_water_ramp_x6_11_5','falling_water_ramp_x6_11_6','falling_water_ramp_x6_11_7','falling_water_ramp_x6_11_8',
-
-    config_list = ['falling_water_ramp_x6_11_10', 'falling_water_ramp_x6_11_11']
+    # config_list = ['falling_water_ramp_x6_11_10', 'falling_water_ramp_x6_11_11']
 
     # config_list = ['signal_N4_a3','signal_N4_a4']
     # config_list = ['signal_N2_a43_3_1_t8','signal_N2_a43_3_5_t8','signal_N2_a43_3_10_t8','signal_N2_a43_3_20_t8','signal_N2_a43_3_1_t16','signal_N2_a43_3_5_t16',

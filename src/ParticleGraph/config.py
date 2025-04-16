@@ -106,6 +106,8 @@ class GraphModelConfig(BaseModel):
     hidden_dim: int
     n_mp_layers: int
 
+    multi_mlp_params: list[list[float]]
+
     lin_edge_positive: bool = False
 
     aggr_type: str
@@ -120,11 +122,6 @@ class GraphModelConfig(BaseModel):
     n_layers_update: int = 3
     hidden_dim_update: int = 64
     output_size_update: int = 1
-
-    input_size_update2: int = 3
-    n_layers_update2: int = 3
-    hidden_dim_update2: int = 64
-    output_size_update2: int = 1
 
     input_size_nnr: int = 3
     n_layers_nnr: int = 5
