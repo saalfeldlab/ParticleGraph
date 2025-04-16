@@ -65,7 +65,7 @@ if __name__ == '__main__':
         # config_list = ['falling_water_ramp_x6_11_1','falling_water_ramp_x6_11_2','falling_water_ramp_x6_11_3','falling_water_ramp_x6_11_4',
         #         'falling_water_ramp_x6_11_5','falling_water_ramp_x6_11_6','falling_water_ramp_x6_11_7','falling_water_ramp_x6_11_8', 'falling_water_ramp_x6_11_9','falling_water_ramp_x6_11_10', 'falling_water_ramp_x6_11_11']
         # config_list = ['falling_water_ramp_x6_11_1']
-        config_list = ['arbitrary_3_test']
+        config_list = ['fluids_m17_1']
         # config_list = ['wave_smooth_3']
         # config_list = ['signal_N2_a38_1']
         # config_list = ['gravity_16']
