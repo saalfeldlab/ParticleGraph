@@ -55,7 +55,7 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'train'
+        task = 'test'
         best_model = ''
         # config_list = ['falling_water_ramp_x6_11']
         # config_list = ['falling_water_ramp_x6_11_1']
@@ -91,7 +91,7 @@ if __name__ == '__main__':
         if 'train' in task:
             data_train(config=config, erase=False, best_model=best_model, device=device)
         if 'test' in task:
-            data_test(config=config, visualize=True, style='black color', verbose=False, best_model='best', run=17, test_mode='plot_data', sample_embedding=False, step=4, device=device) # particle_of_interest=100,
+            data_test(config=config, visualize=True, style='black color', verbose=False, best_model='best', run=1, test_mode='', sample_embedding=False, step=4, device=device) # particle_of_interest=100,
         if 'try_func' in task:
             try_func(max_radius=config.simulation.max_radius, device=device)
 
