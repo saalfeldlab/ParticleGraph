@@ -57,7 +57,7 @@ if __name__ == '__main__':
 
         task = 'train'
         best_model = ''
-        config_list = ['arbitrary_3_test']
+        config_list = ['multi_material_8']
 
 
     for config_file_ in config_list:

@@ -1325,14 +1325,16 @@ def get_type_list(x, dimension):
 
 def prepare_sample(batch_idx, x_list, y_list, run_lengths, time_window, time_step, recursive_loop,
                    n_runs, bc_dpos, max_radius, min_radius, dimension, rotation_augmentation, translation_augmentation,
-                   reflection_augmentation, velocity_augmentation, device):
+                   reflection_augmentation, velocity_augmentation, seed, device):
+
+    np.random.seed(seed)
+    torch.manual_seed(seed)
 
     run = 1 + np.random.randint(n_runs - 1)
     k = time_window + np.random.randint(run_lengths[run] - 1 - time_window - time_step - recursive_loop)
-    x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
-    x_next = torch.tensor(x_list[run][k + time_step], dtype=torch.float32, device=device).clone().detach()
+    x = torch.tensor(x_list[run][k], dtype=torch.float32, device='cpu').clone().detach()
 
-    phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
+    phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device='cpu') * np.pi * 2
     cos_phi = torch.cos(phi)
     sin_phi = torch.sin(phi)
 
@@ -1341,13 +1343,12 @@ def prepare_sample(batch_idx, x_list, y_list, run_lengths, time_window, time_ste
     edges = adj_t.nonzero().t().contiguous()
 
     dataset = Data(x=x[:, :], edge_index=edges, num_nodes=x.shape[0])
-    y = torch.tensor(y_list[run][k], dtype=torch.float32, device=device).clone().detach()
+    y = torch.tensor(y_list[run][k], dtype=torch.float32, device='cpu').clone().detach()
 
     if translation_augmentation:
         displacement = torch.randn(1, dimension, dtype=torch.float32, device=device) * 5
         displacement = displacement.repeat(x.shape[0], 1)
         x[:, 1:dimension + 1] = x[:, 1:dimension + 1] + displacement
-        x_next[:, 1:dimension + 1] = x_next[:, 1:dimension + 1] + displacement
     if reflection_augmentation:
         x[:, 2:3] = 1 - x[:, 2:3]
         x[: dimension + 2: dimension + 3] = - x[: dimension + 2: dimension + 3]
@@ -1360,8 +1361,6 @@ def prepare_sample(batch_idx, x_list, y_list, run_lengths, time_window, time_ste
         y[:, 0] = new_x
         y[:, 1] = new_y
 
-    # print('thread ', phi)
-
     return dataset, y, run, k, phi
 
 
@@ -1369,7 +1368,7 @@ def prepare_batch_parallel(batch_size, x_list, y_list, run_lengths, time_window,
                            n_runs, bc_dpos, max_radius, min_radius, dimension, rotation_augmentation, translation_augmentation,
                            reflection_augmentation, velocity_augmentation, device):
 
-
+    seeds = np.random.randint(0, 1e6, size=batch_size)
     dataset_batch = []
     y_batch_list = []
     data_id_batch_list = []
@@ -1379,7 +1378,7 @@ def prepare_batch_parallel(batch_size, x_list, y_list, run_lengths, time_window,
     with ThreadPoolExecutor(max_workers=10) as executor:
         futures = [executor.submit(
             prepare_sample, i, x_list, y_list, run_lengths, time_window, time_step, recursive_loop,
-            n_runs, bc_dpos, max_radius, min_radius, dimension, rotation_augmentation, translation_augmentation, reflection_augmentation, velocity_augmentation, device
+            n_runs, bc_dpos, max_radius, min_radius, dimension, rotation_augmentation, translation_augmentation, reflection_augmentation, velocity_augmentation, seeds[i], device
         ) for i in range(batch_size)]
 
         for future in futures:
@@ -1388,13 +1387,15 @@ def prepare_batch_parallel(batch_size, x_list, y_list, run_lengths, time_window,
             y_batch_list.append(y)
             data_id_batch_list.append(np.ones(y.shape[0])*data_id)
             k_batch_list.append(np.ones(y.shape[0])*k)
-            phi_batch_list.append(torch.ones((y.shape[0],1),dtype=torch.float32, device=device) * phi)
+            phi_batch_list.append(torch.ones((y.shape[0],1),dtype=torch.float32, device='cpu') * phi)
 
 
-    y_batch = torch.cat(y_batch_list, dim=0).to(device)
+    y_batch = torch.cat(y_batch_list, dim=0)
+    y_batch = y_batch.to(device)
     data_id_batch =  torch.tensor(np.array(data_id_batch_list), dtype=torch.float32, device=device).flatten()
     k_batch = torch.tensor(np.array(k_batch_list), dtype=torch.float32, device=device).flatten()
     phi_batch = torch.cat(phi_batch_list, dim=0)
+    phi_batch = phi_batch.to(device)
 
     batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False, num_workers=0)
 
