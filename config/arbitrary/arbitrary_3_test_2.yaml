@@ -32,20 +32,18 @@ plotting:
   ylim: [-0.04, 0.03]
 
 training:
-
-  device: 'cuda:1'
-  n_runs: 2
   n_epochs: 2
-
   batch_size: 8
-  small_init_batch_size: False
+  particle_batch_ratio: 0.5
 
+  small_init_batch_size: False
+  n_runs: 2
   sparsity: 'replace_embedding_function'
   cluster_method: 'distance_plot'
   rotation_augmentation: True
   data_augmentation_loop: 100
   fix_cluster_embedding: True
-
+  device: 'auto'
 
 
 
