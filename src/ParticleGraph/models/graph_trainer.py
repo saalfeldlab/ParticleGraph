@@ -24,6 +24,8 @@ import seaborn as sns
 from sklearn.decomposition import PCA, TruncatedSVD
 from sklearn.manifold import TSNE
 from ParticleGraph.denoise_data import *
+from scipy.spatial import KDTree
+
 
 def data_train(config=None, erase=False, best_model=None, device=None):
     # plt.rcParams['text.usetex'] = True
@@ -311,13 +313,13 @@ def data_train_particle(config, erase, best_model, device):
                         ind_np = torch.min(distance, axis=1)[1]
                         x_ghost[:, 3:5] = x[ind_np, 3:5].clone().detach()
                     x = torch.cat((x, x_ghost), 0)
-
                     with torch.no_grad():
                         model.a[run, n_particles:n_particles + n_ghosts] = model.a[
                             run, ghosts_particles.embedding_index].clone().detach()  # sample ghost embedding
 
                 if edge_saved:
                     edges = edge_p_p_list[run][f'arr_{k}']
+                    edges = torch.tensor(edges, dtype=torch.int64, device=device)
                 else:
                     distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
                     adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1

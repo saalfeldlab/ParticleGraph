@@ -401,7 +401,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                 np.save(f'graphs_data/{dataset_name}/inv_particle_dropout_mask.npy', inv_particle_dropout_mask)
             # torch.save(y_list, f'graphs_data/{dataset_name}/y_list_{run}.pt')
             np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list)
-            # np.savez(f'graphs_data/{dataset_name}/edge_p_p_list_{run}', *edge_p_p_list)
+            np.savez(f'graphs_data/{dataset_name}/edge_p_p_list_{run}', *edge_p_p_list)
 
             torch.save(model.p, f'graphs_data/{dataset_name}/model_p.pt')
 
