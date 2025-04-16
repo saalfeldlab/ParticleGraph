@@ -256,7 +256,6 @@ def data_train_particle(config, erase, best_model, device):
             mask_ghost = np.argwhere(mask_ghost == 1)
             mask_ghost = mask_ghost[:, 0].astype(int)
 
-
         if particle_batch_ratio < 1:
             Niter = int(n_frames * data_augmentation_loop // batch_size / particle_batch_ratio)
         else:
@@ -409,13 +408,13 @@ def data_train_particle(config, erase, best_model, device):
             if has_ghost:
                 optimizer_ghost_particles.step()
 
-            if False:
-                for name, param in model.lin_edge.named_parameters():
-                    if param.requires_grad:
-                        print(f"Gradient of {name}: {param.grad}")
-                for name, param in model.lin_edge.named_parameters():
-                    if param.requires_grad:
-                        print(f"{name}: {param.data}")
+            # if False:
+            #     for name, param in model.lin_edge.named_parameters():
+            #         if param.requires_grad:
+            #             print(f"Gradient of {name}: {param.grad}")
+            #     for name, param in model.lin_edge.named_parameters():
+            #         if param.requires_grad:
+            #             print(f"{name}: {param.data}")
             # end = time.time()
             # print(f"iter time: {end - start:.4f} seconds")
 
@@ -462,7 +461,7 @@ def data_train_particle(config, erase, best_model, device):
         plt.ylabel('Loss', fontsize=12)
         plt.xlabel('Epochs', fontsize=12)
 
-        if (has_bounding_box == False) & ('PDE_K' not in model_config.particle_model_name) & ('PDE_F' not in model_config.particle_model_name) & ('PDE_WF' not in model_config.particle_model_name):
+        if (has_bounding_box == False) & ('PDE_K' not in model_config.particle_model_name) & ('PDE_MLPs' not in model_config.particle_model_name) & ('PDE_F' not in model_config.particle_model_name) & ('PDE_WF' not in model_config.particle_model_name):
             ax = fig.add_subplot(1, 5, 2)
             embedding = get_embedding(model.a, 1)
             for n in range(n_particle_types):

@@ -106,7 +106,7 @@ class GraphModelConfig(BaseModel):
     hidden_dim: int
     n_mp_layers: int
 
-    multi_mlp_params: list[list[float]]
+    multi_mlp_params: list[list[int]]  = None
 
     lin_edge_positive: bool = False
 

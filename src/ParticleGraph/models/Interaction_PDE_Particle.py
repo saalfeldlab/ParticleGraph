@@ -53,11 +53,16 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
         self.time_window_noise = train_config.time_window_noise
         self.sub_sampling = simulation_config.sub_sampling
 
-        mlp_params = model_config.multi_MLP_params
+        mlp_params = model_config.multi_mlp_params
 
         self.MLP=[]
         for params in mlp_params:
-            self.MLP.append(MLP(input_size=params[0], output_size=params[1], nlayers=params[2], hidden_size=params[3], device=self.device))
+            self.MLP.append(MLP(input_size=params[0], output_size=params[3], nlayers=params[2], hidden_size=params[1], device=self.device))
+
+        self.a = nn.Parameter(
+            torch.tensor(np.ones((self.n_dataset, int(self.n_particles) , self.embedding_dim)),
+                         device=self.device,
+                         requires_grad=True, dtype=torch.float32))
 
 
     def forward(self, data=[], data_id=[], training=[], phi=[], has_field=False, k=[]):
@@ -83,16 +88,16 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
 
         particle_id = x[:, 0:1].long()
-        embedding = self.a[data_id.clone().detach(), particle_id, :].squeeze()
+        embedding = self.a[data_id.long(), particle_id, :].squeeze()
 
         for self.mode in ['kernel_new_features', 'message_passing', 'update']:
             if self.mode == 'kernel_new_features':
-                new_features = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=[])
+                new_features = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=torch.zeros_like(embedding))
             elif self.mode == 'message_passing':
                 out = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding,new_features=new_features)
             elif self.mode == 'update':
                 in_features = torch.cat((embedding, d_pos, out), dim=-1)
-                pred = self.MLP[3](out)
+                pred = self.MLP[3](in_features)
 
         return out
 
@@ -101,13 +106,13 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
         delta_pos = self.bc_dpos(pos_j - pos_i)
         self.delta_pos = delta_pos
 
-        if self.mode == 'kernel':
+        if self.mode == 'kernel_new_features':
 
             self.kernels = self.MLP[0](d_pos_j - d_pos_i)
-            in_features = torch.cat((embedding_i, kernels), dim=-1)
+            in_features = torch.cat((embedding_i, self.kernels), dim=-1)
             new_features = self.MLP[1](in_features)
 
-            return in_features
+            return new_features
 
         elif self.mode == 'message_passing':
 
