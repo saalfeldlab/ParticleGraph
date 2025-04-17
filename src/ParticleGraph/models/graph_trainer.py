@@ -271,9 +271,9 @@ def data_train_particle(config, erase, best_model, device):
 
         for N in trange(Niter):
 
-            phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
-            cos_phi = torch.cos(phi)
-            sin_phi = torch.sin(phi)
+            # phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
+            # cos_phi = torch.cos(phi)
+            # sin_phi = torch.sin(phi)
 
             dataset_batch = []
 
@@ -350,11 +350,11 @@ def data_train_particle(config, erase, best_model, device):
                         y = y * (1 + torch.randn_like(y) * noise_level)
                     y[:,0:dimension] = y[:,0:dimension] / ynorm
 
-                if rotation_augmentation:
-                    new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
-                    new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
-                    y[:, 0] = new_x
-                    y[:, 1] = new_y
+                # if rotation_augmentation:
+                #     new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
+                #     new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
+                #     y[:, 0] = new_x
+                #     y[:, 1] = new_y
                 if reflection_augmentation:
                     y[:, 1] = -y[:, 1]
 
@@ -373,7 +373,7 @@ def data_train_particle(config, erase, best_model, device):
                 optimizer_ghost_particles.zero_grad()
 
             for batch in batch_loader:
-                pred = model(batch, data_id=data_id, training=True, phi=phi, k=k_batch)
+                pred = model(batch, data_id=data_id, training=True, k=k_batch)
             if batch_size > 1:
                 ids = np.concatenate([ids + n * n_particles for n in range(batch_size)], axis=0)
 

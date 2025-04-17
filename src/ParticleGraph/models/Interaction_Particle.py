@@ -93,13 +93,12 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         return alpha * self.a[data_id.clone().detach(), id+1, :].squeeze() + (1 - alpha) * self.a[data_id.clone().detach(), id, :].squeeze()
 
 
-    def forward(self, data=[], data_id=[], training=[], phi=[], has_field=False, k=[]):
+    def forward(self, data=[], data_id=[], training=[], has_field=False, k=[]):
 
         self.data_id = data_id
-        self.cos_phi = torch.cos(phi)
-        self.sin_phi = torch.sin(phi)
         self.training = training
         self.has_field = has_field
+
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
@@ -110,6 +109,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
 
         pos = x[:, 1:self.dimension+1]
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
+
         if self.state == 'sequence':
             particle_id = x[:, 0:1].long()
             embedding = self.get_interp_a(k, particle_id, self.data_id)
@@ -138,6 +138,10 @@ class Interaction_Particle(pyg.nn.MessagePassing):
 
         if self.update_type == 'mlp':
             out = self.lin_phi(torch.cat((out, embedding, d_pos), dim=-1))
+        if self.rotation_augmentation & (self.training == True):
+            new_out = self.cos_phi * out[:, 0] - self.sin_phi * out[:, 1]
+            new_out = self.sin_phi * out[:, 0] + self.cos_phi * out[:, 1]
+            out = new_out
 
         return out
 
@@ -152,6 +156,10 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         dpos_y_j = d_pos_j[:, 1] / self.vnorm
 
         if self.rotation_augmentation & (self.training == True):
+            self.phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=self.device) * np.pi * 2
+            self.cos_phi = torch.cos(self.phi)
+            self.sin_phi = torch.sin(self.phi)
+
             new_delta_pos_x = self.cos_phi * delta_pos[:, 0] + self.sin_phi * delta_pos[:, 1]
             new_delta_pos_y = -self.sin_phi * delta_pos[:, 0] + self.cos_phi * delta_pos[:, 1]
             delta_pos[:, 0] = new_delta_pos_x
