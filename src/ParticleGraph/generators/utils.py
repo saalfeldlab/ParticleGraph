@@ -262,7 +262,7 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
     if (simulation_config.params == 'continuous') | (config.simulation.non_discrete_level > 0):  # TODO: params is a list[list[float]]; this can never happen?
         type = torch.tensor(np.arange(n_particles), device=device)
 
-    if config.graph_model.particle_model_name=='PDE_F':
+    if simulation_config.bounce:
         n_wall_particles = n_particles // n_particle_types
         # real_n_particles = n_particles - n_wall_particles
         # pos = torch.rand(real_n_particles, dimension, device=device)

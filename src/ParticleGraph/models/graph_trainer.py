@@ -3472,7 +3472,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 y_list.append(y)
 
                 x = x_list[0][0].clone().detach()
-                if ('PDE_F' not in model_config.particle_model_name) & ('PDE_WF' not in model_config.particle_model_name):
+                if ('PDE_MLPs' not in model_config.particle_model_name) & ('PDE_F' not in model_config.particle_model_name) & ('PDE_WF' not in model_config.particle_model_name):
                     n_particles = int(x.shape[0] / ratio)
                     config.simulation.n_particles = n_particles
                 n_frames = len(x_list[0])

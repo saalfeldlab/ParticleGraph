@@ -702,7 +702,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     plt.xlim([0,1000])
                     plt.ylim([-40,1000])
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Vel_{run}_{it}.jpg", dpi=80)
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=80)
                     # plt.show()
                     plt.close()
 

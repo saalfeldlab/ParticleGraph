@@ -318,7 +318,7 @@ class CustomColorMap:
 
     def color(self, index):
 
-        if ('PDE_F' in self.model_name) | ('PDE_WF' in self.model_name):
+        if ('PDE_F' in self.model_name) | ('PDE_WF' in self.model_name) | ('PDE_MLPs' in self.model_name):
             match index:
                 case 0:
                     color = (0.75, 0.75, 0.75)
@@ -479,7 +479,9 @@ def get_log_dir(config=[]):
     elif 'PDE_N' in config.graph_model.signal_model_name:
         l_dir = os.path.join('./log/signal/')
     elif 'PDE_WF' in config.graph_model.particle_model_name:
-        l_dir = os.path.join('./log/falling_wter_ramp/')
+        l_dir = os.path.join('./log/multimaterial/')
+    elif 'PDE_MLPs' in config.graph_model.particle_model_name:
+        l_dir = os.path.join('./log/multimaterial/')
     elif 'RD_RPS' in config.graph_model.mesh_model_name:
         l_dir = os.path.join('./log/reaction_diffusion/')
     elif 'Wave' in config.graph_model.mesh_model_name:

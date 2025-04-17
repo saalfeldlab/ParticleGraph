@@ -20,7 +20,7 @@ graph_model:
   mesh_model_name: ''
   prediction: '2nd_derivative'
 
-  multi_mlp_params: [[2, 128, 5, 1], [3, 64, 5, 4], [19, 256, 5, 2], [6, 32, 3, 2]]
+  multi_mlp_params: [[2, 128, 5, 1], [3, 32, 5, 4], [19, 256, 5, 2], [6, 64, 3, 2]]
 
   input_size: 11
   hidden_dim: 256
@@ -56,8 +56,8 @@ training:
   fix_cluster_embedding: True
   device: 'auto'
 
-  learning_rate_start: 5E-6
-  learning_rate_embedding_start: 1E-5
+  learning_rate_start: 5.0E-5
+  learning_rate_embedding_start: 5.0E-4
 
 
 
