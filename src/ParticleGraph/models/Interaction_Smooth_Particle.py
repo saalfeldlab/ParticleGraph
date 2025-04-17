@@ -96,11 +96,9 @@ class Interaction_Smooth_Particle(pyg.nn.MessagePassing):
         return alpha * self.a[data_id.clone().detach(), id+1, :].squeeze() + (1 - alpha) * self.a[data_id.clone().detach(), id, :].squeeze()
 
 
-    def forward(self, data=[], data_id=[], training=[], phi=[], has_field=False, k=[]):
+    def forward(self, data=[], data_id=[], training=[], has_field=False, k=[]):
 
         self.data_id = data_id
-        self.cos_phi = torch.cos(phi)
-        self.sin_phi = torch.sin(phi)
         self.training = training
         self.has_field = has_field
         x, edge_index = data.x, data.edge_index

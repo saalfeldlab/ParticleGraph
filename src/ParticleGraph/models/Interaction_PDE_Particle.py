@@ -111,10 +111,12 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
                     out = self.MLP[3](in_features)
 
         if self.model == 'PDE_MLPs_B':
-            for self.mode in ['new_features_embedding', 'new_features', 'new_features', 'new_features', 'new_features', 'update']:
-                if self.mode == 'new_features_embedding':
+            for self.mode in ['encode_features', 'update_features', 'update_features', 'update_features', 'decode_features', 'update']:
+                if self.mode == 'encode_features':
                     new_features = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=torch.zeros_like(embedding))
-                elif self.mode == 'new_features':
+                elif self.mode == 'update_features':
+                    new_features = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=new_features)
+                elif self.mode == 'decode_features':
                     new_features = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=new_features)
                 elif self.mode == 'update':
                     if self.rotation_augmentation & (self.training == True):
@@ -133,11 +135,18 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
         if self.rotation_augmentation & (self.training == True):
             delta_pos[:, :2] = delta_pos[:, :2] @ self.rotation_matrix.T
 
-        if self.mode == 'new_features_embedding':
+        if self.mode == 'encode_features':
             in_features = torch.cat((embedding_i, embedding_j, delta_pos, d_pos_i, d_pos_j), dim=-1)
-
-        if self.mode == 'new_features':
-            in_features = torch.cat((embedding_i, embedding_j, delta_pos, d_pos_i, d_pos_j), dim=-1)
+            new_features = self.MLP[0](in_features)
+            return new_features
+        if self.mode == 'update_features':
+            in_features = torch.cat((new_features_i, new_features_j), dim=-1)
+            new_features = self.MLP[1](in_features)
+            return new_features
+        if self.mode == 'decode_features':
+            in_features = torch.cat((new_features_i, new_features_j), dim=-1)
+            new_features = self.MLP[2](in_features)
+            return new_features
 
         if self.mode == 'kernel_new_features':
 
