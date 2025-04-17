@@ -108,7 +108,15 @@ class Interaction_Particle(pyg.nn.MessagePassing):
             field = torch.ones_like(x[:,6:7])
 
         pos = x[:, 1:self.dimension+1]
-        d_pos = x[:, self.dimension+1:1+2*self.dimension]
+        d_pos = x[:, self.dimension+1:1+2*self.dimension] / self.vnorm
+        if self.rotation_augmentation & (self.training == True):
+            self.phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=self.device) * np.pi * 2
+            self.rotation_matrix = torch.stack([
+                torch.stack([torch.cos(self.phi), torch.sin(self.phi)]),
+                torch.stack([-torch.sin(self.phi), torch.cos(self.phi)])
+            ])
+            d_pos[:, :2] = d_pos[:, :2] @ self.rotation_matrix.T
+
 
         if self.state == 'sequence':
             particle_id = x[:, 0:1].long()
@@ -139,9 +147,10 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         if self.update_type == 'mlp':
             out = self.lin_phi(torch.cat((out, embedding, d_pos), dim=-1))
         if self.rotation_augmentation & (self.training == True):
-            new_out = self.cos_phi * out[:, 0] - self.sin_phi * out[:, 1]
-            new_out = self.sin_phi * out[:, 0] + self.cos_phi * out[:, 1]
-            out = new_out
+            new_out_x = self.cos_phi * out[:, 0] - self.sin_phi * out[:, 1]
+            new_out_y = self.sin_phi * out[:, 0] + self.cos_phi * out[:, 1]
+            out[:,0] = new_out_x
+            out[:,1] = new_out_y
 
         return out
 
@@ -150,28 +159,8 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         # distance normalized by the max radius
         r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
         delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
-        dpos_x_i = d_pos_i[:, 0] / self.vnorm
-        dpos_y_i = d_pos_i[:, 1] / self.vnorm
-        dpos_x_j = d_pos_j[:, 0] / self.vnorm
-        dpos_y_j = d_pos_j[:, 1] / self.vnorm
-
         if self.rotation_augmentation & (self.training == True):
-            self.phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=self.device) * np.pi * 2
-            self.cos_phi = torch.cos(self.phi)
-            self.sin_phi = torch.sin(self.phi)
-
-            new_delta_pos_x = self.cos_phi * delta_pos[:, 0] + self.sin_phi * delta_pos[:, 1]
-            new_delta_pos_y = -self.sin_phi * delta_pos[:, 0] + self.cos_phi * delta_pos[:, 1]
-            delta_pos[:, 0] = new_delta_pos_x
-            delta_pos[:, 1] = new_delta_pos_y
-            new_dpos_x_i = self.cos_phi * dpos_x_i + self.sin_phi * dpos_y_i
-            new_dpos_y_i = -self.sin_phi * dpos_x_i + self.cos_phi * dpos_y_i
-            dpos_x_i = new_dpos_x_i
-            dpos_y_i = new_dpos_y_i
-            new_dpos_x_j = self.cos_phi * dpos_x_j + self.sin_phi * dpos_y_j
-            new_dpos_y_j = -self.sin_phi * dpos_x_j + self.cos_phi * dpos_y_j
-            dpos_x_j = new_dpos_x_j
-            dpos_y_j = new_dpos_y_j
+            delta_pos[:, :2] = delta_pos[:, :2] @ self.rotation_matrix.T
 
         match self.model:
             case 'PDE_A'|'PDE_ParticleField_A':
@@ -179,8 +168,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
             case 'PDE_A_bis':
                 in_features = torch.cat((delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
             case 'PDE_B' | 'PDE_ParticleField_B' | 'PDE_F':
-                in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
-                                         dpos_y_j[:, None], embedding_i), dim=-1)
+                in_features = torch.cat((delta_pos, r[:, None], dpos_i, dpos_j, embedding_i), dim=-1)
             case 'PDE_G':
                 in_features = torch.cat(
                     (delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None], dpos_y_j[:, None],
