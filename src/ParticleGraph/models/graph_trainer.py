@@ -26,6 +26,8 @@ from sklearn.manifold import TSNE
 from ParticleGraph.denoise_data import *
 from concurrent.futures import ThreadPoolExecutor
 
+from multiprocessing import Process
+
 def data_train(config=None, erase=False, best_model=None, device=None):
     # plt.rcParams['text.usetex'] = True
     # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
@@ -284,6 +286,61 @@ def data_train_particle(config, erase, best_model, device):
         )
 
         for N in trange(Niter):
+
+            optimizer.zero_grad()
+
+            for batch in batch_loader:
+                pred = model(batch.to(device), data_id=data_id.to(device), training=True, phi=phi.to(device),
+                             k=k_batch.to(device))
+
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                trainer_future = executor.submit(train, 0, next_batch)
+                batch_maker_future = executor.submit(prepare_batch_parallel, 1, other_parameters)
+                next_batch = batch_maker_future.get()
+                training_result = trainer_future.get()
+
+            loss = (pred - y_batch.to(device)).norm(2)
+
+            loss.backward()
+            optimizer.step()
+
+            parent_conn, child_conn = Pipe()
+            trainer_process = Process(target=train, args=(parent_conn,))
+            trainer_process.start()
+            parent_conn.send(batch_loader))
+            parent_conn.send(...))
+
+        for N in trange(Niter):
+
+            parent_conn, child_conn = Pipe()
+            trainer_process = Process(target=train, args=(parent_conn,))
+            trainer_process.start()
+            parent_conn.send(batch_loader))
+            parent_conn.send(...))
+
+            # see https://docs.python.org/3/library/multiprocessing.html#multiprocessing-examples
+
+            batch_loader, y_batch, data_id, k_batch, phi = prepare_batch_parallel_mp(
+                batch_size=batch_size,
+                x_list=x_list,
+                y_list=y_list,
+                run_lengths=run_lengths,
+                time_window=time_window,
+                time_step=time_step,
+                recursive_loop=recursive_loop,
+                n_runs=n_runs,
+                max_radius=max_radius,
+                min_radius=min_radius,
+                dimension=dimension,
+                rotation_augmentation=rotation_augmentation,
+                translation_augmentation=translation_augmentation,
+                reflection_augmentation=reflection_augmentation,
+                velocity_augmentation=velocity_augmentation,
+                vnorm=vnorm,
+                device=device
+            )
+
+            trainer_process.join()
 
             optimizer.zero_grad()
 
