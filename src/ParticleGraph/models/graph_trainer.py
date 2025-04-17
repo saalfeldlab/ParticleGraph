@@ -358,6 +358,8 @@ def data_train_particle(config, erase, best_model, device):
                 if reflection_augmentation:
                     y[:, 1] = -y[:, 1]
 
+                if train_config.shared_embedding:
+                    run = 1
                 if batch == 0:
                     data_id = torch.ones((y.shape[0],1), dtype=torch.int) * run
                     y_batch = y
