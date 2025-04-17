@@ -1,5 +1,5 @@
 
-description: 'system of particles falling down in a box  n_runs 5'
+description: 'system of particles falling down in a box    test smaller LR'
 dataset: 'multimaterial'
 data_folder_name: '/groups/saalfeld/saalfeldlab/projects/gnn/learning-to-simulate/MultiMaterial/'
 
@@ -16,14 +16,16 @@ simulation:
   start_frame: 0
 
 graph_model:
-  particle_model_name: 'PDE_F_A'
+  particle_model_name: 'PDE_MLPs'
   mesh_model_name: ''
   prediction: '2nd_derivative'
 
+  multi_mlp_params: [[2, 128, 5, 1], [3, 32, 5, 4], [19, 256, 5, 2], [6, 64, 3, 2]]
+
   input_size: 11
-  output_size: 2
   hidden_dim: 256
   n_mp_layers: 5
+  output_size: 2
 
   input_size_update: 2
   n_layers_update: 2
@@ -39,9 +41,11 @@ plotting:
 
 training:
   n_epochs: 20
-  batch_size: 20
+  batch_size: 8
   small_init_batch_size: False
   n_runs: 999
+
+  time_window_noise: 1.0E-5
 
   sparsity: 'none'
   sparsity_freq: 3
@@ -52,9 +56,8 @@ training:
   fix_cluster_embedding: True
   device: 'auto'
 
-  learning_rate_start: 1E-6
-  learning_rate_embedding_start: 5E-6
-
+  learning_rate_start: 5E-7
+  learning_rate_embedding_start: 1E-4
 
 
 

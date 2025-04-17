@@ -7769,8 +7769,6 @@ def data_plot(config, epoch_list, style, device):
     # plt.rc('text', usetex=False)
     matplotlib.rcParams['savefig.pad_inches'] = 0
 
-    l_dir = get_log_dir(config)
-
     log_dir, logger = create_log_dir(config=config, erase=False)
 
     os.makedirs(os.path.join(log_dir, 'results'), exist_ok=True)
@@ -7847,7 +7845,7 @@ def data_plot(config, epoch_list, style, device):
             plot_particle_field(config, epoch_list, log_dir, logger, 'grey', style, device)
         case 'PDE_E':
             plot_Coulomb(config, epoch_list, log_dir, logger, style, device)
-        case 'PDE_F' | 'PDE_F_A' | 'PDE_F_B' | 'PDE_F_C' | 'PDE_F_D' | 'PDE_F_E' | 'PDE_WF':
+        case 'PDE_F' | 'PDE_F_A' | 'PDE_F_B' | 'PDE_F_C' | 'PDE_F_D' | 'PDE_F_E' | 'PDE_WF' | 'PDE_WF' | 'PDE_MLPs':
             plot_falling_particles(config, epoch_list, log_dir, logger, style, device)
         case 'PDE_G':
             if config_file == 'gravity_continuous':
@@ -8219,8 +8217,8 @@ if __name__ == '__main__':
 
     config_list = ['multimaterial_2', 'multimaterial_8_1', 'multimaterial_8_2','multimaterial_8_4', 'multimaterial_8_5', 'multimaterial_8_6',
                    'multimaterial_8_7', 'multimaterial_9_1', 'multimaterial_9_2', 'multimaterial_9_3', 'multimaterial_9_4']
-    #
-    config_list = ['multimaterial_9_1']
+    # #
+    # config_list = ['falling_water_ramp_x6_11_1']
 
     # config_list = ['multimaterial_2', 'multimaterial_8_1', 'multimaterial_8_2', 'multimaterial_8_4',
     #                'multimaterial_8_5', 'multimaterial_8_6',
