@@ -8215,10 +8215,10 @@ if __name__ == '__main__':
     #config_list = ['signal_N5_v6','signal_N5_v6_0','signal_N5_v6_1','signal_N5_v6_2', 'signal_N5_v6_3', 'signal_N5_v7_1','signal_N5_v7_2','signal_N5_v7_3', 'signal_N5_v8','signal_N5_v9','signal_N5_v10',
     #                'signal_N5_v11','signal_N5_v12','signal_N5_v13','signal_N5_v14','signal_N5_v15']
 
-    config_list = ['multimaterial_2', 'multimaterial_8_1', 'multimaterial_8_2','multimaterial_8_4', 'multimaterial_8_5', 'multimaterial_8_6',
-                   'multimaterial_8_7', 'multimaterial_9_1', 'multimaterial_9_2', 'multimaterial_9_3', 'multimaterial_9_4']
+    # config_list = ['multimaterial_2', 'multimaterial_8_1', 'multimaterial_8_2','multimaterial_8_4', 'multimaterial_8_5', 'multimaterial_8_6',
+    #                'multimaterial_8_7', 'multimaterial_9_1', 'multimaterial_9_2', 'multimaterial_9_3', 'multimaterial_9_4']
     # #
-    # config_list = ['falling_water_ramp_x6_11_1']
+    config_list = ['arbitrary_3_5']
 
     # config_list = ['multimaterial_2', 'multimaterial_8_1', 'multimaterial_8_2', 'multimaterial_8_4',
     #                'multimaterial_8_5', 'multimaterial_8_6',

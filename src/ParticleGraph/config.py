@@ -101,10 +101,10 @@ class GraphModelConfig(BaseModel):
     pre_hidden_dim: int = 1
     pre_n_mp_layers: int = 1
 
-    input_size: int
-    output_size: int
-    hidden_dim: int
-    n_mp_layers: int
+    input_size: int = 1
+    output_size: int = 1
+    hidden_dim: int = 1
+    n_mp_layers: int = 1
 
     multi_mlp_params: list[list[int]]  = None
 
@@ -149,6 +149,7 @@ class PlottingConfig(BaseModel):
     pic_folder: str = 'none'
     pic_format: str = 'jpg'
     pic_size: list[int] = [1000, 1100]
+    data_embedding: int = 1
 
 
 class ImageData(BaseModel):
@@ -254,7 +255,6 @@ class TrainingConfig(BaseModel):
     regul_matrix: bool = False
     sub_batches: int = 1
     sequence: list[str] = ['to track','to cell']
-
 
 
 # Main config schema for ParticleGraph

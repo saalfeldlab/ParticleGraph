@@ -482,6 +482,7 @@ def plot_training (config,  log_dir, epoch, N, x, index_particles, n_particles, 
     simulation_config = config.simulation
     train_config = config.training
     model_config = config.graph_model
+    plot_config = config.plotting
     do_tracking = train_config.do_tracking
     max_radius = simulation_config.max_radius
 
@@ -554,7 +555,7 @@ def plot_training (config,  log_dir, epoch, N, x, index_particles, n_particles, 
             embedding = to_numpy(model.a[1].squeeze())
             plt.scatter(embedding[:-200, 0], embedding[:-200, 1], color='k', s=0.1)
         else:
-            embedding = get_embedding(model.a, 1)
+            embedding = get_embedding(model.a, plot_config.data_embedding)
             for n in range(n_particle_types):
                 plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n), s=20)
         plt.xticks([])
@@ -1209,7 +1210,7 @@ def choose_training_model(model_config=None, device=None, projections=None):
             model = Interaction_Cell(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
         case 'PDE_F_A' |'PDE_F_B'|'PDE_F_C'|'PDE_F_D'|'PDE_F_E' :
             model = Interaction_Smooth_Particle(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
-        case 'PDE_MLPs':
+        case 'PDE_MLPs' | 'PDE_MLPs_A' | 'PDE_MLPs_B' | 'PDE_MLPs_C' | 'PDE_MLPs_D' | 'PDE_MLPs_E':
             model = Interaction_PDE_Particle(aggr_type=aggr_type, config=model_config, device=device,
                                                 bc_dpos=bc_dpos, dimension=dimension)
         case 'PDE_WF':

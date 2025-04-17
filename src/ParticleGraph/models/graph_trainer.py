@@ -88,6 +88,7 @@ def data_train_particle(config, erase, best_model, device):
     simulation_config = config.simulation
     train_config = config.training
     model_config = config.graph_model
+    plot_config = config.plotting
 
     print(f'training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
@@ -105,14 +106,10 @@ def data_train_particle(config, erase, best_model, device):
     noise_level = train_config.noise_level
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
-    rotation_augmentation = train_config.rotation_augmentation
-    translation_augmentation = train_config.translation_augmentation
-    reflection_augmentation = train_config.reflection_augmentation
-    velocity_augmentation = train_config.velocity_augmentation
+
     data_augmentation_loop = train_config.data_augmentation_loop
     recursive_loop = train_config.recursive_loop
     coeff_continuous = train_config.coeff_continuous
-    coeff_sign = train_config.coeff_sign
     target_batch_size = train_config.batch_size
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
@@ -159,12 +156,8 @@ def data_train_particle(config, erase, best_model, device):
         run_lengths.append(len(x))
     x = torch.tensor(x_list[0][0], dtype=torch.float32, device=device)
     y = torch.tensor(y_list[0][0], dtype=torch.float32, device=device)
-    if n_runs >= 100:
-        n_steps = n_runs // 10
-    else:
-        n_steps = 1
     time.sleep(0.5)
-    for run in trange(0, n_runs, n_steps):
+    for run in trange(0, n_runs,  max(n_runs // 10, 1)):
         for k in range(run_lengths[run]):
             if (k % 10 == 0) | (n_frames < 1000):
                 try:
@@ -218,7 +211,7 @@ def data_train_particle(config, erase, best_model, device):
     logger.info(f'N epochs: {n_epochs}')
     logger.info(f'initial batch_size: {batch_size}')
 
-    x = torch.tensor(x_list[1][0], dtype=torch.float32, device=device)
+    x = torch.tensor(x_list[plot_config.data_embedding][0], dtype=torch.float32, device=device)
     index_particles = get_index_particles(x, n_particle_types, dimension)
     type_list = get_type_list(x, dimension)
     print(f'N particles: {n_particles} {len(torch.unique(type_list))} types')
@@ -261,6 +254,8 @@ def data_train_particle(config, erase, best_model, device):
         else:
             Niter = n_frames * data_augmentation_loop // batch_size
         plot_frequency = int(Niter // 20)
+
+
         if epoch==0:
             print(f'{Niter} iterations per epoch')
             logger.info(f'{Niter} iterations per epoch')
@@ -270,10 +265,6 @@ def data_train_particle(config, erase, best_model, device):
         total_loss = 0
 
         for N in trange(Niter):
-
-            # phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
-            # cos_phi = torch.cos(phi)
-            # sin_phi = torch.sin(phi)
 
             dataset_batch = []
 
@@ -291,17 +282,6 @@ def data_train_particle(config, erase, best_model, device):
                 k = time_window + np.random.randint(run_lengths[run] - 1 - time_window - time_step - recursive_loop)
                 x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
                 x_next = torch.tensor(x_list[run][k + time_step], dtype=torch.float32, device=device).clone().detach()
-
-                if translation_augmentation:
-                    displacement = torch.randn(1, dimension, dtype=torch.float32, device=device) * 5
-                    displacement = displacement.repeat(x.shape[0], 1)
-                    x[:, 1:dimension + 1] = x[:, 1:dimension + 1] + displacement
-                    x_next[:, 1:dimension + 1] = x_next[:, 1:dimension + 1] + displacement
-                if reflection_augmentation:
-                    x[:, 2:3] = 1 - x[:, 2:3]
-                    x[: dimension + 2: dimension + 3] = - x[: dimension + 2: dimension + 3]
-                if velocity_augmentation:
-                    x[:, dimension + 1: 2*dimension + 1] = x[:, dimension + 1: 2*dimension + 1] + torch.randn((1,2),device=device).repeat(x.shape[0],1) * vnorm
 
                 if has_ghost:
                     x_ghost = ghosts_particles.get_pos(dataset_id=run, frame=k, bc_pos=bc_pos)
@@ -349,14 +329,6 @@ def data_train_particle(config, erase, best_model, device):
                     if noise_level > 0:
                         y = y * (1 + torch.randn_like(y) * noise_level)
                     y[:,0:dimension] = y[:,0:dimension] / ynorm
-
-                # if rotation_augmentation:
-                #     new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
-                #     new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
-                #     y[:, 0] = new_x
-                #     y[:, 1] = new_y
-                if reflection_augmentation:
-                    y[:, 1] = -y[:, 1]
 
                 if train_config.shared_embedding:
                     run = 1
@@ -3876,7 +3848,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     y = y0 / ynorm
                     pred = y
                 else:
-                    pred = model(dataset, data_id=data_id, training=False, phi=torch.zeros(1, device=device), k=it)
+                    pred = model(dataset, data_id=data_id, training=False, k=it)
                     y = pred
 
                 if has_ghost:

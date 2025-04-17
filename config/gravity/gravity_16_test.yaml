@@ -7,7 +7,6 @@ simulation:
     max_radius: 0.3
     n_particles: 960
     n_particle_types: 16
-    n_interactions: 16
     n_frames: 2000
     delta_t: 3.0E-5
     dpos_init:  5.0E-5
