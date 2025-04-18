@@ -62,7 +62,7 @@ if __name__ == '__main__':
         # config_list = ['multimaterial_9_1', 'multimaterial_9_2', 'multimaterial_9_3', 'multimaterial_9_4', 'multimaterial_9_0',
         #                 'multimaterial_9_5', 'multimaterial_10_1', 'multimaterial_10_2', 'multimaterial_10_3']
 
-        config_list = ['multimaterial_9_8']
+        config_list = ['multimaterial_9_13']
         # config_list = ['signal_N2_a38_1']
         # config_list = ['gravity_16']
         # config_list = ['cell_MDCK_12']

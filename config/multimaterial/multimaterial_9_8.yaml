@@ -1,4 +1,3 @@
-
 description: 'system of particles falling down in a box'
 dataset: 'multimaterial'
 data_folder_name: '/groups/saalfeld/saalfeldlab/projects/gnn/learning-to-simulate/MultiMaterial/'

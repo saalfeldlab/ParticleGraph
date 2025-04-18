@@ -149,7 +149,7 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
                         self.rotation_inv_matrix = torch.stack([torch.stack([torch.cos(self.phi), -torch.sin(self.phi)]), torch.stack([torch.sin(self.phi), torch.cos(self.phi)])])
                         out[:, :2] = out[:, :2] @ self.rotation_inv_matrix.T
             if (self.model == 'PDE_MLPs_D'):
-                in_features = torch.cat((embedding, new_features), dim=-1)
+                in_features = torch.cat((embedding, out), dim=-1)
                 out = self.MLP[1](in_features)
 
         return out
