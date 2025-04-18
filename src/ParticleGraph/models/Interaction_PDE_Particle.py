@@ -174,7 +174,6 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
         if self.mode == 'defined_kernel_features':
             mgrid = delta_pos.clone().detach()
             mgrid.requires_grad = True
-
             Gaussian_kernel = torch.exp(-4 * (mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / self.kernel_var)[:, None] / 2
             dist = torch.sqrt(torch.sum(mgrid ** 2, dim=1))
             triangle_kernel = ((self.max_radius - dist) ** 2 / self.kernel_var)[:, None] / 1.309
@@ -189,14 +188,13 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
         if self.mode == 'message_passing_defined_kernel':
             in_features = torch.cat((d_pos_i - d_pos_j, embedding_i, embedding_j, new_features_i, new_features_j, self.kernel_operators['grad_triangle'], self.kernel_operators['Gaussian']), dim=-1)
             out = self.MLP[0](in_features) / new_features_j.repeat(1, 2)
-            # out = self.lin_edge(in_features) / new_features_j.repeat(1, 2)
         if self.mode == 'kernel_new_features':
             self.kernels = self.MLP[0](delta_pos)
             in_features = torch.cat((embedding_i, self.kernels), dim=-1)
             new_features = self.MLP[1](in_features)
             return new_features
         elif self.mode == 'message_passing_kernel':
-            in_features = torch.cat((embedding_i, embedding_j, delta_pos, d_pos_i, d_pos_j, new_features_i[:,None], new_features_j[:,None], self.kernels), dim=-1)
+            in_features = torch.cat((embedding_i, embedding_j, delta_pos, d_pos_i, d_pos_j, new_features_i, new_features_j, self.kernels), dim=-1)
             out = self.MLP[2](in_features)
 
         return out
