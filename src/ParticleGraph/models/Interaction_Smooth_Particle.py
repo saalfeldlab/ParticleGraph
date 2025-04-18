@@ -194,4 +194,31 @@ class Interaction_Smooth_Particle(pyg.nn.MessagePassing):
 
         return aggr_out  # self.lin_node(aggr_out)
 
+        matplotlib.use("Qt5Agg")
+        fig = plt.figure(figsize=(20, 5))
+        ax = fig.add_subplot(1, 4, 1)
+        plt.scatter(to_numpy(mgrid[:, 0]), to_numpy(mgrid[:, 1]), c=to_numpy(self.kernel_operators['Gaussian']), s=5, cmap='viridis')
+        ax.set_xlim(-self.max_radius, self.max_radius)
+        ax.set_ylim(-self.max_radius, self.max_radius)
+        ax.set_aspect('equal')
+        plt.colorbar()
+        plt.tight_layout()
+        ax = fig.add_subplot(1, 4, 2)
+        plt.scatter(to_numpy(mgrid[:, 0]), to_numpy(mgrid[:, 1]), c=to_numpy(self.kernel_operators['grad_triangle'][:,0]), s=5, cmap='viridis')
+        ax.set_xlim(-self.max_radius, self.max_radius)
+        ax.set_ylim(-self.max_radius, self.max_radius)
+        ax.set_aspect('equal')
+        plt.colorbar()
+        plt.tight_layout()
+        ax = fig.add_subplot(1, 4,3)
+        plt.scatter(to_numpy(mgrid[:, 0]), to_numpy(mgrid[:, 1]), c=to_numpy(self.kernel_operators['grad_triangle'][:,0]), s=5, cmap='viridis')
+        ax.set_xlim(-self.max_radius, self.max_radius)
+        ax.set_ylim(-self.max_radius, self.max_radius)
+        ax.set_aspect('equal')
+        plt.colorbar()
+        plt.tight_layout()
+
+
+
+
 

@@ -315,8 +315,8 @@ def data_train_particle(config, erase, best_model, device):
                     xt = []
                     for t in range(time_window):
                         x_ = torch.tensor(x_list[run][k - t], dtype=torch.float32, device=device)
-                        if translation_augmentation:
-                            x_[:, 1:dimension + 1] = x_[:, 1:dimension + 1] + displacement
+                        # if translation_augmentation:
+                        #     x_[:, 1:dimension + 1] = x_[:, 1:dimension + 1] + displacement
                         xt.append(x_[:, :])
                     dataset = data.Data(x=xt, edge_index=edges, num_nodes=x.shape[0])
                     dataset_batch.append(dataset)
@@ -376,6 +376,10 @@ def data_train_particle(config, erase, best_model, device):
                     grad = func1-func0
                     loss = loss + coeff_continuous * grad.norm(2)
 
+            # matplotlib.use("Qt5Agg")
+            # fig = plt.figure()
+            # plt.scatter(to_numpy(y_batch), to_numpy(pred), s=1, c='k',alpha=0.1)
+
             loss.backward()
             optimizer.step()
 
@@ -383,9 +387,9 @@ def data_train_particle(config, erase, best_model, device):
                 optimizer_ghost_particles.step()
 
             # if False:
-            #     for name, param in model.lin_edge.named_parameters():
-            #         if param.requires_grad:
-            #             print(f"Gradient of {name}: {param.grad}")
+                for name, param in model.lin_edge.named_parameters():
+                    if param.requires_grad:
+                        print(f"Gradient of {name}: {param.grad}")
             #     for name, param in model.lin_edge.named_parameters():
             #         if param.requires_grad:
             #             print(f"{name}: {param.data}")
@@ -3891,6 +3895,11 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
                 else:
                     loss = (pred[:, 0:dimension] * ynorm - y0).norm(2)
+
+                    # matplotlib.use("Qt5Agg")
+                    # fig = plt.figure()
+                    # plt.scatter(to_numpy(y0), to_numpy(ynorm*pred[:, 0:dimension]))
+
                     pred_err_list.append(to_numpy(torch.sqrt(loss)))
                     if model_config.prediction == '2nd_derivative':
                         y = y * ynorm * delta_t

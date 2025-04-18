@@ -269,17 +269,19 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
         # pos[:, 0] = pos[:, 0] * 0.2 + 0.75
         # pos[:, 1] = pos[:, 1] * 0.95 + 0.025
         n_particles_wall = n_wall_particles // 4
-        wall_pos = torch.linspace(0, 1, n_particles_wall, device=device)
+        wall_pos = torch.linspace(0.1, 0.9, n_particles_wall, device=device)
         wall0 = torch.zeros(n_particles_wall, 2, device=device)
         wall0[:,0] = wall_pos
+        wall0[:,1] = 0.1
         wall1 = torch.zeros(n_particles_wall, 2, device=device)
         wall1[:,0] = wall_pos
-        wall1[:,1] = 1
+        wall1[:,1] = 0.9
         wall2 = torch.zeros(n_particles_wall, 2, device=device)
+        wall2[:,0] = 0.1
         wall2[:,1] = wall_pos
         wall3 = torch.zeros(n_particles_wall, 2, device=device)
+        wall3[:,0] = 0.9
         wall3[:,1] = wall_pos
-        wall3[:,0] = 1
         pos_ = torch.cat((wall0,wall1,wall2,wall3), dim=0)
         pos_ = pos_ + torch.randn((n_wall_particles,dimension), device=device) * 0.001
 
