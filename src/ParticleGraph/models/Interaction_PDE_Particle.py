@@ -60,9 +60,11 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
 
         mlp_params = model_config.multi_mlp_params
 
-        self.MLP=[]
-        for params in mlp_params:
-            self.MLP.append(MLP(input_size=params[0], output_size=params[3], nlayers=params[2], hidden_size=params[1], device=self.device))
+        self.MLP = nn.ModuleList([
+            MLP(input_size=params[0], output_size=params[3], nlayers=params[2], hidden_size=params[1],
+                device=self.device)
+            for params in mlp_params
+        ])
 
         self.a = nn.Parameter(
             torch.tensor(np.ones((self.n_dataset, int(self.n_particles) , self.embedding_dim)),

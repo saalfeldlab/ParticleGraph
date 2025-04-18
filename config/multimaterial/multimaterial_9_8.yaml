@@ -21,10 +21,10 @@ graph_model:
 
   multi_mlp_params: [[11, 256, 5, 2]]   # input_size, hidden_size, nlayers, output_size
 
-  input_size: 11
-  output_size: 2
-  hidden_dim: 256
-  n_mp_layers: 5
+#  input_size: 11
+#  output_size: 2
+#  hidden_dim: 256
+#  n_mp_layers: 5
 
   aggr_type: 'add'
   embedding_dim: 2
@@ -50,7 +50,7 @@ training:
   translation_augmentation: False
   data_augmentation_loop: 5000
   fix_cluster_embedding: True
-  device: 'cuda:1'
+  device: 'auto'
 
   learning_rate_start: 5.0E-5
   learning_rate_embedding_start: 5.0E-4
