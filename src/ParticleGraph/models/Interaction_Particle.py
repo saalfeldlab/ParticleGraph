@@ -59,6 +59,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         self.bc_dpos = bc_dpos
         self.max_radius = simulation_config.max_radius
         self.rotation_augmentation = train_config.rotation_augmentation
+        self.reflection_augmentation = train_config.reflection_augmentation
         self.time_window = train_config.time_window
         self.sub_sampling = simulation_config.sub_sampling
         self.state = simulation_config.state_type
@@ -109,13 +110,21 @@ class Interaction_Particle(pyg.nn.MessagePassing):
 
         pos = x[:, 1:self.dimension+1]
         d_pos = x[:, self.dimension+1:1+2*self.dimension] / self.vnorm
-        if self.rotation_augmentation & (self.training == True):
+        if self.rotation_augmentation & self.training == True:
             self.phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=self.device) * np.pi * 2
             self.rotation_matrix = torch.stack([
                 torch.stack([torch.cos(self.phi), torch.sin(self.phi)]),
                 torch.stack([-torch.sin(self.phi), torch.cos(self.phi)])
             ])
             d_pos[:, :2] = d_pos[:, :2] @ self.rotation_matrix.T
+        if self.reflection_augmentation & self.training == True:
+            group = np.random.randint(0, 3)
+            if group in [0, 1]:
+                pos[:, group] = 1 - pos[:, group]
+                d_pos[:, group] = -d_pos[:, group]
+            else:
+                pos = 1 - pos
+                d_pos[:, 1] = -d_pos[:, 1]
 
         if self.state == 'sequence':
             particle_id = x[:, 0:1].long()
@@ -127,9 +136,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         out = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
 
         if self.sub_sampling>1:
-
             pred = out
-
             for k in range(self.sub_sampling):
                 if self.prediction == '2nd_derivative':
                     y = pred * self.ynorm * self.delta_t / self.sub_sampling
@@ -138,19 +145,22 @@ class Interaction_Particle(pyg.nn.MessagePassing):
                     y = pred * self.vnorm
                     d_pos = y
                 pos = pos + d_pos * self.delta_t / self.sub_sampling
-
                 out = pos
-
                 pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
 
         if self.update_type == 'mlp':
             out = self.lin_phi(torch.cat((out, embedding, d_pos), dim=-1))
-        if self.rotation_augmentation & (self.training == True):
+        if self.rotation_augmentation & self.training:
             self.rotation_inv_matrix = torch.stack([
                 torch.stack([torch.cos(self.phi), -torch.sin(self.phi)]),
                 torch.stack([torch.sin(self.phi), torch.cos(self.phi)])
             ])
             out[:, :2] = out[:, :2] @ self.rotation_inv_matrix.T
+        if self.reflection_augmentation & self.training == True:
+            if group in [0, 1]:
+                out[:, group] = -out[:, group]
+            else:
+                out = -out
 
         return out
 

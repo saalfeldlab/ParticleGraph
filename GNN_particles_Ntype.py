@@ -58,16 +58,14 @@ if __name__ == '__main__':
         task = 'train'
         best_model = ''
         # config_list = ['fluids_m17_1']
-        # config_list = ['multimaterial_2', 'multimaterial_8_1', 'multimaterial_8_2','multimaterial_8_4', 'multimaterial_8_5', 'multimaterial_8_6', 'multimaterial_8_7']
-        # config_list = ['multimaterial_9_1', 'multimaterial_9_2', 'multimaterial_9_3', 'multimaterial_9_4', 'multimaterial_9_0',
-        #                 'multimaterial_9_5', 'multimaterial_10_1', 'multimaterial_10_2', 'multimaterial_10_3']
-
-        config_list = ['multimaterial_9_13']
+        # config_list = ['multimaterial_2', 'multimaterial_8_1', 'multimaterial_8_8', 'multimaterial_8_9', 'multimaterial_8_10', 'multimaterial_8_10', 'multimaterial_8_11', 'multimaterial_8_12',
+        #             'multimaterial_9_7', 'multimaterial_9_8', 'multimaterial_9_9','multimaterial_9_10', 'multimaterial_9_11', 'multimaterial_9_12', 'multimaterial_9_13', 'multimaterial_9_14',
+        #             'multimaterial_10_1','multimaterial_10_2', 'multimaterial_10_3', 'multimaterial_10_4']
         # config_list = ['signal_N2_a38_1']
         # config_list = ['gravity_16']
         # config_list = ['cell_MDCK_12']
         # config_list = ['signal_N2_a43_17']
-        # config_list = ['signal_N4_c11_bis']
+        config_list = ['arbitrary_3_5']
         # config_list = ['gravity_16_1', 'gravity_16_2']
 
     for config_file_ in config_list:

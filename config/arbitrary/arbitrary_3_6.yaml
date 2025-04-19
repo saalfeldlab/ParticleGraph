@@ -1,4 +1,4 @@
-description: 'attraction-repulsion with 3 types particles   with rotation augmentation'
+description: 'attraction-repulsion with 3 types particles   with 100 datasets'
 dataset: 'arbitrary_3_6'
 
 simulation:

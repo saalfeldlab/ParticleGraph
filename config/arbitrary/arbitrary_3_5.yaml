@@ -39,6 +39,7 @@ training:
   sparsity: 'replace_embedding_function'
   cluster_method: 'distance_plot'
   rotation_augmentation: True
+  #reflection_augmentation: True
   data_augmentation_loop: 100
   fix_cluster_embedding: True
   device: 'auto'
