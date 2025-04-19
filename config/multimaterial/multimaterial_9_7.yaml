@@ -15,11 +15,11 @@ simulation:
   start_frame: 0
 
 graph_model:
-  particle_model_name: 'PDE_MLPs_C'
+  particle_model_name: 'PDE_MLPs_D'
   mesh_model_name: ''
   prediction: '2nd_derivative'
 
-  multi_mlp_params: [[11, 256, 5, 2]]   # input_size, hidden_size, nlayers, output_size
+  multi_mlp_params: [[11, 256, 5, 2], [4,16,3,2]]   # input_size, hidden_size, nlayers, output_size
 
   input_size: 11
   output_size: 2
@@ -46,7 +46,7 @@ training:
   sparsity: 'none'
   sparsity_freq: 3
   cluster_method: 'kmeans_auto_embedding'
-  rotation_augmentation: False
+  rotation_augmentation: True
   translation_augmentation: False
   data_augmentation_loop: 5000
   fix_cluster_embedding: True

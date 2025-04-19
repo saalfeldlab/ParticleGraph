@@ -61,7 +61,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         self.rotation_augmentation = train_config.rotation_augmentation
         self.reflection_augmentation = train_config.reflection_augmentation
         self.time_window = train_config.time_window
-        self.sub_sampling = simulation_config.sub_sampling
+        self.recursive_loop = train_config.recursive_loop
         self.state = simulation_config.state_type
 
         self.sigma = simulation_config.sigma
@@ -135,32 +135,40 @@ class Interaction_Particle(pyg.nn.MessagePassing):
 
         out = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
 
-        if self.sub_sampling>1:
+        if self.recursive_loop>0:
             pred = out
-            for k in range(self.sub_sampling):
-                if self.prediction == '2nd_derivative':
-                    y = pred * self.ynorm * self.delta_t / self.sub_sampling
-                    d_pos = d_pos + y  # speed update
+            if self.rotation_augmentation & self.training:
+                self.rotation_inv_matrix = torch.stack([torch.stack([torch.cos(self.phi), -torch.sin(self.phi)]),
+                                                        torch.stack([torch.sin(self.phi), torch.cos(self.phi)])])
+                d_pos[:, :2] = d_pos[:, :2] @ self.rotation_inv_matrix.T
+                pred[:, :2] = pred[:, :2] @ self.rotation_inv_matrix.T
+            if self.reflection_augmentation & self.training:
+                if group in [0, 1]:
+                    pos[:, group] = 1 - pos[:, group]
+                    pred[:, group] = -pred[:, group]
                 else:
-                    y = pred * self.vnorm
-                    d_pos = y
-                pos = pos + d_pos * self.delta_t / self.sub_sampling
-                out = pos
-                pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
-
-        if self.update_type == 'mlp':
-            out = self.lin_phi(torch.cat((out, embedding, d_pos), dim=-1))
-        if self.rotation_augmentation & self.training:
-            self.rotation_inv_matrix = torch.stack([
-                torch.stack([torch.cos(self.phi), -torch.sin(self.phi)]),
-                torch.stack([torch.sin(self.phi), torch.cos(self.phi)])
-            ])
-            out[:, :2] = out[:, :2] @ self.rotation_inv_matrix.T
-        if self.reflection_augmentation & self.training == True:
-            if group in [0, 1]:
-                out[:, group] = -out[:, group]
-            else:
-                out = -out
+                    pos = 1 - pos
+                    pred = -pred
+            for k in range(self.recursive_loop):
+                if self.prediction == '2nd_derivative':
+                    d_pos = d_pos + pred * self.ynorm * self.delta_t  # speed update
+                else:
+                    d_pos = pred * self.vnorm
+                pos = pos + d_pos * self.delta_t
+                if k < self.recursive_loop - 1:
+                    pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
+            out = pos
+        else:
+            if self.update_type == 'mlp':
+                out = self.lin_phi(torch.cat((out, embedding, d_pos), dim=-1))
+            if self.rotation_augmentation & self.training:
+                self.rotation_inv_matrix = torch.stack([torch.stack([torch.cos(self.phi), -torch.sin(self.phi)]),torch.stack([torch.sin(self.phi), torch.cos(self.phi)])])
+                out[:, :2] = out[:, :2] @ self.rotation_inv_matrix.T
+            if self.reflection_augmentation & self.training:
+                if group in [0, 1]:
+                    out[:, group] = -out[:, group]
+                else:
+                    out = -out
 
         return out
 

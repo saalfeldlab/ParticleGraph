@@ -36,7 +36,7 @@ training:
   device: 'auto'
   device: 'auto'
 
-  recursive_loop: 1
+  recursive_loop: 5
 
   batch_size: 8
   small_init_batch_size: False

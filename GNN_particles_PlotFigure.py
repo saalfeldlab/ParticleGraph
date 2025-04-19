@@ -8218,9 +8218,11 @@ if __name__ == '__main__':
     # config_list = ['multimaterial_2', 'multimaterial_8_1', 'multimaterial_8_2','multimaterial_8_4', 'multimaterial_8_5', 'multimaterial_8_6',
     #                'multimaterial_8_7', 'multimaterial_9_1', 'multimaterial_9_2', 'multimaterial_9_3', 'multimaterial_9_4']
     # 
-    config_list = ['multimaterial_2', 'multimaterial_8_1', 'multimaterial_8_8', 'multimaterial_8_9', 'multimaterial_8_10', 'multimaterial_8_10', 'multimaterial_8_11', 'multimaterial_8_12',
-                'multimaterial_9_7', 'multimaterial_9_8', 'multimaterial_9_9','multimaterial_9_10', 'multimaterial_9_11', 'multimaterial_9_12', 'multimaterial_9_13', 'multimaterial_9_14',
-                'multimaterial_10_1','multimaterial_10_2', 'multimaterial_10_3', 'multimaterial_10_4']
+    config_list = ['multimaterial_9_9', 'multimaterial_2', 'multimaterial_8_1', 'multimaterial_8_8',
+                   'multimaterial_8_11', 'multimaterial_8_12',
+                   'multimaterial_9_7', 'multimaterial_9_8', 'multimaterial_9_10', 'multimaterial_9_11',
+                   'multimaterial_9_12', 'multimaterial_9_13', 'multimaterial_9_14',
+                   'multimaterial_10_1', 'multimaterial_10_2', 'multimaterial_10_3']
 
     # config_list = ['signal_N4_a3','signal_N4_a4']
     # config_list = ['signal_N2_a43_3_1_t8','signal_N2_a43_3_5_t8','signal_N2_a43_3_10_t8','signal_N2_a43_3_20_t8','signal_N2_a43_3_1_t16','signal_N2_a43_3_5_t16',

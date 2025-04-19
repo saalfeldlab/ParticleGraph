@@ -101,7 +101,7 @@ def data_train_particle(config, erase, best_model, device):
     delta_t = simulation_config.delta_t
     time_window = train_config.time_window
     time_step = train_config.time_step
-    sub_sampling = simulation_config.sub_sampling
+    recursive_loop = train_config.recursive_loop
 
     noise_level = train_config.noise_level
     dataset_name = config.dataset
@@ -281,7 +281,10 @@ def data_train_particle(config, erase, best_model, device):
                 run = 1 + np.random.randint(n_runs - 1)
                 k = time_window + np.random.randint(run_lengths[run] - 1 - time_window - time_step - recursive_loop)
                 x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
-                x_next = torch.tensor(x_list[run][k + time_step], dtype=torch.float32, device=device).clone().detach()
+                if recursive_loop > 0:
+                    x_next = torch.tensor(x_list[run][k + recursive_loop], dtype=torch.float32, device=device).clone().detach()
+                else:
+                    x_next = torch.tensor(x_list[run][k + time_step], dtype=torch.float32, device=device).clone().detach()
 
                 if has_ghost:
                     x_ghost = ghosts_particles.get_pos(dataset_id=run, frame=k, bc_pos=bc_pos)
@@ -321,8 +324,7 @@ def data_train_particle(config, erase, best_model, device):
                     dataset = data.Data(x=xt, edge_index=edges, num_nodes=x.shape[0])
                     dataset_batch.append(dataset)
 
-                if sub_sampling > 1:
-                    # predict position, does not work with rotation_augmentation, does not work with particle_batch_ratio>1
+                if recursive_loop > 0:
                     y = x_next[:, 1:dimension + 1]
                 else:
                     y = torch.tensor(y_list[run][k], dtype=torch.float32, device=device).clone().detach()
@@ -353,9 +355,8 @@ def data_train_particle(config, erase, best_model, device):
 
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
-            elif sub_sampling>1:
-                # predict position, does not work with rotation_augmentation
-                loss = (pred[:,0:dimension] - y_batch).norm(2) * 1E7
+            elif recursive_loop > 0:
+                loss = (pred - y_batch).norm(2)
             elif simulation_config.state_type == 'sequence':
                 loss = (pred - y_batch).norm(2)
                 loss = loss + train_config.coeff_model_a * (model.a[run, ind_a + 1] - model.a[run, ind_a]).norm(2)
