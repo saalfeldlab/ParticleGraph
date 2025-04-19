@@ -1,13 +1,13 @@
 description: 'fluids simulation'
-dataset: 'fluids_m17_2'
+dataset: 'fluids_m17_4'
 
 simulation:
-  params: [[0.0, 0.0, 0.0, 0.0, 0.0], [-0.01, 0.05, 27.0, 2.0, 1.0], [-0.01, 0.05, 27.0, 3.0, 1.0], [-0.01, 0.05, 27.0, 4.0, 1.0], [-0.01, 0.05, 27.0, 5.0, 1.0]]
+  params: [[0.0, 0.0, 0.0, 0.0, 0.0], [-0.00005, 0.8, 27.0, 2.0, 1.0], [-0.00005, 0.8, 26.0, 3.0, 1.0], [-0.00005, 0.8, 25.0, 4.0, 1.0], [-0.00005, 0.8, 24.0, 5.0, 1.0]]
   min_radius: 0.001
   max_radius: 0.05
-  n_particles: 4900
+  n_particles: 8100
   n_particle_types: 5
-  n_nodes: 4900
+  n_nodes: 8100
   n_frames: 20000
   sigma: 0.005
   delta_t: 0.005
@@ -15,7 +15,7 @@ simulation:
   pos_init: 'square'
   boundary: 'periodic'
   bounce: True
-  bounce_coeff: 0.95
+  bounce_coeff: 0.925
   start_frame: 0
   node_value_map: 'pattern_Null.tif'
 

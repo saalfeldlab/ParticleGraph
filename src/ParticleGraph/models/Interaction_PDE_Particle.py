@@ -83,21 +83,33 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
         # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         self.training = training
 
-        if has_field:
-            field = x[:,6:7]
+        if self.time_window == 0:
+            particle_id = x[:, 0:1].long()
+            embedding = self.a[data_id.long(), particle_id, :].squeeze()
+            pos = x[:, 1:self.dimension+1]
+            d_pos = x[:, self.dimension+1:1+2*self.dimension]
         else:
-            field = torch.ones_like(x[:,6:7])
-
-        pos = x[:, 1:self.dimension+1]
+            particle_id = x[0][:, 0:1]
+            embedding = self.a[data_id, to_numpy(particle_id), :].squeeze()
+            x = torch.stack(x)
+            pos = x[:, :, 1:self.dimension + 1]
+            pos = pos - pos[0]
+            pos = pos.transpose(0, 1)
+            pos = torch.reshape(pos, (pos.shape[0], pos.shape[1] * pos.shape[2]))
+            d_pos = x[0, :, self.dimension + 1:1 + 2 * self.dimension].squeeze()
+        if training & self.rotation_augmentation:
+            self.phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=self.device) * np.pi * 2
+            self.rotation_matrix = torch.stack([torch.stack([torch.cos(self.phi), torch.sin(self.phi)]),
+                                                torch.stack([-torch.sin(self.phi), torch.cos(self.phi)])])
+            d_pos[:, :2] = d_pos[:, :2] @ self.rotation_matrix.T
+        if has_field:
+            field = x[:, 6:7]
+        else:
+            field = torch.ones_like(pos[:, 0:1])
         if training & (self.time_window_noise > 0):
             noise = torch.randn_like(pos) * self.time_window_noise
             pos = pos + noise
 
-        d_pos = x[:, self.dimension+1:1+2*self.dimension]
-        if training & self.rotation_augmentation:
-            self.phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=self.device) * np.pi * 2
-            self.rotation_matrix = torch.stack([torch.stack([torch.cos(self.phi), torch.sin(self.phi)]), torch.stack([-torch.sin(self.phi), torch.cos(self.phi)])])
-            d_pos[:, :2] = d_pos[:, :2] @ self.rotation_matrix.T
 
         # if translation_augmentation:
         #     displacement = torch.randn(1, dimension, dtype=torch.float32, device=device) * 5
@@ -105,9 +117,6 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
         #     pos = pos + displacement
         # if velocity_augmentation:
         #     d_pos = d_pos + torch.randn((1, 2), device=device).repeat(d_pos.shape[0], 1) * vnorm
-
-        particle_id = x[:, 0:1].long()
-        embedding = self.a[data_id.long(), particle_id, :].squeeze()
 
         if self.model == 'PDE_MLPs_A':
             for self.mode in ['kernel_new_features', 'message_passing_kernel', 'update']:
@@ -157,6 +166,7 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
     def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, field_i, field_j, embedding_i, embedding_j, new_features_i, new_features_j ):
 
         delta_pos = self.bc_dpos(pos_j - pos_i)
+
         if self.training & self.rotation_augmentation:
             delta_pos[:, :2] = delta_pos[:, :2] @ self.rotation_matrix.T
         if self.mode == 'encode_features':

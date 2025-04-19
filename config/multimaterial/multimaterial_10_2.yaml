@@ -19,7 +19,20 @@ graph_model:
   mesh_model_name: ''
   prediction: '2nd_derivative'
 
-  multi_mlp_params: [[10, 128, 4, 64], [128, 128, 4, 64], [128, 128, 4, 2], [6, 64, 3, 2]]   # input_size, hidden_size, nlayers, output_size
+  multi_mlp_params: [[16, 128, 4, 64], [128, 128, 4, 64], [128, 128, 4, 2], [6, 64, 3, 2]]   # input_size, hidden_size, nlayers, output_size
+
+  input_size: 18
+  output_size: 512
+  hidden_dim: 512
+  n_mp_layers: 4
+  aggr_type: 'add'
+  embedding_dim: 2
+
+  update_type: 'mlp'
+  input_size_update: 520
+  n_layers_update: 4
+  hidden_dim_update: 128
+  output_size_update: 2
 
   aggr_type: 'add'
   embedding_dim: 2
@@ -32,10 +45,11 @@ plotting:
 
 training:
   n_epochs: 20
-  batch_size: 8
+  batch_size: 20
   small_init_batch_size: False
   n_runs: 999
 
+  time_window: 4
   time_window_noise: 1.0E-5
 
   sparsity: 'none'
@@ -47,8 +61,8 @@ training:
   fix_cluster_embedding: True
   device: 'auto'
 
-  learning_rate_start: 5E-5
-  learning_rate_embedding_start: 1E-4
+  learning_rate_start: 1E-5
+  learning_rate_embedding_start: 5E-5
 
 
 

@@ -318,8 +318,6 @@ def data_train_particle(config, erase, best_model, device):
                     xt = []
                     for t in range(time_window):
                         x_ = torch.tensor(x_list[run][k - t], dtype=torch.float32, device=device)
-                        # if translation_augmentation:
-                        #     x_[:, 1:dimension + 1] = x_[:, 1:dimension + 1] + displacement
                         xt.append(x_[:, :])
                     dataset = data.Data(x=xt, edge_index=edges, num_nodes=x.shape[0])
                     dataset_batch.append(dataset)
@@ -3695,7 +3693,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     n_particles = x.shape[0]
     x_inference_list = []
 
-    for it in trange(start_it, min(9600+start_it,stop_it-time_step)):
+    for it in trange(start_it, start_it+200):                 # min(9600+start_it,stop_it-time_step)):
 
         check_and_clear_memory(device=device, iteration_number=it, every_n_iterations=25, memory_percentage_threshold=0.6)
         # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")

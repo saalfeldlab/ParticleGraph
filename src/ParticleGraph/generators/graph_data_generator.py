@@ -626,6 +626,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 else:
                     V1 = y
                 if bounce:
+                    # V1 = V1 * 0.999
                     X1 = X1 + V1 * delta_t
                     gap = 0.005
                     bouncing_pos = torch.argwhere((X1[:, 0] <= 0.1 + gap) | (X1[:, 0] >= 0.9 - gap)).squeeze()
@@ -701,12 +702,12 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     # plt.imshow(im_resized, cmap='viridis', vmin=speedlim[0], vmax=speedlim[1])
                     for n in range(n_particle_types):
                             plt.scatter(to_numpy(x[index_particles[n], 1]*1000), to_numpy(x[index_particles[n], 2]*1000),
-                                        s=2, color=cmap.color(n))
+                                        s=10, color=cmap.color(n), edgecolors='None', alpha=0.9)
                     # plt.scatter(to_numpy(x[:, 1]*1000), to_numpy(x[:, 2]*1000), s=1, c='w')
                     plt.xlim([0,1000])
                     plt.ylim([-40,1000])
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=80)
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=160)
                     # plt.show()
                     plt.close()
 
