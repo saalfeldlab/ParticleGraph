@@ -1,13 +1,13 @@
 description: 'fluids simulation'
-dataset: 'fluids_m17'
+dataset: 'fluids_m17_1'
 
 simulation:
-  params: [[0.0, 0.0, 0.0, 0.0, 0.0], [-0.01, 0.8, 37.0, 50.0, 1.0], [-0.01, 0.8, 38, 50.0, 1.0], [-0.01, 0.8, 39, 50.0, 1.0], [-0.01, 0.8, 40, 50.0, 1.0]]
+  params: [[0.0, 0.0, 0.0, 0.0, 0.0], [-0.01, 0.8, 27.0, 25.0, 1.0], [-0.01, 0.8, 28, 25.0, 1.0], [-0.01, 0.8, 29, 25.0, 1.0], [-0.01, 0.8, 30, 25.0, 1.0]]
   min_radius: 0.001
   max_radius: 0.05
-  n_particles: 10000
+  n_particles: 4900
   n_particle_types: 5
-  n_nodes: 10000
+  n_nodes: 4900
   n_frames: 20000
   sigma: 0.005
   delta_t: 0.005

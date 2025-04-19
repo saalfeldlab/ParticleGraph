@@ -627,11 +627,15 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     V1 = y
                 if bounce:
                     X1 = X1 + V1 * delta_t
-                    bouncing_pos = torch.argwhere((X1[:, 1] <= 0) ).squeeze()
+                    gap = 0.005
+                    bouncing_pos = torch.argwhere((X1[:, 0] <= 0.1 + gap) | (X1[:, 0] >= 0.9 - gap)).squeeze()
                     if bouncing_pos.numel() > 0:
-                        V1[bouncing_pos, 1] = - bounce_coeff * V1[bouncing_pos, 1]
-                        X1[bouncing_pos, 1] = - X1[bouncing_pos, 1] # 1E-6  #  + torch.rand(bouncing_pos.numel(), device=device) * 0.05
-                    X1 = bc_pos(X1)
+                        V1[bouncing_pos, 0] = - 0.7 * bounce_coeff* V1[bouncing_pos, 0]
+                        X1[bouncing_pos, 0] += V1[bouncing_pos, 0] * delta_t * 10
+                    bouncing_pos = torch.argwhere((X1[:, 1] <= 0.1 + gap) | (X1[:, 1] >= 0.9 - gap)).squeeze()
+                    if bouncing_pos.numel() > 0:
+                        V1[bouncing_pos, 1] = - 0.7 * bounce_coeff * V1[bouncing_pos, 1]
+                        X1[bouncing_pos, 1] += V1[bouncing_pos, 1] * delta_t * 10
                 else:
                     X1 = bc_pos(X1 + V1 * delta_t)
                 A1 = A1 + 1

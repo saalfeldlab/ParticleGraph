@@ -3693,8 +3693,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
     x = x_list[0][start_it].clone().detach()
     n_particles = x.shape[0]
-
-    # x_list[0] = torch.cat((x_list[0],x_list[0],x_list[0],x_list[0]), dim=0)
     x_inference_list = []
 
     for it in trange(start_it, min(9600+start_it,stop_it-time_step)):

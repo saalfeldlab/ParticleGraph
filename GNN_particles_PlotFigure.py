@@ -7746,7 +7746,7 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
             np.save(f"./{log_dir}/behavior.npy",map_behavior)
 
 
-def data_plot(config, epoch_list, style, device):
+def data_plot(config, config_file, epoch_list, style, device):
 
     # plt.rcParams['text.usetex'] = True
     # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
@@ -7845,7 +7845,7 @@ def data_plot(config, epoch_list, style, device):
             plot_particle_field(config, epoch_list, log_dir, logger, 'grey', style, device)
         case 'PDE_E':
             plot_Coulomb(config, epoch_list, log_dir, logger, style, device)
-        case 'PDE_F' | 'PDE_F_A' | 'PDE_F_B' | 'PDE_F_C' | 'PDE_F_D' | 'PDE_F_E' | 'PDE_WF' | 'PDE_WF' | 'PDE_MLPs':
+        case 'PDE_F' | 'PDE_F_A' | 'PDE_F_B' | 'PDE_F_C' | 'PDE_F_D' | 'PDE_F_E' | 'PDE_WF' | 'PDE_WF' | 'PDE_MLPs_A'| 'PDE_MLPs_B'| 'PDE_MLPs_C'| 'PDE_MLPs_D'| 'PDE_MLPs_E':
             plot_falling_particles(config, epoch_list, log_dir, logger, style, device)
         case 'PDE_G':
             if config_file == 'gravity_continuous':
@@ -8221,7 +8221,7 @@ if __name__ == '__main__':
     config_list = ['multimaterial_9_9', 'multimaterial_2', 'multimaterial_8_1', 'multimaterial_8_8',
                    'multimaterial_8_11', 'multimaterial_8_12',
                    'multimaterial_9_7', 'multimaterial_9_8', 'multimaterial_9_10', 'multimaterial_9_11',
-                   'multimaterial_9_12', 'multimaterial_9_13', 'multimaterial_9_14',
+                   'multimaterial_9_5', 'multimaterial_9_6',
                    'multimaterial_10_1', 'multimaterial_10_2', 'multimaterial_10_3']
 
     # config_list = ['signal_N4_a3','signal_N4_a4']
@@ -8240,7 +8240,7 @@ if __name__ == '__main__':
 
         print(f'config_file  {config.config_file}')
 
-        data_plot(config=config, epoch_list=['best'], style='black color', device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['time'], style='black color', device=device)
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)
