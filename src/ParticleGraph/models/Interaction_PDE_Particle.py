@@ -209,7 +209,10 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
             out = self.MLP[0](in_features) / new_features_j.repeat(1, 2)
         if self.mode == 'kernel_new_features':
             self.kernels = self.MLP[0](delta_pos)
-            in_features = torch.cat((embedding_i, self.kernels), dim=-1)
+            if self.model == 'PDE_MLPs_A_bis':
+                in_features = torch.cat((embedding_i, embedding_j, self.kernels), dim=-1)
+            else:
+                in_features = torch.cat((embedding_i, self.kernels), dim=-1)
             new_features = self.MLP[1](in_features)
             return new_features
         elif self.mode == 'message_passing_kernel':
