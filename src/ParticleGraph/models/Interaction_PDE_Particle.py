@@ -58,6 +58,9 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
         self.hidden_dim = model_config.hidden_dim
         self.n_layers = model_config.n_mp_layers
 
+        self.kernel_type = model_config.kernel_type
+        self.omega = model_config.omega
+
         mlp_params = model_config.multi_mlp_params
 
         self.MLP = nn.ModuleList([
@@ -65,6 +68,14 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
                 device=self.device)
             for params in mlp_params
         ])
+
+        if 'siren' in self.kernel_type:
+            self.MLP[0] = Siren_Network(image_width=100, in_features=mlp_params[0][0],
+                                out_features=mlp_params[0][3],
+                                hidden_features=mlp_params[0][1],
+                                hidden_layers=mlp_params[0][2], outermost_linear=True, device=self.device, first_omega_0=self.omega,
+                                hidden_omega_0 = self.omega )
+
 
         self.a = nn.Parameter(
             torch.tensor(np.ones((self.n_dataset, int(self.n_particles) , self.embedding_dim)),
@@ -75,6 +86,8 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
         #                         hidden_size=self.hidden_dim, device=self.device)
 
         self.kernel_var = self.max_radius ** 2
+
+
 
 
     def forward(self, data=[], data_id=[], training=[], has_field=False, k=[]):
@@ -208,8 +221,11 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
             in_features = torch.cat((d_pos_i - d_pos_j, embedding_i, embedding_j, new_features_i, new_features_j, self.kernel_operators['grad_triangle'], self.kernel_operators['Gaussian']), dim=-1)
             out = self.MLP[0](in_features) / new_features_j.repeat(1, 2)
         if self.mode == 'kernel_new_features':
-            self.kernels = self.MLP[0](delta_pos)
-            if self.model == 'PDE_MLPs_A_bis':
+            if 'siren' in self.kernel_type:
+                self.kernels = self.MLP[0](delta_pos)
+            else:
+                self.kernels = self.MLP[0](delta_pos)
+            if 'PDE_MLPs_A_bis' in self.model:
                 in_features = torch.cat((embedding_i, embedding_j, self.kernels), dim=-1)
             else:
                 in_features = torch.cat((embedding_i, self.kernels), dim=-1)

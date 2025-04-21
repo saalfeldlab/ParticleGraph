@@ -123,6 +123,8 @@ class GraphModelConfig(BaseModel):
     hidden_dim_update: int = 64
     output_size_update: int = 1
 
+    kernel_type: str = 'mlp'
+
     input_size_nnr: int = 3
     n_layers_nnr: int = 5
     hidden_dim_nnr: int = 128

@@ -4176,6 +4176,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     plt.ylim([0,1])
                     # plt.xlim([0.4,0.6])
                     # plt.ylim([0.4,0.6])
+                if 'name' in style:
+                    plt.title(f"{os.path.basename(log_dir)}", fontsize=24)
 
                 if 'no_ticks' in style:
                     plt.xticks([])
@@ -4429,8 +4431,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                         plt.close()
 
                 if ('feature' in style) & ('PDE_MLPs_A' in config.graph_model.particle_model_name):
-                    if model.model == 'PDE_MLPs_A_bis':
-                        fig = plt.figure(figsize=(22, 3.5))
+                    if 'PDE_MLPs_A_bis' in model.model:
+                        fig = plt.figure(figsize=(22, 4))
                     else:
                         fig = plt.figure(figsize=(22, 5))
                     for k in range(model.new_features.shape[1]):
@@ -4438,8 +4440,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                         plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), c=to_numpy(model.new_features[:, k]), s=5,
                                     cmap='viridis')
                         ax.set_title(f'new_features {k}')
-                        cbar = plt.colorbar()
-                        cbar.ax.tick_params(labelsize=6)
+                        # cbar = plt.colorbar()
+                        # cbar.ax.tick_params(labelsize=6)
+                        plt.xlim([0, 1])
+                        plt.ylim([0, 1])
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/tmp_recons/Features_{config_file}_{run}_{num}.tif", dpi=100)
                     plt.close()

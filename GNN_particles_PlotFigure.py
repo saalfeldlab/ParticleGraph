@@ -1379,7 +1379,7 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
 
     # x_list, y_list, vnorm, ynorm = load_training_data(dataset_name, n_runs, log_dir, device)
 
-    run = 17
+    run = config.plotting.data_embedding
 
     x_list = []
     y_list = []
@@ -1402,6 +1402,8 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
     n_frames = len(x_list[0])
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
+    if 'PDE_MLPs_A' in config.graph_model.particle_model_name:
+        model.model = config.graph_model.particle_model_name + '_eval'
 
     if epoch_list[0] == 'all':
 
@@ -1410,28 +1412,15 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
         plt.rc('text', usetex=False)
         matplotlib.rcParams['savefig.pad_inches'] = 0
 
-        files = glob.glob(f"{log_dir}/models/best_model_with_1_graphs_*.pt")
-        files.sort(key=sort_key)
+        files, file_id_list = get_training_files(log_dir, n_runs)
 
-        flag = True
-        file_id = 0
-        while (flag):
-            if sort_key(files[file_id])//1E7 == 2:
-                flag = False
-            file_id += 1
-
-        file_id_list0 = np.arange(0,1200,20)
-        file_id_list1 = np.arange(1200,file_id,(file_id-40)//60)
-        file_id_list2 = np.arange(file_id, len(files), (len(files)-file_id) // 100)
-        file_id_list = np.concatenate((file_id_list0,file_id_list1, file_id_list2))
-
-        for file_id_ in trange(0,len(file_id_list)):
-            file_id = file_id_list[file_id_]
-            if sort_key(files[file_id]) % 1E7 != 0:
-                epoch = files[file_id].split('graphs')[1][1:-3]
+        with torch.no_grad():
+            it = 0
+            for file_id_ in trange(0,len(file_id_list)):
+                epoch = files[file_id_].split('graphs')[1][1:-3]
                 print(epoch)
 
-                net = f"{log_dir}/models/best_model_with_1_graphs_{epoch}.pt"
+                net = f"{log_dir}/models/best_model_with_{n_runs-1}_graphs_{epoch}.pt"
                 state_dict = torch.load(net, map_location=device)
                 model.load_state_dict(state_dict['model_state_dict'])
                 model.eval()
@@ -1441,50 +1430,48 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
                 fig, ax = fig_init(fontsize=24)
                 params = {'mathtext.default': 'regular'}
                 plt.rcParams.update(params)
-                embedding = get_embedding(model.a, 1)
+                embedding = get_embedding(model.a, run)
                 for n in range(n_particle_types-1,-1,-1):
                     pos = torch.argwhere(type_list == n)
                     pos = to_numpy(pos)
                     if len(pos) > 0:
-                        plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=100, alpha=0.1)
+                        pos = pos[:, 0]
+                        plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=100, alpha=0.25)
                 plt.xlabel(r'$a_{0}$', fontsize=48)
                 plt.ylabel(r'$a_{1}$', fontsize=48)
-                match config.dataset:
-                    case 'arbitrary_3':
-                        plt.xlim([0.5, 1.5])
-                        plt.ylim([0.5, 1.5])
-                    case 'arbitrary_16':
-                        plt.xlim([-2.5, 2.5])
-                        plt.ylim([-2.5, 2.5])
+                plt.xlim([0.5, 1.5])
+                plt.ylim([0.5, 1.5])
+                plt.xticks([])
+                plt.yticks([])
+                    # case 'arbitrary_16':
+                    #     plt.xlim([-2.5, 2.5])
+                    #     plt.ylim([-2.5, 2.5])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/all/embedding_{epoch}.tif", dpi=80)
                 plt.close()
 
+                x = x_list[0][100].clone().detach()
 
-                fig, ax = fig_init(fontsize=24)
-                rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
-                for n in range(int(n_particles * (1 - config.training.particle_dropout))):
-                    embedding_ = model.a[1,n] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-                    in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                             rr[:, None] / max_radius, embedding_), dim=1)
-                    with torch.no_grad():
-                        func = model.lin_edge(in_features.float())
-                        func = func[:, 0]
-                    plt.plot(to_numpy(rr),
-                             to_numpy(func) * to_numpy(ynorm),
-                             color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
-                plt.xlabel('$d_{ij}$', fontsize=48)
-                plt.ylabel('$f(a_i, d_{ij})$', fontsize=48)
-                plt.xlim([0, max_radius])
-                plt.ylim(config.plotting.ylim)
+                distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
+                adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                edge_index = adj_t.nonzero().t().contiguous()
+                data_id = torch.ones((x.shape[0], 1), dtype=torch.int) * run
+                dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
+                pred = model(dataset, data_id=data_id, training=False, k=100)
+
+                fig = plt.figure(figsize=(20, 5))
+                for k in range(model.kernels.shape[1]):
+                    ax = fig.add_subplot(1, model.kernels.shape[1], k + 1)
+                    plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), c=to_numpy(model.kernels[:, k]),
+                                s=5, cmap='viridis', vmin=-2,vmax=2)
+                    ax.set_title(f'kernel {k}')
+                    ax.set_xlim(-model.max_radius, model.max_radius)
+                    ax.set_ylim(-model.max_radius, model.max_radius)
+                    ax.set_aspect('equal')
+                    cbar = plt.colorbar()
+                    cbar.ax.tick_params(labelsize=6)
                 plt.tight_layout()
-                match config.dataset:
-                    case 'arbitrary_3':
-                        plt.ylim([-0.04, 0.03])
-                    case 'arbitrary_16':
-                        plt.ylim([-0.1, 0.1])
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/all/function_{epoch}.tif", dpi=80)
+                plt.savefig(f"./{log_dir}/results/all/kernels_{epoch}.tif", dpi=80)
                 plt.close()
 
     else:
@@ -1496,73 +1483,14 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
             model.load_state_dict(state_dict['model_state_dict'])
             model.eval()
 
-            fig = plt.figure(figsize=(20, 5))
-            # ax = fig.add_subplot(1, 6, 1)
-            # if n_runs > 10:
-            #     for run_ in range(0,n_runs,n_runs//10):
-            #         embedding = get_embedding(model.a, run_)
-            #         for n in range(n_particle_types):
-            #             pos = torch.argwhere(type_list == n)
-            #             pos = to_numpy(pos)
-            #             if len(pos) > 0:
-            #                 plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=5, alpha=1.0, edgecolors='none')
-            #     plt.xlabel(r'$a_{0}$', fontsize=18)
-            #     plt.ylabel(r'$a_{1}$', fontsize=18)
-            # else:
-            #     for run_ in range(n_runs):
-            #         embedding = get_embedding(model.a, run_)
-            #         for n in range(n_particle_types):
-            #             pos = torch.argwhere(type_list == n)
-            #             pos = to_numpy(pos)
-            #             if len(pos) > 0:
-            #                 plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=5, alpha=1.0, edgecolors='none')
-            #     plt.xlabel(r'$a_{0}$', fontsize=18)
-            #     plt.ylabel(r'$a_{1}$', fontsize=18)
-            run_list = [0,17,50,100,150,200,250]
-            for k in range(1, 7):
-
-                run = run_list[k]
-
-                x_list = []
-                y_list = []
-
-                x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
-                x = torch.tensor(x, dtype=torch.float32, device=device)
-                y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
-                y = torch.tensor(y, dtype=torch.float32, device=device)
-                x_list.append(x)
-                y_list.append(y)
-
-                x = x_list[0][0].clone().detach()
-
-                type_list = get_type_list(x, dimension)
-
-                ax = fig.add_subplot(1, 6, k)
-                ax.set_title(f'dataset {run_list[k]}', fontsize = 18)
-                embedding = get_embedding(model.a, run_list[k])
-                for n in range(n_particle_types):
-                    pos = torch.argwhere(type_list == n)
-                    pos = to_numpy(pos)
-                    if len(pos) > 0:
-                        plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=5, edgecolors='none')
-                plt.xlim([0.4, 1.4])
-                plt.ylim([0.7, 1.5])
-                plt.xlabel(r'$a_{0}$', fontsize=18)
-                plt.ylabel(r'$a_{1}$', fontsize=18)
-                plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=170.7)
-            plt.close()
-
             if 'PDE_MLPs_A' in config.graph_model.particle_model_name:
-
-                model.model = config.graph_model.particle_model_name + '_eval'
 
                 x = x_list[0][100].clone().detach()
 
                 distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
                 adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
                 edge_index = adj_t.nonzero().t().contiguous()
-                data_id = torch.ones((n_particles, 1), dtype=torch.int) * run
+                data_id = torch.ones((x.shape[0], 1), dtype=torch.int) * run
                 dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
                 pred = model(dataset, data_id=data_id, training=False, k=100)
 
@@ -1597,6 +1525,46 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/new_features_{epoch}.tif", dpi=170.7)
                 plt.close()
+
+
+            fig = plt.figure(figsize=(20, 5))
+            run_list = [0,17,50,100,150,200,250]
+            for k in range(1, 7):
+
+                run = run_list[k]
+
+                x_list = []
+                y_list = []
+
+                x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
+                x = torch.tensor(x, dtype=torch.float32, device=device)
+                y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
+                y = torch.tensor(y, dtype=torch.float32, device=device)
+                x_list.append(x)
+                y_list.append(y)
+
+                x = x_list[0][0].clone().detach()
+
+                type_list = get_type_list(x, dimension)
+
+                ax = fig.add_subplot(1, 6, k)
+                ax.set_title(f'dataset {run_list[k]}', fontsize = 18)
+                embedding = get_embedding(model.a, run_list[k])
+                for n in range(n_particle_types-1,-1,-1):
+                    pos = torch.argwhere(type_list == n)
+                    pos = to_numpy(pos)
+                    if len(pos) > 0:
+                        pos = pos[:, 0]
+                        plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=25, edgecolors='none', alpha=0.1)
+                plt.xlim([0.5, 1.5])
+                plt.ylim([0.7, 1.7])
+                plt.xlabel(r'$a_{0}$', fontsize=18)
+                plt.ylabel(r'$a_{1}$', fontsize=18)
+                plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=170.7)
+            plt.close()
+
+
 
 
 def plot_cell_state(config, epoch_list, log_dir, logger, style, device):
@@ -8305,8 +8273,8 @@ if __name__ == '__main__':
 
         print(f'config_file  {config.config_file}')
 
-        data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
-        # data_plot(config=config, epoch_list=['all'], style='black color', device=device)
+        # data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['time'], style='black color', device=device)
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
