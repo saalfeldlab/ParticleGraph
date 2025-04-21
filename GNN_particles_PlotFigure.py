@@ -1391,8 +1391,6 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
     x_list.append(x)
     y_list.append(y)
 
-
-
     x = x_list[0][0].clone().detach()
     ynorm = torch.load(f'{log_dir}/ynorm.pt', map_location=device, weights_only=True)
     vnorm = torch.load(f'{log_dir}/vnorm.pt', map_location=device, weights_only=True)
@@ -1498,38 +1496,60 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
             model.load_state_dict(state_dict['model_state_dict'])
             model.eval()
 
-            fig = plt.figure(figsize=(16, 8))
-            ax = fig.add_subplot(1, 2, 1)
-            if n_runs > 10:
-                for run_ in range(0,n_runs,n_runs//10):
-                    embedding = get_embedding(model.a, run_)
-                    for n in range(n_particle_types):
-                        pos = torch.argwhere(type_list == n)
-                        pos = to_numpy(pos)
-                        if len(pos) > 0:
-                            plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=5, alpha=1.0, edgecolors='none')
-                plt.xlabel(r'$a_{0}$', fontsize=28)
-                plt.ylabel(r'$a_{1}$', fontsize=28)
-            else:
-                for run_ in range(n_runs):
-                    embedding = get_embedding(model.a, run_)
-                    for n in range(n_particle_types):
-                        pos = torch.argwhere(type_list == n)
-                        pos = to_numpy(pos)
-                        if len(pos) > 0:
-                            plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=5, alpha=1.0, edgecolors='none')
-                plt.xlabel(r'$a_{0}$', fontsize=28)
-                plt.ylabel(r'$a_{1}$', fontsize=28)
-            ax = fig.add_subplot(1, 2, 2)
-            embedding = get_embedding(model.a, min(run,n_runs-1))
-            for n in range(n_particle_types):
-                pos = torch.argwhere(type_list == n)
-                pos = to_numpy(pos)
-                if len(pos) > 0:
-                    plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=5)
-            plt.xlabel(r'$a_{0}$', fontsize=28)
-            plt.ylabel(r'$a_{1}$', fontsize=28)
-            plt.tight_layout()
+            fig = plt.figure(figsize=(20, 5))
+            # ax = fig.add_subplot(1, 6, 1)
+            # if n_runs > 10:
+            #     for run_ in range(0,n_runs,n_runs//10):
+            #         embedding = get_embedding(model.a, run_)
+            #         for n in range(n_particle_types):
+            #             pos = torch.argwhere(type_list == n)
+            #             pos = to_numpy(pos)
+            #             if len(pos) > 0:
+            #                 plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=5, alpha=1.0, edgecolors='none')
+            #     plt.xlabel(r'$a_{0}$', fontsize=18)
+            #     plt.ylabel(r'$a_{1}$', fontsize=18)
+            # else:
+            #     for run_ in range(n_runs):
+            #         embedding = get_embedding(model.a, run_)
+            #         for n in range(n_particle_types):
+            #             pos = torch.argwhere(type_list == n)
+            #             pos = to_numpy(pos)
+            #             if len(pos) > 0:
+            #                 plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=5, alpha=1.0, edgecolors='none')
+            #     plt.xlabel(r'$a_{0}$', fontsize=18)
+            #     plt.ylabel(r'$a_{1}$', fontsize=18)
+            run_list = [0,17,50,100,150,200,250]
+            for k in range(1, 7):
+
+                run = run_list[k]
+
+                x_list = []
+                y_list = []
+
+                x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
+                x = torch.tensor(x, dtype=torch.float32, device=device)
+                y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
+                y = torch.tensor(y, dtype=torch.float32, device=device)
+                x_list.append(x)
+                y_list.append(y)
+
+                x = x_list[0][0].clone().detach()
+
+                type_list = get_type_list(x, dimension)
+
+                ax = fig.add_subplot(1, 6, k)
+                ax.set_title(f'dataset {run_list[k]}', fontsize = 18)
+                embedding = get_embedding(model.a, run_list[k])
+                for n in range(n_particle_types):
+                    pos = torch.argwhere(type_list == n)
+                    pos = to_numpy(pos)
+                    if len(pos) > 0:
+                        plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=5, edgecolors='none')
+                plt.xlim([0.4, 1.4])
+                plt.ylim([0.7, 1.5])
+                plt.xlabel(r'$a_{0}$', fontsize=18)
+                plt.ylabel(r'$a_{1}$', fontsize=18)
+                plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=170.7)
             plt.close()
 
@@ -1561,7 +1581,10 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
                 plt.savefig(f"./{log_dir}/results/kernels_{epoch}.tif", dpi=170.7)
                 plt.close()
 
-                fig = plt.figure(figsize=(20, 20))
+                if config.graph_model.particle_model_name == 'PDE_MLPs_A_bis':
+                    fig = plt.figure(figsize=(20, 16))
+                else:
+                    fig = plt.figure(figsize=(20, 20))
                 for it in range(0, 200, 50):
                     x = x_list[0][it].clone().detach()
                     for k in range(model.new_features.shape[1]):
@@ -7891,7 +7914,7 @@ def data_plot(config, config_file, epoch_list, style, device):
             plot_particle_field(config, epoch_list, log_dir, logger, 'grey', style, device)
         case 'PDE_E':
             plot_Coulomb(config, epoch_list, log_dir, logger, style, device)
-        case 'PDE_F' | 'PDE_F_A' | 'PDE_F_B' | 'PDE_F_C' | 'PDE_F_D' | 'PDE_F_E' | 'PDE_WF' | 'PDE_WF' | 'PDE_MLPs_A'| 'PDE_MLPs_A_bis' | 'PDE_MLPs_B'| 'PDE_MLPs_C'| 'PDE_MLPs_D' | 'PDE_MLPs_E' | 'PDE_MLPs_F':
+        case 'PDE_F' | 'PDE_F_A' | 'PDE_F_B' | 'PDE_F_C' | 'PDE_F_D' | 'PDE_F_E' | 'PDE_WF' | 'PDE_WF' | 'PDE_MLPs_A'| 'PDE_MLPs_A_bis' | 'PDE_MLPs_B'| 'PDE_MLPs_B_0' |'PDE_MLPs_B_1' | 'PDE_MLPs_B_4'| 'PDE_MLPs_B_10' | 'PDE_MLPs_C'| 'PDE_MLPs_D' | 'PDE_MLPs_E' | 'PDE_MLPs_F':
             plot_falling_particles(config, epoch_list, log_dir, logger, style, device)
         case 'PDE_G':
             if config_file == 'gravity_continuous':
@@ -8270,7 +8293,7 @@ if __name__ == '__main__':
                    'multimaterial_9_7', 'multimaterial_9_8', 'multimaterial_9_9', 'multimaterial_9_10',
                    'multimaterial_9_11', 'multimaterial_9_12', 'multimaterial_9_13',
                    'multimaterial_10_1', 'multimaterial_10_2', 'multimaterial_10_3', 'multimaterial_10_4']
-    # config_list = ['multimaterial_9_9']
+    config_list = ['multimaterial_9_12']
 
     for config_file_ in config_list:
         print(' ')

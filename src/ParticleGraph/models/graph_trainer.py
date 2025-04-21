@@ -3374,8 +3374,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
     log_dir = 'log/' + config.config_file
     files = glob.glob(f"./{log_dir}/tmp_recons/*")
-    for f in files:
-        os.remove(f)
+    # for f in files:
+    #     os.remove(f)
 
     if best_model == 'best':
         files = glob.glob(f"{log_dir}/models/*")
@@ -4429,7 +4429,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                         plt.close()
 
                 if ('feature' in style) & ('PDE_MLPs_A' in config.graph_model.particle_model_name):
-                    fig = plt.figure(figsize=(22, 5))
+                    if model.model == 'PDE_MLPs_A_bis':
+                        fig = plt.figure(figsize=(22, 3.5))
+                    else:
+                        fig = plt.figure(figsize=(22, 5))
                     for k in range(model.new_features.shape[1]):
                         ax = fig.add_subplot(1, model.new_features.shape[1], k + 1)
                         plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), c=to_numpy(model.new_features[:, k]), s=5,

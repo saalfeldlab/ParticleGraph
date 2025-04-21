@@ -1,4 +1,4 @@
-description: 'system of particles falling down in a box   GNN encoder decoder test rotation'
+description: 'system of particles falling down in a box   GNN encoder update decoder   test loop update'
 dataset: 'multimaterial'
 data_folder_name: '/groups/saalfeld/saalfeldlab/projects/gnn/learning-to-simulate/MultiMaterial/'
 
@@ -15,11 +15,11 @@ simulation:
   start_frame: 0
 
 graph_model:
-  particle_model_name: 'PDE_MLPs_B_0'
+  particle_model_name: 'PDE_MLPs_B_4'
   mesh_model_name: ''
   prediction: '2nd_derivative'
 
-  multi_mlp_params: [[18, 512, 4, 512], [520, 128, 4, 2], [1, 1, 1, 1], [6, 16, 3, 2]]   # input_size, hidden_size, nlayers, output_size
+  multi_mlp_params: [[18, 512, 4, 128], [256, 128, 3, 128], [128, 128, 3, 2], [6, 16, 3, 2]]   # input_size, hidden_size, nlayers, output_size
 
   aggr_type: 'add'
   embedding_dim: 2

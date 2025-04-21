@@ -84,13 +84,13 @@ if __name__ == '__main__':
         if 'train' in task:
             data_train(config=config, erase=False, best_model=best_model, device=device)
         if 'test' in task:
-            # for run_ in range(0, config.simulation.n_frames, 50):
-            #     data_test(config=config, visualize=True, style='black color', verbose=False, best_model='best',
-            #               run=run_, test_mode='fixed_bounce_all', sample_embedding=False, step=4,
-            #               device=device)  # particle_of_interest=100,
-            data_test(config=config, visualize=True, style='black color features', verbose=False, best_model='best', run=17,
-                      test_mode='fixed_bounce_all', sample_embedding=False, step=4,
-                      device=device)  # particle_of_interest=100,
+            for run_ in range(0, config.simulation.n_frames, 50):
+                data_test(config=config, visualize=True, style='black color', verbose=False, best_model='best',
+                          run=run_, test_mode='fixed_bounce_all', sample_embedding=False, step=4,
+                          device=device)  # particle_of_interest=100,
+            # data_test(config=config, visualize=True, style='black color', verbose=False, best_model='best', run=17,
+            #           test_mode='fixed_bounce_all', sample_embedding=False, step=4,
+            #           device=device)  # particle_of_interest=100,
 
     if 'try_func' in task:
             try_func(max_radius=config.simulation.max_radius, device=device)

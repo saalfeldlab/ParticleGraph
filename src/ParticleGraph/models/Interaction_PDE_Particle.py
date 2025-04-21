@@ -102,6 +102,8 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
             self.rotation_matrix = torch.stack([torch.stack([torch.cos(self.phi), torch.sin(self.phi)]),
                                                 torch.stack([-torch.sin(self.phi), torch.cos(self.phi)])])
             d_pos[:, :2] = d_pos[:, :2] @ self.rotation_matrix.T
+            if self.time_window > 0:
+                pos[:, :2] = pos[:, :2] @ self.rotation_matrix.T
         if has_field:
             field = x[:, 6:7]
         else:
@@ -109,7 +111,6 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
         if training & (self.time_window_noise > 0):
             noise = torch.randn_like(pos) * self.time_window_noise
             pos = pos + noise
-
 
         # if translation_augmentation:
         #     displacement = torch.randn(1, dimension, dtype=torch.float32, device=device) * 5
@@ -134,28 +135,31 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
                     in_features = torch.cat((embedding, d_pos, out), dim=-1)
                     out = self.MLP[3](in_features)
 
-        if 'PDE_MLPs_B' in self.model:
-            for self.mode in ['encode_features', 'decode_features', 'update']:
+        elif 'PDE_MLPs_B' in self.model:
+            match = re.search(r'_(\d+)$', self.model)
+            n_loop = int(match.group(1))
+            for self.mode in ['encode_features', 'update_features', 'decode_features']:
                 if self.mode == 'encode_features':
                     new_features = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=torch.zeros_like(embedding))
-                else:
-                    out = self.MLP[1](torch.cat((new_features, embedding, pos[:, self.dimension:]), dim=-1))
+                elif self.mode == 'update_features':
+                    if n_loop == 0:
+                        new_features = self.MLP[1](torch.cat((new_features, embedding, pos[:, self.dimension:]), dim=-1))
+                    else:
+                        for loop in range(n_loop):
+                            new_features = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=new_features)
+                elif self.mode == 'decode_features':
+                    if n_loop>0:
+                        new_features = self.MLP[2](new_features)
                     if self.rotation_augmentation & (self.training == True):
-                         self.rotation_inv_matrix = torch.stack([torch.stack([torch.cos(self.phi), -torch.sin(self.phi)]), torch.stack([torch.sin(self.phi), torch.cos(self.phi)])])
-                         out[:, :2] = out[:, :2] @ self.rotation_inv_matrix.T
-                # elif self.mode == 'update_features':
-                #     new_features = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=new_features)
-                # elif self.mode == 'decode_features':
-                #     new_features = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=new_features)
-                # elif self.mode == 'update':
-                #     if self.rotation_augmentation & (self.training == True):
-                #         self.rotation_inv_matrix = torch.stack([torch.stack([torch.cos(self.phi), -torch.sin(self.phi)]), torch.stack([torch.sin(self.phi), torch.cos(self.phi)])])
-                #         new_features[:, :2] = new_features[:, :2] @ self.rotation_inv_matrix.T
-                #         d_pos[:, :2] = d_pos[:, :2] @ self.rotation_inv_matrix.T
-                #     in_features = torch.cat((embedding, d_pos, new_features), dim=-1)
-                #     out = self.MLP[3](in_features)
+                        self.rotation_inv_matrix = torch.stack([torch.stack([torch.cos(self.phi), -torch.sin(self.phi)]), torch.stack([torch.sin(self.phi), torch.cos(self.phi)])])
+                        new_features[:, :2] = new_features[:, :2] @ self.rotation_inv_matrix.T
+                        d_pos[:, :2] = d_pos[:, :2] @ self.rotation_inv_matrix.T
+                        in_features = torch.cat((embedding, d_pos, new_features), dim=-1)
+                        out = self.MLP[3](in_features)
+                    else:
+                        out = new_features
 
-        if ('PDE_MLPs_C' in self.model) | ('PDE_MLPs_D' in self.model):
+        elif ('PDE_MLPs_C' in self.model) | ('PDE_MLPs_D' in self.model):
             for self.mode in ['defined_kernel_features', 'message_passing_defined_kernel']:
                 if self.mode == 'defined_kernel_features':
                     new_features = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=torch.zeros_like(embedding))
@@ -185,10 +189,6 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
         if self.mode == 'update_features':
             in_features = torch.cat((new_features_i, new_features_j), dim=-1)
             new_features = self.MLP[1](in_features)
-            return new_features
-        if self.mode == 'decode_features':
-            in_features = torch.cat((new_features_i, new_features_j), dim=-1)
-            new_features = self.MLP[2](in_features)
             return new_features
         if self.mode == 'defined_kernel_features':
             mgrid = delta_pos.clone().detach()
