@@ -55,14 +55,13 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'test'
+        task = 'train'
         best_model = ''
         # config_list = ['fluids_m17_1']
-        config_list = ['multimaterial_9_9','multimaterial_2', 'multimaterial_2_4', 'multimaterial_2_5', 'multimaterial_8_1',
-                    'multimaterial_9_7', 'multimaterial_9_8','multimaterial_9_9', 'multimaterial_9_10', 'multimaterial_9_11', 'multimaterial_9_12', 'multimaterial_9_13',
-                    'multimaterial_10_1','multimaterial_10_2', 'multimaterial_10_3', 'multimaterial_10_4']
-        # config_list = ['multimaterial_9_12', 'multimaterial_2', 'multimaterial_9_9']
-        # config_list = ['multimaterial_9_14']
+        # config_list = ['multimaterial_9_9','multimaterial_2', 'multimaterial_2_4', 'multimaterial_2_5', 'multimaterial_8_1',
+        #             'multimaterial_9_7', 'multimaterial_9_8','multimaterial_9_9', 'multimaterial_9_10', 'multimaterial_9_11', 'multimaterial_9_12', 'multimaterial_9_13',
+        #             'multimaterial_10_1','multimaterial_10_2', 'multimaterial_10_3', 'multimaterial_10_4']
+        config_list = ['multimaterial_10_1']
         # config_list = ['cell_MDCK_12']
         # config_list = ['signal_N2_a43_17']
         # config_list = ['arbitrary_3_5','arbitrary_3_7','arbitrary_3_8','arbitrary_3_9']
@@ -89,7 +88,7 @@ if __name__ == '__main__':
             #     data_test(config=config, visualize=True, style='black color', verbose=False, best_model='best',
             #               run=run_, test_mode='fixed_bounce_all', sample_embedding=False, step=4,
             #               device=device)  # particle_of_interest=100,
-            data_test(config=config, visualize=True, style='black color', verbose=False, best_model='best', run=17,
+            data_test(config=config, visualize=True, style='black color features', verbose=False, best_model='best', run=17,
                       test_mode='fixed_bounce_all', sample_embedding=False, step=4,
                       device=device)  # particle_of_interest=100,
 

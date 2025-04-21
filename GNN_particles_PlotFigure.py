@@ -724,7 +724,7 @@ def plot_focused_on_cell(config, run, style, step, cell_id, device):
 
                     plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
                                 s=size, color=cmap.color(n))
-                    
+
                 dead_cell = np.argwhere(to_numpy(H1[:, 0]) == 0)
                 if len(dead_cell) > 0:
                     plt.scatter(to_numpy(X1[dead_cell[:, 0].squeeze(), 0]), to_numpy(X1[dead_cell[:, 0].squeeze(), 1]),
@@ -1533,17 +1533,18 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
             plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=170.7)
             plt.close()
 
-            if 'PDE_MLPs' in config.graph_model.particle_model_name:
+            if 'PDE_MLPs_A' in config.graph_model.particle_model_name:
 
                 model.model = config.graph_model.particle_model_name + '_eval'
 
                 x = x_list[0][100].clone().detach()
+
                 distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
                 adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
                 edge_index = adj_t.nonzero().t().contiguous()
                 data_id = torch.ones((n_particles, 1), dtype=torch.int) * run
                 dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
-                pred = model(dataset, data_id=data_id, training=False, k=0)
+                pred = model(dataset, data_id=data_id, training=False, k=100)
 
                 fig = plt.figure(figsize=(20, 5))
                 for k in range(model.kernels.shape[1]):
@@ -1558,6 +1559,20 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
                     cbar.ax.tick_params(labelsize=6)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/kernels_{epoch}.tif", dpi=170.7)
+                plt.close()
+
+                fig = plt.figure(figsize=(20, 20))
+                for it in range(0, 200, 50):
+                    x = x_list[0][it].clone().detach()
+                    for k in range(model.new_features.shape[1]):
+                        ax = fig.add_subplot(5, model.new_features.shape[1], k + 1 + 4*it//50)
+                        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), c=to_numpy(model.new_features[:, k]), s=5, cmap='viridis')
+                        if it==0:
+                            ax.set_title(f'new_features {k}')
+                        cbar = plt.colorbar()
+                        cbar.ax.tick_params(labelsize=6)
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/new_features_{epoch}.tif", dpi=170.7)
                 plt.close()
 
 
@@ -5983,7 +5998,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                         pred_list.append(pred)
 
                         pred = model_f(time=frame / n_frames, enlarge=True) ** 2 * second_correction / 10 # /lin_fit[0]
-                        pred = torch.reshape(pred, (640, 640)) 
+                        pred = torch.reshape(pred, (640, 640))
                         pred = to_numpy(pred)
                         pred = np.flipud(pred)
                         pred = np.rot90(pred, 1)
@@ -7876,7 +7891,7 @@ def data_plot(config, config_file, epoch_list, style, device):
             plot_particle_field(config, epoch_list, log_dir, logger, 'grey', style, device)
         case 'PDE_E':
             plot_Coulomb(config, epoch_list, log_dir, logger, style, device)
-        case 'PDE_F' | 'PDE_F_A' | 'PDE_F_B' | 'PDE_F_C' | 'PDE_F_D' | 'PDE_F_E' | 'PDE_WF' | 'PDE_WF' | 'PDE_MLPs_A'| 'PDE_MLPs_B'| 'PDE_MLPs_C'| 'PDE_MLPs_D'| 'PDE_MLPs_E':
+        case 'PDE_F' | 'PDE_F_A' | 'PDE_F_B' | 'PDE_F_C' | 'PDE_F_D' | 'PDE_F_E' | 'PDE_WF' | 'PDE_WF' | 'PDE_MLPs_A'| 'PDE_MLPs_B'| 'PDE_MLPs_C'| 'PDE_MLPs_D' | 'PDE_MLPs_E' | 'PDE_MLPs_F':
             plot_falling_particles(config, epoch_list, log_dir, logger, style, device)
         case 'PDE_G':
             if config_file == 'gravity_continuous':
@@ -8250,12 +8265,12 @@ if __name__ == '__main__':
     #                'signal_N2_a43_3_10_t16','signal_N2_a43_3_20_t16','signal_N2_a43_3_20_t20','signal_N2_a43_3_20_t24','signal_N2_a43_3_20_t28']
     # config_list = ['gravity_16_1']
     # config_list = ['wave_slit_bis']
-    # config_list = ['multimaterial_9_9', 'multimaterial_2', 'multimaterial_2_4', 'multimaterial_2_5',
-    #                'multimaterial_8_1',
-    #                'multimaterial_9_7', 'multimaterial_9_8', 'multimaterial_9_9', 'multimaterial_9_10',
-    #                'multimaterial_9_11', 'multimaterial_9_12', 'multimaterial_9_13',
-    #                'multimaterial_10_1', 'multimaterial_10_2', 'multimaterial_10_3', 'multimaterial_10_4']
-    config_list = ['multimaterial_9_12']
+    config_list = ['multimaterial_2', 'multimaterial_2_4', 'multimaterial_2_5',
+                   'multimaterial_8_1',
+                   'multimaterial_9_7', 'multimaterial_9_8', 'multimaterial_9_9', 'multimaterial_9_10',
+                   'multimaterial_9_11', 'multimaterial_9_12', 'multimaterial_9_13',
+                   'multimaterial_10_1', 'multimaterial_10_2', 'multimaterial_10_3', 'multimaterial_10_4']
+    # config_list = ['multimaterial_9_9']
 
     for config_file_ in config_list:
         print(' ')

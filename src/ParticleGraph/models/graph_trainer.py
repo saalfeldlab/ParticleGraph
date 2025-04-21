@@ -3591,6 +3591,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     model.ynorm = ynorm
     model.vnorm = vnorm
     model.particle_of_interest = particle_of_interest
+    if 'PDE_MLPs_A' in config.graph_model.particle_model_name:
+        model.model = config.graph_model.particle_model_name + '_eval'
 
     table = PrettyTable(["Modules", "Parameters"])
     total_params = 0
@@ -4067,7 +4069,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=80)
                     plt.close()
-
                 elif 'PDE_K' in model_config.particle_model_name:
 
                     plt.close()
@@ -4081,7 +4082,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
                     plt.xlim([-3, 3])
                     plt.ylim([-3, 3])
-
                 elif do_tracking:
 
                     # plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c='w', alpha=0.25)
@@ -4144,7 +4144,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                         plt.ylim([yc-0.1, yc+0.1])
                         plt.xticks([])
                         plt.yticks([])
-
 
                 if 'latex' in style:
                     plt.xlabel(r'$x$', fontsize=78)
@@ -4250,7 +4249,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/tmp_recons/Boundary_{config_file}_{num}.tif", dpi=80)
                     plt.close()
-
 
                 if has_ghost:
 
@@ -4429,6 +4427,19 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                         plt.tight_layout()
                         plt.savefig(f'./{log_dir}/results/comparison_modulation_{it}.png', dpi=80)
                         plt.close()
+
+                if ('feature' in style) & ('PDE_MLPs_A' in config.graph_model.particle_model_name):
+                    fig = plt.figure(figsize=(22, 5))
+                    for k in range(model.new_features.shape[1]):
+                        ax = fig.add_subplot(1, model.new_features.shape[1], k + 1)
+                        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), c=to_numpy(model.new_features[:, k]), s=5,
+                                    cmap='viridis')
+                        ax.set_title(f'new_features {k}')
+                        cbar = plt.colorbar()
+                        cbar.ax.tick_params(labelsize=6)
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/tmp_recons/Features_{config_file}_{run}_{num}.tif", dpi=100)
+                    plt.close()
 
     if 'inference' in test_mode:
         torch.save(x_inference_list, f"./{log_dir}/x_inference_list_{run}.pt")
