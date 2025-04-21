@@ -118,10 +118,12 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
         # if velocity_augmentation:
         #     d_pos = d_pos + torch.randn((1, 2), device=device).repeat(d_pos.shape[0], 1) * vnorm
 
-        if self.model == 'PDE_MLPs_A':
+        if 'PDE_MLPs_A' in self.model:
             for self.mode in ['kernel_new_features', 'message_passing_kernel', 'update']:
                 if self.mode == 'kernel_new_features':
                     new_features = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=torch.zeros_like(embedding))
+                    if 'eval' in self.model:
+                        self.new_features = new_features
                 elif self.mode == 'message_passing_kernel':
                     out = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=new_features)
                     if self.rotation_augmentation & (self.training == True):
@@ -132,7 +134,7 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
                     in_features = torch.cat((embedding, d_pos, out), dim=-1)
                     out = self.MLP[3](in_features)
 
-        if self.model == 'PDE_MLPs_B':
+        if 'PDE_MLPs_B' in self.model:
             for self.mode in ['encode_features', 'update_features', 'update_features', 'update_features', 'decode_features', 'update']:
                 if self.mode == 'encode_features':
                     new_features = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=torch.zeros_like(embedding))
@@ -148,7 +150,7 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
                     in_features = torch.cat((embedding, d_pos, new_features), dim=-1)
                     out = self.MLP[3](in_features)
 
-        if (self.model == 'PDE_MLPs_C') | (self.model == 'PDE_MLPs_D'):
+        if ('PDE_MLPs_C' in self.model) | ('PDE_MLPs_D' in self.model):
             for self.mode in ['defined_kernel_features', 'message_passing_defined_kernel']:
                 if self.mode == 'defined_kernel_features':
                     new_features = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=torch.zeros_like(embedding))
@@ -166,6 +168,8 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
     def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, field_i, field_j, embedding_i, embedding_j, new_features_i, new_features_j ):
 
         delta_pos = self.bc_dpos(pos_j - pos_i)
+        if 'eval' in self.model:
+            self.delta_pos = delta_pos
 
         if self.training & self.rotation_augmentation:
             delta_pos[:, :2] = delta_pos[:, :2] @ self.rotation_matrix.T

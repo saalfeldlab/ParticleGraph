@@ -1372,6 +1372,8 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
     n_runs = config.training.n_runs
     has_particle_dropout = config.training.particle_dropout > 0
     dataset_name = config.dataset
+    max_radius = config.simulation.max_radius
+    min_radius = config.simulation.min_radius
 
     embedding_cluster = EmbeddingCluster(config)
 
@@ -1388,6 +1390,8 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
     y = torch.tensor(y, dtype=torch.float32, device=device)
     x_list.append(x)
     y_list.append(y)
+
+
 
     x = x_list[0][0].clone().detach()
     ynorm = torch.load(f'{log_dir}/ynorm.pt', map_location=device, weights_only=True)
@@ -1528,6 +1532,33 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=170.7)
             plt.close()
+
+            if 'PDE_MLPs' in config.graph_model.particle_model_name:
+
+                model.model = config.graph_model.particle_model_name + '_eval'
+
+                x = x_list[0][100].clone().detach()
+                distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
+                adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                edge_index = adj_t.nonzero().t().contiguous()
+                data_id = torch.ones((n_particles, 1), dtype=torch.int) * run
+                dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
+                pred = model(dataset, data_id=data_id, training=False, k=0)
+
+                fig = plt.figure(figsize=(20, 5))
+                for k in range(model.kernels.shape[1]):
+                    ax = fig.add_subplot(1, model.kernels.shape[1], k + 1)
+                    plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), c=to_numpy(model.kernels[:, k]),
+                                s=5, cmap='viridis', vmin=-2,vmax=2)
+                    ax.set_title(f'kernel {k}')
+                    ax.set_xlim(-model.max_radius, model.max_radius)
+                    ax.set_ylim(-model.max_radius, model.max_radius)
+                    ax.set_aspect('equal')
+                    cbar = plt.colorbar()
+                    cbar.ax.tick_params(labelsize=6)
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/kernels_{epoch}.tif", dpi=170.7)
+                plt.close()
 
 
 def plot_cell_state(config, epoch_list, log_dir, logger, style, device):
@@ -8214,21 +8245,17 @@ if __name__ == '__main__':
     # config_list = ['boids_16_256']
     #config_list = ['signal_N5_v6','signal_N5_v6_0','signal_N5_v6_1','signal_N5_v6_2', 'signal_N5_v6_3', 'signal_N5_v7_1','signal_N5_v7_2','signal_N5_v7_3', 'signal_N5_v8','signal_N5_v9','signal_N5_v10',
     #                'signal_N5_v11','signal_N5_v12','signal_N5_v13','signal_N5_v14','signal_N5_v15']
-
-    # config_list = ['multimaterial_2', 'multimaterial_8_1', 'multimaterial_8_2','multimaterial_8_4', 'multimaterial_8_5', 'multimaterial_8_6',
-    #                'multimaterial_8_7', 'multimaterial_9_1', 'multimaterial_9_2', 'multimaterial_9_3', 'multimaterial_9_4']
-    # 
-    config_list = ['multimaterial_9_9', 'multimaterial_2', 'multimaterial_8_1', 'multimaterial_8_8',
-                   'multimaterial_8_11', 'multimaterial_8_12',
-                   'multimaterial_9_7', 'multimaterial_9_8', 'multimaterial_9_10', 'multimaterial_9_11',
-                   'multimaterial_9_5', 'multimaterial_9_6',
-                   'multimaterial_10_1', 'multimaterial_10_2', 'multimaterial_10_3']
-
     # config_list = ['signal_N4_a3','signal_N4_a4']
     # config_list = ['signal_N2_a43_3_1_t8','signal_N2_a43_3_5_t8','signal_N2_a43_3_10_t8','signal_N2_a43_3_20_t8','signal_N2_a43_3_1_t16','signal_N2_a43_3_5_t16',
     #                'signal_N2_a43_3_10_t16','signal_N2_a43_3_20_t16','signal_N2_a43_3_20_t20','signal_N2_a43_3_20_t24','signal_N2_a43_3_20_t28']
     # config_list = ['gravity_16_1']
     # config_list = ['wave_slit_bis']
+    # config_list = ['multimaterial_9_9', 'multimaterial_2', 'multimaterial_2_4', 'multimaterial_2_5',
+    #                'multimaterial_8_1',
+    #                'multimaterial_9_7', 'multimaterial_9_8', 'multimaterial_9_9', 'multimaterial_9_10',
+    #                'multimaterial_9_11', 'multimaterial_9_12', 'multimaterial_9_13',
+    #                'multimaterial_10_1', 'multimaterial_10_2', 'multimaterial_10_3', 'multimaterial_10_4']
+    config_list = ['multimaterial_9_12']
 
     for config_file_ in config_list:
         print(' ')
