@@ -26,7 +26,6 @@ from sklearn.manifold import TSNE
 from ParticleGraph.denoise_data import *
 from scipy.spatial import KDTree
 
-
 def data_train(config=None, erase=False, best_model=None, device=None):
     # plt.rcParams['text.usetex'] = True
     # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
@@ -3857,7 +3856,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 if has_ghost:
                     y = y[mask_ghost]
 
-
             with torch.no_grad():
                 if sub_sampling > 1:
                     # predict position, does not work with rotation_augmentation
@@ -3870,7 +3868,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     x[:, 1:dimension + 1] = x_next
                     loss = (x[:, 1:dimension + 1] - x0_next[:, 1:dimension + 1]).norm(2)
                     pred_err_list.append(to_numpy(torch.sqrt(loss)))
-
                 elif do_tracking:
 
                     # x[:, dimension + 1:2 * dimension + 1] = y
@@ -3891,7 +3888,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     pred_err_list.append(to_numpy(torch.sqrt(loss)))
                     if 'inference' in test_mode:
                         x[:,dimension+1:2*dimension+1] = pred.clone().detach() / (delta_t * time_step)
-
                 else:
                     loss = (pred[:, 0:dimension] * ynorm - y0).norm(2)
 
@@ -3930,15 +3926,12 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     if bouncing_pos.numel() > 0:
                         x[bouncing_pos, 4] = - 0.7 * x[bouncing_pos, 4]
                         x[bouncing_pos, 2] += x[bouncing_pos, 4] * delta_t
-
-
                 if (time_window>1) & ('plot_data' not in test_mode):
                     moving_pos = torch.argwhere(x[:,5]!=0)
                     x_list[0][it+1,moving_pos.squeeze(),1:2 * dimension + 1] = x[moving_pos.squeeze(), 1:2 * dimension + 1].clone().detach()
                 if 'fixed' in test_mode:
                     fixed_pos = torch.argwhere(x[:,5]==0)
                     x[fixed_pos.squeeze(), 1:2 * dimension + 1] = x_list[0][it+1,fixed_pos.squeeze(),1:2 * dimension + 1].clone().detach()
-
                 if 'inference' in test_mode:
                     x_inference_list.append(x)
 
@@ -4241,93 +4234,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{run}_{num}.tif", dpi=100)
                     plt.close()
-
-                if 'boundary' in style:
-                    fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
-                    t=torch.min(x[:, 7:],-1).values
-                    plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=25, c=to_numpy(t),vmin=-1,vmax=1)
-                    plt.xlim([0, 1])
-                    plt.ylim([0, 1])
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_recons/Boundary_{config_file}_{num}.tif", dpi=80)
-                    plt.close()
-
-                if has_ghost:
-
-                    x0 = x_list[0][it + 1].clone().detach()
-                    x_ghost_pos = bc_pos(x_ghost[:, 1:3])
-                    x_removed = x_removed_list[it]
-                    x_all = torch.cat((x, x_removed), 0)
-
-                    fig = plt.figure(figsize=(12, 12))
-                    ax = fig.add_subplot(1, 1, 1)
-                    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-                    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-                    ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                    ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                    for n in range(n_particle_types):
-                        plt.scatter(x0[index_particles[n], 1].detach().cpu().numpy(),
-                                    x0[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
-                    if 'frame' in style:
-                        plt.xlabel(r'$x$', fontsize=78)
-                        plt.ylabel(r'$y$', fontsize=78)
-                        plt.xticks(fontsize=48.0)
-                        plt.yticks(fontsize=48.0)
-                    else:
-                        plt.xticks([])
-                        plt.yticks([])
-                    plt.xlim([0, 1])
-                    plt.ylim([0, 1])
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_recons/Ghost1_{config_file}_{it}.tif", dpi=170.7)
-                    plt.close()
-                    fig = plt.figure(figsize=(12, 12))
-                    ax = fig.add_subplot(1, 1, 1)
-                    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-                    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-                    ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                    ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                    plt.scatter(x_ghost_pos[:, 0].detach().cpu().numpy(),
-                                x_ghost_pos[:, 1].detach().cpu().numpy(), s=s_p, color='g')
-                    if 'frame' in style:
-                        plt.xlabel(r'$x$', fontsize=78)
-                        plt.ylabel(r'$y$', fontsize=78)
-                        plt.xticks(fontsize=48.0)
-                        plt.yticks(fontsize=48.0)
-                    else:
-                        plt.xticks([])
-                        plt.yticks([])
-                    plt.xlim([0, 1])
-                    plt.ylim([0, 1])
-                    plt.xticks(fontsize=48.0)
-                    plt.yticks(fontsize=48.0)
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_recons/Ghost2_{config_file}_{it}.tif", dpi=170.7)
-                    plt.close()
-                    fig = plt.figure(figsize=(12, 12))
-                    ax = fig.add_subplot(1, 1, 1)
-                    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-                    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-                    ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                    ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                    plt.scatter(x_removed[:, 1].detach().cpu().numpy(),
-                                x_removed[:, 2].detach().cpu().numpy(), s=s_p, color='r')
-                    if 'frame' in style:
-                        plt.xlabel(r'$x$', fontsize=78)
-                        plt.ylabel(r'$y$', fontsize=78)
-                        plt.xticks(fontsize=48.0)
-                        plt.yticks(fontsize=48.0)
-                    else:
-                        plt.xticks([])
-                        plt.yticks([])
-                    plt.xlim([0, 1])
-                    plt.ylim([0, 1])
-                    plt.xticks(fontsize=48.0)
-                    plt.yticks(fontsize=48.0)
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_recons/Ghost3_{config_file}_{it}.tif", dpi=170.7)
-                    plt.close()
-
                 if ('PDE_N' in model_config.signal_model_name) & (it % 200 == 0) & (it > 0):
 
                     n = [20, 30, 100, 150, 260, 270, 520, 620, 720, 820]
@@ -4429,7 +4335,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                         plt.tight_layout()
                         plt.savefig(f'./{log_dir}/results/comparison_modulation_{it}.png', dpi=80)
                         plt.close()
-
                 if ('feature' in style) & ('PDE_MLPs_A' in config.graph_model.particle_model_name):
                     if 'PDE_MLPs_A_bis' in model.model:
                         fig = plt.figure(figsize=(22, 4))
@@ -4446,6 +4351,90 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                         plt.ylim([0, 1])
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/tmp_recons/Features_{config_file}_{run}_{num}.tif", dpi=100)
+                    plt.close()
+                if 'boundary' in style:
+                    fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
+                    t = torch.min(x[:, 7:],-1).values
+                    plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=25, c=to_numpy(t),vmin=-1,vmax=1)
+                    plt.xlim([0, 1])
+                    plt.ylim([0, 1])
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/tmp_recons/Boundary_{config_file}_{num}.tif", dpi=80)
+                    plt.close()
+                if has_ghost:
+
+                    x0 = x_list[0][it + 1].clone().detach()
+                    x_ghost_pos = bc_pos(x_ghost[:, 1:3])
+                    x_removed = x_removed_list[it]
+                    x_all = torch.cat((x, x_removed), 0)
+
+                    fig = plt.figure(figsize=(12, 12))
+                    ax = fig.add_subplot(1, 1, 1)
+                    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+                    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+                    ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                    ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                    for n in range(n_particle_types):
+                        plt.scatter(x0[index_particles[n], 1].detach().cpu().numpy(),
+                                    x0[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
+                    if 'frame' in style:
+                        plt.xlabel(r'$x$', fontsize=78)
+                        plt.ylabel(r'$y$', fontsize=78)
+                        plt.xticks(fontsize=48.0)
+                        plt.yticks(fontsize=48.0)
+                    else:
+                        plt.xticks([])
+                        plt.yticks([])
+                    plt.xlim([0, 1])
+                    plt.ylim([0, 1])
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/tmp_recons/Ghost1_{config_file}_{it}.tif", dpi=170.7)
+                    plt.close()
+                    fig = plt.figure(figsize=(12, 12))
+                    ax = fig.add_subplot(1, 1, 1)
+                    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+                    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+                    ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                    ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                    plt.scatter(x_ghost_pos[:, 0].detach().cpu().numpy(),
+                                x_ghost_pos[:, 1].detach().cpu().numpy(), s=s_p, color='g')
+                    if 'frame' in style:
+                        plt.xlabel(r'$x$', fontsize=78)
+                        plt.ylabel(r'$y$', fontsize=78)
+                        plt.xticks(fontsize=48.0)
+                        plt.yticks(fontsize=48.0)
+                    else:
+                        plt.xticks([])
+                        plt.yticks([])
+                    plt.xlim([0, 1])
+                    plt.ylim([0, 1])
+                    plt.xticks(fontsize=48.0)
+                    plt.yticks(fontsize=48.0)
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/tmp_recons/Ghost2_{config_file}_{it}.tif", dpi=170.7)
+                    plt.close()
+                    fig = plt.figure(figsize=(12, 12))
+                    ax = fig.add_subplot(1, 1, 1)
+                    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+                    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+                    ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                    ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                    plt.scatter(x_removed[:, 1].detach().cpu().numpy(),
+                                x_removed[:, 2].detach().cpu().numpy(), s=s_p, color='r')
+                    if 'frame' in style:
+                        plt.xlabel(r'$x$', fontsize=78)
+                        plt.ylabel(r'$y$', fontsize=78)
+                        plt.xticks(fontsize=48.0)
+                        plt.yticks(fontsize=48.0)
+                    else:
+                        plt.xticks([])
+                        plt.yticks([])
+                    plt.xlim([0, 1])
+                    plt.ylim([0, 1])
+                    plt.xticks(fontsize=48.0)
+                    plt.yticks(fontsize=48.0)
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/tmp_recons/Ghost3_{config_file}_{it}.tif", dpi=170.7)
                     plt.close()
 
     if 'inference' in test_mode:

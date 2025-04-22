@@ -1516,7 +1516,10 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
                 for it in range(0, 200, 50):
                     x = x_list[0][it].clone().detach()
                     for k in range(model.new_features.shape[1]):
-                        ax = fig.add_subplot(5, model.new_features.shape[1], k + 1 + 4*it//50)
+                        if config.graph_model.particle_model_name == 'PDE_MLPs_A_bis':
+                            ax = fig.add_subplot(5, model.new_features.shape[1], k + 1 + 6*it//50)
+                        else:
+                            ax = fig.add_subplot(5, model.new_features.shape[1], k + 1 + 4*it//50)
                         plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), c=to_numpy(model.new_features[:, k]), s=5, cmap='viridis')
                         if it==0:
                             ax.set_title(f'new_features {k}')
@@ -1556,8 +1559,6 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
                     if len(pos) > 0:
                         pos = pos[:, 0]
                         plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=25, edgecolors='none', alpha=0.1)
-                plt.xlim([0.5, 1.5])
-                plt.ylim([0.7, 1.7])
                 plt.xlabel(r'$a_{0}$', fontsize=18)
                 plt.ylabel(r'$a_{1}$', fontsize=18)
                 plt.tight_layout()
@@ -8256,12 +8257,11 @@ if __name__ == '__main__':
     #                'signal_N2_a43_3_10_t16','signal_N2_a43_3_20_t16','signal_N2_a43_3_20_t20','signal_N2_a43_3_20_t24','signal_N2_a43_3_20_t28']
     # config_list = ['gravity_16_1']
     # config_list = ['wave_slit_bis']
-    config_list = ['multimaterial_2', 'multimaterial_2_4', 'multimaterial_2_5',
-                   'multimaterial_8_1',
-                   'multimaterial_9_7', 'multimaterial_9_8', 'multimaterial_9_9', 'multimaterial_9_10',
-                   'multimaterial_9_11', 'multimaterial_9_12', 'multimaterial_9_13',
-                   'multimaterial_10_1', 'multimaterial_10_2', 'multimaterial_10_3', 'multimaterial_10_4']
-    config_list = ['multimaterial_9_12']
+    config_list = ['multimaterial_2', 'multimaterial_2_4', 'multimaterial_2_5', 'multimaterial_8_1',
+                   'multimaterial_9_8', 'multimaterial_9_9', 'multimaterial_9_10',
+                   'multimaterial_9_11', 'multimaterial_9_12', 'multimaterial_9_13','multimaterial_9_15','multimaterial_9_16',
+                   'multimaterial_10_1', 'multimaterial_10_2', 'multimaterial_10_3', 'multimaterial_10_4', 'multimaterial_11_1']
+    config_list = ['multimaterial_11_1','multimaterial_11_2']
 
     for config_file_ in config_list:
         print(' ')
@@ -8273,8 +8273,8 @@ if __name__ == '__main__':
 
         print(f'config_file  {config.config_file}')
 
-        # data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
-        data_plot(config=config, config_file=config_file, epoch_list=['all'], style='black color', device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
+        # data_plot(config=config, config_file=config_file, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['time'], style='black color', device=device)
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

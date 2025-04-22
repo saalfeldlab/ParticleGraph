@@ -1,4 +1,4 @@
-description: 'system of particles falling down in a box   test smaller radius'
+description: 'system of particles falling down in a box   test siren'
 dataset: 'multimaterial'
 data_folder_name: '/groups/saalfeld/saalfeldlab/projects/gnn/learning-to-simulate/MultiMaterial/'
 
