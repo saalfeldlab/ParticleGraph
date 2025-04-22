@@ -1,4 +1,4 @@
-description: 'system of particles falling down in a box   test larger siren'
+description: 'system of particles falling down in a box   test larger siren hidden 256'
 dataset: 'multimaterial'
 data_folder_name: '/groups/saalfeld/saalfeldlab/projects/gnn/learning-to-simulate/MultiMaterial/'
 
@@ -19,7 +19,7 @@ graph_model:
   mesh_model_name: ''
   prediction: '2nd_derivative'
 
-  multi_mlp_params: [[2, 256, 8, 5], [7, 32, 5, 4], [23, 256, 10, 2], [6, 64, 3, 2]]   # input_size, hidden_size, nlayers, output_size
+  multi_mlp_params: [[2, 256, 5, 5], [7, 32, 5, 4], [23, 256, 10, 2], [6, 64, 3, 2]]   # input_size, hidden_size, nlayers, output_size
 
   kernel_type: 'siren'
 

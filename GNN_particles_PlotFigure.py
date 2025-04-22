@@ -1418,7 +1418,6 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
             it = 0
             for file_id_ in trange(0,len(file_id_list)):
                 epoch = files[file_id_].split('graphs')[1][1:-3]
-                print(epoch)
 
                 net = f"{log_dir}/models/best_model_with_{n_runs-1}_graphs_{epoch}.pt"
                 state_dict = torch.load(net, map_location=device)
@@ -1436,11 +1435,11 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
                     pos = to_numpy(pos)
                     if len(pos) > 0:
                         pos = pos[:, 0]
-                        plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=100, alpha=0.25)
+                        plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=20, edgecolors='none', alpha=1.0)
                 plt.xlabel(r'$a_{0}$', fontsize=48)
                 plt.ylabel(r'$a_{1}$', fontsize=48)
-                plt.xlim([0.5, 1.5])
-                plt.ylim([0.5, 1.5])
+                # plt.xlim([0.5, 1.5])
+                # plt.ylim([0.5, 1.5])
                 plt.xticks([])
                 plt.yticks([])
                     # case 'arbitrary_16':
@@ -1450,29 +1449,30 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
                 plt.savefig(f"./{log_dir}/results/all/embedding_{epoch}.tif", dpi=80)
                 plt.close()
 
-                x = x_list[0][100].clone().detach()
+                if 'PDE_MLPs_A' in config.graph_model.particle_model_name:
+                    x = x_list[0][100].clone().detach()
 
-                distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
-                adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                edge_index = adj_t.nonzero().t().contiguous()
-                data_id = torch.ones((x.shape[0], 1), dtype=torch.int) * run
-                dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
-                pred = model(dataset, data_id=data_id, training=False, k=100)
+                    distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
+                    adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                    edge_index = adj_t.nonzero().t().contiguous()
+                    data_id = torch.ones((x.shape[0], 1), dtype=torch.int) * run
+                    dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
+                    pred = model(dataset, data_id=data_id, training=False, k=100)
 
-                fig = plt.figure(figsize=(20, 5))
-                for k in range(model.kernels.shape[1]):
-                    ax = fig.add_subplot(1, model.kernels.shape[1], k + 1)
-                    plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), c=to_numpy(model.kernels[:, k]),
-                                s=5, cmap='viridis', vmin=-2,vmax=2)
-                    ax.set_title(f'kernel {k}')
-                    ax.set_xlim(-model.max_radius, model.max_radius)
-                    ax.set_ylim(-model.max_radius, model.max_radius)
-                    ax.set_aspect('equal')
-                    cbar = plt.colorbar()
-                    cbar.ax.tick_params(labelsize=6)
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/all/kernels_{epoch}.tif", dpi=80)
-                plt.close()
+                    fig = plt.figure(figsize=(20, 5))
+                    for k in range(model.kernels.shape[1]):
+                        ax = fig.add_subplot(1, model.kernels.shape[1], k + 1)
+                        plt.scatter(to_numpy(model.delta_pos[:, 0]), to_numpy(model.delta_pos[:, 1]), c=to_numpy(model.kernels[:, k]),
+                                    s=5, cmap='viridis', vmin=-2,vmax=2)
+                        ax.set_title(f'kernel {k}')
+                        ax.set_xlim(-model.max_radius, model.max_radius)
+                        ax.set_ylim(-model.max_radius, model.max_radius)
+                        ax.set_aspect('equal')
+                        cbar = plt.colorbar()
+                        cbar.ax.tick_params(labelsize=6)
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/all/kernels_{epoch}.tif", dpi=80)
+                    plt.close()
 
     else:
         for epoch in epoch_list:
@@ -1558,14 +1558,12 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
                     pos = to_numpy(pos)
                     if len(pos) > 0:
                         pos = pos[:, 0]
-                        plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=25, edgecolors='none', alpha=0.1)
+                        plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=10, edgecolors='none', alpha=1.0)
                 plt.xlabel(r'$a_{0}$', fontsize=18)
                 plt.ylabel(r'$a_{1}$', fontsize=18)
                 plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=170.7)
             plt.close()
-
-
 
 
 def plot_cell_state(config, epoch_list, log_dir, logger, style, device):
@@ -7784,6 +7782,48 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
             np.save(f"./{log_dir}/behavior.npy",map_behavior)
 
 
+def plot_loss_curves(log_dir, ylim=None):
+    """
+    Iterates through all folders in the specified directory, loads 'loss.pt' files,
+    and plots all loss curves on a single plot.
+
+    Parameters:
+    - log_dir (str): Path to the directory containing subfolders with 'loss.pt' files.
+    - output_file (str): Path to save the resulting plot.
+    - ylim (tuple, optional): Y-axis limits for the plot (e.g., (0, 0.0075)).
+    """
+    loss_data = {}
+
+    # Iterate through all folders in the specified directory
+    for folder in os.listdir(log_dir):
+        folder_path = os.path.join(log_dir, folder)
+        if os.path.isdir(folder_path):  # Check if it's a directory
+            loss_file = os.path.join(folder_path, 'loss.pt')
+            if os.path.exists(loss_file):  # Check if 'loss.pt' exists
+                try:
+                    # Load the loss values
+                    loss_values = torch.load(loss_file)
+                    loss_data[folder] = loss_values
+                except Exception as e:
+                    print(f"Error loading {loss_file}: {e}")
+
+    # Plot all loss lists on a single plot
+    plt.figure(figsize=(10, 6))
+    for folder, loss_values in loss_data.items():
+        plt.plot(loss_values, label=folder)
+
+    plt.xlabel('Epochs', fontsize=14)
+    plt.ylabel('Loss', fontsize=14)
+    plt.title('Loss Curves', fontsize=16)
+    plt.legend(fontsize=10)
+    plt.grid(True)
+    if ylim:
+        plt.ylim(ylim)
+    plt.tight_layout()
+    plt.savefig(log_dir+'/loss_curves.png', dpi=150)
+    plt.close()
+
+
 def data_plot(config, config_file, epoch_list, style, device):
 
     # plt.rcParams['text.usetex'] = True
@@ -7883,7 +7923,7 @@ def data_plot(config, config_file, epoch_list, style, device):
             plot_particle_field(config, epoch_list, log_dir, logger, 'grey', style, device)
         case 'PDE_E':
             plot_Coulomb(config, epoch_list, log_dir, logger, style, device)
-        case 'PDE_F' | 'PDE_F_A' | 'PDE_F_B' | 'PDE_F_C' | 'PDE_F_D' | 'PDE_F_E' | 'PDE_WF' | 'PDE_WF' | 'PDE_MLPs_A'| 'PDE_MLPs_A_bis' | 'PDE_MLPs_B'| 'PDE_MLPs_B_0' |'PDE_MLPs_B_1' | 'PDE_MLPs_B_4'| 'PDE_MLPs_B_10' | 'PDE_MLPs_C'| 'PDE_MLPs_D' | 'PDE_MLPs_E' | 'PDE_MLPs_F':
+        case 'PDE_F' | 'PDE_F_A' | 'PDE_F_B' | 'PDE_F_C' | 'PDE_F_D' | 'PDE_F_E' | 'PDE_WF' | 'PDE_WF' | 'PDE_MLPs_A'| 'PDE_MLPs_A_bis'| 'PDE_MLPs_A_ter' | 'PDE_MLPs_B'| 'PDE_MLPs_B_0' |'PDE_MLPs_B_1' | 'PDE_MLPs_B_4'| 'PDE_MLPs_B_10' | 'PDE_MLPs_C'| 'PDE_MLPs_D' | 'PDE_MLPs_E' | 'PDE_MLPs_F':
             plot_falling_particles(config, epoch_list, log_dir, logger, style, device)
         case 'PDE_G':
             if config_file == 'gravity_continuous':
@@ -8257,11 +8297,14 @@ if __name__ == '__main__':
     #                'signal_N2_a43_3_10_t16','signal_N2_a43_3_20_t16','signal_N2_a43_3_20_t20','signal_N2_a43_3_20_t24','signal_N2_a43_3_20_t28']
     # config_list = ['gravity_16_1']
     # config_list = ['wave_slit_bis']
-    config_list = ['multimaterial_2', 'multimaterial_2_4', 'multimaterial_2_5', 'multimaterial_8_1',
-                   'multimaterial_9_8', 'multimaterial_9_9', 'multimaterial_9_10',
-                   'multimaterial_9_11', 'multimaterial_9_12', 'multimaterial_9_13','multimaterial_9_15','multimaterial_9_16',
-                   'multimaterial_10_1', 'multimaterial_10_2', 'multimaterial_10_3', 'multimaterial_10_4', 'multimaterial_11_1']
-    config_list = ['multimaterial_11_1','multimaterial_11_2']
+    config_list = ['multimaterial_2', 'multimaterial_2_4', 'multimaterial_2_5',
+                   'multimaterial_9_10', 'multimaterial_9_12', 'multimaterial_9_13', 'multimaterial_9_15',
+                   'multimaterial_9_16', 'multimaterial_9_17', 'multimaterial_9_18',
+                   'multimaterial_10_1', 'multimaterial_10_2', 'multimaterial_10_3', 'multimaterial_10_4',
+                   'multimaterial_11_1', 'multimaterial_11_2']
+    config_list = ['multimaterial_9_17', 'multimaterial_9_18']
+
+    plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 
     for config_file_ in config_list:
         print(' ')
@@ -8282,6 +8325,8 @@ if __name__ == '__main__':
     # f_list = ['synaptic_supp5']
     # for f in f_list:
     #     config_list,epoch_list = get_figures(f)
+
+
 
 
 

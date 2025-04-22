@@ -362,7 +362,6 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                             plt.plot(x[inv_particle_dropout_mask, 2].detach().cpu().numpy(),
                                      x[inv_particle_dropout_mask, 1].detach().cpu().numpy(), '+', color='w')
 
-
                         plt.xlim([0, 1])
                         plt.ylim([0, 1])
                         if 'PDE_G' in model_config.particle_model_name:

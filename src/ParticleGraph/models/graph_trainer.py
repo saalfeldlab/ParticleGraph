@@ -25,6 +25,8 @@ from sklearn.decomposition import PCA, TruncatedSVD
 from sklearn.manifold import TSNE
 from ParticleGraph.denoise_data import *
 from scipy.spatial import KDTree
+from sklearn import neighbors
+
 
 def data_train(config=None, erase=False, best_model=None, device=None):
     # plt.rcParams['text.usetex'] = True
@@ -254,7 +256,6 @@ def data_train_particle(config, erase, best_model, device):
             Niter = n_frames * data_augmentation_loop // batch_size
         plot_frequency = int(Niter // 20)
 
-
         if epoch==0:
             print(f'{Niter} iterations per epoch')
             logger.info(f'{Niter} iterations per epoch')
@@ -302,6 +303,15 @@ def data_train_particle(config, erase, best_model, device):
                     edges = edge_p_p_list[run][f'arr_{k}']
                     edges = torch.tensor(edges, dtype=torch.int64, device=device)
                 else:
+
+                    # positions = x_list[run][k][:, 1:3]
+                    # tree = neighbors.KDTree(positions)
+                    # receivers_list = tree.query_radius(positions, r=max_radius)
+                    # num_nodes = len(positions)
+                    # senders = np.repeat(range(num_nodes), [len(a) for a in receivers_list])
+                    # receivers = np.concatenate(receivers_list, axis=0)
+                    # edges = torch.tensor(np.array([senders, receivers]), dtype=torch.int64, device=device)
+
                     distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
                     adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
                     edges = adj_t.nonzero().t().contiguous()
@@ -405,11 +415,8 @@ def data_train_particle(config, erase, best_model, device):
                               n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
                 torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
                            os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
-            # if ((epoch == 0) & (N % (Niter // 200) == 0)):
-            #     torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
-            #                os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
-            check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 50,
-                                       memory_percentage_threshold=0.6)
+            # check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 50,
+            #                            memory_percentage_threshold=0.6)
 
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()},
@@ -4337,9 +4344,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                         plt.close()
                 if ('feature' in style) & ('PDE_MLPs_A' in config.graph_model.particle_model_name):
                     if 'PDE_MLPs_A_bis' in model.model:
-                        fig = plt.figure(figsize=(22, 4))
-                    else:
                         fig = plt.figure(figsize=(22, 5))
+                    else:
+                        fig = plt.figure(figsize=(22, 6))
                     for k in range(model.new_features.shape[1]):
                         ax = fig.add_subplot(1, model.new_features.shape[1], k + 1)
                         plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), c=to_numpy(model.new_features[:, k]), s=5,

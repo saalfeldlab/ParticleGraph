@@ -109,21 +109,22 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
             pos = pos - pos[0]
             pos = pos.transpose(0, 1)
             pos = torch.reshape(pos, (pos.shape[0], pos.shape[1] * pos.shape[2]))
-            d_pos = x[0, :, self.dimension + 1:1 + 2 * self.dimension].squeeze()
+            d_pos = pos * 0
+
+        if training & (self.time_window_noise > 0):
+            noise = torch.randn_like(pos) * self.time_window_noise
+            pos = pos + noise
         if training & self.rotation_augmentation:
             self.phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=self.device) * np.pi * 2
             self.rotation_matrix = torch.stack([torch.stack([torch.cos(self.phi), torch.sin(self.phi)]),
                                                 torch.stack([-torch.sin(self.phi), torch.cos(self.phi)])])
             d_pos[:, :2] = d_pos[:, :2] @ self.rotation_matrix.T
-            if self.time_window > 0:
-                pos[:, :2] = pos[:, :2] @ self.rotation_matrix.T
+
         if has_field:
             field = x[:, 6:7]
         else:
             field = torch.ones_like(pos[:, 0:1])
-        if training & (self.time_window_noise > 0):
-            noise = torch.randn_like(pos) * self.time_window_noise
-            pos = pos + noise
+
 
         # if translation_augmentation:
         #     displacement = torch.randn(1, dimension, dtype=torch.float32, device=device) * 5
@@ -131,6 +132,7 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
         #     pos = pos + displacement
         # if velocity_augmentation:
         #     d_pos = d_pos + torch.randn((1, 2), device=device).repeat(d_pos.shape[0], 1) * vnorm
+
 
         if 'PDE_MLPs_A' in self.model:
             for self.mode in ['kernel_new_features', 'message_passing_kernel', 'update']:
@@ -145,7 +147,7 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
                         out[:, :2] = out[:, :2] @ self.rotation_inv_matrix.T
                         d_pos[:, :2] = d_pos[:, :2] @ self.rotation_inv_matrix.T
                 elif self.mode == 'update':
-                    in_features = torch.cat((embedding, d_pos, out), dim=-1)
+                    in_features = torch.cat((embedding, out), dim=-1)
                     out = self.MLP[3](in_features)
 
         elif 'PDE_MLPs_B' in self.model:
@@ -156,7 +158,11 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
                     new_features = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=torch.zeros_like(embedding))
                 elif self.mode == 'update_features':
                     if n_loop == 0:
-                        new_features = self.MLP[1](torch.cat((new_features, embedding, pos[:, self.dimension:]), dim=-1))
+                        pos_p = (pos - pos[:, 0:self.dimension].repeat(1, self.time_window))[:, self.dimension:]
+                        if self.training & self.rotation_augmentation:
+                            for i in range(0, 6, 2):
+                                pos_p[:, i:i + 2] = pos_p[:, i:i + 2] @ self.rotation_matrix.T
+                        new_features = self.MLP[1](torch.cat((new_features, embedding, pos_p), dim=-1))
                     else:
                         for loop in range(n_loop):
                             new_features = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=new_features)
@@ -167,106 +173,134 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
                         self.rotation_inv_matrix = torch.stack([torch.stack([torch.cos(self.phi), -torch.sin(self.phi)]), torch.stack([torch.sin(self.phi), torch.cos(self.phi)])])
                         new_features[:, :2] = new_features[:, :2] @ self.rotation_inv_matrix.T
                         d_pos[:, :2] = d_pos[:, :2] @ self.rotation_inv_matrix.T
-                        in_features = torch.cat((embedding, d_pos, new_features), dim=-1)
+                        in_features = torch.cat((embedding, new_features), dim=-1)
                         out = self.MLP[3](in_features)
                     else:
                         out = new_features
 
-        elif ('PDE_MLPs_C' in self.model) | ('PDE_MLPs_D' in self.model):
-            for self.mode in ['defined_kernel_features', 'message_passing_defined_kernel']:
-                if self.mode == 'defined_kernel_features':
-                    new_features = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=torch.zeros_like(embedding))
-                elif self.mode == 'message_passing_defined_kernel':
-                    out = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=new_features)
-                    if self.rotation_augmentation & (self.training == True):
-                        self.rotation_inv_matrix = torch.stack([torch.stack([torch.cos(self.phi), -torch.sin(self.phi)]), torch.stack([torch.sin(self.phi), torch.cos(self.phi)])])
-                        out[:, :2] = out[:, :2] @ self.rotation_inv_matrix.T
-            if (self.model == 'PDE_MLPs_D'):
-                in_features = torch.cat((embedding, out), dim=-1)
-                out = self.MLP[1](in_features)
 
         return out
 
     def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, field_i, field_j, embedding_i, embedding_j, new_features_i, new_features_j ):
 
-        delta_pos = self.bc_dpos(pos_j - pos_i)
-        if 'eval' in self.model:
-            self.delta_pos = delta_pos
+        if self.time_window == 0:
+            delta_pos = self.bc_dpos(pos_j - pos_i)
+            if 'eval' in self.model:
+                self.delta_pos = delta_pos
+            if self.training & self.rotation_augmentation:
+                delta_pos[:, :2] = delta_pos[:, :2] @ self.rotation_matrix.T
+        else:
+            pos_i_p = (pos_i - pos_i[:, 0:self.dimension].repeat(1, self.time_window))[:, self.dimension:]
+            pos_j_p = (pos_j - pos_i[:, 0:self.dimension].repeat(1, self.time_window))
+            if 'eval' in self.model:
+                self.delta_pos = pos_j_p[:,:2]
+            if self.training & self.rotation_augmentation:
+                for i in range(0, 6, 2):
+                    pos_i_p[:, i:i + 2] = pos_i_p[:, i:i + 2] @ self.rotation_matrix.T
+                for i in range(0, 8, 2):
+                    pos_j_p[:, i:i + 2] = pos_j_p[:, i:i + 2] @ self.rotation_matrix.T
 
-        if self.training & self.rotation_augmentation:
-            delta_pos[:, :2] = delta_pos[:, :2] @ self.rotation_matrix.T
-        if self.mode == 'encode_features':
-            in_features = torch.cat((embedding_i, embedding_j, pos_i[:, self.dimension:], pos_j), dim=-1)
-            new_features = self.MLP[0](in_features)
-            return new_features
-        if self.mode == 'update_features':
-            in_features = torch.cat((new_features_i, new_features_j), dim=-1)
-            new_features = self.MLP[1](in_features)
-            return new_features
-        if self.mode == 'defined_kernel_features':
-            mgrid = delta_pos.clone().detach()
-            mgrid.requires_grad = True
-            Gaussian_kernel = torch.exp(-4 * (mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / self.kernel_var)[:, None] / 2
-            dist = torch.sqrt(torch.sum(mgrid ** 2, dim=1))
-            triangle_kernel = ((self.max_radius - dist) ** 2 / self.kernel_var)[:, None] / 1.309
-            grad_triangle_kernel = density_gradient(triangle_kernel, mgrid)
-            grad_triangle_kernel = torch.where(torch.isnan(grad_triangle_kernel),
-                                               torch.zeros_like(grad_triangle_kernel), grad_triangle_kernel)
-            self.kernel_operators = dict()
-            self.kernel_operators['Gaussian'] = Gaussian_kernel.clone().detach()
-            self.kernel_operators['grad_triangle'] = grad_triangle_kernel.clone().detach()
-            density = Gaussian_kernel
-            return density.clone().detach()
-        if self.mode == 'message_passing_defined_kernel':
-            in_features = torch.cat((d_pos_i - d_pos_j, embedding_i, embedding_j, new_features_i, new_features_j, self.kernel_operators['grad_triangle'], self.kernel_operators['Gaussian']), dim=-1)
-            out = self.MLP[0](in_features) / new_features_j.repeat(1, 2)
-        if self.mode == 'kernel_new_features':
-            if 'siren' in self.kernel_type:
-                self.kernels = self.MLP[0](delta_pos)
-            else:
-                self.kernels = self.MLP[0](delta_pos)
-            if 'PDE_MLPs_A_bis' in self.model:
-                in_features = torch.cat((embedding_i, embedding_j, self.kernels), dim=-1)
-            else:
-                in_features = torch.cat((embedding_i, self.kernels), dim=-1)
-            new_features = self.MLP[1](in_features)
-            return new_features
-        elif self.mode == 'message_passing_kernel':
-            in_features = torch.cat((embedding_i, embedding_j, delta_pos, d_pos_i, d_pos_j, new_features_i, new_features_j, self.kernels), dim=-1)
-            out = self.MLP[2](in_features)
+        match self.mode:
+
+            case 'encode_features':
+                in_features = torch.cat((embedding_i, embedding_j, pos_i_p, pos_j_p), dim=-1)
+                new_features = self.MLP[0](in_features)
+                return new_features
+
+            case 'update_features':
+                in_features = torch.cat((new_features_i, new_features_j), dim=-1)
+                new_features = self.MLP[1](in_features)
+                return new_features
+
+            case 'kernel_new_features':
+                if 'siren' in self.kernel_type:
+                    self.kernels = self.MLP[0](delta_pos)
+                else:
+                    self.kernels = self.MLP[0](delta_pos)
+                if 'PDE_MLPs_A_bis' in self.model:
+                    in_features = torch.cat((embedding_i, embedding_j, self.kernels), dim=-1)
+                else:
+                    in_features = torch.cat((embedding_i, self.kernels), dim=-1)
+                new_features = self.MLP[1](in_features)
+                return new_features
+
+            case 'message_passing_kernel':
+                if 'PDE_MLPs_A_ter' in self.model:
+                    in_features = torch.cat((embedding_i, embedding_j, d_pos_i, d_pos_j, new_features_i, new_features_j, self.kernels), dim=-1)
+                    out = self.MLP[2](in_features)
+                    in_features = torch.cat((delta_pos, embedding_i, embedding_j), dim=-1)
+                    out = out + self.MLP[4](in_features)
+                else:
+                    in_features = torch.cat((embedding_i, embedding_j, delta_pos, d_pos_i, d_pos_j, new_features_i, new_features_j, self.kernels), dim=-1)
+                    out = self.MLP[2](in_features)
 
         return out
 
     def update(self, aggr_out):
 
-        return aggr_out  # self.lin_node(aggr_out)
+        return aggr_out
 
-        mgrid = np.mgrid[-self.max_radius:self.max_radius:100j, -self.max_radius:self.max_radius:100j]
-        mgrid = torch.tensor(mgrid, device=self.device).permute(2, 1, 0).reshape(-1, 2).float()
-        kernels = self.MLP[0](mgrid)
 
-        matplotlib.use("Qt5Agg")
-        fig = plt.figure(figsize=(20, 5))
-        for k in range(self.kernels.shape[1]):
-            ax = fig.add_subplot(1, self.kernels.shape[1], k + 1)
-            plt.scatter(to_numpy(delta_pos[:, 0]), to_numpy(delta_pos[:, 1]), c=to_numpy(self.kernels[:, k]), s=5,cmap='viridis')
-            ax.set_title(f'kernel {k}')
-            ax.set_xlim(-self.max_radius, self.max_radius)
-            ax.set_ylim(-self.max_radius, self.max_radius)
-            ax.set_aspect('equal')
-            plt.colorbar()
-        plt.tight_layout()
-        fig = plt.figure(figsize=(20, 5))
-        for k in range(self.kernels.shape[1]):
-            ax = fig.add_subplot(1, self.kernels.shape[1], k + 1)
-            plt.scatter(to_numpy(mgrid[:, 0]), to_numpy(mgrid[:, 1]), c=to_numpy(kernels[:, k]), s=5,
-                        cmap='viridis')
-            ax.set_title(f'kernel {k}')
-            ax.set_xlim(-self.max_radius, self.max_radius)
-            ax.set_ylim(-self.max_radius, self.max_radius)
-            ax.set_aspect('equal')
-            plt.colorbar()
-        plt.tight_layout()
-        plt.show()
+
+
+        # mgrid = np.mgrid[-self.max_radius:self.max_radius:100j, -self.max_radius:self.max_radius:100j]
+        # mgrid = torch.tensor(mgrid, device=self.device).permute(2, 1, 0).reshape(-1, 2).float()
+        # kernels = self.MLP[0](mgrid)
+
+        # matplotlib.use("Qt5Agg")
+        # fig = plt.figure(figsize=(20, 5))
+        # for k in range(self.kernels.shape[1]):
+        #     ax = fig.add_subplot(1, self.kernels.shape[1], k + 1)
+        #     plt.scatter(to_numpy(delta_pos[:, 0]), to_numpy(delta_pos[:, 1]), c=to_numpy(self.kernels[:, k]), s=5,cmap='viridis')
+        #     ax.set_title(f'kernel {k}')
+        #     ax.set_xlim(-self.max_radius, self.max_radius)
+        #     ax.set_ylim(-self.max_radius, self.max_radius)
+        #     ax.set_aspect('equal')
+        #     plt.colorbar()
+        # plt.tight_layout()
+        # fig = plt.figure(figsize=(20, 5))
+        # for k in range(self.kernels.shape[1]):
+        #     ax = fig.add_subplot(1, self.kernels.shape[1], k + 1)
+        #     plt.scatter(to_numpy(mgrid[:, 0]), to_numpy(mgrid[:, 1]), c=to_numpy(kernels[:, k]), s=5,
+        #                 cmap='viridis')
+        #     ax.set_title(f'kernel {k}')
+        #     ax.set_xlim(-self.max_radius, self.max_radius)
+        #     ax.set_ylim(-self.max_radius, self.max_radius)
+        #     ax.set_aspect('equal')
+        #     plt.colorbar()
+        # plt.tight_layout()
+        # plt.show()
+
+        # elif ('PDE_MLPs_C' in self.model) | ('PDE_MLPs_D' in self.model):
+        #     for self.mode in ['defined_kernel_features', 'message_passing_defined_kernel']:
+        #         if self.mode == 'defined_kernel_features':
+        #             new_features = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=torch.zeros_like(embedding))
+        #         elif self.mode == 'message_passing_defined_kernel':
+        #             out = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=new_features)
+        #             if self.rotation_augmentation & (self.training == True):
+        #                 self.rotation_inv_matrix = torch.stack([torch.stack([torch.cos(self.phi), -torch.sin(self.phi)]), torch.stack([torch.sin(self.phi), torch.cos(self.phi)])])
+        #                 out[:, :2] = out[:, :2] @ self.rotation_inv_matrix.T
+        #     if (self.model == 'PDE_MLPs_D'):
+        #         in_features = torch.cat((embedding, out), dim=-1)
+        #         out = self.MLP[1](in_features)
+
+        #
+        # if self.mode == 'defined_kernel_features':
+        #     mgrid = delta_pos.clone().detach()
+        #     mgrid.requires_grad = True
+        #     Gaussian_kernel = torch.exp(-4 * (mgrid[:, 0] ** 2 + mgrid[:, 1] ** 2) / self.kernel_var)[:, None] / 2
+        #     dist = torch.sqrt(torch.sum(mgrid ** 2, dim=1))
+        #     triangle_kernel = ((self.max_radius - dist) ** 2 / self.kernel_var)[:, None] / 1.309
+        #     grad_triangle_kernel = density_gradient(triangle_kernel, mgrid)
+        #     grad_triangle_kernel = torch.where(torch.isnan(grad_triangle_kernel),
+        #                                        torch.zeros_like(grad_triangle_kernel), grad_triangle_kernel)
+        #     self.kernel_operators = dict()
+        #     self.kernel_operators['Gaussian'] = Gaussian_kernel.clone().detach()
+        #     self.kernel_operators['grad_triangle'] = grad_triangle_kernel.clone().detach()
+        #     density = Gaussian_kernel
+        #     return density.clone().detach()
+        # if self.mode == 'message_passing_defined_kernel':
+        #     in_features = torch.cat((d_pos_i - d_pos_j, embedding_i, embedding_j, new_features_i, new_features_j, self.kernel_operators['grad_triangle'], self.kernel_operators['Gaussian']), dim=-1)
+        #     out = self.MLP[0](in_features) / new_features_j.repeat(1, 2)
 
 

@@ -1,4 +1,4 @@
-description: 'system of particles falling down in a box   test siren omega 80'
+description: 'system of particles falling down in a box   test siren omega 50'
 dataset: 'multimaterial'
 data_folder_name: '/groups/saalfeld/saalfeldlab/projects/gnn/learning-to-simulate/MultiMaterial/'
 
@@ -23,7 +23,7 @@ graph_model:
 
   kernel_type: 'siren'
 
-  omega: 80.0
+  omega: 50.0
 
   aggr_type: 'add'
   embedding_dim: 2

@@ -1,4 +1,4 @@
-description: 'system of particles falling down in a box  batchsize 20'
+description: 'system of particles falling down in a box larger MLP'
 dataset: 'multimaterial'
 data_folder_name: '/groups/saalfeld/saalfeldlab/projects/gnn/learning-to-simulate/MultiMaterial/'
 
@@ -19,7 +19,7 @@ graph_model:
   mesh_model_name: ''
   prediction: '2nd_derivative'
 
-  multi_mlp_params: [[2, 128, 5, 5], [7, 32, 5, 4], [23, 256, 5, 2], [6, 64, 3, 2]]   # input_size, hidden_size, nlayers, output_size
+  multi_mlp_params: [[2, 128, 5, 5], [7, 32, 5, 4], [23, 256, 10, 2], [4, 8, 2, 2]]   # input_size, hidden_size, nlayers, output_size
 
   aggr_type: 'add'
   embedding_dim: 2
@@ -43,7 +43,7 @@ training:
   cluster_method: 'kmeans_auto_embedding'
   rotation_augmentation: True
   translation_augmentation: False
-  data_augmentation_loop: 5000
+  data_augmentation_loop: 2000
   fix_cluster_embedding: True
   device: 'auto'
 
