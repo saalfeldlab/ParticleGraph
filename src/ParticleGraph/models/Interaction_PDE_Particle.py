@@ -90,7 +90,7 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
 
 
 
-    def forward(self, data=[], data_id=[], training=[], has_field=False, k=[]):
+    def forward(self, data=[], data_id=[], training=[], has_field=False, k=[], permutation = False):
 
         x, edge_index = data.x, data.edge_index
         # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
@@ -98,12 +98,20 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
 
         if self.time_window == 0:
             particle_id = x[:, 0:1].long()
+
+            if permutation:
+                unique_data_ids = torch.unique(data_id)
+                for data_id_ in unique_data_ids:
+                    indices = (data_id == data_id_).nonzero(as_tuple=True)[0]
+                    permuted_indices = indices[torch.randperm(indices.size(0))]
+                    particle_id[indices] = particle_id[permuted_indices]
+
             embedding = self.a[data_id.long(), particle_id, :].squeeze()
             pos = x[:, 1:self.dimension+1]
             d_pos = x[:, self.dimension+1:1+2*self.dimension]
         else:
-            particle_id = x[0][:, 0:1]
-            embedding = self.a[data_id, to_numpy(particle_id), :].squeeze()
+            particle_id = x[0][:, 0:1].long()
+            embedding = self.a[data_id, particle_id, :].squeeze()
             x = torch.stack(x)
             pos = x[:, :, 1:self.dimension + 1]
             pos = pos - pos[0]

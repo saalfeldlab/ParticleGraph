@@ -111,6 +111,7 @@ def data_train_particle(config, erase, best_model, device):
     data_augmentation_loop = train_config.data_augmentation_loop
     recursive_loop = train_config.recursive_loop
     coeff_continuous = train_config.coeff_continuous
+    coeff_permutation = train_config.coeff_permutation
     target_batch_size = train_config.batch_size
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
@@ -382,8 +383,6 @@ def data_train_particle(config, erase, best_model, device):
                     for batch in batch_loader:
                         pred = model(batch, data_id=data_id, training=True, k=k_batch)
 
-
-
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
             elif simulation_config.state_type == 'sequence':
@@ -394,6 +393,15 @@ def data_train_particle(config, erase, best_model, device):
                     loss = (pred[ids_batch] - y_batch[ids_batch]).norm(2)
                 else:
                     loss = (pred - y_batch).norm(2)
+
+            if train_config.embedding_permutation:
+                for batch in batch_loader:
+                    pred = model(batch, data_id=data_id, training=True, k=k_batch, permutation=True)
+                if particle_batch_ratio < 1:
+                    loss = loss - coeff_permutation * torch.log((pred[ids_batch] - y_batch[ids_batch]).norm(2))
+                else:
+                    loss = loss - coeff_permutation * torch.log((pred - y_batch).norm(2))
+
 
             if (epoch>0) & (coeff_continuous>0):
                 rr = torch.linspace(0, max_radius, 1000, dtype=torch.float32, device=device)
@@ -2489,227 +2497,177 @@ def data_train_synaptic2(config, erase, best_model, device):
                 else:
                     recursive_loop = 1
 
-            if (recursive_loop>1):
+            if has_Siren:
+                optimizer_f.zero_grad()
+            optimizer.zero_grad()
 
-                k = np.random.randint(n_frames - 5 - batch_size - recursive_loop * time_step)
+            dataset_batch = []
+            ids_batch = []
+            ids_index = 0
 
-                x = torch.tensor(x_list[run][k], device=device).clone().detach()
+            # if particle_batch_ratio < 1:
+            #    ids = np.random.permutation(n_particles)[:int(n_particles * particle_batch_ratio)]
+            #    ids = np.sort(ids)
+            # else:
+            #    ids = np.arange(n_particles).astype(int)
 
-                if has_Siren:
-                    optimizer_f.zero_grad()
-                optimizer.zero_grad()
+            loss = 0
 
+            for batch in range(batch_size):
+
+                k = np.random.randint(n_frames - 5 - batch_size - time_step)
+
+                x = torch.tensor(x_list[run][k], device=device)
+
+                if has_field:
+                    if 'visual' in field_type:
+                        x[:n_nodes, 8:9] = model_f(time=k / n_frames) ** 2
+                        x[n_nodes:n_particles, 8:9] = 1
+                    elif 'learnable_short_term_plasticity' in field_type:
+                        alpha = (k % model.embedding_step) / model.embedding_step
+                        x[:, 8] = alpha * model.b[:, k // model.embedding_step + 1] ** 2 + (1 - alpha) * model.b[:,k // model.embedding_step] ** 2
+                        loss = loss + (model.b[:, 1:] - model.b[:, :-1]).norm(2) * coeff_model_b
+                    elif ('Siren_short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
+                        t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
+                        t[:, 0, :] = torch.tensor(k / n_frames, dtype=torch.float32, device=device)
+                        if 'derivative' in field_type:
+                            m = model_f(t).squeeze() ** 2
+                            x[:, 8] = m
+                            m_next = model_f(t + 1.0E-3).squeeze() ** 2
+                            grad = (m_next - m) / 1.0E-3
+                            in_modulation = torch.cat((x[:, 6:7].clone().detach(), m[:, None]), dim=1)
+                            pred_modulation = model.lin_modulation(in_modulation)
+                            loss += (grad - pred_modulation.squeeze()).norm(2) * coeff_lin_modulation
+                        else:
+                            x[:, 8] = model_f(t) ** 2
+                    else:
+                        x[:, 8:9] = model_f(time=k / n_frames) ** 2
+                else:
+                    x[:, 8:9] = torch.ones_like(x[:, 0:1])
+
+                # regularisations
                 in_features = get_in_features_update(None, n_particles, model.a, model.update_type, device)
                 func_phi = model.lin_phi(in_features.float())
 
+                # sparsity on Wij and phi(0)=0
+                loss += model.W.norm(1) * coeff_L1 + func_phi.norm(2)
+
+                # lin.edge monotonic positive
                 if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N7'):
-                    in_features = torch.zeros((n_particles, dimension + 1), device=device)
-                    func_edge = model.lin_edge(in_features.float())
+                    in_features_prev = torch.cat((x[:, 6:7] - xnorm/150, model.a), dim=1)
                     in_features = torch.cat((x[:, 6:7], model.a), dim=1)
-                    in_features_next = torch.cat((x[:, 6:7] + 0.1, model.a), dim=1)
-                    diff = torch.relu(model.lin_edge(in_features) - model.lin_edge(in_features_next)).norm(2)
+                    in_features_next = torch.cat((x[:, 6:7] + xnorm/150, model.a), dim=1)
                 elif model_config.signal_model_name == 'PDE_N5':
-                    in_features = torch.zeros((n_particles, 2 * dimension + 1), device=device)
-                    func_edge = model.lin_edge(in_features.float())
+                    in_features_prev = torch.cat((x[:, 6:7] - xnorm / 150, model.a, model.a), dim=1)
                     in_features = torch.cat((x[:, 6:7], model.a, model.a), dim=1)
-                    in_features_next = torch.cat((x[:, 6:7] + 0.1, model.a, model.a), dim=1)
-                    diff = torch.relu(model.lin_edge(in_features) - model.lin_edge(in_features_next)).norm(2)
+                    in_features_next = torch.cat((x[:, 6:7] + xnorm/150, model.a, model.a), dim=1)
                 else:
-                    in_features = torch.zeros((n_particles, 1), device=device)
-                    func_edge = model.lin_edge(in_features.float())
-                    diff = torch.relu(model.lin_edge(x[:, 6:7].clone().detach()) - model.lin_edge(
-                        x[:, 6:7].clone().detach() + 0.1)).norm(2)
+                    in_features = x[:, 6:7]
+                    in_features_next = x[:, 6:7] + xnorm/150
+                    in_features_prev = x[:, 6:7] - xnorm / 150
 
-                loss = model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + coeff_diff * diff
-
-                pred_list = list([])
-                y0_list= list([])
-
-                for loop in range(recursive_loop):
-
-                    if (loop == 0) & ('learnable_short_term_plasticity' in field_type):
-                        alpha = (k % model.embedding_step) / model.embedding_step
-                        x[:,8] = alpha * model.b[:, k // model.embedding_step + 1] ** 2 + (1 - alpha) * model.b[:, k // model.embedding_step] ** 2
-                    elif ('Siren_short_term_plasticity' in field_type):
-                        t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
-                        t[:, 0, :] = torch.tensor(k / n_frames, dtype=torch.float32, device=device)
-                        x[:, 8] = model_f(t.clone().detach()) ** 2
-
-                    dataset = data.Data(x=x, edge_index=edges)
-                    pred_list.append(model(dataset))
-                    y0_list.append(torch.tensor(y_list[run][k], device=device) / ynorm)
-
-                    x[:, 6:7] = x[:, 6:7] + delta_t * time_step * pred_list[-1]
-
-                    if ('learnable_short_term_plasticity' in field_type):
-                        in_modulation = torch.cat((x[:, 6:7], x[:, 8:9]), dim=1)
-                        pred_modulation = model.lin_modulation(in_modulation)
-                        x[:, 8:9] = x[:, 8:9] + delta_t * time_step * pred_modulation
-
-                    k = k + time_step
-
-                pred_list = torch.stack(pred_list)
-                y0_list = torch.stack(y0_list)
-                loss = loss + (pred_list - y0_list).norm(2)
-
-                loss.backward()
-
-                optimizer.step()
-                if has_Siren:
-                    optimizer_f.step()
-                total_loss += loss.item()
-
-            else:
-
-                if has_Siren:
-                    optimizer_f.zero_grad()
-                optimizer.zero_grad()
-
-                dataset_batch = []
-                ids_batch = []
-                ids_index = 0
-
-                # if particle_batch_ratio < 1:
-                #    ids = np.random.permutation(n_particles)[:int(n_particles * particle_batch_ratio)]
-                #    ids = np.sort(ids)
-                # else:
-                #    ids = np.arange(n_particles).astype(int)
-
-                loss = 0
-
-                for batch in range(batch_size):
-
-                    k = np.random.randint(n_frames - 5 - batch_size - time_step)
-
-                    x = torch.tensor(x_list[run][k], device=device)
-
-                    if has_field:
-                        if 'visual' in field_type:
-                            x[:n_nodes, 8:9] = model_f(time=k / n_frames) ** 2
-                            x[n_nodes:n_particles, 8:9] = 1
-                        elif 'learnable_short_term_plasticity' in field_type:
-                            alpha = (k % model.embedding_step) / model.embedding_step
-                            x[:, 8] = alpha * model.b[:, k // model.embedding_step + 1] ** 2 + (1 - alpha) * model.b[:,k // model.embedding_step] ** 2
-                            loss = loss + (model.b[:, 1:] - model.b[:, :-1]).norm(2) * coeff_model_b
-                        elif ('Siren_short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
-                            t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
-                            t[:, 0, :] = torch.tensor(k / n_frames, dtype=torch.float32, device=device)
-                            if 'derivative' in field_type:
-                                m = model_f(t).squeeze() ** 2
-                                x[:, 8] = m
-                                m_next = model_f(t + 1.0E-3).squeeze() ** 2
-                                grad = (m_next - m) / 1.0E-3
-                                in_modulation = torch.cat((x[:, 6:7].clone().detach(), m[:, None]), dim=1)
-                                pred_modulation = model.lin_modulation(in_modulation)
-                                loss += (grad - pred_modulation.squeeze()).norm(2) * coeff_lin_modulation
-                            else:
-                                x[:, 8] = model_f(t) ** 2
-                        else:
-                            x[:, 8:9] = model_f(time=k / n_frames) ** 2
+                if coeff_diff > 0:
+                    if model_config.lin_edge_positive:
+                        msg_1 = model.lin_edge(in_features_prev) ** 2
+                        msg0 = model.lin_edge(in_features)**2
+                        msg1 = model.lin_edge(in_features_next)**2
                     else:
-                        x[:, 8:9] = torch.ones_like(x[:, 0:1])
+                        msg_1 = model.lin_edge(in_features_prev)
+                        msg0 = model.lin_edge(in_features)
+                        msg1 = model.lin_edge(in_features_next)
+                    loss = loss + torch.relu(msg0 - msg1).norm(2) * coeff_diff
 
-                    # regularisations
-                    in_features = get_in_features_update(None, n_particles, model.a, model.update_type, device)
-                    func_phi = model.lin_phi(in_features.float())
+                if (model.update_type == 'generic') & (coeff_diff_update>0):
+                    in_feature_update = torch.cat((torch.zeros((n_particles,1), device=device), model.a, msg0, torch.ones((n_particles,1), device=device)), dim=1)
+                    in_feature_update_next = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg1, torch.ones((n_particles, 1), device=device)), dim=1)
+                    if 'positive' in train_config.diff_update_regul:
+                        loss = loss + torch.relu(model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next)).norm(2) * coeff_diff_update
+                    if 'TV' in train_config.diff_update_regul:
+                        in_feature_update_next_bis = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg1, torch.ones((n_particles, 1), device=device)*1.1), dim=1)
+                        loss = loss + (model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next_bis)).norm(2) * coeff_diff_update
+                    if 'second_derivative' in train_config.diff_update_regul:
+                        in_feature_update_prev = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg_1, torch.ones((n_particles, 1), device=device)), dim=1)
+                        loss = loss + (model.lin_phi(in_feature_update_prev) + model.lin_phi(in_feature_update_next) - 2* model.lin_phi(in_feature_update)).norm(2) * coeff_diff_update
 
-                    # sparsity on Wij and phi(0)=0
-                    loss += model.W.norm(1) * coeff_L1 + func_phi.norm(2)
+                if particle_batch_ratio < 1:
+                     ids = np.random.permutation(x.shape[0])[:int(x.shape[0] * particle_batch_ratio)]
+                     ids = np.sort(ids)
+                     edges = edges_all.clone().detach()
+                     mask = torch.isin(edges[1, :], torch.tensor(ids, device=device))
+                     edges = edges[:, mask]
 
-                    # lin.edge monotonic positive
-                    if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N7'):
-                        in_features_prev = torch.cat((x[:, 6:7] - xnorm/150, model.a), dim=1)
-                        in_features = torch.cat((x[:, 6:7], model.a), dim=1)
-                        in_features_next = torch.cat((x[:, 6:7] + xnorm/150, model.a), dim=1)
-                    elif model_config.signal_model_name == 'PDE_N5':
-                        in_features_prev = torch.cat((x[:, 6:7] - xnorm / 150, model.a, model.a), dim=1)
-                        in_features = torch.cat((x[:, 6:7], model.a, model.a), dim=1)
-                        in_features_next = torch.cat((x[:, 6:7] + xnorm/150, model.a, model.a), dim=1)
-                    else:
-                        in_features = x[:, 6:7]
-                        in_features_next = x[:, 6:7] + xnorm/150
-                        in_features_prev = x[:, 6:7] - xnorm / 150
+                dataset = data.Data(x=x, edge_index=edges)
+                dataset_batch.append(dataset)
 
-                    if coeff_diff > 0:
-                        if model_config.lin_edge_positive:
-                            msg_1 = model.lin_edge(in_features_prev) ** 2
-                            msg0 = model.lin_edge(in_features)**2
-                            msg1 = model.lin_edge(in_features_next)**2
-                        else:
-                            msg_1 = model.lin_edge(in_features_prev)
-                            msg0 = model.lin_edge(in_features)
-                            msg1 = model.lin_edge(in_features_next)
-                        loss = loss + torch.relu(msg0 - msg1).norm(2) * coeff_diff
-
-                    if (model.update_type == 'generic') & (coeff_diff_update>0):
-                        in_feature_update = torch.cat((torch.zeros((n_particles,1), device=device), model.a, msg0, torch.ones((n_particles,1), device=device)), dim=1)
-                        in_feature_update_next = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg1, torch.ones((n_particles, 1), device=device)), dim=1)
-                        if 'positive' in train_config.diff_update_regul:
-                            loss = loss + torch.relu(model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next)).norm(2) * coeff_diff_update
-                        if 'TV' in train_config.diff_update_regul:
-                            in_feature_update_next_bis = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg1, torch.ones((n_particles, 1), device=device)*1.1), dim=1)
-                            loss = loss + (model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next_bis)).norm(2) * coeff_diff_update
-                        if 'second_derivative' in train_config.diff_update_regul:
-                            in_feature_update_prev = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg_1, torch.ones((n_particles, 1), device=device)), dim=1)
-                            loss = loss + (model.lin_phi(in_feature_update_prev) + model.lin_phi(in_feature_update_next) - 2* model.lin_phi(in_feature_update)).norm(2) * coeff_diff_update
-
-                    if particle_batch_ratio < 1:         
-                         ids = np.random.permutation(x.shape[0])[:int(x.shape[0] * particle_batch_ratio)]
-                         ids = np.sort(ids)
-                         edges = edges_all.clone().detach()
-                         mask = torch.isin(edges[1, :], torch.tensor(ids, device=device))
-                         edges = edges[:, mask]
-
-                    dataset = data.Data(x=x, edge_index=edges)
-                    dataset_batch.append(dataset)
-
-                    if time_step == 1:
-                        y = torch.tensor(y_list[run][k], device=device) / ynorm
-                    else:
-                        y = torch.tensor(x_list[run][k + time_step,:,6:7], device=device).clone().detach()
-
-                    if batch == 0:
-                        x_batch = x[:, 6:7]
-                        y_batch = y
-                        k_batch = torch.ones((x.shape[0],1), dtype=torch.int, device = device) * k
-                        if particle_batch_ratio < 1:
-                            ids_batch = ids
-                    else:
-                        x_batch = torch.cat((x_batch, x[:, 6:7]), dim=0)
-                        y_batch = torch.cat((y_batch, y), dim=0)
-                        k_batch = torch.cat((k_batch, torch.ones((x.shape[0],1), dtype=torch.int, device = device) * k), dim = 0)
-                        if particle_batch_ratio < 1:
-                            ids_batch = np.concatenate((ids_batch, ids + ids_index), axis=0)
-
-                    ids_index += x.shape[0]
-
-                batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
-
-                for batch in batch_loader:
-                    if ('PDE_N3' in model_config.signal_model_name):
-                        pred = model(batch, k=k_batch)
-                    else:
-                        pred = model(batch)
-
-                if time_step == 1:
-                    if particle_batch_ratio < 1:
-                        loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
-                    else:
-                        loss = loss + (pred - y_batch).norm(2)
+                if recursive_loop > 0:
+                    y = torch.tensor(y_list[run][k+recursive_loop], device=device) / ynorm
+                elif time_step == 1:
+                    y = torch.tensor(y_list[run][k], device=device) / ynorm
                 else:
+                    y = torch.tensor(x_list[run][k + time_step,:,6:7], device=device).clone().detach()
+
+                if batch == 0:
+                    x_batch = x[:, 6:7]
+                    y_batch = y
+                    k_batch = torch.ones((x.shape[0],1), dtype=torch.int, device = device) * k
                     if particle_batch_ratio < 1:
-                        loss = loss + (x_batch + pred[ids_batch] * delta_t * time_step - y_batch[ids_batch]).norm(2) / time_step
-                    else:
-                        loss = loss + (x_batch + pred * delta_t * time_step - y_batch).norm(2) / time_step
-                        
+                        ids_batch = ids
+                else:
+                    x_batch = torch.cat((x_batch, x[:, 6:7]), dim=0)
+                    y_batch = torch.cat((y_batch, y), dim=0)
+                    k_batch = torch.cat((k_batch, torch.ones((x.shape[0],1), dtype=torch.int, device = device) * k), dim = 0)
+                    if particle_batch_ratio < 1:
+                        ids_batch = np.concatenate((ids_batch, ids + ids_index), axis=0)
+
+                ids_index += x.shape[0]
+
+            batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
+
+            for batch in batch_loader:
                 if ('PDE_N3' in model_config.signal_model_name):
-                    loss = loss + train_config.coeff_model_a * (model.a[ind_a+1] - model.a[ind_a]).norm(2)
+                    pred = model(batch, k=k_batch)
+                else:
+                    pred = model(batch)
 
-                loss.backward()
-                optimizer.step()
-                if has_Siren:
-                    optimizer_f.step()
-                total_loss += loss.item()
+            if recursive_loop > 0:
+                for loop in range(recursive_loop):
+                    ids_index = 0
+                    for batch in range(batch_size):
+                        x = dataset_batch[batch].x.clone().detach()
+
+                        u = x[:, 6:7]
+                        du = pred[ids_index:ids_index+x.shape[0]]
+                        x[:, 6:7] = u + du * delta_t
+                        x[:, 7:8] = du
+                        dataset_batch[batch].x = x
+
+                        ids_index += x.shape[0]
+
+                    batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
+                    for batch in batch_loader:
+                        if ('PDE_N3' in model_config.signal_model_name):
+                            pred = model(batch, k=k_batch)
+                        else:
+                            pred = model(batch)
+            if time_step == 1:
+                if particle_batch_ratio < 1:
+                    loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
+                else:
+                    loss = loss + (pred - y_batch).norm(2)
+            else:
+                if particle_batch_ratio < 1:
+                    loss = loss + (x_batch + pred[ids_batch] * delta_t * time_step - y_batch[ids_batch]).norm(2) / time_step
+                else:
+                    loss = loss + (x_batch + pred * delta_t * time_step - y_batch).norm(2) / time_step
+
+            if ('PDE_N3' in model_config.signal_model_name):
+                loss = loss + train_config.coeff_model_a * (model.a[ind_a+1] - model.a[ind_a]).norm(2)
+
+            loss.backward()
+            optimizer.step()
+            if has_Siren:
+                optimizer_f.step()
+            total_loss += loss.item()
 
             with torch.no_grad():
                 model.W.copy_(model.W * model.mask)

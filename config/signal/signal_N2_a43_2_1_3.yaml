@@ -1,5 +1,5 @@
-description: 'synaptic network 100.000 points'
-dataset: 'signal_N2_a37'
+description: 'test noise / batchsize    synaptic network 100.000 points   test batchsize 20'
+dataset: 'signal_N2_a43_2'
 
 simulation:
     connectivity_file: 'random'
@@ -24,16 +24,13 @@ graph_model:
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
-    
     input_size: 1
     output_size: 1
     hidden_dim: 64
     n_mp_layers: 3
-
     input_size_update: 3
     n_layers_update: 3
     hidden_dim_update: 64
-
     aggr_type: 'add'
     embedding_dim: 2
     update_type: 'none'
@@ -46,25 +43,22 @@ plotting:
     ylim: [-8,8]
 
 training:
-
-    particle_batch_ratio: 0.25
-
     n_epochs: 20
     n_runs: 2
     device: 'auto'
 
     recursive_loop: 1
-    batch_size: 4
+    batch_size: 60
+    particle_batch_ratio: 0.1
     small_init_batch_size: False
 
-    recursive_loop: 1
+    time_step: 1
 
     epoch_reset: 2
     epoch_reset_freq: 999
-    n_epochs_init: 2
 
     rotation_augmentation: False
-    data_augmentation_loop: 50
+    data_augmentation_loop: 100
 
     sparsity: 'none'
     sparsity_freq: 4
@@ -73,9 +67,14 @@ training:
     fix_cluster_embedding: True
 
     coeff_L1: 0
-    coeff_diff: 10
+    coeff_diff: 100
+    coeff_diff_update: 10
 
     learning_rate_W_start: 1.0E-3
     learning_rate_start: 5.0E-4
     learning_rate_embedding_start: 5.0E-3
+    learning_rate_modulation_start: 1.0E-4
+
+
+    measurement_noise_level: 0.2
 

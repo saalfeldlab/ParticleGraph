@@ -180,6 +180,7 @@ class TrainingConfig(BaseModel):
     small_init_batch_size: bool = True
     embedding_step: int = 1000
     shared_embedding: bool = False
+    embedding_permutation: bool = False
 
     do_tracking: bool = False
     tracking_gt_file: str = ''
@@ -232,6 +233,7 @@ class TrainingConfig(BaseModel):
     coeff_diff_update: float = 10
     coeff_diff_update2: float = 0
     coeff_sign: float = 0
+    coeff_permutation: float = 100
 
     diff_update_regul: str = 'none'
 
