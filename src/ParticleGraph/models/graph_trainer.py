@@ -263,19 +263,13 @@ def data_train_particle(config, erase, best_model, device):
 
         time.sleep(1)
         total_loss = 0
+        # start = time.time()
 
         for N in trange(Niter):
 
             dataset_batch = []
-
-            if particle_batch_ratio < 1:
-                ids = np.random.permutation(n_particles)[:int(n_particles * particle_batch_ratio)]
-                ids = np.sort(ids)
-            else:
-                ids = np.arange(n_particles).astype(int)
-
-            # start = time.time()
-
+            ids_batch = []
+            ids_index = 0
             for batch in range(batch_size):
 
                 run = 1 + np.random.randint(n_runs - 1)
@@ -317,6 +311,8 @@ def data_train_particle(config, erase, best_model, device):
                     edges = adj_t.nonzero().t().contiguous()
 
                 if particle_batch_ratio < 1:
+                    ids = np.random.permutation(x.shape[0])[:int(x.shape[0] * particle_batch_ratio)]
+                    ids = np.sort(ids)
                     mask = torch.isin(edges[1, :], torch.tensor(ids, device=device))
                     edges = edges[:, mask]
 
@@ -344,11 +340,17 @@ def data_train_particle(config, erase, best_model, device):
                 if batch == 0:
                     data_id = torch.ones((y.shape[0],1), dtype=torch.int) * run
                     y_batch = y
-                    k_batch = torch.ones((x.shape[0], 1), dtype=torch.int, device = device) * k
+                    k_batch = torch.ones((x.shape[0],1), dtype=torch.int, device = device) * k
+                    if particle_batch_ratio < 1:
+                        ids_batch = ids
                 else:
                     data_id = torch.cat((data_id, torch.ones((y.shape[0],1), dtype=torch.int) * run), dim = 0)
                     y_batch = torch.cat((y_batch, y), dim=0)
                     k_batch = torch.cat((k_batch, torch.ones((x.shape[0], 1), dtype=torch.int, device = device) * k), dim=0)
+                    if particle_batch_ratio < 1:
+                        ids_batch = np.concatenate((ids_batch, ids + ids_index), axis=0)
+
+                ids_index += x.shape[0]
 
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
@@ -357,9 +359,6 @@ def data_train_particle(config, erase, best_model, device):
 
             for batch in batch_loader:
                 pred = model(batch, data_id=data_id, training=True, k=k_batch)
-            if batch_size > 1:
-                ids = np.concatenate([ids + n * n_particles for n in range(batch_size)], axis=0)
-
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
             elif recursive_loop > 0:
@@ -369,7 +368,7 @@ def data_train_particle(config, erase, best_model, device):
                 loss = loss + train_config.coeff_model_a * (model.a[run, ind_a + 1] - model.a[run, ind_a]).norm(2)
             else:
                 if particle_batch_ratio < 1:
-                    loss = (pred[ids] - y_batch[ids]).norm(2)
+                    loss = (pred[ids_batch] - y_batch[ids_batch]).norm(2)
                 else:
                     loss = (pred - y_batch).norm(2)
 

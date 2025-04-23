@@ -1,4 +1,4 @@
-description: 'system of particles falling down in a box larger MLP   test 99 dataset  LR embedding 5E-6'
+description: 'system of particles falling down in a box larger MLP   test 99 dataset low LR'
 dataset: 'multimaterial'
 data_folder_name: '/groups/saalfeld/saalfeldlab/projects/gnn/learning-to-simulate/MultiMaterial/'
 
@@ -31,7 +31,7 @@ plotting:
   data_embedding: 17
 
 training:
-  n_epochs: 20
+  n_epochs: 1
   batch_size: 20
   small_init_batch_size: False
   n_runs: 99
@@ -47,8 +47,8 @@ training:
   fix_cluster_embedding: True
   device: 'auto'
 
-  learning_rate_start: 5E-5
-  learning_rate_embedding_start: 5E-6
+  learning_rate_start: 5E-8
+  learning_rate_embedding_start: 1E-4
 
 
 

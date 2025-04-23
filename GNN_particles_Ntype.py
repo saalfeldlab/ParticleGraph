@@ -55,15 +55,15 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'generate'
+        task = 'train'
         best_model = ''
-        config_list = ['fluids_m17_1']
+        # config_list = ['fluids_m17_1']
         # config_list = ['multimaterial_2', 'multimaterial_2_4', 'multimaterial_2_5',
         #                'multimaterial_9_10', 'multimaterial_9_12', 'multimaterial_9_13', 'multimaterial_9_15', 'multimaterial_9_16','multimaterial_9_17', 'multimaterial_9_18',
         #                'multimaterial_10_1', 'multimaterial_10_2', 'multimaterial_10_3', 'multimaterial_10_4',
         #                'multimaterial_11_1','multimaterial_11_2']
         # config_list = ['multimaterial_2', 'multimaterial_9_12', 'multimaterial_9_15', 'multimaterial_9_16', 'multimaterial_11_2']
-        # config_list = ['multimaterial_10_1']
+        config_list = ['multimaterial_9_29']
         # config_list = ['cell_MDCK_12']
         # config_list = ['signal_N2_a43_17']
         # config_list = ['arbitrary_3']
