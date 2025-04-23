@@ -48,7 +48,7 @@ training:
   device: 'auto'
 
   learning_rate_start: 5E-5
-  learning_rate_embedding_start: 1E-4
+  learning_rate_embedding_start: 1E-7
 
 
 

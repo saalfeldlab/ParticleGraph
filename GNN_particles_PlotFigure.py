@@ -1538,7 +1538,6 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
 
                 fig = plt.figure(figsize=(20, 5))
 
-
                 for k in range(1, 7):
 
                     run = run_list[k]
@@ -8304,8 +8303,9 @@ if __name__ == '__main__':
     #                'signal_N2_a43_3_10_t16','signal_N2_a43_3_20_t16','signal_N2_a43_3_20_t20','signal_N2_a43_3_20_t24','signal_N2_a43_3_20_t28']
     # config_list = ['gravity_16_1']
     # config_list = ['wave_slit_bis']
-    config_list = [f"multimaterial_9_{i}" for i in range(25, 33)]
+    # config_list = [f"multimaterial_9_{i}" for i in range(25, 33)]
     # config_list = [f"multimaterial_10_{i}" for i in range(1, 5)]
+    config_list = ['fluids_m17_1']
 
     plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 
