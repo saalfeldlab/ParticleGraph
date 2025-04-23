@@ -135,40 +135,16 @@ class Interaction_Particle(pyg.nn.MessagePassing):
 
         out = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
 
-        if self.recursive_loop>0:
-            pred = out
-            if self.rotation_augmentation & self.training:
-                self.rotation_inv_matrix = torch.stack([torch.stack([torch.cos(self.phi), -torch.sin(self.phi)]),
-                                                        torch.stack([torch.sin(self.phi), torch.cos(self.phi)])])
-                d_pos[:, :2] = d_pos[:, :2] @ self.rotation_inv_matrix.T
-                pred[:, :2] = pred[:, :2] @ self.rotation_inv_matrix.T
-            if self.reflection_augmentation & self.training:
-                if group in [0, 1]:
-                    pos[:, group] = 1 - pos[:, group]
-                    pred[:, group] = -pred[:, group]
-                else:
-                    pos = 1 - pos
-                    pred = -pred
-            for k in range(self.recursive_loop):
-                if self.prediction == '2nd_derivative':
-                    d_pos = d_pos + pred * self.ynorm * self.delta_t  # speed update
-                else:
-                    d_pos = pred * self.vnorm
-                pos = pos + d_pos * self.delta_t
-                if k < self.recursive_loop - 1:
-                    pred = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
-            out = pos
-        else:
-            if self.update_type == 'mlp':
-                out = self.lin_phi(torch.cat((out, embedding, d_pos), dim=-1))
-            if self.rotation_augmentation & self.training:
-                self.rotation_inv_matrix = torch.stack([torch.stack([torch.cos(self.phi), -torch.sin(self.phi)]),torch.stack([torch.sin(self.phi), torch.cos(self.phi)])])
-                out[:, :2] = out[:, :2] @ self.rotation_inv_matrix.T
-            if self.reflection_augmentation & self.training:
-                if group in [0, 1]:
-                    out[:, group] = -out[:, group]
-                else:
-                    out = -out
+        if self.update_type == 'mlp':
+            out = self.lin_phi(torch.cat((out, embedding, d_pos), dim=-1))
+        if self.rotation_augmentation & self.training:
+            self.rotation_inv_matrix = torch.stack([torch.stack([torch.cos(self.phi), -torch.sin(self.phi)]),torch.stack([torch.sin(self.phi), torch.cos(self.phi)])])
+            out[:, :2] = out[:, :2] @ self.rotation_inv_matrix.T
+        if self.reflection_augmentation & self.training:
+            if group in [0, 1]:
+                out[:, group] = -out[:, group]
+            else:
+                out = -out
 
         return out
 

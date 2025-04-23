@@ -254,7 +254,7 @@ def data_train_particle(config, erase, best_model, device):
             Niter = int(n_frames * data_augmentation_loop // batch_size / particle_batch_ratio)
         else:
             Niter = n_frames * data_augmentation_loop // batch_size
-        plot_frequency = int(Niter // 30)
+        plot_frequency = int(Niter // 20)
 
         if epoch==0:
             print(f'{Niter} iterations per epoch')
@@ -327,13 +327,13 @@ def data_train_particle(config, erase, best_model, device):
                     dataset = data.Data(x=xt, edge_index=edges, num_nodes=x.shape[0])
                     dataset_batch.append(dataset)
 
-                if recursive_loop > 0:
-                    y = x_next[:, 1:dimension + 1]
+                if recursive_loop > 0 :
+                    y = torch.tensor(y_list[run][k+recursive_loop], dtype=torch.float32, device=device).clone().detach()
                 else:
                     y = torch.tensor(y_list[run][k], dtype=torch.float32, device=device).clone().detach()
-                    if noise_level > 0:
-                        y = y * (1 + torch.randn_like(y) * noise_level)
-                    y[:,0:dimension] = y[:,0:dimension] / ynorm
+                if noise_level > 0:
+                    y = y * (1 + torch.randn_like(y) * noise_level)
+                y[:,0:dimension] = y[:,0:dimension] / ynorm
 
                 if train_config.shared_embedding:
                     run = 1
@@ -359,10 +359,33 @@ def data_train_particle(config, erase, best_model, device):
 
             for batch in batch_loader:
                 pred = model(batch, data_id=data_id, training=True, k=k_batch)
+
+            if recursive_loop > 0:
+                for loop in range(recursive_loop):
+                    ids_index = 0
+                    for batch in range(batch_size):
+                        x = dataset_batch[batch].x.clone().detach()
+
+                        X1 = x[:, 1:dimension + 1]
+                        V1 = x[:, dimension + 1:2 * dimension + 1]
+                        if model_config.prediction == '2nd_derivative':
+                            V1 += pred[ids_index:ids_index+x.shape[0]] * ynorm * delta_t
+                        else:
+                            V1 = pred[ids_index:ids_index+x.shape[0]] * ynorm
+                        x[:, 1:dimension + 1] = bc_pos(X1 + V1 * delta_t)
+                        x[:, dimension + 1:2 * dimension + 1] = V1
+                        dataset_batch[batch].x = x
+
+                        ids_index += x.shape[0]
+
+                    batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
+                    for batch in batch_loader:
+                        pred = model(batch, data_id=data_id, training=True, k=k_batch)
+
+
+
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
-            elif recursive_loop > 0:
-                loss = (pred - y_batch).norm(2)
             elif simulation_config.state_type == 'sequence':
                 loss = (pred - y_batch).norm(2)
                 loss = loss + train_config.coeff_model_a * (model.a[run, ind_a + 1] - model.a[run, ind_a]).norm(2)

@@ -55,13 +55,13 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'test'
+        task = 'train'
         best_model = ''
-        config_list = ['fluids_m17_1']
+        # config_list = ['fluids_m17_1']
         # config_list = [f"multimaterial_9_{i}" for i in range(25, 33)]
         # config_list = [f"multimaterial_10_{i}" for i in range(1, 5)]
 
-        # config_list = ['multimaterial_9_32']
+        config_list = ['multimaterial_9_33']
         # config_list = ['cell_MDCK_12']
         # config_list = ['signal_N2_a43_17']
         # config_list = ['arbitrary_3']

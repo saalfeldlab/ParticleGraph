@@ -178,7 +178,6 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
                     else:
                         out = new_features
 
-
         return out
 
     def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, field_i, field_j, embedding_i, embedding_j, new_features_i, new_features_j ):
