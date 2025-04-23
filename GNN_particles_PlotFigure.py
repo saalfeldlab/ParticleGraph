@@ -1520,7 +1520,7 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
                             ax = fig.add_subplot(5, model.new_features.shape[1], k + 1 + 6*it//50)
                         else:
                             ax = fig.add_subplot(5, model.new_features.shape[1], k + 1 + 4*it//50)
-                        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), c=to_numpy(model.new_features[:, k]), s=5, cmap='viridis')
+                        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), c=to_numpy(model.new_features[:, k]), s=2, cmap='viridis')
                         if it==0:
                             ax.set_title(f'new_features {k}')
                         cbar = plt.colorbar()
@@ -1529,41 +1529,48 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
                 plt.savefig(f"./{log_dir}/results/new_features_{epoch}.tif", dpi=170.7)
                 plt.close()
 
+                if n_runs > 250:
+                    run_list = [0,17,50,100,150,200,250]
+                elif n_runs > 90:
+                    run_list = [0, 17, 10, 20, 30, 40, 50, 60]
+                else:
+                    run_list = [0, 1, 1, 1, 1, 1, 1]
 
-            fig = plt.figure(figsize=(20, 5))
-            run_list = [0,17,50,100,150,200,250]
-            for k in range(1, 7):
+                fig = plt.figure(figsize=(20, 5))
 
-                run = run_list[k]
 
-                x_list = []
-                y_list = []
+                for k in range(1, 7):
 
-                x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
-                x = torch.tensor(x, dtype=torch.float32, device=device)
-                y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
-                y = torch.tensor(y, dtype=torch.float32, device=device)
-                x_list.append(x)
-                y_list.append(y)
+                    run = run_list[k]
 
-                x = x_list[0][0].clone().detach()
+                    x_list = []
+                    y_list = []
 
-                type_list = get_type_list(x, dimension)
+                    x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
+                    x = torch.tensor(x, dtype=torch.float32, device=device)
+                    y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
+                    y = torch.tensor(y, dtype=torch.float32, device=device)
+                    x_list.append(x)
+                    y_list.append(y)
 
-                ax = fig.add_subplot(1, 6, k)
-                ax.set_title(f'dataset {run_list[k]}', fontsize = 18)
-                embedding = get_embedding(model.a, run_list[k])
-                for n in range(n_particle_types-1,-1,-1):
-                    pos = torch.argwhere(type_list == n)
-                    pos = to_numpy(pos)
-                    if len(pos) > 0:
-                        pos = pos[:, 0]
-                        plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=10, edgecolors='none', alpha=1.0)
-                plt.xlabel(r'$a_{0}$', fontsize=18)
-                plt.ylabel(r'$a_{1}$', fontsize=18)
-                plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=170.7)
-            plt.close()
+                    x = x_list[0][0].clone().detach()
+
+                    type_list = get_type_list(x, dimension)
+
+                    ax = fig.add_subplot(1, 6, k)
+                    ax.set_title(f'dataset {run_list[k]}', fontsize = 18)
+                    embedding = get_embedding(model.a, run_list[k])
+                    for n in range(n_particle_types-1,-1,-1):
+                        pos = torch.argwhere(type_list == n)
+                        pos = to_numpy(pos)
+                        if len(pos) > 0:
+                            pos = pos[:, 0]
+                            plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=5, edgecolors='none', alpha=0.5)
+                    plt.xlabel(r'$a_{0}$', fontsize=18)
+                    plt.ylabel(r'$a_{1}$', fontsize=18)
+                    plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=170.7)
+                plt.close()
 
 
 def plot_cell_state(config, epoch_list, log_dir, logger, style, device):
@@ -8297,12 +8304,8 @@ if __name__ == '__main__':
     #                'signal_N2_a43_3_10_t16','signal_N2_a43_3_20_t16','signal_N2_a43_3_20_t20','signal_N2_a43_3_20_t24','signal_N2_a43_3_20_t28']
     # config_list = ['gravity_16_1']
     # config_list = ['wave_slit_bis']
-    config_list = ['multimaterial_2', 'multimaterial_2_4', 'multimaterial_2_5',
-                   'multimaterial_9_10', 'multimaterial_9_12', 'multimaterial_9_13', 'multimaterial_9_15',
-                   'multimaterial_9_16', 'multimaterial_9_17', 'multimaterial_9_18',
-                   'multimaterial_10_1', 'multimaterial_10_2', 'multimaterial_10_3', 'multimaterial_10_4',
-                   'multimaterial_11_1', 'multimaterial_11_2']
-    config_list = ['multimaterial_9_17', 'multimaterial_9_18']
+    config_list = [f"multimaterial_9_{i}" for i in range(25, 33)]
+    # config_list = [f"multimaterial_10_{i}" for i in range(1, 5)]
 
     plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 

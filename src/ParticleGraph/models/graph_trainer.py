@@ -3700,7 +3700,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     n_particles = x.shape[0]
     x_inference_list = []
 
-    for it in trange(start_it, start_it+200):                 # min(9600+start_it,stop_it-time_step)):
+    for it in trange(start_it, stop_it-time_step):   #start_it+200):                 # min(9600+start_it,stop_it-time_step)):
 
         check_and_clear_memory(device=device, iteration_number=it, every_n_iterations=25, memory_percentage_threshold=0.6)
         # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
@@ -3912,17 +3912,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                         else:
                             x[:, dimension + 1:2 * dimension + 1] = y
 
-                    if 'bounce_bottom' in test_mode:
-                        x[:, 1:dimension + 1] = x[:, 1:dimension + 1] + x[:, dimension + 1:2 * dimension + 1] * delta_t
-                        bouncing_pos = torch.argwhere((x[:, 2] <= 0) ).squeeze()
-                        if bouncing_pos.numel() > 0:
-                            x[bouncing_pos, dimension + 2] = - bounce_coeff * x[bouncing_pos, dimension + 2]
-                            x[bouncing_pos, 2] = - x[bouncing_pos, 2] # 1E-6  #  + torch.rand(bouncing_pos.numel(), device=device) * 0.05
-                        x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1])
-                    else:
-                        x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1] + x[:, dimension + 1:2 * dimension + 1] * delta_t)  # position update
+                    x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1] + x[:, dimension + 1:2 * dimension + 1] * delta_t)  # position update
 
-                if 'bounce_all' in test_mode:
+                if 'bounce_all_v0' in test_mode:
                     gap = 0.005
                     bouncing_pos = torch.argwhere((x[:, 1] <= 0.1-gap) | (x[:, 1] >= 0.9+gap)).squeeze()
                     if bouncing_pos.numel() > 0:
@@ -3932,6 +3924,17 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     if bouncing_pos.numel() > 0:
                         x[bouncing_pos, 4] = - 0.7 * x[bouncing_pos, 4]
                         x[bouncing_pos, 2] += x[bouncing_pos, 4] * delta_t
+                if 'bounce_all' in test_mode:
+                    gap = 0.005
+                    bouncing_pos = torch.argwhere((x[:, 1] <= 0.1 + gap) | (x[:, 1] >= 0.9 - gap)).squeeze()
+                    if bouncing_pos.numel() > 0:
+                        x[bouncing_pos, 2] = - 0.7 * bounce_coeff* x[bouncing_pos, 2]
+                        x[bouncing_pos, 1] += x[bouncing_pos, 2] * delta_t * 10
+                    bouncing_pos = torch.argwhere((x[:, 2] <= 0.1 + gap) | (x[:, 2] >= 0.9 - gap)).squeeze()
+                    if bouncing_pos.numel() > 0:
+                        x[bouncing_pos, 3] = - 0.7 * bounce_coeff * x[bouncing_pos, 3]
+                        x[bouncing_pos, 2] += x[bouncing_pos, 3] * delta_t * 10
+
                 if (time_window>1) & ('plot_data' not in test_mode):
                     moving_pos = torch.argwhere(x[:,5]!=0)
                     x_list[0][it+1,moving_pos.squeeze(),1:2 * dimension + 1] = x[moving_pos.squeeze(), 1:2 * dimension + 1].clone().detach()

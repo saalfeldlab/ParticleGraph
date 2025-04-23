@@ -1,4 +1,4 @@
-description: 'system of particles falling down in a box larger MLP   test 99 dataset  batch_ratio=0.2 LR=1E-4'
+description: 'system of particles falling down in a box larger MLP   test 99 dataset  batch_ratio=0.2 larger LR larger noise'
 dataset: 'multimaterial'
 data_folder_name: '/groups/saalfeld/saalfeldlab/projects/gnn/learning-to-simulate/MultiMaterial/'
 
@@ -32,12 +32,12 @@ plotting:
 
 training:
   n_epochs: 20
-  batch_size: 40
-  particle_batch_ratio: 0.2
+  batch_size: 99
+  particle_batch_ratio: 0.1
   small_init_batch_size: False
   n_runs: 99
 
-  time_window_noise: 1.0E-5
+  time_window_noise: 1.0E-4
 
   sparsity: 'none'
   sparsity_freq: 3
@@ -48,7 +48,7 @@ training:
   fix_cluster_embedding: True
   device: 'auto'
 
-  learning_rate_start: 1E-6
+  learning_rate_start: 1E-4
   learning_rate_embedding_start: 1E-6
 
 
