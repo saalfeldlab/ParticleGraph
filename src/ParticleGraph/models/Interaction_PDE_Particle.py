@@ -147,24 +147,19 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
                     in_features = torch.cat((embedding, out), dim=-1)
                     out = self.MLP[3](in_features)
                 case 'step_B2':
+                    match = re.search(r'_(\d+)$', self.model)
+                    n_loop = int(match.group(1))
                     if n_loop == 0:
-                        pos_p = (pos - pos[:, 0:self.dimension].repeat(1, self.time_window))[:, self.dimension:]
-                        if self.training & self.rotation_augmentation:
-                            for i in range(0, 6, 2):
-                                pos_p[:, i:i + 2] = pos_p[:, i:i + 2] @ self.rotation_matrix.T
-                        new_features = self.MLP[1](torch.cat((new_features, embedding, pos_p), dim=-1))
+                        new_features = self.MLP[1](torch.cat((new_features, embedding), dim=-1))
                     else:
                         for loop in range(n_loop):
                             new_features = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=new_features)
                 case 'step_B3':
-                    if n_loop>0:
-                        new_features = self.MLP[2](new_features)
+                    out = self.MLP[2](new_features)
                     if self.training & self.rotation_augmentation:
-                        new_features[:, :2] = self.rotation_correction(new_features[:, :2])
-                        in_features = torch.cat((embedding, new_features), dim=-1)
-                        out = self.MLP[3](in_features)
-                    else:
-                        out = new_features
+                        out[:, :2] = self.rotation_correction(out[:, :2])
+                    in_features = torch.cat((embedding, out), dim=-1)
+                    out = self.MLP[3](in_features)
                 case 'step_C2':
                     new_features_p = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=new_features)
                 case 'step_C3':
@@ -213,7 +208,7 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
                 out = self.MLP[2](in_features)
 		                
             case 'step_B1':
-                in_features = torch.cat((embedding_i, embedding_j, pos_i_p, pos_j_p), dim=-1)
+                in_features = torch.cat((embedding_i, pos_i_p, pos_j_p), dim=-1)
                 new_features = self.MLP[0](in_features)
                 return new_features
 
