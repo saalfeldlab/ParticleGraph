@@ -50,14 +50,11 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
         self.bc_dpos = bc_dpos
         self.max_radius = simulation_config.max_radius
         self.rotation_augmentation = train_config.rotation_augmentation
+        self.translation_augmentation = train_config.translation_augmentation
+        self.velocity_augmentation = train_config.velocity_augmentation
+
         self.time_window = train_config.time_window
         self.time_window_noise = train_config.time_window_noise
-        self.sub_sampling = simulation_config.sub_sampling
-
-        self.input_size = model_config.input_size
-        self.output_size = model_config.output_size
-        self.hidden_dim = model_config.hidden_dim
-        self.n_layers = model_config.n_mp_layers
 
         self.kernel_type = model_config.kernel_type
         self.omega = model_config.omega
@@ -65,7 +62,7 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
         mlp_params = model_config.multi_mlp_params
 
         self.MLP = nn.ModuleList([
-            MLP(input_size=params[0], output_size=params[3], nlayers=params[2], hidden_size=params[1],
+            MLP(input_size=params[0], output_size=params[3], nlayers=params[2], hidden_size=params[1], activation=params[4],
                 device=self.device)
             for params in mlp_params
         ])
@@ -82,9 +79,6 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
             torch.tensor(np.ones((self.n_dataset, int(self.n_particles) , self.embedding_dim)),
                          device=self.device,
                          requires_grad=True, dtype=torch.float32))
-
-        # self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
-        #                         hidden_size=self.hidden_dim, device=self.device)
 
         self.kernel_var = self.max_radius ** 2
 
@@ -124,37 +118,34 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
         else:
             field = torch.ones_like(pos[:, 0:1])
 
-        # if translation_augmentation:
-        #     displacement = torch.randn(1, dimension, dtype=torch.float32, device=device) * 5
-        #     displacement = displacement.repeat(pos.shape[0], 1)
-        #     pos = pos + displacement
-        # if velocity_augmentation:
-        #     d_pos = d_pos + torch.randn((1, 2), device=device).repeat(d_pos.shape[0], 1) * vnorm
+        if self.translation_augmentation:
+            displacement = torch.randn(1, dimension, dtype=torch.float32, device=device) * 5
+            displacement = displacement.repeat(pos.shape[0], 1)
+            pos = pos + displacement
+        if self.velocity_augmentation:
+            d_pos = d_pos + torch.randn((1, 2), device=device).repeat(d_pos.shape[0], 1) * vnorm
 
         if 'PDE_MLPs_A' in self.model:
             mode_list = ['step_A1', 'step_A2', 'step_A3']
         elif 'PDE_MLPs_B' in self.model:
             mode_list = ['step_B1', 'step_B2', 'step_B3']
         elif 'PDE_MLPs_C' in self.model:
-            mode_list = ['step_A1', 'step_C2', 'step_C3', 'step_C4']
+            mode_list = ['step_C1', 'step_C2', 'step_C3', 'step_C4']
 
         for mode in mode_list:
             self.mode = mode
             match mode:
-                case 'step_A1':
+                case 'step_A1' | 'step_B1' | 'step_C1':
                     new_features = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=torch.zeros_like(embedding))
                     if 'eval' in self.model:
                         self.new_features = new_features
                 case 'step_A2':
                     out = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=new_features)
                     if self.rotation_augmentation & (self.training == True):
-                        self.rotation_inv_matrix = torch.stack([torch.stack([torch.cos(self.phi), -torch.sin(self.phi)]), torch.stack([torch.sin(self.phi), torch.cos(self.phi)])])
-                        out[:, :2] = out[:, :2] @ self.rotation_inv_matrix.T
+                        out[:, :2] = self.rotation_correction(out[:, :2])
                 case 'step_A3':
                     in_features = torch.cat((embedding, out), dim=-1)
                     out = self.MLP[3](in_features)
-                case 'step_B1':
-                    new_features = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=torch.zeros_like(embedding))
                 case 'step_B2':
                     if n_loop == 0:
                         pos_p = (pos - pos[:, 0:self.dimension].repeat(1, self.time_window))[:, self.dimension:]
@@ -168,9 +159,8 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
                 case 'step_B3':
                     if n_loop>0:
                         new_features = self.MLP[2](new_features)
-                    if self.rotation_augmentation & (self.training == True):
-                        self.rotation_inv_matrix = torch.stack([torch.stack([torch.cos(self.phi), -torch.sin(self.phi)]), torch.stack([torch.sin(self.phi), torch.cos(self.phi)])])
-                        new_features[:, :2] = new_features[:, :2] @ self.rotation_inv_matrix.T
+                    if self.training & self.rotation_augmentation:
+                        new_features[:, :2] = self.rotation_correction(new_features[:, :2])
                         in_features = torch.cat((embedding, new_features), dim=-1)
                         out = self.MLP[3](in_features)
                     else:
@@ -183,14 +173,11 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
                     in_features = torch.cat((new_features_p, new_features_pp), dim=-1)
                     out = self.MLP[4](in_features)
                     if self.rotation_augmentation & (self.training == True):
-                        self.rotation_inv_matrix = torch.stack([torch.stack([torch.cos(self.phi), -torch.sin(self.phi)]), torch.stack([torch.sin(self.phi), torch.cos(self.phi)])])
-                        out[:, :2] = out[:, :2] @ self.rotation_inv_matrix.T
+                        out[:, :2] = self.rotation_correction(out[:, :2])
                     in_features = torch.cat((embedding, out), dim=-1)
                     out = self.MLP[5](in_features)
 
         return out
-
-
 
     def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, field_i, field_j, embedding_i, embedding_j, new_features_i, new_features_j ):
 
@@ -212,9 +199,7 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
                     pos_j_p[:, i:i + 2] = pos_j_p[:, i:i + 2] @ self.rotation_matrix.T
 
         match self.mode:
-
-
-            case 'step_A1':
+            case 'step_A1' | 'step_C1':
                 if 'siren' in self.kernel_type:
                     self.kernels = self.MLP[0](delta_pos)
                 else:
@@ -249,7 +234,12 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
 
         return aggr_out
 
-
+    def rotation_correction(self, tensor):
+        rotation_inv_matrix = torch.stack([
+            torch.stack([torch.cos(self.phi), -torch.sin(self.phi)]),
+            torch.stack([torch.sin(self.phi), torch.cos(self.phi)])
+        ])
+        return tensor @ rotation_inv_matrix.T
 
 
         # mgrid = np.mgrid[-self.max_radius:self.max_radius:100j, -self.max_radius:self.max_radius:100j]
