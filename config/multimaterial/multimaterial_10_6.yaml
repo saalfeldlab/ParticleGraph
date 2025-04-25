@@ -1,4 +1,4 @@
-description: 'system of particles falling down in a box larger MLP   test 99 dataset  batch_ratio=0.2 larger LR'
+description: 'system of particles falling down in a box   GNN encoder update decoder   test loop update'
 dataset: 'multimaterial'
 data_folder_name: '/groups/saalfeld/saalfeldlab/projects/gnn/learning-to-simulate/MultiMaterial/'
 
@@ -15,11 +15,11 @@ simulation:
   start_frame: 0
 
 graph_model:
-  particle_model_name: 'PDE_MLPs_A'
+  particle_model_name: 'PDE_MLPs_B_4'
   mesh_model_name: ''
   prediction: '2nd_derivative'
 
-  multi_mlp_params: [[2, 128, 5, 5], [7, 32, 5, 4], [23, 256, 10, 2], [4, 8, 2, 2]]   # input_size, hidden_size, nlayers, output_size
+  multi_mlp_params: [[18, 512, 4, 128], [256, 128, 3, 128], [128, 128, 3, 2], [4, 8, 2, 2]]   # input_size, hidden_size, nlayers, output_size
 
   aggr_type: 'add'
   embedding_dim: 2
@@ -32,11 +32,12 @@ plotting:
 
 training:
   n_epochs: 20
-  batch_size: 99
-  particle_batch_ratio: 0.1
+  batch_size: 20
+  particle_batch_ratio: 0.5
   small_init_batch_size: False
-  n_runs: 99
+  n_runs: 999
 
+  time_window: 4
   time_window_noise: 1.0E-5
 
   sparsity: 'none'
@@ -44,12 +45,15 @@ training:
   cluster_method: 'kmeans_auto_embedding'
   rotation_augmentation: True
   translation_augmentation: False
-  data_augmentation_loop: 2000
+  data_augmentation_loop: 1000
   fix_cluster_embedding: True
   device: 'auto'
 
-  learning_rate_start: 5E-4
-  learning_rate_embedding_start: 5E-4
+  embedding_permutation: True
+  coeff_permutation: 1000
+
+  learning_rate_start: 1E-5
+  learning_rate_embedding_start: 5E-5
 
 
 

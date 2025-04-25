@@ -28,7 +28,9 @@ class MLP(nn.Module):
 
         self.layers.append(layer)
 
-        if activation=='tanh':
+        if activation=='none':
+            self.activation = lambda x: x
+        elif activation=='tanh':
             self.activation = F.tanh
         else:
             self.activation = F.relu

@@ -61,7 +61,7 @@ if __name__ == '__main__':
         # config_list = [f"multimaterial_9_{i}" for i in range(25, 33)]
         # config_list = [f"multimaterial_10_{i}" for i in range(1, 5)]
 
-        config_list = ['multimaterial_9_33']
+        config_list = ['multimaterial_12_1']
         # config_list = ['cell_MDCK_12']
         # config_list = ['signal_N2_a43_17']
         # config_list = ['arbitrary_3']
@@ -88,8 +88,8 @@ if __name__ == '__main__':
             #     data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best',
             #               run=run_, test_mode='fixed_bounce_all', sample_embedding=False, step=4,
             #               device=device)  # particle_of_interest=100,
-            data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best', run=1,
-                      test_mode='fixed_bounce_all', sample_embedding=False, step=40,
+            data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best', run=17,
+                      test_mode='fixed_bounce_all', sample_embedding=False, step=4,
                       device=device)  # particle_of_interest=100,
 
     if 'try_func' in task:

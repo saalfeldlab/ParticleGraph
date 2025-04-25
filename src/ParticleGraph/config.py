@@ -1,6 +1,7 @@
 from typing import Optional, Literal, Annotated, Dict
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
+from typing import List, Union
 
 # Sub-config schemas for ParticleGraph
 
@@ -106,7 +107,7 @@ class GraphModelConfig(BaseModel):
     hidden_dim: int = 1
     n_mp_layers: int = 1
 
-    multi_mlp_params: list[list[int]]  = None
+    multi_mlp_params: List[List[Union[int, int, int, int, str]]]  = None
 
     lin_edge_positive: bool = False
 
