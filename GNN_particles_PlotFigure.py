@@ -1402,8 +1402,7 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
     n_frames = len(x_list[0])
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    if 'PDE_MLPs_A' in config.graph_model.particle_model_name:
-        model.model = config.graph_model.particle_model_name + '_eval'
+    model.model = config.graph_model.particle_model_name + '_eval'
 
     if epoch_list[0] == 'all':
 
@@ -1483,7 +1482,7 @@ def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
             model.load_state_dict(state_dict['model_state_dict'])
             model.eval()
 
-            if 'PDE_MLPs_A' in config.graph_model.particle_model_name:
+            if ('PDE_MLPs_A' in config.graph_model.particle_model_name) | ('PDE_MLPs_C' in config.graph_model.particle_model_name):
 
                 x = x_list[0][100].clone().detach()
 
@@ -8305,7 +8304,7 @@ if __name__ == '__main__':
     # config_list = ['wave_slit_bis']
     # config_list = [f"multimaterial_9_{i}" for i in range(25, 33)]
     # config_list = [f"multimaterial_10_{i}" for i in range(1, 5)]
-    config_list = ['multimaterial_9_23','multimaterial_9_24','multimaterial_9_33']
+    config_list = ['multimaterial_12_1', 'multimaterial_12_2', 'multimaterial_12_3', 'multimaterial_12_4']
 
     plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 

@@ -57,11 +57,11 @@ if __name__ == '__main__':
 
         task = 'train'
         best_model = ''
-        # config_list = ['fluids_m17_1']
+        config_list = ['fluids_m17_6']
         # config_list = [f"multimaterial_9_{i}" for i in range(25, 33)]
         # config_list = [f"multimaterial_10_{i}" for i in range(1, 5)]
 
-        config_list = ['multimaterial_12_1']
+        # config_list = ['multimaterial_12_1','multimaterial_12_2','multimaterial_12_3','multimaterial_12_4']
         # config_list = ['cell_MDCK_12']
         # config_list = ['signal_N2_a43_17']
         # config_list = ['arbitrary_3']
