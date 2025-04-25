@@ -131,11 +131,13 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
             mode_list = ['step_B1', 'step_B2', 'step_B3']
         elif 'PDE_MLPs_C' in self.model:
             mode_list = ['step_C1', 'step_C2', 'step_C3', 'step_C4']
+        elif 'PDE_MLPs_D' in self.model:
+            mode_list = ['step_D1', 'step_D2', 'step_D3', 'step_D4']
 
         for mode in mode_list:
             self.mode = mode
             match mode:
-                case 'step_A1' | 'step_B1' | 'step_C1':
+                case 'step_A1' | 'step_B1' | 'step_C1' | 'step_D1':
                     new_features = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=torch.zeros_like(embedding))
                     if 'eval' in self.model:
                         self.new_features = new_features
@@ -160,11 +162,11 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
                         out[:, :2] = self.rotation_correction(out[:, :2])
                     in_features = torch.cat((embedding, out), dim=-1)
                     out = self.MLP[3](in_features)
-                case 'step_C2':
+                case 'step_C2' |  'step_D2':
                     new_features_p = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=new_features)
-                case 'step_C3':
+                case 'step_C3' | 'step_D3':
                     new_features_pp = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=new_features_p)
-                case'step_C4':
+                case'step_C4' | 'step_D4':
                     in_features = torch.cat((new_features_p, new_features_pp), dim=-1)
                     out = self.MLP[4](in_features)
                     if self.rotation_augmentation & (self.training == True):
@@ -194,7 +196,7 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
                     pos_j_p[:, i:i + 2] = pos_j_p[:, i:i + 2] @ self.rotation_matrix.T
 
         match self.mode:
-            case 'step_A1' | 'step_C1':
+            case 'step_A1' | 'step_C1' | 'step_D1':
                 if 'siren' in self.kernel_type:
                     self.kernels = self.MLP[0](delta_pos)
                 else:
@@ -220,6 +222,21 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
             case 'step_C3':
                 in_features = torch.cat((embedding_i, new_features_i, self.kernels), dim=-1)
                 out = self.MLP[3](in_features)
+
+            case 'step_D2':
+                in_features = torch.cat((embedding_i, embedding_j, d_pos_i, d_pos_j, new_features_i, new_features_j), dim=-1)
+                out = self.MLP[2](in_features)
+                O = torch.einsum('ij,ik->ijk', out, self.kernels)
+                O = O.view(O.shape[0], -1)
+                return O
+
+            case 'step_D3':
+                in_features = torch.cat((embedding_i, new_features_i), dim=-1)
+                out = self.MLP[3](in_features)
+                O = torch.einsum('ij,ik->ijk', out, self.kernels)
+                O = O.view(O.shape[0], -1)
+                return O
+
 
 
 
