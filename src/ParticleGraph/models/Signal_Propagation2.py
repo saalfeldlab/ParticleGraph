@@ -102,7 +102,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         return alpha * self.a[id.squeeze()+1, :] + (1 - alpha) * self.a[id.squeeze(), :]
 
 
-    def forward(self, data=[], data_id=[], k = []):
+    def forward(self, data=[], data_id=[], k = [], return_all=False):
         self.return_all = return_all
         x, edge_index = data.x, data.edge_index
 
@@ -117,7 +117,6 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
                 embedding = self.a[particle_id, :]
             else:
                 embedding = self.a[self.data_id, particle_id, :].squeeze()
-
 
         msg = self.propagate(edge_index, u=u, embedding=embedding)
 
