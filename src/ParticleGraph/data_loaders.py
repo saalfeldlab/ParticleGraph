@@ -956,35 +956,35 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
         x_list = []
         y_list = []
 
-        for it in trange(simulation_config.start_frame, n_frames -2):
+        for it in trange(0, n_frames-2):
             x = np.zeros((n_particles, 13))
             x[:, 0] = np.arange(n_particles)
             x[:, 1:3] = X1
-            x[:, 6] = activity_worm[run][:, it]
-            x[:, 10:13] = odor_worms[run][:, it]
+            x[:, 6] = activity_worm[run,:,it]
+            x[:, 10:13] = odor_worms[run,:,it]
             x_list.append(x)
 
-            y = (activity_worm[run][:, it+1]- activity_worm[run][:, it]) / delta_t
+            y = (activity_worm[run,:,it+1]- activity_worm[run,:,it]) / delta_t
             y_list.append(y)
 
-            if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
+            if visualize & (run == 0) & (it % 2 == 0) & (it >= 0):
+                plt.style.use('dark_background')
+
                 plt.figure(figsize=(10, 10))
                 # plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=10, c=to_numpy(x[:, 6]),
                 #             cmap='viridis', vmin=-10, vmax=10, edgecolors='k', alpha=1)
                 plt.axis('off')
-                plt.scatter(X1[:, 0], X1[:, 1], s=100, c=x[:, 6], cmap='viridis', vmin=-5, vmax=5)
+                plt.scatter(X1[:, 0], X1[:, 1], s=700, c=x[:, 6], cmap='viridis', vmin=-2, vmax=2)
                 plt.xticks([])
                 plt.yticks([])
                 plt.tight_layout()
-                plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_2D_{run}_{num}.tif", dpi=170)
+                plt.savefig(f"graphs_data/{dataset_name}/Fig/2D_Fig_{run}_{it}.tif", dpi=80)
                 plt.close()
 
-
-    if bSave:
-        x_list = np.array(x_list)
-        y_list = np.array(y_list)
-        np.save(f'graphs_data/{dataset_name}/x_list_{run}.npy', x_list)
-        np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list)
+    x_list = np.array(x_list)
+    y_list = np.array(y_list)
+    np.save(f'graphs_data/{dataset_name}/x_list_{run}.npy', x_list)
+    np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list)
 
 def load_shrofflab_celegans(
         file_path,

@@ -14,7 +14,7 @@ simulation:
     max_radius: 1.0E6
     n_particles: 189
     n_particle_types: 4
-    n_frames: 960
+    n_frames: 800
     delta_t: 0.25
     dpos_init:  0
     boundary: 'no'
