@@ -3689,7 +3689,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     n_particles = x.shape[0]
     x_inference_list = []
 
-    for it in trange(start_it, start_it+200):                 # min(9600+start_it,stop_it-time_step)):
+    for it in trange(start_it, min(9600+start_it,stop_it-time_step)):  #  start_it+200): # min(9600+start_it,stop_it-time_step)):
 
         check_and_clear_memory(device=device, iteration_number=it, every_n_iterations=25, memory_percentage_threshold=0.6)
         # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
@@ -3825,7 +3825,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     y = y0 / ynorm
                 else:
                     with torch.no_grad():
-                        pred = model(dataset, data_id=1)
+                        pred = model(dataset, data_id=data_id)
                         y = pred
             else:
                 distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
