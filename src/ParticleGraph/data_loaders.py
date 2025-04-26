@@ -918,13 +918,13 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_subplot(221)
         plt.imshow(activity_worm[idata][:, 0:1000], aspect='auto', vmin =-5, vmax=5, cmap='viridis')
-        plt.colorbar()
         plt.title(f'dataset {idata}', fontsize=18)
         plt.xlabel('time', fontsize=18)
         plt.ylabel('neurons', fontsize=18)
         plt.xticks(fontsize=14)
         plt.yticks(fontsize=14)
         ax = fig.add_subplot(222)
+        plt.title(f'missing data', fontsize=18)
         test_im = activity_worm[idata][:, 0:1000] * 0
         pos = np.argwhere(activity_worm[idata][:, 0:1000] == 0)
         test_im[pos[:, 0], pos[:, 1]] = 1
@@ -946,12 +946,45 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
         plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{idata}.tif", dpi=80)  # 170.7)
         plt.close()
 
-    print (odor_worms.shape)
+    xc, yc = get_equidistant_points(n_points=n_particles)
+    pos = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
+    perm = torch.randperm(pos.size(0))
+    X1 = to_numpy(pos[perm])
+
+    for run in range(config.training.n_runs):
+
+        x_list = []
+        y_list = []
+
+        for it in trange(simulation_config.start_frame, n_frames -2):
+            x = np.zeros((n_particles, 13))
+            x[:, 0] = np.arange(n_particles)
+            x[:, 1:3] = X1
+            x[:, 6] = activity_worm[run][:, it]
+            x[:, 10:13] = odor_worms[run][:, it]
+            x_list.append(x)
+
+            y = (activity_worm[run][:, it+1]- activity_worm[run][:, it]) / delta_t
+            y_list.append(y)
+
+            if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
+                plt.figure(figsize=(10, 10))
+                # plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=10, c=to_numpy(x[:, 6]),
+                #             cmap='viridis', vmin=-10, vmax=10, edgecolors='k', alpha=1)
+                plt.axis('off')
+                plt.scatter(X1[:, 0], X1[:, 1], s=100, c=x[:, 6], cmap='viridis', vmin=-5, vmax=5)
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+                plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_2D_{run}_{num}.tif", dpi=170)
+                plt.close()
 
 
-
-    
-
+    if bSave:
+        x_list = np.array(x_list)
+        y_list = np.array(y_list)
+        np.save(f'graphs_data/{dataset_name}/x_list_{run}.npy', x_list)
+        np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list)
 
 def load_shrofflab_celegans(
         file_path,
