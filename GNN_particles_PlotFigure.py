@@ -8306,6 +8306,9 @@ if __name__ == '__main__':
     # config_list = [f"multimaterial_10_{i}" for i in range(1, 5)]
     config_list = ['multimaterial_12_1', 'multimaterial_12_2', 'multimaterial_12_3', 'multimaterial_12_4']
 
+    # config_list = ['multimaterial_13_1', 'multimaterial_13_2']
+    # config_list = ['falling_water_ramp_x6_13']
+
     plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 
     for config_file_ in config_list:

@@ -1,4 +1,4 @@
-description: 'synaptic network 100.000 points'
+description: 'synaptic network 100.000 points   test batch_ratio'
 dataset: 'signal_N2_a37'
 
 simulation:

@@ -118,11 +118,11 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
         else:
             field = torch.ones_like(pos[:, 0:1])
 
-        if self.translation_augmentation:
+        if training & self.translation_augmentation:
             displacement = torch.randn(1, dimension, dtype=torch.float32, device=device) * 5
             displacement = displacement.repeat(pos.shape[0], 1)
             pos = pos + displacement
-        if self.velocity_augmentation:
+        if training & self.velocity_augmentation:
             d_pos = d_pos + torch.randn((1, 2), device=device).repeat(d_pos.shape[0], 1) * vnorm
 
         if 'PDE_MLPs_A' in self.model:
