@@ -1,5 +1,5 @@
 description: 'test time dependent functions'
-dataset: 'signal_N3_c9'
+dataset: 'signal_N3_c11'
 
 simulation:
     connectivity_file: 'random'

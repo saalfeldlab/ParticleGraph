@@ -1,11 +1,12 @@
-description: 'test Gaussian distribution  synaptic network 100.000 points'
-dataset: 'signal_N2_g'
+description: 'test sparsity   synaptic network 100.000 points'
+dataset: 'signal_N2_e3'
 
 simulation:
     connectivity_file: 'random'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
-    connectivity_distribution: 'Gaussian'
+    connectivity_distribution: 'Lorentz'
+    connectivity_filling_factor: 0.10
     params: [[10.0,1.0,1.0],[10.0,2.0,1.0],[10.0,1.0,2.0],[10.0,2.0,2.0]]
     phi: 'tanh'
     tau: 1.0
@@ -17,7 +18,7 @@ simulation:
     delta_t: 0.01
     dpos_init:  0
     boundary: 'no'
-    start_frame: -1000
+    start_frame: 0 # -1000
 
 graph_model:
     signal_model_name: 'PDE_N2'
@@ -39,8 +40,8 @@ graph_model:
 plotting:
     colormap: 'tab10'
     arrow_length: 1
-    xlim: [-5,5]
-    ylim: [-8,8]
+    xlim: [ -5,5 ]
+    ylim: [ -8,8 ]
 
 training:
     n_epochs: 20
@@ -58,3 +59,4 @@ training:
     sparsity_freq: 4
     learning_rate_start: 1.0E-4
     learning_rate_embedding_start: 1.0E-4
+    coeff_L1: 1.0E-5
