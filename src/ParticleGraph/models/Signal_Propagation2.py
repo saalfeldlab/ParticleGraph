@@ -59,6 +59,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
 
         self.bc_dpos = bc_dpos
         self.adjacency_matrix = simulation_config.adjacency_matrix
+        self.n_ghosts = int(config.training.n_ghosts)
 
 
         if self.model == 'PDE_N3':
@@ -72,22 +73,19 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         self.lin_phi = MLP(input_size=self.input_size_update, output_size=self.output_size, nlayers=self.n_layers_update,
                             hidden_size=self.hidden_dim_update, device=self.device)
 
-        if self.n_dataset==2:
-            if self.model == 'PDE_N3':
-                self.a = nn.Parameter(torch.ones((int(self.n_particles*100 + 1000), self.embedding_dim), device=self.device, requires_grad=True,dtype=torch.float32))
-                self.embedding_step =  self.n_frames // 100
-            elif model_config.embedding_init =='':
-                self.a = nn.Parameter(torch.ones((int(self.n_particles), self.embedding_dim), device=self.device, requires_grad=True, dtype=torch.float32))
-            else:
-                self.a = nn.Parameter(torch.tensor(projections, device=self.device, requires_grad=True, dtype=torch.float32))
-
-            if (self.model == 'PDE_N6') | (self.model == 'PDE_N7'):
-                self.b = nn.Parameter(torch.ones((int(self.n_particles), 1000 + 10), device=self.device, requires_grad=True,dtype=torch.float32)*0.44)
-                self.embedding_step = self.n_frames // 1000
-                self.lin_modulation = MLP(input_size=self.input_size_modulation, output_size=self.output_size_modulation, nlayers=self.n_layers_modulation,
-                                    hidden_size=self.hidden_dim_modulation, device=self.device)
+        if self.model == 'PDE_N3':
+            self.a = nn.Parameter(torch.ones((int(self.n_particles*100 + 1000), self.embedding_dim), device=self.device, requires_grad=True,dtype=torch.float32))
+            self.embedding_step =  self.n_frames // 100
+        elif model_config.embedding_init =='':
+            self.a = nn.Parameter(torch.ones((int(self.n_particles), self.embedding_dim), device=self.device, requires_grad=True, dtype=torch.float32))
         else:
-            self.a = nn.Parameter(torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device, requires_grad=True, dtype=torch.float32))
+            self.a = nn.Parameter(torch.tensor(projections, device=self.device, requires_grad=True, dtype=torch.float32))
+
+        if (self.model == 'PDE_N6') | (self.model == 'PDE_N7'):
+            self.b = nn.Parameter(torch.ones((int(self.n_particles), 1000 + 10), device=self.device, requires_grad=True,dtype=torch.float32)*0.44)
+            self.embedding_step = self.n_frames // 1000
+            self.lin_modulation = MLP(input_size=self.input_size_modulation, output_size=self.output_size_modulation, nlayers=self.n_layers_modulation,
+                                hidden_size=self.hidden_dim_modulation, device=self.device)
 
         self.W = nn.Parameter(torch.randn((int(self.n_particles),int(self.n_particles)), device=self.device, requires_grad=True, dtype=torch.float32))
 
@@ -112,11 +110,8 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             particle_id = x[:, 0:1].long()
             embedding = self.get_interp_a(k, particle_id)
         else:
-            if  self.n_dataset==2:
-                particle_id = x[:, 0].long()
-                embedding = self.a[particle_id, :]
-            else:
-                embedding = self.a[self.data_id, particle_id, :].squeeze()
+            particle_id = x[:, 0].long()
+            embedding = self.a[particle_id, :]
 
         msg = self.propagate(edge_index, u=u, embedding=embedding)
 

@@ -1,6 +1,7 @@
 description: 'test neuron_dependent functions  with CElegans data'
 dataset: 'CElegans_a1'
 data_folder_name: '/groups/saalfeld/home/allierc/Py/wormvae/data/worm_activity/all_traces_Heads_new.mat'
+connectome_folder_name: '/groups/saalfeld/home/allierc/Py/wormvae/data/worm_connectivity/'
 
 simulation:
     connectivity_file: 'random'
@@ -48,7 +49,7 @@ plotting:
 
 training:
     n_epochs: 20
-    recursive_loop: 1
+    recursive_loop: 0
     batch_size: 1
     small_init_batch_size: False
     n_runs: 21
@@ -71,4 +72,5 @@ training:
 
     noise_level: 1.0
 
-    coeff_diff: 500
+    coeff_L1: 1.0E-5
+    coeff_diff: 100

@@ -33,7 +33,8 @@ from ParticleGraph.generators.cell_utils import *
 from ParticleGraph.generators import PDE_V
 from cellpose import models
 import scipy.io as sio
-
+import seaborn as sns
+from torch_geometric.utils import dense_to_sparse
 
 def extract_object_properties(segmentation_image, fluorescence_image=[]):
     # Label the objects in the segmentation image
@@ -824,13 +825,12 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
 
     data_folder_name = config.data_folder_name
     dataset_name = config.dataset
+    connectome_folder_name = config.connectome_folder_name
 
     simulation_config = config.simulation
     train_config = config.training
     n_frames = simulation_config.n_frames
-    dimension = 2
 
-    n_particle_types = simulation_config.n_particle_types
     n_runs = train_config.n_runs
     n_particles = simulation_config.n_particles
 
@@ -844,6 +844,95 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
 
     # Loading Data from class Worm_Data_Loader(Dataset) in https://github.com/TuragaLab/wormvae
 
+    print ('load connectome ...')
+    chem_weights = torch.load(connectome_folder_name + 'chem_weights.pt')
+    eassym_weights = torch.load(connectome_folder_name + 'eassym_weights.pt')
+    chem_sparsity = torch.load(connectome_folder_name + 'chem_sparsity.pt')
+    esym_sparsity = torch.load(connectome_folder_name + 'esym_sparsity.pt')
+
+    # plot matrixes
+    fig = plt.figure(figsize=(12, 12))
+    ax = fig.add_subplot(221)
+    ax = sns.heatmap(to_numpy(chem_weights), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},)
+    plt.imshow(to_numpy(chem_weights), aspect='auto', vmin=-1, vmax=1, cmap='viridis')
+    plt.title('chemical weights', fontsize=18)
+    plt.xlabel('neurons', fontsize=18)
+    plt.ylabel('neurons', fontsize=18)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    ax = fig.add_subplot(222)
+    ax = sns.heatmap(to_numpy(eassym_weights), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},)
+    plt.title('electrical weights', fontsize=18)
+    plt.xlabel('neurons', fontsize=18)
+    plt.ylabel('neurons', fontsize=18)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    ax = fig.add_subplot(223)
+    ax = sns.heatmap(to_numpy(chem_sparsity), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},)
+    plt.title('chemical sparsity', fontsize=18)
+    plt.xlabel('neurons', fontsize=18)
+    plt.ylabel('neurons', fontsize=18)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    ax = fig.add_subplot(224)
+    ax = sns.heatmap(to_numpy(esym_sparsity), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},)
+    plt.title('electrical sparsity', fontsize=18)
+    plt.xlabel('neurons', fontsize=18)
+    plt.ylabel('neurons', fontsize=18)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.tight_layout()
+    plt.savefig(f"graphs_data/{dataset_name}/all_connectome.png", dpi=170)
+    plt.close()
+
+    map_list = np.load(connectome_folder_name + 'map_list.npy', allow_pickle=True)
+
+    subset_chem_weights = chem_weights[np.ix_(map_list, map_list)]
+    subset_eassym_weights = eassym_weights[np.ix_(map_list, map_list)]
+    subset_chem_sparsity = chem_sparsity[np.ix_(map_list, map_list)]
+    subset_eassym_sparsity = esym_sparsity[np.ix_(map_list, map_list)]
+
+    adjacency = torch.tensor(subset_chem_weights, dtype=torch.float32, device=device)
+    torch.save(adjacency, f'./graphs_data/{dataset_name}/adjacency.pt')
+
+    edge_index, edge_attr = dense_to_sparse(torch.ones((n_particles)) - torch.eye(n_particles))
+    torch.save(edge_index.to(device), f'./graphs_data/{dataset_name}/edge_index.pt')
+
+    fig = plt.figure(figsize=(12, 12))
+    ax = fig.add_subplot(221)
+    ax = sns.heatmap(to_numpy(subset_chem_weights), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},)
+    plt.imshow(to_numpy(chem_weights), aspect='auto', cmap='viridis')
+    plt.title('chemical weights', fontsize=18)
+    plt.xlabel('neurons', fontsize=18)
+    plt.ylabel('neurons', fontsize=18)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    ax = fig.add_subplot(222)
+    ax = sns.heatmap(to_numpy(subset_eassym_weights), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},)
+    plt.title('electrical weights', fontsize=18)
+    plt.xlabel('neurons', fontsize=18)
+    plt.ylabel('neurons', fontsize=18)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    ax = fig.add_subplot(223)
+    ax = sns.heatmap(to_numpy(subset_chem_sparsity), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},)
+    plt.title('chemical sparsity', fontsize=18)
+    plt.xlabel('neurons', fontsize=18)
+    plt.ylabel('neurons', fontsize=18)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    ax = fig.add_subplot(224)
+    ax = sns.heatmap(to_numpy(subset_eassym_sparsity), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},)
+    plt.title('electrical sparsity', fontsize=18)
+    plt.xlabel('neurons', fontsize=18)
+    plt.ylabel('neurons', fontsize=18)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.tight_layout()
+    plt.savefig(f"graphs_data/{dataset_name}/subset_connectome.png", dpi=170)
+    plt.close()
+
+
     odor_channels = 3
     step = 0.25
     n_runs = 21
@@ -855,6 +944,8 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     T_start = 160
     activity_datasets = np.zeros((n_runs, n_particles, T))
     odor_datasets = np.zeros((n_runs, odor_channels, T))
+
+    print ('load traces ...')
 
     trace_variable = sio.loadmat(data_folder_name)
     trace_arr = trace_variable['traces']
@@ -981,10 +1072,11 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
                 plt.savefig(f"graphs_data/{dataset_name}/Fig/2D_Fig_{run}_{it}.tif", dpi=80)
                 plt.close()
 
-    x_list = np.array(x_list)
-    y_list = np.array(y_list)
-    np.save(f'graphs_data/{dataset_name}/x_list_{run}.npy', x_list)
-    np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list)
+        x_list = np.array(x_list)
+        y_list = np.array(y_list)
+        np.save(f'graphs_data/{dataset_name}/x_list_{run}.npy', x_list)
+        np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list)
+
 
 def load_shrofflab_celegans(
         file_path,

@@ -270,6 +270,7 @@ class ParticleGraphConfig(BaseModel):
     description: Optional[str] = 'ParticleGraph'
     dataset: str
     data_folder_name: str = 'none'
+    connectome_folder_name: str = 'none'
     data_folder_mesh_name: str = 'none'
     config_file: str = 'none'
     simulation: SimulationConfig

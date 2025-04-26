@@ -2290,7 +2290,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
         x_list.append(x)
         y_list.append(y)
-    x = x_list[0][n_frames - 1]
+    x = x_list[0][n_frames - 10]
 
     activity = torch.tensor(x_list[0][:, :, 6:7],device=device)
     activity = activity.squeeze()
@@ -2510,178 +2510,184 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                 k = np.random.randint(n_frames - 5 - batch_size - time_step)
 
-                x = torch.tensor(x_list[run][k], device=device)
+                x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device)
 
-                if has_field:
-                    if 'visual' in field_type:
-                        x[:n_nodes, 8:9] = model_f(time=k / n_frames) ** 2
-                        x[n_nodes:n_particles, 8:9] = 1
-                    elif 'learnable_short_term_plasticity' in field_type:
-                        alpha = (k % model.embedding_step) / model.embedding_step
-                        x[:, 8] = alpha * model.b[:, k // model.embedding_step + 1] ** 2 + (1 - alpha) * model.b[:,k // model.embedding_step] ** 2
-                        loss = loss + (model.b[:, 1:] - model.b[:, :-1]).norm(2) * coeff_model_b
-                    elif ('Siren_short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
-                        t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
-                        t[:, 0, :] = torch.tensor(k / n_frames, dtype=torch.float32, device=device)
-                        if 'derivative' in field_type:
-                            m = model_f(t).squeeze() ** 2
-                            x[:, 8] = m
-                            m_next = model_f(t + 1.0E-3).squeeze() ** 2
-                            grad = (m_next - m) / 1.0E-3
-                            in_modulation = torch.cat((x[:, 6:7].clone().detach(), m[:, None]), dim=1)
-                            pred_modulation = model.lin_modulation(in_modulation)
-                            loss += (grad - pred_modulation.squeeze()).norm(2) * coeff_lin_modulation
+                if not(torch.isnan(x).any()):
+                    if has_field:
+                        if 'visual' in field_type:
+                            x[:n_nodes, 8:9] = model_f(time=k / n_frames) ** 2
+                            x[n_nodes:n_particles, 8:9] = 1
+                        elif 'learnable_short_term_plasticity' in field_type:
+                            alpha = (k % model.embedding_step) / model.embedding_step
+                            x[:, 8] = alpha * model.b[:, k // model.embedding_step + 1] ** 2 + (1 - alpha) * model.b[:,k // model.embedding_step] ** 2
+                            loss = loss + (model.b[:, 1:] - model.b[:, :-1]).norm(2) * coeff_model_b
+                        elif ('Siren_short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
+                            t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
+                            t[:, 0, :] = torch.tensor(k / n_frames, dtype=torch.float32, device=device)
+                            if 'derivative' in field_type:
+                                m = model_f(t).squeeze() ** 2
+                                x[:, 8] = m
+                                m_next = model_f(t + 1.0E-3).squeeze() ** 2
+                                grad = (m_next - m) / 1.0E-3
+                                in_modulation = torch.cat((x[:, 6:7].clone().detach(), m[:, None]), dim=1)
+                                pred_modulation = model.lin_modulation(in_modulation)
+                                loss += (grad - pred_modulation.squeeze()).norm(2) * coeff_lin_modulation
+                            else:
+                                x[:, 8] = model_f(t) ** 2
                         else:
-                            x[:, 8] = model_f(t) ** 2
+                            x[:, 8:9] = model_f(time=k / n_frames) ** 2
                     else:
-                        x[:, 8:9] = model_f(time=k / n_frames) ** 2
-                else:
-                    x[:, 8:9] = torch.ones_like(x[:, 0:1])
+                        x[:, 8:9] = torch.ones_like(x[:, 0:1])
 
-                # regularisations
-                in_features = get_in_features_update(None, n_particles, model.a, model.update_type, device)
-                func_phi = model.lin_phi(in_features.float())
+                    # regularisations
+                    in_features = get_in_features_update(None, n_particles, model.a, model.update_type, device)
 
-                # sparsity on Wij and phi(0)=0
-                loss += model.W.norm(1) * coeff_L1 + func_phi.norm(2)
+                    func_phi = model.lin_phi(in_features.float())
 
-                # lin.edge monotonic positive
-                if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N7'):
-                    in_features_prev = torch.cat((x[:, 6:7] - xnorm/150, model.a), dim=1)
-                    in_features = torch.cat((x[:, 6:7], model.a), dim=1)
-                    in_features_next = torch.cat((x[:, 6:7] + xnorm/150, model.a), dim=1)
-                elif model_config.signal_model_name == 'PDE_N5':
-                    in_features_prev = torch.cat((x[:, 6:7] - xnorm / 150, model.a, model.a), dim=1)
-                    in_features = torch.cat((x[:, 6:7], model.a, model.a), dim=1)
-                    in_features_next = torch.cat((x[:, 6:7] + xnorm/150, model.a, model.a), dim=1)
-                else:
-                    in_features = x[:, 6:7]
-                    in_features_next = x[:, 6:7] + xnorm/150
-                    in_features_prev = x[:, 6:7] - xnorm / 150
+                    # sparsity on Wij and phi(0)=0
+                    loss += model.W.norm(1) * coeff_L1 + func_phi.norm(2)
 
-                if coeff_diff > 0:
-                    if model_config.lin_edge_positive:
-                        msg_1 = model.lin_edge(in_features_prev) ** 2
-                        msg0 = model.lin_edge(in_features)**2
-                        msg1 = model.lin_edge(in_features_next)**2
+                    # lin.edge monotonic positive
+                    if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N7'):
+                        in_features_prev = torch.cat((x[:, 6:7] - xnorm/150, model.a), dim=1)
+                        in_features = torch.cat((x[:, 6:7], model.a), dim=1)
+                        in_features_next = torch.cat((x[:, 6:7] + xnorm/150, model.a), dim=1)
+                    elif model_config.signal_model_name == 'PDE_N5':
+                        in_features_prev = torch.cat((x[:, 6:7] - xnorm / 150, model.a, model.a), dim=1)
+                        in_features = torch.cat((x[:, 6:7], model.a, model.a), dim=1)
+                        in_features_next = torch.cat((x[:, 6:7] + xnorm/150, model.a, model.a), dim=1)
                     else:
-                        msg_1 = model.lin_edge(in_features_prev)
-                        msg0 = model.lin_edge(in_features)
-                        msg1 = model.lin_edge(in_features_next)
-                    loss = loss + torch.relu(msg0 - msg1).norm(2) * coeff_diff
+                        in_features = x[:, 6:7]
+                        in_features_next = x[:, 6:7] + xnorm/150
+                        in_features_prev = x[:, 6:7] - xnorm / 150
 
-                if (model.update_type == 'generic') & (coeff_diff_update>0):
-                    in_feature_update = torch.cat((torch.zeros((n_particles,1), device=device), model.a, msg0, torch.ones((n_particles,1), device=device)), dim=1)
-                    in_feature_update_next = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg1, torch.ones((n_particles, 1), device=device)), dim=1)
-                    if 'positive' in train_config.diff_update_regul:
-                        loss = loss + torch.relu(model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next)).norm(2) * coeff_diff_update
-                    if 'TV' in train_config.diff_update_regul:
-                        in_feature_update_next_bis = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg1, torch.ones((n_particles, 1), device=device)*1.1), dim=1)
-                        loss = loss + (model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next_bis)).norm(2) * coeff_diff_update
-                    if 'second_derivative' in train_config.diff_update_regul:
-                        in_feature_update_prev = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg_1, torch.ones((n_particles, 1), device=device)), dim=1)
-                        loss = loss + (model.lin_phi(in_feature_update_prev) + model.lin_phi(in_feature_update_next) - 2* model.lin_phi(in_feature_update)).norm(2) * coeff_diff_update
+                    if coeff_diff > 0:
+                        if model_config.lin_edge_positive:
+                            msg_1 = model.lin_edge(in_features_prev) ** 2
+                            msg0 = model.lin_edge(in_features)**2
+                            msg1 = model.lin_edge(in_features_next)**2
+                        else:
+                            msg_1 = model.lin_edge(in_features_prev)
+                            msg0 = model.lin_edge(in_features)
+                            msg1 = model.lin_edge(in_features_next)
+                        loss = loss + torch.relu(msg0 - msg1).norm(2) * coeff_diff
 
-                if particle_batch_ratio < 1:
-                     ids = np.random.permutation(x.shape[0])[:int(x.shape[0] * particle_batch_ratio)]
-                     ids = np.sort(ids)
-                     edges = edges_all.clone().detach()
-                     mask = torch.isin(edges[1, :], torch.tensor(ids, device=device))
-                     edges = edges[:, mask]
+                    if (model.update_type == 'generic') & (coeff_diff_update>0):
+                        in_feature_update = torch.cat((torch.zeros((n_particles,1), device=device), model.a, msg0, torch.ones((n_particles,1), device=device)), dim=1)
+                        in_feature_update_next = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg1, torch.ones((n_particles, 1), device=device)), dim=1)
+                        if 'positive' in train_config.diff_update_regul:
+                            loss = loss + torch.relu(model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next)).norm(2) * coeff_diff_update
+                        if 'TV' in train_config.diff_update_regul:
+                            in_feature_update_next_bis = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg1, torch.ones((n_particles, 1), device=device)*1.1), dim=1)
+                            loss = loss + (model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next_bis)).norm(2) * coeff_diff_update
+                        if 'second_derivative' in train_config.diff_update_regul:
+                            in_feature_update_prev = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg_1, torch.ones((n_particles, 1), device=device)), dim=1)
+                            loss = loss + (model.lin_phi(in_feature_update_prev) + model.lin_phi(in_feature_update_next) - 2* model.lin_phi(in_feature_update)).norm(2) * coeff_diff_update
 
-                dataset = data.Data(x=x, edge_index=edges)
-                dataset_batch.append(dataset)
-
-                if recursive_loop > 0:
-                    y = torch.tensor(y_list[run][k+recursive_loop], device=device) / ynorm
-                elif time_step == 1:
-                    y = torch.tensor(y_list[run][k], device=device) / ynorm
-                else:
-                    y = torch.tensor(x_list[run][k + time_step,:,6:7], device=device).clone().detach()
-
-                if train_config.shared_embedding:
-                    run = 1
-                if batch == 0:
-                    data_id = torch.ones((y.shape[0],1), dtype=torch.int) * run
-                    x_batch = x[:, 6:7]
-                    y_batch = y
-                    k_batch = torch.ones((x.shape[0],1), dtype=torch.int, device = device) * k
                     if particle_batch_ratio < 1:
-                        ids_batch = ids
-                else:
-                    data_id = torch.cat((data_id, torch.ones((y.shape[0], 1), dtype=torch.int) * run), dim=0)
-                    x_batch = torch.cat((x_batch, x[:, 6:7]), dim=0)
-                    y_batch = torch.cat((y_batch, y), dim=0)
-                    k_batch = torch.cat((k_batch, torch.ones((x.shape[0],1), dtype=torch.int, device = device) * k), dim = 0)
-                    if particle_batch_ratio < 1:
-                        ids_batch = np.concatenate((ids_batch, ids + ids_index), axis=0)
+                         ids = np.random.permutation(x.shape[0])[:int(x.shape[0] * particle_batch_ratio)]
+                         ids = np.sort(ids)
+                         edges = edges_all.clone().detach()
+                         mask = torch.isin(edges[1, :], torch.tensor(ids, device=device))
+                         edges = edges[:, mask]
 
-                ids_index += x.shape[0]
 
-            batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
+                    if recursive_loop > 0:
+                        y = torch.tensor(y_list[run][k+recursive_loop], device=device) / ynorm
+                    elif time_step == 1:
+                        y = torch.tensor(y_list[run][k], device=device) / ynorm
+                    else:
+                        y = torch.tensor(x_list[run][k + time_step,:,6:7], device=device).clone().detach()
 
-            for batch in batch_loader:
-                pred = model(batch, data_id=data_id, k=k_batch)
+                    if not(torch.isnan(y).any()):
 
-            if recursive_loop > 0:
-                for loop in range(recursive_loop):
-                    ids_index = 0
-                    for batch in range(batch_size):
-                        x = dataset_batch[batch].x.clone().detach()
+                        dataset = data.Data(x=x, edge_index=edges)
+                        dataset_batch.append(dataset)
 
-                        u = x[:, 6:7]
-                        du = pred[ids_index:ids_index+x.shape[0]]
-                        x[:, 6:7] = u + du * delta_t
-                        x[:, 7:8] = du
-                        dataset_batch[batch].x = x
+                        if train_config.shared_embedding:
+                            run = 1
+                        if batch == 0:
+                            data_id = torch.ones((y.shape[0],1), dtype=torch.int) * run
+                            x_batch = x[:, 6:7]
+                            y_batch = y
+                            k_batch = torch.ones((x.shape[0],1), dtype=torch.int, device = device) * k
+                            if particle_batch_ratio < 1:
+                                ids_batch = ids
+                        else:
+                            data_id = torch.cat((data_id, torch.ones((y.shape[0], 1), dtype=torch.int) * run), dim=0)
+                            x_batch = torch.cat((x_batch, x[:, 6:7]), dim=0)
+                            y_batch = torch.cat((y_batch, y), dim=0)
+                            k_batch = torch.cat((k_batch, torch.ones((x.shape[0],1), dtype=torch.int, device = device) * k), dim = 0)
+                            if particle_batch_ratio < 1:
+                                ids_batch = np.concatenate((ids_batch, ids + ids_index), axis=0)
 
                         ids_index += x.shape[0]
 
-                    batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
-                    for batch in batch_loader:
-                        if ('PDE_N3' in model_config.signal_model_name):
-                            pred = model(batch, k=k_batch)
-                        else:
-                            pred = model(batch)
-            if time_step == 1:
-                if particle_batch_ratio < 1:
-                    loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
+            if not(dataset_batch==[]):
+                batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
+
+                for batch in batch_loader:
+                    pred = model(batch, data_id=data_id, k=k_batch)
+
+                if recursive_loop > 0:
+                    for loop in range(recursive_loop):
+                        ids_index = 0
+                        for batch in range(batch_size):
+                            x = dataset_batch[batch].x.clone().detach()
+
+                            u = x[:, 6:7]
+                            du = pred[ids_index:ids_index+x.shape[0]]
+                            x[:, 6:7] = u + du * delta_t
+                            x[:, 7:8] = du
+                            dataset_batch[batch].x = x
+
+                            ids_index += x.shape[0]
+
+                        batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
+                        for batch in batch_loader:
+                            if ('PDE_N3' in model_config.signal_model_name):
+                                pred = model(batch, k=k_batch)
+                            else:
+                                pred = model(batch)
+                if time_step == 1:
+                    if particle_batch_ratio < 1:
+                        loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
+                    else:
+                        loss = loss + (pred - y_batch).norm(2)
                 else:
-                    loss = loss + (pred - y_batch).norm(2)
-            else:
-                if particle_batch_ratio < 1:
-                    loss = loss + (x_batch + pred[ids_batch] * delta_t * time_step - y_batch[ids_batch]).norm(2) / time_step
-                else:
-                    loss = loss + (x_batch + pred * delta_t * time_step - y_batch).norm(2) / time_step
+                    if particle_batch_ratio < 1:
+                        loss = loss + (x_batch + pred[ids_batch] * delta_t * time_step - y_batch[ids_batch]).norm(2) / time_step
+                    else:
+                        loss = loss + (x_batch + pred * delta_t * time_step - y_batch).norm(2) / time_step
 
-            if ('PDE_N3' in model_config.signal_model_name):
-                loss = loss + train_config.coeff_model_a * (model.a[ind_a+1] - model.a[ind_a]).norm(2)
+                if ('PDE_N3' in model_config.signal_model_name):
+                    loss = loss + train_config.coeff_model_a * (model.a[ind_a+1] - model.a[ind_a]).norm(2)
 
-            loss.backward()
-            optimizer.step()
-            if has_Siren:
-                optimizer_f.step()
-            total_loss += loss.item()
+                loss.backward()
+                optimizer.step()
+                if has_Siren:
+                    optimizer_f.step()
+                total_loss += loss.item()
 
-            with torch.no_grad():
-                model.W.copy_(model.W * model.mask)
-
-            visualize_embedding = True
-            if visualize_embedding & ((N % plot_frequency == 0) | (N == 0)):
                 with torch.no_grad():
-                    plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_particles,
-                                         n_particle_types, type_list, cmap, device)
+                    model.W.copy_(model.W * model.mask)
 
-                    if has_field:
-                        plot_training_signal_field(x, n_nodes, n_nodes_per_axis, recursive_loop, k, time_step, x_list, run, model, field_type, model_f,
-                                                   edges, y_list, ynorm, delta_t, n_frames, log_dir, epoch, N,
-                                                   recursive_parameters, modulation, device)
-                        if 'learnable_short_term_plasticity' not in field_type:
-                            torch.save({'model_state_dict': model_f.state_dict(),'optimizer_state_dict': optimizer_f.state_dict()},os.path.join(log_dir,
-                                        'models',f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+                visualize_embedding = True
+                if visualize_embedding & ((N % plot_frequency == 0) | (N == 0)):
+                    with torch.no_grad():
+                        plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_particles,
+                                             n_particle_types, type_list, cmap, device)
 
-                    torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
-                               os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+                        if has_field:
+                            plot_training_signal_field(x, n_nodes, n_nodes_per_axis, recursive_loop, k, time_step, x_list, run, model, field_type, model_f,
+                                                       edges, y_list, ynorm, delta_t, n_frames, log_dir, epoch, N,
+                                                       recursive_parameters, modulation, device)
+                            if 'learnable_short_term_plasticity' not in field_type:
+                                torch.save({'model_state_dict': model_f.state_dict(),'optimizer_state_dict': optimizer_f.state_dict()},os.path.join(log_dir,
+                                            'models',f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+
+                        torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
+                                   os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
             # check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 50, memory_percentage_threshold=0.6)
 
