@@ -2504,12 +2504,6 @@ def data_train_synaptic2(config, erase, best_model, device):
             ids_batch = []
             ids_index = 0
 
-            # if particle_batch_ratio < 1:
-            #    ids = np.random.permutation(n_particles)[:int(n_particles * particle_batch_ratio)]
-            #    ids = np.sort(ids)
-            # else:
-            #    ids = np.arange(n_particles).astype(int)
-
             loss = 0
 
             for batch in range(batch_size):
@@ -2605,6 +2599,8 @@ def data_train_synaptic2(config, erase, best_model, device):
                 else:
                     y = torch.tensor(x_list[run][k + time_step,:,6:7], device=device).clone().detach()
 
+                if train_config.shared_embedding:
+                    run = 1
                 if batch == 0:
                     data_id = torch.ones((y.shape[0],1), dtype=torch.int) * run
                     x_batch = x[:, 6:7]
@@ -3735,7 +3731,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             geomloss_list.append(geomloss.item())
         rmserr_list.append(rmserr.item())
 
-        data_id = torch.ones((n_particles, 1), dtype=torch.int) * run
+        if train_config.shared_embedding:
+            data_id = torch.ones((n_particles, 1), dtype=torch.int)
+        else:
+            data_id = torch.ones((n_particles, 1), dtype=torch.int) * run
 
         # update calculations
         if model_config.mesh_model_name == 'DiffMesh':

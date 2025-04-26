@@ -32,7 +32,7 @@ from torch_geometric.utils.convert import to_networkx
 from ParticleGraph.generators.cell_utils import *
 from ParticleGraph.generators import PDE_V
 from cellpose import models
-
+import scipy.io as sio
 
 
 def extract_object_properties(segmentation_image, fluorescence_image=[]):
@@ -645,7 +645,7 @@ def load_3D_cell_data(config, device, visualize):
 
 
 def load_Goole_data(config, device=None, visualize=None, step=None, cmap=None):
-    # create output folder, empty it if bErase=True, copy files into it
+
     data_folder_name = config.data_folder_name
     dataset_name = config.dataset
 
@@ -796,6 +796,161 @@ def load_Goole_data(config, device=None, visualize=None, step=None, cmap=None):
     #     # target_position = torch.from_numpy(target_position)
     #     position_seq = torch.from_numpy(position_seq)
 
+
+def process_trace(trace):
+    '''
+    Returns activity traces with normalization based on mean and standard devation.
+    '''
+    worm_trace = (trace - np.nanmean(trace))/np.nanstd(trace)
+    return worm_trace
+
+def process_activity(activity_worms):
+    '''
+    Returns a list of matrices corresponding to the data missing in the activity columns of the activity_worms dataframes and
+    a matrix of the activity with NaNs replaced by 0's
+    '''
+    missing_data, activity_data = [],[]
+    for id in range(len(activity_worms)):
+        worm = (activity_worms[id] - activity_worms[id].mean())/activity_worms[id].std()
+        act_matrix = worm
+        missing_act = np.zeros(act_matrix.shape)
+        missing_act[np.isnan(act_matrix)] = 1
+        act_matrix[np.isnan(act_matrix)] = 0
+        missing_data.append(missing_act)
+        activity_data.append(act_matrix)
+    return activity_data, missing_data
+
+def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
+
+    data_folder_name = config.data_folder_name
+    dataset_name = config.dataset
+
+    simulation_config = config.simulation
+    train_config = config.training
+    n_frames = simulation_config.n_frames
+    dimension = 2
+
+    n_particle_types = simulation_config.n_particle_types
+    n_runs = train_config.n_runs
+    n_particles = simulation_config.n_particles
+
+    delta_t = simulation_config.delta_t
+    bc_pos, bc_dpos = choose_boundary_values('no')
+    cmap = CustomColorMap(config=config)
+
+    folder = f'./graphs_data/{dataset_name}/'
+    os.makedirs(folder, exist_ok=True)
+    os.makedirs(f'./graphs_data/{dataset_name}/Fig/', exist_ok=True)
+
+    # Loading Data from class Worm_Data_Loader(Dataset) in https://github.com/TuragaLab/wormvae
+
+    odor_channels = 3
+    step = 0.25
+    n_runs = 21
+
+    # mat file attributes
+    n_particles = 189
+    T = 960
+    N_length = 109
+    T_start = 160
+    activity_datasets = np.zeros((n_runs, n_particles, T))
+    odor_datasets = np.zeros((n_runs, odor_channels, T))
+
+    trace_variable = sio.loadmat(data_folder_name)
+    trace_arr = trace_variable['traces']
+    print(f"traces shape: {trace_arr.shape}")
+    is_L = trace_variable['is_L']
+    neurons_name = trace_variable['neurons']
+    stim_names = trace_variable["stim_names"]
+    stimulate_seconds = trace_variable['stim_times']
+    stims = trace_variable['stims']
+
+    for idata in range(n_runs):
+        ineuron = 0
+        for ifile in range(N_length):
+            if trace_arr[ifile][0].shape[1] == 42:
+                data = trace_arr[ifile][0][0][idata]
+                if data.shape[0] < 1:
+                    activity_datasets[idata][ineuron][:] = np.nan
+                else:
+                    activity_datasets[idata][ineuron][0:data[0].shape[0]] = data[0]
+                ineuron += 1
+                data = trace_arr[ifile][0][0][idata + 21]
+                if data.shape[0] < 1:
+                    activity_datasets[idata][ineuron][:] = np.nan
+                else:
+                    activity_datasets[idata][ineuron][0:data[0].shape[0]] = data[0]
+                ineuron += 1
+            else:
+                data = trace_arr[ifile][0][0][idata]
+                if data.shape[0] < 1:
+                    activity_datasets[idata][ineuron][:] = np.nan
+                else:
+                    activity_datasets[idata][ineuron][0:data[0].shape[0]] = data[0]
+                ineuron += 1
+    # add baseline 2
+    activity_worm = activity_datasets[:, :, T_start:] + 2
+
+    activity_with_zeros, missing_matrix = process_activity(activity_worm)
+    activity_worm = process_trace(activity_worm)
+
+    neuron_names = []
+    for ifile in range(N_length):
+        if is_L[ifile][0][0].shape[0] == 42:
+            neuron_names.append(neurons_name[ifile][0][0] + 'L')
+            neuron_names.append(neurons_name[ifile][0][0] + 'R')
+        else:
+            neuron_names.append(neurons_name[ifile][0][0])
+
+    time = np.arange(start=0, stop=T * step, step=step)
+    odor_list = ['butanone', 'pentanedione', 'NaCL']
+    for idata in range(n_runs):
+        for it_stimu in range(stimulate_seconds.shape[0]):
+            tim1_ind = time > stimulate_seconds[it_stimu][0]
+            tim2_ind = time < stimulate_seconds[it_stimu][1]
+            odor_on = np.multiply(tim1_ind.astype(int), tim2_ind.astype(int))
+            stim_odor = stims[idata][it_stimu] - 1
+            odor_datasets[idata][stim_odor][:] = odor_on
+
+    odor_worms = odor_datasets[:, :, T_start:]
+
+    for idata in trange(n_runs):
+        fig = plt.figure(figsize=(12, 12))
+        ax = fig.add_subplot(221)
+        plt.imshow(activity_worm[idata][:, 0:1000], aspect='auto', vmin =-5, vmax=5, cmap='viridis')
+        plt.colorbar()
+        plt.title(f'dataset {idata}', fontsize=18)
+        plt.xlabel('time', fontsize=18)
+        plt.ylabel('neurons', fontsize=18)
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
+        ax = fig.add_subplot(222)
+        test_im = activity_worm[idata][:, 0:1000] * 0
+        pos = np.argwhere(activity_worm[idata][:, 0:1000] == 0)
+        test_im[pos[:, 0], pos[:, 1]] = 1
+        pos = np.argwhere(np.isnan(activity_worm[idata][:, 0:1000]))
+        test_im[pos[:, 0], pos[:, 1]] = 2
+        pos = np.argwhere(np.isinf(activity_worm[idata][:, 0:1000]))
+        test_im[pos[:, 0], pos[:, 1]] = 3
+        plt.imshow(test_im[:,500:], aspect='auto',vmin =0, vmax=3, cmap='viridis')
+        plt.xticks([])
+        plt.yticks([])
+        ax = fig.add_subplot(223)
+        plt.imshow(odor_worms[idata][:, 0:1000], aspect='auto', vmin =0, vmax=1, cmap='viridis', interpolation='nearest')
+        plt.xlabel('time', fontsize=18)
+        plt.ylabel('odor', fontsize=18)
+        plt.title(f'odor stimuli', fontsize=18)
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
+        plt.tight_layout()
+        plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{idata}.tif", dpi=80)  # 170.7)
+        plt.close()
+
+    print (odor_worms.shape)
+
+
+
+    
 
 
 def load_shrofflab_celegans(

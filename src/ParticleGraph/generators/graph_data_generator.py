@@ -46,15 +46,11 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
         # return
 
     if has_city:
-        data_generate_rat_city(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
-                                        alpha=0.2, ratio=ratio,
-                                        scenario=scenario, device=device, bSave=bSave)
+        data_generate_rat_city(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step, alpha=0.2, ratio=ratio, scenario=scenario, device=device, bSave=bSave)
     elif config.data_folder_name != 'none':
         generate_from_data(config=config, device=device, visualize=visualize)
     elif has_particle_field:
-        data_generate_particle_field(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
-                                     alpha=0.2, ratio=ratio,
-                                     scenario='none', device=device, bSave=bSave)
+        data_generate_particle_field(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step, alpha=0.2, ratio=ratio, scenario='none', device=device, bSave=bSave)
     elif has_mesh:
         data_generate_mesh(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
                                         alpha=0.2, ratio=ratio,
@@ -410,7 +406,6 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
     # for handler in logger.handlers[:]:
     #     handler.close()
     #     logger.removeHandler(handler)
-
 
 
 def data_generate_particle_field(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
@@ -909,7 +904,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             torch.save(edge_f_p_list, f'graphs_data/{dataset_name}/edge_f_p_list{run}.pt')
 
             # torch.save(model_p_p.p, f'graphs_data/{dataset_name}/model_p.pt')
-
 
 
 def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1, scenario='none', device=None, bSave=True):
@@ -1518,7 +1512,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         logger.removeHandler(handler)
 
 
-
 def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1, scenario='none', device=None, bSave=True):
     if 'black' in style:
         plt.style.use('dark_background')
@@ -1963,7 +1956,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         # print(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
 
 
-
 def data_generate_rat_city(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2,
                            ratio=1, scenario='none', device=None, bSave=True):
 
@@ -2187,7 +2179,6 @@ def data_generate_rat_city(config, visualize=True, run_vizualized=0, style='colo
     np.savez(f'graphs_data/{dataset_name}/edge_p_p_list_{run}', *edge_p_p_list)
 
 
-
 def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2,
                             ratio=1, scenario='none', device=None, bSave=True):
     simulation_config = config.simulation
@@ -2390,7 +2381,6 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
     #     logger.removeHandler(handler)
 
 
-
 def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
     simulation_config = config.simulation
@@ -2582,7 +2572,6 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
         if bSave:
             torch.save(x_mesh_list, f'graphs_data/{dataset_name}/x_mesh_list_{run}.pt')
             torch.save(y_mesh_list, f'graphs_data/{dataset_name}/y_mesh_list_{run}.pt')
-
 
 
 def try_func(max_radius,device):
