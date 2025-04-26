@@ -2300,7 +2300,6 @@ def data_train_synaptic2(config, erase, best_model, device):
     print(f'xnorm: {to_numpy(xnorm)}')
     logger.info(f'xnorm: {to_numpy(xnorm)}')
 
-
     n_particles = x.shape[0]
     print(f'N particles: {n_particles}')
     logger.info(f'N particles: {n_particles}')
@@ -2607,12 +2606,14 @@ def data_train_synaptic2(config, erase, best_model, device):
                     y = torch.tensor(x_list[run][k + time_step,:,6:7], device=device).clone().detach()
 
                 if batch == 0:
+                    data_id = torch.ones((y.shape[0],1), dtype=torch.int) * run
                     x_batch = x[:, 6:7]
                     y_batch = y
                     k_batch = torch.ones((x.shape[0],1), dtype=torch.int, device = device) * k
                     if particle_batch_ratio < 1:
                         ids_batch = ids
                 else:
+                    data_id = torch.cat((data_id, torch.ones((y.shape[0], 1), dtype=torch.int) * run), dim=0)
                     x_batch = torch.cat((x_batch, x[:, 6:7]), dim=0)
                     y_batch = torch.cat((y_batch, y), dim=0)
                     k_batch = torch.cat((k_batch, torch.ones((x.shape[0],1), dtype=torch.int, device = device) * k), dim = 0)
@@ -2624,10 +2625,7 @@ def data_train_synaptic2(config, erase, best_model, device):
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
 
             for batch in batch_loader:
-                if ('PDE_N3' in model_config.signal_model_name):
-                    pred = model(batch, k=k_batch)
-                else:
-                    pred = model(batch)
+                pred = model(batch, data_id=data_id, k=k_batch)
 
             if recursive_loop > 0:
                 for loop in range(recursive_loop):
