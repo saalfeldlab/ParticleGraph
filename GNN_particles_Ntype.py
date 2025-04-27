@@ -55,18 +55,18 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'train'
+        task = 'test'
         best_model = ''
 
-        # config_list = ['multimaterial_12_1','multimaterial_12_2','multimaterial_12_3','multimaterial_12_4','multimaterial_12_5',
-        #                'multimaterial_13_1', 'multimaterial_13_2', 'multimaterial_13_3',
-        #                 'multimaterial_14_1', 'multimaterial_14_2', 'falling_water_ramp_x6_13']
+        config_list = ['multimaterial_12_1','multimaterial_12_2','multimaterial_12_3','multimaterial_12_4','multimaterial_12_5',
+                       'multimaterial_13_1', 'multimaterial_13_2', 'multimaterial_13_3',
+                        'multimaterial_14_1', 'multimaterial_14_2', 'falling_water_ramp_x6_13']
         # config_list = ['fluids_m17_7']
         # config_list = ['signal_N5_v11_bis']
         # config_list = ['falling_water_ramp_x6_13']
         # config_list = ['cell_MDCK_12']
         # config_list = ['signal_N2_a37']
-        config_list = ['signal_N4_CElegans_a1']
+        # config_list = ['signal_N4_CElegans_a1']
 
 
     for config_file_ in config_list:
@@ -90,7 +90,7 @@ if __name__ == '__main__':
             #     data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best',
             #               run=run_, test_mode='fixed_bounce_all', sample_embedding=False, step=4,
             #               device=device)  # particle_of_interest=100,
-            data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best', run=1,
+            data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best', run=17,
                       test_mode='fixed_bounce_all', sample_embedding=False, step=4,
                       device=device)  # particle_of_interest=100,
 

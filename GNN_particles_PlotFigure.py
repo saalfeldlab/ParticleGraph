@@ -4678,7 +4678,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
     print(f'xnorm: {to_numpy(xnorm)}, vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
 
     print('update variables ...')
-    x = x_list[0][n_frames - 1]
+    x = x_list[0][n_frames - 5]
     n_particles = x.shape[0]
     print(f'N neurons: {n_particles}')
     logger.info(f'N neurons: {n_particles}')
@@ -5375,6 +5375,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
         true_model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, device=device)
 
+
         for epoch in epoch_list:
 
             net = f'{log_dir}/models/best_model_with_{n_runs-1}_graphs_{epoch}.pt'
@@ -5383,6 +5384,27 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             model.load_state_dict(state_dict['model_state_dict'])
             model.edges = edge_index
             print(f'net: {net}')
+
+            i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+            A = model.W.clone().detach()
+            A[i, i] = 0
+
+            plt.figure(figsize=(10, 10))
+            ax = sns.heatmap(to_numpy(A), center=0, square=True, cmap='bwr',
+                             cbar_kws={'fraction': 0.046}, vmin=-2, vmax=2)
+            cbar = ax.collections[0].colorbar
+            cbar.ax.tick_params(labelsize=32)
+            plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+            plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+            plt.xticks(rotation=0)
+            # plt.subplot(2, 2, 1)
+            # ax = sns.heatmap(to_numpy(A[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
+            # plt.xticks(rotation=0)
+            # plt.xticks([])
+            # plt.yticks([])
+            plt.tight_layout()
+            plt.savefig(f'./{log_dir}/results/first learned connectivity.png', dpi=300)
+            plt.close()
 
             if has_field:
                 net = f'{log_dir}/models/best_model_f_with_{n_runs - 1}_graphs_{epoch}.pt'
@@ -5702,9 +5724,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.savefig(f"./{log_dir}/results/learned_types_{epoch}.tif", dpi=170.7)
             plt.close()
 
-            i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
-            A = model.W.clone().detach() / correction
-            A[i, i] = 0
+
 
             fig, ax = fig_init()
             gt_weight = to_numpy(adjacency)
@@ -8304,7 +8324,7 @@ if __name__ == '__main__':
     # config_list = ['wave_slit_bis']
     # config_list = [f"multimaterial_9_{i}" for i in range(25, 33)]
     # config_list = [f"multimaterial_10_{i}" for i in range(1, 5)]
-    config_list = ['multimaterial_12_1', 'multimaterial_12_2', 'multimaterial_12_3', 'multimaterial_12_4']
+    config_list = ['signal_N4_CElegans_a3']
 
     # config_list = ['multimaterial_13_1', 'multimaterial_13_2']
     # config_list = ['falling_water_ramp_x6_13']
