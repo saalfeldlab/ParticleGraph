@@ -133,22 +133,44 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
     plt.savefig(f"./{log_dir}/tmp_training/embedding/{epoch}_{N}.tif", dpi=87)
     plt.close()
 
-    fig, ax = fig_init()
     gt_weight = to_numpy(adjacency)
-    i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
-    A = model.W.clone().detach()
-    A[i,i] = 0
-    pred_weight = to_numpy(A)
-    plt.scatter(gt_weight, pred_weight / 10, s=0.1, c='k', alpha=0.1)
-    plt.xlabel(r'true $W_{ij}$', fontsize=68)
-    plt.ylabel(r'learned $W_{ij}$', fontsize=68)
-    if n_particles == 8000:
-        plt.xlim([-0.05, 0.05])
+    pred_weight = to_numpy(model.W.clone().detach())
+    if n_particles<1000:
+        fig = plt.figure(figsize=(8, 8))
+        plt.scatter(gt_weight, pred_weight, s=10, c='k',alpha=0.2)
+        plt.xticks([])
+        plt.yticks([])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/matrix/comparison_{epoch}_{N}.tif", dpi=87)
+        plt.close()
+
+        fig = plt.figure(figsize=(16, 8))
+        ax = fig.add_subplot(121)
+        ax = sns.heatmap(pred_weight, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
+        plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+        plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+        ax = fig.add_subplot(122)
+        ax = sns.heatmap(gt_weight, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
+        plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+        plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/matrix/matrix_{epoch}_{N}.tif", dpi=87)
+        plt.close()
     else:
-        plt.xlim([-0.2, 0.2])
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/matrix/comparison_{epoch}_{N}.tif", dpi=87)
-    plt.close()
+        fig = plt.figure(figsize=(8, 8))
+        fig, ax = fig_init()
+        plt.scatter(gt_weight, pred_weight / 10, s=0.1, c='k', alpha=0.1)
+        plt.xlabel(r'true $W_{ij}$', fontsize=68)
+        plt.ylabel(r'learned $W_{ij}$', fontsize=68)
+        if n_particles == 8000:
+            plt.xlim([-0.05, 0.05])
+        else:
+            plt.xlim([-0.2, 0.2])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/matrix/comparison_{epoch}_{N}.tif", dpi=87)
+        plt.close()
+
+
 
     all_func_values = []
     fig = plt.figure(figsize=(8, 8))

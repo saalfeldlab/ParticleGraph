@@ -2489,13 +2489,6 @@ def data_train_synaptic2(config, erase, best_model, device):
         for N in trange(Niter):
 
             run = np.random.randint(n_runs-1)
-
-            if (train_config.recursive_loop > 1) & (train_config.recursive_sequence=='alternate'):
-                if N%4 == 0:
-                    recursive_loop = train_config.recursive_loop
-                else:
-                    recursive_loop = 1
-
             if has_Siren:
                 optimizer_f.zero_grad()
             optimizer.zero_grad()
@@ -2511,7 +2504,6 @@ def data_train_synaptic2(config, erase, best_model, device):
                 k = np.random.randint(n_frames - 5 - batch_size - time_step)
 
                 x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device)
-
                 if not(torch.isnan(x).any()):
                     if has_field:
                         if 'visual' in field_type:
@@ -2591,13 +2583,12 @@ def data_train_synaptic2(config, erase, best_model, device):
                          mask = torch.isin(edges[1, :], torch.tensor(ids, device=device))
                          edges = edges[:, mask]
 
-
                     if recursive_loop > 1:
                         y = torch.tensor(y_list[run][k+recursive_loop], device=device) / ynorm
-                    elif time_step == 1:
-                        y = torch.tensor(y_list[run][k], device=device) / ynorm
+                    elif time_step > 1:
+                        y = torch.tensor(x_list[run][k + time_step, :, 6:7], device=device).clone().detach()
                     else:
-                        y = torch.tensor(x_list[run][k + time_step,:,6:7], device=device).clone().detach()
+                        y = torch.tensor(y_list[run][k], device=device) / ynorm
 
                     if not(torch.isnan(y).any()):
 
@@ -2629,18 +2620,17 @@ def data_train_synaptic2(config, erase, best_model, device):
                 for batch in batch_loader:
                     pred = model(batch, data_id=data_id, k=k_batch)
 
-                if recursive_loop > 0:
+                if recursive_loop > 1:
                     for loop in range(recursive_loop):
+
                         ids_index = 0
                         for batch in range(batch_size):
                             x = dataset_batch[batch].x.clone().detach()
-
                             u = x[:, 6:7]
                             du = pred[ids_index:ids_index+x.shape[0]]
                             x[:, 6:7] = u + du * delta_t
                             x[:, 7:8] = du
                             dataset_batch[batch].x = x
-
                             ids_index += x.shape[0]
 
                         batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
@@ -2649,16 +2639,17 @@ def data_train_synaptic2(config, erase, best_model, device):
                                 pred = model(batch, k=k_batch)
                             else:
                                 pred = model(batch)
-                if time_step == 1:
-                    if particle_batch_ratio < 1:
-                        loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
-                    else:
-                        loss = loss + (pred - y_batch).norm(2)
-                else:
+
+                if time_step > 1:
                     if particle_batch_ratio < 1:
                         loss = loss + (x_batch + pred[ids_batch] * delta_t * time_step - y_batch[ids_batch]).norm(2) / time_step
                     else:
                         loss = loss + (x_batch + pred * delta_t * time_step - y_batch).norm(2) / time_step
+                else:
+                    if particle_batch_ratio < 1:
+                        loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
+                    else:
+                        loss = loss + (pred - y_batch).norm(2)
 
                 if ('PDE_N3' in model_config.signal_model_name):
                     loss = loss + train_config.coeff_model_a * (model.a[ind_a+1] - model.a[ind_a]).norm(2)
