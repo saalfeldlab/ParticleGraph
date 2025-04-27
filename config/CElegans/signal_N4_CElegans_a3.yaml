@@ -54,6 +54,7 @@ training:
     small_init_batch_size: False
     n_runs: 21
 
+    time_step: 4
     shared_embedding: True
 
     sparsity: 'none'

@@ -2592,7 +2592,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                          edges = edges[:, mask]
 
 
-                    if recursive_loop > 0:
+                    if recursive_loop > 1:
                         y = torch.tensor(y_list[run][k+recursive_loop], device=device) / ynorm
                     elif time_step == 1:
                         y = torch.tensor(y_list[run][k], device=device) / ynorm
