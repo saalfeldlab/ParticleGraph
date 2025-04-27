@@ -58,9 +58,7 @@ if __name__ == '__main__':
         task = 'test'
         best_model = ''
         # config_list = ['fluids_m17_1']
-        config_list = ['multimaterial_9_9','multimaterial_2', 'multimaterial_8_1', 'multimaterial_8_8', 'multimaterial_8_11', 'multimaterial_8_12',
-                    'multimaterial_9_7', 'multimaterial_9_8','multimaterial_9_10', 'multimaterial_9_11', 'multimaterial_9_12', 'multimaterial_9_13', 'multimaterial_9_14',
-                    'multimaterial_10_1','multimaterial_10_2', 'multimaterial_10_3']
+        config_list = ['multimaterial_9_12']
         # config_list = ['signal_N2_a38_1']
         # config_list = ['gravity_16']
         # config_list = ['cell_MDCK_12']
@@ -81,7 +79,7 @@ if __name__ == '__main__':
         print(f'folder  {config.dataset}')
 
         if 'generate' in task:
-            data_generate(config, device=device, visualize=True, run_vizualized=0, style='black color', alpha=1, erase=False, bSave=True, step=100)  #config.simulation.n_frames // 100)
+            data_generate(config, device=device, visualize=True, run_vizualized=0, style='black field', alpha=1, erase=False, bSave=True, step=100)  #config.simulation.n_frames // 100)
         if 'train' in task:
             data_train(config=config, erase=False, best_model=best_model, device=device)
         if 'test' in task:
