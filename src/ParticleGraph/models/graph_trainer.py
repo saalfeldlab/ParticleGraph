@@ -2263,6 +2263,8 @@ def data_train_synaptic2(config, erase, best_model, device):
     coeff_lin_modulation = train_config.coeff_lin_modulation
     coeff_model_b = train_config.coeff_model_b
     time_step = train_config.time_step
+    n_ghosts = int(train_config.n_ghosts)
+    has_ghost = n_ghosts > 0
 
     if field_type != '':
         n_nodes = simulation_config.n_nodes
@@ -2356,7 +2358,17 @@ def data_train_synaptic2(config, erase, best_model, device):
 
     print('create models ...')
     model, bc_pos, bc_dpos = choose_training_model(model_config=config, device=device, projections=projections)
-    if has_Siren:
+    if has_ghost:
+        model_missing_activity = nn.ModuleList([
+            Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
+                  hidden_features=model_config.hidden_dim_nnr,
+                  hidden_layers=model_config.n_layers_nnr, first_omega_0=omega, hidden_omega_0=omega,
+                  outermost_linear=model_config.outermost_linear_nnr)
+            for n in range(n_runs)
+        ])
+        model_missing_activity.to(device=device)
+        optimizer_f = torch.optim.Adam(lr=train_config.learning_rate_NNR, params=model_missing_activity.parameters())
+    elif has_Siren:
         if ('Siren_short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
             model_f = Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
                             hidden_features=model_config.hidden_dim_nnr,
@@ -2488,8 +2500,8 @@ def data_train_synaptic2(config, erase, best_model, device):
 
         for N in trange(Niter):
 
-            run = np.random.randint(n_runs-1)
-            if has_Siren:
+
+            if has_Siren | has_ghost:
                 optimizer_f.zero_grad()
             optimizer.zero_grad()
 
@@ -2501,6 +2513,7 @@ def data_train_synaptic2(config, erase, best_model, device):
 
             for batch in range(batch_size):
 
+                run = np.random.randint(n_runs - 1)
                 k = np.random.randint(n_frames - 5 - batch_size - time_step)
 
                 x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device)
@@ -2530,28 +2543,35 @@ def data_train_synaptic2(config, erase, best_model, device):
                             x[:, 8:9] = model_f(time=k / n_frames) ** 2
                     else:
                         x[:, 8:9] = torch.ones_like(x[:, 0:1])
+                    if has_ghost:
+                        t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
+                        t[:, 0, :] = torch.tensor(k / n_frames, dtype=torch.float32, device=device)
+                        missing_activity = model_missing_activity[run](t).squeeze()
+                        x_ghost = torch.zeros((n_ghosts, x.shape[1]), device=device)
+                        x_ghost[:, 6:7] = missing_activity[:, None]
+                        x = torch.cat((x, x_ghost), 0)
 
                     # regularisations
-                    in_features = get_in_features_update(None, n_particles, model.a, model.update_type, device)
+                    in_features = get_in_features_update(None, n_particles, model.a[:n_particles], model.update_type, device)
 
                     func_phi = model.lin_phi(in_features.float())
 
                     # sparsity on Wij and phi(0)=0
-                    loss += model.W.norm(1) * coeff_L1 + func_phi.norm(2)
+                    loss += model.W[:n_particles,:n_particles].norm(1) * coeff_L1 + func_phi.norm(2)
 
                     # lin.edge monotonic positive
                     if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N7'):
-                        in_features_prev = torch.cat((x[:, 6:7] - xnorm/150, model.a), dim=1)
-                        in_features = torch.cat((x[:, 6:7], model.a), dim=1)
-                        in_features_next = torch.cat((x[:, 6:7] + xnorm/150, model.a), dim=1)
+                        in_features_prev = torch.cat((x[:n_particles, 6:7] - xnorm/150, model.a[:n_particles]), dim=1)
+                        in_features = torch.cat((x[:n_particles, 6:7], model.a), dim=1)
+                        in_features_next = torch.cat((x[:n_particles, 6:7] + xnorm/150, model.a[:n_particles]), dim=1)
                     elif model_config.signal_model_name == 'PDE_N5':
-                        in_features_prev = torch.cat((x[:, 6:7] - xnorm / 150, model.a, model.a), dim=1)
-                        in_features = torch.cat((x[:, 6:7], model.a, model.a), dim=1)
-                        in_features_next = torch.cat((x[:, 6:7] + xnorm/150, model.a, model.a), dim=1)
+                        in_features_prev = torch.cat((x[:n_particles, 6:7] - xnorm / 150, model.a[:n_particles], model.a[:n_particles]), dim=1)
+                        in_features = torch.cat((x[:n_particles, 6:7], model.a, model.a), dim=1)
+                        in_features_next = torch.cat((x[:n_particles, 6:7] + xnorm/150, model.a[:n_particles], model.a[:n_particles]), dim=1)
                     else:
-                        in_features = x[:, 6:7]
-                        in_features_next = x[:, 6:7] + xnorm/150
-                        in_features_prev = x[:, 6:7] - xnorm / 150
+                        in_features = x[:n_particles, 6:7]
+                        in_features_next = x[:n_particles, 6:7] + xnorm/150
+                        in_features_prev = x[:n_particles, 6:7] - xnorm / 150
 
                     if coeff_diff > 0:
                         if model_config.lin_edge_positive:
@@ -2565,16 +2585,16 @@ def data_train_synaptic2(config, erase, best_model, device):
                         loss = loss + torch.relu(msg0 - msg1).norm(2) * coeff_diff
 
                     if (model.update_type == 'generic') & (coeff_diff_update>0):
-                        in_feature_update = torch.cat((torch.zeros((n_particles,1), device=device), model.a, msg0, torch.ones((n_particles,1), device=device)), dim=1)
-                        in_feature_update_next = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg1, torch.ones((n_particles, 1), device=device)), dim=1)
+                        in_feature_update = torch.cat((torch.zeros((n_particles,1), device=device), model.a[:n_particles], msg0, torch.ones((n_particles,1), device=device)), dim=1)
+                        in_feature_update_next = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[:n_particles], msg1, torch.ones((n_particles, 1), device=device)), dim=1)
                         if 'positive' in train_config.diff_update_regul:
                             loss = loss + torch.relu(model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next)).norm(2) * coeff_diff_update
                         if 'TV' in train_config.diff_update_regul:
-                            in_feature_update_next_bis = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg1, torch.ones((n_particles, 1), device=device)*1.1), dim=1)
+                            in_feature_update_next_bis = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[:n_particles], msg1, torch.ones((n_particles, 1), device=device)*1.1), dim=1)
                             loss = loss + (model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next_bis)).norm(2) * coeff_diff_update
                         if 'second_derivative' in train_config.diff_update_regul:
-                            in_feature_update_prev = torch.cat((torch.zeros((n_particles, 1), device=device), model.a, msg_1, torch.ones((n_particles, 1), device=device)), dim=1)
-                            loss = loss + (model.lin_phi(in_feature_update_prev) + model.lin_phi(in_feature_update_next) - 2* model.lin_phi(in_feature_update)).norm(2) * coeff_diff_update
+                            in_feature_update_prev = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[:n_particles], msg_1, torch.ones((n_particles, 1), device=device)), dim=1)
+                            loss = loss + (model.lin_phi(in_feature_update_prev) + model.lin_phi(in_feature_update_next) - 2 * model.lin_phi(in_feature_update)).norm(2) * coeff_diff_update
 
                     if particle_batch_ratio < 1:
                          ids = np.random.permutation(x.shape[0])[:int(x.shape[0] * particle_batch_ratio)]
@@ -2597,7 +2617,7 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                         if train_config.shared_embedding:
                             run = 1
-                        if batch == 0:
+                        if len(dataset_batch) == 1:
                             data_id = torch.ones((y.shape[0],1), dtype=torch.int) * run
                             x_batch = x[:, 6:7]
                             y_batch = y
@@ -2656,7 +2676,7 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                 loss.backward()
                 optimizer.step()
-                if has_Siren:
+                if has_Siren | has_ghost:
                     optimizer_f.step()
                 total_loss += loss.item()
 
