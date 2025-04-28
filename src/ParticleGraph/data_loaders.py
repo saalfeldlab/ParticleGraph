@@ -35,6 +35,8 @@ from cellpose import models, core, utils, io, models, metrics, denoise
 import scipy.io as sio
 import seaborn as sns
 from torch_geometric.utils import dense_to_sparse
+import pickle
+import json
 
 def extract_object_properties(segmentation_image, fluorescence_image=[]):
     # Label the objects in the segmentation image
@@ -813,6 +815,7 @@ def process_trace(trace):
     worm_trace = (trace - np.nanmean(trace))/np.nanstd(trace)
     return worm_trace
 
+
 def process_activity(activity_worms):
     '''
     Returns a list of matrices corresponding to the data missing in the activity columns of the activity_worms dataframes and
@@ -828,6 +831,7 @@ def process_activity(activity_worms):
         missing_data.append(missing_act)
         activity_data.append(act_matrix)
     return activity_data, missing_data
+
 
 def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
 
@@ -857,6 +861,12 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     eassym_weights = torch.load(connectome_folder_name + 'eassym_weights.pt')
     chem_sparsity = torch.load(connectome_folder_name + 'chem_sparsity.pt')
     esym_sparsity = torch.load(connectome_folder_name + 'esym_sparsity.pt')
+
+    with open(connectome_folder_name+"activity_neuron_list.pkl", "rb") as f:
+        activity_neuron_list = pickle.load(f)
+    with open(connectome_folder_name+"neuron_names.json", "r") as f:
+        neuron_names = json.load(f)
+
 
     # plot matrixes
     fig = plt.figure(figsize=(12, 12))
@@ -899,6 +909,11 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     subset_eassym_weights = eassym_weights[np.ix_(map_list, map_list)]
     subset_chem_sparsity = chem_sparsity[np.ix_(map_list, map_list)]
     subset_eassym_sparsity = esym_sparsity[np.ix_(map_list, map_list)]
+
+    # subset_chem_weights_test = subset_chem_weights * 0
+    # for k in trange(189):
+    #     subset_chem_weights_test[k, :] = chem_weights[map_list[k],map_list]
+
 
     adjacency = torch.tensor(subset_chem_weights, dtype=torch.float32, device=device)
     torch.save(adjacency, f'./graphs_data/{dataset_name}/adjacency.pt')
@@ -992,14 +1007,6 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
 
     activity_with_zeros, missing_matrix = process_activity(activity_worm)
     activity_worm = process_trace(activity_worm)
-
-    neuron_names = []
-    for ifile in range(N_length):
-        if is_L[ifile][0][0].shape[0] == 42:
-            neuron_names.append(neurons_name[ifile][0][0] + 'L')
-            neuron_names.append(neurons_name[ifile][0][0] + 'R')
-        else:
-            neuron_names.append(neurons_name[ifile][0][0])
 
     time = np.arange(start=0, stop=T * step, step=step)
     odor_list = ['butanone', 'pentanedione', 'NaCL']

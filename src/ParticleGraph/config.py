@@ -117,7 +117,7 @@ class GraphModelConfig(BaseModel):
     embedding_dim: int = 2
     embedding_init: str = ''
 
-    update_type: Literal['linear', 'mlp', 'pre_mlp', '2steps', 'none', 'no_pos', 'generic', 'embedding_MLP'] = 'none'
+    update_type: Literal['linear', 'mlp', 'pre_mlp', '2steps', 'none', 'no_pos', 'generic', 'excitation', 'generic_excitation', 'embedding_MLP'] = 'none'
 
     input_size_update: int = 3
     n_layers_update: int = 3
@@ -137,6 +137,12 @@ class GraphModelConfig(BaseModel):
     n_layers_modulation: int = 3
     hidden_dim_modulation: int = 64
     output_size_modulation: int = 1
+
+    input_size_excitation: int = 3
+    n_layers_excitation: int = 5
+    hidden_dim_excitation: int = 128
+
+    excitation_dim: int = 1
 
 
 class PlottingConfig(BaseModel):

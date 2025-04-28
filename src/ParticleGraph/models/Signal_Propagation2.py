@@ -60,6 +60,13 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         self.bc_dpos = bc_dpos
         self.adjacency_matrix = simulation_config.adjacency_matrix
         self.n_ghosts = int(config.training.n_ghosts)
+        self.excitation_dim = model_config.excitation_dim
+
+        self.n_layers_excitation = model_config.n_layers_excitation
+        self.hidden_dim_excitation = model_config.hidden_dim_excitation
+        self.input_size_excitation = model_config.input_size_excitation
+
+
 
 
         if self.model == 'PDE_N3':
@@ -72,6 +79,9 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
 
         self.lin_phi = MLP(input_size=self.input_size_update, output_size=self.output_size, nlayers=self.n_layers_update,
                             hidden_size=self.hidden_dim_update, device=self.device)
+
+        if 'excitation' in self.update_type:
+            self.lin_exc = MLP(input_size=self.input_size_excitation, output_size= 1, nlayers=self.n_layers_excitation, hidden_size=self.hidden_dim_excitation, device=self.device)
 
         if self.model == 'PDE_N3':
             self.a = nn.Parameter(torch.ones((int(self.n_particles*100 + 1000), self.embedding_dim), device=self.device, requires_grad=True,dtype=torch.float32))
@@ -115,14 +125,25 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
 
         msg = self.propagate(edge_index, u=u, embedding=embedding)
 
-        if self.update_type == 'generic':        # MLP1(u, embedding, \sum MLP0(u, embedding), field )
+        if 'generic' in self.update_type:        # MLP1(u, embedding, \sum MLP0(u, embedding), field )
             field = x[:, 8:9]
-            in_features = torch.cat([u, embedding, msg, field], dim=1)
+            if 'excitation' in self.update_type:
+                in_features = torch.cat([embedding, x[:, 10:10 + self.excitation_dim]], dim=1)
+                excitation = self.lin_exc(in_features)
+                in_features = torch.cat([u, embedding, msg, field, excitation], dim=1)
+            else:
+                in_features = torch.cat([u, embedding, msg, field], dim=1)
             pred = self.lin_phi(in_features)
         else:
             field = x[:, 8:9]
-            in_features = torch.cat([u, embedding], dim=1)
-            pred = self.lin_phi(in_features) + msg * field  # MLP1(u, embedding) + field * \sum MLP0(u, embedding)
+            if 'excitation' in self.update_type:
+                in_features = torch.cat([embedding, x[:, 10:10 + self.excitation_dim]], dim=1)
+                excitation = self.lin_exc(in_features)
+                in_features = torch.cat([u, embedding], dim=1)
+                pred = self.lin_phi(in_features) + msg * field + excitation
+            else:
+                in_features = torch.cat([u, embedding], dim=1)
+                pred = self.lin_phi(in_features) + msg * field  # MLP1(u, embedding) + field * \sum MLP0(u, embedding)
 
         if return_all:
             return pred, in_features
