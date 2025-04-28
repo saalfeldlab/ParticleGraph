@@ -95,7 +95,8 @@ def sparsify_cluster(cluster_method, proj_interaction, embedding, cluster_distan
 
     new_labels = np.ones_like(labels) * n_particle_types
     for n in range(n_particle_types):
-        new_labels[labels == label_list[n]] = n
+        if n < len(label_list):
+            new_labels[labels == label_list[n]] = n
 
     computation_time = time.time() - start_time
     print(f"clustering computation time is {computation_time:0.2f} seconds.")

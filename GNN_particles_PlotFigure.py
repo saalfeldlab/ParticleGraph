@@ -5404,7 +5404,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
             plt.figure(figsize=(10, 10))
             ax = sns.heatmap(to_numpy(A), center=0, square=True, cmap='bwr',
-                             cbar_kws={'fraction': 0.046}, vmin=-2, vmax=2)
+                             cbar_kws={'fraction': 0.046}, vmin=-0.5, vmax=0.5)
             cbar = ax.collections[0].colorbar
             cbar.ax.tick_params(labelsize=32)
             plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
@@ -5418,6 +5418,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.tight_layout()
             plt.savefig(f'./{log_dir}/results/first learned connectivity.png', dpi=300)
             plt.close()
+
+            A = A[:n_particles,:n_particles]
 
             if has_field:
                 net = f'{log_dir}/models/best_model_f_with_{n_runs - 1}_graphs_{epoch}.pt'
@@ -5720,7 +5722,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             labels, n_clusters, new_labels = sparsify_cluster(config.training.cluster_method, proj_interaction, embedding,
                                                               config.training.cluster_distance_threshold, type_list,
                                                               n_particle_types, embedding_cluster)
-            accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
+            accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels[:n_particles])
             print(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}  ')
             logger.info(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method} ')
 
@@ -5733,7 +5735,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             # logger.info(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method} ')
 
             plt.figure(figsize=(10, 10))
-            plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=150, color=cmap.color(to_numpy(type_list).astype(int)))
+            plt.scatter(to_numpy(X1_first[:n_particles, 0]), to_numpy(X1_first[:n_particles, 1]), s=150, color=cmap.color(to_numpy(type_list).astype(int)))
             plt.xticks([])
             plt.yticks([])
             plt.axis('off')
@@ -5742,15 +5744,13 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.close()
 
             plt.figure(figsize=(10, 10))
-            plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=150, color=cmap.color(new_labels.astype(int)))
+            plt.scatter(to_numpy(X1_first[:n_particles, 0]), to_numpy(X1_first[:n_particles, 1]), s=150, color=cmap.color(new_labels[:n_particles].astype(int)))
             plt.xticks([])
             plt.yticks([])
             plt.axis('off')
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/learned_types_{epoch}.tif", dpi=170.7)
             plt.close()
-
-
 
             fig, ax = fig_init()
             gt_weight = to_numpy(adjacency)
@@ -5815,6 +5815,25 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.tight_layout()
             plt.savefig(f'./{log_dir}/results/learned connectivity.png', dpi=300)
             plt.close()
+
+            if has_ghost:
+
+                print('plot learned activity ...')
+                os.makedirs(f"./{log_dir}/results/learned_activity", exist_ok=True)
+                for n in range(n_runs):
+                    fig, ax = fig_init(fontsize=24, formatx='%.0f', formaty='%.0f')
+                    t = torch.zeros((1, 800, 1), dtype=torch.float32, device=device)
+                    t[0] = torch.linspace(0, 1, 800, dtype=torch.float32, device=device)[:, None]
+                    prediction = model_missing_activity[n](t)
+                    prediction = prediction.squeeze().t()
+                    plt.imshow(to_numpy(prediction), aspect='auto',cmap='viridis')
+                    plt.colorbar()
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/learned_activity/learned_activity_{n}.tif", dpi=80)
+                    plt.close()
+
+
+
 
             if has_field:
 
