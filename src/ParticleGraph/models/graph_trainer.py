@@ -2589,10 +2589,10 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                     if recursive_loop > 1:
                         y = torch.tensor(y_list[run][k+recursive_loop], device=device) / ynorm
-                    elif time_step > 1:
-                        y = torch.tensor(x_list[run][k + time_step, :, 6:7], device=device).clone().detach()
-                    else:
+                    elif time_step == 1:
                         y = torch.tensor(y_list[run][k], device=device) / ynorm
+                    else:
+                        y = torch.tensor(x_list[run][k + time_step,:,6:7], device=device).clone().detach()
 
                     if not(torch.isnan(y).any()):
 
@@ -2644,20 +2644,20 @@ def data_train_synaptic2(config, erase, best_model, device):
                             else:
                                 pred = model(batch)
 
-                if time_step > 1:
-                    if has_ghost:
-                        loss = loss + (x_batch[ids_batch] + pred[ids_batch] * delta_t * time_step - y_batch).norm(2) / time_step
-                    elif particle_batch_ratio < 1:
-                        loss = loss + (x_batch[ids_batch] + pred[ids_batch] * delta_t * time_step - y_batch[ids_batch]).norm(2) / time_step
-                    else:
-                        loss = loss + (x_batch + pred * delta_t * time_step - y_batch).norm(2) / time_step
-                else:
+                if time_step == 1:
                     if has_ghost:
                         loss = loss + (pred[ids_batch] - y_batch).norm(2)
                     elif particle_batch_ratio < 1:
                         loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
                     else:
                         loss = loss + (pred - y_batch).norm(2)
+                else:
+                    if has_ghost:
+                        loss = loss + (x_batch[ids_batch] + pred[ids_batch] * delta_t * time_step - y_batch).norm(2) / time_step
+                    elif particle_batch_ratio < 1:
+                        loss = loss + (x_batch[ids_batch] + pred[ids_batch] * delta_t * time_step - y_batch[ids_batch]).norm(2) / time_step
+                    else:
+                        loss = loss + (x_batch + pred * delta_t * time_step - y_batch).norm(2) / time_step
 
                 if ('PDE_N3' in model_config.signal_model_name):
                     loss = loss + train_config.coeff_model_a * (model.a[ind_a+1] - model.a[ind_a]).norm(2)
