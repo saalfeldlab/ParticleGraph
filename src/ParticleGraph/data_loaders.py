@@ -31,7 +31,7 @@ from torch_geometric.utils.convert import to_networkx
 # from cellpose import models
 from ParticleGraph.generators.cell_utils import *
 from ParticleGraph.generators import PDE_V
-from cellpose import models
+from cellpose import models, core, utils, io, models, metrics, denoise
 import scipy.io as sio
 import seaborn as sns
 from torch_geometric.utils import dense_to_sparse
@@ -320,9 +320,12 @@ def load_2D_cell_data(config, device, visualize):
     files.sort()
 
     os.makedirs(f"{data_folder_name}/SEG", exist_ok=True)
+    os.makedirs(f"{data_folder_name}/DN", exist_ok=True)
 
     model_path = image_data.cellpose_model
     model_custom = models.CellposeModel(gpu=True, pretrained_model=model_path)
+
+    model_denoise = denoise.CellposeDenoiseModel(gpu=True, model_type="cyto3", restore_type="denoise_cyto3")
 
     # model_cyto1 = models.CellposeModel(gpu=True, model_type='cyto3', nchan=2)
     # model_cyto2 = models.CellposeModel(gpu=True, model_type='cyto2', nchan=2)
@@ -330,225 +333,230 @@ def load_2D_cell_data(config, device, visualize):
 
     print('generate segmentation masks with Cellpose ...')
 
-    # for it in trange(len(files)):
-    #     im = tifffile.imread(data_folder_name + files[it])
-    #     im = np.array(im)
-    #     masks, flows, styles = model_custom.eval(im, diameter=120, flow_threshold=0.0, invert=False, normalize=True, channels=image_data.cellpose_channel)
-    #     tifffile.imsave(data_folder_name + 'SEG/' + files[it], masks)
-    #     # matplotlib.use("Qt5Agg")
-    #     # fig = plt.subplots(figsize=(8, 8))
-    #     # plt.imshow(masks)
-    #     # plt.show()
+    for it in trange(len(files)):
+        im = tifffile.imread(data_folder_name + files[it])
+        im = np.array(im)
+        masks, flows, styles, imgs_dn = model_denoise.eval(im, diameter=75, channels=[0,0])
+        # masks, flows, styles = model_custom.eval(im, diameter=120, flow_threshold=0.0, invert=False, normalize=True, channels=image_data.cellpose_channel)
+        tifffile.imsave(data_folder_name + 'DN/' + files[it], imgs_dn[:,:,0].squeeze())
+        # matplotlib.use("Qt5Agg")
+        # fig = plt.subplots(figsize=(8, 8))
+        # plt.imshow(masks)
+        # plt.show()
 
     # if image_data.tracking_file != '':
     #     im_tracking = tifffile.imread(image_data.tracking_file)
     #     im_tracking = np.array(im_tracking)
 
-    if image_data.tracking_file != '':
-        df = pd.read_csv(image_data.tracking_file)
-        trackmate = dict()
-        trackmate['x'] = np.array(df['POSITION_X'][3:]).astype(float)
-        trackmate['y'] = np.array(df['POSITION_Y'][3:]).astype(float)
-        trackmate['frame'] = np.array(df['FRAME'][3:]).astype(int)
-        trackmate['track_ID'] = np.array(df['TRACK_ID'][3:])
-        trackmate['track_ID'] = pd.Series(trackmate['track_ID']).fillna(-1).astype(int).to_numpy()
 
 
-    n_cells = 0
-    run = 0
-    x_list = []
-    y_list = []
-    track_list = []
-    full_vertice_list = []
+    if False:
+
+        if image_data.tracking_file != '':
+            df = pd.read_csv(image_data.tracking_file)
+            trackmate = dict()
+            trackmate['x'] = np.array(df['POSITION_X'][3:]).astype(float)
+            trackmate['y'] = np.array(df['POSITION_Y'][3:]).astype(float)
+            trackmate['frame'] = np.array(df['FRAME'][3:]).astype(int)
+            trackmate['track_ID'] = np.array(df['TRACK_ID'][3:])
+            trackmate['track_ID'] = pd.Series(trackmate['track_ID']).fillna(-1).astype(int).to_numpy()
 
 
-    for it in range(0,n_frames-1):
-
-        im_fluo = np.flipud(np.array(tifffile.imread(data_folder_name + files[it])))
-        im_seg = np.flipud(np.array(tifffile.imread(data_folder_name + 'SEG/' + files[it])))
-
-        im_dim = im_seg.shape
-        if it == 0:
-            trackmate['y'] = im_dim[0] - trackmate['y']
-
-        object_properties = extract_object_properties(im_seg, im_fluo[:,:,image_data.membrane_channel])
-        object_properties = np.array(object_properties, dtype=float)
-
-        N = np.arange(object_properties.shape[0], dtype=np.float32)[:, None]
-        X = object_properties[:,1:3]
-        V = np.zeros((X.shape[0], 2))
-        T = np.zeros((X.shape[0], 1))
-        F = np.zeros((X.shape[0], 2))
-        F [:, 1:2] = object_properties[:,7:8]
-        AREA = object_properties[:,3:4]
-        PERIMETER = object_properties[:,4:5]
-        ASPECT = object_properties[:,5:6]
-        ORIENTATION = object_properties[:,6:7]
-        ID = n_cells + np.arange(object_properties.shape[0])[:, None]
-
-        pos = np.argwhere(trackmate['frame'] == it)
-        plt.scatter(trackmate['x'][pos], trackmate['y'][pos], s=10, c='w', alpha=0.75)
-        X_trackmate = np.concatenate((trackmate['y'][pos], trackmate['x'][pos]), axis=1)
-        trackID = trackmate['track_ID'][pos]
-
-        # Calculate distances between each point in X and each point in X_trackmate
-        distances = np.linalg.norm(X[:, None, :] - X_trackmate[None, :, :], axis=2)
-        # Find the index of the closest point in X_trackmate for each point in X
-        closest_indices = np.argmin(distances, axis=1)
-        # Map the track_ID from trackmate to X using the closest indices
-        X_track_ID = trackmate['track_ID'][pos][closest_indices]
-
-        x = np.concatenate((N.astype(int), X, V, T, F, AREA, PERIMETER, ASPECT, ORIENTATION, X_track_ID, ID.astype(int)-1), axis=1)
-
-        if (it>0) & (image_data.tracking_file != ''):
-
-            positions_prev = x_list[-1][:, 1:3]
-            positions_curr = x[:, 1:3]
-            fluo_prev = x_list[-1][:, 7:8]
-            fluo_curr = x[:, 7:8]
-
-            track_ids_prev = x_list[-1][:, 12]
-            track_ids_curr = x[:, 12]
-
-            V = np.zeros_like(positions_curr)
-            # Compute the time step (assuming uniform time step)
-            for i, track_id in enumerate(track_ids_curr):
-                # Find the corresponding index in the previous positions
-                prev_index = np.where((track_ids_prev == track_id)&(track_id>-1))
-                prev_index = prev_index[0]
-                try:
-                    if prev_index.size > 0:
-                        V[i] = (positions_curr[i] - positions_prev[prev_index]) / delta_t
-                        F[i,0] = (fluo_curr[i] - fluo_prev[prev_index]) / fluo_curr[i]
-                except:
-                    print(f'Error: {prev_index}')
+        n_cells = 0
+        run = 0
+        x_list = []
+        y_list = []
+        track_list = []
+        full_vertice_list = []
 
 
-            x = np.concatenate((N.astype(int), X, V, T, F, AREA, PERIMETER, ASPECT, ORIENTATION, X_track_ID, ID.astype(int) - 1), axis=1)
+        for it in range(0,n_frames-1):
+
+            im_fluo = np.flipud(np.array(tifffile.imread(data_folder_name + files[it])))
+            im_seg = np.flipud(np.array(tifffile.imread(data_folder_name + 'SEG/' + files[it])))
+
+            im_dim = im_seg.shape
+            if it == 0:
+                trackmate['y'] = im_dim[0] - trackmate['y']
+
+            object_properties = extract_object_properties(im_seg, im_fluo[:,:,image_data.membrane_channel])
+            object_properties = np.array(object_properties, dtype=float)
+
+            N = np.arange(object_properties.shape[0], dtype=np.float32)[:, None]
+            X = object_properties[:,1:3]
+            V = np.zeros((X.shape[0], 2))
+            T = np.zeros((X.shape[0], 1))
+            F = np.zeros((X.shape[0], 2))
+            F [:, 1:2] = object_properties[:,7:8]
+            AREA = object_properties[:,3:4]
+            PERIMETER = object_properties[:,4:5]
+            ASPECT = object_properties[:,5:6]
+            ORIENTATION = object_properties[:,6:7]
+            ID = n_cells + np.arange(object_properties.shape[0])[:, None]
+
+            pos = np.argwhere(trackmate['frame'] == it)
+            plt.scatter(trackmate['x'][pos], trackmate['y'][pos], s=10, c='w', alpha=0.75)
+            X_trackmate = np.concatenate((trackmate['y'][pos], trackmate['x'][pos]), axis=1)
+            trackID = trackmate['track_ID'][pos]
+
+            # Calculate distances between each point in X and each point in X_trackmate
+            distances = np.linalg.norm(X[:, None, :] - X_trackmate[None, :, :], axis=2)
+            # Find the index of the closest point in X_trackmate for each point in X
+            closest_indices = np.argmin(distances, axis=1)
+            # Map the track_ID from trackmate to X using the closest indices
+            X_track_ID = trackmate['track_ID'][pos][closest_indices]
+
+            x = np.concatenate((N.astype(int), X, V, T, F, AREA, PERIMETER, ASPECT, ORIENTATION, X_track_ID, ID.astype(int)-1), axis=1)
+
+            if (it>0) & (image_data.tracking_file != ''):
+
+                positions_prev = x_list[-1][:, 1:3]
+                positions_curr = x[:, 1:3]
+                fluo_prev = x_list[-1][:, 7:8]
+                fluo_curr = x[:, 7:8]
+
+                track_ids_prev = x_list[-1][:, 12]
+                track_ids_curr = x[:, 12]
+
+                V = np.zeros_like(positions_curr)
+                # Compute the time step (assuming uniform time step)
+                for i, track_id in enumerate(track_ids_curr):
+                    # Find the corresponding index in the previous positions
+                    prev_index = np.where((track_ids_prev == track_id)&(track_id>-1))
+                    prev_index = prev_index[0]
+                    try:
+                        if prev_index.size > 0:
+                            V[i] = (positions_curr[i] - positions_prev[prev_index]) / delta_t
+                            F[i,0] = (fluo_curr[i] - fluo_prev[prev_index]) / fluo_curr[i]
+                    except:
+                        print(f'Error: {prev_index}')
 
 
-        x_list.append(x)
-
-        y = torch.zeros((x.shape[0], 2), dtype=torch.float32, device=device)
-        y_list.append(y)
-
-        vertices_list = []
-        for n in trange(1, len(x)):
-            mask = (im_seg == n)
-            if np.sum(mask)>0:
-                vertices = mask_to_vertices(mask=mask, num_vertices=20)
-                uniform_points = get_uniform_points(vertices, num_points=20)
-                N = (n-1)*20 + np.arange(20, dtype=np.float32)[:, None]
-                X = uniform_points
-                empty_columns = np.zeros((X.shape[0], 2))
-                T = n_cells + (n-1) * np.ones((X.shape[0], 1))
-                vertices = np.concatenate((N.astype(int), X, empty_columns, T, N.astype(int)), axis=1)
-                vertices_list.append(vertices)
-        # vertices_list = torch.stack(vertices_list)
-        # vertices_list = torch.reshape(vertices_list, (-1, vertices_list.shape[2]))
-        vertices = np.array(vertices_list)
-        full_vertice_list.append(vertices)
-
-        # params = torch.tensor([[1.6233, 1.0413, 1.6012, 1.5615]], dtype=torch.float32, device=device)
-        # model_vertices = PDE_V(aggr_type='mean', p=torch.squeeze(params), sigma=30, bc_dpos=bc_dpos, dimension=2)
-        # max_radius=50
-        # min_radius=0
-        # for epoch in trange(4):
-        #     distance = torch.sum(bc_dpos(vertices[:, None, 1:dimension + 1] - vertices[None, :, 1:dimension + 1]) ** 2, dim=2)
-        #     adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
-        #     edge_index = adj_t.nonzero().t().contiguous()
-        #     dataset = data.Data(x=vertices, pos=vertices[:, 1:3], edge_index=edge_index, field=[])
-        #     with torch.no_grad():
-        #         y = model_vertices(dataset)
-        #     vertices[:,1:3] = vertices[:,1:3] + y
-        #     vertices[:, 1:2] = torch.clip(vertices[:, 1:2], 0, im_dim[0])
-        #     vertices[:, 2:3] = torch.clip(vertices[:, 2:3], 0, im_dim[1])
+                x = np.concatenate((N.astype(int), X, V, T, F, AREA, PERIMETER, ASPECT, ORIENTATION, X_track_ID, ID.astype(int) - 1), axis=1)
 
 
-        print (f'{files[it]}')
-        fig = plt.subplots(figsize=(35, 20))
-        plt.xticks([])
-        plt.yticks([])
-        plt.axis('off')
+            x_list.append(x)
 
-        ax = plt.subplot(161)
-        plt.axis('off')
-        plt.imshow(im_fluo)
-        for n in range(vertices.shape[0]):
-            plt.plot(vertices[n,:,2], vertices[n,:,1], c='w', linewidth=1)
-            # plt.text(x[n, 2], x[n, 1], f'{x[n,0]:0.0f}', fontsize=12, color='w')
-        # plt.scatter(x[:, 2], x[:, 1], s=10, c='w', alpha=0.75)
-        plt.xlim([0 , im_dim[1]])
-        plt.ylim([0 , im_dim[0]])
-        plt.xticks([])
-        plt.yticks([])
+            y = torch.zeros((x.shape[0], 2), dtype=torch.float32, device=device)
+            y_list.append(y)
 
-        ax = plt.subplot(162)
-        plt.axis('off')
-        plt.imshow(im_fluo*0)
-        for n in range(vertices.shape[0]):
-            plt.scatter(vertices[n,:,2], vertices[n,:,1], c='w', s=8, alpha=0.75, edgecolors='none')
-        plt.scatter(x[:, 2], x[:, 1], s=10, c='w', alpha=0.75)
-        plt.xlim([0 , im_dim[1]])
-        plt.ylim([0 , im_dim[0]])
-        plt.xticks([])
-        plt.yticks([])
+            vertices_list = []
+            for n in trange(1, len(x)):
+                mask = (im_seg == n)
+                if np.sum(mask)>0:
+                    vertices = mask_to_vertices(mask=mask, num_vertices=20)
+                    uniform_points = get_uniform_points(vertices, num_points=20)
+                    N = (n-1)*20 + np.arange(20, dtype=np.float32)[:, None]
+                    X = uniform_points
+                    empty_columns = np.zeros((X.shape[0], 2))
+                    T = n_cells + (n-1) * np.ones((X.shape[0], 1))
+                    vertices = np.concatenate((N.astype(int), X, empty_columns, T, N.astype(int)), axis=1)
+                    vertices_list.append(vertices)
+            # vertices_list = torch.stack(vertices_list)
+            # vertices_list = torch.reshape(vertices_list, (-1, vertices_list.shape[2]))
+            vertices = np.array(vertices_list)
+            full_vertice_list.append(vertices)
 
-        ax = plt.subplot(163)
-        plt.imshow(im_fluo*0)
-        plt.scatter(x[:, 2], x[:, 1], s=10, c='w', alpha=1)
-        # for n in range(len(x)):
-        #     plt.text(x[n, 2], x[n, 1], f'{x[n, -2]:0.0f}', fontsize=8, color='w')
-        plt.xlim([0 , im_dim[1]])
-        plt.ylim([0 , im_dim[0]])
-        plt.xticks([])
-        plt.yticks([])
+            # params = torch.tensor([[1.6233, 1.0413, 1.6012, 1.5615]], dtype=torch.float32, device=device)
+            # model_vertices = PDE_V(aggr_type='mean', p=torch.squeeze(params), sigma=30, bc_dpos=bc_dpos, dimension=2)
+            # max_radius=50
+            # min_radius=0
+            # for epoch in trange(4):
+            #     distance = torch.sum(bc_dpos(vertices[:, None, 1:dimension + 1] - vertices[None, :, 1:dimension + 1]) ** 2, dim=2)
+            #     adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
+            #     edge_index = adj_t.nonzero().t().contiguous()
+            #     dataset = data.Data(x=vertices, pos=vertices[:, 1:3], edge_index=edge_index, field=[])
+            #     with torch.no_grad():
+            #         y = model_vertices(dataset)
+            #     vertices[:,1:3] = vertices[:,1:3] + y
+            #     vertices[:, 1:2] = torch.clip(vertices[:, 1:2], 0, im_dim[0])
+            #     vertices[:, 2:3] = torch.clip(vertices[:, 2:3], 0, im_dim[1])
 
-        ax = plt.subplot(164)
-        plt.title('velocity', fontsize=48)
-        plt.scatter(x[:, 2], x[:, 1], s=20, alpha=1, c='w')
-        plt.quiver(x[:, 2], x[:, 1], x[:, 4], x[:, 3], color='w', scale = 250)
-        # plt.colorbar()
-        plt.xlim([0 , im_dim[1]])
-        plt.ylim([0 , im_dim[0]])
-        plt.xticks([])
-        plt.yticks([])
 
-        ax = plt.subplot(165)
-        plt.title('F', fontsize=48)
-        plt.scatter(x[:, 2], x[:, 1], s=100, c=x[:, 7], alpha=1, cmap='viridis', vmin=0, vmax=0.5E6)
-        # plt.colorbar()
-        plt.xlim([0 , im_dim[1]])
-        plt.ylim([0 , im_dim[0]])
-        plt.xticks([])
-        plt.yticks([])
+            print (f'{files[it]}')
+            fig = plt.subplots(figsize=(35, 20))
+            plt.xticks([])
+            plt.yticks([])
+            plt.axis('off')
 
-        ax = plt.subplot(166)
-        plt.title('DF/F', fontsize=48)
-        plt.scatter(x[:, 2], x[:, 1], s=100, c=x[:, 6], alpha=1, cmap='viridis', vmin=-0.5, vmax=0.5)
-        # plt.colorbar()
-        plt.xlim([0 , im_dim[1]])
-        plt.ylim([0 , im_dim[0]])
-        plt.xticks([])
-        plt.yticks([])
+            ax = plt.subplot(161)
+            plt.axis('off')
+            plt.imshow(im_fluo)
+            for n in range(vertices.shape[0]):
+                plt.plot(vertices[n,:,2], vertices[n,:,1], c='w', linewidth=1)
+                # plt.text(x[n, 2], x[n, 1], f'{x[n,0]:0.0f}', fontsize=12, color='w')
+            # plt.scatter(x[:, 2], x[:, 1], s=10, c='w', alpha=0.75)
+            plt.xlim([0 , im_dim[1]])
+            plt.ylim([0 , im_dim[0]])
+            plt.xticks([])
+            plt.yticks([])
 
-        plt.tight_layout()
-        plt.xticks([])
-        plt.yticks([])
-        # plt.show()
-        plt.savefig(f"graphs_data/{dataset_name}/Fig/{files[it]}", dpi=100)
-        plt.close()
+            ax = plt.subplot(162)
+            plt.axis('off')
+            plt.imshow(im_fluo*0)
+            for n in range(vertices.shape[0]):
+                plt.scatter(vertices[n,:,2], vertices[n,:,1], c='w', s=8, alpha=0.75, edgecolors='none')
+            plt.scatter(x[:, 2], x[:, 1], s=10, c='w', alpha=0.75)
+            plt.xlim([0 , im_dim[1]])
+            plt.ylim([0 , im_dim[0]])
+            plt.xticks([])
+            plt.yticks([])
 
-        n_cells = ID[-1] + 1
+            ax = plt.subplot(163)
+            plt.imshow(im_fluo*0)
+            plt.scatter(x[:, 2], x[:, 1], s=10, c='w', alpha=1)
+            # for n in range(len(x)):
+            #     plt.text(x[n, 2], x[n, 1], f'{x[n, -2]:0.0f}', fontsize=8, color='w')
+            plt.xlim([0 , im_dim[1]])
+            plt.ylim([0 , im_dim[0]])
+            plt.xticks([])
+            plt.yticks([])
 
-    np.savez(f'graphs_data/{dataset_name}/x_list_{run}', *x_list)
-    np.savez(f'graphs_data/{dataset_name}/full_vertice_list_{run}', *full_vertice_list)
+            ax = plt.subplot(164)
+            plt.title('velocity', fontsize=48)
+            plt.scatter(x[:, 2], x[:, 1], s=20, alpha=1, c='w')
+            plt.quiver(x[:, 2], x[:, 1], x[:, 4], x[:, 3], color='w', scale = 250)
+            # plt.colorbar()
+            plt.xlim([0 , im_dim[1]])
+            plt.ylim([0 , im_dim[0]])
+            plt.xticks([])
+            plt.yticks([])
 
-    # torch.save(x_list, f'graphs_data/{dataset_name}/x_list_{run}.pt')
-    # torch.save(y_list, f'graphs_data/{dataset_name}/y_list_{run}.pt')
-    # torch.save(full_vertice_list, f'graphs_data/{dataset_name}/full_vertice_list{run}.pt')
+            ax = plt.subplot(165)
+            plt.title('F', fontsize=48)
+            plt.scatter(x[:, 2], x[:, 1], s=100, c=x[:, 7], alpha=1, cmap='viridis', vmin=0, vmax=0.5E6)
+            # plt.colorbar()
+            plt.xlim([0 , im_dim[1]])
+            plt.ylim([0 , im_dim[0]])
+            plt.xticks([])
+            plt.yticks([])
 
-    print(f'n_cells: {n_cells}')
+            ax = plt.subplot(166)
+            plt.title('DF/F', fontsize=48)
+            plt.scatter(x[:, 2], x[:, 1], s=100, c=x[:, 6], alpha=1, cmap='viridis', vmin=-0.5, vmax=0.5)
+            # plt.colorbar()
+            plt.xlim([0 , im_dim[1]])
+            plt.ylim([0 , im_dim[0]])
+            plt.xticks([])
+            plt.yticks([])
+
+            plt.tight_layout()
+            plt.xticks([])
+            plt.yticks([])
+            # plt.show()
+            plt.savefig(f"graphs_data/{dataset_name}/Fig/{files[it]}", dpi=100)
+            plt.close()
+
+            n_cells = ID[-1] + 1
+
+        np.savez(f'graphs_data/{dataset_name}/x_list_{run}', *x_list)
+        np.savez(f'graphs_data/{dataset_name}/full_vertice_list_{run}', *full_vertice_list)
+
+        # torch.save(x_list, f'graphs_data/{dataset_name}/x_list_{run}.pt')
+        # torch.save(y_list, f'graphs_data/{dataset_name}/y_list_{run}.pt')
+        # torch.save(full_vertice_list, f'graphs_data/{dataset_name}/full_vertice_list{run}.pt')
+
+        print(f'n_cells: {n_cells}')
 
 
 def load_3D_cell_data(config, device, visualize):

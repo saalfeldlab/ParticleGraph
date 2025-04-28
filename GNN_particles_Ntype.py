@@ -55,16 +55,16 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'test'
+        task = 'generate'
         best_model = ''
 
-        config_list = ['multimaterial_12_1','multimaterial_12_2','multimaterial_12_3','multimaterial_12_4','multimaterial_12_5',
-                       'multimaterial_13_1', 'multimaterial_13_2', 'multimaterial_13_3',
-                        'multimaterial_14_1', 'multimaterial_14_2', 'falling_water_ramp_x6_13']
+        # config_list = ['multimaterial_12_1','multimaterial_12_2','multimaterial_12_3','multimaterial_12_4','multimaterial_12_5',
+        #                'multimaterial_13_1', 'multimaterial_13_2', 'multimaterial_13_3',
+        #                 'multimaterial_14_1', 'multimaterial_14_2', 'falling_water_ramp_x6_13']
         # config_list = ['fluids_m17_7']
         # config_list = ['signal_N5_v11_bis']
         # config_list = ['falling_water_ramp_x6_13']
-        # config_list = ['cell_MDCK_12']
+        config_list = ['cell_MDCK_14']
         # config_list = ['signal_N2_a37']
         # config_list = ['signal_N4_CElegans_a1']
 
