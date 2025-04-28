@@ -4652,6 +4652,9 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
         has_field = True
     else:
         has_field = False
+    n_ghosts = int(train_config.n_ghosts)
+    has_ghost = n_ghosts > 0
+    is_CElegans = 'CElegans' in dataset_name
 
     x_list = []
     y_list = []
@@ -4766,8 +4769,18 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
     else:
         mc = 'k'
 
-    if has_field:
+    if has_ghost:
+        model_missing_activity = nn.ModuleList([
+            Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
+                  hidden_features=model_config.hidden_dim_nnr,
+                  hidden_layers=model_config.n_layers_nnr, first_omega_0=omega, hidden_omega_0=omega,
+                  outermost_linear=model_config.outermost_linear_nnr)
+            for n in range(n_runs)
+        ])
+        model_missing_activity.to(device=device)
+        model_missing_activity.eval()
 
+    if has_field:
         if ('Siren_short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
             model_f = Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
                             hidden_features=model_config.hidden_dim_nnr,
@@ -5244,7 +5257,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=2)
         plt.xlabel('time', fontsize=64)
         plt.ylabel('$x_{i}$', fontsize=64)
-        plt.xlim([0,10000])
+        plt.xlim([0,n_frames])
         # plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
         plt.xticks(fontsize=28)
         plt.yticks(fontsize=28)
@@ -5365,10 +5378,10 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
         plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
         plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
         plt.xticks(rotation=0)
-        plt.subplot(2, 2, 1)
-        ax = sns.heatmap(to_numpy(adjacency[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
-        plt.xticks([])
-        plt.yticks([])
+        # plt.subplot(2, 2, 1)
+        # ax = sns.heatmap(to_numpy(adjacency[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
+        # plt.xticks([])
+        # plt.yticks([])
         plt.tight_layout()
         plt.savefig(f'./{log_dir}/results/true connectivity.png', dpi=300)
         plt.close()
@@ -5474,6 +5487,11 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     plt.savefig(f"./{log_dir}/results/true_plasticity_map.tif", dpi=80)
                     plt.close()
 
+            if has_ghost:
+                net = f'{log_dir}/models/best_model_f_with_{n_runs - 1}_graphs_{epoch}.pt'
+                state_dict = torch.load(net, map_location=device)
+                model_missing_activity.load_state_dict(state_dict['model_state_dict'])
+
             fig, ax = fig_init()
             for n in range(n_particle_types,-1,-1):
                 pos = torch.argwhere(type_list == n).squeeze()
@@ -5489,7 +5507,10 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.close()
 
             fig, ax = fig_init()
-            rr = torch.linspace(-xnorm.squeeze()*2 , xnorm.squeeze()*2 , 1000).to(device)
+            if is_CElegans:
+                rr = torch.linspace(-xnorm.squeeze() * 4, xnorm.squeeze() * 4, 1000).to(device)
+            else:
+                rr = torch.linspace(-xnorm.squeeze() * 2 , xnorm.squeeze() * 2 , 1000).to(device)
             func_list = []
             for n in trange(0,n_particles,n_particles//100):
                 if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
@@ -5510,7 +5531,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.ylabel(r'Learned $\psi^*(a_i, x_i)$', fontsize=68)
             # if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
             #     plt.ylim([-0.5,0.5])
-            plt.xlim([-to_numpy(xnorm)*2, to_numpy(xnorm)*2])
+            # plt.xlim([-to_numpy(xnorm)*2, to_numpy(xnorm)*2])
             plt.ylim([y_min,y_max*1.1])
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/raw_psi_{epoch}.tif", dpi=170.7)
@@ -5591,13 +5612,18 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 psi_list = []
                 fig, ax = fig_init()
                 rr = torch.linspace(-xnorm.squeeze(), xnorm.squeeze(), 1500).to(device)
-                if (model_config.signal_model_name == 'PDE_N4'):
-                    for n in range(n_particle_types):
-                        true_func = true_model.func(rr, n, 'phi')
-                        plt.plot(to_numpy(rr), to_numpy(true_func), c = mc, linewidth = 16, label = 'original', alpha = 0.21)
+                if is_CElegans:
+                    rr = torch.linspace(-xnorm.squeeze() * 4, xnorm.squeeze() * 4, 1500).to(device)
                 else:
-                    true_func = true_model.func(rr, 0, 'phi')
-                    plt.plot(to_numpy(rr), to_numpy(true_func), c = mc, linewidth = 16, label = 'original', alpha = 0.21)
+                    rr = torch.linspace(-xnorm.squeeze(), xnorm.squeeze(), 1500).to(device)
+                if not(is_CElegans):
+                    if (model_config.signal_model_name == 'PDE_N4'):
+                        for n in range(n_particle_types):
+                            true_func = true_model.func(rr, n, 'phi')
+                            plt.plot(to_numpy(rr), to_numpy(true_func), c = mc, linewidth = 16, label = 'original', alpha = 0.21)
+                    else:
+                        true_func = true_model.func(rr, 0, 'phi')
+                        plt.plot(to_numpy(rr), to_numpy(true_func), c = mc, linewidth = 16, label = 'original', alpha = 0.21)
 
                 for n in trange(0,n_particles):
                     if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
@@ -5627,8 +5653,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     plt.ylim([-0.2, 1.2])
                 else:
                     plt.ylim([-1.6, 1.6])
-                plt.xlim([-to_numpy(xnorm), to_numpy(xnorm)])
-                # plt.xlim(config.plotting.xlim)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/learned_psi_{epoch}.tif", dpi=170.7)
                 plt.close()
@@ -5638,12 +5662,13 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             print('interaction functions ...')
 
             fig, ax = fig_init()
-            for n in trange(n_particle_types):
-                if model_config.signal_model_name == 'PDE_N5':
-                    true_func = true_model.func(rr, n, n, 'update')
-                else:
-                    true_func = true_model.func(rr, n, 'update')
-                plt.plot(to_numpy(rr), to_numpy(true_func), c=mc, linewidth=16, label='original', alpha=0.21)
+            if not (is_CElegans):
+                for n in trange(n_particle_types):
+                    if model_config.signal_model_name == 'PDE_N5':
+                        true_func = true_model.func(rr, n, n, 'update')
+                    else:
+                        true_func = true_model.func(rr, n, 'update')
+                    plt.plot(to_numpy(rr), to_numpy(true_func), c=mc, linewidth=16, label='original', alpha=0.21)
             phi_list = []
             for n in trange(n_particles):
                 embedding_ = model.a[n, :] * torch.ones((1500, config.graph_model.embedding_dim), device=device)
@@ -5660,8 +5685,9 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.xlabel(r'$x_i$', fontsize=68)
             plt.ylabel(r'learned $\phi^*(a_i, x_i)$', fontsize=68)
             plt.tight_layout()
-            plt.xlim([-to_numpy(xnorm), to_numpy(xnorm)])
-            plt.ylim(config.plotting.ylim)
+            # plt.xlim([-to_numpy(xnorm), to_numpy(xnorm)])
+            if not (is_CElegans):
+                plt.ylim(config.plotting.ylim)
             plt.savefig(f'./{log_dir}/results/learned phi_{epoch}.png', dpi=300)
             plt.close()
 
@@ -8324,7 +8350,7 @@ if __name__ == '__main__':
     # config_list = ['wave_slit_bis']
     # config_list = [f"multimaterial_9_{i}" for i in range(25, 33)]
     # config_list = [f"multimaterial_10_{i}" for i in range(1, 5)]
-    config_list = ['signal_N4_CElegans_a6']
+    config_list = ['signal_N4_CElegans_a7']
 
     # config_list = ['multimaterial_13_1', 'multimaterial_13_2']
     # config_list = ['falling_water_ramp_x6_13']
