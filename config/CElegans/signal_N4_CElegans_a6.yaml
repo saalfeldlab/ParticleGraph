@@ -52,8 +52,6 @@ graph_model:
     excitation_dim: 3
 
 
-
-
 plotting:
     colormap: 'tab10'
     arrow_length: 1
