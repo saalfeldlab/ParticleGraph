@@ -67,8 +67,6 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         self.input_size_excitation = model_config.input_size_excitation
 
 
-
-
         if self.model == 'PDE_N3':
             self.embedding_evolves = True
         else:
@@ -137,7 +135,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         else:
             field = x[:, 8:9]
             if 'excitation' in self.update_type:
-                in_features = torch.cat([embedding, x[:, 10:10 + self.excitation_dim]], dim=1)
+                in_features = torch.cat([embedding, x[:, 10: 10 + self.excitation_dim]], dim=1)
                 excitation = self.lin_exc(in_features)
                 in_features = torch.cat([u, embedding], dim=1)
                 pred = self.lin_phi(in_features) + msg * field + excitation

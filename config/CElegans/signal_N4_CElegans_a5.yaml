@@ -1,4 +1,4 @@
-description: 'test neuron_dependent functions  with CElegans data    test decrease Lr  and add excitation'
+description: 'test neuron_dependent functions  with CElegans data    test decrease Lr increase batchsize and add excitation'
 dataset: 'CElegans_a1'
 data_folder_name: '/groups/saalfeld/home/allierc/Py/wormvae/data/worm_activity/all_traces_Heads_new.mat'
 connectome_folder_name: '/groups/saalfeld/home/allierc/Py/wormvae/data/worm_connectivity/'
@@ -55,8 +55,9 @@ plotting:
 training:
     n_epochs: 20
     recursive_loop: 1
-    batch_size: 1
+    batch_size: 8
     small_init_batch_size: False
+    device: 'cuda:1'
     n_runs: 21
 
     time_step: 8
@@ -68,7 +69,7 @@ training:
     cluster_method: 'distance_embedding'
     cluster_distance_threshold: 0.2
     fix_cluster_embedding: True
-    device: 'auto'
+
     sparsity: 'replace_embedding_function'
     sparsity_freq: 4
 
