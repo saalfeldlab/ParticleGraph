@@ -97,7 +97,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
 
         self.W = nn.Parameter(torch.randn((int(self.n_particles + self.n_ghosts),int(self.n_particles + self.n_ghosts)), device=self.device, requires_grad=True, dtype=torch.float32))
 
-        self.mask = torch.ones((int(self.n_particles),int(self.n_particles)), device=self.device, requires_grad=False, dtype=torch.float32)
+        self.mask = torch.ones((int(self.n_particles + self.n_ghosts),int(self.n_particles + self.n_ghosts)), device=self.device, requires_grad=False, dtype=torch.float32)
         self.mask.fill_diagonal_(0)
 
     def get_interp_a(self, k, particle_id):
@@ -168,7 +168,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         if (self.batch_size==1):
             return T[edge_index_i, edge_index_j][:, None] * line_edge
         else:
-            return T[edge_index_i%self.n_particles, edge_index_j%self.n_particles][:,None] * line_edge
+            return T[edge_index_i%(self.W.shape[0]), edge_index_j%(self.W.shape[0])][:,None] * line_edge
 
 
     def update(self, aggr_out):

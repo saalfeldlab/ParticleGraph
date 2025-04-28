@@ -29,12 +29,12 @@ graph_model:
 
     input_size: 3
     output_size: 1
-    hidden_dim: 64
-    n_mp_layers: 3
+    hidden_dim: 256
+    n_mp_layers: 5
 
     input_size_update: 3
-    n_layers_update: 3
     hidden_dim_update: 64
+    n_layers_update: 5
 
     input_size_excitation: 5
     n_layers_excitation: 3

@@ -134,7 +134,7 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
     plt.close()
 
     gt_weight = to_numpy(adjacency)
-    pred_weight = to_numpy(model.W.clone().detach())
+    pred_weight = to_numpy(model.W[:n_particles, :n_particles].clone().detach())
     if n_particles<1000:
         fig = plt.figure(figsize=(8, 8))
         plt.scatter(gt_weight, pred_weight, s=10, c='k',alpha=0.2)
