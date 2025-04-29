@@ -25,7 +25,7 @@ from sklearn.decomposition import PCA, TruncatedSVD
 from sklearn.manifold import TSNE
 from ParticleGraph.denoise_data import *
 from scipy.spatial import KDTree
-from sklearn import neighbors
+from sklearn import neighbors, metrics
 
 
 def data_train(config=None, erase=False, best_model=None, device=None):
@@ -2740,7 +2740,7 @@ def data_train_synaptic2(config, erase, best_model, device):
 
         ax = fig.add_subplot(2, 5, 5)
         gt_weight = to_numpy(adjacency)
-        pred_weight = to_numpy(A)
+        pred_weight = to_numpy(A[:n_particles, :n_particles])
         plt.scatter(gt_weight, pred_weight, s=0.1, c='k', alpha=0.01)
         plt.xlabel('true weight', fontsize=12)
         plt.ylabel('learned weight', fontsize=12)
@@ -2812,6 +2812,9 @@ def data_train_synaptic2(config, erase, best_model, device):
                                                               train_config.cluster_distance_threshold, type_list,
                                                               n_particle_types, embedding_cluster)
 
+            if has_ghost:
+                labels = labels[:n_particles]
+                new_labels = new_labels[:n_particles]
             accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
             print(f'accuracy: {np.round(accuracy, 3)}   n_clusters: {n_clusters}')
             logger.info(f'accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}')
