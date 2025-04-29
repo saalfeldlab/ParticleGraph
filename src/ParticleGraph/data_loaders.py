@@ -37,6 +37,8 @@ import seaborn as sns
 from torch_geometric.utils import dense_to_sparse
 import pickle
 import json
+import scipy.io
+import h5py
 
 def extract_object_properties(segmentation_image, fluorescence_image=[]):
     # Label the objects in the segmentation image
@@ -833,7 +835,10 @@ def process_activity(activity_worms):
     return activity_data, missing_data
 
 
-def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
+def load_worm_Kato_data(config, device=None, visualize=None, step=None, cmap=None):
+
+    # data from https://osf.io/2395t/    Global Brain Dynamics Embed the Motor Command Sequence of Caenorhabditis elegans
+
 
     data_folder_name = config.data_folder_name
     dataset_name = config.dataset
@@ -854,9 +859,42 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     os.makedirs(folder, exist_ok=True)
     os.makedirs(f'./graphs_data/{dataset_name}/Fig/', exist_ok=True)
 
-    # Loading Data from class Worm_Data_Loader(Dataset) in https://github.com/TuragaLab/wormvae
+    with h5py.File(data_folder_name, 'r') as f:
+        # View top-level structure
+        print(list(f.keys()))
+        wt_data = f['WT_NoStim']
+        print(list(wt_data.keys()))
 
-    print ('load connectome ...')
+    with h5py.File(data_folder_name, 'r') as f:
+        # Access the deltaFOverF dataset
+        delta_f_over_f = f['WT_NoStim']['deltaFOverF']
+
+        # Iterate through the object references
+        for i, ref in enumerate(delta_f_over_f):
+            # Dereference the object reference
+            dereferenced_data = f[ref[0]]
+            # Check if the dereferenced object is a dataset
+            if isinstance(dereferenced_data, h5py.Dataset):
+                print(f"Dereferenced Dataset {i}: {dereferenced_data[()].shape}")
+            elif isinstance(dereferenced_data, h5py.Group):
+                print(f"Dereferenced Group {i}: Contains keys {list(dereferenced_data.keys())}")
+
+        wt_data = f['WT_NoStim']['NeuronNames']
+        first_ref_data = f[wt_data[1][0]]  # This should point to another object that stores data
+        neuron_references = first_ref_data[:]  # Read all the references from this dataset
+        for i, neuron_ref in enumerate(neuron_references):
+            # Dereference each object reference to get the actual neuron name
+            dereferenced_neuron = f[neuron_ref[0]]
+            neuron_name = dereferenced_neuron[()]  # Get the actual neuron name
+
+            # Convert the neuron name from numbers (if they are ASCII values) to characters
+            decoded_name = ''.join(chr(int(num[0])) for num in neuron_name)
+
+            print(f"Neuron {i + 1} name:", decoded_name)
+
+
+
+
     chem_weights = torch.load(connectome_folder_name + 'chem_weights.pt')
     eassym_weights = torch.load(connectome_folder_name + 'eassym_weights.pt')
     chem_sparsity = torch.load(connectome_folder_name + 'chem_sparsity.pt')
@@ -872,7 +910,6 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     fig = plt.figure(figsize=(12, 12))
     ax = fig.add_subplot(221)
     ax = sns.heatmap(to_numpy(chem_weights), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},)
-    plt.imshow(to_numpy(chem_weights), aspect='auto', vmin=-1, vmax=1, cmap='viridis')
     plt.title('chemical weights', fontsize=18)
     plt.xlabel('neurons', fontsize=18)
     plt.ylabel('neurons', fontsize=18)
@@ -917,6 +954,319 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
 
     adjacency = torch.tensor(subset_chem_weights + subset_eassym_weights, dtype=torch.float32, device=device)
     torch.save(adjacency, f'./graphs_data/{dataset_name}/adjacency.pt')
+
+
+    # plot matrixes
+    fig = plt.figure(figsize=(30, 15))
+    ax = fig.add_subplot(121)
+    ax = sns.heatmap(to_numpy(adjacency>0), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},)
+    ax.set_xticks(range(len(activity_neuron_list)))
+    ax.set_xticklabels(activity_neuron_list, fontsize=6, rotation=90)
+    ax.set_yticks(range(len(activity_neuron_list)))
+    ax.set_yticklabels(activity_neuron_list, fontsize=6)
+    plt.imshow(to_numpy(chem_weights), aspect='auto', vmin=-1, vmax=1, cmap='viridis')
+    plt.title('adjacency matrix', fontsize=18)
+    plt.xlabel('neurons', fontsize=18)
+    plt.ylabel('neurons', fontsize=18)
+    ax = fig.add_subplot(122)
+    ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},)
+    ax.set_xticks(range(len(activity_neuron_list)))
+    ax.set_xticklabels(activity_neuron_list, fontsize=6, rotation=90)
+    ax.set_yticks(range(len(activity_neuron_list)))
+    ax.set_yticklabels(activity_neuron_list, fontsize=6)
+    plt.imshow(to_numpy(chem_weights), aspect='auto', vmin=-1, vmax=1, cmap='viridis')
+    plt.title('weight matrix', fontsize=18)
+    plt.xlabel('neurons', fontsize=18)
+    plt.ylabel('neurons', fontsize=18)
+    plt.tight_layout()
+    plt.savefig(f"graphs_data/{dataset_name}/adjacency_matrix.png", dpi=170)
+
+
+    edge_index, edge_attr = dense_to_sparse(torch.ones((n_particles)) - torch.eye(n_particles))
+    torch.save(edge_index.to(device), f'./graphs_data/{dataset_name}/edge_index.pt')
+
+    fig = plt.figure(figsize=(12, 12))
+    ax = fig.add_subplot(221)
+    ax = sns.heatmap(to_numpy(subset_chem_weights), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},)
+    plt.imshow(to_numpy(chem_weights), aspect='auto', cmap='viridis')
+    plt.title('chemical weights', fontsize=18)
+    plt.xlabel('neurons', fontsize=18)
+    plt.ylabel('neurons', fontsize=18)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    ax = fig.add_subplot(222)
+    ax = sns.heatmap(to_numpy(subset_eassym_weights), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},)
+    plt.title('electrical weights', fontsize=18)
+    plt.xlabel('neurons', fontsize=18)
+    plt.ylabel('neurons', fontsize=18)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    ax = fig.add_subplot(223)
+    ax = sns.heatmap(to_numpy(subset_chem_sparsity), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},)
+    plt.title('chemical sparsity', fontsize=18)
+    plt.xlabel('neurons', fontsize=18)
+    plt.ylabel('neurons', fontsize=18)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    ax = fig.add_subplot(224)
+    ax = sns.heatmap(to_numpy(subset_eassym_sparsity), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},)
+    plt.title('electrical sparsity', fontsize=18)
+    plt.xlabel('neurons', fontsize=18)
+    plt.ylabel('neurons', fontsize=18)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.tight_layout()
+    plt.savefig(f"graphs_data/{dataset_name}/subset_connectome.png", dpi=170)
+    plt.close()
+
+
+    odor_channels = 3
+    step = 0.25
+    n_runs = 21
+
+    # mat file attributes
+    n_particles = 189
+    T = 960
+    N_length = 109
+    T_start = 160
+    activity_datasets = np.zeros((n_runs, n_particles, T))
+    odor_datasets = np.zeros((n_runs, odor_channels, T))
+
+    print ('load traces ...')
+
+    trace_variable = sio.loadmat(data_folder_name)
+    trace_arr = trace_variable['traces']
+    print(f"traces shape: {trace_arr.shape}")
+    is_L = trace_variable['is_L']
+    neurons_name = trace_variable['neurons']
+    stim_names = trace_variable["stim_names"]
+    stimulate_seconds = trace_variable['stim_times']
+    stims = trace_variable['stims']
+
+    for idata in range(n_runs):
+        ineuron = 0
+        for ifile in range(N_length):
+            if trace_arr[ifile][0].shape[1] == 42:
+                data = trace_arr[ifile][0][0][idata]
+                if data.shape[0] < 1:
+                    activity_datasets[idata][ineuron][:] = np.nan
+                else:
+                    activity_datasets[idata][ineuron][0:data[0].shape[0]] = data[0]
+                ineuron += 1
+                data = trace_arr[ifile][0][0][idata + 21]
+                if data.shape[0] < 1:
+                    activity_datasets[idata][ineuron][:] = np.nan
+                else:
+                    activity_datasets[idata][ineuron][0:data[0].shape[0]] = data[0]
+                ineuron += 1
+            else:
+                data = trace_arr[ifile][0][0][idata]
+                if data.shape[0] < 1:
+                    activity_datasets[idata][ineuron][:] = np.nan
+                else:
+                    activity_datasets[idata][ineuron][0:data[0].shape[0]] = data[0]
+                ineuron += 1
+    # add baseline 2
+    activity_worm = activity_datasets[:, :, T_start:] + 2
+
+    activity_with_zeros, missing_matrix = process_activity(activity_worm)
+    activity_worm = process_trace(activity_worm)
+
+    time = np.arange(start=0, stop=T * step, step=step)
+    odor_list = ['butanone', 'pentanedione', 'NaCL']
+    for idata in range(n_runs):
+        for it_stimu in range(stimulate_seconds.shape[0]):
+            tim1_ind = time > stimulate_seconds[it_stimu][0]
+            tim2_ind = time < stimulate_seconds[it_stimu][1]
+            odor_on = np.multiply(tim1_ind.astype(int), tim2_ind.astype(int))
+            stim_odor = stims[idata][it_stimu] - 1
+            odor_datasets[idata][stim_odor][:] = odor_on
+
+    odor_worms = odor_datasets[:, :, T_start:]
+
+    for idata in trange(n_runs):
+        fig = plt.figure(figsize=(12, 12))
+        ax = fig.add_subplot(221)
+        plt.imshow(activity_worm[idata][:, 0:1000], aspect='auto', vmin =-5, vmax=5, cmap='viridis')
+        plt.title(f'dataset {idata}', fontsize=18)
+        plt.xlabel('time', fontsize=18)
+        plt.ylabel('neurons', fontsize=18)
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
+        ax = fig.add_subplot(222)
+        plt.title(f'missing data', fontsize=18)
+        test_im = activity_worm[idata][:, 0:1000] * 0
+        pos = np.argwhere(activity_worm[idata][:, 0:1000] == 0)
+        test_im[pos[:, 0], pos[:, 1]] = 1
+        pos = np.argwhere(np.isnan(activity_worm[idata][:, 0:1000]))
+        test_im[pos[:, 0], pos[:, 1]] = 2
+        pos = np.argwhere(np.isinf(activity_worm[idata][:, 0:1000]))
+        test_im[pos[:, 0], pos[:, 1]] = 3
+        plt.imshow(test_im[:,500:], aspect='auto',vmin =0, vmax=3, cmap='viridis')
+        plt.xticks([])
+        plt.yticks([])
+        ax = fig.add_subplot(223)
+        plt.imshow(odor_worms[idata][:, 0:1000], aspect='auto', vmin =0, vmax=1, cmap='viridis', interpolation='nearest')
+        plt.xlabel('time', fontsize=18)
+        plt.ylabel('odor', fontsize=18)
+        plt.title(f'odor stimuli', fontsize=18)
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
+        plt.tight_layout()
+        plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{idata}.tif", dpi=80)  # 170.7)
+        plt.close()
+
+    xc, yc = get_equidistant_points(n_points=n_particles)
+    pos = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
+    perm = torch.randperm(pos.size(0))
+    X1 = to_numpy(pos[perm])
+
+    for run in range(config.training.n_runs):
+
+        x_list = []
+        y_list = []
+
+        for it in trange(0, n_frames-2):
+            x = np.zeros((n_particles, 13))
+            x[:, 0] = np.arange(n_particles)
+            x[:, 1:3] = X1
+            x[:, 6] = activity_worm[run,:,it]
+            x[:, 10:13] = odor_worms[run,:,it]
+            x_list.append(x)
+
+            y = (activity_worm[run,:,it+1]- activity_worm[run,:,it]) / delta_t
+            y_list.append(y)
+
+            if visualize & (run == 0) & (it % 2 == 0) & (it >= 0):
+                plt.style.use('dark_background')
+
+                plt.figure(figsize=(10, 10))
+                # plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=10, c=to_numpy(x[:, 6]),
+                #             cmap='viridis', vmin=-10, vmax=10, edgecolors='k', alpha=1)
+                plt.axis('off')
+                plt.scatter(X1[:, 0], X1[:, 1], s=700, c=x[:, 6], cmap='viridis', vmin=-2, vmax=2)
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+                plt.savefig(f"graphs_data/{dataset_name}/Fig/2D_Fig_{run}_{it}.tif", dpi=80)
+                plt.close()
+
+        x_list = np.array(x_list)
+        y_list = np.array(y_list)
+        np.save(f'graphs_data/{dataset_name}/x_list_{run}.npy', x_list)
+        np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list)
+
+
+def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
+
+    data_folder_name = config.data_folder_name
+    dataset_name = config.dataset
+    connectome_folder_name = config.connectome_folder_name
+
+    simulation_config = config.simulation
+    train_config = config.training
+    n_frames = simulation_config.n_frames
+
+    n_runs = train_config.n_runs
+    n_particles = simulation_config.n_particles
+
+    delta_t = simulation_config.delta_t
+    bc_pos, bc_dpos = choose_boundary_values('no')
+    cmap = CustomColorMap(config=config)
+
+    folder = f'./graphs_data/{dataset_name}/'
+    os.makedirs(folder, exist_ok=True)
+    os.makedirs(f'./graphs_data/{dataset_name}/Fig/', exist_ok=True)
+
+    # Loading Data from class Worm_Data_Loader(Dataset) in https://github.com/TuragaLab/wormvae
+
+    print ('load connectome ...')
+    chem_weights = torch.load(connectome_folder_name + 'chem_weights.pt')
+    eassym_weights = torch.load(connectome_folder_name + 'eassym_weights.pt')
+    chem_sparsity = torch.load(connectome_folder_name + 'chem_sparsity.pt')
+    esym_sparsity = torch.load(connectome_folder_name + 'esym_sparsity.pt')
+
+    with open(connectome_folder_name+"activity_neuron_list.pkl", "rb") as f:
+        activity_neuron_list = pickle.load(f)
+    with open(connectome_folder_name+"neuron_names.json", "r") as f:
+        neuron_names = json.load(f)
+
+
+    # plot matrixes
+    fig = plt.figure(figsize=(12, 12))
+    ax = fig.add_subplot(221)
+    ax = sns.heatmap(to_numpy(chem_weights), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},)
+    plt.title('chemical weights', fontsize=18)
+    plt.xlabel('neurons', fontsize=18)
+    plt.ylabel('neurons', fontsize=18)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    ax = fig.add_subplot(222)
+    ax = sns.heatmap(to_numpy(eassym_weights), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},)
+    plt.title('electrical weights', fontsize=18)
+    plt.xlabel('neurons', fontsize=18)
+    plt.ylabel('neurons', fontsize=18)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    ax = fig.add_subplot(223)
+    ax = sns.heatmap(to_numpy(chem_sparsity), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},)
+    plt.title('chemical sparsity', fontsize=18)
+    plt.xlabel('neurons', fontsize=18)
+    plt.ylabel('neurons', fontsize=18)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    ax = fig.add_subplot(224)
+    ax = sns.heatmap(to_numpy(esym_sparsity), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},)
+    plt.title('electrical sparsity', fontsize=18)
+    plt.xlabel('neurons', fontsize=18)
+    plt.ylabel('neurons', fontsize=18)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.tight_layout()
+    plt.savefig(f"graphs_data/{dataset_name}/all_connectome.png", dpi=170)
+    plt.close()
+
+    map_list = np.load(connectome_folder_name + 'map_list.npy', allow_pickle=True)
+
+    subset_chem_weights = chem_weights[np.ix_(map_list, map_list)]
+    subset_eassym_weights = eassym_weights[np.ix_(map_list, map_list)]
+    subset_chem_sparsity = chem_sparsity[np.ix_(map_list, map_list)]
+    subset_eassym_sparsity = esym_sparsity[np.ix_(map_list, map_list)]
+
+    # subset_chem_weights_test = subset_chem_weights * 0
+    # for k in trange(189):
+    #     subset_chem_weights_test[k, :] = chem_weights[map_list[k],map_list]
+
+
+    adjacency = torch.tensor(subset_chem_weights + subset_eassym_weights, dtype=torch.float32, device=device)
+    torch.save(adjacency, f'./graphs_data/{dataset_name}/adjacency.pt')
+
+
+    # plot matrixes
+    fig = plt.figure(figsize=(30, 15))
+    ax = fig.add_subplot(121)
+    ax = sns.heatmap(to_numpy(adjacency>0), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},)
+    ax.set_xticks(range(len(activity_neuron_list)))
+    ax.set_xticklabels(activity_neuron_list, fontsize=6, rotation=90)
+    ax.set_yticks(range(len(activity_neuron_list)))
+    ax.set_yticklabels(activity_neuron_list, fontsize=6)
+    plt.imshow(to_numpy(chem_weights), aspect='auto', vmin=-1, vmax=1, cmap='viridis')
+    plt.title('adjacency matrix', fontsize=18)
+    plt.xlabel('neurons', fontsize=18)
+    plt.ylabel('neurons', fontsize=18)
+    ax = fig.add_subplot(122)
+    ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},)
+    ax.set_xticks(range(len(activity_neuron_list)))
+    ax.set_xticklabels(activity_neuron_list, fontsize=6, rotation=90)
+    ax.set_yticks(range(len(activity_neuron_list)))
+    ax.set_yticklabels(activity_neuron_list, fontsize=6)
+    plt.imshow(to_numpy(chem_weights), aspect='auto', vmin=-1, vmax=1, cmap='viridis')
+    plt.title('weight matrix', fontsize=18)
+    plt.xlabel('neurons', fontsize=18)
+    plt.ylabel('neurons', fontsize=18)
+    plt.tight_layout()
+    plt.savefig(f"graphs_data/{dataset_name}/adjacency_matrix.png", dpi=170)
+
 
     edge_index, edge_attr = dense_to_sparse(torch.ones((n_particles)) - torch.eye(n_particles))
     torch.save(edge_index.to(device), f'./graphs_data/{dataset_name}/edge_index.pt')

@@ -26,6 +26,8 @@ def generate_from_data(config, device, visualize=True, step=None, cmap=None):
         load_Goole_data(config, device, visualize, step, cmap)
     elif 'MultiMaterial' in data_folder_name:
         load_Goole_data(config, device, visualize, step, cmap)
+    elif 'Kato' in data_folder_name:
+        load_worm_Kato_data(config, device, visualize, step)
     elif 'worm' in data_folder_name:
         load_worm_data(config, device, visualize, step)
     elif image_data.file_type != 'none':

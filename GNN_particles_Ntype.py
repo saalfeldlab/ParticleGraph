@@ -66,7 +66,7 @@ if __name__ == '__main__':
         # config_list = ['falling_water_ramp_x6_13']
         # config_list = ['cell_MDCK_14']
         # config_list = ['signal_N2_a37']
-        config_list = ['signal_N4_CElegans_a1'] # , 'signal_N4_CElegans_a7', 'signal_N4_CElegans_a8', 'signal_N4_CElegans_a9']
+        config_list = ['signal_N4_CElegans_b1'] # , 'signal_N4_CElegans_a7', 'signal_N4_CElegans_a8', 'signal_N4_CElegans_a9']
 
 
     for config_file_ in config_list:

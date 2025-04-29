@@ -52,7 +52,6 @@ class SimulationConfig(BaseModel):
     connectivity_parameter: float = 1.0
     connectivity_distribution: str = 'Gaussian'
     connectivity_distribution_params: float = 1
-    connectivity_mask: bool = False
 
     excitation_value_map: Optional[str] = None
     excitation: str='none'
@@ -189,6 +188,8 @@ class TrainingConfig(BaseModel):
     shared_embedding: bool = False
     embedding_permutation: bool = False
 
+    with_connectivity_mask: bool = False
+
     do_tracking: bool = False
     tracking_gt_file: str = ''
     ctrl_tracking: bool = False
@@ -241,6 +242,7 @@ class TrainingConfig(BaseModel):
     coeff_diff_update2: float = 0
     coeff_sign: float = 0
     coeff_permutation: float = 100
+    coeff_std_W_ghost: float = 0
 
     diff_update_regul: str = 'none'
 

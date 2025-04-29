@@ -51,6 +51,8 @@ graph_model:
     update_type: 'excitation'
     excitation_dim: 3
 
+    lin_edge_positive: True
+
 
 plotting:
     colormap: 'tab10'
@@ -91,4 +93,4 @@ training:
 
     coeff_L1: 1.0E-6
     coeff_diff: 100
-
+    coeff_std_W_ghost: 100

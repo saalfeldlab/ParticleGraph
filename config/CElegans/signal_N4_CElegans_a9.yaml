@@ -68,6 +68,8 @@ training:
     device: 'auto'
     n_runs: 21
 
+    with_connectivity_mask: True
+
     n_ghosts: 100
 
     time_step: 8

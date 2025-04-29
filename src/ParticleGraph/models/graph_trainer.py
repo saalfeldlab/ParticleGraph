@@ -26,7 +26,7 @@ from sklearn.manifold import TSNE
 from ParticleGraph.denoise_data import *
 from scipy.spatial import KDTree
 from sklearn import neighbors, metrics
-
+import torch.nn.functional as F
 
 def data_train(config=None, erase=False, best_model=None, device=None):
     # plt.rcParams['text.usetex'] = True
@@ -2396,12 +2396,6 @@ def data_train_synaptic2(config, erase, best_model, device):
     logger.info(f'initial batch_size: {batch_size}')
 
     adjacency = torch.load(f'./graphs_data/{dataset_name}/adjacency.pt', map_location=device)
-    if has_ghost:
-        edges, edge_attr = dense_to_sparse(torch.ones((n_particles + n_ghosts)) - torch.eye(n_particles + n_ghosts))
-        edges = edges.to(device=device)
-    else:
-        edges = torch.load(f'./graphs_data/{dataset_name}/edge_index.pt', map_location=device)
-    edges_all = edges.clone().detach()
 
     # matrix = to_numpy(adjacency)
     # rank = get_matrix_rank(matrix)
@@ -2415,9 +2409,19 @@ def data_train_synaptic2(config, erase, best_model, device):
     # plt.title('Spectral Density')
     # plt.savefig(f"./{log_dir}/tmp_training/Spectral_density_Aij.tif")
 
-    if simulation_config.connectivity_mask:
-        model.mask = torch.load(f'./graphs_data/{dataset_name}/mask.pt', map_location=device)
-        edges = torch.load(f'./graphs_data/{dataset_name}/edge_index_.pt', map_location=device)
+    if train_config.with_connectivity_mask:
+        if has_ghost:
+            mask_ = (adjacency >0) * 1.0
+            model.mask[:n_particles,:n_particles] = mask_
+        else:
+            model.mask = torch.load(f'./graphs_data/{dataset_name}/mask.pt', map_location=device)
+
+    if has_ghost:
+        edges, edge_attr = dense_to_sparse(torch.ones((n_particles + n_ghosts)) - torch.eye(n_particles + n_ghosts))
+        edges = edges.to(device=device)
+    else:
+        edges = torch.load(f'./graphs_data/{dataset_name}/edge_index.pt', map_location=device)
+    edges_all = edges.clone().detach()
 
     print(f'{edges.shape[1]} edges')
 
@@ -2478,7 +2482,6 @@ def data_train_synaptic2(config, erase, best_model, device):
         k = 0
 
         for N in trange(Niter):
-
 
             if has_Siren | has_ghost:
                 optimizer_f.zero_grad()
@@ -2567,6 +2570,19 @@ def data_train_synaptic2(config, erase, best_model, device):
                             msg0 = model.lin_edge(in_features)
                             msg1 = model.lin_edge(in_features_next)
                         loss = loss + torch.relu(msg0 - msg1).norm(2) * coeff_diff
+
+                    if train_config.coeff_std_W_ghost>0:
+                        W_particles = model.W[:n_particles, :n_particles]
+                        W_ghost = model.W[:n_particles:, :n_particles]
+                        W_particles_mean = torch.mean(W_particles, dim=0)
+                        W_particles_std = torch.std(W_particles, dim=0)
+                        W_ghost_mean = torch.mean(W_ghost, dim=0)
+                        W_ghost_std = torch.std(W_ghost, dim=0)
+
+                        mean_loss = F.mse_loss(W_particles_mean, W_ghost_mean)
+                        std_loss = F.mse_loss(W_particles_std, W_ghost_std)
+                        loss = loss + (mean_loss + std_loss) * train_config.coeff_std_W_ghost
+
 
                     if (model.update_type == 'generic') & (coeff_diff_update>0):
                         in_feature_update = torch.cat((torch.zeros((n_particles,1), device=device), model.a[:n_particles], msg0, torch.ones((n_particles,1), device=device)), dim=1)
