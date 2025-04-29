@@ -93,4 +93,4 @@ training:
 
     coeff_L1: 1.0E-6
     coeff_diff: 100
-    coeff_std_W_ghost: 1
+    coeff_L1_ghost: 1.0E-5

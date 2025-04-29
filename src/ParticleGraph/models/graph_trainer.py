@@ -2544,7 +2544,13 @@ def data_train_synaptic2(config, erase, best_model, device):
                     func_phi = model.lin_phi(in_features.float())
 
                     # sparsity on Wij and phi(0)=0
-                    loss += model.W.norm(1) * coeff_L1 + func_phi.norm(2)
+                    loss += model.W[:n_particles,:n_particles].norm(1) * coeff_L1 + func_phi.norm(2)
+                    if has_ghost and (train_config.coeff_L1_ghost>0):
+                        loss += model.W[:n_particles, n_particles:].norm(1) * train_config.coeff_L1_ghost
+                        # fig = plt.figure(figsize=(8, 8))
+                        # plt.imshow(to_numpy(model.W[:n_particles, n_particles:]))
+                        # plt.savefig('W_ghost.tif')
+                        # plt.close()
 
                     # lin.edge monotonic positive
                     if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N7'):
@@ -2570,19 +2576,6 @@ def data_train_synaptic2(config, erase, best_model, device):
                             msg0 = model.lin_edge(in_features)
                             msg1 = model.lin_edge(in_features_next)
                         loss = loss + torch.relu(msg0 - msg1).norm(2) * coeff_diff
-
-                    if train_config.coeff_std_W_ghost>0:
-                        W_particles = model.W[:n_particles, :n_particles]
-                        W_ghost = model.W[:n_particles:, :n_particles]
-                        W_particles_mean = torch.mean(W_particles, dim=0)
-                        W_particles_std = torch.std(W_particles, dim=0)
-                        W_ghost_mean = torch.mean(W_ghost, dim=0)
-                        W_ghost_std = torch.std(W_ghost, dim=0)
-
-                        mean_loss = F.mse_loss(W_particles_mean, W_ghost_mean)
-                        std_loss = F.mse_loss(W_particles_std, W_ghost_std)
-                        loss = loss + (mean_loss + std_loss) * train_config.coeff_std_W_ghost
-
 
                     if (model.update_type == 'generic') & (coeff_diff_update>0):
                         in_feature_update = torch.cat((torch.zeros((n_particles,1), device=device), model.a[:n_particles], msg0, torch.ones((n_particles,1), device=device)), dim=1)

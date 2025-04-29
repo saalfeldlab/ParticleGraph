@@ -8373,7 +8373,8 @@ if __name__ == '__main__':
     # config_list = ['wave_slit_bis']
     # config_list = [f"multimaterial_9_{i}" for i in range(25, 33)]
     # config_list = [f"multimaterial_10_{i}" for i in range(1, 5)]
-    config_list = ['signal_N4_CElegans_a6', 'signal_N4_CElegans_a7', 'signal_N4_CElegans_a8', 'signal_N4_CElegans_a9']
+    # config_list = ['signal_N4_CElegans_a6', 'signal_N4_CElegans_a7', 'signal_N4_CElegans_a8', 'signal_N4_CElegans_a9',
+    config_list = ['signal_N4_CElegans_a10', 'signal_N4_CElegans_a11', 'signal_N4_CElegans_a12']
 
     # config_list = ['multimaterial_13_1', 'multimaterial_13_2']
     # config_list = ['falling_water_ramp_x6_13']
