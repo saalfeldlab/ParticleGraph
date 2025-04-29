@@ -55,7 +55,7 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'train'
+        task = 'generate'
         best_model = ''
 
         # config_list = ['multimaterial_12_1','multimaterial_12_2','multimaterial_12_3','multimaterial_12_4','multimaterial_12_5',
@@ -66,7 +66,7 @@ if __name__ == '__main__':
         # config_list = ['falling_water_ramp_x6_13']
         # config_list = ['cell_MDCK_14']
         # config_list = ['signal_N2_a37']
-        config_list = ['signal_N4_CElegans_a6']
+        config_list = ['signal_N4_CElegans_a1'] # , 'signal_N4_CElegans_a7', 'signal_N4_CElegans_a8', 'signal_N4_CElegans_a9']
 
 
     for config_file_ in config_list:
@@ -90,7 +90,7 @@ if __name__ == '__main__':
             #     data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best',
             #               run=run_, test_mode='fixed_bounce_all', sample_embedding=False, step=4,
             #               device=device)  # particle_of_interest=100,
-            data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best', run=17, test_mode='fixed_bounce_all', sample_embedding=False, step=4, device=device)  # particle_of_interest=100,
+            data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best', run=0, test_mode='', sample_embedding=False, step=4, device=device)  # particle_of_interest=100,
 
     if 'try_func' in task:
             try_func(max_radius=config.simulation.max_radius, device=device)

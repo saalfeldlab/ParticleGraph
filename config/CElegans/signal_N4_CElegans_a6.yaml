@@ -59,7 +59,7 @@ plotting:
     ylim: [-8,8]
 
 training:
-    n_epochs: 20
+    n_epochs: 8
     recursive_loop: 1
     batch_size: 8
     small_init_batch_size: False
@@ -73,7 +73,7 @@ training:
 
     sparsity: 'none'
     rotation_augmentation: False
-    data_augmentation_loop: 20000
+    data_augmentation_loop: 5000
     cluster_method: 'distance_embedding'
     cluster_distance_threshold: 0.2
     fix_cluster_embedding: True
@@ -85,9 +85,7 @@ training:
     learning_rate_start: 5.0E-5
     learning_rate_embedding_start: 5.0E-4
 
-    learning_rate_NNR: 1.0E-5
+    learning_rate_NNR: 1.0E-6
 
-    noise_level: 1.0
-
-    coeff_L1: 1.0E-5
+    coeff_L1: 1.0E-6
     coeff_diff: 100

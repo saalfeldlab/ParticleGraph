@@ -915,7 +915,7 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     #     subset_chem_weights_test[k, :] = chem_weights[map_list[k],map_list]
 
 
-    adjacency = torch.tensor(subset_chem_weights, dtype=torch.float32, device=device)
+    adjacency = torch.tensor(subset_chem_weights + subset_eassym_weights, dtype=torch.float32, device=device)
     torch.save(adjacency, f'./graphs_data/{dataset_name}/adjacency.pt')
 
     edge_index, edge_attr = dense_to_sparse(torch.ones((n_particles)) - torch.eye(n_particles))

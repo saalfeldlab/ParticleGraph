@@ -136,13 +136,14 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
     gt_weight = to_numpy(adjacency)
     pred_weight = to_numpy(model.W[:n_particles, :n_particles].clone().detach())
     if n_particles<1000:
-        fig = plt.figure(figsize=(8, 8))
-        plt.scatter(gt_weight, pred_weight, s=10, c='k',alpha=0.2)
-        plt.xticks([])
-        plt.yticks([])
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/matrix/comparison_{epoch}_{N}.tif", dpi=87)
-        plt.close()
+
+        # fig = plt.figure(figsize=(8, 8))
+        # plt.scatter(gt_weight, pred_weight, s=10, c='k',alpha=0.2)
+        # plt.xticks([])
+        # plt.yticks([])
+        # plt.tight_layout()
+        # plt.savefig(f"./{log_dir}/tmp_training/matrix/comparison_{epoch}_{N}.tif", dpi=87)
+        # plt.close()
 
         fig = plt.figure(figsize=(16, 8))
         ax = fig.add_subplot(121)

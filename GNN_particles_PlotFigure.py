@@ -5494,10 +5494,14 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 state_dict = torch.load(net, map_location=device)
                 model_missing_activity.load_state_dict(state_dict['model_state_dict'])
 
+
             fig, ax = fig_init()
-            for n in range(n_particle_types,-1,-1):
-                pos = torch.argwhere(type_list == n).squeeze()
-                plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=200, color=cmap.color(n), alpha=0.25, edgecolors='none')
+            if has_ghost:
+                plt.scatter(to_numpy(model.a[:n_particles, 0]), to_numpy(model.a[:n_particles, 1]), s=150, color=cmap.color(0), edgecolors='none')
+            else:
+                for n in range(n_particle_types,-1,-1):
+                    pos = torch.argwhere(type_list == n).squeeze()
+                    plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=200, color=cmap.color(n), alpha=0.25, edgecolors='none')
             if 'latex' in style:
                 plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
                 plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
@@ -8369,7 +8373,7 @@ if __name__ == '__main__':
     # config_list = ['wave_slit_bis']
     # config_list = [f"multimaterial_9_{i}" for i in range(25, 33)]
     # config_list = [f"multimaterial_10_{i}" for i in range(1, 5)]
-    config_list = ['signal_N4_CElegans_a6', 'signal_N4_CElegans_a7', 'signal_N4_CElegans_a8']
+    config_list = ['signal_N4_CElegans_a6', 'signal_N4_CElegans_a7', 'signal_N4_CElegans_a8', 'signal_N4_CElegans_a9']
 
     # config_list = ['multimaterial_13_1', 'multimaterial_13_2']
     # config_list = ['falling_water_ramp_x6_13']
