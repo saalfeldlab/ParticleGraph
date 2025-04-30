@@ -51,8 +51,6 @@ graph_model:
     update_type: 'excitation'
     excitation_dim: 3
 
-    lin_edge_positive: True
-
 
 plotting:
     colormap: 'tab10'
@@ -61,12 +59,14 @@ plotting:
     ylim: [-8,8]
 
 training:
-    n_epochs: 20
+    n_epochs: 8
     recursive_loop: 1
     batch_size: 8
     small_init_batch_size: False
     device: 'auto'
     n_runs: 21
+
+    with_connectivity_mask: True
 
     n_ghosts: 100
 
@@ -88,3 +88,5 @@ training:
 
     coeff_L1: 1.0E-6
     coeff_diff: 100
+    coeff_L1_ghost: 1.0E-5
+

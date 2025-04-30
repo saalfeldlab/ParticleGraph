@@ -51,8 +51,6 @@ graph_model:
     update_type: 'excitation'
     excitation_dim: 3
 
-    lin_edge_positive: True
-
 
 plotting:
     colormap: 'tab10'
@@ -68,7 +66,7 @@ training:
     device: 'auto'
     n_runs: 21
 
-    n_ghosts: 100
+    with_connectivity_mask: True
 
     time_step: 8
     shared_embedding: True
@@ -80,6 +78,7 @@ training:
     cluster_distance_threshold: 0.2
     fix_cluster_embedding: True
 
+
     learning_rate_W_start: 1.0E-4
     learning_rate_start: 5.0E-5
     learning_rate_embedding_start: 5.0E-4
@@ -88,3 +87,4 @@ training:
 
     coeff_L1: 1.0E-6
     coeff_diff: 100
+

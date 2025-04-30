@@ -61,7 +61,7 @@ plotting:
     ylim: [-8,8]
 
 training:
-    n_epochs: 8
+    n_epochs: 20
     recursive_loop: 1
     batch_size: 8
     small_init_batch_size: False
@@ -81,9 +81,6 @@ training:
     cluster_method: 'distance_embedding'
     cluster_distance_threshold: 0.2
     fix_cluster_embedding: True
-
-    sparsity: 'replace_embedding_function'
-    sparsity_freq: 4
 
     learning_rate_W_start: 1.0E-4
     learning_rate_start: 5.0E-5

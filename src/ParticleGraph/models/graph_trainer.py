@@ -2414,7 +2414,7 @@ def data_train_synaptic2(config, erase, best_model, device):
             mask_ = (adjacency >0) * 1.0
             model.mask[:n_particles,:n_particles] = mask_
         else:
-            model.mask = torch.load(f'./graphs_data/{dataset_name}/mask.pt', map_location=device)
+            model.mask = (adjacency >0) * 1.0
 
     if has_ghost:
         edges, edge_attr = dense_to_sparse(torch.ones((n_particles + n_ghosts)) - torch.eye(n_particles + n_ghosts))
