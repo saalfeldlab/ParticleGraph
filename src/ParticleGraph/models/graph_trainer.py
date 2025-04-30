@@ -2272,6 +2272,7 @@ def data_train_synaptic2(config, erase, best_model, device):
     activity = activity.squeeze()
     distrib = activity.flatten()
     activity = activity.t()
+
     xnorm = torch.round(1.5*torch.std(distrib).to(device))
     torch.save(xnorm, os.path.join(log_dir, 'xnorm.pt'))
     print(f'xnorm: {to_numpy(xnorm)}')
@@ -2292,10 +2293,29 @@ def data_train_synaptic2(config, erase, best_model, device):
 
     if train_config.denoise:
         print('denoise data ...')
-        for k in range(1):
+        for k in range(len(x_list)):
             x_, y_ = denoise_data(config, x_list[k], y_list[k], device)
             x_list[k] = x_
             y_list[k] = y_
+
+        activity = torch.tensor(x_list[0][:, :, 6:7], device=device)
+        activity = activity.squeeze()
+        activity = activity.t()
+
+        plt.figure(figsize=(15, 10))
+        n = np.random.permutation(n_particles)
+        for i in range(25):
+            plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=2)
+        plt.xlabel('time', fontsize=64)
+        plt.ylabel('$x_{i}$', fontsize=64)
+        plt.xlim([0,n_frames])
+        # plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
+        plt.xticks(fontsize=28)
+        plt.yticks(fontsize=28)
+        plt.title(r'$x_i$ samples',fontsize=48)
+        plt.tight_layout()
+        plt.savefig(f'./{log_dir}/denoised_activity.tif', dpi=300)
+        plt.close()
 
     if model_config.embedding_init !='':
         print('compute init embedding ...')

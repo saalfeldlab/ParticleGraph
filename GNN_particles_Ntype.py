@@ -56,7 +56,7 @@ if __name__ == '__main__':
     else:
 
         task = 'train'
-        best_model = '9_0'
+        best_model = ''
 
         # config_list = ['multimaterial_12_1','multimaterial_12_2','multimaterial_12_3','multimaterial_12_4','multimaterial_12_5',
         #                'multimaterial_13_1', 'multimaterial_13_2', 'multimaterial_13_3',
@@ -71,7 +71,7 @@ if __name__ == '__main__':
         #                'signal_N4_CElegans_a8_1', 'signal_N4_CElegans_a8_2', 'signal_N4_CElegans_a8_3',
         #                'signal_N4_CElegans_a9', 'signal_N4_CElegans_a9_1', 'signal_N4_CElegans_a9_2',
         #                'signal_N4_CElegans_a9_3', 'signal_N4_CElegans_a9_4', 'signal_N4_CElegans_a9_5']
-        config_list = ['signal_N2_a43_2_1_t16']
+        config_list = ['signal_N4_CElegans_a9_6']
 
     for config_file_ in config_list:
         print(' ')

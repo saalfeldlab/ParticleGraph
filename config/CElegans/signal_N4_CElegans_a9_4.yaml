@@ -72,7 +72,7 @@ training:
 
     n_ghosts: 100
 
-    time_step: 8
+    time_step: 16
     shared_embedding: True
 
     sparsity: 'none'
@@ -82,12 +82,12 @@ training:
     cluster_distance_threshold: 0.2
     fix_cluster_embedding: True
 
-    learning_rate_W_start: 1.0E-4
-    learning_rate_start: 5.0E-5
-    learning_rate_embedding_start: 5.0E-4
+    learning_rate_W_start: 1.0E-3
+    learning_rate_start: 5.0E-4
+    learning_rate_embedding_start: 5.0E-3
 
     learning_rate_NNR: 1.0E-6
 
     coeff_L1: 1.0E-6
     coeff_diff: 100
-    coeff_L1_ghost: 1.0E-5
+    coeff_L1_ghost: 1.0E-6

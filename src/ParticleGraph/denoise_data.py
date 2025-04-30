@@ -31,9 +31,14 @@ def denoise_data(config, x_list, y_list, device):
 
 def estimate_noise_std(signal):
     # Estimate the noise standard deviation using the median absolute deviation
-    median = torch.median(signal)
-    mad = torch.median(torch.abs(signal - median))
-    noise_std = 1.4826 * mad
+    valid_signal = signal[~torch.isnan(signal)]  # Filter out NaNs
+
+    if valid_signal.numel() > 0:
+        median = torch.median(valid_signal)
+        mad = torch.median(torch.abs(valid_signal - median))
+        noise_std = 1.4826 * mad
+    else:
+        noise_std = 1
     return noise_std
 
 

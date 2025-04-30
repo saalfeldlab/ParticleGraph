@@ -63,14 +63,14 @@ plotting:
 training:
     n_epochs: 20
     recursive_loop: 1
-    batch_size: 8
+    batch_size: 1
     small_init_batch_size: False
     device: 'auto'
     n_runs: 21
 
     n_ghosts: 100
 
-    time_step: 8
+    time_step: 20
     shared_embedding: True
 
     sparsity: 'none'
@@ -81,12 +81,12 @@ training:
     fix_cluster_embedding: True
 
 
-    learning_rate_W_start: 1.0E-4
-    learning_rate_start: 5.0E-5
-    learning_rate_embedding_start: 5.0E-4
+    learning_rate_W_start: 1.0E-3
+    learning_rate_start: 5.0E-4
+    learning_rate_embedding_start: 5.0E-3
 
     learning_rate_NNR: 1.0E-6
 
     coeff_L1: 1.0E-6
     coeff_diff: 100
-    coeff_L1_ghost: 1.0E-6
+    coeff_L1_ghost: 1.0E-5
