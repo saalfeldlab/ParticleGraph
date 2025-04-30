@@ -8415,13 +8415,13 @@ if __name__ == '__main__':
     # config_list = [f"multimaterial_9_{i}" for i in range(25, 33)]
     # config_list = [f"multimaterial_10_{i}" for i in range(1, 5)]
     # config_list = ['signal_N4_CElegans_a6', 'signal_N4_CElegans_a7', 'signal_N4_CElegans_a8', 'signal_N4_CElegans_a9',
-    config_list = ['signal_N4_CElegans_a9_6', 'signal_N4_CElegans_a7_2', 'signal_N4_CElegans_a7_3', 'signal_N4_CElegans_a9_2', 'signal_N4_CElegans_a9_3'] #  'signal_N4_CElegans_a6', 'signal_N4_CElegans_a7_1', 'signal_N4_CElegans_a7_2', 'signal_N4_CElegans_a8', 'signal_N4_CElegans_a8_1', 'signal_N4_CElegans_a8_2', 'signal_N4_CElegans_a8_3', , 'signal_N4_CElegans_a9_4', 'signal_N4_CElegans_a9_5']
-    # config_list = ['signal_N4_CElegans_a7_2']
+    # config_list = ['signal_N4_CElegans_a9_6', 'signal_N4_CElegans_a7_2', 'signal_N4_CElegans_a7_3', 'signal_N4_CElegans_a9_2', 'signal_N4_CElegans_a9_3'] #  'signal_N4_CElegans_a6', 'signal_N4_CElegans_a7_1', 'signal_N4_CElegans_a7_2', 'signal_N4_CElegans_a8', 'signal_N4_CElegans_a8_1', 'signal_N4_CElegans_a8_2', 'signal_N4_CElegans_a8_3', , 'signal_N4_CElegans_a9_4', 'signal_N4_CElegans_a9_5']
+    config_list = ['signal_N2_a43_2_1_t16']
 
     # config_list = ['multimaterial_13_1', 'multimaterial_13_2']
     # config_list = ['falling_water_ramp_x6_13']
 
-    plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
+    # plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 
     for config_file_ in config_list:
         print(' ')

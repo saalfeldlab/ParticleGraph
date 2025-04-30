@@ -81,9 +81,9 @@ training:
     fix_cluster_embedding: True
 
 
-    learning_rate_W_start: 1.0E-4
-    learning_rate_start: 5.0E-5
-    learning_rate_embedding_start: 5.0E-4
+    learning_rate_W_start: 1.0E-3
+    learning_rate_start: 5.0E-4
+    learning_rate_embedding_start: 5.0E-3
 
     learning_rate_NNR: 1.0E-6
 

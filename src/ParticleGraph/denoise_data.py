@@ -10,19 +10,6 @@ def denoise_data(config, x_list, y_list, device):
     activity = activity.squeeze()
     activity = activity.t()
 
-    # n = np.random.permutation(x_list.shape[1])
-    # plt.figure(figsize=(15, 10))
-    # for i in range(25):
-    #     plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=2)
-    # plt.xlabel('time', fontsize=64)
-    # plt.ylabel('$x_{i}$', fontsize=64)
-    # # plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
-    # plt.xticks(fontsize=48)
-    # plt.yticks(fontsize=48)
-    # plt.xlim([0, 1000])
-    # plt.tight_layout()
-    # plt.show()
-
     denoised_signals = []
     for i in trange(activity.shape[0]):
         signal = activity[i, :].clone().detach()
@@ -37,22 +24,7 @@ def denoise_data(config, x_list, y_list, device):
     x_list[:, :, 6] = denoised_signals_array
 
     for k in range(1, x_list.shape[0] - 1):
-        y_list[k] = (x_list[k + 1, :, 6:7] - x_list[k, :, 6:7]) / config.simulation.delta_t
-
-    # activity = torch.tensor(x_list[:, :, 6:7])
-    # activity = activity.squeeze()
-    # activity = activity.t()
-    # plt.figure(figsize=(15, 10))
-    # for i in range(25):
-    #     plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=2)
-    # plt.xlabel('time', fontsize=64)
-    # plt.ylabel('$x_{i}$', fontsize=64)
-    # # plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
-    # plt.xticks(fontsize=48)
-    # plt.yticks(fontsize=48)
-    # plt.xlim([0, 1000])
-    # plt.tight_layout()
-    # plt.show()
+        y_list[k] = (x_list[k + 1, :, 6:7] - x_list[k, :, 6:7]).squeeze() / config.simulation.delta_t
 
     return x_list, y_list
 
