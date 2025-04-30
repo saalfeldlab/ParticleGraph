@@ -68,9 +68,7 @@ training:
     device: 'auto'
     n_runs: 21
 
-    n_ghosts: 100
-
-    time_step: 20
+    time_step: 8
     shared_embedding: True
 
     sparsity: 'none'
@@ -89,4 +87,3 @@ training:
 
     coeff_L1: 1.0E-6
     coeff_diff: 100
-    coeff_L1_ghost: 1.0E-5

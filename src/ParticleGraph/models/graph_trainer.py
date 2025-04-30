@@ -2419,6 +2419,7 @@ def data_train_synaptic2(config, erase, best_model, device):
     if has_ghost:
         edges, edge_attr = dense_to_sparse(torch.ones((n_particles + n_ghosts)) - torch.eye(n_particles + n_ghosts))
         edges = edges.to(device=device)
+        model.mask[n_particles:, :] = 0
     else:
         edges = torch.load(f'./graphs_data/{dataset_name}/edge_index.pt', map_location=device)
     edges_all = edges.clone().detach()
@@ -3369,7 +3370,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     n_frames = simulation_config.n_frames
     delta_t = simulation_config.delta_t
     time_window = training_config.time_window
-    time_step = 1  #training_config.time_step
+    time_step = training_config.time_step
     sub_sampling = simulation_config.sub_sampling
     bounce_coeff = simulation_config.bounce_coeff
     cmap = CustomColorMap(config=config)
@@ -3719,7 +3720,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     n_particles = x.shape[0]
     x_inference_list = []
 
-    for it in trange(start_it, start_it+800):   #  start_it+200): # min(9600+start_it,stop_it-time_step)):
+    for it in trange(start_it, start_it+200):   #  start_it+200): # min(9600+start_it,stop_it-time_step)):
 
         check_and_clear_memory(device=device, iteration_number=it, every_n_iterations=25, memory_percentage_threshold=0.6)
         # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
@@ -3734,7 +3735,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         if has_mesh:
             x[:, 1:5] = x0[:, 1:5].clone().detach()
             dataset_mesh = data.Data(x=x, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
-        if do_tracking:
+        if (time_step>1) | do_tracking:
             x = x0.clone().detach()
 
         # error calculations
@@ -3838,7 +3839,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 x_ghost = model_ghost.get_pos(dataset_id=run, frame=it, bc_pos=bc_pos)
                 x_ = torch.cat((x_, x_ghost), 0)
 
-
             # compute connectivity and prediction
             if has_adjacency_matrix:
                 if 'PDE_N' in model_config.signal_model_name:
@@ -3930,6 +3930,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     pred_err_list.append(to_numpy(torch.sqrt(loss)))
                     if 'inference' in test_mode:
                         x[:,dimension+1:2*dimension+1] = pred.clone().detach() / (delta_t * time_step)
+                elif ('PDE_N' in model_config.signal_model_name) & (time_step>1):
+
+                    loss = 0
+                    pred_err_list.append(to_numpy(torch.sqrt(loss)))
                 else:
                     loss = (pred[:n_particles, 0:dimension] * ynorm - y0).norm(2)
 
