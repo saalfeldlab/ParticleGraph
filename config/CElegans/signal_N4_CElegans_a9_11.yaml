@@ -61,7 +61,7 @@ plotting:
     ylim: [-8,8]
 
 training:
-    n_epochs: 20
+    n_epochs: 10
     recursive_loop: 1
     batch_size: 8
     small_init_batch_size: False
@@ -88,6 +88,6 @@ training:
 
     learning_rate_NNR: 1.0E-6
 
-    coeff_L1: 1.0E-6
     coeff_diff: 100
-    coeff_L1_ghost: 1.0E-6
+    coeff_L1: 0
+    coeff_L1_ghost: 1.0E-3

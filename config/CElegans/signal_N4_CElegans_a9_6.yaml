@@ -1,4 +1,4 @@
-description: 'test neuron_dependent functions  with CElegans data    idem a5   add  100 ghosts'
+description: 'test neuron_dependent functions  with CElegans data    add  100 ghosts batchsize 8'
 dataset: 'CElegans_a1'
 data_folder_name: '/groups/saalfeld/home/allierc/Py/wormvae/data/worm_activity/all_traces_Heads_new.mat'
 connectome_folder_name: '/groups/saalfeld/home/allierc/Py/wormvae/data/worm_connectivity/'
@@ -61,7 +61,7 @@ plotting:
     ylim: [-8,8]
 
 training:
-    n_epochs: 20
+    n_epochs: 10
     recursive_loop: 1
     batch_size: 8
     small_init_batch_size: False
@@ -74,7 +74,6 @@ training:
 
     time_step: 8
     shared_embedding: True
-    denoise: True
 
     sparsity: 'none'
     rotation_augmentation: False
@@ -89,6 +88,6 @@ training:
 
     learning_rate_NNR: 1.0E-6
 
-    coeff_L1: 1.0E-6
     coeff_diff: 100
+    coeff_L1: 0
     coeff_L1_ghost: 1.0E-6

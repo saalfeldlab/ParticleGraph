@@ -1,4 +1,4 @@
-description: 'test neuron_dependent functions  with CElegans data    add  100 ghosts batchsize 8'
+description: 'test neuron_dependent functions  with CElegans data    100 ghosts n_runs 5'
 dataset: 'CElegans_a1'
 data_folder_name: '/groups/saalfeld/home/allierc/Py/wormvae/data/worm_activity/all_traces_Heads_new.mat'
 connectome_folder_name: '/groups/saalfeld/home/allierc/Py/wormvae/data/worm_connectivity/'
@@ -63,12 +63,10 @@ plotting:
 training:
     n_epochs: 20
     recursive_loop: 1
-    batch_size: 8
+    batch_size: 1
     small_init_batch_size: False
     device: 'auto'
-    n_runs: 21
-
-    with_connectivity_mask: True
+    n_runs: 5
 
     n_ghosts: 100
 
@@ -82,6 +80,7 @@ training:
     cluster_distance_threshold: 0.2
     fix_cluster_embedding: True
 
+
     learning_rate_W_start: 1.0E-3
     learning_rate_start: 5.0E-4
     learning_rate_embedding_start: 5.0E-3
@@ -90,4 +89,4 @@ training:
 
     coeff_L1: 1.0E-6
     coeff_diff: 100
-    coeff_L1_ghost: 1.0E-6
+    coeff_L1_ghost: 1.0E-5

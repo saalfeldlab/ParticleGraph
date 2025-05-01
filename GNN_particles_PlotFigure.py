@@ -34,6 +34,7 @@ from sklearn.mixture import GaussianMixture
 import warnings
 import seaborn as sns
 import glob
+import shutil
 
 # from pysr import PySRRegressor
 
@@ -5256,7 +5257,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
         # plt.close()
 
         plt.figure(figsize=(15, 10))
-        n = np.random.permutation(n_particles)
+
+        n = np.random.randint(0, n_particles, 25)
         for i in range(25):
             plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=2)
         plt.xlabel('time', fontsize=64)
@@ -8415,8 +8417,8 @@ if __name__ == '__main__':
     # config_list = [f"multimaterial_9_{i}" for i in range(25, 33)]
     # config_list = [f"multimaterial_10_{i}" for i in range(1, 5)]
     # config_list = ['signal_N4_CElegans_a6', 'signal_N4_CElegans_a7', 'signal_N4_CElegans_a8', 'signal_N4_CElegans_a9',
-    # config_list = ['signal_N4_CElegans_a9_6', 'signal_N4_CElegans_a7_2', 'signal_N4_CElegans_a7_3', 'signal_N4_CElegans_a9_2', 'signal_N4_CElegans_a9_3'] #  'signal_N4_CElegans_a6', 'signal_N4_CElegans_a7_1', 'signal_N4_CElegans_a7_2', 'signal_N4_CElegans_a8', 'signal_N4_CElegans_a8_1', 'signal_N4_CElegans_a8_2', 'signal_N4_CElegans_a8_3', , 'signal_N4_CElegans_a9_4', 'signal_N4_CElegans_a9_5']
-    config_list = ['signal_N2_a43_2_1_t16']
+    config_list = ['signal_N4_CElegans_a7_1', 'signal_N4_CElegans_a7_2', 'signal_N4_CElegans_a7_3', 'signal_N4_CElegans_a7_4', 'signal_N4_CElegans_a7_5', 'signal_N4_CElegans_a7_6', 'signal_N4_CElegans_a7_7', 'signal_N4_CElegans_a9_1', 'signal_N4_CElegans_a9_2', 'signal_N4_CElegans_a9_3', 'signal_N4_CElegans_a9_4', 'signal_N4_CElegans_a9_5']
+    # config_list = ['signal_N2_a43_2_1_t16']
 
     # config_list = ['multimaterial_13_1', 'multimaterial_13_2']
     # config_list = ['falling_water_ramp_x6_13']
@@ -8433,11 +8435,22 @@ if __name__ == '__main__':
 
         print(f'config_file  {config.config_file}')
 
+        folder_name = './log/' + pre_folder + '/tmp_results/'
+        os.makedirs(folder_name, exist_ok=True)
+
         data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
         # data_plot(config=config, config_file=config_file, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['time'], style='black color', device=device)
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
+
+        # get figure and put it in folder tmp
+
+        filename = 'first learned connectivity.tif'
+        shutil.copyfile('./log/' + pre_folder + config_file_ + '/results/' + filename, './log/' + pre_folder + '/tmp_results/' + config_file_ + '_' + filename)
+
+
+
 
     # f_list = ['synaptic_supp5']
     # for f in f_list:
