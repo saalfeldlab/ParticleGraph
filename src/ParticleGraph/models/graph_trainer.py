@@ -2628,10 +2628,10 @@ def data_train_synaptic2(config, erase, best_model, device):
                         loss = loss + torch.relu(msg0 - msg1).norm(2) * coeff_diff
 
                     if coeff_sign > 0:
-                        W_sign = (model.W[:n_particles, :n_particles])
-                        sum_per_col = W_sign.sum(dim=0)  # masking is redundant
-                        log_sum = - sum_per_col.norm(2)
-                        loss = loss + log_sum * coeff_sign
+                        # W_sign = (model.W[:n_particles, :n_particles])
+                        # sum_per_col = W_sign.sum(dim=0)  # masking is redundant
+                        # log_sum = - sum_per_col.norm(2)
+                        loss = loss + W_sign.sum() * coeff_sign
 
                         fig = plt.figure(figsize=(8, 8))
                         plt.imshow(to_numpy(W_sign))
