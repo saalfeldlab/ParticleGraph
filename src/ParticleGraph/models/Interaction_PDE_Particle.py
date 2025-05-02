@@ -208,11 +208,6 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
             case 'step_A2' | 'step_C2':
                 in_features = torch.cat((embedding_i, embedding_j, delta_pos, d_pos_i, d_pos_j, new_features_i, new_features_j, self.kernels), dim=-1)
                 out = self.MLP[2](in_features)
-
-                    in_features = torch.cat((embedding_i, embedding_j, d_pos_i, d_pos_j, new_features_i, new_features_j, self.kernels), dim=-1)
-                    out = self.MLP[2](in_features)
-                    in_features = torch.cat((delta_pos, embedding_i, embedding_j), dim=-1)
-                    out = out + self.MLP[4](in_features)
 		                
             case 'step_B1':
                 in_features = torch.cat((embedding_i, pos_i_p, pos_j_p), dim=-1)
