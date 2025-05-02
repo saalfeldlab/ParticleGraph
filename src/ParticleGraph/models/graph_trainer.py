@@ -2628,15 +2628,19 @@ def data_train_synaptic2(config, erase, best_model, device):
                         loss = loss + torch.relu(msg0 - msg1).norm(2) * coeff_diff
 
                     if coeff_sign > 0:
-                        # W_sign = (model.W[:n_particles, :n_particles])
-                        # sum_per_col = W_sign.sum(dim=0)  # masking is redundant
-                        # log_sum = - sum_per_col.norm(2)
-                        loss = loss + W_sign.sum() * coeff_sign
+                        W_sign = torch.sign(model.W[:n_particles, :n_particles])
+                        mask = W_sign != 0
+                        W_masked = W_sign * mask
+                        sum_per_col = W_masked.sum(dim=0)
+                        count_per_col = mask.sum(dim=0)
+                        mean_per_col = sum_per_col / count_per_col.clamp(min=1)  # Avoid division by zero
+                        diff_squared = ((W_masked - mean_per_col.unsqueeze(0)) * mask) ** 2
+                        ssd = diff_squared.sum(dim=0)
+                        std_nonzero = torch.sqrt(ssd / count_per_col.clamp(min=1))
+                        loss = loss + std_nonzero.norm(2) * coeff_sign
 
-                        fig = plt.figure(figsize=(8, 8))
-                        plt.imshow(to_numpy(W_sign))
-                        plt.savefig('W_ghost.tif')
-                        plt.close()
+
+
 
                     if (model.update_type == 'generic') & (coeff_diff_update>0):
                         in_feature_update = torch.cat((torch.zeros((n_particles,1), device=device), model.a[:n_particles], msg0, torch.ones((n_particles,1), device=device)), dim=1)
