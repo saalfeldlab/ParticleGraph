@@ -243,6 +243,7 @@ class TrainingConfig(BaseModel):
     coeff_sign: float = 0
     coeff_permutation: float = 100
     coeff_L1_ghost: float = 0
+    coeff_sign: float = 0
 
     diff_update_regul: str = 'none'
 

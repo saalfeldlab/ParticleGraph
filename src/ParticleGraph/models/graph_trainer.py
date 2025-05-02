@@ -2262,6 +2262,7 @@ def data_train_synaptic2(config, erase, best_model, device):
     field_type = model_config.field_type
     coeff_lin_modulation = train_config.coeff_lin_modulation
     coeff_model_b = train_config.coeff_model_b
+    coeff_sign = train_config.coeff_sign
     time_step = train_config.time_step
     n_ghosts = int(train_config.n_ghosts)
     has_ghost = n_ghosts > 0
@@ -2625,6 +2626,15 @@ def data_train_synaptic2(config, erase, best_model, device):
                             msg0 = model.lin_edge(in_features)
                             msg1 = model.lin_edge(in_features_next)
                         loss = loss + torch.relu(msg0 - msg1).norm(2) * coeff_diff
+
+                    if coeff_sign > 0:
+                        W_sign = torch.sign(model.W[:n_particles, n_particles:])
+                        non_zero_mask = W_sign != 0
+                        count_nonzero = non_zero_mask.sum(dim=0)
+                        x_sign_masked = x_sign.float().masked_fill(~non_zero_mask, float('nan'))
+                        std_nonzero = torch.nanstd(x_sign_masked, dim=0, unbiased=False)
+                        loss = loss + std_nonzero.norm(2) * coeff_sign
+
 
                     if (model.update_type == 'generic') & (coeff_diff_update>0):
                         in_feature_update = torch.cat((torch.zeros((n_particles,1), device=device), model.a[:n_particles], msg0, torch.ones((n_particles,1), device=device)), dim=1)
