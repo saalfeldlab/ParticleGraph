@@ -2631,8 +2631,8 @@ def data_train_synaptic2(config, erase, best_model, device):
                         W_sign = torch.sign(model.W[:n_particles, n_particles:])
                         non_zero_mask = W_sign != 0
                         count_nonzero = non_zero_mask.sum(dim=0)
-                        x_sign_masked = x_sign.float().masked_fill(~non_zero_mask, float('nan'))
-                        std_nonzero = torch.nanstd(x_sign_masked, dim=0, unbiased=False)
+                        W_sign_masked = W_sign.float().masked_fill(~non_zero_mask, float('nan'))
+                        std_nonzero = torch.nanstd(W_sign_masked, dim=0, unbiased=False)
                         loss = loss + std_nonzero.norm(2) * coeff_sign
 
 
