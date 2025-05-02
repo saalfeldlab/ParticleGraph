@@ -86,6 +86,32 @@ def data_train(config=None, erase=False, best_model=None, device=None):
 
 
 def data_train_particle(config, erase, best_model, device):
+    simulation_config = config.simulation
+    train_config = config.training
+    model_config = config.graph_model
+    plot_config = config.plotting
+
+    print(f'training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+
+    dimension = simulation_config.dimension
+    n_epochs = train_config.n_epochs
+    max_radius = simulation_config.max_radius
+    min_radius = simulation_config.min_radius
+    n_particles = simulation_config.n_particles
+    n_particle_types = simulation_config.n_particle_types
+    delta_t = simulation_config.delta_t
+    time_window = train_config.time_window
+    time_step = train_config.time_step
+    recursive_loop = train_config.recursive_loop
+
+    noise_level = train_config.noise_level
+    dataset_name = config.dataset
+    n_frames = simulation_config.n_frames
+
+    data_augmentation_loop = train_config.data_augmentation_loop
+    recursive_loop = train_config.recursive_loop
+    coeff_continuous = train_config.coeff_continuous
+    coeff_permutation = train_config.coeff_permutation
     target_batch_size = train_config.batch_size
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
