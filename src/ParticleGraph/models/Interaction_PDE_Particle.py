@@ -83,6 +83,83 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
         self.kernel_var = self.max_radius ** 2
 
 
+    def forward_old(self, data=[], data_id=[], training=[], has_field=False, k=[]):
+
+        x, edge_index = data.x, data.edge_index
+        # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+        self.training = training
+
+        if has_field:
+            field = x[:,6:7]
+        else:
+            field = torch.ones_like(x[:,6:7])
+
+        pos = x[:, 1:self.dimension+1]
+        if training & (self.time_window_noise > 0):
+            noise = torch.randn_like(pos) * self.time_window_noise
+            pos = pos + noise
+
+        d_pos = x[:, self.dimension+1:1+2*self.dimension]
+        if training & self.rotation_augmentation:
+            self.phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=self.device) * np.pi * 2
+            self.rotation_matrix = torch.stack([torch.stack([torch.cos(self.phi), torch.sin(self.phi)]), torch.stack([-torch.sin(self.phi), torch.cos(self.phi)])])
+            d_pos[:, :2] = d_pos[:, :2] @ self.rotation_matrix.T
+
+        # if translation_augmentation:
+        #     displacement = torch.randn(1, dimension, dtype=torch.float32, device=device) * 5
+        #     displacement = displacement.repeat(pos.shape[0], 1)
+        #     pos = pos + displacement
+        # if velocity_augmentation:
+        #     d_pos = d_pos + torch.randn((1, 2), device=device).repeat(d_pos.shape[0], 1) * vnorm
+
+        particle_id = x[:, 0:1].long()
+        embedding = self.a[data_id.long(), particle_id, :].squeeze()
+
+        if self.model == 'PDE_MLPs_A':
+            for self.mode in ['kernel_new_features', 'message_passing_kernel', 'update']:
+                if self.mode == 'kernel_new_features':
+                    new_features = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=torch.zeros_like(embedding))
+                elif self.mode == 'message_passing_kernel':
+                    out = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=new_features)
+                    if self.rotation_augmentation & (self.training == True):
+                        self.rotation_inv_matrix = torch.stack([torch.stack([torch.cos(self.phi), -torch.sin(self.phi)]), torch.stack([torch.sin(self.phi), torch.cos(self.phi)])])
+                        out[:, :2] = out[:, :2] @ self.rotation_inv_matrix.T
+                        d_pos[:, :2] = d_pos[:, :2] @ self.rotation_inv_matrix.T
+                elif self.mode == 'update':
+                    in_features = torch.cat((embedding, d_pos, out), dim=-1)
+                    out = self.MLP[3](in_features)
+
+        if self.model == 'PDE_MLPs_B':
+            for self.mode in ['encode_features', 'update_features', 'update_features', 'update_features', 'decode_features', 'update']:
+                if self.mode == 'encode_features':
+                    new_features = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=torch.zeros_like(embedding))
+                elif self.mode == 'update_features':
+                    new_features = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=new_features)
+                elif self.mode == 'decode_features':
+                    new_features = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=new_features)
+                elif self.mode == 'update':
+                    if self.rotation_augmentation & (self.training == True):
+                        self.rotation_inv_matrix = torch.stack([torch.stack([torch.cos(self.phi), -torch.sin(self.phi)]), torch.stack([torch.sin(self.phi), torch.cos(self.phi)])])
+                        new_features[:, :2] = new_features[:, :2] @ self.rotation_inv_matrix.T
+                        d_pos[:, :2] = d_pos[:, :2] @ self.rotation_inv_matrix.T
+                    in_features = torch.cat((embedding, d_pos, new_features), dim=-1)
+                    out = self.MLP[3](in_features)
+
+        if (self.model == 'PDE_MLPs_C') | (self.model == 'PDE_MLPs_D'):
+            for self.mode in ['defined_kernel_features', 'message_passing_defined_kernel']:
+                if self.mode == 'defined_kernel_features':
+                    new_features = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=torch.zeros_like(embedding))
+                elif self.mode == 'message_passing_defined_kernel':
+                    out = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, embedding=embedding, new_features=new_features)
+                    if self.rotation_augmentation & (self.training == True):
+                        self.rotation_inv_matrix = torch.stack([torch.stack([torch.cos(self.phi), -torch.sin(self.phi)]), torch.stack([torch.sin(self.phi), torch.cos(self.phi)])])
+                        out[:, :2] = out[:, :2] @ self.rotation_inv_matrix.T
+            if (self.model == 'PDE_MLPs_D'):
+                in_features = torch.cat((embedding, out), dim=-1)
+                out = self.MLP[1](in_features)
+
+        return out
+
     def forward(self, data=[], data_id=[], training=[], has_field=False, k=[], permutation = False):
 
         x, edge_index = data.x, data.edge_index
@@ -146,7 +223,7 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
                     if self.rotation_augmentation & (self.training == True):
                         out[:, :2] = self.rotation_correction(out[:, :2])
                 case 'step_A3':
-                    in_features = torch.cat((embedding, out), dim=-1)
+                    in_features = torch.cat((embedding, d_pos, out), dim=-1)
                     out = self.MLP[3](in_features)
                 case 'step_B2':
                     match = re.search(r'_(\d+)$', self.model)
