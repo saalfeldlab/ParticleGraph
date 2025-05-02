@@ -2629,10 +2629,14 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                     if coeff_sign > 0:
                         W_sign = torch.sign(model.W[:n_particles, n_particles:])
-                        non_zero_mask = W_sign != 0
-                        count_nonzero = non_zero_mask.sum(dim=0)
-                        W_sign_masked = W_sign.float().masked_fill(~non_zero_mask, float('nan'))
-                        std_nonzero = torch.nanstd(W_sign_masked, dim=0, unbiased=False)
+                        mask = W_sign != 0
+                        W_masked = W_sign * mask
+                        sum_per_col = W_masked.sum(dim=0)
+                        count_per_col = mask.sum(dim=0)
+                        mean_per_col = sum_per_col / count_per_col.clamp(min=1)  # Avoid division by zero
+                        diff_squared = ((W_masked - mean_per_col.unsqueeze(0)) * mask) ** 2
+                        ssd = diff_squared.sum(dim=0)
+                        std_nonzero = torch.sqrt(ssd / count_per_col.clamp(min=1))
                         loss = loss + std_nonzero.norm(2) * coeff_sign
 
 
