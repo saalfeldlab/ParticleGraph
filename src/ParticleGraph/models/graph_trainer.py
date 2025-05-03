@@ -2464,7 +2464,10 @@ def data_train_synaptic2(config, erase, best_model, device):
             model.mask[:n_particles,:n_particles] = mask_
         else:
             model.mask = (adjacency >0) * 1.0
-
+    if coeff_sign > 0:
+        index_weight = []
+        for i in range(n_particles):
+            index_weight.append(torch.argwhere(model.mask[:, i] >0).squeeze())
     if has_ghost:
         edges, edge_attr = dense_to_sparse(torch.ones((n_particles + n_ghosts)) - torch.eye(n_particles + n_ghosts))
         edges = edges.to(device=device)
@@ -2629,14 +2632,9 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                     if coeff_sign > 0:
                         W_sign = torch.sign(model.W[:n_particles, :n_particles])
-                        mask = W_sign != 0
-                        mean_per_col = W_sign.masked_fill(~mask, 0).sum(dim=0) / mask.sum(dim=0).clamp(min=1)
-                        diff_squared = (W_sign - mean_per_col.unsqueeze(0)).masked_fill(~mask, 0) ** 2
-                        std_nonzero = torch.sqrt(diff_squared.sum(dim=0) / mask.sum(dim=0).clamp(min=1))
+                        for i in range(n_particles):
+                            loss = loss + torch.std(W_sign[index_weight[i], i]) * coeff_sign
                         loss = loss + std_nonzero.norm(2) * coeff_sign
-
-
-
 
                     if (model.update_type == 'generic') & (coeff_diff_update>0):
                         in_feature_update = torch.cat((torch.zeros((n_particles,1), device=device), model.a[:n_particles], msg0, torch.ones((n_particles,1), device=device)), dim=1)
