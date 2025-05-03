@@ -32,7 +32,7 @@ graph_model:
     hidden_dim: 256
     n_mp_layers: 5
 
-    input_size_update: 5
+    input_size_update: 8
     hidden_dim_update: 64
     n_layers_update: 5
 
@@ -48,7 +48,7 @@ graph_model:
 
     aggr_type: 'add'
     embedding_dim: 2
-    update_type: 'excitation'
+    update_type: 'generic_excitation'
     excitation_dim: 3
 
     lin_edge_positive: True
@@ -92,4 +92,3 @@ training:
     coeff_diff: 100
     coeff_L1: 0
     coeff_L1_ghost: 1.0E-4
-    coeff_sign: 100.0
