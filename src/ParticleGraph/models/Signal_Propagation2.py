@@ -37,6 +37,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         self.n_dataset = config.training.n_runs
         self.n_frames = simulation_config.n_frames
         self.field_type = model_config.field_type
+        self.embedding_trial = config.training.embedding_trial
 
         self.input_size = model_config.input_size
         self.output_size = model_config.output_size
@@ -81,6 +82,11 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         if 'excitation' in self.update_type:
             self.lin_exc = MLP(input_size=self.input_size_excitation, output_size= 1, nlayers=self.n_layers_excitation, hidden_size=self.hidden_dim_excitation, device=self.device)
 
+        if self.embedding_trial:
+            self.b = nn.Parameter(
+                torch.ones((int(self.n_dataset), self.embedding_dim), device=self.device, requires_grad=True, dtype=torch.float32))
+
+
         if self.model == 'PDE_N3':
             self.a = nn.Parameter(torch.ones((int(self.n_particles*100 + 1000), self.embedding_dim), device=self.device, requires_grad=True,dtype=torch.float32))
             self.embedding_step =  self.n_frames // 100
@@ -120,6 +126,8 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         else:
             particle_id = x[:, 0].long()
             embedding = self.a[particle_id, :]
+            if  self.embedding_trial:
+                embedding = torch.cat((self.b[data_id.squeeze().long(), :], embedding), dim=1)
 
         msg = self.propagate(edge_index, u=u, embedding=embedding)
 

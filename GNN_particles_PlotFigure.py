@@ -408,7 +408,7 @@ def plot_embedding_func_cluster_tracking(model, config, embedding_cluster, cmap,
         plt.close()
 
     func_list, proj_interaction = analyze_edge_function_tracking(rr=[], vizualize=False, config=config,
-                                                        model_MLP=model.lin_edge, model_a=model.a,
+                                                        model_MLP=model.lin_edge, model=model,
                                                         n_particles=n_particles, ynorm=ynorm,
                                                         indexes=indexes, type_list = type_list,
                                                         cmap=cmap, embedding_type = embedding_type, device=device)
@@ -568,7 +568,7 @@ def plot_embedding_func_cluster(model, config,embedding_cluster, cmap, index_par
         model_MLP_ = model.lin_phi
     else:
         model_MLP_ = model.lin_edge
-    func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config, model_MLP=model_MLP_, model_a=model.a, type_list=to_numpy(type_list), n_particles=n_particles, dataset_number=1, ynorm=ynorm, cmap=cmap, update_type='NA', device=device)
+    func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config, model_MLP=model_MLP_, model=model, type_list=to_numpy(type_list), n_particles=n_particles, dataset_number=1, ynorm=ynorm, cmap=cmap, update_type='NA', device=device)
     plt.close()
 
     # trans = umap.UMAP(n_neighbors=100, n_components=2, init='spectral').fit(func_list_)

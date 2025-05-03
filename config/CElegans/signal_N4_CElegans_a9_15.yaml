@@ -1,4 +1,4 @@
-description: 'test neuron_dependent functions  with CElegans data    add  100 ghosts batchsize 8  coeff_L1_ghost: 1.0E-4   coeff_sign: 1E2'
+description: 'test neuron_dependent functions  with CElegans data    add  100 ghosts batchsize 8 '
 dataset: 'CElegans_a1'
 data_folder_name: '/groups/saalfeld/home/allierc/Py/wormvae/data/worm_activity/all_traces_Heads_new.mat'
 connectome_folder_name: '/groups/saalfeld/home/allierc/Py/wormvae/data/worm_connectivity/'
@@ -27,16 +27,16 @@ graph_model:
     mesh_model_name: ''
     prediction: 'first_derivative'
 
-    input_size: 3
+    input_size: 5
     output_size: 1
     hidden_dim: 256
     n_mp_layers: 5
 
-    input_size_update: 3
+    input_size_update: 5
     hidden_dim_update: 64
     n_layers_update: 5
 
-    input_size_excitation: 5
+    input_size_excitation: 7
     n_layers_excitation: 3
     hidden_dim_excitation: 64
 
@@ -74,6 +74,7 @@ training:
 
     time_step: 8
     shared_embedding: True
+    embedding_trial: True
 
     sparsity: 'none'
     rotation_augmentation: False
@@ -91,4 +92,3 @@ training:
     coeff_diff: 100
     coeff_L1: 0
     coeff_L1_ghost: 1.0E-4
-    coeff_sign: 100.0

@@ -407,9 +407,9 @@ def data_train_particle(config, erase, best_model, device):
                 rr = torch.linspace(0, max_radius, 1000, dtype=torch.float32, device=device)
                 for n in np.random.permutation(n_particles)[:n_particles//100]:
                     embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
-                    in_features = get_in_features(rr + simulation_config.max_radius/200, embedding_, config.graph_model.particle_model_name, simulation_config.max_radius)
+                    in_features = get_in_features(rr=rr + simulation_config.max_radius/200, embedding=embedding_, model=model, model_name=config.graph_model.particle_model_name, max_radius=simulation_config.max_radius)
                     func1 = model.lin_edge(in_features)
-                    in_features = get_in_features(rr, embedding_, config.graph_model.particle_model_name,simulation_config.max_radius)
+                    in_features = get_in_features(rr=rr, embedding=embedding_, model=model, model_name=config.graph_model.particle_model_name, max_radius=simulation_config.max_radius)
                     func0 = model.lin_edge(in_features)
                     grad = func1-func0
                     loss = loss + coeff_continuous * grad.norm(2)
@@ -485,7 +485,7 @@ def data_train_particle(config, erase, best_model, device):
 
             ax = fig.add_subplot(1, 5, 3)
             func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config,
-                                                                model_MLP=model.lin_edge, model_a=model.a,
+                                                                model_MLP=model.lin_edge, model=model,
                                                                 n_nodes=0,
                                                                 dataset_number=1,
                                                                 n_particles=n_particles, ynorm=ynorm,
@@ -2095,7 +2095,7 @@ def data_train_particle_field(config, erase, best_model, device):
 
         ax = fig.add_subplot(1, 5, 3)
         func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config,
-                                                            model_MLP=model.lin_edge, model_a=model.a,
+                                                            model_MLP=model.lin_edge, model=model,
                                                             n_nodes=0,
                                                             dataset_number=1,
                                                             n_particles=n_particles, ynorm=ynorm,
@@ -2592,7 +2592,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                         edges = edges[:, mask]
 
                     # regularisations
-                    in_features = get_in_features_update(None, n_particles, model.a[:n_particles], model.update_type, device)
+                    in_features = get_in_features_update(rr=None, model=model, device=device)
 
                     func_phi = model.lin_phi(in_features.float())
 
@@ -2610,10 +2610,19 @@ def data_train_synaptic2(config, erase, best_model, device):
                         in_features_prev = torch.cat((x[:n_particles, 6:7] - xnorm/150, model.a[:n_particles]), dim=1)
                         in_features = torch.cat((x[:n_particles, 6:7], model.a[:n_particles]), dim=1)
                         in_features_next = torch.cat((x[:n_particles, 6:7] + xnorm/150, model.a[:n_particles]), dim=1)
+                        if model.embedding_trial:
+                            in_features_prev = torch.cat((in_features_prev, model.b[0].repeat(n_particles, 1)), dim=1)
+                            in_features = torch.cat((in_features, model.b[0].repeat(n_particles, 1)), dim=1)
+                            in_features_next = torch.cat((in_features_next, model.b[0].repeat(n_particles, 1)), dim=1)
                     elif model_config.signal_model_name == 'PDE_N5':
-                        in_features_prev = torch.cat((x[:n_particles, 6:7] - xnorm / 150, model.a[:n_particles], model.a[:n_particles]), dim=1)
-                        in_features = torch.cat((x[:n_particles, 6:7], model.a[:n_particles], model.a[:n_particles]), dim=1)
-                        in_features_next = torch.cat((x[:n_particles, 6:7] + xnorm/150, model.a[:n_particles], model.a[:n_particles]), dim=1)
+                        if model.embedding_trial:
+                            in_features_prev = torch.cat((x[:n_particles, 6:7] - xnorm / 150, model.a[:n_particles], model.b[0].repeat(n_particles, 1), model.a[:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
+                            in_features = torch.cat((x[:n_particles, 6:7], model.a[:n_particles], model.b[0].repeat(n_particles, 1), model.a[:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
+                            in_features_next = torch.cat((x[:n_particles, 6:7] + xnorm/150, model.a[:n_particles], model.b[0].repeat(n_particles, 1), model.a[:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
+                        else:
+                            in_features_prev = torch.cat((x[:n_particles, 6:7] - xnorm / 150, model.a[:n_particles], model.a[:n_particles]), dim=1)
+                            in_features = torch.cat((x[:n_particles, 6:7], model.a[:n_particles], model.a[:n_particles]), dim=1)
+                            in_features_next = torch.cat((x[:n_particles, 6:7] + xnorm/150, model.a[:n_particles], model.a[:n_particles]), dim=1)
                     else:
                         in_features = x[:n_particles, 6:7]
                         in_features_next = x[:n_particles, 6:7] + xnorm/150
@@ -2675,17 +2684,15 @@ def data_train_synaptic2(config, erase, best_model, device):
                         dataset = data.Data(x=x, edge_index=edges)
                         dataset_batch.append(dataset)
 
-                        # if train_config.shared_embedding:
-                        #     run = 1
                         if len(dataset_batch) == 1:
-                            data_id = torch.ones((y.shape[0],1), dtype=torch.int) * run
+                            data_id = torch.ones((x.shape[0],1), dtype=torch.int) * run
                             x_batch = x[:, 6:7]
                             y_batch = y
                             k_batch = torch.ones((x.shape[0],1), dtype=torch.int, device = device) * k
                             if has_ghost | (particle_batch_ratio < 1) :
                                 ids_batch = ids
                         else:
-                            data_id = torch.cat((data_id, torch.ones((y.shape[0], 1), dtype=torch.int) * run), dim=0)
+                            data_id = torch.cat((data_id, torch.ones((x.shape[0], 1), dtype=torch.int) * run), dim=0)
                             x_batch = torch.cat((x_batch, x[:, 6:7]), dim=0)
                             y_batch = torch.cat((y_batch, y), dim=0)
                             k_batch = torch.cat((k_batch, torch.ones((x.shape[0],1), dtype=torch.int, device = device) * k), dim = 0)
@@ -2859,7 +2866,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         rr = torch.linspace(-xnorm, xnorm, 1000, device=device)
         for n in range(n_particles):
             embedding_ = model.a[n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
-            in_features = get_in_features(rr, embedding_, model_config.signal_model_name)
+            in_features = get_in_features(rr=rr, embedding=embedding_, model=model, model_name=model_config.signal_model_name, max_radius=simulation_config.max_radius)
             with torch.no_grad():
                 func = model.lin_edge(in_features.float())
             if model_config.lin_edge_positive:
@@ -2872,7 +2879,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         y_min, y_max = all_func_values.min().item(), all_func_values.max().item()
         plt.ylim([y_min-0.1, y_max*1.1])
 
-        if ('PDE_N3' not in model_config.signal_model_name):
+        if 'PDE_N3' not in model_config.signal_model_name:
 
             ax = fig.add_subplot(2, 5, 6)
             embedding = to_numpy(model.a.squeeze())
@@ -2885,7 +2892,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                 update_type = model.update_type
 
             func_list_, proj_interaction = analyze_edge_function(rr=torch.linspace(-xnorm, xnorm, 1000, device=device), vizualize=False, config=config,
-                                                                model_MLP=model_MLP, model_a=model.a,
+                                                                model_MLP=model_MLP, model=model,
                                                                 n_nodes=0,
                                                                 dataset_number=1,
                                                                 n_particles=n_particles, ynorm=ynorm,
@@ -2896,7 +2903,7 @@ def data_train_synaptic2(config, erase, best_model, device):
             update_type = model.update_type
 
             func_list, proj_interaction_ = analyze_edge_function(rr=torch.linspace(-xnorm, xnorm, 1000, device=device), vizualize=True, config=config,
-                                                                model_MLP=model_MLP, model_a=model.a,
+                                                                model_MLP=model_MLP, model=model,
                                                                 n_nodes=0,
                                                                 dataset_number=1,
                                                                 n_particles=n_particles, ynorm=ynorm,
@@ -2973,12 +2980,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                         optimizer.zero_grad()
                         for n in range(n_particles):
                             embedding_ = model.a[n, :].clone().detach() * torch.ones((1000, model_config.embedding_dim),device=device)
-                            # if (model_config.signal_model_name == 'PDE_N4') :
-                            #     in_features = get_in_features(rr, embedding_, config.graph_model.signal_model_name,
-                            #                                   config.simulation.max_radius)
-                            #     pred.append(model.lin_edge(in_features.float()))
-                            # else:
-                            in_features = get_in_features_update(rr[:,None], n_particles, embedding_, model.update_type, device)
+                            in_features = get_in_features_update(rr=rr[:,None], model=model, device=device)
                             pred.append(model.lin_phi(in_features.float()))
                         pred = torch.stack(pred)
                         loss = (pred[:, :, 0] - y_func_list.clone().detach()).norm(2)
