@@ -1,4 +1,4 @@
-description: 'test neuron_dependent functions  with CElegans data    add  100 ghosts batchsize 8 '
+description: 'test neuron_dependent functions  with CElegans data    add  100 ghosts batchsize 8 + embedding_trial + generic'
 dataset: 'CElegans_a1'
 data_folder_name: '/groups/saalfeld/home/allierc/Py/wormvae/data/worm_activity/all_traces_Heads_new.mat'
 connectome_folder_name: '/groups/saalfeld/home/allierc/Py/wormvae/data/worm_connectivity/'
