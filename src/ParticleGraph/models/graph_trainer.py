@@ -2634,7 +2634,6 @@ def data_train_synaptic2(config, erase, best_model, device):
                         W_sign = torch.sign(model.W[:n_particles, :n_particles])
                         for i in range(n_particles):
                             loss = loss + torch.std(W_sign[index_weight[i], i]) * coeff_sign
-                        loss = loss + std_nonzero.norm(2) * coeff_sign
 
                     if (model.update_type == 'generic') & (coeff_diff_update>0):
                         in_feature_update = torch.cat((torch.zeros((n_particles,1), device=device), model.a[:n_particles], msg0, torch.ones((n_particles,1), device=device)), dim=1)
