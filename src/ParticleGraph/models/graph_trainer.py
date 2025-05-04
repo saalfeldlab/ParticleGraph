@@ -2795,8 +2795,8 @@ def data_train_synaptic2(config, erase, best_model, device):
 
             # check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 50, memory_percentage_threshold=0.6)
 
-        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
-        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
+        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles ))
+        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles ))
         logger.info(f'recursive_parameters: {recursive_parameters[0]:.2f}')
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()},
@@ -2806,7 +2806,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                         'optimizer_state_dict': optimizer_f.state_dict()},
                        os.path.join(log_dir, 'models', f'best_model_f_with_{n_runs - 1}_graphs_{epoch}.pt'))
 
-        list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
+        list_loss.append(total_loss / (N + 1) / n_particles )
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
 
