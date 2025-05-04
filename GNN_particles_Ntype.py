@@ -94,7 +94,7 @@ if __name__ == '__main__':
             #     data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best',
             #               run=run_, test_mode='fixed_bounce_all', sample_embedding=False, step=4,
             #               device=device)  # particle_of_interest=100,
-            data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best', run=0, test_mode='', sample_embedding=False, step=4, device=device)  # particle_of_interest=100,
+            data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best', run=17, test_mode='fixed_bounce_all', sample_embedding=False, step=4, device=device)  # particle_of_interest=100,
 
     if 'try_func' in task:
             try_func(max_radius=config.simulation.max_radius, device=device)
