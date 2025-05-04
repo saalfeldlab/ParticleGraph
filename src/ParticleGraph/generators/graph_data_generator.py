@@ -193,7 +193,6 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                 new_vy = sin_phi * y[:, 0] + cos_phi * y[:, 1]
                 y = torch.cat((new_vx[:, None], new_vy[:, None]), 1).clone().detach()
 
-
             # append list
             if (it >= 0) & bSave:
                 if has_particle_dropout:

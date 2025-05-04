@@ -55,13 +55,13 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'train'
+        task = 'generate'
         best_model = ''
 
         # config_list = ['multimaterial_12_1','multimaterial_12_2','multimaterial_12_3','multimaterial_12_4','multimaterial_12_5',
         #                'multimaterial_13_1', 'multimaterial_13_2', 'multimaterial_13_3',
         #                'multimaterial_14_1', 'multimaterial_14_2', 'falling_water_ramp_x6_13']
-        # config_list = ['fluids_m17_7']
+        config_list = ['fluids_m18_1']
         # config_list = ['signal_N5_v11_bis']
         # config_list = ['falling_water_ramp_x6_13']
         # config_list = ['cell_MDCK_14']
@@ -71,7 +71,7 @@ if __name__ == '__main__':
         #                'signal_N4_CElegans_a8_1', 'signal_N4_CElegans_a8_2', 'signal_N4_CElegans_a8_3',
         #                'signal_N4_CElegans_a9', 'signal_N4_CElegans_a9_1', 'signal_N4_CElegans_a9_2',
         #                'signal_N4_CElegans_a9_3', 'signal_N4_CElegans_a9_4', 'signal_N4_CElegans_a9_5']
-        config_list = ['signal_N4_CElegans_a9_16']
+        # config_list = ['signal_N4_CElegans_a9_16']
 
     for config_file_ in config_list:
         print(' ')
@@ -86,7 +86,7 @@ if __name__ == '__main__':
         print(f'folder  {config.dataset}')
 
         if 'generate' in task:
-            data_generate(config, device=device, visualize=True, run_vizualized=0, style='black field', alpha=1, erase=False, bSave=True, step=100)  #config.simulation.n_frames // 100)
+            data_generate(config, device=device, visualize=True, run_vizualized=0, style='black color field', alpha=1, erase=False, bSave=True, step=100)  #config.simulation.n_frames // 100)
         if 'train' in task:
             data_train(config=config, erase=False, best_model=best_model, device=device)
         if 'test' in task:
