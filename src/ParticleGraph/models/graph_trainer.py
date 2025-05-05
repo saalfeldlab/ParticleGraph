@@ -2283,6 +2283,9 @@ def data_train_synaptic2(config, erase, best_model, device):
         n_nodes = simulation_config.n_nodes
         if has_ghost:
             n_nodes = n_particles + n_ghosts
+            n_nodes_per_axis = 100
+        else:
+            n_nodes_per_axis = int(np.sqrt(n_nodes))
         has_field = True
     else:
         n_nodes = simulation_config.n_particles
@@ -2413,7 +2416,6 @@ def data_train_synaptic2(config, erase, best_model, device):
                 for n in range(n_runs)
             ])
         else:
-            n_nodes_per_axis = int(np.sqrt(n_nodes))
             model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
                                     out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
                                     hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device,
