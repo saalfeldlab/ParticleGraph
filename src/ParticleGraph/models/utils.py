@@ -347,6 +347,7 @@ def plot_training_signal_field(x, n_nodes,n_nodes_per_axis, recursive_loop, kk, 
         plt.close()
 
     elif ('Siren_short_term_plasticity' in field_type) | ('modulation' in field_type):
+        n_frames = n_frames - 10
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_subplot(2, 2, 1)
         plt.imshow(to_numpy(modulation), aspect='auto')
