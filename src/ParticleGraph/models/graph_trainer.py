@@ -2252,6 +2252,7 @@ def data_train_synaptic2(config, erase, best_model, device):
 
     dimension = simulation_config.dimension
     n_epochs = train_config.n_epochs
+    n_particles = simulation_config.n_particles
     n_particle_types = simulation_config.n_particle_types
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
@@ -2280,6 +2281,8 @@ def data_train_synaptic2(config, erase, best_model, device):
 
     if field_type != '':
         n_nodes = simulation_config.n_nodes
+        if has_ghost:
+            n_nodes = n_particles + n_ghosts
         has_field = True
     else:
         n_nodes = simulation_config.n_particles
@@ -2391,7 +2394,7 @@ def data_train_synaptic2(config, erase, best_model, device):
     model, bc_pos, bc_dpos = choose_training_model(model_config=config, device=device, projections=projections)
     if has_ghost:
         model_missing_activity = nn.ModuleList([
-            Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
+            Siren(in_features=model_config.input_size_nnr, out_features=n_ghosts,
                   hidden_features=model_config.hidden_dim_nnr,
                   hidden_layers=model_config.n_layers_nnr, first_omega_0=omega, hidden_omega_0=omega,
                   outermost_linear=model_config.outermost_linear_nnr)
@@ -2567,6 +2570,18 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                 x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device)
                 if not(torch.isnan(x).any()):
+                    if has_ghost:
+                        t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
+                        t[:, 0, :] = torch.tensor(k / n_frames, dtype=torch.float32, device=device)
+                        missing_activity = model_missing_activity[run](t).squeeze()
+                        x_ghost = torch.zeros((n_ghosts, x.shape[1]), device=device)
+                        x_ghost[:, 6:7] = missing_activity[:, None]
+                        x_ghost[:, 0] = n_particles + torch.arange(n_ghosts, device=device)
+                        x = torch.cat((x, x_ghost), 0)
+                        ids = np.arange(n_particles)
+                        edges = edges_all.clone().detach()
+                        mask = torch.isin(edges[1, :], torch.tensor(ids, device=device))
+                        edges = edges[:, mask]
                     if has_field:
                         if 'visual' in field_type:
                             x[:n_nodes, 8:9] = model_f(time=k / n_frames) ** 2
@@ -2592,18 +2607,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                             x[:, 8:9] = model_f(time=k / n_frames) ** 2
                     else:
                         x[:, 8:9] = torch.ones_like(x[:, 0:1])
-                    if has_ghost:
-                        t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
-                        t[:, 0, :] = torch.tensor(k / n_frames, dtype=torch.float32, device=device)
-                        missing_activity = model_missing_activity[run](t).squeeze()
-                        x_ghost = torch.zeros((n_ghosts, x.shape[1]), device=device)
-                        x_ghost[:, 6:7] = missing_activity[:, None]
-                        x_ghost[:, 0] = n_particles + torch.arange(n_ghosts, device=device)
-                        x = torch.cat((x, x_ghost), 0)
-                        ids = np.arange(n_particles)
-                        edges = edges_all.clone().detach()
-                        mask = torch.isin(edges[1, :], torch.tensor(ids, device=device))
-                        edges = edges[:, mask]
+
 
                     # regularisations
                     in_features = get_in_features_update(rr=None, model=model, device=device)

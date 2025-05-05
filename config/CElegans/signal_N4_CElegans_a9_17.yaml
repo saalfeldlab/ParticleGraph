@@ -44,7 +44,7 @@ graph_model:
     input_size_nnr: 1
     n_layers_nnr: 5
     hidden_dim_nnr: 96
-    output_size_nnr: 100
+    output_size_nnr: 289
     omega: 30
 
     aggr_type: 'add'
