@@ -409,9 +409,9 @@ def data_train_particle(config, erase, best_model, device):
                         x_pos_pred = (x_batch[:, 1:dimension + 1] + delta_t * time_step * pred * ynorm)
 
                     if particle_batch_ratio < 1:
-                        loss = loss + (x_batch[ids_batch] - y_batch[ids_batch]).norm(2)
+                        loss = loss + (x_pos_pred[ids_batch] - y_batch[ids_batch]).norm(2)
                     else:
-                        loss = loss + (x_batch - y_batch).norm(2)
+                        loss = loss + (x_pos_pred - y_batch).norm(2)
 
             if (epoch>0) & (coeff_continuous>0):
                 rr = torch.linspace(0, max_radius, 1000, dtype=torch.float32, device=device)
