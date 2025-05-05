@@ -186,7 +186,6 @@ class TrainingConfig(BaseModel):
     small_init_batch_size: bool = True
     embedding_step: int = 1000
     shared_embedding: bool = False
-    embedding_permutation: bool = False
     embedding_trial: bool = False
 
     with_connectivity_mask: bool = False

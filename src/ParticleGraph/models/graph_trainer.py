@@ -394,14 +394,6 @@ def data_train_particle(config, erase, best_model, device):
                 else:
                     loss = (pred - y_batch).norm(2)
 
-            if train_config.embedding_permutation:
-                for batch in batch_loader:
-                    pred = model(batch, data_id=data_id, training=True, k=k_batch, permutation=True)
-                if particle_batch_ratio < 1:
-                    loss = loss - coeff_permutation * torch.log((pred[ids_batch] - y_batch[ids_batch]).norm(2))
-                else:
-                    loss = loss - coeff_permutation * torch.log((pred - y_batch).norm(2))
-
 
             if (epoch>0) & (coeff_continuous>0):
                 rr = torch.linspace(0, max_radius, 1000, dtype=torch.float32, device=device)

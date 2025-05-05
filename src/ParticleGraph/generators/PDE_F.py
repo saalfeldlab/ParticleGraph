@@ -53,6 +53,9 @@ class PDE_F(pyg.nn.MessagePassing):
             self.mode = 'kernel'
             previous_density = self.density
             self.density = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, parameters=parameters, density=torch.zeros_like(x[:, 0:1]), mass=mass)
+
+            self.density = self.density[:,0:1]
+
             density = torch.zeros_like(x[:, 0:1])
             density[continuous_field_size[0]:] = previous_density
             self.mode = 'message_passing'
@@ -60,12 +63,21 @@ class PDE_F(pyg.nn.MessagePassing):
         else:
             self.mode = 'kernel'
             self.density = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, parameters=parameters, density=torch.zeros_like(x[:, 0:1]), mass=mass)
+
+            fig = plt.figure()
+            plt.scatter(to_numpy(pos[:, 0]), to_numpy(pos[:, 1]), c=to_numpy(self.density[:, 2]), s=2, cmap='viridis', vmin=0, vmax=1E6)
+            plt.colorbar()
+            plt.savefig('density.tif')
+            plt.close()
+
+            self.density = self.density[:, 0:1]
+
             self.mode = 'message_passing'
             out = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, field=field, parameters=parameters, density=self.density, mass=mass)
 
         out[:, 1] = out[:, 1] + torch.ones_like(out[:, 1]) * parameters[:,0] * 9.8
 
-        return out
+        return out[:,0:2]
 
 
     def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, field_i, field_j, parameters_i, density_i, density_j, mass_i, mass_j):
@@ -94,6 +106,8 @@ class PDE_F(pyg.nn.MessagePassing):
             self.kernel_operators['laplacian'] = laplacian_kernel
 
             density = Gaussian_kernel * mass_j
+
+            density = torch.cat((density, dist[:, None], torch.ones_like(dist[:, None])), dim=1)
 
             return density
 

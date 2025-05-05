@@ -71,7 +71,7 @@ if __name__ == '__main__':
         #                'signal_N4_CElegans_a8_1', 'signal_N4_CElegans_a8_2', 'signal_N4_CElegans_a8_3',
         #                'signal_N4_CElegans_a9', 'signal_N4_CElegans_a9_1', 'signal_N4_CElegans_a9_2',
         #                'signal_N4_CElegans_a9_3', 'signal_N4_CElegans_a9_4', 'signal_N4_CElegans_a9_5']
-        # config_list = ['signal_N4_CElegans_a9_16']
+        # config_list = ['signal_N4_CElegans_a9_16' ]
 
     for config_file_ in config_list:
         print(' ')
@@ -86,7 +86,7 @@ if __name__ == '__main__':
         print(f'folder  {config.dataset}')
 
         if 'generate' in task:
-            data_generate(config, device=device, visualize=True, run_vizualized=0, style='black color field', alpha=1, erase=False, bSave=True, step=100)  #config.simulation.n_frames // 100)
+            data_generate(config, device=device, visualize=True, run_vizualized=0, style='black field', alpha=1, erase=False, bSave=True, step=100)  #config.simulation.n_frames // 100)
         if 'train' in task:
             data_train(config=config, erase=False, best_model=best_model, device=device)
         if 'test' in task:

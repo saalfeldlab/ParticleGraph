@@ -20,8 +20,8 @@ simulation:
   node_value_map: 'pattern_Null.tif'
 
 graph_model:
-  particle_model_name: 'PDE_MLPs_A'
-#  particle_model_name: 'PDE_F_A'
+#  particle_model_name: 'PDE_MLPs_A'
+  particle_model_name: 'PDE_F_A'
 
   mesh_model_name: ''
   prediction: '2nd_derivative'

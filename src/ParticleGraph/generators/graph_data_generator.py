@@ -693,10 +693,14 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     # im = np.flipud(im)
                     # im_resized = zoom(im, 10)
                     # plt.imshow(im_resized, cmap='viridis', vmin=speedlim[0], vmax=speedlim[1])
-                    for n in range(n_particle_types):
-                            plt.scatter(to_numpy(x[index_particles[n], 1]*1000), to_numpy(x[index_particles[n], 2]*1000),
-                                        s=10, color=cmap.color(n), edgecolors='None', alpha=0.9)
-                    # plt.scatter(to_numpy(x[:, 1]*1000), to_numpy(x[:, 2]*1000), s=1, c='w')
+
+                    # for n in range(n_particle_types):
+                    #         plt.scatter(to_numpy(x[index_particles[n], 1]*1000), to_numpy(x[index_particles[n], 2]*1000),
+                    #                     s=10, color=cmap.color(n), edgecolors='None', alpha=0.9)
+
+                    # plt.scatter(1000 * to_numpy(x[:, 1]), 1000 * to_numpy(x[:, 2]), c=model.correction.detach().cpu().numpy(), s=2, cmap='viridis', vmin =0 , vmax=0.4)
+
+
                     plt.xlim([0,1000])
                     plt.ylim([-40,1000])
                     plt.tight_layout()
