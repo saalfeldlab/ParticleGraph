@@ -255,7 +255,7 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
     # plt.savefig(f"./{log_dir}/tmp_training/matrix/{epoch}_{N}.tif", dpi=87)
     # plt.close()
 
-def plot_training_signal_field(x, n_nodes,n_nodes_per_axis, recursive_loop, kk, time_step, x_list, run, model, field_type, model_f, edges, y_list, ynorm, delta_t, n_frames, log_dir, epoch, N, recursive_parameters, modulation, device):
+def plot_training_signal_field(x, n_nodes, n_nodes_per_axis, recursive_loop, kk, time_step, x_list, run, model, field_type, model_f, edges, y_list, ynorm, delta_t, n_frames, log_dir, epoch, N, recursive_parameters, modulation, device):
     if recursive_loop > 1:
         x = torch.tensor(x_list[run][kk], device=device).clone().detach()
         ids = np.arange(kk, kk + recursive_loop * time_step, time_step)
@@ -372,9 +372,9 @@ def plot_training_signal_field(x, n_nodes,n_nodes_per_axis, recursive_loop, kk, 
 
         print(ids, ids.shape,modulation.shape, prediction.shape)
 
-        plt.scatter(to_numpy(modulation[:, ids]), to_numpy(prediction[:, ids]), s=0.1, color='k', alpha=0.01)
+        plt.scatter(to_numpy(modulation[:, ids]), to_numpy(prediction[:modulation.shape[0], ids]), s=0.1, color='k', alpha=0.01)
         x_data = to_numpy(modulation[:, ids]).flatten()
-        y_data = to_numpy(prediction[:, ids]).flatten()
+        y_data = to_numpy(prediction[:modulation.shape[0], ids]).flatten()
         lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
         residuals = y_data - linear_model(x_data, *lin_fit)
         ss_res = np.sum(residuals ** 2)
@@ -382,7 +382,7 @@ def plot_training_signal_field(x, n_nodes,n_nodes_per_axis, recursive_loop, kk, 
         r_squared = 1 - (ss_res / ss_tot)
         ax.text(0.01, 0.99, f'$R^2$ {r_squared:0.3f}   slope {lin_fit[0]:0.3f}', transform=ax.transAxes,
                 verticalalignment='top', horizontalalignment='left')
-        ind_list = [10, 124, 148, 200, 250, 300]
+        ind_list = [10, 24, 48, 120, 150, 180]
         ax = fig.add_subplot(4, 2, 6)
         for ind in ind_list:
             plt.plot(to_numpy(modulation[ind, :]))
