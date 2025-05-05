@@ -2401,14 +2401,17 @@ def data_train_synaptic2(config, erase, best_model, device):
             for n in range(n_runs)
         ])
         model_missing_activity.to(device=device)
-        optimizer_f = torch.optim.Adam(lr=train_config.learning_rate_NNR, params=model_missing_activity.parameters())
+        optimizer_missing_activity = torch.optim.Adam(lr=train_config.learning_rate_NNR, params=model_missing_activity.parameters())
         model_missing_activity.train()
-    elif has_Siren:
-        if ('Siren_short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
-            model_f = Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
-                            hidden_features=model_config.hidden_dim_nnr,
-                            hidden_layers=model_config.n_layers_nnr, first_omega_0=omega, hidden_omega_0=omega,
-                            outermost_linear=model_config.outermost_linear_nnr)
+    if has_Siren:
+        if ('Siren_short_term_plasticity' in field_type) | ('modulation' in field_type):
+            model_f = nn.ModuleList([
+                Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
+                      hidden_features=model_config.hidden_dim_nnr,
+                      hidden_layers=model_config.n_layers_nnr, first_omega_0=omega, hidden_omega_0=omega,
+                      outermost_linear=model_config.outermost_linear_nnr)
+                for n in range(n_runs)
+            ])
         else:
             model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
                                     out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
@@ -2547,7 +2550,9 @@ def data_train_synaptic2(config, erase, best_model, device):
 
         for N in trange(Niter):
 
-            if has_Siren | has_ghost:
+            if has_ghost:
+                optimizer_missing_activity.zero_grad()
+            if has_Siren:
                 optimizer_f.zero_grad()
             optimizer.zero_grad()
 
@@ -2572,19 +2577,19 @@ def data_train_synaptic2(config, erase, best_model, device):
                             alpha = (k % model.embedding_step) / model.embedding_step
                             x[:, 8] = alpha * model.b[:, k // model.embedding_step + 1] ** 2 + (1 - alpha) * model.b[:,k // model.embedding_step] ** 2
                             loss = loss + (model.b[:, 1:] - model.b[:, :-1]).norm(2) * coeff_model_b
-                        elif ('Siren_short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
+                        elif ('Siren_short_term_plasticity' in field_type) | ('modulation' in field_type):
                             t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
                             t[:, 0, :] = torch.tensor(k / n_frames, dtype=torch.float32, device=device)
                             if 'derivative' in field_type:
-                                m = model_f(t).squeeze() ** 2
+                                m = model_f[run](t).squeeze() ** 2
                                 x[:, 8] = m
-                                m_next = model_f(t + 1.0E-3).squeeze() ** 2
+                                m_next = model_f[run](t + 1.0E-3).squeeze() ** 2
                                 grad = (m_next - m) / 1.0E-3
                                 in_modulation = torch.cat((x[:, 6:7].clone().detach(), m[:, None]), dim=1)
                                 pred_modulation = model.lin_modulation(in_modulation)
                                 loss += (grad - pred_modulation.squeeze()).norm(2) * coeff_lin_modulation
                             else:
-                                x[:, 8] = model_f(t) ** 2
+                                x[:, 8] = model_f[run](t) ** 2
                         else:
                             x[:, 8:9] = model_f(time=k / n_frames) ** 2
                     else:
@@ -2615,7 +2620,6 @@ def data_train_synaptic2(config, erase, best_model, device):
                         # plt.imshow(to_numpy(model.W[:n_particles, n_particles:]))
                         # plt.savefig('W_ghost.tif')
                         # plt.close()
-
                     # lin.edge monotonic positive
                     if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N7'):
                         in_features_prev = torch.cat((x[:n_particles, 6:7] - xnorm/150, model.a[:n_particles]), dim=1)
@@ -2777,7 +2781,9 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                 loss.backward()
                 optimizer.step()
-                if has_Siren | has_ghost:
+                if has_ghost:
+                    optimizer_missing_activity.step()
+                if has_Siren:
                     optimizer_f.step()
                 total_loss += loss.item()
 

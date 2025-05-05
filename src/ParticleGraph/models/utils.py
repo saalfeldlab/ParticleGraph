@@ -325,8 +325,8 @@ def plot_training_signal_field(x, n_nodes,n_nodes_per_axis, recursive_loop, kk, 
         ax.text(0.01, 0.95, f'loop {recursive_loop} ', transform=ax.transAxes,
                 verticalalignment='top', horizontalalignment='left', color='w')
         ax = fig.add_subplot(2, 2, 3)
-        plt.scatter(to_numpy(modulation[:, np.arange(0, 100000, 100)]), to_numpy(model.b[:, 0:1000] ** 2), s=0.1, color='k', alpha=0.01)
-        x_data = to_numpy(modulation[:, np.arange(0, 100000, 100)]).flatten()
+        plt.scatter(to_numpy(modulation[:, np.arange(0, n_frames, n_frames//1000)]), to_numpy(model.b[:, 0:1000] ** 2), s=0.1, color='k', alpha=0.01)
+        x_data = to_numpy(modulation[:, np.arange(0, n_frames, n_frames//1000)]).flatten()
         y_data = to_numpy(model.b[:, 0:1000] ** 2).flatten()
         lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
         residuals = y_data - linear_model(x_data, *lin_fit)
@@ -346,21 +346,28 @@ def plot_training_signal_field(x, n_nodes,n_nodes_per_axis, recursive_loop, kk, 
         plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
         plt.close()
 
-    elif ('Siren_short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
+    elif ('Siren_short_term_plasticity' in field_type) | ('modulation' in field_type):
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_subplot(2, 2, 1)
         plt.imshow(to_numpy(modulation), aspect='auto')
         ax = fig.add_subplot(2, 2, 2)
-        t = torch.zeros((1, 100000, 1), dtype=torch.float32, device=device)
-        t[0] = torch.linspace(0, 1, 100000, dtype=torch.float32, device=device)[:, None]
-        prediction = model_f(t) ** 2
+        if n_frames > 1000:
+            t = torch.zeros((1, n_frames//100, 1), dtype=torch.float32, device=device)
+            t[0] = torch.linspace(0, 1, n_frames//100, dtype=torch.float32, device=device)[:, None]
+        else:
+            t = torch.zeros((1, n_frames, 1), dtype=torch.float32, device=device)
+            t[0] = torch.linspace(0, 1, n_frames, dtype=torch.float32, device=device)[:, None]
+        prediction = model_f[0](t) ** 2
         prediction = prediction.squeeze()
         prediction = prediction.t()
         plt.imshow(to_numpy(prediction), aspect='auto')
         plt.xticks([])
         plt.yticks([])
         ax = fig.add_subplot(2, 2, 3)
-        ids = np.arange(0, 100000, 100).astype(int)
+        if n_frames > 1000:
+            ids = np.arange(0, n_frames, 100).astype(int)
+        else:
+            ids = np.arange(0, n_frames, 1).astype(int)
         plt.scatter(to_numpy(modulation[:, ids]), to_numpy(prediction[:, ids]), s=0.1, color='k', alpha=0.01)
         x_data = to_numpy(modulation[:, ids]).flatten()
         y_data = to_numpy(prediction[:, ids]).flatten()
