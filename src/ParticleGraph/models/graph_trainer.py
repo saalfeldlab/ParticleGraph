@@ -345,12 +345,14 @@ def data_train_particle(config, erase, best_model, device):
 
                 if batch == 0:
                     data_id = torch.ones((y.shape[0],1), dtype=torch.int) * run
+                    x_batch = x
                     y_batch = y
                     k_batch = torch.ones((x.shape[0],1), dtype=torch.int, device = device) * k
                     if particle_batch_ratio < 1:
                         ids_batch = ids
                 else:
                     data_id = torch.cat((data_id, torch.ones((y.shape[0],1), dtype=torch.int) * run), dim = 0)
+                    x_batch = torch.cat((x_batch, x), dim=0)
                     y_batch = torch.cat((y_batch, y), dim=0)
                     k_batch = torch.cat((k_batch, torch.ones((x.shape[0], 1), dtype=torch.int, device = device) * k), dim=0)
                     if particle_batch_ratio < 1:
@@ -401,14 +403,15 @@ def data_train_particle(config, erase, best_model, device):
                         loss = (pred - y_batch).norm(2)
                 elif time_step > 1:
                     if model_config.prediction == '2nd_derivative':
-                        x_pos_pred = (x[:, 1:dimension + 1] + delta_t * time_step * (x[:, dimension + 1:2*dimension + 1] + delta_t * time_step * pred * ynorm))
+                        x_pos_pred = (x_batch[:, 1:dimension + 1] + delta_t * time_step * (
+                                x_batch[:, dimension + 1:2 * dimension + 1] + delta_t * time_step * pred * ynorm))
                     else:
-                        x_pos_pred = (x[:, 1:dimension + 1] + delta_t * time_step * pred * ynorm)
+                        x_pos_pred = (x_batch[:, 1:dimension + 1] + delta_t * time_step * pred * ynorm)
 
                     if particle_batch_ratio < 1:
                         loss = loss + (x_batch[ids_batch] - y_batch[ids_batch]).norm(2)
                     else:
-                        loss = loss + ( x_batch - y_batch).norm(2)
+                        loss = loss + (x_batch - y_batch).norm(2)
 
             if (epoch>0) & (coeff_continuous>0):
                 rr = torch.linspace(0, max_radius, 1000, dtype=torch.float32, device=device)
