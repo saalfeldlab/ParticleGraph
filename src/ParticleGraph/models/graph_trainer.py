@@ -330,14 +330,19 @@ def data_train_particle(config, erase, best_model, device):
 
                 if recursive_loop > 0 :
                     y = torch.tensor(y_list[run][k+recursive_loop], dtype=torch.float32, device=device).clone().detach()
-                else:
+                elif time_step == 1:
                     y = torch.tensor(y_list[run][k], dtype=torch.float32, device=device).clone().detach()
+                elif time_step > 1:
+                    y = torch.tensor(x_list[run][k + time_step, :, 1:dimension + 1], device=device).clone().detach()
+
                 if noise_level > 0:
                     y = y * (1 + torch.randn_like(y) * noise_level)
-                y[:,0:dimension] = y[:,0:dimension] / ynorm
+                if time_step > 1:
+                    y[:,0:dimension] = y[:,0:dimension] / ynorm
 
                 if train_config.shared_embedding:
                     run = 1
+
                 if batch == 0:
                     data_id = torch.ones((y.shape[0],1), dtype=torch.int) * run
                     y_batch = y
@@ -389,11 +394,21 @@ def data_train_particle(config, erase, best_model, device):
                 loss = (pred - y_batch).norm(2)
                 loss = loss + train_config.coeff_model_a * (model.a[run, ind_a + 1] - model.a[run, ind_a]).norm(2)
             else:
-                if particle_batch_ratio < 1:
-                    loss = (pred[ids_batch] - y_batch[ids_batch]).norm(2)
-                else:
-                    loss = (pred - y_batch).norm(2)
+                if time_step == 1:
+                    if particle_batch_ratio < 1:
+                        loss = (pred[ids_batch] - y_batch[ids_batch]).norm(2)
+                    else:
+                        loss = (pred - y_batch).norm(2)
+                elif time_step > 1:
+                    if model_config.prediction == '2nd_derivative':
+                        x_pos_pred = (x[:, 1:dimension + 1] + delta_t * time_step * (x[:, dimension + 1:2*dimension + 1] + delta_t * time_step * pred * ynorm))
+                    else:
+                        x_pos_pred = (x[:, 1:dimension + 1] + delta_t * time_step * pred * ynorm)
 
+                    if particle_batch_ratio < 1:
+                        loss = loss + (x_batch[ids_batch] - y_batch[ids_batch]).norm(2)
+                    else:
+                        loss = loss + ( x_batch - y_batch).norm(2)
 
             if (epoch>0) & (coeff_continuous>0):
                 rr = torch.linspace(0, max_radius, 1000, dtype=torch.float32, device=device)
@@ -2668,7 +2683,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                         y = torch.tensor(y_list[run][k+recursive_loop], device=device) / ynorm
                     elif time_step == 1:
                         y = torch.tensor(y_list[run][k], device=device) / ynorm
-                    else:
+                    elif time_step >1:
                         y = torch.tensor(x_list[run][k + time_step,:,6:7], device=device).clone().detach()
 
                     if not(torch.isnan(y).any()):
@@ -2726,7 +2741,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                         loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
                     else:
                         loss = loss + (pred - y_batch).norm(2)
-                else:
+                elif time_step > 1:
                     if has_ghost:
                         loss = loss + (x_batch[ids_batch] + pred[ids_batch] * delta_t * time_step - y_batch).norm(2) / time_step
                     elif particle_batch_ratio < 1:
