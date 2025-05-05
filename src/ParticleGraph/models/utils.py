@@ -370,8 +370,6 @@ def plot_training_signal_field(x, n_nodes, n_nodes_per_axis, recursive_loop, kk,
         else:
             ids = np.arange(0, n_frames, 1).astype(int)
 
-        print(ids, ids.shape,modulation.shape, prediction.shape)
-
         plt.scatter(to_numpy(modulation[:, ids]), to_numpy(prediction[:modulation.shape[0], ids]), s=0.1, color='k', alpha=0.01)
         x_data = to_numpy(modulation[:, ids]).flatten()
         y_data = to_numpy(prediction[:modulation.shape[0], ids]).flatten()
