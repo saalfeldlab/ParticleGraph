@@ -271,6 +271,7 @@ def data_train_particle(config, erase, best_model, device):
             dataset_batch = []
             ids_batch = []
             ids_index = 0
+            loss = 0
             for batch in range(batch_size):
 
                 run = 1 + np.random.randint(n_runs - 1)
