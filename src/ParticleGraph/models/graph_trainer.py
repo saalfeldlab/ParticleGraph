@@ -2401,7 +2401,6 @@ def data_train_synaptic2(config, erase, best_model, device):
         optimizer_missing_activity = torch.optim.Adam(lr=train_config.learning_rate_NNR, params=model_missing_activity.parameters())
         model_missing_activity.train()
     if has_Siren:
-        n_nodes_per_axis = int(np.sqrt(n_nodes))
         if ('Siren_short_term_plasticity' in field_type) | ('modulation' in field_type):
             model_f = nn.ModuleList([
                 Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
@@ -2411,6 +2410,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                 for n in range(n_runs)
             ])
         else:
+            n_nodes_per_axis = int(np.sqrt(n_nodes))
             model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
                                     out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
                                     hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device,
