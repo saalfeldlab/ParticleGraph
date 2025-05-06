@@ -635,8 +635,9 @@ def plot_training (config,  log_dir, epoch, N, x, index_particles, n_particles, 
                         embedding_ = model.a[n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
                     else:
                         embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
-                    in_features = get_in_features(rr, embedding_, config.graph_model.particle_model_name,
-                                                  simulation_config.max_radius)
+
+                    in_features = get_in_features(rr=rr, embedding=embedding_, model=model, model_name=config.graph_model.particle_model_name,
+                                                  max_radius=simulation_config.max_radius)
                     with torch.no_grad():
                         func = model.lin_edge(in_features.float())
                     func = func[:, 0]
