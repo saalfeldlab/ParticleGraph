@@ -44,6 +44,7 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
         self.delta_t = simulation_config.delta_t
         self.n_particles = simulation_config.n_particles
         self.embedding_dim = model_config.embedding_dim
+        self.embedding_trial = config.training.embedding_trial
 
         self.n_frames = simulation_config.n_frames
         self.prediction = model_config.prediction

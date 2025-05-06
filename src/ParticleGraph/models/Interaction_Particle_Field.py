@@ -57,6 +57,7 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
         self.bc_dpos = bc_dpos
         self.n_ghosts = int(train_config.n_ghosts)
         self.dimension = dimension
+        self.embedding_trial = config.training.embedding_trial
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device)
