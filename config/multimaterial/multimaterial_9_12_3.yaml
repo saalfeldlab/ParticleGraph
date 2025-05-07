@@ -1,4 +1,4 @@
-description: 'system of particles falling down in a box larger MLP'
+description: 'system of particles falling down in a box larger MLP   test time_step 8'
 dataset: 'multimaterial'
 data_folder_name: '/groups/saalfeld/saalfeldlab/projects/gnn/learning-to-simulate/MultiMaterial/'
 
