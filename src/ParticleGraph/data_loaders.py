@@ -827,6 +827,9 @@ def load_cardiomyocyte_data(config, device, visualize, step):
             (N1_mesh.clone().detach(), X1_mesh.clone().detach(), V1_mesh.clone().detach(),
              T1_mesh.clone().detach(), H1_mesh.clone().detach(), A1_mesh.clone().detach()), 1)
 
+        x_mesh_list.append(x_mesh.clone().detach())
+        y_mesh_list.append(x_mesh[:, 6:7])
+
         x_particle_field = torch.concatenate((x_mesh, x), dim=0)
         distance = torch.sum((x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
         adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
@@ -840,7 +843,6 @@ def load_cardiomyocyte_data(config, device, visualize, step):
         pos = to_numpy(pos[:, 0])
         edge_index = edge_index[:, pos]
         edge_f_p_list.append(edge_index)
-
 
         y = torch.zeros((x.shape[0], 2), dtype=torch.float32, device=device)
 
