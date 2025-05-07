@@ -1,4 +1,4 @@
-description: 'velocity field on cultured cardiomyocytes cells + field'
+description: 'velocity field on cultured cardiomyocytes cells + field + radius 0.075'
 dataset: 'cell_cardio_4'
 data_folder_name: '/groups/saalfeld/home/allierc/signaling/cardiomyocytes/healthy.npy'
 

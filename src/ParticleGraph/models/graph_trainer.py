@@ -1824,7 +1824,7 @@ def data_train_particle_field(config, erase, best_model, device):
         y_mesh_list.append(h)
     h = y_mesh_list[0][0].clone().detach()
     for run in range(n_runs):
-        for k in range(n_frames):
+        for k in range(n_frames-5):
             h = torch.cat((h, y_mesh_list[run][k].clone().detach()), 0)
     hnorm = torch.std(h)
     torch.save(hnorm, os.path.join(log_dir, 'hnorm.pt'))
@@ -1843,7 +1843,7 @@ def data_train_particle_field(config, erase, best_model, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    if best_model != None:
+    if best_model != '':
         net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{best_model}.pt"
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
@@ -1872,7 +1872,7 @@ def data_train_particle_field(config, erase, best_model, device):
 
     print('Update variables ...')
     # update variable if particle_dropout, cell_division, etc ...
-    x = torch.tensor(x_list[1][n_frames - 1], dtype=torch.float32, device=device)
+    x = torch.tensor(x_list[1][n_frames - 5], dtype=torch.float32, device=device)
     n_particles = x.shape[0]
     index_particles = get_index_particles(x, n_particle_types, dimension)
     type_list = get_type_list(x, dimension)

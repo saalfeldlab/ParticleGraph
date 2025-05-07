@@ -1,6 +1,4 @@
-"""
-A collection of functions for loading data from various sources.
-"""
+from ParticleGraph.generators.utils import *
 import os
 import re
 from dataclasses import dataclass
@@ -17,7 +15,6 @@ from scipy.interpolate import CubicSpline, interp1d, make_interp_spline
 from tqdm import trange
 
 from ParticleGraph.TimeSeries import TimeSeries
-# from ParticleGraph.utils import choose_boundary_values
 
 import json
 from tqdm import trange
@@ -38,127 +35,6 @@ import json
 import scipy.io
 import h5py
 
-from ParticleGraph.generators import *
-
-
-def init_mesh(config, device):
-
-    simulation_config = config.simulation
-    model_config = config.graph_model
-
-    n_nodes = simulation_config.n_nodes
-    n_particles = simulation_config.n_particles
-    node_value_map = simulation_config.node_value_map
-    field_grid = model_config.field_grid
-    max_radius = simulation_config.max_radius
-
-    n_nodes_per_axis = int(np.sqrt(n_nodes))
-    xs = torch.linspace(1 / (2 * n_nodes_per_axis), 1 - 1 / (2 * n_nodes_per_axis), steps=n_nodes_per_axis)
-    ys = torch.linspace(1 / (2 * n_nodes_per_axis), 1 - 1 / (2 * n_nodes_per_axis), steps=n_nodes_per_axis)
-    x_mesh, y_mesh = torch.meshgrid(xs, ys, indexing='xy')
-    x_mesh = torch.reshape(x_mesh, (n_nodes_per_axis ** 2, 1))
-    y_mesh = torch.reshape(y_mesh, (n_nodes_per_axis ** 2, 1))
-    mesh_size = 1 / n_nodes_per_axis
-    pos_mesh = torch.zeros((n_nodes, 2), device=device)
-    pos_mesh[0:n_nodes, 0:1] = x_mesh[0:n_nodes]
-    pos_mesh[0:n_nodes, 1:2] = y_mesh[0:n_nodes]
-
-    i0 = imread(f'graphs_data/{node_value_map}')
-    if len(i0.shape) == 2:
-        # i0 = i0[0,:, :]
-        i0 = np.flipud(i0)
-        values = i0[(to_numpy(pos_mesh[:, 1]) * 255).astype(int), (to_numpy(pos_mesh[:, 0]) * 255).astype(int)]
-
-    mask_mesh = (x_mesh > torch.min(x_mesh) + 0.02) & (x_mesh < torch.max(x_mesh) - 0.02) & (y_mesh > torch.min(y_mesh) + 0.02) & (y_mesh < torch.max(y_mesh) - 0.02)
-
-    if 'grid' not in field_grid:
-        if 'pattern_Null.tif' in simulation_config.node_value_map:
-            pos_mesh = pos_mesh + torch.randn(n_nodes, 2, device=device) * mesh_size / 24
-        else:
-            pos_mesh = pos_mesh + torch.randn(n_nodes, 2, device=device) * mesh_size / 8
-
-    match config.graph_model.mesh_model_name:
-        case 'RD_Gray_Scott_Mesh':
-            features_mesh = torch.zeros((n_nodes, 2), device=device)
-            features_mesh[:, 0] -= 0.5 * torch.tensor(values / 255, device=device)
-            features_mesh[:, 1] = 0.25 * torch.tensor(values / 255, device=device)
-        case 'RD_FitzHugh_Nagumo_Mesh':
-            features_mesh = torch.zeros((n_nodes, 2), device=device) + torch.rand((n_nodes, 2), device=device) * 0.1
-        case 'RD_RPS_Mesh' | 'RD_RPS_Mesh_bis':
-            features_mesh = torch.rand((n_nodes, 3), device=device)
-            s = torch.sum(features_mesh, dim=1)
-            for k in range(3):
-                features_mesh[:, k] = features_mesh[:, k] / s
-        case 'DiffMesh' | 'WaveMesh' | 'Particle_Mesh_A' | 'Particle_Mesh_B' | 'WaveSmoothParticle':
-            features_mesh = torch.zeros((n_nodes, 2), device=device)
-            features_mesh[:, 0] = torch.tensor(values / 255 * 5000, device=device)
-        case 'PDE_O_Mesh':
-            features_mesh = torch.zeros((n_particles, 5), device=device)
-            features_mesh[0:n_particles, 0:1] = x_mesh[0:n_particles]
-            features_mesh[0:n_particles, 1:2] = y_mesh[0:n_particles]
-            features_mesh[0:n_particles, 2:3] = torch.randn(n_particles, 1, device=device) * 2 * np.pi  # theta
-            features_mesh[0:n_particles, 3:4] = torch.ones(n_particles, 1, device=device) * np.pi / 200  # d_theta
-            features_mesh[0:n_particles, 4:5] = features_mesh[0:n_particles, 3:4]  # d_theta0
-            pos_mesh[:, 0] = features_mesh[:, 0] + (3 / 8) * mesh_size * torch.cos(features_mesh[:, 2])
-            pos_mesh[:, 1] = features_mesh[:, 1] + (3 / 8) * mesh_size * torch.sin(features_mesh[:, 2])
-        case '' :
-            features_mesh = torch.zeros((n_nodes, 2), device=device)
-
-    # i0 = imread(f'graphs_data/{node_type_map}')
-    # values = i0[(to_numpy(x_mesh[:, 0]) * 255).astype(int), (to_numpy(y_mesh[:, 0]) * 255).astype(int)]
-    # if np.max(values) > 0:
-    #     values = np.round(values / np.max(values) * (simulation_config.n_node_types-1))
-    # type_mesh = torch.tensor(values, device=device)
-    # type_mesh = type_mesh[:, None]
-
-    type_mesh = torch.zeros((n_nodes, 1), device=device)
-
-    node_id_mesh = torch.arange(n_nodes, device=device)
-    node_id_mesh = node_id_mesh[:, None]
-    dpos_mesh = torch.zeros((n_nodes, 2), device=device)
-
-    x_mesh = torch.concatenate((node_id_mesh.clone().detach(), pos_mesh.clone().detach(), dpos_mesh.clone().detach(),
-                                type_mesh.clone().detach(), features_mesh.clone().detach()), 1)
-
-    pos = to_numpy(x_mesh[:, 1:3])
-    tri = Delaunay(pos, qhull_options='QJ')
-    face = torch.from_numpy(tri.simplices)
-    face_longest_edge = np.zeros((face.shape[0], 1))
-
-    print('removal of skinny faces ...')
-
-    for k in trange(face.shape[0]):
-        # compute edge distances
-        x1 = pos[face[k, 0], :]
-        x2 = pos[face[k, 1], :]
-        x3 = pos[face[k, 2], :]
-        a = np.sqrt(np.sum((x1 - x2) ** 2))
-        b = np.sqrt(np.sum((x2 - x3) ** 2))
-        c = np.sqrt(np.sum((x3 - x1) ** 2))
-        A = np.max([a, b]) / np.min([a, b])
-        B = np.max([a, c]) / np.min([a, c])
-        C = np.max([c, b]) / np.min([c, b])
-        face_longest_edge[k] = np.max([A, B, C])
-
-    face_kept = np.argwhere(face_longest_edge < 5)
-    face_kept = face_kept[:, 0]
-    face = face[face_kept, :]
-    face = face.t().contiguous()
-    face = face.to(device, torch.long)
-
-    if (config.graph_model.particle_model_name == 'PDE_ParticleField_A')  | (config.graph_model.particle_model_name == 'PDE_ParticleField_B'):
-        type_mesh = 0 * type_mesh
-
-    a_mesh = torch.zeros_like(type_mesh)
-    type_mesh = type_mesh.to(dtype=torch.float32)
-
-    if 'Smooth' in config.graph_model.mesh_model_name:
-        distance = torch.sum((pos_mesh[:, None, :] - pos_mesh[None, :, :]) ** 2, dim=2)
-        adj_t = ((distance < max_radius ** 2) & (distance >= 0)).float() * 1
-        mesh_data['edge_index'] = adj_t.nonzero().t().contiguous()
-
-
-    return pos_mesh, dpos_mesh, type_mesh, features_mesh, a_mesh, node_id_mesh
 
 
 def extract_object_properties(segmentation_image, fluorescence_image=[]):
@@ -809,7 +685,10 @@ def load_cardiomyocyte_data(config, device, visualize, step):
     H = np.zeros((n_particles, 2))
     ID = np.arange(n_particles, dtype=np.float32)[:, None]
 
-    X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh = init_mesh(config, device=device)
+    X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
+    torch.save(mesh_data, f'graphs_data/{dataset_name}/mesh_data_{run}.pt')
+    torch.save(mesh_data, f'graphs_data/{dataset_name}/mesh_data_{run+1}.pt')
+    mask_mesh = mesh_data['mask'].squeeze()
 
     plt.style.use('dark_background')
     output_dir = f"./graphs_data/{dataset_name}/Fig/"
@@ -881,6 +760,8 @@ def load_cardiomyocyte_data(config, device, visualize, step):
     np.save(f'graphs_data/{dataset_name}/x_list_{run+1}.npy', x_list)
     np.save(f'graphs_data/{dataset_name}/y_list_{run+1}.npy', y_list)
 
+    x_mesh_list = torch.stack(x_mesh_list)
+    y_mesh_list = torch.stack(y_mesh_list)
     torch.save(x_mesh_list, f'graphs_data/{dataset_name}/x_mesh_list_{run}.pt')
     torch.save(y_mesh_list, f'graphs_data/{dataset_name}/y_mesh_list_{run}.pt')
     torch.save(edge_p_p_list, f'graphs_data/{dataset_name}/edge_p_p_list{run}.pt')
@@ -889,6 +770,7 @@ def load_cardiomyocyte_data(config, device, visualize, step):
     torch.save(y_mesh_list, f'graphs_data/{dataset_name}/y_mesh_list_{run+1}.pt')
     torch.save(edge_p_p_list, f'graphs_data/{dataset_name}/edge_p_p_list{run+1}.pt')
     torch.save(edge_f_p_list, f'graphs_data/{dataset_name}/edge_f_p_list{run+1}.pt')
+
 
 def load_Goole_data(config, device=None, visualize=None, step=None, cmap=None):
 

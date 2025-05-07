@@ -4,6 +4,7 @@ import networkx as nx
 import torch
 from ParticleGraph.generators.utils import *
 from ParticleGraph.models.utils import *
+from ParticleGraph.data_loaders import *
 
 from GNN_particles_Ntype import *
 from ParticleGraph.utils import set_size
@@ -25,6 +26,7 @@ import torch_geometric.utils as pyg_utils
 from scipy.ndimage import zoom
 import re
 import imageio
+from ParticleGraph.generators.utils import *
 
 
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
@@ -73,6 +75,36 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                                         scenario=scenario, device=device, bSave=bSave)
 
     plt.style.use('default')
+
+
+def generate_from_data(config, device, visualize=True, step=None, cmap=None):
+
+    data_folder_name = config.data_folder_name
+    image_data = config.image_data
+
+    if data_folder_name == 'graphs_data/solar_system':
+        load_solar_system(config, device, visualize, step)
+    elif 'LG-ODE' in data_folder_name:
+        load_LG_ODE(config, device, visualize, step)
+    elif 'WaterDropSmall' in data_folder_name:
+        load_WaterDropSmall(config, device, visualize, step, cmap)
+    elif 'WaterRamps' in data_folder_name:
+        load_Goole_data(config, device, visualize, step, cmap)
+    elif 'MultiMaterial' in data_folder_name:
+        load_Goole_data(config, device, visualize, step, cmap)
+    elif 'Kato' in data_folder_name:
+        load_worm_Kato_data(config, device, visualize, step)
+    elif 'worm' in data_folder_name:
+        load_worm_data(config, device, visualize, step)
+    elif 'cardio' in data_folder_name:
+        load_cardiomyocyte_data(config, device, visualize, step)
+    elif image_data.file_type != 'none':
+        if image_data.file_type == '3D masks meshes':
+            load_3D_cell_data(config, device, visualize)
+        if image_data.file_type == '2D fluo':
+            load_2D_cell_data(config, device, visualize)
+    else:
+        raise ValueError(f'Unknown data folder name {data_folder_name}')
 
 
 def data_generate_particle(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1, scenario='none', device=None, bSave=True):

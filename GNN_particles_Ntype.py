@@ -21,7 +21,6 @@ from matplotlib.ticker import FuncFormatter
 from prettytable import PrettyTable
 
 from ParticleGraph.config import ParticleGraphConfig
-from ParticleGraph.generators.utils import *
 from ParticleGraph.generators.graph_data_generator import *
 from ParticleGraph.models.graph_trainer import *
 from ParticleGraph.models.Siren_Network import *
@@ -55,7 +54,7 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'generate'
+        task = 'train'
         best_model = ''
 
         # config_list = ['multimaterial_12_1','multimaterial_12_2','multimaterial_12_3','multimaterial_12_4','multimaterial_12_5',
