@@ -1822,7 +1822,6 @@ def data_train_particle_field(config, erase, best_model, device):
         x_mesh_list.append(x_mesh)
         h = torch.load(f'graphs_data/{dataset_name}/y_mesh_list_{run}.pt', map_location=device, weights_only=False)
         y_mesh_list.append(h)
-        print(f'run {run} x_mesh: {x_mesh.shape} y_mesh: {h.shape}')
     h = y_mesh_list[0][0].clone().detach()
     for run in range(n_runs):
         for k in range(n_frames):
