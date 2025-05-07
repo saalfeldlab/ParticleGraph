@@ -603,14 +603,14 @@ def plot_training (config,  log_dir, epoch, N, x, index_particles, n_particles, 
         if do_tracking:
             embedding = to_numpy(model.a)
             for n in range(n_particle_types):
-                plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n), s=20)
+                plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n), s=1)
         elif simulation_config.state_type == 'sequence':
             embedding = to_numpy(model.a[1].squeeze())
             plt.scatter(embedding[:-200, 0], embedding[:-200, 1], color='k', s=0.1)
         else:
             embedding = get_embedding(model.a, plot_config.data_embedding)
             for n in range(n_particle_types):
-                plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n), s=20)
+                plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n), s=1)
         plt.xticks([])
         plt.yticks([])
         plt.tight_layout()
@@ -646,7 +646,7 @@ def plot_training (config,  log_dir, epoch, N, x, index_particles, n_particles, 
                                  to_numpy(func * ynorm),
                                  linewidth=2,
                                  color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
-                plt.ylim(config.plotting.ylim)
+                # plt.ylim(config.plotting.ylim)
                 if (model_config.particle_model_name == 'PDE_G') | (model_config.particle_model_name == 'PDE_E'):
                     plt.xlim([0, 0.02])
                 plt.tight_layout()
