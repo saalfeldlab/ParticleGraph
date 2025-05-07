@@ -135,8 +135,7 @@ class Siren_Network(nn.Module):
                 
             self.net.append(final_linear)
         else:
-            self.net.append(SineLayer(hidden_features, out_features, 
-                                      is_first=False, omega_0=hidden_omega_0))
+            self.net.append(SineLayer(hidden_features, out_features, is_first=False, omega_0=hidden_omega_0))
         
         self.net = nn.Sequential(*self.net)
 
@@ -335,6 +334,6 @@ if __name__ == '__main__':
             pred = model_siren()**2
             pred = torch.reshape(pred, (256, 256))
             fig = plt.figure(figsize=(8, 8))
-            plt.imshow(pred.detach().cpu().numpy())
+            plt.imshow(pred.detach().cpu().numpy(), cmpa='grey')
             # plt.scatter(y.detach().cpu().numpy(),x.detach().cpu().numpy(),c='k',s=1)
             plt.savefig(f"tmp/output_{epoch}.png")
