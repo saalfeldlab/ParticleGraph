@@ -1872,7 +1872,7 @@ def data_train_particle_field(config, erase, best_model, device):
 
     print('Update variables ...')
     # update variable if particle_dropout, cell_division, etc ...
-    x = x_list[1][n_frames - 1].clone().detach()
+    x = x_list[1][n_frames - 1]
     n_particles = x.shape[0]
     index_particles = get_index_particles(x, n_particle_types, dimension)
     type_list = get_type_list(x, dimension)
@@ -1881,26 +1881,15 @@ def data_train_particle_field(config, erase, best_model, device):
     config.simulation.n_particles = n_particles
 
     if has_siren:
-
         image_width = int(np.sqrt(n_nodes))
-        if has_siren_time:
-            model_f = Siren_Network(image_width=image_width, in_features=model_config.input_size_nnr,
+        model_f = Siren_Network(image_width=image_width, in_features=model_config.input_size_nnr,
                                     out_features=model_config.output_size_nnr,
                                     hidden_features=model_config.hidden_dim_nnr,
                                     hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device,
                                     first_omega_0=80, hidden_omega_0=80.)
-        else:
-            model_f = Siren_Network(image_width=image_width, in_features=model_config.input_size_nnr,
-                                    out_features=model_config.output_size_nnr,
-                                    hidden_features=model_config.hidden_dim_nnr,
-                                    hidden_layers=3, outermost_linear=True, device=device, first_omega_0=80,
-                                    hidden_omega_0=80.)
         model_f.to(device=device)
         model_f.train()
         optimizer_f = torch.optim.Adam(lr=1e-5, params=model_f.parameters())
-        # net = f"{log_dir}/models/best_model_f_with_1_graphs_20.pt"
-        # state_dict = torch.load(net, map_location=device)
-        # model_f.load_state_dict(state_dict['model_state_dict'])
 
     if has_ghost:
         ghosts_particles = Ghost_Particles(config, n_particles, vnorm, device)
@@ -1963,7 +1952,7 @@ def data_train_particle_field(config, erase, best_model, device):
             for batch in range(batch_size):
 
                 k = np.random.randint(n_frames - 2)
-                x = x_list[run][k].clone().detach()
+                x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device)
                 x_mesh = x_mesh_list[run][k].clone().detach()
 
                 match model_config.field_type:
@@ -1980,7 +1969,6 @@ def data_train_particle_field(config, erase, best_model, device):
                     if ghosts_particles.boids:
                         distance = torch.sum(
                             bc_dpos(x_ghost[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                        dist_np = to_numpy(distance)
                         ind_np = torch.min(distance, axis=1)[1]
                         x_ghost[:, 3:5] = x[ind_np, 3:5].clone().detach()
                     x = torch.cat((x, x_ghost), 0)
@@ -1997,10 +1985,9 @@ def data_train_particle_field(config, erase, best_model, device):
                 dataset_f_p = data.Data(x=x_particle_field[:, :], edge_index=edges)
                 dataset_batch_f_p.append(dataset_f_p)
 
-                y = y_list[run][k].clone().detach()
+                y = torch.tensor(y_list[run][k], dtype=torch.float32, device=device)
                 if noise_level > 0:
                     y = y * (1 + torch.randn_like(y) * noise_level)
-
                 y = y / ynorm
 
                 if rotation_augmentation:
@@ -2039,8 +2026,7 @@ def data_train_particle_field(config, erase, best_model, device):
             pred_f_p = pred_f_p[f_p_mask]
 
             if has_ghost:
-                loss = ((pred_p_p[mask_ghost] + 0 * pred_f_p - y_batch)).norm(2) + var_batch.mean() + model.field.norm(
-                    2)
+                loss = ((pred_p_p[mask_ghost] + 0 * pred_f_p - y_batch)).norm(2) + var_batch.mean() + model.field.norm(2)
             else:
                 loss = (pred_p_p + pred_f_p - y_batch).norm(2)  # + model.field.norm(2)
 
