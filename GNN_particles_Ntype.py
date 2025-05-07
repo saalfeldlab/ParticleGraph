@@ -64,8 +64,8 @@ if __name__ == '__main__':
         # config_list = ['fluids_m18_1']
         # config_list = ['signal_N5_v11_bis']
         # config_list = ['falling_water_ramp_x6_13']
-        config_list = ['arbitrary_3_field_video_bison_test']
-        # config_list = ['cell_cardio_1']
+        # config_list = ['arbitrary_3_field_video_bison_test']
+        config_list = ['cell_cardio_3']
 
 
     for config_file_ in config_list:
