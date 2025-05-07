@@ -432,7 +432,7 @@ def plot_training_particle_field(config, has_siren, has_siren_time, model_f,  n_
         plt.axis('off')
     embedding = get_embedding(model.a, dataset_num)
     if n_particle_types > 1000:
-        plt.scatter(embedding[:, 0], embedding[:, 1], c=to_numpy(x[:, 5]) / n_particles, s=5, cmap='viridis')
+        plt.scatter(embedding[:, 0], embedding[:, 1], c=to_numpy(x[:, 5]) / n_particles, s=1, cmap='viridis')
     else:
         for n in range(n_particle_types):
             plt.scatter(embedding[index_particles[n], 0],
@@ -481,11 +481,11 @@ def plot_training_particle_field(config, has_siren, has_siren_time, model_f,  n_
                      to_numpy(func * ynorm),
                      linewidth=8,
                      color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
-    match model_config.particle_model_name:
-        case 'PDE_ParticleField_A':
-            plt.ylim([-0.04, 0.03])
-        case 'PDE_ParticleField_B':
-            plt.ylim([-1E-4, 1E-4])
+    # match model_config.particle_model_name:
+    #     case 'PDE_ParticleField_A':
+    #         plt.ylim([-0.04, 0.03])
+    #     case 'PDE_ParticleField_B':
+    #         plt.ylim([-1E-4, 1E-4])
 
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/{model_name}_function_{epoch}_{N}.tif", dpi=170.7)
@@ -493,7 +493,8 @@ def plot_training_particle_field(config, has_siren, has_siren_time, model_f,  n_
 
     if has_siren:
         if has_siren_time:
-            frame_list = [n_frames//4, 2*n_frames//4, 3*n_frames//4, n_frames-1]
+            # frame_list = [n_frames//4, 2*n_frames//4, 3*n_frames//4, n_frames-1]
+            frame_list = [54, 58, 62, 66]
         else:
             frame_list = [0]
 
@@ -509,13 +510,14 @@ def plot_training_particle_field(config, has_siren, has_siren_time, model_f,  n_
             tmp = to_numpy(torch.sqrt(tmp))
             if has_siren_time:
                 tmp= np.rot90(tmp,k=1)
-            fig_ = plt.figure(figsize=(12, 12))
+            fig_ = plt.figure(figsize=(14, 12))
             axf = fig_.add_subplot(1, 1, 1)
-            plt.imshow(tmp, cmap='grey', vmin=0, vmax=2)
+            plt.imshow(tmp, cmap='grey')
+            plt.colorbar()
             plt.xticks([])
             plt.yticks([])
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/field/{model_name}_{epoch}_{N}_{frame}.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/tmp_training/field/{model_name}_{epoch}_{N}_{frame}.tif", dpi=80)
             plt.close()
 
     # else:
