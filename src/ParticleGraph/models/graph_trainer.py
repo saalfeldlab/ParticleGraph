@@ -1951,7 +1951,7 @@ def data_train_particle_field(config, erase, best_model, device):
 
             for batch in range(batch_size):
 
-                k = np.random.randint(n_frames - 2)
+                k = np.random.randint(n_frames - 3)
                 x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device)
                 x_mesh = x_mesh_list[run][k].clone().detach()
 
