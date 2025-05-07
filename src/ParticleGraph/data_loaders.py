@@ -871,8 +871,8 @@ def load_cardiomyocyte_data(config, device, visualize, step):
         plt.savefig(f"./graphs_data/{dataset_name}/Fig/Fig_{num}", dpi=100)
         plt.close()
 
-    x_list = np.array(x_list)
-    y_list = np.array(y_list)
+    x_list_ = np.array(to_numpy(torch.stack(x_list)))
+    y_list_ = np.array(to_numpy(torch.stack(y_list)))
 
     np.save(f'graphs_data/{dataset_name}/x_list_{run}.npy', x_list)
     np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list)
