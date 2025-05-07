@@ -1736,6 +1736,7 @@ def data_train_particle_field(config, erase, best_model, device):
     n_epochs = train_config.n_epochs
     max_radius = simulation_config.max_radius
     min_radius = simulation_config.min_radius
+    n_particles = simulation_config.n_particles
     n_particle_types = simulation_config.n_particle_types
     n_nodes = simulation_config.n_nodes
     n_nodes_per_axis = int(np.sqrt(n_nodes))
