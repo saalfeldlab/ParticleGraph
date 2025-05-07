@@ -253,9 +253,6 @@ def get_cameraman_tensor(sidelength):
 
 
 
-
-
-
 if __name__ == '__main__':
 
 

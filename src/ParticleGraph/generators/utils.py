@@ -30,6 +30,8 @@ def generate_from_data(config, device, visualize=True, step=None, cmap=None):
         load_worm_Kato_data(config, device, visualize, step)
     elif 'worm' in data_folder_name:
         load_worm_data(config, device, visualize, step)
+    elif 'cardio' in data_folder_name:
+        load_cardiomyocyte_data(config, device, visualize, step)
     elif image_data.file_type != 'none':
         if image_data.file_type == '3D masks meshes':
             load_3D_cell_data(config, device, visualize)

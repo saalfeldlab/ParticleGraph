@@ -657,6 +657,76 @@ def load_3D_cell_data(config, device, visualize):
     # visualize_mesh(mesh_file)
 
 
+def load_cardiomyocyte_data(config, device, visualize, step):
+
+
+    n_particles = config.simulation.n_particles
+    n_frames = config.simulation.n_frames
+    dataset_name = config.dataset
+    delta_t = config.simulation.delta_t
+
+    run = 0
+    x_list = []
+    y_list = []
+
+    file_path = os.path.expanduser(config.data_folder_name)
+    data = np.load(file_path, allow_pickle=True)
+
+    N = np.arange(n_particles, dtype=np.float32)[:, None]
+    X = np.zeros((n_particles, 2))
+    V = np.zeros((n_particles, 2))
+    T = np.zeros((n_particles, 1))
+    ID = np.arange(n_particles, dtype=np.float32)[:, None]
+
+    plt.style.use('dark_background')
+    output_dir = f"./graphs_data/{dataset_name}/Fig/"
+    os.makedirs(output_dir, exist_ok=True)
+
+    for it in trange(0, n_frames - 1):
+
+        # Load the data for the current frame
+        X = (np.reshape(data[it], (n_particles, 2)) + 20) / 1300
+
+        if it == 0:
+
+            x = np.concatenate((N.astype(int), X, V, T, ID.astype(int) - 1), axis=1)
+            y = torch.zeros((x.shape[0], 2), dtype=torch.float32, device=device)
+
+        if it > 0:
+
+            positions_prev = x_list[-1][:, 1:3]
+            positions_curr = x[:, 1:3]
+            V = (positions_curr - positions_prev) / delta_t
+            x = np.concatenate((N.astype(int), X, V, T, ID.astype(int) - 1), axis=1)
+
+            if  it>1 :
+                v_prev = x_list[-1][:, 3:5]
+                v_curr = x[:, 3:5]
+                y = (v_curr - v_prev) / delta_t
+                y_list.append(y)
+
+        x_list.append(x)
+
+        fig = plt.subplots(figsize=(20, 20))
+        plt.xticks([])
+        plt.yticks([])
+        plt.axis('off')
+        plt.scatter(x[:, 2], x[:, 1], s=10, c='w', alpha=0.75)
+        plt.xlim([-0.1, 1.1])
+        plt.ylim([-0.1, 1.1])
+
+        num = f"{it:04}"
+        plt.savefig(f"./graphs_data/{dataset_name}/Fig/Fig_{num}", dpi=100)
+        plt.close()
+
+    x_list = np.array(x_list)
+    y_list = np.array(y_list)
+
+    np.save(f'graphs_data/{dataset_name}/x_list_{run}.npy', x_list)
+    np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list)
+
+
+
 def load_Goole_data(config, device=None, visualize=None, step=None, cmap=None):
 
     data_folder_name = config.data_folder_name
@@ -891,8 +961,6 @@ def load_worm_Kato_data(config, device=None, visualize=None, step=None, cmap=Non
             decoded_name = ''.join(chr(int(num[0])) for num in neuron_name)
 
             print(f"Neuron {i + 1} name:", decoded_name)
-
-
 
 
 def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
