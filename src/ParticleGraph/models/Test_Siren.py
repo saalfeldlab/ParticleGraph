@@ -83,7 +83,7 @@ class Siren(nn.Module):
     def forward_with_activations(self, coords, retain_grad=False):
         '''Returns not only model output, but also intermediate activations.
         Only used for visualizing activations later!'''
-        activations = OrderedDict()
+        # activations = OrderedDict()
 
         activation_count = 0
         x = coords.clone().detach().requires_grad_(True)
