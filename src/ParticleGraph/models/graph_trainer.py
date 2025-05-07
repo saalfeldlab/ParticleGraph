@@ -1936,6 +1936,8 @@ def data_train_particle_field(config, erase, best_model, device):
 
         total_loss = 0
         Niter = n_frames * data_augmentation_loop // batch_size
+        plot_frequency = int(Niter // 50)
+
 
         if epoch==0:
             print(f'{Niter} iterations per epoch')
@@ -2045,7 +2047,7 @@ def data_train_particle_field(config, erase, best_model, device):
             total_loss += loss.item()
 
             visualize_embedding = True
-            if visualize_embedding & (((epoch < 30) & (N % (Niter // 50) == 0)) | (N == 0)):
+            if visualize_embedding & (((epoch < 30) & (N % plot_frequency == 0)) | (N == 0)):
                 plot_training_particle_field(config=config, has_siren=has_siren, has_siren_time=has_siren_time,
                                              model_f=model_f, n_frames=n_frames,
                                              model_name=model_config.particle_model_name, log_dir=log_dir,
