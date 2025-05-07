@@ -1,14 +1,9 @@
 # SIREN network
 # Code adapted from the following GitHub repository:
 # https://github.com/vsitzmann/siren?tab=readme-ov-file
-import os
 
-import torch
 from torch import nn
-
 import torch
-import torch_geometric as pyg
-import torch_geometric.utils as pyg_utils
 
 from PIL import Image
 from torchvision.transforms import Resize, Compose, ToTensor, Normalize
@@ -18,9 +13,6 @@ import matplotlib.pyplot as plt
 from tqdm import trange
 from torch.utils.data import DataLoader, Dataset
 import matplotlib
-
-# from ParticleGraph.utils import choose_boundary_values
-# from ParticleGraph.config import ParticleGraphConfig
 
 
 class SineLayer(nn.Module):
@@ -55,7 +47,6 @@ class SineLayer(nn.Module):
 
     def forward(self, input):
         return torch.sin(self.omega_0 * self.linear(input))
-
 
 class Siren(nn.Module):
     def __init__(self, in_features, hidden_features, hidden_layers, out_features, outermost_linear=False,
@@ -219,50 +210,3 @@ if __name__ == '__main__':
         optim.zero_grad()
         loss.backward()
         optim.step()
-
-    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
-    axes[0].imshow(model_output.cpu().view(256, 256).detach().numpy())
-    axes[1].imshow(img_grad.norm(dim=-1).cpu().view(256, 256).detach().numpy())
-    axes[2].imshow(img_laplacian.cpu().view(256, 256).detach().numpy())
-    plt.show()
-
-
-
-
-
-
-    model_siren = Siren_Network(image_width=256, in_features=2, out_features=1, hidden_features=256, hidden_layers=3,
-                                outermost_linear=True)
-    model_siren = model_siren.to(device=device)
-    optimizer = torch.optim.Adam(lr=1e-4, params=model_siren.parameters())
-
-    i0 = imread('data/pics_boat.tif')
-
-    y = torch.tensor(i0, dtype=torch.float32, device=device)
-    y = y.flatten()
-    y = y[:, None]
-
-    coords = get_mgrid(256, dim=2)
-    coords = coords.to('cuda:0')
-
-    print(coords.device, y.device)
-
-    for epoch in trange(10000):
-        optimizer.zero_grad()
-
-        x = model_siren() ** 2
-
-        loss = (x - y).norm(2)
-
-        loss.backward()
-        optimizer.step()
-
-        if epoch % 500 == 0:
-            print(f"Epoch {epoch}, Loss {loss.item()}")
-            pred = model_siren() ** 2
-            pred = torch.reshape(pred, (256, 256))
-            fig = plt.figure(figsize=(8, 8))
-            plt.imshow(pred.detach().cpu().numpy())
-            # plt.scatter(y.detach().cpu().numpy(),x.detach().cpu().numpy(),c='k',s=1)
-            plt.savefig(f"tmp/output2_{epoch}.png")
-            plt.close()
