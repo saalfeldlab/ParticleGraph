@@ -1,6 +1,6 @@
 description: 'velocity field on cultured cardiomyocytes cells'
 dataset: 'cell_cardio_1'
-data_folder_name: '~/Desktop/signaling/cardiomyocytes/healthy.npy'
+data_folder_name: '/groups/saalfeld/home/allierc/signaling/cardiomyocytes/healthy.npy'
 
 simulation:
   params: [[-1]]

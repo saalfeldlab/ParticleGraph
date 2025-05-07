@@ -687,10 +687,8 @@ def load_cardiomyocyte_data(config, device, visualize, step):
         # Load the data for the current frame
         X = (np.reshape(data[it], (n_particles, 2)) + 20) / 1300
 
-        if it == 0:
-
-            x = np.concatenate((N.astype(int), X, V, T, ID.astype(int) - 1), axis=1)
-            y = torch.zeros((x.shape[0], 2), dtype=torch.float32, device=device)
+        x = np.concatenate((N.astype(int), X, V, T, ID.astype(int) - 1), axis=1)
+        y = torch.zeros((x.shape[0], 2), dtype=torch.float32, device=device)
 
         if it > 0:
 
@@ -724,6 +722,8 @@ def load_cardiomyocyte_data(config, device, visualize, step):
 
     np.save(f'graphs_data/{dataset_name}/x_list_{run}.npy', x_list)
     np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list)
+    np.save(f'graphs_data/{dataset_name}/x_list_{run+1}.npy', x_list)
+    np.save(f'graphs_data/{dataset_name}/y_list_{run+1}.npy', y_list)
 
 
 
