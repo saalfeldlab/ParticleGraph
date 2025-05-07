@@ -1792,7 +1792,7 @@ def data_train_particle_field(config, erase, best_model, device):
     y = torch.tensor(y_list[0][0], dtype=torch.float32, device=device)
     time.sleep(0.5)
     for run in trange(0, n_runs,  max(n_runs // 10, 1)):
-        for k in range(run_lengths[run]-5):
+        for k in range(n_frames-5):
             if (k % 10 == 0) | (n_frames < 1000):
                 try:
                     x = torch.cat((x, torch.tensor(x_list[run][k], dtype=torch.float32, device=device)), 0)
