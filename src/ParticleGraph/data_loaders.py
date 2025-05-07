@@ -666,6 +666,9 @@ def load_cardiomyocyte_data(config, device, visualize, step):
     min_radius = config.simulation.min_radius
     n_nodes = config.simulation.n_nodes
 
+    output_dir = f"./graphs_data/{dataset_name}/Fig/"
+    os.makedirs(output_dir, exist_ok=True)
+
     run = 0
     x_list = []
     y_list = []
@@ -685,14 +688,15 @@ def load_cardiomyocyte_data(config, device, visualize, step):
     H = np.zeros((n_particles, 2))
     ID = np.arange(n_particles, dtype=np.float32)[:, None]
 
+
+
     X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
     torch.save(mesh_data, f'graphs_data/{dataset_name}/mesh_data_{run}.pt')
     torch.save(mesh_data, f'graphs_data/{dataset_name}/mesh_data_{run+1}.pt')
     mask_mesh = mesh_data['mask'].squeeze()
 
     plt.style.use('dark_background')
-    output_dir = f"./graphs_data/{dataset_name}/Fig/"
-    os.makedirs(output_dir, exist_ok=True)
+
 
     for it in trange(0, n_frames - 1):
 
