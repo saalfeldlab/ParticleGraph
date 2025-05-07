@@ -436,7 +436,7 @@ def plot_training_particle_field(config, has_siren, has_siren_time, model_f,  n_
     else:
         for n in range(n_particle_types):
             plt.scatter(embedding[index_particles[n], 0],
-                        embedding[index_particles[n], 1], color=cmap.color(n), s=200)  #
+                        embedding[index_particles[n], 1], color=cmap.color(n), s=1)  #
 
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/embedding/{model_name}_embedding_{epoch}_{N}.tif", dpi=170.7)
