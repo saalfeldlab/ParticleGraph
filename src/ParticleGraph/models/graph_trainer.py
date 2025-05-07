@@ -1772,6 +1772,7 @@ def data_train_particle_field(config, erase, best_model, device):
     edge_p_p_list = []
     edge_f_p_list = []
 
+    n_particles_max = 0
     for run in trange(n_runs):
         x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
         y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
