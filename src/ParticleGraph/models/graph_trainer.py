@@ -1872,7 +1872,7 @@ def data_train_particle_field(config, erase, best_model, device):
 
     print('Update variables ...')
     # update variable if particle_dropout, cell_division, etc ...
-    x = x_list[1][n_frames - 1]
+    x = torch.tensor(x_list[1][n_frames - 1], dtype=torch.float32, device=device)
     n_particles = x.shape[0]
     index_particles = get_index_particles(x, n_particle_types, dimension)
     type_list = get_type_list(x, dimension)
