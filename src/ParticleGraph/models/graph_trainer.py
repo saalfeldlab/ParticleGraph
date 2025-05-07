@@ -1770,34 +1770,47 @@ def data_train_particle_field(config, erase, best_model, device):
     x_list = []
     y_list = []
     edge_p_p_list = []
-    edge_p_f_list = []
-    edge_f_f_list = []
     edge_f_p_list = []
+
     for run in trange(n_runs):
-        x = torch.load(f'graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device, weights_only=False)
-        y = torch.load(f'graphs_data/{dataset_name}/y_list_{run}.pt', map_location=device, weights_only=False)
-        edge_p_p = torch.load(f'graphs_data/{dataset_name}/edge_p_p_list{run}.pt', map_location=device, weights_only=False)
-        edge_f_p = torch.load(f'graphs_data/{dataset_name}/edge_f_p_list{run}.pt', map_location=device, weights_only=False)
+        x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
+        y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
+        if np.isnan(x).any() | np.isnan(y).any():
+            print('Pb isnan')
+        if x[0].shape[0] > n_particles_max:
+            n_particles_max = x[0].shape[0]
         x_list.append(x)
         y_list.append(y)
+
+        edge_p_p = torch.load(f'graphs_data/{dataset_name}/edge_p_p_list{run}.pt', map_location=device, weights_only=False)
+        edge_f_p = torch.load(f'graphs_data/{dataset_name}/edge_f_p_list{run}.pt', map_location=device, weights_only=False)
         edge_p_p_list.append(edge_p_p)
         edge_f_p_list.append(edge_f_p)
-    x = x_list[0][0].clone().detach()
-    y = y_list[0][0].clone().detach()
-    for run in range(n_runs):
-        for k in trange(n_frames):
+
+    x = torch.tensor(x_list[0][0], dtype=torch.float32, device=device)
+    y = torch.tensor(y_list[0][0], dtype=torch.float32, device=device)
+    time.sleep(0.5)
+    for run in trange(0, n_runs,  max(n_runs // 10, 1)):
+        for k in range(run_lengths[run]-5):
             if (k % 10 == 0) | (n_frames < 1000):
-                x = torch.cat((x, x_list[run][k].clone().detach()), 0)
-                y = torch.cat((y, y_list[run][k].clone().detach()), 0)
-        print(x_list[run][k].shape)
+                try:
+                    x = torch.cat((x, torch.tensor(x_list[run][k], dtype=torch.float32, device=device)), 0)
+                except:
+                    print(f'Error in run {run} frame {k}')
+                y = torch.cat((y, torch.tensor(y_list[run][k], dtype=torch.float32, device=device)), 0)
         time.sleep(0.5)
+    if torch.isnan(x).any() | torch.isnan(y).any():
+        print('Pb isnan')
     vnorm = norm_velocity(x, dimension, device)
     ynorm = norm_acceleration(y, device)
     torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
     torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
     time.sleep(0.5)
+    print(f'N particles: {n_particles}')
+    logger.info(f'N particles: {n_particles}')
     print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
     logger.info(f'vnorm ynorm: {to_numpy(vnorm)} {to_numpy(ynorm)}')
+
 
     x_mesh_list = []
     y_mesh_list = []

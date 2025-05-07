@@ -17,7 +17,6 @@ from scipy.interpolate import CubicSpline, interp1d, make_interp_spline
 from tqdm import trange
 
 from ParticleGraph.TimeSeries import TimeSeries
-from ParticleGraph.utils import *
 # from ParticleGraph.utils import choose_boundary_values
 
 import json
@@ -30,7 +29,6 @@ import networkx as nx
 from torch_geometric.utils.convert import to_networkx
 # from cellpose import models
 from ParticleGraph.generators.cell_utils import *
-from ParticleGraph.generators import PDE_V
 from cellpose import models, core, utils, io, models, metrics, denoise
 import scipy.io as sio
 import seaborn as sns
@@ -39,6 +37,129 @@ import pickle
 import json
 import scipy.io
 import h5py
+
+from ParticleGraph.generators import *
+
+
+def init_mesh(config, device):
+
+    simulation_config = config.simulation
+    model_config = config.graph_model
+
+    n_nodes = simulation_config.n_nodes
+    n_particles = simulation_config.n_particles
+    node_value_map = simulation_config.node_value_map
+    field_grid = model_config.field_grid
+    max_radius = simulation_config.max_radius
+
+    n_nodes_per_axis = int(np.sqrt(n_nodes))
+    xs = torch.linspace(1 / (2 * n_nodes_per_axis), 1 - 1 / (2 * n_nodes_per_axis), steps=n_nodes_per_axis)
+    ys = torch.linspace(1 / (2 * n_nodes_per_axis), 1 - 1 / (2 * n_nodes_per_axis), steps=n_nodes_per_axis)
+    x_mesh, y_mesh = torch.meshgrid(xs, ys, indexing='xy')
+    x_mesh = torch.reshape(x_mesh, (n_nodes_per_axis ** 2, 1))
+    y_mesh = torch.reshape(y_mesh, (n_nodes_per_axis ** 2, 1))
+    mesh_size = 1 / n_nodes_per_axis
+    pos_mesh = torch.zeros((n_nodes, 2), device=device)
+    pos_mesh[0:n_nodes, 0:1] = x_mesh[0:n_nodes]
+    pos_mesh[0:n_nodes, 1:2] = y_mesh[0:n_nodes]
+
+    i0 = imread(f'graphs_data/{node_value_map}')
+    if len(i0.shape) == 2:
+        # i0 = i0[0,:, :]
+        i0 = np.flipud(i0)
+        values = i0[(to_numpy(pos_mesh[:, 1]) * 255).astype(int), (to_numpy(pos_mesh[:, 0]) * 255).astype(int)]
+
+    mask_mesh = (x_mesh > torch.min(x_mesh) + 0.02) & (x_mesh < torch.max(x_mesh) - 0.02) & (y_mesh > torch.min(y_mesh) + 0.02) & (y_mesh < torch.max(y_mesh) - 0.02)
+
+    if 'grid' not in field_grid:
+        if 'pattern_Null.tif' in simulation_config.node_value_map:
+            pos_mesh = pos_mesh + torch.randn(n_nodes, 2, device=device) * mesh_size / 24
+        else:
+            pos_mesh = pos_mesh + torch.randn(n_nodes, 2, device=device) * mesh_size / 8
+
+    match config.graph_model.mesh_model_name:
+        case 'RD_Gray_Scott_Mesh':
+            features_mesh = torch.zeros((n_nodes, 2), device=device)
+            features_mesh[:, 0] -= 0.5 * torch.tensor(values / 255, device=device)
+            features_mesh[:, 1] = 0.25 * torch.tensor(values / 255, device=device)
+        case 'RD_FitzHugh_Nagumo_Mesh':
+            features_mesh = torch.zeros((n_nodes, 2), device=device) + torch.rand((n_nodes, 2), device=device) * 0.1
+        case 'RD_RPS_Mesh' | 'RD_RPS_Mesh_bis':
+            features_mesh = torch.rand((n_nodes, 3), device=device)
+            s = torch.sum(features_mesh, dim=1)
+            for k in range(3):
+                features_mesh[:, k] = features_mesh[:, k] / s
+        case 'DiffMesh' | 'WaveMesh' | 'Particle_Mesh_A' | 'Particle_Mesh_B' | 'WaveSmoothParticle':
+            features_mesh = torch.zeros((n_nodes, 2), device=device)
+            features_mesh[:, 0] = torch.tensor(values / 255 * 5000, device=device)
+        case 'PDE_O_Mesh':
+            features_mesh = torch.zeros((n_particles, 5), device=device)
+            features_mesh[0:n_particles, 0:1] = x_mesh[0:n_particles]
+            features_mesh[0:n_particles, 1:2] = y_mesh[0:n_particles]
+            features_mesh[0:n_particles, 2:3] = torch.randn(n_particles, 1, device=device) * 2 * np.pi  # theta
+            features_mesh[0:n_particles, 3:4] = torch.ones(n_particles, 1, device=device) * np.pi / 200  # d_theta
+            features_mesh[0:n_particles, 4:5] = features_mesh[0:n_particles, 3:4]  # d_theta0
+            pos_mesh[:, 0] = features_mesh[:, 0] + (3 / 8) * mesh_size * torch.cos(features_mesh[:, 2])
+            pos_mesh[:, 1] = features_mesh[:, 1] + (3 / 8) * mesh_size * torch.sin(features_mesh[:, 2])
+        case '' :
+            features_mesh = torch.zeros((n_nodes, 2), device=device)
+
+    # i0 = imread(f'graphs_data/{node_type_map}')
+    # values = i0[(to_numpy(x_mesh[:, 0]) * 255).astype(int), (to_numpy(y_mesh[:, 0]) * 255).astype(int)]
+    # if np.max(values) > 0:
+    #     values = np.round(values / np.max(values) * (simulation_config.n_node_types-1))
+    # type_mesh = torch.tensor(values, device=device)
+    # type_mesh = type_mesh[:, None]
+
+    type_mesh = torch.zeros((n_nodes, 1), device=device)
+
+    node_id_mesh = torch.arange(n_nodes, device=device)
+    node_id_mesh = node_id_mesh[:, None]
+    dpos_mesh = torch.zeros((n_nodes, 2), device=device)
+
+    x_mesh = torch.concatenate((node_id_mesh.clone().detach(), pos_mesh.clone().detach(), dpos_mesh.clone().detach(),
+                                type_mesh.clone().detach(), features_mesh.clone().detach()), 1)
+
+    pos = to_numpy(x_mesh[:, 1:3])
+    tri = Delaunay(pos, qhull_options='QJ')
+    face = torch.from_numpy(tri.simplices)
+    face_longest_edge = np.zeros((face.shape[0], 1))
+
+    print('removal of skinny faces ...')
+
+    for k in trange(face.shape[0]):
+        # compute edge distances
+        x1 = pos[face[k, 0], :]
+        x2 = pos[face[k, 1], :]
+        x3 = pos[face[k, 2], :]
+        a = np.sqrt(np.sum((x1 - x2) ** 2))
+        b = np.sqrt(np.sum((x2 - x3) ** 2))
+        c = np.sqrt(np.sum((x3 - x1) ** 2))
+        A = np.max([a, b]) / np.min([a, b])
+        B = np.max([a, c]) / np.min([a, c])
+        C = np.max([c, b]) / np.min([c, b])
+        face_longest_edge[k] = np.max([A, B, C])
+
+    face_kept = np.argwhere(face_longest_edge < 5)
+    face_kept = face_kept[:, 0]
+    face = face[face_kept, :]
+    face = face.t().contiguous()
+    face = face.to(device, torch.long)
+
+    if (config.graph_model.particle_model_name == 'PDE_ParticleField_A')  | (config.graph_model.particle_model_name == 'PDE_ParticleField_B'):
+        type_mesh = 0 * type_mesh
+
+    a_mesh = torch.zeros_like(type_mesh)
+    type_mesh = type_mesh.to(dtype=torch.float32)
+
+    if 'Smooth' in config.graph_model.mesh_model_name:
+        distance = torch.sum((pos_mesh[:, None, :] - pos_mesh[None, :, :]) ** 2, dim=2)
+        adj_t = ((distance < max_radius ** 2) & (distance >= 0)).float() * 1
+        mesh_data['edge_index'] = adj_t.nonzero().t().contiguous()
+
+
+    return pos_mesh, dpos_mesh, type_mesh, features_mesh, a_mesh, node_id_mesh
+
 
 def extract_object_properties(segmentation_image, fluorescence_image=[]):
     # Label the objects in the segmentation image
@@ -664,10 +785,19 @@ def load_cardiomyocyte_data(config, device, visualize, step):
     n_frames = config.simulation.n_frames
     dataset_name = config.dataset
     delta_t = config.simulation.delta_t
+    dimension = config.simulation.dimension
+    max_radius = config.simulation.max_radius
+    min_radius = config.simulation.min_radius
+    n_nodes = config.simulation.n_nodes
 
     run = 0
     x_list = []
     y_list = []
+
+    x_mesh_list = []
+    y_mesh_list = []
+    edge_p_p_list = []
+    edge_f_p_list = []
 
     file_path = os.path.expanduser(config.data_folder_name)
     data = np.load(file_path, allow_pickle=True)
@@ -676,7 +806,10 @@ def load_cardiomyocyte_data(config, device, visualize, step):
     X = np.zeros((n_particles, 2))
     V = np.zeros((n_particles, 2))
     T = np.zeros((n_particles, 1))
+    H = np.zeros((n_particles, 2))
     ID = np.arange(n_particles, dtype=np.float32)[:, None]
+
+    X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh = init_mesh(config, device=device)
 
     plt.style.use('dark_background')
     output_dir = f"./graphs_data/{dataset_name}/Fig/"
@@ -686,8 +819,29 @@ def load_cardiomyocyte_data(config, device, visualize, step):
 
         # Load the data for the current frame
         X = (np.reshape(data[it], (n_particles, 2)) + 20) / 1300
+        V = np.zeros((n_particles, 2))
 
-        x = np.concatenate((N.astype(int), X, V, T, ID.astype(int) - 1), axis=1)
+        x = torch.tensor(np.concatenate((N.astype(int), X, V, T, H, ID.astype(int) - 1), axis=1), dtype=torch.float32, device=device)
+
+        x_mesh = torch.concatenate(
+            (N1_mesh.clone().detach(), X1_mesh.clone().detach(), V1_mesh.clone().detach(),
+             T1_mesh.clone().detach(), H1_mesh.clone().detach(), A1_mesh.clone().detach()), 1)
+
+        x_particle_field = torch.concatenate((x_mesh, x), dim=0)
+        distance = torch.sum((x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+        edge_index = adj_t.nonzero().t().contiguous()
+        edge_p_p_list.append(edge_index)
+
+        distance = torch.sum((x_particle_field[:, None, 1:dimension + 1] - x_particle_field[None, :, 1:dimension + 1]) ** 2, dim=2)
+        adj_t = ((distance < (max_radius / 2) ** 2) & (distance > min_radius ** 2)).float() * 1
+        edge_index = adj_t.nonzero().t().contiguous()
+        pos = torch.argwhere((edge_index[1, :] >= n_nodes) & (edge_index[0, :] < n_nodes))
+        pos = to_numpy(pos[:, 0])
+        edge_index = edge_index[:, pos]
+        edge_f_p_list.append(edge_index)
+
+
         y = torch.zeros((x.shape[0], 2), dtype=torch.float32, device=device)
 
         if it > 0:
@@ -695,7 +849,7 @@ def load_cardiomyocyte_data(config, device, visualize, step):
             positions_prev = x_list[-1][:, 1:3]
             positions_curr = x[:, 1:3]
             V = (positions_curr - positions_prev) / delta_t
-            x = np.concatenate((N.astype(int), X, V, T, ID.astype(int) - 1), axis=1)
+            x[:, 3:5] = V
 
             if  it>1 :
                 v_prev = x_list[-1][:, 3:5]
@@ -709,7 +863,7 @@ def load_cardiomyocyte_data(config, device, visualize, step):
         plt.xticks([])
         plt.yticks([])
         plt.axis('off')
-        plt.scatter(x[:, 2], x[:, 1], s=10, c='w', alpha=0.75)
+        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=10, c='w', alpha=0.75)
         plt.xlim([-0.1, 1.1])
         plt.ylim([-0.1, 1.1])
 
@@ -722,10 +876,23 @@ def load_cardiomyocyte_data(config, device, visualize, step):
 
     np.save(f'graphs_data/{dataset_name}/x_list_{run}.npy', x_list)
     np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list)
+
+
+    x_list_ = np.array(to_numpy(torch.stack(x_list)))
+    y_list_ = np.array(to_numpy(torch.stack(y_list)))
+    np.save(f'graphs_data/{dataset_name}/x_list_{run}.npy', x_list_)
+    np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list_)
     np.save(f'graphs_data/{dataset_name}/x_list_{run+1}.npy', x_list)
     np.save(f'graphs_data/{dataset_name}/y_list_{run+1}.npy', y_list)
 
-
+    torch.save(x_mesh_list, f'graphs_data/{dataset_name}/x_mesh_list_{run}.pt')
+    torch.save(y_mesh_list, f'graphs_data/{dataset_name}/y_mesh_list_{run}.pt')
+    torch.save(edge_p_p_list, f'graphs_data/{dataset_name}/edge_p_p_list{run}.pt')
+    torch.save(edge_f_p_list, f'graphs_data/{dataset_name}/edge_f_p_list{run}.pt')
+    torch.save(x_mesh_list, f'graphs_data/{dataset_name}/x_mesh_list_{run+1}.pt')
+    torch.save(y_mesh_list, f'graphs_data/{dataset_name}/y_mesh_list_{run+1}.pt')
+    torch.save(edge_p_p_list, f'graphs_data/{dataset_name}/edge_p_p_list{run+1}.pt')
+    torch.save(edge_f_p_list, f'graphs_data/{dataset_name}/edge_f_p_list{run+1}.pt')
 
 def load_Goole_data(config, device=None, visualize=None, step=None, cmap=None):
 

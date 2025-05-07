@@ -11,6 +11,10 @@ simulation:
   n_frames: 240
   delta_t: 0.04166
   boundary: 'no'
+  n_nodes: 10000
+  n_node_types: 1
+  n_nodes: 10000
+  n_node_types: 1
   start_frame: 0
 
 graph_model:

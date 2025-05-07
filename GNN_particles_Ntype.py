@@ -27,7 +27,7 @@ from ParticleGraph.models.graph_trainer import *
 from ParticleGraph.models.Siren_Network import *
 from ParticleGraph.models.Ghost_Particles import Ghost_Particles
 from ParticleGraph.models.utils import *
-from ParticleGraph.utils import *
+
 import warnings
 
 if __name__ == '__main__':
@@ -55,7 +55,7 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'train'
+        task = 'generate'
         best_model = ''
 
         # config_list = ['multimaterial_12_1','multimaterial_12_2','multimaterial_12_3','multimaterial_12_4','multimaterial_12_5',
