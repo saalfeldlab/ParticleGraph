@@ -776,6 +776,81 @@ def load_cardiomyocyte_data(config, device, visualize, step):
     torch.save(edge_f_p_list, f'graphs_data/{dataset_name}/edge_f_p_list{run+1}.pt')
 
 
+def load_U2OS_data(config, device, visualize, step):
+
+
+    n_particles = config.simulation.n_particles
+    n_frames = config.simulation.n_frames
+    dataset_name = config.dataset
+    delta_t = config.simulation.delta_t
+    dimension = config.simulation.dimension
+    max_radius = config.simulation.max_radius
+    min_radius = config.simulation.min_radius
+    n_nodes = config.simulation.n_nodes
+
+    output_dir = f"./graphs_data/{dataset_name}/Fig/"
+    os.makedirs(output_dir, exist_ok=True)
+
+    run = 0
+    x_list = []
+    y_list = []
+
+    x_mesh_list = []
+    y_mesh_list = []
+    edge_p_p_list = []
+    edge_f_p_list = []
+
+
+    X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
+    torch.save(mesh_data, f'graphs_data/{dataset_name}/mesh_data_{run}.pt')
+    torch.save(mesh_data, f'graphs_data/{dataset_name}/mesh_data_{run+1}.pt')
+    mask_mesh = mesh_data['mask'].squeeze()
+
+    plt.style.use('dark_background')
+
+    file_path = os.path.expanduser(config.data_folder_name)
+    im0 = tifffile.imread(file_path)
+
+    x_mesh = torch.concatenate(
+        (N1_mesh.clone().detach(), X1_mesh.clone().detach(), V1_mesh.clone().detach(),
+         T1_mesh.clone().detach(), H1_mesh.clone().detach(), A1_mesh.clone().detach()), 1)
+    x_mesh[:, 2] = 1 - x_mesh[:, 2]
+
+    for it in trange(0, n_frames - 1):
+
+        x_mesh[:,6:9] = torch.tensor(im0[it], dtype=torch.float32, device=device).reshape(-1, 3) / 256
+
+        x_mesh_list.append(x_mesh.clone().detach())
+
+        if it > 0:
+            value_prev = x_mesh_list[-1][:, 6:9]
+            value_curr = x_mesh[:, 6:9]
+            y_mesh = (value_curr - value_prev) / delta_t
+        else:
+            y_mesh = torch.zeros((x_mesh.shape[0], 3), dtype=torch.float32, device=device)
+
+        y_mesh_list.append(y_mesh.clone().detach())
+
+        # fig = plt.subplots(figsize=(10, 10))
+        # plt.xticks([])
+        # plt.yticks([])
+        # plt.axis('off')
+        # plt.scatter(to_numpy(x_mesh[:, 1]), to_numpy(1-x_mesh[:, 2]), s=1, c=to_numpy(x_mesh[:, 6]))
+        # plt.xlim([0, 1.])
+        # plt.ylim([0, 1.])
+        # num = f"{it:04}"
+        # plt.savefig(f"./graphs_data/{dataset_name}/Fig/Fig_{num}", dpi=100)
+        # plt.close()
+
+
+    x_mesh_list = torch.stack(x_mesh_list)
+    y_mesh_list = torch.stack(y_mesh_list)
+    torch.save(x_mesh_list, f'graphs_data/{dataset_name}/x_mesh_list_{run}.pt')
+    torch.save(y_mesh_list, f'graphs_data/{dataset_name}/y_mesh_list_{run}.pt')
+    torch.save(x_mesh_list, f'graphs_data/{dataset_name}/x_mesh_list_{run+1}.pt')
+    torch.save(y_mesh_list, f'graphs_data/{dataset_name}/y_mesh_list_{run+1}.pt')
+
+
 def load_Goole_data(config, device=None, visualize=None, step=None, cmap=None):
 
     data_folder_name = config.data_folder_name

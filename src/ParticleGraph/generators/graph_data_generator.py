@@ -47,10 +47,11 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
         print('watch out: data already generated')
         # return
 
-    if has_city:
-        data_generate_rat_city(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step, alpha=0.2, ratio=ratio, scenario=scenario, device=device, bSave=bSave)
-    elif config.data_folder_name != 'none':
+    if config.data_folder_name != 'none':
         generate_from_data(config=config, device=device, visualize=visualize)
+    elif has_city:
+        data_generate_rat_city(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase,
+                               step=step, alpha=0.2, ratio=ratio, scenario=scenario, device=device, bSave=bSave)
     elif has_particle_field:
         data_generate_particle_field(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step, alpha=0.2, ratio=ratio, scenario='none', device=device, bSave=bSave)
     elif has_mesh:
@@ -96,6 +97,8 @@ def generate_from_data(config, device, visualize=True, step=None, cmap=None):
         load_worm_Kato_data(config, device, visualize, step)
     elif 'worm' in data_folder_name:
         load_worm_data(config, device, visualize, step)
+    elif 'U2OS' in data_folder_name:
+        load_U2OS_data(config, device, visualize, step)
     elif 'cardio' in data_folder_name:
         load_cardiomyocyte_data(config, device, visualize, step)
     elif image_data.file_type != 'none':

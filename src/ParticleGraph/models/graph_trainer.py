@@ -1327,7 +1327,7 @@ def data_train_mesh(config, erase, best_model, device):
     train_config = config.training
     model_config = config.graph_model
 
-    print(f'Training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+    print(f'training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
     n_epochs = train_config.n_epochs
     n_node_types = simulation_config.n_node_types
