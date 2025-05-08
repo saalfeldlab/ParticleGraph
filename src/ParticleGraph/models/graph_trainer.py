@@ -3835,7 +3835,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     n_particles = x.shape[0]
     x_inference_list = []
 
-    for it in trange(start_it, start_it+200):   #  start_it+200): # min(9600+start_it,stop_it-time_step)):
+    for it in trange(start_it, n_frames):   #  start_it+200): # min(9600+start_it,stop_it-time_step)):
 
         check_and_clear_memory(device=device, iteration_number=it, every_n_iterations=25, memory_percentage_threshold=0.6)
         # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
@@ -4104,528 +4104,528 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 if 'inference' in test_mode:
                     x_inference_list.append(x)
 
-            # vizualization
-            if 'plot_data' in test_mode:
-                x = x_list[0][it].clone().detach()
+        # vizualization
+        if 'plot_data' in test_mode:
+            x = x_list[0][it].clone().detach()
 
-            if (it % step == 0) & (it >= 0) & visualize:
+        if (it % step == 0) & (it >= 0) & visualize:
 
-                # print(f'acceleration {torch.max(y[:, 0])}')
-                # print(f'speed {torch.max(x[:, 3])}')
+            # print(f'acceleration {torch.max(y[:, 0])}')
+            # print(f'speed {torch.max(x[:, 3])}')
 
-                num = f"{it:06}"
+            num = f"{it:06}"
 
+            if 'latex' in style:
+                plt.rcParams['text.usetex'] = True
+                rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+
+            if 'black' in style:
+                plt.style.use('dark_background')
+                mc = 'w'
+            else:
+                plt.style.use('default')
+                mc = 'k'
+
+            fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
+            ax.tick_params(axis='both', which='major', pad=15)
+
+            if has_mesh:
+                pts = x[:, 1:3].detach().cpu().numpy()
+                tri = Delaunay(pts)
+                colors = torch.sum(x[tri.simplices, 6], dim=1) / 3.0
+                if model_config.mesh_model_name == 'DiffMesh':
+                    plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                                  facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1000)
+                if 'WaveMesh' in model_config.mesh_model_name:
+                    plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                                  facecolors=colors.detach().cpu().numpy(), vmin=-1000, vmax=1000)
+                    fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
+                    ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+                    ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+                if model_config.mesh_model_name == 'RD_Gray_Scott_Mesh':
+                    fig = plt.figure(figsize=(12, 6))
+                    ax = fig.add_subplot(1, 2, 1)
+                    colors = torch.sum(x[tri.simplices, 6], dim=1) / 3.0
+                    plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                                  facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.axis('off')
+                    ax = fig.add_subplot(1, 2, 2)
+                    colors = torch.sum(x[tri.simplices, 7], dim=1) / 3.0
+                    plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                                  facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.axis('off')
+                if (model_config.mesh_model_name == 'RD_RPS_Mesh') | (
+                        model_config.mesh_model_name == 'RD_RPS_Mesh_bis'):
+                    H1_IM = torch.reshape(x[:, 6:9], (100, 100, 3))
+                    plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=1)
+                    fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
+                    ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+                    ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+                    # plt.xticks([])
+                    # plt.yticks([])
+                    # plt.axis('off')
+            elif ('visual' in field_type) & ('PDE_N' in model_config.signal_model_name):
+                if 'plot_data' in test_mode:
+
+                    plt.close()
+
+                    im_ = im[int(it / n_frames * 256)].squeeze()
+                    im_ = np.rot90(im_, 3)
+                    im_ = np.reshape(im_, (n_nodes_per_axis * n_nodes_per_axis))
+                    if ('modulation' in field_type):
+                        A1[:, 0:1] = torch.tensor(im_[:, None], dtype=torch.float32, device=device)
+                    if ('visual' in field_type):
+                        A1[:n_nodes, 0:1] = torch.tensor(im_[:, None], dtype=torch.float32, device=device)
+                        A1[n_nodes:n_particles, 0:1] = 1
+
+                fig = plt.figure(figsize=(8, 12))
+                plt.subplot(211)
+                plt.title(r'$b_i$', fontsize=48)
+                plt.scatter(to_numpy(x0[:, 2]), to_numpy(x0[:, 1]), s=8, c=to_numpy(A1[:, 0]), cmap='viridis', vmin=0,
+                            vmax=2)
+                plt.xticks([])
+                plt.yticks([])
+                plt.subplot(212)
+                plt.title(r'$x_i$', fontsize=48)
+                plt.scatter(to_numpy(x0[:, 2]), to_numpy(x0[:, 1]), s=8, c=to_numpy(x[:, 6:7]), cmap='viridis',
+                            vmin=-10,
+                            vmax=10)
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{num}.tif", dpi=80)
+                plt.close()
+            elif 'PDE_N' in model_config.signal_model_name:
+
+                plt.close()
+
+                # y = model(dataset, data_id=1, return_all=True)
+
+                matplotlib.rcParams['savefig.pad_inches'] = 0
+
+                if has_ghost:
+                    plt.figure(figsize=(25, 25))
+                    plt.scatter(to_numpy(X1_first[:n_particles, 0]), 1.1 + to_numpy(X1_first[:n_particles, 1]), s=1000, c=to_numpy(x[:n_particles, 6]), vmin=-2, vmax = 2, cmap='viridis', edgecolors='k', alpha=1)
+                    plt.scatter(to_numpy(X1_first[:n_ghosts, 0]) + 1.1, 1.1 + to_numpy(X1_first[:n_ghosts, 1]), s=1000, c=4*to_numpy(x[n_particles:n_ghosts+n_particles, 6]), vmin=-2, vmax = 2, cmap='viridis', edgecolors='k', alpha=1)
+                    plt.scatter(to_numpy(X1_first[:n_particles, 0]), to_numpy(X1_first[:n_particles, 1]), s=1000, c=to_numpy(x0[:n_particles, 6]), vmin=-2, vmax = 2, cmap='viridis', edgecolors='k', alpha=1)
+                    plt.scatter(to_numpy(X1_first[:n_particles, 0]) + 1.1, to_numpy(X1_first[:n_particles, 1]), s=1000, c=to_numpy(y[:n_particles]* delta_t), vmin=-2, vmax = 2, cmap='viridis', edgecolors='k', alpha=1)
+
+                    plt.axis('off')
+                    plt.text(0.05, 1.0, r'neuron activity                             extra activity (*4)', fontsize=48, color='w', ha='left', va='top',
+                             transform=plt.gca().transAxes)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=170)
+                    plt.close()
+                else:
+                    plt.figure(figsize=(10, 10))
+                    plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=200, c=to_numpy(x[:, 6]),
+                                cmap='viridis', vmin=-10, vmax=10, edgecolors='k', alpha=1)
+                    plt.axis('off')
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=170)
+                    plt.close()
+
+                    im = imread(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif")
+                    plt.figure(figsize=(10, 10))
+                    plt.imshow(im)
+                    plt.axis('off')
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.subplot(3, 3, 1)
+                    plt.imshow(im[800:1000, 800:1000, :])
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=80)
+                    plt.close()
+            elif 'PDE_K' in model_config.particle_model_name:
+
+                plt.close()
+                fig = plt.figure(figsize=(12, 12))
+                plt.scatter(x[:, 2].detach().cpu().numpy(),
+                            x[:, 1].detach().cpu().numpy(), s=20, color='r')
+                if it < n_frames - 1:
+                    x0_ = x_list[0][it + 1].clone().detach()
+                    plt.scatter(x0_[:, 2].detach().cpu().numpy(),
+                                x0_[:, 1].detach().cpu().numpy(), s=40, color='w', alpha=1, edgecolors='None')
+
+                plt.xlim([-3, 3])
+                plt.ylim([-3, 3])
+            elif do_tracking:
+
+                # plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c='w', alpha=0.25)
+                plt.scatter(to_numpy(x0[:, 2]), to_numpy(x0[:, 1]), s=10, c='w', alpha=0.5)
+                plt.scatter(to_numpy(x_pos_pred[:, 1]), to_numpy(x_pos_pred[:, 0]), s=10, c='r')
+                x1 = x_list[0][it + time_step].clone().detach()
+                plt.scatter(to_numpy(x1[:, 2]), to_numpy(x1[:, 1]), s=10, c='g')
+
+                plt.xticks([])
+                plt.yticks([])
+
+                if 'zoom' in style:
+                    for m in range(x.shape[0]):
+                            plt.arrow(x=to_numpy(x0[m, 2]), y=to_numpy(x0[m, 1]), dx=to_numpy(x[m, dimension+2]) * delta_t,
+                                      dy=to_numpy(x[m, dimension+1]) * delta_t, head_width=0.004,
+                                      length_includes_head=True, color='g')
+                    plt.xlim([300,400])
+                    plt.ylim([300,400])
+                else:
+                    plt.xlim([0,700])
+                    plt.ylim([0,700])
+                plt.tight_layout()
+            else:
+                s_p = 10
+                index_particles = get_index_particles(x, n_particle_types, dimension)
+                for n in range(n_particle_types):
+                    if 'bw' in style:
+                        plt.scatter(x[index_particles[n], 2].detach().cpu().numpy(),
+                                    x[index_particles[n], 1].detach().cpu().numpy(), s=s_p, color='w')
+                    else:
+                        plt.scatter(x[index_particles[n], 2].detach().cpu().numpy(),
+                                    x[index_particles[n], 1].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
+                plt.xlim([0, 1])
+                plt.ylim([0, 1])
+
+                if particle_of_interest > 1:
+
+                    xc = x[particle_of_interest, 2].detach().cpu().numpy()
+                    yc = x[particle_of_interest, 1].detach().cpu().numpy()
+                    pos = torch.argwhere(edge_index[1,:]==particle_of_interest)
+                    pos = pos[:, 0]
+                    if 'zoom' in style:
+                        plt.scatter(x[edge_index[0,pos], 2].detach().cpu().numpy(),
+                                    x[edge_index[0,pos], 1].detach().cpu().numpy(), s=s_p * 20 , color=mc, alpha=0.25)
+                    else:
+                        plt.scatter(x[edge_index[0,pos], 2].detach().cpu().numpy(),
+                                    x[edge_index[0,pos], 1].detach().cpu().numpy(), s=s_p * 5 , color=mc, alpha=0.25, )
+
+
+                    for k in range(pos.shape[0]):
+                        plt.arrow(x[edge_index[1,pos[k]], 2].detach().cpu().numpy(),
+                                    x[edge_index[1,pos[k]], 1].detach().cpu().numpy(),  dx=to_numpy(model.msg[k,1]) * delta_t/20,
+                                  dy=to_numpy(model.msg[k,0]) * delta_t/20, head_width=0.004, length_includes_head=True, color=mc,alpha=0.25)
+
+                    plt.arrow(x=to_numpy(x[particle_of_interest, 2]), y=to_numpy(x[particle_of_interest, 1]), dx=to_numpy(x[particle_of_interest, 4]) * delta_t * 100,
+                              dy=to_numpy(x[particle_of_interest, 3]) * delta_t * 100, head_width=0.004, length_includes_head=True, color=cmap.color(to_numpy(x[particle_of_interest, 5]).astype(int)))
+
+                if 'zoom' in style:
+                    plt.xlim([xc-0.1, xc+0.1])
+                    plt.ylim([yc-0.1, yc+0.1])
+                    plt.xticks([])
+                    plt.yticks([])
+
+            if 'latex' in style:
+                plt.xlabel(r'$x$', fontsize=78)
+                plt.ylabel(r'$y$', fontsize=78)
+                plt.xticks(fontsize=48.0)
+                plt.yticks(fontsize=48.0)
+            if 'frame' in style:
+                plt.xlabel('x', fontsize=48)
+                plt.ylabel('y', fontsize=48)
+                plt.xticks(fontsize=48.0)
+                plt.yticks(fontsize=48.0)
+                plt.text(0, 1.1, f'   ', ha='left', va='top', transform=ax.transAxes, fontsize=48)
+                ax.tick_params(axis='both', which='major', pad=15)
+                # cbar = plt.colorbar(shrink=0.5)
+                # cbar.ax.tick_params(labelsize=32)
+            if 'arrow' in style:
+                for m in range(x.shape[0]):
+                    if x[m, 4] != 0 :
+                        if 'speed' in style:
+                            # plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(y0[m, 1]) * delta_t * 50, dy=to_numpy(y0[m, 0]) * delta_t * 50, head_width=0.004, length_includes_head=False, color='g')
+                            # plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(x[m, 4]) * delta_t * 50, dy=to_numpy(x[m, 3]) * delta_t * 50, head_width=0.004, length_includes_head=False, color='w')
+                            # angle = compute_signed_angle(x[m, 3:5], y0[m, 0:2])
+                            # angle_list.append(angle)
+                            plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(x[m, 4]) * delta_t * 2, dy=to_numpy(x[m, 3]) * delta_t * 2, head_width=0.004, length_includes_head=True, color='g')
+                        if 'acc_true' in style:
+                            plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(y0[m, 1])/5E3, dy=to_numpy(y0[m, 0])/5E3, head_width=0.004, length_includes_head=True, color='r')
+                        if 'acc_learned' in style:
+                            plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(pred[m, 1]*ynorm.squeeze()) / 5E3, dy=to_numpy(pred[m, 0]*ynorm.squeeze()) / 5E3, head_width=0.004, length_includes_head=True, color='r')
+                plt.xlim([0,1])
+                plt.ylim([0,1])
+                # plt.xlim([0.4,0.6])
+                # plt.ylim([0.4,0.6])
+            if 'name' in style:
+                plt.title(f"{os.path.basename(log_dir)}", fontsize=24)
+
+            if 'no_ticks' in style:
+                plt.xticks([])
+                plt.yticks([])
+            if 'PDE_G' in model_config.particle_model_name:
+                plt.xlim([-2, 2])
+                plt.ylim([-2, 2])
+            if 'PDE_GS' in model_config.particle_model_name:
+
+                object_list = ['sun', 'mercury', 'venus', 'earth', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune',
+                               'pluto', 'io',
+                               'europa', 'ganymede', 'callisto', 'mimas', 'enceladus', 'tethys', 'dione', 'rhea',
+                               'titan', 'hyperion', 'moon',
+                               'phobos', 'deimos', 'charon']
+
+                masses = torch.tensor(
+                    [1.989e30, 3.30e23, 4.87e24, 5.97e24, 6.42e23, 1.90e27, 5.68e26, 8.68e25, 1.02e26, 1.31e22,
+                     8.93e22, 4.80e22, 1.48e23, 1.08e23, 3.75e19, 1.08e20,
+                     6.18e20, 1.10e21, 2.31e21, 1.35e23, 5.62e18, 7.35e22, 1.07e16, 1.48e15, 1.52e21],
+                    device=device)
+
+                pos = x[:, 1:dimension + 1]  # - x[0,1:dimension + 1]
+                distance = torch.sqrt(torch.sum(bc_dpos(pos[:, None, :] - pos[None, 0, :]) ** 2, dim=2))
+                unit_vector = pos / distance
+
+                if it == 0:
+                    log_coeff = torch.log(distance[1:])
+                    log_coeff_min = torch.min(log_coeff)
+                    log_coeff_max = torch.max(log_coeff)
+                    log_coeff_diff = log_coeff_max - log_coeff_min
+                    d_log = [log_coeff_min, log_coeff_max, log_coeff_diff]
+
+                    log_coeff = torch.log(masses)
+                    log_coeff_min = torch.min(log_coeff)
+                    log_coeff_max = torch.max(log_coeff)
+                    log_coeff_diff = log_coeff_max - log_coeff_min
+                    m_log = [log_coeff_min, log_coeff_max, log_coeff_diff]
+
+                    m_ = torch.log(masses) / m_log[2]
+
+                distance_ = (torch.log(distance) - d_log[0]) / d_log[2]
+                pos = distance_ * unit_vector
+                pos = to_numpy(pos)
+                pos[0] = 0
+
+                for n in range(25):
+                    plt.scatter(pos[n, 1], pos[n, 0], s=200 * to_numpy(m_[n] ** 3), color=cmap.color(n))
+                    # plt.text(pos[n,1], pos[n, 0], object_list[n], fontsize=8)
+                plt.xlim([-1.2, 1.2])
+                plt.ylim([-1.2, 1.2])
+                plt.xticks([])
+                plt.yticks([])
+            if 'PDE_K' in model_config.particle_model_name:
+                plt.xlim([-3, 3])
+                plt.ylim([-3, 3])
+                plt.xticks(fontsize=24)
+                plt.yticks(fontsize=24)
+
+            # save figure
+            if not ('PDE_N' in model_config.signal_model_name):
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{run}_{num}.tif", dpi=100)
+                plt.close()
+
+            if ('PDE_N' in model_config.signal_model_name) & (it % 200 == 0) & (it > 0):
+
+                if has_ghost & ('PDE_N' in model_config.signal_model_name):
+                    n = [1, 3, 10, 15, 26, 27, 52, 62, 92, 120]
+                else:
+                    n = [20, 30, 100, 150, 260, 270, 520, 620, 720, 820]
+
+                neuron_gt_list_ = torch.cat(neuron_gt_list, 0)
+                neuron_pred_list_ = torch.cat(neuron_pred_list, 0)
+                neuron_gt_list_ = torch.reshape(neuron_gt_list_,
+                                                (neuron_gt_list_.shape[0] // n_particles, n_particles))
+                neuron_pred_list_ = torch.reshape(neuron_pred_list_,
+                                                  (neuron_pred_list_.shape[0] // n_particles, n_particles))
+
+                plt.figure(figsize=(20, 10))
                 if 'latex' in style:
                     plt.rcParams['text.usetex'] = True
                     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+                ax = plt.subplot(121)
+                plt.plot(neuron_gt_list_[:, n[0]].detach().cpu().numpy(), c=mc, linewidth=8, label='true',
+                         alpha=0.25)
+                plt.plot(neuron_pred_list_[:, n[0]].detach().cpu().numpy(), linewidth=4, c='k',
+                         label='learned')
+                plt.legend(fontsize=24)
+                plt.plot(neuron_gt_list_[:, n[1:10]].detach().cpu().numpy(), c=mc, linewidth=8, alpha=0.25)
+                plt.plot(neuron_pred_list_[:, n[1:10]].detach().cpu().numpy(), linewidth=4)
+                plt.xlim([0, 1400])
+                plt.xlabel(r'time-points', fontsize=48)
+                plt.ylabel(r'$x_i$', fontsize=48)
+                plt.xticks(fontsize=24)
+                plt.yticks(fontsize=24)
+                plt.ylim([-30, 30])
+                # plt.text(40, 26, f'time: {it}', fontsize=34)
+                ax = plt.subplot(122)
+                plt.scatter(to_numpy(neuron_gt_list_[-1, :]), to_numpy(neuron_pred_list_[-1, :]), s=10, c=mc)
+                plt.xlim([-30, 30])
+                plt.ylim([-30, 30])
+                plt.xticks(fontsize=24)
+                plt.yticks(fontsize=24)
+                x_data = to_numpy(neuron_gt_list_[-1, :])
+                y_data = to_numpy(neuron_pred_list_[-1, :])
+                lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+                residuals = y_data - linear_model(x_data, *lin_fit)
+                ss_res = np.sum(residuals ** 2)
+                ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+                r_squared = 1 - (ss_res / ss_tot)
+                plt.xlabel(r'true $x_i$', fontsize=48)
+                plt.ylabel(r'learned $x_i$', fontsize=48)
+                plt.text(-28.5, 26, f'$R^2$: {np.round(r_squared, 3)}', fontsize=34)
+                plt.text(-28.5, 22, f'slope: {np.round(lin_fit[0], 2)}', fontsize=34)
+                plt.tight_layout()
+                plt.savefig(f'./{log_dir}/results/comparison_xi_{it}.png', dpi=80)
+                plt.close()
 
-                if 'black' in style:
-                    plt.style.use('dark_background')
-                    mc = 'w'
-                else:
-                    plt.style.use('default')
-                    mc = 'k'
+                if ('Siren_short_term_plasticity' in field_type) | ('modulation' in field_type):
 
-                fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
-                ax.tick_params(axis='both', which='major', pad=15)
-
-                if has_mesh:
-                    pts = x[:, 1:3].detach().cpu().numpy()
-                    tri = Delaunay(pts)
-                    colors = torch.sum(x[tri.simplices, 6], dim=1) / 3.0
-                    if model_config.mesh_model_name == 'DiffMesh':
-                        plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                      facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1000)
-                    if 'WaveMesh' in model_config.mesh_model_name:
-                        plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                      facecolors=colors.detach().cpu().numpy(), vmin=-1000, vmax=1000)
-                        fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
-                        ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-                        ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-                    if model_config.mesh_model_name == 'RD_Gray_Scott_Mesh':
-                        fig = plt.figure(figsize=(12, 6))
-                        ax = fig.add_subplot(1, 2, 1)
-                        colors = torch.sum(x[tri.simplices, 6], dim=1) / 3.0
-                        plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                      facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1)
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.axis('off')
-                        ax = fig.add_subplot(1, 2, 2)
-                        colors = torch.sum(x[tri.simplices, 7], dim=1) / 3.0
-                        plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                      facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1)
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.axis('off')
-                    if (model_config.mesh_model_name == 'RD_RPS_Mesh') | (
-                            model_config.mesh_model_name == 'RD_RPS_Mesh_bis'):
-                        H1_IM = torch.reshape(x[:, 6:9], (100, 100, 3))
-                        plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=1)
-                        fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
-                        ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-                        ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-                        # plt.xticks([])
-                        # plt.yticks([])
-                        # plt.axis('off')
-                elif ('visual' in field_type) & ('PDE_N' in model_config.signal_model_name):
-                    if 'plot_data' in test_mode:
-
-                        plt.close()
-
-                        im_ = im[int(it / n_frames * 256)].squeeze()
-                        im_ = np.rot90(im_, 3)
-                        im_ = np.reshape(im_, (n_nodes_per_axis * n_nodes_per_axis))
-                        if ('modulation' in field_type):
-                            A1[:, 0:1] = torch.tensor(im_[:, None], dtype=torch.float32, device=device)
-                        if ('visual' in field_type):
-                            A1[:n_nodes, 0:1] = torch.tensor(im_[:, None], dtype=torch.float32, device=device)
-                            A1[n_nodes:n_particles, 0:1] = 1
-
-                    fig = plt.figure(figsize=(8, 12))
-                    plt.subplot(211)
-                    plt.title(r'$b_i$', fontsize=48)
-                    plt.scatter(to_numpy(x0[:, 2]), to_numpy(x0[:, 1]), s=8, c=to_numpy(A1[:, 0]), cmap='viridis', vmin=0,
-                                vmax=2)
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.subplot(212)
-                    plt.title(r'$x_i$', fontsize=48)
-                    plt.scatter(to_numpy(x0[:, 2]), to_numpy(x0[:, 1]), s=8, c=to_numpy(x[:, 6:7]), cmap='viridis',
-                                vmin=-10,
-                                vmax=10)
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{num}.tif", dpi=80)
-                    plt.close()
-                elif 'PDE_N' in model_config.signal_model_name:
-
-                    plt.close()
-
-                    # y = model(dataset, data_id=1, return_all=True)
-
-                    matplotlib.rcParams['savefig.pad_inches'] = 0
-
-                    if has_ghost:
-                        plt.figure(figsize=(25, 25))
-                        plt.scatter(to_numpy(X1_first[:n_particles, 0]), 1.1 + to_numpy(X1_first[:n_particles, 1]), s=1000, c=to_numpy(x[:n_particles, 6]), vmin=-2, vmax = 2, cmap='viridis', edgecolors='k', alpha=1)
-                        plt.scatter(to_numpy(X1_first[:n_ghosts, 0]) + 1.1, 1.1 + to_numpy(X1_first[:n_ghosts, 1]), s=1000, c=4*to_numpy(x[n_particles:n_ghosts+n_particles, 6]), vmin=-2, vmax = 2, cmap='viridis', edgecolors='k', alpha=1)
-                        plt.scatter(to_numpy(X1_first[:n_particles, 0]), to_numpy(X1_first[:n_particles, 1]), s=1000, c=to_numpy(x0[:n_particles, 6]), vmin=-2, vmax = 2, cmap='viridis', edgecolors='k', alpha=1)
-                        plt.scatter(to_numpy(X1_first[:n_particles, 0]) + 1.1, to_numpy(X1_first[:n_particles, 1]), s=1000, c=to_numpy(y[:n_particles]* delta_t), vmin=-2, vmax = 2, cmap='viridis', edgecolors='k', alpha=1)
-
-                        plt.axis('off')
-                        plt.text(0.05, 1.0, r'neuron activity                             extra activity (*4)', fontsize=48, color='w', ha='left', va='top',
-                                 transform=plt.gca().transAxes)
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.tight_layout()
-                        plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=170)
-                        plt.close()
-                    else:
-                        plt.figure(figsize=(10, 10))
-                        plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=200, c=to_numpy(x[:, 6]),
-                                    cmap='viridis', vmin=-10, vmax=10, edgecolors='k', alpha=1)
-                        plt.axis('off')
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.tight_layout()
-                        plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=170)
-                        plt.close()
-
-                        im = imread(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif")
-                        plt.figure(figsize=(10, 10))
-                        plt.imshow(im)
-                        plt.axis('off')
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.subplot(3, 3, 1)
-                        plt.imshow(im[800:1000, 800:1000, :])
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.tight_layout()
-                        plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=80)
-                        plt.close()
-                elif 'PDE_K' in model_config.particle_model_name:
-
-                    plt.close()
-                    fig = plt.figure(figsize=(12, 12))
-                    plt.scatter(x[:, 2].detach().cpu().numpy(),
-                                x[:, 1].detach().cpu().numpy(), s=20, color='r')
-                    if it < n_frames - 1:
-                        x0_ = x_list[0][it + 1].clone().detach()
-                        plt.scatter(x0_[:, 2].detach().cpu().numpy(),
-                                    x0_[:, 1].detach().cpu().numpy(), s=40, color='w', alpha=1, edgecolors='None')
-
-                    plt.xlim([-3, 3])
-                    plt.ylim([-3, 3])
-                elif do_tracking:
-
-                    # plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c='w', alpha=0.25)
-                    plt.scatter(to_numpy(x0[:, 2]), to_numpy(x0[:, 1]), s=10, c='w', alpha=0.5)
-                    plt.scatter(to_numpy(x_pos_pred[:, 1]), to_numpy(x_pos_pred[:, 0]), s=10, c='r')
-                    x1 = x_list[0][it + time_step].clone().detach()
-                    plt.scatter(to_numpy(x1[:, 2]), to_numpy(x1[:, 1]), s=10, c='g')
-
-                    plt.xticks([])
-                    plt.yticks([])
-
-                    if 'zoom' in style:
-                        for m in range(x.shape[0]):
-                                plt.arrow(x=to_numpy(x0[m, 2]), y=to_numpy(x0[m, 1]), dx=to_numpy(x[m, dimension+2]) * delta_t,
-                                          dy=to_numpy(x[m, dimension+1]) * delta_t, head_width=0.004,
-                                          length_includes_head=True, color='g')
-                        plt.xlim([300,400])
-                        plt.ylim([300,400])
-                    else:
-                        plt.xlim([0,700])
-                        plt.ylim([0,700])
-                    plt.tight_layout()
-                else:
-                    s_p = 10
-                    index_particles = get_index_particles(x, n_particle_types, dimension)
-                    for n in range(n_particle_types):
-                        if 'bw' in style:
-                            plt.scatter(x[index_particles[n], 2].detach().cpu().numpy(),
-                                        x[index_particles[n], 1].detach().cpu().numpy(), s=s_p, color='w')
-                        else:
-                            plt.scatter(x[index_particles[n], 2].detach().cpu().numpy(),
-                                        x[index_particles[n], 1].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
-                    plt.xlim([0, 1])
-                    plt.ylim([0, 1])
-
-                    if particle_of_interest > 1:
-
-                        xc = x[particle_of_interest, 2].detach().cpu().numpy()
-                        yc = x[particle_of_interest, 1].detach().cpu().numpy()
-                        pos = torch.argwhere(edge_index[1,:]==particle_of_interest)
-                        pos = pos[:, 0]
-                        if 'zoom' in style:
-                            plt.scatter(x[edge_index[0,pos], 2].detach().cpu().numpy(),
-                                        x[edge_index[0,pos], 1].detach().cpu().numpy(), s=s_p * 20 , color=mc, alpha=0.25)
-                        else:
-                            plt.scatter(x[edge_index[0,pos], 2].detach().cpu().numpy(),
-                                        x[edge_index[0,pos], 1].detach().cpu().numpy(), s=s_p * 5 , color=mc, alpha=0.25, )
-
-
-                        for k in range(pos.shape[0]):
-                            plt.arrow(x[edge_index[1,pos[k]], 2].detach().cpu().numpy(),
-                                        x[edge_index[1,pos[k]], 1].detach().cpu().numpy(),  dx=to_numpy(model.msg[k,1]) * delta_t/20,
-                                      dy=to_numpy(model.msg[k,0]) * delta_t/20, head_width=0.004, length_includes_head=True, color=mc,alpha=0.25)
-
-                        plt.arrow(x=to_numpy(x[particle_of_interest, 2]), y=to_numpy(x[particle_of_interest, 1]), dx=to_numpy(x[particle_of_interest, 4]) * delta_t * 100,
-                                  dy=to_numpy(x[particle_of_interest, 3]) * delta_t * 100, head_width=0.004, length_includes_head=True, color=cmap.color(to_numpy(x[particle_of_interest, 5]).astype(int)))
-
-                    if 'zoom' in style:
-                        plt.xlim([xc-0.1, xc+0.1])
-                        plt.ylim([yc-0.1, yc+0.1])
-                        plt.xticks([])
-                        plt.yticks([])
-
-                if 'latex' in style:
-                    plt.xlabel(r'$x$', fontsize=78)
-                    plt.ylabel(r'$y$', fontsize=78)
-                    plt.xticks(fontsize=48.0)
-                    plt.yticks(fontsize=48.0)
-                if 'frame' in style:
-                    plt.xlabel('x', fontsize=48)
-                    plt.ylabel('y', fontsize=48)
-                    plt.xticks(fontsize=48.0)
-                    plt.yticks(fontsize=48.0)
-                    plt.text(0, 1.1, f'   ', ha='left', va='top', transform=ax.transAxes, fontsize=48)
-                    ax.tick_params(axis='both', which='major', pad=15)
-                    # cbar = plt.colorbar(shrink=0.5)
-                    # cbar.ax.tick_params(labelsize=32)
-                if 'arrow' in style:
-                    for m in range(x.shape[0]):
-                        if x[m, 4] != 0 :
-                            if 'speed' in style:
-                                # plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(y0[m, 1]) * delta_t * 50, dy=to_numpy(y0[m, 0]) * delta_t * 50, head_width=0.004, length_includes_head=False, color='g')
-                                # plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(x[m, 4]) * delta_t * 50, dy=to_numpy(x[m, 3]) * delta_t * 50, head_width=0.004, length_includes_head=False, color='w')
-                                # angle = compute_signed_angle(x[m, 3:5], y0[m, 0:2])
-                                # angle_list.append(angle)
-                                plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(x[m, 4]) * delta_t * 2, dy=to_numpy(x[m, 3]) * delta_t * 2, head_width=0.004, length_includes_head=True, color='g')
-                            if 'acc_true' in style:
-                                plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(y0[m, 1])/5E3, dy=to_numpy(y0[m, 0])/5E3, head_width=0.004, length_includes_head=True, color='r')
-                            if 'acc_learned' in style:
-                                plt.arrow(x=to_numpy(x[m, 2]), y=to_numpy(x[m, 1]), dx=to_numpy(pred[m, 1]*ynorm.squeeze()) / 5E3, dy=to_numpy(pred[m, 0]*ynorm.squeeze()) / 5E3, head_width=0.004, length_includes_head=True, color='r')
-                    plt.xlim([0,1])
-                    plt.ylim([0,1])
-                    # plt.xlim([0.4,0.6])
-                    # plt.ylim([0.4,0.6])
-                if 'name' in style:
-                    plt.title(f"{os.path.basename(log_dir)}", fontsize=24)
-
-                if 'no_ticks' in style:
-                    plt.xticks([])
-                    plt.yticks([])
-                if 'PDE_G' in model_config.particle_model_name:
-                    plt.xlim([-2, 2])
-                    plt.ylim([-2, 2])
-                if 'PDE_GS' in model_config.particle_model_name:
-
-                    object_list = ['sun', 'mercury', 'venus', 'earth', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune',
-                                   'pluto', 'io',
-                                   'europa', 'ganymede', 'callisto', 'mimas', 'enceladus', 'tethys', 'dione', 'rhea',
-                                   'titan', 'hyperion', 'moon',
-                                   'phobos', 'deimos', 'charon']
-
-                    masses = torch.tensor(
-                        [1.989e30, 3.30e23, 4.87e24, 5.97e24, 6.42e23, 1.90e27, 5.68e26, 8.68e25, 1.02e26, 1.31e22,
-                         8.93e22, 4.80e22, 1.48e23, 1.08e23, 3.75e19, 1.08e20,
-                         6.18e20, 1.10e21, 2.31e21, 1.35e23, 5.62e18, 7.35e22, 1.07e16, 1.48e15, 1.52e21],
-                        device=device)
-
-                    pos = x[:, 1:dimension + 1]  # - x[0,1:dimension + 1]
-                    distance = torch.sqrt(torch.sum(bc_dpos(pos[:, None, :] - pos[None, 0, :]) ** 2, dim=2))
-                    unit_vector = pos / distance
-
-                    if it == 0:
-                        log_coeff = torch.log(distance[1:])
-                        log_coeff_min = torch.min(log_coeff)
-                        log_coeff_max = torch.max(log_coeff)
-                        log_coeff_diff = log_coeff_max - log_coeff_min
-                        d_log = [log_coeff_min, log_coeff_max, log_coeff_diff]
-
-                        log_coeff = torch.log(masses)
-                        log_coeff_min = torch.min(log_coeff)
-                        log_coeff_max = torch.max(log_coeff)
-                        log_coeff_diff = log_coeff_max - log_coeff_min
-                        m_log = [log_coeff_min, log_coeff_max, log_coeff_diff]
-
-                        m_ = torch.log(masses) / m_log[2]
-
-                    distance_ = (torch.log(distance) - d_log[0]) / d_log[2]
-                    pos = distance_ * unit_vector
-                    pos = to_numpy(pos)
-                    pos[0] = 0
-
-                    for n in range(25):
-                        plt.scatter(pos[n, 1], pos[n, 0], s=200 * to_numpy(m_[n] ** 3), color=cmap.color(n))
-                        # plt.text(pos[n,1], pos[n, 0], object_list[n], fontsize=8)
-                    plt.xlim([-1.2, 1.2])
-                    plt.ylim([-1.2, 1.2])
-                    plt.xticks([])
-                    plt.yticks([])
-                if 'PDE_K' in model_config.particle_model_name:
-                    plt.xlim([-3, 3])
-                    plt.ylim([-3, 3])
-                    plt.xticks(fontsize=24)
-                    plt.yticks(fontsize=24)
-
-                # save figure
-                if not ('PDE_N' in model_config.signal_model_name):
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{run}_{num}.tif", dpi=100)
-                    plt.close()
-
-                if ('PDE_N' in model_config.signal_model_name) & (it % 200 == 0) & (it > 0):
-
-                    if has_ghost & ('PDE_N' in model_config.signal_model_name):
-                        n = [1, 3, 10, 15, 26, 27, 52, 62, 92, 120]
-                    else:
-                        n = [20, 30, 100, 150, 260, 270, 520, 620, 720, 820]
-
-                    neuron_gt_list_ = torch.cat(neuron_gt_list, 0)
-                    neuron_pred_list_ = torch.cat(neuron_pred_list, 0)
-                    neuron_gt_list_ = torch.reshape(neuron_gt_list_,
-                                                    (neuron_gt_list_.shape[0] // n_particles, n_particles))
-                    neuron_pred_list_ = torch.reshape(neuron_pred_list_,
-                                                      (neuron_pred_list_.shape[0] // n_particles, n_particles))
+                    modulation_gt_list_ = torch.cat(modulation_gt_list, 0)
+                    modulation_pred_list_ = torch.cat(modulation_pred_list, 0)
+                    modulation_gt_list_ = torch.reshape(modulation_gt_list_,
+                                                        (modulation_gt_list_.shape[0] // n_particles, n_particles))
+                    modulation_pred_list_ = torch.reshape(modulation_pred_list_,
+                                                          (modulation_pred_list_.shape[0] // n_particles,
+                                                           n_particles))
 
                     plt.figure(figsize=(20, 10))
                     if 'latex' in style:
                         plt.rcParams['text.usetex'] = True
                         rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-                    ax = plt.subplot(121)
-                    plt.plot(neuron_gt_list_[:, n[0]].detach().cpu().numpy(), c=mc, linewidth=8, label='true',
-                             alpha=0.25)
-                    plt.plot(neuron_pred_list_[:, n[0]].detach().cpu().numpy(), linewidth=4, c='k',
-                             label='learned')
-                    plt.legend(fontsize=24)
-                    plt.plot(neuron_gt_list_[:, n[1:10]].detach().cpu().numpy(), c=mc, linewidth=8, alpha=0.25)
-                    plt.plot(neuron_pred_list_[:, n[1:10]].detach().cpu().numpy(), linewidth=4)
-                    plt.xlim([0, 1400])
-                    plt.xlabel(r'time-points', fontsize=48)
-                    plt.ylabel(r'$x_i$', fontsize=48)
-                    plt.xticks(fontsize=24)
-                    plt.yticks(fontsize=24)
-                    plt.ylim([-30, 30])
-                    # plt.text(40, 26, f'time: {it}', fontsize=34)
+
                     ax = plt.subplot(122)
-                    plt.scatter(to_numpy(neuron_gt_list_[-1, :]), to_numpy(neuron_pred_list_[-1, :]), s=10, c=mc)
-                    plt.xlim([-30, 30])
-                    plt.ylim([-30, 30])
+                    plt.scatter(to_numpy(modulation_gt_list_[-1, :]), to_numpy(modulation_pred_list_[-1, :]), s=10,
+                                c=mc)
                     plt.xticks(fontsize=24)
                     plt.yticks(fontsize=24)
-                    x_data = to_numpy(neuron_gt_list_[-1, :])
-                    y_data = to_numpy(neuron_pred_list_[-1, :])
+                    x_data = to_numpy(modulation_gt_list_[-1, :])
+                    y_data = to_numpy(modulation_pred_list_[-1, :])
                     lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
                     residuals = y_data - linear_model(x_data, *lin_fit)
                     ss_res = np.sum(residuals ** 2)
                     ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
                     r_squared = 1 - (ss_res / ss_tot)
-                    plt.xlabel(r'true $x_i$', fontsize=48)
-                    plt.ylabel(r'learned $x_i$', fontsize=48)
-                    plt.text(-28.5, 26, f'$R^2$: {np.round(r_squared, 3)}', fontsize=34)
-                    plt.text(-28.5, 22, f'slope: {np.round(lin_fit[0], 2)}', fontsize=34)
+                    plt.xlabel(r'true modulation', fontsize=48)
+                    plt.ylabel(r'learned modulation', fontsize=48)
+                    # plt.text(0.05, 0.9 * lin_fit[0], f'$R^2$: {np.round(r_squared, 3)}', fontsize=34)
+                    # plt.text(0.05, 0.8 * lin_fit[0], f'slope: {np.round(lin_fit[0], 2)}', fontsize=34)
+                    ax = plt.subplot(121)
+                    plt.plot(modulation_gt_list_[:, n[0]].detach().cpu().numpy(), c='k', linewidth=8, label='true',
+                             alpha=0.25)
+                    plt.plot(modulation_pred_list_[:, n[0]].detach().cpu().numpy() / lin_fit[0], linewidth=4, c='k',
+                             label='learned')
+                    plt.legend(fontsize=24)
+                    plt.plot(modulation_gt_list_[:, n[1:10]].detach().cpu().numpy(), c='k', linewidth=8, alpha=0.25)
+                    plt.plot(modulation_pred_list_[:, n[1:10]].detach().cpu().numpy() / lin_fit[0], linewidth=4)
+                    plt.xlim([0, 1400])
+                    plt.xlabel(r'time-points', fontsize=48)
+                    plt.ylabel(r'modulation', fontsize=48)
+                    plt.xticks(fontsize=24)
+                    plt.yticks(fontsize=24)
+                    plt.ylim([0, 2])
+                    # plt.text(40, 26, f'time: {it}', fontsize=34)
                     plt.tight_layout()
-                    plt.savefig(f'./{log_dir}/results/comparison_xi_{it}.png', dpi=80)
+                    plt.tight_layout()
+                    plt.savefig(f'./{log_dir}/results/comparison_modulation_{it}.png', dpi=80)
                     plt.close()
 
-                    if ('Siren_short_term_plasticity' in field_type) | ('modulation' in field_type):
-
-                        modulation_gt_list_ = torch.cat(modulation_gt_list, 0)
-                        modulation_pred_list_ = torch.cat(modulation_pred_list, 0)
-                        modulation_gt_list_ = torch.reshape(modulation_gt_list_,
-                                                            (modulation_gt_list_.shape[0] // n_particles, n_particles))
-                        modulation_pred_list_ = torch.reshape(modulation_pred_list_,
-                                                              (modulation_pred_list_.shape[0] // n_particles,
-                                                               n_particles))
-
-                        plt.figure(figsize=(20, 10))
-                        if 'latex' in style:
-                            plt.rcParams['text.usetex'] = True
-                            rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-
-                        ax = plt.subplot(122)
-                        plt.scatter(to_numpy(modulation_gt_list_[-1, :]), to_numpy(modulation_pred_list_[-1, :]), s=10,
-                                    c=mc)
-                        plt.xticks(fontsize=24)
-                        plt.yticks(fontsize=24)
-                        x_data = to_numpy(modulation_gt_list_[-1, :])
-                        y_data = to_numpy(modulation_pred_list_[-1, :])
-                        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-                        residuals = y_data - linear_model(x_data, *lin_fit)
-                        ss_res = np.sum(residuals ** 2)
-                        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-                        r_squared = 1 - (ss_res / ss_tot)
-                        plt.xlabel(r'true modulation', fontsize=48)
-                        plt.ylabel(r'learned modulation', fontsize=48)
-                        # plt.text(0.05, 0.9 * lin_fit[0], f'$R^2$: {np.round(r_squared, 3)}', fontsize=34)
-                        # plt.text(0.05, 0.8 * lin_fit[0], f'slope: {np.round(lin_fit[0], 2)}', fontsize=34)
-                        ax = plt.subplot(121)
-                        plt.plot(modulation_gt_list_[:, n[0]].detach().cpu().numpy(), c='k', linewidth=8, label='true',
-                                 alpha=0.25)
-                        plt.plot(modulation_pred_list_[:, n[0]].detach().cpu().numpy() / lin_fit[0], linewidth=4, c='k',
-                                 label='learned')
-                        plt.legend(fontsize=24)
-                        plt.plot(modulation_gt_list_[:, n[1:10]].detach().cpu().numpy(), c='k', linewidth=8, alpha=0.25)
-                        plt.plot(modulation_pred_list_[:, n[1:10]].detach().cpu().numpy() / lin_fit[0], linewidth=4)
-                        plt.xlim([0, 1400])
-                        plt.xlabel(r'time-points', fontsize=48)
-                        plt.ylabel(r'modulation', fontsize=48)
-                        plt.xticks(fontsize=24)
-                        plt.yticks(fontsize=24)
-                        plt.ylim([0, 2])
-                        # plt.text(40, 26, f'time: {it}', fontsize=34)
-                        plt.tight_layout()
-                        plt.tight_layout()
-                        plt.savefig(f'./{log_dir}/results/comparison_modulation_{it}.png', dpi=80)
-                        plt.close()
-
-                if ('feature' in style) & ('PDE_MLPs_A' in config.graph_model.particle_model_name):
-                    if 'PDE_MLPs_A_bis' in model.model:
-                        fig = plt.figure(figsize=(22, 5))
-                    else:
-                        fig = plt.figure(figsize=(22, 6))
-                    for k in range(model.new_features.shape[1]):
-                        ax = fig.add_subplot(1, model.new_features.shape[1], k + 1)
-                        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), c=to_numpy(model.new_features[:, k]), s=5,
-                                    cmap='viridis')
-                        ax.set_title(f'new_features {k}')
-                        # cbar = plt.colorbar()
-                        # cbar.ax.tick_params(labelsize=6)
-                        plt.xlim([0, 1])
-                        plt.ylim([0, 1])
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_recons/Features_{config_file}_{run}_{num}.tif", dpi=100)
-                    plt.close()
-
-                if 'boundary' in style:
-                    fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
-                    t = torch.min(x[:, 7:],-1).values
-                    plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=25, c=to_numpy(t),vmin=-1,vmax=1)
+            if ('feature' in style) & ('PDE_MLPs_A' in config.graph_model.particle_model_name):
+                if 'PDE_MLPs_A_bis' in model.model:
+                    fig = plt.figure(figsize=(22, 5))
+                else:
+                    fig = plt.figure(figsize=(22, 6))
+                for k in range(model.new_features.shape[1]):
+                    ax = fig.add_subplot(1, model.new_features.shape[1], k + 1)
+                    plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), c=to_numpy(model.new_features[:, k]), s=5,
+                                cmap='viridis')
+                    ax.set_title(f'new_features {k}')
+                    # cbar = plt.colorbar()
+                    # cbar.ax.tick_params(labelsize=6)
                     plt.xlim([0, 1])
                     plt.ylim([0, 1])
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_recons/Boundary_{config_file}_{num}.tif", dpi=80)
-                    plt.close()
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_recons/Features_{config_file}_{run}_{num}.tif", dpi=100)
+                plt.close()
 
-                if has_ghost & ('PDE_N' not in model_config.signal_model_name):
-                    x0 = x_list[0][it + 1].clone().detach()
-                    x_ghost_pos = bc_pos(x_ghost[:, 1:3])
-                    x_removed = x_removed_list[it]
-                    x_all = torch.cat((x, x_removed), 0)
+            if 'boundary' in style:
+                fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
+                t = torch.min(x[:, 7:],-1).values
+                plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=25, c=to_numpy(t),vmin=-1,vmax=1)
+                plt.xlim([0, 1])
+                plt.ylim([0, 1])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_recons/Boundary_{config_file}_{num}.tif", dpi=80)
+                plt.close()
 
-                    fig = plt.figure(figsize=(12, 12))
-                    ax = fig.add_subplot(1, 1, 1)
-                    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-                    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-                    ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                    ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                    for n in range(n_particle_types):
-                        plt.scatter(x0[index_particles[n], 1].detach().cpu().numpy(),
-                                    x0[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
-                    if 'frame' in style:
-                        plt.xlabel(r'$x$', fontsize=78)
-                        plt.ylabel(r'$y$', fontsize=78)
-                        plt.xticks(fontsize=48.0)
-                        plt.yticks(fontsize=48.0)
-                    else:
-                        plt.xticks([])
-                        plt.yticks([])
-                    plt.xlim([0, 1])
-                    plt.ylim([0, 1])
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_recons/Ghost1_{config_file}_{it}.tif", dpi=170.7)
-                    plt.close()
-                    fig = plt.figure(figsize=(12, 12))
-                    ax = fig.add_subplot(1, 1, 1)
-                    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-                    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-                    ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                    ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                    plt.scatter(x_ghost_pos[:, 0].detach().cpu().numpy(),
-                                x_ghost_pos[:, 1].detach().cpu().numpy(), s=s_p, color='g')
-                    if 'frame' in style:
-                        plt.xlabel(r'$x$', fontsize=78)
-                        plt.ylabel(r'$y$', fontsize=78)
-                        plt.xticks(fontsize=48.0)
-                        plt.yticks(fontsize=48.0)
-                    else:
-                        plt.xticks([])
-                        plt.yticks([])
-                    plt.xlim([0, 1])
-                    plt.ylim([0, 1])
+            if has_ghost & ('PDE_N' not in model_config.signal_model_name):
+                x0 = x_list[0][it + 1].clone().detach()
+                x_ghost_pos = bc_pos(x_ghost[:, 1:3])
+                x_removed = x_removed_list[it]
+                x_all = torch.cat((x, x_removed), 0)
+
+                fig = plt.figure(figsize=(12, 12))
+                ax = fig.add_subplot(1, 1, 1)
+                ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+                ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+                ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                for n in range(n_particle_types):
+                    plt.scatter(x0[index_particles[n], 1].detach().cpu().numpy(),
+                                x0[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
+                if 'frame' in style:
+                    plt.xlabel(r'$x$', fontsize=78)
+                    plt.ylabel(r'$y$', fontsize=78)
                     plt.xticks(fontsize=48.0)
                     plt.yticks(fontsize=48.0)
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_recons/Ghost2_{config_file}_{it}.tif", dpi=170.7)
-                    plt.close()
-                    fig = plt.figure(figsize=(12, 12))
-                    ax = fig.add_subplot(1, 1, 1)
-                    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-                    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-                    ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                    ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                    plt.scatter(x_removed[:, 1].detach().cpu().numpy(),
-                                x_removed[:, 2].detach().cpu().numpy(), s=s_p, color='r')
-                    if 'frame' in style:
-                        plt.xlabel(r'$x$', fontsize=78)
-                        plt.ylabel(r'$y$', fontsize=78)
-                        plt.xticks(fontsize=48.0)
-                        plt.yticks(fontsize=48.0)
-                    else:
-                        plt.xticks([])
-                        plt.yticks([])
-                    plt.xlim([0, 1])
-                    plt.ylim([0, 1])
+                else:
+                    plt.xticks([])
+                    plt.yticks([])
+                plt.xlim([0, 1])
+                plt.ylim([0, 1])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_recons/Ghost1_{config_file}_{it}.tif", dpi=170.7)
+                plt.close()
+                fig = plt.figure(figsize=(12, 12))
+                ax = fig.add_subplot(1, 1, 1)
+                ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+                ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+                ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                plt.scatter(x_ghost_pos[:, 0].detach().cpu().numpy(),
+                            x_ghost_pos[:, 1].detach().cpu().numpy(), s=s_p, color='g')
+                if 'frame' in style:
+                    plt.xlabel(r'$x$', fontsize=78)
+                    plt.ylabel(r'$y$', fontsize=78)
                     plt.xticks(fontsize=48.0)
                     plt.yticks(fontsize=48.0)
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_recons/Ghost3_{config_file}_{it}.tif", dpi=170.7)
-                    plt.close()
+                else:
+                    plt.xticks([])
+                    plt.yticks([])
+                plt.xlim([0, 1])
+                plt.ylim([0, 1])
+                plt.xticks(fontsize=48.0)
+                plt.yticks(fontsize=48.0)
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_recons/Ghost2_{config_file}_{it}.tif", dpi=170.7)
+                plt.close()
+                fig = plt.figure(figsize=(12, 12))
+                ax = fig.add_subplot(1, 1, 1)
+                ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+                ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+                ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                plt.scatter(x_removed[:, 1].detach().cpu().numpy(),
+                            x_removed[:, 2].detach().cpu().numpy(), s=s_p, color='r')
+                if 'frame' in style:
+                    plt.xlabel(r'$x$', fontsize=78)
+                    plt.ylabel(r'$y$', fontsize=78)
+                    plt.xticks(fontsize=48.0)
+                    plt.yticks(fontsize=48.0)
+                else:
+                    plt.xticks([])
+                    plt.yticks([])
+                plt.xlim([0, 1])
+                plt.ylim([0, 1])
+                plt.xticks(fontsize=48.0)
+                plt.yticks(fontsize=48.0)
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_recons/Ghost3_{config_file}_{it}.tif", dpi=170.7)
+                plt.close()
 
     if 'inference' in test_mode:
         torch.save(x_inference_list, f"./{log_dir}/x_inference_list_{run}.pt")
