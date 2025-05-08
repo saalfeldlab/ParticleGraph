@@ -64,7 +64,8 @@ if __name__ == '__main__':
         # config_list = ['signal_N5_v11_bis']
         # config_list = ['falling_water_ramp_x6_13']
         # config_list = ['arbitrary_3_field_video_bison_test']
-        config_list = ['cell_cardio_3']
+        # config_list = ['cell_cardio_3']
+        config_list = ['RD_RPS_1']
 
 
     for config_file_ in config_list:
@@ -80,7 +81,7 @@ if __name__ == '__main__':
         print(f'folder  {config.dataset}')
 
         if 'generate' in task:
-            data_generate(config, device=device, visualize=True, run_vizualized=0, style='black field', alpha=1, erase=False, bSave=True, step=100)  #config.simulation.n_frames // 100)
+            data_generate(config, device=device, visualize=True, run_vizualized=0, style='black color', alpha=1, erase=False, bSave=True, step=100)  #config.simulation.n_frames // 100)
         if 'train' in task:
             data_train(config=config, erase=False, best_model=best_model, device=device)
         if 'test' in task:

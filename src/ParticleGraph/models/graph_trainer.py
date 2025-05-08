@@ -1501,7 +1501,7 @@ def data_train_mesh(config, erase, best_model, device):
             optimizer.zero_grad()
 
             for batch in batch_loader:
-                pred = model(batch, data_id = data_id, training = True, phi = phi)
+                pred = model(batch, data_id = data_id)
 
                 # fig = plt.figure(figsize=(8, 8))
                 # plt.ion()
@@ -1870,7 +1870,7 @@ def data_train_particle_field(config, erase, best_model, device):
     logger.info(f'N epochs: {n_epochs}')
     logger.info(f'initial batch_size: {batch_size}')
 
-    print('Update variables ...')
+    print('update variables ...')
     # update variable if particle_dropout, cell_division, etc ...
     x = torch.tensor(x_list[1][n_frames - 5], dtype=torch.float32, device=device)
     n_particles = x.shape[0]
@@ -1905,7 +1905,7 @@ def data_train_particle_field(config, erase, best_model, device):
         mask_ghost = np.argwhere(mask_ghost == 1)
         mask_ghost = mask_ghost[:, 0].astype(int)
 
-    print("Start training ...")
+    print("start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
 

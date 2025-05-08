@@ -8,15 +8,13 @@ simulation:
   diffusion_coefficients:  [[0.01], [0.02], [0.03], [0.040]]
   n_particles: 10000
   n_particle_types: 4
-  n_interactions: 4
   n_nodes: 10000
   n_node_types: 4
   n_frames: 4000
   delta_t: 0.05
   boundary: 'periodic'
-  node_value_map: 'pattern_10.tif'
-  node_coeff_map: 'pics_boat.tif'
-  beta: 1
+  node_value_map: 'input_data/pattern_10.tif'
+  node_coeff_map: 'input_data/pics_boat.tif'
 
 graph_model:
   particle_model_name: ''

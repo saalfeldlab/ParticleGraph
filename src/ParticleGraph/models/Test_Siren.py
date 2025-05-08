@@ -178,18 +178,29 @@ if __name__ == '__main__':
     dataloader = DataLoader(cameraman, batch_size=1, pin_memory=True, num_workers=0)
 
     img_siren = Siren(in_features=2, out_features=1, hidden_features=256,
-                      hidden_layers=3, outermost_linear=True, first_omega_0=80, hidden_omega_0=80.)
+                      hidden_layers=3, outermost_linear=True, first_omega_0=20.0, hidden_omega_0=20.0)
     img_siren.cuda()
 
     total_steps = 500  # Since the whole image is our dataset, this just means 500 gradient descent steps.
-    steps_til_summary = 10
+    steps_til_summary = 100
 
     optim = torch.optim.Adam(lr=1e-4, params=img_siren.parameters())
 
     model_input, ground_truth = next(iter(dataloader))
     model_input, ground_truth = model_input.cuda(), ground_truth.cuda()
 
+    indx = np.random.permutation(256)
+    nlines = 64
+    indx = indx[:nlines]
+
+    indx_list = []
+    for k in range(nlines):
+        indx_list.append(np.arange(256) + indx[k] * 256)
+    indx = np.concatenate(indx_list)
+
+
     for step in trange(total_steps):
+
         model_output, coords = img_siren(model_input)
         # model_output = gradient(model_output, coords)
         # model_output = laplace(model_output, coords)
@@ -200,6 +211,7 @@ if __name__ == '__main__':
             # img_grad = gradient(model_output, coords)
             # img_laplacian = laplace(model_output, coords)
 
+            model_output, coords = img_siren(model_input)
             plt.imshow(model_output.cpu().view(256, 256).detach().numpy(), cmap='grey')
             # plt.imshow(img_grad.norm(dim=-1).cpu().view(256, 256).detach().numpy())
             # plt.imshow(img_laplacian.cpu().view(256, 256).detach().numpy())
@@ -210,3 +222,18 @@ if __name__ == '__main__':
         optim.zero_grad()
         loss.backward()
         optim.step()
+
+    n = 1024
+    coords = torch.linspace(-1, 1, steps=n)
+    x, y = torch.meshgrid(coords, coords, indexing='xy')
+    pos_mesh = torch.stack([y.flatten(), x.flatten()], dim=1).unsqueeze(0).to(device)
+    mesh_size = 1 / n
+
+    with torch.no_grad():
+        model_output, coords = img_siren(pos_mesh)
+
+    print('super resolved')
+
+    model_output = model_output.view(n, n).cpu().numpy()
+    plt.imshow(model_output, cmap='gray')
+    plt.show()
