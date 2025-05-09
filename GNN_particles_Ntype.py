@@ -54,7 +54,7 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'training'
+        task = 'test'
         best_model = None
 
         # config_list = ['multimaterial_12_1','multimaterial_12_2','multimaterial_12_3','multimaterial_12_4','multimaterial_12_5',
@@ -91,7 +91,7 @@ if __name__ == '__main__':
             #               run=run_, test_mode='fixed_bounce_all', sample_embedding=False, step=4,
             #               device=device)  # particle_of_interest=100,
             data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best', run=1, test_mode='', sample_embedding=False,
-                      step=10, device=device)  # particle_of_interest=100,
+                      step=20, device=device)  # particle_of_interest=100,
 
     if 'try_func' in task:
             try_func(max_radius=config.simulation.max_radius, device=device)

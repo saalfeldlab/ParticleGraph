@@ -4122,7 +4122,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             if 'latex' in style:
                 plt.rcParams['text.usetex'] = True
                 rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-
             if 'black' in style:
                 plt.style.use('dark_background')
                 mc = 'w'
@@ -4164,7 +4163,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     plt.axis('off')
                 if 'RD_RPS_Mesh' in model_config.mesh_model_name:
                     H1_IM = torch.reshape(x[:, 6:9], (n_nodes_per_axis, n_nodes_per_axis, 3))
-                    plt.imshow(H1_IM.detach().cpu().numpy()/5)
+                    plt.imshow(H1_IM.detach().cpu().numpy(),vmin=0,vmax=1)
                     fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
                     ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
                     ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
