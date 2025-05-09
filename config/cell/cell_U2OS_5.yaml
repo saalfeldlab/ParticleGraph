@@ -20,10 +20,12 @@ graph_model:
   particle_model_name: ''
   mesh_model_name: 'RD_RPS_Mesh'
   prediction: 'first_derivative'
+
   input_size: 8
   output_size: 3
-  hidden_dim: 32
-  n_mp_layers: 5
+  hidden_dim: 128
+  n_mp_layers: 8
+
   aggr_type: 'add'
   mesh_aggr_type: 'add'
   embedding_dim: 2
@@ -36,15 +38,15 @@ plotting:
 training:
 
   n_epochs: 20
-  batch_size: 8
+  n_runs: 2
+  device: 'cuda:0'
+
+  batch_size: 1
   small_init_batch_size: True
 
-  data_augmentation_loop: 5000
-  time_step: 8
+  data_augmentation_loop: 2500
+  time_window_noise: 1E-5
 
-  n_runs: 2
-  sparsity: 'replace_embedding'
+  sparsity: 'none'
   cluster_method: 'distance_plot'
   fix_cluster_embedding: True
-
-  device: 'cuda:0'

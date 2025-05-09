@@ -38,8 +38,9 @@ training:
   n_epochs: 20
   batch_size: 8
   small_init_batch_size: True
+  device: 'cuda:0'
 
-  data_augmentation_loop: 5000
+  data_augmentation_loop: 2500
 
   time_step: 4
 
@@ -48,4 +49,7 @@ training:
   cluster_method: 'distance_plot'
   fix_cluster_embedding: True
 
-  device: 'cuda:0'
+  learning_rate_start: 1.0E-4
+  learning_rate_embedding_start: 1.0E-4
+
+

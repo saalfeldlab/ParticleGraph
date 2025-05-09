@@ -1373,7 +1373,7 @@ def data_train_mesh(config, erase, best_model, device):
         y_mesh_list.append(h)
     h = y_mesh_list[0][0].clone().detach()
     for run in range(n_runs):
-        for k in range(n_frames-5):
+        for k in trange(n_frames-5):
             h = torch.cat((h, y_mesh_list[run][k].clone().detach()), 0)
     hnorm = torch.std(h)
     torch.save(hnorm, os.path.join(log_dir, 'hnorm.pt'))
@@ -3909,7 +3909,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             with torch.no_grad():
                 pred = mesh_model(dataset_mesh, data_id=data_id)
                 x[mask_mesh.squeeze(), 6:9] += pred[mask_mesh.squeeze()] * hnorm * delta_t
-                x[mask_mesh.squeeze(), 6:9] = torch.clamp(x[mask_mesh.squeeze(), 6:9], 0, 2)
+                x[:, 6:9] = torch.clamp(x[:, 6:9], 0, 2)
         elif has_field:
             match model_config.field_type:
                 case 'tensor':
@@ -4170,6 +4170,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     # plt.xticks([])
                     # plt.yticks([])
                     # plt.axis('off')
+
+                    plt.figure()
+                    plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=8, c=to_numpy(pred[:, 0] * delta_t * hnorm), cmap='viridis', vmin=0, vmax=5)
+
             elif ('visual' in field_type) & ('PDE_N' in model_config.signal_model_name):
                 if 'plot_data' in test_mode:
 
