@@ -4155,7 +4155,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     plt.axis('off')
                 if (model_config.mesh_model_name == 'RD_RPS_Mesh') | (
                         model_config.mesh_model_name == 'RD_RPS_Mesh_bis'):
-                    H1_IM = torch.reshape(x[:, 6:9], (100, 100, 3))
+                    H1_IM = torch.reshape(x[:, 6:9], (n_nodes_per_axis, n_nodes_per_axis, 3))
                     plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=1)
                     fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
                     ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
