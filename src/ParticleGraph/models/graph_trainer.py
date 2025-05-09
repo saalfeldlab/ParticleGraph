@@ -1524,8 +1524,8 @@ def data_train_mesh(config, erase, best_model, device):
                 loss = (pred[ids_batch] - y_batch[ids_batch]).norm(2)
             elif time_step > 1:
                 if model_config.prediction == 'first_derivative':
-                    x_mesh_pred = x_batch[[ids_batch],6:9] + delta_t * time_step * pred[[ids_batch]] * hnorm
-                    loss = (x_mesh_pred - y_batch).norm(2)
+                    x_mesh_pred = x_batch[:,6:9] + delta_t * time_step * pred * hnorm
+                    loss = (x_mesh_pred[ids_batch] - y_batch[ids_batch]).norm(2)
 
             loss.backward()
             optimizer.step()
