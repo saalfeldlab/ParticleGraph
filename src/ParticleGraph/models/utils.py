@@ -830,7 +830,7 @@ def plot_training_mesh(config,  log_dir, epoch, N, x, index_particles, n_particl
                 embedding_ = model.a[dataset_num, n, :] * torch.ones((200, 2), device=device)
                 in_features = torch.cat((rr, embedding_), dim=1)
                 h = model.lin_phi(in_features.float())
-                h = h[:, 0]
+                h = h[:, 1]
                 popt, pcov = curve_fit(linear_model, to_numpy(rr[:,1].squeeze()), to_numpy(h.squeeze()))
                 popt_list.append(popt)
             t = np.array(popt_list)
