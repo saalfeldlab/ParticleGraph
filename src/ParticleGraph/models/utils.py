@@ -797,8 +797,7 @@ def plot_training_mesh(config,  log_dir, epoch, N, x, index_particles, n_particl
 
             rr = torch.tensor(np.linspace(-1, 1, 200)).to(device)
             rr = rr[:,None]
-            rr = torch.cat((rr, torch.zeros_like(rr), torch.zeros_like(rr)), dim=1)
-            rr = torch.cat((rr, torch.zeros_like(rr)), dim=1)
+            rr = torch.cat((rr, torch.zeros_like(rr), torch.zeros_like(rr), torch.zeros_like(rr), torch.zeros_like(rr), torch.zeros_like(rr)), dim=1)
             popt_list = []
             for n in trange(n_nodes):
                 embedding_ = model.a[dataset_num, n, :] * torch.ones((200, 2), device=device)
@@ -809,7 +808,6 @@ def plot_training_mesh(config,  log_dir, epoch, N, x, index_particles, n_particl
                 popt_list.append(popt)
             t = np.array(popt_list)
             t = t[:, 0]
-
             n_nodes_per_axis = int(np.sqrt(n_nodes))
             fig = plt.figure(figsize=(8, 8))
             t = np.reshape(t, (n_nodes_per_axis, n_nodes_per_axis))
@@ -818,13 +816,42 @@ def plot_training_mesh(config,  log_dir, epoch, N, x, index_particles, n_particl
             plt.xticks([])
             plt.yticks([])
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/field/mesh_map_R_{epoch}_{N}.tif",dpi=87)
+            plt.savefig(f"./{log_dir}/tmp_training/field/mesh_map_LR_{epoch}_{N}.tif",dpi=87)
             plt.close()
+
 
             rr = torch.tensor(np.linspace(-1, 1, 200)).to(device)
             rr = rr[:,None]
-            rr = torch.cat((torch.zeros_like(rr), rr, torch.zeros_like(rr)), dim=1)
-            rr = torch.cat((rr, torch.zeros_like(rr)), dim=1)
+            rr = torch.cat((torch.zeros_like(rr), torch.zeros_like(rr), torch.zeros_like(rr), rr, torch.zeros_like(rr), torch.zeros_like(rr)), dim=1)
+            popt_list = []
+            for n in trange(n_nodes):
+                embedding_ = model.a[dataset_num, n, :] * torch.ones((200, 2), device=device)
+                in_features = torch.cat((rr, embedding_), dim=1)
+                h = model.lin_phi(in_features.float())
+                h = h[:, 0]
+                popt, pcov = curve_fit(linear_model, to_numpy(rr[:,4].squeeze()), to_numpy(h.squeeze()))
+                popt_list.append(popt)
+            t = np.array(popt_list)
+            t = t[:, 0]
+            n_nodes_per_axis = int(np.sqrt(n_nodes))
+            fig = plt.figure(figsize=(8, 8))
+            t = np.reshape(t, (n_nodes_per_axis, n_nodes_per_axis))
+            t = np.flipud(t)
+            plt.imshow(t, cmap='gray')
+            plt.xticks([])
+            plt.yticks([])
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/tmp_training/field/mesh_map_uR_{epoch}_{N}.tif",dpi=87)
+            plt.close()
+
+
+
+
+
+
+            rr = torch.tensor(np.linspace(-1, 1, 200)).to(device)
+            rr = rr[:,None]
+            rr = torch.cat((torch.zeros_like(rr), rr, torch.zeros_like(rr), torch.zeros_like(rr), torch.zeros_like(rr), torch.zeros_like(rr)), dim=1)
             popt_list = []
             for n in trange(n_nodes):
                 embedding_ = model.a[dataset_num, n, :] * torch.ones((200, 2), device=device)
@@ -835,7 +862,6 @@ def plot_training_mesh(config,  log_dir, epoch, N, x, index_particles, n_particl
                 popt_list.append(popt)
             t = np.array(popt_list)
             t = t[:, 0]
-
             n_nodes_per_axis = int(np.sqrt(n_nodes))
             fig = plt.figure(figsize=(8, 8))
             t = np.reshape(t, (n_nodes_per_axis, n_nodes_per_axis))
@@ -844,7 +870,32 @@ def plot_training_mesh(config,  log_dir, epoch, N, x, index_particles, n_particl
             plt.xticks([])
             plt.yticks([])
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/field/mesh_map_G_{epoch}_{N}.tif",dpi=87)
+            plt.savefig(f"./{log_dir}/tmp_training/field/mesh_map_LG_{epoch}_{N}.tif",dpi=87)
+            plt.close()
+
+
+            rr = torch.tensor(np.linspace(-1, 1, 200)).to(device)
+            rr = rr[:,None]
+            rr = torch.cat((torch.zeros_like(rr), torch.zeros_like(rr), torch.zeros_like(rr), torch.zeros_like(rr), rr, torch.zeros_like(rr)), dim=1)
+            popt_list = []
+            for n in trange(n_nodes):
+                embedding_ = model.a[dataset_num, n, :] * torch.ones((200, 2), device=device)
+                in_features = torch.cat((rr, embedding_), dim=1)
+                h = model.lin_phi(in_features.float())
+                h = h[:, 1]
+                popt, pcov = curve_fit(linear_model, to_numpy(rr[:,5].squeeze()), to_numpy(h.squeeze()))
+                popt_list.append(popt)
+            t = np.array(popt_list)
+            t = t[:, 0]
+            n_nodes_per_axis = int(np.sqrt(n_nodes))
+            fig = plt.figure(figsize=(8, 8))
+            t = np.reshape(t, (n_nodes_per_axis, n_nodes_per_axis))
+            t = np.flipud(t)
+            plt.imshow(t, cmap='gray')
+            plt.xticks([])
+            plt.yticks([])
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/tmp_training/field/mesh_map_vG_{epoch}_{N}.tif",dpi=87)
             plt.close()
 
 
