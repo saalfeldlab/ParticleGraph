@@ -40,6 +40,7 @@ class Mesh_RPS(pyg.nn.MessagePassing):
         self.nparticles = simulation_config.n_particles
         self.ndataset = config.training.n_runs
         self.bc_dpos = bc_dpos
+        self.time_window_noise = train_config.time_window_noise
 
         self.lin_phi = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                            hidden_size=self.hidden_size, device=self.device)
@@ -59,6 +60,10 @@ class Mesh_RPS(pyg.nn.MessagePassing):
         particle_id = x[:, 0:1].long()
         embedding = self.a[self.data_id.clone().detach(), particle_id, :].squeeze()
         input_phi = torch.cat((laplacian_uvw, uvw, embedding), dim=-1)
+
+        if self.time_window_noise > 0:
+            noise = torch.randn_like(input_phi[:,0:6]) * self.time_window_noise
+            input_phi = input_phi + noise
 
         pred = self.lin_phi(input_phi)
 
