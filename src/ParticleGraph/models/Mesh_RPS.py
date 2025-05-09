@@ -30,6 +30,7 @@ class Mesh_RPS(pyg.nn.MessagePassing):
 
         simulation_config = config.simulation
         model_config = config.graph_model
+        train_config = config.training
 
         self.device = device
         self.input_size = model_config.input_size
