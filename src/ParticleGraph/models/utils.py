@@ -846,9 +846,6 @@ def plot_training_mesh(config,  log_dir, epoch, N, x, index_particles, n_particl
 
 
 
-
-
-
             rr = torch.tensor(np.linspace(-1, 1, 200)).to(device)
             rr = rr[:,None]
             rr = torch.cat((torch.zeros_like(rr), rr, torch.zeros_like(rr), torch.zeros_like(rr), torch.zeros_like(rr), torch.zeros_like(rr)), dim=1)
