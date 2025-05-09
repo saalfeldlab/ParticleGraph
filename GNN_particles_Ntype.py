@@ -54,7 +54,7 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'generate_training'
+        task = 'training'
         best_model = None
 
         # config_list = ['multimaterial_12_1','multimaterial_12_2','multimaterial_12_3','multimaterial_12_4','multimaterial_12_5',
@@ -63,9 +63,9 @@ if __name__ == '__main__':
         # config_list = ['fluids_m18_1']
         # config_list = ['signal_N5_v11_bis']
         # config_list = ['falling_water_ramp_x6_13']
-        config_list = ['arbitrary_3_bis']
+        # config_list = ['arbitrary_3_bis']
         # config_list = ['cell_cardio_3']
-        # config_list = ['RD_RPS_1']
+        config_list = ['RD_RPS_5']
         # config_list = ['cell_U2OS_2']
 
 

@@ -1333,6 +1333,7 @@ def data_train_mesh(config, erase, best_model, device):
     n_node_types = simulation_config.n_node_types
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
+    delta_t = simulation_config.delta_t
     data_augmentation_loop = train_config.data_augmentation_loop
     target_batch_size = train_config.batch_size
     replace_with_cluster = 'replace' in train_config.sparsity
@@ -1468,11 +1469,6 @@ def data_train_mesh(config, erase, best_model, device):
                 x_mesh = x_mesh_list[run][k].clone().detach()
                 x_mesh_next = x_mesh_list[run][k + time_step].clone().detach()
 
-                if batch == 0:
-                    data_id = torch.ones((x_mesh.shape[0],1), dtype=torch.int) * run
-                else:
-                    data_id = torch.cat((data_id, torch.ones((x_mesh.shape[0],1), dtype=torch.int) * run), dim = 0)
-
                 if train_config.noise_level > 0:
                     x_mesh[:, 6:7] = x_mesh[:, 6:7] + train_config.noise_level * torch.randn_like(x_mesh[:, 6:7])
 
@@ -1492,8 +1488,12 @@ def data_train_mesh(config, erase, best_model, device):
                     y = y_mesh_list[run][k + time_step].clone().detach()
 
                 if batch == 0:
+                    x_batch = x_mesh
+                    data_id = torch.ones((x_mesh.shape[0], 1), dtype=torch.int) * run
                     y_batch = y
                 else:
+                    data_id = torch.cat((data_id, torch.ones((x_mesh.shape[0],1), dtype=torch.int) * run), dim = 0)
+                    x_batch = torch.cat((x_batch, x_mesh), dim=0)
                     y_batch = torch.cat((y_batch, y), dim=0)
 
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
@@ -1509,7 +1509,13 @@ def data_train_mesh(config, erase, best_model, device):
                 # plt.scatter(to_numpy(x_mesh[edge_index_mesh[1, pos], 1]), to_numpy(x_mesh[edge_index_mesh[1, pos], 2]), s=10, c='r')
                 # plt.show()
 
-            loss = ((pred - y_batch) * mask_mesh).norm(2)
+            if time_step == 1:
+                loss = ((pred - y_batch) * mask_mesh).norm(2)
+            elif time_step > 1:
+                if model_config.prediction == 'first_derivative':
+                    x_mesh_pred = x_batch[:,6:9] + delta_t * time_step * pred
+                    loss = ((x_mesh_pred - y_batch) * mask_mesh).norm(2)
+
             loss.backward()
             optimizer.step()
 
@@ -1592,13 +1598,11 @@ def data_train_mesh(config, erase, best_model, device):
             labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding,
                                                               train_config.cluster_distance_threshold, type_list,
                                                               n_particle_types, embedding_cluster)
-
         else:
             proj_interaction = popt_list
             proj_interaction[:, 1] = proj_interaction[:, 0]
 
         if (replace_with_cluster) & ((epoch + 1) % sparsity_freq == 0):
-
             labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction,
                                                               embedding, train_config.cluster_distance_threshold,
                                                               type_list, n_node_types, embedding_cluster)
@@ -3480,7 +3484,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
     n_nodes = simulation_config.n_nodes
-    n_nodes_per_axis = int(np.sqrt(n_nodes))
     n_runs = training_config.n_runs
     n_frames = simulation_config.n_frames
     delta_t = simulation_config.delta_t
@@ -3634,6 +3637,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         mask_ghost = np.argwhere(mask_ghost == 1)
         mask_ghost = mask_ghost[:, 0].astype(int)
     if has_mesh:
+        n_nodes_per_axis = int(np.sqrt(n_nodes))
+        
         hnorm = torch.load(f'{log_dir}/hnorm.pt', map_location=device).to(device)
 
         mesh_data = torch.load(f'graphs_data/{dataset_name}/mesh_data_{run}.pt', map_location=device)
