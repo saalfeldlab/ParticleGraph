@@ -20,12 +20,15 @@ graph_model:
   particle_model_name: ''
   mesh_model_name: 'RD_RPS_Mesh'
   prediction: 'first_derivative'
+
   input_size: 8
   output_size: 3
   hidden_dim: 32
   n_mp_layers: 5
+
   aggr_type: 'add'
   mesh_aggr_type: 'add'
+
   embedding_dim: 2
   update_type: 'none'
 
