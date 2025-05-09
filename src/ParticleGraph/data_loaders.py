@@ -792,14 +792,9 @@ def load_U2OS_data(config, device, visualize, step):
     os.makedirs(output_dir, exist_ok=True)
 
     run = 0
-    x_list = []
-    y_list = []
 
     x_mesh_list = []
     y_mesh_list = []
-    edge_p_p_list = []
-    edge_f_p_list = []
-
 
     X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
     torch.save(mesh_data, f'graphs_data/{dataset_name}/mesh_data_{run}.pt')
@@ -820,22 +815,19 @@ def load_U2OS_data(config, device, visualize, step):
 
         x_mesh[:,6:9] = torch.tensor(im0[it], dtype=torch.float32, device=device).reshape(-1, 3) / 256
 
-        x_mesh_list.append(x_mesh.clone().detach())
-
         if it > 0:
-            value_prev = x_mesh_list[-1][:, 6:9]
-            value_curr = x_mesh[:, 6:9]
-            y_mesh = (value_curr - value_prev) / delta_t
+            y_mesh = torch.tensor(im0[it+1]-im0[it], dtype=torch.float32, device=device).reshape(-1, 3) / 256 / delta_t
         else:
             y_mesh = torch.zeros((x_mesh.shape[0], 3), dtype=torch.float32, device=device)
 
+        x_mesh_list.append(x_mesh.clone().detach())
         y_mesh_list.append(y_mesh.clone().detach())
 
         # fig = plt.subplots(figsize=(10, 10))
         # plt.xticks([])
         # plt.yticks([])
         # plt.axis('off')
-        # plt.scatter(to_numpy(x_mesh[:, 1]), to_numpy(1-x_mesh[:, 2]), s=1, c=to_numpy(x_mesh[:, 6]))
+        # plt.scatter(to_numpy(x_mesh[:, 1]), to_numpy(1-x_mesh[:, 2]), s=1, c=to_numpy(y_mesh[:, 0]))
         # plt.xlim([0, 1.])
         # plt.ylim([0, 1.])
         # num = f"{it:04}"

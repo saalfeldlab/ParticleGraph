@@ -1371,7 +1371,7 @@ def data_train_mesh(config, erase, best_model, device):
         y_mesh_list.append(h)
     h = y_mesh_list[0][0].clone().detach()
     for run in range(n_runs):
-        for k in range(n_frames):
+        for k in range(n_frames-5):
             h = torch.cat((h, y_mesh_list[run][k].clone().detach()), 0)
     hnorm = torch.std(h)
     torch.save(hnorm, os.path.join(log_dir, 'hnorm.pt'))
@@ -1422,7 +1422,7 @@ def data_train_mesh(config, erase, best_model, device):
 
     print('update variables ...')
     # update variable if particle_dropout, cell_division, etc ...
-    x_mesh = x_mesh_list[1][n_frames - 1].clone().detach()
+    x_mesh = x_mesh_list[1][n_frames - 5].clone().detach()
     type_list = x_mesh[:, 5:6].clone().detach()
     n_nodes = x_mesh.shape[0]
     print(f'N nodes: {n_nodes}')
@@ -1451,7 +1451,6 @@ def data_train_mesh(config, erase, best_model, device):
             print(f'{Niter} iterations per epoch')
             logger.info(f'{Niter} iterations per epoch')
             print(f'plot every {plot_frequency} iterations')
-
         if epoch == 1:
             repeat_factor = batch_size // old_batch_size
             mask_mesh = mask_mesh.repeat(repeat_factor, 1)
@@ -1463,15 +1462,11 @@ def data_train_mesh(config, erase, best_model, device):
 
         for N in trange(Niter):
 
-            phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
-            cos_phi = torch.cos(phi)
-            sin_phi = torch.sin(phi)
-
             run = 1 + np.random.randint(n_runs - 1)
 
             dataset_batch = []
             for batch in range(batch_size):
-                k = np.random.randint(n_frames - 1)
+                k = np.random.randint(n_frames - 2)
                 x_mesh = x_mesh_list[run][k].clone().detach()
 
                 if batch == 0:
@@ -1516,15 +1511,15 @@ def data_train_mesh(config, erase, best_model, device):
 
             total_loss += loss.item()
 
-            visualize_embedding = ('Wave' in model_config.mesh_model_name)
+            visualize_embedding = True
             if visualize_embedding & (((epoch < 10) & (N % plot_frequency == 0)) | (N == 0)):
                 torch.save({'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict()},
                            os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
-                plot_training(config=config, log_dir=log_dir, epoch=epoch, N=N, x=x_mesh, model=model, n_nodes=n_nodes, n_node_types=n_node_types,
+                plot_training_mesh(config=config, log_dir=log_dir, epoch=epoch, N=N, x=x_mesh, model=model, n_nodes=n_nodes, n_node_types=n_node_types,
                               index_nodes=index_nodes, dataset_num=1, index_particles=[], n_particles=[],
-                              n_particle_types=[], ynorm=ynorm, cmap=cmap, axis=True, device=device)
+                              n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
 
                 torch.save({'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict()},

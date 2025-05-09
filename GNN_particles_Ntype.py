@@ -66,7 +66,7 @@ if __name__ == '__main__':
         # config_list = ['arbitrary_3_field_video_bison_test']
         # config_list = ['cell_cardio_3']
         # config_list = ['RD_RPS_1']
-        config_list = ['cell_U2OS_1']
+        config_list = ['cell_U2OS_2']
 
 
     for config_file_ in config_list:
