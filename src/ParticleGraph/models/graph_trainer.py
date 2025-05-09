@@ -3476,6 +3476,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
     n_nodes = simulation_config.n_nodes
+    n_nodes_per_axis = int(np.sqrt(n_nodes))
     n_runs = training_config.n_runs
     n_frames = simulation_config.n_frames
     delta_t = simulation_config.delta_t
