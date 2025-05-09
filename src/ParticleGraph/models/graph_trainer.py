@@ -1381,10 +1381,15 @@ def data_train_mesh(config, erase, best_model, device):
     logger.info(f'hnorm: {to_numpy(hnorm)}')
     time.sleep(0.5)
     mesh_data = torch.load(f'graphs_data/{dataset_name}/mesh_data_1.pt', map_location=device)
-    mask_mesh = mesh_data['mask']
-    mask_mesh = mask_mesh.repeat(batch_size, 1)
+    # mask_mesh = mesh_data['mask']
+    # mask_mesh = mask_mesh.repeat(batch_size, 1)
     edge_index_mesh = mesh_data['edge_index']
     edge_weight_mesh = mesh_data['edge_weight']
+
+    ids = to_numpy(torch.argwhere(mesh_data['mask']==True)[:,0].squeeze())
+    mask = torch.isin(edge_index_mesh[1, :], torch.tensor(ids, device=device))
+    edge_index_mesh = edge_index_mesh[:, mask]
+    edge_weight_mesh = edge_weight_mesh[mask]
 
     if 'WaveMeshSmooth' in model_config.mesh_model_name:
         with torch.no_grad():
@@ -1464,6 +1469,8 @@ def data_train_mesh(config, erase, best_model, device):
             run = 1 + np.random.randint(n_runs - 1)
 
             dataset_batch = []
+            ids_index = 0
+            loss = 0
             for batch in range(batch_size):
                 k = np.random.randint(n_frames - 2 - time_step)
                 x_mesh = x_mesh_list[run][k].clone().detach()
@@ -1491,10 +1498,14 @@ def data_train_mesh(config, erase, best_model, device):
                     x_batch = x_mesh
                     data_id = torch.ones((x_mesh.shape[0], 1), dtype=torch.int) * run
                     y_batch = y
+                    ids_batch = ids
                 else:
                     data_id = torch.cat((data_id, torch.ones((x_mesh.shape[0],1), dtype=torch.int) * run), dim = 0)
                     x_batch = torch.cat((x_batch, x_mesh), dim=0)
                     y_batch = torch.cat((y_batch, y), dim=0)
+                    ids_batch = np.concatenate((ids_batch, ids + ids_index), axis=0)
+
+                ids_index += x.shape[0]
 
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
@@ -1510,11 +1521,11 @@ def data_train_mesh(config, erase, best_model, device):
                 # plt.show()
 
             if time_step == 1:
-                loss = ((pred - y_batch) * mask_mesh).norm(2)
+                loss = (pred[ids_batch] - y_batch[ids_batch]).norm(2)
             elif time_step > 1:
                 if model_config.prediction == 'first_derivative':
-                    x_mesh_pred = x_batch[:,6:9] + delta_t * time_step * pred * hnorm
-                    loss = ((x_mesh_pred - y_batch) * mask_mesh).norm(2)
+                    x_mesh_pred = x_batch[[ids_batch],6:9] + delta_t * time_step * pred[[ids_batch]] * hnorm
+                    loss = (x_mesh_pred - y_batch).norm(2)
 
             loss.backward()
             optimizer.step()
