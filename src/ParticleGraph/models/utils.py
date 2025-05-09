@@ -787,7 +787,7 @@ def plot_training_mesh(config,  log_dir, epoch, N, x, index_particles, n_particl
 
             fig = plt.figure(figsize=(8, 8))
             embedding = get_embedding(model.a, 1)
-            plt.scatter(embedding[:, 0], embedding[:, 1], c='k', s=5)
+            plt.scatter(embedding[:, 0], embedding[:, 1], c='k', s=1)
             plt.xticks([])
             plt.yticks([])
             plt.tight_layout()
