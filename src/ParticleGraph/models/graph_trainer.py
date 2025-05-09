@@ -3638,7 +3638,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         mask_ghost = mask_ghost[:, 0].astype(int)
     if has_mesh:
         n_nodes_per_axis = int(np.sqrt(n_nodes))
-        
+
         hnorm = torch.load(f'{log_dir}/hnorm.pt', map_location=device).to(device)
 
         mesh_data = torch.load(f'graphs_data/{dataset_name}/mesh_data_{run}.pt', map_location=device)
