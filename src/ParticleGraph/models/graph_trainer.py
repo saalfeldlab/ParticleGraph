@@ -338,7 +338,7 @@ def data_train_particle(config, erase, best_model, device):
 
                 if noise_level > 0:
                     y = y * (1 + torch.randn_like(y) * noise_level)
-                if time_step > 1:
+                if time_step == 1:
                     y[:,0:dimension] = y[:,0:dimension] / ynorm
 
                 if train_config.shared_embedding:
@@ -1349,6 +1349,7 @@ def data_train_mesh(config, erase, best_model, device):
     max_radius = config.simulation.max_radius
     min_radius = config.simulation.min_radius
     n_particle_types = simulation_config.n_particle_types
+    time_step = train_config.time_step
 
     log_dir, logger = create_log_dir(config, erase)
     logger.info(f'Graph files N: {n_runs}')
@@ -1456,8 +1457,6 @@ def data_train_mesh(config, erase, best_model, device):
 
         total_loss = 0
         Niter = n_frames * data_augmentation_loop // batch_size
-        if (batch_size == 1):
-            Niter = Niter // 4
 
         for N in trange(Niter):
 
@@ -1465,8 +1464,9 @@ def data_train_mesh(config, erase, best_model, device):
 
             dataset_batch = []
             for batch in range(batch_size):
-                k = np.random.randint(n_frames - 2)
+                k = np.random.randint(n_frames - 2 - time_step)
                 x_mesh = x_mesh_list[run][k].clone().detach()
+                x_mesh_next = x_mesh_list[run][k + time_step].clone().detach()
 
                 if batch == 0:
                     data_id = torch.ones((x_mesh.shape[0],1), dtype=torch.int) * run
@@ -1485,7 +1485,12 @@ def data_train_mesh(config, erase, best_model, device):
 
                 dataset = data.Data(x=x_mesh, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
                 dataset_batch.append(dataset)
-                y = y_mesh_list[run][k].clone().detach() / hnorm
+
+                if time_step == 1:
+                    y = y_mesh_list[run][k].clone().detach() / hnorm
+                elif time_step > 1:
+                    y = y_mesh_list[run][k + time_step].clone().detach()
+
                 if batch == 0:
                     y_batch = y
                 else:
