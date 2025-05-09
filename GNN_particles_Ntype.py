@@ -32,7 +32,6 @@ import warnings
 if __name__ == '__main__':
 
     warnings.filterwarnings("ignore", category=FutureWarning)
-
     # try:
     #     matplotlib.use("Qt5Agg")
     # except:
