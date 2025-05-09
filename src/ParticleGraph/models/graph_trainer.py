@@ -462,9 +462,9 @@ def data_train_particle(config, erase, best_model, device):
                     'optimizer_state_dict': optimizer.state_dict()},
                    os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
 
-        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
-        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
-        list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
+        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles))
+        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles))
+        list_loss.append(total_loss / (N + 1) / n_particles)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
         scheduler.step()
@@ -1436,7 +1436,6 @@ def data_train_mesh(config, erase, best_model, device):
 
     print("start training mesh ...")
 
-
     list_loss = []
     time.sleep(1)
     for epoch in range(n_epochs + 1):
@@ -1525,12 +1524,12 @@ def data_train_mesh(config, erase, best_model, device):
                             'optimizer_state_dict': optimizer.state_dict()},
                            os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
-        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_nodes / batch_size))
-        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_nodes / batch_size))
+        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_nodes))
+        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_nodes))
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()},
                    os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
-        list_loss.append(total_loss / (N + 1) / n_nodes / batch_size)
+        list_loss.append(total_loss / (N + 1) / n_nodes )
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
         # matplotlib.use("Qt5Agg")
@@ -2066,8 +2065,8 @@ def data_train_particle_field(config, erase, best_model, device):
                                 'optimizer_state_dict': optimizer_f.state_dict()},
                                os.path.join(log_dir, 'models', f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
-        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
-        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
+        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles))
+        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles))
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()},
                    os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
@@ -2075,7 +2074,7 @@ def data_train_particle_field(config, erase, best_model, device):
             torch.save({'model_state_dict': model_f.state_dict(),
                         'optimizer_state_dict': optimizer_f.state_dict()},
                        os.path.join(log_dir, 'models', f'best_model_f_with_{n_runs - 1}_graphs_{epoch}.pt'))
-        list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
+        list_loss.append(total_loss / (N + 1) / n_particles)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
         if has_ghost:
@@ -3830,7 +3829,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     n_particles = x.shape[0]
     x_inference_list = []
 
-    for it in trange(start_it, n_frames):   #  start_it+200): # min(9600+start_it,stop_it-time_step)):
+    for it in trange(start_it, n_frames-2):   #  start_it+200): # min(9600+start_it,stop_it-time_step)):
 
         check_and_clear_memory(device=device, iteration_number=it, every_n_iterations=25, memory_percentage_threshold=0.6)
         # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
@@ -3900,7 +3899,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             with torch.no_grad():
                 pred = mesh_model(dataset_mesh, data_id=data_id)
                 x[mask_mesh.squeeze(), 6:9] += pred[mask_mesh.squeeze()] * hnorm * delta_t
-                x[mask_mesh.squeeze(), 6:9] = torch.clamp(x[mask_mesh.squeeze(), 6:9], 0, 1)
+                x[mask_mesh.squeeze(), 6:9] = torch.clamp(x[mask_mesh.squeeze(), 6:9], 0, 2)
         elif has_field:
             match model_config.field_type:
                 case 'tensor':
@@ -4137,7 +4136,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
                     ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
                     ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-                if model_config.mesh_model_name == 'RD_Gray_Scott_Mesh':
+                if 'RD_Gray_Scott_Mesh' in model_config.mesh_model_name:
                     fig = plt.figure(figsize=(12, 6))
                     ax = fig.add_subplot(1, 2, 1)
                     colors = torch.sum(x[tri.simplices, 6], dim=1) / 3.0
@@ -4153,9 +4152,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     plt.xticks([])
                     plt.yticks([])
                     plt.axis('off')
-                if model_config.mesh_model_name == 'RD_RPS_Mesh':
+                if 'RD_RPS_Mesh' in model_config.mesh_model_name:
                     H1_IM = torch.reshape(x[:, 6:9], (n_nodes_per_axis, n_nodes_per_axis, 3))
-                    plt.imshow(H1_IM.detach().cpu().numpy())
+                    plt.imshow(H1_IM.detach().cpu().numpy()/5)
                     fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
                     ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
                     ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
