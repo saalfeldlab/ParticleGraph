@@ -1505,7 +1505,7 @@ def data_train_mesh(config, erase, best_model, device):
                     y_batch = torch.cat((y_batch, y), dim=0)
                     ids_batch = np.concatenate((ids_batch, ids + ids_index), axis=0)
 
-                ids_index += x.shape[0]
+                ids_index += x_mesh.shape[0]
 
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()

@@ -64,8 +64,8 @@ if __name__ == '__main__':
         # config_list = ['falling_water_ramp_x6_13']
         # config_list = ['arbitrary_3']
         # config_list = ['cell_cardio_3']
-        # config_list = ['RD_RPS_5']
-        config_list = ['cell_U2OS_2']
+        config_list = ['RD_RPS_5']
+        # config_list = ['cell_U2OS_2']
 
 
     for config_file_ in config_list:
