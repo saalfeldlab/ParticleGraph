@@ -64,7 +64,7 @@ class Mesh_RPS(pyg.nn.MessagePassing):
 
         if self.time_window_noise > 0:
             noise = torch.randn_like(input_phi[:,0:6]) * self.time_window_noise
-            input_phi = input_phi + noise
+            input_phi[:,0:6] = input_phi[:,0:6] + noise
 
         pred = self.lin_phi(input_phi)
 
