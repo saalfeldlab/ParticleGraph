@@ -41,6 +41,8 @@ training:
 
   data_augmentation_loop: 5000
 
+  time_step: 4
+
   n_runs: 2
   sparsity: 'replace_embedding'
   cluster_method: 'distance_plot'

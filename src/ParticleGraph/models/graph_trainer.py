@@ -1513,7 +1513,7 @@ def data_train_mesh(config, erase, best_model, device):
                 loss = ((pred - y_batch) * mask_mesh).norm(2)
             elif time_step > 1:
                 if model_config.prediction == 'first_derivative':
-                    x_mesh_pred = x_batch[:,6:9] + delta_t * time_step * pred
+                    x_mesh_pred = x_batch[:,6:9] + delta_t * time_step * pred * hnorm
                     loss = ((x_mesh_pred - y_batch) * mask_mesh).norm(2)
 
             loss.backward()
@@ -4163,7 +4163,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     plt.axis('off')
                 if 'RD_RPS_Mesh' in model_config.mesh_model_name:
                     H1_IM = torch.reshape(x[:, 6:9], (n_nodes_per_axis, n_nodes_per_axis, 3))
-                    plt.imshow(H1_IM.detach().cpu().numpy(),vmin=0,vmax=1)
+                    plt.imshow(H1_IM.detach().cpu().numpy())
                     fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
                     ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
                     ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
