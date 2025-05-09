@@ -1446,7 +1446,7 @@ def data_train_mesh(config, erase, best_model, device):
         logger.info(f'batch_size: {batch_size}')
 
         Niter = n_frames * data_augmentation_loop // batch_size
-        plot_frequency = int(Niter // 50)
+        plot_frequency = int(Niter // 10)
         if epoch==0:
             print(f'{Niter} iterations per epoch')
             logger.info(f'{Niter} iterations per epoch')
