@@ -348,7 +348,6 @@ def data_train_particle(config, erase, best_model, device):
 
                 if train_config.shared_embedding:
                     run = 1
-
                 if batch == 0:
                     data_id = torch.ones((y.shape[0],1), dtype=torch.int) * run
                     x_batch = x
@@ -368,6 +367,7 @@ def data_train_particle(config, erase, best_model, device):
 
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
+
             if has_ghost:
                 optimizer_ghost_particles.zero_grad()
 
@@ -398,28 +398,10 @@ def data_train_particle(config, erase, best_model, device):
 
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
-            elif simulation_config.state_type == 'sequence':
+            if simulation_config.state_type == 'sequence':
                 loss = (pred - y_batch).norm(2)
                 loss = loss + train_config.coeff_model_a * (model.a[run, ind_a + 1] - model.a[run, ind_a]).norm(2)
-            else:
-                if time_step == 1:
-                    if particle_batch_ratio < 1:
-                        loss = (pred[ids_batch] - y_batch[ids_batch]).norm(2)
-                    else:
-                        loss = (pred - y_batch).norm(2)
-                elif time_step > 1:
-                    if model_config.prediction == '2nd_derivative':
-                        x_pos_pred = (x_batch[:, 1:dimension + 1] + delta_t * time_step * (
-                                x_batch[:, dimension + 1:2 * dimension + 1] + delta_t * time_step * pred * ynorm))
-                    else:
-                        x_pos_pred = (x_batch[:, 1:dimension + 1] + delta_t * time_step * pred * ynorm)
-
-                    if particle_batch_ratio < 1:
-                        loss = loss + (x_pos_pred[ids_batch] - y_batch[ids_batch]).norm(2)
-                    else:
-                        loss = loss + (x_pos_pred - y_batch).norm(2)
-
-            if (epoch>0) & (coeff_continuous>0):
+            if (coeff_continuous>0) & (epoch>0) & :
                 rr = torch.linspace(0, max_radius, 1000, dtype=torch.float32, device=device)
                 for n in np.random.permutation(n_particles)[:n_particles//100]:
                     embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
@@ -429,6 +411,22 @@ def data_train_particle(config, erase, best_model, device):
                     func0 = model.lin_edge(in_features)
                     grad = func1-func0
                     loss = loss + coeff_continuous * grad.norm(2)
+
+            if time_step == 1:
+                if particle_batch_ratio < 1:
+                    loss = (pred[ids_batch] - y_batch[ids_batch]).norm(2)
+                else:
+                    loss = (pred - y_batch).norm(2)
+            elif time_step > 1:
+                if model_config.prediction == '2nd_derivative':
+                    x_pos_pred = x_batch[:, 1:dimension + 1] + delta_t * time_step * (x_batch[:, dimension + 1:2 * dimension + 1] + delta_t * time_step * pred * ynorm)
+                else:
+                    x_pos_pred = x_batch[:, 1:dimension + 1] + delta_t * time_step * pred * ynorm
+
+                if particle_batch_ratio < 1:
+                    loss = loss + (x_pos_pred[ids_batch] - y_batch[ids_batch]).norm(2)
+                else:
+                    loss = loss + (x_pos_pred - y_batch).norm(2)
 
             # matplotlib.use("Qt5Agg")
             # fig = plt.figure()
@@ -488,7 +486,7 @@ def data_train_particle(config, erase, best_model, device):
         plt.ylabel('Loss', fontsize=12)
         plt.xlabel('Epochs', fontsize=12)
 
-        if (has_bounding_box == False) & ('PDE_K' not in model_config.particle_model_name) & ('PDE_MLPs' not in model_config.particle_model_name) & ('PDE_F' not in model_config.particle_model_name) & ('PDE_WF' not in model_config.particle_model_name):
+        if ('PDE_K' not in model_config.particle_model_name) & ('PDE_MLPs' not in model_config.particle_model_name) & ('PDE_F' not in model_config.particle_model_name) & ('PDE_WF' not in model_config.particle_model_name) & (has_bounding_box == False) :
             ax = fig.add_subplot(1, 5, 2)
             embedding = get_embedding(model.a, 1)
             for n in range(n_particle_types):
