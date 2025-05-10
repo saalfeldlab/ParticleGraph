@@ -117,7 +117,9 @@ class Interaction_Particle(pyg.nn.MessagePassing):
                 torch.stack([torch.cos(self.phi), torch.sin(self.phi)]),
                 torch.stack([-torch.sin(self.phi), torch.cos(self.phi)])
             ])
-            d_pos[:, :2] = d_pos[:, :2] @ self.rotation_matrix.T
+            self.rotation_matrix = self.rotation_matrix.permute(*torch.arange(self.rotation_matrix.ndim - 1, -1, -1))
+
+            d_pos[:, :2] = d_pos[:, :2] @ self.rotation_matrix
         if self.reflection_augmentation & self.training == True:
             group = np.random.randint(0, 3)
             if group in [0, 1]:
@@ -155,7 +157,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
         delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
         if self.rotation_augmentation & (self.training == True):
-            delta_pos[:, :2] = delta_pos[:, :2] @ self.rotation_matrix.T
+            delta_pos[:, :2] = delta_pos[:, :2] @ self.rotation_matrix
 
         match self.model:
             case 'PDE_A'|'PDE_ParticleField_A':
