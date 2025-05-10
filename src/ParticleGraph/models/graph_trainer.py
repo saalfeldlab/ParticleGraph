@@ -3879,8 +3879,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         elif model_config.mesh_model_name == 'WaveMesh':
             rmserr = torch.sqrt(torch.mean((x[mask_mesh.squeeze(), 6:7] - x0[mask_mesh.squeeze(), 6:7]) ** 2))
         elif model_config.mesh_model_name == 'RD_RPS_Mesh':
-            rmserr = torch.sqrt(
-                torch.mean(torch.sum((x[mask_mesh.squeeze(), 6:9] - x0[mask_mesh.squeeze(), 6:9]) ** 2, axis=1)))
+            rmserr = torch.sqrt(torch.mean(torch.sum((x[mask_mesh.squeeze(), 6:9] - x0[mask_mesh.squeeze(), 6:9]) ** 2, axis=1)))
         elif has_bounding_box:
             rmserr = torch.sqrt(
                 torch.mean(torch.sum(bc_dpos(x[:, 1:dimension + 1] - x0[:, 1:dimension + 1]) ** 2, axis=1)))
@@ -4042,10 +4041,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     loss = (x[:, 1:dimension + 1] - x0_next[:, 1:dimension + 1]).norm(2)
                     pred_err_list.append(to_numpy(torch.sqrt(loss)))
                 elif do_tracking:
-
-                    # x[:, dimension + 1:2 * dimension + 1] = y
-                    # x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1] + x[:, dimension + 1:2 * dimension + 1] * delta_t)
-
                     x_pos_next = x0_next[:, 1:dimension + 1].clone().detach()
                     if pred.shape[1] != dimension:
                         pred = torch.cat((pred, torch.zeros(pred.shape[0], 1, device=pred.device)), dim= 1)
@@ -4061,12 +4056,21 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     pred_err_list.append(to_numpy(torch.sqrt(loss)))
                     if 'inference' in test_mode:
                         x[:,dimension+1:2*dimension+1] = pred.clone().detach() / (delta_t * time_step)
-                elif ('PDE_N' in model_config.signal_model_name) & (time_step>1):
-                    x[:n_particles, 6:7] += y[:n_particles] * delta_t * time_step
-                    loss = (x[:n_particles, 6:7] - x0_next[:n_particles, 6:7]).norm(2) * 0
-                    pred_err_list.append(to_numpy(torch.sqrt(loss)))
+                elif 'PDE_N' in model_config.signal_model_name:
+                    loss = (pred[:n_particles, 0:dimension] * ynorm - y0).norm(2)
+                    if 'PDE_N' in model_config.signal_model_name:
+                        x[:n_particles, 6:7] += y[:n_particles] * delta_t  # signal update
+                    else:
+                        x[:n_particles, dimension + 1:2 * dimension + 1] = y[:n_particles]
                 else:
                     loss = (pred[:n_particles, 0:dimension] * ynorm - y0).norm(2)
+                    pred_err_list.append(to_numpy(torch.sqrt(loss)))
+                    if model_config.prediction == '2nd_derivative':
+                        y = y * ynorm * delta_t
+                        x[:n_particles, dimension + 1:2 * dimension + 1] = x[:n_particles, dimension + 1:2 * dimension + 1] + y[:n_particles]  # speed update
+                    else:
+                        y = y * vnorm
+                    x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1] + x[:, dimension + 1:2 * dimension + 1] * delta_t)  # position update
 
                     # matplotlib.use("Qt5Agg")
                     # fig = plt.figure()
@@ -4075,19 +4079,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     # plt.ylabel('pred')
                     # plt.savefig(f'pred_{it}.png')
                     # plt.close()
-
-                    pred_err_list.append(to_numpy(torch.sqrt(loss)))
-                    if model_config.prediction == '2nd_derivative':
-                        y = y * ynorm * delta_t
-                        x[:n_particles, dimension + 1:2 * dimension + 1] = x[:n_particles, dimension + 1:2 * dimension + 1] + y[:n_particles]  # speed update
-                    else:
-                        y = y * vnorm
-                        if 'PDE_N' in model_config.signal_model_name:
-                            x[:n_particles, 6:7] += y[:n_particles] * delta_t  # signal update
-                        else:
-                            x[:n_particles, dimension + 1:2 * dimension + 1] = y[:n_particles]
-
-                    x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1] + x[:, dimension + 1:2 * dimension + 1] * delta_t)  # position update
 
                 if 'bounce_all_v0' in test_mode:
                     gap = 0.005
@@ -4109,15 +4100,15 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     if bouncing_pos.numel() > 0:
                         x[bouncing_pos, 4] = - 0.7 * bounce_coeff * x[bouncing_pos, 4]
                         x[bouncing_pos, 2] += x[bouncing_pos, 4] * delta_t * 10
-
-                if (time_window>1) & ('plot_data' not in test_mode):
-                    moving_pos = torch.argwhere(x[:,5]!=0)
-                    x_list[0][it+1,moving_pos.squeeze(),1:2 * dimension + 1] = x[moving_pos.squeeze(), 1:2 * dimension + 1].clone().detach()
                 if 'fixed' in test_mode:
                     fixed_pos = torch.argwhere(x[:,5]==0)
                     x[fixed_pos.squeeze(), 1:2 * dimension + 1] = x_list[0][it+1,fixed_pos.squeeze(),1:2 * dimension + 1].clone().detach()
                 if 'inference' in test_mode:
                     x_inference_list.append(x)
+
+                if (time_window>1) & ('plot_data' not in test_mode):
+                    moving_pos = torch.argwhere(x[:,5]!=0)
+                    x_list[0][it+1,moving_pos.squeeze(),1:2 * dimension + 1] = x[moving_pos.squeeze(), 1:2 * dimension + 1].clone().detach()
 
         # vizualization
         if 'plot_data' in test_mode:
