@@ -52,7 +52,6 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-
         task = 'train'
         best_model = None
 
@@ -91,10 +90,6 @@ if __name__ == '__main__':
             #               device=device)  # particle_of_interest=100,
             data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best', run=17, test_mode='', sample_embedding=False,
                       step=4, device=device)  # particle_of_interest=100,  'fixed_bounce_all'
-
-    if 'try_func' in task:
-            try_func(max_radius=config.simulation.max_radius, device=device)
-
 
 
 

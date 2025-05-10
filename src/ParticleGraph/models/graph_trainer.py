@@ -501,7 +501,6 @@ def data_train_particle(config, erase, best_model, device):
             func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config,
                                                                 model_MLP=model.lin_edge, model=model,
                                                                 n_nodes=0,
-                                                                dataset_number=1,
                                                                 n_particles=n_particles, ynorm=ynorm,
                                                                 type_list=to_numpy(x[:, 1 + 2 * dimension]),
                                                                 cmap=cmap, update_type='NA', device=device)
@@ -2133,7 +2132,6 @@ def data_train_particle_field(config, erase, best_model, device):
         func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config,
                                                             model_MLP=model.lin_edge, model=model,
                                                             n_nodes=0,
-                                                            dataset_number=1,
                                                             n_particles=n_particles, ynorm=ynorm,
                                                             type_list=to_numpy(x[:, 1 + 2 * dimension]),
                                                             cmap=cmap, update_type='NA', device=device)
@@ -2940,7 +2938,6 @@ def data_train_synaptic2(config, erase, best_model, device):
             func_list_, proj_interaction = analyze_edge_function(rr=torch.linspace(-xnorm, xnorm, 1000, device=device), vizualize=False, config=config,
                                                                 model_MLP=model_MLP, model=model,
                                                                 n_nodes=0,
-                                                                dataset_number=1,
                                                                 n_particles=n_particles, ynorm=ynorm,
                                                                 type_list=to_numpy(x[:, 1 + 2 * dimension]),
                                                                 cmap=cmap, update_type = update_type, device=device)
@@ -2951,7 +2948,6 @@ def data_train_synaptic2(config, erase, best_model, device):
             func_list, proj_interaction_ = analyze_edge_function(rr=torch.linspace(-xnorm, xnorm, 1000, device=device), vizualize=True, config=config,
                                                                 model_MLP=model_MLP, model=model,
                                                                 n_nodes=0,
-                                                                dataset_number=1,
                                                                 n_particles=n_particles, ynorm=ynorm,
                                                                 type_list=to_numpy(x[:, 1 + 2 * dimension]),
                                                                 cmap=cmap, update_type = update_type, device=device)

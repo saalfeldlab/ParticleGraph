@@ -543,7 +543,6 @@ def plot_training(config,  log_dir, epoch, N, x, index_particles, n_particles, n
 
     matplotlib.rcParams['savefig.pad_inches'] = 0
 
-
     fig = plt.figure(figsize=(8, 8))
     if do_tracking:
         embedding = to_numpy(model.a)
@@ -1271,16 +1270,11 @@ def analyze_edge_function_state(rr=[], config=None, model=None, id_list=None, ty
 
     return func_list, true_type_list, short_model_a_list, proj_interaction
 
-def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], model=None, n_nodes=0, dataset_number = 0, n_particles=None, ynorm=None, type_list=None, cmap=None, update_type=None, device=None):
+def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], model=None, n_nodes=0, n_particles=None, ynorm=None, type_list=None, cmap=None, update_type=None, device=None):
 
     max_radius = config.simulation.max_radius
     min_radius = config.simulation.min_radius
-
-    embedding = get_embedding(model.a, config.plotting.data_embedding)
-
-
-    if (update_type != 'NA') & model.embedding_trial:
-        embedding = torch.cat((embedding, model.b[0].clone().detach().repeat(n_particles, 1)), dim=1)
+    dimension = config.simulation.dimension
 
     if config.graph_model.particle_model_name != '':
         config_model = config.graph_model.particle_model_name
@@ -1304,21 +1298,22 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
     print('interaction functions ...')
     func_list = []
     for n in range(n_particles):
+
         if config.training.do_tracking:
-            embedding_ = embedding[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-        elif 'PDE_N' in config.graph_model.signal_model_name :
-            embedding_ = embedding[n_nodes + n, :] * torch.ones((1000, embedding.shape[1]),device=device)
+            embedding_ = model.a[n, :] * torch.ones((1000, dimension), device=device)
         else:
-            embedding_ = embedding[dataset_number, n_nodes+n, :] * torch.ones((1000, embedding.shape[1]), device=device)
+            if (update_type != 'NA') & model.embedding_trial:
+                embedding_ = torch.cat((model.a[1, n], model.b[0].clone().detach().repeat(n_particles, 1)), dim=1) * torch.ones((1000, 2*dimension), device=device)
+            else:
+                embedding_ = model.a[1, n] * torch.ones((1000, dimension), device=device)
 
         if update_type == 'NA':
             in_features = get_in_features(rr=rr, embedding=embedding_, model=model, model_name=config_model, max_radius=max_radius)
         else:
             in_features = get_in_features_update(rr=rr[:, None], embedding=embedding_, model=model, device=device)
         with torch.no_grad():
-            func = model_MLP(in_features.float())
+            func = model_MLP(in_features.float())[:, 0]
 
-        func = func[:, 0]
         func_list.append(func)
         if ((n % 5 == 0) | (config.graph_model.particle_model_name=='PDE_GS') | ('PDE_N' in config_model)) & vizualize:
             plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),2, color=cmap.color(type_list[n].astype(int)), linewidth=1, alpha=0.25)
@@ -1327,7 +1322,6 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
     func_list_ = to_numpy(func_list)
 
     if vizualize:
-        # plt.ylim(config.plotting.ylim)
         if config.graph_model.particle_model_name == 'PDE_GS':
             plt.xscale('log')
             plt.yscale('log')
@@ -1349,8 +1343,6 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
             trans = umap.UMAP(n_neighbors=50, n_components=2, transform_queue_size=0).fit(func_list_)
             proj_interaction = trans.transform(func_list_)
     print('done ...')
-
-
 
     return func_list, proj_interaction
 
