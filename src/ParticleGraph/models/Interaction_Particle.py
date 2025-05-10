@@ -78,7 +78,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
 
         if self.state == 'sequence':
             self.a = nn.Parameter(torch.ones((self.n_dataset, int(self.n_particles*100 + 100 ), self.embedding_dim), device=self.device, requires_grad=True,dtype=torch.float32))
-            self.embedding_step =  self.n_frames // 100
+            self.embedding_step = self.n_frames // 100
         else:
             self.a = nn.Parameter(
                     torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,

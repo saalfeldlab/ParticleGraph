@@ -892,7 +892,6 @@ def plot_training_mesh(config,  log_dir, epoch, N, x, index_particles, n_particl
                 plt.savefig(f"./{log_dir}/tmp_training/field/mesh_map_vG_{epoch}_{N}.tif",dpi=87)
                 plt.close()
 
-
         case 'WaveMesh' | 'WaveMeshSmooth':
 
             if model_config.mesh_model_name == 'WaveMeshSmooth':
@@ -1276,7 +1275,10 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
 
     max_radius = config.simulation.max_radius
     min_radius = config.simulation.min_radius
-    embedding = model.a[:n_particles].clone().detach()
+
+    embedding = get_embedding(model.a, config.plotting.data_embedding)
+
+
     if (update_type != 'NA') & model.embedding_trial:
         embedding = torch.cat((embedding, model.b[0].clone().detach().repeat(n_particles, 1)), dim=1)
 
@@ -1308,6 +1310,7 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
             embedding_ = embedding[n_nodes + n, :] * torch.ones((1000, embedding.shape[1]),device=device)
         else:
             embedding_ = embedding[dataset_number, n_nodes+n, :] * torch.ones((1000, embedding.shape[1]), device=device)
+
         if update_type == 'NA':
             in_features = get_in_features(rr=rr, embedding=embedding_, model=model, model_name=config_model, max_radius=max_radius)
         else:

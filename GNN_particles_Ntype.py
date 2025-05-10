@@ -32,10 +32,10 @@ import warnings
 if __name__ == '__main__':
 
     warnings.filterwarnings("ignore", category=FutureWarning)
-    # try:
-    #     matplotlib.use("Qt5Agg")
-    # except:
-    #     pass
+    try:
+        matplotlib.use("Qt5Agg")
+    except:
+        pass
 
     parser = argparse.ArgumentParser(description="ParticleGraph")
     parser.add_argument('-o', '--option', nargs='+', help='Option that takes multiple values')

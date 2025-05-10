@@ -334,12 +334,17 @@ def data_train_particle(config, erase, best_model, device):
                 elif time_step == 1:
                     y = torch.tensor(y_list[run][k], dtype=torch.float32, device=device).clone().detach()
                 elif time_step > 1:
-                    y = torch.tensor(x_list[run][k + time_step, :, 1:dimension + 1], device=device).clone().detach()
+                    y = torch.tensor(x_list[run][k + time_step, :, 1:dimension + 1], dtype=torch.float32, device=device).clone().detach()
 
                 if noise_level > 0:
                     y = y * (1 + torch.randn_like(y) * noise_level)
                 if time_step == 1:
                     y[:,0:dimension] = y[:,0:dimension] / ynorm
+
+                # fig = plt.figure()
+                # plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=1, c='k')
+                # plt.scatter(to_numpy(y[:, 0]), to_numpy(y[:, 1]), s=1, c='r')
+                # plt.show()
 
                 if train_config.shared_embedding:
                     run = 1
@@ -447,8 +452,7 @@ def data_train_particle(config, erase, best_model, device):
 
             total_loss += loss.item()
 
-            visualize_embedding = True
-            if visualize_embedding & (((epoch < 30) & (N % plot_frequency == 0)) | (N == 0)):
+            if ((epoch < 30) & (N % plot_frequency == 0)) | (N == 0):
                 plot_training(config=config, log_dir=log_dir,
                               epoch=epoch, N=N, x=x, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
                               index_particles=index_particles, n_particles=n_particles,
