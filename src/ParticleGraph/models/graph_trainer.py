@@ -330,16 +330,13 @@ def data_train_particle(config, erase, best_model, device):
                     dataset_batch.append(dataset)
 
                 if recursive_loop > 0 :
-                    y = torch.tensor(y_list[run][k+recursive_loop], dtype=torch.float32, device=device).clone().detach()
+                    y = torch.tensor(y_list[run][k+recursive_loop], dtype=torch.float32, device=device).clone().detach() / ynorm
                 elif time_step == 1:
-                    y = torch.tensor(y_list[run][k], dtype=torch.float32, device=device).clone().detach()
+                    y = torch.tensor(y_list[run][k], dtype=torch.float32, device=device).clone().detach() / ynorm
                 elif time_step > 1:
                     y = torch.tensor(x_list[run][k + time_step, :, 1:dimension + 1], dtype=torch.float32, device=device).clone().detach()
-
                 if noise_level > 0:
                     y = y * (1 + torch.randn_like(y) * noise_level)
-                if time_step == 1:
-                    y[:,0:dimension] = y[:,0:dimension] / ynorm
 
                 # fig = plt.figure()
                 # plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=1, c='k')
