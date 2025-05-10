@@ -337,7 +337,6 @@ def data_train_particle(config, erase, best_model, device):
                     y = torch.tensor(x_list[run][k + time_step, :, 1:dimension + 1], dtype=torch.float32, device=device).clone().detach()
                 if noise_level > 0:
                     y = y * (1 + torch.randn_like(y) * noise_level)
-
                 # fig = plt.figure()
                 # plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=1, c='k')
                 # plt.scatter(to_numpy(y[:, 0]), to_numpy(y[:, 1]), s=1, c='r')
@@ -398,7 +397,7 @@ def data_train_particle(config, erase, best_model, device):
             if simulation_config.state_type == 'sequence':
                 loss = (pred - y_batch).norm(2)
                 loss = loss + train_config.coeff_model_a * (model.a[run, ind_a + 1] - model.a[run, ind_a]).norm(2)
-            if (coeff_continuous>0) & (epoch>0) & :
+            if (coeff_continuous>0) & (epoch>0):
                 rr = torch.linspace(0, max_radius, 1000, dtype=torch.float32, device=device)
                 for n in np.random.permutation(n_particles)[:n_particles//100]:
                     embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
