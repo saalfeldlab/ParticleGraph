@@ -3850,7 +3850,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     n_particles = x.shape[0]
     x_inference_list = []
 
-    for it in trange(start_it, n_frames-2):   #  start_it+200): # min(9600+start_it,stop_it-time_step)):
+    for it in trange(start_it, start_it+200)   # n_frames-2):   #  start_it+200): # min(9600+start_it,stop_it-time_step)):
 
         check_and_clear_memory(device=device, iteration_number=it, every_n_iterations=25, memory_percentage_threshold=0.6)
         # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
@@ -3865,7 +3865,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         if has_mesh:
             x[:, 1:5] = x0[:, 1:5].clone().detach()
             dataset_mesh = data.Data(x=x, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
-        if (time_step>1) | do_tracking:
+        if do_tracking:
             x = x0.clone().detach()
 
         # error calculations
