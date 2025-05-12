@@ -59,7 +59,7 @@ class Mesh_RPS(pyg.nn.MessagePassing):
         laplacian_uvw = self.propagate(edge_index, uvw=uvw, discrete_laplacian=edge_attr)
 
         particle_id = x[:, 0:1].long()
-        embedding = self.a[self.data_id.clone().detach(), particle_id, :].squeeze()
+        embedding = self.a[self.data_id, particle_id, :].squeeze()
         input_phi = torch.cat((laplacian_uvw, uvw, embedding), dim=-1)
 
         if self.time_window_noise > 0:

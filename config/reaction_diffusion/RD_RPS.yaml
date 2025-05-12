@@ -8,7 +8,6 @@ simulation:
   diffusion_coefficients: [[0.02], [0.04], [0.05], [0.03]]
   n_particles: 10000
   n_particle_types: 4
-  n_interactions: 4
   n_nodes: 10000
   n_node_types: 4
   n_frames: 4000
@@ -16,7 +15,6 @@ simulation:
   boundary: 'periodic'
   node_value_map: 'pattern_10.tif'
   node_coeff_map: 'pics_quadrants.tif'
-  beta: 1
 
 graph_model:
   field_grid: 'voronoi'

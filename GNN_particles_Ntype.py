@@ -52,7 +52,7 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        task = 'train'
+        task = 'test'
         best_model = None
 
         # config_list = ['multimaterial_12_1','multimaterial_12_2','multimaterial_12_3','multimaterial_12_4','multimaterial_12_5',
@@ -61,7 +61,7 @@ if __name__ == '__main__':
         # config_list = ['fluids_m18_1']
         # config_list = ['signal_N5_v11_bis']
         # config_list = ['falling_water_ramp_x6_13']
-        config_list = ['arbitrary_3']
+        config_list = ['arbitrary_3_field_video_bison']
         # config_list = ['cell_cardio_3']
         # config_list = ['RD_RPS_5']
         # config_list = ['cell_U2OS_2']
@@ -88,7 +88,7 @@ if __name__ == '__main__':
             #     data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best',
             #               run=run_, test_mode='fixed_bounce_all', sample_embedding=False, step=4,
             #               device=device)  # particle_of_interest=100,
-            data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best', run=17, test_mode='fixed_bounce_all', sample_embedding=False,
+            data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best', run=1, test_mode='', sample_embedding=False,
                       step=4, device=device)  # particle_of_interest=100,  'fixed_bounce_all'
 
 

@@ -1947,8 +1947,7 @@ def data_train_particle_field(config, erase, best_model, device):
 
         total_loss = 0
         Niter = n_frames * data_augmentation_loop // batch_size
-        plot_frequency = int(Niter // 50)
-
+        plot_frequency = int(Niter // 10)
 
         if epoch==0:
             print(f'{Niter} iterations per epoch')

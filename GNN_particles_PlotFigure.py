@@ -568,7 +568,7 @@ def plot_embedding_func_cluster(model, config,embedding_cluster, cmap, index_par
         model_MLP_ = model.lin_phi
     else:
         model_MLP_ = model.lin_edge
-    func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config, model_MLP=model_MLP_, model=model, type_list=to_numpy(type_list), n_particles=n_particles, dataset_number=1, ynorm=ynorm, cmap=cmap, update_type='NA', device=device)
+    func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config, model_MLP=model_MLP_, model=model, type_list=to_numpy(type_list), n_particles=n_particles, ynorm=ynorm, cmap=cmap, update_type='NA', device=device)
     plt.close()
 
     # trans = umap.UMAP(n_neighbors=100, n_components=2, init='spectral').fit(func_list_)
@@ -3858,8 +3858,8 @@ def plot_particle_field(config, epoch_list, log_dir, logger, cc, style, device):
     y_list = []
     x_list.append(torch.load(f'graphs_data/{dataset_name}/x_list_1.pt', map_location=device))
     y_list.append(torch.load(f'graphs_data/{dataset_name}/y_list_1.pt', map_location=device))
-    ynorm = torch.load(f'./log/try_{dataset_name}/ynorm.pt', map_location=device).to(device)
-    vnorm = torch.load(f'./log/try_{dataset_name}/vnorm.pt', map_location=device).to(device)
+    ynorm = torch.load(f'./log/{dataset_name}/ynorm.pt', map_location=device).to(device)
+    vnorm = torch.load(f'./log/{dataset_name}/vnorm.pt', map_location=device).to(device)
 
     x_mesh_list = []
     y_mesh_list = []
@@ -3867,7 +3867,7 @@ def plot_particle_field(config, epoch_list, log_dir, logger, cc, style, device):
     x_mesh_list.append(x_mesh)
     y_mesh = torch.load(f'graphs_data/{dataset_name}/y_mesh_list_0.pt', map_location=device)
     y_mesh_list.append(y_mesh)
-    hnorm = torch.load(f'./log/try_{dataset_name}/hnorm.pt', map_location=device).to(device)
+    hnorm = torch.load(f'./log/{dataset_name}/hnorm.pt', map_location=device).to(device)
 
     mesh_data = torch.load(f'graphs_data/{dataset_name}/mesh_data_0.pt', map_location=device)
     mask_mesh = mesh_data['mask']
@@ -4053,6 +4053,12 @@ def plot_particle_field(config, epoch_list, log_dir, logger, cc, style, device):
                 plt.savefig(f"./{log_dir}/results/all/function_{epoch}.tif", dpi=80)
                 plt.close()
     else:
+
+        if 'black' in style:
+            mc = 'w'
+        else:
+            mc = 'k'
+
         for epoch in epoch_list:
             print(f'epoch: {epoch}')
 
@@ -8074,7 +8080,7 @@ def get_figures(index):
         case '3':
             config_list = ['arbitrary_3', 'arbitrary_3_continuous', 'arbitrary_3_3', 'arbitrary_16', 'arbitrary_32','arbitrary_64']
         case '4':
-            config_list = ['arbitrary_3_field_video_bison_quad']
+            config_list = ['arbitrary_3_field_video_bison_test']
         case '4_bis':
             config_list = ['arbitrary_3_field_video_bison']
         case 'supp1':
@@ -8415,13 +8421,20 @@ if __name__ == '__main__':
     # config_list = [f"multimaterial_9_{i}" for i in range(25, 33)]
     # config_list = [f"multimaterial_10_{i}" for i in range(1, 5)]
     # config_list = ['signal_N4_CElegans_a6', 'signal_N4_CElegans_a7', 'signal_N4_CElegans_a8', 'signal_N4_CElegans_a9',
-    config_list = ['signal_N4_CElegans_a7_1', 'signal_N4_CElegans_a7_2', 'signal_N4_CElegans_a7_3', 'signal_N4_CElegans_a7_4', 'signal_N4_CElegans_a7_5', 'signal_N4_CElegans_a7_6', 'signal_N4_CElegans_a7_7', 'signal_N4_CElegans_a9_1', 'signal_N4_CElegans_a9_2', 'signal_N4_CElegans_a9_3', 'signal_N4_CElegans_a9_4', 'signal_N4_CElegans_a9_5']
+    # config_list = ['signal_N4_CElegans_a7_1', 'signal_N4_CElegans_a7_2', 'signal_N4_CElegans_a7_3', 'signal_N4_CElegans_a7_4', 'signal_N4_CElegans_a7_5', 'signal_N4_CElegans_a7_6', 'signal_N4_CElegans_a7_7', 'signal_N4_CElegans_a9_1', 'signal_N4_CElegans_a9_2', 'signal_N4_CElegans_a9_3', 'signal_N4_CElegans_a9_4', 'signal_N4_CElegans_a9_5']
     # config_list = ['signal_N2_a43_2_1_t16']
 
     # config_list = ['multimaterial_13_1', 'multimaterial_13_2']
     # config_list = ['falling_water_ramp_x6_13']
+    config_list = ['arbitrary_3_field_video_bison_test']
+    config_list = ['RD_RPS']
 
     # plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
+
+
+    # f_list = ['4']
+    # for f in f_list:
+    #     config_list,epoch_list = get_figures(f)
 
     for config_file_ in config_list:
         print(' ')
@@ -8444,15 +8457,13 @@ if __name__ == '__main__':
 
         # get figure and put it in folder tmp
 
-        filename = 'first learned connectivity.tif'
-        shutil.copyfile('./log/' + pre_folder + config_file_ + '/results/' + filename, './log/' + pre_folder + '/tmp_results/' + config_file_ + '_' + filename)
+        # filename = 'first learned connectivity.tif'
+        # shutil.copyfile('./log/' + pre_folder + config_file_ + '/results/' + filename, './log/' + pre_folder + '/tmp_results/' + config_file_ + '_' + filename)
 
 
 
 
-    # f_list = ['synaptic_supp5']
-    # for f in f_list:
-    #     config_list,epoch_list = get_figures(f)
+
 
 
 
