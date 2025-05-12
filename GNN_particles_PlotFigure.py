@@ -4442,7 +4442,7 @@ def plot_RD_RPS(config, epoch_list, log_dir, logger, cc, style, device):
         labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=cluster_distance_threshold)
         labels_map = np.reshape(labels, (n_nodes_per_axis, n_nodes_per_axis))
         fig, ax = fig_init()
-        plt.imshow(labels_map, cmap='tab20', vmin=0, vmax=10)
+        plt.imshow(labels_map==5, cmap='tab20', vmin=0, vmax=10)
         fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
         ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
         ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
@@ -4450,7 +4450,7 @@ def plot_RD_RPS(config, epoch_list, log_dir, logger, cc, style, device):
         plt.ylabel(r'$y$', fontsize=68)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/labels_map_cbar.tif", dpi=300)
-        plt.close
+        plt.close()
 
         fig, ax = fig_init()
         for nodes_type in np.unique(labels[labels <5]):
@@ -4503,29 +4503,35 @@ def plot_RD_RPS(config, epoch_list, log_dir, logger, cc, style, device):
             lin_fit_reconstructed = np.zeros((len(np.unique(labels))-1, 3, 10))
             eq_list = ['u', 'v', 'w']
             # class 0 is discarded (borders)
-            for n in np.unique(labels)[1:]-1:
+
+            id = 0
+            for n in np.unique(labels):
                 print(n)
-                pos = np.argwhere((labels == n+1) & (to_numpy(mask_mesh.squeeze()) == 1))
-                pos = pos[:, 0].astype(int)
-                for it, eq in enumerate(eq_list):
-                    fitting_model = reaction_diffusion_model(eq)
-                    laplacian_u = to_numpy(laplacian_uvw[pos, 0])
-                    laplacian_v = to_numpy(laplacian_uvw[pos, 1])
-                    laplacian_w = to_numpy(laplacian_uvw[pos, 2])
-                    u = to_numpy(uvw[pos, 0])
-                    v = to_numpy(uvw[pos, 1])
-                    w = to_numpy(uvw[pos, 2])
-                    x_data = np.concatenate((laplacian_u[:, None], laplacian_v[:, None], laplacian_w[:, None],
-                                             u[:, None], v[:, None], w[:, None]), axis=1)
-                    y_data = to_numpy(increment[pos, 0 + it:1 + it])
-                    p0 = np.ones((10, 1))
-                    lin_fit, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data),
-                                                  p0=np.squeeze(p0), method='trf')
-                    lin_fit_true[n, it] = lin_fit
-                    y_data = to_numpy(pred[pos, it:it + 1])
-                    lin_fit, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data),
-                                                  p0=np.squeeze(p0), method='trf')
-                    lin_fit_reconstructed[n, it] = lin_fit
+                pos = np.argwhere((labels == n) & (to_numpy(mask_mesh.squeeze()) == 1))
+
+                if len(pos)>500:
+                    pos = pos[:, 0].astype(int)
+                    for it, eq in enumerate(eq_list):
+                        fitting_model = reaction_diffusion_model(eq)
+                        laplacian_u = to_numpy(laplacian_uvw[pos, 0])
+                        laplacian_v = to_numpy(laplacian_uvw[pos, 1])
+                        laplacian_w = to_numpy(laplacian_uvw[pos, 2])
+                        u = to_numpy(uvw[pos, 0])
+                        v = to_numpy(uvw[pos, 1])
+                        w = to_numpy(uvw[pos, 2])
+                        x_data = np.concatenate((laplacian_u[:, None], laplacian_v[:, None], laplacian_w[:, None],
+                                                 u[:, None], v[:, None], w[:, None]), axis=1)
+                        y_data = to_numpy(increment[pos, 0 + it:1 + it])
+                        p0 = np.ones((10, 1))
+                        lin_fit, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data),
+                                                      p0=np.squeeze(p0), method='trf')
+                        lin_fit_true[id, it] = lin_fit
+                        y_data = to_numpy(pred[pos, it:it + 1])
+                        lin_fit, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data),
+                                                      p0=np.squeeze(p0), method='trf')
+                        lin_fit_reconstructed[id, it] = lin_fit
+
+                    id += 1
 
             coeff_reconstructed = np.round(np.median(lin_fit_reconstructed, axis=0), 2)
             diffusion_coeff_reconstructed = np.round(np.median(lin_fit_reconstructed, axis=1), 2)[:, 9]
@@ -4600,12 +4606,12 @@ def plot_RD_RPS(config, epoch_list, log_dir, logger, cc, style, device):
 
             fig, ax = fig_init(formatx='%.3f', formaty='%.3f')
             x_data = np.array(true_diffusion_coeff)
-            y_data = diffusion_coeff_reconstructed
-            plt.scatter(x_data, y_data, c=mc, s=400)
+            y_data = np.sort(diffusion_coeff_reconstructed[labels_list])
+            plt.scatter(x_data, y_data, c='k', s=400)
             plt.ylabel(r'Learned diffusion coeff.', fontsize=64)
             plt.xlabel(r'True diffusion coeff.', fontsize=64)
-            plt.xlim([0, vm * 1.1])
-            plt.ylim([0, vm * 1.1])
+            plt.xlim([0, 0.04])
+            plt.ylim([0, 0.04])
             lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
             residuals = y_data - linear_model(x_data, *lin_fit)
             ss_res = np.sum(residuals ** 2)
