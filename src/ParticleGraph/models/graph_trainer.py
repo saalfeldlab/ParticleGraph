@@ -482,7 +482,7 @@ def data_train_particle(config, erase, best_model, device):
         plt.ylabel('Loss', fontsize=12)
         plt.xlabel('Epochs', fontsize=12)
 
-        if ('PDE_K' not in model_config.particle_model_name) & ('PDE_MLPs' not in model_config.particle_model_name) & ('PDE_F' not in model_config.particle_model_name) & ('PDE_WF' not in model_config.particle_model_name) & (has_bounding_box == False) :
+        if ('PDE_T' not in model_config.particle_model_name) & ('PDE_K' not in model_config.particle_model_name) & ('PDE_MLPs' not in model_config.particle_model_name) & ('PDE_F' not in model_config.particle_model_name) & ('PDE_WF' not in model_config.particle_model_name) & (has_bounding_box == False) :
             ax = fig.add_subplot(1, 5, 2)
             embedding = get_embedding(model.a, 1)
             for n in range(n_particle_types):

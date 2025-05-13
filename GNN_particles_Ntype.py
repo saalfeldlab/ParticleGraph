@@ -62,7 +62,7 @@ if __name__ == '__main__':
         # config_list = ['signal_N5_v11_bis']
         # config_list = ['falling_water_ramp_x6_13']
         # config_list = ['arbitrary_3_field_video_bison']
-        config_list = ['cell_cardio_1','cell_cardio_2']
+        config_list = ['cell_cardio_5']
         # config_list = ['RD_RPS_5']
         # config_list = ['cell_U2OS_2']
 

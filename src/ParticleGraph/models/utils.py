@@ -960,8 +960,6 @@ def plot_training_mesh(config,  log_dir, epoch, N, x, index_particles, n_particl
                         dpi=87)
             plt.close()
 
-
-
 def plot_training_mouse(config, log_dir, epoch, N, model):
 
     simulation_config = config.simulation
@@ -1371,7 +1369,7 @@ def choose_training_model(model_config=None, device=None, projections=None):
             model.edges = []
         case 'PDE_Agents' | 'PDE_Agents_A' | 'PDE_Agents_B' | 'PDE_Agents_C':
             model = Interaction_Agent(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
-        case 'PDE_A' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_mass' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G' | 'PDE_K':
+        case 'PDE_A' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_mass' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G' | 'PDE_K' | 'PDE_T':
             model = Interaction_Particle(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             model.edges = []
             if 'PDE_K' in model_name:

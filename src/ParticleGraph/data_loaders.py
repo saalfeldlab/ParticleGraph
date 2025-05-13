@@ -738,8 +738,8 @@ def load_cardiomyocyte_data(config, device, visualize, step):
         plt.close()
 
     if config.graph_model.prediction == '2nd_derivative':
-
-        y_list = torch.zeros((n_particles,2), dtype=torch.float32, device=device)
+        y_list = []
+        y_list.append(torch.zeros((n_particles,2), dtype=torch.float32, device=device))
         for it in trange(1, n_frames - 1):
 
             X_prev = data[it-1, :, :, 0:2].copy() / image_width
@@ -754,14 +754,14 @@ def load_cardiomyocyte_data(config, device, visualize, step):
 
 
             X_flat = np.reshape(X, (X.shape[0] * X.shape[1], X.shape[2]))
-            Y_flat = np.reshape(Y, (Y.shape[0] * Y.shape[1], Y.shape[2]))
+            Y_flat = Y
             indices = np.arange(0, X_flat.shape[0], 10)
             X_sampled = X_flat[indices]
             Y_sampled = Y_flat[indices]
 
             # Create the plot
             fig, ax = plt.subplots(figsize=(10, 10))  # You can adjust the figure size
-            ax.quiver(X_sampled[:, 0], X_sampled[:, 1], Y_sampled[:, 0]*5, Y_sampled[:, 1]*5,
+            ax.quiver(X_sampled[:, 0], X_sampled[:, 1], Y_sampled[:, 0]/5, Y_sampled[:, 1]/5,
                       angles='xy', scale_units='xy', scale=1, color='blue')
 
             ax.set_aspect('equal')

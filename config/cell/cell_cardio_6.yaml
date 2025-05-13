@@ -1,5 +1,5 @@
-description: 'velocity field on cultured cardiomyocytes cells   test training 2nd_derivative'
-dataset: 'cell_cardio_2'
+description: 'velocity field on cultured cardiomyocytes cells   test training first derivative    mix of cardio 1 and cardio 5'
+dataset: 'cell_cardio_6'
 data_folder_name: '/groups/saalfeld/home/allierc/signaling/cardiomyocytes/Cardio_1/0_B_15kPa_1_MMStack_Pos0.ome.tif.derivatives.npy'
 
 simulation:
@@ -17,7 +17,7 @@ simulation:
 graph_model:
   particle_model_name: 'PDE_T'
   mesh_model_name: ''
-  prediction: '2nd_derivative'
+  prediction: 'first_derivative'
 
   input_size: 15
   output_size: 2
@@ -37,7 +37,7 @@ plotting:
 
 training:
 
-  n_runs: 2
+  n_runs: 3
   device: 'auto'
   n_epochs: 20
 

@@ -452,7 +452,7 @@ def add_pre_folder(config_file_):
     elif 'wave' in config_file_:
         config_file = os.path.join('wave', config_file_)
         pre_folder = 'wave/'
-    elif 'cell' in config_file_:
+    elif ('cell' in config_file_) | ('cardio' in config_file_) | ('U2OS' in config_file_):
         config_file = os.path.join('cell', config_file_)
         pre_folder = 'cell/'
     elif 'mouse' in config_file_:

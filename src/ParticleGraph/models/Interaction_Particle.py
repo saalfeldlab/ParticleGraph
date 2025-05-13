@@ -126,14 +126,18 @@ class Interaction_Particle(pyg.nn.MessagePassing):
             self.rotation_matrix = self.rotation_matrix.permute(*torch.arange(self.rotation_matrix.ndim - 1, -1, -1))
 
             d_pos[:, :2] = d_pos[:, :2] @ self.rotation_matrix
-        if self.reflection_augmentation & self.training == True:
-            group = np.random.randint(0, 3)
-            if group in [0, 1]:
-                pos[:, group] = 1 - pos[:, group]
-                d_pos[:, group] = -d_pos[:, group]
-            else:
-                pos = 1 - pos
-                d_pos[:, 1] = -d_pos[:, 1]
+
+            for n in range(derivatives.shape[1]//2):
+                derivatives[:, n*2:n*2+2] = derivatives[:, n*2:n*2+2] @ self.rotation_matrix
+
+        # if self.reflection_augmentation & self.training == True:
+        #     group = np.random.randint(0, 3)
+        #     if group in [0, 1]:
+        #         pos[:, group] = 1 - pos[:, group]
+        #         d_pos[:, group] = -d_pos[:, group]
+        #     else:
+        #         pos = 1 - pos
+        #         d_pos[:, 1] = -d_pos[:, 1]
 
         if self.state == 'sequence':
             particle_id = x[:, 0:1].long()
@@ -142,7 +146,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
             particle_id = x[:, 0:1].long()
             embedding = self.a[self.data_id.clone().detach(), particle_id, :].squeeze()
 
-        out = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
+        out = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field, derivatives=derivatives)
 
         if self.update_type == 'mlp':
             out = self.lin_phi(torch.cat((out, embedding, d_pos), dim=-1))
@@ -158,7 +162,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
 
         return out
 
-    def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j, field_j):
+    def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j, field_j, derivatives_j):
 
         # distance normalized by the max radius
         r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
@@ -184,6 +188,8 @@ class Interaction_Particle(pyg.nn.MessagePassing):
                     (delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
             case 'PDE_K':
                 in_features = delta_pos
+            case 'PDE_T':
+                in_features = torch.cat((delta_pos, r[:, None], embedding_i, derivatives_j), dim=-1)
 
         if self.model == 'PDE_K':
             A = torch.zeros(self.n_particles, self.n_particles, device=self.device, requires_grad=False, dtype=torch.float32)
