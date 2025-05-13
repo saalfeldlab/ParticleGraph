@@ -664,97 +664,152 @@ def load_cardiomyocyte_data(config, device, visualize, step):
     dimension = config.simulation.dimension
     max_radius = config.simulation.max_radius
     min_radius = config.simulation.min_radius
-    n_nodes = config.simulation.n_nodes
 
-    output_dir = f"./graphs_data/{dataset_name}/Fig/"
-    os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(f"./graphs_data/{dataset_name}/Fig/", exist_ok=True)
+    os.makedirs( f"./graphs_data/{dataset_name}/Fig/Dots", exist_ok=True)
+    os.makedirs(f"./graphs_data/{dataset_name}/Fig/Derivatives", exist_ok=True)
+    os.makedirs( f"./graphs_data/{dataset_name}/Fig/Target", exist_ok=True)
+
 
     run = 0
     x_list = []
-    y_list = []
-
-    x_mesh_list = []
-    y_mesh_list = []
     edge_p_p_list = []
-    edge_f_p_list = []
 
-    file_path = os.path.expanduser(config.data_folder_name)
-    data = np.load(file_path, allow_pickle=True)
+    data = np.load(config.data_folder_name, allow_pickle=True)
+    image_width = np.max(data[0][:, 0]) - np.min(data[0][:, 0])
+    image_height = np.max(data[0][:, 1]) - np.min(data[0][:, 1])
 
     N = np.arange(n_particles, dtype=np.float32)[:, None]
     X = np.zeros((n_particles, 2))
     V = np.zeros((n_particles, 2))
     T = np.zeros((n_particles, 1))
-    H = np.zeros((n_particles, 2))
-    ID = np.arange(n_particles, dtype=np.float32)[:, None]
+    H = np.zeros((n_particles, data.shape[3]-2))
 
-
-
-    X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
-    torch.save(mesh_data, f'graphs_data/{dataset_name}/mesh_data_{run}.pt')
-    torch.save(mesh_data, f'graphs_data/{dataset_name}/mesh_data_{run+1}.pt')
-    mask_mesh = mesh_data['mask'].squeeze()
 
     plt.style.use('dark_background')
 
-
     for it in trange(0, n_frames - 1):
 
-        # Load the data for the current frame
-        X = (np.reshape(data[it], (n_particles, 2)) + 20) / 1300
-        V = np.zeros((n_particles, 2))
+        # normalization of the position
+        X = data[it,:,:,0:2].copy() / image_width
+        H = data[it,:,:,2:]
+        X = np.reshape(X, (X.shape[0] *  X.shape[1], X.shape[2]))
+        H = np.reshape(H, (H.shape[0] *  H.shape[1], H.shape[2]))
 
-        x = torch.tensor(np.concatenate((N.astype(int), X, V, T, H, ID.astype(int) - 1), axis=1), dtype=torch.float32, device=device)
+        uv_mapping = [0,2,1,3,4,7,5,8,6,9]
+        H = H[:,uv_mapping]
 
-        x_mesh = torch.concatenate(
-            (N1_mesh.clone().detach(), X1_mesh.clone().detach(), V1_mesh.clone().detach(),
-             T1_mesh.clone().detach(), H1_mesh.clone().detach(), A1_mesh.clone().detach()), 1)
+        x = torch.tensor(np.concatenate((N.astype(int), X, V, T, H), axis=1), dtype=torch.float32, device=device)
 
-        x_mesh_list.append(x_mesh.clone().detach())
-        y_mesh_list.append(x_mesh[:, 6:7])
+        x_list.append(x.clone().detach())
 
-        x_particle_field = torch.concatenate((x_mesh, x), dim=0)
         distance = torch.sum((x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
         adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
         edge_index = adj_t.nonzero().t().contiguous()
         edge_p_p_list.append(edge_index)
 
-        distance = torch.sum((x_particle_field[:, None, 1:dimension + 1] - x_particle_field[None, :, 1:dimension + 1]) ** 2, dim=2)
-        adj_t = ((distance < (max_radius / 2) ** 2) & (distance > min_radius ** 2)).float() * 1
-        edge_index = adj_t.nonzero().t().contiguous()
-        pos = torch.argwhere((edge_index[1, :] >= n_nodes) & (edge_index[0, :] < n_nodes))
-        pos = to_numpy(pos[:, 0])
-        edge_index = edge_index[:, pos]
-        edge_f_p_list.append(edge_index)
-
-        y = torch.zeros((x.shape[0], 2), dtype=torch.float32, device=device)
-
-        if it > 0:
-
-            positions_prev = x_list[-1][:, 1:3]
-            positions_curr = x[:, 1:3]
-            V = (positions_curr - positions_prev) / delta_t
-            x[:, 3:5] = V
-
-            if  it>1 :
-                v_prev = x_list[-1][:, 3:5]
-                v_curr = x[:, 3:5]
-                y = (v_curr - v_prev) / delta_t
-                y_list.append(y)
-
-        x_list.append(x)
-
         fig = plt.subplots(figsize=(20, 20))
         plt.xticks([])
         plt.yticks([])
         plt.axis('off')
-        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=10, c='w', alpha=0.75)
-        plt.xlim([-0.1, 1.1])
-        plt.ylim([-0.1, 1.1])
-
+        plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=1, c='w', alpha=0.75)
+        plt.xlim([0, 1])
+        plt.ylim([0, 1])
+        plt.tight_layout()
         num = f"{it:04}"
-        plt.savefig(f"./graphs_data/{dataset_name}/Fig/Fig_{num}", dpi=100)
+        plt.savefig(f"./graphs_data/{dataset_name}/Fig/Dots/Fig_{num}", dpi=70)
         plt.close()
+
+        metric_list=['du(t, x, y) / dx', 'du(t, x, y) / dy', 'dv(t, x, y) / dx', 'dv(t, x, y) / dy', 'd2u(t, x, y) / dx2', 'd2u(t, x, y) / dy2', 'd2u(t, x, y) / dxdy', 'd2v(t, x, y) / dx2', 'd2v(t, x, y) / dy2', 'd2v(t, x, y) / dxdy']
+
+        fig = plt.subplots(figsize=(25, 10))
+        plt.axis('off')
+        for k in range(10):
+            plt.subplot(2, 5, k+1)
+            plt.title(metric_list[uv_mapping[k]], fontsize=14)
+            if k<4:
+                plt.imshow(H[:,k].reshape((int(np.sqrt(n_particles)), int(np.sqrt(n_particles)))), cmap='viridis', vmin = -0.2, vmax=0.2)
+            else:
+                plt.imshow(H[:, k].reshape((int(np.sqrt(n_particles)), int(np.sqrt(n_particles)))), cmap='viridis', vmin=-0.02, vmax=0.02)
+            plt.axis('off')
+        plt.tight_layout()
+        num = f"{it:04}"
+        plt.savefig(f"./graphs_data/{dataset_name}/Fig/Derivatives/Derivative_{num}", dpi=70)
+        plt.close()
+
+    if config.graph_model.prediction == '2nd_derivative':
+
+        y_list = torch.zeros((n_particles,2), dtype=torch.float32, device=device)
+        for it in trange(1, n_frames - 1):
+
+            X_prev = data[it-1, :, :, 0:2].copy() / image_width
+            X = data[it, :, :, 0:2].copy() / image_width
+            X_next = data[it+1, :, :, 0:2].copy() / image_width
+
+            Y = (X_next - 2 * X_prev + X) / delta_t ** 2
+
+            Y = np.reshape(Y, (Y.shape[0] * Y.shape[1], Y.shape[2]))
+            y = torch.tensor(Y, dtype=torch.float32, device=device)
+            y_list.append(y.clone().detach())
+
+
+            X_flat = np.reshape(X, (X.shape[0] * X.shape[1], X.shape[2]))
+            Y_flat = np.reshape(Y, (Y.shape[0] * Y.shape[1], Y.shape[2]))
+            indices = np.arange(0, X_flat.shape[0], 10)
+            X_sampled = X_flat[indices]
+            Y_sampled = Y_flat[indices]
+
+            # Create the plot
+            fig, ax = plt.subplots(figsize=(10, 10))  # You can adjust the figure size
+            ax.quiver(X_sampled[:, 0], X_sampled[:, 1], Y_sampled[:, 0]*5, Y_sampled[:, 1]*5,
+                      angles='xy', scale_units='xy', scale=1, color='blue')
+
+            ax.set_aspect('equal')
+            ax.set_title("Acceleration Vector Field Plot")
+            ax.set_xlabel("X")
+            ax.set_ylabel("Y")
+            plt.grid(True)
+
+            num = f"{it:04}"
+            plt.savefig(f"./graphs_data/{dataset_name}/Fig/Target/2nd_derivative_{num}", dpi=70)
+            plt.close()
+        y_list[0] = y_list[1]   # better than zeros
+
+    elif config.graph_model.prediction == 'first_derivative':
+
+        y_list = []
+        for it in trange(0, n_frames - 1):  # Notice: loop until n_frames - 1
+
+            X = data[it, :, :, 0:2].copy() / image_width
+            X_next = data[it+1, :, :, 0:2].copy() / image_width
+
+            # First derivative using forward difference
+            Y = (X_next - X) / delta_t
+
+            Y = np.reshape(Y, (Y.shape[0] * Y.shape[1], Y.shape[2]))
+            y = torch.tensor(Y, dtype=torch.float32, device=device)
+            y_list.append(y.clone().detach())
+
+            # For plotting
+            X_flat = np.reshape(X, (X.shape[0] * X.shape[1], X.shape[2]))
+            Y_flat = Y
+            indices = np.arange(0, X_flat.shape[0], 10)
+            X_sampled = X_flat[indices]
+            Y_sampled = Y_flat[indices]
+
+            # Create the plot
+            fig, ax = plt.subplots(figsize=(10, 10))
+            ax.quiver(X_sampled[:, 0], X_sampled[:, 1], Y_sampled[:, 0]*5, Y_sampled[:, 1]*5,
+                      angles='xy', scale_units='xy', scale=1, color='green')
+
+            ax.set_aspect('equal')
+            ax.set_title("Velocity Vector Field Plot")
+            ax.set_xlabel("X")
+            ax.set_ylabel("Y")
+            plt.grid(True)
+            num = f"{it:04}"
+            plt.savefig(f"./graphs_data/{dataset_name}/Fig/Target/first_derivative_{num}", dpi=70)
+            plt.close()
 
     x_list = np.array(to_numpy(torch.stack(x_list)))
     y_list = np.array(to_numpy(torch.stack(y_list)))
@@ -764,16 +819,8 @@ def load_cardiomyocyte_data(config, device, visualize, step):
     np.save(f'graphs_data/{dataset_name}/x_list_{run+1}.npy', x_list)
     np.save(f'graphs_data/{dataset_name}/y_list_{run+1}.npy', y_list)
 
-    x_mesh_list = torch.stack(x_mesh_list)
-    y_mesh_list = torch.stack(y_mesh_list)
-    torch.save(x_mesh_list, f'graphs_data/{dataset_name}/x_mesh_list_{run}.pt')
-    torch.save(y_mesh_list, f'graphs_data/{dataset_name}/y_mesh_list_{run}.pt')
-    torch.save(edge_p_p_list, f'graphs_data/{dataset_name}/edge_p_p_list{run}.pt')
-    torch.save(edge_f_p_list, f'graphs_data/{dataset_name}/edge_f_p_list{run}.pt')
-    torch.save(x_mesh_list, f'graphs_data/{dataset_name}/x_mesh_list_{run+1}.pt')
-    torch.save(y_mesh_list, f'graphs_data/{dataset_name}/y_mesh_list_{run+1}.pt')
-    torch.save(edge_p_p_list, f'graphs_data/{dataset_name}/edge_p_p_list{run+1}.pt')
-    torch.save(edge_f_p_list, f'graphs_data/{dataset_name}/edge_f_p_list{run+1}.pt')
+    # torch.save(edge_p_p_list, f'graphs_data/{dataset_name}/edge_p_p_list{run}.pt')
+    # torch.save(edge_p_p_list, f'graphs_data/{dataset_name}/edge_p_p_list{run+1}.pt')
 
 
 def load_U2OS_data(config, device, visualize, step):

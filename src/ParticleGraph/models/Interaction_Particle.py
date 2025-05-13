@@ -109,6 +109,12 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         else:
             field = torch.ones_like(x[:,6:7])
 
+        if self.model == 'PDE_T':
+            derivatives = x[:, 6:]
+        else:
+            derivatives = torch.zeros_like(x[:, 6:7])
+
+
         pos = x[:, 1:self.dimension+1]
         d_pos = x[:, self.dimension+1:1+2*self.dimension] / self.vnorm
         if self.rotation_augmentation & self.training == True:

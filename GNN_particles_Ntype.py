@@ -52,7 +52,7 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        task = 'test'
+        task = 'generate'
         best_model = None
 
         # config_list = ['multimaterial_12_1','multimaterial_12_2','multimaterial_12_3','multimaterial_12_4','multimaterial_12_5',
@@ -61,8 +61,8 @@ if __name__ == '__main__':
         # config_list = ['fluids_m18_1']
         # config_list = ['signal_N5_v11_bis']
         # config_list = ['falling_water_ramp_x6_13']
-        config_list = ['arbitrary_3_field_video_bison']
-        # config_list = ['cell_cardio_3']
+        # config_list = ['arbitrary_3_field_video_bison']
+        config_list = ['cell_cardio_1','cell_cardio_2']
         # config_list = ['RD_RPS_5']
         # config_list = ['cell_U2OS_2']
 
@@ -80,7 +80,7 @@ if __name__ == '__main__':
         print(f'folder  {config.dataset}')
 
         if 'generate' in task:
-            data_generate(config, device=device, visualize=True, run_vizualized=0, style='black color', alpha=1, erase=False, bSave=True, step=100)  #config.simulation.n_frames // 100)
+            data_generate(config, device=device, visualize=True, run_vizualized=0, style='black color', alpha=1, erase=False, bSave=True, step=1)  #config.simulation.n_frames // 100)
         if 'train' in task:
             data_train(config=config, erase=False, best_model=best_model, device=device)
         if 'test' in task:
