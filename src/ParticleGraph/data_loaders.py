@@ -282,7 +282,7 @@ def load_LG_ODE(config, device=None, visualize=False, step=1000):
     torch.save(connection_matrix_list, f'graphs_data/graphs_{dataset_name}/connection_matrix_list.pt')
 
 
-def load_fluo_data_with_Cellpose(config, device, visualize):
+def load_2Dfluo_data_with_Cellpose(config, device, visualize):
 
     plt.style.use('dark_background')
 
@@ -653,7 +653,7 @@ def load_3Dfluo_data_with_Cellpose(config, device, visualize):
     # visualize_mesh(mesh_file)
 
 
-def load_grid_data(config, device, visualize, step):
+def load_2Dgrid_data(config, device, visualize, step):
 
 
     n_particles = config.simulation.n_particles
@@ -822,7 +822,7 @@ def load_grid_data(config, device, visualize, step):
     # torch.save(edge_p_p_list, f'graphs_data/{dataset_name}/edge_p_p_list{run+1}.pt')
 
 
-def load_fluo_data_on_mesh(config, device, visualize, step):
+def load_2Dfluo_data_on_mesh(config, device, visualize, step):
 
 
     n_particles = config.simulation.n_particles
