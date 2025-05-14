@@ -65,8 +65,8 @@ if __name__ == '__main__':
         # config_list = ['boids_16_256']
         # config_list = ['cell_cardio_3']
         # config_list = ['RD_RPS_5']
-        # config_list = ['cell_U2OS_2']
-        config_list = ['cell_MDCK_14']
+        config_list = ['cell_U2OS_1']
+        # config_list = ['cell_MDCK_14']
 
 
     for config_file_ in config_list:

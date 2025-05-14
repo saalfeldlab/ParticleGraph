@@ -18,7 +18,7 @@ simulation:
   start_frame: 0
 
 image_data:
-    file_type: '2D fluo'
+    file_type: '2D fluo Cellpose'
     cellpose_channel: 0
     cellpose_diameter: 75
 #    cellpose_model: '/groups/saalfeld/home/allierc/signaling/MDCK/Fluorescent and FLIM signal_MDCK-voltron2ST/merged_V2_ST_bottom_1_image_Dapi/models/CP_20250123_093109'

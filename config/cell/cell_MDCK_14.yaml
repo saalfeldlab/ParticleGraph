@@ -17,7 +17,7 @@ simulation:
   start_frame: 0
 
 image_data:
-    file_type: '2D fluo'
+    file_type: '2D fluo Cellpose'
     cellpose_channel: 0
     cellpose_diameter: 75
     cellpose_model: '/groups/saalfeld/home/allierc/signaling/MDCK/MDCK gCAMP7b 2nd observation/10 sec wound region/merged/models/CP_20250427_164351'

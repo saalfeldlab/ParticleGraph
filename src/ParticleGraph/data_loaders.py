@@ -282,7 +282,7 @@ def load_LG_ODE(config, device=None, visualize=False, step=1000):
     torch.save(connection_matrix_list, f'graphs_data/graphs_{dataset_name}/connection_matrix_list.pt')
 
 
-def load_2D_cell_data(config, device, visualize):
+def load_fluo_data_with_Cellpose(config, device, visualize):
 
     plt.style.use('dark_background')
 
@@ -559,7 +559,7 @@ def load_2D_cell_data(config, device, visualize):
         print(f'n_cells: {n_cells}')
 
 
-def load_3D_cell_data(config, device, visualize):
+def load_3Dfluo_data_with_Cellpose(config, device, visualize):
 
 
     data_folder_name = config.data_folder_name
@@ -653,7 +653,7 @@ def load_3D_cell_data(config, device, visualize):
     # visualize_mesh(mesh_file)
 
 
-def load_cardiomyocyte_data(config, device, visualize, step):
+def load_grid_data(config, device, visualize, step):
 
 
     n_particles = config.simulation.n_particles
@@ -822,7 +822,7 @@ def load_cardiomyocyte_data(config, device, visualize, step):
     # torch.save(edge_p_p_list, f'graphs_data/{dataset_name}/edge_p_p_list{run+1}.pt')
 
 
-def load_U2OS_data(config, device, visualize, step):
+def load_fluo_data_on_mesh(config, device, visualize, step):
 
 
     n_particles = config.simulation.n_particles
@@ -843,6 +843,7 @@ def load_U2OS_data(config, device, visualize, step):
     y_mesh_list = []
 
     X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
+    # save mesh grid, edges indices and Laplacian discrete values,
     torch.save(mesh_data, f'graphs_data/{dataset_name}/mesh_data_{run}.pt')
     torch.save(mesh_data, f'graphs_data/{dataset_name}/mesh_data_{run+1}.pt')
     mask_mesh = mesh_data['mask'].squeeze()
@@ -869,16 +870,16 @@ def load_U2OS_data(config, device, visualize, step):
         x_mesh_list.append(x_mesh.clone().detach())
         y_mesh_list.append(y_mesh.clone().detach())
 
-        # fig = plt.subplots(figsize=(10, 10))
-        # plt.xticks([])
-        # plt.yticks([])
-        # plt.axis('off')
-        # plt.scatter(to_numpy(x_mesh[:, 1]), to_numpy(1-x_mesh[:, 2]), s=1, c=to_numpy(y_mesh[:, 0]))
-        # plt.xlim([0, 1.])
-        # plt.ylim([0, 1.])
-        # num = f"{it:04}"
-        # plt.savefig(f"./graphs_data/{dataset_name}/Fig/Fig_{num}", dpi=100)
-        # plt.close()
+        fig = plt.subplots(figsize=(10, 10))
+        plt.xticks([])
+        plt.yticks([])
+        plt.axis('off')
+        plt.scatter(to_numpy(x_mesh[:, 1]), to_numpy(1-x_mesh[:, 2]), s=1, c=to_numpy(y_mesh[:, 0]))
+        plt.xlim([0, 1.])
+        plt.ylim([0, 1.])
+        num = f"{it:04}"
+        plt.savefig(f"./graphs_data/{dataset_name}/Fig/Fig_{num}", dpi=100)
+        plt.close()
 
 
     x_mesh_list = torch.stack(x_mesh_list)

@@ -98,14 +98,14 @@ def generate_from_data(config, device, visualize=True, step=None, cmap=None):
     elif 'worm' in data_folder_name:
         load_worm_data(config, device, visualize, step)
     elif 'U2OS' in data_folder_name:
-        load_U2OS_data(config, device, visualize, step)
+        load_fluo_data_on_mesh(config, device, visualize, step)
     elif 'cardio' in data_folder_name:
-        load_cardiomyocyte_data(config, device, visualize, step)
+        load_grid_data(config, device, visualize, step)
     elif image_data.file_type != 'none':
-        if image_data.file_type == '3D masks meshes':
-            load_3D_cell_data(config, device, visualize)
-        if image_data.file_type == '2D fluo':
-            load_2D_cell_data(config, device, visualize)
+        if image_data.file_type == '3D fluo Cellpose':
+            load_3Dfluo_data_with_Cellpose(config, device, visualize)
+        if image_data.file_type == '2D fluo Cellpose':
+            load_fluo_data_with_Cellpose(config, device, visualize)
     else:
         raise ValueError(f'Unknown data folder name {data_folder_name}')
 
