@@ -3845,7 +3845,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     n_particles = x.shape[0]
     x_inference_list = []
 
-    for it in trange(start_it, start_it+200):  # n_frames-2):   #  start_it+200): # min(9600+start_it,stop_it-time_step)):
+    for it in trange(start_it, n_frames-2):   #  start_it+200): # min(9600+start_it,stop_it-time_step)):
 
         check_and_clear_memory(device=device, iteration_number=it, every_n_iterations=25, memory_percentage_threshold=0.6)
         # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
@@ -4065,7 +4065,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                         x[:n_particles, dimension + 1:2 * dimension + 1] = x[:n_particles, dimension + 1:2 * dimension + 1] + y[:n_particles]  # speed update
                     else:
                         y = y * vnorm
-                        x[:n_particles, dimension + 1:2 * dimension + 1] = y[:n_particles]  # speed update
+                        if 'PDE_N' in model_config.signal_model_name:
+                            x[:n_particles, 6:7] += y[:n_particles] * delta_t  # signal update
+                        else:
+                            x[:n_particles, dimension + 1:2 * dimension + 1] = y[:n_particles]
                     x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1] + x[:, dimension + 1:2 * dimension + 1] * delta_t)  # position update
 
                     # matplotlib.use("Qt5Agg")
