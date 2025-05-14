@@ -3596,7 +3596,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                         n_particle_types = 3
 
         ynorm = torch.load(f'{log_dir}/ynorm.pt', map_location=device, weights_only=True)
-        vnorm = torch.load(f'{log_dir}/vnorm.pt', map_location=device, weights_only=True )
+        vnorm = torch.load(f'{log_dir}/vnorm.pt', map_location=device, weights_only=True)
+        if vnorm == 0:
+            vnorm=ynorm
 
     if do_tracking | has_state:
         for k in range(len(x_list[0])):
@@ -4063,6 +4065,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                         x[:n_particles, dimension + 1:2 * dimension + 1] = x[:n_particles, dimension + 1:2 * dimension + 1] + y[:n_particles]  # speed update
                     else:
                         y = y * vnorm
+                        x[:n_particles, dimension + 1:2 * dimension + 1] = y[:n_particles]  # speed update
                     x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1] + x[:, dimension + 1:2 * dimension + 1] * delta_t)  # position update
 
                     # matplotlib.use("Qt5Agg")

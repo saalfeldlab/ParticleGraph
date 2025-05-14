@@ -540,26 +540,53 @@ def plot_training(config,  log_dir, epoch, N, x, index_particles, n_particles, n
     plot_config = config.plotting
     do_tracking = train_config.do_tracking
     max_radius = simulation_config.max_radius
+    n_runs = train_config.n_runs
 
     matplotlib.rcParams['savefig.pad_inches'] = 0
 
-    fig = plt.figure(figsize=(8, 8))
-    if do_tracking:
-        embedding = to_numpy(model.a)
-        for n in range(n_particle_types):
-            plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n), s=1)
-    elif simulation_config.state_type == 'sequence':
-        embedding = to_numpy(model.a[1].squeeze())
-        plt.scatter(embedding[:-200, 0], embedding[:-200, 1], color='k', s=0.1)
+    if n_runs == 3:
+
+        fig = plt.figure(figsize=(24, 8))
+        ax = fig.add_subplot(1, 3, 1)
+        embedding = get_embedding(model.a, 1)
+        plt.scatter(embedding[:, 0], embedding[:, 1], s=5, alpha=0.5)
+        embedding = get_embedding(model.a, 2)
+        plt.scatter(embedding[:, 0], embedding[:, 1], s=5, alpha=0.5)
+        plt.xticks([])
+        plt.yticks([])
+        ax = fig.add_subplot(1, 3, 3)
+        embedding = get_embedding(model.a, 1)
+        plt.scatter(embedding[:, 0], embedding[:, 1], s=5, alpha=0)
+        embedding = get_embedding(model.a, 2)
+        plt.scatter(embedding[:, 0], embedding[:, 1], s=5, alpha=0.5)
+        plt.xticks([])
+        plt.yticks([])
+        ax = fig.add_subplot(1, 3, 2)
+        embedding = get_embedding(model.a, 1)
+        plt.scatter(embedding[:, 0], embedding[:, 1], s=5, alpha=0.5)
+        embedding = get_embedding(model.a, 2)
+        plt.scatter(embedding[:, 0], embedding[:, 1], s=5, alpha=0)
     else:
-        embedding = get_embedding(model.a, plot_config.data_embedding)
-        for n in range(n_particle_types):
-            plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n), s=1)
+        fig = plt.figure(figsize=(8, 8))
+        if do_tracking:
+            embedding = to_numpy(model.a)
+            for n in range(n_particle_types):
+                plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n), s=1)
+        elif simulation_config.state_type == 'sequence':
+            embedding = to_numpy(model.a[1].squeeze())
+            plt.scatter(embedding[:-200, 0], embedding[:-200, 1], color='k', s=0.1)
+        else:
+            embedding = get_embedding(model.a, plot_config.data_embedding)
+            for n in range(n_particle_types):
+                plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n), s=1)
+
     plt.xticks([])
     plt.yticks([])
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/embedding/{epoch}_{N}.tif",dpi=87)
     plt.close()
+
+
 
     match model_config.particle_model_name:
 
