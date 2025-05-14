@@ -325,7 +325,6 @@ def load_2D_cell_data(config, device, visualize):
 
     model_path = image_data.cellpose_model
     model_custom = models.CellposeModel(gpu=True, pretrained_model=model_path)
-
     model_denoise = denoise.CellposeDenoiseModel(gpu=True, model_type="cyto3", restore_type="denoise_cyto3")
 
     # model_cyto1 = models.CellposeModel(gpu=True, model_type='cyto3', nchan=2)

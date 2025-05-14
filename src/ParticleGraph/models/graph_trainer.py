@@ -4030,7 +4030,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                         x_next = bc_pos(y[:,0:dimension])
                     elif time_step == 2:
                         x_next = bc_pos(y[:,dimension:2*dimension])
-
                     x[:, dimension + 1:2 * dimension + 1] = (x_next - x[:, 1:dimension + 1]) / delta_t
                     x[:, 1:dimension + 1] = x_next
                     loss = (x[:, 1:dimension + 1] - x0_next[:, 1:dimension + 1]).norm(2)
