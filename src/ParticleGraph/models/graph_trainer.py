@@ -1328,6 +1328,7 @@ def data_train_mesh(config, erase, best_model, device):
 
     n_epochs = train_config.n_epochs
     n_node_types = simulation_config.n_node_types
+    n_nodes = simulation_config.n_nodes
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
     delta_t = simulation_config.delta_t
@@ -1348,6 +1349,8 @@ def data_train_mesh(config, erase, best_model, device):
     min_radius = config.simulation.min_radius
     n_particle_types = simulation_config.n_particle_types
     time_step = train_config.time_step
+    field_type = model_config.field_type
+    omega = model_config.omega
 
     log_dir, logger = create_log_dir(config, erase)
     logger.info(f'Graph files N: {n_runs}')
@@ -1398,7 +1401,7 @@ def data_train_mesh(config, erase, best_model, device):
 
     print('create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    if best_model != None:
+    if (best_model != None) & (best_model != '') & (best_model != 'None'):
         net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{best_model}.pt"
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
@@ -1438,6 +1441,19 @@ def data_train_mesh(config, erase, best_model, device):
         index = np.argwhere(x_mesh[:, 5].detach().cpu().numpy() == n)
         index_nodes.append(index.squeeze())
 
+    if field_type != '':
+        has_field= True
+        n_nodes_per_axis = int(np.sqrt(n_nodes))
+        model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
+                                out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
+                                hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device,
+                                first_omega_0=omega, hidden_omega_0=omega)
+        model_f.to(device=device)
+        optimizer_f = torch.optim.Adam(lr=train_config.learning_rate_NNR, params=model_f.parameters())
+        model_f.train()
+    else:
+        has_field = False
+
     print("start training mesh ...")
 
     list_loss = []
@@ -1463,6 +1479,9 @@ def data_train_mesh(config, erase, best_model, device):
 
         for N in trange(Niter):
 
+            if has_field:
+                optimizer_f.zero_grad()
+
             run = 1 + np.random.randint(n_runs - 1)
 
             dataset_batch = []
@@ -1472,6 +1491,9 @@ def data_train_mesh(config, erase, best_model, device):
                 k = np.random.randint(n_frames - 2 - time_step)
                 x_mesh = x_mesh_list[run][k].clone().detach()
                 x_mesh_next = x_mesh_list[run][k + time_step].clone().detach()
+
+                if has_field:
+                    field = model_f(time=k / n_frames) ** 2
 
                 if train_config.noise_level > 0:
                     x_mesh[:, 6:7] = x_mesh[:, 6:7] + train_config.noise_level * torch.randn_like(x_mesh[:, 6:7])
@@ -1508,7 +1530,7 @@ def data_train_mesh(config, erase, best_model, device):
             optimizer.zero_grad()
 
             for batch in batch_loader:
-                pred = model(batch, data_id = data_id)
+                pred = model(batch, data_id = data_id, has_field = has_field)
 
                 # fig = plt.figure(figsize=(8, 8))
                 # plt.ion()
@@ -3959,71 +3981,71 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
         else:
 
-            if has_ghost & ('PDE_N' not in model_config.signal_model_name):
-                x_ = x
-                x_ghost = model_ghost.get_pos(dataset_id=run, frame=it, bc_pos=bc_pos)
-                x_ = torch.cat((x_, x_ghost), 0)
-
-            # compute connectivity and prediction
-            if has_adjacency_matrix:
-                if 'PDE_N' in model_config.signal_model_name:
-                    if 'visual' in field_type:
-                        x[:n_nodes, 8:9] = model_f(time=it / n_frames) ** 2
-                        x[n_nodes:n_particles, 8:9] = 1
-                    elif 'learnable_short_term_plasticity' in field_type:
-                        alpha = (k % model.embedding_step) / model.embedding_step
-                        x[:, 8] = alpha * model.b[:, it // model.embedding_step + 1] ** 2 + (1 - alpha) * model.b[:,it // model.embedding_step] ** 2
-                    elif ('Siren_short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
-                        t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
-                        t[:, 0, :] = torch.tensor(it / n_frames, dtype=torch.float32, device=device)
-                        x[:, 8] = model_f(t).squeeze() ** 2
-                    elif 'modulation' in field_type:
-                        x[:, 8:9] = model_f(time=it / n_frames) ** 2
-                    if has_ghost & ('PDE_N' in model_config.signal_model_name):
-                        t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
-                        t[:, 0, :] = torch.tensor(it / n_frames, dtype=torch.float32, device=device)
-                        missing_activity = model_missing_activity[run](t).squeeze()
-                        x_ghost = torch.zeros((n_ghosts, x.shape[1]), device=device)
-                        x_ghost[:, 6:7] = missing_activity[:, None]
-                        x_ghost[:, 0] = n_particles + torch.arange(n_ghosts, device=device)
-                        x = torch.cat((x[:n_particles], x_ghost), 0)
-                        edges, edge_attr = dense_to_sparse(torch.ones((n_particles + n_ghosts)) - torch.eye(n_particles + n_ghosts))
-                        edges = edges.to(device=device)
-                        ids = np.arange(n_particles)
-                        mask = torch.isin(edges[1, :], torch.tensor(ids, device=device))
-                        edge_index = edges[:, mask]
-                dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
-                if 'test_simulation' in test_mode:
-                    y = y0 / ynorm
-                else:
-                    with torch.no_grad():
-                        pred = model(dataset, data_id=data_id)
-                        y = pred
-            else:
-                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                edge_index = adj_t.nonzero().t().contiguous()
-
-                if time_window > 0:
-                    xt = []
-                    for t in range(time_window):
-                        x_ = x_list[0][it - t].clone().detach()
-                        xt.append(x_[:, :])
-                    dataset = data.Data(x=xt, edge_index=edge_index)
-                else:
-                    dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
-
-                if 'test_simulation' in test_mode:
-                    y = y0 / ynorm
-                    pred = y
-                else:
-                    pred = model(dataset, data_id=data_id, training=False, k=it)
-                    y = pred
-
-                if has_ghost:
-                    y = y[mask_ghost]
-
             with torch.no_grad():
+                if has_ghost & ('PDE_N' not in model_config.signal_model_name):
+                    x_ = x
+                    x_ghost = model_ghost.get_pos(dataset_id=run, frame=it, bc_pos=bc_pos)
+                    x_ = torch.cat((x_, x_ghost), 0)
+
+                # compute connectivity and prediction
+                if has_adjacency_matrix:
+                    if 'PDE_N' in model_config.signal_model_name:
+                        if 'visual' in field_type:
+                            x[:n_nodes, 8:9] = model_f(time=it / n_frames) ** 2
+                            x[n_nodes:n_particles, 8:9] = 1
+                        elif 'learnable_short_term_plasticity' in field_type:
+                            alpha = (k % model.embedding_step) / model.embedding_step
+                            x[:, 8] = alpha * model.b[:, it // model.embedding_step + 1] ** 2 + (1 - alpha) * model.b[:,it // model.embedding_step] ** 2
+                        elif ('Siren_short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
+                            t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
+                            t[:, 0, :] = torch.tensor(it / n_frames, dtype=torch.float32, device=device)
+                            x[:, 8] = model_f(t).squeeze() ** 2
+                        elif 'modulation' in field_type:
+                            x[:, 8:9] = model_f(time=it / n_frames) ** 2
+                        if has_ghost & ('PDE_N' in model_config.signal_model_name):
+                            t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
+                            t[:, 0, :] = torch.tensor(it / n_frames, dtype=torch.float32, device=device)
+                            missing_activity = model_missing_activity[run](t).squeeze()
+                            x_ghost = torch.zeros((n_ghosts, x.shape[1]), device=device)
+                            x_ghost[:, 6:7] = missing_activity[:, None]
+                            x_ghost[:, 0] = n_particles + torch.arange(n_ghosts, device=device)
+                            x = torch.cat((x[:n_particles], x_ghost), 0)
+                            edges, edge_attr = dense_to_sparse(torch.ones((n_particles + n_ghosts)) - torch.eye(n_particles + n_ghosts))
+                            edges = edges.to(device=device)
+                            ids = np.arange(n_particles)
+                            mask = torch.isin(edges[1, :], torch.tensor(ids, device=device))
+                            edge_index = edges[:, mask]
+                    dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
+                    if 'test_simulation' in test_mode:
+                        y = y0 / ynorm
+                    else:
+                        with torch.no_grad():
+                            pred = model(dataset, data_id=data_id)
+                            y = pred
+                else:
+                    distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                    adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                    edge_index = adj_t.nonzero().t().contiguous()
+
+                    if time_window > 0:
+                        xt = []
+                        for t in range(time_window):
+                            x_ = x_list[0][it - t].clone().detach()
+                            xt.append(x_[:, :])
+                        dataset = data.Data(x=xt, edge_index=edge_index)
+                    else:
+                        dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
+
+                    if 'test_simulation' in test_mode:
+                        y = y0 / ynorm
+                        pred = y
+                    else:
+                        pred = model(dataset, data_id=data_id, training=False, k=it)
+                        y = pred
+
+                    if has_ghost:
+                        y = y[mask_ghost]
+
                 if sub_sampling > 1:
                     # predict position, does not work with rotation_augmentation
                     if time_step == 1:
@@ -4163,7 +4185,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     plt.axis('off')
                 if 'RD_RPS_Mesh' in model_config.mesh_model_name:
                     H1_IM = torch.reshape(x[:, 6:9], (n_nodes_per_axis, n_nodes_per_axis, 3))
-                    plt.imshow(H1_IM.detach().cpu().numpy())
+                    plt.imshow(to_numpy(H1_IM))
                     fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
                     ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
                     ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
@@ -4171,8 +4193,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     # plt.yticks([])
                     # plt.axis('off')
 
-                    plt.figure()
-                    plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=8, c=to_numpy(pred[:, 0] * delta_t * hnorm), cmap='viridis', vmin=0, vmax=5)
+                    # plt.figure()
+                    # plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=8, c=to_numpy(pred[:, 0] * delta_t * hnorm), cmap='viridis', vmin=0, vmax=5)
 
             elif ('visual' in field_type) & ('PDE_N' in model_config.signal_model_name):
                 if 'plot_data' in test_mode:

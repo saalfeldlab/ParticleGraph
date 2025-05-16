@@ -61,14 +61,20 @@ class Mesh_RPS(pyg.nn.MessagePassing):
             torch.tensor(np.ones((int(self.ndataset), int(self.nparticles), self.embedding_dim)), device=self.device,
                          requires_grad=True, dtype=torch.float32))
 
-    def forward(self, data=[], data_id=[], return_all=False):
+    def forward(self, data=[], data_id=[], has_field=False, return_all=False):
         self.data_id = data_id
+        self.has_field = has_field
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
 
         uvw = data.x[:, 6:9]
         pos = x[:, 1:3]
         particle_id = x[:, 0:1].long()
         embedding = self.a[self.data_id, particle_id, :].squeeze()
+
+        if self.has_field:
+            field = x[:, 9:10]
+        else:
+            field = torch.zeros_like(x[:, 9:10])
 
 
         self.step = 0
@@ -88,6 +94,9 @@ class Mesh_RPS(pyg.nn.MessagePassing):
             if self.time_window_noise > 0:
                 noise = torch.randn_like(input_phi[:,0:6]) * self.time_window_noise
                 input_phi[:,0:6] = input_phi[:,0:6] + noise
+
+        if self.has_field:
+            input_phi = torch.cat((input_phi, field), dim=-1)
 
         pred = self.lin_phi(input_phi)
 
