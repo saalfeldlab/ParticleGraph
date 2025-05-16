@@ -1,13 +1,13 @@
 description: 'system of particles falling down in a box'
-dataset: 'falling_water_ramp_wall_1000'
-data_folder_name: '/groups/saalfeld/saalfeldlab/projects/gnn/learning-to-simulate/WaterRamps/'
+dataset: 'multimaterial'
+data_folder_name: '/groups/saalfeld/saalfeldlab/projects/gnn/learning-to-simulate/MultiMaterial/'
 
 simulation:
   params: [[0, 0.2, 0.4, 0.6, 0.8], [0.2, 0.2, 0.2, 0.2, 0.2]]
   min_radius: 0
   max_radius: 0.05
   n_particles: 2800
-  n_particle_types: 2
+  n_particle_types: 5
   n_frames: 600
   delta_t: 0.0025
   dpos_init: 1.0
@@ -15,19 +15,19 @@ simulation:
   start_frame: 0
 
 graph_model:
-  particle_model_name: 'PDE_WF'
+  particle_model_name: 'PDE_WF2'
   mesh_model_name: ''
   prediction: '2nd_derivative'
 
   input_size: 18
-  output_size: 512
-  hidden_dim: 512
+  output_size: 256
+  hidden_dim: 256
   n_mp_layers: 4
   aggr_type: 'add'
   embedding_dim: 2
 
   update_type: 'mlp'
-  input_size_update: 520
+  input_size_update: 264
   n_layers_update: 4
   hidden_dim_update: 128
   output_size_update: 2
@@ -41,7 +41,7 @@ training:
   n_epochs: 20
   batch_size: 8
   small_init_batch_size: False
-  n_runs: 990
+  n_runs: 500
   time_window: 4
   time_window_noise: 0
   time_window_noise: 1.0E-5

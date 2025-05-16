@@ -53,19 +53,17 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'generate'
+        task = 'train'
         best_model = None
 
-        # config_list = ['multimaterial_12_1','multimaterial_12_2','multimaterial_12_3','multimaterial_12_4','multimaterial_12_5',
-        #                'multimaterial_13_1', 'multimaterial_13_2', 'multimaterial_13_3',
-        #                'multimaterial_14_1', 'multimaterial_14_2', 'falling_water_ramp_x6_13']
+        # config_list = ['multimaterial_9_12']
         # config_list = ['fluids_m18_1']
         # config_list = ['signal_N5_v11_bis']
-        # config_list = ['falling_water_ramp_x6_13']
+        config_list = ['falling_water_ramp_x6_11_2']
         # config_list = ['boids_16_256']
         # config_list = ['cell_cardio_3']
         # config_list = ['RD_RPS_5']
-        config_list = ['cell_U2OS_1']
+        # config_list = ['cell_U2OS_1']
         # config_list = ['cell_MDCK_14']
 
 
@@ -86,12 +84,12 @@ if __name__ == '__main__':
         if 'train' in task:
             data_train(config=config, erase=False, best_model=best_model, device=device)
         if 'test' in task:
-            # for run_ in range(0, config.simulation.n_frames, 50):
-            #     data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best',
-            #               run=run_, test_mode='fixed_bounce_all', sample_embedding=False, step=4,
-            #               device=device)  # particle_of_interest=100,
-            data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best', run=1, test_mode='', sample_embedding=False,
-                      step=50, device=device)  # particle_of_interest=100,  'fixed_bounce_all'
+            for run_ in range(4,8):
+                data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best',
+                          run=run_, test_mode='fixed_bounce_all', sample_embedding=False, step=4,
+                          device=device)  # particle_of_interest=100,
+            # data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best', run=4, test_mode='fixed_bounce_all', sample_embedding=False,
+            #           step=4, device=device)  # particle_of_interest=100,  'fixed_bounce_all'
 
     if 'try_func' in task:
             try_func(max_radius=config.simulation.max_radius, device=device)

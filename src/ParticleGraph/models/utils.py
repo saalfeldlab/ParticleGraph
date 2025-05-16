@@ -1426,7 +1426,7 @@ def choose_training_model(model_config=None, device=None, projections=None):
         case 'PDE_MLPs' | 'PDE_MLPs_A' | 'PDE_MLPs_A_bis' | 'PDE_MLPs_A_ter' | 'PDE_MLPs_B'| 'PDE_MLPs_B_0' |'PDE_MLPs_B_1' | 'PDE_MLPs_B_4'| 'PDE_MLPs_B_10' |'PDE_MLPs_C' | 'PDE_MLPs_D' | 'PDE_MLPs_E' | 'PDE_MLPs_F':
             model = Interaction_PDE_Particle(aggr_type=aggr_type, config=model_config, device=device,
                                                 bc_dpos=bc_dpos, dimension=dimension)
-        case 'PDE_WF':
+        case 'PDE_WF' | 'PDE_WF2':
             model = Interaction_Falling_Water_Wall(aggr_type=aggr_type, config=model_config,bc_dpos=bc_dpos, dimension=dimension, device=device)
         case 'PDE_WFS':
             model = Interaction_Falling_Water_Smooth(aggr_type=aggr_type, config=model_config,bc_dpos=bc_dpos, dimension=dimension, device=device)

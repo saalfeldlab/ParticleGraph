@@ -34,14 +34,14 @@ import pickle
 import json
 import scipy.io
 import h5py
+import re
+from skimage.draw import disk
+from skimage.transform import resize
 
-
-
-def extract_object_properties(segmentation_image, fluorescence_image=[]):
+def extract_object_properties(segmentation_image, fluorescence_image=[], radius=40):
     # Label the objects in the segmentation image
     labeled_image = label(segmentation_image)
-
-    # matplotlib.use("Qt5Agg")
+    fluorescence_image = np.flipud(fluorescence_image)
     # fig = plt.figure(figsize=(13, 10.5))
     # plt.imshow(fluorescence_image)
     # plt.show()
@@ -51,25 +51,67 @@ def extract_object_properties(segmentation_image, fluorescence_image=[]):
     for id, region in enumerate(regionprops(labeled_image, intensity_image=fluorescence_image)):
         # Get the cell ID
         cell_id = id
-        # Calculate the position (centroid) of the object
+
         pos_x = region.centroid[0]
         pos_y = region.centroid[1]
-        pos_x_weighted = region.weighted_centroid[0]
-        pos_y_weighted = region.weighted_centroid[1]
+
         # Calculate the area of the object
         area = region.area
 
-        if area > 8:
+        if area>8:
+
             # Calculate the perimeter of the object
             perimeter = region.perimeter
+
             # Calculate the aspect ratio of the bounding box
             aspect_ratio = region.major_axis_length / (region.minor_axis_length + 1e-6)
+
             # Calculate the orientation of the object
             orientation = region.orientation
-            # calculate sum intensity
-            fluo_sum = region.mean_intensity * area
 
-            object_properties.append((cell_id, pos_x_weighted, pos_y_weighted, area, perimeter, aspect_ratio, orientation, fluo_sum))
+            rr, cc = disk((pos_x, pos_y), radius, shape=fluorescence_image.shape)
+
+            # Ensure the coordinates are within bounds
+            valid_coords = (rr >= 0) & (rr < fluorescence_image.shape[0]) & (cc >= 0) & (
+                        cc < fluorescence_image.shape[1])
+
+            rr_valid = rr[valid_coords]
+            cc_valid = cc[valid_coords]
+
+            # Extract the fluorescence values inside the circular mask
+            fluo_sum_radius = np.sum(fluorescence_image[rr_valid, cc_valid])
+            fluo_sum_segmentation = region.mean_intensity * area
+
+            # if id == 339:
+            #     rr_valid_339 = rr_valid
+            #     cc_valid_339 = cc_valid
+            #     pos_x_339 = pos_x
+            #     pos_y_339 = pos_y
+            #     fluo_sum_radius_339 = np.sum(fluorescence_image[rr_valid_339, cc_valid_339])
+            #     print(len(object_properties), fluo_sum_radius_339)
+            # if id == 551:
+            #     rr_valid_551 = rr_valid
+            #     cc_valid_551 = cc_valid
+            #     pos_x_551 = pos_x
+            #     pos_y_551 = pos_y
+            #     fluo_sum_radius_551 = np.sum(fluorescence_image[rr_valid_551, cc_valid_551])
+            #     print(len(object_properties), fluo_sum_radius_551)
+
+            object_properties.append((cell_id, pos_x, pos_y, area, perimeter, aspect_ratio, orientation, fluo_sum_radius, fluo_sum_segmentation))
+
+    # tmp = fluorescence_image
+    # tmp[rr_valid_551, cc_valid_551] = 1
+    # fig = plt.figure(figsize=(13, 10.5))
+    # plt.imshow(tmp)
+    #
+    # fig = plt.figure(figsize=(13, 10.5))
+    # # plt.imshow(fluorescence_image*0)
+    # for i in range(len(object_properties)):
+    #     pos_x = object_properties[i][1]
+    #     pos_y = object_properties[i][2]
+    #     plt.scatter(pos_y, pos_x, s=100, c=object_properties[i][7], cmap='viridis', vmin=0, vmax=4000, alpha=0.75)
+    #     plt.text(pos_y, pos_x, f'{i}', fontsize=10, color='w')
+
 
     return object_properties
 
@@ -313,72 +355,104 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
         if (f[-3:] != 'Fig') & (f[-2:] != 'GT') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (f != 'generation_code.py'):
             os.remove(f)
     files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
-    for f in files:
-        os.remove(f)
+    # for f in files:
+    #     os.remove(f)
 
     files = os.listdir(data_folder_name)
     files = [f for f in files if f.endswith('.tif')]
-    files.sort()
+    files = sorted(files, key=lambda x: int(re.search(r'\d+', x).group()))
+
+    im = tifffile.imread(data_folder_name + files[0])
+    print(f'image size {im.shape}, frames {len(files)}')
 
     os.makedirs(f"{data_folder_name}/SEG", exist_ok=True)
     os.makedirs(f"{data_folder_name}/DN", exist_ok=True)
+    os.makedirs(f"{data_folder_name}/TRK", exist_ok=True)
+    os.makedirs(f"{data_folder_name}/TRK_RESULT", exist_ok=True)
 
-    model_path = image_data.cellpose_model
-    model_custom = models.CellposeModel(gpu=True, pretrained_model=model_path)
-    model_denoise = denoise.CellposeDenoiseModel(gpu=True, model_type="cyto3", restore_type="denoise_cyto3")
+    cellpose_model_path = image_data.cellpose_model
+    cellpose_denoise_model = image_data.cellpose_denoise_model
+    cellpose_diameter = image_data.cellpose_diameter
+    cellpose_channels = image_data.cellpose_channel
+    trackmate_size_ratio = image_data.trackmate_size_ratio
+    trackmate_frame_step = image_data.trackmate_frame_step
 
-    # model_cyto1 = models.CellposeModel(gpu=True, model_type='cyto3', nchan=2)
-    # model_cyto2 = models.CellposeModel(gpu=True, model_type='cyto2', nchan=2)
-    # model_cyto3 = models.CellposeModel(gpu=True, model_type='cyto2_cp3', nchan=2)
+    if 'models' in cellpose_model_path:
+        model_cellpose = models.CellposeModel(gpu=True, pretrained_model=cellpose_model_path)
+    elif 'cyto3' in cellpose_model_path:
+        model_cellpose = models.CellposeModel(gpu=True, model_type='cyto3', nchan=2)
+    elif 'cyto2' in cellpose_model_path:
+        model_cellpose = models.CellposeModel(gpu=True, model_type='cyto2', nchan=2)
+    elif 'cyto2_cp3' in cellpose_model_path:
+        model_cellpose = models.CellposeModel(gpu=True, model_type='cyto2_cp3', nchan=2)
 
-    print('generate segmentation masks with Cellpose ...')
+    if cellpose_denoise_model == 'cyto3':
+        model_denoise = denoise.CellposeDenoiseModel(gpu=True, model_type="cyto3", restore_type="denoise_cyto3")
 
-    for it in trange(len(files)):
-        im = tifffile.imread(data_folder_name + files[it])
-        im = np.array(im)
-        masks, flows, styles, imgs_dn = model_denoise.eval(im, diameter=75, channels=[0,0])
-        # masks, flows, styles = model_custom.eval(im, diameter=120, flow_threshold=0.0, invert=False, normalize=True, channels=image_data.cellpose_channel)
-        tifffile.imsave(data_folder_name + 'DN/' + files[it], imgs_dn[:,:,0].squeeze())
-        # matplotlib.use("Qt5Agg")
-        # fig = plt.subplots(figsize=(8, 8))
-        # plt.imshow(masks)
-        # plt.show()
+    if not os.path.exists(f"{data_folder_name}/TRK/_spots.csv"):
 
-    # if image_data.tracking_file != '':
-    #     im_tracking = tifffile.imread(image_data.tracking_file)
-    #     im_tracking = np.array(im_tracking)
+        print('generate segmentation masks with Cellpose ...')
+        for it in trange(len(files)):
+            im = tifffile.imread(data_folder_name + files[it])
+            im = np.array(im).astype('float32')
 
+            if cellpose_denoise_model != '':
+                for i in cellpose_channels:
+                    masks, flows, styles, imgs_dn = model_denoise.eval(im[:,:,i-1], diameter=cellpose_diameter, channels=[0,0])
+                    im[:,:,i-1:i] = imgs_dn.copy()
+            # tifffile.imsave(data_folder_name + 'DN/' + files[it], im)
+            masks, flows, styles = model_cellpose.eval(im, diameter=cellpose_diameter, flow_threshold=0.0, invert=False, normalize=True, channels=cellpose_channels)
+            tifffile.imsave(data_folder_name + 'SEG/' + files[it], masks)
 
+            object_properties = extract_object_properties(masks, im[:, :, image_data.membrane_channel], radius=cellpose_diameter/1.5)
+            image = im[:,:,0] * 0
+            for i in range(len(object_properties)):
+                cell_id = object_properties[i][0]
+                pos_x = object_properties[i][1]
+                pos_y = object_properties[i][2]
+                rr, cc = disk((pos_x, pos_y), 8, shape=image.shape)
+                image[rr, cc] = 255  # White blob
+            image = resize(image,(image.shape[0] // trackmate_size_ratio, image.shape[1] // trackmate_size_ratio),anti_aliasing=True)
+            tifffile.imsave(f'{data_folder_name}/TRK/{it:06}.tif', image.astype('uint8'))
 
-    if False:
+            # trackmate settings
+            # diameter 5
+            # distance closing gap 6 6 3
+            # min track length 20
 
-        if image_data.tracking_file != '':
-            df = pd.read_csv(image_data.tracking_file)
-            trackmate = dict()
-            trackmate['x'] = np.array(df['POSITION_X'][3:]).astype(float)
-            trackmate['y'] = np.array(df['POSITION_Y'][3:]).astype(float)
-            trackmate['frame'] = np.array(df['FRAME'][3:]).astype(int)
-            trackmate['track_ID'] = np.array(df['TRACK_ID'][3:])
-            trackmate['track_ID'] = pd.Series(trackmate['track_ID']).fillna(-1).astype(int).to_numpy()
+    elif not os.path.exists(f'graphs_data/{dataset_name}/time_series_list_0'):
 
+        df = pd.read_csv(f"{data_folder_name}/TRK/_spots.csv")
 
-        n_cells = 0
+        trackmate = dict()
+        trackmate['x'] = np.array(df['POSITION_X'][3:]).astype(float)
+        trackmate['y'] = np.array(df['POSITION_Y'][3:]).astype(float)
+        trackmate['frame'] = np.array(df['FRAME'][3:]).astype(int)
+        trackmate['track_ID'] = np.array(df['TRACK_ID'][3:])
+        trackmate['track_ID'] = pd.Series(trackmate['track_ID']).fillna(-1).astype(int).to_numpy()
+
+        im = tifffile.imread(data_folder_name + files[0])
+        im_dim = im.shape
+        trackmate['x'] = trackmate['x'] * trackmate_size_ratio
+        trackmate['y'] = trackmate['y'] * trackmate_size_ratio
+        trackmate['y'] = im_dim[0] - trackmate['y']
+
+        n_cells = np.max(trackmate['track_ID'])+100
+
+        time_series_list = []
+        for i in range(n_cells-1):
+            time_series_list.append(list([]))
+
         run = 0
         x_list = []
         y_list = []
-        track_list = []
-        full_vertice_list = []
 
+        for it in trange(0, len(files)-2):
 
-        for it in range(0,n_frames-1):
-
-            im_fluo = np.flipud(np.array(tifffile.imread(data_folder_name + files[it])))
+            im_fluo = tifffile.imread(data_folder_name + files[it])
+            im_fluo = np.array(im_fluo).astype('float32') / 256
             im_seg = np.flipud(np.array(tifffile.imread(data_folder_name + 'SEG/' + files[it])))
-
-            im_dim = im_seg.shape
-            if it == 0:
-                trackmate['y'] = im_dim[0] - trackmate['y']
-
+            im_seg = np.array(im_seg)
             object_properties = extract_object_properties(im_seg, im_fluo[:,:,image_data.membrane_channel])
             object_properties = np.array(object_properties, dtype=float)
 
@@ -386,29 +460,62 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
             X = object_properties[:,1:3]
             V = np.zeros((X.shape[0], 2))
             T = np.zeros((X.shape[0], 1))
-            F = np.zeros((X.shape[0], 2))
-            F [:, 1:2] = object_properties[:,7:8]
+            F = np.zeros((X.shape[0], 3))
+            F [:, 0:1] = object_properties[:,7:8]
             AREA = object_properties[:,3:4]
             PERIMETER = object_properties[:,4:5]
             ASPECT = object_properties[:,5:6]
             ORIENTATION = object_properties[:,6:7]
             ID = n_cells + np.arange(object_properties.shape[0])[:, None]
 
-            pos = np.argwhere(trackmate['frame'] == it)
-            plt.scatter(trackmate['x'][pos], trackmate['y'][pos], s=10, c='w', alpha=0.75)
+            pos = np.argwhere(trackmate['frame'] == it // trackmate_frame_step)
+
             X_trackmate = np.concatenate((trackmate['y'][pos], trackmate['x'][pos]), axis=1)
             trackID = trackmate['track_ID'][pos]
 
             # Calculate distances between each point in X and each point in X_trackmate
             distances = np.linalg.norm(X[:, None, :] - X_trackmate[None, :, :], axis=2)
             # Find the index of the closest point in X_trackmate for each point in X
-            closest_indices = np.argmin(distances, axis=1)
+            closest_indices = np.argmin(distances, axis=0)
             # Map the track_ID from trackmate to X using the closest indices
-            X_track_ID = trackmate['track_ID'][pos][closest_indices]
 
-            x = np.concatenate((N.astype(int), X, V, T, F, AREA, PERIMETER, ASPECT, ORIENTATION, X_track_ID, ID.astype(int)-1), axis=1)
+            X_track_ID = trackmate['track_ID'][pos]
 
-            if (it>0) & (image_data.tracking_file != ''):
+            F [:, 1:2] = F[:, 0:1] / np.median(F[closest_indices,0:1])
+
+            x = np.concatenate((X_track_ID, X[closest_indices], V[closest_indices], T[closest_indices], F[closest_indices]), axis=1)
+
+            for i in range(x.shape[0]):
+                time_series_list[int(x[i, 0])].append([it,x[i, 6]])
+
+            if False:
+                fig = plt.figure(figsize=(12, 12))
+                plt.scatter(X_trackmate[:,1], X_trackmate[:,0], s=50, c='w', alpha=0.75)
+                plt.scatter(X[:,1], X[:,0], s=50, c='g', alpha=0.75)
+                for i in range(x.shape[0]):
+                    plt.text(x[i,2], x[i,1], f'{int(x[i,0])}', fontsize=10, color='w')
+                    plt.scatter(X_trackmate[i,1], X_trackmate[i,0], s=10, c='r', alpha=0.75)
+                    plt.scatter(x[i,2], x[i,1], s=10, c='r', alpha=0.75)
+                plt.savefig(f"{data_folder_name}/TRK_RESULT/{it:06}.tif", dpi=80)
+                plt.close()
+
+            if False:
+                fig = plt.figure(figsize=(12, 12))
+                plt.axis('off')
+                # tmp=np.flipud(im_fluo/np.median(F[closest_indices,0:1]))
+                # plt.imshow((tmp[:,:,image_data.membrane_channel]), cmap='gray', vmin=0, vmax=0.001)
+                plt.imshow(im_fluo*0)
+                plt.scatter(x[:,2], x[:,1], s=100, c=x[:,7], cmap='viridis', alpha=0.75)
+                # if it%100==0 :
+                #     for i in range(x.shape[0]):
+                #         plt.text(x[i,2], x[i,1], f'{int(x[i,0])}', fontsize=8, color='w')
+                plt.xlim([0 , im_dim[1]])
+                plt.ylim([0 , im_dim[0]])
+                plt.tight_layout()
+                plt.savefig(f"{data_folder_name}/TRK_RESULT/{it:06}.tif", dpi=80)
+                plt.close()
+
+            if False: #(it>0) & (image_data.tracking_file != ''):
 
                 positions_prev = x_list[-1][:, 1:3]
                 positions_curr = x[:, 1:3]
@@ -434,123 +541,125 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
 
                 x = np.concatenate((N.astype(int), X, V, T, F, AREA, PERIMETER, ASPECT, ORIENTATION, X_track_ID, ID.astype(int) - 1), axis=1)
 
-
             x_list.append(x)
 
-            y = torch.zeros((x.shape[0], 2), dtype=torch.float32, device=device)
+            y = np.zeros((x.shape[0], 2))
             y_list.append(y)
 
-            vertices_list = []
-            for n in trange(1, len(x)):
-                mask = (im_seg == n)
-                if np.sum(mask)>0:
-                    vertices = mask_to_vertices(mask=mask, num_vertices=20)
-                    uniform_points = get_uniform_points(vertices, num_points=20)
-                    N = (n-1)*20 + np.arange(20, dtype=np.float32)[:, None]
-                    X = uniform_points
-                    empty_columns = np.zeros((X.shape[0], 2))
-                    T = n_cells + (n-1) * np.ones((X.shape[0], 1))
-                    vertices = np.concatenate((N.astype(int), X, empty_columns, T, N.astype(int)), axis=1)
-                    vertices_list.append(vertices)
-            # vertices_list = torch.stack(vertices_list)
-            # vertices_list = torch.reshape(vertices_list, (-1, vertices_list.shape[2]))
-            vertices = np.array(vertices_list)
-            full_vertice_list.append(vertices)
+            if False:
 
-            # params = torch.tensor([[1.6233, 1.0413, 1.6012, 1.5615]], dtype=torch.float32, device=device)
-            # model_vertices = PDE_V(aggr_type='mean', p=torch.squeeze(params), sigma=30, bc_dpos=bc_dpos, dimension=2)
-            # max_radius=50
-            # min_radius=0
-            # for epoch in trange(4):
-            #     distance = torch.sum(bc_dpos(vertices[:, None, 1:dimension + 1] - vertices[None, :, 1:dimension + 1]) ** 2, dim=2)
-            #     adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
-            #     edge_index = adj_t.nonzero().t().contiguous()
-            #     dataset = data.Data(x=vertices, pos=vertices[:, 1:3], edge_index=edge_index, field=[])
-            #     with torch.no_grad():
-            #         y = model_vertices(dataset)
-            #     vertices[:,1:3] = vertices[:,1:3] + y
-            #     vertices[:, 1:2] = torch.clip(vertices[:, 1:2], 0, im_dim[0])
-            #     vertices[:, 2:3] = torch.clip(vertices[:, 2:3], 0, im_dim[1])
+                vertices_list = []
+                for n in trange(1, len(x)):
+                    mask = (im_seg == n)
+                    if np.sum(mask)>0:
+                        vertices = mask_to_vertices(mask=mask, num_vertices=20)
+                        uniform_points = get_uniform_points(vertices, num_points=20)
+                        N = (n-1)*20 + np.arange(20, dtype=np.float32)[:, None]
+                        X = uniform_points
+                        empty_columns = np.zeros((X.shape[0], 2))
+                        T = n_cells + (n-1) * np.ones((X.shape[0], 1))
+                        vertices = np.concatenate((N.astype(int), X, empty_columns, T, N.astype(int)), axis=1)
+                        vertices_list.append(vertices)
+                # vertices_list = torch.stack(vertices_list)
+                # vertices_list = torch.reshape(vertices_list, (-1, vertices_list.shape[2]))
+                vertices = np.array(vertices_list)
+                full_vertice_list.append(vertices)
 
+                # params = torch.tensor([[1.6233, 1.0413, 1.6012, 1.5615]], dtype=torch.float32, device=device)
+                # model_vertices = PDE_V(aggr_type='mean', p=torch.squeeze(params), sigma=30, bc_dpos=bc_dpos, dimension=2)
+                # max_radius=50
+                # min_radius=0
+                # for epoch in trange(4):
+                #     distance = torch.sum(bc_dpos(vertices[:, None, 1:dimension + 1] - vertices[None, :, 1:dimension + 1]) ** 2, dim=2)
+                #     adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
+                #     edge_index = adj_t.nonzero().t().contiguous()
+                #     dataset = data.Data(x=vertices, pos=vertices[:, 1:3], edge_index=edge_index, field=[])
+                #     with torch.no_grad():
+                #         y = model_vertices(dataset)
+                #     vertices[:,1:3] = vertices[:,1:3] + y
+                #     vertices[:, 1:2] = torch.clip(vertices[:, 1:2], 0, im_dim[0])
+                #     vertices[:, 2:3] = torch.clip(vertices[:, 2:3], 0, im_dim[1])
 
-            print (f'{files[it]}')
-            fig = plt.subplots(figsize=(35, 20))
-            plt.xticks([])
-            plt.yticks([])
-            plt.axis('off')
+                print (f'{files[it]}')
+                fig = plt.subplots(figsize=(35, 20))
+                plt.xticks([])
+                plt.yticks([])
+                plt.axis('off')
 
-            ax = plt.subplot(161)
-            plt.axis('off')
-            plt.imshow(im_fluo)
-            for n in range(vertices.shape[0]):
-                plt.plot(vertices[n,:,2], vertices[n,:,1], c='w', linewidth=1)
-                # plt.text(x[n, 2], x[n, 1], f'{x[n,0]:0.0f}', fontsize=12, color='w')
-            # plt.scatter(x[:, 2], x[:, 1], s=10, c='w', alpha=0.75)
-            plt.xlim([0 , im_dim[1]])
-            plt.ylim([0 , im_dim[0]])
-            plt.xticks([])
-            plt.yticks([])
+                ax = plt.subplot(161)
+                plt.axis('off')
+                plt.imshow(im_fluo)
+                for n in range(vertices.shape[0]):
+                    plt.plot(vertices[n,:,2], vertices[n,:,1], c='w', linewidth=1)
+                    # plt.text(x[n, 2], x[n, 1], f'{x[n,0]:0.0f}', fontsize=12, color='w')
+                # plt.scatter(x[:, 2], x[:, 1], s=10, c='w', alpha=0.75)
+                plt.xlim([0 , im_dim[1]])
+                plt.ylim([0 , im_dim[0]])
+                plt.xticks([])
+                plt.yticks([])
 
-            ax = plt.subplot(162)
-            plt.axis('off')
-            plt.imshow(im_fluo*0)
-            for n in range(vertices.shape[0]):
-                plt.scatter(vertices[n,:,2], vertices[n,:,1], c='w', s=8, alpha=0.75, edgecolors='none')
-            plt.scatter(x[:, 2], x[:, 1], s=10, c='w', alpha=0.75)
-            plt.xlim([0 , im_dim[1]])
-            plt.ylim([0 , im_dim[0]])
-            plt.xticks([])
-            plt.yticks([])
+                ax = plt.subplot(162)
+                plt.axis('off')
+                plt.imshow(im_fluo*0)
+                for n in range(vertices.shape[0]):
+                    plt.scatter(vertices[n,:,2], vertices[n,:,1], c='w', s=8, alpha=0.75, edgecolors='none')
+                plt.scatter(x[:, 2], x[:, 1], s=10, c='w', alpha=0.75)
+                plt.xlim([0 , im_dim[1]])
+                plt.ylim([0 , im_dim[0]])
+                plt.xticks([])
+                plt.yticks([])
 
-            ax = plt.subplot(163)
-            plt.imshow(im_fluo*0)
-            plt.scatter(x[:, 2], x[:, 1], s=10, c='w', alpha=1)
-            # for n in range(len(x)):
-            #     plt.text(x[n, 2], x[n, 1], f'{x[n, -2]:0.0f}', fontsize=8, color='w')
-            plt.xlim([0 , im_dim[1]])
-            plt.ylim([0 , im_dim[0]])
-            plt.xticks([])
-            plt.yticks([])
+                ax = plt.subplot(163)
+                plt.imshow(im_fluo*0)
+                plt.scatter(x[:, 2], x[:, 1], s=10, c='w', alpha=1)
+                # for n in range(len(x)):
+                #     plt.text(x[n, 2], x[n, 1], f'{x[n, -2]:0.0f}', fontsize=8, color='w')
+                plt.xlim([0 , im_dim[1]])
+                plt.ylim([0 , im_dim[0]])
+                plt.xticks([])
+                plt.yticks([])
 
-            ax = plt.subplot(164)
-            plt.title('velocity', fontsize=48)
-            plt.scatter(x[:, 2], x[:, 1], s=20, alpha=1, c='w')
-            plt.quiver(x[:, 2], x[:, 1], x[:, 4], x[:, 3], color='w', scale = 250)
-            # plt.colorbar()
-            plt.xlim([0 , im_dim[1]])
-            plt.ylim([0 , im_dim[0]])
-            plt.xticks([])
-            plt.yticks([])
+                ax = plt.subplot(164)
+                plt.title('velocity', fontsize=48)
+                plt.scatter(x[:, 2], x[:, 1], s=20, alpha=1, c='w')
+                plt.quiver(x[:, 2], x[:, 1], x[:, 4], x[:, 3], color='w', scale = 250)
+                # plt.colorbar()
+                plt.xlim([0 , im_dim[1]])
+                plt.ylim([0 , im_dim[0]])
+                plt.xticks([])
+                plt.yticks([])
 
-            ax = plt.subplot(165)
-            plt.title('F', fontsize=48)
-            plt.scatter(x[:, 2], x[:, 1], s=100, c=x[:, 7], alpha=1, cmap='viridis', vmin=0, vmax=0.5E6)
-            # plt.colorbar()
-            plt.xlim([0 , im_dim[1]])
-            plt.ylim([0 , im_dim[0]])
-            plt.xticks([])
-            plt.yticks([])
+                ax = plt.subplot(165)
+                plt.title('F', fontsize=48)
+                plt.scatter(x[:, 2], x[:, 1], s=100, c=x[:, 7], alpha=1, cmap='viridis', vmin=0, vmax=0.5E6)
+                # plt.colorbar()
+                plt.xlim([0 , im_dim[1]])
+                plt.ylim([0 , im_dim[0]])
+                plt.xticks([])
+                plt.yticks([])
 
-            ax = plt.subplot(166)
-            plt.title('DF/F', fontsize=48)
-            plt.scatter(x[:, 2], x[:, 1], s=100, c=x[:, 6], alpha=1, cmap='viridis', vmin=-0.5, vmax=0.5)
-            # plt.colorbar()
-            plt.xlim([0 , im_dim[1]])
-            plt.ylim([0 , im_dim[0]])
-            plt.xticks([])
-            plt.yticks([])
+                ax = plt.subplot(166)
+                plt.title('DF/F', fontsize=48)
+                plt.scatter(x[:, 2], x[:, 1], s=100, c=x[:, 6], alpha=1, cmap='viridis', vmin=-0.5, vmax=0.5)
+                # plt.colorbar()
+                plt.xlim([0 , im_dim[1]])
+                plt.ylim([0 , im_dim[0]])
+                plt.xticks([])
+                plt.yticks([])
 
-            plt.tight_layout()
-            plt.xticks([])
-            plt.yticks([])
-            # plt.show()
-            plt.savefig(f"graphs_data/{dataset_name}/Fig/{files[it]}", dpi=100)
-            plt.close()
+                plt.tight_layout()
+                plt.xticks([])
+                plt.yticks([])
+                # plt.show()
+                plt.savefig(f"graphs_data/{dataset_name}/Fig/{files[it]}", dpi=100)
+                plt.close()
 
-            n_cells = ID[-1] + 1
+                n_cells = ID[-1] + 1
+
 
         np.savez(f'graphs_data/{dataset_name}/x_list_{run}', *x_list)
-        np.savez(f'graphs_data/{dataset_name}/full_vertice_list_{run}', *full_vertice_list)
+        np.savez(f'graphs_data/{dataset_name}/y_list_{run}', *y_list)
+        np.savez(f'graphs_data/{dataset_name}/time_series_list_{run}', *time_series_list)
 
         # torch.save(x_list, f'graphs_data/{dataset_name}/x_list_{run}.pt')
         # torch.save(y_list, f'graphs_data/{dataset_name}/y_list_{run}.pt')
@@ -558,6 +667,23 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
 
         print(f'n_cells: {n_cells}')
 
+    else:
+
+        x_list = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npz', allow_pickle=True)
+        y_list = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npz', allow_pickle=True)
+        time_series_list = np.load(f'graphs_data/{dataset_name}/time_series_list_{run}.npz', allow_pickle=True)
+
+        n_cells = len(x_list[0])
+        print(f'n_cells: {n_cells}')
+
+        it = 100
+
+        fig = plt.figure(figsize=(12, 12))
+        plt.axis('off')
+        plt.imshow(im_fluo*0)
+        for i in range(len(x_list[it])):
+            plt.scatter(x_list[it][i][:,2], x_list[it][i][:,1], c=x_list[0][it][i][:,7], s=100, cmap='viridis', alpha=0.75)
+            plt.text(x[i, 2], x[i, 1], f'{x[i, 0]}', fontsize=10, color='w')
 
 def load_3Dfluo_data_with_Cellpose(config, device, visualize):
 
@@ -636,18 +762,6 @@ def load_3Dfluo_data_with_Cellpose(config, device, visualize):
 
     torch.save(x_list, f'graphs_data/{dataset_name}/x_list_{run}.pt')
     torch.save(y_list, f'graphs_data/{dataset_name}/y_list_{run}.pt')
-
-
-
-
-
-
-
-
-
-
-
-
 
     # mesh_file = '/groups/wang/wanglab/GNN/240408-LVpD80-E10-IAI/SMG2-processed/masks_smooth2_mesh_vtp/240408-E14-SMG-LVpD80-E10-IAI-SMG2-combined-rcan-t049_cp_masks.vtp'
     # visualize_mesh(mesh_file)
@@ -846,7 +960,6 @@ def load_2Dfluo_data_on_mesh(config, device, visualize, step):
     # save mesh grid, edges indices and Laplacian discrete values,
     torch.save(mesh_data, f'graphs_data/{dataset_name}/mesh_data_{run}.pt')
     torch.save(mesh_data, f'graphs_data/{dataset_name}/mesh_data_{run+1}.pt')
-    mask_mesh = mesh_data['mask'].squeeze()
 
     plt.style.use('dark_background')
 
@@ -874,7 +987,12 @@ def load_2Dfluo_data_on_mesh(config, device, visualize, step):
         plt.xticks([])
         plt.yticks([])
         plt.axis('off')
-        plt.scatter(to_numpy(x_mesh[:, 1]), to_numpy(1-x_mesh[:, 2]), s=1, c=to_numpy(y_mesh[:, 0]))
+
+        im = to_numpy(x_mesh[:, 6:9])  # (n_nodes, 3)
+        im = im.reshape((int(np.sqrt(n_nodes)), int(np.sqrt(n_nodes)), 3))
+        # print values rangees of im and its shape
+
+        plt.imshow(np.clip(im * 100.0, 0, 1))
         plt.xlim([0, 1.])
         plt.ylim([0, 1.])
         num = f"{it:04}"

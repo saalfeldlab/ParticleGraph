@@ -1,5 +1,5 @@
 description: 'system of particles falling down in a box'
-dataset: 'falling_water_ramp_wall_1000'
+dataset: 'falling_water_ramp_wall'
 data_folder_name: '/groups/saalfeld/saalfeldlab/projects/gnn/learning-to-simulate/WaterRamps/'
 
 simulation:
@@ -41,7 +41,7 @@ training:
   n_epochs: 20
   batch_size: 8
   small_init_batch_size: False
-  n_runs: 990
+  n_runs: 500
   time_window: 4
   time_window_noise: 0
   time_window_noise: 1.0E-5

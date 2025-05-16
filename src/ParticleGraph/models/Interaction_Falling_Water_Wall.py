@@ -38,6 +38,8 @@ class Interaction_Falling_Water_Wall(pyg.nn.MessagePassing):
 
         self.device = device
 
+        self.model = model_config.particle_model_name
+
         self.pre_input_size = model_config.pre_input_size
         self.pre_output_size = model_config.pre_output_size
         self.pre_hidden_dim = model_config.pre_hidden_dim
@@ -67,7 +69,15 @@ class Interaction_Falling_Water_Wall(pyg.nn.MessagePassing):
         self.sub_sampling = simulation_config.sub_sampling
         self.prediction = model_config.prediction
 
-        self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
+
+        if self.model == 'PDE_WF2':
+            self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
+                                hidden_size=self.hidden_dim, device=self.device)
+
+            self.lin_edge2 = MLP(input_size=self.output_size + 4, output_size=self.output_size, nlayers=self.n_layers,
+                                hidden_size=self.hidden_dim, device=self.device)
+        else:
+            self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device)
 
         if self.update_type == 'mlp':
@@ -99,7 +109,15 @@ class Interaction_Falling_Water_Wall(pyg.nn.MessagePassing):
             noise = torch.randn_like(pos) * self.time_window_noise
             pos = pos + noise
 
-        pred = self.propagate(edge_index=edge_index, pos=pos, embedding=embedding)
+        if self.model == 'PDE_WF2':
+            self.step = 0
+            pred = self.propagate(edge_index=edge_index, pos=pos, embedding=embedding)
+            self.step = 1
+            pred = self.propagate(edge_index=edge_index, pos=pred, embedding=embedding)
+
+        else:
+            self.step = 0
+            pred = self.propagate(edge_index=edge_index, pos=pos, embedding=embedding)
 
         if self.update_type == 'mlp':
             pos_p = (pos - pos[:, 0:self.dimension].repeat(1, self.time_window))[:, self.dimension:]
@@ -132,15 +150,22 @@ class Interaction_Falling_Water_Wall(pyg.nn.MessagePassing):
 
     def message(self, edge_index_i, edge_index_j, pos_i, pos_j, embedding_i, embedding_j):
 
-        if self.time_window == 0:
+        if self.step == 0:
+            if self.time_window == 0:
+                delta_pos = self.bc_dpos(pos_j - pos_i)
+                in_features = torch.cat((delta_pos, embedding_i, embedding_j), dim=-1)
+            else:
+                pos_i_p = (pos_i - pos_i[:, 0:self.dimension].repeat(1, self.time_window))[:, self.dimension:]
+                pos_j_p = (pos_j - pos_i[:, 0:self.dimension].repeat(1, self.time_window))
+                in_features = torch.cat((pos_i_p, pos_j_p, embedding_i, embedding_j), dim=-1)
+            out = self.lin_edge(in_features)
+            return out
+
+        elif self.step == 1:
             delta_pos = self.bc_dpos(pos_j - pos_i)
             in_features = torch.cat((delta_pos, embedding_i, embedding_j), dim=-1)
-        else:
-            pos_i_p = (pos_i - pos_i[:, 0:self.dimension].repeat(1, self.time_window))[:, self.dimension:]
-            pos_j_p = (pos_j - pos_i[:, 0:self.dimension].repeat(1, self.time_window))
-            in_features = torch.cat((pos_i_p, pos_j_p, embedding_i, embedding_j), dim=-1)
-        out = self.lin_edge(in_features)
-        return out
+            out = self.lin_edge2(in_features)
+            return out
 
     def update(self, aggr_out):
 

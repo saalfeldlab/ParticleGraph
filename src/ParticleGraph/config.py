@@ -165,12 +165,16 @@ class ImageData(BaseModel):
 
     file_type: str = 'none'
     cellpose_model: str = 'cyto3'
+    cellpose_denoise_model: str = ''
     cellpose_diameter: float = 30
     cellpose_flow_threshold: int = 0.4
     cellpose_cellprob_threshold: int = 0.0
     cellpose_channel: list[int] = [1]
     membrane_channel: int = 0
     tracking_file: str =''
+    trackmate_size_ratio: float = 1.0
+    trackmate_frame_step: int = 1
+
 
 
 class TrainingConfig(BaseModel):
