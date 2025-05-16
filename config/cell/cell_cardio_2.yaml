@@ -46,8 +46,9 @@ training:
   device: 'auto'
   n_epochs: 20
 
-  batch_size: 8
+  batch_size: 1
   small_init_batch_size: False
+  particle_batch_ratio: 0.1
 
   noise_level: 0
 

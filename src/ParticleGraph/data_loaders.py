@@ -813,14 +813,14 @@ def load_2Dgrid_data(config, device, visualize, step):
         uv_mapping = [0,2,1,3,4,7,5,8,6,9]
         H = H[:,uv_mapping]
 
+        if it>0:
+            X_prev = data[it-1,:,:,0:2].copy() / image_width
+            X_prev = np.reshape(X_prev, (X_prev.shape[0] * X_prev.shape[1], X_prev.shape[2]))
+            V = (X - X_prev) / delta_t
+
         x = torch.tensor(np.concatenate((N.astype(int), X, V, T, H), axis=1), dtype=torch.float32, device=device)
 
         x_list.append(x.clone().detach())
-
-        distance = torch.sum((x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-        edge_index = adj_t.nonzero().t().contiguous()
-        edge_p_p_list.append(edge_index)
 
         fig = plt.subplots(figsize=(10, 10))
         plt.xticks([])
