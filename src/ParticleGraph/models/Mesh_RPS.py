@@ -33,9 +33,12 @@ class Mesh_RPS(pyg.nn.MessagePassing):
         train_config = config.training
 
         self.device = device
+        self.model = model_config.mesh_model_name
+
         self.input_size = model_config.input_size
         self.output_size = model_config.output_size
         self.hidden_size = model_config.hidden_dim
+
         self.nlayers = model_config.n_mp_layers
         self.embedding_dim = model_config.embedding_dim
         self.nparticles = simulation_config.n_particles
@@ -43,7 +46,15 @@ class Mesh_RPS(pyg.nn.MessagePassing):
         self.bc_dpos = bc_dpos
         self.time_window_noise = train_config.time_window_noise
 
-        self.lin_phi = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
+
+        if self.model == 'RD_RPS_Mesh2':
+            self.lin_edge = MLP(input_size=8, output_size=self.output_size, nlayers=self.nlayers,
+                                hidden_size=self.hidden_size, device=self.device)
+
+            self.lin_phi = MLP(input_size=self.input_size + 3, output_size=self.output_size, nlayers=self.nlayers,
+                           hidden_size=self.hidden_size, device=self.device)
+        else:
+            self.lin_phi = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                            hidden_size=self.hidden_size, device=self.device)
 
         self.a = nn.Parameter(
@@ -55,28 +66,45 @@ class Mesh_RPS(pyg.nn.MessagePassing):
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
 
         uvw = data.x[:, 6:9]
-
-        laplacian_uvw = self.propagate(edge_index, uvw=uvw, discrete_laplacian=edge_attr)
-
+        pos = x[:, 1:3]
         particle_id = x[:, 0:1].long()
         embedding = self.a[self.data_id, particle_id, :].squeeze()
-        input_phi = torch.cat((laplacian_uvw, uvw, embedding), dim=-1)
 
-        if self.time_window_noise > 0:
-            noise = torch.randn_like(input_phi[:,0:6]) * self.time_window_noise
-            input_phi[:,0:6] = input_phi[:,0:6] + noise
+
+        self.step = 0
+        laplacian_uvw = self.propagate(edge_index, uvw=uvw, pos=pos, embedding=embedding, discrete_laplacian=edge_attr)
+        self.laplacian_uvw = laplacian_uvw
+
+        if self.model == 'RD_RPS_Mesh2':
+            self.step = 1
+            uvw_msg = self.propagate(edge_index, uvw=uvw, pos=pos, embedding=embedding,
+                                           discrete_laplacian=edge_attr)
+            input_phi = torch.cat((laplacian_uvw, uvw, uvw_msg, embedding), dim=-1)
+            if self.time_window_noise > 0:
+                noise = torch.randn_like(input_phi[:,0:9]) * self.time_window_noise
+                input_phi[:,0:9] = input_phi[:,0:9] + noise
+        else:
+            input_phi = torch.cat((laplacian_uvw, uvw, embedding), dim=-1)
+            if self.time_window_noise > 0:
+                noise = torch.randn_like(input_phi[:,0:6]) * self.time_window_noise
+                input_phi[:,0:6] = input_phi[:,0:6] + noise
 
         pred = self.lin_phi(input_phi)
-
-        self.laplacian_uvw = laplacian_uvw
 
         if return_all:
             return pred, laplacian_uvw, uvw, embedding, input_phi
         else:
             return pred
 
-    def message(self, uvw_j, discrete_laplacian):
-        return discrete_laplacian[:,None] * uvw_j
+    def message(self, uvw_j, pos_i, pos_j, embedding_i, discrete_laplacian):
+
+        if self.step == 0:
+            return discrete_laplacian[:,None] * uvw_j
+        elif self.step == 1:
+            r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1))
+            delta_pos = self.bc_dpos(pos_j - pos_i)
+            in_features = torch.cat((uvw_j, delta_pos, r[:,None], embedding_i), dim=-1)
+            return self.lin_edge(in_features)
 
     def update(self, aggr_out):
         return aggr_out

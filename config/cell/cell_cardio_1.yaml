@@ -41,7 +41,7 @@ training:
   device: 'auto'
   n_epochs: 20
 
-  batch_size: 1
+  batch_size: 8
   small_init_batch_size: False
 
   noise_level: 0

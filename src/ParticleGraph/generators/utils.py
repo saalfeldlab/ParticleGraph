@@ -374,7 +374,7 @@ def init_mesh(config, device):
             features_mesh[:, 1] = 0.25 * torch.tensor(values / 255, device=device)
         case 'RD_FitzHugh_Nagumo_Mesh':
             features_mesh = torch.zeros((n_nodes, 2), device=device) + torch.rand((n_nodes, 2), device=device) * 0.1
-        case 'RD_RPS_Mesh' | 'RD_RPS_Mesh_bis':
+        case 'RD_RPS_Mesh' | 'RD_RPS_Mesh2' | 'RD_RPS_Mesh_bis':
             features_mesh = torch.rand((n_nodes, 3), device=device)
             s = torch.sum(features_mesh, dim=1)
             for k in range(3):

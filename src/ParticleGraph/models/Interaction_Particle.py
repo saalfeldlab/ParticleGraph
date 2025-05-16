@@ -114,7 +114,6 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         else:
             derivatives = torch.zeros_like(x[:, 6:7])
 
-
         pos = x[:, 1:self.dimension+1]
         d_pos = x[:, self.dimension+1:1+2*self.dimension] / self.vnorm
         if self.rotation_augmentation & self.training == True:

@@ -532,7 +532,7 @@ def plot_training_particle_field(config, has_siren, has_siren_time, model_f,  n_
     # im = np.flipud(im)
     # io.imsave(f"./{log_dir}/tmp_training/field_pic_{epoch}_{N}.tif", im)
 
-def plot_training(config,  log_dir, epoch, N, x, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
+def plot_training(config, pred, gt, log_dir, epoch, N, x, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -586,7 +586,14 @@ def plot_training(config,  log_dir, epoch, N, x, index_particles, n_particles, n
     plt.savefig(f"./{log_dir}/tmp_training/embedding/{epoch}_{N}.tif",dpi=87)
     plt.close()
 
-
+    fig = plt.figure(figsize=(8, 8))
+    plt.scatter(to_numpy(gt[:, 0]), to_numpy(pred[:, 0]), c='r', s=1)
+    plt.scatter(to_numpy(gt[:, 1]), to_numpy(pred[:, 1]), c='g', s=1)
+    plt.xlabel('true value', fontsize=14)
+    plt.ylabel('pred value', fontsize=14)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/prediction/{epoch}_{N}.tif", dpi=87)
+    plt.close()
 
     match model_config.particle_model_name:
 
@@ -796,7 +803,7 @@ def plot_training(config,  log_dir, epoch, N, x, index_particles, n_particles, n
                 plt.savefig(f"./{log_dir}/tmp_training/matrix/M_{epoch}_{N}.tif", dpi=87)
                 plt.close()
 
-def plot_training_mesh(config,  log_dir, epoch, N, x, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
+def plot_training_mesh(config, pred, gt, log_dir, epoch, N, x, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -809,7 +816,7 @@ def plot_training_mesh(config,  log_dir, epoch, N, x, index_particles, n_particl
 
     match model_config.mesh_model_name:
 
-        case 'RD_RPS_Mesh':
+        case 'RD_RPS_Mesh' | 'RD_RPS_Mesh2':
 
             fig = plt.figure(figsize=(8, 8))
             embedding = get_embedding(model.a, 1)
@@ -819,6 +826,17 @@ def plot_training_mesh(config,  log_dir, epoch, N, x, index_particles, n_particl
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/tmp_training/embedding/{epoch}_{N}.tif", dpi=87)
             plt.close()
+
+            fig = plt.figure(figsize=(8, 8))
+            plt.scatter(to_numpy(gt[:,0]), to_numpy(pred[:,0]), c='r', s=1)
+            plt.scatter(to_numpy(gt[:,1]), to_numpy(pred[:,1]), c='g', s=1)
+            plt.scatter(to_numpy(gt[:,2]), to_numpy(pred[:,2]), c='b', s=1)
+            plt.xlabel('true value', fontsize=14)
+            plt.ylabel('pred value', fontsize=14)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/tmp_training/prediction/{epoch}_{N}.tif", dpi=87)
+            plt.close()
+
 
             if False:
                 rr = torch.tensor(np.linspace(-1, 1, 200)).to(device)
@@ -1442,7 +1460,7 @@ def choose_training_model(model_config=None, device=None, projections=None):
         case 'WaveMeshSmooth':
             model = Mesh_Smooth(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
-        case 'RD_RPS_Mesh':
+        case 'RD_RPS_Mesh' | 'RD_RPS_Mesh2':
             model = Mesh_RPS(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
         case 'RD_RPS_Mesh_bis':

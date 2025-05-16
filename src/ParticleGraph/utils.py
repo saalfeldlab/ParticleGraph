@@ -512,6 +512,7 @@ def create_log_dir(config=[], erase=True):
     os.makedirs(os.path.join(log_dir, 'tmp_training/particle'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'tmp_training/field'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'tmp_training/matrix'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'tmp_training/prediction'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'tmp_training/function'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'tmp_training/function/lin_phi'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'tmp_training/function/lin_edge'), exist_ok=True)
@@ -775,7 +776,38 @@ def get_3d_bounding_box(xx):
     return bounding_box
 
 
+def get_top_fft_modes_per_pixel(im0, dt=1.0, top_n=3):
+    """
+    Compute the top N Fourier modes for each pixel and channel in a 4D time series image stack.
 
+    Parameters:
+        im0 (ndarray): shape (T, H, W, C)
+        dt (float): time step between frames
+        top_n (int): number of top frequency modes to return
+
+    Returns:
+        top_freqs (ndarray): shape (top_n, H, W, C), top frequencies per pixel/channel
+        top_amps (ndarray): shape (top_n, H, W, C), corresponding amplitudes
+    """
+    T, H, W, C = im0.shape
+
+    # Compute FFT frequencies
+    freqs = np.fft.fftfreq(T, d=dt)
+    pos_mask = freqs > 0
+    pos_freqs = freqs[pos_mask]
+
+    # Compute FFT along time axis
+    fft_vals = np.fft.fft(im0, axis=0)              # shape: (T, H, W, C)
+    fft_mag = np.abs(fft_vals)[pos_mask, :, :, :]   # shape: (T_pos, H, W, C)
+
+    # Get indices of top N frequencies per pixel/channel
+    top_indices = np.argsort(fft_mag, axis=0)[-top_n:][::-1]  # shape: (top_n, H, W, C)
+
+    # Gather top frequencies and amplitudes
+    top_freqs = pos_freqs[top_indices]      # broadcast: top_n x H x W x C
+    top_amps = np.take_along_axis(fft_mag, top_indices, axis=0)
+
+    return top_freqs, top_amps
 
 
 

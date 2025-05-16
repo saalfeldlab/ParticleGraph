@@ -350,11 +350,11 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
     os.makedirs(folder, exist_ok=True)
     os.makedirs(f'./graphs_data/{dataset_name}/Fig/', exist_ok=True)
 
-    files = glob.glob(f"{folder}/*")
-    for f in files:
-        if (f[-3:] != 'Fig') & (f[-2:] != 'GT') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (f != 'generation_code.py'):
-            os.remove(f)
-    files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
+    # files = glob.glob(f"{folder}/*")
+    # for f in files:
+    #     if (f[-3:] != 'Fig') & (f[-2:] != 'GT') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (f != 'generation_code.py'):
+    #         os.remove(f)
+    # files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
     # for f in files:
     #     os.remove(f)
 
@@ -486,7 +486,7 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
             x = np.concatenate((X_track_ID, X[closest_indices], V[closest_indices], T[closest_indices], F[closest_indices]), axis=1)
 
             for i in range(x.shape[0]):
-                time_series_list[int(x[i, 0])].append([it,x[i, 6]])
+                time_series_list[int(x[i, 0])].append([it,x[i, 6],x[i, 7]])
 
             if False:
                 fig = plt.figure(figsize=(12, 12))
@@ -685,6 +685,7 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
             plt.scatter(x_list[it][i][:,2], x_list[it][i][:,1], c=x_list[0][it][i][:,7], s=100, cmap='viridis', alpha=0.75)
             plt.text(x[i, 2], x[i, 1], f'{x[i, 0]}', fontsize=10, color='w')
 
+
 def load_3Dfluo_data_with_Cellpose(config, device, visualize):
 
 
@@ -821,7 +822,7 @@ def load_2Dgrid_data(config, device, visualize, step):
         edge_index = adj_t.nonzero().t().contiguous()
         edge_p_p_list.append(edge_index)
 
-        fig = plt.subplots(figsize=(20, 20))
+        fig = plt.subplots(figsize=(10, 10))
         plt.xticks([])
         plt.yticks([])
         plt.axis('off')
@@ -899,6 +900,13 @@ def load_2Dgrid_data(config, device, visualize, step):
             # First derivative using forward difference
             Y = (X_next - X) / delta_t
 
+            # fig = plt.figure(figsize=(10, 10))
+            # plt.axis('off')
+            # X = np.reshape(X, (X.shape[0] * X.shape[1], X.shape[2]))
+            # plt.scatter(X[:, 0], X[:, 1], s=1, c='w', alpha=0.75)
+            # X_next = np.reshape(X_next, (X_next.shape[0] * X_next.shape[1], X_next.shape[2]))
+            # plt.scatter(X_next[:, 0], X_next[:, 1], s=1, c='r', alpha=0.75)
+
             Y = np.reshape(Y, (Y.shape[0] * Y.shape[1], Y.shape[2]))
             y = torch.tensor(Y, dtype=torch.float32, device=device)
             y_list.append(y.clone().detach())
@@ -965,36 +973,77 @@ def load_2Dfluo_data_on_mesh(config, device, visualize, step):
 
     file_path = os.path.expanduser(config.data_folder_name)
     im0 = tifffile.imread(file_path)
+    im0 = np.array(im0).astype('float32')
+
+    top_freqs, top_amps = get_top_fft_modes_per_pixel(im0, dt=1.0, top_n=1)
+
+    # Example: get top frequency at pixel (100, 150) in channel 0
+    print("Top frequencies:", top_freqs[:, 128, 128, 1])
+    print("Amplitudes:", top_amps[:, 128, 128, 0])
+
+    top_freqs = top_freqs.squeeze()
+    top_amps = top_amps.squeeze()
 
     x_mesh = torch.concatenate(
         (N1_mesh.clone().detach(), X1_mesh.clone().detach(), V1_mesh.clone().detach(),
          T1_mesh.clone().detach(), H1_mesh.clone().detach(), A1_mesh.clone().detach()), 1)
     x_mesh[:, 2] = 1 - x_mesh[:, 2]
 
+    fig = plt.figure(figsize=(20, 10))
+    ax = fig.add_subplot(121)
+    plt.imshow(top_freqs[:,:,0],vmin=0,vmax=0.05)
+    plt.colorbar()
+    plt.tight_layout()
+    plt.title('top frequency in channel 0')
+    ax = fig.add_subplot(122)
+    plt.imshow(top_freqs[:,:,1],vmin=0,vmax=0.05)
+    plt.colorbar()
+    plt.tight_layout()
+    plt.title('top frequency in channel 1')
+    plt.savefig(f"{output_dir}/../top_freqs.png", dpi=100)
+    plt.close()
+
+
+
+    fig = plt.figure(figsize=(20, 10))
+    ax = fig.add_subplot(121)
+    time_series = im0[:,128,128,0:2]
+    plt.plot(time_series[:, 0], c='r')
+    plt.plot(time_series[:, 1], c='g')
+    # plt.grid(alpha=0.25)
+    plt.title('pixel_128_128')
+    ax = fig.add_subplot(122)
+    time_series = im0[:,72,69,0:2]
+    plt.plot(time_series[:, 0], c='r')
+    plt.plot(time_series[:, 1], c='g')
+    # plt.grid(alpha=0.25)
+    plt.title('pixel_72_69')
+    plt.tight_layout()
+    plt.savefig(f"{output_dir}/../pixels.png", dpi=100)
+    plt.close()
+
+
+
+    fig = plt.figure(figsize=(10, 10))
+
+    plt.savefig(f"{output_dir}/../pixel_72_69.png", dpi=100)
+    plt.close()
+
+
     for it in trange(0, n_frames - 1):
 
         x_mesh[:,6:9] = torch.tensor(im0[it], dtype=torch.float32, device=device).reshape(-1, 3) / 256
-
-        if it > 0:
-            y_mesh = torch.tensor(im0[it+1]-im0[it], dtype=torch.float32, device=device).reshape(-1, 3) / 256 / delta_t
-        else:
-            y_mesh = torch.zeros((x_mesh.shape[0], 3), dtype=torch.float32, device=device)
+        y_mesh = torch.tensor(im0[it+1]-im0[it], dtype=torch.float32, device=device).reshape(-1, 3) / 256 / delta_t
 
         x_mesh_list.append(x_mesh.clone().detach())
         y_mesh_list.append(y_mesh.clone().detach())
 
-        fig = plt.subplots(figsize=(10, 10))
-        plt.xticks([])
-        plt.yticks([])
-        plt.axis('off')
-
         im = to_numpy(x_mesh[:, 6:9])  # (n_nodes, 3)
         im = im.reshape((int(np.sqrt(n_nodes)), int(np.sqrt(n_nodes)), 3))
-        # print values rangees of im and its shape
 
-        plt.imshow(np.clip(im * 100.0, 0, 1))
-        plt.xlim([0, 1.])
-        plt.ylim([0, 1.])
+        fig = plt.figure(figsize=(10, 10))
+        plt.axis('off')
+        plt.imshow((im*255).astype('uint8'))
         num = f"{it:04}"
         plt.savefig(f"./graphs_data/{dataset_name}/Fig/Fig_{num}", dpi=100)
         plt.close()

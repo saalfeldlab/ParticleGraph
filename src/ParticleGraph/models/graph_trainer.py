@@ -447,7 +447,7 @@ def data_train_particle(config, erase, best_model, device):
             total_loss += loss.item()
 
             if ((epoch < 30) & (N % plot_frequency == 0)) | (N == 0):
-                plot_training(config=config, log_dir=log_dir,
+                plot_training(config=config, pred=pred, gt=y_batch, log_dir=log_dir,
                               epoch=epoch, N=N, x=x, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
                               index_particles=index_particles, n_particles=n_particles,
                               n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
@@ -1535,7 +1535,7 @@ def data_train_mesh(config, erase, best_model, device):
                             'optimizer_state_dict': optimizer.state_dict()},
                            os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
-                plot_training_mesh(config=config, log_dir=log_dir, epoch=epoch, N=N, x=x_mesh, model=model, n_nodes=n_nodes, n_node_types=n_node_types,
+                plot_training_mesh(config=config, pred=pred[ids_batch], gt=y_batch[ids_batch], log_dir=log_dir, epoch=epoch, N=N, x=x_mesh, model=model, n_nodes=n_nodes, n_node_types=n_node_types,
                               index_nodes=index_nodes, dataset_num=1, index_particles=[], n_particles=[],
                               n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
 

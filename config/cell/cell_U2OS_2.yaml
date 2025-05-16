@@ -18,7 +18,7 @@ simulation:
 graph_model:
   field_grid: 'voronoi'
   particle_model_name: ''
-  mesh_model_name: 'RD_RPS_Mesh'
+  mesh_model_name: 'RD_RPS_Mesh2'
   prediction: 'first_derivative'
 
   input_size: 8
