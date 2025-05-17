@@ -61,9 +61,9 @@ if __name__ == '__main__':
         # config_list = ['signal_N5_v11_bis']
         # config_list = ['falling_water_ramp_x6_11_2']
         # config_list = ['boids_16_256']
-        # config_list = ['cell_cardio_2']
+        config_list = ['cell_cardio_3']
         # config_list = ['RD_RPS_5']
-        config_list = ['cell_U2OS_3']
+        # config_list = ['cell_U2OS_3']
         # config_list = ['cell_MDCK_14']
 
 

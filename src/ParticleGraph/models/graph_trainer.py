@@ -102,6 +102,8 @@ def data_train_particle(config, erase, best_model, device):
     delta_t = simulation_config.delta_t
     time_window = train_config.time_window
     time_step = train_config.time_step
+    field_type = model_config.field_type
+    omega = model_config.omega
     recursive_loop = train_config.recursive_loop
 
     noise_level = train_config.noise_level
@@ -231,6 +233,20 @@ def data_train_particle(config, erase, best_model, device):
         pos = torch.argwhere(ind_a % 100 != 99).squeeze()
         ind_a = ind_a[pos]
 
+    if field_type != '':
+        print('create Siren network')
+        has_field= True
+        n_nodes_per_axis = int(np.sqrt(n_particles))
+        model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
+                                out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
+                                hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device,
+                                first_omega_0=omega, hidden_omega_0=omega)
+        model_f.to(device=device)
+        optimizer_f = torch.optim.Adam(lr=train_config.learning_rate_NNR, params=model_f.parameters())
+        model_f.train()
+    else:
+        has_field = False
+
     print("start training particles ...")
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
 
@@ -268,6 +284,9 @@ def data_train_particle(config, erase, best_model, device):
 
         for N in trange(Niter):
 
+            if has_field:
+                optimizer_f.zero_grad()
+
             dataset_batch = []
             ids_batch = []
             ids_index = 0
@@ -281,6 +300,10 @@ def data_train_particle(config, erase, best_model, device):
                     x_next = torch.tensor(x_list[run][k + recursive_loop], dtype=torch.float32, device=device).clone().detach()
                 else:
                     x_next = torch.tensor(x_list[run][k + time_step], dtype=torch.float32, device=device).clone().detach()
+
+                if has_field:
+                    field = model_f(time=k / n_frames) ** 2
+                    x[:,6:7] = field
 
                 if has_ghost:
                     x_ghost = ghosts_particles.get_pos(dataset_id=run, frame=k, bc_pos=bc_pos)
@@ -368,7 +391,7 @@ def data_train_particle(config, erase, best_model, device):
                 optimizer_ghost_particles.zero_grad()
 
             for batch in batch_loader:
-                pred = model(batch, data_id=data_id, training=True, k=k_batch)
+                pred = model(batch, data_id=data_id, training=True, k=k_batch, has_field = has_field)
 
             if recursive_loop > 0:
                 for loop in range(recursive_loop):
@@ -453,7 +476,12 @@ def data_train_particle(config, erase, best_model, device):
                               n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
                 torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
                            os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
-            check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 50,
+                if has_field:
+                    torch.save({'model_state_dict': model_f.state_dict(),
+                                'optimizer_state_dict': optimizer_f.state_dict()}, os.path.join(log_dir,
+                                'models',f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+
+                check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 50,
                                        memory_percentage_threshold=0.6)
 
         torch.save({'model_state_dict': model.state_dict(),
@@ -1442,6 +1470,7 @@ def data_train_mesh(config, erase, best_model, device):
         index_nodes.append(index.squeeze())
 
     if field_type != '':
+        print('create Siren network')
         has_field= True
         n_nodes_per_axis = int(np.sqrt(n_nodes))
         model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
@@ -1565,9 +1594,7 @@ def data_train_mesh(config, erase, best_model, device):
 
                 if has_field:
                     torch.save({'model_state_dict': model_f.state_dict(),
-                                'optimizer_state_dict': optimizer_f.state_dict()}, os.path.join(log_dir,
-                                                                                                'models',
-                                                                                                f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+                                'optimizer_state_dict': optimizer_f.state_dict()}, os.path.join(log_dir,'models',f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_nodes))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_nodes))

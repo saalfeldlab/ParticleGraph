@@ -148,7 +148,10 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         out = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field, derivatives=derivatives)
 
         if self.update_type == 'mlp':
-            out = self.lin_phi(torch.cat((out, embedding, d_pos), dim=-1))
+            if (self.model == 'PDE_T') & has_field:
+                out = self.lin_phi(torch.cat((out, embedding, d_pos, field), dim=-1))
+            else:
+                out = self.lin_phi(torch.cat((out, embedding, d_pos), dim=-1))
         if self.rotation_augmentation & self.training:
             self.rotation_inv_matrix = torch.stack([torch.stack([torch.cos(self.phi), -torch.sin(self.phi)]),torch.stack([torch.sin(self.phi), torch.cos(self.phi)])])
             self.rotation_inv_matrix = self.rotation_inv_matrix.permute(*torch.arange(self.rotation_inv_matrix.ndim - 1, -1, -1))
@@ -197,6 +200,9 @@ class Interaction_Particle(pyg.nn.MessagePassing):
             A.T[i, j] = self.vals[self.data_id[0]]**2
             A[i,i] = 0
             out = A[edge_index_i, edge_index_j].repeat(2, 1).t() * self.lin_edge(in_features) * field_j
+
+        elif self.model == 'PDE_T':
+            out = self.lin_edge(in_features)
 
         else:
             out = self.lin_edge(in_features) * field_j
