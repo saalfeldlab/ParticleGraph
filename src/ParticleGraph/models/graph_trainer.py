@@ -3633,7 +3633,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
             x_list.append(torch.tensor(x, device=device))
             y_list.append(torch.tensor(y, device=device))
-        elif (model_config.particle_model_name == 'PDE_M'):
+        elif (model_config.particle_model_name == 'PDE_R'):
             x = torch.load(f'graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device)
             x_list.append(x)
         else:
@@ -3925,7 +3925,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     n_particles = x.shape[0]
     x_inference_list = []
 
-    for it in trange(start_it, start_it+400):  #  start_it+200): # min(9600+start_it,stop_it-time_step)):
+    for it in trange(start_it, start_it+200):  #  start_it+200): # min(9600+start_it,stop_it-time_step)):
 
         check_and_clear_memory(device=device, iteration_number=it, every_n_iterations=25, memory_percentage_threshold=0.6)
         # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
@@ -3935,7 +3935,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         if it < n_frames - 4:
             x0 = x_list[0][it].clone().detach()
             x0_next = x_list[0][(it+time_step)].clone().detach()
-            if not(model_config.particle_model_name == 'PDE_M'):
+            if not(model_config.particle_model_name == 'PDE_R'):
                 y0 = y_list[0][it].clone().detach()
         if has_mesh:
             x[:, 1:5] = x0[:, 1:5].clone().detach()

@@ -8052,14 +8052,14 @@ def data_plot(config, config_file, epoch_list, style, device):
             plot_particle_field(config, epoch_list, log_dir, logger, 'grey', style, device)
         case 'PDE_E':
             plot_Coulomb(config, epoch_list, log_dir, logger, style, device)
-        case 'PDE_F' | 'PDE_F_A' | 'PDE_F_B' | 'PDE_F_C' | 'PDE_F_D' | 'PDE_F_E' | 'PDE_M' | 'PDE_M' | 'PDE_MLPs_A'| 'PDE_MLPs_A_bis'| 'PDE_MLPs_A_ter' | 'PDE_MLPs_B'| 'PDE_MLPs_B_0' |'PDE_MLPs_B_1' | 'PDE_MLPs_B_4'| 'PDE_MLPs_B_10' | 'PDE_MLPs_C'| 'PDE_MLPs_D' | 'PDE_MLPs_E' | 'PDE_MLPs_F':
+        case 'PDE_F' | 'PDE_F_A' | 'PDE_F_B' | 'PDE_F_C' | 'PDE_F_D' | 'PDE_F_E' | 'PDE_M'| 'PDE_MLPs_A'| 'PDE_MLPs_A_bis'| 'PDE_MLPs_A_ter' | 'PDE_MLPs_B'| 'PDE_MLPs_B_0' |'PDE_MLPs_B_1' | 'PDE_MLPs_B_4'| 'PDE_MLPs_B_10' | 'PDE_MLPs_C'| 'PDE_MLPs_D' | 'PDE_MLPs_E' | 'PDE_MLPs_F':
             plot_falling_particles(config, epoch_list, log_dir, logger, style, device)
         case 'PDE_G':
             if config_file == 'gravity_continuous':
                 plot_gravity_continuous(config, epoch_list, log_dir, logger, style, device)
             else:
                 plot_gravity(config, epoch_list, log_dir, logger, style, device)
-        case 'PDE_M':
+        case 'PDE_R':
                 plot_mouse(config, epoch_list, log_dir, logger, style, device)
 
     match config.graph_model.mesh_model_name:

@@ -1403,7 +1403,7 @@ def choose_training_model(model_config=None, device=None, projections=None):
     model=[]
     model_name = model_config.graph_model.particle_model_name
     match model_name:
-        case 'PDE_M':
+        case 'PDE_R':
             model = Interaction_Mouse(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos,
                                      dimension=dimension)
         case  'PDE_Cell' | 'PDE_Cell_area':
