@@ -1470,9 +1470,6 @@ def data_train_mesh(config, erase, best_model, device):
             print(f'{Niter} iterations per epoch')
             logger.info(f'{Niter} iterations per epoch')
             print(f'plot every {plot_frequency} iterations')
-        if epoch == 1:
-            repeat_factor = batch_size // old_batch_size
-            mask_mesh = mask_mesh.repeat(repeat_factor, 1)
 
         total_loss = 0
         Niter = n_frames * data_augmentation_loop // batch_size
@@ -1494,6 +1491,7 @@ def data_train_mesh(config, erase, best_model, device):
 
                 if has_field:
                     field = model_f(time=k / n_frames) ** 2
+                    x_mesh[:,9:10] = field
 
                 if train_config.noise_level > 0:
                     x_mesh[:, 6:7] = x_mesh[:, 6:7] + train_config.noise_level * torch.randn_like(x_mesh[:, 6:7])
@@ -1565,6 +1563,12 @@ def data_train_mesh(config, erase, best_model, device):
                             'optimizer_state_dict': optimizer.state_dict()},
                            os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
+                if has_field:
+                    torch.save({'model_state_dict': model_f.state_dict(),
+                                'optimizer_state_dict': optimizer_f.state_dict()}, os.path.join(log_dir,
+                                                                                                'models',
+                                                                                                f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_nodes))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_nodes))
         torch.save({'model_state_dict': model.state_dict(),
@@ -1593,14 +1597,23 @@ def data_train_mesh(config, erase, best_model, device):
         ax = fig.add_subplot(1, 5, 3)
         func_list = []
         popt_list = []
-        for n in range(n_nodes):
+
+        if n_nodes > 1000:
+            node_list = np.random.choice(n_nodes, 1000, replace=False)
+        else:
+            node_list = np.arange(n_nodes)
+
+        for n in node_list:
             embedding_ = model.a[1, n, :] * torch.ones((100, model_config.embedding_dim), device=device)
             if model_config.mesh_model_name == 'RD_RPS_Mesh':
                 embedding_ = model.a[1, n, :] * torch.ones((100, model_config.embedding_dim), device=device)
                 u = torch.tensor(np.linspace(0, 1, 100)).to(device)
                 u = u[:, None]
                 r = u
-                in_features = torch.cat((u, u, u, u, u, u, embedding_), dim=1)
+                if has_field:
+                    in_features = torch.cat((u, u, u, u, u, u, embedding_, u*0), dim=1)
+                else:
+                    in_features = torch.cat((u, u, u, u, u, u, embedding_), dim=1)
                 h = model.lin_phi(in_features.float())
                 h = h[:, 0]
             else:
@@ -3520,6 +3533,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     cmap = CustomColorMap(config=config)
     dimension = simulation_config.dimension
     has_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
+    has_mesh_field = (model_config.field_type!='') & ('RD_RPS_Mesh' in model_config.mesh_model_name)
 
     do_tracking = training_config.do_tracking
     has_state = (config.simulation.state_type != 'discrete')
@@ -3616,7 +3630,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                         index = np.arange(n_particles * n // 3, n_particles * (n + 1) // 3)
                         index_particles.append(index)
                         n_particle_types = 3
-
         ynorm = torch.load(f'{log_dir}/ynorm.pt', map_location=device, weights_only=True)
         vnorm = torch.load(f'{log_dir}/vnorm.pt', map_location=device, weights_only=True)
         if vnorm == 0:
@@ -3769,6 +3782,19 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             state_dict = torch.load(net, map_location=device)
             mesh_model.load_state_dict(state_dict['model_state_dict'])
             mesh_model.eval()
+
+            if has_mesh_field:
+                model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
+                                        out_features=model_config.output_size_nnr,
+                                        hidden_features=model_config.hidden_dim_nnr,
+                                        hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device,
+                                        first_omega_0=omega, hidden_omega_0=omega)
+                net = f'{log_dir}/models/best_model_f_with_1_graphs_{best_model}.pt'
+                state_dict = torch.load(net, map_location=device)
+                model_f.load_state_dict(state_dict['model_state_dict'])
+                model_f.to(device=device)
+                model_f.eval()
+
         else:
             state_dict = torch.load(net, map_location=device, weights_only=True)
             model.load_state_dict(state_dict['model_state_dict'])
@@ -3881,6 +3907,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 y0 = y_list[0][it].clone().detach()
         if has_mesh:
             x[:, 1:5] = x0[:, 1:5].clone().detach()
+            if has_mesh_field:
+                field = model_f(time=k / n_frames) ** 2
+                x[:, 9:10] = field
             dataset_mesh = data.Data(x=x, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
         if do_tracking:
             x = x0.clone().detach()
@@ -3934,7 +3963,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             x[mask_mesh.squeeze(), 6:7] += x[mask_mesh.squeeze(), 7:8] * delta_t
         elif 'RD_RPS_Mesh' in model_config.mesh_model_name == 'RD_RPS_Mesh':
             with torch.no_grad():
-                pred = mesh_model(dataset_mesh, data_id=data_id)
+                pred = mesh_model(dataset_mesh, data_id=data_id, has_field=has_mesh_field)
                 x[mask_mesh.squeeze(), 6:9] += pred[mask_mesh.squeeze()] * hnorm * delta_t
                 x[:, 6:9] = torch.clamp(x[:, 6:9], 0, 2)
         elif has_field:
@@ -3978,9 +4007,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 x[:, 3:5] = y
 
             x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t)
-
         else:
-
             with torch.no_grad():
                 if has_ghost & ('PDE_N' not in model_config.signal_model_name):
                     x_ = x
