@@ -1559,7 +1559,7 @@ def data_train_mesh(config, erase, best_model, device):
             optimizer.zero_grad()
 
             for batch in batch_loader:
-                pred = model(batch, data_id = data_id, has_field = has_field)
+                pred = model(batch, data_id = data_id, training=True, has_field = has_field)
 
                 # fig = plt.figure(figsize=(8, 8))
                 # plt.ion()
@@ -3995,7 +3995,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             x[mask_mesh.squeeze(), 6:7] += x[mask_mesh.squeeze(), 7:8] * delta_t
         elif 'RD_RPS_Mesh' in model_config.mesh_model_name:
             with torch.no_grad():
-                pred = mesh_model(dataset_mesh, data_id=data_id, has_field=has_mesh_field)
+                pred = mesh_model(dataset_mesh, data_id=data_id, training=False, has_field=has_mesh_field)
                 x[mask_mesh.squeeze(), 6:9] += pred[mask_mesh.squeeze()] * hnorm * delta_t
                 x[:, 6:9] = torch.clamp(x[:, 6:9], 0, 1.1)
         elif has_field:

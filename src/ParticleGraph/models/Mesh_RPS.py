@@ -45,6 +45,7 @@ class Mesh_RPS(pyg.nn.MessagePassing):
         self.ndataset = config.training.n_runs
         self.bc_dpos = bc_dpos
         self.time_window_noise = train_config.time_window_noise
+        self.rotation_augmentation = train_config.rotation_augmentation
 
 
         if self.model == 'RD_RPS_Mesh2':
@@ -61,7 +62,7 @@ class Mesh_RPS(pyg.nn.MessagePassing):
             torch.tensor(np.ones((int(self.ndataset), int(self.nparticles), self.embedding_dim)), device=self.device,
                          requires_grad=True, dtype=torch.float32))
 
-    def forward(self, data=[], data_id=[], has_field=False, return_all=False):
+    def forward(self, data=[], data_id=[], training=[], has_field=False, return_all=False):
         self.data_id = data_id
         self.has_field = has_field
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
@@ -75,6 +76,14 @@ class Mesh_RPS(pyg.nn.MessagePassing):
             field = x[:, 9:10]
         else:
             field = torch.zeros_like(x[:, 9:10])
+
+        if self.rotation_augmentation:
+            self.phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=self.device) * np.pi * 2
+            self.rotation_matrix = torch.stack([
+                torch.stack([torch.cos(self.phi), torch.sin(self.phi)]),
+                torch.stack([-torch.sin(self.phi), torch.cos(self.phi)])
+            ])
+            self.rotation_matrix = self.rotation_matrix.permute(*torch.arange(self.rotation_matrix.ndim - 1, -1, -1))
 
 
         self.step = 0
@@ -112,6 +121,8 @@ class Mesh_RPS(pyg.nn.MessagePassing):
         elif self.step == 1:
             r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1))
             delta_pos = self.bc_dpos(pos_j - pos_i)
+            if self.rotation_augmentation & (self.training == True):
+                delta_pos[:, :2] = delta_pos[:, :2] @ self.rotation_matrix
             in_features = torch.cat((uvw_j, delta_pos, r[:,None], embedding_i), dim=-1)
             return self.lin_edge(in_features)
 
