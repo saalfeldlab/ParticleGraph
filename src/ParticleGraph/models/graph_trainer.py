@@ -454,6 +454,9 @@ def data_train_particle(config, erase, best_model, device):
             loss.backward()
             optimizer.step()
 
+            if has_field:
+                optimizer_f.step()
+
             if has_ghost:
                 optimizer_ghost_particles.step()
 
@@ -1575,6 +1578,9 @@ def data_train_mesh(config, erase, best_model, device):
 
             loss.backward()
             optimizer.step()
+
+            if has_field:
+                optimizer_f.step()
 
             total_loss += loss.item()
 
@@ -3920,7 +3926,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     n_particles = x.shape[0]
     x_inference_list = []
 
-    for it in trange(start_it, start_it+200):  #  start_it+200): # min(9600+start_it,stop_it-time_step)):
+    for it in trange(start_it, start_it+400):  #  start_it+200): # min(9600+start_it,stop_it-time_step)):
 
         check_and_clear_memory(device=device, iteration_number=it, every_n_iterations=25, memory_percentage_threshold=0.6)
         # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
