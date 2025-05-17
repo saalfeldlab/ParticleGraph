@@ -53,17 +53,17 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'train'
+        task = 'test'
         best_model = ''
 
-        # config_list = ['multimaterial_9_12']
+        # config_list = ['multimaterial_15_1']
         # config_list = ['fluids_m18_1']
         # config_list = ['signal_N5_v11_bis']
         # config_list = ['falling_water_ramp_x6_11_2']
         # config_list = ['boids_16_256']
-        config_list = ['cell_cardio_3']
+        # config_list = ['cell_cardio_3']
         # config_list = ['RD_RPS_5']
-        # config_list = ['cell_U2OS_3']
+        config_list = ['cell_U2OS_1']
         # config_list = ['cell_MDCK_14']
 
 
@@ -88,7 +88,7 @@ if __name__ == '__main__':
             #     data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best',
             #               run=run_, test_mode='fixed_bounce_all', sample_embedding=False, step=4,
             #               device=device)  # particle_of_interest=100,
-            data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best', run=37, test_mode='fixed_bounce_all', sample_embedding=False,
+            data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best', run=1, test_mode='', sample_embedding=False,
                       step=4, device=device)  # particle_of_interest=100,  'fixed_bounce_all'
 
     if 'try_func' in task:

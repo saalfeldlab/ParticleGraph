@@ -180,9 +180,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
             case 'PDE_B' | 'PDE_ParticleField_B' | 'PDE_F':
                 in_features = torch.cat((delta_pos, r[:, None], d_pos_i, d_pos_j, embedding_i), dim=-1)
             case 'PDE_G':
-                in_features = torch.cat(
-                    (delta_pos, r[:, None], d_pos_i, d_pos_j, embedding_j),
-                    dim=-1)
+                in_features = torch.cat((delta_pos, r[:, None], d_pos_i, d_pos_j, embedding_j), dim=-1)
             case 'PDE_GS':
                 in_features = torch.cat((delta_pos, r[:, None], 10**embedding_j),dim=-1)
             case 'PDE_E':

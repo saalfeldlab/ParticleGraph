@@ -1445,7 +1445,7 @@ def choose_training_model(model_config=None, device=None, projections=None):
             model = Interaction_PDE_Particle(aggr_type=aggr_type, config=model_config, device=device,
                                                 bc_dpos=bc_dpos, dimension=dimension)
         case 'PDE_WF' | 'PDE_WF2':
-            model = Interaction_Falling_Water_Wall(aggr_type=aggr_type, config=model_config,bc_dpos=bc_dpos, dimension=dimension, device=device)
+            model = Interaction_Particle2(aggr_type=aggr_type, config=model_config, bc_dpos=bc_dpos, dimension=dimension, device=device)
         case 'PDE_WFS':
             model = Interaction_Falling_Water_Smooth(aggr_type=aggr_type, config=model_config,bc_dpos=bc_dpos, dimension=dimension, device=device)
 

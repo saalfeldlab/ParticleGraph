@@ -104,7 +104,6 @@ def data_train_particle(config, erase, best_model, device):
     time_step = train_config.time_step
     field_type = model_config.field_type
     omega = model_config.omega
-    recursive_loop = train_config.recursive_loop
 
     noise_level = train_config.noise_level
     dataset_name = config.dataset
@@ -391,7 +390,7 @@ def data_train_particle(config, erase, best_model, device):
                 optimizer_ghost_particles.zero_grad()
 
             for batch in batch_loader:
-                pred = model(batch, data_id=data_id, training=True, k=k_batch, has_field = has_field)
+                pred = model(batch, data_id=data_id, training=True, k=k_batch, has_field=has_field)
 
             if recursive_loop > 0:
                 for loop in range(recursive_loop):
@@ -3994,11 +3993,11 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 pred = mesh_model(dataset_mesh, data_id=data_id)
             x[mask_mesh.squeeze(), 7:8] += pred[mask_mesh.squeeze()] * hnorm * delta_t
             x[mask_mesh.squeeze(), 6:7] += x[mask_mesh.squeeze(), 7:8] * delta_t
-        elif 'RD_RPS_Mesh' in model_config.mesh_model_name == 'RD_RPS_Mesh':
+        elif 'RD_RPS_Mesh' in model_config.mesh_model_name:
             with torch.no_grad():
                 pred = mesh_model(dataset_mesh, data_id=data_id, has_field=has_mesh_field)
                 x[mask_mesh.squeeze(), 6:9] += pred[mask_mesh.squeeze()] * hnorm * delta_t
-                x[:, 6:9] = torch.clamp(x[:, 6:9], 0, 2)
+                x[:, 6:9] = torch.clamp(x[:, 6:9], 0, 1.1)
         elif has_field:
             match model_config.field_type:
                 case 'tensor':

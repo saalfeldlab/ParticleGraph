@@ -9,7 +9,7 @@ from ParticleGraph.models.Gumbel import gumbel_softmax_sample, gumbel_softmax
 # from ParticleGraph.models.utils import reparameterize
 
 
-class Interaction_Falling_Water_Wall(pyg.nn.MessagePassing):
+class Interaction_Particle2(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
@@ -30,7 +30,7 @@ class Interaction_Falling_Water_Wall(pyg.nn.MessagePassing):
 
     def __init__(self, config, device, aggr_type=None, bc_dpos=None, dimension=2, model_density=[]):
 
-        super(Interaction_Falling_Water_Wall, self).__init__(aggr=aggr_type)  # "Add" aggregation.
+        super(Interaction_Particle2, self).__init__(aggr=aggr_type)  # "Add" aggregation.
 
         simulation_config = config.simulation
         model_config = config.graph_model
