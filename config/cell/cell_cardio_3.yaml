@@ -1,4 +1,4 @@
-description: 'velocity field on cultured cardiomyocytes cells   test training first derivative  + update MLP'
+description: 'velocity field on cultured cardiomyocytes cells   test training first derivative  + update MLP + Siren'
 dataset: 'cell_cardio_1'
 data_folder_name: '/groups/saalfeld/home/allierc/signaling/cardiomyocytes/Cardio_1/0_B_15kPa_1_MMStack_Pos0.ome.tif.derivatives.npy'
 
