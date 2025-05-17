@@ -63,7 +63,7 @@ if __name__ == '__main__':
         # config_list = ['boids_16_256']
         # config_list = ['cell_cardio_3']
         # config_list = ['RD_RPS_5']
-        config_list = ['cell_U2OS_4']
+        config_list = ['cell_U2OS_5']
         # config_list = ['cell_MDCK_14']
 
 

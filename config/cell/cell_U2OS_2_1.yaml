@@ -1,4 +1,4 @@
-description: 'U2OS cells signal transcript  2 passes + rotation'
+description: 'U2OS cells signal transcript  2 passes + Siren'
 dataset: 'cell_U2OS_1'
 data_folder_name: '/groups/saalfeld/home/allierc/signaling/U2OS/U2OS_001_small_256.tif'
 
@@ -20,8 +20,10 @@ graph_model:
   particle_model_name: ''
   mesh_model_name: 'RD_RPS_Mesh2'
   prediction: 'first_derivative'
+  field_type: 'Siren_additive'
 
-  input_size: 8
+
+  input_size: 9
   output_size: 3
   hidden_dim: 256
   n_mp_layers: 5
@@ -45,7 +47,6 @@ training:
   batch_size: 8
   small_init_batch_size: True
 
-  rotation_augmentation: True
   data_augmentation_loop: 5000
 
   sparsity: 'none'

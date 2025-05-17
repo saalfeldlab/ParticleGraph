@@ -975,11 +975,12 @@ def load_2Dfluo_data_on_mesh(config, device, visualize, step):
     im0 = tifffile.imread(file_path)
     im0 = np.array(im0).astype('float32')
 
+
     top_freqs, top_amps = get_top_fft_modes_per_pixel(im0, dt=1.0, top_n=1)
 
     # Example: get top frequency at pixel (100, 150) in channel 0
-    print("Top frequencies:", top_freqs[:, 128, 128, 1])
-    print("Amplitudes:", top_amps[:, 128, 128, 0])
+    print("Top frequencies:", top_freqs[:, 64, 64, 1])
+    print("Amplitudes:", top_amps[:, 64, 64, 0])
 
     top_freqs = top_freqs.squeeze()
     top_amps = top_amps.squeeze()
@@ -1003,24 +1004,22 @@ def load_2Dfluo_data_on_mesh(config, device, visualize, step):
     plt.savefig(f"{output_dir}/../top_freqs.png", dpi=100)
     plt.close()
 
-
-
-    fig = plt.figure(figsize=(20, 10))
-    ax = fig.add_subplot(121)
-    time_series = im0[:,128,128,0:2]
-    plt.plot(time_series[:, 0], c='r')
-    plt.plot(time_series[:, 1], c='g')
-    # plt.grid(alpha=0.25)
-    plt.title('pixel_128_128')
-    ax = fig.add_subplot(122)
-    time_series = im0[:,72,69,0:2]
-    plt.plot(time_series[:, 0], c='r')
-    plt.plot(time_series[:, 1], c='g')
-    # plt.grid(alpha=0.25)
-    plt.title('pixel_72_69')
-    plt.tight_layout()
-    plt.savefig(f"{output_dir}/../pixels.png", dpi=100)
-    plt.close()
+    # fig = plt.figure(figsize=(20, 10))
+    # ax = fig.add_subplot(121)
+    # time_series = im0[:,128,128,0:2]
+    # plt.plot(time_series[:, 0], c='r')
+    # plt.plot(time_series[:, 1], c='g')
+    # # plt.grid(alpha=0.25)
+    # plt.title('pixel_128_128')
+    # ax = fig.add_subplot(122)
+    # time_series = im0[:,72,69,0:2]
+    # plt.plot(time_series[:, 0], c='r')
+    # plt.plot(time_series[:, 1], c='g')
+    # # plt.grid(alpha=0.25)
+    # plt.title('pixel_72_69')
+    # plt.tight_layout()
+    # plt.savefig(f"{output_dir}/../pixels.png", dpi=100)
+    # plt.close()
 
 
 

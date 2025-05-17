@@ -65,6 +65,7 @@ class Mesh_RPS(pyg.nn.MessagePassing):
     def forward(self, data=[], data_id=[], training=[], has_field=False, return_all=False):
         self.data_id = data_id
         self.has_field = has_field
+        self.training = training
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
 
         uvw = data.x[:, 6:9]
