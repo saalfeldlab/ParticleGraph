@@ -70,7 +70,7 @@ class Interaction_Particle2(pyg.nn.MessagePassing):
         self.prediction = model_config.prediction
 
 
-        if self.model == 'PDE_WF2':
+        if self.model == 'PDE_M2':
             self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device)
 
@@ -109,7 +109,7 @@ class Interaction_Particle2(pyg.nn.MessagePassing):
             noise = torch.randn_like(pos) * self.time_window_noise
             pos = pos + noise
 
-        if self.model == 'PDE_WF2':
+        if self.model == 'PDE_M2':
             self.step = 0
             pred = self.propagate(edge_index=edge_index, pos=pos, embedding=embedding)
             self.step = 1

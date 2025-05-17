@@ -15,7 +15,7 @@ simulation:
   start_frame: 0
 
 graph_model:
-  particle_model_name: 'PDE_WF'
+  particle_model_name: 'PDE_M'
   mesh_model_name: ''
   prediction: '2nd_derivative'
   update_type: 'pre_mlp'

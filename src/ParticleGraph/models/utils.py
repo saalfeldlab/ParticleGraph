@@ -122,7 +122,7 @@ def get_in_features(rr=None, embedding=None, model=[], model_name = [], max_radi
             in_features = torch.cat((0 * rr[:, None], rr[:, None] / max_radius), dim=1)
         case 'PDE_F':
             in_features = torch.cat((0 * rr[:, None], rr[:, None] / max_radius, rr[:, None] / max_radius, embedding, embedding), dim=-1)
-        case 'PDE_WF':
+        case 'PDE_M':
             in_features = torch.cat((rr[:, None] / max_radius, rr[:, None] / max_radius, embedding, embedding), dim=-1)
 
     return in_features
@@ -1403,7 +1403,7 @@ def choose_training_model(model_config=None, device=None, projections=None):
     model=[]
     model_name = model_config.graph_model.particle_model_name
     match model_name:
-        case 'PDE_M':
+        case 'PDE_R':
             model = Interaction_Mouse(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos,
                                      dimension=dimension)
         case  'PDE_Cell' | 'PDE_Cell_area':
@@ -1444,9 +1444,9 @@ def choose_training_model(model_config=None, device=None, projections=None):
         case 'PDE_MLPs' | 'PDE_MLPs_A' | 'PDE_MLPs_A_bis' | 'PDE_MLPs_A_ter' | 'PDE_MLPs_B'| 'PDE_MLPs_B_0' |'PDE_MLPs_B_1' | 'PDE_MLPs_B_4'| 'PDE_MLPs_B_10' |'PDE_MLPs_C' | 'PDE_MLPs_D' | 'PDE_MLPs_E' | 'PDE_MLPs_F':
             model = Interaction_PDE_Particle(aggr_type=aggr_type, config=model_config, device=device,
                                                 bc_dpos=bc_dpos, dimension=dimension)
-        case 'PDE_WF' | 'PDE_WF2':
+        case 'PDE_M' | 'PDE_M2':
             model = Interaction_Particle2(aggr_type=aggr_type, config=model_config, bc_dpos=bc_dpos, dimension=dimension, device=device)
-        case 'PDE_WFS':
+        case 'PDE_MS':
             model = Interaction_Falling_Water_Smooth(aggr_type=aggr_type, config=model_config,bc_dpos=bc_dpos, dimension=dimension, device=device)
 
     model_name = model_config.graph_model.mesh_model_name

@@ -17,7 +17,7 @@ simulation:
   start_frame: 0
 
 graph_model:
-  particle_model_name: 'PDE_WFS'
+  particle_model_name: 'PDE_MS'
   mesh_model_name: ''
   prediction: '2nd_derivative'
 
