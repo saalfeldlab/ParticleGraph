@@ -53,7 +53,7 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'train'
+        task = 'test'
         best_model = ''
 
         # config_list = ['multimaterial_15_1']
@@ -88,7 +88,7 @@ if __name__ == '__main__':
             #     data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best',
             #               run=run_, test_mode='fixed_bounce_all', sample_embedding=False, step=4,
             #               device=device)  # particle_of_interest=100,
-            data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best', run=1, test_mode='', sample_embedding=False,
+            data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best', run=17, test_mode='fixed_bounce_all', sample_embedding=False,
                       step=4, device=device)  # particle_of_interest=100,  'fixed_bounce_all'
 
     if 'try_func' in task:

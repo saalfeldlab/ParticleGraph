@@ -987,7 +987,7 @@ def load_2Dfluo_data_on_mesh(config, device, visualize, step):
 
     x_mesh = torch.concatenate(
         (N1_mesh.clone().detach(), X1_mesh.clone().detach(), V1_mesh.clone().detach(),
-         T1_mesh.clone().detach(), H1_mesh.clone().detach(), A1_mesh.clone().detach()), 1)
+         T1_mesh.clone().detach(), H1_mesh.clone().detach(), H1_mesh.clone().detach(), A1_mesh.clone().detach()), 1)
     x_mesh[:, 2] = 1 - x_mesh[:, 2]
 
     fig = plt.figure(figsize=(20, 10))
@@ -1022,17 +1022,20 @@ def load_2Dfluo_data_on_mesh(config, device, visualize, step):
     # plt.close()
 
 
-
-    fig = plt.figure(figsize=(10, 10))
-
-    plt.savefig(f"{output_dir}/../pixel_72_69.png", dpi=100)
-    plt.close()
-
-
     for it in trange(0, n_frames - 1):
 
         x_mesh[:,6:9] = torch.tensor(im0[it], dtype=torch.float32, device=device).reshape(-1, 3) / 256
-        y_mesh = torch.tensor(im0[it+1]-im0[it], dtype=torch.float32, device=device).reshape(-1, 3) / 256 / delta_t
+        if it>0:
+            x_mesh[:, 9:12] = torch.tensor(im0[it+1]-im0[it], dtype=torch.float32, device=device).reshape(-1, 3) / 256 / delta_t
+        else:
+            x_mesh[:, 9:12] = torch.zeros((n_nodes, 3), dtype=torch.float32, device=device)
+
+        if config.graph_model.prediction == 'first_derivative':
+            y_mesh = torch.tensor(im0[it+1]-im0[it], dtype=torch.float32, device=device).reshape(-1, 3) / 256 / delta_t
+        elif (config.graph_model.prediction == '2nd_derivative') & (it>0):
+            y_mesh = torch.tensor(im0[it+1]-2*im0[it]+im0[it-1], dtype=torch.float32, device=device).reshape(-1, 3) / 256 / delta_t**2
+        else:
+            y_mesh = torch.zeros((n_nodes, 3), dtype=torch.float32, device=device)
 
         x_mesh_list.append(x_mesh.clone().detach())
         y_mesh_list.append(y_mesh.clone().detach())

@@ -512,7 +512,7 @@ def data_train_particle(config, erase, best_model, device):
         plt.ylabel('Loss', fontsize=12)
         plt.xlabel('Epochs', fontsize=12)
 
-        if ('PDE_T' not in model_config.particle_model_name) & ('PDE_K' not in model_config.particle_model_name) & ('PDE_MLPs' not in model_config.particle_model_name) & ('PDE_F' not in model_config.particle_model_name) & ('PDE_WF' not in model_config.particle_model_name) & (has_bounding_box == False) :
+        if ('PDE_T' not in model_config.particle_model_name) & ('PDE_K' not in model_config.particle_model_name) & ('PDE_MLPs' not in model_config.particle_model_name) & ('PDE_F' not in model_config.particle_model_name) & ('PDE_M' not in model_config.particle_model_name) & (has_bounding_box == False) :
             ax = fig.add_subplot(1, 5, 2)
             embedding = get_embedding(model.a, 1)
             for n in range(n_particle_types):
@@ -3651,7 +3651,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 y_list.append(y)
 
                 x = x_list[0][0].clone().detach()
-                if ('PDE_MLPs' not in model_config.particle_model_name) & ('PDE_F' not in model_config.particle_model_name) & ('PDE_WF' not in model_config.particle_model_name):
+                if ('PDE_MLPs' not in model_config.particle_model_name) & ('PDE_F' not in model_config.particle_model_name) & ('PDE_M' not in model_config.particle_model_name):
                     n_particles = int(x.shape[0] / ratio)
                     config.simulation.n_particles = n_particles
                 n_frames = len(x_list[0])
@@ -3996,7 +3996,11 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         elif 'RD_RPS_Mesh' in model_config.mesh_model_name:
             with torch.no_grad():
                 pred = mesh_model(dataset_mesh, data_id=data_id, training=False, has_field=has_mesh_field)
-                x[mask_mesh.squeeze(), 6:9] += pred[mask_mesh.squeeze()] * hnorm * delta_t
+                if model_config.prediction=='2nd_derivative':
+                    x[mask_mesh.squeeze(), 9:12] += pred[mask_mesh.squeeze()] * hnorm * delta_t
+                    x[mask_mesh.squeeze(), 6:9] += x[mask_mesh.squeeze(), 9:12] * delta_t
+                else:
+                    x[mask_mesh.squeeze(), 6:9] += pred[mask_mesh.squeeze()] * hnorm * delta_t
                 x[:, 6:9] = torch.clamp(x[:, 6:9], 0, 1.1)
         elif has_field:
             match model_config.field_type:
