@@ -148,7 +148,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         out = self.propagate(edge_index, particle_id=particle_id, pos=pos, d_pos=d_pos, embedding=embedding, field=field, derivatives=derivatives)
 
         if self.update_type == 'mlp':
-            if (self.model == 'PDE_T') & has_field:
+            if has_field:
                 out = self.lin_phi(torch.cat((out, embedding, d_pos, field), dim=-1))
             else:
                 out = self.lin_phi(torch.cat((out, embedding, d_pos), dim=-1))
@@ -173,11 +173,11 @@ class Interaction_Particle(pyg.nn.MessagePassing):
             delta_pos[:, :2] = delta_pos[:, :2] @ self.rotation_matrix
 
         match self.model:
-            case 'PDE_A'|'PDE_ParticleField_A':
+            case 'PDE_A':
                 in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
             case 'PDE_A_bis':
                 in_features = torch.cat((delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
-            case 'PDE_B' | 'PDE_ParticleField_B' | 'PDE_F':
+            case 'PDE_B' | 'PDE_F':
                 in_features = torch.cat((delta_pos, r[:, None], d_pos_i, d_pos_j, embedding_i), dim=-1)
             case 'PDE_G':
                 in_features = torch.cat((delta_pos, r[:, None], d_pos_i, d_pos_j, embedding_j), dim=-1)
@@ -197,13 +197,11 @@ class Interaction_Particle(pyg.nn.MessagePassing):
             A[i, j] = self.vals[self.data_id[0]]**2
             A.T[i, j] = self.vals[self.data_id[0]]**2
             A[i,i] = 0
-            out = A[edge_index_i, edge_index_j].repeat(2, 1).t() * self.lin_edge(in_features) * field_j
+            out = A[edge_index_i, edge_index_j].repeat(2, 1).t() * self.lin_edge(in_features)
 
-        elif self.model == 'PDE_T':
-            out = self.lin_edge(in_features)
 
-        else:
-            out = self.lin_edge(in_features) * field_j
+        out = self.lin_edge(in_features)
+
 
         if self.training==False:
             pos = torch.argwhere(edge_index_i == self.particle_of_interest)

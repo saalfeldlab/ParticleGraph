@@ -3575,7 +3575,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         n_nodes_per_axis = int(np.sqrt(n_nodes))
 
     log_dir = 'log/' + config.config_file
-    files = glob.glob(f"./{log_dir}/tmp_recons/*")
+    # files = glob.glob(f"./{log_dir}/tmp_recons/*")
     # for f in files:
     #     os.remove(f)
 
