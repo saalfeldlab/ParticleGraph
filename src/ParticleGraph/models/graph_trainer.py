@@ -2693,7 +2693,6 @@ def data_train_synaptic2(config, erase, best_model, device):
                     else:
                         x[:, 8:9] = torch.ones_like(x[:, 0:1])
 
-
                     # regularisations
                     in_features = get_in_features_update(rr=None, model=model, device=device)
 
@@ -2753,7 +2752,6 @@ def data_train_synaptic2(config, erase, best_model, device):
                                 loss_contribs.append(std)
                         if loss_contribs:
                             loss = loss + torch.stack(loss_contribs).norm(2) * coeff_sign
-
 
                     if (model.update_type == 'generic') & (coeff_diff_update>0):
                         in_feature_update = torch.cat((torch.zeros((n_particles,1), device=device), model.a[:n_particles], msg0, torch.ones((n_particles,1), device=device)), dim=1)
@@ -4393,19 +4391,19 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     pos = pos[:, 0]
                     if 'zoom' in style:
                         plt.scatter(x[edge_index[0,pos], 2].detach().cpu().numpy(),
-                                    x[edge_index[0,pos], 1].detach().cpu().numpy(), s=s_p * 20 , color=mc, alpha=0.25)
+                                    x[edge_index[0,pos], 1].detach().cpu().numpy(), s=s_p * 10 , color=mc, alpha=1.0)
                     else:
                         plt.scatter(x[edge_index[0,pos], 2].detach().cpu().numpy(),
-                                    x[edge_index[0,pos], 1].detach().cpu().numpy(), s=s_p * 5 , color=mc, alpha=0.25, )
+                                    x[edge_index[0,pos], 1].detach().cpu().numpy(), s=s_p * 1 , color=mc, alpha=1.0)
 
 
-                    for k in range(pos.shape[0]):
-                        plt.arrow(x[edge_index[1,pos[k]], 2].detach().cpu().numpy(),
-                                    x[edge_index[1,pos[k]], 1].detach().cpu().numpy(),  dx=to_numpy(model.msg[k,1]) * delta_t/20,
-                                  dy=to_numpy(model.msg[k,0]) * delta_t/20, head_width=0.004, length_includes_head=True, color=mc,alpha=0.25)
+                    # for k in range(pos.shape[0]):
+                    #     plt.arrow(x[edge_index[1,pos[k]], 2].detach().cpu().numpy(),
+                    #                 x[edge_index[1,pos[k]], 1].detach().cpu().numpy(),  dx=to_numpy(model.msg[k,1]) * delta_t/20,
+                    #               dy=to_numpy(model.msg[k,0]) * delta_t/20, head_width=0.004, length_includes_head=True, color=mc,alpha=0.25)
 
-                    plt.arrow(x=to_numpy(x[particle_of_interest, 2]), y=to_numpy(x[particle_of_interest, 1]), dx=to_numpy(x[particle_of_interest, 4]) * delta_t * 100,
-                              dy=to_numpy(x[particle_of_interest, 3]) * delta_t * 100, head_width=0.004, length_includes_head=True, color=cmap.color(to_numpy(x[particle_of_interest, 5]).astype(int)))
+                    plt.arrow(x=to_numpy(x[particle_of_interest, 2]), y=to_numpy(x[particle_of_interest, 1]), dx=to_numpy(x[particle_of_interest, 4]) * delta_t * 50,
+                              dy=to_numpy(x[particle_of_interest, 3]) * delta_t * 100, head_width=0.004, length_includes_head=True, color='r')
 
                 if 'zoom' in style:
                     plt.xlim([xc-0.1, xc+0.1])

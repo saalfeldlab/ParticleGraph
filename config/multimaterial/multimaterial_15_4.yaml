@@ -36,6 +36,7 @@ plotting:
   colormap: 'tab10'
   arrow_length: 2
   ylim: [-0.001, 0]
+  data_embedding: 17
 
 training:
   n_epochs: 20

@@ -106,6 +106,11 @@ class GraphModelConfig(BaseModel):
     hidden_dim: int = 1
     n_mp_layers: int = 1
 
+    input_size_decoder: int = 1
+    output_size_decoder: int = 1
+    hidden_dim_decoder: int = 1
+    n_mp_layers_decoder: int = 1
+
     multi_mlp_params: List[List[Union[int, int, int, int, str]]]  = None
 
     lin_edge_positive: bool = False

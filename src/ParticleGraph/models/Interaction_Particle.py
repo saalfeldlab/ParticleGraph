@@ -122,7 +122,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
                 torch.stack([torch.cos(self.phi), torch.sin(self.phi)]),
                 torch.stack([-torch.sin(self.phi), torch.cos(self.phi)])
             ])
-            self.rotation_matrix = self.rotation_matrix.permute(*torch.arange(self.rotation_matrix.ndim - 1, -1, -1))
+            self.rotation_matrix = self.rotation_matrix.permute(*torch.arange(self.rotation_matrix.ndim - 1, -1, -1)).squeeze()
 
             d_pos[:, :2] = d_pos[:, :2] @ self.rotation_matrix
 
@@ -154,7 +154,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
                 out = self.lin_phi(torch.cat((out, embedding, d_pos), dim=-1))
         if self.rotation_augmentation & self.training:
             self.rotation_inv_matrix = torch.stack([torch.stack([torch.cos(self.phi), -torch.sin(self.phi)]),torch.stack([torch.sin(self.phi), torch.cos(self.phi)])])
-            self.rotation_inv_matrix = self.rotation_inv_matrix.permute(*torch.arange(self.rotation_inv_matrix.ndim - 1, -1, -1))
+            self.rotation_inv_matrix = self.rotation_inv_matrix.permute(*torch.arange(self.rotation_inv_matrix.ndim - 1, -1, -1)).squeeze()
             out[:, :2] = out[:, :2] @ self.rotation_inv_matrix
         if self.reflection_augmentation & self.training:
             if group in [0, 1]:

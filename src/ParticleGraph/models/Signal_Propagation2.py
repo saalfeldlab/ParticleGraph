@@ -125,7 +125,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         else:
             particle_id = x[:, 0].long()
             embedding = self.a[particle_id, :]
-            if  self.embedding_trial:
+            if self.embedding_trial:
                 embedding = torch.cat((self.b[data_id.squeeze().long(), :], embedding), dim=1)
 
         msg = self.propagate(edge_index, u=u, embedding=embedding)
