@@ -94,12 +94,12 @@ class Interaction_Particle2(pyg.nn.MessagePassing):
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
         if self.time_window == 0:
-            particle_id = x[:, 0:1]
-            embedding = self.a[data_id, to_numpy(particle_id), :].squeeze()
+            particle_id = x[:, 0:1].long()
+            embedding = self.a[data_id, particle_id, :].squeeze()
             pos = x[:, 1:self.dimension+1]
         else:
-            particle_id = x[0][:, 0:1]
-            embedding = self.a[data_id, to_numpy(particle_id), :].squeeze()
+            particle_id = x[0][:, 0:1].long()
+            embedding = self.a[data_id, particle_id, :].squeeze()
             x = torch.stack(x)
             pos = x[:, :, 1:self.dimension + 1]
             pos = pos.transpose(0, 1)

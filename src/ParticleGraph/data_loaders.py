@@ -82,35 +82,39 @@ def extract_object_properties(segmentation_image, fluorescence_image=[], radius=
             fluo_sum_radius = np.sum(fluorescence_image[rr_valid, cc_valid])
             fluo_sum_segmentation = region.mean_intensity * area
 
-            # if id == 339:
-            #     rr_valid_339 = rr_valid
-            #     cc_valid_339 = cc_valid
-            #     pos_x_339 = pos_x
-            #     pos_y_339 = pos_y
-            #     fluo_sum_radius_339 = np.sum(fluorescence_image[rr_valid_339, cc_valid_339])
-            #     print(len(object_properties), fluo_sum_radius_339)
-            # if id == 551:
-            #     rr_valid_551 = rr_valid
-            #     cc_valid_551 = cc_valid
-            #     pos_x_551 = pos_x
-            #     pos_y_551 = pos_y
-            #     fluo_sum_radius_551 = np.sum(fluorescence_image[rr_valid_551, cc_valid_551])
-            #     print(len(object_properties), fluo_sum_radius_551)
+            if id == 339:
+                rr_valid_339 = rr_valid
+                cc_valid_339 = cc_valid
+                pos_x_339 = pos_x
+                pos_y_339 = pos_y
+                fluo_sum_radius_339 = np.sum(fluorescence_image[rr_valid_339, cc_valid_339])
+                # print(len(object_properties), fluo_sum_radius_339)
 
-            object_properties.append((cell_id, pos_x, pos_y, area, perimeter, aspect_ratio, orientation, fluo_sum_radius, fluo_sum_segmentation))
+            if id == 334:
+                rr_valid_334 = rr_valid
+                cc_valid_334 = cc_valid
+                pos_x_334 = pos_x
+                pos_y_334 = pos_y
+                fluo_sum_radius_334 = np.sum(fluorescence_image[rr_valid_334, cc_valid_334])
+                print(len(object_properties), fluo_sum_radius_334)
+
+
+            object_properties.append((id, pos_x, pos_y, area, perimeter, aspect_ratio, orientation, fluo_sum_radius, fluo_sum_segmentation))
 
     # tmp = fluorescence_image
-    # tmp[rr_valid_551, cc_valid_551] = 1
+    # tmp[rr_valid_334, cc_valid_334] = 1
     # fig = plt.figure(figsize=(13, 10.5))
     # plt.imshow(tmp)
-    #
+
+
     # fig = plt.figure(figsize=(13, 10.5))
-    # # plt.imshow(fluorescence_image*0)
+    # plt.imshow(fluorescence_image*0)
     # for i in range(len(object_properties)):
     #     pos_x = object_properties[i][1]
     #     pos_y = object_properties[i][2]
     #     plt.scatter(pos_y, pos_x, s=100, c=object_properties[i][7], cmap='viridis', vmin=0, vmax=4000, alpha=0.75)
     #     plt.text(pos_y, pos_x, f'{i}', fontsize=10, color='w')
+    # plt.show()
 
 
     return object_properties
@@ -389,6 +393,8 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
     if cellpose_denoise_model == 'cyto3':
         model_denoise = denoise.CellposeDenoiseModel(gpu=True, model_type="cyto3", restore_type="denoise_cyto3")
 
+
+
     if not os.path.exists(f"{data_folder_name}/TRK/_spots.csv"):
 
         print('generate segmentation masks with Cellpose ...')
@@ -420,7 +426,7 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
             # distance closing gap 6 6 3
             # min track length 20
 
-    elif not os.path.exists(f'graphs_data/{dataset_name}/time_series_list_0'):
+    else:
 
         df = pd.read_csv(f"{data_folder_name}/TRK/_spots.csv")
 
@@ -481,16 +487,34 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
 
             X_track_ID = trackmate['track_ID'][pos]
 
-            F [:, 1:2] = F[:, 0:1] / np.median(F[closest_indices,0:1])
+            F[:, 1:2] = F[:, 0:1] / np.median(F[closest_indices,0:1])
 
             x = np.concatenate((X_track_ID, X[closest_indices], V[closest_indices], T[closest_indices], F[closest_indices]), axis=1)
+
+
+            pa = np.argwhere(X_track_ID==489)[0,0]
+            pb = np.argwhere(X_track_ID==494)[0,0]
+            print(f'cell 494 is {pb}    cell 489 is {pa}')
+            print(x[pb, 6:7], x[pa, 6:7])
+
 
             for i in range(x.shape[0]):
                 time_series_list[int(x[i, 0])].append([it,x[i, 6],x[i, 7]])
 
+
+            xx = 0
+
             if False:
                 fig = plt.figure(figsize=(12, 12))
                 plt.scatter(X_trackmate[:,1], X_trackmate[:,0], s=50, c='w', alpha=0.75)
+                for i in range(X_trackmate.shape[0]):
+                    plt.text(X_trackmate[i,1], X_trackmate[i,0], f'{int(X_track_ID[i])}', fontsize=10, color='w')
+
+                fig = plt.figure(figsize=(12, 12))
+                for k in range(len(X)):
+                    plt.scatter(X[k, 1], X[k, 0], s=10)
+                    plt.text(X[k, 1], X[k, 0], f'{k}', fontsize=10, color='w')
+
                 plt.scatter(X[:,1], X[:,0], s=50, c='g', alpha=0.75)
                 for i in range(x.shape[0]):
                     plt.text(x[i,2], x[i,1], f'{int(x[i,0])}', fontsize=10, color='w')
@@ -498,6 +522,9 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
                     plt.scatter(x[i,2], x[i,1], s=10, c='r', alpha=0.75)
                 plt.savefig(f"{data_folder_name}/TRK_RESULT/{it:06}.tif", dpi=80)
                 plt.close()
+
+
+
 
             if False:
                 fig = plt.figure(figsize=(12, 12))
@@ -667,23 +694,6 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
 
         print(f'n_cells: {n_cells}')
 
-    else:
-
-        x_list = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npz', allow_pickle=True)
-        y_list = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npz', allow_pickle=True)
-        time_series_list = np.load(f'graphs_data/{dataset_name}/time_series_list_{run}.npz', allow_pickle=True)
-
-        n_cells = len(x_list[0])
-        print(f'n_cells: {n_cells}')
-
-        it = 100
-
-        fig = plt.figure(figsize=(12, 12))
-        plt.axis('off')
-        plt.imshow(im_fluo*0)
-        for i in range(len(x_list[it])):
-            plt.scatter(x_list[it][i][:,2], x_list[it][i][:,1], c=x_list[0][it][i][:,7], s=100, cmap='viridis', alpha=0.75)
-            plt.text(x[i, 2], x[i, 1], f'{x[i, 0]}', fontsize=10, color='w')
 
 
 def load_3Dfluo_data_with_Cellpose(config, device, visualize):

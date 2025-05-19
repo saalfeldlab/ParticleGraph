@@ -53,18 +53,18 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'train'
+        task = 'generate'
         best_model = ''
 
-        config_list = ['multimaterial_16_1']
+        # config_list = ['multimaterial_16_3']
         # config_list = ['fluids_m18_1']
         # config_list = ['signal_N5_v11_bis']
         # config_list = ['falling_water_ramp_x6_11_1']
         # config_list = ['arbitrary_3']
         # config_list = ['cell_cardio_3']
         # config_list = ['RD_RPS_5']
-        # config_list = ['cell_U2OS_5']
-        # config_list = ['cell_MDCK_14']
+        # config_list = ['cell_U2OS_2']
+        config_list = ['cell_MDCK_14']
         # config_list = ['signal_N4_CElegans_a9_17']
 
     for config_file_ in config_list:
@@ -86,10 +86,10 @@ if __name__ == '__main__':
         if 'test' in task:
             # for run_ in range(17,23):
             #     data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best',
-            #               run=run_, test_mode='plot_data', sample_embedding=False, step=4,
+            #               run=run_, test_mode='fixed_bounce_all', sample_embedding=False, step=4,
             #               device=device)  # particle_of_interest=100, 'fixed_bounce_all'
-            data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best', run=17,
-                      test_mode='fixed_bounce_all', sample_embedding=False, step=4, device=device, particle_of_interest=800)  # particle_of_interest=100,  'fixed_bounce_all'
+            data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best', run=1,
+                      test_mode='fixed_bounce_all', sample_embedding=False, step=4, device=device, particle_of_interest=0)  # particle_of_interest=100,  'fixed_bounce_all'
 
     if 'try_func' in task:
             try_func(max_radius=config.simulation.max_radius, device=device)

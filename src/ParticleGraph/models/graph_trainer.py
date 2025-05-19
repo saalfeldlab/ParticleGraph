@@ -1637,13 +1637,16 @@ def data_train_mesh(config, erase, best_model, device):
 
         for n in node_list:
             embedding_ = model.a[1, n, :] * torch.ones((100, model_config.embedding_dim), device=device)
-            if model_config.mesh_model_name == 'RD_RPS_Mesh':
+            if 'RD_RPS_Mesh' in model_config.mesh_model_name:
                 embedding_ = model.a[1, n, :] * torch.ones((100, model_config.embedding_dim), device=device)
                 u = torch.tensor(np.linspace(0, 1, 100)).to(device)
                 u = u[:, None]
                 r = u
-                if has_field:
-                    in_features = torch.cat((u, u, u, u, u, u, embedding_, u*0), dim=1)
+                if 'RD_RPS_Mesh2' in model_config.mesh_model_name:
+                    if has_field:
+                        in_features = torch.cat((u, u, u, u, u, u, u, u ,u, embedding_, u*0), dim=1)
+                    else:
+                        in_features = torch.cat((u, u, u, u, u, u, u, u, u, embedding_), dim=1)
                 else:
                     in_features = torch.cat((u, u, u, u, u, u, embedding_), dim=1)
                 h = model.lin_phi(in_features.float())
@@ -3564,6 +3567,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     dimension = simulation_config.dimension
     has_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
     has_mesh_field = (model_config.field_type!='') & ('RD_RPS_Mesh' in model_config.mesh_model_name)
+    omega = model_config.omega
 
     do_tracking = training_config.do_tracking
     has_state = (config.simulation.state_type != 'discrete')
@@ -3923,7 +3927,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     n_particles = x.shape[0]
     x_inference_list = []
 
-    for it in trange(start_it, start_it+200):  #  start_it+200): # min(9600+start_it,stop_it-time_step)):
+    for it in trange(start_it, start_it+300):  #  start_it+200): # min(9600+start_it,stop_it-time_step)):
 
         check_and_clear_memory(device=device, iteration_number=it, every_n_iterations=25, memory_percentage_threshold=0.6)
         # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
@@ -3938,7 +3942,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         if has_mesh:
             x[:, 1:5] = x0[:, 1:5].clone().detach()
             if has_mesh_field:
-                field = model_f(time=k / n_frames) ** 2
+                field = model_f(time=it / n_frames) ** 2
                 x[:, 9:10] = field
             dataset_mesh = data.Data(x=x, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
         if do_tracking:

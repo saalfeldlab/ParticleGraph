@@ -130,6 +130,7 @@ class Interaction_Particle3(pyg.nn.MessagePassing):
         self.step = 1
         pred = self.propagate(edge_index=edge_index, pos=pred, embedding=embedding)
 
+
         pred = self.lin_decoder(pred)
         if self.rotation_augmentation & self.training:
             self.rotation_inv_matrix = torch.stack([torch.stack([torch.cos(self.phi), -torch.sin(self.phi)]),torch.stack([torch.sin(self.phi), torch.cos(self.phi)])])
@@ -163,9 +164,7 @@ class Interaction_Particle3(pyg.nn.MessagePassing):
             return out
 
         elif self.step == 1:
-            delta_pos = self.bc_dpos(pos_j - pos_i)
-            if self.rotation_augmentation & (self.training == True):
-                delta_pos = delta_pos @ self.rotation_matrix
+            delta_pos = pos_j - pos_i
             in_features = torch.cat((delta_pos, embedding_i, embedding_j), dim=-1)
             out = self.lin_edge2(in_features)
             return out
