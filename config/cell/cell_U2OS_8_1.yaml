@@ -1,40 +1,39 @@
-description: 'Rock Paper Scissor model'
-dataset: 'RD_RPS_4'
+description: 'cell_U2OS_2.yaml 128x128  2 passes larger MLP'
+dataset: 'cell_U2OS_8'
+data_folder_name: '/groups/saalfeld/home/allierc/signaling/U2OS/U2OS_002_small_128.tif'
 
 simulation:
   params: [[0],[0],[0],[0]]
   min_radius: 0
   max_radius: 0.3
   diffusion_coefficients: [[0.02], [0.04], [0.05], [0.03]]
-  n_particles: 10000
+  n_particles: 16384
   n_particle_types: 4
-  n_nodes: 10000
+  n_nodes: 16384
   n_node_types: 4
-  n_frames: 4000
+  n_frames: 181
   delta_t: 0.05
   boundary: 'periodic'
-  node_value_map: 'input_data/pattern_10.tif'
-  node_coeff_map: 'input_data/pics_quadrants.tif'
 
 graph_model:
   field_grid: 'voronoi'
   particle_model_name: ''
-  mesh_model_name: 'RD_RPS_Mesh'
+  mesh_model_name: 'RD_RPS_Mesh2'
   prediction: 'first_derivative'
 
   input_size: 8
   output_size: 3
-  hidden_dim: 32
-  n_mp_layers: 5
+  hidden_dim: 256
+  n_mp_layers: 10
 
-  input_size_update: 8
+  input_size_update: 11
   output_size_update: 3
-  hidden_dim_update: 32
+  hidden_dim_update: 256
   n_layers_update: 5
-
 
   aggr_type: 'add'
   mesh_aggr_type: 'add'
+
   embedding_dim: 2
   update_type: 'none'
 
@@ -44,12 +43,17 @@ plotting:
 
 training:
 
-  n_epochs: 40
+  n_runs: 2
+  device: 'cuda:0'
+
+  n_epochs: 20
   batch_size: 8
   small_init_batch_size: True
-  n_runs: 2
+
+  data_augmentation_loop: 5000
+
   sparsity: 'none'
   cluster_method: 'distance_plot'
   fix_cluster_embedding: True
 
-  device: 'cuda:0'
+

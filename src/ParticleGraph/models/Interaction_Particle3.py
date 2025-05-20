@@ -108,7 +108,6 @@ class Interaction_Particle3(pyg.nn.MessagePassing):
             ])
             self.rotation_matrix = self.rotation_matrix.permute(*torch.arange(self.rotation_matrix.ndim - 1, -1, -1)).squeeze()
 
-
         if self.time_window == 0:
             particle_id = x[:, 0:1].long()
             embedding = self.a[self.data_id.clone().detach(), particle_id, :].squeeze()

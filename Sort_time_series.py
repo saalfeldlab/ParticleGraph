@@ -50,7 +50,7 @@ if __name__ == '__main__':
         print(f'folder  {config.dataset}')
 
         dataset_name = config.dataset
-        data_folder_name = config.data_folder_name
+        data_folder_name = config.data_folder_name + '/DN/'
 
         files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
         for f in files:
@@ -97,8 +97,9 @@ if __name__ == '__main__':
         plt.close()
 
 
-        cell_oi = 494
+        cell_oi = 4004   # 3153  7718   3236   4004
         time_series_oi = time_series_list_map[cell_oi, 0:4300]
+        time_oi= [3890,3995] # [3900, 4000]  [3800, 3900]  [4000,4100]  [4050,4150]
 
         # Sampling interval and frequency
         dt = 10.0  # seconds between samples
@@ -130,11 +131,19 @@ if __name__ == '__main__':
         plt.show()
         plt.close()
 
+        # plt.figure(figsize=(16, 8))
+        # it=500
+        # im = tifffile.imread(data_folder_name + files[max(0, it - 1)])
+        # plt.imshow(im)
+        # x = x_list[f'arr_{500}']
+        # plt.scatter(x[:, 2], im.shape[0]-x[:, 1], c='red', s=4)
+        # for k in range(0, len(x)):
+        #     plt.text(x[k, 2], im.shape[0]-x[k, 1], str(int(x[k, 0])), verticalalignment='top', horizontalalignment='left', fontsize=10, c='w')
 
-        time_oi=[0,285]
+
 
         for it in trange(time_oi[0], time_oi[1], 1):
-            im = tifffile.imread(data_folder_name + files[it+1])
+            im = tifffile.imread(data_folder_name + files[max(0,it-1)])
             im = np.array(im).astype('float32')
 
             x = x_list[f'arr_{it}']
@@ -142,22 +151,22 @@ if __name__ == '__main__':
 
             plt.figure(figsize=(14, 12))
             ax = plt.subplot(221)
-            plt.imshow(im[:,:,0],vmin=0,vmax=255)
+            plt.imshow(im,vmin=0,vmax=0.25)
             plt.scatter(x[pos, 2], im.shape[0]-x[pos, 1]-75, c='red', s=4)
             ax = plt.subplot(222)
             plt.plot(time_series_list_map[cell_oi, 0:4300], linewidth=0.5, color='white', alpha=1)
-            plt.plot(time_series_list_map[cell_oi, 0:it], linewidth=1, color='red', alpha=1)
+            plt.plot(np.arange(time_oi[0],it), time_series_list_map[cell_oi, time_oi[0]:it], linewidth=1, color='red', alpha=1)
             plt.scatter(it, time_series_list_map[cell_oi, it], c='red', s=4)
             plt.text(0.01, 2900, f"frame: {it}\ncell: {cell_oi}", verticalalignment='top', horizontalalignment='left', fontsize=10)
             plt.ylim([0,3000])
             ax = plt.subplot(223)
-            plt.imshow(np.fliplr(np.flipud(im[:,:,0])),vmin=0,vmax=255)
+            plt.imshow(np.fliplr(np.flipud(im)),vmin=0,vmax=0.25)
             plt.xlim([im.shape[1]-x[pos, 2]+200, im.shape[1]-x[pos, 2]-200])
             plt.ylim([x[pos, 1]-200, x[pos, 1]+200])
             ax = plt.subplot(224)
             plt.plot(time_series_list_map[cell_oi, time_oi[0]:time_oi[1]], linewidth=1, color='white', alpha=1)
             plt.plot(time_series_list_map[cell_oi, time_oi[0]:it], linewidth=1, color='red', alpha=1)
-            plt.scatter(it, time_series_list_map[cell_oi, it], c='red', s=4)
+            plt.scatter(it-time_oi[0], time_series_list_map[cell_oi, it], c='red', s=4)
 
             plt.tight_layout()
             plt.savefig(f'graphs_data/{dataset_name}/Fig/frame_{it:06}.tif', dpi=100)

@@ -3728,6 +3728,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         mask_mesh = (x_ > np.min(x_) + 0.02) & (x_ < np.max(x_) - 0.02) & (y_ > np.min(y_) + 0.02) & (y_ < np.max(y_) - 0.02)
         mask_mesh = torch.tensor(mask_mesh, dtype=torch.bool, device=device)
 
+        node_gt_list=[]
+        node_pred_list=[]
+
         if 'WaveMeshSmooth' in model_config.mesh_model_name:
             with torch.no_grad():
                 distance = torch.sum((mesh_data['mesh_pos'][:, None, :] - mesh_data['mesh_pos'][None, :, :]) ** 2, dim=2)
@@ -3927,7 +3930,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     n_particles = x.shape[0]
     x_inference_list = []
 
-    for it in trange(start_it, start_it+300):  #  start_it+200): # min(9600+start_it,stop_it-time_step)):
+    for it in trange(start_it, min(9600+start_it,stop_it-time_step)):  #  start_it+200): # min(9600+start_it,stop_it-time_step)):
 
         check_and_clear_memory(device=device, iteration_number=it, every_n_iterations=25, memory_percentage_threshold=0.6)
         # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
@@ -3956,10 +3959,12 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             if ('Siren_short_term_plasticity' in field_type) | ('modulation' in field_type):
                 modulation_gt_list.append(x0[:, 8:9])
                 modulation_pred_list.append(x[:, 8:9].clone().detach())
-        elif model_config.mesh_model_name == 'WaveMesh':
+        elif 'WaveMesh' in model_config.mesh_model_name:
             rmserr = torch.sqrt(torch.mean((x[mask_mesh.squeeze(), 6:7] - x0[mask_mesh.squeeze(), 6:7]) ** 2))
-        elif model_config.mesh_model_name == 'RD_RPS_Mesh':
+        elif 'RD_RPS_Mesh' in model_config.mesh_model_name:
             rmserr = torch.sqrt(torch.mean(torch.sum((x[mask_mesh.squeeze(), 6:9] - x0[mask_mesh.squeeze(), 6:9]) ** 2, axis=1)))
+            node_gt_list.append(x0[:, 6:9])
+            node_pred_list.append(x[:n_particles, 6:9].clone().detach())
         elif has_bounding_box:
             rmserr = torch.sqrt(
                 torch.mean(torch.sum(bc_dpos(x[:, 1:dimension + 1] - x0[:, 1:dimension + 1]) ** 2, axis=1)))
@@ -4251,9 +4256,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 if 'RD_RPS_Mesh' in model_config.mesh_model_name:
                     H1_IM = torch.reshape(x[:, 6:9], (n_nodes_per_axis, n_nodes_per_axis, 3))
                     plt.imshow(to_numpy(H1_IM))
-                    fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
-                    ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-                    ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+                    plt.axis('off')
+                    plt.xticks([])
+                    plt.yticks([])
                     # plt.xticks([])
                     # plt.yticks([])
                     # plt.axis('off')
@@ -4512,6 +4517,57 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{run}_{num}.tif", dpi=100)
                 plt.close()
 
+            if ('RD_RPS_Mesh' in model_config.mesh_model_name) & (it % 40 == 0) & (it > 0):
+
+                node_gt_list_ = torch.cat(node_gt_list, 0)
+                node_pred_list_ = torch.cat(node_pred_list, 0)
+                node_gt_list_ = torch.reshape(node_gt_list_, (node_gt_list_.shape[0] // n_particles, n_particles,3))
+                node_pred_list_ = torch.reshape(node_pred_list_, (node_pred_list_.shape[0] // n_particles, n_particles,3))
+
+                # plt.figure(figsize=(10, 10))
+                # n_list=[]
+                # for k in range(0,n_particles,n_particles//40):
+                #     if torch.max(node_gt_list_[:, k, 0].squeeze()) > 0.25:
+                #         plt.plot(to_numpy(node_gt_list_[:, k, 0].squeeze()))
+                #         n_list.append (k)
+
+                plt.figure(figsize=(10, 10))
+                plt.plot(to_numpy(node_gt_list_[:, 2454, 0].squeeze()))
+
+                n = [2454, 3272, 4908, 5317, 7362, 7771, 9407, 11452, 12270, 14724]
+
+                plt.figure(figsize=(20, 10))
+                ax = plt.subplot(121)
+                plt.plot(to_numpy(node_gt_list_[:, n[0], 0]), c='r', linewidth=4, label='true', alpha=0.25)
+                plt.plot(to_numpy(node_pred_list_[:, n[0], 0]), linewidth=2, c='r', label='learned')
+                plt.legend(fontsize=24)
+
+                plt.plot(to_numpy(node_gt_list_[:, n[1:5],0]), c='r', linewidth=4, alpha=0.25)
+                plt.plot(to_numpy(node_pred_list_[:, n[1:5],0]), c='r', linewidth=2)
+                plt.ylim([0, 1])
+                plt.xlim([0, 180])
+
+                ax = plt.subplot(122)
+                plt.scatter(to_numpy(node_gt_list_[-1, :]), to_numpy(node_pred_list_[-1, :]), s=1, c=mc)
+                plt.xlim([0,1])
+                plt.ylim([0,1])
+
+                x_data = to_numpy(node_gt_list_[-1, :,0])
+                y_data = to_numpy(node_pred_list_[-1, :,0])
+                lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+                residuals = y_data - linear_model(x_data, *lin_fit)
+                ss_res = np.sum(residuals ** 2)
+                ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+                r_squared = 1 - (ss_res / ss_tot)
+                plt.xlabel(r'true $x_i$', fontsize=48)
+                plt.ylabel(r'learned $x_i$', fontsize=48)
+                plt.text(0.05, 0.95, f'$R^2$: {np.round(r_squared, 3)}', fontsize=34)
+                plt.text(0.05, 0.85, f'slope: {np.round(lin_fit[0], 2)}', fontsize=34)
+                plt.tight_layout()
+                plt.savefig(f'./{log_dir}/results/comparison_xi_{it}.png', dpi=80)
+                plt.close()
+
+
             if ('PDE_N' in model_config.signal_model_name) & (it % 200 == 0) & (it > 0):
 
                 if has_ghost & ('PDE_N' in model_config.signal_model_name):
@@ -4726,13 +4782,13 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     print('prediction error {:.3e}+/-{:.3e}'.format(np.mean(pred_err_list), np.std(pred_err_list)))
     print('average rollout RMSE {:.3e}+/-{:.3e}'.format(np.mean(rmserr_list), np.std(rmserr_list)))
 
-    if has_mesh:
-        h = x_mesh_list[0][0][:, 6:7]
-        for k in range(n_frames):
-            h = torch.cat((h, x_mesh_list[0][k][:, 6:7]), 0)
-        h = to_numpy(h)
-        print(h.shape)
-        print('average u {:.3e}+/-{:.3e}'.format(np.mean(h), np.std(h)))
+    # if has_mesh:
+    #     h = x_mesh_list[0][0][:, 6:7]
+    #     for k in range(n_frames):
+    #         h = torch.cat((h, x_mesh_list[0][k][:, 6:7]), 0)
+    #     h = to_numpy(h)
+    #     print(h.shape)
+    #     print('average u {:.3e}+/-{:.3e}'.format(np.mean(h), np.std(h)))
 
     if 'PDE_N' in model_config.signal_model_name:
 

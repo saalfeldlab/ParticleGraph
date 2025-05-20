@@ -47,7 +47,7 @@ training:
   n_epochs: 20
   batch_size: 8
   small_init_batch_size: False
-  n_runs: 5
+  n_runs: 500
 
   time_window: 2
   time_window_noise: 1.0E-5

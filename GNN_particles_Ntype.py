@@ -53,7 +53,7 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'generate'
+        task = 'test'
         best_model = ''
 
         # config_list = ['multimaterial_16_3']
@@ -63,8 +63,8 @@ if __name__ == '__main__':
         # config_list = ['arbitrary_3']
         # config_list = ['cell_cardio_3']
         # config_list = ['RD_RPS_5']
-        # config_list = ['cell_U2OS_2']
-        config_list = ['cell_MDCK_14']
+        config_list = ['cell_U2OS_8']
+        # config_list = ['cell_MDCK_14']
         # config_list = ['signal_N4_CElegans_a9_17']
 
     for config_file_ in config_list:
@@ -89,7 +89,7 @@ if __name__ == '__main__':
             #               run=run_, test_mode='fixed_bounce_all', sample_embedding=False, step=4,
             #               device=device)  # particle_of_interest=100, 'fixed_bounce_all'
             data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best', run=1,
-                      test_mode='fixed_bounce_all', sample_embedding=False, step=4, device=device, particle_of_interest=0)  # particle_of_interest=100,  'fixed_bounce_all'
+                      test_mode='', sample_embedding=False, step=1, device=device, particle_of_interest=0)  # particle_of_interest=100,  'fixed_bounce_all'
 
     if 'try_func' in task:
             try_func(max_radius=config.simulation.max_radius, device=device)
