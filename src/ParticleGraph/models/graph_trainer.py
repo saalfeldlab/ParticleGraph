@@ -27,6 +27,7 @@ from ParticleGraph.denoise_data import *
 from scipy.spatial import KDTree
 from sklearn import neighbors, metrics
 import torch.nn.functional as F
+from scipy.ndimage import median_filter
 
 def data_train(config=None, erase=False, best_model=None, device=None):
     # plt.rcParams['text.usetex'] = True
@@ -1381,6 +1382,7 @@ def data_train_mesh(config, erase, best_model, device):
     time_step = train_config.time_step
     field_type = model_config.field_type
     omega = model_config.omega
+    recursive_loop = train_config.recursive_loop
 
     log_dir, logger = create_log_dir(config, erase)
     logger.info(f'Graph files N: {n_runs}')
@@ -1516,9 +1518,12 @@ def data_train_mesh(config, erase, best_model, device):
             ids_index = 0
             loss = 0
             for batch in range(batch_size):
-                k = np.random.randint(n_frames - 2 - time_step)
+                k = np.random.randint(n_frames - 2 - time_step - recursive_loop)
                 x_mesh = x_mesh_list[run][k].clone().detach()
-                x_mesh_next = x_mesh_list[run][k + time_step].clone().detach()
+                if recursive_loop > 0:
+                    x_mesh_next = x_mesh_list[run][k + recursive_loop].clone().detach()
+                else:
+                    x_mesh_next = x_mesh_list[run][k + time_step].clone().detach()
 
                 if has_field:
                     field = model_f(time=k / n_frames) ** 2
@@ -1537,10 +1542,12 @@ def data_train_mesh(config, erase, best_model, device):
                 dataset = data.Data(x=x_mesh, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
                 dataset_batch.append(dataset)
 
-                if time_step == 1:
+                if recursive_loop>0:
+                    y = x_mesh_next[:, 6:9].clone().detach()
+                elif time_step == 1:
                     y = y_mesh_list[run][k].clone().detach() / hnorm
                 elif time_step > 1:
-                    y = x_mesh_next[:, 6:9]
+                    y = x_mesh_next[:, 6:9].clone().detach()
 
                 if batch == 0:
                     x_batch = x_mesh
@@ -1558,10 +1565,19 @@ def data_train_mesh(config, erase, best_model, device):
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
 
-            for batch in batch_loader:
-                pred = model(batch, data_id = data_id, training=True, has_field = has_field)
+            if recursive_loop>0:
+                for loop in range(recursive_loop):
+                    pred = model(dataset, data_id=data_id, training=True, has_field=has_field)
+                    if model_config.prediction == 'first_derivative':
+                        x_mesh[ids_index:ids_index, 6:9] = x_mesh[ids_index:ids_index, 6:9] + delta_t * pred[ids_index:ids_index + x_mesh.shape[0]] * hnorm
+                    dataset = data.Data(x=x_mesh, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
+            else:
+                for batch in batch_loader:
+                    pred = model(batch, data_id = data_id, training=True, has_field = has_field)
 
-            if time_step == 1:
+            if recursive_loop > 0:
+                loss = (x_mesh[ids_batch, 6:9] - y_batch[ids_batch]).norm(2)
+            elif time_step == 1:
                 loss = (pred[ids_batch] - y_batch[ids_batch]).norm(2)
             elif time_step > 1:
                 if model_config.prediction == 'first_derivative':
@@ -3923,7 +3939,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     n_particles = x.shape[0]
     x_inference_list = []
 
-    for it in trange(start_it, start_it+300):  #  start_it+200): # min(9600+start_it,stop_it-time_step)):
+    for it in trange(start_it, start_it+100):  #  start_it+200): # min(9600+start_it,stop_it-time_step)):
 
         check_and_clear_memory(device=device, iteration_number=it, every_n_iterations=25, memory_percentage_threshold=0.6)
         # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
@@ -4002,6 +4018,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 else:
                     x[mask_mesh.squeeze(), 6:9] += pred[mask_mesh.squeeze()] * hnorm * delta_t
                 x[:, 6:9] = torch.clamp(x[:, 6:9], 0, 1.1)
+
         elif has_field:
             match model_config.field_type:
                 case 'tensor':
@@ -4518,17 +4535,19 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 node_gt_list_ = torch.reshape(node_gt_list_, (node_gt_list_.shape[0] // n_particles, n_particles,3))
                 node_pred_list_ = torch.reshape(node_pred_list_, (node_pred_list_.shape[0] // n_particles, n_particles,3))
 
-                # plt.figure(figsize=(10, 10))
-                # n_list=[]
-                # for k in range(0,n_particles,n_particles//40):
-                #     if torch.max(node_gt_list_[:, k, 0].squeeze()) > 0.25:
-                #         plt.plot(to_numpy(node_gt_list_[:, k, 0].squeeze()))
-                #         n_list.append (k)
+                plt.figure(figsize=(10, 10))
+                n_list=[]
+                for k in range(0,n_particles,n_particles//40):
+                    if torch.max(node_gt_list_[:, k, 0].squeeze()) > 0.25:
+                        plt.plot(to_numpy(node_gt_list_[:, k, 0].squeeze()))
+                        n_list.append (k)
 
                 if n_nodes == 4096:
                     n = [612, 714, 1428, 1632, 1836, 2142, 2346, 3162, 3264, 3672]
                 elif n_nodes == 16384:
                     n = [2454, 3272, 4908, 5317, 7362, 7771, 9407, 11452, 12270, 14724]
+                elif n_nodes == 65536:
+                    n =  [13104, 14742, 18018, 22932, 26208, 31122, 36036, 39312, 42588, 49140, 50778, 58968]
 
                 plt.figure(figsize=(20, 10))
                 ax = plt.subplot(121)
