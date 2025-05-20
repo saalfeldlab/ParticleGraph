@@ -34,7 +34,7 @@ class WBI_Communication(pyg.nn.MessagePassing):
         self.input_size = model_config.input_size
         self.output_size = model_config.output_size
         self.hidden_dim = model_config.hidden_dim
-        self.n_layers = model_config.n_mp_layers
+        self.n_layers = model_config.n_layers
         self.embedding_dim = model_config.embedding_dim
         self.n_particles = simulation_config.n_particles
         self.n_dataset = config.training.n_runs

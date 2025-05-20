@@ -40,7 +40,7 @@ class Interaction_Smooth_Particle(pyg.nn.MessagePassing):
         self.input_size = model_config.input_size
         self.output_size = model_config.output_size
         self.hidden_dim = model_config.hidden_dim
-        self.n_layers = model_config.n_mp_layers
+        self.n_layers = model_config.n_layers
 
         self.update_type = model_config.update_type
         self.n_layers_update = model_config.n_layers_update

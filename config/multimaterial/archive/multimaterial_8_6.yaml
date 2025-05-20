@@ -23,7 +23,7 @@ graph_model:
   input_size: 14
   output_size: 2
   hidden_dim: 256
-  n_mp_layers: 5
+  n_layers: 5
 
   input_size_update: 2
   n_layers_update: 2

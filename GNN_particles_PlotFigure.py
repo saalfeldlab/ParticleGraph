@@ -55,7 +55,7 @@ class Interaction_Particle_extract(MessagePassing):
         self.input_size = config.graph_model.input_size
         self.output_size = config.graph_model.output_size
         self.hidden_dim = config.graph_model.hidden_dim
-        self.n_layers = config.graph_model.n_mp_layers
+        self.n_layers = config.graph_model.n_layers
         self.n_particles = config.simulation.n_particles
         self.max_radius = config.simulation.max_radius
         self.rotation_augmentation = config.training.rotation_augmentation
@@ -262,7 +262,7 @@ class Mesh_RPS_extract(MessagePassing):
         self.input_size = config.graph_model.input_size
         self.output_size = config.graph_model.output_size
         self.hidden_size = config.graph_model.hidden_dim
-        self.nlayers = config.graph_model.n_mp_layers
+        self.nlayers = config.graph_model.n_layers
         self.embedding_dim = config.graph_model.embedding_dim
         self.nparticles = config.simulation.n_particles
         self.ndataset = config.training.n_runs

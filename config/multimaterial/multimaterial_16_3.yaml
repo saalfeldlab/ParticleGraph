@@ -25,12 +25,12 @@ graph_model:
   input_size: 10
   output_size: 256
   hidden_dim: 256
-  n_mp_layers: 5
+  n_layers: 5
 
   input_size_decoder: 256
   output_size_decoder: 2
   hidden_dim_decoder: 256
-  n_mp_layers_decoder: 4
+  n_layers_decoder: 4
 
   update_type: 'mlp'
   input_size_update: 4

@@ -38,7 +38,7 @@ class Mesh_RPS(pyg.nn.MessagePassing):
         self.input_size = model_config.input_size
         self.output_size = model_config.output_size
         self.hidden_size = model_config.hidden_dim
-        self.nlayers = model_config.n_mp_layers
+        self.nlayers = model_config.n_layers
 
         self.input_size_update = model_config.input_size_update
         self.hidden_dim_update = model_config.hidden_dim_update

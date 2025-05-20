@@ -25,12 +25,12 @@ graph_model:
   pre_input_size: 6
   pre_output_size: 5
   pre_hidden_dim: 128
-  pre_n_mp_layers: 4
+  pre_n_layers: 4
 
   input_size: 25
   output_size: 32
   hidden_dim: 128
-  n_mp_layers: 4
+  n_layers: 4
   aggr_type: 'add'
   embedding_dim: 2
 

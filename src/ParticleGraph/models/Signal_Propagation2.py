@@ -42,7 +42,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         self.input_size = model_config.input_size
         self.output_size = model_config.output_size
         self.hidden_dim = model_config.hidden_dim
-        self.n_layers = model_config.n_mp_layers
+        self.n_layers = model_config.n_layers
 
         self.lin_edge_positive = model_config.lin_edge_positive
 

@@ -99,17 +99,17 @@ class GraphModelConfig(BaseModel):
     pre_input_size: int = 1
     pre_output_size: int = 1
     pre_hidden_dim: int = 1
-    pre_n_mp_layers: int = 1
+    pre_n_layers: int = 1
 
     input_size: int = 1
     output_size: int = 1
     hidden_dim: int = 1
-    n_mp_layers: int = 1
+    n_layers: int = 1
 
     input_size_decoder: int = 1
     output_size_decoder: int = 1
     hidden_dim_decoder: int = 1
-    n_mp_layers_decoder: int = 1
+    n_layers_decoder: int = 1
 
     multi_mlp_params: List[List[Union[int, int, int, int, str]]]  = None
 

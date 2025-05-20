@@ -27,7 +27,7 @@ graph_model:
   input_size: 13
   output_size: 2
   hidden_dim: 128
-  n_mp_layers: 5
+  n_layers: 5
   aggr_type: 'add'
   embedding_dim: 2
   update_type: 'none'
