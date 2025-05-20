@@ -1540,7 +1540,7 @@ def data_train_mesh(config, erase, best_model, device):
                 if time_step == 1:
                     y = y_mesh_list[run][k].clone().detach() / hnorm
                 elif time_step > 1:
-                    y = y_mesh_list[run][k + time_step].clone().detach()
+                    y = x_mesh_next[:, 6:9]
 
                 if batch == 0:
                     x_batch = x_mesh
@@ -1560,13 +1560,6 @@ def data_train_mesh(config, erase, best_model, device):
 
             for batch in batch_loader:
                 pred = model(batch, data_id = data_id, training=True, has_field = has_field)
-
-                # fig = plt.figure(figsize=(8, 8))
-                # plt.ion()
-                # pos = torch.argwhere(edge_index_mesh[0,:]==4850)
-                # plt.scatter(to_numpy(x_mesh[:, 1]), to_numpy(x_mesh[:, 2]), s=10, c=to_numpy(model.density))
-                # plt.scatter(to_numpy(x_mesh[edge_index_mesh[1, pos], 1]), to_numpy(x_mesh[edge_index_mesh[1, pos], 2]), s=10, c='r')
-                # plt.show()
 
             if time_step == 1:
                 loss = (pred[ids_batch] - y_batch[ids_batch]).norm(2)
@@ -3930,7 +3923,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     n_particles = x.shape[0]
     x_inference_list = []
 
-    for it in trange(start_it, min(9600+start_it,stop_it-time_step)):  #  start_it+200): # min(9600+start_it,stop_it-time_step)):
+    for it in trange(start_it, start_it+300):  #  start_it+200): # min(9600+start_it,stop_it-time_step)):
 
         check_and_clear_memory(device=device, iteration_number=it, every_n_iterations=25, memory_percentage_threshold=0.6)
         # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
@@ -4255,6 +4248,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     plt.axis('off')
                 if 'RD_RPS_Mesh' in model_config.mesh_model_name:
                     H1_IM = torch.reshape(x[:, 6:9], (n_nodes_per_axis, n_nodes_per_axis, 3))
+                    H1_IM = torch.clip(H1_IM, 0, 1)
                     plt.imshow(to_numpy(H1_IM))
                     plt.axis('off')
                     plt.xticks([])
@@ -4531,10 +4525,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 #         plt.plot(to_numpy(node_gt_list_[:, k, 0].squeeze()))
                 #         n_list.append (k)
 
-                plt.figure(figsize=(10, 10))
-                plt.plot(to_numpy(node_gt_list_[:, 2454, 0].squeeze()))
-
-                n = [2454, 3272, 4908, 5317, 7362, 7771, 9407, 11452, 12270, 14724]
+                if n_nodes == 4096:
+                    n = [612, 714, 1428, 1632, 1836, 2142, 2346, 3162, 3264, 3672]
+                elif n_nodes == 16384:
+                    n = [2454, 3272, 4908, 5317, 7362, 7771, 9407, 11452, 12270, 14724]
 
                 plt.figure(figsize=(20, 10))
                 ax = plt.subplot(121)
@@ -4566,7 +4560,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.tight_layout()
                 plt.savefig(f'./{log_dir}/results/comparison_xi_{it}.png', dpi=80)
                 plt.close()
-
 
             if ('PDE_N' in model_config.signal_model_name) & (it % 200 == 0) & (it > 0):
 

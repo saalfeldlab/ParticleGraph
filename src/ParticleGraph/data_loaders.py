@@ -696,7 +696,6 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
         print(f'n_cells: {n_cells}')
 
 
-
 def load_3Dfluo_data_with_Cellpose(config, device, visualize):
 
 
@@ -990,8 +989,8 @@ def load_2Dfluo_data_on_mesh(config, device, visualize, step):
     top_freqs, top_amps = get_top_fft_modes_per_pixel(im0, dt=1.0, top_n=1)
 
     # Example: get top frequency at pixel (100, 150) in channel 0
-    print("Top frequencies:", top_freqs[:, 64, 64, 1])
-    print("Amplitudes:", top_amps[:, 64, 64, 0])
+    # print("Top frequencies:", top_freqs[:, 64, 64, 1])
+    # print("Amplitudes:", top_amps[:, 64, 64, 0])
 
     top_freqs = top_freqs.squeeze()
     top_amps = top_amps.squeeze()
@@ -1001,17 +1000,20 @@ def load_2Dfluo_data_on_mesh(config, device, visualize, step):
          T1_mesh.clone().detach(), H1_mesh.clone().detach(), H1_mesh.clone().detach(), A1_mesh.clone().detach()), 1)
     x_mesh[:, 2] = 1 - x_mesh[:, 2]
 
-    fig = plt.figure(figsize=(20, 10))
-    ax = fig.add_subplot(121)
+    fig = plt.figure(figsize=(16, 4))
+    ax = fig.add_subplot(141)
     plt.imshow(top_freqs[:,:,0],vmin=0,vmax=0.05)
-    plt.colorbar()
-    plt.tight_layout()
     plt.title('top frequency in channel 0')
-    ax = fig.add_subplot(122)
+    ax = fig.add_subplot(142)
     plt.imshow(top_freqs[:,:,1],vmin=0,vmax=0.05)
-    plt.colorbar()
-    plt.tight_layout()
     plt.title('top frequency in channel 1')
+    ax = fig.add_subplot(143)
+    plt.imshow(top_amps[:,:,0],vmin=0,vmax=5000)
+    plt.title('amplitudes in channel 0')
+    ax = fig.add_subplot(144)
+    plt.imshow(top_amps[:,:,1],vmin=0,vmax=5000)
+    plt.title('amplitudes in channel 1')
+    plt.tight_layout()
     plt.savefig(f"{output_dir}/../top_freqs.png", dpi=100)
     plt.close()
 
