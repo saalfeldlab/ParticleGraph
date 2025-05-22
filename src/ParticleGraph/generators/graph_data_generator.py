@@ -85,6 +85,8 @@ def generate_from_data(config, device, visualize=True, step=None, cmap=None):
 
     if data_folder_name == 'graphs_data/solar_system':
         load_solar_system(config, device, visualize, step)
+    elif 'RGB' in config.graph_model.particle_model_name:
+        load_RGB_grid_data(config, device, visualize, step)
     elif 'LG-ODE' in data_folder_name:
         load_LG_ODE(config, device, visualize, step)
     elif 'WaterDropSmall' in data_folder_name:

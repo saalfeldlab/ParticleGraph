@@ -361,7 +361,9 @@ def init_mesh(config, device):
 
     mask_mesh = (x_mesh > torch.min(x_mesh) + 0.02) & (x_mesh < torch.max(x_mesh) - 0.02) & (y_mesh > torch.min(y_mesh) + 0.02) & (y_mesh < torch.max(y_mesh) - 0.02)
 
-    if 'grid' not in field_grid:
+    if 'grid' in field_grid:
+        pos_mesh = pos_mesh
+    else:
         if 'pattern_Null.tif' in simulation_config.node_value_map:
             pos_mesh = pos_mesh + torch.randn(n_nodes, 2, device=device) * mesh_size / 24
         else:
@@ -369,30 +371,30 @@ def init_mesh(config, device):
 
     match config.graph_model.mesh_model_name:
         case 'RD_Gray_Scott_Mesh':
-            features_mesh = torch.zeros((n_nodes, 2), device=device)
-            features_mesh[:, 0] -= 0.5 * torch.tensor(values / 255, device=device)
-            features_mesh[:, 1] = 0.25 * torch.tensor(values / 255, device=device)
+            node_value = torch.zeros((n_nodes, 2), device=device)
+            node_value[:, 0] -= 0.5 * torch.tensor(values / 255, device=device)
+            node_value[:, 1] = 0.25 * torch.tensor(values / 255, device=device)
         case 'RD_FitzHugh_Nagumo_Mesh':
-            features_mesh = torch.zeros((n_nodes, 2), device=device) + torch.rand((n_nodes, 2), device=device) * 0.1
-        case 'RD_RPS_Mesh' | 'RD_RPS_Mesh2' | 'RD_RPS_Mesh_bis':
-            features_mesh = torch.rand((n_nodes, 3), device=device)
-            s = torch.sum(features_mesh, dim=1)
+            node_value = torch.zeros((n_nodes, 2), device=device) + torch.rand((n_nodes, 2), device=device) * 0.1
+        case 'RD_RPS_Mesh' | 'RD_RPS_Mesh2' | 'RD_RPS_Mesh3' :
+            node_value = torch.rand((n_nodes, 3), device=device)
+            s = torch.sum(node_value, dim=1)
             for k in range(3):
-                features_mesh[:, k] = features_mesh[:, k] / s
+                node_value[:, k] = node_value[:, k] / s
         case 'DiffMesh' | 'WaveMesh' | 'Particle_Mesh_A' | 'Particle_Mesh_B' | 'WaveSmoothParticle':
-            features_mesh = torch.zeros((n_nodes, 2), device=device)
-            features_mesh[:, 0] = torch.tensor(values / 255 * 5000, device=device)
+            node_value = torch.zeros((n_nodes, 2), device=device)
+            node_value[:, 0] = torch.tensor(values / 255 * 5000, device=device)
         case 'PDE_O_Mesh':
-            features_mesh = torch.zeros((n_particles, 5), device=device)
-            features_mesh[0:n_particles, 0:1] = x_mesh[0:n_particles]
-            features_mesh[0:n_particles, 1:2] = y_mesh[0:n_particles]
-            features_mesh[0:n_particles, 2:3] = torch.randn(n_particles, 1, device=device) * 2 * np.pi  # theta
-            features_mesh[0:n_particles, 3:4] = torch.ones(n_particles, 1, device=device) * np.pi / 200  # d_theta
-            features_mesh[0:n_particles, 4:5] = features_mesh[0:n_particles, 3:4]  # d_theta0
-            pos_mesh[:, 0] = features_mesh[:, 0] + (3 / 8) * mesh_size * torch.cos(features_mesh[:, 2])
-            pos_mesh[:, 1] = features_mesh[:, 1] + (3 / 8) * mesh_size * torch.sin(features_mesh[:, 2])
+            node_value = torch.zeros((n_particles, 5), device=device)
+            node_value[0:n_particles, 0:1] = x_mesh[0:n_particles]
+            node_value[0:n_particles, 1:2] = y_mesh[0:n_particles]
+            node_value[0:n_particles, 2:3] = torch.randn(n_particles, 1, device=device) * 2 * np.pi  # theta
+            node_value[0:n_particles, 3:4] = torch.ones(n_particles, 1, device=device) * np.pi / 200  # d_theta
+            node_value[0:n_particles, 4:5] = node_value[0:n_particles, 3:4]  # d_theta0
+            pos_mesh[:, 0] = node_value[:, 0] + (3 / 8) * mesh_size * torch.cos(node_value[:, 2])
+            pos_mesh[:, 1] = node_value[:, 1] + (3 / 8) * mesh_size * torch.sin(node_value[:, 2])
         case '' :
-            features_mesh = torch.zeros((n_nodes, 2), device=device)
+            node_value = torch.zeros((n_nodes, 2), device=device)
 
     # i0 = imread(f'graphs_data/{node_type_map}')
     # values = i0[(to_numpy(x_mesh[:, 0]) * 255).astype(int), (to_numpy(y_mesh[:, 0]) * 255).astype(int)]
@@ -408,7 +410,7 @@ def init_mesh(config, device):
     dpos_mesh = torch.zeros((n_nodes, 2), device=device)
 
     x_mesh = torch.concatenate((node_id_mesh.clone().detach(), pos_mesh.clone().detach(), dpos_mesh.clone().detach(),
-                                type_mesh.clone().detach(), features_mesh.clone().detach()), 1)
+                                type_mesh.clone().detach(), node_value.clone().detach()), 1)
 
     pos = to_numpy(x_mesh[:, 1:3])
     tri = Delaunay(pos, qhull_options='QJ')
@@ -454,7 +456,7 @@ def init_mesh(config, device):
         mesh_data['edge_index'] = adj_t.nonzero().t().contiguous()
 
 
-    return pos_mesh, dpos_mesh, type_mesh, features_mesh, a_mesh, node_id_mesh, mesh_data
+    return pos_mesh, dpos_mesh, type_mesh, node_value, a_mesh, node_id_mesh, mesh_data
 
 
 def init_synapse_map(config, x, edge_attr_adjacency, device):

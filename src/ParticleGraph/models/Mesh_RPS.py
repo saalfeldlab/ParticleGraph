@@ -51,6 +51,7 @@ class Mesh_RPS(pyg.nn.MessagePassing):
         self.bc_dpos = bc_dpos
         self.time_window_noise = train_config.time_window_noise
         self.rotation_augmentation = train_config.rotation_augmentation
+        self.field_type = model_config.field_type
 
 
         if self.model == 'RD_RPS_Mesh2':
@@ -78,6 +79,8 @@ class Mesh_RPS(pyg.nn.MessagePassing):
 
         if self.has_field:
             field = x[:, 9:10]
+            if (self.has_field) & ('replace_blue' in self.field_type):
+                x[:, 8:9] = field
         else:
             field = torch.zeros_like(x[:, 9:10])
 
@@ -106,7 +109,7 @@ class Mesh_RPS(pyg.nn.MessagePassing):
                 noise = torch.randn_like(input_phi[:,0:6]) * self.time_window_noise
                 input_phi[:,0:6] = input_phi[:,0:6] + noise
 
-        if self.has_field:
+        if (self.has_field) & ('additive' in self.field_type):
             input_phi = torch.cat((input_phi, field), dim=-1)
 
         pred = self.lin_phi(input_phi)

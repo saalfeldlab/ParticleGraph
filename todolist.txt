@@ -1,5 +1,0 @@
-remove interaction_particle_field
-
-add field static movie modulation forcing
-
-pipeline motile gurobi traccuracy

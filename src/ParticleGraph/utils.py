@@ -810,4 +810,22 @@ def get_top_fft_modes_per_pixel(im0, dt=1.0, top_n=3):
     return top_freqs, top_amps
 
 
+import torch.nn.functional as F
+
+
+def total_variation_norm(im):
+    # Compute the differences along the x-axis (horizontal direction)
+    dx = im[:, 1:, :] - im[:, :-1, :]  # (batch, height-1, width, channels)
+
+    # Compute the differences along the y-axis (vertical direction)
+    dy = im[1:, :, :] - im[:-1, :, :]  # (batch, height, width-1, channels)
+
+    # Sum squared differences and take the square root (L2 norm)
+    tv_x = torch.sqrt(torch.sum(dx ** 2))  # Sum along channels
+    tv_y = torch.sqrt(torch.sum(dy ** 2))  # Sum along channels
+
+    # Total variation is the sum of x and y contributions
+    return tv_x + tv_y
+
+
 

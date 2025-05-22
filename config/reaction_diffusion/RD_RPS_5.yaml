@@ -47,8 +47,6 @@ training:
   n_runs: 2
   device: 'cuda:0'
 
-  time_step: 4
-
   batch_size: 8
   small_init_batch_size: True
 

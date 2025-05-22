@@ -870,7 +870,7 @@ def load_2Dgrid_data(config, device, visualize, step):
             X = data[it, :, :, 0:2].copy() / image_width
             X_next = data[it+1, :, :, 0:2].copy() / image_width
 
-            Y = (X_next - 2 * X_prev + X) / delta_t ** 2
+            Y = (X_next - 2 * X + X_prev) / delta_t ** 2
 
             Y = np.reshape(Y, (Y.shape[0] * Y.shape[1], Y.shape[2]))
             y = torch.tensor(Y, dtype=torch.float32, device=device)
@@ -955,6 +955,249 @@ def load_2Dgrid_data(config, device, visualize, step):
 
 
 def load_2Dfluo_data_on_mesh(config, device, visualize, step):
+
+
+    n_particles = config.simulation.n_particles
+    n_frames = config.simulation.n_frames
+    dataset_name = config.dataset
+    delta_t = config.simulation.delta_t
+    dimension = config.simulation.dimension
+    max_radius = config.simulation.max_radius
+    min_radius = config.simulation.min_radius
+    n_nodes = config.simulation.n_nodes
+
+    output_dir = f"./graphs_data/{dataset_name}/Fig/"
+    os.makedirs(output_dir, exist_ok=True)
+
+    run = 0
+
+    x_mesh_list = []
+    y_mesh_list = []
+
+    X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
+    # save mesh grid, edges indices and Laplacian discrete values,
+    torch.save(mesh_data, f'graphs_data/{dataset_name}/mesh_data_{run}.pt')
+    torch.save(mesh_data, f'graphs_data/{dataset_name}/mesh_data_{run+1}.pt')
+
+    plt.style.use('dark_background')
+
+    file_path = os.path.expanduser(config.data_folder_name)
+    im0 = tifffile.imread(file_path)
+    im0 = np.array(im0).astype('float32')
+
+
+    top_freqs, top_amps = get_top_fft_modes_per_pixel(im0, dt=1.0, top_n=1)
+
+    # Example: get top frequency at pixel (100, 150) in channel 0
+    # print("Top frequencies:", top_freqs[:, 64, 64, 1])
+    # print("Amplitudes:", top_amps[:, 64, 64, 0])
+
+    top_freqs = top_freqs.squeeze()
+    top_amps = top_amps.squeeze()
+
+    x_mesh = torch.concatenate(
+        (N1_mesh.clone().detach(), X1_mesh.clone().detach(), V1_mesh.clone().detach(),
+         T1_mesh.clone().detach(), H1_mesh.clone().detach(), H1_mesh.clone().detach(), A1_mesh.clone().detach()), 1)
+    x_mesh[:, 2] = 1 - x_mesh[:, 2]
+
+    fig = plt.figure(figsize=(16, 4))
+    ax = fig.add_subplot(141)
+    plt.imshow(top_freqs[:,:,0],vmin=0,vmax=0.05)
+    plt.title('top frequency in channel 0')
+    ax = fig.add_subplot(142)
+    plt.imshow(top_freqs[:,:,1],vmin=0,vmax=0.05)
+    plt.title('top frequency in channel 1')
+    ax = fig.add_subplot(143)
+    plt.imshow(top_amps[:,:,0],vmin=0,vmax=5000)
+    plt.title('amplitudes in channel 0')
+    ax = fig.add_subplot(144)
+    plt.imshow(top_amps[:,:,1],vmin=0,vmax=5000)
+    plt.title('amplitudes in channel 1')
+    plt.tight_layout()
+    plt.savefig(f"{output_dir}/../top_freqs.png", dpi=100)
+    plt.close()
+
+    # fig = plt.figure(figsize=(20, 10))
+    # ax = fig.add_subplot(121)
+    # time_series = im0[:,128,128,0:2]
+    # plt.plot(time_series[:, 0], c='r')
+    # plt.plot(time_series[:, 1], c='g')
+    # # plt.grid(alpha=0.25)
+    # plt.title('pixel_128_128')
+    # ax = fig.add_subplot(122)
+    # time_series = im0[:,72,69,0:2]
+    # plt.plot(time_series[:, 0], c='r')
+    # plt.plot(time_series[:, 1], c='g')
+    # # plt.grid(alpha=0.25)
+    # plt.title('pixel_72_69')
+    # plt.tight_layout()
+    # plt.savefig(f"{output_dir}/../pixels.png", dpi=100)
+    # plt.close()
+
+
+    for it in trange(0, n_frames - 1):
+
+        x_mesh[:,6:9] = torch.tensor(im0[it], dtype=torch.float32, device=device).reshape(-1, 3) / 256
+        if it>0:
+            x_mesh[:, 9:12] = torch.tensor(im0[it+1]-im0[it], dtype=torch.float32, device=device).reshape(-1, 3) / 256 / delta_t
+        else:
+            x_mesh[:, 9:12] = torch.zeros((n_nodes, 3), dtype=torch.float32, device=device)
+
+        if config.graph_model.prediction == 'first_derivative':
+            y_mesh = torch.tensor(im0[it+1]-im0[it], dtype=torch.float32, device=device).reshape(-1, 3) / 256 / delta_t
+        elif (config.graph_model.prediction == '2nd_derivative') & (it>0):
+            y_mesh = torch.tensor(im0[it+1]-2*im0[it]+im0[it-1], dtype=torch.float32, device=device).reshape(-1, 3) / 256 / delta_t**2
+        else:
+            y_mesh = torch.zeros((n_nodes, 3), dtype=torch.float32, device=device)
+
+        x_mesh_list.append(x_mesh.clone().detach())
+        y_mesh_list.append(y_mesh.clone().detach())
+
+        im = to_numpy(x_mesh[:, 6:9])  # (n_nodes, 3)
+        im = im.reshape((int(np.sqrt(n_nodes)), int(np.sqrt(n_nodes)), 3))
+
+        fig = plt.figure(figsize=(10, 10))
+        plt.axis('off')
+        plt.imshow((im*255).astype('uint8'))
+        num = f"{it:04}"
+        plt.savefig(f"./graphs_data/{dataset_name}/Fig/Fig_{num}", dpi=100)
+        plt.close()
+
+
+    x_mesh_list = torch.stack(x_mesh_list)
+    y_mesh_list = torch.stack(y_mesh_list)
+    torch.save(x_mesh_list, f'graphs_data/{dataset_name}/x_mesh_list_{run}.pt')
+    torch.save(y_mesh_list, f'graphs_data/{dataset_name}/y_mesh_list_{run}.pt')
+    torch.save(x_mesh_list, f'graphs_data/{dataset_name}/x_mesh_list_{run+1}.pt')
+    torch.save(y_mesh_list, f'graphs_data/{dataset_name}/y_mesh_list_{run+1}.pt')
+
+
+def load_RGB_grid_data(config, device, visualize, step):
+
+    n_nodes = config.simulation.n_nodes
+    n_frames = config.simulation.n_frames
+    dataset_name = config.dataset
+    delta_t = config.simulation.delta_t
+    dimension = config.simulation.dimension
+    max_radius = config.simulation.max_radius
+    min_radius = config.simulation.min_radius
+
+    os.makedirs(f"./graphs_data/{dataset_name}/Fig/", exist_ok=True)
+    os.makedirs( f"./graphs_data/{dataset_name}/Fig/Dots", exist_ok=True)
+    os.makedirs(f"./graphs_data/{dataset_name}/Fig/Derivatives", exist_ok=True)
+    os.makedirs( f"./graphs_data/{dataset_name}/Fig/Target", exist_ok=True)
+
+    run = 0
+    x_list = []
+
+    im0 = tifffile.imread(config.data_folder_name)
+    im0 = np.array(im0).astype('float32')
+
+    image_width = im0.shape[1]
+    image_height = im0.shape[2]
+
+    N = np.arange(n_nodes, dtype=np.float32)[:, None]
+    X = np.zeros((n_nodes, 2))
+    V = np.zeros((n_nodes, 2))
+    T = np.zeros((n_nodes, 1))
+    H = np.zeros((n_nodes, 6))
+
+    xs = torch.linspace(0, 1, steps=image_width)
+    ys = torch.linspace(0, image_height/image_width, steps=image_height)
+    x_mesh, y_mesh = torch.meshgrid(xs, ys, indexing='xy')
+    x_mesh = torch.reshape(x_mesh, (n_nodes, 1))
+    y_mesh = torch.reshape(y_mesh, (n_nodes, 1))
+    pos_mesh = torch.zeros((n_nodes, 2), device=device)
+    pos_mesh[0:n_nodes, 0:1] = x_mesh[0:n_nodes]
+    pos_mesh[0:n_nodes, 1:2] = y_mesh[0:n_nodes]
+    X = to_numpy(pos_mesh)
+
+
+    plt.style.use('dark_background')
+
+    for it in trange(0, n_frames - 1):
+
+        H = im0[it] / 255
+        H = np.reshape(H, (H.shape[0] *  H.shape[1], H.shape[2]))
+
+        if it>0:
+            H_prev = im0[it-1] /255
+            H_prev = np.reshape(H_prev, (H_prev.shape[0] * H_prev.shape[1], H_prev.shape[2]))
+            dH = (H - H_prev) / delta_t
+            H = np.concatenate((H, dH), axis=1)
+        else:
+            H = np.concatenate((H, np.zeros_like(H)), axis=1)
+
+        x = torch.tensor(np.concatenate((N.astype(int), X, V, T, H), axis=1), dtype=torch.float32, device=device)
+
+        x_list.append(x.clone().detach())
+
+        fig = plt.subplots(figsize=(12, 8))
+        plt.axis('off')
+        for k in range(3):
+            plt.subplot(2, 3, k+1)
+            plt.xticks([])
+            plt.yticks([])
+            plt.axis('off')
+            plt.scatter(to_numpy(x[:, 1]), 1-to_numpy(x[:, 2]), s=10, c=to_numpy(x[:, 6+k]), vmin=0, vmax=1.1)
+            plt.xlim([0, 1])
+            plt.ylim([0, 1])
+        if it>0:
+            for k in range(3):
+                plt.subplot(2, 3, k + 4)
+                plt.xticks([])
+                plt.yticks([])
+                plt.axis('off')
+                plt.scatter(to_numpy(x[:, 1]), 1 - to_numpy(x[:, 2]), s=10, c=to_numpy(x[:, 9 + k]), vmin=-1, vmax=1)
+                plt.xlim([0, 1])
+                plt.ylim([0, 1])
+        plt.tight_layout()
+        num = f"{it:04}"
+        plt.savefig(f"./graphs_data/{dataset_name}/Fig/Dots/Fig_{num}", dpi=70)
+        plt.close()
+
+
+    if config.graph_model.prediction == '2nd_derivative':
+        y_list = []
+        y_list.append(torch.zeros((n_nodes,2), dtype=torch.float32, device=device))
+        for it in trange(1, n_frames - 1):
+
+            H_prev = im0[it-1] /255
+            H = im0[it] /255
+            H_next = im0[it+1] /255
+
+            Y = (H_next - 2 * H + H_prev) / delta_t ** 2
+
+            Y = np.reshape(Y, (Y.shape[0] * Y.shape[1], Y.shape[2]))
+            y = torch.tensor(Y, dtype=torch.float32, device=device)
+            y_list.append(y.clone().detach())
+
+        y_list[0] = y_list[1]   # better than zeros
+
+    elif config.graph_model.prediction == 'first_derivative':
+
+        y_list = []
+        for it in trange(0, n_frames - 1):  # Notice: loop until n_frames - 1
+
+            H = im0[it] /255
+            H_next = im0[it+1] /255
+
+            Y = (H_next - H) / delta_t
+
+            Y = np.reshape(Y, (Y.shape[0] * Y.shape[1], Y.shape[2]))
+            y = torch.tensor(Y, dtype=torch.float32, device=device)
+            y_list.append(y.clone().detach())
+
+    x_list = np.array(to_numpy(torch.stack(x_list)))
+    y_list = np.array(to_numpy(torch.stack(y_list)))
+
+    np.save(f'graphs_data/{dataset_name}/x_list_{run}.npy', x_list)
+    np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list)
+    np.save(f'graphs_data/{dataset_name}/x_list_{run+1}.npy', x_list)
+    np.save(f'graphs_data/{dataset_name}/y_list_{run+1}.npy', y_list)
+
+    # torch.save(edge_p_p_list, f'graphs_data/{dataset_name}/edge_p_p_list{run}.pt')
+    # torch.save(edge_p_p_list, f'graphs_data/{dataset_name}/edge_p_p_list{run+1}.pt')
 
 
     n_particles = config.simulation.n_particles

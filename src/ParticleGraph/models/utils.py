@@ -803,7 +803,7 @@ def plot_training(config, pred, gt, log_dir, epoch, N, x, index_particles, n_par
                 plt.savefig(f"./{log_dir}/tmp_training/matrix/M_{epoch}_{N}.tif", dpi=87)
                 plt.close()
 
-def plot_training_mesh(config, pred, gt, log_dir, epoch, N, x, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
+def plot_training_mesh(config, pred, has_field, field, gt, log_dir, epoch, N, x, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -837,6 +837,14 @@ def plot_training_mesh(config, pred, gt, log_dir, epoch, N, x, index_particles, 
             plt.savefig(f"./{log_dir}/tmp_training/prediction/{epoch}_{N}.tif", dpi=87)
             plt.close()
 
+            if has_field:
+                fig = plt.figure(figsize=(10, 10))
+                n_nodes_per_axis = int(np.sqrt(n_nodes))
+                plt.imshow(np.reshape(to_numpy(field), (n_nodes_per_axis, n_nodes_per_axis)))
+                plt.colorbar()
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_training/field/{epoch}_{N}.tif", dpi=87)
+                plt.close()
 
             if False:
                 rr = torch.tensor(np.linspace(-1, 1, 200)).to(device)

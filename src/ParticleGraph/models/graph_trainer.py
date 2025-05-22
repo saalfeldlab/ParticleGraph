@@ -296,11 +296,6 @@ def data_train_particle(config, erase, best_model, device):
                 run = 1 + np.random.randint(n_runs - 1)
                 k = time_window + np.random.randint(run_lengths[run] - 1 - time_window - time_step - recursive_loop)
                 x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
-                if recursive_loop > 0:
-                    x_next = torch.tensor(x_list[run][k + recursive_loop], dtype=torch.float32, device=device).clone().detach()
-                else:
-                    x_next = torch.tensor(x_list[run][k + time_step], dtype=torch.float32, device=device).clone().detach()
-
                 if has_field:
                     field = model_f(time=k / n_frames) ** 2
                     x[:,6:7] = field
@@ -353,7 +348,7 @@ def data_train_particle(config, erase, best_model, device):
                     dataset_batch.append(dataset)
 
                 if recursive_loop > 0 :
-                    y = torch.tensor(y_list[run][k+recursive_loop], dtype=torch.float32, device=device).clone().detach() / ynorm
+                    y = torch.tensor(x_list[run][k + recursive_loop], dtype=torch.float32, device=device).clone().detach()
                 elif time_step == 1:
                     y = torch.tensor(y_list[run][k], dtype=torch.float32, device=device).clone().detach() / ynorm
                 elif time_step > 1:
@@ -1360,6 +1355,7 @@ def data_train_mesh(config, erase, best_model, device):
     n_epochs = train_config.n_epochs
     n_node_types = simulation_config.n_node_types
     n_nodes = simulation_config.n_nodes
+    n_nodes_per_axis = int(np.sqrt(n_nodes))
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
     delta_t = simulation_config.delta_t
@@ -1383,6 +1379,7 @@ def data_train_mesh(config, erase, best_model, device):
     field_type = model_config.field_type
     omega = model_config.omega
     recursive_loop = train_config.recursive_loop
+    coeff_TV_norm = train_config.coeff_TV_norm
 
     log_dir, logger = create_log_dir(config, erase)
     logger.info(f'Graph files N: {n_runs}')
@@ -1528,6 +1525,8 @@ def data_train_mesh(config, erase, best_model, device):
                 if has_field:
                     field = model_f(time=k / n_frames) ** 2
                     x_mesh[:,9:10] = field
+                else:
+                    field=[]
 
                 if train_config.noise_level > 0:
                     x_mesh[:, 6:7] = x_mesh[:, 6:7] + train_config.noise_level * torch.randn_like(x_mesh[:, 6:7])
@@ -1583,6 +1582,11 @@ def data_train_mesh(config, erase, best_model, device):
                 if model_config.prediction == 'first_derivative':
                     x_mesh_pred = x_batch[:,6:9] + delta_t * time_step * pred * hnorm
                     loss = (x_mesh_pred[ids_batch] - y_batch[ids_batch]).norm(2)
+            if coeff_TV_norm > 0:
+                for k in range(batch_size):
+                    pred_ = pred[k * n_nodes:(k + 1) * n_nodes, :]
+                    pred_ = torch.reshape(pred_, (n_nodes_per_axis,n_nodes_per_axis, 3))
+                    loss = loss + coeff_TV_norm * total_variation_norm(pred_)
 
             loss.backward()
             optimizer.step()
@@ -1592,13 +1596,12 @@ def data_train_mesh(config, erase, best_model, device):
 
             total_loss += loss.item()
 
-            visualize_embedding = True
-            if visualize_embedding & (((epoch < 10) & (N % plot_frequency == 0)) | (N == 0)):
+            if (((epoch < 10) & (N % plot_frequency == 0)) | (N == 0)):
                 torch.save({'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict()},
                            os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
-                plot_training_mesh(config=config, pred=pred[ids_batch], gt=y_batch[ids_batch], log_dir=log_dir, epoch=epoch, N=N, x=x_mesh, model=model, n_nodes=n_nodes, n_node_types=n_node_types,
+                plot_training_mesh(config=config, pred=pred[ids_batch], has_field=has_field, field=field, gt=y_batch[ids_batch], log_dir=log_dir, epoch=epoch, N=N, x=x_mesh, model=model, n_nodes=n_nodes, n_node_types=n_node_types,
                               index_nodes=index_nodes, dataset_num=1, index_particles=[], n_particles=[],
                               n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
 
@@ -3939,7 +3942,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     n_particles = x.shape[0]
     x_inference_list = []
 
-    for it in trange(start_it, start_it+100):  #  start_it+200): # min(9600+start_it,stop_it-time_step)):
+    for it in trange(start_it, start_it+200):  #  start_it+200): # min(9600+start_it,stop_it-time_step)):
 
         check_and_clear_memory(device=device, iteration_number=it, every_n_iterations=25, memory_percentage_threshold=0.6)
         # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
@@ -3956,6 +3959,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             if has_mesh_field:
                 field = model_f(time=it / n_frames) ** 2
                 x[:, 9:10] = field
+
             dataset_mesh = data.Data(x=x, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
         if do_tracking:
             x = x0.clone().detach()
@@ -4011,14 +4015,23 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             x[mask_mesh.squeeze(), 6:7] += x[mask_mesh.squeeze(), 7:8] * delta_t
         elif 'RD_RPS_Mesh' in model_config.mesh_model_name:
             with torch.no_grad():
-                pred = mesh_model(dataset_mesh, data_id=data_id, training=False, has_field=has_mesh_field)
+                if 'test_simulation' in test_mode:
+                    y = y0 / hnorm
+                    pred = y
+                else:
+                    pred = mesh_model(dataset_mesh, data_id=data_id, training=False, has_field=has_mesh_field)
+                if has_mesh_field:
+                    field = model_f(time=it / n_frames) ** 2
+                    x[:, 9:10] = field
+                    if 'replace_blue' in field_type:
+                        x[:, 8:9] = field
+
                 if model_config.prediction=='2nd_derivative':
                     x[mask_mesh.squeeze(), 9:12] += pred[mask_mesh.squeeze()] * hnorm * delta_t
                     x[mask_mesh.squeeze(), 6:9] += x[mask_mesh.squeeze(), 9:12] * delta_t
                 else:
                     x[mask_mesh.squeeze(), 6:9] += pred[mask_mesh.squeeze()] * hnorm * delta_t
                 x[:, 6:9] = torch.clamp(x[:, 6:9], 0, 1.1)
-
         elif has_field:
             match model_config.field_type:
                 case 'tensor':
@@ -4538,7 +4551,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.figure(figsize=(10, 10))
                 n_list=[]
                 for k in range(0,n_particles,n_particles//40):
-                    if torch.max(node_gt_list_[:, k, 0].squeeze()) > 0.25:
+                    if torch.max(node_gt_list_[:, k, 0].squeeze()) > 0.5:
                         plt.plot(to_numpy(node_gt_list_[:, k, 0].squeeze()))
                         n_list.append (k)
 
@@ -4548,6 +4561,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     n = [2454, 3272, 4908, 5317, 7362, 7771, 9407, 11452, 12270, 14724]
                 elif n_nodes == 65536:
                     n =  [13104, 14742, 18018, 22932, 26208, 31122, 36036, 39312, 42588, 49140, 50778, 58968]
+                elif n_nodes == 10000:
+                    n = [2250, 2500, 3500, 4750, 5000, 5750, 6250, 9500]
+
 
                 plt.figure(figsize=(20, 10))
                 ax = plt.subplot(121)
