@@ -28,11 +28,9 @@ from ParticleGraph.models.Ghost_Particles import Ghost_Particles
 from ParticleGraph.models.utils import *
 
 import warnings
-
+from skimage import filters, feature
 
 if __name__ == '__main__':
-
-
 
     config_list = ['cell_MDCK_14']
 
@@ -140,18 +138,19 @@ if __name__ == '__main__':
         # for k in range(0, len(x)):
         #     plt.text(x[k, 2], im.shape[0]-x[k, 1], str(int(x[k, 0])), verticalalignment='top', horizontalalignment='left', fontsize=10, c='w')
 
-
-
         for it in trange(time_oi[0], time_oi[1], 1):
             im = tifffile.imread(data_folder_name + files[max(0,it-1)])
             im = np.array(im).astype('float32')
+
+            im2 = tifffile.imread(data_folder_name + '../' + files[max(0, it - 1)])
+            im2 = np.array(im2).astype('float32')
 
             x = x_list[f'arr_{it}']
             pos = np.argwhere(x[:,0]==cell_oi)
 
             plt.figure(figsize=(14, 12))
             ax = plt.subplot(221)
-            plt.imshow(im,vmin=0,vmax=0.25)
+            plt.imshow(im,vmin=0, vmax=0.25)
             plt.scatter(x[pos, 2], im.shape[0]-x[pos, 1]-75, c='red', s=4)
             ax = plt.subplot(222)
             plt.plot(time_series_list_map[cell_oi, 0:4300], linewidth=0.5, color='white', alpha=1)
@@ -160,7 +159,10 @@ if __name__ == '__main__':
             plt.text(0.01, 2900, f"frame: {it}\ncell: {cell_oi}", verticalalignment='top', horizontalalignment='left', fontsize=10)
             plt.ylim([0,3000])
             ax = plt.subplot(223)
-            plt.imshow(np.fliplr(np.flipud(im)),vmin=0,vmax=0.25)
+            shifted_im2 = np.roll(im2, shift=-15, axis=0)
+            im = im + feature.canny(shifted_im2[:, :, 1], sigma=4)
+            plt.imshow(np.fliplr(np.flipud(im)), vmin=0, vmax=0.25)
+            plt.scatter(x[:, 2], im.shape[0] - x[:, 1], c='w', s=4)
             plt.xlim([im.shape[1]-x[pos, 2]+200, im.shape[1]-x[pos, 2]-200])
             plt.ylim([x[pos, 1]-200, x[pos, 1]+200])
             ax = plt.subplot(224)

@@ -175,6 +175,7 @@ class ImageData(BaseModel):
     cellpose_flow_threshold: int = 0.4
     cellpose_cellprob_threshold: int = 0.0
     cellpose_channel: list[int] = [1]
+    offset_channel: list[float] = [0.0, 0.0]
     membrane_channel: int = 0
     tracking_file: str =''
     trackmate_size_ratio: float = 1.0

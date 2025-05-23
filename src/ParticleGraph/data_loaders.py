@@ -37,8 +37,9 @@ import h5py
 import re
 from skimage.draw import disk
 from skimage.transform import resize
+from skimage import filters, feature
 
-def extract_object_properties(segmentation_image, fluorescence_image=[], radius=40):
+def extract_object_properties(segmentation_image, fluorescence_image=[], radius=40, offset_channel=[0.0, 0.0]):
     # Label the objects in the segmentation image
     labeled_image = label(segmentation_image)
     fluorescence_image = np.flipud(fluorescence_image)
@@ -69,7 +70,7 @@ def extract_object_properties(segmentation_image, fluorescence_image=[], radius=
             # Calculate the orientation of the object
             orientation = region.orientation
 
-            rr, cc = disk((pos_x, pos_y), radius, shape=fluorescence_image.shape)
+            rr, cc = disk((pos_x+offset_channel[0], pos_y+offset_channel[1]), radius, shape=fluorescence_image.shape)
 
             # Ensure the coordinates are within bounds
             valid_coords = (rr >= 0) & (rr < fluorescence_image.shape[0]) & (cc >= 0) & (
@@ -96,7 +97,7 @@ def extract_object_properties(segmentation_image, fluorescence_image=[], radius=
                 pos_x_334 = pos_x
                 pos_y_334 = pos_y
                 fluo_sum_radius_334 = np.sum(fluorescence_image[rr_valid_334, cc_valid_334])
-                print(len(object_properties), fluo_sum_radius_334)
+                # print(len(object_properties), fluo_sum_radius_334)
 
 
             object_properties.append((id, pos_x, pos_y, area, perimeter, aspect_ratio, orientation, fluo_sum_radius, fluo_sum_segmentation))
@@ -339,10 +340,12 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
     train_config = config.training
     image_data = config.image_data
 
+
     max_radius = simulation_config.max_radius
     min_radius = simulation_config.min_radius
     dimension = simulation_config.dimension
     n_frames = simulation_config.n_frames
+    offset_channel = image_data.offset_channel
 
     delta_t = simulation_config.delta_t
 
@@ -454,13 +457,13 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
         x_list = []
         y_list = []
 
-        for it in trange(4099, len(files)-2):
+        for it in trange(0, len(files)-2):
 
             im_fluo = tifffile.imread(data_folder_name + files[it])
             im_fluo = np.array(im_fluo).astype('float32') / 256
             im_seg = np.flipud(np.array(tifffile.imread(data_folder_name + 'SEG/' + files[it])))
             im_seg = np.array(im_seg)
-            object_properties = extract_object_properties(im_seg, im_fluo[:,:,image_data.membrane_channel])
+            object_properties = extract_object_properties(im_seg, im_fluo[:,:,image_data.membrane_channel], offset_channel = offset_channel)
             object_properties = np.array(object_properties, dtype=float)
 
             N = np.arange(object_properties.shape[0], dtype=np.float32)[:, None]
@@ -491,6 +494,7 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
             F[:, 1:2] = F[:, 0:1] / np.median(F[closest_indices,0:1])
 
             x = np.concatenate((X_track_ID, X[closest_indices], V[closest_indices], T[closest_indices], F[closest_indices]), axis=1)
+            x [:,]
 
             # pa = np.argwhere(X_track_ID==489)[0,0]
             # pb = np.argwhere(X_track_ID==494)[0,0]
@@ -502,11 +506,22 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
                 time_series_list[int(x[i, 0])].append([it,x[i, 6],x[i, 7]])
 
 
-            xx = 0
-
             if False:
                 fig = plt.figure(figsize=(12, 12))
                 plt.imshow(np.flipud(im_fluo[:,:,0])*100)
+
+                fig = plt.figure(figsize=(12, 12))
+                shifted_im2 = np.roll(im_fluo[:,:,1], shift=-15, axis=0)
+                im = feature.canny(shifted_im2, sigma=4)
+
+                shifted_im2 = np.roll(im_fluo[:, :, 1], shift=-15, axis=0)
+                im3 = im_fluo[:,:,0]*100 + feature.canny(shifted_im2*100,sigma=4)
+                fig = plt.figure(figsize=(12, 12))
+                plt.imshow(np.flipud(im3), vmin=0, vmax=0.25)
+                plt.scatter(X_trackmate[:, 1], X_trackmate[:, 0]+15, s=20, c='w', alpha=0.5)
+
+
+                plt.show()
                 # plt.scatter(X_trackmate[:,1], X_trackmate[:,0], s=50, c='w', alpha=0.75)
                 for i in range(X_trackmate.shape[0]):
                     plt.text(X_trackmate[i,1], X_trackmate[i,0], f'{int(X_track_ID[i])}', fontsize=14, color='r')
@@ -523,9 +538,6 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
                     plt.scatter(x[i,2], x[i,1], s=10, c='r', alpha=0.75)
                 plt.savefig(f"{data_folder_name}/TRK_RESULT/{it:06}.tif", dpi=80)
                 plt.close()
-
-
-
 
             if False:
                 fig = plt.figure(figsize=(12, 12))
