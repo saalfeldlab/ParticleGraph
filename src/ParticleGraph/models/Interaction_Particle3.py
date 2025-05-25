@@ -40,15 +40,15 @@ class Interaction_Particle3(pyg.nn.MessagePassing):
 
         self.model = model_config.particle_model_name
 
-        self.pre_input_size = model_config.pre_input_size
-        self.pre_output_size = model_config.pre_output_size
-        self.pre_hidden_dim = model_config.pre_hidden_dim
-        self.pre_n_layers = model_config.pre_n_layers
-
         self.input_size = model_config.input_size
         self.output_size = model_config.output_size
         self.hidden_dim = model_config.hidden_dim
         self.n_layers = model_config.n_layers
+
+        self.input_size_2 = model_config.input_size_2
+        self.output_size_2 = model_config.output_size_2
+        self.hidden_dim_2 = model_config.hidden_dim_2
+        self.n_layers_2 = model_config.n_layers_2
 
         self.input_size_decoder = model_config.input_size_decoder
         self.output_size_decoder = model_config.output_size_decoder
@@ -78,8 +78,8 @@ class Interaction_Particle3(pyg.nn.MessagePassing):
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                             hidden_size=self.hidden_dim, device=self.device)
 
-        self.lin_edge2 = MLP(input_size=self.output_size + 4, output_size=self.output_size, nlayers=self.n_layers,
-                            hidden_size=self.hidden_dim, device=self.device)
+        self.lin_edge2 = MLP(input_size=self.input_size_2, output_size=self.output_size_2, nlayers=self.n_layers_2,
+                            hidden_size=self.hidden_dim_2, device=self.device)
 
         self.lin_decoder = MLP(input_size=self.input_size_decoder, output_size=self.output_size_decoder, nlayers=self.n_layers_decoder,
                             hidden_size=self.hidden_dim_decoder, device=self.device)
@@ -99,6 +99,11 @@ class Interaction_Particle3(pyg.nn.MessagePassing):
 
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+
+        if has_field:
+            field = x[:,6:7]
+        else:
+            field = torch.ones_like(x[:,6:7])
 
         if self.rotation_augmentation & self.training == True:
             self.phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=self.device) * np.pi * 2
@@ -128,7 +133,6 @@ class Interaction_Particle3(pyg.nn.MessagePassing):
         pred = self.propagate(edge_index=edge_index, pos=pos, embedding=embedding)
         self.step = 1
         pred = self.propagate(edge_index=edge_index, pos=pred, embedding=embedding)
-
 
         pred = self.lin_decoder(pred)
         if self.rotation_augmentation & self.training:

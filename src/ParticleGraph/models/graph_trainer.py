@@ -3577,8 +3577,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     bounce_coeff = simulation_config.bounce_coeff
     cmap = CustomColorMap(config=config)
     dimension = simulation_config.dimension
-    has_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
+    has_particle_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
     has_mesh_field = (model_config.field_type!='') & ('RD_RPS_Mesh' in model_config.mesh_model_name)
+    has_field = (model_config.field_type!='') & (has_mesh_field ==False) & (has_particle_field == False)
     omega = model_config.omega
 
     do_tracking = training_config.do_tracking
@@ -3623,7 +3624,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         y_mesh_list.append(h)
         x_list = x_mesh_list
         y_list = y_mesh_list
-    elif has_field:
+    elif has_particle_field:
         x_list = []
         y_list = []
         x_mesh_list = []
@@ -3808,92 +3809,89 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         print(table)
         print(f"total trainable Params: {total_params}")
 
-    model, bc_pos, bc_dpos = choose_training_model(config, device)
-    model.ynorm = ynorm
-    model.vnorm = vnorm
-    model.particle_of_interest = particle_of_interest
-    if 'PDE_MLPs_A' in config.graph_model.particle_model_name:
-        model.model = config.graph_model.particle_model_name + '_eval'
-
-    table = PrettyTable(["Modules", "Parameters"])
-    total_params = 0
-    for name, parameter in model.named_parameters():
-        if not parameter.requires_grad:
-            continue
-        param = parameter.numel()
-        table.add_row([name, param])
-        total_params += param
     if 'test_simulation' in 'test_mode':
-        model, bc_pos, bc_dpos = choose_model(config, device=device)
-    else:
         if has_mesh:
-            mesh_model, bc_pos, bc_dpos = choose_training_model(config, device)
+            mesh_model, bc_pos, bc_dpos = choose_mesh_model(config, device)
+        else:
+            model, bc_pos, bc_dpos = choose_model(config, device=device)
+    elif has_mesh:
+        mesh_model, bc_pos, bc_dpos = choose_training_model(config, device)
+        state_dict = torch.load(net, map_location=device)
+        mesh_model.load_state_dict(state_dict['model_state_dict'])
+        mesh_model.eval()
+        if has_mesh_field:
+            model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
+                                    out_features=model_config.output_size_nnr,
+                                    hidden_features=model_config.hidden_dim_nnr,
+                                    hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device,
+                                    first_omega_0=omega, hidden_omega_0=omega)
+            net = f'{log_dir}/models/best_model_f_with_1_graphs_{best_model}.pt'
             state_dict = torch.load(net, map_location=device)
-            mesh_model.load_state_dict(state_dict['model_state_dict'])
-            mesh_model.eval()
-
-            if has_mesh_field:
-                model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
-                                        out_features=model_config.output_size_nnr,
-                                        hidden_features=model_config.hidden_dim_nnr,
-                                        hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device,
-                                        first_omega_0=omega, hidden_omega_0=omega)
+            model_f.load_state_dict(state_dict['model_state_dict'])
+            model_f.to(device=device)
+            model_f.eval()
+    else:
+        model, bc_pos, bc_dpos = choose_training_model(config, device)
+        model.ynorm = ynorm
+        model.vnorm = vnorm
+        model.particle_of_interest = particle_of_interest
+        table = PrettyTable(["Modules", "Parameters"])
+        total_params = 0
+        for name, parameter in model.named_parameters():
+            if not parameter.requires_grad:
+                continue
+            param = parameter.numel()
+            table.add_row([name, param])
+            total_params += param
+        state_dict = torch.load(net, map_location=device, weights_only=True)
+        model.load_state_dict(state_dict['model_state_dict'])
+        model.eval()
+        mesh_model = None
+        if 'PDE_K' in model_config.particle_model_name:
+            model.connection_matrix = torch.load(f'graphs_data/{dataset_name}/connection_matrix_list.pt',
+                                                 map_location=device)
+            timeit = np.load(f'graphs_data/{dataset_name}/times_train_springs_example.npy',
+                             allow_pickle=True)
+            timeit = timeit[run][0]
+            time_id = 0
+        if 'PDE_N' in model_config.signal_model_name:
+            if ('Siren_short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
+                model_f = Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
+                                hidden_features=model_config.hidden_dim_nnr,
+                                hidden_layers=model_config.n_layers_nnr, first_omega_0=model_config.omega, hidden_omega_0=model_config.omega,
+                                outermost_linear=model_config.outermost_linear_nnr)
                 net = f'{log_dir}/models/best_model_f_with_1_graphs_{best_model}.pt'
                 state_dict = torch.load(net, map_location=device)
                 model_f.load_state_dict(state_dict['model_state_dict'])
                 model_f.to(device=device)
                 model_f.eval()
+            if ('modulation' in model_config.field_type) | ('visual' in model_config.field_type):
+                model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
+                                        out_features=model_config.output_size_nnr,
+                                        hidden_features=model_config.hidden_dim_nnr,
+                                        hidden_layers=model_config.n_layers_nnr, outermost_linear=True,
+                                        device=device,
+                                        first_omega_0=model_config.omega, hidden_omega_0=model_config.omega)
+                net = f'{log_dir}/models/best_model_f_with_1_graphs_{best_model}.pt'
+                state_dict = torch.load(net, map_location=device)
+                model_f.load_state_dict(state_dict['model_state_dict'])
+                model_f.to(device=device)
+                model_f.eval()
+            if has_ghost & ('PDE_N' in model_config.signal_model_name):
+                print('load missing activity models ...')
+                model_missing_activity = nn.ModuleList([
+                    Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
+                          hidden_features=model_config.hidden_dim_nnr,
+                          hidden_layers=model_config.n_layers_nnr, first_omega_0=model_config.omega, hidden_omega_0=model_config.omega,
+                          outermost_linear=model_config.outermost_linear_nnr)
+                    for n in range(n_runs)
+                ])
+                model_missing_activity.to(device=device)
+                net = f'{log_dir}/models/best_model_f_with_{n_runs - 1}_graphs_{best_model}.pt'
+                state_dict = torch.load(net, map_location=device)
+                model_missing_activity.load_state_dict(state_dict['model_state_dict'])
 
-        else:
-            state_dict = torch.load(net, map_location=device, weights_only=True)
-            model.load_state_dict(state_dict['model_state_dict'])
-            model.eval()
-            mesh_model = None
-            if 'PDE_K' in model_config.particle_model_name:
-                model.connection_matrix = torch.load(f'graphs_data/{dataset_name}/connection_matrix_list.pt',
-                                                     map_location=device)
-                timeit = np.load(f'graphs_data/{dataset_name}/times_train_springs_example.npy',
-                                 allow_pickle=True)
-                timeit = timeit[run][0]
-                time_id = 0
-            if 'PDE_N' in model_config.signal_model_name:
-                if ('Siren_short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
-                    model_f = Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
-                                    hidden_features=model_config.hidden_dim_nnr,
-                                    hidden_layers=model_config.n_layers_nnr, first_omega_0=model_config.omega, hidden_omega_0=model_config.omega,
-                                    outermost_linear=model_config.outermost_linear_nnr)
-                    net = f'{log_dir}/models/best_model_f_with_1_graphs_{best_model}.pt'
-                    state_dict = torch.load(net, map_location=device)
-                    model_f.load_state_dict(state_dict['model_state_dict'])
-                    model_f.to(device=device)
-                    model_f.eval()
-                if ('modulation' in model_config.field_type) | ('visual' in model_config.field_type):
-                    model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
-                                            out_features=model_config.output_size_nnr,
-                                            hidden_features=model_config.hidden_dim_nnr,
-                                            hidden_layers=model_config.n_layers_nnr, outermost_linear=True,
-                                            device=device,
-                                            first_omega_0=model_config.omega, hidden_omega_0=model_config.omega)
-                    net = f'{log_dir}/models/best_model_f_with_1_graphs_{best_model}.pt'
-                    state_dict = torch.load(net, map_location=device)
-                    model_f.load_state_dict(state_dict['model_state_dict'])
-                    model_f.to(device=device)
-                    model_f.eval()
-                if has_ghost & ('PDE_N' in model_config.signal_model_name):
-                    print('load missing activity models ...')
-                    model_missing_activity = nn.ModuleList([
-                        Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
-                              hidden_features=model_config.hidden_dim_nnr,
-                              hidden_layers=model_config.n_layers_nnr, first_omega_0=model_config.omega, hidden_omega_0=model_config.omega,
-                              outermost_linear=model_config.outermost_linear_nnr)
-                        for n in range(n_runs)
-                    ])
-                    model_missing_activity.to(device=device)
-                    net = f'{log_dir}/models/best_model_f_with_{n_runs - 1}_graphs_{best_model}.pt'
-                    state_dict = torch.load(net, map_location=device)
-                    model_missing_activity.load_state_dict(state_dict['model_state_dict'])
-
-        if has_field:
+        if has_particle_field:
             model_f_p = model
             image_width = int(np.sqrt(n_nodes))
             if 'siren_with_time' in model_config.field_type:
@@ -3924,6 +3922,28 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 with torch.no_grad():
                     model.a = a_.clone().detach()
                     model.field[run] = t.clone().detach()
+        elif has_field:
+            image_width = int(np.sqrt(n_nodes))
+            model_f = Siren_Network(image_width=image_width, in_features=3, out_features=1, hidden_features=128,
+                                    hidden_layers=5, outermost_linear=True, device=device, first_omega_0=80,
+                                    hidden_omega_0=80.)
+            net = f'{log_dir}/models/best_model_f_with_1_graphs_{best_model}.pt'
+            state_dict = torch.load(net, map_location=device)
+            model_f.load_state_dict(state_dict['model_state_dict'])
+            model_f.to(device=device)
+            model_f.eval()
+            table = PrettyTable(["Modules", "Parameters"])
+            total_params = 0
+            for name, parameter in model_f.named_parameters():
+                if not parameter.requires_grad:
+                    continue
+                param = parameter.numel()
+                table.add_row([name, param])
+                total_params += param
+            if verbose:
+                print(table)
+                print(f"Total Trainable Params: {total_params}")
+
     rmserr_list = []
     pred_err_list = []
     gloss = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
@@ -4032,7 +4052,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 else:
                     x[mask_mesh.squeeze(), 6:9] += pred[mask_mesh.squeeze()] * hnorm * delta_t
                 x[:, 6:9] = torch.clamp(x[:, 6:9], 0, 1.1)
-        elif has_field:
+        elif has_particle_field:
             match model_config.field_type:
                 case 'tensor':
                     x_mesh[:, 6:7] = model.field[run]
@@ -4073,6 +4093,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 x[:, 3:5] = y
 
             x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t)
+
         else:
             with torch.no_grad():
                 if has_ghost & ('PDE_N' not in model_config.signal_model_name):
@@ -4119,6 +4140,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
                     adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
                     edge_index = adj_t.nonzero().t().contiguous()
+
+                    if has_field:
+                        field = model_f(time=it / n_frames) ** 2
+                        x[:, 6:7] = field
 
                     if time_window > 0:
                         xt = []

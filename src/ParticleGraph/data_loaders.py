@@ -91,25 +91,24 @@ def extract_object_properties(segmentation_image, fluorescence_image=[], radius=
                 fluo_sum_radius_339 = np.sum(fluorescence_image[rr_valid_339, cc_valid_339])
                 # print(len(object_properties), fluo_sum_radius_339)
 
-            if id == 334:
-                rr_valid_334 = rr_valid
-                cc_valid_334 = cc_valid
-                pos_x_334 = pos_x
-                pos_y_334 = pos_y
-                fluo_sum_radius_334 = np.sum(fluorescence_image[rr_valid_334, cc_valid_334])
+            if id == 104:
+                rr_valid_104 = rr_valid
+                cc_valid_104 = cc_valid
+                pos_x_104 = pos_x
+                pos_y_104 = pos_y
+                fluo_sum_radius_334 = np.sum(fluorescence_image[rr_valid_104, cc_valid_104])
                 # print(len(object_properties), fluo_sum_radius_334)
-
 
             object_properties.append((id, pos_x, pos_y, area, perimeter, aspect_ratio, orientation, fluo_sum_radius, fluo_sum_segmentation))
 
     # tmp = fluorescence_image
-    # tmp[rr_valid_334, cc_valid_334] = 1
+    # tmp[rr_valid_104, cc_valid_104] = tmp[rr_valid_104, cc_valid_104] + 0.25
     # fig = plt.figure(figsize=(13, 10.5))
     # plt.imshow(tmp)
     #
     #
     # fig = plt.figure(figsize=(13, 10.5))
-    # plt.imshow(fluorescence_image*0)
+    # plt.imshow(fluorescence_image)
     # for i in range(len(object_properties)):
     #     pos_x = object_properties[i][1]
     #     pos_y = object_properties[i][2]
@@ -322,7 +321,6 @@ def load_LG_ODE(config, device=None, visualize=False, step=1000):
                     plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)  # 170.7)
                     plt.close()
 
-
         torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
         torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
 
@@ -339,7 +337,6 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
     simulation_config = config.simulation
     train_config = config.training
     image_data = config.image_data
-
 
     max_radius = simulation_config.max_radius
     min_radius = simulation_config.min_radius
@@ -380,9 +377,10 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
     cellpose_model_path = image_data.cellpose_model
     cellpose_denoise_model = image_data.cellpose_denoise_model
     cellpose_diameter = image_data.cellpose_diameter
-    cellpose_channels = image_data.cellpose_channel
+    cellpose_channels = np.array(image_data.cellpose_channel)
     trackmate_size_ratio = image_data.trackmate_size_ratio
     trackmate_frame_step = image_data.trackmate_frame_step
+    measure_diameter = image_data.measure_diameter
 
     if 'models' in cellpose_model_path:
         model_cellpose = models.CellposeModel(gpu=True, pretrained_model=cellpose_model_path)
@@ -397,7 +395,7 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
         model_denoise = denoise.CellposeDenoiseModel(gpu=True, model_type="cyto3", restore_type="denoise_cyto3")
 
 
-
+    # step 1
     if not os.path.exists(f"{data_folder_name}/TRK/_spots.csv"):
 
         print('generate segmentation masks with Cellpose ...')
@@ -409,22 +407,26 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
                 for i in cellpose_channels:
                     masks, flows, styles, imgs_dn = model_denoise.eval(im[:,:,i-1], diameter=cellpose_diameter, channels=[0,0])
                     im[:,:,i-1:i] = imgs_dn.copy()
-            tifffile.imsave(data_folder_name + 'DN/' + files[it], im[:,:,0])
+                tifffile.imsave(data_folder_name + 'DN/' + files[it], im[:,:,0])
 
-            # masks, flows, styles = model_cellpose.eval(im, diameter=cellpose_diameter, flow_threshold=0.0, invert=False, normalize=True, channels=cellpose_channels)
-            # tifffile.imsave(data_folder_name + 'SEG/' + files[it], masks)
-            #
-            # object_properties = extract_object_properties(masks, im[:, :, image_data.membrane_channel], radius=cellpose_diameter/1.5)
-            # image = im[:,:,0] * 0
-            # for i in range(len(object_properties)):
-            #     cell_id = object_properties[i][0]
-            #     pos_x = object_properties[i][1]
-            #     pos_y = object_properties[i][2]
-            #     rr, cc = disk((pos_x, pos_y), 8, shape=image.shape)
-            #     image[rr, cc] = 255  # White blob
-            # image = resize(image,(image.shape[0] // trackmate_size_ratio, image.shape[1] // trackmate_size_ratio),anti_aliasing=True)
-            # tifffile.imsave(f'{data_folder_name}/TRK/{it:06}.tif', image.astype('uint8'))
+            masks, flows, styles = model_cellpose.eval(im[:,:,:], diameter=cellpose_diameter, flow_threshold=0.0, invert=False, normalize=True, channels=cellpose_channels+1)
+            # fig = plt.figure(figsize=(12, 12))
+            # plt.imshow(masks)
 
+            tifffile.imsave(data_folder_name + 'SEG/' + files[it], masks)
+
+            object_properties = extract_object_properties(masks, im[:, :, cellpose_channels[0]], radius=cellpose_diameter)
+            image = im[:,:,0] * 0
+            for i in range(len(object_properties)):
+                cell_id = object_properties[i][0]
+                pos_x = object_properties[i][1]
+                pos_y = object_properties[i][2]
+                rr, cc = disk((pos_x, pos_y), 8, shape=image.shape)
+                image[rr, cc] = 255  # White blob
+            image = resize(image,(image.shape[0] // trackmate_size_ratio, image.shape[1] // trackmate_size_ratio), anti_aliasing=True)
+            tifffile.imsave(f'{data_folder_name}/TRK/{it:06}.tif', image.astype('uint8'))
+
+            # setp 2 trackmate
             # trackmate settings
             # diameter 5
             # distance closing gap 6 6 3
@@ -432,6 +434,7 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
 
     else:
 
+        #step 3
         df = pd.read_csv(f"{data_folder_name}/TRK/_spots.csv")
 
         trackmate = dict()
@@ -463,7 +466,7 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
             im_fluo = np.array(im_fluo).astype('float32') / 256
             im_seg = np.flipud(np.array(tifffile.imread(data_folder_name + 'SEG/' + files[it])))
             im_seg = np.array(im_seg)
-            object_properties = extract_object_properties(im_seg, im_fluo[:,:,image_data.membrane_channel], offset_channel = offset_channel)
+            object_properties = extract_object_properties(im_seg, im_fluo[:,:,cellpose_channels[1]], radius=measure_diameter, offset_channel = offset_channel)
             object_properties = np.array(object_properties, dtype=float)
 
             N = np.arange(object_properties.shape[0], dtype=np.float32)[:, None]
@@ -505,37 +508,14 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
             for i in range(x.shape[0]):
                 time_series_list[int(x[i, 0])].append([it,x[i, 6],x[i, 7]])
 
+            if True:
 
-            if False:
-                fig = plt.figure(figsize=(12, 12))
-                plt.imshow(np.flipud(im_fluo[:,:,0])*100)
-
-                fig = plt.figure(figsize=(12, 12))
-                shifted_im2 = np.roll(im_fluo[:,:,1], shift=-15, axis=0)
-                im = feature.canny(shifted_im2, sigma=4)
-
-                shifted_im2 = np.roll(im_fluo[:, :, 1], shift=-15, axis=0)
-                im3 = im_fluo[:,:,0]*100 + feature.canny(shifted_im2*100,sigma=4)
+                shifted_im2 = np.roll(im_fluo[:, :, cellpose_channels[0]], shift= -offset_channel[0], axis=0)
+                im3 = im_fluo[:,:,cellpose_channels[1]]/5 + feature.canny(shifted_im2*100,sigma=10)
                 fig = plt.figure(figsize=(12, 12))
                 plt.imshow(np.flipud(im3), vmin=0, vmax=0.25)
-                plt.scatter(X_trackmate[:, 1], X_trackmate[:, 0]+15, s=20, c='w', alpha=0.5)
-
-
-                plt.show()
-                # plt.scatter(X_trackmate[:,1], X_trackmate[:,0], s=50, c='w', alpha=0.75)
                 for i in range(X_trackmate.shape[0]):
-                    plt.text(X_trackmate[i,1], X_trackmate[i,0], f'{int(X_track_ID[i])}', fontsize=14, color='r')
-
-                fig = plt.figure(figsize=(12, 12))
-                for k in range(len(X)):
-                    plt.scatter(X[k, 1], X[k, 0], s=10)
-                    plt.text(X[k, 1], X[k, 0], f'{k}', fontsize=10, color='w')
-
-                plt.scatter(X[:,1], X[:,0], s=50, c='g', alpha=0.75)
-                for i in range(x.shape[0]):
-                    plt.text(x[i,2], x[i,1], f'{int(x[i,0])}', fontsize=10, color='w')
-                    plt.scatter(X_trackmate[i,1], X_trackmate[i,0], s=10, c='r', alpha=0.75)
-                    plt.scatter(x[i,2], x[i,1], s=10, c='r', alpha=0.75)
+                    plt.text(X_trackmate[i,1], X_trackmate[i,0], f'{int(X_track_ID[i])}', fontsize=8, color='w')
                 plt.savefig(f"{data_folder_name}/TRK_RESULT/{it:06}.tif", dpi=80)
                 plt.close()
 

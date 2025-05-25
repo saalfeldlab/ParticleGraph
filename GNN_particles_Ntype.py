@@ -53,18 +53,18 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'generate'
+        task = 'test'
         best_model = ''
 
         # config_list = ['multimaterial_16_3']
         # config_list = ['fluids_m18_1']
         # config_list = ['signal_N5_v11_bis']
         # config_list = ['falling_water_ramp_x6_11_1']
-        # config_list = ['arbitrary_3']
-        # config_list = ['cell_cardio_3']
+        config_list = ['arbitrary_3']
+        # config_list = ['cell_cardio_1_1']
         # config_list = ['RD_RPS_5']
         # config_list = ['cell_U2OS_8_12', 'cell_U2OS_8_13', 'cell_U2OS_8_18', 'cell_U2OS_8_19', 'cell_U2OS_8_20']
-        config_list = ['cell_MDCK_14']
+        # config_list = ['cell_MDCK_15']
         # config_list = ['signal_N4_CElegans_a9_17']
 
     for config_file_ in config_list:

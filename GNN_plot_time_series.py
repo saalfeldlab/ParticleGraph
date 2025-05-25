@@ -32,7 +32,7 @@ from skimage import filters, feature
 
 if __name__ == '__main__':
 
-    config_list = ['cell_MDCK_14']
+    config_list = ['cell_MDCK_15']
 
 
     for config_file_ in config_list:
@@ -48,7 +48,10 @@ if __name__ == '__main__':
         print(f'folder  {config.dataset}')
 
         dataset_name = config.dataset
-        data_folder_name = config.data_folder_name + '/DN/'
+        data_folder_name = config.data_folder_name # + '/DN/'
+        n_frames = config.simulation.n_frames
+        cellpose_channels = config.image_data.cellpose_channel
+        offset_channel = config.image_data.offset_channel
 
         files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
         for f in files:
@@ -73,11 +76,11 @@ if __name__ == '__main__':
                 first_t = time_series[f'arr_{k}'][0,0]
                 if first_t>0:
                     tmp = np.concatenate((np.zeros((int(first_t),1)),tmp))
-                if tmp.shape[0] < 4310:
-                    tmp = np.concatenate((tmp, np.zeros((4310-tmp.shape[0],1))))
+                if tmp.shape[0] < n_frames+10:
+                    tmp = np.concatenate((tmp, np.zeros((n_frames+10-tmp.shape[0],1))))
                 time_series_list.append(tmp)
             else:
-                tmp = np.zeros((4310,1))
+                tmp = np.zeros((n_frames+10,1))
                 time_series_list.append(tmp)
 
         time_series_list_map = np.array(time_series_list).squeeze()
@@ -90,14 +93,13 @@ if __name__ == '__main__':
         ax.set_title('kinograph')
         ax.set_xlabel('time')
         ax.set_ylabel('cell')
-        plt.imshow(time_series_list_map[0:700], cmap='viridis', aspect='auto', interpolation='nearest')
+        plt.imshow(time_series_list_map, cmap='viridis', aspect='auto', interpolation='nearest')
         plt.savefig(f'graphs_data/{dataset_name}/kinograph.png', dpi=300)
         plt.close()
 
-
-        cell_oi = 4004   # 3153  7718   3236   4004
-        time_series_oi = time_series_list_map[cell_oi, 0:4300]
-        time_oi= [3890,3995] # [3900, 4000]  [3800, 3900]  [4000,4100]  [4050,4150]
+        cell_oi = 97
+        time_series_oi = time_series_list_map[cell_oi, 0:n_frames]
+        time_oi= [0, n_frames-1]
 
         # Sampling interval and frequency
         dt = 10.0  # seconds between samples
@@ -126,7 +128,7 @@ if __name__ == '__main__':
         plt.ylabel("Log Amplitude")
         plt.grid(True)
         plt.tight_layout()
-        plt.show()
+        # plt.show()
         plt.close()
 
         # plt.figure(figsize=(16, 8))
@@ -139,10 +141,12 @@ if __name__ == '__main__':
         #     plt.text(x[k, 2], im.shape[0]-x[k, 1], str(int(x[k, 0])), verticalalignment='top', horizontalalignment='left', fontsize=10, c='w')
 
         for it in trange(time_oi[0], time_oi[1], 1):
-            im = tifffile.imread(data_folder_name + files[max(0,it-1)])
-            im = np.array(im).astype('float32')
+            im = tifffile.imread(data_folder_name + files[max(0,it-1)])/255
+            im = np.array(im[:,:,cellpose_channels[1]]).astype('float32')
+            # im = tifffile.imread(data_folder_name + '/../' + files[max(0,it-1)]) / 255 / 5
+            # im = np.array(im[:,:,0]).astype('float32')
 
-            im2 = tifffile.imread(data_folder_name + '../' + files[max(0, it - 1)])
+            im2 = tifffile.imread(data_folder_name + '/SEG/' + files[max(0, it - 1)])
             im2 = np.array(im2).astype('float32')
 
             x = x_list[f'arr_{it}']
@@ -150,26 +154,25 @@ if __name__ == '__main__':
 
             plt.figure(figsize=(14, 12))
             ax = plt.subplot(221)
-            plt.imshow(im,vmin=0, vmax=0.25)
+            plt.imshow(im,vmin=0, vmax=0.25, cmap='viridis')
             plt.scatter(x[pos, 2], im.shape[0]-x[pos, 1]-75, c='red', s=4)
             ax = plt.subplot(222)
-            plt.plot(time_series_list_map[cell_oi, 0:4300], linewidth=0.5, color='white', alpha=1)
+            plt.plot(time_series_list_map[cell_oi, 0:n_frames], linewidth=0.5, color='white', alpha=1)
             plt.plot(np.arange(time_oi[0],it), time_series_list_map[cell_oi, time_oi[0]:it], linewidth=1, color='red', alpha=1)
             plt.scatter(it, time_series_list_map[cell_oi, it], c='red', s=4)
             plt.text(0.01, 2900, f"frame: {it}\ncell: {cell_oi}", verticalalignment='top', horizontalalignment='left', fontsize=10)
             plt.ylim([0,3000])
             ax = plt.subplot(223)
-            shifted_im2 = np.roll(im2, shift=-15, axis=0)
-            im = im + feature.canny(shifted_im2[:, :, 1], sigma=4)
-            plt.imshow(np.fliplr(np.flipud(im)), vmin=0, vmax=0.25)
-            plt.scatter(x[:, 2], im.shape[0] - x[:, 1], c='w', s=4)
+            shifted_im2 = np.roll(im2, shift=-offset_channel[0], axis=0)
+            im = im + feature.canny(shifted_im2, sigma=4)
+            plt.imshow(np.fliplr(np.flipud(im)), vmin=0, vmax=0.25, cmap='viridis')
+            # plt.scatter(x[:, 2], im.shape[0] - x[:, 1], c='w', s=4)
             plt.xlim([im.shape[1]-x[pos, 2]+200, im.shape[1]-x[pos, 2]-200])
             plt.ylim([x[pos, 1]-200, x[pos, 1]+200])
             ax = plt.subplot(224)
             plt.plot(time_series_list_map[cell_oi, time_oi[0]:time_oi[1]], linewidth=1, color='white', alpha=1)
             plt.plot(time_series_list_map[cell_oi, time_oi[0]:it], linewidth=1, color='red', alpha=1)
             plt.scatter(it-time_oi[0], time_series_list_map[cell_oi, it], c='red', s=4)
-
             plt.tight_layout()
             plt.savefig(f'graphs_data/{dataset_name}/Fig/frame_{it:06}.tif', dpi=100)
             plt.close()

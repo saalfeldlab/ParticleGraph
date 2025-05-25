@@ -96,15 +96,15 @@ class GraphModelConfig(BaseModel):
     field_type: str = ''
     field_grid: Optional[str] = ''
 
-    pre_input_size: int = 1
-    pre_output_size: int = 1
-    pre_hidden_dim: int = 1
-    pre_n_layers: int = 1
-
     input_size: int = 1
     output_size: int = 1
     hidden_dim: int = 1
     n_layers: int = 1
+
+    input_size_2: int = 1
+    output_size_2: int = 1
+    hidden_dim_2: int = 1
+    n_layers_2: int = 1
 
     input_size_decoder: int = 1
     output_size_decoder: int = 1
@@ -176,10 +176,10 @@ class ImageData(BaseModel):
     cellpose_cellprob_threshold: int = 0.0
     cellpose_channel: list[int] = [1]
     offset_channel: list[float] = [0.0, 0.0]
-    membrane_channel: int = 0
     tracking_file: str =''
     trackmate_size_ratio: float = 1.0
     trackmate_frame_step: int = 1
+    measure_diameter: float = 40.0
 
 
 

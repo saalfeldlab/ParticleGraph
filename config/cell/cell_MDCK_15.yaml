@@ -1,6 +1,6 @@
 description: 'Cells are MDCKs epithelial cells and surface is coated with fibronectin (FN) for improving cell adherence  Stained with H42 nuclear dye (405) and cells expressing gCAMP7b (488) all over cyto Time interval- 10sec intervals using 40x glyc objective'
-dataset: 'cell_MDCK_14'
-data_folder_name: '/groups/saalfeld/home/allierc/signaling/MDCK/MDCK gCAMP7b 2nd observation/10 sec wound region/merged/'
+dataset: 'cell_MDCK_15'
+data_folder_name: '/groups/saalfeld/home/allierc/signaling/MDCK/MDCK pACER mRuby3 and Ace NeonGreen/MDCK Ace NeonGreen/merged/'
 
 simulation:
   params: [[-1]]
@@ -11,7 +11,7 @@ simulation:
   has_cell_death: True
   n_particles_max: 8603
   n_particle_types: 16
-  n_frames: 4305
+  n_frames: 60
   delta_t: 1
   boundary: 'no'
   start_frame: 0
@@ -19,14 +19,14 @@ simulation:
 image_data:
     file_type: '2D fluo Cellpose'
     cellpose_channel: 0
-    cellpose_diameter: 30
+    cellpose_diameter: 65
     cellpose_model: 'cyto2_cp3'
-    cellpose_denoise_model: 'cyto3'
+    cellpose_denoise_model: ''
     cellpose_channel: [2, 1]
     trackmate_size_ratio: 4.0
-    trackmate_frame_step: 4
-    offset_channel: [15, 0]
-    measure_diameter: 40
+    trackmate_frame_step: 1
+    offset_channel: [0, 0]
+    measure_diameter: 70
 
 graph_model:
   particle_model_name: 'PDE_Cell'
