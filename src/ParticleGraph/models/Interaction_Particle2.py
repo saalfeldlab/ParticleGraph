@@ -63,6 +63,8 @@ class Interaction_Particle2(pyg.nn.MessagePassing):
         self.delta_t = simulation_config.delta_t
         self.max_radius = simulation_config.max_radius
         self.bc_dpos = bc_dpos
+        self.remove_self = train_config.remove_self
+
 
         self.time_window = train_config.time_window
         self.time_window_noise = train_config.time_window_noise
@@ -91,7 +93,8 @@ class Interaction_Particle2(pyg.nn.MessagePassing):
     def forward(self, data=[], data_id=[], training=[], phi=[], has_field=False, k = 0):
 
         x, edge_index = data.x, data.edge_index
-        edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+        if self.remove_self:
+            edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
         if self.time_window == 0:
             particle_id = x[:, 0:1].long()

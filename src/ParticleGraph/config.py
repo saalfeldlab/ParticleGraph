@@ -197,6 +197,7 @@ class TrainingConfig(BaseModel):
     embedding_step: int = 1000
     shared_embedding: bool = False
     embedding_trial: bool = False
+    remove_self: bool = True
 
     with_connectivity_mask: bool = False
 

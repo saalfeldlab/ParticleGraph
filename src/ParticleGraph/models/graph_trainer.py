@@ -4096,7 +4096,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 x[:, 3:5] = y
 
             x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t)
-
         else:
             with torch.no_grad():
                 if has_ghost & ('PDE_N' not in model_config.signal_model_name):
@@ -4444,18 +4443,22 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
 
+                if ('field' in style) & has_field:
+                    if 'zoom' in style:
+                        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=s_p * 50, c=to_numpy(x[:, 6])*50, alpha=0.5, cmap='viridis', vmin=0, vmax=1.0)
+                    else:
+                        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=s_p * 2, c=to_numpy(x[:, 6])*50, alpha=0.5, cmap='viridis', vmin=0, vmax=1.0)
+
                 if particle_of_interest > 1:
 
-                    xc = x[particle_of_interest, 2].detach().cpu().numpy()
-                    yc = x[particle_of_interest, 1].detach().cpu().numpy()
+                    xc = to_numpy(x[particle_of_interest, 2])
+                    yc = to_numpy(x[particle_of_interest, 1])
                     pos = torch.argwhere(edge_index[1,:]==particle_of_interest)
                     pos = pos[:, 0]
                     if 'zoom' in style:
-                        plt.scatter(x[edge_index[0,pos], 2].detach().cpu().numpy(),
-                                    x[edge_index[0,pos], 1].detach().cpu().numpy(), s=s_p * 10 , color=mc, alpha=1.0)
+                        plt.scatter(to_numpy(x[edge_index[0,pos], 2]), to_numpy(x[edge_index[0,pos], 1]), s=s_p * 10 , color=mc, alpha=1.0)
                     else:
-                        plt.scatter(x[edge_index[0,pos], 2].detach().cpu().numpy(),
-                                    x[edge_index[0,pos], 1].detach().cpu().numpy(), s=s_p * 1 , color=mc, alpha=1.0)
+                        plt.scatter(to_numpy(x[edge_index[0,pos], 2]), to_numpy(x[edge_index[0,pos], 1]), s=s_p * 1 , color=mc, alpha=1.0)
 
 
                     # for k in range(pos.shape[0]):
@@ -4463,8 +4466,18 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     #                 x[edge_index[1,pos[k]], 1].detach().cpu().numpy(),  dx=to_numpy(model.msg[k,1]) * delta_t/20,
                     #               dy=to_numpy(model.msg[k,0]) * delta_t/20, head_width=0.004, length_includes_head=True, color=mc,alpha=0.25)
 
-                    plt.arrow(x=to_numpy(x[particle_of_interest, 2]), y=to_numpy(x[particle_of_interest, 1]), dx=to_numpy(x[particle_of_interest, 4]) * delta_t * 50,
-                              dy=to_numpy(x[particle_of_interest, 3]) * delta_t * 100, head_width=0.004, length_includes_head=True, color='r')
+                    plt.arrow(x=to_numpy(x[particle_of_interest, 2]), y=to_numpy(x[particle_of_interest, 1]),
+                              dx=to_numpy(x[particle_of_interest, 4]) * delta_t * 100,
+                              dy=to_numpy(x[particle_of_interest, 3]) * delta_t * 100, head_width=0.004, length_includes_head=True, color='b')
+                    if model_config.prediction == '2nd_derivative':
+                        plt.arrow(x=to_numpy(x[particle_of_interest, 2]), y=to_numpy(x[particle_of_interest, 1]),
+                                  dx=to_numpy(y0[particle_of_interest, 1]) * delta_t**2 * 100,
+                                  dy=to_numpy(y0[particle_of_interest, 0]) * delta_t**2 * 100, head_width=0.004,
+                                  length_includes_head=True, color='g')
+                        plt.arrow(x=to_numpy(x[particle_of_interest, 2]), y=to_numpy(x[particle_of_interest, 1]),
+                                  dx=to_numpy(y[particle_of_interest, 1] ) * delta_t * 100,
+                                  dy=to_numpy(y[particle_of_interest, 0] ) * delta_t * 100, head_width=0.004,
+                                  length_includes_head=True, color='r')
 
                 if 'zoom' in style:
                     plt.xlim([xc-0.1, xc+0.1])

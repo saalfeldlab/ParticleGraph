@@ -8,7 +8,6 @@ from ParticleGraph.models.Siren_Network import *
 from ParticleGraph.models.Gumbel import gumbel_softmax_sample, gumbel_softmax
 # from ParticleGraph.models.utils import reparameterize
 
-
 class Interaction_Particle3(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -69,6 +68,7 @@ class Interaction_Particle3(pyg.nn.MessagePassing):
         self.max_radius = simulation_config.max_radius
         self.bc_dpos = bc_dpos
         self.rotation_augmentation = train_config.rotation_augmentation
+        self.remove_self = train_config.remove_self
 
         self.time_window = train_config.time_window
         self.time_window_noise = train_config.time_window_noise
@@ -98,7 +98,9 @@ class Interaction_Particle3(pyg.nn.MessagePassing):
         self.has_field = has_field
 
         x, edge_index = data.x, data.edge_index
-        edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+
+        if self.remove_self:
+            edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
         if has_field:
             field = x[:,6:7]

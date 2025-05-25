@@ -64,6 +64,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         self.time_window = train_config.time_window
         self.recursive_loop = train_config.recursive_loop
         self.state = simulation_config.state_type
+        self.remove_self = train_config.remove_self
 
         self.sigma = simulation_config.sigma
         self.n_ghosts = int(train_config.n_ghosts)
@@ -102,7 +103,8 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         self.has_field = has_field
 
         x, edge_index = data.x, data.edge_index
-        edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+        if self.remove_self:
+            edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
         if has_field:
             field = x[:,6:7]
