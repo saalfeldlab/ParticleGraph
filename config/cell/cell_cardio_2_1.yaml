@@ -29,7 +29,7 @@ graph_model:
   hidden_dim: 128
   n_layers: 5
 
-  input_size_2: 132
+  input_size_2: 134
   output_size_2: 128
   hidden_dim_2: 128
   n_layers_2: 5

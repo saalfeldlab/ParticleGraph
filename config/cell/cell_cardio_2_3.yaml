@@ -1,4 +1,4 @@
-description: 'velocity field on cultured cardiomyocytes cells   test training 2nd_derivative + field'
+description: 'velocity field on cultured cardiomyocytes cells   test training 2nd_derivative + field + rotation'
 dataset: 'cell_cardio_2'
 data_folder_name: '/groups/saalfeld/home/allierc/signaling/cardiomyocytes/Cardio_1/0_B_15kPa_1_MMStack_Pos0.ome.tif.derivatives.npy'
 
@@ -29,7 +29,7 @@ graph_model:
   hidden_dim: 128
   n_layers: 5
 
-  input_size_2: 132
+  input_size_2: 134
   output_size_2: 128
   hidden_dim_2: 128
   n_layers_2: 5

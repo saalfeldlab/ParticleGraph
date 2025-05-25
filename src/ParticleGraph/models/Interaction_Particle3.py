@@ -135,7 +135,7 @@ class Interaction_Particle3(pyg.nn.MessagePassing):
         pred = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, embedding=embedding)
         if self.model == 'PDE_MM_2layers':
             self.step = 1
-            pred = self.propagate(edge_index=edge_index, pos=pred, d_pos=d_pos, embedding=embedding)
+            pred = self.propagate(edge_index=edge_index, pos=pos, d_pos=pred, embedding=embedding)
         pred = self.lin_decoder(pred)
 
         if self.rotation_augmentation & self.training:
@@ -162,7 +162,7 @@ class Interaction_Particle3(pyg.nn.MessagePassing):
             else:
                 pos_i_p = (pos_i - pos_i[:, 0:self.dimension].repeat(1, self.time_window))[:, self.dimension:]
                 pos_j_p = (pos_j - pos_i[:, 0:self.dimension].repeat(1, self.time_window))
-                if self.rotation_augmentation & (self.training == True):
+                if self.rotation_augmentation & self.training:
                     for k in range(pos_i_p.shape[1]//2):
                         pos_i_p[:, k*2:(k+1)*2] = pos_i_p[:, k*2:(k+1)*2] @ self.rotation_matrix
                     for k in range(pos_j_p.shape[1] // 2):
@@ -172,7 +172,16 @@ class Interaction_Particle3(pyg.nn.MessagePassing):
             return out
 
         elif self.step == 1:
-            in_features = torch.cat((pos_i, pos_j, embedding_i, embedding_j), dim=-1)
+            if self.time_window == 0:
+                delta_pos = pos_j - pos_i
+                if self.rotation_augmentation & self.training:
+                    delta_pos = delta_pos @ self.rotation_matrix
+                in_features = torch.cat((delta_pos, d_pos_i, d_pos_j, embedding_i, embedding_j), dim=-1)
+            else:
+                pos_j_p = pos_j[:, 0:self.dimension] - pos_i[:, 0:self.dimension]
+                if self.rotation_augmentation & self.training:
+                    pos_j_p = pos_j_p @ self.rotation_matrix
+                in_features = torch.cat((pos_j_p, d_pos_i, d_pos_j, embedding_i, embedding_j), dim=-1)
             out = self.lin_edge2(in_features)
             return out
 

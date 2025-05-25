@@ -29,11 +29,6 @@ graph_model:
   hidden_dim: 128
   n_layers: 5
 
-  input_size_2: 132
-  output_size_2: 128
-  hidden_dim_2: 128
-  n_layers_2: 5
-
   input_size_decoder: 128
   output_size_decoder: 2
   hidden_dim_decoder: 128
