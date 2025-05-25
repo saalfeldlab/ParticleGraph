@@ -3691,7 +3691,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 type_list = torch.concatenate((type_list, type))
         n_particles_max = len(type_list) + 1
         config.simulation.n_particles_max = n_particles_max
-
     if ratio > 1:
         new_nparticles = int(n_particles * ratio)
         model.a = nn.Parameter(
@@ -3895,9 +3894,11 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             model_f_p = model
             image_width = int(np.sqrt(n_nodes))
             if 'siren_with_time' in model_config.field_type:
-                model_f = Siren_Network(image_width=image_width, in_features=3, out_features=1, hidden_features=128,
-                                        hidden_layers=5, outermost_linear=True, device=device, first_omega_0=80,
-                                        hidden_omega_0=80.)
+                model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
+                                        out_features=model_config.output_size_nnr,
+                                        hidden_features=model_config.hidden_dim_nnr,
+                                        hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device,
+                                        first_omega_0=model_config.omega, hidden_omega_0=model_config.omega)
                 net = f'{log_dir}/models/best_model_f_with_1_graphs_{best_model}.pt'
                 state_dict = torch.load(net, map_location=device)
                 model_f.load_state_dict(state_dict['model_state_dict'])
@@ -3924,9 +3925,11 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     model.field[run] = t.clone().detach()
         elif has_field:
             image_width = int(np.sqrt(n_nodes))
-            model_f = Siren_Network(image_width=image_width, in_features=3, out_features=1, hidden_features=128,
-                                    hidden_layers=5, outermost_linear=True, device=device, first_omega_0=80,
-                                    hidden_omega_0=80.)
+            model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
+                                    out_features=model_config.output_size_nnr,
+                                    hidden_features=model_config.hidden_dim_nnr,
+                                    hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device,
+                                    first_omega_0=model_config.omega, hidden_omega_0=model_config.omega)
             net = f'{log_dir}/models/best_model_f_with_1_graphs_{best_model}.pt'
             state_dict = torch.load(net, map_location=device)
             model_f.load_state_dict(state_dict['model_state_dict'])
@@ -3962,7 +3965,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     n_particles = x.shape[0]
     x_inference_list = []
 
-    for it in trange(start_it, start_it+200):  #  start_it+200): # min(9600+start_it,stop_it-time_step)):
+    for it in trange(start_it,  min(9600+start_it,stop_it-time_step)): #  start_it+200): # min(9600+start_it,stop_it-time_step)):
 
         check_and_clear_memory(device=device, iteration_number=it, every_n_iterations=25, memory_percentage_threshold=0.6)
         # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
@@ -4158,7 +4161,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                         y = y0 / ynorm
                         pred = y
                     else:
-                        pred = model(dataset, data_id=data_id, training=False, k=it)
+                        pred = model(dataset, data_id=data_id, training=False, has_field=has_field, k=it)
                         y = pred
 
                     if has_ghost:

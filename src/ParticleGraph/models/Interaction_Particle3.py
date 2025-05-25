@@ -117,6 +117,7 @@ class Interaction_Particle3(pyg.nn.MessagePassing):
             particle_id = x[:, 0:1].long()
             embedding = self.a[self.data_id.clone().detach(), particle_id, :].squeeze()
             pos = x[:, 1:self.dimension+1]
+            d_pos = x[:, self.dimension + 1:1 + 2 * self.dimension]
         else:
             particle_id = x[0][:, 0:1].long()
             embedding = self.a[self.data_id.clone().detach(), particle_id, :].squeeze()
@@ -124,17 +125,19 @@ class Interaction_Particle3(pyg.nn.MessagePassing):
             pos = x[:, :, 1:self.dimension + 1]
             pos = pos.transpose(0, 1)
             pos = torch.reshape(pos, (pos.shape[0], pos.shape[1] * pos.shape[2]))
+            d_pos = torch.zeros((pos.shape[0],self.dimension), dtype=torch.float32, device=self.device)
 
         if training & (self.time_window_noise > 0):
             noise = torch.randn_like(pos) * self.time_window_noise
             pos = pos + noise
 
         self.step = 0
-        pred = self.propagate(edge_index=edge_index, pos=pos, embedding=embedding)
-        self.step = 1
-        pred = self.propagate(edge_index=edge_index, pos=pred, embedding=embedding)
-
+        pred = self.propagate(edge_index=edge_index, pos=pos, d_pos=d_pos, embedding=embedding)
+        if self.model == 'PDE_MM_2layers':
+            self.step = 1
+            pred = self.propagate(edge_index=edge_index, pos=pred, d_pos=d_pos, embedding=embedding)
         pred = self.lin_decoder(pred)
+
         if self.rotation_augmentation & self.training:
             self.rotation_inv_matrix = torch.stack([torch.stack([torch.cos(self.phi), -torch.sin(self.phi)]),torch.stack([torch.sin(self.phi), torch.cos(self.phi)])])
             self.rotation_inv_matrix = self.rotation_inv_matrix.permute(*torch.arange(self.rotation_inv_matrix.ndim - 1, -1, -1)).squeeze()
@@ -146,14 +149,16 @@ class Interaction_Particle3(pyg.nn.MessagePassing):
             out = self.lin_phi(torch.cat((pred, embedding), dim=-1))
         return out
 
-    def message(self, edge_index_i, edge_index_j, pos_i, pos_j, embedding_i, embedding_j):
+    def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j):
 
         if self.step == 0:
             if self.time_window == 0:
-                delta_pos = self.bc_dpos(pos_j - pos_i)
+                delta_pos = pos_j - pos_i
                 if self.rotation_augmentation & (self.training == True):
                     delta_pos = delta_pos @ self.rotation_matrix
-                in_features = torch.cat((delta_pos, embedding_i, embedding_j), dim=-1)
+                    d_pos_i = d_pos_i @ self.rotation_matrix
+                    d_pos_j = d_pos_j @ self.rotation_matrix
+                in_features = torch.cat((delta_pos, d_pos_i, d_pos_j, embedding_i, embedding_j), dim=-1)
             else:
                 pos_i_p = (pos_i - pos_i[:, 0:self.dimension].repeat(1, self.time_window))[:, self.dimension:]
                 pos_j_p = (pos_j - pos_i[:, 0:self.dimension].repeat(1, self.time_window))
@@ -167,8 +172,7 @@ class Interaction_Particle3(pyg.nn.MessagePassing):
             return out
 
         elif self.step == 1:
-            delta_pos = pos_j - pos_i
-            in_features = torch.cat((delta_pos, embedding_i, embedding_j), dim=-1)
+            in_features = torch.cat((pos_i, pos_j, embedding_i, embedding_j), dim=-1)
             out = self.lin_edge2(in_features)
             return out
 

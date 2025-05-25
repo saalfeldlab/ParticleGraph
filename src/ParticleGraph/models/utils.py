@@ -1454,7 +1454,7 @@ def choose_training_model(model_config=None, device=None, projections=None):
                                                 bc_dpos=bc_dpos, dimension=dimension)
         case 'PDE_M' | 'PDE_M2':
             model = Interaction_Particle2(aggr_type=aggr_type, config=model_config, bc_dpos=bc_dpos, dimension=dimension, device=device)
-        case 'PDE_MM' | 'PDE_MM_2layers':
+        case 'PDE_MM' | 'PDE_MM_1layer' | 'PDE_MM_2layers':
             model = Interaction_Particle3(aggr_type=aggr_type, config=model_config, bc_dpos=bc_dpos, dimension=dimension, device=device)
         case 'PDE_MS':
             model = Interaction_Falling_Water_Smooth(aggr_type=aggr_type, config=model_config,bc_dpos=bc_dpos, dimension=dimension, device=device)
