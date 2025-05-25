@@ -39,27 +39,6 @@ class Interaction_Particle3(pyg.nn.MessagePassing):
 
         self.model = model_config.particle_model_name
 
-        self.input_size = model_config.input_size
-        self.output_size = model_config.output_size
-        self.hidden_dim = model_config.hidden_dim
-        self.n_layers = model_config.n_layers
-
-        self.input_size_2 = model_config.input_size_2
-        self.output_size_2 = model_config.output_size_2
-        self.hidden_dim_2 = model_config.hidden_dim_2
-        self.n_layers_2 = model_config.n_layers_2
-
-        self.input_size_decoder = model_config.input_size_decoder
-        self.output_size_decoder = model_config.output_size_decoder
-        self.hidden_dim_decoder = model_config.hidden_dim_decoder
-        self.n_layers_decoder = model_config.n_layers_decoder
-        
-        self.update_type = model_config.update_type
-        self.n_layers_update = model_config.n_layers_update
-        self.input_size_update = model_config.input_size_update
-        self.hidden_dim_update = model_config.hidden_dim_update
-        self.output_size_update = model_config.output_size_update
-
         self.n_dataset = train_config.n_runs
         self.n_particles = simulation_config.n_particles
         self.embedding_dim = model_config.embedding_dim
@@ -75,17 +54,21 @@ class Interaction_Particle3(pyg.nn.MessagePassing):
         self.sub_sampling = simulation_config.sub_sampling
         self.prediction = model_config.prediction
 
-        self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
-                            hidden_size=self.hidden_dim, device=self.device)
+        self.lin_edge = MLP(input_size=model_config.input_size, output_size=model_config.output_size, nlayers=model_config.n_layers,
+                            hidden_size=model_config.hidden_dim, device=self.device)
 
-        self.lin_edge2 = MLP(input_size=self.input_size_2, output_size=self.output_size_2, nlayers=self.n_layers_2,
-                            hidden_size=self.hidden_dim_2, device=self.device)
+        self.lin_edge2 = MLP(input_size=model_config.input_size_2, output_size=model_config.output_size_2, nlayers=model_config.n_layers_2,
+                            hidden_size=model_config.hidden_dim_2, device=self.device)
 
-        self.lin_decoder = MLP(input_size=self.input_size_decoder, output_size=self.output_size_decoder, nlayers=self.n_layers_decoder,
-                            hidden_size=self.hidden_dim_decoder, device=self.device)
+        if self.model == 'PDE_MM_3layers':
+            self.lin_edge3 = MLP(input_size=model_config.input_size_2, output_size=model_config.output_size_2, nlayers=model_config_layers_2,
+                                 hidden_size=model_config.hidden_dim_2, device=self.device)
 
-        self.lin_phi = MLP(input_size=self.input_size_update, output_size=self.output_size_update, nlayers=self.n_layers_update,
-                                hidden_size=self.hidden_dim_update, device=self.device)
+        self.lin_decoder = MLP(input_size=model_config.input_size_decoder, output_size=model_config.output_size_decoder, nlayers=model_config.n_layers_decoder,
+                            hidden_size=model_config.hidden_dim_decoder, device=self.device)
+
+        self.lin_phi = MLP(input_size=model_config.input_size_update, output_size=model_config.output_size_update, nlayers=model_config.n_layers_update,
+                                hidden_size=model_config.hidden_dim_update, device=self.device)
 
         self.a = nn.Parameter(
                 torch.tensor(np.ones((self.n_dataset, int(self.n_particles), self.embedding_dim)), device=self.device,
@@ -138,6 +121,9 @@ class Interaction_Particle3(pyg.nn.MessagePassing):
         if self.model == 'PDE_MM_2layers':
             self.step = 1
             pred = self.propagate(edge_index=edge_index, pos=pos, d_pos=pred, embedding=embedding)
+        if self.model == 'PDE_MM_3layers':
+            self.step = 2
+            pred = self.propagate(edge_index=edge_index, pos=pos, d_pos=pred, embedding=embedding)
         pred = self.lin_decoder(pred)
 
         if self.rotation_augmentation & self.training:
@@ -173,7 +159,7 @@ class Interaction_Particle3(pyg.nn.MessagePassing):
             out = self.lin_edge(in_features)
             return out
 
-        elif self.step == 1:
+        elif (self.step == 1) | (self.step == 2):
             if self.time_window == 0:
                 delta_pos = pos_j - pos_i
                 if self.rotation_augmentation & self.training:
@@ -184,7 +170,10 @@ class Interaction_Particle3(pyg.nn.MessagePassing):
                 if self.rotation_augmentation & self.training:
                     pos_j_p = pos_j_p @ self.rotation_matrix
                 in_features = torch.cat((pos_j_p, d_pos_i, d_pos_j, embedding_i, embedding_j), dim=-1)
-            out = self.lin_edge2(in_features)
+            if self.step == 1:
+                out = self.lin_edge2(in_features)
+            else:
+                out = self.lin_edge3(in_features)
             return out
 
     def update(self, aggr_out):

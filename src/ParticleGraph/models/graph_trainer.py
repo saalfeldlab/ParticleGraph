@@ -4445,9 +4445,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
                 if ('field' in style) & has_field:
                     if 'zoom' in style:
-                        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=s_p * 50, c=to_numpy(x[:, 6])*50, alpha=0.5, cmap='viridis', vmin=0, vmax=1.0)
+                        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=s_p * 50, c=to_numpy(x[:, 6])*20, alpha=0.5, cmap='viridis', vmin=0, vmax=1.0)
                     else:
-                        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=s_p * 2, c=to_numpy(x[:, 6])*50, alpha=0.5, cmap='viridis', vmin=0, vmax=1.0)
+                        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=s_p * 2, c=to_numpy(x[:, 6])*20, alpha=0.5, cmap='viridis', vmin=0, vmax=1.0)
 
                 if particle_of_interest > 1:
 
