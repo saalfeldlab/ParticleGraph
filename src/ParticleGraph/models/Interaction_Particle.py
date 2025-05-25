@@ -116,7 +116,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
 
         pos = x[:, 1:self.dimension+1]
         d_pos = x[:, self.dimension+1:1+2*self.dimension] / self.vnorm
-        if self.rotation_augmentation & self.training == True:
+        if self.rotation_augmentation & self.training:
             self.phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=self.device) * np.pi * 2
             self.rotation_matrix = torch.stack([
                 torch.stack([torch.cos(self.phi), torch.sin(self.phi)]),
@@ -169,7 +169,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         # distance normalized by the max radius
         r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
         delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
-        if self.rotation_augmentation & (self.training == True):
+        if self.rotation_augmentation & self.training:
             delta_pos[:, :2] = delta_pos[:, :2] @ self.rotation_matrix
 
         match self.model:

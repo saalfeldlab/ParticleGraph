@@ -103,9 +103,9 @@ class Interaction_Particle3(pyg.nn.MessagePassing):
         if has_field:
             field = x[:,6:7]
         else:
-            field = torch.ones_like(x[:,6:7])
+            field = torch.zeros((self.n_particles, 1), dtype=torch.float32, device=self.device)
 
-        if self.rotation_augmentation & self.training == True:
+        if self.rotation_augmentation & self.training:
             self.phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=self.device) * np.pi * 2
             self.rotation_matrix = torch.stack([
                 torch.stack([torch.cos(self.phi), torch.sin(self.phi)]),
@@ -125,7 +125,7 @@ class Interaction_Particle3(pyg.nn.MessagePassing):
             pos = x[:, :, 1:self.dimension + 1]
             pos = pos.transpose(0, 1)
             pos = torch.reshape(pos, (pos.shape[0], pos.shape[1] * pos.shape[2]))
-            d_pos = torch.zeros((pos.shape[0],self.dimension), dtype=torch.float32, device=self.device)
+            d_pos = torch.zeros((pos.shape[0], self.dimension), dtype=torch.float32, device=self.device)
 
         if training & (self.time_window_noise > 0):
             noise = torch.randn_like(pos) * self.time_window_noise
@@ -154,7 +154,7 @@ class Interaction_Particle3(pyg.nn.MessagePassing):
         if self.step == 0:
             if self.time_window == 0:
                 delta_pos = pos_j - pos_i
-                if self.rotation_augmentation & (self.training == True):
+                if self.rotation_augmentation & self.training:
                     delta_pos = delta_pos @ self.rotation_matrix
                     d_pos_i = d_pos_i @ self.rotation_matrix
                     d_pos_j = d_pos_j @ self.rotation_matrix

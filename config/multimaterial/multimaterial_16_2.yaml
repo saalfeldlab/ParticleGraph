@@ -30,7 +30,7 @@ graph_model:
   input_size_2: 132
   output_size_2: 256
   hidden_dim_2: 256
-  n_layers_@: 5
+  n_layers_2: 5
 
   input_size_decoder: 256
   output_size_decoder: 2
