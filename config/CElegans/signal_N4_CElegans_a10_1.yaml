@@ -26,13 +26,14 @@ graph_model:
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
+    field_type: 'modulation'
 
     input_size: 3
     output_size: 1
     hidden_dim: 256
     n_layers: 5
 
-    input_size_update: 3
+    input_size_update: 6
     hidden_dim_update: 64
     n_layers_update: 5
 
@@ -43,12 +44,13 @@ graph_model:
     input_size_nnr: 1
     n_layers_nnr: 5
     hidden_dim_nnr: 96
-    output_size_nnr: 100
+    output_size_nnr: 289
     omega: 30
 
     aggr_type: 'add'
     embedding_dim: 2
-    update_type: 'excitation'
+
+    update_type: 'generic_excitation'
     excitation_dim: 3
 
     lin_edge_positive: True
@@ -68,12 +70,13 @@ training:
     device: 'auto'
     n_runs: 21
 
-    with_connectivity_mask: True
+    with_connectivity_mask: False
 
-    n_ghosts: 100
+    n_virtual_neurons: 100
 
     time_step: 8
     shared_embedding: True
+    embedding_trial: False
 
     sparsity: 'none'
     rotation_augmentation: False
@@ -90,4 +93,4 @@ training:
 
     coeff_L1: 1.0E-6
     coeff_diff: 100
-    coeff_L1_ghost: 1.0E-6
+    coeff_L1_virtual_neuron: 1.0E-6

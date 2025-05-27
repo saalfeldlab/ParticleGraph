@@ -60,7 +60,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
 
         self.bc_dpos = bc_dpos
         self.adjacency_matrix = simulation_config.adjacency_matrix
-        self.n_ghosts = int(config.training.n_ghosts)
+        self.n_virtual_neurons = int(config.training.n_virtual_neurons)
         self.excitation_dim = model_config.excitation_dim
 
         self.n_layers_excitation = model_config.n_layers_excitation
@@ -90,7 +90,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             self.a = nn.Parameter(torch.ones((int(self.n_particles*100 + 1000), self.embedding_dim), device=self.device, requires_grad=True,dtype=torch.float32))
             self.embedding_step =  self.n_frames // 100
         elif model_config.embedding_init =='':
-            self.a = nn.Parameter(torch.ones((int(self.n_particles + self.n_ghosts), self.embedding_dim), device=self.device, requires_grad=True, dtype=torch.float32))
+            self.a = nn.Parameter(torch.ones((int(self.n_particles + self.n_virtual_neurons), self.embedding_dim), device=self.device, requires_grad=True, dtype=torch.float32))
         else:
             self.a = nn.Parameter(torch.tensor(projections, device=self.device, requires_grad=True, dtype=torch.float32))
 
@@ -100,9 +100,9 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             self.lin_modulation = MLP(input_size=self.input_size_modulation, output_size=self.output_size_modulation, nlayers=self.n_layers_modulation,
                                 hidden_size=self.hidden_dim_modulation, device=self.device)
 
-        self.W = nn.Parameter(torch.randn((int(self.n_particles + self.n_ghosts),int(self.n_particles + self.n_ghosts)), device=self.device, requires_grad=True, dtype=torch.float32))
+        self.W = nn.Parameter(torch.randn((int(self.n_particles + self.n_virtual_neurons),int(self.n_particles + self.n_virtual_neurons)), device=self.device, requires_grad=True, dtype=torch.float32))
 
-        self.mask = torch.ones((int(self.n_particles + self.n_ghosts),int(self.n_particles + self.n_ghosts)), device=self.device, requires_grad=False, dtype=torch.float32)
+        self.mask = torch.ones((int(self.n_particles + self.n_virtual_neurons),int(self.n_particles + self.n_virtual_neurons)), device=self.device, requires_grad=False, dtype=torch.float32)
         self.mask.fill_diagonal_(0)
 
     def get_interp_a(self, k, particle_id):
