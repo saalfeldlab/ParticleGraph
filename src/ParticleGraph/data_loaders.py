@@ -39,6 +39,8 @@ from skimage.draw import disk
 from skimage.transform import resize
 from skimage import filters, feature
 import pandas as pd
+import scipy.io
+
 
 def extract_object_properties(segmentation_image, fluorescence_image=[], radius=40, offset_channel=[0.0, 0.0]):
     # Label the objects in the segmentation image
@@ -1588,7 +1590,7 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     ax.set_xticklabels(all_neuron_list, fontsize=6, rotation=90)
     ax.set_yticks(range(len(all_neuron_list)))
     ax.set_yticklabels(all_neuron_list, fontsize=6)
-    plt.title('adjacency matrix White 1986)', fontsize=18)
+    plt.title('adjacency matrix White 1986', fontsize=18)
     plt.xlabel('pre neurons', fontsize=18)
     plt.ylabel('post neurons', fontsize=18)
     ax = fig.add_subplot(122)
@@ -1597,7 +1599,7 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     ax.set_xticklabels(all_neuron_list, fontsize=6, rotation=90)
     ax.set_yticks(range(len(all_neuron_list)))
     ax.set_yticklabels(all_neuron_list, fontsize=6)
-    plt.title('adjacency matrix White 1986)', fontsize=18)
+    plt.title('weights', fontsize=18)
     plt.xlabel('pre neurons', fontsize=18)
     plt.ylabel('post neurons', fontsize=18)
     plt.tight_layout()
@@ -1606,37 +1608,100 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
 
 
 
-    # Comparison with data from 'Connectomes across development reveal principles of brain maturation'
 
-    # Path to your Excel file
-    file_path = connectome_folder_name + '41586_2021_3778_MOESM4_ESM.xlsx'
-    # Sheet name
-    sheet_name = 'Dataset8'
-    excell_neuron_names = pd.read_excel(file_path, sheet_name=sheet_name, usecols='C', skiprows=4, nrows=224, header=None)
-    excell_neuron_names = excell_neuron_names.squeeze()  # convert to Series for convenience
-    excell_matrix = pd.read_excel(file_path, sheet_name=sheet_name, skiprows=4, nrows=224, usecols='D:GA', header=None)
-    excell_matrix = excell_matrix.T
-    excell_matrix = torch.tensor(np.array(excell_matrix), dtype=torch.float32, device=device)
 
-    excell_map_list = np.zeros(len(all_neuron_list), dtype=int)
+    # Comparison with data from https://github.com/openworm/VarshneyEtAl2011
+    # Structural Properties of the <i>Caenorhabditis elegans</i> Neuronal Network
+    file_path = '/groups/saalfeld/home/allierc/Py/VarshneyEtAl2011/ConnOrdered_040903.mat'
+
+    # Load the .mat file
+    mat_data = scipy.io.loadmat(file_path)
+
+    # Accessing the adjacency matrix and neuron labels
+    chemical_connectome = mat_data['A_init_t_ordered']
+    electrical_connectome = mat_data['Ag_t_ordered']
+    neuron_names_raw = mat_data['Neuron_ordered']
+
+    Varshney_matrix = np.array(chemical_connectome.todense())
+    Varshney_matrix = torch.tensor(Varshney_matrix, dtype=torch.float32, device=device)
+    Varshney_neuron_names = [str(cell[0][0]) for cell in neuron_names_raw]
+
+
+    Varshney_map_list = np.zeros(len(all_neuron_list), dtype=int)
     for i, neuron_name in enumerate(all_neuron_list):
-        if neuron_name in list(excell_neuron_names):
-            index = list(excell_neuron_names).index(neuron_name)
-            excell_map_list[i] = index
+        if neuron_name in list(Varshney_neuron_names):
+            index = list(Varshney_neuron_names).index(neuron_name)
+            Varshney_map_list[i] = index
         else :
             print('missing neuron name in excell: ', neuron_name)
-            excell_map_list[i] = 0
+            Varshney_map_list[i] = 0
 
-    map_excell_matrix = excell_matrix[np.ix_(excell_map_list, excell_map_list)]
+    map_Varshney_matrix = Varshney_matrix[np.ix_(Varshney_map_list, Varshney_map_list)]
 
     for i, neuron_name in enumerate(all_neuron_list):
-        if neuron_name not in list(excell_neuron_names):
-            map_excell_matrix[i,:] = 0
-            map_excell_matrix[:, i] = 0
+        if neuron_name not in list(Varshney_neuron_names):
+            map_Varshney_matrix[i,:] = 0
+            map_Varshney_matrix[:, i] = 0
 
     fig = plt.figure(figsize=(30, 15))
     ax = fig.add_subplot(121)
-    ax = sns.heatmap(to_numpy(map_excell_matrix)>0, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
+    ax = sns.heatmap(to_numpy(map_Varshney_matrix)>0, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
+    ax.set_xticks(range(len(all_neuron_list)))
+    ax.set_xticklabels(all_neuron_list, fontsize=6, rotation=90)
+    ax.set_yticks(range(len(all_neuron_list)))
+    ax.set_yticklabels(all_neuron_list, fontsize=6)
+    plt.xlabel('pre neurons', fontsize=18)
+    plt.ylabel('post neurons', fontsize=18)
+    plt.title('adjacency matrix Varsnehy 2011', fontsize=18)
+    ax = fig.add_subplot(122)
+    ax = sns.heatmap(to_numpy(map_Varshney_matrix), center=0, square=True, cmap='bwr', vmin=0, vmax=30, cbar_kws={'fraction': 0.046})
+    ax.set_xticks(range(len(all_neuron_list)))
+    ax.set_xticklabels(all_neuron_list, fontsize=6, rotation=90)
+    ax.set_yticks(range(len(all_neuron_list)))
+    ax.set_yticklabels(all_neuron_list, fontsize=6)
+    plt.xlabel('pre neurons', fontsize=18)
+    plt.ylabel('post neurons', fontsize=18)
+    plt.title('weights', fontsize=18)
+    plt.tight_layout()
+    plt.savefig(f"graphs_data/{dataset_name}/full_mapped_Varshney_adjacency_matrix.png", dpi=170)
+    plt.close()
+
+
+
+
+
+    # Comparison with data from 'Connectomes across development reveal principles of brain maturation'
+    # https://www.nature.com/articles/s41586-021-03778-4
+
+    # Path to your Excel file
+    file_path = '/groups/saalfeld/home/allierc/signaling/Celegans/Zhen_2021/41586_2021_3778_MOESM4_ESM.xlsx'
+    # Sheet name
+    sheet_name = 'Dataset8'
+    Zhen_neuron_names = pd.read_excel(file_path, sheet_name=sheet_name, usecols='C', skiprows=4, nrows=224, header=None)
+    Zhen_neuron_names = Zhen_neuron_names.squeeze()  # convert to Series for convenience
+    Zhen_matrix = pd.read_excel(file_path, sheet_name=sheet_name, skiprows=4, nrows=224, usecols='D:GA', header=None)
+    Zhen_matrix = Zhen_matrix.T
+    Zhen_matrix = torch.tensor(np.array(Zhen_matrix), dtype=torch.float32, device=device)
+
+    Zhen_map_list = np.zeros(len(all_neuron_list), dtype=int)
+    for i, neuron_name in enumerate(all_neuron_list):
+        if neuron_name in list(Zhen_neuron_names):
+            index = list(Zhen_neuron_names).index(neuron_name)
+            Zhen_map_list[i] = index
+        else :
+            print('missing neuron name in excell: ', neuron_name)
+            Zhen_map_list[i] = 0
+
+    map_Zhen_matrix = Zhen_matrix[np.ix_(Zhen_map_list, Zhen_map_list)]
+
+    for i, neuron_name in enumerate(all_neuron_list):
+        if neuron_name not in list(Zhen_neuron_names):
+            map_Zhen_matrix[i,:] = 0
+            map_Zhen_matrix[:, i] = 0
+
+    fig = plt.figure(figsize=(30, 15))
+    ax = fig.add_subplot(121)
+    ax = sns.heatmap(to_numpy(map_Zhen_matrix)>0, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
     ax.set_xticks(range(len(all_neuron_list)))
     ax.set_xticklabels(all_neuron_list, fontsize=6, rotation=90)
     ax.set_yticks(range(len(all_neuron_list)))
@@ -1645,19 +1710,17 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     plt.ylabel('post neurons', fontsize=18)
     plt.title('adjacency matrix Mei Zhen 2021 (sheet 7)', fontsize=18)
     ax = fig.add_subplot(122)
-    ax = sns.heatmap(to_numpy(map_excell_matrix), center=0, square=True, cmap='bwr', vmin=0, vmax=30, cbar_kws={'fraction': 0.046})
+    ax = sns.heatmap(to_numpy(map_Zhen_matrix), center=0, square=True, cmap='bwr', vmin=0, vmax=30, cbar_kws={'fraction': 0.046})
     ax.set_xticks(range(len(all_neuron_list)))
     ax.set_xticklabels(all_neuron_list, fontsize=6, rotation=90)
     ax.set_yticks(range(len(all_neuron_list)))
     ax.set_yticklabels(all_neuron_list, fontsize=6)
     plt.xlabel('pre neurons', fontsize=18)
     plt.ylabel('post neurons', fontsize=18)
-    plt.title('adjacency matrix Mei Zhen 2021 (sheet 7)', fontsize=18)
+    plt.title('weights', fontsize=18)
     plt.tight_layout()
     plt.savefig(f"graphs_data/{dataset_name}/full_mapped_Zhen_adjacency_matrix.png", dpi=170)
     plt.close()
-
-
 
 
 
@@ -1692,7 +1755,7 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     ax.set_xticklabels(activity_neuron_list, fontsize=6, rotation=90)
     ax.set_yticks(range(len(activity_neuron_list)))
     ax.set_yticklabels(activity_neuron_list, fontsize=6)
-    plt.title('weight matrix', fontsize=18)
+    plt.title('weights', fontsize=18)
     plt.xlabel('pre neurons', fontsize=18)
     plt.ylabel('post neurons', fontsize=18)
     plt.tight_layout()
@@ -1702,25 +1765,29 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
 
 
 
-    excell_map_list = np.zeros(len(activity_neuron_list), dtype=int)
+
+
+
+
+    Zhen_map_list = np.zeros(len(activity_neuron_list), dtype=int)
     for i, neuron_name in enumerate(activity_neuron_list):
-        if neuron_name in list(excell_neuron_names):
-            index = list(excell_neuron_names).index(neuron_name)
-            excell_map_list[i] = index
+        if neuron_name in list(Zhen_neuron_names):
+            index = list(Zhen_neuron_names).index(neuron_name)
+            Zhen_map_list[i] = index
         else :
-            print('missing neuron name in excell: ', neuron_name)
-            excell_map_list[i] = 0
+            print('missing neuron name in Zhen: ', neuron_name)
+            Zhen_map_list[i] = 0
 
-    map_excell_matrix = excell_matrix[np.ix_(excell_map_list, excell_map_list)]
+    map_Zhen_matrix = Zhen_matrix[np.ix_(Zhen_map_list, Zhen_map_list)]
 
     for i, neuron_name in enumerate(activity_neuron_list):
-        if neuron_name not in list(excell_neuron_names):
-            map_excell_matrix[i,:] = 0
-            map_excell_matrix[:, i] = 0
+        if neuron_name not in list(Zhen_neuron_names):
+            map_Zhen_matrix[i,:] = 0
+            map_Zhen_matrix[:, i] = 0
 
     fig = plt.figure(figsize=(30, 15))
     ax = fig.add_subplot(121)
-    ax = sns.heatmap(to_numpy(map_excell_matrix)>0, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},)
+    ax = sns.heatmap(to_numpy(map_Zhen_matrix)>0, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},)
     ax.set_xticks(range(len(activity_neuron_list)))
     ax.set_xticklabels(activity_neuron_list, fontsize=6, rotation=90)
     ax.set_yticks(range(len(activity_neuron_list)))
@@ -1729,12 +1796,12 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     plt.xlabel('pre neurons', fontsize=18)
     plt.ylabel('post neurons', fontsize=18)
     ax = fig.add_subplot(122)
-    ax = sns.heatmap(to_numpy(map_excell_matrix), center=0, square=True, cmap='bwr', vmin=0, vmax=30, cbar_kws={'fraction': 0.046},)
+    ax = sns.heatmap(to_numpy(map_Zhen_matrix), center=0, square=True, cmap='bwr', vmin=0, vmax=30, cbar_kws={'fraction': 0.046},)
     ax.set_xticks(range(len(activity_neuron_list)))
     ax.set_xticklabels(activity_neuron_list, fontsize=6, rotation=90)
     ax.set_yticks(range(len(activity_neuron_list)))
     ax.set_yticklabels(activity_neuron_list, fontsize=6)
-    plt.title('weight matrix', fontsize=18)
+    plt.title('weights', fontsize=18)
     plt.xlabel('pre neurons', fontsize=18)
     plt.ylabel('post neurons', fontsize=18)
     plt.tight_layout()

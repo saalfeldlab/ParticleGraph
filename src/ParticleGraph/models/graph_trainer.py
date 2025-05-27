@@ -2380,6 +2380,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         n_nodes = simulation_config.n_nodes
         if has_virtual_neuron:
             n_nodes = n_particles + n_virtual_neurons
+            n_nodes_per_axis = 0
         else:
             n_nodes_per_axis = int(np.sqrt(n_nodes))
         has_field = True
@@ -2666,6 +2667,9 @@ def data_train_synaptic2(config, erase, best_model, device):
                 k = np.random.randint(n_frames - 5 - batch_size - time_step)
 
                 x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device)
+
+                ids = np.arange(n_particles)
+
                 if not(torch.isnan(x).any()):
                     if has_virtual_neuron:
                         t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
@@ -2705,43 +2709,42 @@ def data_train_synaptic2(config, erase, best_model, device):
                     else:
                         x[:, 8:9] = torch.ones_like(x[:, 0:1])
 
-                    # regularisations
+                    # regularisation  phi(0)=0
                     in_features = get_in_features_update(rr=None, model=model, device=device)
-
                     func_phi = model.lin_phi(in_features.float())
-
-                    # sparsity on Wij and phi(0)=0
-                    loss += model.W[:n_particles,:n_particles].norm(1) * coeff_L1 + func_phi.norm(2)
+                    loss += func_phi.norm(2)
+                    # sparsity on Wij
+                    loss += model.W[:n_particles,:n_particles].norm(1) * coeff_L1
+                    # sparsity on Wij for virtual neurons
                     if has_virtual_neuron and (train_config.coeff_L1_virtual_neuron>0):
                         loss += model.W[:n_particles, n_particles:].norm(1) * train_config.coeff_L1_virtual_neuron
                         # fig = plt.figure(figsize=(8, 8))
                         # plt.imshow(to_numpy(model.W[:n_particles, n_particles:]))
                         # plt.savefig('W_ghost.tif')
                         # plt.close()
-                    # lin.edge monotonic positive
-                    if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N7'):
-                        in_features_prev = torch.cat((x[:n_particles, 6:7] - xnorm/150, model.a[:n_particles]), dim=1)
-                        in_features = torch.cat((x[:n_particles, 6:7], model.a[:n_particles]), dim=1)
-                        in_features_next = torch.cat((x[:n_particles, 6:7] + xnorm/150, model.a[:n_particles]), dim=1)
-                        if model.embedding_trial:
-                            in_features_prev = torch.cat((in_features_prev, model.b[0].repeat(n_particles, 1)), dim=1)
-                            in_features = torch.cat((in_features, model.b[0].repeat(n_particles, 1)), dim=1)
-                            in_features_next = torch.cat((in_features_next, model.b[0].repeat(n_particles, 1)), dim=1)
-                    elif model_config.signal_model_name == 'PDE_N5':
-                        if model.embedding_trial:
-                            in_features_prev = torch.cat((x[:n_particles, 6:7] - xnorm / 150, model.a[:n_particles], model.b[0].repeat(n_particles, 1), model.a[:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
-                            in_features = torch.cat((x[:n_particles, 6:7], model.a[:n_particles], model.b[0].repeat(n_particles, 1), model.a[:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
-                            in_features_next = torch.cat((x[:n_particles, 6:7] + xnorm/150, model.a[:n_particles], model.b[0].repeat(n_particles, 1), model.a[:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
-                        else:
-                            in_features_prev = torch.cat((x[:n_particles, 6:7] - xnorm / 150, model.a[:n_particles], model.a[:n_particles]), dim=1)
-                            in_features = torch.cat((x[:n_particles, 6:7], model.a[:n_particles], model.a[:n_particles]), dim=1)
-                            in_features_next = torch.cat((x[:n_particles, 6:7] + xnorm/150, model.a[:n_particles], model.a[:n_particles]), dim=1)
-                    else:
-                        in_features = x[:n_particles, 6:7]
-                        in_features_next = x[:n_particles, 6:7] + xnorm/150
-                        in_features_prev = x[:n_particles, 6:7] - xnorm / 150
-
+                    # regularisation lin.edge monotonic positive
                     if coeff_diff > 0:
+                        if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N7'):
+                            in_features_prev = torch.cat((x[:n_particles, 6:7] - xnorm/150, model.a[:n_particles]), dim=1)
+                            in_features = torch.cat((x[:n_particles, 6:7], model.a[:n_particles]), dim=1)
+                            in_features_next = torch.cat((x[:n_particles, 6:7] + xnorm/150, model.a[:n_particles]), dim=1)
+                            if model.embedding_trial:
+                                in_features_prev = torch.cat((in_features_prev, model.b[0].repeat(n_particles, 1)), dim=1)
+                                in_features = torch.cat((in_features, model.b[0].repeat(n_particles, 1)), dim=1)
+                                in_features_next = torch.cat((in_features_next, model.b[0].repeat(n_particles, 1)), dim=1)
+                        elif model_config.signal_model_name == 'PDE_N5':
+                            if model.embedding_trial:
+                                in_features_prev = torch.cat((x[:n_particles, 6:7] - xnorm / 150, model.a[:n_particles], model.b[0].repeat(n_particles, 1), model.a[:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
+                                in_features = torch.cat((x[:n_particles, 6:7], model.a[:n_particles], model.b[0].repeat(n_particles, 1), model.a[:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
+                                in_features_next = torch.cat((x[:n_particles, 6:7] + xnorm/150, model.a[:n_particles], model.b[0].repeat(n_particles, 1), model.a[:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
+                            else:
+                                in_features_prev = torch.cat((x[:n_particles, 6:7] - xnorm / 150, model.a[:n_particles], model.a[:n_particles]), dim=1)
+                                in_features = torch.cat((x[:n_particles, 6:7], model.a[:n_particles], model.a[:n_particles]), dim=1)
+                                in_features_next = torch.cat((x[:n_particles, 6:7] + xnorm/150, model.a[:n_particles], model.a[:n_particles]), dim=1)
+                        else:
+                            in_features = x[:n_particles, 6:7]
+                            in_features_next = x[:n_particles, 6:7] + xnorm/150
+                            in_features_prev = x[:n_particles, 6:7] - xnorm / 150
                         if model_config.lin_edge_positive:
                             msg_1 = model.lin_edge(in_features_prev) ** 2
                             msg0 = model.lin_edge(in_features)**2
@@ -2751,9 +2754,8 @@ def data_train_synaptic2(config, erase, best_model, device):
                             msg0 = model.lin_edge(in_features)
                             msg1 = model.lin_edge(in_features_next)
                         loss = loss + torch.relu(msg0 - msg1).norm(2) * coeff_diff
-
+                    # regularisation columns of W with same sign
                     if coeff_sign > 0:
-                        
                         W_sign = torch.tanh(5 * model.W)
                         loss_contribs = []
                         for i in range(n_particles):
@@ -2764,7 +2766,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                                 loss_contribs.append(std)
                         if loss_contribs:
                             loss = loss + torch.stack(loss_contribs).norm(2) * coeff_sign
-
+                    # miscalleneous regularisations
                     if (model.update_type == 'generic') & (coeff_diff_update>0):
                         in_feature_update = torch.cat((torch.zeros((n_particles,1), device=device), model.a[:n_particles], msg0, torch.ones((n_particles,1), device=device)), dim=1)
                         in_feature_update_next = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[:n_particles], msg1, torch.ones((n_particles, 1), device=device)), dim=1)
@@ -2788,7 +2790,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                         y = torch.tensor(y_list[run][k+recursive_loop], device=device) / ynorm
                     elif time_step == 1:
                         y = torch.tensor(y_list[run][k], device=device) / ynorm
-                    elif time_step >1:
+                    elif time_step > 1:
                         y = torch.tensor(x_list[run][k + time_step,:,6:7], device=device).clone().detach()
 
                     if not(torch.isnan(y).any()):
@@ -2796,6 +2798,8 @@ def data_train_synaptic2(config, erase, best_model, device):
                         dataset = data.Data(x=x, edge_index=edges)
                         dataset_batch.append(dataset)
 
+                        if train_config.shared_embedding:
+                            run = 1
                         if len(dataset_batch) == 1:
                             data_id = torch.ones((x.shape[0],1), dtype=torch.int) * run
                             x_batch = x[:, 6:7]
@@ -2840,20 +2844,9 @@ def data_train_synaptic2(config, erase, best_model, device):
                                 pred = model(batch)
 
                 if time_step == 1:
-                    if has_virtual_neuron:
-                        loss = loss + (pred[ids_batch] - y_batch).norm(2)
-                    elif particle_batch_ratio < 1:
-                        loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
-                    else:
-                        loss = loss + (pred - y_batch).norm(2)
+                    loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
                 elif time_step > 1:
-                    if has_virtual_neuron:
-                        loss = loss + (x_batch[ids_batch] + pred[ids_batch] * delta_t * time_step - y_batch).norm(2) / time_step
-                    elif particle_batch_ratio < 1:
-                        loss = loss + (x_batch[ids_batch] + pred[ids_batch] * delta_t * time_step - y_batch[ids_batch]).norm(2) / time_step
-                    else:
-                        loss = loss + ( x_batch + pred * delta_t * time_step - y_batch).norm(2) / time_step
-
+                    loss = loss + (x_batch[ids_batch] + pred[ids_batch] * delta_t * time_step - y_batch[ids_batch]).norm(2) / time_step
                     # if run == 0:
                     #     plt.figure(figsize=(15, 10))
                     #     n = np.random.permutation(n_particles)
@@ -2900,7 +2893,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                             if 'learnable_short_term_plasticity' not in field_type:
                                 torch.save({'model_state_dict': model_f.state_dict(),'optimizer_state_dict': optimizer_f.state_dict()}, os.path.join(log_dir,
                                             'models',f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
-                        if virtual_neurons:
+                        if has_virtual_neuron:
                             torch.save({'model_state_dict': model_missing_activity.state_dict(),'optimizer_state_dict': optimizer_f.state_dict()}, os.path.join(log_dir,
                                             'models',f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
