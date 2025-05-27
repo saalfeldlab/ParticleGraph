@@ -28,6 +28,7 @@ from scipy.spatial import KDTree
 from sklearn import neighbors, metrics
 import torch.nn.functional as F
 from scipy.ndimage import median_filter
+from tifffile import imwrite
 
 def data_train(config=None, erase=False, best_model=None, device=None):
     # plt.rcParams['text.usetex'] = True
@@ -3965,7 +3966,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     n_particles = x.shape[0]
     x_inference_list = []
 
-    for it in trange(start_it,  min(9600+start_it,stop_it-time_step)): #  start_it+200): # min(9600+start_it,stop_it-time_step)):
+    for it in trange(start_it, start_it+200): # min(9600+start_it,stop_it-time_step)): #  start_it+200): # min(9600+start_it,stop_it-time_step)):
 
         check_and_clear_memory(device=device, iteration_number=it, every_n_iterations=25, memory_percentage_threshold=0.6)
         # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
@@ -4306,6 +4307,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 if 'RD_RPS_Mesh' in model_config.mesh_model_name:
                     H1_IM = torch.reshape(x[:, 6:9], (n_nodes_per_axis, n_nodes_per_axis, 3))
                     H1_IM = torch.clip(H1_IM, 0, 1)
+
+                    imwrite(f"./{log_dir}/tmp_recons/H1_IM_{config_file}_{num}.tif", (to_numpy(H1_IM)*255).astype(np.uint8))
+
                     plt.imshow(to_numpy(H1_IM))
                     plt.axis('off')
                     plt.xticks([])
@@ -4316,7 +4320,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
                     # plt.figure()
                     # plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=8, c=to_numpy(pred[:, 0] * delta_t * hnorm), cmap='viridis', vmin=0, vmax=5)
-
             elif ('visual' in field_type) & ('PDE_N' in model_config.signal_model_name):
                 if 'plot_data' in test_mode:
 

@@ -1,4 +1,4 @@
-description: 'velocity field on cultured cardiomyocytes cells   test training 2nd_derivative + field + 3 layers + remove_self: False'
+description: 'velocity field on cultured cardiomyocytes cells   test training 2nd_derivative + not remove self'
 dataset: 'cell_cardio_2'
 data_folder_name: '/groups/saalfeld/home/allierc/signaling/cardiomyocytes/Cardio_1/0_B_15kPa_1_MMStack_Pos0.ome.tif.derivatives.npy'
 
@@ -16,10 +16,10 @@ simulation:
   start_frame: 0
 
 graph_model:
-  particle_model_name: 'PDE_MM_3layers'
+  particle_model_name: 'PDE_MM_2layers'
   mesh_model_name: ''
   prediction: '2nd_derivative'
-  field_type: 'stimulus'
+  field_type: ''
 
   aggr_type: 'add'
   embedding_dim: 2
@@ -40,7 +40,7 @@ graph_model:
   n_layers_decoder: 3
 
   update_type: 'mlp'
-  input_size_update: 5
+  input_size_update: 4
   n_layers_update: 5
   hidden_dim_update: 128
   output_size_update: 2

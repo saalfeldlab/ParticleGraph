@@ -14,7 +14,6 @@ class Interaction_Particle3(pyg.nn.MessagePassing):
 
     """
     Model learning the acceleration of particles as a function of their relative distance and relative velocities.
-    The interaction function is defined by a MLP self.lin_edge
     The particle embedding is defined by a table self.a
 
     Inputs
@@ -36,7 +35,6 @@ class Interaction_Particle3(pyg.nn.MessagePassing):
         train_config = config.training
 
         self.device = device
-
         self.model = model_config.particle_model_name
 
         self.n_dataset = train_config.n_runs
@@ -61,7 +59,7 @@ class Interaction_Particle3(pyg.nn.MessagePassing):
                             hidden_size=model_config.hidden_dim_2, device=self.device)
 
         if self.model == 'PDE_MM_3layers':
-            self.lin_edge3 = MLP(input_size=model_config.input_size_2, output_size=model_config.output_size_2, nlayers=model_config_layers_2,
+            self.lin_edge3 = MLP(input_size=model_config.input_size_2, output_size=model_config.output_size_2, nlayers=model_config.n_layers_2,
                                  hidden_size=model_config.hidden_dim_2, device=self.device)
 
         self.lin_decoder = MLP(input_size=model_config.input_size_decoder, output_size=model_config.output_size_decoder, nlayers=model_config.n_layers_decoder,
@@ -153,15 +151,15 @@ class Interaction_Particle3(pyg.nn.MessagePassing):
                 if self.rotation_augmentation & self.training:
                     for k in range(pos_i_p.shape[1]//2):
                         pos_i_p[:, k*2:(k+1)*2] = pos_i_p[:, k*2:(k+1)*2] @ self.rotation_matrix
-                    for k in range(pos_j_p.shape[1] // 2):
-                        pos_j_p[:, k * 2:(k + 1) * 2] = pos_j_p[:, k * 2:(k + 1) * 2] @ self.rotation_matrix
+                    for k in range(pos_j_p.shape[1]//2):
+                        pos_j_p[:, k*2:(k+1)*2] = pos_j_p[:, k*2:(k+1)*2] @ self.rotation_matrix
                 in_features = torch.cat((pos_i_p, pos_j_p, embedding_i, embedding_j), dim=-1)
             out = self.lin_edge(in_features)
             return out
 
         elif (self.step == 1) | (self.step == 2):
             if self.time_window == 0:
-                delta_pos = pos_j - pos_i
+                delta_pos = pos_j-pos_i
                 if self.rotation_augmentation & self.training:
                     delta_pos = delta_pos @ self.rotation_matrix
                 in_features = torch.cat((delta_pos, d_pos_i, d_pos_j, embedding_i, embedding_j), dim=-1)
