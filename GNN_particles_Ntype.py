@@ -65,7 +65,7 @@ if __name__ == '__main__':
         # config_list = ['RD_RPS_5']
         # config_list = ['cell_U2OS_test']
         # config_list = ['cell_MDCK_15']
-        config_list = ['signal_N4_CElegans_a10_1']
+        config_list = ['signal_N4_CElegans_a_1']
 
     for config_file_ in config_list:
         print(' ')

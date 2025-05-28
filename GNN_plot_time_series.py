@@ -97,7 +97,7 @@ if __name__ == '__main__':
         plt.savefig(f'graphs_data/{dataset_name}/kinograph.png', dpi=300)
         plt.close()
 
-        cell_oi = 97
+        cell_oi = 103
         time_series_oi = time_series_list_map[cell_oi, 0:n_frames]
         time_oi= [0, n_frames-1]
 

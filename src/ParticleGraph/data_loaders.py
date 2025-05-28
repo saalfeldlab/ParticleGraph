@@ -1549,6 +1549,47 @@ def load_worm_Kato_data(config, device=None, visualize=None, step=None, cmap=Non
             print(f"Neuron {i + 1} name:", decoded_name)
 
 
+def plot_worm_adjacency_matrix(weights, all_neuron_list, title, output_path):
+    """
+    Plots the adjacency matrix and weights for the given chemical and electrical weights.
+
+    Parameters:
+        chem_weights (torch.Tensor): Chemical weights matrix.
+        eassym_weights (torch.Tensor): Electrical weights matrix.
+        all_neuron_list (list): List of neuron names.
+        output_path (str): Path to save the output plot.
+    """
+
+
+    fig = plt.figure(figsize=(30, 15))
+
+    # Plot adjacency matrix
+    ax = fig.add_subplot(121)
+    sns.heatmap(weights > 0, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
+    ax.set_xticks(range(len(all_neuron_list)))
+    ax.set_xticklabels(all_neuron_list, fontsize=6, rotation=90)
+    ax.set_yticks(range(len(all_neuron_list)))
+    ax.set_yticklabels(all_neuron_list, fontsize=6)
+    plt.title(title, fontsize=18)
+    plt.xlabel('pre Neurons', fontsize=18)
+    plt.ylabel('post Neurons', fontsize=18)
+
+    # Plot weights
+    ax = fig.add_subplot(122)
+    sns.heatmap(weights, center=0, square=True, cmap='bwr', vmin=0, vmax=30, cbar_kws={'fraction': 0.046})
+    ax.set_xticks(range(len(all_neuron_list)))
+    ax.set_xticklabels(all_neuron_list, fontsize=6, rotation=90)
+    ax.set_yticks(range(len(all_neuron_list)))
+    ax.set_yticklabels(all_neuron_list, fontsize=6)
+    plt.title('weights', fontsize=18)
+    plt.xlabel('pre Neurons', fontsize=18)
+    plt.ylabel('post Neurons', fontsize=18)
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=170)
+    plt.close()
+
+
 def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
 
     data_folder_name = config.data_folder_name
@@ -1583,31 +1624,7 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     with open(connectome_folder_name+"all_neuron_names.json", "r") as f:
         all_neuron_list = json.load(f)
 
-    fig = plt.figure(figsize=(30, 15))
-    ax = fig.add_subplot(121)
-    ax = sns.heatmap(to_numpy(chem_weights+eassym_weights)>0, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},)
-    ax.set_xticks(range(len(all_neuron_list)))
-    ax.set_xticklabels(all_neuron_list, fontsize=6, rotation=90)
-    ax.set_yticks(range(len(all_neuron_list)))
-    ax.set_yticklabels(all_neuron_list, fontsize=6)
-    plt.title('adjacency matrix White 1986', fontsize=18)
-    plt.xlabel('pre neurons', fontsize=18)
-    plt.ylabel('post neurons', fontsize=18)
-    ax = fig.add_subplot(122)
-    ax = sns.heatmap(to_numpy(chem_weights+eassym_weights), center=0, square=True, cmap='bwr', vmin=0, vmax=30, cbar_kws={'fraction': 0.046},)
-    ax.set_xticks(range(len(all_neuron_list)))
-    ax.set_xticklabels(all_neuron_list, fontsize=6, rotation=90)
-    ax.set_yticks(range(len(all_neuron_list)))
-    ax.set_yticklabels(all_neuron_list, fontsize=6)
-    plt.title('weights', fontsize=18)
-    plt.xlabel('pre neurons', fontsize=18)
-    plt.ylabel('post neurons', fontsize=18)
-    plt.tight_layout()
-    plt.savefig(f"graphs_data/{dataset_name}/full_White_adjacency_matrix.png", dpi=170)
-    plt.close()
-
-
-
+    plot_worm_adjacency_matrix(to_numpy(chem_weights+eassym_weights), all_neuron_list, 'adjacency matrix White 1986', f"graphs_data/{dataset_name}/full_White_adjacency_matrix.png")
 
 
     # Comparison with data from https://github.com/openworm/VarshneyEtAl2011
@@ -1633,7 +1650,7 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
             index = list(Varshney_neuron_names).index(neuron_name)
             Varshney_map_list[i] = index
         else :
-            print('missing neuron name in excell: ', neuron_name)
+            # print('missing neuron name in Varshney: ', neuron_name)
             Varshney_map_list[i] = 0
 
     map_Varshney_matrix = Varshney_matrix[np.ix_(Varshney_map_list, Varshney_map_list)]
@@ -1643,31 +1660,8 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
             map_Varshney_matrix[i,:] = 0
             map_Varshney_matrix[:, i] = 0
 
-    fig = plt.figure(figsize=(30, 15))
-    ax = fig.add_subplot(121)
-    ax = sns.heatmap(to_numpy(map_Varshney_matrix)>0, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
-    ax.set_xticks(range(len(all_neuron_list)))
-    ax.set_xticklabels(all_neuron_list, fontsize=6, rotation=90)
-    ax.set_yticks(range(len(all_neuron_list)))
-    ax.set_yticklabels(all_neuron_list, fontsize=6)
-    plt.xlabel('pre neurons', fontsize=18)
-    plt.ylabel('post neurons', fontsize=18)
-    plt.title('adjacency matrix Varsnehy 2011', fontsize=18)
-    ax = fig.add_subplot(122)
-    ax = sns.heatmap(to_numpy(map_Varshney_matrix), center=0, square=True, cmap='bwr', vmin=0, vmax=30, cbar_kws={'fraction': 0.046})
-    ax.set_xticks(range(len(all_neuron_list)))
-    ax.set_xticklabels(all_neuron_list, fontsize=6, rotation=90)
-    ax.set_yticks(range(len(all_neuron_list)))
-    ax.set_yticklabels(all_neuron_list, fontsize=6)
-    plt.xlabel('pre neurons', fontsize=18)
-    plt.ylabel('post neurons', fontsize=18)
-    plt.title('weights', fontsize=18)
-    plt.tight_layout()
-    plt.savefig(f"graphs_data/{dataset_name}/full_mapped_Varshney_adjacency_matrix.png", dpi=170)
-    plt.close()
 
-
-
+    plot_worm_adjacency_matrix(to_numpy(map_Varshney_matrix), all_neuron_list, 'adjacency matrix Varshney 2011', f"graphs_data/{dataset_name}/full_Varshney_adjacency_matrix.png")
 
 
     # Comparison with data from 'Connectomes across development reveal principles of brain maturation'
@@ -1689,7 +1683,7 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
             index = list(Zhen_neuron_names).index(neuron_name)
             Zhen_map_list[i] = index
         else :
-            print('missing neuron name in excell: ', neuron_name)
+            # print('missing neuron name in Zhen: ', neuron_name)
             Zhen_map_list[i] = 0
 
     map_Zhen_matrix = Zhen_matrix[np.ix_(Zhen_map_list, Zhen_map_list)]
@@ -1699,28 +1693,7 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
             map_Zhen_matrix[i,:] = 0
             map_Zhen_matrix[:, i] = 0
 
-    fig = plt.figure(figsize=(30, 15))
-    ax = fig.add_subplot(121)
-    ax = sns.heatmap(to_numpy(map_Zhen_matrix)>0, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
-    ax.set_xticks(range(len(all_neuron_list)))
-    ax.set_xticklabels(all_neuron_list, fontsize=6, rotation=90)
-    ax.set_yticks(range(len(all_neuron_list)))
-    ax.set_yticklabels(all_neuron_list, fontsize=6)
-    plt.xlabel('pre neurons', fontsize=18)
-    plt.ylabel('post neurons', fontsize=18)
-    plt.title('adjacency matrix Mei Zhen 2021 (sheet 7)', fontsize=18)
-    ax = fig.add_subplot(122)
-    ax = sns.heatmap(to_numpy(map_Zhen_matrix), center=0, square=True, cmap='bwr', vmin=0, vmax=30, cbar_kws={'fraction': 0.046})
-    ax.set_xticks(range(len(all_neuron_list)))
-    ax.set_xticklabels(all_neuron_list, fontsize=6, rotation=90)
-    ax.set_yticks(range(len(all_neuron_list)))
-    ax.set_yticklabels(all_neuron_list, fontsize=6)
-    plt.xlabel('pre neurons', fontsize=18)
-    plt.ylabel('post neurons', fontsize=18)
-    plt.title('weights', fontsize=18)
-    plt.tight_layout()
-    plt.savefig(f"graphs_data/{dataset_name}/full_mapped_Zhen_adjacency_matrix.png", dpi=170)
-    plt.close()
+    plot_worm_adjacency_matrix(to_numpy(map_Zhen_matrix), all_neuron_list, 'adjacency matrix Mei Zhen 2021', f"graphs_data/{dataset_name}/full_mapped_Zhen_adjacency_matrix.png")
 
 
 
@@ -1734,37 +1707,31 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     # subset_chem_weights_test = subset_chem_weights * 0
     # for k in trange(189):
     #     subset_chem_weights_test[k, :] = chem_weights[map_list[k],map_list]
+
     adjacency = torch.tensor(subset_chem_weights + subset_eassym_weights, dtype=torch.float32, device=device)
     torch.save(adjacency, f'./graphs_data/{dataset_name}/adjacency.pt')
 
-
-    # plot matrixes
-    fig = plt.figure(figsize=(30, 15))
-    ax = fig.add_subplot(121)
-    ax = sns.heatmap(to_numpy(adjacency)>0, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},)
-    ax.set_xticks(range(len(activity_neuron_list)))
-    ax.set_xticklabels(activity_neuron_list, fontsize=6, rotation=90)
-    ax.set_yticks(range(len(activity_neuron_list)))
-    ax.set_yticklabels(activity_neuron_list, fontsize=6)
-    plt.title('partial adjacency matrix White 1986', fontsize=18)
-    plt.xlabel('pre neurons', fontsize=18)
-    plt.ylabel('post neurons', fontsize=18)
-    ax = fig.add_subplot(122)
-    ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', vmin=0, vmax=30, cbar_kws={'fraction': 0.046},)
-    ax.set_xticks(range(len(activity_neuron_list)))
-    ax.set_xticklabels(activity_neuron_list, fontsize=6, rotation=90)
-    ax.set_yticks(range(len(activity_neuron_list)))
-    ax.set_yticklabels(activity_neuron_list, fontsize=6)
-    plt.title('weights', fontsize=18)
-    plt.xlabel('pre neurons', fontsize=18)
-    plt.ylabel('post neurons', fontsize=18)
-    plt.tight_layout()
-    plt.savefig(f"graphs_data/{dataset_name}/partial_White_adjacency_matrix.png", dpi=170)
-    plt.close()
+    plot_worm_adjacency_matrix(to_numpy(adjacency), activity_neuron_list, 'partial adjacency matrix White 2021', f"graphs_data/{dataset_name}/partial_White_adjacency_matrix.png")
 
 
 
+    Varshney_map_list = np.zeros(len(activity_neuron_list), dtype=int)
+    for i, neuron_name in enumerate(activity_neuron_list):
+        if neuron_name in list(Varshney_neuron_names):
+            index = list(Varshney_neuron_names).index(neuron_name)
+            Varshney_map_list[i] = index
+        else :
+            print('missing neuron name in Varshney: ', neuron_name)
+            Varshney_map_list[i] = 0
 
+    map_Varshney_matrix = Varshney_matrix[np.ix_(Varshney_map_list, Varshney_map_list)]
+
+    for i, neuron_name in enumerate(activity_neuron_list):
+        if neuron_name not in list(Varshney_neuron_names):
+            map_Varshney_matrix[i,:] = 0
+            map_Varshney_matrix[:, i] = 0
+
+    plot_worm_adjacency_matrix(to_numpy(map_Varshney_matrix), activity_neuron_list, 'partial adjacency matrix Varshney 2011', f"graphs_data/{dataset_name}/partial_Varshney_adjacency_matrix.png")
 
 
 
@@ -1785,28 +1752,8 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
             map_Zhen_matrix[i,:] = 0
             map_Zhen_matrix[:, i] = 0
 
-    fig = plt.figure(figsize=(30, 15))
-    ax = fig.add_subplot(121)
-    ax = sns.heatmap(to_numpy(map_Zhen_matrix)>0, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},)
-    ax.set_xticks(range(len(activity_neuron_list)))
-    ax.set_xticklabels(activity_neuron_list, fontsize=6, rotation=90)
-    ax.set_yticks(range(len(activity_neuron_list)))
-    ax.set_yticklabels(activity_neuron_list, fontsize=6)
-    plt.title('partial adjacency matrix Mei Zhen 2021 (sheet 7)', fontsize=18)
-    plt.xlabel('pre neurons', fontsize=18)
-    plt.ylabel('post neurons', fontsize=18)
-    ax = fig.add_subplot(122)
-    ax = sns.heatmap(to_numpy(map_Zhen_matrix), center=0, square=True, cmap='bwr', vmin=0, vmax=30, cbar_kws={'fraction': 0.046},)
-    ax.set_xticks(range(len(activity_neuron_list)))
-    ax.set_xticklabels(activity_neuron_list, fontsize=6, rotation=90)
-    ax.set_yticks(range(len(activity_neuron_list)))
-    ax.set_yticklabels(activity_neuron_list, fontsize=6)
-    plt.title('weights', fontsize=18)
-    plt.xlabel('pre neurons', fontsize=18)
-    plt.ylabel('post neurons', fontsize=18)
-    plt.tight_layout()
-    plt.savefig(f"graphs_data/{dataset_name}/partial_Zhen_adjacency_matrix.png", dpi=170)
-    plt.close()
+    plot_worm_adjacency_matrix(to_numpy(map_Zhen_matrix), activity_neuron_list, 'partial adjacency matrix Mei Zhen 2021', f"graphs_data/{dataset_name}/partial_Zhen_adjacency_matrix.png")
+
 
 
 
