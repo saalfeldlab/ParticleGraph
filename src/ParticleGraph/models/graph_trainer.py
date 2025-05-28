@@ -2900,7 +2900,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                             if 'learnable_short_term_plasticity' not in field_type:
                                 torch.save({'model_state_dict': model_f.state_dict(),'optimizer_state_dict': optimizer_f.state_dict()}, os.path.join(log_dir,
                                             'models',f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
-                        if virtual_neurons:
+                        if has_virtual_neuron:
                             torch.save({'model_state_dict': model_missing_activity.state_dict(),'optimizer_state_dict': optimizer_f.state_dict()}, os.path.join(log_dir,
                                             'models',f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
