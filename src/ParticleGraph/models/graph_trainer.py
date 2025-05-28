@@ -2380,6 +2380,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         n_nodes = simulation_config.n_nodes
         if has_virtual_neuron:
             n_nodes = n_particles + n_virtual_neurons
+            n_nodes_per_axis = 0
         else:
             n_nodes_per_axis = int(np.sqrt(n_nodes))
         has_field = True
@@ -2387,6 +2388,9 @@ def data_train_synaptic2(config, erase, best_model, device):
         n_nodes = simulation_config.n_particles
         has_field = False
     has_Siren = has_field & ('learnable_short_term_plasticity' not in field_type)
+
+    print(f'has_field: {has_field}, has_Siren: {has_Siren}, has_virtual_neuron: {has_virtual_neuron}')
+
 
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
@@ -2887,13 +2891,13 @@ def data_train_synaptic2(config, erase, best_model, device):
                 with torch.no_grad():
                     model.W.copy_(model.W * model.mask)
 
-                visualize_embedding = True
-                if visualize_embedding & ((N % plot_frequency == 0) | (N == 0)):
+                if ((N % plot_frequency == 0) | (N == 0)):
                     with torch.no_grad():
                         plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_particles,
                                              n_particle_types, type_list, cmap, device)
 
                         if has_field:
+                            print(f'n_nodes_per_axis: {n_nodes_per_axis}')
                             plot_training_signal_field(x, n_nodes, n_nodes_per_axis, recursive_loop, k, time_step, x_list, run, model, field_type, model_f,
                                                        edges, y_list, ynorm, delta_t, n_frames, log_dir, epoch, N,
                                                        recursive_parameters, modulation, device)
