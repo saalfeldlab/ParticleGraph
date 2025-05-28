@@ -53,7 +53,7 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'train'
+        task = 'generate'
         best_model = ''
 
         # config_list = ['multimaterial_16_2']  #   ,'multimaterial_16_2', 'multimaterial_16_3', 'multimaterial_16_4']
@@ -63,7 +63,7 @@ if __name__ == '__main__':
         # config_list = ['arbitrary_3']
         # config_list = ['cell_cardio_2_4']
         # config_list = ['RD_RPS_5']
-        config_list = ['cell_U2OS_8_21']
+        config_list = ['cell_U2OS_10_0']
         # config_list = ['cell_MDCK_15']
         # config_list = ['signal_CElegans_a_1']
 

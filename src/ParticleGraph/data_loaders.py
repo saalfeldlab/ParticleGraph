@@ -979,8 +979,6 @@ def load_2Dfluo_data_on_mesh(config, device, visualize, step):
     file_path = os.path.expanduser(config.data_folder_name)
     im0 = tifffile.imread(file_path)
     im0 = np.array(im0).astype('float32')
-    im0 = im0[0:150]
-
 
     top_freqs, top_amps = get_top_fft_modes_per_pixel(im0, dt=1.0, top_n=1)
 
