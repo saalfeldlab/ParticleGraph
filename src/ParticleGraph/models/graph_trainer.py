@@ -114,7 +114,6 @@ def data_train_particle(config, erase, best_model, device):
     data_augmentation_loop = train_config.data_augmentation_loop
     recursive_loop = train_config.recursive_loop
     coeff_continuous = train_config.coeff_continuous
-    coeff_permutation = train_config.coeff_permutation
     target_batch_size = train_config.batch_size
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
@@ -420,9 +419,9 @@ def data_train_particle(config, erase, best_model, device):
                 rr = torch.linspace(0, max_radius, 1000, dtype=torch.float32, device=device)
                 for n in np.random.permutation(n_particles)[:n_particles//100]:
                     embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
-                    in_features = get_in_features(rr=rr + simulation_config.max_radius/200, embedding=embedding_, model=model, model_name=config.graph_model.particle_model_name, max_radius=simulation_config.max_radius)
+                    in_features = get_in_features(rr=rr + simulation_config.max_radius/200, embedding=embedding_, model=model)
                     func1 = model.lin_edge(in_features)
-                    in_features = get_in_features(rr=rr, embedding=embedding_, model=model, model_name=config.graph_model.particle_model_name, max_radius=simulation_config.max_radius)
+                    in_features = get_in_features(rr=rr, embedding=embedding_, model=model)
                     func0 = model.lin_edge(in_features)
                     grad = func1-func0
                     loss = loss + coeff_continuous * grad.norm(2)
@@ -468,7 +467,7 @@ def data_train_particle(config, erase, best_model, device):
 
             total_loss += loss.item()
 
-            if ((epoch < 30) & (N % plot_frequency == 0)) | (N == 0):
+            if False: #((epoch < 30) & (N % plot_frequency == 0)) | (N == 0):
                 plot_training(config=config, pred=pred, gt=y_batch, log_dir=log_dir,
                               epoch=epoch, N=N, x=x, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
                               index_particles=index_particles, n_particles=n_particles,
@@ -521,7 +520,6 @@ def data_train_particle(config, erase, best_model, device):
             ax = fig.add_subplot(1, 5, 3)
             func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config,
                                                                 model_MLP=model.lin_edge, model=model,
-                                                                n_nodes=0,
                                                                 n_particles=n_particles, ynorm=ynorm,
                                                                 type_list=to_numpy(x[:, 1 + 2 * dimension]),
                                                                 cmap=cmap, update_type='NA', device=device)
@@ -2207,7 +2205,6 @@ def data_train_particle_field(config, erase, best_model, device):
         ax = fig.add_subplot(1, 5, 3)
         func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config,
                                                             model_MLP=model.lin_edge, model=model,
-                                                            n_nodes=0,
                                                             n_particles=n_particles, ynorm=ynorm,
                                                             type_list=to_numpy(x[:, 1 + 2 * dimension]),
                                                             cmap=cmap, update_type='NA', device=device)
@@ -2390,7 +2387,6 @@ def data_train_synaptic2(config, erase, best_model, device):
     has_Siren = has_field & ('learnable_short_term_plasticity' not in field_type)
 
     print(f'has_field: {has_field}, has_Siren: {has_Siren}, has_virtual_neuron: {has_virtual_neuron}')
-
 
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
@@ -2709,42 +2705,17 @@ def data_train_synaptic2(config, erase, best_model, device):
                     else:
                         x[:, 8:9] = torch.ones_like(x[:, 0:1])
 
-                    # regularisations
+
+                    # regularisation lin_phi(0)=0
                     in_features = get_in_features_update(rr=None, model=model, device=device)
-
                     func_phi = model.lin_phi(in_features.float())
-
-                    # sparsity on Wij and phi(0)=0
-                    loss += model.W[:n_particles,:n_particles].norm(1) * coeff_L1 + func_phi.norm(2)
+                    loss = func_phi.norm(2)
+                    # regularisation sparsity on Wij
+                    loss = loss + model.W[:n_particles,:n_particles].norm(1) * coeff_L1
                     if has_virtual_neuron and (train_config.coeff_L1_virtual_neuron>0):
                         loss += model.W[:n_particles, n_particles:].norm(1) * train_config.coeff_L1_virtual_neuron
-                        # fig = plt.figure(figsize=(8, 8))
-                        # plt.imshow(to_numpy(model.W[:n_particles, n_particles:]))
-                        # plt.savefig('W_ghost.tif')
-                        # plt.close()
-                    # lin.edge monotonic positive
-                    if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N7'):
-                        in_features_prev = torch.cat((x[:n_particles, 6:7] - xnorm/150, model.a[:n_particles]), dim=1)
-                        in_features = torch.cat((x[:n_particles, 6:7], model.a[:n_particles]), dim=1)
-                        in_features_next = torch.cat((x[:n_particles, 6:7] + xnorm/150, model.a[:n_particles]), dim=1)
-                        if model.embedding_trial:
-                            in_features_prev = torch.cat((in_features_prev, model.b[0].repeat(n_particles, 1)), dim=1)
-                            in_features = torch.cat((in_features, model.b[0].repeat(n_particles, 1)), dim=1)
-                            in_features_next = torch.cat((in_features_next, model.b[0].repeat(n_particles, 1)), dim=1)
-                    elif model_config.signal_model_name == 'PDE_N5':
-                        if model.embedding_trial:
-                            in_features_prev = torch.cat((x[:n_particles, 6:7] - xnorm / 150, model.a[:n_particles], model.b[0].repeat(n_particles, 1), model.a[:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
-                            in_features = torch.cat((x[:n_particles, 6:7], model.a[:n_particles], model.b[0].repeat(n_particles, 1), model.a[:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
-                            in_features_next = torch.cat((x[:n_particles, 6:7] + xnorm/150, model.a[:n_particles], model.b[0].repeat(n_particles, 1), model.a[:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
-                        else:
-                            in_features_prev = torch.cat((x[:n_particles, 6:7] - xnorm / 150, model.a[:n_particles], model.a[:n_particles]), dim=1)
-                            in_features = torch.cat((x[:n_particles, 6:7], model.a[:n_particles], model.a[:n_particles]), dim=1)
-                            in_features_next = torch.cat((x[:n_particles, 6:7] + xnorm/150, model.a[:n_particles], model.a[:n_particles]), dim=1)
-                    else:
-                        in_features = x[:n_particles, 6:7]
-                        in_features_next = x[:n_particles, 6:7] + xnorm/150
-                        in_features_prev = x[:n_particles, 6:7] - xnorm / 150
-
+                    # regularisation lin_edge
+                    in_features_prev, in_features, in_features_next = get_in_features_lin_edge(x, model, model_config, xnorm, n_particles, device)
                     if coeff_diff > 0:
                         if model_config.lin_edge_positive:
                             msg_1 = model.lin_edge(in_features_prev) ** 2
@@ -2755,9 +2726,8 @@ def data_train_synaptic2(config, erase, best_model, device):
                             msg0 = model.lin_edge(in_features)
                             msg1 = model.lin_edge(in_features_next)
                         loss = loss + torch.relu(msg0 - msg1).norm(2) * coeff_diff
-
+                    # regularisation sign Wij
                     if coeff_sign > 0:
-                        
                         W_sign = torch.tanh(5 * model.W)
                         loss_contribs = []
                         for i in range(n_particles):
@@ -2768,18 +2738,20 @@ def data_train_synaptic2(config, erase, best_model, device):
                                 loss_contribs.append(std)
                         if loss_contribs:
                             loss = loss + torch.stack(loss_contribs).norm(2) * coeff_sign
-
+                    # miscalleneous regularisations
                     if (model.update_type == 'generic') & (coeff_diff_update>0):
-                        in_feature_update = torch.cat((torch.zeros((n_particles,1), device=device), model.a[:n_particles], msg0, torch.ones((n_particles,1), device=device)), dim=1)
-                        in_feature_update_next = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[:n_particles], msg1, torch.ones((n_particles, 1), device=device)), dim=1)
+                        in_feature_update = torch.cat((torch.zeros((n_particles,1), device=device), model.a[1,:n_particles], msg0, torch.ones((n_particles,1), device=device)), dim=1)
+                        in_feature_update_next = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1,:n_particles], msg1, torch.ones((n_particles, 1), device=device)), dim=1)
                         if 'positive' in train_config.diff_update_regul:
                             loss = loss + torch.relu(model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next)).norm(2) * coeff_diff_update
                         if 'TV' in train_config.diff_update_regul:
-                            in_feature_update_next_bis = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[:n_particles], msg1, torch.ones((n_particles, 1), device=device)*1.1), dim=1)
+                            in_feature_update_next_bis = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1,:n_particles], msg1, torch.ones((n_particles, 1), device=device)*1.1), dim=1)
                             loss = loss + (model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next_bis)).norm(2) * coeff_diff_update
                         if 'second_derivative' in train_config.diff_update_regul:
-                            in_feature_update_prev = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[:n_particles], msg_1, torch.ones((n_particles, 1), device=device)), dim=1)
+                            in_feature_update_prev = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1,:n_particles], msg_1, torch.ones((n_particles, 1), device=device)), dim=1)
                             loss = loss + (model.lin_phi(in_feature_update_prev) + model.lin_phi(in_feature_update_next) - 2 * model.lin_phi(in_feature_update)).norm(2) * coeff_diff_update
+
+
 
                     if particle_batch_ratio < 1:
                          ids = np.random.permutation(x.shape[0])[:int(x.shape[0] * particle_batch_ratio)]
@@ -2878,7 +2850,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                     #     plt.close()
 
                 if ('PDE_N3' in model_config.signal_model_name):
-                    loss = loss + train_config.coeff_model_a * (model.a[ind_a+1] - model.a[ind_a]).norm(2)
+                    loss = loss + train_config.coeff_model_a * (model.a[1,ind_a+1] - model.a[1,ind_a]).norm(2)
 
                 loss.backward()
                 optimizer.step()
@@ -2897,7 +2869,6 @@ def data_train_synaptic2(config, erase, best_model, device):
                                              n_particle_types, type_list, cmap, device)
 
                         if has_field:
-                            print(f'n_nodes_per_axis: {n_nodes_per_axis}')
                             plot_training_signal_field(x, n_nodes, n_nodes_per_axis, recursive_loop, k, time_step, x_list, run, model, field_type, model_f,
                                                        edges, y_list, ynorm, delta_t, n_frames, log_dir, epoch, N,
                                                        recursive_parameters, modulation, device)
@@ -2938,7 +2909,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         ax = fig.add_subplot(2, 5, 2)
         for n in range(n_particle_types):
             pos = torch.argwhere(type_list == n)
-            plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=0.1, color=cmap.color(n))
+            plt.scatter(to_numpy(model.a[1,pos, 0]), to_numpy(model.a[1,pos, 1]), s=0.1, color=cmap.color(n))
         plt.xlabel('Embedding 0', fontsize=12)
         plt.ylabel('Embedding 1', fontsize=12)
 
@@ -2983,8 +2954,8 @@ def data_train_synaptic2(config, erase, best_model, device):
         ax = fig.add_subplot(2, 5, 10)
         rr = torch.linspace(-xnorm, xnorm, 1000, device=device)
         for n in range(n_particles):
-            embedding_ = model.a[n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
-            in_features = get_in_features(rr=rr, embedding=embedding_, model=model, model_name=model_config.signal_model_name, max_radius=simulation_config.max_radius)
+            embedding_ = model.a[1,n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
+            in_features = get_in_features(rr=rr, embedding=embedding_, model=model)
             with torch.no_grad():
                 func = model.lin_edge(in_features.float())
             if model_config.lin_edge_positive:
@@ -3000,7 +2971,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         if 'PDE_N3' not in model_config.signal_model_name:
 
             ax = fig.add_subplot(2, 5, 6)
-            embedding = to_numpy(model.a.squeeze())
+            embedding = to_numpy(model.a[1].squeeze())
 
             if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5') | (model_config.signal_model_name == 'PDE_N9'):
                 model_MLP = model.lin_edge
@@ -3011,7 +2982,6 @@ def data_train_synaptic2(config, erase, best_model, device):
 
             func_list_, proj_interaction = analyze_edge_function(rr=torch.linspace(-xnorm, xnorm, 1000, device=device), vizualize=False, config=config,
                                                                 model_MLP=model_MLP, model=model,
-                                                                n_nodes=0,
                                                                 n_particles=n_particles, ynorm=ynorm,
                                                                 type_list=to_numpy(x[:, 1 + 2 * dimension]),
                                                                 cmap=cmap, update_type = update_type, device=device)
@@ -3021,7 +2991,6 @@ def data_train_synaptic2(config, erase, best_model, device):
 
             func_list, proj_interaction_ = analyze_edge_function(rr=torch.linspace(-xnorm, xnorm, 1000, device=device), vizualize=True, config=config,
                                                                 model_MLP=model_MLP, model=model,
-                                                                n_nodes=0,
                                                                 n_particles=n_particles, ynorm=ynorm,
                                                                 type_list=to_numpy(x[:, 1 + 2 * dimension]),
                                                                 cmap=cmap, update_type = update_type, device=device)
@@ -3048,7 +3017,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                 verticalalignment='top', horizontalalignment='left')
 
             ax = fig.add_subplot(2, 5, 8)
-            model_a_ = model.a.clone().detach()
+            model_a_ = model.a[1].clone().detach()
             for n in range(n_clusters):
                 pos = np.argwhere(labels == n).squeeze().astype(int)
                 if pos.size > 0:
@@ -3066,7 +3035,7 @@ def data_train_synaptic2(config, erase, best_model, device):
             if (replace_with_cluster) & (epoch % sparsity_freq == sparsity_freq - 1) & (epoch < n_epochs - sparsity_freq):
                 # Constrain embedding domain
                 with torch.no_grad():
-                    model.a.copy_(model_a_)
+                    model.a[1] = model_a_.clone().detach()
                 print(f'regul_embedding: replaced')
                 logger.info(f'regul_embedding: replaced')
 

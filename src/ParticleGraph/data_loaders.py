@@ -1590,6 +1590,37 @@ def plot_worm_adjacency_matrix(weights, all_neuron_list, title, output_path):
     plt.close()
 
 
+def map_matrix(neuron_list, neuron_names, matrix):
+    """
+    Maps the Varshney matrix to the given neuron list and sets rows/columns to zero for missing neurons.
+
+    Parameters:
+        neuron_list (list): List of all neuron names.
+        neuron_names (list): List of neuron names in the Varshney dataset.
+        matrix (torch.Tensor): Adjacency matrix from the Varshney dataset.
+
+    Returns:
+        torch.Tensor: Mapped matrix.
+    """
+
+    map_list = np.zeros(len(neuron_list), dtype=int)
+    for i, neuron_name in enumerate(neuron_list):
+        if neuron_name in list(neuron_names):
+            index = list(neuron_names).index(neuron_name)
+            map_list[i] = index
+        else:
+            map_list[i] = 0
+
+    mapped_matrix = matrix[np.ix_(map_list, map_list)]
+
+    for i, neuron_name in enumerate(neuron_list):
+        if neuron_name not in list(neuron_names):
+            mapped_matrix[i, :] = 0
+            mapped_matrix[:, i] = 0
+
+    return (mapped_matrix)
+
+
 def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
 
     data_folder_name = config.data_folder_name
@@ -1626,77 +1657,6 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
 
     plot_worm_adjacency_matrix(to_numpy(chem_weights+eassym_weights), all_neuron_list, 'adjacency matrix White 1986', f"graphs_data/{dataset_name}/full_White_adjacency_matrix.png")
 
-
-    # Comparison with data from https://github.com/openworm/VarshneyEtAl2011
-    # Structural Properties of the <i>Caenorhabditis elegans</i> Neuronal Network
-    file_path = '/groups/saalfeld/home/allierc/Py/VarshneyEtAl2011/ConnOrdered_040903.mat'
-
-    # Load the .mat file
-    mat_data = scipy.io.loadmat(file_path)
-
-    # Accessing the adjacency matrix and neuron labels
-    chemical_connectome = mat_data['A_init_t_ordered']
-    electrical_connectome = mat_data['Ag_t_ordered']
-    neuron_names_raw = mat_data['Neuron_ordered']
-
-    Varshney_matrix = np.array(chemical_connectome.todense())
-    Varshney_matrix = torch.tensor(Varshney_matrix, dtype=torch.float32, device=device)
-    Varshney_neuron_names = [str(cell[0][0]) for cell in neuron_names_raw]
-
-
-    Varshney_map_list = np.zeros(len(all_neuron_list), dtype=int)
-    for i, neuron_name in enumerate(all_neuron_list):
-        if neuron_name in list(Varshney_neuron_names):
-            index = list(Varshney_neuron_names).index(neuron_name)
-            Varshney_map_list[i] = index
-        else :
-            # print('missing neuron name in Varshney: ', neuron_name)
-            Varshney_map_list[i] = 0
-
-    map_Varshney_matrix = Varshney_matrix[np.ix_(Varshney_map_list, Varshney_map_list)]
-
-    for i, neuron_name in enumerate(all_neuron_list):
-        if neuron_name not in list(Varshney_neuron_names):
-            map_Varshney_matrix[i,:] = 0
-            map_Varshney_matrix[:, i] = 0
-
-
-    plot_worm_adjacency_matrix(to_numpy(map_Varshney_matrix), all_neuron_list, 'adjacency matrix Varshney 2011', f"graphs_data/{dataset_name}/full_Varshney_adjacency_matrix.png")
-
-
-    # Comparison with data from 'Connectomes across development reveal principles of brain maturation'
-    # https://www.nature.com/articles/s41586-021-03778-4
-
-    # Path to your Excel file
-    file_path = '/groups/saalfeld/home/allierc/signaling/Celegans/Zhen_2021/41586_2021_3778_MOESM4_ESM.xlsx'
-    # Sheet name
-    sheet_name = 'Dataset8'
-    Zhen_neuron_names = pd.read_excel(file_path, sheet_name=sheet_name, usecols='C', skiprows=4, nrows=224, header=None)
-    Zhen_neuron_names = Zhen_neuron_names.squeeze()  # convert to Series for convenience
-    Zhen_matrix = pd.read_excel(file_path, sheet_name=sheet_name, skiprows=4, nrows=224, usecols='D:GA', header=None)
-    Zhen_matrix = Zhen_matrix.T
-    Zhen_matrix = torch.tensor(np.array(Zhen_matrix), dtype=torch.float32, device=device)
-
-    Zhen_map_list = np.zeros(len(all_neuron_list), dtype=int)
-    for i, neuron_name in enumerate(all_neuron_list):
-        if neuron_name in list(Zhen_neuron_names):
-            index = list(Zhen_neuron_names).index(neuron_name)
-            Zhen_map_list[i] = index
-        else :
-            # print('missing neuron name in Zhen: ', neuron_name)
-            Zhen_map_list[i] = 0
-
-    map_Zhen_matrix = Zhen_matrix[np.ix_(Zhen_map_list, Zhen_map_list)]
-
-    for i, neuron_name in enumerate(all_neuron_list):
-        if neuron_name not in list(Zhen_neuron_names):
-            map_Zhen_matrix[i,:] = 0
-            map_Zhen_matrix[:, i] = 0
-
-    plot_worm_adjacency_matrix(to_numpy(map_Zhen_matrix), all_neuron_list, 'adjacency matrix Mei Zhen 2021', f"graphs_data/{dataset_name}/full_mapped_Zhen_adjacency_matrix.png")
-
-
-
     # map_list contain the index of the neuron activity traces, first trace is that of ADAL neuron index=123
     map_list = np.load(connectome_folder_name + 'map_list.npy', allow_pickle=True)
 
@@ -1708,59 +1668,104 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     # for k in trange(189):
     #     subset_chem_weights_test[k, :] = chem_weights[map_list[k],map_list]
 
-    adjacency = torch.tensor(subset_chem_weights + subset_eassym_weights, dtype=torch.float32, device=device)
-    torch.save(adjacency, f'./graphs_data/{dataset_name}/adjacency.pt')
-
+    adjacency = (subset_chem_weights + subset_eassym_weights).clone().detach().to(dtype=torch.float32, device=device)
     plot_worm_adjacency_matrix(to_numpy(adjacency), activity_neuron_list, 'partial adjacency matrix White 2021', f"graphs_data/{dataset_name}/partial_White_adjacency_matrix.png")
 
 
 
-    Varshney_map_list = np.zeros(len(activity_neuron_list), dtype=int)
-    for i, neuron_name in enumerate(activity_neuron_list):
-        if neuron_name in list(Varshney_neuron_names):
-            index = list(Varshney_neuron_names).index(neuron_name)
-            Varshney_map_list[i] = index
-        else :
-            print('missing neuron name in Varshney: ', neuron_name)
-            Varshney_map_list[i] = 0
 
-    map_Varshney_matrix = Varshney_matrix[np.ix_(Varshney_map_list, Varshney_map_list)]
 
-    for i, neuron_name in enumerate(activity_neuron_list):
-        if neuron_name not in list(Varshney_neuron_names):
-            map_Varshney_matrix[i,:] = 0
-            map_Varshney_matrix[:, i] = 0
+    # Comparison with data from https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.0020095
+    data_Kaiser = scipy.io.loadmat('/groups/saalfeld/home/allierc/signaling/Celegans/Cornell/celegans277.mat')
+    positions = data_Kaiser['celegans277positions']
+    labels_raw = data_Kaiser['celegans277labels']
+    Kaiser_neuron_names = [str(label[0]) for label in labels_raw.squeeze()]
+    Kaiser_matrix = np.array(data_Kaiser['celegans277matrix'])
+    Kaiser_matrix = torch.tensor(Kaiser_matrix, dtype=torch.float32, device=device).t()
 
+    # Comparison with data from https://github.com/openworm/VarshneyEtAl2011
+    # Structural Properties of the <i>Caenorhabditis elegans</i> Neuronal Network
+    file_path = '/groups/saalfeld/home/allierc/Py/VarshneyEtAl2011/ConnOrdered_040903.mat'
+    mat_data = scipy.io.loadmat(file_path)
+    chemical_connectome = mat_data['A_init_t_ordered']
+    electrical_connectome = mat_data['Ag_t_ordered']
+    neuron_names_raw = mat_data['Neuron_ordered']
+    Varshney_matrix = np.array((chemical_connectome+electrical_connectome).todense())
+    Varshney_matrix = torch.tensor(Varshney_matrix, dtype=torch.float32, device=device)
+    Varshney_neuron_names = [str(cell[0][0]) for cell in neuron_names_raw]
+
+    # Comparison with data from 'Connectomes across development reveal principles of brain maturation'
+    # https://www.nature.com/articles/s41586-021-03778-4
+    file_path = '/groups/saalfeld/home/allierc/signaling/Celegans/Zhen_2021/41586_2021_3778_MOESM4_ESM.xlsx'
+    sheet_name = 'Dataset8'
+    Zhen_neuron_names = pd.read_excel(file_path, sheet_name=sheet_name, usecols='C', skiprows=4, nrows=224, header=None)
+    Zhen_neuron_names = Zhen_neuron_names.squeeze()  # convert to Series for convenience
+    Zhen_matrix = pd.read_excel(file_path, sheet_name=sheet_name, skiprows=4, nrows=224, usecols='D:GA', header=None)
+    Zhen_matrix = Zhen_matrix.T
+    Zhen_matrix = torch.tensor(np.array(Zhen_matrix), dtype=torch.float32, device=device)
+
+
+
+
+
+    map_Varshney_matrix = map_matrix(all_neuron_list, Varshney_neuron_names, Varshney_matrix)
+    plot_worm_adjacency_matrix(to_numpy(map_Varshney_matrix), all_neuron_list, 'adjacency matrix Varshney 2011', f"graphs_data/{dataset_name}/full_Varshney_adjacency_matrix.png")
+
+    map_Zhen_matrix = map_matrix(all_neuron_list, Zhen_neuron_names, Zhen_matrix)
+    plot_worm_adjacency_matrix(to_numpy(map_Zhen_matrix), all_neuron_list, 'adjacency matrix Mei Zhen 2021', f"graphs_data/{dataset_name}/full_mapped_Zhen_adjacency_matrix.png")
+
+    map_Kaiser_matrix = map_matrix(all_neuron_list, Kaiser_neuron_names, Kaiser_matrix)
+    plot_worm_adjacency_matrix(to_numpy(map_Kaiser_matrix), all_neuron_list, 'adjacency matrix Kaiser', f"graphs_data/{dataset_name}/full_Kaiser_adjacency_matrix.png")
+
+
+
+
+
+    map_Varshney_matrix = map_matrix(activity_neuron_list, Varshney_neuron_names, Varshney_matrix)
     plot_worm_adjacency_matrix(to_numpy(map_Varshney_matrix), activity_neuron_list, 'partial adjacency matrix Varshney 2011', f"graphs_data/{dataset_name}/partial_Varshney_adjacency_matrix.png")
 
-
-
-
-    Zhen_map_list = np.zeros(len(activity_neuron_list), dtype=int)
-    for i, neuron_name in enumerate(activity_neuron_list):
-        if neuron_name in list(Zhen_neuron_names):
-            index = list(Zhen_neuron_names).index(neuron_name)
-            Zhen_map_list[i] = index
-        else :
-            print('missing neuron name in Zhen: ', neuron_name)
-            Zhen_map_list[i] = 0
-
-    map_Zhen_matrix = Zhen_matrix[np.ix_(Zhen_map_list, Zhen_map_list)]
-
-    for i, neuron_name in enumerate(activity_neuron_list):
-        if neuron_name not in list(Zhen_neuron_names):
-            map_Zhen_matrix[i,:] = 0
-            map_Zhen_matrix[:, i] = 0
-
+    map_Zhen_matrix = map_matrix(activity_neuron_list, Zhen_neuron_names, Zhen_matrix)
     plot_worm_adjacency_matrix(to_numpy(map_Zhen_matrix), activity_neuron_list, 'partial adjacency matrix Mei Zhen 2021', f"graphs_data/{dataset_name}/partial_Zhen_adjacency_matrix.png")
 
+    map_Kaiser_matrix = map_matrix(activity_neuron_list, Kaiser_neuron_names, Kaiser_matrix)
+    plot_worm_adjacency_matrix(to_numpy(map_Kaiser_matrix), activity_neuron_list, 'partial adjacency matrix Kaiser', f"graphs_data/{dataset_name}/partial full_Kaiser_adjacency_matrix.png")
+
+
+
+
+
+
+
+    mask_matrix = ((map_Zhen_matrix>0) | (map_Varshney_matrix>0) | (map_Kaiser_matrix>0) | (adjacency>0)) * 1.0
+    zero_rows = torch.all(mask_matrix == 0, dim=1)
+    zero_columns = torch.all(mask_matrix == 0, dim=0)
+    mask_matrix[zero_rows] = 1
+    mask_matrix[:, zero_columns] = 1
+
+
+    print (f'filling factor {torch.sum(mask_matrix)/mask_matrix.shape[0]**2:0.3f}')
+
+
+    fig = plt.figure(figsize=(15, 15))
+    ax = fig.add_subplot(111)
+    sns.heatmap(to_numpy(mask_matrix), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
+    ax.set_xticks(range(len(activity_neuron_list)))
+    ax.set_xticklabels(activity_neuron_list, fontsize=6, rotation=90)
+    ax.set_yticks(range(len(activity_neuron_list)))
+    ax.set_yticklabels(activity_neuron_list, fontsize=6)
+    plt.title('mask', fontsize=18)
+    plt.xlabel('pre Neurons', fontsize=18)
+    plt.ylabel('post Neurons', fontsize=18)
+    plt.tight_layout()
+    plt.savefig(f"graphs_data/{dataset_name}/mask_adjacency_matrix.png", dpi=170)
+    plt.close()
 
 
 
 
     # generate data for GNN training
 
-
+    torch.save(mask_matrix, f'./graphs_data/{dataset_name}/adjacency.pt')
 
     # create fully connected edges
     edge_index, edge_attr = dense_to_sparse(torch.ones((n_particles)) - torch.eye(n_particles))
@@ -1891,11 +1896,11 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
                 # plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=10, c=to_numpy(x[:, 6]),
                 #             cmap='viridis', vmin=-10, vmax=10, edgecolors='k', alpha=1)
                 plt.axis('off')
-                plt.scatter(X1[:, 0], X1[:, 1], s=700, c=x[:, 6], cmap='viridis', vmin=-2, vmax=2)
+                plt.scatter(X1[:, 0], X1[:, 1], s=700, c=x[:, 6], cmap='viridis', vmin=-20, vmax=20)
                 plt.xticks([])
                 plt.yticks([])
                 plt.tight_layout()
-                plt.savefig(f"graphs_data/{dataset_name}/Fig/2D_Fig_{run}_{it}.tif", dpi=80)
+                plt.savefig(f"graphs_data/{dataset_name}/Fig/2D_Fig_{run}_{it:03d}.tif", dpi=80)
                 plt.close()
 
         x_list = np.array(x_list)

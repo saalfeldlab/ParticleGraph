@@ -22,13 +22,13 @@ simulation:
     start_frame: -1000
 
 graph_model:
-    signal_model_name: 'PDE_N4'
+    signal_model_name: 'PDE_CE1'
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
-    field_type: 'modulation'
+    field_type: ''
 
-    input_size: 3
+    input_size: 6
     output_size: 1
     hidden_dim: 256
     n_layers: 5
@@ -70,9 +70,9 @@ training:
     device: 'auto'
     n_runs: 21
 
-    with_connectivity_mask: False
+    with_connectivity_mask: True
 
-    n_virtual_neurons: 100
+    n_virtual_neurons: 0
 
     time_step: 8
     shared_embedding: True
@@ -80,17 +80,14 @@ training:
 
     sparsity: 'none'
     rotation_augmentation: False
-    data_augmentation_loop: 5000
-    cluster_method: 'distance_embedding'
-    cluster_distance_threshold: 0.2
-    fix_cluster_embedding: True
+    data_augmentation_loop: 5
 
     learning_rate_W_start: 1.0E-3
     learning_rate_start: 5.0E-4
     learning_rate_embedding_start: 5.0E-3
-
     learning_rate_NNR: 1.0E-6
 
     coeff_L1: 1.0E-6
     coeff_diff: 100
     coeff_L1_virtual_neuron: 1.0E-6
+    coeff_sign : 1.0E-6

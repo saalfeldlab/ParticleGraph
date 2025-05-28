@@ -59,6 +59,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         self.update_type = model_config.update_type
 
         self.bc_dpos = bc_dpos
+        self.max_radius = simulation_config.max_radius
         self.adjacency_matrix = simulation_config.adjacency_matrix
         self.n_virtual_neurons = int(config.training.n_virtual_neurons)
         self.excitation_dim = model_config.excitation_dim
@@ -87,12 +88,12 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
                 torch.ones((int(self.n_dataset), self.embedding_dim), device=self.device, requires_grad=True, dtype=torch.float32))
 
         if self.model == 'PDE_N3':
-            self.a = nn.Parameter(torch.ones((int(self.n_particles*100 + 1000), self.embedding_dim), device=self.device, requires_grad=True,dtype=torch.float32))
+            self.a = nn.Parameter(torch.ones((self.n_dataset, int(self.n_particles*100 + 1000), self.embedding_dim), device=self.device, requires_grad=True,dtype=torch.float32))
             self.embedding_step =  self.n_frames // 100
-        elif model_config.embedding_init =='':
-            self.a = nn.Parameter(torch.ones((int(self.n_particles + self.n_virtual_neurons), self.embedding_dim), device=self.device, requires_grad=True, dtype=torch.float32))
         else:
-            self.a = nn.Parameter(torch.tensor(projections, device=self.device, requires_grad=True, dtype=torch.float32))
+            self.a = nn.Parameter(torch.ones((self.n_dataset, int(self.n_particles + self.n_virtual_neurons), self.embedding_dim), device=self.device, requires_grad=True, dtype=torch.float32))
+
+        print(self.a.shape)
 
         if (self.model == 'PDE_N6') | (self.model == 'PDE_N7'):
             self.b = nn.Parameter(torch.ones((int(self.n_particles), 1000 + 10), device=self.device, requires_grad=True,dtype=torch.float32)*0.44)
@@ -124,7 +125,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             embedding = self.get_interp_a(k, particle_id)
         else:
             particle_id = x[:, 0].long()
-            embedding = self.a[particle_id, :]
+            embedding = self.a[data_id.squeeze().long(), particle_id, :]
             if self.embedding_trial:
                 embedding = torch.cat((self.b[data_id.squeeze().long(), :], embedding), dim=1)
 
@@ -155,7 +156,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         else:
             return pred
 
-    def message(self, edge_index_i, edge_index_j, u_j, embedding_i, embedding_j):
+    def message(self, edge_index_i, edge_index_j, u_i, u_j, embedding_i, embedding_j):
 
         if (self.model=='PDE_N4') | (self.model=='PDE_N7'):
             in_features = torch.cat([u_j, embedding_j], dim=1)
@@ -163,6 +164,8 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             in_features = torch.cat([u_j, embedding_j], dim=1)
         elif (self.model=='PDE_N5'):
             in_features = torch.cat([u_j, embedding_i, embedding_j], dim=1)
+        elif (self.model=='PDE_CE1'):
+            in_features = torch.cat([u_i, u_j, embedding_i, embedding_j], dim=1)
         else:
             in_features = u_j
 
