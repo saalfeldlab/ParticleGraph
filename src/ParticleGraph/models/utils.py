@@ -1415,7 +1415,8 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
             plt.xlim([1E-3, 0.02])
         if config.graph_model.particle_model_name == 'PDE_E':
             plt.xlim([0, 0.05])
-        plt.tight_layout()
+        ylim = [np.min(func_list_)/1.05, np.max(func_list_)*1.05]
+        plt.ylim(ylim)
 
     print('UMAP reduction ...')
     with warnings.catch_warnings():
