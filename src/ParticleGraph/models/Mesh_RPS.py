@@ -54,8 +54,8 @@ class Mesh_RPS(pyg.nn.MessagePassing):
         self.field_type = model_config.field_type
 
 
-        if self.model == 'RD_RPS_Mesh2':
-            self.lin_edge = MLP(input_size=8, output_size=self.output_size, nlayers=self.nlayers,
+        if (self.model == 'RD_RPS_Mesh2') | (self.model == 'RD_RPS_Mesh3'):
+            self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                                 hidden_size=self.hidden_size, device=self.device)
 
         self.lin_phi = MLP(input_size=self.input_size_update, output_size=self.output_size_update, nlayers=self.nlayers,
@@ -103,6 +103,13 @@ class Mesh_RPS(pyg.nn.MessagePassing):
             if self.time_window_noise > 0:
                 noise = torch.randn_like(input_phi[:,0:9]) * self.time_window_noise
                 input_phi[:,0:9] = input_phi[:,0:9] + noise
+        elif self.model == 'RD_RPS_Mesh3':
+            self.step = 2
+            uvw_msg = self.propagate(edge_index, uvw=uvw, pos=pos, embedding=embedding, discrete_laplacian=edge_attr)
+            input_phi = torch.cat((laplacian_uvw, uvw, uvw_msg, embedding), dim=-1)
+            if self.time_window_noise > 0:
+                noise = torch.randn_like(input_phi[:,0:9]) * self.time_window_noise
+                input_phi[:,0:9] = input_phi[:,0:9] + noise
         else:
             input_phi = torch.cat((laplacian_uvw, uvw, embedding), dim=-1)
             if self.time_window_noise > 0:
@@ -130,6 +137,15 @@ class Mesh_RPS(pyg.nn.MessagePassing):
                 delta_pos[:, :2] = delta_pos[:, :2] @ self.rotation_matrix
             in_features = torch.cat((uvw_j, delta_pos, r[:,None], embedding_i), dim=-1)
             return self.lin_edge(in_features)
+        elif self.step == 2:
+            delta_pos = self.bc_dpos(pos_j - pos_i)
+            if self.rotation_augmentation & (self.training == True):
+                delta_pos[:, :2] = delta_pos[:, :2] @ self.rotation_matrix
+            in_features = torch.cat((uvw_j, delta_pos, embedding_i), dim=-1)
+            return self.lin_edge(in_features)
+
+            # fig = plt.figure(figsize=(10, 10))
+            # plt.scatter(to_numpy(delta_pos[:, 0]), to_numpy(delta_pos[:, 1]), c='k')
 
     def update(self, aggr_out):
         return aggr_out

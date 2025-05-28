@@ -851,7 +851,7 @@ def plot_training_mesh(config, pred, has_field, field, gt, log_dir, epoch, N, x,
 
     match model_config.mesh_model_name:
 
-        case 'RD_RPS_Mesh' | 'RD_RPS_Mesh2':
+        case 'RD_RPS_Mesh' | 'RD_RPS_Mesh2' | 'RD_RPS_Mesh3':
 
             fig = plt.figure(figsize=(8, 8))
             embedding = get_embedding(model.a, 1)
@@ -1506,7 +1506,7 @@ def choose_training_model(model_config=None, device=None, projections=None):
         case 'WaveMeshSmooth':
             model = Mesh_Smooth(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
-        case 'RD_RPS_Mesh' | 'RD_RPS_Mesh2':
+        case 'RD_RPS_Mesh' | 'RD_RPS_Mesh2' | 'RD_RPS_Mesh3':
             model = Mesh_RPS(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
         case 'RD_RPS_Mesh_bis':

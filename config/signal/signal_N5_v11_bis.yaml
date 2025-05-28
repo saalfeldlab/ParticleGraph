@@ -72,7 +72,7 @@ training:
     n_epochs_init: 2
 
     rotation_augmentation: False
-    data_augmentation_loop: 50
+    data_augmentation_loop: 18
 
     sparsity: 'none'
     sparsity_freq: 4

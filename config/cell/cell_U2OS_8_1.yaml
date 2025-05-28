@@ -21,7 +21,7 @@ graph_model:
   mesh_model_name: 'RD_RPS_Mesh2'
   prediction: 'first_derivative'
 
-  input_size: 8
+  input_size: 7
   output_size: 3
   hidden_dim: 256
   n_layers: 10

@@ -1673,7 +1673,7 @@ def data_train_mesh(config, erase, best_model, device):
                 u = torch.tensor(np.linspace(0, 1, 100)).to(device)
                 u = u[:, None]
                 r = u
-                if 'RD_RPS_Mesh2' in model_config.mesh_model_name:
+                if ('RD_RPS_Mesh2' in model_config.mesh_model_name) |  ('RD_RPS_Mesh3' in model_config.mesh_model_name):
                     if has_field:
                         in_features = torch.cat((u, u, u, u, u, u, u, u, u, embedding_, u * 0), dim=1)
                     else:
