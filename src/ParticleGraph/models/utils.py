@@ -52,7 +52,7 @@ def get_in_features_update(rr=None, model=None, embedding = None, device=None):
     model_update_type = model.update_type
 
     if embedding == None:
-        embedding = model.a[1, 0:n_particles]
+        embedding = model.a[0:n_particles]
         if model.embedding_trial:
             embedding = torch.cat((embedding, model.b[0].repeat(n_particles, 1)), dim=1)
 
@@ -78,31 +78,31 @@ def get_in_features_update(rr=None, model=None, embedding = None, device=None):
 def get_in_features_lin_edge(x, model, model_config, xnorm, n_particles, device):
 
     if model_config.signal_model_name in ['PDE_N4', 'PDE_N7']:
-        in_features_prev = torch.cat((x[:n_particles, 6:7] - xnorm / 150, model.a[1,:n_particles]), dim=1)
-        in_features = torch.cat((x[:n_particles, 6:7], model.a[1,:n_particles]), dim=1)
-        in_features_next = torch.cat((x[:n_particles, 6:7] + xnorm / 150, model.a[1,:n_particles]), dim=1)
+        in_features_prev = torch.cat((x[:n_particles, 6:7] - xnorm / 150, model.a[:n_particles]), dim=1)
+        in_features = torch.cat((x[:n_particles, 6:7], model.a[:n_particles]), dim=1)
+        in_features_next = torch.cat((x[:n_particles, 6:7] + xnorm / 150, model.a[:n_particles]), dim=1)
         if model.embedding_trial:
             in_features_prev = torch.cat((in_features_prev, model.b[0].repeat(n_particles, 1)), dim=1)
             in_features = torch.cat((in_features, model.b[0].repeat(n_particles, 1)), dim=1)
             in_features_next = torch.cat((in_features_next, model.b[0].repeat(n_particles, 1)), dim=1)
     elif model_config.signal_model_name == 'PDE_N5':
         if model.embedding_trial:
-            in_features_prev = torch.cat((x[:n_particles, 6:7] - xnorm / 150, model.a[1,:n_particles], model.b[0].repeat(n_particles, 1), model.a[1,:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
-            in_features = torch.cat((x[:n_particles, 6:7], model.a[1,:n_particles], model.b[0].repeat(n_particles, 1), model.a[1,:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
-            in_features_next = torch.cat((x[:n_particles, 6:7] + xnorm / 150, model.a[1,:n_particles], model.b[0].repeat(n_particles, 1), model.a[1,:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
+            in_features_prev = torch.cat((x[:n_particles, 6:7] - xnorm / 150, model.a[:n_particles], model.b[0].repeat(n_particles, 1), model.a[:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
+            in_features = torch.cat((x[:n_particles, 6:7], model.a[:n_particles], model.b[0].repeat(n_particles, 1), model.a[:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
+            in_features_next = torch.cat((x[:n_particles, 6:7] + xnorm / 150, model.a[:n_particles], model.b[0].repeat(n_particles, 1), model.a[:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
         else:
-            in_features_prev = torch.cat((x[:n_particles, 6:7] - xnorm / 150, model.a[1,:n_particles], model.a[1,:n_particles]), dim=1)
-            in_features = torch.cat((x[:n_particles, 6:7], model.a[1,:n_particles], model.a[1,:n_particles]), dim=1)
-            in_features_next = torch.cat((x[:n_particles, 6:7] + xnorm / 150, model.a[1,:n_particles], model.a[1,:n_particles]), dim=1)
+            in_features_prev = torch.cat((x[:n_particles, 6:7] - xnorm / 150, model.a[:n_particles], model.a[:n_particles]), dim=1)
+            in_features = torch.cat((x[:n_particles, 6:7], model.a[:n_particles], model.a[:n_particles]), dim=1)
+            in_features_next = torch.cat((x[:n_particles, 6:7] + xnorm / 150, model.a[:n_particles], model.a[:n_particles]), dim=1)
     elif model_config.signal_model_name == 'PDE_CE1':
         if model.embedding_trial:
-            in_features_prev = torch.cat((torch.zeros((n_particles, 1), dtype=torch.float32, device=device), x[:n_particles, 6:7] - xnorm / 150, model.a[1,:n_particles], model.b[0].repeat(n_particles, 1), model.a[1,:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
-            in_features = torch.cat((torch.zeros((n_particles, 1), dtype=torch.float32, device=device), x[:n_particles, 6:7], model.a[1,:n_particles], model.b[0].repeat(n_particles, 1), model.a[1,:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
-            in_features_next = torch.cat((torch.zeros((n_particles, 1), dtype=torch.float32, device=device), x[:n_particles, 6:7] + xnorm / 150, model.a[1,:n_particles], model.b[0].repeat(n_particles, 1), model.a[1,:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
+            in_features_prev = torch.cat((torch.zeros((n_particles, 1), dtype=torch.float32, device=device), x[:n_particles, 6:7] - xnorm / 150, model.a[:n_particles], model.b[0].repeat(n_particles, 1), model.a[:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
+            in_features = torch.cat((torch.zeros((n_particles, 1), dtype=torch.float32, device=device), x[:n_particles, 6:7], model.a[:n_particles], model.b[0].repeat(n_particles, 1), model.a[:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
+            in_features_next = torch.cat((torch.zeros((n_particles, 1), dtype=torch.float32, device=device), x[:n_particles, 6:7] + xnorm / 150, model.a[:n_particles], model.b[0].repeat(n_particles, 1), model.a[:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
         else:
-            in_features_prev = torch.cat((torch.zeros((n_particles, 1), dtype=torch.float32, device=device), x[:n_particles, 6:7] - xnorm / 150, model.a[1,:n_particles], model.a[1,:n_particles]), dim=1)
-            in_features = torch.cat((torch.zeros((n_particles, 1), dtype=torch.float32, device=device), x[:n_particles, 6:7], model.a[1,:n_particles], model.a[1,:n_particles]), dim=1)
-            in_features_next = torch.cat((torch.zeros((n_particles, 1), dtype=torch.float32, device=device), x[:n_particles, 6:7] + xnorm / 150, model.a[1,:n_particles], model.a[1,:n_particles]), dim=1)
+            in_features_prev = torch.cat((torch.zeros((n_particles, 1), dtype=torch.float32, device=device), x[:n_particles, 6:7] - xnorm / 150, model.a[:n_particles], model.a[:n_particles]), dim=1)
+            in_features = torch.cat((torch.zeros((n_particles, 1), dtype=torch.float32, device=device), x[:n_particles, 6:7], model.a[:n_particles], model.a[:n_particles]), dim=1)
+            in_features_next = torch.cat((torch.zeros((n_particles, 1), dtype=torch.float32, device=device), x[:n_particles, 6:7] + xnorm / 150, model.a[:n_particles], model.a[:n_particles]), dim=1)
     else:
         in_features = x[:n_particles, 6:7]
         in_features_next = x[:n_particles, 6:7] + xnorm / 150
@@ -110,12 +110,10 @@ def get_in_features_lin_edge(x, model, model_config, xnorm, n_particles, device)
 
     return in_features_prev, in_features, in_features_next
 
-def get_in_features(rr=None, embedding=None, model=[]):
+def get_in_features(rr=None, embedding=None, model=[], model_name = [], max_radius=[]):
 
     if model.embedding_trial:
         embedding = torch.cat((embedding, model.b[0].repeat(embedding.shape[0], 1)), dim=1)
-    model_name = model.model
-    max_radius = model.max_radius
 
     match model_name:
         case 'PDE_A' | 'PDE_Cell_A':
@@ -151,8 +149,6 @@ def get_in_features(rr=None, embedding=None, model=[]):
             in_features = rr[:, None]
         case 'PDE_N4' | 'PDE_N7':
             in_features = torch.cat((rr[:, None], embedding), dim=1)
-        case 'PDE_CE1':
-            in_features = torch.cat((rr[:, None]*0, rr[:, None], embedding, embedding), dim=1)
         case 'PDE_N9':
             in_features = torch.cat((rr[:, None], embedding, torch.ones_like(rr[:, None])), dim=1)
         case 'PDE_N5':
@@ -177,7 +173,10 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
         fig = plt.figure(figsize=(8, 8))
         for n in range(n_particle_types):
             pos=torch.argwhere(type_list==n).squeeze()
-            plt.scatter(to_numpy(model.a[1,pos, 0]), to_numpy(model.a[1,pos, 1]), s=20, color=cmap.color(n))
+            if config.graph_model.signal_model_name=='PDE_N':
+                plt.scatter(to_numpy(model.a[1,pos, 0]), to_numpy(model.a[1,pos, 1]), s=20, color=cmap.color(n))
+            else:
+                plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=20, color=cmap.color(n))
 
     plt.xticks([])
     plt.yticks([])
@@ -228,24 +227,18 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
     rr = torch.linspace(-xnorm, xnorm, 1000, device=device)
     for n in range(n_particles):
         if ('PDE_N4' in config.graph_model.signal_model_name) | ('PDE_N7' in config.graph_model.signal_model_name):
-            embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+            embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
             if model.embedding_trial:
                 embedding_ = torch.cat((embedding_, model.b[0].repeat(1000, 1)), dim=1)
             in_features = torch.cat((rr[:, None], embedding_), dim=1)
         elif 'PDE_N5' in config.graph_model.signal_model_name:
-            embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+            embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
             if model.embedding_trial:
                 in_features = torch.cat((rr[:, None], embedding_, model.b[0].repeat(1000, 1), embedding_, model.b[0].repeat(1000, 1)), dim=1)
             else:
                 in_features = torch.cat((rr[:, None], embedding_, embedding_), dim=1)
-        elif 'PDE_CE1' in config.graph_model.signal_model_name:
-            embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-            if model.embedding_trial:
-                in_features = torch.cat((rr[:, None]*0, rr[:, None], embedding_, model.b[0].repeat(1000, 1), embedding_, model.b[0].repeat(1000, 1)), dim=1)
-            else:
-                in_features = torch.cat((rr[:, None]*0, rr[:, None], embedding_, embedding_), dim=1)
         elif ('PDE_N9' in config.graph_model.signal_model_name):
-            embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+            embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
             in_features = torch.cat((rr[:, None], embedding_, torch.ones_like(rr[:,None])), dim=1)
         else:
             in_features = rr[:, None]
@@ -266,7 +259,7 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
     fig = plt.figure(figsize=(8, 8))
     rr = torch.linspace(-xnorm, xnorm, 1000, device=device)
     for n in range(n_particles):
-        embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+        embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
         if model.embedding_trial:
             embedding_ = torch.cat((embedding_, model.b[0].repeat(1000, 1)), dim=1)
         in_features = get_in_features_update(rr=rr[:, None], model=model, embedding=embedding_, device=device)
@@ -656,7 +649,8 @@ def plot_training(config, pred, gt, log_dir, epoch, N, x, index_particles, n_par
                 else:
                     embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
 
-                in_features = get_in_features(rr=rr, embedding=embedding_, model=model)
+                in_features = get_in_features(rr=rr, embedding=embedding_, model=model, model_name=config.graph_model.particle_model_name,
+                                              max_radius=simulation_config.max_radius)
                 with torch.no_grad():
                     func = model.lin_edge(in_features.float())
                 func = func[:, 0]
@@ -1362,7 +1356,7 @@ def analyze_edge_function_state(rr=[], config=None, model=None, id_list=None, ty
 
     return func_list, true_type_list, short_model_a_list, proj_interaction
 
-def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], model=None, n_particles=None, ynorm=None, type_list=None, cmap=None, update_type=None, device=None):
+def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], model=None, n_nodes=0, n_particles=None, ynorm=None, type_list=None, cmap=None, update_type=None, device=None):
 
     max_radius = config.simulation.max_radius
     min_radius = config.simulation.min_radius
@@ -1400,7 +1394,7 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
                 embedding_ = model.a[1, n] * torch.ones((1000, dimension), device=device)
 
         if update_type == 'NA':
-            in_features = get_in_features(rr=rr, embedding=embedding_, model=model)
+            in_features = get_in_features(rr=rr, embedding=embedding_, model=model, model_name=config_model, max_radius=max_radius)
         else:
             in_features = get_in_features_update(rr=rr[:, None], embedding=embedding_, model=model, device=device)
         with torch.no_grad():
@@ -1421,10 +1415,6 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
             plt.xlim([1E-3, 0.02])
         if config.graph_model.particle_model_name == 'PDE_E':
             plt.xlim([0, 0.05])
-
-        ylim = [np.min(func_list_)/1.05, np.max(func_list_)*1.05]
-        plt.ylim(ylim)
-
         plt.tight_layout()
 
     print('UMAP reduction ...')
