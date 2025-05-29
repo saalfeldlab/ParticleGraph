@@ -1653,7 +1653,7 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     with open(connectome_folder_name+"all_neuron_names.json", "r") as f:
         all_neuron_list = json.load(f)
 
-    plot_worm_adjacency_matrix(to_numpy(chem_weights+eassym_weights), all_neuron_list, 'adjacency matrix White 1986', f"graphs_data/{dataset_name}/full_White_adjacency_matrix.png")
+    plot_worm_adjacency_matrix(to_numpy(chem_weights+eassym_weights), all_neuron_list, 'adjacency matrix Turuga 2022', f"graphs_data/{dataset_name}/full_Turuga_adjacency_matrix.png")
 
     # map_list contain the index of the neuron activity traces, first trace is that of ADAL neuron index=123
     map_list = np.load(connectome_folder_name + 'map_list.npy', allow_pickle=True)
@@ -1667,14 +1667,34 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     #     subset_chem_weights_test[k, :] = chem_weights[map_list[k],map_list]
 
     adjacency = (subset_chem_weights + subset_eassym_weights).clone().detach().to(dtype=torch.float32, device=device)
-    plot_worm_adjacency_matrix(to_numpy(adjacency), activity_neuron_list, 'partial adjacency matrix White 2021', f"graphs_data/{dataset_name}/partial_White_adjacency_matrix.png")
+    plot_worm_adjacency_matrix(to_numpy(adjacency), activity_neuron_list, 'partial adjacency matrix Turuga 2022', f"graphs_data/{dataset_name}/partial_Turuga_adjacency_matrix.png")
 
 
 
+    # Comparison with data from https://wormwiring.org/pages/adjacency.html
+    # Cook 2019 Whole-animal connectomes of both Caenorhabditis
+
+    file_path = '/groups/saalfeld/home/allierc/signaling/Celegans/Cook_2020/SI_5_corrected_July_2020_bis.xlsx'
+    sheet_name = 'male chemical'
+    Cook_neuron_chem_names = pd.read_excel(file_path, sheet_name=sheet_name, usecols='C', skiprows=3, nrows=382, header=None)
+    Cook_neuron_chem_names = [str(label) for label in Cook_neuron_chem_names.squeeze()]
+    Cook_matrix_chem = pd.read_excel(file_path, sheet_name=sheet_name, skiprows=3, nrows=382, usecols='D:NU', header=None)
+    Cook_matrix_chem = np.array(Cook_matrix_chem)
+    Cook_matrix_chem = np.nan_to_num(Cook_matrix_chem, nan=0.0)
+    Cook_matrix_chem = torch.tensor(Cook_matrix_chem, dtype=torch.float32, device=device)
+
+    file_path = '/groups/saalfeld/home/allierc/signaling/Celegans/Cook_2020/SI_5_corrected_July_2020_bis.xlsx'
+    sheet_name = 'male gap jn symmetric'
+    Cook_neuron_elec_names = pd.read_excel(file_path, sheet_name=sheet_name, usecols='C', skiprows=3, nrows=586, header=None)
+    Cook_neuron_elec_names = [str(label) for label in Cook_neuron_elec_names.squeeze()]
+    Cook_matrix_elec = pd.read_excel(file_path, sheet_name=sheet_name, skiprows=3, nrows=586, usecols='D:VQ', header=None)
+    Cook_matrix_elec = np.array(Cook_matrix_elec)
+    Cook_matrix_elec = np.nan_to_num(Cook_matrix_elec, nan=0.0)
+    Cook_matrix_elec = torch.tensor(Cook_matrix_elec, dtype=torch.float32, device=device)
 
 
     # Comparison with data from https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.0020095
-    data_Kaiser = scipy.io.loadmat('/groups/saalfeld/home/allierc/signaling/Celegans/Cornell/celegans277.mat')
+    data_Kaiser = scipy.io.loadmat('/groups/saalfeld/home/allierc/signaling/Celegans/Kaiser_2006/celegans277.mat')
     positions = data_Kaiser['celegans277positions']
     labels_raw = data_Kaiser['celegans277labels']
     Kaiser_neuron_names = [str(label[0]) for label in labels_raw.squeeze()]
@@ -1683,7 +1703,7 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
 
     # Comparison with data from https://github.com/openworm/VarshneyEtAl2011
     # Structural Properties of the <i>Caenorhabditis elegans</i> Neuronal Network
-    file_path = '/groups/saalfeld/home/allierc/Py/VarshneyEtAl2011/ConnOrdered_040903.mat'
+    file_path = '/groups/saalfeld/home/allierc/signaling/Celegans/Varshney_2011/ConnOrdered_040903.mat'
     mat_data = scipy.io.loadmat(file_path)
     chemical_connectome = mat_data['A_init_t_ordered']
     electrical_connectome = mat_data['Ag_t_ordered']
@@ -1704,6 +1724,10 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
 
 
 
+    map_Cook_matrix_chem = map_matrix(all_neuron_list, Cook_neuron_chem_names, Cook_matrix_chem)
+    map_Cook_matrix_elec = map_matrix(all_neuron_list, Cook_neuron_elec_names, Cook_matrix_elec)
+    map_Cook_matrix = map_Cook_matrix_chem + map_Cook_matrix_elec
+    plot_worm_adjacency_matrix(to_numpy(map_Cook_matrix), all_neuron_list, 'adjacency matrix Cook 2019', f"graphs_data/{dataset_name}/full_Cook_adjacency_matrix.png")
 
 
     map_Varshney_matrix = map_matrix(all_neuron_list, Varshney_neuron_names, Varshney_matrix)
@@ -1715,6 +1739,13 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     map_Kaiser_matrix = map_matrix(all_neuron_list, Kaiser_neuron_names, Kaiser_matrix)
     plot_worm_adjacency_matrix(to_numpy(map_Kaiser_matrix), all_neuron_list, 'adjacency matrix Kaiser', f"graphs_data/{dataset_name}/full_Kaiser_adjacency_matrix.png")
 
+
+
+
+    map_Cook_matrix_chem = map_matrix(activity_neuron_list, Cook_neuron_chem_names, Cook_matrix_chem)
+    map_Cook_matrix_elec = map_matrix(activity_neuron_list, Cook_neuron_elec_names, Cook_matrix_elec)
+    map_Cook_matrix = map_Cook_matrix_chem + map_Cook_matrix_elec
+    plot_worm_adjacency_matrix(to_numpy(map_Cook_matrix), activity_neuron_list, 'partial adjacency matrix Cook 2019', f"graphs_data/{dataset_name}/partial_Cook_adjacency_matrix.png")
 
 
 
@@ -1734,11 +1765,11 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
 
 
 
-    mask_matrix = ((map_Zhen_matrix>0) | (map_Varshney_matrix>0) | (map_Kaiser_matrix>0) | (adjacency>0)) * 1.0
-    zero_rows = torch.all(mask_matrix == 0, dim=1)
-    zero_columns = torch.all(mask_matrix == 0, dim=0)
-    mask_matrix[zero_rows] = 1
-    mask_matrix[:, zero_columns] = 1
+    mask_matrix = ((map_Zhen_matrix>0) | (map_Varshney_matrix>0) | (map_Kaiser_matrix>0) | (map_Cook_matrix>0) |(adjacency>0)) * 1.0
+    # zero_rows = torch.all(mask_matrix == 0, dim=1)
+    # zero_columns = torch.all(mask_matrix == 0, dim=0)
+    # mask_matrix[zero_rows] = 1
+    # mask_matrix[:, zero_columns] = 1
 
 
     print (f'filling factor {torch.sum(mask_matrix)/mask_matrix.shape[0]**2:0.3f}')

@@ -145,7 +145,9 @@ class Mesh_RPS(pyg.nn.MessagePassing):
             return self.lin_edge(in_features)
 
             # fig = plt.figure(figsize=(10, 10))
-            # plt.scatter(to_numpy(delta_pos[:, 0]), to_numpy(delta_pos[:, 1]), c='k')
+            # plt.scatter(to_numpy(delta_pos[:, 0]), to_numpy(delta_pos[:, 1]), s=1, c=to_numpy(discrete_laplacian[:,None]), alpha=0.5)
+            # fig = plt.figure(figsize=(10, 10))
+            # plt.scatter(to_numpy(delta_pos[:, 0]), to_numpy(delta_pos[:, 1]), s=1, c='k', alpha=0.5)
 
     def update(self, aggr_out):
         return aggr_out

@@ -365,7 +365,7 @@ def init_mesh(config, device):
         pos_mesh = pos_mesh
     else:
         if 'pattern_Null.tif' in simulation_config.node_value_map:
-            pos_mesh = pos_mesh + torch.randn(n_nodes, 2, device=device) * mesh_size / 96
+            pos_mesh = pos_mesh + torch.randn(n_nodes, 2, device=device) * mesh_size / 24
         else:
             pos_mesh = pos_mesh + torch.randn(n_nodes, 2, device=device) * mesh_size / 8
 
