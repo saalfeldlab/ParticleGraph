@@ -2965,7 +2965,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         plt.plot(list_loss, color='k', label='loss')
         plt.plot(list_loss_regul, color='b', label='regul')
         plt.plot(np.array(list_loss)-np.array(list_loss_regul), color='r', label='pred error')
-        plt.legend(loc='upper right', fontsize=12)
+        plt.legend(loc='upper right', fontsize=8)
         plt.xlim([0, n_epochs])
         plt.ylabel('Loss', fontsize=12)
         plt.xlabel('Epochs', fontsize=12)
@@ -3012,7 +3012,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         print(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
         logger.info(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
 
-        ax.text(0.01, 0.99, f'$R^2$ {r_squared:0.3f}   slope {lin_fit[0]:0.3f}', transform=ax.transAxes,
+        ax.text(0.05, 0.99, f'$R^2$ {r_squared:0.3f}   slope {lin_fit[0]:0.3f}', transform=ax.transAxes,
                 verticalalignment='top', horizontalalignment='left')
 
         all_func_values = []
@@ -3062,7 +3062,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                 model_MLP = model.lin_phi
                 update_type = model.update_type
 
-            func_list_, proj_interaction = analyze_edge_function(rr=torch.linspace(-xnorm, xnorm, 1000, device=device),
+            func_list_, proj_interaction = analyze_edge_function(rr=torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device),
                                                                  vizualize=False, config=config,
                                                                  model_MLP=model_MLP, model=model,
                                                                  n_nodes=0,
