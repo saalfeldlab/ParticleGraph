@@ -144,11 +144,12 @@ def get_in_features(rr=None, embedding=None, model=[], model_name = [], max_radi
         case 'PDE_E':
             in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                      rr[:, None] / max_radius, embedding, embedding), dim=1)
-
         case 'PDE_N2' | 'PDE_N3' | 'PDE_N6' :
             in_features = rr[:, None]
         case 'PDE_N4' | 'PDE_N7':
             in_features = torch.cat((rr[:, None], embedding), dim=1)
+        case 'PDE_CE1':
+            in_features = torch.cat((rr[:, None]*0, rr[:, None], embedding, embedding), dim=1)
         case 'PDE_N9':
             in_features = torch.cat((rr[:, None], embedding, torch.ones_like(rr[:, None])), dim=1)
         case 'PDE_N5':
@@ -222,9 +223,9 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
         plt.savefig(f"./{log_dir}/tmp_training/matrix/comparison_{epoch}_{N}.tif", dpi=87)
         plt.close()
 
-    all_func_values = []
     fig = plt.figure(figsize=(8, 8))
-    rr = torch.linspace(-xnorm, xnorm, 1000, device=device)
+
+    rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
     for n in range(n_particles):
         if ('PDE_N4' in config.graph_model.signal_model_name) | ('PDE_N7' in config.graph_model.signal_model_name):
             embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
@@ -240,24 +241,42 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
         elif ('PDE_N9' in config.graph_model.signal_model_name):
             embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
             in_features = torch.cat((rr[:, None], embedding_, torch.ones_like(rr[:,None])), dim=1)
+        elif ('PDE_CE1' in config.graph_model.signal_model_name):
+            embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+            if model.embedding_trial:
+                in_features = torch.cat((rr[:, None]*0, rr[:, None], embedding_, model.b[0].repeat(1000, 1), embedding_, model.b[0].repeat(1000, 1)), dim=1)
+            else:
+                in_features = torch.cat((rr[:, None]*0, rr[:, None], embedding_, embedding_), dim=1)
         else:
             in_features = rr[:, None]
         with torch.no_grad():
             func = model.lin_edge(in_features.float())
         if config.graph_model.lin_edge_positive:
             func=func**2
-        all_func_values.append(func)
         if (n % 2 == 0):
             plt.plot(to_numpy(rr), to_numpy(func),2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
-    all_func_values = torch.cat(all_func_values)
-    y_min, y_max = all_func_values.min().item(), all_func_values.max().item()
-    plt.ylim([y_min-0.1, y_max*1.1])
+    if ('PDE_CE1' in config.graph_model.signal_model_name):
+        for n in range(n_particles):
+            embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+            if model.embedding_trial:
+                in_features = torch.cat((torch.ones_like(rr[:, None])*3, rr[:, None], embedding_, model.b[0].repeat(1000, 1), embedding_, model.b[0].repeat(1000, 1)), dim=1)
+            else:
+                in_features = torch.cat((torch.ones_like(rr[:, None])*3, rr[:, None], embedding_, embedding_), dim=1)
+            with torch.no_grad():
+                func = model.lin_edge(in_features.float())
+            if config.graph_model.lin_edge_positive:
+                func=func**2
+            if (n % 2 == 0):
+                plt.plot(to_numpy(rr), to_numpy(func),2, color='g', linewidth=2, alpha=0.25)
+    plt.xlim(config.plotting.xlim)
+    plt.ylim(config.plotting.ylim)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/func_{epoch}_{N}.tif", dpi=87)
     plt.close()
 
+    all_func_values=[]
     fig = plt.figure(figsize=(8, 8))
-    rr = torch.linspace(-xnorm, xnorm, 1000, device=device)
+    rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
     for n in range(n_particles):
         embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
         if model.embedding_trial:
@@ -265,9 +284,16 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
         in_features = get_in_features_update(rr=rr[:, None], model=model, embedding=embedding_, device=device)
         with torch.no_grad():
             func = model.lin_phi(in_features.float())
+            all_func_values.append(func)
         if (n % 2 == 0):
             plt.plot(to_numpy(rr), to_numpy(func),2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.1)
-    # plt.ylim([-5,5])
+    all_func_values = torch.cat(all_func_values)
+
+    plt.xlim(config.plotting.xlim)
+    y_min, y_max = all_func_values.min().item(), all_func_values.max().item()
+    plt.ylim([y_min-0.1, y_max*1.1])
+
+
     plt.savefig(f"./{log_dir}/tmp_training/function/lin_phi/func_{epoch}_{N}.tif", dpi=87)
     plt.close()
 
@@ -1385,13 +1411,18 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
     func_list = []
     for n in range(n_particles):
 
+        if len(model.a.shape)==3:
+            model_a= model.a[1, n, :]
+        else:
+            model_a = model.a[n, :]
+
         if config.training.do_tracking:
-            embedding_ = model.a[n, :] * torch.ones((1000, dimension), device=device)
+            embedding_ = model_a * torch.ones((1000, dimension), device=device)
         else:
             if (update_type != 'NA') & model.embedding_trial:
-                embedding_ = torch.cat((model.a[1, n], model.b[0].clone().detach().repeat(n_particles, 1)), dim=1) * torch.ones((1000, 2*dimension), device=device)
+                embedding_ = torch.cat((model_a, model.b[0].clone().detach().repeat(n_particles, 1)), dim=1) * torch.ones((1000, 2*dimension), device=device)
             else:
-                embedding_ = model.a[1, n] * torch.ones((1000, dimension), device=device)
+                embedding_ = model_a * torch.ones((1000, dimension), device=device)
 
         if update_type == 'NA':
             in_features = get_in_features(rr=rr, embedding=embedding_, model=model, model_name=config_model, max_radius=max_radius)

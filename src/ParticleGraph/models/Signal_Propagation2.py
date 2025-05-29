@@ -155,7 +155,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         else:
             return pred
 
-    def message(self, edge_index_i, edge_index_j, u_j, embedding_i, embedding_j):
+    def message(self, edge_index_i, edge_index_j, u_i, u_j, embedding_i, embedding_j):
 
         if (self.model=='PDE_N4') | (self.model=='PDE_N7'):
             in_features = torch.cat([u_j, embedding_j], dim=1)
@@ -163,6 +163,8 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             in_features = torch.cat([u_j, embedding_j], dim=1)
         elif (self.model=='PDE_N5'):
             in_features = torch.cat([u_j, embedding_i, embedding_j], dim=1)
+        elif (self.model=='PDE_CE1'):
+            in_features = torch.cat([u_i, u_j, embedding_i, embedding_j], dim=1)
         else:
             in_features = u_j
 

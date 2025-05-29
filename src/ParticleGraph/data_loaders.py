@@ -1642,7 +1642,7 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
 
     # Loading Data from class Worm_Data_Loader(Dataset) in https://github.com/TuragaLab/wormvae
 
-    print ('load connectome ...')
+    print ('load data from Worm_Data_Loader ...')
     chem_weights = torch.load(connectome_folder_name + 'chem_weights.pt')
     eassym_weights = torch.load(connectome_folder_name + 'eassym_weights.pt')
     chem_sparsity = torch.load(connectome_folder_name + 'chem_sparsity.pt')
@@ -1669,12 +1669,11 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     adjacency = (subset_chem_weights + subset_eassym_weights).clone().detach().to(dtype=torch.float32, device=device)
     plot_worm_adjacency_matrix(to_numpy(adjacency), activity_neuron_list, 'partial adjacency matrix Turuga 2022', f"graphs_data/{dataset_name}/partial_Turuga_adjacency_matrix.png")
 
-
-
+    print('load connectomes from other data ...')
     # Comparison with data from https://wormwiring.org/pages/adjacency.html
     # Cook 2019 Whole-animal connectomes of both Caenorhabditis
 
-    file_path = '/groups/saalfeld/home/allierc/signaling/Celegans/Cook_2020/SI_5_corrected_July_2020_bis.xlsx'
+    file_path = '/groups/saalfeld/home/allierc/signaling/Celegans/Cook_2019/SI_5_corrected_July_2020_bis.xlsx'
     sheet_name = 'male chemical'
     Cook_neuron_chem_names = pd.read_excel(file_path, sheet_name=sheet_name, usecols='C', skiprows=3, nrows=382, header=None)
     Cook_neuron_chem_names = [str(label) for label in Cook_neuron_chem_names.squeeze()]
@@ -1715,29 +1714,39 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     # Comparison with data from 'Connectomes across development reveal principles of brain maturation'
     # https://www.nature.com/articles/s41586-021-03778-4
     file_path = '/groups/saalfeld/home/allierc/signaling/Celegans/Zhen_2021/41586_2021_3778_MOESM4_ESM.xlsx'
-    sheet_name = 'Dataset8'
+    sheet_name = 'Dataset7'
     Zhen_neuron_names = pd.read_excel(file_path, sheet_name=sheet_name, usecols='C', skiprows=4, nrows=224, header=None)
     Zhen_neuron_names = Zhen_neuron_names.squeeze()  # convert to Series for convenience
     Zhen_matrix = pd.read_excel(file_path, sheet_name=sheet_name, skiprows=4, nrows=224, usecols='D:GA', header=None)
     Zhen_matrix = Zhen_matrix.T
-    Zhen_matrix = torch.tensor(np.array(Zhen_matrix), dtype=torch.float32, device=device)
+    Zhen_matrix_7 = torch.tensor(np.array(Zhen_matrix), dtype=torch.float32, device=device)
+    sheet_name = 'Dataset8'
+    Zhen_matrix = pd.read_excel(file_path, sheet_name=sheet_name, skiprows=4, nrows=224, usecols='D:GA', header=None)
+    Zhen_matrix = Zhen_matrix.T
+    Zhen_matrix_8 = torch.tensor(np.array(Zhen_matrix), dtype=torch.float32, device=device)
+    Zhen_matrix = Zhen_matrix_7 + Zhen_matrix_8  # combine both datasets
 
-
+    print('plot connectomes ...')
 
     map_Cook_matrix_chem = map_matrix(all_neuron_list, Cook_neuron_chem_names, Cook_matrix_chem)
     map_Cook_matrix_elec = map_matrix(all_neuron_list, Cook_neuron_elec_names, Cook_matrix_elec)
     map_Cook_matrix = map_Cook_matrix_chem + map_Cook_matrix_elec
     plot_worm_adjacency_matrix(to_numpy(map_Cook_matrix), all_neuron_list, 'adjacency matrix Cook 2019', f"graphs_data/{dataset_name}/full_Cook_adjacency_matrix.png")
 
-
     map_Varshney_matrix = map_matrix(all_neuron_list, Varshney_neuron_names, Varshney_matrix)
     plot_worm_adjacency_matrix(to_numpy(map_Varshney_matrix), all_neuron_list, 'adjacency matrix Varshney 2011', f"graphs_data/{dataset_name}/full_Varshney_adjacency_matrix.png")
 
-    map_Zhen_matrix = map_matrix(all_neuron_list, Zhen_neuron_names, Zhen_matrix)
-    plot_worm_adjacency_matrix(to_numpy(map_Zhen_matrix), all_neuron_list, 'adjacency matrix Mei Zhen 2021', f"graphs_data/{dataset_name}/full_mapped_Zhen_adjacency_matrix.png")
+    map_Zhen_matrix = map_matrix(all_neuron_list, Zhen_neuron_names, Zhen_matrix_7)
+    plot_worm_adjacency_matrix(to_numpy(map_Zhen_matrix), all_neuron_list, 'adjacency matrix Mei Zhen 2021 (7)', f"graphs_data/{dataset_name}/full_Zhen_adjacency_matrix_7.png")
+
+    map_Zhen_matrix = map_matrix(all_neuron_list, Zhen_neuron_names, Zhen_matrix_8)
+    plot_worm_adjacency_matrix(to_numpy(map_Zhen_matrix), all_neuron_list, 'adjacency matrix Mei Zhen 2021 (8)', f"graphs_data/{dataset_name}/full_Zhen_adjacency_matrix_8.png")
 
     map_Kaiser_matrix = map_matrix(all_neuron_list, Kaiser_neuron_names, Kaiser_matrix)
-    plot_worm_adjacency_matrix(to_numpy(map_Kaiser_matrix), all_neuron_list, 'adjacency matrix Kaiser', f"graphs_data/{dataset_name}/full_Kaiser_adjacency_matrix.png")
+    plot_worm_adjacency_matrix(to_numpy(map_Kaiser_matrix), all_neuron_list, 'adjacency matrix Kaiser 2006', f"graphs_data/{dataset_name}/full_Kaiser_adjacency_matrix.png")
+
+
+
 
 
 
@@ -1747,23 +1756,17 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     map_Cook_matrix = map_Cook_matrix_chem + map_Cook_matrix_elec
     plot_worm_adjacency_matrix(to_numpy(map_Cook_matrix), activity_neuron_list, 'partial adjacency matrix Cook 2019', f"graphs_data/{dataset_name}/partial_Cook_adjacency_matrix.png")
 
-
-
-
     map_Varshney_matrix = map_matrix(activity_neuron_list, Varshney_neuron_names, Varshney_matrix)
     plot_worm_adjacency_matrix(to_numpy(map_Varshney_matrix), activity_neuron_list, 'partial adjacency matrix Varshney 2011', f"graphs_data/{dataset_name}/partial_Varshney_adjacency_matrix.png")
 
     map_Zhen_matrix = map_matrix(activity_neuron_list, Zhen_neuron_names, Zhen_matrix)
-    plot_worm_adjacency_matrix(to_numpy(map_Zhen_matrix), activity_neuron_list, 'partial adjacency matrix Mei Zhen 2021', f"graphs_data/{dataset_name}/partial_Zhen_adjacency_matrix.png")
+    plot_worm_adjacency_matrix(to_numpy(map_Zhen_matrix), activity_neuron_list, 'partial adjacency matrix Mei Zhen 2021', f"graphs_data/{dataset_name}/partial_Zhen_adjacency_matrix_7.png")
 
     map_Kaiser_matrix = map_matrix(activity_neuron_list, Kaiser_neuron_names, Kaiser_matrix)
-    plot_worm_adjacency_matrix(to_numpy(map_Kaiser_matrix), activity_neuron_list, 'partial adjacency matrix Kaiser', f"graphs_data/{dataset_name}/partial full_Kaiser_adjacency_matrix.png")
+    plot_worm_adjacency_matrix(to_numpy(map_Kaiser_matrix), activity_neuron_list, 'partial adjacency matrix Kaiser 2006', f"graphs_data/{dataset_name}/partial full_Kaiser_adjacency_matrix_8.png")
 
 
-
-
-
-
+    print('generate mask ...')
 
     mask_matrix = ((map_Zhen_matrix>0) | (map_Varshney_matrix>0) | (map_Kaiser_matrix>0) | (map_Cook_matrix>0) |(adjacency>0)) * 1.0
     # zero_rows = torch.all(mask_matrix == 0, dim=1)
@@ -1817,7 +1820,6 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
 
     trace_variable = sio.loadmat(data_folder_name)
     trace_arr = trace_variable['traces']
-    print(f"traces shape: {trace_arr.shape}")
     is_L = trace_variable['is_L']
     stimulate_seconds = trace_variable['stim_times']
     stims = trace_variable['stims']
@@ -1848,6 +1850,13 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
                 ineuron += 1
 
     # add baseline 2
+
+    mean_value = np.nanmean(activity_datasets)
+    min_value = np.nanmin(activity_datasets)
+    max_value = np.nanmax(activity_datasets)
+    std_value = np.nanstd(activity_datasets)
+    print(f'mean: {mean_value}, min: {min_value}, max: {max_value}, std: {std_value}')
+
     activity_worm = activity_datasets[:, :, T_start:] + 2
 
     # activity_with_zeros, missing_matrix = process_activity(activity_worm)

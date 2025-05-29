@@ -2646,6 +2646,7 @@ def data_train_synaptic2(config, erase, best_model, device):
     # torch.autograd.set_detect_anomaly(True)
 
     list_loss = []
+    list_loss_regul = []
     time.sleep(0.2)
 
     for epoch in range(start_epoch, n_epochs + 1):
@@ -2676,6 +2677,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         print(f'plot every {plot_frequency} iterations')
 
         total_loss = 0
+        total_loss_regul = 0
         k = 0
 
         for N in trange(Niter):
@@ -2862,6 +2864,8 @@ def data_train_synaptic2(config, erase, best_model, device):
                             else:
                                 pred = model(batch)
 
+                total_loss_regul += loss.item()
+
                 if time_step == 1:
                     if has_virtual_neuron:
                         loss = loss + (pred[ids_batch] - y_batch).norm(2)
@@ -2877,7 +2881,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                         loss = loss + (x_batch[ids_batch] + pred[ids_batch] * delta_t * time_step - y_batch[
                             ids_batch]).norm(2) / time_step
                     else:
-                        loss = loss + (x_batch + pred * delta_t * time_step - y_batch).norm(2) / time_step
+                        loss = loss + (x_batch + pred * delta_t * time_step - y_batch).norm(2)
 
                     # if run == 0:
                     #     plt.figure(figsize=(15, 10))
@@ -2907,6 +2911,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                     optimizer_missing_activity.step()
                 if has_Siren:
                     optimizer_f.step()
+
                 total_loss += loss.item()
 
                 with torch.no_grad():
@@ -2950,12 +2955,17 @@ def data_train_synaptic2(config, erase, best_model, device):
                         'optimizer_state_dict': optimizer_f.state_dict()},
                        os.path.join(log_dir, 'models', f'best_model_f_with_{n_runs - 1}_graphs_{epoch}.pt'))
 
-        list_loss.append(total_loss / (N + 1) / n_particles)
+        list_loss.append(total_loss / n_particles)
+        list_loss_regul.append(total_loss_regul / n_particles)
+
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
         fig = plt.figure(figsize=(20, 8))
         ax = fig.add_subplot(2, 5, 1)
-        plt.plot(list_loss, color='k')
+        plt.plot(list_loss, color='k', label='loss')
+        plt.plot(list_loss_regul, color='b', label='regul')
+        plt.plot(np.array(list_loss)-np.array(list_loss_regul), color='r', label='pred error')
+        plt.legend(loc='upper right', fontsize=12)
         plt.xlim([0, n_epochs])
         plt.ylabel('Loss', fontsize=12)
         plt.xlabel('Epochs', fontsize=12)
@@ -2975,8 +2985,9 @@ def data_train_synaptic2(config, erase, best_model, device):
         plt.title('True connectivity matrix', fontsize=12)
         plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
         plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+
         ax = fig.add_subplot(2, 5, 4)
-        ax = sns.heatmap(to_numpy(A), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-1, vmax=1)
+        ax = sns.heatmap(to_numpy(A), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
         plt.title('Learned connectivity matrix', fontsize=12)
         plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
         plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
@@ -3006,7 +3017,7 @@ def data_train_synaptic2(config, erase, best_model, device):
 
         all_func_values = []
         ax = fig.add_subplot(2, 5, 10)
-        rr = torch.linspace(-xnorm, xnorm, 1000, device=device)
+        rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
         for n in range(n_particles):
             embedding_ = model.a[n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
             in_features = get_in_features(rr=rr, embedding=embedding_, model=model,
@@ -3020,9 +3031,23 @@ def data_train_synaptic2(config, erase, best_model, device):
             if (n % 2 == 0):
                 plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)),
                          linewidth=2, alpha=0.25)
-        all_func_values = torch.cat(all_func_values)
-        y_min, y_max = all_func_values.min().item(), all_func_values.max().item()
-        plt.ylim([y_min - 0.1, y_max * 1.1])
+        if ('PDE_CE1' in config.graph_model.signal_model_name):
+            for n in range(n_particles):
+                embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                if model.embedding_trial:
+                    in_features = torch.cat((torch.ones_like(rr[:, None]) * 3, rr[:, None], embedding_,
+                                             model.b[0].repeat(1000, 1), embedding_, model.b[0].repeat(1000, 1)), dim=1)
+                else:
+                    in_features = torch.cat((torch.ones_like(rr[:, None]) * 3, rr[:, None], embedding_, embedding_),
+                                            dim=1)
+                with torch.no_grad():
+                    func = model.lin_edge(in_features.float())
+                if config.graph_model.lin_edge_positive:
+                    func = func ** 2
+                if (n % 2 == 0):
+                    plt.plot(to_numpy(rr), to_numpy(func), 2, color='g', linewidth=2, alpha=0.25)
+        plt.xlim(config.plotting.xlim)
+        plt.ylim(config.plotting.ylim)
 
         if 'PDE_N3' not in model_config.signal_model_name:
 
@@ -3060,7 +3085,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                                                               train_config.cluster_distance_threshold, type_list,
                                                               n_particle_types, embedding_cluster)
 
-            if virtual_neurons:
+            if has_virtual_neuron:
                 labels = labels[:n_particles]
                 new_labels = new_labels[:n_particles]
             accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
