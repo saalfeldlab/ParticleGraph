@@ -726,6 +726,37 @@ def get_equidistant_points(n_points=1024):
 def get_matrix_rank(matrix):
     return np.linalg.matrix_rank(matrix)
 
+
+def map_matrix(neuron_list, neuron_names, matrix):
+    """
+    Maps the Varshney matrix to the given neuron list and sets rows/columns to zero for missing neurons.
+
+    Parameters:
+        neuron_list (list): List of all neuron names.
+        neuron_names (list): List of neuron names in the Varshney dataset.
+        matrix (torch.Tensor): Adjacency matrix from the Varshney dataset.
+
+    Returns:
+        torch.Tensor: Mapped matrix.
+    """
+
+    map_list = np.zeros(len(neuron_list), dtype=int)
+    for i, neuron_name in enumerate(neuron_list):
+        if neuron_name in list(neuron_names):
+            index = list(neuron_names).index(neuron_name)
+            map_list[i] = index
+        else:
+            map_list[i] = 0
+
+    mapped_matrix = matrix[np.ix_(map_list, map_list)]
+
+    for i, neuron_name in enumerate(neuron_list):
+        if neuron_name not in list(neuron_names):
+            mapped_matrix[i, :] = 0
+            mapped_matrix[:, i] = 0
+
+    return mapped_matrix, map_list
+
 # Example usage
 # matrix = np.random.rand(100, 100)
 # rank = get_matrix_rank(matrix)

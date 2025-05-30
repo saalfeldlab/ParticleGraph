@@ -5269,10 +5269,9 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
         # plt.close()
 
         plt.figure(figsize=(15, 10))
-
-        n = np.random.randint(0, n_particles, 25)
-        for i in range(25):
-            plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=2)
+        n = np.random.randint(0, n_particles, 50)
+        for i in range(50):
+            plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=1)
         plt.xlabel('time', fontsize=64)
         plt.ylabel('$x_{i}$', fontsize=64)
         plt.xlim([0,n_frames])
@@ -5283,21 +5282,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
         plt.tight_layout()
         plt.savefig(f'./{log_dir}/results/activity.tif', dpi=300)
         plt.close()
-
-        if False: #os.path.exists(f'graphs_data/{dataset_name}/raw_x_list_{run}.npy'):
-            plt.figure(figsize=(15, 10))
-            for i in range(25):
-                plt.plot(to_numpy(raw_activity[n[i].astype(int), :]), linewidth=2)
-            plt.xlabel('time', fontsize=64)
-            plt.ylabel('$x_{i}$', fontsize=64)
-            plt.xlim([0, 10000])
-            # plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
-            plt.xticks(fontsize=28)
-            plt.yticks(fontsize=28)
-            plt.title(r'$x_i$ samples',fontsize=48)
-            plt.tight_layout()
-            plt.savefig(f'./{log_dir}/results/raw_activity.tif', dpi=300)
-            plt.close()
 
         if False: #os.path.exists(f"./{log_dir}/neuron_gt_list.pt"):
 
@@ -8018,7 +8002,7 @@ def data_plot(config, config_file, epoch_list, style, device):
 
     if os.path.exists(f'{log_dir}/loss.pt'):
         loss = torch.load(f'{log_dir}/loss.pt')
-        fig, ax = fig_init(formatx='%.0f', formaty='%.5f')
+        fig, ax = fig_init(formatx='%.0f', formaty='%.2f')
         plt.plot(loss, color=mc, linewidth=4)
         plt.xlim([0, 20])
         plt.ylabel('loss', fontsize=68)
@@ -8434,6 +8418,7 @@ if __name__ == '__main__':
     # config_list = ['falling_water_ramp_x6_13']
     config_list = ['arbitrary_3_field_video_bison_test']
     config_list = ['RD_RPS']
+    config_list = ['signal_CElegans_a_2']
 
     # plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 

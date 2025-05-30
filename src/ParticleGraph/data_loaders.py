@@ -1588,37 +1588,6 @@ def plot_worm_adjacency_matrix(weights, all_neuron_list, title, output_path):
     plt.close()
 
 
-def map_matrix(neuron_list, neuron_names, matrix):
-    """
-    Maps the Varshney matrix to the given neuron list and sets rows/columns to zero for missing neurons.
-
-    Parameters:
-        neuron_list (list): List of all neuron names.
-        neuron_names (list): List of neuron names in the Varshney dataset.
-        matrix (torch.Tensor): Adjacency matrix from the Varshney dataset.
-
-    Returns:
-        torch.Tensor: Mapped matrix.
-    """
-
-    map_list = np.zeros(len(neuron_list), dtype=int)
-    for i, neuron_name in enumerate(neuron_list):
-        if neuron_name in list(neuron_names):
-            index = list(neuron_names).index(neuron_name)
-            map_list[i] = index
-        else:
-            map_list[i] = 0
-
-    mapped_matrix = matrix[np.ix_(map_list, map_list)]
-
-    for i, neuron_name in enumerate(neuron_list):
-        if neuron_name not in list(neuron_names):
-            mapped_matrix[i, :] = 0
-            mapped_matrix[:, i] = 0
-
-    return (mapped_matrix)
-
-
 def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
 
     data_folder_name = config.data_folder_name
@@ -1653,6 +1622,12 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     with open(connectome_folder_name+"all_neuron_names.json", "r") as f:
         all_neuron_list = json.load(f)
 
+    all_neuron_list = [str(neuron) for neuron in all_neuron_list]
+    activity_neuron_list = [str(neuron) for neuron in activity_neuron_list]
+
+    with open(f"graphs_data/{dataset_name}/activity_neuron_list.json", "w") as f:
+        json.dump(activity_neuron_list, f)
+
     plot_worm_adjacency_matrix(to_numpy(chem_weights+eassym_weights), all_neuron_list, 'adjacency matrix Turuga 2022', f"graphs_data/{dataset_name}/full_Turuga_adjacency_matrix.png")
 
     # map_list contain the index of the neuron activity traces, first trace is that of ADAL neuron index=123
@@ -1669,6 +1644,10 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     adjacency = (subset_chem_weights + subset_eassym_weights).clone().detach().to(dtype=torch.float32, device=device)
     plot_worm_adjacency_matrix(to_numpy(adjacency), activity_neuron_list, 'partial adjacency matrix Turuga 2022', f"graphs_data/{dataset_name}/partial_Turuga_adjacency_matrix.png")
 
+
+
+
+
     print('load connectomes from other data ...')
     # Comparison with data from https://wormwiring.org/pages/adjacency.html
     # Cook 2019 Whole-animal connectomes of both Caenorhabditis
@@ -1682,7 +1661,7 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     Cook_matrix_chem = np.nan_to_num(Cook_matrix_chem, nan=0.0)
     Cook_matrix_chem = torch.tensor(Cook_matrix_chem, dtype=torch.float32, device=device)
 
-    file_path = '/groups/saalfeld/home/allierc/signaling/Celegans/Cook_2020/SI_5_corrected_July_2020_bis.xlsx'
+    file_path = '/groups/saalfeld/home/allierc/signaling/Celegans/Cook_2019/SI_5_corrected_July_2020_bis.xlsx'
     sheet_name = 'male gap jn symmetric'
     Cook_neuron_elec_names = pd.read_excel(file_path, sheet_name=sheet_name, usecols='C', skiprows=3, nrows=586, header=None)
     Cook_neuron_elec_names = [str(label) for label in Cook_neuron_elec_names.squeeze()]
@@ -1690,7 +1669,6 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     Cook_matrix_elec = np.array(Cook_matrix_elec)
     Cook_matrix_elec = np.nan_to_num(Cook_matrix_elec, nan=0.0)
     Cook_matrix_elec = torch.tensor(Cook_matrix_elec, dtype=torch.float32, device=device)
-
 
     # Comparison with data from https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.0020095
     data_Kaiser = scipy.io.loadmat('/groups/saalfeld/home/allierc/signaling/Celegans/Kaiser_2006/celegans277.mat')
@@ -1728,21 +1706,21 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
 
     print('plot connectomes ...')
 
-    map_Cook_matrix_chem = map_matrix(all_neuron_list, Cook_neuron_chem_names, Cook_matrix_chem)
-    map_Cook_matrix_elec = map_matrix(all_neuron_list, Cook_neuron_elec_names, Cook_matrix_elec)
+    map_Cook_matrix_chem , index = map_matrix(all_neuron_list, Cook_neuron_chem_names, Cook_matrix_chem)
+    map_Cook_matrix_elec , index = map_matrix(all_neuron_list, Cook_neuron_elec_names, Cook_matrix_elec)
     map_Cook_matrix = map_Cook_matrix_chem + map_Cook_matrix_elec
     plot_worm_adjacency_matrix(to_numpy(map_Cook_matrix), all_neuron_list, 'adjacency matrix Cook 2019', f"graphs_data/{dataset_name}/full_Cook_adjacency_matrix.png")
 
-    map_Varshney_matrix = map_matrix(all_neuron_list, Varshney_neuron_names, Varshney_matrix)
+    map_Varshney_matrix , index = map_matrix(all_neuron_list, Varshney_neuron_names, Varshney_matrix)
     plot_worm_adjacency_matrix(to_numpy(map_Varshney_matrix), all_neuron_list, 'adjacency matrix Varshney 2011', f"graphs_data/{dataset_name}/full_Varshney_adjacency_matrix.png")
 
-    map_Zhen_matrix = map_matrix(all_neuron_list, Zhen_neuron_names, Zhen_matrix_7)
+    map_Zhen_matrix , index = map_matrix(all_neuron_list, Zhen_neuron_names, Zhen_matrix_7)
     plot_worm_adjacency_matrix(to_numpy(map_Zhen_matrix), all_neuron_list, 'adjacency matrix Mei Zhen 2021 (7)', f"graphs_data/{dataset_name}/full_Zhen_adjacency_matrix_7.png")
 
-    map_Zhen_matrix = map_matrix(all_neuron_list, Zhen_neuron_names, Zhen_matrix_8)
+    map_Zhen_matrix , index = map_matrix(all_neuron_list, Zhen_neuron_names, Zhen_matrix_8)
     plot_worm_adjacency_matrix(to_numpy(map_Zhen_matrix), all_neuron_list, 'adjacency matrix Mei Zhen 2021 (8)', f"graphs_data/{dataset_name}/full_Zhen_adjacency_matrix_8.png")
 
-    map_Kaiser_matrix = map_matrix(all_neuron_list, Kaiser_neuron_names, Kaiser_matrix)
+    map_Kaiser_matrix , index = map_matrix(all_neuron_list, Kaiser_neuron_names, Kaiser_matrix)
     plot_worm_adjacency_matrix(to_numpy(map_Kaiser_matrix), all_neuron_list, 'adjacency matrix Kaiser 2006', f"graphs_data/{dataset_name}/full_Kaiser_adjacency_matrix.png")
 
 
@@ -1751,24 +1729,24 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
 
 
 
-    map_Cook_matrix_chem = map_matrix(activity_neuron_list, Cook_neuron_chem_names, Cook_matrix_chem)
-    map_Cook_matrix_elec = map_matrix(activity_neuron_list, Cook_neuron_elec_names, Cook_matrix_elec)
+    map_Cook_matrix_chem , index = map_matrix(activity_neuron_list, Cook_neuron_chem_names, Cook_matrix_chem)
+    map_Cook_matrix_elec , index = map_matrix(activity_neuron_list, Cook_neuron_elec_names, Cook_matrix_elec)
     map_Cook_matrix = map_Cook_matrix_chem + map_Cook_matrix_elec
     plot_worm_adjacency_matrix(to_numpy(map_Cook_matrix), activity_neuron_list, 'partial adjacency matrix Cook 2019', f"graphs_data/{dataset_name}/partial_Cook_adjacency_matrix.png")
 
-    map_Varshney_matrix = map_matrix(activity_neuron_list, Varshney_neuron_names, Varshney_matrix)
+    map_Varshney_matrix , index = map_matrix(activity_neuron_list, Varshney_neuron_names, Varshney_matrix)
     plot_worm_adjacency_matrix(to_numpy(map_Varshney_matrix), activity_neuron_list, 'partial adjacency matrix Varshney 2011', f"graphs_data/{dataset_name}/partial_Varshney_adjacency_matrix.png")
 
-    map_Zhen_matrix = map_matrix(activity_neuron_list, Zhen_neuron_names, Zhen_matrix)
+    map_Zhen_matrix , index = map_matrix(activity_neuron_list, Zhen_neuron_names, Zhen_matrix)
     plot_worm_adjacency_matrix(to_numpy(map_Zhen_matrix), activity_neuron_list, 'partial adjacency matrix Mei Zhen 2021', f"graphs_data/{dataset_name}/partial_Zhen_adjacency_matrix_7.png")
 
-    map_Kaiser_matrix = map_matrix(activity_neuron_list, Kaiser_neuron_names, Kaiser_matrix)
+    map_Kaiser_matrix , index = map_matrix(activity_neuron_list, Kaiser_neuron_names, Kaiser_matrix)
     plot_worm_adjacency_matrix(to_numpy(map_Kaiser_matrix), activity_neuron_list, 'partial adjacency matrix Kaiser 2006', f"graphs_data/{dataset_name}/partial full_Kaiser_adjacency_matrix_8.png")
 
 
     print('generate mask ...')
 
-    mask_matrix = ((map_Zhen_matrix>0) | (map_Varshney_matrix>0) | (map_Kaiser_matrix>0) | (map_Cook_matrix>0) |(adjacency>0)) * 1.0
+    mask_matrix = ((map_Zhen_matrix>0) | (map_Varshney_matrix>0) | (map_Kaiser_matrix>0) | (map_Cook_matrix>0)) * 1.0   # |(adjacency>0)) * 1.0
     # zero_rows = torch.all(mask_matrix == 0, dim=1)
     # zero_columns = torch.all(mask_matrix == 0, dim=0)
     # mask_matrix[zero_rows] = 1
@@ -1791,6 +1769,30 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     plt.tight_layout()
     plt.savefig(f"graphs_data/{dataset_name}/mask_adjacency_matrix.png", dpi=170)
     plt.close()
+
+
+
+
+    larynx_neuron_list = Cook_neuron_chem_names[0:20]
+    with open(f"graphs_data/{dataset_name}/larynx_neuron_list.json", "w") as f:
+        json.dump(larynx_neuron_list, f)
+
+    map_larynx_matrix , index = map_matrix(larynx_neuron_list, activity_neuron_list, mask_matrix)
+
+    fig = plt.figure(figsize=(15, 15))
+    ax = fig.add_subplot(111)
+    sns.heatmap(to_numpy(map_larynx_matrix), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
+    ax.set_xticks(range(len(larynx_neuron_list)))
+    ax.set_xticklabels(larynx_neuron_list, fontsize=14, rotation=90)
+    ax.set_yticks(range(len(larynx_neuron_list)))
+    ax.set_yticklabels(larynx_neuron_list, fontsize=14)
+    plt.title('larynx adjacency', fontsize=18)
+    plt.xlabel('pre Neurons', fontsize=18)
+    plt.ylabel('post Neurons', fontsize=18)
+    plt.tight_layout()
+    plt.savefig(f"graphs_data/{dataset_name}/mask_larynx_adjacency_matrix.png", dpi=170)
+    plt.close()
+
 
 
 
@@ -1857,7 +1859,7 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     std_value = np.nanstd(activity_datasets)
     print(f'mean: {mean_value}, min: {min_value}, max: {max_value}, std: {std_value}')
 
-    activity_worm = activity_datasets[:, :, T_start:] + 2
+    activity_worm = activity_datasets[:, :, T_start:] + 6
 
     # activity_with_zeros, missing_matrix = process_activity(activity_worm)
     # activity_worm = process_trace(activity_worm)
