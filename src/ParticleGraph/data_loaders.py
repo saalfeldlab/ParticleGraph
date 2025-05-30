@@ -1716,7 +1716,6 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
 
     map_Zhen_matrix , index = map_matrix(all_neuron_list, Zhen_neuron_names, Zhen_matrix_7)
     plot_worm_adjacency_matrix(to_numpy(map_Zhen_matrix), all_neuron_list, 'adjacency matrix Mei Zhen 2021 (7)', f"graphs_data/{dataset_name}/full_Zhen_adjacency_matrix_7.png")
-
     map_Zhen_matrix , index = map_matrix(all_neuron_list, Zhen_neuron_names, Zhen_matrix_8)
     plot_worm_adjacency_matrix(to_numpy(map_Zhen_matrix), all_neuron_list, 'adjacency matrix Mei Zhen 2021 (8)', f"graphs_data/{dataset_name}/full_Zhen_adjacency_matrix_8.png")
 
@@ -1725,8 +1724,7 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
 
 
 
-
-
+    print('generate partial adjacency matrices ...')
 
 
     map_Cook_matrix_chem , index = map_matrix(activity_neuron_list, Cook_neuron_chem_names, Cook_matrix_chem)
@@ -1737,11 +1735,13 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     map_Varshney_matrix , index = map_matrix(activity_neuron_list, Varshney_neuron_names, Varshney_matrix)
     plot_worm_adjacency_matrix(to_numpy(map_Varshney_matrix), activity_neuron_list, 'partial adjacency matrix Varshney 2011', f"graphs_data/{dataset_name}/partial_Varshney_adjacency_matrix.png")
 
-    map_Zhen_matrix , index = map_matrix(activity_neuron_list, Zhen_neuron_names, Zhen_matrix)
+    map_Zhen_matrix , index = map_matrix(activity_neuron_list, Zhen_neuron_names, Zhen_matrix_7)
     plot_worm_adjacency_matrix(to_numpy(map_Zhen_matrix), activity_neuron_list, 'partial adjacency matrix Mei Zhen 2021', f"graphs_data/{dataset_name}/partial_Zhen_adjacency_matrix_7.png")
+    map_Zhen_matrix , index = map_matrix(activity_neuron_list, Zhen_neuron_names, Zhen_matrix_8)
+    plot_worm_adjacency_matrix(to_numpy(map_Zhen_matrix), activity_neuron_list, 'partial adjacency matrix Mei Zhen 2021', f"graphs_data/{dataset_name}/partial_Zhen_adjacency_matrix_8.png")
 
     map_Kaiser_matrix , index = map_matrix(activity_neuron_list, Kaiser_neuron_names, Kaiser_matrix)
-    plot_worm_adjacency_matrix(to_numpy(map_Kaiser_matrix), activity_neuron_list, 'partial adjacency matrix Kaiser 2006', f"graphs_data/{dataset_name}/partial full_Kaiser_adjacency_matrix_8.png")
+    plot_worm_adjacency_matrix(to_numpy(map_Kaiser_matrix), activity_neuron_list, 'partial adjacency matrix Kaiser 2006', f"graphs_data/{dataset_name}/partial full_Kaiser_adjacency_matrix.png")
 
 
     print('generate mask ...')
@@ -1769,8 +1769,6 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     plt.tight_layout()
     plt.savefig(f"graphs_data/{dataset_name}/mask_adjacency_matrix.png", dpi=170)
     plt.close()
-
-
 
 
     larynx_neuron_list = Cook_neuron_chem_names[0:20]
@@ -1876,10 +1874,13 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
 
     odor_worms = odor_datasets[:, :, T_start:]
 
+    os.makedirs(f"graphs_data/{dataset_name}/Fig/Fig/", exist_ok=True)
+    os.makedirs(f"graphs_data/{dataset_name}/Fig/Kinograph/", exist_ok=True)
+
     for idata in trange(n_runs):
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_subplot(221)
-        plt.imshow(activity_worm[idata][:, 0:1000], aspect='auto', vmin =-5, vmax=5, cmap='viridis')
+        plt.imshow(activity_worm[idata][:, 0:1000], aspect='auto', vmin =0, vmax=8, cmap='viridis')
         plt.title(f'dataset {idata}', fontsize=18)
         plt.xlabel('time', fontsize=18)
         plt.ylabel('neurons', fontsize=18)
@@ -1905,7 +1906,7 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
         plt.xticks(fontsize=14)
         plt.yticks(fontsize=14)
         plt.tight_layout()
-        plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{idata}.tif", dpi=80)  # 170.7)
+        plt.savefig(f"graphs_data/{dataset_name}/Fig/Kinograph/Fig_{idata}.tif", dpi=80)  # 170.7)
         plt.close()
 
     xc, yc = get_equidistant_points(n_points=n_particles)
@@ -1936,11 +1937,11 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
                 # plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=10, c=to_numpy(x[:, 6]),
                 #             cmap='viridis', vmin=-10, vmax=10, edgecolors='k', alpha=1)
                 plt.axis('off')
-                plt.scatter(X1[:, 0], X1[:, 1], s=700, c=x[:, 6], cmap='viridis', vmin=-20, vmax=20)
+                plt.scatter(X1[:, 0], X1[:, 1], s=700, c=x[:, 6], cmap='viridis', vmin=0, vmax=8)
                 plt.xticks([])
                 plt.yticks([])
                 plt.tight_layout()
-                plt.savefig(f"graphs_data/{dataset_name}/Fig/2D_Fig_{run}_{it:03d}.tif", dpi=80)
+                plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig/Fig_{run}_{it:03d}.tif", dpi=80)
                 plt.close()
 
         x_list = np.array(x_list)

@@ -20,6 +20,7 @@ import torch.nn.functional as F
 import seaborn as sns
 from scipy.optimize import curve_fit
 from ParticleGraph.fitting_models import linear_model
+import json
 
 def linear_model(x, a, b):
     return a * x + b
@@ -223,8 +224,33 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
         plt.savefig(f"./{log_dir}/tmp_training/matrix/comparison_{epoch}_{N}.tif", dpi=87)
         plt.close()
 
-    fig = plt.figure(figsize=(8, 8))
+    if ('PDE_N8' in config.graph_model.signal_model_name):
+        os.makedirs(f"./{log_dir}/tmp_training/matrix/larynx", exist_ok=True)
+        data_folder_name = './graphs_data/CElegans/CElegans_a1/'
+        with open(data_folder_name+"activity_neuron_list.json", "r") as f:
+            activity_neuron_list = json.load(f)
+        with open(data_folder_name+"larynx_neuron_list.json", "r") as f:
+            larynx_neuron_list = json.load(f)
+        larynx_pred_weight, index_larynx =   map_matrix(larynx_neuron_list, activity_neuron_list, pred_weight)
+        larynx_gt_weight, _ = map_matrix(larynx_neuron_list, activity_neuron_list, gt_weight)
+        fig = plt.figure(figsize=(16, 8))
+        ax = fig.add_subplot(121)
+        ax = sns.heatmap(larynx_weight, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
+        ax.set_xticks(range(len(larynx_neuron_list)))
+        ax.set_xticklabels(larynx_neuron_list, fontsize=12, rotation=90)
+        ax.set_yticks(range(len(larynx_neuron_list)))
+        ax.set_yticklabels(larynx_neuron_list, fontsize=12)
+        ax = fig.add_subplot(122)
+        ax = sns.heatmap(larynx_gt_weight, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
+        ax.set_xticks(range(len(larynx_neuron_list)))
+        ax.set_xticklabels(larynx_neuron_list, fontsize=12, rotation=90)
+        ax.set_yticks(range(len(larynx_neuron_list)))
+        ax.set_yticklabels(larynx_neuron_list, fontsize=12)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/matrix/larynx/matrix_{epoch}_{N}.tif", dpi=87)
+        plt.close()
 
+    fig = plt.figure(figsize=(8, 8))
     rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
     for n in range(n_particles):
         if ('PDE_N4' in config.graph_model.signal_model_name) | ('PDE_N7' in config.graph_model.signal_model_name):

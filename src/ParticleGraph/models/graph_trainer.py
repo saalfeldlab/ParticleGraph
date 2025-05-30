@@ -2883,25 +2883,6 @@ def data_train_synaptic2(config, erase, best_model, device):
                     else:
                         loss = loss + (x_batch + pred * delta_t * time_step - y_batch).norm(2)
 
-                    # if run == 0:
-                    #     plt.figure(figsize=(15, 10))
-                    #     n = np.random.permutation(n_particles)
-                    #     for i in range(5):
-                    #         plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=2)
-                    #         plt.scatter(k, to_numpy(x[n[i].astype(int), 6:7]), color='k', s=50)
-                    #         plt.scatter(k+time_step, to_numpy(y_batch[n[i].astype(int)]), color='k', s=50)
-                    #         plt.scatter(k+time_step, to_numpy(x_batch[n[i].astype(int)] + pred[n[i].astype(int)] * delta_t * time_step), color='r', s=100, marker='x')
-                    #     plt.xlabel('time', fontsize=64)
-                    #     plt.ylabel('$x_{i}$', fontsize=64)
-                    #     plt.xlim([k-64, k+64])
-                    #     # plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
-                    #     plt.xticks(fontsize=28)
-                    #     plt.yticks(fontsize=28)
-                    #     plt.title(r'$x_i$ samples', fontsize=48)
-                    #     plt.tight_layout()
-                    #     plt.savefig(f'activity.tif', dpi=300)
-                    #     plt.close()
-
                 if ('PDE_N3' in model_config.signal_model_name):
                     loss = loss + train_config.coeff_model_a * (model.a[ind_a + 1] - model.a[ind_a]).norm(2)
 

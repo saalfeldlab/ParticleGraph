@@ -1,4 +1,4 @@
-description: 'test neuron_dependent functions  with CElegans data      coeff_L1: 5.0E-5'
+description: 'test neuron_dependent functions  with CElegans data      coeff_L1: 1.0E-6'
 dataset: 'CElegans_a1'
 data_folder_name: '/groups/saalfeld/home/allierc/Py/wormvae/data/worm_activity/all_traces_Heads_new.mat'
 connectome_folder_name: '/groups/saalfeld/home/allierc/Py/wormvae/data/worm_connectivity/'
@@ -84,7 +84,7 @@ training:
     learning_rate_start: 1.0E-5
     learning_rate_embedding_start: 5.0E-4
 
-    coeff_L1: 5.0E-5
+    coeff_L1: 1.0E-6
     coeff_diff: 100
     coeff_L1_virtual_neuron: 0
     coeff_sign : 0
