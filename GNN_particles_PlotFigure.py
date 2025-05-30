@@ -4794,7 +4794,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
         model_missing_activity.eval()
 
     if has_field:
-        if ('Siren_short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
+        if ('short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
             model_f = Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
                             hidden_features=model_config.hidden_dim_nnr,
                             hidden_layers=model_config.n_layers_nnr, first_omega_0=omega, hidden_omega_0=omega,
@@ -5032,7 +5032,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
                 if has_field:
 
-                    if 'Siren_short_term_plasticity' in field_type:
+                    if 'short_term_plasticity' in field_type:
                         fig, ax = fig_init()
                         t = torch.zeros((1, 100000, 1), dtype=torch.float32, device=device)
                         t[0] = torch.linspace(0, 1, 100000, dtype=torch.float32, device=device)[:, None]
@@ -5427,7 +5427,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 state_dict = torch.load(net, map_location=device)
                 model_f.load_state_dict(state_dict['model_state_dict'])
 
-                if 'Siren_short_term_plasticity' in field_type:
+                if 'short_term_plasticity' in field_type:
 
                     fig, ax = fig_init()
                     t = torch.zeros((1, 1000, 1), dtype=torch.float32, device=device)
@@ -5927,7 +5927,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     #     plt.plot(to_numpy(modulation[ind, ids]))
                     #     plt.plot(to_numpy(model.b[ind, 0:1000]**2))
 
-                if ('Siren_short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
+                if ('short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
 
                     for frame in trange(0, n_frames, n_frames // 100):
                         t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
@@ -6209,7 +6209,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                         alpha = (k % model.embedding_step) / model.embedding_step
                         x[:, 8] = alpha * model.b[:, k // model.embedding_step + 1] ** 2 + (1 - alpha) * model.b[:,
                                                                                                          k // model.embedding_step] ** 2
-                    elif ('Siren_short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
+                    elif ('short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
                         t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
                         t[:, 0, :] = torch.tensor(k / n_frames, dtype=torch.float32, device=device)
                         x[:, 8] = model_f(t) ** 2

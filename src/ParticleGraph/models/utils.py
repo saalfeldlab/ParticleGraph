@@ -342,7 +342,7 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
     # plt.savefig(f"./{log_dir}/tmp_training/matrix/{epoch}_{N}.tif", dpi=87)
     # plt.close()
 
-def plot_training_signal_field(x, n_nodes, n_nodes_per_axis, recursive_loop, kk, time_step, x_list, run, model, field_type, model_f, edges, y_list, ynorm, delta_t, n_frames, log_dir, epoch, N, recursive_parameters, modulation, device):
+def plot_training_signal_field(x, n_nodes, recursive_loop, kk, time_step, x_list, run, model, field_type, model_f, edges, y_list, ynorm, delta_t, n_frames, log_dir, epoch, N, recursive_parameters, modulation, device):
     if recursive_loop > 1:
         x = torch.tensor(x_list[run][kk], device=device).clone().detach()
         ids = np.arange(kk, kk + recursive_loop * time_step, time_step)
@@ -359,7 +359,7 @@ def plot_training_signal_field(x, n_nodes, n_nodes_per_axis, recursive_loop, kk,
             if (loop == 0) & ('learnable_short_term_plasticity' in field_type):
                 alpha = (kk % model.embedding_step) / model.embedding_step
                 x[:, 8] = alpha * model.b[:, kk // model.embedding_step + 1] ** 2 + (1 - alpha) * model.b[:, kk // model.embedding_step] ** 2
-            elif ('Siren_short_term_plasticity' in field_type):
+            elif ('short_term_plasticity' in field_type):
                 t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
                 t[:, 0, :] = torch.tensor(kk / n_frames, dtype=torch.float32, device=device)
                 x[:, 8] = model_f(t.clone().detach()) ** 2
@@ -433,7 +433,7 @@ def plot_training_signal_field(x, n_nodes, n_nodes_per_axis, recursive_loop, kk,
         plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
         plt.close()
 
-    elif ('Siren_short_term_plasticity' in field_type) | ('modulation' in field_type):
+    elif ('short_term_plasticity' in field_type) | ('modulation' in field_type):
         n_frames = n_frames - 10
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_subplot(2, 2, 1)
@@ -479,6 +479,7 @@ def plot_training_signal_field(x, n_nodes, n_nodes_per_axis, recursive_loop, kk,
         plt.close()
 
     else:
+        n_nodes_per_axis = int(np.sqrt(n_nodes))
         if 'visual' in field_type:
             tmp = torch.reshape(x[:n_nodes, 8:9], (n_nodes_per_axis, n_nodes_per_axis))
         else:

@@ -2400,16 +2400,12 @@ def data_train_synaptic2(config, erase, best_model, device):
         n_nodes = simulation_config.n_nodes
         if has_virtual_neuron:
             n_nodes = n_particles + n_virtual_neurons
-            n_nodes_per_axis = 0
-        else:
-            n_nodes_per_axis = int(np.sqrt(n_nodes))
-        has_field = True
+        has_neural_field = True
     else:
         n_nodes = simulation_config.n_particles
-        has_field = False
-    has_Siren = has_field & ('learnable_short_term_plasticity' not in field_type)
+        has_neural_field = False
 
-    print(f'has_field: {has_field}, has_Siren: {has_Siren}, has_virtual_neuron: {has_virtual_neuron}')
+    print(f'has_neural_field: {has_neural_field}, has_virtual_neuron: {has_virtual_neuron}')
 
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
@@ -2527,8 +2523,8 @@ def data_train_synaptic2(config, erase, best_model, device):
         optimizer_missing_activity = torch.optim.Adam(lr=train_config.learning_rate_NNR,
                                                       params=model_missing_activity.parameters())
         model_missing_activity.train()
-    if has_Siren:
-        if ('Siren_short_term_plasticity' in field_type) | ('modulation' in field_type):
+    if has_neural_field:
+        if ('short_term_plasticity' in field_type) | ('modulation' in field_type):
             model_f = nn.ModuleList([
                 Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
                       hidden_features=model_config.hidden_dim_nnr,
@@ -2538,6 +2534,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                 for n in range(n_runs)
             ])
         else:
+            n_nodes_per_axis = int(np.sqrt(n_nodes))
             model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
                                     out_features=model_config.output_size_nnr,
                                     hidden_features=model_config.hidden_dim_nnr,
@@ -2546,6 +2543,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         model_f.to(device=device)
         optimizer_f = torch.optim.Adam(lr=train_config.learning_rate_NNR, params=model_f.parameters())
         model_f.train()
+
     if (best_model != None) & (best_model != '') & (best_model != 'None'):
         net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{best_model}.pt"
         print(f'load {net} ...')
@@ -2554,8 +2552,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         start_epoch = int(best_model.split('_')[0])
         print(f'best_model: {best_model}  start_epoch: {start_epoch}')
         logger.info(f'best_model: {best_model}  start_epoch: {start_epoch}')
-
-        if has_Siren:
+        if has_neural_field:
             net = f'{log_dir}/models/best_model_f_with_{n_runs - 1}_graphs_{best_model}.pt'
             state_dict = torch.load(net, map_location=device)
             model_f.load_state_dict(state_dict['model_state_dict'])
@@ -2626,7 +2623,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         ind_a = torch.tensor(np.arange(1, n_particles * 100), device=device)
         pos = torch.argwhere(ind_a % 100 != 99).squeeze()
         ind_a = ind_a[pos]
-    if has_field:
+    if has_neural_field:
         modulation = torch.tensor(x_list[0], device=device)
         modulation = modulation[:, :, 8:9].squeeze()
         modulation = modulation.t()
@@ -2684,7 +2681,7 @@ def data_train_synaptic2(config, erase, best_model, device):
 
             if has_virtual_neuron:
                 optimizer_missing_activity.zero_grad()
-            if has_Siren:
+            if has_neural_field:
                 optimizer_f.zero_grad()
             optimizer.zero_grad()
 
@@ -2713,7 +2710,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                         edges = edges_all.clone().detach()
                         mask = torch.isin(edges[1, :], torch.tensor(ids, device=device))
                         edges = edges[:, mask]
-                    if has_field:
+                    if has_neural_field:
                         if 'visual' in field_type:
                             x[:n_nodes, 8:9] = model_f(time=k / n_frames) ** 2
                             x[n_nodes:n_particles, 8:9] = 1
@@ -2722,7 +2719,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                             x[:, 8] = alpha * model.b[:, k // model.embedding_step + 1] ** 2 + (1 - alpha) * model.b[:,
                                                                                                              k // model.embedding_step] ** 2
                             loss = loss + (model.b[:, 1:] - model.b[:, :-1]).norm(2) * coeff_model_b
-                        elif ('Siren_short_term_plasticity' in field_type) | ('modulation' in field_type):
+                        elif ('short_term_plasticity' in field_type) | ('modulation' in field_type):
                             t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
                             t[:, 0, :] = torch.tensor(k / n_frames, dtype=torch.float32, device=device)
                             if 'derivative' in field_type:
@@ -2734,7 +2731,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                                 pred_modulation = model.lin_modulation(in_modulation)
                                 loss += (grad - pred_modulation.squeeze()).norm(2) * coeff_lin_modulation
                             else:
-                                x[:, 8] = model_f[run](t) ** 2
+                                x[:, 8] = model_f[run](t).squeeze()** 2
                         else:
                             x[:, 8:9] = model_f(time=k / n_frames) ** 2
                     else:
@@ -2890,7 +2887,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                 optimizer.step()
                 if has_virtual_neuron:
                     optimizer_missing_activity.step()
-                if has_Siren:
+                if has_neural_field:
                     optimizer_f.step()
 
                 total_loss += loss.item()
@@ -2903,21 +2900,16 @@ def data_train_synaptic2(config, erase, best_model, device):
                         plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_particles,
                                              n_particle_types, type_list, cmap, device)
 
-                        if has_field:
-                            plot_training_signal_field(x, n_nodes, n_nodes_per_axis, recursive_loop, k, time_step,
+                        if has_neural_field:
+                            plot_training_signal_field(x, n_nodes, recursive_loop, k, time_step,
                                                        x_list, run, model, field_type, model_f,
                                                        edges, y_list, ynorm, delta_t, n_frames, log_dir, epoch, N,
                                                        recursive_parameters, modulation, device)
-                            if 'learnable_short_term_plasticity' not in field_type:
-                                torch.save({'model_state_dict': model_f.state_dict(),
-                                            'optimizer_state_dict': optimizer_f.state_dict()}, os.path.join(log_dir,
-                                                                                                            'models',
-                                                                                                            f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+                            torch.save({'model_state_dict': model_f.state_dict(),
+                                            'optimizer_state_dict': optimizer_f.state_dict()}, os.path.join(log_dir,'models',f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
                         if has_virtual_neuron:
                             torch.save({'model_state_dict': model_missing_activity.state_dict(),
-                                        'optimizer_state_dict': optimizer_f.state_dict()}, os.path.join(log_dir,
-                                                                                                        'models',
-                                                                                                        f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+                                        'optimizer_state_dict': optimizer_f.state_dict()}, os.path.join(log_dir,'models',f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
                         torch.save(
                             {'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
@@ -2931,7 +2923,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()},
                    os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
-        if has_Siren:
+        if has_neural_field:
             torch.save({'model_state_dict': model_f.state_dict(),
                         'optimizer_state_dict': optimizer_f.state_dict()},
                        os.path.join(log_dir, 'models', f'best_model_f_with_{n_runs - 1}_graphs_{epoch}.pt'))
@@ -3903,7 +3895,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             timeit = timeit[run][0]
             time_id = 0
         if 'PDE_N' in model_config.signal_model_name:
-            if ('Siren_short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
+            if ('short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
                 model_f = Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
                                 hidden_features=model_config.hidden_dim_nnr,
                                 hidden_layers=model_config.n_layers_nnr, first_omega_0=model_config.omega,
@@ -4045,7 +4037,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:n_particles, 6:7] - x0[:, 6:7]) ** 2, axis=1)))
             neuron_gt_list.append(x0[:, 6:7])
             neuron_pred_list.append(x[:n_particles, 6:7].clone().detach())
-            if ('Siren_short_term_plasticity' in field_type) | ('modulation' in field_type):
+            if ('short_term_plasticity' in field_type) | ('modulation' in field_type):
                 modulation_gt_list.append(x0[:, 8:9])
                 modulation_pred_list.append(x[:, 8:9].clone().detach())
         elif 'WaveMesh' in model_config.mesh_model_name:
@@ -4168,7 +4160,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                             alpha = (k % model.embedding_step) / model.embedding_step
                             x[:, 8] = alpha * model.b[:, it // model.embedding_step + 1] ** 2 + (1 - alpha) * model.b[:,
                                                                                                               it // model.embedding_step] ** 2
-                        elif ('Siren_short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
+                        elif ('short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
                             t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
                             t[:, 0, :] = torch.tensor(it / n_frames, dtype=torch.float32, device=device)
                             x[:, 8] = model_f(t).squeeze() ** 2
@@ -4778,7 +4770,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.savefig(f'./{log_dir}/results/comparison_xi_{it}.png', dpi=80)
                 plt.close()
 
-                if ('Siren_short_term_plasticity' in field_type) | ('modulation' in field_type):
+                if ('short_term_plasticity' in field_type) | ('modulation' in field_type):
 
                     modulation_gt_list_ = torch.cat(modulation_gt_list, 0)
                     modulation_pred_list_ = torch.cat(modulation_pred_list, 0)
