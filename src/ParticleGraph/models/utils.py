@@ -235,7 +235,7 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
         larynx_gt_weight, _ = map_matrix(larynx_neuron_list, activity_neuron_list, gt_weight)
         fig = plt.figure(figsize=(16, 8))
         ax = fig.add_subplot(121)
-        ax = sns.heatmap(larynx_weight, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
+        ax = sns.heatmap(larynx_pred_weight, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
         ax.set_xticks(range(len(larynx_neuron_list)))
         ax.set_xticklabels(larynx_neuron_list, fontsize=12, rotation=90)
         ax.set_yticks(range(len(larynx_neuron_list)))

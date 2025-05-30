@@ -53,20 +53,13 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'train'
+        task = 'generate train test'
         best_model = ''
 
-        # config_list = ['multimaterial_16_2']  #   ,'multimaterial_16_2', 'multimaterial_16_3', 'multimaterial_16_4']
-        # config_list = ['fluids_m18_1']
+
+        config_list = ['signal_N2_a37']
         # config_list = ['signal_N5_v11_bis']
-        # config_list = ['falling_water_ramp_x6_11_1']
-        # config_list = ['arbitrary_3']
-        # config_list = ['cell_cardio_2_4']
-        # config_list = ['RD_RPS_5']
-        # config_list = ['cell_U2OS_9_0','cell_U2OS_10_0','cell_U2OS_11_0','cell_U2OS_8_21','cell_U2OS_8_22']
-        # config_list = ['cell_MDCK_15']
-        config_list = ['signal_CElegans_a_1']
-        config_list = ['signal_CElegans_a_1']
+
 
     for config_file_ in config_list:
         print(' ')

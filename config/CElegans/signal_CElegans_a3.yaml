@@ -1,4 +1,4 @@
-description: 'test neuron_dependent functions  with CElegans data      coeff_L1: 1.0E-6 coeff_diff: 1000'
+description: 'test neuron_dependent functions  with CElegans data     hidden_dim: 128'
 dataset: 'CElegans_a1'
 data_folder_name: '/groups/saalfeld/home/allierc/Py/wormvae/data/worm_activity/all_traces_Heads_new.mat'
 connectome_folder_name: '/groups/saalfeld/home/allierc/Py/wormvae/data/worm_connectivity/'
@@ -30,7 +30,7 @@ graph_model:
 
     input_size: 6
     output_size: 1
-    hidden_dim: 256
+    hidden_dim: 128
     n_layers: 5
 
     input_size_update: 6
@@ -58,7 +58,7 @@ graph_model:
 plotting:
     colormap: 'tab10'
     arrow_length: 1
-    xlim: [0,8]
+    xlim: [4,8]
     ylim: [-0.1,1.0]
 
 training:
@@ -84,7 +84,7 @@ training:
     learning_rate_start: 1.0E-5
     learning_rate_embedding_start: 5.0E-4
 
-    coeff_L1: 1.0E-6
-    coeff_diff: 1000
+    coeff_L1: 0.0
+    coeff_diff: 100
     coeff_L1_virtual_neuron: 0
     coeff_sign : 0
