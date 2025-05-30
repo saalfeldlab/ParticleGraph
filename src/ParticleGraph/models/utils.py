@@ -94,7 +94,7 @@ def get_in_features_lin_edge(x, model, model_config, xnorm, n_particles, device)
             in_features_prev = torch.cat((x[:n_particles, 6:7] - xnorm / 150, model.a[:n_particles], model.a[:n_particles]), dim=1)
             in_features = torch.cat((x[:n_particles, 6:7], model.a[:n_particles], model.a[:n_particles]), dim=1)
             in_features_next = torch.cat((x[:n_particles, 6:7] + xnorm / 150, model.a[:n_particles], model.a[:n_particles]), dim=1)
-    elif model_config.signal_model_name == 'PDE_CE1':
+    elif model_config.signal_model_name == 'PDE_N8':
         if model.embedding_trial:
             in_features_prev = torch.cat((torch.zeros((n_particles, 1), dtype=torch.float32, device=device), x[:n_particles, 6:7] - xnorm / 150, model.a[:n_particles], model.b[0].repeat(n_particles, 1), model.a[:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
             in_features = torch.cat((torch.zeros((n_particles, 1), dtype=torch.float32, device=device), x[:n_particles, 6:7], model.a[:n_particles], model.b[0].repeat(n_particles, 1), model.a[:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
@@ -148,7 +148,7 @@ def get_in_features(rr=None, embedding=None, model=[], model_name = [], max_radi
             in_features = rr[:, None]
         case 'PDE_N4' | 'PDE_N7':
             in_features = torch.cat((rr[:, None], embedding), dim=1)
-        case 'PDE_CE1':
+        case 'PDE_N8':
             in_features = torch.cat((rr[:, None]*0, rr[:, None], embedding, embedding), dim=1)
         case 'PDE_N9':
             in_features = torch.cat((rr[:, None], embedding, torch.ones_like(rr[:, None])), dim=1)
@@ -241,7 +241,7 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
         elif ('PDE_N9' in config.graph_model.signal_model_name):
             embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
             in_features = torch.cat((rr[:, None], embedding_, torch.ones_like(rr[:,None])), dim=1)
-        elif ('PDE_CE1' in config.graph_model.signal_model_name):
+        elif ('PDE_N8' in config.graph_model.signal_model_name):
             embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
             if model.embedding_trial:
                 in_features = torch.cat((rr[:, None]*0, rr[:, None], embedding_, model.b[0].repeat(1000, 1), embedding_, model.b[0].repeat(1000, 1)), dim=1)
@@ -255,7 +255,7 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
             func=func**2
         if (n % 2 == 0):
             plt.plot(to_numpy(rr), to_numpy(func),2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
-    if ('PDE_CE1' in config.graph_model.signal_model_name):
+    if ('PDE_N8' in config.graph_model.signal_model_name):
         for n in range(n_particles):
             embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
             if model.embedding_trial:
@@ -1546,7 +1546,7 @@ def choose_training_model(model_config=None, device=None, projections=None):
 
     model_name = model_config.graph_model.signal_model_name
     match model_name:
-        case 'PDE_N2' | 'PDE_N3' | 'PDE_N4' | 'PDE_N5' | 'PDE_N6' | 'PDE_N7' | 'PDE_N9' | 'PDE_CE1':
+        case 'PDE_N2' | 'PDE_N3' | 'PDE_N4' | 'PDE_N5' | 'PDE_N6' | 'PDE_N7' | 'PDE_N9' | 'PDE_N8':
             model = Signal_Propagation2(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
         case 'PDE_WBI':

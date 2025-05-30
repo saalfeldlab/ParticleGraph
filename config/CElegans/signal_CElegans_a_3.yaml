@@ -22,7 +22,7 @@ simulation:
     start_frame: -1000
 
 graph_model:
-    signal_model_name: 'PDE_CE1'
+    signal_model_name: 'PDE_N8'
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'

@@ -2671,7 +2671,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         else:
             Niter = int(n_frames * data_augmentation_loop // batch_size * 0.2 // max(recursive_loop, 1))
 
-        plot_frequency = int(Niter // 20)
+        plot_frequency = int(Niter // 40)
         print(f'{Niter} iterations per epoch')
         logger.info(f'{Niter} iterations per epoch')
         print(f'plot every {plot_frequency} iterations')
@@ -3031,7 +3031,7 @@ def data_train_synaptic2(config, erase, best_model, device):
             if (n % 2 == 0):
                 plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)),
                          linewidth=2, alpha=0.25)
-        if ('PDE_CE1' in config.graph_model.signal_model_name):
+        if ('PDE_N8' in config.graph_model.signal_model_name):
             for n in range(n_particles):
                 embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
                 if model.embedding_trial:
@@ -3073,7 +3073,7 @@ def data_train_synaptic2(config, erase, best_model, device):
             model_MLP = model.lin_phi
             update_type = model.update_type
 
-            func_list, proj_interaction_ = analyze_edge_function(rr=torch.linspace(-xnorm, xnorm, 1000, device=device),
+            func_list, proj_interaction_ = analyze_edge_function(rr=torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device),
                                                                  vizualize=True, config=config,
                                                                  model_MLP=model_MLP, model=model,
                                                                  n_nodes=0,
