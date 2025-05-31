@@ -5,7 +5,7 @@ data_folder_name: '/groups/saalfeld/home/allierc/signaling/U2OS/U2OS_002_small_1
 simulation:
   params: [[0],[0],[0],[0]]
   min_radius: 0
-  max_radius: 0.3
+  max_radius: 0.01
   diffusion_coefficients: [[0.02], [0.04], [0.05], [0.03]]
   n_particles: 16384
   n_particle_types: 4
@@ -21,7 +21,7 @@ graph_model:
   mesh_model_name: 'RD_Mesh3'
   prediction: 'first_derivative'
 
-  input_size: 8
+  input_size: 6
   output_size: 3
   hidden_dim: 256
   n_layers: 5
@@ -34,7 +34,7 @@ graph_model:
   input_size_nnr: 2
   n_layers_nnr: 5
   hidden_dim_nnr: 128
-  output_size_nnr: 3
+  output_size_nnr: 1
   outermost_linear_nnr: True
   omega: 30.0
 
@@ -53,14 +53,16 @@ training:
   n_runs: 2
   device: 'cuda:0'
 
-  n_epochs: 4
+  n_epochs: 5
   batch_size: 8
   small_init_batch_size: True
 
-  data_augmentation_loop: 10000
+  data_augmentation_loop: 5000
 
   sparsity: 'none'
   cluster_method: 'distance_plot'
   fix_cluster_embedding: True
+
+  learning_rate_NNR: 1.0E-4
 
 

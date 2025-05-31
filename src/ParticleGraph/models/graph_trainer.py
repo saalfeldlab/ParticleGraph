@@ -1508,7 +1508,7 @@ def data_train_mesh(config, erase, best_model, device):
         logger.info(f'batch_size: {batch_size}')
 
         Niter = n_frames * data_augmentation_loop // batch_size
-        plot_frequency = int(Niter // 10)
+        plot_frequency = int(Niter // 40)
         if epoch == 0:
             print(f'{Niter} iterations per epoch')
             logger.info(f'{Niter} iterations per epoch')
@@ -1622,6 +1622,14 @@ def data_train_mesh(config, erase, best_model, device):
                                    n_nodes=n_nodes, n_node_types=n_node_types,
                                    index_nodes=index_nodes, dataset_num=1, index_particles=[], n_particles=[],
                                    n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
+
+                if model_config.mesh_model_name == 'RD_Mesh3':
+                    kernel = model.siren((model.siren.get_mgrid(100, dim=2).to(device)-0.5) * 2).reshape((100, 100, 1))
+                    fig = plt.figure(figsize=(5, 5))
+                    plt.imshow(to_numpy(kernel[:, :, 0]), cmap='jet', vmin=0, vmax=1)
+                    plt.savefig(f"./{log_dir}/tmp_training/field/kernel_{epoch}_{N}.tif", dpi=87)
+                    plt.close()
+
 
                 torch.save({'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict()},

@@ -191,7 +191,7 @@ class Siren_Network(nn.Module):
             if time != None:
                coords = torch.cat((coords, time * torch.ones_like(coords[:, 0:1])), 1)
 
-        coords = coords.clone().detach().requires_grad_(True) # allows to take derivative w.r.t. input
+        # coords = coords.clone().detach().requires_grad_(True) # allows to take derivative w.r.t. input
         output = self.net(coords)
         return output
 
