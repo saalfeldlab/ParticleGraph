@@ -106,7 +106,6 @@ class GraphModelConfig(BaseModel):
     hidden_dim_2: int = 1
     n_layers_2: int = 1
 
-
     input_size_decoder: int = 1
     output_size_decoder: int = 1
     hidden_dim_decoder: int = 1

@@ -31,6 +31,13 @@ graph_model:
   hidden_dim_update: 256
   n_layers_update: 5
 
+  input_size_nnr: 2
+  n_layers_nnr: 5
+  hidden_dim_nnr: 128
+  output_size_nnr: 3
+  outermost_linear_nnr: True
+  omega: 30.0
+
   aggr_type: 'add'
   mesh_aggr_type: 'add'
 

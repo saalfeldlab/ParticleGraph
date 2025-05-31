@@ -154,7 +154,9 @@ class Mesh_RPS(pyg.nn.MessagePassing):
         elif self.step == 2:
             delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
             self.kernel = self.siren(delta_pos)
+            print('kernel shape', self.kernel.shape)
             in_features = torch.cat((uvw_j, self.kernel, embedding_i), dim=-1)
+            return self.lin_edge(in_features)
 
 
 
