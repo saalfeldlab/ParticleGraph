@@ -63,9 +63,9 @@ if __name__ == '__main__':
         # config_list = ['arbitrary_3']
         # config_list = ['cell_cardio_2_4']
         # config_list = ['RD_RPS_5']
-        # config_list = ['cell_U2OS_9_0','cell_U2OS_10_0','cell_U2OS_11_0','cell_U2OS_8_21','cell_U2OS_8_22']
+        config_list = ['cell_U2OS_12_0']
         # config_list = ['cell_MDCK_15']
-        config_list = ['signal_CElegans_a8']
+        # config_list = ['signal_CElegans_a8']
 
     for config_file_ in config_list:
         print(' ')

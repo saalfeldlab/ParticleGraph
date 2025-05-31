@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch_geometric as pyg
 from ParticleGraph.models.MLP import MLP
 from ParticleGraph.utils import to_numpy
+from ParticleGraph.models.Siren_Network import *
 
 
 class Mesh_RPS(pyg.nn.MessagePassing):
@@ -34,6 +35,7 @@ class Mesh_RPS(pyg.nn.MessagePassing):
 
         self.device = device
         self.model = model_config.mesh_model_name
+        self.max_radius = simulation_config.max_radius
 
         self.input_size = model_config.input_size
         self.output_size = model_config.output_size
@@ -54,9 +56,18 @@ class Mesh_RPS(pyg.nn.MessagePassing):
         self.field_type = model_config.field_type
 
 
+
         if (self.model == 'RD_RPS_Mesh2') | (self.model == 'RD_RPS_Mesh3'):
             self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                                 hidden_size=self.hidden_size, device=self.device)
+
+        if (self.model == 'RD_RPS_Mesh3'):
+            self.siren = Siren_Network(image_width=100, in_features=model_config.input_size_nnr,
+                                        out_features=model_config.output_size_nnr,
+                                        hidden_features=model_config.hidden_dim_nnr,
+                                        hidden_layers=model_config.n_layers_nnr, outermost_linear=model_config.outermost_linear_nnr, device=self.device,
+                                        first_omega_0=model_config.omega,
+                                        hidden_omega_0=model_config.omega)
 
         self.lin_phi = MLP(input_size=self.input_size_update, output_size=self.output_size_update, nlayers=self.nlayers,
                        hidden_size=self.hidden_dim_update, device=self.device)
@@ -92,29 +103,32 @@ class Mesh_RPS(pyg.nn.MessagePassing):
             ])
             self.rotation_matrix = self.rotation_matrix.permute(*torch.arange(self.rotation_matrix.ndim - 1, -1, -1))
 
-        self.step = 0
-        laplacian_uvw = self.propagate(edge_index, uvw=uvw, pos=pos, embedding=embedding, discrete_laplacian=edge_attr)
-        self.laplacian_uvw = laplacian_uvw
-
-        if self.model == 'RD_RPS_Mesh2':
-            self.step = 1
-            uvw_msg = self.propagate(edge_index, uvw=uvw, pos=pos, embedding=embedding, discrete_laplacian=edge_attr)
-            input_phi = torch.cat((laplacian_uvw, uvw, uvw_msg, embedding), dim=-1)
-            if self.time_window_noise > 0:
-                noise = torch.randn_like(input_phi[:,0:9]) * self.time_window_noise
-                input_phi[:,0:9] = input_phi[:,0:9] + noise
-        elif self.model == 'RD_RPS_Mesh3':
-            self.step = 2
-            uvw_msg = self.propagate(edge_index, uvw=uvw, pos=pos, embedding=embedding, discrete_laplacian=edge_attr)
-            input_phi = torch.cat((laplacian_uvw, uvw, uvw_msg, embedding), dim=-1)
-            if self.time_window_noise > 0:
-                noise = torch.randn_like(input_phi[:,0:9]) * self.time_window_noise
-                input_phi[:,0:9] = input_phi[:,0:9] + noise
-        else:
-            input_phi = torch.cat((laplacian_uvw, uvw, embedding), dim=-1)
-            if self.time_window_noise > 0:
-                noise = torch.randn_like(input_phi[:,0:6]) * self.time_window_noise
-                input_phi[:,0:6] = input_phi[:,0:6] + noise
+        match self.model:
+            case 'RD_RPS_Mesh':
+                self.step = 0
+                laplacian_uvw = self.propagate(edge_index, uvw=uvw, pos=pos, embedding=embedding, discrete_laplacian=edge_attr)
+                self.laplacian_uvw = laplacian_uvw
+                input_phi = torch.cat((laplacian_uvw, uvw, embedding), dim=-1)
+                if self.time_window_noise > 0:
+                    noise = torch.randn_like(input_phi[:, 0:6]) * self.time_window_noise
+                    input_phi[:, 0:6] = input_phi[:, 0:6] + noise
+            case 'RD_RPS_Mesh2':
+                self.step = 0
+                laplacian_uvw = self.propagate(edge_index, uvw=uvw, pos=pos, embedding=embedding, discrete_laplacian=edge_attr)
+                self.laplacian_uvw = laplacian_uvw
+                self.step = 1
+                uvw_msg = self.propagate(edge_index, uvw=uvw, pos=pos, embedding=embedding, discrete_laplacian=edge_attr)
+                input_phi = torch.cat((laplacian_uvw, uvw, uvw_msg, embedding), dim=-1)
+                if self.time_window_noise > 0:
+                    noise = torch.randn_like(input_phi[:,0:9]) * self.time_window_noise
+                    input_phi[:,0:9] = input_phi[:,0:9] + noise
+            case 'RD_RPS_Mesh3':
+                self.step = 2
+                uvw_msg = self.propagate(edge_index, uvw=uvw, pos=pos, embedding=embedding, discrete_laplacian=edge_attr)
+                input_phi = torch.cat((laplacian_uvw, uvw, uvw_msg, embedding), dim=-1)
+                if self.time_window_noise > 0:
+                    noise = torch.randn_like(input_phi[:, 0:9]) * self.time_window_noise
+                    input_phi[:, 0:9] = input_phi[:, 0:9] + noise
 
         if (self.has_field) & ('additive' in self.field_type):
             input_phi = torch.cat((input_phi, field), dim=-1)
@@ -138,11 +152,13 @@ class Mesh_RPS(pyg.nn.MessagePassing):
             in_features = torch.cat((uvw_j, delta_pos, r[:,None], embedding_i), dim=-1)
             return self.lin_edge(in_features)
         elif self.step == 2:
-            delta_pos = self.bc_dpos(pos_j - pos_i)
-            if self.rotation_augmentation & (self.training == True):
-                delta_pos[:, :2] = delta_pos[:, :2] @ self.rotation_matrix
-            in_features = torch.cat((uvw_j, delta_pos, embedding_i), dim=-1)
-            return self.lin_edge(in_features)
+            delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
+            self.kernel = self.siren(delta_pos)
+            in_features = torch.cat((uvw_j, self.kernel, embedding_i), dim=-1)
+
+
+
+
 
             # fig = plt.figure(figsize=(10, 10))
             # plt.scatter(to_numpy(delta_pos[:, 0]), to_numpy(delta_pos[:, 1]), s=1, c=to_numpy(discrete_laplacian[:,None]), alpha=0.5)
