@@ -1668,12 +1668,12 @@ def data_train_mesh(config, erase, best_model, device):
 
         for n in node_list:
             embedding_ = model.a[1, n, :] * torch.ones((100, model_config.embedding_dim), device=device)
-            if 'RD_RPS_Mesh' in model_config.mesh_model_name:
+            if 'RD_Mesh' in model_config.mesh_model_name:
                 embedding_ = model.a[1, n, :] * torch.ones((100, model_config.embedding_dim), device=device)
                 u = torch.tensor(np.linspace(0, 1, 100)).to(device)
                 u = u[:, None]
                 r = u
-                if ('RD_RPS_Mesh2' in model_config.mesh_model_name) |  ('RD_RPS_Mesh3' in model_config.mesh_model_name):
+                if ('RD_Mesh2' in model_config.mesh_model_name) |  ('RD_Mesh3' in model_config.mesh_model_name):
                     if has_field:
                         in_features = torch.cat((u, u, u, u, u, u, u, u, u, embedding_, u * 0), dim=1)
                     else:
@@ -1698,7 +1698,7 @@ def data_train_mesh(config, erase, best_model, device):
         coeff_norm = to_numpy(func_list)
         popt_list = np.array(popt_list)
 
-        if 'RD_RPS_Mesh' in model_config.mesh_model_name:
+        if 'RD_Mesh' in model_config.mesh_model_name:
             trans = umap.UMAP(n_neighbors=500, n_components=2, transform_queue_size=0).fit(coeff_norm)
             proj_interaction = trans.transform(coeff_norm)
         elif 'WaveMeshSmooth' in model_config.mesh_model_name:
@@ -3616,7 +3616,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     cmap = CustomColorMap(config=config)
     dimension = simulation_config.dimension
     has_particle_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
-    has_mesh_field = (model_config.field_type != '') & ('RD_RPS_Mesh' in model_config.mesh_model_name)
+    has_mesh_field = (model_config.field_type != '') & ('RD_Mesh' in model_config.mesh_model_name)
     has_field = (model_config.field_type != '') & (has_mesh_field == False) & (has_particle_field == False)
     omega = model_config.omega
 
@@ -4042,7 +4042,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 modulation_pred_list.append(x[:, 8:9].clone().detach())
         elif 'WaveMesh' in model_config.mesh_model_name:
             rmserr = torch.sqrt(torch.mean((x[mask_mesh.squeeze(), 6:7] - x0[mask_mesh.squeeze(), 6:7]) ** 2))
-        elif 'RD_RPS_Mesh' in model_config.mesh_model_name:
+        elif 'RD_Mesh' in model_config.mesh_model_name:
             rmserr = torch.sqrt(
                 torch.mean(torch.sum((x[mask_mesh.squeeze(), 6:9] - x0[mask_mesh.squeeze(), 6:9]) ** 2, axis=1)))
             node_gt_list.append(x0[:, 6:9])
@@ -4083,7 +4083,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 pred = mesh_model(dataset_mesh, data_id=data_id)
             x[mask_mesh.squeeze(), 7:8] += pred[mask_mesh.squeeze()] * hnorm * delta_t
             x[mask_mesh.squeeze(), 6:7] += x[mask_mesh.squeeze(), 7:8] * delta_t
-        elif 'RD_RPS_Mesh' in model_config.mesh_model_name:
+        elif 'RD_Mesh' in model_config.mesh_model_name:
             with torch.no_grad():
                 if 'test_simulation' in test_mode:
                     y = y0 / hnorm
@@ -4358,7 +4358,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     plt.xticks([])
                     plt.yticks([])
                     plt.axis('off')
-                if 'RD_RPS_Mesh' in model_config.mesh_model_name:
+                if 'RD_Mesh' in model_config.mesh_model_name:
                     H1_IM = torch.reshape(x[:, 6:9], (n_nodes_per_axis, n_nodes_per_axis, 3))
                     H1_IM = torch.clip(H1_IM, 0, 1)
 
@@ -4661,7 +4661,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{run}_{num}.tif", dpi=100)
                 plt.close()
 
-            if ('RD_RPS_Mesh' in model_config.mesh_model_name) & (it % 40 == 0) & (it > 0):
+            if ('RD_Mesh' in model_config.mesh_model_name) & (it % 40 == 0) & (it > 0):
 
                 node_gt_list_ = torch.cat(node_gt_list, 0)
                 node_pred_list_ = torch.cat(node_pred_list, 0)

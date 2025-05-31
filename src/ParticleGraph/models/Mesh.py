@@ -7,7 +7,7 @@ from ParticleGraph.utils import to_numpy
 from ParticleGraph.models.Siren_Network import *
 
 
-class Mesh_RPS(pyg.nn.MessagePassing):
+class Mesh(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
@@ -27,7 +27,7 @@ class Mesh_RPS(pyg.nn.MessagePassing):
     """
 
     def __init__(self, aggr_type=None, config=None, device=None, bc_dpos=None):
-        super(Mesh_RPS, self).__init__(aggr=aggr_type)
+        super(Mesh, self).__init__(aggr=aggr_type)
 
         simulation_config = config.simulation
         model_config = config.graph_model
@@ -36,16 +36,6 @@ class Mesh_RPS(pyg.nn.MessagePassing):
         self.device = device
         self.model = model_config.mesh_model_name
         self.max_radius = simulation_config.max_radius
-
-        self.input_size = model_config.input_size
-        self.output_size = model_config.output_size
-        self.hidden_size = model_config.hidden_dim
-        self.nlayers = model_config.n_layers
-
-        self.input_size_update = model_config.input_size_update
-        self.hidden_dim_update = model_config.hidden_dim_update
-        self.output_size_update = model_config.output_size_update
-        self.n_layers_update = model_config.n_layers_update
 
         self.embedding_dim = model_config.embedding_dim
         self.nparticles = simulation_config.n_particles
@@ -56,12 +46,11 @@ class Mesh_RPS(pyg.nn.MessagePassing):
         self.field_type = model_config.field_type
 
 
+        if (self.model == 'RD_Mesh2') | (self.model == 'RD_Mesh3'):
+            self.lin_edge = MLP(input_size=model_config.input_size, output_size=model_config.output_size, nlayers=model_config.n_layers,
+                                hidden_size=model_config.hidden_dim, device=self.device)
 
-        if (self.model == 'RD_RPS_Mesh2') | (self.model == 'RD_RPS_Mesh3'):
-            self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
-                                hidden_size=self.hidden_size, device=self.device)
-
-        if (self.model == 'RD_RPS_Mesh3'):
+        if (self.model == 'RD_Mesh3'):
             self.siren = Siren_Network(image_width=100, in_features=model_config.input_size_nnr,
                                         out_features=model_config.output_size_nnr,
                                         hidden_features=model_config.hidden_dim_nnr,
@@ -69,8 +58,8 @@ class Mesh_RPS(pyg.nn.MessagePassing):
                                         first_omega_0=model_config.omega,
                                         hidden_omega_0=model_config.omega)
 
-        self.lin_phi = MLP(input_size=self.input_size_update, output_size=self.output_size_update, nlayers=self.nlayers,
-                       hidden_size=self.hidden_dim_update, device=self.device)
+        self.lin_phi = MLP(input_size=model_config.input_size_update, output_size=model_config.output_size_update, nlayers=model_config.n_layers,
+                       hidden_size=model_config.hidden_dim_update, device=self.device)
 
 
         self.a = nn.Parameter(
@@ -104,7 +93,7 @@ class Mesh_RPS(pyg.nn.MessagePassing):
             self.rotation_matrix = self.rotation_matrix.permute(*torch.arange(self.rotation_matrix.ndim - 1, -1, -1))
 
         match self.model:
-            case 'RD_RPS_Mesh':
+            case 'RD_Mesh':
                 self.step = 0
                 laplacian_uvw = self.propagate(edge_index, uvw=uvw, pos=pos, embedding=embedding, discrete_laplacian=edge_attr)
                 self.laplacian_uvw = laplacian_uvw
@@ -112,7 +101,7 @@ class Mesh_RPS(pyg.nn.MessagePassing):
                 if self.time_window_noise > 0:
                     noise = torch.randn_like(input_phi[:, 0:6]) * self.time_window_noise
                     input_phi[:, 0:6] = input_phi[:, 0:6] + noise
-            case 'RD_RPS_Mesh2':
+            case 'RD_Mesh2':
                 self.step = 0
                 laplacian_uvw = self.propagate(edge_index, uvw=uvw, pos=pos, embedding=embedding, discrete_laplacian=edge_attr)
                 self.laplacian_uvw = laplacian_uvw
@@ -122,10 +111,10 @@ class Mesh_RPS(pyg.nn.MessagePassing):
                 if self.time_window_noise > 0:
                     noise = torch.randn_like(input_phi[:,0:9]) * self.time_window_noise
                     input_phi[:,0:9] = input_phi[:,0:9] + noise
-            case 'RD_RPS_Mesh3':
+            case 'RD_Mesh3':
                 self.step = 2
                 uvw_msg = self.propagate(edge_index, uvw=uvw, pos=pos, embedding=embedding, discrete_laplacian=edge_attr)
-                input_phi = torch.cat((laplacian_uvw, uvw, uvw_msg, embedding), dim=-1)
+                input_phi = torch.cat((uvw, uvw_msg, embedding), dim=-1)
                 if self.time_window_noise > 0:
                     noise = torch.randn_like(input_phi[:, 0:9]) * self.time_window_noise
                     input_phi[:, 0:9] = input_phi[:, 0:9] + noise
@@ -154,7 +143,6 @@ class Mesh_RPS(pyg.nn.MessagePassing):
         elif self.step == 2:
             delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
             self.kernel = self.siren(delta_pos)
-            print('kernel shape', self.kernel.shape)
             in_features = torch.cat((uvw_j, self.kernel, embedding_i), dim=-1)
             return self.lin_edge(in_features)
 

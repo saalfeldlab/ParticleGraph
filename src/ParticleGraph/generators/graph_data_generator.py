@@ -761,7 +761,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
 
                     fig = plt.figure(figsize=(10, 10))
 
-                    if model_config.mesh_model_name == 'RD_RPS_Mesh':
+                    if model_config.mesh_model_name == 'RD_Mesh':
                         H1_IM = torch.reshape(x_mesh[:, 6:9], (100, 100, 3))
                         plt.imshow(to_numpy(H1_IM), vmin=0, vmax=1)
                     elif (model_config.mesh_model_name == 'Wave_Mesh') | (model_config.mesh_model_name =='DiffMesh') :
@@ -2489,7 +2489,7 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
                     H1_mesh[mask_mesh, 0:1] += H1_mesh[mask_mesh, 1:2] * delta_t
                     # x_ = to_numpy(x_mesh)
                     # plt.scatter(x_[:, 1], x_[:, 2], c=to_numpy(H1_mesh[:, 0]))
-                case 'RD_Gray_Scott_Mesh' | 'RD_FitzHugh_Nagumo_Mesh' | 'RD_RPS_Mesh' | 'RD_RPS_Mesh_bis':
+                case 'RD_Gray_Scott_Mesh' | 'RD_FitzHugh_Nagumo_Mesh' | 'RD_Mesh' | 'RD_Mesh_bis':
                     with torch.no_grad():
                         pred = mesh_model(dataset_mesh)
                         H1_mesh[mesh_data['mask'].squeeze(), :] += pred[mesh_data['mask'].squeeze(), :] * delta_t
@@ -2513,7 +2513,7 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
 
                     fig = plt.figure(figsize=(12, 12))
                     match model_config.mesh_model_name:
-                        case 'RD_RPS_Mesh':
+                        case 'RD_Mesh':
                             H1_IM = torch.reshape(x_mesh[:, 6:9], (100, 100, 3))
                             plt.imshow(to_numpy(H1_IM), vmin=0, vmax=1)
                         case 'Wave_Mesh' | 'DiffMesh':
@@ -2578,7 +2578,7 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
                             plt.xticks([])
                             plt.yticks([])
                             plt.axis('off')
-                        case 'RD_RPS_Mesh' | 'RD_RPS_Mesh_bis':
+                        case 'RD_Mesh' | 'RD_Mesh_bis':
                             H1_IM = torch.reshape(H1, (100, 100, 3))
                             plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=1)
                             fmt = lambda x, pos: '{:.1f}'.format((x)/100, pos)

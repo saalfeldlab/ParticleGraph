@@ -8049,7 +8049,7 @@ def data_plot(config, config_file, epoch_list, style, device):
     match config.graph_model.mesh_model_name:
         case 'WaveMesh':
             plot_wave(config=config, epoch_list=epoch_list, log_dir=log_dir, logger=logger, cc='viridis', style=style, device=device)
-        case 'RD_RPS_Mesh':
+        case 'RD_Mesh':
             plot_RD_RPS(config=config, epoch_list=epoch_list, log_dir=log_dir, logger=logger, cc='viridis',  style=style, device=device)
 
     if ('PDE_N' in config.graph_model.signal_model_name):

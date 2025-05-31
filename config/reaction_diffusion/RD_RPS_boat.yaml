@@ -18,7 +18,7 @@ simulation:
 
 graph_model:
   particle_model_name: ''
-  mesh_model_name: 'RD_RPS_Mesh'
+  mesh_model_name: 'RD_Mesh'
   prediction: 'first_derivative'
   input_size: 8
   output_size: 3

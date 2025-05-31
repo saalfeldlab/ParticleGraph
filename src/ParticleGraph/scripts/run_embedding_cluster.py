@@ -9,7 +9,7 @@ if __name__ == '__main__':
     # model_config = {'ninteractions': 3, 'nparticles': 4800, 'nparticle_types': 3, 'cmap': 'tab10', 'model':'PDE_A'}
     # model_config = {'ninteractions': 16, 'nparticles': 960, 'nparticle_types': 16, 'cmap': 'tab20', 'model':'GravityParticles'}
     model_config = {'ninteractions': 5, 'nparticles': 10000, 'nparticle_types': 5, 'cmap': 'tab20',
-                    'model': 'RD_RPS_Mesh'}
+                    'model': 'RD_Mesh'}
 
     # cmap = cc(model_config=model_config)
 

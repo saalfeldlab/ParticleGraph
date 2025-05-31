@@ -159,7 +159,7 @@ def choose_mesh_model(config, X1_mesh, device):
                 mesh_model = RD_Gray_Scott(aggr_type=aggr_type, c=torch.squeeze(c), bc_dpos=bc_dpos)
             case 'RD_FitzHugh_Nagumo_Mesh':
                 mesh_model = RD_FitzHugh_Nagumo(aggr_type=aggr_type, c=torch.squeeze(c), bc_dpos=bc_dpos)
-            case 'RD_RPS_Mesh':
+            case 'RD_Mesh':
                 mesh_model = RD_RPS(aggr_type=aggr_type, bc_dpos=bc_dpos, coeff=values)
             case 'DiffMesh' | 'WaveMesh':
                 mesh_model = PDE_Laplacian(aggr_type=aggr_type, bc_dpos=bc_dpos, coeff=values)
@@ -376,7 +376,7 @@ def init_mesh(config, device):
             node_value[:, 1] = 0.25 * torch.tensor(values / 255, device=device)
         case 'RD_FitzHugh_Nagumo_Mesh':
             node_value = torch.zeros((n_nodes, 2), device=device) + torch.rand((n_nodes, 2), device=device) * 0.1
-        case 'RD_RPS_Mesh' | 'RD_RPS_Mesh2' | 'RD_RPS_Mesh3' :
+        case 'RD_Mesh' | 'RD_Mesh2' | 'RD_Mesh3' :
             node_value = torch.rand((n_nodes, 3), device=device)
             s = torch.sum(node_value, dim=1)
             for k in range(3):
