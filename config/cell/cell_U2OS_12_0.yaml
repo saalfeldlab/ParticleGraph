@@ -57,7 +57,7 @@ training:
   batch_size: 8
   small_init_batch_size: True
 
-  data_augmentation_loop: 5000
+  data_augmentation_loop: 2000
 
   sparsity: 'none'
   cluster_method: 'distance_plot'
