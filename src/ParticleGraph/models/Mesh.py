@@ -141,17 +141,14 @@ class Mesh(pyg.nn.MessagePassing):
             in_features = torch.cat((uvw_j, delta_pos, r[:,None], embedding_i), dim=-1)
             return self.lin_edge(in_features)
         elif self.step == 2:
-            delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
+            delta_pos = self.bc_dpos(pos_j - pos_i)
             self.kernel = self.siren(delta_pos)
             in_features = torch.cat((uvw_j, self.kernel, embedding_i), dim=-1)
             return self.lin_edge(in_features)
 
 
-
-
-
-            # fig = plt.figure(figsize=(10, 10))
-            # plt.scatter(to_numpy(delta_pos[:, 0]), to_numpy(delta_pos[:, 1]), s=1, c=to_numpy(discrete_laplacian[:,None]), alpha=0.5)
+            fig = plt.figure(figsize=(10, 10))
+            plt.scatter(to_numpy(delta_pos[:, 0]), to_numpy(delta_pos[:, 1]), s=1, c=to_numpy(discrete_laplacian[:,None]), alpha=0.5)
             # fig = plt.figure(figsize=(10, 10))
             # plt.scatter(to_numpy(delta_pos[:, 0]), to_numpy(delta_pos[:, 1]), s=1, c='k', alpha=0.5)
 

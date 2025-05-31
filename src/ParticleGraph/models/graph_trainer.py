@@ -3773,13 +3773,18 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         edge_index_mesh = mesh_data['edge_index']
         edge_weight_mesh = mesh_data['edge_weight']
 
-        xy = to_numpy(mesh_data['mesh_pos'])
-        x_ = xy[:, 0]
-        y_ = xy[:, 1]
-        mask = to_numpy(mask_mesh)
-        mask_mesh = (x_ > np.min(x_) + 0.02) & (x_ < np.max(x_) - 0.02) & (y_ > np.min(y_) + 0.02) & (
-                    y_ < np.max(y_) - 0.02)
-        mask_mesh = torch.tensor(mask_mesh, dtype=torch.bool, device=device)
+        ids = to_numpy(torch.argwhere(mesh_data['mask'] == True)[:, 0].squeeze())
+        mask = torch.isin(edge_index_mesh[1, :], torch.tensor(ids, device=device))
+        edge_index_mesh = edge_index_mesh[:, mask]
+        edge_weight_mesh = edge_weight_mesh[mask]
+
+        # xy = to_numpy(mesh_data['mesh_pos'])
+        # x_ = xy[:, 0]
+        # y_ = xy[:, 1]
+        # mask = to_numpy(mask_mesh)
+        # mask_mesh = (x_ > np.min(x_) + 0.02) & (x_ < np.max(x_) - 0.02) & (y_ > np.min(y_) + 0.02) & (
+        #             y_ < np.max(y_) - 0.02)
+        # mask_mesh = torch.tensor(mask_mesh, dtype=torch.bool, device=device)
 
         node_gt_list = []
         node_pred_list = []
@@ -4009,7 +4014,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     x_inference_list = []
 
     for it in trange(start_it,
-                     start_it + 200):  # min(9600+start_it,stop_it-time_step)): #  start_it+200): # min(9600+start_it,stop_it-time_step)):
+                     start_it + min(9600+start_it,stop_it-time_step)): #  start_it+200): # min(9600+start_it,stop_it-time_step)):
 
         check_and_clear_memory(device=device, iteration_number=it, every_n_iterations=25,
                                memory_percentage_threshold=0.6)
