@@ -202,7 +202,7 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
         pos = torch.rand(n_particles, dimension, device=device)
         if simulation_config.pos_init == 'square':
             pos = pos * 0.5 + 0.25
-    elif (simulation_config.boundary == 'periodic'):
+    elif (simulation_config.boundary == 'periodic') | ('PDE_K' in config.graph_model.particle_model_name):
         pos = torch.rand(n_particles, dimension, device=device)
         if n_particles <= 10:
             if 'PDE_K' in config.graph_model.particle_model_name:
