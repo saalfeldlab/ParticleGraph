@@ -108,7 +108,7 @@ def data_train_particle(config, erase, best_model, device):
     field_type = model_config.field_type
     omega = model_config.omega
 
-    noise_level = train_config.noise_level
+    # noise_level = train_config.noise_level
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
 
@@ -357,8 +357,8 @@ def data_train_particle(config, erase, best_model, device):
                 elif time_step > 1:
                     y = torch.tensor(x_list[run][k + time_step, :, 1:dimension + 1], dtype=torch.float32,
                                      device=device).clone().detach()
-                if noise_level > 0:
-                    y = y * (1 + torch.randn_like(y) * noise_level)
+                # if noise_level > 0:
+                #     y = y * (1 + torch.randn_like(y) * noise_level)
                 # fig = plt.figure()
                 # plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=1, c='k')
                 # plt.scatter(to_numpy(y[:, 0]), to_numpy(y[:, 1]), s=1, c='r')
