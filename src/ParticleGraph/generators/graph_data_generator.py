@@ -176,6 +176,12 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
             model.connection_matrix = connection_matrix.detach().clone()
             connection_matrix_list.append(connection_matrix)
 
+            fig =plt.figure(figsize=(12, 12))
+            plt.imshow(to_numpy(connection_matrix), cmap='viridis', vmin=0, vmax=1)
+            plt.colorbar()
+            plt.savefig(f"graphs_data/{dataset_name}/connection_matrix_{run}.tif", dpi=80)
+            plt.close()
+
         n_particles = simulation_config.n_particles
 
         x_list = []
@@ -419,6 +425,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         num = f"{it:06}"
                         plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80) # 170.7)
                         plt.close()
+
 
         if bSave:
 

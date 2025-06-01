@@ -1,6 +1,4 @@
 import os
-
-import numpy as np
 import umap
 import torch
 import matplotlib.pyplot as plt
@@ -10,7 +8,6 @@ from torch_geometric.nn import MessagePassing
 import torch_geometric.utils as pyg_utils
 import imageio.v2 as imageio
 from matplotlib import rc
-
 from ParticleGraph.utils import set_size
 from scipy.ndimage import median_filter
 
@@ -35,6 +32,14 @@ import warnings
 import seaborn as sns
 import glob
 import shutil
+from skimage import measure, morphology, segmentation, filters
+from scipy import ndimage as ndi
+from skimage.feature import peak_local_max
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors
+import numpy as np
+
+
 
 # from pysr import PySRRegressor
 
@@ -4363,12 +4368,13 @@ def plot_particle_field(config, epoch_list, log_dir, logger, cc, style, device):
                     logger.info(f'R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}')
 
 
-def plot_RD_RPS(config, epoch_list, log_dir, logger, cc, style, device):
+def plot_RD_mesh(config, epoch_list, log_dir, logger, cc, style, device):
 
     dataset_name = config.dataset
 
     n_nodes = config.simulation.n_nodes
     n_nodes_per_axis = int(np.sqrt(n_nodes))
+
     n_node_types = config.simulation.n_node_types
     n_frames = config.simulation.n_frames
     n_runs = config.training.n_runs
@@ -4396,36 +4402,42 @@ def plot_RD_RPS(config, epoch_list, log_dir, logger, cc, style, device):
     edge_index_mesh = mesh_data['edge_index']
     edge_weight_mesh = mesh_data['edge_weight']
 
+    ids = to_numpy(torch.argwhere(mesh_data['mask'] == True)[:, 0].squeeze())
+    mask = torch.isin(edge_index_mesh[1, :], torch.tensor(ids, device=device))
+    edge_index_mesh = edge_index_mesh[:, mask]
+    edge_weight_mesh = edge_weight_mesh[mask]
+
     x_mesh = x_mesh_list[1][0].clone().detach()
 
-    i0 = imread(f'graphs_data/{config.simulation.node_coeff_map}')
-    coeff = i0[(to_numpy(x_mesh[:, 2]) * 255).astype(int), (to_numpy(x_mesh[:, 1]) * 255).astype(int)]
-    coeff = np.reshape(coeff, (n_nodes_per_axis, n_nodes_per_axis))
-    vm = np.max(coeff)
-    print(f'vm: {vm}')
+    if config.simulation.node_coeff_map != None:
+        i0 = imread(f'graphs_data/{config.simulation.node_coeff_map}')
+        coeff = i0[(to_numpy(x_mesh[:, 2]) * 255).astype(int), (to_numpy(x_mesh[:, 1]) * 255).astype(int)]
+        coeff = np.reshape(coeff, (n_nodes_per_axis, n_nodes_per_axis))
+        vm = np.max(coeff)
+        print(f'vm: {vm}')
 
-    fig, ax = fig_init()
-    fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
-    ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-    ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-    plt.imshow(np.flipud(coeff), vmin=0, vmax=vm, cmap='grey')
-    plt.xlabel(r'$x$', fontsize=68)
-    plt.ylabel(r'$y$', fontsize=68)
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/true_coeff.tif", dpi=300)
-    plt.close()
-    fig, ax = fig_init()
-    fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
-    ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-    ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-    plt.imshow(coeff, vmin=0, vmax=vm, cmap='grey')
-    plt.xlabel(r'$x$', fontsize=68)
-    plt.ylabel(r'$y$', fontsize=68)
-    cbar = plt.colorbar(shrink=0.5)
-    cbar.ax.tick_params(labelsize=32)
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/true_coeff_cbar.tif", dpi=300)
-    plt.close()
+        fig, ax = fig_init()
+        fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
+        ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+        ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+        plt.imshow(np.flipud(coeff), vmin=0, vmax=vm, cmap='grey')
+        plt.xlabel(r'$x$', fontsize=68)
+        plt.ylabel(r'$y$', fontsize=68)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/true_coeff.tif", dpi=300)
+        plt.close()
+        fig, ax = fig_init()
+        fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
+        ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+        ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+        plt.imshow(coeff, vmin=0, vmax=vm, cmap='grey')
+        plt.xlabel(r'$x$', fontsize=68)
+        plt.ylabel(r'$y$', fontsize=68)
+        cbar = plt.colorbar(shrink=0.5)
+        cbar.ax.tick_params(labelsize=32)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/true_coeff_cbar.tif", dpi=300)
+        plt.close()
 
     for epoch in epoch_list:
 
@@ -4436,6 +4448,77 @@ def plot_RD_RPS(config, epoch_list, log_dir, logger, cc, style, device):
         model.load_state_dict(state_dict['model_state_dict'])
         print(f'net: {net}')
         embedding = get_embedding(model.a, 1)
+
+        file_path = os.path.expanduser(config.data_folder_name)
+        im0 = tifffile.imread(file_path)
+        im0 = np.array(im0).astype('float32')
+
+        top_freqs, top_amps = get_top_fft_modes_per_pixel(im0, dt=1.0, top_n=1)
+        top_freqs = top_freqs[0,:,:,0]
+        im_freq = top_freqs * 1000
+        top_freqs = top_freqs.flatten()
+
+        # Assume 'binary_mask' is already computed from previous step
+        # Step 1: Distance transform
+
+        binary_mask = im_freq > 10
+        distance = ndi.distance_transform_edt(binary_mask)
+
+        # Step 2: Find local maxima for seed points
+        local_max_coords = peak_local_max(distance, labels=binary_mask, footprint=np.ones((3, 3)), min_distance=5)
+        local_max_mask = np.zeros_like(distance, dtype=bool)
+        local_max_mask[tuple(local_max_coords.T)] = True
+
+        # Step 3: Label seed points
+        markers, _ = ndi.label(local_max_mask)
+
+        # Step 4: Watershed segmentation
+        labels_ws = segmentation.watershed(-distance, markers, mask=binary_mask)
+
+        # Optional: Keep only large regions
+        final_labels = np.zeros_like(labels_ws)
+        props = measure.regionprops(labels_ws)
+        label_counter = 1
+        for p in props:
+            if p.area >= 100:  # tune area threshold
+                for coord in p.coords:
+                    final_labels[coord[0], coord[1]] = label_counter
+                label_counter += 1
+
+        im = np.reshape(to_numpy(x_mesh[:,6]),(128,128))
+
+        plt.figure(figsize=(20, 5))
+        plt.subplot(1, 4, 1)
+        plt.title("image")
+        plt.imshow(im, cmap='gray')
+        plt.subplot(1, 4, 2)
+        plt.title("frequency map")
+        plt.imshow(im_freq, cmap='gray', vmin=0, vmax=40)
+        plt.subplot(1, 4, 3)
+        plt.title("distance Transform")
+        plt.imshow(distance, cmap='magma')
+        plt.subplot(1, 4, 4)
+        plt.title("segmentation")
+        plt.imshow(final_labels, cmap='nipy_spectral')
+        plt.tight_layout()
+        plt.show()
+
+        final_labels = final_labels.flatten()
+        cmap = cm.get_cmap('nipy_spectral')
+        norm = mcolors.Normalize(vmin=1, vmax=final_labels.max())  # normalize from 1 to max label
+
+        fig, ax = fig_init()
+        for k in np.unique(final_labels):
+            if k > 0:
+                pos = np.argwhere(final_labels == k)
+                if len(pos) > 0:
+                    color = cmap(norm(k))  # Map label to color
+                    plt.scatter(embedding[pos, 0], embedding[pos, 1], s=10, color=color, label=f"Cluster {k}")
+        plt.legend(loc='best', markerscale=2)
+        plt.tight_layout()
+        plt.show()
+
+
 
         cluster_method = 'distance_embedding'
         cluster_distance_threshold = 0.01
@@ -8049,8 +8132,8 @@ def data_plot(config, config_file, epoch_list, style, device):
     match config.graph_model.mesh_model_name:
         case 'WaveMesh':
             plot_wave(config=config, epoch_list=epoch_list, log_dir=log_dir, logger=logger, cc='viridis', style=style, device=device)
-        case 'RD_Mesh':
-            plot_RD_RPS(config=config, epoch_list=epoch_list, log_dir=log_dir, logger=logger, cc='viridis',  style=style, device=device)
+        case 'RD_Mesh' | 'RD_Mesh2' | 'RD_Mesh3':
+            plot_RD_mesh(config=config, epoch_list=epoch_list, log_dir=log_dir, logger=logger, cc='viridis',  style=style, device=device)
 
     if ('PDE_N' in config.graph_model.signal_model_name):
         if ('PDE_N3' in config.graph_model.signal_model_name):
@@ -8416,9 +8499,10 @@ if __name__ == '__main__':
 
     # config_list = ['multimaterial_13_1', 'multimaterial_13_2']
     # config_list = ['falling_water_ramp_x6_13']
-    config_list = ['arbitrary_3_field_video_bison_test']
-    config_list = ['RD_RPS']
-    config_list = ['signal_CElegans_a_2']
+    # config_list = ['arbitrary_3_field_video_bison_test']
+    # config_list = ['RD_RPS']
+    config_list = ['cell_U2OS_12_0']
+    # config_list = ['signal_CElegans_a_2']
 
     # plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 

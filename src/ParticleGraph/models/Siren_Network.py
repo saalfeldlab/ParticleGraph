@@ -12,6 +12,10 @@ import matplotlib
 from matplotlib import pyplot as plt
 from tifffile import imread, imsave
 from tqdm import trange
+# from torch.utils.data import DataLoader, Dataset
+# from PIL import Image
+# import skimage
+# from torchvision.transforms import Resize, Compose, ToTensor, Normalize
 
 
 
@@ -171,21 +175,6 @@ class Siren_Network(nn.Module):
 
     def forward(self, coords=None, time=None, enlarge=False):
 
-        # if self.coords is None:
-        #     coords = self.get_mgrid(self.image_width, dim=2, enlarge=enlarge).to(self.device)
-        #     coords = torch.cat((coords, torch.ones_like(coords[:, 0:1])), 1)
-        #     self.coords = coords
-        # else:
-        #     coords = self.coords
-        #
-        # if time != None:
-        #    coords[:,2] = coords[:,2] * time
-        #
-        # print(time)
-        #
-        # coords = coords.clone().detach() #.requires_grad_(True) # allows to take derivative w.r.t. input
-
-
         if coords is None:
             coords = self.get_mgrid(self.image_width, dim=2, enlarge=enlarge).to(self.device)
             if time != None:
@@ -252,7 +241,6 @@ def get_cameraman_tensor(sidelength):
     return img
 
 
-
 if __name__ == '__main__':
 
 
@@ -272,18 +260,18 @@ if __name__ == '__main__':
     model_input, ground_truth = model_input.cuda(), ground_truth.cuda()
 
     for step in range(total_steps):
-        model_output, coords = img_siren(model_input)
+        model_output = img_siren(model_input)
         loss = ((model_output - ground_truth) ** 2).mean()
 
         if not step % steps_til_summary:
             print("Step %d, Total loss %0.6f" % (step, loss))
-            img_grad = gradient(model_output, coords)
-            img_laplacian = laplace(model_output, coords)
+            # img_grad = gradient(model_output, coords)
+            # img_laplacian = laplace(model_output, coords)
 
             fig, axes = plt.subplots(1, 3, figsize=(18, 6))
             axes[0].imshow(model_output.cpu().view(256, 256).detach().numpy())
-            axes[1].imshow(img_grad.norm(dim=-1).cpu().view(256, 256).detach().numpy())
-            axes[2].imshow(img_laplacian.cpu().view(256, 256).detach().numpy())
+            # axes[1].imshow(img_grad.norm(dim=-1).cpu().view(256, 256).detach().numpy())
+            # axes[2].imshow(img_laplacian.cpu().view(256, 256).detach().numpy())
             plt.show()
             plt.savefig(f"tmp/output_{step}.png")
             plt.close()

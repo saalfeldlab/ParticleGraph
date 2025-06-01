@@ -1,4 +1,4 @@
-description: 'cell_U2OS_2.yaml 128x128  test Siren'
+description: 'cell_U2OS_2.yaml 128x128  msg only small update'
 dataset: 'cell_U2OS_8'
 data_folder_name: '/groups/saalfeld/home/allierc/signaling/U2OS/U2OS_002_small_128.tif'
 
@@ -18,17 +18,17 @@ simulation:
 graph_model:
   field_grid: 'voronoi'
   particle_model_name: ''
-  mesh_model_name: 'RD_Mesh3'
+  mesh_model_name: 'RD_Mesh4'
   prediction: 'first_derivative'
 
-  input_size: 6
+  input_size: 5
   output_size: 3
   hidden_dim: 256
   n_layers: 5
 
   input_size_update: 8
   output_size_update: 3
-  hidden_dim_update: 256
+  hidden_dim_update: 128
   n_layers_update: 5
 
   input_size_nnr: 2

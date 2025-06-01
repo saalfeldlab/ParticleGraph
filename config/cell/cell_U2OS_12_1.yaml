@@ -1,4 +1,4 @@
-description: 'cell_U2OS_2.yaml 128x128  2 passes   test Siren'
+description: 'cell_U2OS_2.yaml 128x128  msg only'
 dataset: 'cell_U2OS_8'
 data_folder_name: '/groups/saalfeld/home/allierc/signaling/U2OS/U2OS_002_small_128.tif'
 
@@ -18,15 +18,15 @@ simulation:
 graph_model:
   field_grid: 'voronoi'
   particle_model_name: ''
-  mesh_model_name: 'RD_Mesh3'
+  mesh_model_name: 'RD_Mesh4'
   prediction: 'first_derivative'
 
-  input_size: 8
-  output_size: 9
+  input_size: 5
+  output_size: 3
   hidden_dim: 256
   n_layers: 5
 
-  input_size_update: 14
+  input_size_update: 8
   output_size_update: 3
   hidden_dim_update: 256
   n_layers_update: 5
@@ -34,7 +34,7 @@ graph_model:
   input_size_nnr: 2
   n_layers_nnr: 5
   hidden_dim_nnr: 128
-  output_size_nnr: 3
+  output_size_nnr: 1
   outermost_linear_nnr: True
   omega: 30.0
 
@@ -57,12 +57,13 @@ training:
   batch_size: 8
   small_init_batch_size: True
 
-  data_augmentation_loop: 5000
+  rotation_augmentation: False
+  data_augmentation_loop: 2000
 
   sparsity: 'none'
   cluster_method: 'distance_plot'
   fix_cluster_embedding: True
 
-  learning_rate_NNR: 1.0E-5
+  learning_rate_NNR: 1.0E-3
 
 

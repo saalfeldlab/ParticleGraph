@@ -46,17 +46,14 @@ class Mesh(pyg.nn.MessagePassing):
         self.field_type = model_config.field_type
 
 
-        if (self.model == 'RD_Mesh2') | (self.model == 'RD_Mesh3'):
+        if (self.model == 'RD_Mesh2') | (self.model == 'RD_Mesh3') | (self.model == 'RD_Mesh4'):
             self.lin_edge = MLP(input_size=model_config.input_size, output_size=model_config.output_size, nlayers=model_config.n_layers,
                                 hidden_size=model_config.hidden_dim, device=self.device)
 
         if (self.model == 'RD_Mesh3'):
-            self.siren = Siren_Network(image_width=100, in_features=model_config.input_size_nnr,
-                                        out_features=model_config.output_size_nnr,
-                                        hidden_features=model_config.hidden_dim_nnr,
-                                        hidden_layers=model_config.n_layers_nnr, outermost_linear=model_config.outermost_linear_nnr, device=self.device,
-                                        first_omega_0=model_config.omega,
-                                        hidden_omega_0=model_config.omega)
+            self.siren = Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
+                      hidden_layers=model_config.n_layers_nnr, outermost_linear=True,first_omega_0=model_config.omega,hidden_omega_0=model_config.omega)
+            self.siren = self.siren.to(self.device)
 
         self.lin_phi = MLP(input_size=model_config.input_size_update, output_size=model_config.output_size_update, nlayers=model_config.n_layers,
                        hidden_size=model_config.hidden_dim_update, device=self.device)
@@ -118,6 +115,13 @@ class Mesh(pyg.nn.MessagePassing):
                 if self.time_window_noise > 0:
                     noise = torch.randn_like(input_phi[:, 0:9]) * self.time_window_noise
                     input_phi[:, 0:9] = input_phi[:, 0:9] + noise
+            case 'RD_Mesh4':
+                self.step = 3
+                uvw_msg = self.propagate(edge_index, uvw=uvw, pos=pos, embedding=embedding, discrete_laplacian=edge_attr)
+                input_phi = torch.cat((uvw, uvw_msg, embedding), dim=-1)
+                if self.time_window_noise > 0:
+                    noise = torch.randn_like(input_phi[:, 0:9]) * self.time_window_noise
+                    input_phi[:, 0:9] = input_phi[:, 0:9] + noise
 
         if (self.has_field) & ('additive' in self.field_type):
             input_phi = torch.cat((input_phi, field), dim=-1)
@@ -142,8 +146,16 @@ class Mesh(pyg.nn.MessagePassing):
             return self.lin_edge(in_features)
         elif self.step == 2:
             delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
+            if self.rotation_augmentation & (self.training == True):
+                delta_pos[:, :2] = delta_pos[:, :2] @ self.rotation_matrix
             self.kernel = self.siren(delta_pos)
             in_features = torch.cat((uvw_j, self.kernel, embedding_i), dim=-1)
+            return self.lin_edge(in_features)
+        elif self.step == 3:
+            delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
+            if self.rotation_augmentation & (self.training == True):
+                delta_pos[:, :2] = delta_pos[:, :2] @ self.rotation_matrix
+            in_features = torch.cat((uvw_j, embedding_i), dim=-1)
             return self.lin_edge(in_features)
 
 

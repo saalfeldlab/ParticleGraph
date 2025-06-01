@@ -803,7 +803,8 @@ def plot_training(config, pred, gt, log_dir, epoch, N, x, index_particles, n_par
                     embedding_ = model.a[n, :] * torch.ones((200, model_config.embedding_dim), device=device)
                 else:
                     embedding_ = model.a[1, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
-                in_features = get_in_features(rr, embedding_, config.graph_model.particle_model_name, max_radius)
+                in_features = get_in_features(rr=rr, embedding=embedding_, model=model, model_name=config.graph_model.particle_model_name,
+                                              max_radius=simulation_config.max_radius)
                 with torch.no_grad():
                     func = model.lin_edge(in_features.float())
                 func = func[:, 0]
@@ -904,7 +905,7 @@ def plot_training_mesh(config, pred, has_field, field, gt, log_dir, epoch, N, x,
 
     match model_config.mesh_model_name:
 
-        case 'RD_Mesh' | 'RD_Mesh2' | 'RD_Mesh3':
+        case 'RD_Mesh' | 'RD_Mesh2' | 'RD_Mesh3' | 'RD_Mesh4':
 
             fig = plt.figure(figsize=(8, 8))
             embedding = get_embedding(model.a, 1)
@@ -1522,7 +1523,7 @@ def choose_training_model(model_config=None, device=None, projections=None):
             model = Interaction_Particle(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             model.edges = []
             if 'PDE_K' in model_name:
-                model.connection_matrix = torch.load(f'graphs_data/graphs_{dataset_name}/connection_matrix_list.pt', map_location=device)
+                model.connection_matrix = torch.load(f'./graphs_data/{dataset_name}/connection_matrix_list.pt', map_location=device)
         case 'PDE_GS':
             model = Interaction_Planet(aggr_type=aggr_type, config=model_config, device=device)
             t = np.arange(model_config.simulation.n_particles)
@@ -1566,7 +1567,7 @@ def choose_training_model(model_config=None, device=None, projections=None):
         case 'WaveMeshSmooth':
             model = Mesh_Smooth(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
-        case 'RD_Mesh' | 'RD_Mesh2' | 'RD_Mesh3':
+        case 'RD_Mesh' | 'RD_Mesh2' | 'RD_Mesh3' | 'RD_Mesh4':
             model = Mesh(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
 

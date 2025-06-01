@@ -859,4 +859,9 @@ def total_variation_norm(im):
     return tv_x + tv_y
 
 
+def check_file_exists(dataset_name):
+    file_path = f'graphs_data/graphs_{dataset_name}/connection_matrix_list.pt'
+    return os.path.isfile(file_path)
+
+
 

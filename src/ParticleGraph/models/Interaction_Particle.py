@@ -200,10 +200,8 @@ class Interaction_Particle(pyg.nn.MessagePassing):
             A.T[i, j] = self.vals[self.data_id[0]]**2
             A[i,i] = 0
             out = A[edge_index_i, edge_index_j].repeat(2, 1).t() * self.lin_edge(in_features)
-
-
-        out = self.lin_edge(in_features)
-
+        else:
+            out = self.lin_edge(in_features)
 
         if self.training==False:
             pos = torch.argwhere(edge_index_i == self.particle_of_interest)

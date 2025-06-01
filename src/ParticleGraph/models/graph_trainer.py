@@ -1624,9 +1624,14 @@ def data_train_mesh(config, erase, best_model, device):
                                    n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
 
                 if model_config.mesh_model_name == 'RD_Mesh3':
-                    kernel = model.siren((model.siren.get_mgrid(100, dim=2).to(device)-0.5) * 2).reshape((100, 100, 1))
+
+                    x_ = torch.linspace(-1, 1, 100)
+                    y_ = torch.linspace(-1, 1, 100)
+                    xx, yy = torch.meshgrid(x_, y_, indexing='ij')
+                    grid = torch.stack([xx, yy], dim=-1).to(device=device).float()
+                    kernel = model.siren(grid)
                     fig = plt.figure(figsize=(5, 5))
-                    plt.imshow(to_numpy(kernel[:, :, 0]), cmap='jet', vmin=0, vmax=1)
+                    plt.imshow(to_numpy(kernel[:, :, 0]), cmap='viridis')
                     plt.savefig(f"./{log_dir}/tmp_training/field/kernel_{epoch}_{N}.tif", dpi=87)
                     plt.close()
 
@@ -1681,7 +1686,7 @@ def data_train_mesh(config, erase, best_model, device):
                 u = torch.tensor(np.linspace(0, 1, 100)).to(device)
                 u = u[:, None]
                 r = u
-                if ('RD_Mesh2' in model_config.mesh_model_name) |  ('RD_Mesh3' in model_config.mesh_model_name):
+                if ('RD_Mesh2' in model_config.mesh_model_name):
                     if has_field:
                         in_features = torch.cat((u, u, u, u, u, u, u, u, u, embedding_, u * 0), dim=1)
                     else:
