@@ -132,6 +132,7 @@ class SirenCollection(nn.Module):
         # outputs = self.common(outputs)
         return outputs
 
+
 class MLP(nn.Module):
 
     def __init__(self, input_size=None, output_size=None, nlayers=None, hidden_size=None, device=None, activation=None, initialisation=None):
@@ -295,7 +296,6 @@ if __name__ == '__main__':
 
                 plt.plot(to_numpy(t.squeeze()), to_numpy(pred.squeeze()), linewidth=1)
                 plt.tight_layout()
-
 
                 fig = plt.figure()
                 plt.plot(to_numpy(t.squeeze()), to_numpy(y_list[k].squeeze()), linewidth=1)
