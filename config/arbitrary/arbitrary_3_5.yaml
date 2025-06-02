@@ -1,4 +1,4 @@
-description: 'attraction-repulsion with 3 types particles   with rotation augmentation'
+description: 'attraction-repulsion with 3 types particles   batchsize 1'
 dataset: 'arbitrary_3'
 
 simulation:
@@ -34,11 +34,10 @@ plotting:
 training:
   n_epochs: 2
   device: 'auto'
-  device: 'auto'
 
   recursive_loop: 1
 
-  batch_size: 8
+  batch_size: 1
   small_init_batch_size: False
   n_runs: 2
   sparsity: 'replace_embedding_function'

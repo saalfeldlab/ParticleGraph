@@ -53,7 +53,6 @@ def sparsify_cluster(cluster_method, proj_interaction, embedding, cluster_distan
     proj_interaction = (proj_interaction - np.min(proj_interaction)) / (np.max(proj_interaction) - np.min(proj_interaction)+1e-10)
     embedding = (embedding - np.min(embedding)) / (np.max(embedding) - np.min(embedding)+1e-10)
 
-    start_time = time.time()
     match cluster_method:
         case 'kmeans_auto_plot':
             labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
@@ -97,9 +96,6 @@ def sparsify_cluster(cluster_method, proj_interaction, embedding, cluster_distan
     for n in range(n_particle_types):
         if n < len(label_list):
             new_labels[labels == label_list[n]] = n
-
-    computation_time = time.time() - start_time
-    print(f"clustering computation time is {computation_time:0.2f} seconds.")
 
     fig,ax = fig_init()
     ax.scatter(proj_interaction[:, 0], proj_interaction[:, 1], c=new_labels, s=5, cmap='tab20')

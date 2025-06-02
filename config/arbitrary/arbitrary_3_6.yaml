@@ -1,5 +1,5 @@
-description: 'attraction-repulsion with 3 types particles   with 100 datasets'
-dataset: 'arbitrary_3_6'
+description: 'attraction-repulsion with 3 types particles recursive loop 2'
+dataset: 'arbitrary_3'
 
 simulation:
   params: [[1.6233, 1.0413, 1.6012, 1.5615], [1.7667, 1.8308, 1.0855, 1.9055],  [1.7226, 1.7850, 1.0584, 1.8579]]
@@ -32,17 +32,18 @@ plotting:
   ylim: [-0.04, 0.03]
 
 training:
-
+  n_epochs: 20
+  n_runs: 2
   device: 'auto'
-  n_runs: 101
-  n_epochs: 2
+
+  recursive_loop: 2
+
   batch_size: 8
   small_init_batch_size: False
-  shared_embedding: True
 
   sparsity: 'replace_embedding_function'
   cluster_method: 'distance_plot'
-  rotation_augmentation: False
+  rotation_augmentation: True
   data_augmentation_loop: 100
   fix_cluster_embedding: True
 

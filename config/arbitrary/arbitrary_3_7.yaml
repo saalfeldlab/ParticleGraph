@@ -1,4 +1,4 @@
-description: 'attraction-repulsion with 3 types particles recursive loop = 1'
+description: 'attraction-repulsion with 3 types particles  time_step 2'
 dataset: 'arbitrary_3'
 
 simulation:
@@ -32,16 +32,16 @@ plotting:
   ylim: [-0.04, 0.03]
 
 training:
-  n_epochs: 20
+  n_epochs: 5
   n_runs: 2
   device: 'auto'
 
-  recursive_loop: 2
+  time_step: 2
 
   batch_size: 8
   small_init_batch_size: False
 
-  sparsity: 'replace_embedding_function'
+  sparsity: 'none'
   cluster_method: 'distance_plot'
   rotation_augmentation: True
   data_augmentation_loop: 100

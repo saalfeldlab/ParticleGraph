@@ -1460,7 +1460,7 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
             func = model_MLP(in_features.float())[:, 0]
 
         func_list.append(func)
-        if ((n % 5 == 0) | (config.graph_model.particle_model_name=='PDE_GS') | ('PDE_N' in config_model)) & vizualize:
+        if ((n % (n_particles//200) == 0) | (config.graph_model.particle_model_name=='PDE_GS') | ('PDE_N' in config_model)) & vizualize:
             plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),2, color=cmap.color(type_list[n].astype(int)), linewidth=1, alpha=0.25)
 
     func_list = torch.stack(func_list)
@@ -1476,8 +1476,10 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
             plt.xlim([0, 0.05])
         if 'PDE_N' in config.graph_model.particle_model_name:
             plt.xlim(config.plotting.xlim)
-        ylim = [np.min(func_list_)/1.05, np.max(func_list_)*1.05]
-        plt.ylim(ylim)
+
+
+        # ylim = [np.min(func_list_)/1.05, np.max(func_list_)*1.05]
+        plt.ylim(config.plotting.ylim)
 
     print('UMAP reduction ...')
     with warnings.catch_warnings():
@@ -1490,7 +1492,6 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
         else:
             trans = umap.UMAP(n_neighbors=50, n_components=2, transform_queue_size=0).fit(func_list_)
             proj_interaction = trans.transform(func_list_)
-    print('done ...')
 
     return func_list, proj_interaction
 

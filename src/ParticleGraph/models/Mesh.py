@@ -149,8 +149,9 @@ class Mesh(pyg.nn.MessagePassing):
             if self.rotation_augmentation & (self.training == True):
                 delta_pos[:, :2] = delta_pos[:, :2] @ self.rotation_matrix
             self.kernel = self.siren(delta_pos)
-            in_features = torch.cat((uvw_j, self.kernel, embedding_i), dim=-1)
-            return self.lin_edge(in_features)
+            in_features = torch.cat((uvw_j, embedding_i), dim=-1)
+            out = torch.cat((self.lin_edge(in_features), self.kernel*uvw_j), dim=-1)
+            return out
         elif self.step == 3:
             delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
             if self.rotation_augmentation & (self.training == True):
