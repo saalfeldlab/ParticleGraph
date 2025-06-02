@@ -448,18 +448,16 @@ def plot_training_signal_field(x, n_nodes, recursive_loop, kk, time_step, x_list
         prediction = model_f[0](t) ** 2
         prediction = prediction.squeeze()
         prediction = prediction.t()
-        plt.imshow(to_numpy(prediction), aspect='auto')
-        plt.xticks([])
-        plt.yticks([])
+        plt.imshow(to_numpy(prediction), aspect='auto', cmap='viridis')
         ax = fig.add_subplot(2, 2, 3)
         if n_frames > 1000:
             ids = np.arange(0, n_frames, 100).astype(int)
         else:
             ids = np.arange(0, n_frames, 1).astype(int)
 
-        plt.scatter(to_numpy(modulation[:, ids]), to_numpy(prediction[:modulation.shape[0], ids]), s=0.1, color='k', alpha=0.01)
-        x_data = to_numpy(modulation[:, ids]).flatten()
-        y_data = to_numpy(prediction[:modulation.shape[0], ids]).flatten()
+        plt.scatter(to_numpy(modulation[:, ids[:-1]]), to_numpy(prediction[:modulation.shape[0], :]), s=0.1, color='k', alpha=0.01)
+        x_data = to_numpy(modulation[:, ids[:-1]]).flatten()
+        y_data = to_numpy(prediction[:modulation.shape[0], :]).flatten()
         lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
         residuals = y_data - linear_model(x_data, *lin_fit)
         ss_res = np.sum(residuals ** 2)
@@ -1460,8 +1458,23 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
             func = model_MLP(in_features.float())[:, 0]
 
         func_list.append(func)
-        if ((n % (n_particles//200) == 0) | (config.graph_model.particle_model_name=='PDE_GS') | ('PDE_N' in config_model)) & vizualize:
-            plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),2, color=cmap.color(type_list[n].astype(int)), linewidth=1, alpha=0.25)
+
+        should_plot = vizualize and (
+                n_particles <= 200 or
+                (n % (n_particles // 200) == 0) or
+                (config.graph_model.particle_model_name == 'PDE_GS') or
+                ('PDE_N' in config_model)
+        )
+
+        if should_plot:
+            plt.plot(
+                to_numpy(rr),
+                to_numpy(func) * to_numpy(ynorm),
+                2,
+                color=cmap.color(type_list[n].astype(int)),
+                linewidth=1,
+                alpha=0.25
+            )
 
     func_list = torch.stack(func_list)
     func_list_ = to_numpy(func_list)

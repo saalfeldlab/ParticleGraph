@@ -5351,20 +5351,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
         # plt.savefig(f'./{log_dir}/results/kinograph.tif', dpi=300)
         # plt.close()
 
-        plt.figure(figsize=(15, 10))
-        n = np.random.randint(0, n_particles, 50)
-        for i in range(50):
-            plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=1)
-        plt.xlabel('time', fontsize=64)
-        plt.ylabel('$x_{i}$', fontsize=64)
-        plt.xlim([0,n_frames])
-        # plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
-        plt.xticks(fontsize=28)
-        plt.yticks(fontsize=28)
-        plt.title(r'$x_i$ samples',fontsize=48)
-        plt.tight_layout()
-        plt.savefig(f'./{log_dir}/results/activity.tif', dpi=300)
-        plt.close()
+
 
         if False: #os.path.exists(f"./{log_dir}/neuron_gt_list.pt"):
 
@@ -5469,6 +5456,28 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
         # plt.yticks([])
         plt.tight_layout()
         plt.savefig(f'./{log_dir}/results/true connectivity.tif', dpi=300)
+        plt.close()
+
+        plt.figure(figsize=(15, 10))
+        if False: # config.graph_model.signal_model_name == 'PDE_N8':
+            with open(f'graphs_data/{dataset_name}/larynx_neuron_list.json', 'r') as file:
+                larynx_neuron_list = json.load(file)
+            with open(f'graphs_data/{dataset_name}/activity_neuron_list.json', 'r') as file:
+                activity_neuron_list = json.load(file)
+            map_larynx_matrix, n = map_matrix(larynx_neuron_list, activity_neuron_list, adjacency)
+        else:
+            n = np.random.randint(0, n_particles, 50)
+        for i in range(len(n)):
+            plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=1)
+        plt.xlabel('time', fontsize=64)
+        plt.ylabel('$x_{i}$', fontsize=64)
+        plt.xlim([0,n_frames])
+        # plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
+        plt.xticks(fontsize=28)
+        plt.yticks(fontsize=28)
+        plt.title(r'$x_i$ samples',fontsize=48)
+        plt.tight_layout()
+        plt.savefig(f'./{log_dir}/results/activity.tif', dpi=300)
         plt.close()
 
         true_model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, device=device)
@@ -8501,8 +8510,8 @@ if __name__ == '__main__':
     # config_list = ['falling_water_ramp_x6_13']
     # config_list = ['arbitrary_3_field_video_bison_test']
     # config_list = ['RD_RPS']
-    config_list = ['cell_U2OS_12_0']
-    # config_list = ['signal_CElegans_a_2']
+    # config_list = ['cell_U2OS_12_0']
+    config_list = ['signal_CElegans_a2']
 
     # plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 

@@ -33,9 +33,9 @@ plotting:
 
 training:
 
-  device: 'cuda:1'
+  device: 'auto'
   n_runs: 2
-  n_epochs: 2
+  n_epochs: 10
 
   batch_size: 8
   small_init_batch_size: False

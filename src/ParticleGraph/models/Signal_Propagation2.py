@@ -139,6 +139,8 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             else:
                 in_features = torch.cat([u, embedding, msg, field], dim=1)
             pred = self.lin_phi(in_features)
+        elif 'test_field' in self.update_type:
+            pred = x[:, 8:9]
         else:
             field = x[:, 8:9]
             if 'excitation' in self.update_type:

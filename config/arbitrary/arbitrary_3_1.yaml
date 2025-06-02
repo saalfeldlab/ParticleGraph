@@ -41,7 +41,7 @@ training:
   rotation_augmentation: True
   data_augmentation_loop: 100
   fix_cluster_embedding: True
-  device: 'auto'
+  device: 'cuda:1'
 
 
 

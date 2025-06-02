@@ -1563,25 +1563,25 @@ def plot_worm_adjacency_matrix(weights, all_neuron_list, title, output_path):
 
     # Plot adjacency matrix
     ax = fig.add_subplot(121)
-    sns.heatmap(weights > 0, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
+    sns.heatmap(np.transpose(weights > 0), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
     ax.set_xticks(range(len(all_neuron_list)))
     ax.set_xticklabels(all_neuron_list, fontsize=6, rotation=90)
     ax.set_yticks(range(len(all_neuron_list)))
     ax.set_yticklabels(all_neuron_list, fontsize=6)
     plt.title(title, fontsize=18)
-    plt.xlabel('pre Neurons', fontsize=18)
-    plt.ylabel('post Neurons', fontsize=18)
+    plt.xlabel('postsynaptic', fontsize=18)
+    plt.ylabel('presynaptic', fontsize=18)
 
     # Plot weights
     ax = fig.add_subplot(122)
-    sns.heatmap(weights, center=0, square=True, cmap='bwr', vmin=0, vmax=30, cbar_kws={'fraction': 0.046})
+    sns.heatmap(np.transpose(weights), center=0, square=True, cmap='bwr', vmin=0, vmax=30, cbar_kws={'fraction': 0.046})
     ax.set_xticks(range(len(all_neuron_list)))
     ax.set_xticklabels(all_neuron_list, fontsize=6, rotation=90)
     ax.set_yticks(range(len(all_neuron_list)))
     ax.set_yticklabels(all_neuron_list, fontsize=6)
     plt.title('weights', fontsize=18)
-    plt.xlabel('pre Neurons', fontsize=18)
-    plt.ylabel('post Neurons', fontsize=18)
+    plt.xlabel('postsynaptic', fontsize=18)
+    plt.ylabel('presynaptic', fontsize=18)
 
     plt.tight_layout()
     plt.savefig(output_path, dpi=170)
@@ -1659,7 +1659,7 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     Cook_matrix_chem = pd.read_excel(file_path, sheet_name=sheet_name, skiprows=3, nrows=382, usecols='D:NU', header=None)
     Cook_matrix_chem = np.array(Cook_matrix_chem)
     Cook_matrix_chem = np.nan_to_num(Cook_matrix_chem, nan=0.0)
-    Cook_matrix_chem = torch.tensor(Cook_matrix_chem, dtype=torch.float32, device=device)
+    Cook_matrix_chem = torch.tensor(Cook_matrix_chem, dtype=torch.float32, device=device).t()
 
     file_path = '/groups/saalfeld/home/allierc/signaling/Celegans/Cook_2019/SI_5_corrected_July_2020_bis.xlsx'
     sheet_name = 'male gap jn symmetric'
@@ -1668,7 +1668,7 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     Cook_matrix_elec = pd.read_excel(file_path, sheet_name=sheet_name, skiprows=3, nrows=586, usecols='D:VQ', header=None)
     Cook_matrix_elec = np.array(Cook_matrix_elec)
     Cook_matrix_elec = np.nan_to_num(Cook_matrix_elec, nan=0.0)
-    Cook_matrix_elec = torch.tensor(Cook_matrix_elec, dtype=torch.float32, device=device)
+    Cook_matrix_elec = torch.tensor(Cook_matrix_elec, dtype=torch.float32, device=device).t()
 
     # Comparison with data from https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.0020095
     data_Kaiser = scipy.io.loadmat('/groups/saalfeld/home/allierc/signaling/Celegans/Kaiser_2006/celegans277.mat')
@@ -1676,7 +1676,7 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     labels_raw = data_Kaiser['celegans277labels']
     Kaiser_neuron_names = [str(label[0]) for label in labels_raw.squeeze()]
     Kaiser_matrix = np.array(data_Kaiser['celegans277matrix'])
-    Kaiser_matrix = torch.tensor(Kaiser_matrix, dtype=torch.float32, device=device).t()
+    Kaiser_matrix = torch.tensor(Kaiser_matrix, dtype=torch.float32, device=device)
 
     # Comparison with data from https://github.com/openworm/VarshneyEtAl2011
     # Structural Properties of the <i>Caenorhabditis elegans</i> Neuronal Network
@@ -1686,7 +1686,7 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     electrical_connectome = mat_data['Ag_t_ordered']
     neuron_names_raw = mat_data['Neuron_ordered']
     Varshney_matrix = np.array((chemical_connectome+electrical_connectome).todense())
-    Varshney_matrix = torch.tensor(Varshney_matrix, dtype=torch.float32, device=device)
+    Varshney_matrix = torch.tensor(Varshney_matrix, dtype=torch.float32, device=device).t()
     Varshney_neuron_names = [str(cell[0][0]) for cell in neuron_names_raw]
 
     # Comparison with data from 'Connectomes across development reveal principles of brain maturation'
@@ -1696,11 +1696,11 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     Zhen_neuron_names = pd.read_excel(file_path, sheet_name=sheet_name, usecols='C', skiprows=4, nrows=224, header=None)
     Zhen_neuron_names = Zhen_neuron_names.squeeze()  # convert to Series for convenience
     Zhen_matrix = pd.read_excel(file_path, sheet_name=sheet_name, skiprows=4, nrows=224, usecols='D:GA', header=None)
-    Zhen_matrix = Zhen_matrix.T
+    # Zhen_matrix = Zhen_matrix.T
     Zhen_matrix_7 = torch.tensor(np.array(Zhen_matrix), dtype=torch.float32, device=device)
     sheet_name = 'Dataset8'
     Zhen_matrix = pd.read_excel(file_path, sheet_name=sheet_name, skiprows=4, nrows=224, usecols='D:GA', header=None)
-    Zhen_matrix = Zhen_matrix.T
+    # Zhen_matrix = Zhen_matrix.T
     Zhen_matrix_8 = torch.tensor(np.array(Zhen_matrix), dtype=torch.float32, device=device)
     Zhen_matrix = Zhen_matrix_7 + Zhen_matrix_8  # combine both datasets
 
