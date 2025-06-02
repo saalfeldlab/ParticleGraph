@@ -1,4 +1,4 @@
-description: 'cell_U2OS_2.yaml 128x128  2 passes repeat 8_0'
+description: 'cell_U2OS_2.yaml 128x128  2 passes repeat 8_0 larger MLP'
 dataset: 'cell_U2OS_8'
 data_folder_name: '/groups/saalfeld/home/allierc/signaling/U2OS/U2OS_002_small_128.tif'
 
@@ -23,8 +23,8 @@ graph_model:
 
   input_size: 8
   output_size: 3
-  hidden_dim: 256
-  n_layers: 5
+  hidden_dim: 128
+  n_layers: 10
 
   input_size_update: 11
   output_size_update: 3

@@ -1,4 +1,4 @@
-description: 'attraction-repulsion with 3 types particles'
+description: 'attraction-repulsion with 3 types particles   CTRL'
 dataset: 'arbitrary_3'
 
 simulation:
@@ -34,7 +34,6 @@ plotting:
 training:
   n_epochs: 20
   batch_size: 8
-  particle_batch_ratio: 0.25
   small_init_batch_size: False
   n_runs: 2
   sparsity: 'replace_embedding_function'

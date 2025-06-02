@@ -1,4 +1,4 @@
-description: 'attraction-repulsion with 3 types particles'
+description: 'attraction-repulsion with 3 types particles     with particle_batch_ratio: 0.25'
 dataset: 'arbitrary_3'
 
 simulation:

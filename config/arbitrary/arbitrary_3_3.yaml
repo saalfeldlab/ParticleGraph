@@ -1,4 +1,4 @@
-description: 'attraction-repulsion with 3 types particles   no rotation augmentation'
+description: 'attraction-repulsion with 3 types particles     with particle_batch_ratio: 0.1'
 dataset: 'arbitrary_3'
 
 simulation:
@@ -32,13 +32,14 @@ plotting:
   ylim: [-0.04, 0.03]
 
 training:
-  n_epochs: 2
+  n_epochs: 20
   batch_size: 8
+  particle_batch_ratio: 0.1
   small_init_batch_size: False
   n_runs: 2
   sparsity: 'replace_embedding_function'
   cluster_method: 'distance_plot'
-  rotation_augmentation: False
+  rotation_augmentation: True
   data_augmentation_loop: 100
   fix_cluster_embedding: True
   device: 'auto'

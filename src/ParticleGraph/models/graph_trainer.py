@@ -255,6 +255,7 @@ def data_train_particle(config, erase, best_model, device):
     list_loss = []
     time.sleep(1)
 
+    # torch.autograd.set_detect_anomaly(True)
     for epoch in range(start_epoch, n_epochs + 1):
 
         logger.info(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
@@ -498,9 +499,9 @@ def data_train_particle(config, erase, best_model, device):
                     'optimizer_state_dict': optimizer.state_dict()},
                    os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
 
-        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles))
-        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles))
-        list_loss.append(total_loss / (N + 1) / n_particles)
+        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / n_particles))
+        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / n_particles))
+        list_loss.append(total_loss / n_particles)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
         scheduler.step()
@@ -512,7 +513,7 @@ def data_train_particle(config, erase, best_model, device):
                         'optimizer_state_dict': optimizer_ghost_particles.state_dict()},
                        os.path.join(log_dir, 'models', f'best_ghost_particles_with_{n_runs - 1}_graphs_{epoch}.pt'))
 
-        fig = plt.figure(figsize=(22, 4))
+        fig = plt.figure(figsize=(22, 6))
         ax = fig.add_subplot(1, 5, 1)
         plt.plot(list_loss, color='k')
 
@@ -1114,12 +1115,12 @@ def data_train_cell(config, erase, best_model, device):
                 check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 20,
                                        memory_percentage_threshold=0.6)
 
-        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
-        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
+        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss  / n_particles / batch_size))
+        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss  / n_particles / batch_size))
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()},
                    os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
-        list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
+        list_loss.append(total_loss  / n_particles / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
         # embedding = proj_interaction
@@ -1686,7 +1687,7 @@ def data_train_mesh(config, erase, best_model, device):
                 u = torch.tensor(np.linspace(0, 1, 100)).to(device)
                 u = u[:, None]
                 r = u
-                if ('RD_Mesh2' in model_config.mesh_model_name):
+                if ('RD_Mesh2' in model_config.mesh_model_name) | ('RD_Mesh3' in model_config.mesh_model_name):
                     if has_field:
                         in_features = torch.cat((u, u, u, u, u, u, u, u, u, embedding_, u * 0), dim=1)
                     else:
@@ -2197,8 +2198,8 @@ def data_train_particle_field(config, erase, best_model, device):
                                 'optimizer_state_dict': optimizer_f.state_dict()},
                                os.path.join(log_dir, 'models', f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
-        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles))
-        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles))
+        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / n_particles))
+        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss  / n_particles))
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()},
                    os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
@@ -2206,7 +2207,7 @@ def data_train_particle_field(config, erase, best_model, device):
             torch.save({'model_state_dict': model_f.state_dict(),
                         'optimizer_state_dict': optimizer_f.state_dict()},
                        os.path.join(log_dir, 'models', f'best_model_f_with_{n_runs - 1}_graphs_{epoch}.pt'))
-        list_loss.append(total_loss / (N + 1) / n_particles)
+        list_loss.append(total_loss / n_particles)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
         if has_ghost:
@@ -2930,8 +2931,8 @@ def data_train_synaptic2(config, erase, best_model, device):
 
             # check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 50, memory_percentage_threshold=0.6)
 
-        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles))
-        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles))
+        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / n_particles))
+        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / n_particles))
         logger.info(f'recursive_parameters: {recursive_parameters[0]:.2f}')
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()},
