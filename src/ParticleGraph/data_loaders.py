@@ -1641,7 +1641,7 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     # for k in trange(189):
     #     subset_chem_weights_test[k, :] = chem_weights[map_list[k],map_list]
 
-    adjacency = (subset_chem_weights + subset_eassym_weights).clone().detach().to(dtype=torch.float32, device=device)
+    adjacency = (subset_chem_weights + subset_eassym_weights).clone().detach().to(dtype=torch.float32, device=device).t()
     plot_worm_adjacency_matrix(to_numpy(adjacency), activity_neuron_list, 'partial adjacency matrix Turuga 2022', f"graphs_data/{dataset_name}/partial_Turuga_adjacency_matrix.png")
 
 
@@ -1758,7 +1758,7 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
 
     fig = plt.figure(figsize=(15, 15))
     ax = fig.add_subplot(111)
-    sns.heatmap(to_numpy(mask_matrix), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
+    sns.heatmap(to_numpy(mask_matrix.t()), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
     ax.set_xticks(range(len(activity_neuron_list)))
     ax.set_xticklabels(activity_neuron_list, fontsize=6, rotation=90)
     ax.set_yticks(range(len(activity_neuron_list)))
@@ -1779,14 +1779,14 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
 
     fig = plt.figure(figsize=(15, 15))
     ax = fig.add_subplot(111)
-    sns.heatmap(to_numpy(map_larynx_matrix), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
+    sns.heatmap(to_numpy(map_larynx_matrix.t()), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
     ax.set_xticks(range(len(larynx_neuron_list)))
     ax.set_xticklabels(larynx_neuron_list, fontsize=14, rotation=90)
     ax.set_yticks(range(len(larynx_neuron_list)))
     ax.set_yticklabels(larynx_neuron_list, fontsize=14)
     plt.title('larynx adjacency', fontsize=18)
-    plt.xlabel('pre Neurons', fontsize=18)
-    plt.ylabel('post Neurons', fontsize=18)
+    plt.xlabel('postsynaptic', fontsize=18)
+    plt.ylabel('presynaptic', fontsize=18)
     plt.tight_layout()
     plt.savefig(f"graphs_data/{dataset_name}/mask_larynx_adjacency_matrix.png", dpi=170)
     plt.close()
