@@ -1,5 +1,5 @@
 description: 'system of particles connected with spring possible coeffs 0 0.2 0.4 0.6 0.8   + noise_level 1E-3'
-dataset: 'springs_matrix_N100_2'
+dataset: 'springs_matrix_N100_3'
 
 simulation:
   params: [[0, 0.2, 0.4, 0.6, 0.8], [0.2, 0.2, 0.2, 0.2, 0.2]]
@@ -31,15 +31,13 @@ plotting:
   ylim: [-0.001, 0]
 
 training:
-  n_epochs: 20
+  n_epochs: 10
   n_runs: 2
   device: 'auto'
 
   batch_size: 1
   small_init_batch_size: False
   noise_level: 1E-3
-
-
 
   sparsity: 'none'
   cluster_method: 'distance_plot'

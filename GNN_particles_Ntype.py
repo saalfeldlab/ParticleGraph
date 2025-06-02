@@ -53,18 +53,18 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'generate_train'
+        task = 'train'
         best_model = ''
 
         # config_list = ['multimaterial_16_2']  #   ,'multimaterial_16_2', 'multimaterial_16_3', 'multimaterial_16_4']
         # config_list = ['fluids_m18_1']
         # config_list = ['signal_N5_v11_bis']
         # config_list = ['falling_water_ramp_x6_11_1']
-        # config_list = ['arbitrary_3']
+        config_list = ['arbitrary_3']
         # config_list = ['cell_cardio_2_4']
         # config_list = ['RD_RPS_5']
         # config_list = ['cell_U2OS_12_1']
-        config_list = ['springs_matrix_N5_3']
+        # config_list = ['springs_matrix_N5_3']
         # config_list = ['cell_MDCK_15']
         # config_list = ['signal_CElegans_a8']
 

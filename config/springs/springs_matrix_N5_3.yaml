@@ -7,7 +7,7 @@ simulation:
   max_radius: 1
   n_particles: 5
   n_particle_types: 3
-  n_frames: 2000
+  n_frames: 1000
   delta_t: 0.01
   dpos_init: 1.0E-5
   boundary: 'no'
@@ -35,7 +35,7 @@ training:
   n_runs: 2
   device: 'auto'
 
-  batch_size: 1
+  batch_size: 4
   small_init_batch_size: False
 
   sparsity: 'none'

@@ -31,14 +31,12 @@ plotting:
   ylim: [-0.001, 0]
 
 training:
-  n_epochs: 20
+  n_epochs: 10
   n_runs: 2
   device: 'auto'
 
   batch_size: 1
   small_init_batch_size: False
-
-
 
   sparsity: 'none'
   cluster_method: 'distance_plot'

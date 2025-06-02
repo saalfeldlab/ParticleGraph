@@ -1645,12 +1645,12 @@ def data_train_mesh(config, erase, best_model, device):
                                 'optimizer_state_dict': optimizer_f.state_dict()},
                                os.path.join(log_dir, 'models', f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
-        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_nodes))
-        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_nodes))
+        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss  / n_nodes))
+        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss  / n_nodes))
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()},
                    os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
-        list_loss.append(total_loss / (N + 1) / n_nodes)
+        list_loss.append(total_loss / n_nodes)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
         # matplotlib.use("Qt5Agg")
