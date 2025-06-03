@@ -1,5 +1,5 @@
 description: 'test modulation with permutation'
-dataset: 'signal_N4_m13'
+dataset: 'signal_N4_m12'
 
 simulation:
     connectivity_file: 'random'
