@@ -22,100 +22,43 @@ import torch.optim as optim
 
 
 
+# ----------------- SIREN Layer -----------------
 class SineLayer(nn.Module):
-    # See paper sec. 3.2, final paragraph, and supplement Sec. 1.5 for discussion of omega_0.
-
-    # If is_first=True, omega_0 is a frequency factor which simply multiplies the activations before the
-    # nonlinearity. Different signals may require different omega_0 in the first layer - this is a
-    # hyperparameter.
-
-    # If is_first=False, then the weights will be divided by omega_0 so as to keep the magnitude of
-    # activations constant, but boost gradients to the weight matrix (see supplement Sec. 1.5)
-
-    def __init__(self, in_features, out_features, bias=True,
-                 is_first=False, omega_0=30):
+    def __init__(self, in_features, out_features, is_first=False, omega_0=30):
         super().__init__()
         self.omega_0 = omega_0
         self.is_first = is_first
-
-        self.in_features = in_features
-        self.linear = nn.Linear(in_features, out_features, bias=bias)
-
+        self.linear = nn.Linear(in_features, out_features)
         self.init_weights()
 
     def init_weights(self):
         with torch.no_grad():
             if self.is_first:
-                self.linear.weight.uniform_(-1 / self.in_features,
-                                            1 / self.in_features)
+                self.linear.weight.uniform_(-1 / self.linear.in_features, 1 / self.linear.in_features)
             else:
-                self.linear.weight.uniform_(-np.sqrt(6 / self.in_features) / self.omega_0,
-                                            np.sqrt(6 / self.in_features) / self.omega_0)
+                self.linear.weight.uniform_(
+                    -np.sqrt(6 / self.linear.in_features) / self.omega_0,
+                    np.sqrt(6 / self.linear.in_features) / self.omega_0
+                )
 
-    def forward(self, input):
-        return torch.sin(self.omega_0 * self.linear(input))
+    def forward(self, x):
+        return torch.sin(self.omega_0 * self.linear(x))
 
 
+# ----------------- SIREN Network -----------------
 class Siren(nn.Module):
-    def __init__(self, in_features, hidden_features, hidden_layers, out_features, outermost_linear=False,
-                 first_omega_0=30, hidden_omega_0=30.):
-        super(Siren, self).__init__()
+    def __init__(self, in_features=1, hidden_features=128, hidden_layers=3, out_features=1,
+                 first_omega_0=30, hidden_omega_0=30):
+        super().__init__()
 
-        self.net = []
-        self.net.append(SineLayer(in_features, hidden_features,
-                                  is_first=True, omega_0=first_omega_0))
+        layers = [SineLayer(in_features, hidden_features, is_first=True, omega_0=first_omega_0)]
+        for _ in range(hidden_layers):
+            layers.append(SineLayer(hidden_features, hidden_features, is_first=False, omega_0=hidden_omega_0))
+        layers.append(nn.Linear(hidden_features, out_features))  # final linear layer
+        self.net = nn.Sequential(*layers)
 
-        for i in range(hidden_layers):
-            self.net.append(SineLayer(hidden_features, hidden_features,
-                                      is_first=False, omega_0=hidden_omega_0))
-
-        if outermost_linear:
-            final_linear = nn.Linear(hidden_features, out_features)
-
-            with torch.no_grad():
-                final_linear.weight.uniform_(-np.sqrt(6 / hidden_features) / hidden_omega_0,
-                                             np.sqrt(6 / hidden_features) / hidden_omega_0)
-
-            self.net.append(final_linear)
-        else:
-            self.net.append(SineLayer(hidden_features, out_features,
-                                      is_first=False, omega_0=hidden_omega_0))
-
-        self.net = nn.Sequential(*self.net)
-
-    def forward(self, coords):
-
-        output = self.net(coords)
-        return output
-
-    def forward_with_activations(self, coords, retain_grad=False):
-        '''Returns not only model output, but also intermediate activations.
-        Only used for visualizing activations later!'''
-        activations = OrderedDict()
-
-        activation_count = 0
-        x = coords.clone().detach().requires_grad_(True)
-        activations['input'] = x
-        for i, layer in enumerate(self.net):
-            if isinstance(layer, SineLayer):
-                x, intermed = layer.forward_with_intermediate(x)
-
-                if retain_grad:
-                    x.retain_grad()
-                    intermed.retain_grad()
-
-                activations['_'.join((str(layer.__class__), "%d" % activation_count))] = intermed
-                activation_count += 1
-            else:
-                x = layer(x)
-
-                if retain_grad:
-                    x.retain_grad()
-
-            activations['_'.join((str(layer.__class__), "%d" % activation_count))] = x
-            activation_count += 1
-
-        return activations
+    def forward(self, x):
+        return self.net(x)
 
 
 class MLP(nn.Module):
@@ -161,18 +104,13 @@ class model_duo(nn.Module):
 
         super(model_duo, self).__init__()
 
-        self.device = device
-        
-        self.mlp0 = MLP(input_size=3, output_size=1, nlayers=5, hidden_size=128, device=self.device)
-        self.mlp1 = MLP(input_size=2, output_size=1, nlayers=3, hidden_size=16, device=self.device)
-        self.siren = Siren(in_features=1, out_features=1, hidden_features=128, hidden_layers=3, outermost_linear=True, first_omega_0=80, hidden_omega_0=80.)
-        self.siren = self.siren.to(self.device)
+        self.siren = Siren(in_features=1, out_features=1, hidden_features=128, hidden_layers=3).to(device)
+        self.mlp0 = MLP(input_size=3, output_size=1, nlayers=5, hidden_size=128, device=device)
+        self.mlp1 = MLP(input_size=2, output_size=1, nlayers=5, hidden_size=128, device=device)
 
     def forward(self, x):
-        
+
         return self.siren(x)
-
-
 
 
 if __name__ == '__main__':
@@ -252,47 +190,101 @@ if __name__ == '__main__':
     w_true = torch.tensor(w, dtype=torch.float32, device=device)
     I_ext = torch.tensor(I_ext, dtype=torch.float32, device=device)
 
-    model = model_duo(device=device)
-    optimizer = optim.Adam(model.parameters(), lr=1E-3)
-    model.train()
+    n_steps = len(w_true)
+    t_full = torch.linspace(0, 1, n_steps, device=device).unsqueeze(1)  # shape (10000, 1)
+    w_true = torch.tensor(w_true, dtype=torch.float32, device=device)  # shape (10000,)
 
-    batch_size = 1000
-    t = torch.linspace(0, n_steps + 1, (n_steps + 1), dtype=torch.float32, device=device) / n_steps
-    t = t[None, 0:n_steps, None]
+    model = model_duo(device=device)    #Siren(in_features=1, out_features=1).to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=5e-5)
 
-    for epoch in trange(100000):
+    n_epochs = 200000
+    batch_size = 2000
 
-        time = np.random.randint(1, n_steps-1, batch_size).astype(int)
+    for epoch in trange(n_epochs):
+        idx = torch.randint(1, n_steps-1, (batch_size,))
+        t_batch = t_full[idx]  # (batch_size, 1)
+
+        # pred = model.siren(t_batch)
+        # loss = F.mse_loss(pred, w)
+
+        w_prev = model.siren(t_batch - 1/n_steps)  # w at time t+1
+        w = model.siren(t_batch)
+        w_next = model.siren(t_batch + 1/n_steps)  # w at time t-1
+
+        idx = to_numpy(idx)  # Convert to numpy for indexing
+
+        dv_pred = model.mlp0(torch.cat((v_true[idx,None], w, I_ext[idx,None]), dim=1))
+        dw_pred = model.mlp1(torch.cat((v_true[idx,None], w), dim=1))
+        #
+        y_dv = (v_true[idx+1,None]-v_true[idx-1,None]) / (2*dt)
+        y_dw = (w_next - w_prev) / (2*dt)
+
+        loss = 10 * F.mse_loss(dv_pred, y_dv) + F.mse_loss(dw_pred, y_dw)
 
         optimizer.zero_grad()
-
-        w = model.siren(t[:,time,:]/n_steps)[0]
-
-        loss = F.mse_loss(w, w_true[time,None])
-
-
-        # dv_pred = model.mlp0(torch.cat((v_true[time,None], w, I_ext[time,None]), dim=1))
-        # dw_pred = model.mlp1(torch.cat((v_true[time,None], w), dim=1))
-        #
-        # y_dv = (v_true[time+1,None]-v_true[time-1,None]) / (2*dt)
-        # y_dw = (model.siren(t[:,time+1,:]/n_steps)[0] - model.siren(t[:,time-1,:]/n_steps)[0]) / (2*dt)
-        #
-        # loss = F.mse_loss(dv_pred, y_dv) + F.mse_loss(dw_pred, y_dw)
-
         loss.backward()
         optimizer.step()
 
         if epoch % 10000 == 0:
-            print(f'Epoch {epoch}, Loss: {loss.item()}')
-            with torch.no_grad():
-                model.eval()
+            print(f"Epoch {epoch}, Loss: {loss.item():.6f}")
 
-                time = np.arange(0,n_steps).astype(int)
-                w = model.siren(t[:,time,:]/n_steps)[0]
-                fig = plt.figure(figsize=(12, 6))
-                plt.plot(to_numpy(w))
-                plt.plot(to_numpy(w_true), linestyle='--')
-                plt.show()
+
+
+    with torch.no_grad():
+        pred_full = model(t_full).squeeze().cpu().numpy()
+
+    plt.figure(figsize=(10, 4))
+    plt.plot(w_true.cpu().numpy(), label="Target")
+    plt.plot(pred_full, label="SIREN Output")
+    plt.title(f"Epoch {epoch}")
+    plt.legend()
+    plt.show()
+
+
+    # rollout
+
+    v = v_true[0:1].clone().detach()
+    w = v_true[0:1].clone().detach()
+    v_list = []
+    w_list = []
+
+    for step in trange(1, n_steps):
+
+        with torch.no_grad():
+
+            w = model.siren(t_full[step])
+
+            dv_pred = model.mlp0(torch.cat((v[:,None], w[:,None], I_ext[step:step+1,None]), dim=1))
+            dw_pred = model.mlp1(torch.cat((v[:,None], w[:,None]), dim=1))
+
+            v += dt * dv_pred.squeeze()
+            w += dt * dw_pred.squeeze()
+
+        v_list.append(v.clone().detach())
+        w_list.append(w.clone().detach())
+
+    v_list = torch.stack(v_list, dim=0)
+    w_list = torch.stack(w_list, dim=0)
+
+    fig = plt.figure(figsize=(12, 12))
+    plt.plot(time[1:], v_list.cpu().numpy(), label='v (membrane potential)')
+    plt.plot(time[1:], w_list.cpu().numpy(), label='w (recovery variable)', alpha=0.7)
+    plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
