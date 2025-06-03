@@ -445,13 +445,11 @@ def plot_training_signal_field(x, n_nodes, recursive_loop, kk, time_step, x_list
         plt.imshow(to_numpy(modulation), aspect='auto')
         ax = fig.add_subplot(2, 2, 2)
         if n_frames > 1000:
-            t = torch.zeros((1, n_frames//100, 1), dtype=torch.float32, device=device)
-            t[0] = torch.linspace(0, 1, n_frames//100, dtype=torch.float32, device=device)[:, None]
+            t = torch.linspace(0, 1, n_frames//100, dtype=torch.float32, device=device).unsqueeze(1)
         else:
-            t = torch.zeros((1, n_frames, 1), dtype=torch.float32, device=device)
-            t[0] = torch.linspace(0, 1, n_frames, dtype=torch.float32, device=device)[:, None]
+            t = torch.linspace(0, 1, n_frames, dtype=torch.float32, device=device).unsqueeze(1)
+
         prediction = model_f[0](t) ** 2
-        prediction = prediction.squeeze()
         prediction = prediction.t()
         plt.imshow(to_numpy(prediction), aspect='auto', cmap='viridis')
         ax = fig.add_subplot(2, 2, 3)

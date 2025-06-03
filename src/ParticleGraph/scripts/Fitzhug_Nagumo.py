@@ -45,8 +45,43 @@ class SineLayer(nn.Module):
         return torch.sin(self.omega_0 * self.linear(x))
 
 
-# ----------------- SIREN Network -----------------
+
 class Siren(nn.Module):
+    def __init__(self, in_features, hidden_features, hidden_layers, out_features, outermost_linear=False,
+                 first_omega_0=30, hidden_omega_0=30.):
+        super().__init__()
+
+        self.net = []
+        self.net.append(SineLayer(in_features, hidden_features,
+                                  is_first=True, omega_0=first_omega_0))
+
+        for i in range(hidden_layers):
+            self.net.append(SineLayer(hidden_features, hidden_features,
+                                      is_first=False, omega_0=hidden_omega_0))
+
+        if outermost_linear:
+            final_linear = nn.Linear(hidden_features, out_features)
+
+            with torch.no_grad():
+                final_linear.weight.uniform_(-np.sqrt(6 / hidden_features) / hidden_omega_0,
+                                             np.sqrt(6 / hidden_features) / hidden_omega_0)
+
+            self.net.append(final_linear)
+        else:
+            self.net.append(SineLayer(hidden_features, out_features,
+                                      is_first=False, omega_0=hidden_omega_0))
+
+        self.net = nn.Sequential(*self.net)
+
+    def forward(self, coords):
+        # coords = coords.clone().detach().requires_grad_(True)  # allows to take derivative w.r.t. input
+        output = self.net(coords)
+        return output
+
+
+
+# ----------------- SIREN Network -----------------
+class Siren2(nn.Module):
     def __init__(self, in_features=1, hidden_features=128, hidden_layers=3, out_features=1,
                  first_omega_0=30, hidden_omega_0=30):
         super().__init__()
@@ -104,7 +139,7 @@ class model_duo(nn.Module):
 
         super(model_duo, self).__init__()
 
-        self.siren = Siren(in_features=1, out_features=1, hidden_features=128, hidden_layers=3).to(device)
+        self.siren = Siren(in_features=1, out_features=1, hidden_features=128, hidden_layers=3, outermost_linear=True).to(device)
         self.mlp0 = MLP(input_size=3, output_size=1, nlayers=5, hidden_size=128, device=device)
         self.mlp1 = MLP(input_size=2, output_size=1, nlayers=5, hidden_size=128, device=device)
 
@@ -194,6 +229,40 @@ if __name__ == '__main__':
     t_full = torch.linspace(0, 1, n_steps, device=device).unsqueeze(1)  # shape (10000, 1)
     w_true = torch.tensor(w_true, dtype=torch.float32, device=device)  # shape (10000,)
 
+
+
+    # model = Siren(in_features=1, out_features=1).to(device)
+    # optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+    #
+    # n_epochs = 200000
+    # batch_size = 2000
+    #
+    # for epoch in trange(n_epochs):
+    #     idx = torch.randint(0, n_steps, (batch_size,))
+    #     t_batch = t_full[idx]  # (batch_size, 1)
+    #     w_batch = w_true[idx].unsqueeze(1)  # (batch_size, 1)
+    #
+    #     pred = model(t_batch)
+    #     loss = F.mse_loss(pred, w_batch)
+    #
+    #     optimizer.zero_grad()
+    #     loss.backward()
+    #     optimizer.step()
+    #
+    #     if epoch % 1000 == 0:
+    #         print(f"Epoch {epoch}, Loss: {loss.item():.6f}")
+    #         with torch.no_grad():
+    #             pred_full = model(t_full).squeeze().cpu().numpy()
+    #             plt.figure(figsize=(10, 4))
+    #             plt.plot(w_true.cpu().numpy(), label="Target")
+    #             plt.plot(pred_full, label="SIREN Output")
+    #             plt.title(f"Epoch {epoch}")
+    #             plt.legend()
+    #             plt.show()
+
+
+
+
     model = model_duo(device=device)    #Siren(in_features=1, out_features=1).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=5e-5)
 
@@ -204,29 +273,51 @@ if __name__ == '__main__':
         idx = torch.randint(1, n_steps-1, (batch_size,))
         t_batch = t_full[idx]  # (batch_size, 1)
 
-        # pred = model.siren(t_batch)
-        # loss = F.mse_loss(pred, w)
+        training ='1D'
 
-        w_prev = model.siren(t_batch - 1/n_steps)  # w at time t+1
-        w = model.siren(t_batch)
-        w_next = model.siren(t_batch + 1/n_steps)  # w at time t-1
+        match training:
+            case '1D':
+                pred = model.siren(t_batch)
+                w_batch = w_true[idx].unsqueeze(1)
+                loss = F.mse_loss(pred, w_batch)
 
-        idx = to_numpy(idx)  # Convert to numpy for indexing
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
 
-        dv_pred = model.mlp0(torch.cat((v_true[idx,None], w, I_ext[idx,None]), dim=1))
-        dw_pred = model.mlp1(torch.cat((v_true[idx,None], w), dim=1))
-        #
-        y_dv = (v_true[idx+1,None]-v_true[idx-1,None]) / (2*dt)
-        y_dw = (w_next - w_prev) / (2*dt)
+                if epoch % 1000 == 0:
+                    print(f"Epoch {epoch}, Loss: {loss.item():.6f}")
+                    with torch.no_grad():
+                        pred_full = model.siren(t_full).squeeze().cpu().numpy()
+                        plt.figure(figsize=(10, 4))
+                        plt.plot(w_true.cpu().numpy(), label="Target")
+                        plt.plot(pred_full, label="SIREN Output")
+                        plt.title(f"Epoch {epoch}")
+                        plt.legend()
+                        plt.show()
 
-        loss = 10 * F.mse_loss(dv_pred, y_dv) + F.mse_loss(dw_pred, y_dw)
+            case 'derivative':
 
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+                w_prev = model.siren(t_batch - 1/n_steps)  # w at time t+1
+                w = model.siren(t_batch)
+                w_next = model.siren(t_batch + 1/n_steps)  # w at time t-1
 
-        if epoch % 10000 == 0:
-            print(f"Epoch {epoch}, Loss: {loss.item():.6f}")
+                idx = to_numpy(idx)  # Convert to numpy for indexing
+
+                dv_pred = model.mlp0(torch.cat((v_true[idx,None], w, I_ext[idx,None]), dim=1))
+                dw_pred = model.mlp1(torch.cat((v_true[idx,None], w), dim=1))
+                #
+                y_dv = (v_true[idx+1,None]-v_true[idx-1,None]) / (2*dt)
+                y_dw = (w_next - w_prev) / (2*dt)
+
+                loss = 10 * F.mse_loss(dv_pred, y_dv) + F.mse_loss(dw_pred, y_dw)
+
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+
+                if epoch % 10000 == 0:
+                    print(f"Epoch {epoch}, Loss: {loss.item():.6f}")
 
 
 

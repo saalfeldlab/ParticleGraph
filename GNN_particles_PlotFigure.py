@@ -5117,10 +5117,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
                     if 'short_term_plasticity' in field_type:
                         fig, ax = fig_init()
-                        t = torch.zeros((1, 100000, 1), dtype=torch.float32, device=device)
-                        t[0] = torch.linspace(0, 1, 100000, dtype=torch.float32, device=device)[:, None]
+                        t = torch.linspace(1, 100000, 1, dtype=torch.float32, device=device).unsqueeze(1)
                         prediction = model_f(t) ** 2
-                        prediction = prediction.squeeze()
                         prediction = prediction.t()
                         plt.imshow(to_numpy(prediction), aspect='auto', cmap='gray')
                         plt.title(r'learned $FMLP(t)_i$', fontsize=68)
@@ -5522,10 +5520,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 if 'short_term_plasticity' in field_type:
 
                     fig, ax = fig_init()
-                    t = torch.zeros((1, 1000, 1), dtype=torch.float32, device=device)
-                    t[0] = torch.linspace(0, 1, 1000, dtype=torch.float32, device=device)[:, None]
+                    t = torch.linspace(1, 1000, 1, dtype=torch.float32, device=device).unsqueeze(1)
                     prediction = model_f(t) ** 2
-                    prediction = prediction.squeeze()
                     prediction = prediction.t()
                     plt.imshow(to_numpy(prediction), aspect='auto')
                     plt.title(r'learned $MLP_2(i,t)$', fontsize=68)
@@ -6022,16 +6018,14 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 if ('short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
 
                     for frame in trange(0, n_frames, n_frames // 100):
-                        t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
-                        t[:, 0, :] = torch.tensor(frame / n_frames, dtype=torch.float32, device=device)
-
+                        t = torch.tensor([frame/ n_frames], dtype=torch.float32, device=device)
                         if (model_config.update_type == '2steps'):
-                                m_ = model_f(t).squeeze() ** 2
+                                m_ = model_f(t) ** 2
                                 m_ = m_[:,None]
                                 in_features= torch.cat((torch.zeros_like(m_), torch.ones_like(m_)*xnorm, m_), dim=1)
                                 m = model.lin_phi2(in_features)
                         else:
-                            m = model_f(t).squeeze() ** 2
+                            m = model_f(t) ** 2
 
                         if 'permutation' in model_config.field_type:
                             inverse_permutation_indices = torch.load(f'./graphs_data/{dataset_name}/inverse_permutation_indices.pt', map_location=device)
@@ -6077,10 +6071,9 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                         # plt.close()
 
                     fig, ax = fig_init()
-                    t = torch.zeros((1, 100000, 1), dtype=torch.float32, device=device)
-                    t[0] = torch.linspace(0, 1, 100000, dtype=torch.float32, device=device)[:, None]
+                    t = torch.linspace(0, 1, 100000, dtype=torch.float32, device=device).unsqueeze(1)
+
                     prediction = model_f(t) ** 2
-                    prediction = prediction.squeeze()
                     prediction = prediction.t()
                     plt.imshow(to_numpy(prediction), aspect='auto')
                     plt.title(r'learned $MLP_2(i,t)$', fontsize=68)
@@ -6302,8 +6295,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                         x[:, 8] = alpha * model.b[:, k // model.embedding_step + 1] ** 2 + (1 - alpha) * model.b[:,
                                                                                                          k // model.embedding_step] ** 2
                     elif ('short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
-                        t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
-                        t[:, 0, :] = torch.tensor(k / n_frames, dtype=torch.float32, device=device)
+                        t = torch.tensor([k / n_frames], dtype=torch.float32, device=device)
                         x[:, 8] = model_f(t) ** 2
                     else:
                         x[:, 8:9] = model_f(time=k / n_frames) ** 2

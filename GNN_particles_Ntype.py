@@ -67,7 +67,7 @@ if __name__ == '__main__':
         # config_list = ['springs_matrix_N5_3']
         # config_list = ['cell_MDCK_15']
         # config_list = ['signal_CElegans_a1']
-        config_list = ['signal_N4_m3']
+        config_list = ['signal_N4_m13']
 
     for config_file_ in config_list:
         print(' ')

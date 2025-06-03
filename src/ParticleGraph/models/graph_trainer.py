@@ -2741,10 +2741,9 @@ def data_train_synaptic2(config, erase, best_model, device):
                                                                                                              k // model.embedding_step] ** 2
                             loss = loss + (model.b[:, 1:] - model.b[:, :-1]).norm(2) * coeff_model_b
                         elif ('short_term_plasticity' in field_type) | ('modulation' in field_type):
-                            t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
-                            t[:, 0, :] = torch.tensor(k / n_frames, dtype=torch.float32, device=device)
+                            t = torch.tensor([k / n_frames], dtype=torch.float32, device=device)
                             if 'derivative' in field_type:
-                                m = model_f[run](t).squeeze() ** 2
+                                m = model_f[run](t) ** 2
                                 x[:, 8] = m
                                 m_next = model_f[run](t + 1.0E-3).squeeze() ** 2
                                 grad = (m_next - m) / 1.0E-3
@@ -2752,9 +2751,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                                 pred_modulation = model.lin_modulation(in_modulation)
                                 loss += (grad - pred_modulation.squeeze()).norm(2) * coeff_lin_modulation
                             else:
-                                x[:, 8] = model_f[run](t).squeeze() ** 2
-                        else:
-                            x[:, 8:9] = model_f(time=k / n_frames) ** 2
+                                x[:, 8] = model_f[run](t) ** 2
                     else:
                         x[:, 8:9] = torch.ones_like(x[:, 0:1])
 
