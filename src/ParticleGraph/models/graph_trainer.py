@@ -2577,8 +2577,10 @@ def data_train_synaptic2(config, erase, best_model, device):
             net = f'{log_dir}/models/best_model_f_with_{n_runs - 1}_graphs_{best_model}.pt'
             state_dict = torch.load(net, map_location=device)
             model_f.load_state_dict(state_dict['model_state_dict'])
+        list_loss = torch.load(os.path.join(log_dir, 'loss.pt'))
     else:
         start_epoch = 0
+        list_loss = []
     lr = train_config.learning_rate_start
     if train_config.learning_rate_update_start == 0:
         lr_update = train_config.learning_rate_start
@@ -2663,7 +2665,6 @@ def data_train_synaptic2(config, erase, best_model, device):
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
     # torch.autograd.set_detect_anomaly(True)
 
-    list_loss = []
     list_loss_regul = []
     time.sleep(0.2)
 
