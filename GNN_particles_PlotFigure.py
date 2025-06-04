@@ -4370,6 +4370,9 @@ def plot_particle_field(config, epoch_list, log_dir, logger, cc, style, device):
 
 def plot_RD_mesh(config, epoch_list, log_dir, logger, cc, style, device):
 
+    simulation_config = config.simulation
+    train_config = config.training
+    model_config = config.graph_model
     dataset_name = config.dataset
 
     n_nodes = config.simulation.n_nodes
@@ -4382,6 +4385,13 @@ def plot_RD_mesh(config, epoch_list, log_dir, logger, cc, style, device):
     cmap = CustomColorMap(config=config)
 
     embedding_cluster = EmbeddingCluster(config)
+    field_type = model_config.field_type
+    if field_type != '':
+        n_nodes = simulation_config.n_nodes
+        n_nodes_per_axis = int(np.sqrt(n_nodes))
+        has_field = True
+    else:
+        has_field = False
 
     hnorm = torch.load(f'{log_dir}/hnorm.pt', map_location=device).to(device)
 
@@ -4447,6 +4457,32 @@ def plot_RD_mesh(config, epoch_list, log_dir, logger, cc, style, device):
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
         print(f'net: {net}')
+
+        if has_field:
+            model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
+                                    out_features=model_config.output_size_nnr,
+                                    hidden_features=model_config.hidden_dim_nnr,
+                                    hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device,
+                                    first_omega_0=model_config.omega, hidden_omega_0=model_config.omega)
+            model_f.to(device=device)
+            model_f.train()
+
+            net = f'{log_dir}/models/best_model_f_with_{n_runs - 1}_graphs_{epoch}.pt'
+            state_dict = torch.load(net, map_location=device)
+            model_f.load_state_dict(state_dict['model_state_dict'])
+
+            for t in range(n_frames):
+                fig, ax = fig_init()
+                plt.xticks([])
+                plt.yticks([])
+                prediction = model_f(time=t / n_frames) ** 2
+                prediction = torch.reshape(prediction, (n_nodes_per_axis, n_nodes_per_axis))
+                plt.imshow(to_numpy(prediction), aspect='auto', vmin=0, vmax=1)
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/field/fig_{t}.tif", dpi=80)
+                plt.close()
+
+
         embedding = get_embedding(model.a, 1)
 
         file_path = os.path.expanduser(config.data_folder_name)
@@ -4501,55 +4537,80 @@ def plot_RD_mesh(config, epoch_list, log_dir, logger, cc, style, device):
         plt.title("segmentation")
         plt.imshow(final_labels, cmap='nipy_spectral')
         plt.tight_layout()
-        plt.show()
+        plt.savefig(f"./{log_dir}/results/freq_{epoch}.tif", dpi=180)
+        plt.close()
 
         final_labels = final_labels.flatten()
         cmap = cm.get_cmap('nipy_spectral')
         norm = mcolors.Normalize(vmin=1, vmax=final_labels.max())  # normalize from 1 to max label
 
         fig, ax = fig_init()
+        plt.xticks([])
+        plt.yticks([])
         for k in np.unique(final_labels):
-            if k > 0:
+            if k > 1:
                 pos = np.argwhere(final_labels == k)
                 if len(pos) > 0:
                     color = cmap(norm(k))  # Map label to color
-                    plt.scatter(embedding[pos, 0], embedding[pos, 1], s=10, color=color, label=f"Cluster {k}")
-        plt.legend(loc='best', markerscale=2)
+                    plt.scatter(embedding[pos, 0], embedding[pos, 1], s=5, color=color, label=f"Cluster {k-1}")
+        # plt.xlim([0.4,1.8])
+        # plt.ylim([0.4, 1.8])
+        plt.xlim([-4,4])
+        plt.ylim([-4,4])
+        # plt.legend(loc='best', markerscale=2)
         plt.tight_layout()
-        plt.show()
-
-
-
-        cluster_method = 'distance_embedding'
-        cluster_distance_threshold = 0.01
-        labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=cluster_distance_threshold)
-        labels_map = np.reshape(labels, (n_nodes_per_axis, n_nodes_per_axis))
-        fig, ax = fig_init()
-        plt.imshow(labels_map==5, cmap='tab20', vmin=0, vmax=10)
-        fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
-        ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-        ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-        plt.xlabel(r'$x$', fontsize=68)
-        plt.ylabel(r'$y$', fontsize=68)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/labels_map_cbar.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/seg_embedding_{epoch}.tif", dpi=300)
         plt.close()
 
         fig, ax = fig_init()
-        for nodes_type in np.unique(labels[labels <5]):
-            pos = np.argwhere(labels == nodes_type)
-            plt.scatter(embedding[pos, 0], embedding[pos, 1], s=400, cmap=cmap.color(nodes_type*2))
-        if 'latex' in style:
-            plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
-            plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
-        else:
-            plt.xlabel(r'$a_{0}$', fontsize=68)
-            plt.ylabel(r'$a_{1}$', fontsize=68)
+        plt.axis('off')
+        for i, k in enumerate(np.unique(final_labels)):
+            if k > 1:
+                ax = plt.subplot(4, 4, i-1)
+                pos = np.argwhere(final_labels == k)
+                if len(pos) > 0:
+                    color = cmap(norm(k))  # Map label to color
+                    plt.scatter(embedding[pos, 0], embedding[pos, 1], s=1, color=color, label=f"Cluster {k-1}")
+            # plt.xlim([0.4,1.8])
+            # plt.ylim([0.4, 1.8])
+            plt.xlim([-4, 4])
+            plt.ylim([-4, 4])
+            plt.legend(loc='best', markerscale=2)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/seg_montage_embedding_{epoch}.tif", dpi=300)
         plt.close()
 
-        if True:
+
+        # cluster_method = 'distance_embedding'
+        # cluster_distance_threshold = 0.01
+        # labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=cluster_distance_threshold)
+        # labels_map = np.reshape(labels, (n_nodes_per_axis, n_nodes_per_axis))
+        # fig, ax = fig_init()
+        # plt.imshow(labels_map==5, cmap='tab20', vmin=0, vmax=10)
+        # fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
+        # ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+        # ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+        # plt.xlabel(r'$x$', fontsize=68)
+        # plt.ylabel(r'$y$', fontsize=68)
+        # plt.tight_layout()
+        # plt.savefig(f"./{log_dir}/results/labels_map_cbar.tif", dpi=300)
+        # plt.close()
+
+        # fig, ax = fig_init()
+        # for nodes_type in np.unique(labels[labels <5]):
+        #     pos = np.argwhere(labels == nodes_type)
+        #     plt.scatter(embedding[pos, 0], embedding[pos, 1], s=400, cmap=cmap.color(nodes_type*2))
+        # if 'latex' in style:
+        #     plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
+        #     plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
+        # else:
+        #     plt.xlabel(r'$a_{0}$', fontsize=68)
+        #     plt.ylabel(r'$a_{1}$', fontsize=68)
+        # plt.tight_layout()
+        # plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=300)
+        # plt.close()
+
+        if False:
 
             k = 2400
 
@@ -8473,6 +8534,7 @@ if __name__ == '__main__':
 
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
+
     print(' ')
     print(f'device {device}')
 
@@ -8502,8 +8564,8 @@ if __name__ == '__main__':
     # config_list = ['falling_water_ramp_x6_13']
     # config_list = ['arbitrary_3_field_video_bison_test']
     # config_list = ['RD_RPS']
-    # config_list = ['cell_U2OS_12_0']
-    config_list = ['signal_CElegans_a2']
+    config_list = ['cell_U2OS_8_12']
+    # config_list = ['signal_CElegans_a2']
 
     # plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 

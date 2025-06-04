@@ -1491,7 +1491,7 @@ def data_train_mesh(config, erase, best_model, device):
         model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
                                 out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
                                 hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device,
-                                first_omega_0=omega, hidden_omega_0=omega)
+                                first_omega_0=model_config.omega, hidden_omega_0=model_config.omega)
         model_f.to(device=device)
         optimizer_f = torch.optim.Adam(lr=train_config.learning_rate_NNR, params=model_f.parameters())
         model_f.train()

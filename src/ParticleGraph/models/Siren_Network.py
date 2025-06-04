@@ -52,7 +52,7 @@ class SineLayer(nn.Module):
     def forward(self, input):
         return torch.sin(self.omega_0 * self.linear(input))
 
-class first_Siren(nn.Module):
+class Siren(nn.Module):
     def __init__(self, in_features, hidden_features, hidden_layers, out_features, outermost_linear=False,
                  first_omega_0=30, hidden_omega_0=30.):
         super().__init__()
@@ -85,7 +85,7 @@ class first_Siren(nn.Module):
         return output
 
 
-class Siren(nn.Module):
+class small_Siren(nn.Module):
     def __init__(self, in_features=1, hidden_features=128, hidden_layers=3, out_features=1, outermost_linear=True,
                  first_omega_0=30, hidden_omega_0=30):
         super().__init__()

@@ -63,7 +63,7 @@ plotting:
     ylim: [-0.1,1.0]
 
 training:
-    n_epochs: 20
+    n_epochs: 40
     recursive_loop: 1
     batch_size: 1
     small_init_batch_size: False
