@@ -54,7 +54,7 @@ if __name__ == '__main__':
     else:
 
         task = 'train'
-        best_model = '20_0'
+        best_model = ''
 
         # config_list = ['multimaterial_16_2']  #   ,'multimaterial_16_2', 'multimaterial_16_3', 'multimaterial_16_4']
         # config_list = ['fluids_m18_1']
@@ -66,7 +66,7 @@ if __name__ == '__main__':
         # config_list = ['cell_U2OS_12_4']
         # config_list = ['springs_matrix_N5_3']
         # config_list = ['cell_MDCK_15']
-        config_list = ['signal_CElegans_a1']
+        config_list = ['signal_CElegans_a5']
         # config_list = ['signal_N4_m13']
 
     for config_file_ in config_list:

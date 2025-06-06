@@ -2467,10 +2467,10 @@ def data_train_synaptic2(config, erase, best_model, device):
     print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
     logger.info(f'vnorm ynorm: {to_numpy(vnorm)} {to_numpy(ynorm)}')
 
-    if train_config.denoise:
+    if train_config.denoiser:
         print('denoise data ...')
         for k in range(len(x_list)):
-            x_, y_ = denoise_data(config, x_list[k], y_list[k], device)
+            x_, y_ = denoise_data(config, x_list[k], y_list[k], train_config.denoiser_param, device)
             x_list[k] = x_
             y_list[k] = y_
 
@@ -2989,8 +2989,8 @@ def data_train_synaptic2(config, erase, best_model, device):
         fig = plt.figure(figsize=(20, 8))
         ax = fig.add_subplot(2, 5, 1)
         plt.plot(list_loss, color='k', label='loss')
-        plt.plot(list_loss_regul, color='b', label='regul')
-        plt.plot(np.array(list_loss)-np.array(list_loss_regul), color='r', label='pred error')
+        # plt.plot(list_loss_regul, color='b', label='regul')
+        # plt.plot(np.array(list_loss)-np.array(list_loss_regul), color='r', label='pred error')
         plt.legend(loc='upper right', fontsize=8)
         plt.xlim([0, n_epochs])
         plt.ylabel('Loss', fontsize=12)
@@ -3072,8 +3072,8 @@ def data_train_synaptic2(config, erase, best_model, device):
                     func = func ** 2
                 if (n % 2 == 0):
                     plt.plot(to_numpy(rr), to_numpy(func), 2, color='g', linewidth=2, alpha=0.25)
-        plt.xlim(config.plotting.xlim)
-        plt.ylim(config.plotting.ylim)
+        # plt.xlim(config.plotting.xlim)
+        # plt.ylim(config.plotting.ylim)
 
         if 'PDE_N3' not in model_config.signal_model_name:
 
@@ -4736,11 +4736,11 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
                 plt.figure(figsize=(20, 10))
                 ax = plt.subplot(121)
-                plt.plot(to_numpy(node_gt_list_[:, n[0], 0]), c='r', linewidth=4, label='true', alpha=0.25)
+                plt.plot(to_numpy(node_gt_list_[:, n[0], 0]), c='r', linewidth=4, label='true', alpha=0.5)
                 plt.plot(to_numpy(node_pred_list_[:, n[0], 0]), linewidth=2, c='r', label='learned')
                 plt.legend(fontsize=24)
 
-                plt.plot(to_numpy(node_gt_list_[:, n[1:5], 0]), c='r', linewidth=4, alpha=0.25)
+                plt.plot(to_numpy(node_gt_list_[:, n[1:5], 0]), c='r', linewidth=4, alpha=0.5)
                 plt.plot(to_numpy(node_pred_list_[:, n[1:5], 0]), c='r', linewidth=2)
                 plt.ylim([0, 1])
                 plt.xlim([0, 180])

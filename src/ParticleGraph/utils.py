@@ -864,4 +864,16 @@ def check_file_exists(dataset_name):
     return os.path.isfile(file_path)
 
 
+def find_suffix_pairs_with_index(neuron_list, suffix1, suffix2):
+    pairs = []
+    for i, neuron in enumerate(neuron_list):
+        if neuron.endswith(suffix1):
+            base_name = neuron[:-1]
+            target_name = base_name + suffix2
+            for j, other_neuron in enumerate(neuron_list):
+                if other_neuron == target_name:
+                    pairs.append(((i, neuron), (j, other_neuron)))
+                    break  # Stop after finding the first match
+    return pairs
+
 

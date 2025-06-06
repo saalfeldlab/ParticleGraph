@@ -4,16 +4,19 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import trange
 
-def denoise_data(config, x_list, y_list, device):
+def denoise_data(config, x_list, y_list, denoise_std, device):
 
-    activity = torch.tensor(x_list[:, :, 6:7])
+    activity = torch.tensor(x_list[:, :, 6:7], dtype=torch.float32, device=device)
     activity = activity.squeeze()
     activity = activity.t()
 
     denoised_signals = []
     for i in trange(activity.shape[0]):
         signal = activity[i, :].clone().detach()
-        denoised_signal = denoise_signal(signal, None, signal.device)
+        match config.training.denoiser_type:
+            case 'Gaussian_filter':
+                denoised_signal = gaussian_filter(signal, torch.tensor([config.training.denoiser_param], dtype=torch.float32, device=device))
+
         denoised_signal = denoised_signal[0:signal.shape[0]]
         denoised_signals.append(to_numpy(denoised_signal))
         # visualize_signals(signal, denoised_signal)
@@ -27,6 +30,13 @@ def denoise_data(config, x_list, y_list, device):
         y_list[k] = (x_list[k + 1, :, 6:7] - x_list[k, :, 6:7]).squeeze() / config.simulation.delta_t
 
     return x_list, y_list
+
+
+
+# def denoise_signal(config, signal, noise_std, device):
+#     # noise_std = estimate_noise_std(signal)
+#     denoised_signal = gaussian_filter(signal, torch.tensor([noise_std], dtype=torch.float32, device=device))
+#     return denoised_signal
 
 
 def estimate_noise_std(signal):
@@ -53,12 +63,6 @@ def gaussian_filter(signal, std):
     signal_padded = F.pad(signal.unsqueeze(0).unsqueeze(0), (kernel_size // 2, kernel_size // 2), mode='reflect')
     signal_denoised = F.conv1d(signal_padded, kernel.unsqueeze(0).unsqueeze(0)).squeeze()
     return signal_denoised
-
-
-def denoise_signal(signal, config, device):
-    noise_std = estimate_noise_std(signal)
-    denoised_signal = gaussian_filter(signal, noise_std)
-    return denoised_signal
 
 
 def visualize_signals(original_signal, denoised_signal):

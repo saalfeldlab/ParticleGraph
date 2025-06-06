@@ -141,7 +141,7 @@ class model_duo(nn.Module):
 
         self.siren = Siren(in_features=1, out_features=1, hidden_features=128, hidden_layers=3, outermost_linear=True).to(device)
         self.mlp0 = MLP(input_size=3, output_size=1, nlayers=5, hidden_size=128, device=device)
-        self.mlp1 = MLP(input_size=2, output_size=1, nlayers=5, hidden_size=128, device=device)
+        self.mlp1 = MLP(input_size=2, output_size=1, nlayers=2, hidden_size=2, device=device)
 
     def forward(self, x):
 
@@ -229,51 +229,18 @@ if __name__ == '__main__':
     t_full = torch.linspace(0, 1, n_steps, device=device).unsqueeze(1)  # shape (10000, 1)
     w_true = torch.tensor(w_true, dtype=torch.float32, device=device)  # shape (10000,)
 
-
-
-    # model = Siren(in_features=1, out_features=1).to(device)
-    # optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
-    #
-    # n_epochs = 200000
-    # batch_size = 2000
-    #
-    # for epoch in trange(n_epochs):
-    #     idx = torch.randint(0, n_steps, (batch_size,))
-    #     t_batch = t_full[idx]  # (batch_size, 1)
-    #     w_batch = w_true[idx].unsqueeze(1)  # (batch_size, 1)
-    #
-    #     pred = model(t_batch)
-    #     loss = F.mse_loss(pred, w_batch)
-    #
-    #     optimizer.zero_grad()
-    #     loss.backward()
-    #     optimizer.step()
-    #
-    #     if epoch % 1000 == 0:
-    #         print(f"Epoch {epoch}, Loss: {loss.item():.6f}")
-    #         with torch.no_grad():
-    #             pred_full = model(t_full).squeeze().cpu().numpy()
-    #             plt.figure(figsize=(10, 4))
-    #             plt.plot(w_true.cpu().numpy(), label="Target")
-    #             plt.plot(pred_full, label="SIREN Output")
-    #             plt.title(f"Epoch {epoch}")
-    #             plt.legend()
-    #             plt.show()
-
-
-
-
     model = model_duo(device=device)    #Siren(in_features=1, out_features=1).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=5e-5)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
 
     n_epochs = 200000
     batch_size = 2000
 
     for epoch in trange(n_epochs):
-        idx = torch.randint(1, n_steps-1, (batch_size,))
-        t_batch = t_full[idx]  # (batch_size, 1)
+        idx = torch.randint(1, n_steps-8, (batch_size,))
+        t_batch = t_full[idx]
+        idx = to_numpy(idx)
 
-        training ='1D'
+        training ='recursive'
 
         match training:
             case '1D':
@@ -296,7 +263,74 @@ if __name__ == '__main__':
                         plt.legend()
                         plt.show()
 
+            case 'recursive':
+
+                w = model.siren(t_batch)
+                v = v_true[idx, None].clone().detach()
+                optimizer.zero_grad()
+
+                recursive_loop = 3
+
+                for loop in range(recursive_loop):
+
+                    dv_pred = model.mlp0(torch.cat((v, w, I_ext[idx, None].clone().detach()), dim=1))
+                    dw_pred = model.mlp1(torch.cat((v, w), dim=1))
+
+                    v = v + dt * dv_pred
+                    w = w + dt * dw_pred
+
+                    idx = idx + 1
+
+                    # w_true = model.siren(t_full[idx])
+
+                loss = (v-v_true[idx, None]).norm(2)
+
+                loss.backward()
+                optimizer.step()
+
+                if epoch % 10000 == 0:
+                    print(f"Epoch {epoch}, Loss: {loss.item():.6f}")
+
+                    with torch.no_grad():
+                        pred_full = model(t_full).squeeze().cpu().numpy()
+
+                        v = v_true[0:1].clone().detach()
+                        w = v_true[0:1].clone().detach()
+                        v_list = []
+                        w_list = []
+                        v_list.append(v.clone().detach())
+                        w_list.append(w.clone().detach())
+
+                        for step in range(1, n_steps):
+                            with torch.no_grad():
+                                w = model.siren(t_full[step])
+
+                                dv_pred = model.mlp0(
+                                    torch.cat((v[:, None], w[:, None], I_ext[step:step + 1, None]), dim=1))
+                                dw_pred = model.mlp1(torch.cat((v[:, None], w[:, None]), dim=1))
+
+                                v += dt * dv_pred.squeeze()
+                                w += dt * dw_pred.squeeze()
+
+                            v_list.append(v.clone().detach())
+                            w_list.append(w.clone().detach())
+
+                        v_list = torch.stack(v_list, dim=0)
+                        w_list = torch.stack(w_list, dim=0)
+
+                        plt.style.use('dark_background')
+                        fig = plt.figure(figsize=(12, 6))
+                        plt.plot(v_true.cpu().numpy(), label='true v (membrane potential)', linewidth=12, alpha=0.5, c='salmon')
+                        plt.plot(v_list.cpu().numpy(), label='rollout v', linewidth=2, alpha=1, c='salmon')
+                        plt.plot(w_true.cpu().numpy(), label='w (recovery variable)', linewidth=12, alpha=0.5, c='blue')
+                        plt.plot(w_true.cpu().numpy(), label='rollout w', linewidth=2, alpha=1, c='blue')
+                        plt.xlim([0, n_steps//4])
+                        plt.legend(loc='upper right')
+
+
             case 'derivative':
+
+                optimizer.zero_grad()
 
                 w_prev = model.siren(t_batch - 1/n_steps)  # w at time t+1
                 w = model.siren(t_batch)
@@ -306,13 +340,13 @@ if __name__ == '__main__':
 
                 dv_pred = model.mlp0(torch.cat((v_true[idx,None], w, I_ext[idx,None]), dim=1))
                 dw_pred = model.mlp1(torch.cat((v_true[idx,None], w), dim=1))
-                #
+
                 y_dv = (v_true[idx+1,None]-v_true[idx-1,None]) / (2*dt)
                 y_dw = (w_next - w_prev) / (2*dt)
 
                 loss = 10 * F.mse_loss(dv_pred, y_dv) + F.mse_loss(dw_pred, y_dw)
 
-                optimizer.zero_grad()
+
                 loss.backward()
                 optimizer.step()
 

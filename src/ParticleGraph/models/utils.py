@@ -256,77 +256,71 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
         plt.savefig(f"./{log_dir}/tmp_training/matrix/larynx/matrix_{epoch}_{N}.tif", dpi=87)
         plt.close()
 
-    fig = plt.figure(figsize=(8, 8))
-    rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
-    for n in range(n_particles):
-        if ('PDE_N4' in config.graph_model.signal_model_name) | ('PDE_N7' in config.graph_model.signal_model_name):
-            embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-            if model.embedding_trial:
-                embedding_ = torch.cat((embedding_, model.b[0].repeat(1000, 1)), dim=1)
-            in_features = torch.cat((rr[:, None], embedding_), dim=1)
-        elif 'PDE_N5' in config.graph_model.signal_model_name:
-            embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-            if model.embedding_trial:
-                in_features = torch.cat((rr[:, None], embedding_, model.b[0].repeat(1000, 1), embedding_, model.b[0].repeat(1000, 1)), dim=1)
-            else:
-                in_features = torch.cat((rr[:, None], embedding_, embedding_), dim=1)
-        elif ('PDE_N9' in config.graph_model.signal_model_name):
-            embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-            in_features = torch.cat((rr[:, None], embedding_, torch.ones_like(rr[:,None])), dim=1)
-        elif ('PDE_N8' in config.graph_model.signal_model_name):
-            embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-            if model.embedding_trial:
-                in_features = torch.cat((rr[:, None]*0, rr[:, None], embedding_, model.b[0].repeat(1000, 1), embedding_, model.b[0].repeat(1000, 1)), dim=1)
-            else:
-                in_features = torch.cat((rr[:, None]*0, rr[:, None], embedding_, embedding_), dim=1)
-        else:
-            in_features = rr[:, None]
-        with torch.no_grad():
-            func = model.lin_edge(in_features.float())
-        if config.graph_model.lin_edge_positive:
-            func=func**2
-        if (n % 2 == 0):
-            plt.plot(to_numpy(rr), to_numpy(func),2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
-    if ('PDE_N8' in config.graph_model.signal_model_name):
+        rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
+        fig = plt.figure(figsize=(8, 8))
+        for idx, k in enumerate(np.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 10)):  # Corrected step size to generate 13 evenly spaced values
+            for n in range(0, n_particles, 4):
+                embedding_i = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                embedding_j = model.a[np.random.randint(n_particles), :] * torch.ones(
+                    (1000, config.graph_model.embedding_dim), device=device)
+                if model.embedding_trial:
+                    in_features = torch.cat((torch.ones_like(rr[:, None]) * k, rr[:, None], embedding_i, embedding_j,model.b[0].repeat(1000, 1)), dim=1)
+                else:
+                    in_features = torch.cat((rr[:, None], torch.ones_like(rr[:, None]) * k, embedding_i, embedding_j), dim=1)
+                with torch.no_grad():
+                    func = model.lin_edge(in_features.float())
+                if config.graph_model.lin_edge_positive:
+                    func = func ** 2
+                plt.plot(to_numpy(rr - k), to_numpy(func), 2, color=cmap.color(idx), linewidth=2, alpha=0.25)
+        plt.xlabel(r'$x_i-x_j$', fontsize=18)
+        # plt.ylabel(r'learned $\psi^*(a_i, x_i)$', fontsize=68)
+        plt.ylabel(r'$MLP_1(a_i, a_j, x_i, x_j)$', fontsize=18)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/func_{epoch}_{N}.tif", dpi=87)
+        plt.close()
+
+    else:
+
+        fig = plt.figure(figsize=(8, 8))
+        rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
         for n in range(n_particles):
-            embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-            if model.embedding_trial:
-                in_features = torch.cat((torch.ones_like(rr[:, None])*3, rr[:, None], embedding_, model.b[0].repeat(1000, 1), embedding_, model.b[0].repeat(1000, 1)), dim=1)
+            if ('PDE_N4' in config.graph_model.signal_model_name) | ('PDE_N7' in config.graph_model.signal_model_name):
+                embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                if model.embedding_trial:
+                    embedding_ = torch.cat((embedding_, model.b[0].repeat(1000, 1)), dim=1)
+                in_features = torch.cat((rr[:, None], embedding_), dim=1)
+            elif 'PDE_N5' in config.graph_model.signal_model_name:
+                embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                if model.embedding_trial:
+                    in_features = torch.cat(
+                        (rr[:, None], embedding_, model.b[0].repeat(1000, 1), embedding_, model.b[0].repeat(1000, 1)),
+                        dim=1)
+                else:
+                    in_features = torch.cat((rr[:, None], embedding_, embedding_), dim=1)
+            elif ('PDE_N9' in config.graph_model.signal_model_name):
+                embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                in_features = torch.cat((rr[:, None], embedding_, torch.ones_like(rr[:, None])), dim=1)
+            elif ('PDE_N8' in config.graph_model.signal_model_name):
+                embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                if model.embedding_trial:
+                    in_features = torch.cat((rr[:, None] * 0, rr[:, None], embedding_, model.b[0].repeat(1000, 1),
+                                             embedding_, model.b[0].repeat(1000, 1)), dim=1)
+                else:
+                    in_features = torch.cat((rr[:, None] * 0, rr[:, None], embedding_, embedding_), dim=1)
             else:
-                in_features = torch.cat((torch.ones_like(rr[:, None])*3, rr[:, None], embedding_, embedding_), dim=1)
+                in_features = rr[:, None]
             with torch.no_grad():
                 func = model.lin_edge(in_features.float())
             if config.graph_model.lin_edge_positive:
-                func=func**2
+                func = func ** 2
             if (n % 2 == 0):
-                plt.plot(to_numpy(rr), to_numpy(func),2, color='g', linewidth=2, alpha=0.25)
-    plt.xlim(config.plotting.xlim)
-    plt.ylim(config.plotting.ylim)
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/func_{epoch}_{N}.tif", dpi=87)
-    plt.close()
-
-    all_func_values=[]
-    fig = plt.figure(figsize=(8, 8))
-    rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
-    for n in range(n_particles):
-        embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-        if model.embedding_trial:
-            embedding_ = torch.cat((embedding_, model.b[0].repeat(1000, 1)), dim=1)
-        in_features = get_in_features_update(rr=rr[:, None], model=model, embedding=embedding_, device=device)
-        with torch.no_grad():
-            func = model.lin_phi(in_features.float())
-            all_func_values.append(func)
-        if (n % 2 == 0):
-            plt.plot(to_numpy(rr), to_numpy(func),2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.1)
-    all_func_values = torch.cat(all_func_values)
-
-    plt.xlim(config.plotting.xlim)
-    y_min, y_max = all_func_values.min().item(), all_func_values.max().item()
-    plt.ylim([y_min-0.1, y_max*1.1])
-
-    plt.savefig(f"./{log_dir}/tmp_training/function/lin_phi/func_{epoch}_{N}.tif", dpi=87)
-    plt.close()
+                plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)),
+                         linewidth=2, alpha=0.25)
+        plt.xlim(config.plotting.xlim)
+        plt.ylim(config.plotting.ylim)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/func_{epoch}_{N}.tif", dpi=87)
+        plt.close()
 
     # i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
     # if (config.graph_model.signal_model_name)!='PDE_N':

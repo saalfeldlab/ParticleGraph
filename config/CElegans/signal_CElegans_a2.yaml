@@ -57,7 +57,7 @@ graph_model:
     lin_edge_positive: True
 
 plotting:
-    colormap: 'tab10'
+    colormap: 'tab20'
     arrow_length: 1
     xlim: [4,8]
     ylim: [-0.1,1.0]
