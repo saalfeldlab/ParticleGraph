@@ -141,7 +141,7 @@ class model_duo(nn.Module):
 
         self.siren = Siren(in_features=1, out_features=1, hidden_features=128, hidden_layers=3, outermost_linear=True).to(device)
         self.mlp0 = MLP(input_size=3, output_size=1, nlayers=5, hidden_size=128, device=device)
-        self.mlp1 = MLP(input_size=2, output_size=1, nlayers=2, hidden_size=2, device=device)
+        self.mlp1 = MLP(input_size=2, output_size=1, nlayers=2, hidden_size=4, device=device)
 
     def forward(self, x):
 
@@ -188,6 +188,8 @@ if __name__ == '__main__':
         dw = epsilon * (v[i] + a - b * w[i])
         v[i+1] = v[i] + dt * dv
         w[i+1] = w[i] + dt * dw
+
+    plt.style.use('dark_background')
 
     # Plotting
     fig = plt.figure(figsize=(12, 6))
@@ -281,21 +283,20 @@ if __name__ == '__main__':
 
                     idx = idx + 1
 
-                    # w_true = model.siren(t_full[idx])
-
-                loss = (v-v_true[idx, None]).norm(2)
+                w_siren = model.siren(t_full[idx])
+                loss = (v-v_true[idx, None]).norm(2) + (w-w_siren).norm(2)
 
                 loss.backward()
                 optimizer.step()
 
-                if epoch % 10000 == 0:
+                if (epoch>0) & (epoch % 10000 == 0):
                     print(f"Epoch {epoch}, Loss: {loss.item():.6f}")
 
                     with torch.no_grad():
-                        pred_full = model(t_full).squeeze().cpu().numpy()
+                        w_pred = model(t_full)
 
                         v = v_true[0:1].clone().detach()
-                        w = v_true[0:1].clone().detach()
+                        w = w_true[0:1].clone().detach()
                         v_list = []
                         w_list = []
                         v_list.append(v.clone().detach())
@@ -303,10 +304,9 @@ if __name__ == '__main__':
 
                         for step in range(1, n_steps):
                             with torch.no_grad():
-                                w = model.siren(t_full[step])
+                                # w = model.siren(t_full[step])
 
-                                dv_pred = model.mlp0(
-                                    torch.cat((v[:, None], w[:, None], I_ext[step:step + 1, None]), dim=1))
+                                dv_pred = model.mlp0(torch.cat((v[:, None], w[:, None], I_ext[step:step + 1, None]), dim=1))
                                 dw_pred = model.mlp1(torch.cat((v[:, None], w[:, None]), dim=1))
 
                                 v += dt * dv_pred.squeeze()
@@ -318,97 +318,17 @@ if __name__ == '__main__':
                         v_list = torch.stack(v_list, dim=0)
                         w_list = torch.stack(w_list, dim=0)
 
-                        plt.style.use('dark_background')
+
                         fig = plt.figure(figsize=(12, 6))
-                        plt.plot(v_true.cpu().numpy(), label='true v (membrane potential)', linewidth=12, alpha=0.5, c='salmon')
+                        plt.plot(I_ext.cpu().numpy(), label='I_ext (external input)', linewidth=2, alpha=0.5, c='red')
+                        plt.plot(v_true.cpu().numpy(), label='true v (membrane potential)', linewidth=10, alpha=0.5, c='salmon')
                         plt.plot(v_list.cpu().numpy(), label='rollout v', linewidth=2, alpha=1, c='salmon')
-                        plt.plot(w_true.cpu().numpy(), label='w (recovery variable)', linewidth=12, alpha=0.5, c='blue')
-                        plt.plot(w_true.cpu().numpy(), label='rollout w', linewidth=2, alpha=1, c='blue')
-                        plt.xlim([0, n_steps//4])
-                        plt.legend(loc='upper right')
-
-
-            case 'derivative':
-
-                optimizer.zero_grad()
-
-                w_prev = model.siren(t_batch - 1/n_steps)  # w at time t+1
-                w = model.siren(t_batch)
-                w_next = model.siren(t_batch + 1/n_steps)  # w at time t-1
-
-                idx = to_numpy(idx)  # Convert to numpy for indexing
-
-                dv_pred = model.mlp0(torch.cat((v_true[idx,None], w, I_ext[idx,None]), dim=1))
-                dw_pred = model.mlp1(torch.cat((v_true[idx,None], w), dim=1))
-
-                y_dv = (v_true[idx+1,None]-v_true[idx-1,None]) / (2*dt)
-                y_dw = (w_next - w_prev) / (2*dt)
-
-                loss = 10 * F.mse_loss(dv_pred, y_dv) + F.mse_loss(dw_pred, y_dw)
-
-
-                loss.backward()
-                optimizer.step()
-
-                if epoch % 10000 == 0:
-                    print(f"Epoch {epoch}, Loss: {loss.item():.6f}")
-
-
-
-    with torch.no_grad():
-        pred_full = model(t_full).squeeze().cpu().numpy()
-
-    plt.figure(figsize=(10, 4))
-    plt.plot(w_true.cpu().numpy(), label="Target")
-    plt.plot(pred_full, label="SIREN Output")
-    plt.title(f"Epoch {epoch}")
-    plt.legend()
-    plt.show()
-
-
-    # rollout
-
-    v = v_true[0:1].clone().detach()
-    w = v_true[0:1].clone().detach()
-    v_list = []
-    w_list = []
-
-    for step in trange(1, n_steps):
-
-        with torch.no_grad():
-
-            w = model.siren(t_full[step])
-
-            dv_pred = model.mlp0(torch.cat((v[:,None], w[:,None], I_ext[step:step+1,None]), dim=1))
-            dw_pred = model.mlp1(torch.cat((v[:,None], w[:,None]), dim=1))
-
-            v += dt * dv_pred.squeeze()
-            w += dt * dw_pred.squeeze()
-
-        v_list.append(v.clone().detach())
-        w_list.append(w.clone().detach())
-
-    v_list = torch.stack(v_list, dim=0)
-    w_list = torch.stack(w_list, dim=0)
-
-    fig = plt.figure(figsize=(12, 12))
-    plt.plot(time[1:], v_list.cpu().numpy(), label='v (membrane potential)')
-    plt.plot(time[1:], w_list.cpu().numpy(), label='w (recovery variable)', alpha=0.7)
-    plt.show()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                        plt.plot(w_true.cpu().numpy(), label='w (recovery variable)', linewidth=10, alpha=0.5, c='blue')
+                        plt.plot(w_list.cpu().numpy(), label='w NNR', linewidth=2, alpha=1, c='blue')
+                        plt.plot(w_pred.cpu().numpy(), label='w NNR', linewidth=2, alpha=0.5, c='blue')
+                        plt.xlim([0, n_steps//2.5])
+                        plt.legend(loc='upper left')
+                        plt.show()
 
 
 
