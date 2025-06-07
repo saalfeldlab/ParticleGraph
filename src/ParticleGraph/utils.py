@@ -728,17 +728,6 @@ def get_matrix_rank(matrix):
 
 
 def map_matrix(neuron_list, neuron_names, matrix):
-    """
-    Maps the Varshney matrix to the given neuron list and sets rows/columns to zero for missing neurons.
-
-    Parameters:
-        neuron_list (list): List of all neuron names.
-        neuron_names (list): List of neuron names in the Varshney dataset.
-        matrix (torch.Tensor): Adjacency matrix from the Varshney dataset.
-
-    Returns:
-        torch.Tensor: Mapped matrix.
-    """
 
     map_list = np.zeros(len(neuron_list), dtype=int)
     for i, neuron_name in enumerate(neuron_list):
@@ -756,6 +745,7 @@ def map_matrix(neuron_list, neuron_names, matrix):
             mapped_matrix[:, i] = 0
 
     return mapped_matrix, map_list
+
 
 # Example usage
 # matrix = np.random.rand(100, 100)

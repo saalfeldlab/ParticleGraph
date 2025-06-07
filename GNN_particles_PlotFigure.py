@@ -4817,15 +4817,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
     n_ghosts = int(train_config.n_ghosts)
     has_ghost = n_ghosts > 0
 
-    data_folder_name = './graphs_data/CElegans/CElegans_a1/'
-
-    activity_neuron_list = json.load(open(f'graphs_data/{dataset_name}/activity_neuron_list.json", "r"))
-    larynx_neuron_list = json.load(open(f'graphs_data/{dataset_name}/larynx_neuron_list.json", "r"))
-    sensory_neuron_list = json.load(f'graphs_data/{dataset_name}/sensory_neuron_list.json", "r"))
-    inter_neuron_list = json.load(f'graphs_data/{dataset_name}/inter_neuron_list.json", "r"))
-    motor_neuron_list = json.load(f'graphs_data/{dataset_name}/motor_neuron_list.json", "r"))
-
-    # activity_neuron_list = json.load(open(f'graphs_data/{dataset_name}/activity_neuron_list.json', 'r'))
+    activity_neuron_list = np.array(json.load(open(f'graphs_data/{dataset_name}/activity_neuron_list.json', "r")))
 
     x_list = []
     y_list = []
@@ -5428,7 +5420,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
         plt.savefig(f'./{log_dir}/results/slope.tif', dpi=300)
         plt.close()
 
-    else:s
+    else:
 
         files = glob.glob(f'./{log_dir}/results/*.tif')
         for f in files:
@@ -5550,8 +5542,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
         plt.close()
 
         plt.figure(figsize=(10, 10))
-        ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},
-                         vmin=-0.1, vmax=0.1)
+        ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.1, vmax=0.1)
         cbar = ax.collections[0].colorbar
         cbar.ax.tick_params(labelsize=32)
         plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
@@ -5565,27 +5556,28 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
         plt.savefig(f'./{log_dir}/results/true connectivity.tif', dpi=300)
         plt.close()
 
-        plt.figure(figsize=(10, 10))
-        if True: # config.graph_model.signal_model_name == 'PDE_N8':
-            with open(f'graphs_data/{dataset_name}/larynx_neuron_list.json', 'r') as file:
-                larynx_neuron_list = json.load(file)
-            with open(f'graphs_data/{dataset_name}/activity_neuron_list.json', 'r') as file:
-                activity_neuron_list = json.load(file)
-            map_larynx_matrix, n = map_matrix(larynx_neuron_list, activity_neuron_list, adjacency)
-        else:
-            n = np.random.randint(0, n_particles, 50)
-        for i in range(len(n)):
-            plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=1)
-        plt.xlabel('time', fontsize=64)
-        plt.ylabel('$x_{i}$', fontsize=64)
-        plt.xlim([0,n_frames])
-        # plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
-        plt.xticks(fontsize=28)
-        plt.yticks(fontsize=28)
-        plt.title(r'$x_i$ samples',fontsize=48)
-        plt.tight_layout()
-        plt.savefig(f'./{log_dir}/results/activity.tif', dpi=300)
-        plt.close()
+        for k in range(2):
+            plt.figure(figsize=(10, 10))
+            if k==0: # config.graph_model.signal_model_name == 'PDE_N8':
+                plt.title('activity_larynx', fontsize=68)
+                map_larynx_matrix, n = map_matrix(larynx_neuron_list, activity_neuron_list, adjacency)
+            else:
+                plt.title('activity', fontsize=68)
+                n = np.random.randint(0, n_particles, 50)
+            for i in range(len(n)):
+                plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=1)
+            plt.xlabel('time', fontsize=64)
+            plt.ylabel('$x_{i}$', fontsize=64)
+            plt.xlim([0,n_frames])
+            plt.xticks(fontsize=28)
+            plt.yticks(fontsize=28)
+            plt.title(r'$x_i$ samples',fontsize=48)
+            plt.tight_layout()
+            if k == 0:
+                plt.savefig(f'./{log_dir}/results/activity_larynx.tif', dpi=300)
+            else:
+                plt.savefig(f'./{log_dir}/results/activity.tif', dpi=300)
+            plt.close()
 
         true_model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, device=device)
 
@@ -5710,8 +5702,6 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             plt.close()
 
 
-
-
             fig, ax = fig_init()
             for n in range(n_particles):
                 plt.scatter(to_numpy(model.a[:n_particles, 0]), to_numpy(model.a[:n_particles, 1]), s=50, color=mc, edgecolors='none')
@@ -5764,30 +5754,29 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             plt.savefig(f"./{log_dir}/results/histogram_d_pair_embedding.tif", dpi=80)
             plt.close()
 
-
             if 'excitation' in model_config.update_type:
                 embedding = model.a[:n_particles]
                 excitation = torch.tensor(x_list[0][:, :, 10: 10 + model.excitation_dim],device=device)
                 excitation = torch.reshape(excitation, (excitation.shape[0]*excitation.shape[1], excitation.shape[2]))
-                fig = plt.figure(figsize=(10, 10))
                 excitation_ = torch.unique(excitation,dim=0)
-                for k, exc in enumerate(excitation_):
-                    ax = fig.add_subplot(2, 2, k + 1)
+                in_features = torch.cat([embedding, excitation_[0] * torch.ones_like(embedding[:, 0:1])], dim=1)
+                out_0 = model.lin_exc(in_features.float())
+
+                fig = plt.figure(figsize=(18, 6))
+                for k, exc in enumerate(excitation_[1:]):
+                    ax = fig.add_subplot(1, 3, k + 1)
                     plt.text(0.2, 0.95, f'{to_numpy(exc)}', fontsize=14, ha='center', va='center', transform=ax.transAxes)
                     in_features = torch.cat([embedding, exc * torch.ones_like(embedding[:,0:1])], dim=1)
-                    out = model.lin_exc(in_features.float())
+                    out = model.lin_exc(in_features.float()) - out_0
                     # plt.scatter(to_numpy(embedding[:, 0])*0, to_numpy(out), s=100, c='w', alpha=0.15, edgecolors='none')
-                    plt.scatter(to_numpy(embedding[:, 0]), to_numpy(embedding[:, 1]), s=100, c=to_numpy(out), alpha=1, edgecolors='none')
+                    plt.scatter(to_numpy(embedding[:, 0]), to_numpy(embedding[:, 1]), s=10, c=to_numpy(-out), alpha=1, edgecolors='none')
                     plt.colorbar()
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/excitation.tif", dpi=170.7)
                 plt.close()
 
             fig, ax = fig_init()
-            if is_CElegans:
-                rr = torch.linspace(-xnorm.squeeze() * 4, xnorm.squeeze() * 4, 1000).to(device)
-            else:
-                rr = torch.linspace(-xnorm.squeeze() * 2 , xnorm.squeeze() * 2 , 1000).to(device)
+            rr = torch.linspace(-xnorm.squeeze() * 4, xnorm.squeeze() * 4, 1000).to(device)
             func_list = []
             for n in trange(0,n_particles,n_particles//100):
                 if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
@@ -6111,25 +6100,6 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             plt.tight_layout()
             plt.savefig(f'./{log_dir}/results/final learned connectivity.tif', dpi=300)
             plt.close()
-
-            if has_ghost:
-
-                print('plot learned activity ...')
-                os.makedirs(f"./{log_dir}/results/learned_activity", exist_ok=True)
-                for n in range(n_runs):
-                    fig, ax = fig_init(fontsize=24, formatx='%.0f', formaty='%.0f')
-                    t = torch.zeros((1, 800, 1), dtype=torch.float32, device=device)
-                    t[0] = torch.linspace(0, 1, 800, dtype=torch.float32, device=device)[:, None]
-                    prediction = model_missing_activity[n](t)
-                    prediction = prediction.squeeze().t()
-                    plt.imshow(to_numpy(prediction), aspect='auto',cmap='viridis')
-                    plt.colorbar()
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/results/learned_activity/learned_activity_{n}.tif", dpi=80)
-                    plt.close()
-
-
-
 
             if has_field:
 
@@ -10533,8 +10503,8 @@ if __name__ == '__main__':
         folder_name = './log/' + pre_folder + '/tmp_results/'
         os.makedirs(folder_name, exist_ok=True)
 
-        # data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
-        data_plot(config=config, config_file=config_file, epoch_list=['all'], style='black color', device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
+        # data_plot(config=config, config_file=config_file, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['time'], style='black color', device=device)
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

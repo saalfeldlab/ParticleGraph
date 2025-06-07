@@ -1776,13 +1776,13 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
         json.dump(larynx_neuron_list, f)
     sensory_neuron_list = Cook_neuron_chem_names[20:103]
     with open(f"graphs_data/{dataset_name}/sensory_neuron_list.json", "w") as f:
-        json.dump(larynx_neuron_list, f)
+        json.dump(sensory_neuron_list, f)
     inter_neuron_list = Cook_neuron_chem_names[103:184]
     with open(f"graphs_data/{dataset_name}/inter_neuron_list.json", "w") as f:
-        json.dump(larynx_neuron_list, f)
+        json.dump(inter_neuron_list, f)
     motor_neuron_list = Cook_neuron_chem_names[184:292]
     with open(f"graphs_data/{dataset_name}/motor_neuron_list.json", "w") as f:
-        json.dump(larynx_neuron_list, f)
+        json.dump(motor_neuron_list, f)
 
 
     map_larynx_matrix , index = map_matrix(larynx_neuron_list, activity_neuron_list, mask_matrix)
@@ -1920,6 +1920,12 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     pos = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
     perm = torch.randperm(pos.size(0))
     X1 = to_numpy(pos[perm])
+    # type 0 larynx
+    # type 1 sensory
+    # type 2 inter
+    # type 3 motor
+    # type 4
+    T1 = np.ones(n_particles,1) * 4
 
     for run in range(config.training.n_runs):
 
@@ -1930,6 +1936,7 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
             x = np.zeros((n_particles, 13))
             x[:, 0] = np.arange(n_particles)
             x[:, 1:3] = X1
+            x[:, 5] = T1
             x[:, 6] = activity_worm[run,:,it]
             x[:, 10:13] = odor_worms[run,:,it]
             x_list.append(x)
