@@ -1774,6 +1774,16 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     larynx_neuron_list = Cook_neuron_chem_names[0:20]
     with open(f"graphs_data/{dataset_name}/larynx_neuron_list.json", "w") as f:
         json.dump(larynx_neuron_list, f)
+    sensory_neuron_list = Cook_neuron_chem_names[20:103]
+    with open(f"graphs_data/{dataset_name}/sensory_neuron_list.json", "w") as f:
+        json.dump(larynx_neuron_list, f)
+    inter_neuron_list = Cook_neuron_chem_names[103:184]
+    with open(f"graphs_data/{dataset_name}/inter_neuron_list.json", "w") as f:
+        json.dump(larynx_neuron_list, f)
+    motor_neuron_list = Cook_neuron_chem_names[184:292]
+    with open(f"graphs_data/{dataset_name}/motor_neuron_list.json", "w") as f:
+        json.dump(larynx_neuron_list, f)
+
 
     map_larynx_matrix , index = map_matrix(larynx_neuron_list, activity_neuron_list, mask_matrix)
 
@@ -1790,9 +1800,6 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     plt.tight_layout()
     plt.savefig(f"graphs_data/{dataset_name}/mask_larynx_adjacency_matrix.png", dpi=170)
     plt.close()
-
-
-
 
 
     # generate data for GNN training

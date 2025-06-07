@@ -46,8 +46,8 @@ training:
   n_runs: 2
   device: 'cuda:0'
 
-  n_epochs: 20
-  batch_size: 8
+  n_epochs: 10
+  batch_size: 4
   small_init_batch_size: True
 
   data_augmentation_loop: 10000

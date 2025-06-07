@@ -876,4 +876,84 @@ def find_suffix_pairs_with_index(neuron_list, suffix1, suffix2):
                     break  # Stop after finding the first match
     return pairs
 
+def fit_polynomial(x, y, degree=3):
+    """
+    Fit a polynomial of given degree to data x, y.
+
+    Parameters:
+        x: numpy array or tensor of shape (N,) or (N, 1)
+        y: numpy array or tensor of shape (N,) or (N, 1)
+        degree: int, degree of polynomial to fit (default=3)
+
+    Returns:
+        poly: numpy.poly1d object representing the fitted polynomial
+    """
+    # Convert to 1D numpy arrays
+    x_np = np.ravel(x)
+    y_np = np.ravel(y)
+
+    # Fit polynomial
+    coeffs = np.polyfit(x_np, y_np, deg=degree)
+
+    # Create polynomial object
+    poly = np.poly1d(coeffs)
+
+    return poly
+
+def fit_polynomial_with_latex(x, y, degree=3):
+    """
+    Fit a polynomial of given degree to data x, y,
+    and return a LaTeX formatted string of the polynomial.
+
+    Parameters:
+        x: numpy array or tensor of shape (N,) or (N, 1)
+        y: numpy array or tensor of shape (N,) or (N, 1)
+        degree: int, degree of polynomial to fit (default=3)
+
+    Returns:
+        poly: numpy.poly1d object representing the fitted polynomial
+        latex_str: str, LaTeX formatted polynomial expression
+    """
+    x_np = np.ravel(x)
+    y_np = np.ravel(y)
+
+    coeffs = np.polyfit(x_np, y_np, deg=degree)
+    poly = np.poly1d(coeffs)
+
+    # Build LaTeX string
+    terms = []
+    for power, coeff in enumerate(coeffs[::-1]):
+        # power = 0 means constant term
+        # coeff for the current power
+        if abs(coeff) < 1e-12:
+            continue  # skip negligible coefficients
+
+        coeff_str = f"{abs(coeff):.4g}"
+        if power == 0:
+            term = f"{coeff_str}"
+        elif power == 1:
+            term = f"{coeff_str} x"
+        else:
+            term = f"{coeff_str} x^{power}"
+
+        # Add sign
+        sign = "-" if coeff < 0 else "+"
+        terms.append((sign, term))
+
+    # First term sign handling
+    if terms:
+        first_sign, first_term = terms[0]
+        if first_sign == "+":
+            latex_expr = first_term
+        else:
+            latex_expr = first_sign + " " + first_term
+
+        for sign, term in terms[1:]:
+            latex_expr += f" {sign} {term}"
+    else:
+        latex_expr = "0"
+
+    latex_str = f"${latex_expr}$"
+
+    return poly, latex_str
 

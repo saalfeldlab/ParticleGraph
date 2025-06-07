@@ -2784,7 +2784,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                         loss_contribs = []
                         for i in range(n_particles):
                             indices = index_weight[i]
-                            if len(indices) > 0:
+                            if indices.numel() > 0:
                                 values = W_sign[indices, i]
                                 std = torch.std(values, unbiased=False)
                                 loss_contribs.append(std)

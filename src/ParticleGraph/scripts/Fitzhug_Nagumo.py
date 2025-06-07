@@ -20,8 +20,6 @@ import skimage
 from torchvision.transforms import Resize, Compose, ToTensor, Normalize
 import torch.optim as optim
 
-
-
 # ----------------- SIREN Layer -----------------
 class SineLayer(nn.Module):
     def __init__(self, in_features, out_features, is_first=False, omega_0=30):
@@ -164,6 +162,7 @@ if __name__ == '__main__':
     n_steps = int(T / dt)
     time = np.linspace(0, T, n_steps)
 
+
     # Initialize variables
     v = np.zeros(n_steps)
     w = np.zeros(n_steps)
@@ -192,32 +191,32 @@ if __name__ == '__main__':
     plt.style.use('dark_background')
 
     # Plotting
-    fig = plt.figure(figsize=(12, 6))
+    fig = plt.figure(figsize=(10, 10))
     # Time series
-    plt.subplot(2, 1, 1)
-    plt.plot(time, v, label='v (membrane potential)')
-    plt.plot(time, w, label='w (recovery variable)', alpha=0.7)
-    plt.xlabel('Time')
-    plt.ylabel('State')
-    plt.title('FitzHugh-Nagumo with Periodic Excitation')
-    plt.legend()
-    plt.grid(True)
-    # Plot I_ext
-    plt.subplot(2, 1, 2)
-    plt.plot(time, I_ext, color='red', label='External input $I_{ext}$')
-    plt.xlabel('Time')
-    plt.ylabel('Input current')
-    plt.legend()
-    plt.grid(True)
+    plt.subplot(2, 2, 1)
+    plt.plot(time, I_ext, color='red', linewidth=2)
+    plt.xlabel('time', fontsize=16)
+    plt.ylabel(r'$I_{ext}$', fontsize=16)
+    plt.xlim([0, 300])
+    plt.subplot(2, 2, 2)
+    plt.plot(time, v, c='white', linewidth=2)
+    plt.xlim([0, 300])
+    plt.xlabel('time', fontsize=16)
+    plt.ylabel('v', fontsize=16)
+    plt.subplot(2, 2, 4)
+    plt.plot(time, w, c='green', linewidth=2)
+    plt.xlim([0, 300])
+    plt.xlabel('time', fontsize=16)
+    plt.ylabel('w', fontsize=16)
     plt.tight_layout()
-    plt.savefig('./tmp/time_series.png', dpi=170)
+    plt.savefig('./tmp/time_series_Nagumo.png', dpi=170)
     plt.close()
 
     plt.figure(figsize=(8, 8))
     plt.plot(v, w)
-    plt.xlabel('v')
-    plt.ylabel('w')
-    plt.title('Phase Portrait')
+    plt.xlabel('v', fontsize=16)
+    plt.ylabel('w', fontsize=16)
+    plt.title('phase Portrait')
     plt.grid(True)
     plt.tight_layout()
     plt.savefig('./tmp/phase_portrait.png', dpi=170)
@@ -233,6 +232,10 @@ if __name__ == '__main__':
 
     model = model_duo(device=device)    #Siren(in_features=1, out_features=1).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
+
+    # state_dict = torch.load(f'tmp/model_0.pt', map_location=device)
+    # model.load_state_dict(state_dict['model_state_dict'])
+
 
     n_epochs = 200000
     batch_size = 2000
@@ -306,7 +309,7 @@ if __name__ == '__main__':
                             with torch.no_grad():
                                 # w = model.siren(t_full[step])
 
-                                dv_pred = model.mlp0(torch.cat((v[:, None], w[:, None], I_ext[step:step + 1, None]), dim=1))
+                                dv_pred = model.mlp0(torch.cat((v[:, None], w[:, None], I_ext[step:step + 1, None]/2), dim=1))
                                 dw_pred = model.mlp1(torch.cat((v[:, None], w[:, None]), dim=1))
 
                                 v += dt * dv_pred.squeeze()
@@ -318,17 +321,95 @@ if __name__ == '__main__':
                         v_list = torch.stack(v_list, dim=0)
                         w_list = torch.stack(w_list, dim=0)
 
-
-                        fig = plt.figure(figsize=(12, 6))
-                        plt.plot(I_ext.cpu().numpy(), label='I_ext (external input)', linewidth=2, alpha=0.5, c='red')
-                        plt.plot(v_true.cpu().numpy(), label='true v (membrane potential)', linewidth=10, alpha=0.5, c='salmon')
-                        plt.plot(v_list.cpu().numpy(), label='rollout v', linewidth=2, alpha=1, c='salmon')
-                        plt.plot(w_true.cpu().numpy(), label='w (recovery variable)', linewidth=10, alpha=0.5, c='blue')
-                        plt.plot(w_list.cpu().numpy(), label='w NNR', linewidth=2, alpha=1, c='blue')
-                        plt.plot(w_pred.cpu().numpy(), label='w NNR', linewidth=2, alpha=0.5, c='blue')
+                        fig = plt.figure(figsize=(12, 18))
+                        ax = fig.add_subplot(211)
+                        # plt.plot(I_ext.cpu().numpy(), label='I_ext (external input)', linewidth=2, alpha=0.5, c='red')
+                        plt.plot(v_true.cpu().numpy(), label='true v (membrane potential)', linewidth=4, alpha=0.5, c='white')
+                        plt.plot(v_list.cpu().numpy(), label='rollout v', linewidth=2, alpha=1, c='white')
+                        plt.xlim([0, n_steps//2.5])
+                        ax = fig.add_subplot(212)
+                        plt.plot(w_true.cpu().numpy(), label='w (recovery variable)', linewidth=4, alpha=0.5, c='green')
+                        plt.plot(w_list.cpu().numpy(), label='rollout w', linewidth=2, alpha=1, c='green')
+                        plt.plot(w_pred.cpu().numpy(), label='NNR w', linewidth=2, alpha=0.5, c='green')
                         plt.xlim([0, n_steps//2.5])
                         plt.legend(loc='upper left')
+                        plt.savefig('./tmp/rollout_Nagumo.png', dpi=170)
                         plt.show()
+                        plt.close()
+
+                        plt.figure(figsize=(8, 8))
+                        plt.plot(v_true.cpu().numpy(),w_true.cpu().numpy(), label='true', linewidth=2, alpha=0.5, c='white')
+                        plt.plot(v_list.cpu().numpy(), w_list.cpu().numpy(), label='rollout', linewidth=2, alpha=1, c='white')
+                        plt.xlabel('v', fontsize=16)
+                        plt.ylabel('w', fontsize=16)
+                        plt.legend(fontsize=16)
+                        plt.title('phase portrait',fontsize=20)
+                        # plt.grid(True)
+                        plt.tight_layout()
+                        plt.savefig('./tmp/phase_portrait_Nagumo.png', dpi=170)
+                        plt.show()
+                        plt.close()
+
+                        fig = plt.figure(figsize=(11, 12))
+                        ax = fig.add_subplot(221)
+                        inputs = torch.cat((v_true[:, None], w_true[:, None] * 0, I_ext[:, None] * 0), dim=1)
+                        func = model.mlp0(inputs)  # [N, 1]
+                        poly, latex = fit_polynomial_with_latex(to_numpy(inputs[:, 0]), to_numpy(func), degree=3)
+                        plt.scatter(to_numpy(inputs[:, 0]), to_numpy(func), s=5, c='white')
+                        plt.title(f'v = {latex}', fontsize=12, color='white')
+                        plt.xlabel('v', fontsize=16)
+                        plt.ylabel('dv/dt', fontsize=16)
+                        ax = fig.add_subplot(222)
+                        inputs = torch.cat((v_true[:, None] * 0, w_true[:, None], I_ext[:, None] * 0), dim=1)
+                        func = model.mlp0(inputs)  # [N, 1]
+                        poly, latex = fit_polynomial_with_latex(to_numpy(inputs[:, 1]), to_numpy(func), degree=2)
+                        plt.scatter(to_numpy(inputs[:, 1]), to_numpy(func), s=5, c='white')
+                        plt.title(f'v = {latex}', fontsize=12, color='white')
+                        plt.xlabel('w', fontsize=16)
+                        plt.ylabel('dv/dt', fontsize=16)
+                        ax = fig.add_subplot(223)
+                        inputs = torch.cat((v_true[:, None] * 0, w_true[:, None] * 0, I_ext[:, None]), dim=1)
+                        func = model.mlp0(inputs)  # [N, 1]
+                        poly, latex = fit_polynomial_with_latex(to_numpy(inputs[:, 2]), to_numpy(func), degree=2)
+                        plt.scatter(to_numpy(inputs[:, 2]), to_numpy(func), s=5, c='white')
+                        plt.title(f'v = {latex}', fontsize=12, color='white')
+                        plt.xlabel(r'$I_{ext}$', fontsize=16)
+                        plt.ylabel('dv/dt', fontsize=16)
+                        plt.tight_layout()
+                        plt.savefig('./tmp/fit_dv_Nagumo.png', dpi=170)
+                        plt.show()
+                        plt.close()
+
+                        fig = plt.figure(figsize=(11, 12))
+                        ax = fig.add_subplot(221)
+                        inputs = torch.cat((v_true[:, None], w_true[:, None] * 0), dim=1)
+                        func = model.mlp1(inputs)  # [N, 1]
+                        poly, latex = fit_polynomial_with_latex(to_numpy(inputs[:, 0]), to_numpy(func), degree=2)
+                        plt.scatter(to_numpy(inputs[:, 0]), to_numpy(func), s=5, c='white')
+                        plt.title(f'w = {latex}', fontsize=12, color='white')
+                        plt.xlabel('w', fontsize=16)
+                        plt.ylabel('dw/dt', fontsize=16)
+                        ax = fig.add_subplot(222)
+                        inputs = torch.cat((v_true[:, None] * 0, w_true[:, None]), dim=1)
+                        func = model.mlp1(inputs)  # [N, 1]
+                        poly, latex = fit_polynomial_with_latex(to_numpy(inputs[:, 1]), to_numpy(func), degree=2)
+                        plt.scatter(to_numpy(inputs[:, 1]), to_numpy(func), s=5, c='white')
+                        plt.title(f'w = {latex}', fontsize=12, color='white')
+                        plt.xlabel('w', fontsize=16)
+                        plt.ylabel('dw/dt', fontsize=16)
+                        plt.tight_layout()
+                        plt.savefig('./tmp/fit_dw_Nagumo.png', dpi=170)
+                        plt.show()
+                        plt.close()
+
+                        torch.save({'model_state_dict': model.state_dict(),
+                                    'optimizer_state_dict': optimizer.state_dict()},
+                                    f'tmp/model.pt')
+
+
+
+
+
 
 
 
