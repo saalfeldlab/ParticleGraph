@@ -187,7 +187,12 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
     plt.close()
 
     gt_weight = to_numpy(adjacency)
-    pred_weight = to_numpy(model.W[:n_particles, :n_particles].clone().detach())
+
+    if config.training.multi_connectivity:
+        pred_weight = to_numpy(model.W[0, :n_particles, :n_particles].clone().detach())
+    else:
+        pred_weight = to_numpy(model.W[:n_particles, :n_particles].clone().detach())
+
     if n_particles<1000:
 
         # fig = plt.figure(figsize=(8, 8))

@@ -199,6 +199,7 @@ class TrainingConfig(BaseModel):
     embedding_trial: bool = False
     remove_self: bool = True
 
+    multi_connectivity: bool = False
     with_connectivity_mask: bool = False
 
     do_tracking: bool = False

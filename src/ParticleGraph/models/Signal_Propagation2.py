@@ -38,6 +38,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         self.n_frames = simulation_config.n_frames
         self.field_type = model_config.field_type
         self.embedding_trial = config.training.embedding_trial
+        self.multi_connectivity = config.training.multi_connectivity
 
         self.input_size = model_config.input_size
         self.output_size = model_config.output_size
@@ -100,7 +101,10 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             self.lin_modulation = MLP(input_size=self.input_size_modulation, output_size=self.output_size_modulation, nlayers=self.n_layers_modulation,
                                 hidden_size=self.hidden_dim_modulation, device=self.device)
 
-        self.W = nn.Parameter(torch.randn((int(self.n_particles + self.n_virtual_neurons),int(self.n_particles + self.n_virtual_neurons)), device=self.device, requires_grad=True, dtype=torch.float32))
+        if self.multi_connectivity:
+            self.W = nn.Parameter(torch.randn((int(self.n_dataset),int(self.n_particles + self.n_virtual_neurons),int(self.n_particles + self.n_virtual_neurons)), device=self.device, requires_grad=True, dtype=torch.float32))
+        else:
+            self.W = nn.Parameter(torch.randn((int(self.n_particles + self.n_virtual_neurons),int(self.n_particles + self.n_virtual_neurons)), device=self.device, requires_grad=True, dtype=torch.float32))
 
         self.mask = torch.ones((int(self.n_particles + self.n_virtual_neurons),int(self.n_particles + self.n_virtual_neurons)), device=self.device, requires_grad=False, dtype=torch.float32)
         self.mask.fill_diagonal_(0)
@@ -117,6 +121,8 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         self.return_all = return_all
         x, edge_index = data.x, data.edge_index
 
+        self.data_id = data_id.squeeze().long().clone().detach()
+
         u = data.x[:, 6:7]
 
         if self.model == 'PDE_N3':
@@ -126,7 +132,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             particle_id = x[:, 0].long()
             embedding = self.a[particle_id, :]
             if self.embedding_trial:
-                embedding = torch.cat((self.b[data_id.squeeze().long(), :], embedding), dim=1)
+                embedding = torch.cat((self.b[self.data_id, :], embedding), dim=1)
 
         msg = self.propagate(edge_index, u=u, embedding=embedding)
 
@@ -168,16 +174,21 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         else:
             in_features = u_j
 
-        T = self.W * self.mask
 
         line_edge = self.lin_edge(in_features)
         if self.lin_edge_positive:
             line_edge = line_edge**2
 
-        if (self.batch_size==1):
+        if self.multi_connectivity:
+            assert self.batch_size==1, 'Warning: multiple_connectivity is not implemented for batch_size > 1'
+            T = self.W[self.data_id[0], :, :] * self.mask
             return T[edge_index_i, edge_index_j][:, None] * line_edge
         else:
-            return T[edge_index_i%(self.W.shape[0]), edge_index_j%(self.W.shape[0])][:,None] * line_edge
+            T = self.W * self.mask
+            if (self.batch_size==1):
+                return T[edge_index_i, edge_index_j][:, None] * line_edge
+            else:
+                return T[edge_index_i%(self.W.shape[0]), edge_index_j%(self.W.shape[0])][:,None] * line_edge
 
 
     def update(self, aggr_out):

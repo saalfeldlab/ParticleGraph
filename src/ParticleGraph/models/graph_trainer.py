@@ -2409,6 +2409,7 @@ def data_train_synaptic2(config, erase, best_model, device):
     time_step = train_config.time_step
     n_virtual_neurons = int(train_config.n_virtual_neurons)
     has_virtual_neuron = n_virtual_neurons > 0
+    multi_connectivity = config.training.multi_connectivity
 
     if field_type != '':
         n_nodes = simulation_config.n_nodes
@@ -2756,18 +2757,20 @@ def data_train_synaptic2(config, erase, best_model, device):
                     else:
                         x[:, 8:9] = torch.ones_like(x[:, 0:1])
 
+                    if multi_connectivity:
+                        model_W = model.W[run]
+                    else:
+                        model_W = model.W
                     # regularisation lin_phi(0)=0
                     in_features = get_in_features_update(rr=None, model=model, device=device)
                     func_phi = model.lin_phi(in_features.float())
                     loss = func_phi.norm(2)
                     # regularisation sparsity on Wij
-                    loss = loss + model.W[:n_particles, :n_particles].norm(1) * coeff_L1
+                    loss = loss + model_W[:n_particles, :n_particles].norm(1) * coeff_L1
                     if has_virtual_neuron and (train_config.coeff_L1_virtual_neuron > 0):
-                        loss += model.W[:n_particles, n_particles:].norm(1) * train_config.coeff_L1_virtual_neuron
+                        loss += model_W[:n_particles, n_particles:].norm(1) * train_config.coeff_L1_virtual_neuron
                     # regularisation lin_edge
-                    in_features_prev, in_features, in_features_next = get_in_features_lin_edge(x, model, model_config,
-                                                                                               xnorm, n_particles,
-                                                                                               device)
+                    in_features_prev, in_features, in_features_next = get_in_features_lin_edge(x, model, model_config, xnorm, n_particles,device)
                     if coeff_diff > 0:
                         if model_config.lin_edge_positive:
                             msg_1 = model.lin_edge(in_features_prev) ** 2
@@ -2780,7 +2783,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                         loss = loss + torch.relu(msg0 - msg1).norm(2) * coeff_diff
                     # regularisation sign Wij
                     if coeff_sign > 0:
-                        W_sign = torch.tanh(5 * model.W)
+                        W_sign = torch.tanh(5 * model_W)
                         loss_contribs = []
                         for i in range(n_particles):
                             indices = index_weight[i]
@@ -2912,7 +2915,10 @@ def data_train_synaptic2(config, erase, best_model, device):
                 total_loss += loss.item()
 
                 with torch.no_grad():
-                    model.W.copy_(model.W * model.mask)
+                    if multi_connectivity:
+                        model.W[run].copy_(model.W[run] * model.mask)
+                    else:
+                        model.W.copy_(model.W * model.mask)
 
                 if ((N % plot_frequency == 0) | (N == 0)):
                     with torch.no_grad():
@@ -3003,7 +3009,10 @@ def data_train_synaptic2(config, erase, best_model, device):
         plt.xlabel('Embedding 0', fontsize=12)
         plt.ylabel('Embedding 1', fontsize=12)
 
-        A = model.W.clone().detach() * model.mask.clone().detach()
+        if multi_connectivity:
+            A = model.W[0].clone().detach() * model.mask.clone().detach()
+        else:
+            A = model.W.clone().detach() * model.mask.clone().detach()
 
         ax = fig.add_subplot(2, 5, 3)
         ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},

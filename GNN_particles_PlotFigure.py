@@ -4872,6 +4872,9 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
     distrib = to_numpy(activity.flatten())
     activity = activity.t()
 
+    excitation = torch.tensor(x_list[0][:, :, 10:13], device=device)
+    excitation = excitation[:,0,:].squeeze()
+
     if os.path.exists(f'graphs_data/{dataset_name}/raw_x_list_{run}.npy'):
         raw_activity = torch.tensor(raw_x[:, :, 6:7], device=device)
         raw_activity = raw_activity.squeeze()
@@ -5701,16 +5704,13 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             if 'excitation' in model_config.update_type:
 
                 embedding = model.a[:n_particles]
-                excitation = torch.tensor(x_list[0][:, :, 10: 10 + model.excitation_dim],device=device)
-                excitation = torch.reshape(excitation, (excitation.shape[0]*excitation.shape[1], excitation.shape[2]))
-                excitation_ = torch.unique(excitation,dim=0)
-                in_features = torch.cat([embedding, excitation_[0] * torch.ones_like(embedding[:, 0:1])], dim=1)
-                out_0 = model.lin_exc(in_features.float())
+                excitation_ = torch.tensor([[1., 0., 0.], [0., 1., 0.], [0., 0., 1.0]], dtype=torch.float32, device=device)
 
-                fig = plt.figure(figsize=(18, 6))
-                for k, exc in enumerate(excitation_[1:]):
-                    ax = fig.add_subplot(1, 3, k + 1)
+                for k, exc in enumerate(excitation_):
+                    fig = plt.figure(figsize=(12, 12))
+                    ax = fig.add_subplot(1, 1, 1)
                     plt.title(odor_list[k], fontsize=18)
+                    print(exc)
                     in_features = torch.cat([embedding, exc * torch.ones_like(embedding[:, 0:1])], dim=1)
                     out = model.lin_exc(in_features.float())
                     in_features = torch.cat([
@@ -5725,20 +5725,15 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                     embedding_np = to_numpy(embedding)
                     out_np = to_numpy(out).flatten()
 
-                    sc = ax.scatter(embedding_np[:, 0], embedding_np[:, 1], s=20, c=out_np, alpha=1, edgecolors='none',
+                    plt.scatter(embedding_np[:, 0], embedding_np[:, 1], s=100, c=out_np, alpha=1, edgecolors='none',
                                     cmap=black_to_green)
-                    fig.colorbar(sc, ax=ax)
 
-                    top5_indices = np.argsort(out_np)[-5:][::-1]
-
-                    # Prepare label text for bottom-left box
+                    top3_indices = np.argsort(out_np)[-3:][::-1]
                     label_lines = [
                         f"{activity_neuron_list[m]} ({neuron_types_list[int(x[m, 5])]})"
-                        for m in top5_indices
+                        for m in top3_indices
                     ]
                     label_text = "\n".join(label_lines)
-
-                    # Add text box to bottom-left
                     ax.text(
                         0.02, 0.05,  # relative axes coords (bottom-left)
                         label_text,
@@ -5748,9 +5743,16 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                         transform=ax.transAxes,
                         bbox=dict(facecolor='white', alpha=0.0, edgecolor='gray')
                     )
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/excitation.png", dpi=170.7)
-                plt.close()
+
+                    ax = fig.add_subplot(3, 3, 1)
+                    for m in top3_indices:
+                        plt.plot(
+                            to_numpy(activity[m, :]),
+                            linewidth=0.5)
+                    plt.plot(to_numpy(excitation[:,k]), linewidth=0.5, c='yellow')
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/excitation_{odor_list[k]}.png", dpi=170.7)
+                    plt.close()
 
             # fig, ax = fig_init()
             # rr = torch.linspace(-xnorm.squeeze() * 4, xnorm.squeeze() * 4, 1000).to(device)
