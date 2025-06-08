@@ -1645,9 +1645,6 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     plot_worm_adjacency_matrix(to_numpy(adjacency), activity_neuron_list, 'partial adjacency matrix Turuga 2022', f"graphs_data/{dataset_name}/partial_Turuga_adjacency_matrix.png")
 
 
-
-
-
     print('load connectomes from other data ...')
     # Comparison with data from https://wormwiring.org/pages/adjacency.html
     # Cook 2019 Whole-animal connectomes of both Caenorhabditis
