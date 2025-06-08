@@ -40,7 +40,7 @@ from skimage.transform import resize
 from skimage import filters, feature
 import pandas as pd
 import scipy.io
-
+from matplotlib.colors import LinearSegmentedColormap
 
 def extract_object_properties(segmentation_image, fluorescence_image=[], radius=40, offset_channel=[0.0, 0.0]):
     # Label the objects in the segmentation image
@@ -1920,12 +1920,29 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
     pos = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
     perm = torch.randperm(pos.size(0))
     X1 = to_numpy(pos[perm])
+
     # type 0 larynx
     # type 1 sensory
     # type 2 inter
     # type 3 motor
-    # type 4
-    T1 = np.ones(n_particles,1) * 4
+    # type 4 other
+
+    T1 = np.ones((n_particles, 1)) * 4
+    type_dict = {}
+
+    # Assign types according to list
+    for name in larynx_neuron_list:
+        type_dict[name] = 0
+    for name in sensory_neuron_list:
+        type_dict[name] = 1
+    for name in inter_neuron_list:
+        type_dict[name] = 2
+    for name in motor_neuron_list:
+        type_dict[name] = 3
+
+    # Default to type 4 ("other") if not found
+    T1 = np.array([[type_dict.get(name, 4)] for name in activity_neuron_list])
+
 
     for run in range(config.training.n_runs):
 
@@ -1936,7 +1953,7 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
             x = np.zeros((n_particles, 13))
             x[:, 0] = np.arange(n_particles)
             x[:, 1:3] = X1
-            x[:, 5] = T1
+            x[:, 5:6] = T1
             x[:, 6] = activity_worm[run,:,it]
             x[:, 10:13] = odor_worms[run,:,it]
             x_list.append(x)
@@ -1951,7 +1968,18 @@ def load_worm_data(config, device=None, visualize=None, step=None, cmap=None):
                 # plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=10, c=to_numpy(x[:, 6]),
                 #             cmap='viridis', vmin=-10, vmax=10, edgecolors='k', alpha=1)
                 plt.axis('off')
-                plt.scatter(X1[:, 0], X1[:, 1], s=700, c=x[:, 6], cmap='viridis', vmin=0, vmax=8)
+                values = x[:, 6]
+                normed_vals = (values - 4) / (8 - 4)  # (min=4, max=8)
+
+                black_to_green = LinearSegmentedColormap.from_list('black_green', ['black', 'green'])
+                black_to_yellow = LinearSegmentedColormap.from_list('black_yellow', ['black', 'yellow'])
+
+                plt.scatter(X1[:, 0], X1[:, 1], s=700, c=normed_vals, cmap=black_to_green)
+
+                plt.scatter(-0.45, 0.5, s=700, c=x[0, 10] + 0.1, cmap= black_to_yellow, vmin=0,vmax=1)
+                plt.scatter(-0.4, 0.5, s=700, c=x[0, 11] + 0.1, cmap= black_to_yellow, vmin=0,vmax=1)
+                plt.scatter(-0.35, 0.5, s=700, c=x[0, 12] + 0.1, cmap= black_to_yellow, vmin=0,vmax=1)
+
                 plt.xticks([])
                 plt.yticks([])
                 plt.tight_layout()

@@ -4817,7 +4817,13 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
     n_ghosts = int(train_config.n_ghosts)
     has_ghost = n_ghosts > 0
 
-    activity_neuron_list = np.array(json.load(open(f'graphs_data/{dataset_name}/activity_neuron_list.json', "r")))
+    data_folder_name = './graphs_data/CElegans/CElegans_a1/'
+
+    activity_neuron_list = json.load(open(f'graphs_data/{dataset_name}/activity_neuron_list.json', "r"))
+    larynx_neuron_list = json.load(open(f'graphs_data/{dataset_name}/larynx_neuron_list.json', "r"))
+    sensory_neuron_list = json.load(open(f'graphs_data/{dataset_name}/sensory_neuron_list.json', "r"))
+    inter_neuron_list = json.load(open(f'graphs_data/{dataset_name}/inter_neuron_list.json', "r"))
+    motor_neuron_list = json.load(open(f'graphs_data/{dataset_name}/motor_neuron_list.json', "r"))
 
     x_list = []
     y_list = []
@@ -10503,8 +10509,8 @@ if __name__ == '__main__':
         folder_name = './log/' + pre_folder + '/tmp_results/'
         os.makedirs(folder_name, exist_ok=True)
 
-        data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
-        # data_plot(config=config, config_file=config_file, epoch_list=['all'], style='black color', device=device)
+        # data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['all'], style='black color', device=device)
         # data_plot(config=config, epoch_list=['time'], style='black color', device=device)
         # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
