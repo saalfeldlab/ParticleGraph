@@ -452,28 +452,27 @@ def plot_training_signal_field(x, n_nodes, recursive_loop, kk, time_step, x_list
         prediction = prediction.t()
         plt.imshow(to_numpy(prediction), aspect='auto', cmap='viridis')
         ax = fig.add_subplot(2, 2, 3)
-        if n_frames > 1000:
-            ids = np.arange(0, n_frames, 100).astype(int)
-        else:
-            ids = np.arange(0, n_frames, 1).astype(int)
-
-        plt.scatter(to_numpy(modulation[:, ids[:-1]]), to_numpy(prediction[:modulation.shape[0], :]), s=0.1, color='k', alpha=0.01)
-        x_data = to_numpy(modulation[:, ids[:-1]]).flatten()
-        y_data = to_numpy(prediction[:modulation.shape[0], :]).flatten()
-        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-        residuals = y_data - linear_model(x_data, *lin_fit)
-        ss_res = np.sum(residuals ** 2)
-        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-        r_squared = 1 - (ss_res / ss_tot)
-        ax.text(0.01, 0.99, f'$R^2$ {r_squared:0.3f}   slope {lin_fit[0]:0.3f}', transform=ax.transAxes,
-                verticalalignment='top', horizontalalignment='left')
-        ind_list = [10, 24, 48, 120, 150, 180]
-        ax = fig.add_subplot(4, 2, 6)
-        for ind in ind_list:
-            plt.plot(to_numpy(modulation[ind, :]))
-        ax = fig.add_subplot(4, 2, 8)
-        for ind in ind_list:
-            plt.plot(to_numpy(prediction[ind, :]))
+        # if n_frames > 1000:
+        #     ids = np.arange(0, n_frames, 100).astype(int)
+        # else:
+        #     ids = np.arange(0, n_frames, 1).astype(int)
+        # plt.scatter(to_numpy(modulation[:, ids[:-1]]), to_numpy(prediction[:modulation.shape[0], :]), s=0.1, color='k', alpha=0.01)
+        # x_data = to_numpy(modulation[:, ids[:-1]]).flatten()
+        # y_data = to_numpy(prediction[:modulation.shape[0], :]).flatten()
+        # lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+        # residuals = y_data - linear_model(x_data, *lin_fit)
+        # ss_res = np.sum(residuals ** 2)
+        # ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+        # r_squared = 1 - (ss_res / ss_tot)
+        # ax.text(0.01, 0.99, f'$R^2$ {r_squared:0.3f}   slope {lin_fit[0]:0.3f}', transform=ax.transAxes,
+        #         verticalalignment='top', horizontalalignment='left')
+        # ind_list = [10, 24, 48, 120, 150, 180]
+        # ax = fig.add_subplot(4, 2, 6)
+        # for ind in ind_list:
+        #     plt.plot(to_numpy(modulation[ind, :]))
+        # ax = fig.add_subplot(4, 2, 8)
+        # for ind in ind_list:
+        #     plt.plot(to_numpy(prediction[ind, :]))
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
         plt.close()

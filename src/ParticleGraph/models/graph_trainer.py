@@ -29,7 +29,7 @@ from sklearn import neighbors, metrics
 import torch.nn.functional as F
 from scipy.ndimage import median_filter
 from tifffile import imwrite
-
+from matplotlib.colors import LinearSegmentedColormap
 
 def data_train(config=None, erase=False, best_model=None, device=None):
     # plt.rcParams['text.usetex'] = True
@@ -4465,11 +4465,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{num}.tif", dpi=80)
                 plt.close()
             elif 'PDE_N' in model_config.signal_model_name:
-
                 plt.close()
-
-                # y = model(dataset, data_id=1, return_all=True)
-
                 matplotlib.rcParams['savefig.pad_inches'] = 0
 
                 if has_ghost:
@@ -4497,9 +4493,14 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=170)
                     plt.close()
                 else:
+
+                    black_to_green = LinearSegmentedColormap.from_list('black_green', ['black', 'green'])
                     plt.figure(figsize=(10, 10))
-                    plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=200, c=to_numpy(x[:, 6]),
-                                cmap='viridis', vmin=-10, vmax=10, edgecolors='k', alpha=1)
+                    # plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=200, c=to_numpy(x[:, 6]),
+                    #             cmap='viridis', vmin=-10, vmax=10, edgecolors='k', alpha=1)
+                    plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=700, c=to_numpy(x[:, 6]), alpha=1, edgecolors='none',
+                                    cmap=black_to_green)
+
                     plt.axis('off')
                     plt.xticks([])
                     plt.yticks([])
@@ -4774,10 +4775,12 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.savefig(f'./{log_dir}/results/comparison_xi_{it}.png', dpi=80)
                 plt.close()
 
-            if ('PDE_N' in model_config.signal_model_name) & (it % 200 == 0) & (it > 0):
+            if ('PDE_N' in model_config.signal_model_name) & (it % 50 == 0) & (it > 0):
 
                 if has_ghost & ('PDE_N' in model_config.signal_model_name):
                     n = [1, 3, 10, 15, 26, 27, 52, 62, 92, 120]
+                elif 'CElegans' in dataset_name:
+                    n = [20, 30, 40, 50, 60, 70, 80, 90, 100, 110]
                 else:
                     n = [20, 30, 100, 150, 260, 270, 520, 620, 720, 820]
 
@@ -4800,12 +4803,13 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.legend(fontsize=24)
                 plt.plot(neuron_gt_list_[:, n[1:10]].detach().cpu().numpy(), c=mc, linewidth=8, alpha=0.25)
                 plt.plot(neuron_pred_list_[:, n[1:10]].detach().cpu().numpy(), linewidth=4)
-                plt.xlim([0, 1400])
+                plt.xlim([0, 200])
                 plt.xlabel(r'time-points', fontsize=48)
                 plt.ylabel(r'$x_i$', fontsize=48)
                 plt.xticks(fontsize=24)
                 plt.yticks(fontsize=24)
-                plt.ylim([-30, 30])
+                plt.ylim([0, 10])
+                # plt.ylim([-30, 30])
                 # plt.text(40, 26, f'time: {it}', fontsize=34)
                 ax = plt.subplot(122)
                 plt.scatter(to_numpy(neuron_gt_list_[-1, :]), to_numpy(neuron_pred_list_[-1, :]), s=10, c=mc)
