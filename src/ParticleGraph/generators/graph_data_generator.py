@@ -97,8 +97,10 @@ def generate_from_data(config, device, visualize=True, step=None, cmap=None):
         load_Goole_data(config, device, visualize, step, cmap)
     elif 'Kato' in data_folder_name:
         load_worm_Kato_data(config, device, visualize, step)
-    elif 'worm' in data_folder_name:
-        load_worm_data(config, device, visualize, step)
+    elif 'wormvae' in data_folder_name:
+        load_wormvae_data(config, device, visualize, step)
+    elif 'NeuroPAL' in data_folder_name:
+        load_neuropal_data(config, device, visualize, step)
     elif 'U2OS' in data_folder_name:
         load_2Dfluo_data_on_mesh(config, device, visualize, step)
     elif 'cardio' in data_folder_name:

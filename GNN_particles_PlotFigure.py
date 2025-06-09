@@ -4810,12 +4810,14 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
     field_type = model_config.field_type
     if field_type != '':
         n_nodes = simulation_config.n_nodes
-        n_nodes_per_axis = int(np.sqrt(n_nodes))
+        # n_nodes_per_axis = int(np.sqrt(n_nodes))
         has_field = True
     else:
         has_field = False
     n_ghosts = int(train_config.n_ghosts)
     has_ghost = n_ghosts > 0
+    multi_connectivity = config.training.multi_connectivity
+
 
     data_folder_name = './graphs_data/CElegans/CElegans_a1/'
 
@@ -4832,13 +4834,12 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
 
     x_list = []
     y_list = []
-    for run in trange(1,2):
+    for run in trange(0,n_runs):
         if os.path.exists(f'graphs_data/{dataset_name}/x_list_{run}.pt'):
             x = torch.load(f'graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device)
             y = torch.load(f'graphs_data/{dataset_name}/y_list_{run}.pt', map_location=device)
             x = to_numpy(torch.stack(x))
             y = to_numpy(torch.stack(y))
-
         else:
             x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
             y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
@@ -4958,11 +4959,15 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
         model_missing_activity.eval()
 
     if has_field:
-        if ('short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
-            model_f = Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
-                            hidden_features=model_config.hidden_dim_nnr,
-                            hidden_layers=model_config.n_layers_nnr, first_omega_0=omega, hidden_omega_0=omega,
-                            outermost_linear=model_config.outermost_linear_nnr)
+        if ('short_term_plasticity' in field_type) | ('modulation' in field_type):
+            model_f = nn.ModuleList([
+                Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
+                      hidden_features=model_config.hidden_dim_nnr,
+                      hidden_layers=model_config.n_layers_nnr, first_omega_0=model_config.omega,
+                      hidden_omega_0=model_config.omega,
+                      outermost_linear=model_config.outermost_linear_nnr)
+                for n in range(n_runs)
+            ])
         else:
             model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
                                             hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device, first_omega_0=omega, hidden_omega_0=omega)
@@ -5602,29 +5607,71 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             model.edges = edge_index
             print(f'net: {net}')
 
-            i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
-            A = model.W.clone().detach()
-            A[i, i] = 0
-            A = A.t()
+            neuron_OI = get_neuron_index('SAAVL', activity_neuron_list)
 
-            fig, ax = fig_init()
-            ax = sns.heatmap(to_numpy(A) , center=0, square=True, cmap='bwr',
-                             cbar_kws={'fraction': 0.046}, vmin=-4, vmax=4)
-            cbar = ax.collections[0].colorbar
-            cbar.ax.tick_params(labelsize=48)
-            plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=24)
-            plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=24)
-            plt.subplot(2, 2, 1)
 
-            larynx_pred_weight, index_larynx = map_matrix(larynx_neuron_list, activity_neuron_list, A)
-            ax = sns.heatmap(to_numpy(larynx_pred_weight) , cbar=False, center=0, square=True,
-                             cmap='bwr', vmin=-4, vmax=4)
+            for data_OI in range(n_runs):
 
-            plt.xticks([])
-            plt.yticks([])
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/W_{epoch}.tif", dpi=80)
-            plt.close()
+                activity = torch.tensor(x_list[data_OI][:, :, 6:7], device=device)
+                activity = activity.squeeze()
+                activity = activity.t()
+
+                fig = plt.figure(figsize=(20, 2))
+                plt.plot(to_numpy(activity[neuron_OI, :]), linewidth=2, c=mc)
+                plt.show()
+
+
+
+            if multi_connectivity:
+                os.makedirs(f"./{log_dir}/results/W", exist_ok=True)
+                for k in range(model.W.shape[0]-1):
+
+                    i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+                    A = model.W[k].clone().detach()
+                    A[i, i] = 0
+                    A = A.t()
+                    fig, ax = fig_init()
+                    ax = sns.heatmap(to_numpy(A), center=0, square=True, cmap='bwr',cbar_kws={'fraction': 0.046}, vmin=-4, vmax=4)
+                    cbar = ax.collections[0].colorbar
+                    cbar.ax.tick_params(labelsize=48)
+                    plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=24)
+                    plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=24)
+                    plt.subplot(2, 2, 1)
+                    larynx_pred_weight, index_larynx = map_matrix(larynx_neuron_list, activity_neuron_list, A)
+                    ax = sns.heatmap(to_numpy(larynx_pred_weight), cbar=False, center=0, square=True,
+                                     cmap='bwr', vmin=-4, vmax=4)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/W/W_{k}.tif", dpi=80)
+                    plt.close()
+
+
+            else:
+
+                i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+                A = model.W.clone().detach()
+                A[i, i] = 0
+                A = A.t()
+
+                fig, ax = fig_init()
+                ax = sns.heatmap(to_numpy(A) , center=0, square=True, cmap='bwr',
+                                 cbar_kws={'fraction': 0.046}, vmin=-4, vmax=4)
+                cbar = ax.collections[0].colorbar
+                cbar.ax.tick_params(labelsize=48)
+                plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=24)
+                plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=24)
+                plt.subplot(2, 2, 1)
+
+                larynx_pred_weight, index_larynx = map_matrix(larynx_neuron_list, activity_neuron_list, A)
+                ax = sns.heatmap(to_numpy(larynx_pred_weight) , cbar=False, center=0, square=True,
+                                 cmap='bwr', vmin=-4, vmax=4)
+
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/W_{epoch}.tif", dpi=80)
+                plt.close()
 
             if has_field:
                 net = f'{log_dir}/models/best_model_f_with_{n_runs - 1}_graphs_{epoch}.pt'
@@ -6080,7 +6127,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             # plt.savefig(f'./{log_dir}/results/final learned connectivity.tif', dpi=300)
             # plt.close()
 
-            if has_field:
+            if False: # has_field:
 
                 print('plot field ...')
                 os.makedirs(f"./{log_dir}/results/field", exist_ok=True)
@@ -6129,7 +6176,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                     #     plt.plot(to_numpy(modulation[ind, ids]))
                     #     plt.plot(to_numpy(model.b[ind, 0:1000]**2))
 
-                if ('short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
+                if ('short_term_plasticity' in field_type) | ('modulation' in field_type):
 
                     for frame in trange(0, n_frames, n_frames // 100):
                         t = torch.tensor([frame/ n_frames], dtype=torch.float32, device=device)
@@ -6139,7 +6186,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                                 in_features= torch.cat((torch.zeros_like(m_), torch.ones_like(m_)*xnorm, m_), dim=1)
                                 m = model.lin_phi2(in_features)
                         else:
-                            m = model_f(t) ** 2
+                            m = model_f[0](t) ** 2
 
                         if 'permutation' in model_config.field_type:
                             inverse_permutation_indices = torch.load(f'./graphs_data/{dataset_name}/inverse_permutation_indices.pt', map_location=device)
@@ -10460,7 +10507,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_video_bison_test']
     # config_list = ['RD_RPS']
     # config_list = ['cell_U2OS_8_12']
-    config_list = ['signal_CElegans_a3']
+    config_list = ['signal_CElegans_a3', 'signal_CElegans_a5', 'signal_CElegans_a6', 'signal_CElegans_a7', 'signal_CElegans_a8', 'signal_CElegans_a9', 'signal_CElegans_a10']
 
     # plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 

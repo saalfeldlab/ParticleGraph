@@ -57,20 +57,43 @@ def get_in_features_update(rr=None, model=None, embedding = None, device=None):
         if model.embedding_trial:
             embedding = torch.cat((embedding, model.b[0].repeat(n_particles, 1)), dim=1)
 
+
     if rr == None:
         if 'generic' in model_update_type:
             if 'excitation' in model_update_type:
-                in_features = torch.cat((torch.zeros((n_particles, 1), device=device), embedding, torch.zeros((n_particles, 1), device=device), torch.ones((n_particles, 2), device=device)), dim=1)
+                in_features = torch.cat((
+                    torch.zeros((n_particles, 1), device=device),
+                    embedding,
+                    torch.zeros((n_particles, 1), device=device),
+                    torch.ones((n_particles, 1), device=device),
+                    torch.zeros((n_particles, model.excitation_dim), device=device)
+                ), dim=1)
             else:
-                in_features = torch.cat((torch.zeros((n_particles, 1), device=device), embedding, torch.zeros((n_particles, 1), device=device), torch.ones((n_particles, 1), device=device)), dim=1)
+                in_features = torch.cat((
+                    torch.zeros((n_particles, 1), device=device),
+                    embedding,
+                    torch.ones((n_particles, 1), device=device),
+                    torch.ones((n_particles, 1), device=device)
+                ), dim=1)
         else:
             in_features = torch.cat((torch.zeros((n_particles, 1), device=device), embedding), dim=1)
     else:
         if 'generic' in model_update_type:
             if 'excitation' in model_update_type:
-                in_features = torch.cat((rr, embedding, torch.zeros((rr.shape[0], 1), device=device), torch.ones((rr.shape[0], 2), device=device)), dim=1)
+                in_features = torch.cat((
+                    rr,
+                    embedding,
+                    torch.zeros((rr.shape[0], 1), device=device),
+                    torch.ones((rr.shape[0], 1), device=device),
+                    torch.zeros((rr.shape[0], model.excitation_dim), device=device)
+                ), dim=1)
             else:
-                in_features = torch.cat((rr, embedding, torch.zeros((rr.shape[0], 1), device=device), torch.ones((rr.shape[0], 1), device=device)), dim=1)
+                in_features = torch.cat((
+                    rr,
+                    embedding,
+                    torch.ones((rr.shape[0], 1), device=device),
+                    torch.ones((rr.shape[0], 1), device=device)
+                ), dim=1)
         else:
             in_features = torch.cat((rr, embedding), dim=1)
 

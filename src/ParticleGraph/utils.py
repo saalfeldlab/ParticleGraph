@@ -747,6 +747,15 @@ def map_matrix(neuron_list, neuron_names, matrix):
     return mapped_matrix, map_list
 
 
+def get_neuron_index(neuron_name, activity_neuron_list):
+    """
+    Returns the index of the neuron_name in activity_neuron_list.
+    Raises ValueError if not found.
+    """
+    try:
+        return activity_neuron_list.index(neuron_name)
+    except ValueError:
+        raise ValueError(f"Neuron '{neuron_name}' not found in activity_neuron_list.")
 # Example usage
 # matrix = np.random.rand(100, 100)
 # rank = get_matrix_rank(matrix)

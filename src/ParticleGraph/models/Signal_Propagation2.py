@@ -139,20 +139,16 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         if 'generic' in self.update_type:        # MLP1(u, embedding, \sum MLP0(u, embedding), field )
             field = x[:, 8:9]
             if 'excitation' in self.update_type:
-                in_features = torch.cat([embedding, x[:, 10:10 + self.excitation_dim]], dim=1)
-                excitation = self.lin_exc(in_features)
+                excitation = x[:, 10: 10 + self.excitation_dim]
                 in_features = torch.cat([u, embedding, msg, field, excitation], dim=1)
             else:
                 in_features = torch.cat([u, embedding, msg, field], dim=1)
             pred = self.lin_phi(in_features)
-        elif 'test_field' in self.update_type:
-            pred = x[:, 8:9]
         else:
             field = x[:, 8:9]
             if 'excitation' in self.update_type:
-                in_features = torch.cat([embedding, x[:, 10: 10 + self.excitation_dim]], dim=1)
-                excitation = self.lin_exc(in_features)
-                in_features = torch.cat([u, embedding], dim=1)
+                excitation = x[:, 10: 10 + self.excitation_dim]
+                in_features = torch.cat([u, embedding, msg], dim=1)
                 pred = self.lin_phi(in_features) + msg * field + excitation
             else:
                 in_features = torch.cat([u, embedding], dim=1)

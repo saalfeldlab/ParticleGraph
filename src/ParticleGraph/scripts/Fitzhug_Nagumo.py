@@ -175,7 +175,7 @@ if __name__ == '__main__':
     # External excitation: periodic pulse every 30s lasting 1s
     pulse_interval = 80.0  # seconds
     pulse_duration = 1.0   # seconds
-    pulse_amplitude = 0.8  # strength of excitation
+    pulse_amplitude = 0.8 # strength of excitation
 
     for i, t in enumerate(time):
         if (t % pulse_interval) < pulse_duration:
@@ -198,14 +198,17 @@ if __name__ == '__main__':
     plt.xlabel('time', fontsize=16)
     plt.ylabel(r'$I_{ext}$', fontsize=16)
     plt.xlim([0, 300])
+    plt.ylim([0, 1])
     plt.subplot(2, 2, 2)
     plt.plot(time, v, c='white', linewidth=2)
     plt.xlim([0, 300])
+    plt.ylim([-2, 2])
     plt.xlabel('time', fontsize=16)
     plt.ylabel('v', fontsize=16)
     plt.subplot(2, 2, 4)
     plt.plot(time, w, c='green', linewidth=2)
     plt.xlim([0, 300])
+    plt.ylim([-1.5, 1.5])
     plt.xlabel('time', fontsize=16)
     plt.ylabel('w', fontsize=16)
     plt.tight_layout()
@@ -233,8 +236,8 @@ if __name__ == '__main__':
     model = model_duo(device=device)    #Siren(in_features=1, out_features=1).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
 
-    # state_dict = torch.load(f'tmp/model_0.pt', map_location=device)
-    # model.load_state_dict(state_dict['model_state_dict'])
+    state_dict = torch.load(f'tmp/model_0.pt', map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
 
 
     n_epochs = 200000
@@ -292,8 +295,8 @@ if __name__ == '__main__':
                 loss.backward()
                 optimizer.step()
 
-                if (epoch>0) & (epoch % 10000 == 0):
-                    print(f"Epoch {epoch}, Loss: {loss.item():.6f}")
+                if (epoch>-1) & (epoch % 10000 == 0):
+                    # print(f"Epoch {epoch}, Loss: {loss.item():.6f}")
 
                     with torch.no_grad():
                         w_pred = model(t_full)
@@ -309,7 +312,7 @@ if __name__ == '__main__':
                             with torch.no_grad():
                                 # w = model.siren(t_full[step])
 
-                                dv_pred = model.mlp0(torch.cat((v[:, None], w[:, None], I_ext[step:step + 1, None]/2), dim=1))
+                                dv_pred = model.mlp0(torch.cat((v[:, None], w[:, None], I_ext[step:step + 1, None]), dim=1))
                                 dw_pred = model.mlp1(torch.cat((v[:, None], w[:, None]), dim=1))
 
                                 v += dt * dv_pred.squeeze()
@@ -327,11 +330,13 @@ if __name__ == '__main__':
                         plt.plot(v_true.cpu().numpy(), label='true v (membrane potential)', linewidth=4, alpha=0.5, c='white')
                         plt.plot(v_list.cpu().numpy(), label='rollout v', linewidth=2, alpha=1, c='white')
                         plt.xlim([0, n_steps//2.5])
+                        plt.ylim([-2, 2])
                         ax = fig.add_subplot(212)
                         plt.plot(w_true.cpu().numpy(), label='w (recovery variable)', linewidth=4, alpha=0.5, c='green')
                         plt.plot(w_list.cpu().numpy(), label='rollout w', linewidth=2, alpha=1, c='green')
                         plt.plot(w_pred.cpu().numpy(), label='NNR w', linewidth=2, alpha=0.5, c='green')
                         plt.xlim([0, n_steps//2.5])
+                        plt.ylim([-1.5, 1.5])
                         plt.legend(loc='upper left')
                         plt.savefig('./tmp/rollout_Nagumo.png', dpi=170)
                         plt.show()

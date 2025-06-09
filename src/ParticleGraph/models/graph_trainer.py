@@ -2713,7 +2713,7 @@ def data_train_synaptic2(config, erase, best_model, device):
             ids_index = 0
 
             loss = 0
-            run = np.random.randint(n_runs - 1)
+            run = np.random.randint(n_runs)
 
             for batch in range(batch_size):
 
@@ -2782,7 +2782,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                             msg1 = model.lin_edge(in_features_next)
                         loss = loss + torch.relu(msg0 - msg1).norm(2) * coeff_diff
                     # regularisation sign Wij
-                    if coeff_sign > 0:
+                    if (coeff_sign > 0) and (N%4 == 0):
                         W_sign = torch.tanh(5 * model_W)
                         loss_contribs = []
                         for i in range(n_particles):
@@ -2987,7 +2987,8 @@ def data_train_synaptic2(config, erase, best_model, device):
                         'optimizer_state_dict': optimizer_f.state_dict()},
                        os.path.join(log_dir, 'models', f'best_model_f_with_{n_runs - 1}_graphs_{epoch}.pt'))
 
-        list_loss.append(total_loss / n_particles)
+        list_loss.append((total_loss-total_loss_regul) / n_particles)
+
         list_loss_regul.append(total_loss_regul / n_particles)
 
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
