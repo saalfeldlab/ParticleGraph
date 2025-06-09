@@ -107,12 +107,7 @@ for epoch in trange(n_epochs):
     if epoch % 500 == 0:
         print(f"[{epoch}] loss: {loss.item():.6f}")
 
-
-torch.save({'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict()},
-           f'tmp/model.pt')
-
-    # Rollout with model and extract hidden statez
+# Rollout with model and extract hidden state
 with torch.no_grad():
     v = v_true[0].view(1, 1, 1)
     h = None
@@ -128,28 +123,33 @@ with torch.no_grad():
     v_rollout = np.array(v_rollout)
     h_rollout = np.stack(h_rollout, axis=0)  # (T, hidden_dim)
 
-    # Plot results
-    plt.style.use("dark_background")
-    plt.figure(figsize=(12, 5))
-    plt.plot(v_true.cpu().numpy(), label='True v', linewidth=2, alpha=0.5, color='white')
-    plt.plot(v_rollout, label='RNN rollout v', linewidth=2, color='cyan')
-    plt.xlabel('Time Step')
-    plt.ylabel('Membrane Potential v')
-    plt.legend()
-    plt.title("FitzHugh–Nagumo: RNN rollout vs. True")
-    plt.tight_layout()
-    plt.savefig('./tmp/rnn_fitzhug_rollout.png', dpi=170)
-    plt.show()
+
+# Plot results
+plt.style.use("dark_background")
+plt.figure(figsize=(12, 5))
+plt.plot(v_true.cpu().numpy(), label='True v', linewidth=2, alpha=0.5, color='white')
+plt.plot(v_rollout, label='RNN rollout v', linewidth=2, color='cyan')
+plt.xlabel('Time Step')
+plt.ylabel('Membrane Potential v')
+plt.legend()
+plt.title("FitzHugh–Nagumo: RNN rollout vs. True")
+plt.tight_layout()
+plt.savefig('./tmp/rnn_fitzhug_rollout.png', dpi=170)
+plt.show()
 
 
-    plt.figure(figsize=(12, 6))
-    for i in range(min(5, h_rollout.shape[1])):  # show first 5 dimensions
-        plt.plot(h_rollout[:, i], label=f'hidden dim {i}')
-    plt.title('Learned hidden state dimensions (proxy for w)')
-    plt.xlabel('Time Step')
-    plt.ylabel('Hidden State Value')
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig('./tmp/hidden_state_plot.png', dpi=170)
-    plt.show()
+plt.figure(figsize=(12, 6))
+for i in range(min(5, h_rollout.shape[1])):  # show first 5 dimensions
+    plt.plot(h_rollout[:, i], label=f'hidden dim {i}')
+plt.title('Learned hidden state dimensions (proxy for w)')
+plt.xlabel('Time Step')
+plt.ylabel('Hidden State Value')
+plt.legend()
+plt.tight_layout()
+plt.savefig('./tmp/hidden_state_plot.png', dpi=170)
+plt.show()
+
+
+
+
 

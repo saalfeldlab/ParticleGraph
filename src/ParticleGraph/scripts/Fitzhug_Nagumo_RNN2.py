@@ -83,7 +83,7 @@ class RNNModel(nn.Module):
         return v_pred, hn
 
 # Initialize model
-model = RNNModel(hidden_dim=64).to(device)
+model = RNNModel(hidden_dim=128).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=5e-4)
 loss_fn = nn.MSELoss()
 
