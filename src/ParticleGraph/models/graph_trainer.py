@@ -3002,10 +3002,46 @@ def data_train_synaptic2(config, erase, best_model, device):
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
         fig = plt.figure(figsize=(8, 8))
+
+        ax = fig.add_subplot(2, 3, 1)
         plt.plot(list_loss, color='k', linewidth=1)
         plt.xlim([0, n_epochs])
         plt.ylabel('Loss', fontsize=12)
         plt.xlabel('Epochs', fontsize=12)
+
+        ax = fig.add_subplot(2, 3, 2)
+        for n in range(n_particle_types):
+            pos = torch.argwhere(type_list == n)
+            plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=1, color=cmap.color(n))
+        plt.xlabel('Embedding 0', fontsize=12)
+        plt.ylabel('Embedding 1', fontsize=12)
+
+        if multi_connectivity:
+            A = model.W[0].clone().detach() * model.mask.clone().detach()
+        else:
+            A = model.W.clone().detach() * model.mask.clone().detach()
+
+        ax = fig.add_subplot(2, 3, 4)
+        ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},
+                         vmin=-0.001, vmax=0.001)
+        plt.title('True connectivity matrix', fontsize=12)
+        plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+        plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+
+        ax = fig.add_subplot(2, 3, 5)
+        ax = sns.heatmap(to_numpy(A), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
+        plt.title('Learned connectivity matrix', fontsize=12)
+        plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+        plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+
+        ax = fig.add_subplot(2, 3, 6)
+        gt_weight = to_numpy(adjacency)
+        pred_weight = to_numpy(A[:n_particles, :n_particles])
+        plt.scatter(gt_weight, pred_weight, s=0.1, c='k', alpha=0.01)
+        plt.xlabel('true weight', fontsize=12)
+        plt.ylabel('learned weight', fontsize=12)
+        plt.title('comparison')
+
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/Loss_{epoch}.tif")
         plt.close()
