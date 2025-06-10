@@ -2010,7 +2010,6 @@ def load_neuropal_data(config, device=None, visualize=None, step=None, cmap=None
     os.makedirs(folder, exist_ok=True)
     os.makedirs(f'./graphs_data/{dataset_name}/Fig/', exist_ok=True)
 
-
     # Loading Data from https://www.yeminilab.com/neuropal
 
     print ('load data from neuropal ...')
@@ -2062,7 +2061,7 @@ def load_neuropal_data(config, device=None, visualize=None, step=None, cmap=None
                 ineuron += 1
     # add baseline 2
 
-    activity_worms = activity_datasets[:, :, :]
+    activity_datasets = activity_datasets[:, :, :]
 
     neuron_names = []
     for ifile in range(N_length):
@@ -2073,32 +2072,32 @@ def load_neuropal_data(config, device=None, visualize=None, step=None, cmap=None
             neuron_names.append(neurons_name[ifile][0][0])
 
 
+    #
+    # neuron_OI = get_neuron_index('AVFL', neuron_names)
+    # for data_OI in range(22):
+    #     activity = activity_worms[data_OI, neuron_OI, :]
+    #     fig = plt.figure(figsize=(20, 2))
+    #     activity = activity_worms[data_OI, neuron_OI, :]
+    #     plt.plot(activity, linewidth=1, c='b')
+    #     activity = activity_worms[data_OI, neuron_OI+1, :]
+    #     plt.plot(activity, linewidth=1, c='r')
+    #     plt.title(f'{data_OI} {neuron_OI} {neuron_names[neuron_OI]}', fontsize=18)
+    #     plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{data_OI:03d}_{neuron_OI:03d}.tif", dpi=80)
+    #     plt.close()
 
-    neuron_OI = get_neuron_index('AVFL', neuron_names)
-    for data_OI in range(22):
-        activity = activity_worms[data_OI, neuron_OI, :]
-        fig = plt.figure(figsize=(20, 2))
-        activity = activity_worms[data_OI, neuron_OI, :]
-        plt.plot(activity, linewidth=1, c='b')
-        activity = activity_worms[data_OI, neuron_OI+1, :]
-        plt.plot(activity, linewidth=1, c='r')
-        plt.title(f'{data_OI} {neuron_OI} {neuron_names[neuron_OI]}', fontsize=18)
-        plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{data_OI:03d}_{neuron_OI:03d}.tif", dpi=80)
-        plt.close()
-
-
+    print('load connectomes from other data ...')
 
     # Loading Data from class Worm_Data_Loader(Dataset) in https://github.com/TuragaLab/wormvae
 
     print ('load data from Worm_Data_Loader ...')
-    chem_weights = torch.load(connectome_folder_name + 'chem_weights.pt')
-    eassym_weights = torch.load(connectome_folder_name + 'eassym_weights.pt')
-    chem_sparsity = torch.load(connectome_folder_name + 'chem_sparsity.pt')
-    esym_sparsity = torch.load(connectome_folder_name + 'esym_sparsity.pt')
+    chem_weights = torch.load('/groups/saalfeld/home/allierc/Py/wormvae/data/worm_connectivity/' + 'chem_weights.pt')
+    eassym_weights = torch.load('/groups/saalfeld/home/allierc/Py/wormvae/data/worm_connectivity/' + 'eassym_weights.pt')
+    chem_sparsity = torch.load('/groups/saalfeld/home/allierc/Py/wormvae/data/worm_connectivity/' + 'chem_sparsity.pt')
+    esym_sparsity = torch.load('/groups/saalfeld/home/allierc/Py/wormvae/data/worm_connectivity/' + 'esym_sparsity.pt')
 
-    with open(connectome_folder_name+"activity_neuron_list.pkl", "rb") as f:
+    with open('/groups/saalfeld/home/allierc/Py/wormvae/data/worm_connectivity/'+"activity_neuron_list.pkl", "rb") as f:
         activity_neuron_list = pickle.load(f)
-    with open(connectome_folder_name+"all_neuron_names.json", "r") as f:
+    with open('/groups/saalfeld/home/allierc/Py/wormvae/data/worm_connectivity/'+"all_neuron_names.json", "r") as f:
         all_neuron_list = json.load(f)
 
     all_neuron_list = [str(neuron) for neuron in all_neuron_list]
@@ -2110,7 +2109,7 @@ def load_neuropal_data(config, device=None, visualize=None, step=None, cmap=None
     plot_worm_adjacency_matrix(to_numpy(chem_weights+eassym_weights), all_neuron_list, 'adjacency matrix Turuga 2022', f"graphs_data/{dataset_name}/full_Turuga_adjacency_matrix.png")
 
     # map_list contain the index of the neuron activity traces, first trace is that of ADAL neuron index=123
-    map_list = np.load(connectome_folder_name + 'map_list.npy', allow_pickle=True)
+    map_list = np.load('/groups/saalfeld/home/allierc/Py/wormvae/data/worm_connectivity/' + 'map_list.npy', allow_pickle=True)
 
     subset_chem_weights = chem_weights[np.ix_(map_list, map_list)]
     subset_eassym_weights = eassym_weights[np.ix_(map_list, map_list)]
@@ -2124,7 +2123,7 @@ def load_neuropal_data(config, device=None, visualize=None, step=None, cmap=None
     plot_worm_adjacency_matrix(to_numpy(adjacency), activity_neuron_list, 'partial adjacency matrix Turuga 2022', f"graphs_data/{dataset_name}/partial_Turuga_adjacency_matrix.png")
 
 
-    print('load connectomes from other data ...')
+
     # Comparison with data from https://wormwiring.org/pages/adjacency.html
     # Cook 2019 Whole-animal connectomes of both Caenorhabditis
 
@@ -2277,7 +2276,6 @@ def load_neuropal_data(config, device=None, visualize=None, step=None, cmap=None
     plt.savefig(f"graphs_data/{dataset_name}/mask_larynx_adjacency_matrix.png", dpi=170)
     plt.close()
 
-
     # generate data for GNN training
 
     torch.save(mask_matrix, f'./graphs_data/{dataset_name}/adjacency.pt')
@@ -2287,52 +2285,6 @@ def load_neuropal_data(config, device=None, visualize=None, step=None, cmap=None
     torch.save(edge_index.to(device), f'./graphs_data/{dataset_name}/edge_index.pt')
 
 
-    odor_channels = 3
-    step = 0.25
-    n_runs = 21
-
-    # mat file attributes
-    n_particles = 189
-    T = 960
-    N_length = 109
-    T_start = 160
-    activity_datasets = np.zeros((n_runs, n_particles, T))
-    odor_datasets = np.zeros((n_runs, odor_channels, T))
-
-    print ('load traces ...')
-
-    trace_variable = sio.loadmat(data_folder_name)
-    trace_arr = trace_variable['traces']
-    is_L = trace_variable['is_L']
-    stimulate_seconds = trace_variable['stim_times']
-    stims = trace_variable['stims']
-
-
-    for idata in trange(n_runs):
-        ineuron = 0
-        for ifile in range(N_length):
-            if trace_arr[ifile][0].shape[1] == 42:
-                data = trace_arr[ifile][0][0][idata]
-                if data.shape[0] < 1:
-                    activity_datasets[idata][ineuron][:] = np.nan
-                else:
-                    activity_datasets[idata][ineuron][0:data[0].shape[0]] = data[0]
-                ineuron += 1
-                data = trace_arr[ifile][0][0][idata + 21]
-                if data.shape[0] < 1:
-                    activity_datasets[idata][ineuron][:] = np.nan
-                else:
-                    activity_datasets[idata][ineuron][0:data[0].shape[0]] = data[0]
-                ineuron += 1
-            else:
-                data = trace_arr[ifile][0][0][idata]
-                if data.shape[0] < 1:
-                    activity_datasets[idata][ineuron][:] = np.nan
-                else:
-                    activity_datasets[idata][ineuron][0:data[0].shape[0]] = data[0]
-                ineuron += 1
-
-    # add baseline 2
 
     mean_value = np.nanmean(activity_datasets)
     min_value = np.nanmin(activity_datasets)
