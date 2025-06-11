@@ -1,5 +1,5 @@
-description: 'test neuron_dependent functions  with CElegans data'
-dataset: 'CElegans_a1'
+description: 'test neuron_dependent functions  with CElegans data      time_step:8   with_connectivity_mask: True   multi_connectivity: True  has_missing_activity: True   +  modulation field'
+dataset: 'CElegans_c1'
 data_folder_name: '/groups/saalfeld/home/allierc/Py/wormvae/data/worm_activity/all_traces_Heads_new.mat'
 connectome_folder_name: '/groups/saalfeld/home/allierc/Py/wormvae/data/worm_connectivity/'
 
@@ -13,9 +13,9 @@ simulation:
     tau: 1.0
     min_radius: 1.0
     max_radius: 1.0E6
-    n_particles: 189
+    n_particles: 300
     n_particle_types: 4
-    n_frames: 800
+    n_frames: 960
     delta_t: 0.25
     dpos_init:  0
     boundary: 'no'
@@ -26,16 +26,17 @@ graph_model:
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
-    field_type: ''
+    field_type: 'modulation'
 
     input_size: 6
     output_size: 1
     hidden_dim: 256
     n_layers: 5
 
-    input_size_update: 6
+    input_size_update: 8
     hidden_dim_update: 64
     n_layers_update: 5
+    output_size_update: 1
 
     input_size_excitation: 5
     n_layers_excitation: 3
@@ -44,7 +45,7 @@ graph_model:
     input_size_nnr: 1
     n_layers_nnr: 5
     hidden_dim_nnr: 96
-    output_size_nnr: 289
+    output_size_nnr: 300
     omega: 30
 
     aggr_type: 'add'
@@ -56,7 +57,7 @@ graph_model:
     lin_edge_positive: True
 
 plotting:
-    colormap: 'tab10'
+    colormap: 'tab20'
     arrow_length: 1
     xlim: [4,8]
     ylim: [-0.1,1.0]
@@ -69,22 +70,21 @@ training:
     device: 'auto'
     n_runs: 21
 
-    with_connectivity_mask: False
-
-    n_virtual_neurons: 0
+    multi_connectivity: True
+    with_connectivity_mask: True
+    has_missing_activity: True
 
     time_step: 8
     embedding_trial: False
 
     sparsity: 'none'
     rotation_augmentation: False
-    data_augmentation_loop: 500
+    data_augmentation_loop: 1500
 
-    learning_rate_W_start: 5.0E-3
-    learning_rate_start: 1.0E-5
-    learning_rate_embedding_start: 5.0E-4
+    learning_rate_W_start: 1.0E-4
+    learning_rate_start: 1.0E-4
+    learning_rate_embedding_start: 1.0E-4
+    learning_rate_NNR: 1.0E-5
 
-    coeff_L1: 0.0
     coeff_diff: 100
-    coeff_L1_virtual_neuron: 0
-    coeff_sign : 0
+    coeff_sign : 10

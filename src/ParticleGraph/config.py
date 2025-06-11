@@ -201,6 +201,7 @@ class TrainingConfig(BaseModel):
 
     multi_connectivity: bool = False
     with_connectivity_mask: bool = False
+    has_missing_activity: bool = False
 
     do_tracking: bool = False
     tracking_gt_file: str = ''
@@ -221,7 +222,6 @@ class TrainingConfig(BaseModel):
 
     particle_dropout: float = 0
     n_ghosts: int = 0
-    n_virtual_neurons: int = 0
     ghost_method: Literal['none', 'tensor', 'MLP'] = 'none'
     ghost_logvar: float = -12
 
@@ -257,7 +257,6 @@ class TrainingConfig(BaseModel):
     coeff_sign: float = 0
     coeff_permutation: float = 100
     coeff_L1_ghost: float = 0
-    coeff_L1_virtual_neuron: float = 0
     coeff_sign: float = 0
     coeff_TV_norm: float = 0
 

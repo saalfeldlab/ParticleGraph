@@ -49,34 +49,34 @@ def get_type_time_series(new_labels=None, dataset_number=None, cell_id=None, n_p
 
 def get_in_features_update(rr=None, model=None, embedding = None, device=None):
 
-    n_particles = model.n_particles
+    n_neurons = model.n_neurons
     model_update_type = model.update_type
 
     if embedding == None:
-        embedding = model.a[0:n_particles]
+        embedding = model.a[0:n_neurons]
         if model.embedding_trial:
-            embedding = torch.cat((embedding, model.b[0].repeat(n_particles, 1)), dim=1)
+            embedding = torch.cat((embedding, model.b[0].repeat(n_neurons, 1)), dim=1)
 
 
     if rr == None:
         if 'generic' in model_update_type:
             if 'excitation' in model_update_type:
                 in_features = torch.cat((
-                    torch.zeros((n_particles, 1), device=device),
+                    torch.zeros((n_neurons, 1), device=device),
                     embedding,
-                    torch.zeros((n_particles, 1), device=device),
-                    torch.ones((n_particles, 1), device=device),
-                    torch.zeros((n_particles, model.excitation_dim), device=device)
+                    torch.zeros((n_neurons, 1), device=device),
+                    torch.ones((n_neurons, 1), device=device),
+                    torch.zeros((n_neurons, model.excitation_dim), device=device)
                 ), dim=1)
             else:
                 in_features = torch.cat((
-                    torch.zeros((n_particles, 1), device=device),
+                    torch.zeros((n_neurons, 1), device=device),
                     embedding,
-                    torch.ones((n_particles, 1), device=device),
-                    torch.ones((n_particles, 1), device=device)
+                    torch.ones((n_neurons, 1), device=device),
+                    torch.ones((n_neurons, 1), device=device)
                 ), dim=1)
         else:
-            in_features = torch.cat((torch.zeros((n_particles, 1), device=device), embedding), dim=1)
+            in_features = torch.cat((torch.zeros((n_neurons, 1), device=device), embedding), dim=1)
     else:
         if 'generic' in model_update_type:
             if 'excitation' in model_update_type:
@@ -375,14 +375,11 @@ def plot_training_signal_field(x, n_nodes, recursive_loop, kk, time_step, x_list
         ids = np.arange(kk, kk + recursive_loop * time_step, time_step)
         true_activity_list = np.transpose(x_list[run][ids.astype(int), :, 6:7].squeeze())
         true_modulation_list = np.transpose(x_list[run][ids.astype(int), :, 8:9].squeeze())
-
         loss = 0
         pred_activity_list = list([])
         pred_modulation_list = list([])
-
         for loop in range(recursive_loop):
             pred_activity_list.append(x[:, 6:7].clone().detach())
-
             if (loop == 0) & ('learnable_short_term_plasticity' in field_type):
                 alpha = (kk % model.embedding_step) / model.embedding_step
                 x[:, 8] = alpha * model.b[:, kk // model.embedding_step + 1] ** 2 + (1 - alpha) * model.b[:, kk // model.embedding_step] ** 2
@@ -390,28 +387,20 @@ def plot_training_signal_field(x, n_nodes, recursive_loop, kk, time_step, x_list
                 t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
                 t[:, 0, :] = torch.tensor(kk / n_frames, dtype=torch.float32, device=device)
                 x[:, 8] = model_f(t.clone().detach()) ** 2
-
             pred_modulation_list.append(x[:, 8:9].clone().detach())
-
             dataset = data.Data(x=x, edge_index=edges)
             y = torch.tensor(y_list[run][kk], device=device) / ynorm
-
             pred = model(dataset)
             loss = loss + (pred - y).norm(2)
-
             kk = kk + time_step
-
             if 'learnable_short_term_plasticity' in field_type:
                 in_modulation = torch.cat((x[:, 6:7], x[:, 8:9]), dim=1)
                 pred_modulation = model.lin_modulation(in_modulation)
                 x[:, 8:9] = x[:, 8:9] + delta_t * time_step * pred_modulation
-
             x[:, 6:7] = x[:, 6:7] + delta_t * time_step * pred
-
         pred_activity_list = torch.stack(pred_activity_list).squeeze().t()
         pred_modulation_list = torch.stack(pred_modulation_list).squeeze().t()
         kk = kk - time_step * recursive_loop
-
         fig = plt.figure(figsize=(12, 12))
         ind_list = [10, 124, 148, 200, 250, 300]
         ax = fig.add_subplot(2, 1, 1)
@@ -515,6 +504,30 @@ def plot_training_signal_field(x, n_nodes, recursive_loop, kk, time_step, x_list
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
         plt.close()
+
+def plot_training_signal_missing_activity(n_frames, k, x_list, run, model_missing_activity, log_dir, epoch, N, device):
+
+        n_frames = n_frames - 10
+        if n_frames > 1000:
+            t = torch.linspace(0, 1, n_frames//100, dtype=torch.float32, device=device).unsqueeze(1)
+        else:
+            t = torch.linspace(0, 1, n_frames, dtype=torch.float32, device=device).unsqueeze(1)
+        prediction = model_missing_activity[0](t) ** 2
+        prediction = prediction.t()
+
+        fig = plt.figure(figsize=(16, 8))
+        ax = fig.add_subplot(1, 2, 1)
+        plt.imshow(to_numpy(prediction), aspect='auto', cmap='viridis')
+        ax = fig.add_subplot(1, 2, 2)
+        pos = np.argwhere(x_list[run][k][:, 6] == 6)
+        prediction[pos[:,0]]=0
+        plt.imshow(to_numpy(prediction), aspect='auto', cmap='viridis')
+
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/field/missing_activity_{epoch}_{N}.tif", dpi=80)
+        plt.close()
+
+
 
 def plot_training_particle_field(config, has_siren, has_siren_time, model_f,  n_frames, model_name, log_dir, epoch, N, x, x_mesh, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
 

@@ -33,7 +33,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         self.device = device
         self.model = model_config.signal_model_name
         self.embedding_dim = model_config.embedding_dim
-        self.n_particles = simulation_config.n_particles
+        self.n_neurons = simulation_config.n_particles
         self.n_dataset = config.training.n_runs
         self.n_frames = simulation_config.n_frames
         self.field_type = model_config.field_type
@@ -61,7 +61,6 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
 
         self.bc_dpos = bc_dpos
         self.adjacency_matrix = simulation_config.adjacency_matrix
-        self.n_virtual_neurons = int(config.training.n_virtual_neurons)
         self.excitation_dim = model_config.excitation_dim
 
         self.n_layers_excitation = model_config.n_layers_excitation
@@ -88,25 +87,25 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
                 torch.ones((int(self.n_dataset), self.embedding_dim), device=self.device, requires_grad=True, dtype=torch.float32))
 
         if self.model == 'PDE_N3':
-            self.a = nn.Parameter(torch.ones((int(self.n_particles*100 + 1000), self.embedding_dim), device=self.device, requires_grad=True,dtype=torch.float32))
+            self.a = nn.Parameter(torch.ones((int(self.n_neurons*100 + 1000), self.embedding_dim), device=self.device, requires_grad=True,dtype=torch.float32))
             self.embedding_step =  self.n_frames // 100
         elif model_config.embedding_init =='':
-            self.a = nn.Parameter(torch.ones((int(self.n_particles + self.n_virtual_neurons), self.embedding_dim), device=self.device, requires_grad=True, dtype=torch.float32))
+            self.a = nn.Parameter(torch.ones((int(self.n_neurons), self.embedding_dim), device=self.device, requires_grad=True, dtype=torch.float32))
         else:
             self.a = nn.Parameter(torch.tensor(projections, device=self.device, requires_grad=True, dtype=torch.float32))
 
         if (self.model == 'PDE_N6') | (self.model == 'PDE_N7'):
-            self.b = nn.Parameter(torch.ones((int(self.n_particles), 1000 + 10), device=self.device, requires_grad=True,dtype=torch.float32)*0.44)
+            self.b = nn.Parameter(torch.ones((int(self.n_neurons), 1000 + 10), device=self.device, requires_grad=True,dtype=torch.float32)*0.44)
             self.embedding_step = self.n_frames // 1000
             self.lin_modulation = MLP(input_size=self.input_size_modulation, output_size=self.output_size_modulation, nlayers=self.n_layers_modulation,
                                 hidden_size=self.hidden_dim_modulation, device=self.device)
 
         if self.multi_connectivity:
-            self.W = nn.Parameter(torch.randn((int(self.n_dataset),int(self.n_particles + self.n_virtual_neurons),int(self.n_particles + self.n_virtual_neurons)), device=self.device, requires_grad=True, dtype=torch.float32))
+            self.W = nn.Parameter(torch.randn((int(self.n_dataset),int(self.n_neurons),int(self.n_neurons)), device=self.device, requires_grad=True, dtype=torch.float32))
         else:
-            self.W = nn.Parameter(torch.randn((int(self.n_particles + self.n_virtual_neurons),int(self.n_particles + self.n_virtual_neurons)), device=self.device, requires_grad=True, dtype=torch.float32))
+            self.W = nn.Parameter(torch.randn((int(self.n_neurons),int(self.n_neurons)), device=self.device, requires_grad=True, dtype=torch.float32))
 
-        self.mask = torch.ones((int(self.n_particles + self.n_virtual_neurons),int(self.n_particles + self.n_virtual_neurons)), device=self.device, requires_grad=False, dtype=torch.float32)
+        self.mask = torch.ones((int(self.n_neurons),int(self.n_neurons)), device=self.device, requires_grad=False, dtype=torch.float32)
         self.mask.fill_diagonal_(0)
 
     def get_interp_a(self, k, particle_id):
@@ -136,7 +135,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
 
         msg = self.propagate(edge_index, u=u, embedding=embedding)
 
-        if 'generic' in self.update_type:        # MLP1(u, embedding, \sum MLP0(u, embedding), field )
+        if 'generic' in self.update_type:        # MLP1(u, embedding, \sum MLP0(u, embedding), field)
             field = x[:, 8:9]
             if 'excitation' in self.update_type:
                 excitation = x[:, 10: 10 + self.excitation_dim]
@@ -216,7 +215,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
 #                        nlayers=self.n_layers_update2,
 #                        hidden_size=self.hidden_dim_update2, device=self.device)
 
-# if self.update_type == '2steps':                  # MLP2( MLP1(u, embedding), \sum MLP0(u, embedding), field )
+# if self.update_type == '2steps':                  # MLP2( MLP1(u, embedding), \sum MLP0(u, embedding), field)
 #     in_features1 = torch.cat([u, embedding], dim=1)
 #     pred1 = self.lin_phi(in_features1)
 #     field = x[:, 8:9]
