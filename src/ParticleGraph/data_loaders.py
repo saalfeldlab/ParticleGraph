@@ -1612,11 +1612,11 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
 
     # Loading Data from class Worm_Data_Loader(Dataset) in https://github.com/TuragaLab/wormvae
 
-
     with open(connectome_folder_name+"all_neuron_names.json", "r") as f:
         all_neuron_list = json.load(f)
     all_neuron_list = [str(neuron) for neuron in all_neuron_list]
-
+    with open(f"graphs_data/{dataset_name}/all_neuron_list.json", "w") as f:
+        json.dump(all_neuron_list, f)
     with open(connectome_folder_name+"activity_neuron_list.pkl", "rb") as f:
         activity_neuron_list = pickle.load(f)
     activity_neuron_list = [str(neuron) for neuron in activity_neuron_list]
@@ -1629,9 +1629,7 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
     print(f"neurons with activity data: {len(activity_neuron_list)}")
     print(f"Neurons without activity data: {len(not_recorded_neurons)}")
     print (f"total {len(all_neuron_list)} {len(not_recorded_neurons) + len(activity_neuron_list)}")
-
     # all_neuron_list = [*activity_neuron_list, *not_recorded_neurons]
-
 
     print ('load data from Worm_Data_Loader ...')
     odor_channels = 3
@@ -1870,8 +1868,14 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
 
     # generate data for GNN training
     # create fully connected edges
+    n_neurons = len(all_neuron_list)
     edge_index, edge_attr = dense_to_sparse(torch.ones((n_neurons)) - torch.eye(n_neurons))
     torch.save(edge_index.to(device), f'./graphs_data/{dataset_name}/edge_index.pt')
+    activity_idx = []
+    for k in range(len(activity_neuron_list)):
+        neuron_OI = get_neuron_index(activity_neuron_list[k], all_neuron_list)
+        activity_idx.append(neuron_OI)
+    activity_idx = np.array(activity_idx)
 
     xc, yc = get_equidistant_points(n_points=n_neurons)
     pos = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
@@ -1886,8 +1890,6 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
 
     T1 = np.ones((n_neurons, 1)) * 4
     type_dict = {}
-
-    # Assign types according to list
     for name in larynx_neuron_list:
         type_dict[name] = 0
     for name in sensory_neuron_list:
@@ -1898,15 +1900,8 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
         type_dict[name] = 3
 
     # Default to type 4 ("other") if not found
-    T1 = np.array([[type_dict.get(name, 4)] for name in activity_neuron_list])
+    T1[activity_idx] = np.array([[type_dict.get(name, 4)] for name in activity_neuron_list])
 
-    activity_idx = []
-    for k in range(len(activity_neuron_list)):
-        neuron_OI = get_neuron_index(activity_neuron_list[k], all_neuron_list)
-        activity_idx.append(neuron_OI)
-    activity_idx = np.array(activity_idx)
-
-    n_neurons = len(all_neuron_list)
     for run in range(config.training.n_runs):
 
         x_list = []
@@ -1917,7 +1912,8 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
             x[:, 0] = np.arange(n_neurons)
             x[:, 1:3] = X1
             x[:, 5:6] = T1
-            x[:, 6] = activity_worm[run,:,it]
+            x[:, 6] = 6
+            x[activity_idx, 6] = activity_worm[run,:,it]
             x[:, 10:13] = odor_worms[run,:,it]
             x_list.append(x)
 
@@ -1953,8 +1949,7 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
         np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list)
 
         activity = torch.tensor(x_list[:, :, 6:7], device=device)
-        activity = activity.squeeze()
-        activity = activity.t()
+        activity = activity.squeeze().t().cpu().numpy()
 
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_subplot(221)
@@ -1984,7 +1979,7 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
         plt.xticks(fontsize=14)
         plt.yticks(fontsize=14)
         plt.tight_layout()
-        plt.savefig(f"graphs_data/{dataset_name}/Fig/Kinograph/Fig_{idata}.tif", dpi=80)  # 170.7)
+        plt.savefig(f"graphs_data/{dataset_name}/Fig/Kinograph/Fig_{run}.tif", dpi=80)  # 170.7)
         plt.close()
 
 
