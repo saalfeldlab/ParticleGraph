@@ -1721,7 +1721,8 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
     eassym_weights = torch.load(connectome_folder_name + 'eassym_weights.pt')
     chem_sparsity = torch.load(connectome_folder_name + 'chem_sparsity.pt')
     esym_sparsity = torch.load(connectome_folder_name + 'esym_sparsity.pt')
-    plot_worm_adjacency_matrix(to_numpy(chem_weights+eassym_weights), all_neuron_list, 'adjacency matrix Turuga 2022', f"graphs_data/{dataset_name}/full_Turuga_adjacency_matrix.png")
+    map_Turuga_matrix = chem_weights+eassym_weights
+    plot_worm_adjacency_matrix(to_numpy(map_Turuga_matrix), all_neuron_list, 'adjacency matrix Turuga 2022', f"graphs_data/{dataset_name}/full_Turuga_adjacency_matrix.png")
 
     print('load connectomes from other data ...')
 
@@ -1793,7 +1794,7 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
 
     print('generate mask ...')
 
-    mask_matrix = ((map_Zhen_matrix>0) | (map_Varshney_matrix>0) | (map_Kaiser_matrix>0) | (map_Cook_matrix>0) | (adjacency>0)) * 1.0
+    mask_matrix = ((map_Zhen_matrix>0) | (map_Varshney_matrix>0) | (map_Kaiser_matrix>0) | (map_Cook_matrix>0) | (map_Turuga_matrix>0)) * 1.0
     torch.save(mask_matrix, f'./graphs_data/{dataset_name}/adjacency.pt')
     print (f'filling factor {torch.sum(mask_matrix)/mask_matrix.shape[0]**2:0.3f}')
     # zero_rows = torch.all(mask_matrix == 0, dim=1)
