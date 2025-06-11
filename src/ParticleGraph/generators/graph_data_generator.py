@@ -1941,7 +1941,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         plt.savefig(f'graphs_data/{dataset_name}/activity_1000.png', dpi=300)
         plt.close()
 
-        if (noise_level>0) | (measurement_noise_level>0):
+        if False: # (noise_level>0) | (measurement_noise_level>0):
 
             plt.figure(figsize=(15, 10))
             window_size = 25

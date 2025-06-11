@@ -1,4 +1,4 @@
-description: 'attraction-repulsion with 3 types particles   batchsize 1'
+description: 'attraction-repulsion with 3 types particles recursive loop 2'
 dataset: 'arbitrary_3'
 
 simulation:
@@ -32,22 +32,26 @@ plotting:
   ylim: [-0.04, 0.03]
 
 training:
-  n_epochs: 2
-  device: 'auto'
-
-  recursive_loop: 1
-
-  batch_size: 1
-  small_init_batch_size: False
+  n_epochs: 20
   n_runs: 2
+  device: 'cuda:1'
+
+  recursive_loop: 2
+
+  batch_size: 4
+  small_init_batch_size: False
+
   sparsity: 'replace_embedding_function'
   cluster_method: 'distance_plot'
   rotation_augmentation: True
   data_augmentation_loop: 100
   fix_cluster_embedding: True
 
-  learning_rate_start: 5.0E-3
-  learning_rate_embedding_start: 5.0E-3
+  learning_rate_start: 1.0E-4
+  learning_rate_embedding_start: 1.0E-4
+
+
+
 
 
 

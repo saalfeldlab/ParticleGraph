@@ -1,5 +1,5 @@
-description: 'synaptic network random matrix   cluster embedding distance 0.2   1000 neurons 4 types phi neuron-neuron dependent lorentz std 0.03   coeff_diff 500'
-dataset: 'signal_N5_l4'
+description: 'synaptic network random matrix   cluster embedding distance 0.2   1000 neurons 4 types phi neuron-neuron dependent lorentz std 0.03   coeff_diff 500     n_particles: 300 n_frames: 1000'
+dataset: 'signal_N5_l6'
 
 simulation:
     connectivity_file: 'random'
@@ -11,9 +11,9 @@ simulation:
     tau: 1.0
     min_radius: 1.0
     max_radius: 1.0E6
-    n_particles: 1000
+    n_particles: 300
     n_particle_types: 4
-    n_frames: 100000
+    n_frames: 1000
     delta_t: 0.01
     dpos_init:  0
     boundary: 'no'
@@ -45,27 +45,22 @@ plotting:
     ylim: [ -8,8 ]
 
 training:
-    n_epochs: 40
-    n_epochs_init: 10
+    n_epochs: 20
+    n_runs: 2
+    device: 'auto'
+
     recursive_loop: 1
     batch_size: 1
     small_init_batch_size: False
-    n_runs: 2
 
     sparsity: 'none'
     rotation_augmentation: False
-    data_augmentation_loop: 100
-    cluster_method: 'distance_embedding'
-    cluster_distance_threshold: 0.2
-    fix_cluster_embedding: True
-    device: 'auto'
-    sparsity: 'replace_embedding'
-    sparsity_freq: 4
+    data_augmentation_loop: 2000
 
-    learning_rate_W_start: 1.0E-4
-    learning_rate_start: 5.0E-5
-    learning_rate_embedding_start: 5.0E-4
+    learning_rate_W_start: 1.0E-3
+    learning_rate_start: 5.0E-4
+    learning_rate_embedding_start: 5.0E-3
 
-    noise_level: 0
+    noise_level: 0.5
 
     coeff_diff: 500

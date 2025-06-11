@@ -320,15 +320,6 @@ def data_train_particle(config, erase, best_model, device):
                     edges = edge_p_p_list[run][f'arr_{k}']
                     edges = torch.tensor(edges, dtype=torch.int64, device=device)
                 else:
-
-                    # positions = x_list[run][k][:, 1:3]
-                    # tree = neighbors.KDTree(positions)
-                    # receivers_list = tree.query_radius(positions, r=max_radius)
-                    # num_nodes = len(positions)
-                    # senders = np.repeat(range(num_nodes), [len(a) for a in receivers_list])
-                    # receivers = np.concatenate(receivers_list, axis=0)
-                    # edges = torch.tensor(np.array([senders, receivers]), dtype=torch.int64, device=device)
-
                     distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
                     adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
                     edges = adj_t.nonzero().t().contiguous()
@@ -351,13 +342,13 @@ def data_train_particle(config, erase, best_model, device):
                     dataset_batch.append(dataset)
 
                 if recursive_loop > 0:
-                    y = torch.tensor(x_list[run][k + recursive_loop], dtype=torch.float32,
-                                     device=device).clone().detach()
+                    y = torch.tensor(x_list[run][k + recursive_loop, :, 1:dimension + 1], dtype=torch.float32, device=device).clone().detach()
                 elif time_step == 1:
                     y = torch.tensor(y_list[run][k], dtype=torch.float32, device=device).clone().detach() / ynorm
                 elif time_step > 1:
                     y = torch.tensor(x_list[run][k + time_step, :, 1:dimension + 1], dtype=torch.float32,
                                      device=device).clone().detach()
+
                 # if noise_level > 0:
                 #     y = y * (1 + torch.randn_like(y) * noise_level)
                 # fig = plt.figure()
@@ -436,7 +427,13 @@ def data_train_particle(config, erase, best_model, device):
                     grad = func1 - func0
                     loss = loss + coeff_continuous * grad.norm(2)
 
-            if time_step == 1:
+            if recursive_loop>1:
+                if particle_batch_ratio < 1:
+                    loss = (pred[ids_batch] - y_batch[ids_batch]).norm(2)
+                else:
+                    loss = (pred - y_batch).norm(2)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            elif time_step == 1:
                 if particle_batch_ratio < 1:
                     loss = (pred[ids_batch] - y_batch[ids_batch]).norm(2)
                 else:
@@ -3043,7 +3040,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         plt.title('comparison')
 
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/Loss_{epoch}.tif")
+        plt.savefig(f"./{log_dir}/tmp_training/loss_{epoch}.tif")
         plt.close()
 
         if replace_with_cluster:
