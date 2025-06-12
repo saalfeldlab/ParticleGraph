@@ -68,7 +68,7 @@ training:
     batch_size: 32
     small_init_batch_size: False
     device: 'auto'
-    n_runs: 2
+    n_runs: 1
 
     multi_connectivity: True
     with_connectivity_mask: True
@@ -81,7 +81,7 @@ training:
     rotation_augmentation: False
     data_augmentation_loop: 1500
 
-    learning_rate_W_start: 1.0E-4
+    learning_rate_W_start: 1.0E-5
     learning_rate_start: 1.0E-4
     learning_rate_embedding_start: 1.0E-4
     learning_rate_NNR: 1.0E-5
