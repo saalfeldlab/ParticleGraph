@@ -2836,16 +2836,16 @@ def data_train_synaptic2(config, erase, best_model, device):
                             x_batch = x[:, 6:7]
                             y_batch = y
                             k_batch = torch.ones((x.shape[0], 1), dtype=torch.int, device=device) * k
-                            if (particle_batch_ratio < 1) | has_missing_activity:
-                                ids_batch = ids
+                            # if (particle_batch_ratio < 1) | has_missing_activity:
+                            ids_batch = ids
                         else:
                             data_id = torch.cat((data_id, torch.ones((x.shape[0], 1), dtype=torch.int, device=device) * run), dim=0)
                             x_batch = torch.cat((x_batch, x[:, 6:7]), dim=0)
                             y_batch = torch.cat((y_batch, y), dim=0)
                             k_batch = torch.cat(
                                 (k_batch, torch.ones((x.shape[0], 1), dtype=torch.int, device=device) * k), dim=0)
-                            if (particle_batch_ratio < 1) | has_missing_activity:
-                                ids_batch = np.concatenate((ids_batch, ids + ids_index), axis=0)
+                            # if (particle_batch_ratio < 1) | has_missing_activity:
+                            ids_batch = np.concatenate((ids_batch, ids + ids_index), axis=0)
 
                         ids_index += x.shape[0]
 
@@ -2856,23 +2856,23 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                 total_loss_regul += loss.item()
 
-                # if time_step == 1:
-                #     loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
-                #
-                # elif time_step > 1:
-                #     loss = loss + (x_batch[ids_batch] + pred[ids_batch] * delta_t * time_step - y_batch[ids_batch]).norm(2) / time_step
-
                 if time_step == 1:
-                    if (particle_batch_ratio < 1) | has_missing_activity:
-                        loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
-                    else:
-                        loss = loss + (pred - y_batch).norm(2)
+                    loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
+
                 elif time_step > 1:
-                    if (particle_batch_ratio < 1) | has_missing_activity:
-                        loss = loss + (x_batch[ids_batch] + pred[ids_batch] * delta_t * time_step - y_batch[
-                            ids_batch]).norm(2) / time_step
-                    else:
-                        loss = loss + (x_batch + pred * delta_t * time_step - y_batch).norm(2)
+                    loss = loss + (x_batch[ids_batch] + pred[ids_batch] * delta_t * time_step - y_batch[ids_batch]).norm(2) / time_step
+
+                # if time_step == 1:
+                #     if (particle_batch_ratio < 1) | has_missing_activity:
+                #         loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
+                #     else:
+                #         loss = loss + (pred - y_batch).norm(2)
+                # elif time_step > 1:
+                #     if (particle_batch_ratio < 1) | has_missing_activity:
+                #         loss = loss + (x_batch[ids_batch] + pred[ids_batch] * delta_t * time_step - y_batch[
+                #             ids_batch]).norm(2) / time_step
+                #     else:
+                #         loss = loss + (x_batch + pred * delta_t * time_step - y_batch).norm(2)
 
                 if ('PDE_N3' in model_config.signal_model_name):
                     loss = loss + train_config.coeff_model_a * (model.a[ind_a + 1] - model.a[ind_a]).norm(2)
