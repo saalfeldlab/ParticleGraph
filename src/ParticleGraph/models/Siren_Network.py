@@ -171,19 +171,6 @@ class Siren_Network(nn.Module):
         output = self.net(coords)
         return output
 
-class SirenCollection(nn.Module):
-    def __init__(self, n_nodes, in_features, hidden_features, hidden_layers, out_features, outermost_linear=False, first_omega_0=30, hidden_omega_0=30.):
-        super(SirenCollection, self).__init__()
-
-        self.sirens = nn.ModuleList([Siren(in_features=in_features, hidden_features=hidden_features, hidden_layers=hidden_layers, out_features=out_features, outermost_linear=outermost_linear, first_omega_0=first_omega_0, hidden_omega_0=hidden_omega_0) for _ in range(n_nodes)])
-        # self.sirens = nn.ModuleList([Siren(in_features=in_features, hidden_features=hidden_features, hidden_layers=hidden_layers-1, out_features=hidden_features, outermost_linear=False, first_omega_0=first_omega_0, hidden_omega_0=hidden_omega_0) for _ in range(100)])
-        # self.common = Siren(in_features=hidden_features, hidden_features=hidden_features, hidden_layers=1, out_features=out_features, outermost_linear=True, first_omega_0=first_omega_0, hidden_omega_0=hidden_omega_0)
-
-    def forward(self, x, n):
-        outputs = self.sirens[n](x)
-        # outputs = self.common(outputs)
-        return outputs
-
 
 def get_mgrid(sidelen, dim=2):
     '''Generates a flattened grid of (x,y,...) coordinates in a range of -1 to 1.
@@ -228,6 +215,136 @@ def get_cameraman_tensor(sidelength):
 if __name__ == '__main__':
 
 
+
+    device = 'cuda:0'
+    try:
+        matplotlib.use("Qt5Agg")
+    except:
+        pass
+
+    model = Siren(in_features = 1, hidden_features = 256 , hidden_layers = 3, out_features = 300, outermost_linear=True, first_omega_0=30., hidden_omega_0=30.)
+    model = model.to(device=device)
+    optimizer = torch.optim.Adam(lr=1e-4, params=model.parameters())
+
+    x_list = np.load('/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/CElegans/CElegans_c1/x_list_0.npy')
+    x_list = np.nan_to_num(x_list, nan=0.0)
+
+    activity = torch.tensor(x_list,device=device)
+    activity = activity[:, :, 6:7].squeeze()
+    activity = activity.t()
+    activity = torch.nan_to_num(activity, nan=0.0)
+    y = activity
+
+    # plt.imshow(activity.detach().cpu().numpy(), cmap='grey')
+    # plt.show()
+
+    n_frames = 958
+    batchsize = 100
+
+    for epoch in trange(1000000//batchsize):
+        optimizer.zero_grad()
+
+        loss = 0
+        for batch in range(batchsize):
+
+            k = np.random.randint(n_frames - 1)
+            x = torch.tensor(x_list[k], dtype=torch.float32, device=device)
+
+            t = torch.tensor([k / n_frames], dtype=torch.float32, device=device)
+            missing_activity = model(t) ** 2
+
+            loss = loss + (missing_activity - x[:, 6].clone().detach()).norm(2)
+
+        loss.backward()
+        optimizer.step()
+
+        if epoch % (10000//batchsize) == 0:
+            print(f"Epoch {epoch}, Loss {loss.item()}")
+            with torch.no_grad():
+                t = torch.linspace(0, 1, n_frames, dtype=torch.float32, device=device).unsqueeze(1)
+                pred = model(t) ** 2
+                pred = pred.t()
+            fig = plt.figure(figsize=(16, 8))
+            plt.imshow(pred.detach().cpu().numpy(), cmap='grey')
+            plt.show()
+
+    #####################################
+
+    model_siren = Siren(in_features = 1, hidden_features = 256 , hidden_layers = 3, out_features = 287400, outermost_linear=True, first_omega_0=30., hidden_omega_0=30.)
+    model_siren = model_siren.to(device=device)
+    optimizer = torch.optim.Adam(lr=1e-4, params=model_siren.parameters())
+
+    x_list = np.load('/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/CElegans/CElegans_c1/x_list_0.npy')
+    activity = torch.tensor(x_list,device=device)
+    activity = activity[:, :, 6:7].squeeze()
+    activity = activity.t()
+    activity = torch.nan_to_num(activity, nan=0.0)
+    y = activity.flatten()
+
+
+    for epoch in trange(10000):
+        optimizer.zero_grad()
+
+        t = torch.tensor([1],dtype=torch.float32, device=device)
+        x = model_siren(t) ** 2
+
+        loss = (x - y).norm(2)
+
+        loss.backward()
+        optimizer.step()
+
+        if epoch % 500 == 0:
+            print(f"Epoch {epoch}, Loss {loss.item()}")
+            pred = model_siren(t) ** 2
+            # pred = torch.reshape(pred, (256, 256))
+            pred = torch.reshape(pred, (300, 958))
+            fig = plt.figure(figsize=(16, 8))
+            plt.imshow(pred.detach().cpu().numpy(), cmap='grey')
+            plt.show()
+
+    #####################################
+
+    model_siren = Siren_Network(image_width=256, in_features=2, out_features=1, hidden_features=256, hidden_layers=3, outermost_linear=True)
+    model_siren = model_siren.to(device=device)
+    optimizer = torch.optim.Adam(lr=1e-4, params=model_siren.parameters())
+
+    i0 = imread('data/pics_boat.tif')
+
+    y = torch.tensor(i0, dtype=torch.float32, device=device)
+    y = y.flatten()
+    y = y[:,None]
+
+    coords = get_mgrid(256, dim=2)
+    coords = coords.to('cuda:0')
+
+    print(coords.device, y.device)
+
+
+    for epoch in trange(10000):
+        optimizer.zero_grad()
+
+        x = model_siren()**2
+
+        loss = (x - y).norm(2)
+
+        loss.backward()
+        optimizer.step()
+
+        if epoch % 500 == 0:
+            print(f"Epoch {epoch}, Loss {loss.item()}")
+            pred = model_siren()**2
+            pred = torch.reshape(pred, (256, 256))
+            fig = plt.figure(figsize=(8, 8))
+            plt.imshow(pred.detach().cpu().numpy(), cmap='grey')
+            plt.show()
+
+            # plt.scatter(y.detach().cpu().numpy(),x.detach().cpu().numpy(),c='k',s=1)
+            # plt.savefig(f"tmp/output_{epoch}.png")
+
+
+    #####################################
+
+
     cameraman = ImageFitting(256)
     dataloader = DataLoader(cameraman, batch_size=1, pin_memory=True, num_workers=0)
 
@@ -263,46 +380,3 @@ if __name__ == '__main__':
         optim.zero_grad()
         loss.backward()
         optim.step()
-
-
-
-    device = 'cuda:0'
-    try:
-        matplotlib.use("Qt5Agg")
-    except:
-        pass
-
-    model_siren = Siren_Network(image_width=256, in_features=2, out_features=1, hidden_features=256, hidden_layers=3, outermost_linear=True)
-    model_siren = model_siren.to(device=device)
-    optimizer = torch.optim.Adam(lr=1e-4, params=model_siren.parameters())
-
-    i0 = imread('data/pics_boat.tif')
-
-    y = torch.tensor(i0, dtype=torch.float32, device=device)
-    y = y.flatten()
-    y = y[:,None]
-
-    coords = get_mgrid(256, dim=2)
-    coords = coords.to('cuda:0')
-
-    print(coords.device, y.device)
-
-
-    for epoch in trange(10000):
-        optimizer.zero_grad()
-
-        x = model_siren()**2
-
-        loss = (x - y).norm(2)
-
-        loss.backward()
-        optimizer.step()
-
-        if epoch % 500 == 0:
-            print(f"Epoch {epoch}, Loss {loss.item()}")
-            pred = model_siren()**2
-            pred = torch.reshape(pred, (256, 256))
-            fig = plt.figure(figsize=(8, 8))
-            plt.imshow(pred.detach().cpu().numpy(), cmpa='grey')
-            # plt.scatter(y.detach().cpu().numpy(),x.detach().cpu().numpy(),c='k',s=1)
-            plt.savefig(f"tmp/output_{epoch}.png")

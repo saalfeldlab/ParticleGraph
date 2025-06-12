@@ -451,7 +451,6 @@ def plot_training_signal_field(x, n_nodes, recursive_loop, kk, time_step, x_list
         plt.close()
 
     elif ('short_term_plasticity' in field_type) | ('modulation' in field_type):
-        n_frames = n_frames - 10
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_subplot(2, 2, 1)
         plt.imshow(to_numpy(modulation), aspect='auto')
@@ -507,7 +506,6 @@ def plot_training_signal_field(x, n_nodes, recursive_loop, kk, time_step, x_list
 
 def plot_training_signal_missing_activity(n_frames, k, x_list, run, model_missing_activity, log_dir, epoch, N, device):
 
-        n_frames = n_frames - 10
         if n_frames > 1000:
             t = torch.linspace(0, 1, n_frames//100, dtype=torch.float32, device=device).unsqueeze(1)
         else:
