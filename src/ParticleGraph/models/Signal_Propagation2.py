@@ -133,7 +133,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             if self.embedding_trial:
                 embedding = torch.cat((self.b[self.data_id, :], embedding), dim=1)
 
-        msg = self.propagate(edge_index, u=u, embedding=embedding)
+        msg = self.propagate(edge_index, u=u, embedding=embedding, data_id=self.data_id[:,None])
 
         if 'generic' in self.update_type:        # MLP1(u, embedding, \sum MLP0(u, embedding), field)
             field = x[:, 8:9]
@@ -158,7 +158,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         else:
             return pred
 
-    def message(self, edge_index_i, edge_index_j, u_i, u_j, embedding_i, embedding_j):
+    def message(self, edge_index_i, edge_index_j, u_i, u_j, embedding_i, embedding_j, data_id_i):
 
         if (self.model=='PDE_N4') | (self.model=='PDE_N7'):
             in_features = torch.cat([u_j, embedding_j], dim=1)
@@ -175,9 +175,11 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             line_edge = line_edge**2
 
         if self.multi_connectivity:
-            assert self.batch_size==1, 'Warning: multiple_connectivity is not implemented for batch_size > 1'
-            T = self.W[self.data_id[0], :, :] * self.mask
-            return T[edge_index_i, edge_index_j][:, None] * line_edge
+            if self.batch_size == 1:
+                T = self.W[data_id_i, :, :] * self.mask
+                return T[edge_index_i, edge_index_j][:, None] * line_edge
+            else:
+                return self.W[data_id_i.squeeze(), edge_index_i % (self.W.shape[0]), edge_index_j % (self.W.shape[0])][:, None] * line_edge
         else:
             T = self.W * self.mask
             if (self.batch_size==1):

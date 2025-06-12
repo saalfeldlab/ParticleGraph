@@ -33,9 +33,12 @@ from tqdm import trange
 import matplotlib
 import matplotlib.pyplot as plt
 import torch
+from scipy.optimize import curve_fit
 from sklearn.metrics import r2_score, mean_squared_error
 from scipy import stats
 
+def linear_model(x, a, b):
+    return a * x + b
 
 if __name__ == '__main__':
 
@@ -102,118 +105,113 @@ if __name__ == '__main__':
         activity = activity[:, :, 8:9].squeeze()
         activity = activity.t()
 
-        model = nn.ModuleList([
-            Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
-                  hidden_features=model_config.hidden_dim_nnr,
-                  hidden_layers=model_config.n_layers_nnr, first_omega_0=model_config.omega,
-                  hidden_omega_0=model_config.omega,
-                  outermost_linear=model_config.outermost_linear_nnr)
-            for n in range(n_runs)
-        ])
-        model.to(device=device)
-        optimizer = torch.optim.Adam(lr=train_config.learning_rate_missing_activity,params=model.parameters())
-        model.train()
+        n_layers_nnr_list = [5, 8, 3]
+        hidden_dim_nnr_list = [256, 128, 64]
+        batch_size_list = [100,64,32,16,8,4,2,1]
 
-        def count_parameters(model):
-            return sum(p.numel() for p in model.parameters() if p.requires_grad)
-        print(f'number of learnable parameters: {count_parameters(model) //100}')
+        for n_layers_nnr in n_layers_nnr_list:
+            for hidden_dim_nnr in hidden_dim_nnr_list:
+                for batch_size in batch_size_list:
 
-        list_loss_regul = []
-        time.sleep(0.2)
+                    print(f"n_layers_nnr:{n_layers_nnr}  hidden_dim_nnr: {hidden_dim_nnr}  batch_size: {batch_size}")
 
-        model = Siren(in_features=1, hidden_features=256, hidden_layers=3, out_features=300, outermost_linear=True,
-                      first_omega_0=30., hidden_omega_0=30.)
-        model = model.to(device=device)
-        optimizer = torch.optim.Adam(lr=1e-4, params=model.parameters())
+                    model = nn.ModuleList([
+                        Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
+                              hidden_features=hidden_dim_nnr,
+                              hidden_layers=n_layers_nnr,
+                              first_omega_0=model_config.omega,
+                              hidden_omega_0=model_config.omega,
+                              outermost_linear=model_config.outermost_linear_nnr)
+                        for n in range(n_runs)
+                    ])
+                    model.to(device=device)
+                    optimizer = torch.optim.Adam(lr=train_config.learning_rate_missing_activity,params=model.parameters())
+                    model.train()
 
-        batch_size = 100
-        Niter = 10000
-        plot_frequency = 100000 // batch_size
-        print(f'plot frequency {plot_frequency}')
+                    def count_parameters(model):
+                        return sum(p.numel() for p in model.parameters() if p.requires_grad)
+                    print(f'number of learnable parameters: {count_parameters(model) //100}')
 
-        for epoch in range(20):
+                    list_loss_regul = []
+                    time.sleep(0.2)
 
-            total_loss = 0
-            k = 0
+                    Niter = 10000
+                    plot_frequency = 100000 // batch_size
+                    k = 0
 
-            for N in trange(Niter):
+                    for N in trange(plot_frequency * 2 + 2):
 
-                optimizer.zero_grad()
+                        optimizer.zero_grad()
 
-                loss = 0
-                run = 0  #np.random.randint(n_runs)
+                        loss = 0
+                        run = 0  #np.random.randint(n_runs)
 
-                for batch in range(batch_size):
+                        for batch in range(batch_size):
 
-                    k = np.random.randint(n_frames - 1 - time_step)
-                    x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device)
-                    if not (torch.isnan(x).any()):
-                        t = torch.tensor([k / n_frames], dtype=torch.float32, device=device)
-                        missing_activity = model(t).squeeze()
-                        loss = loss + (missing_activity - x[:, 6].clone().detach()).norm(2)
+                            k = np.random.randint(n_frames - 1 - time_step)
+                            x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device)
+                            if not (torch.isnan(x).any()):
+                                t = torch.tensor([k / n_frames], dtype=torch.float32, device=device)
+                                missing_activity = model[0](t).squeeze()
+                                loss = loss + (missing_activity - x[:, 6].clone().detach()).norm(2)
 
-                if loss !=0:
-                    loss.backward()
-                    optimizer.step()
-                    # print(N, loss.item()/batch_size)
+                        if loss !=0:
+                            loss.backward()
+                            optimizer.step()
+                            # print(N, loss.item()/batch_size)
 
-                if (N % plot_frequency == 0):
-                    with torch.no_grad():
-                        t = torch.linspace(0, 1, n_frames, dtype=torch.float32, device=device).unsqueeze(1)
-                        prediction = model(t) ** 2
-                        prediction = prediction.t()
+                        if (N % plot_frequency == 0):
+                            with torch.no_grad():
+                                t = torch.linspace(0, 1, n_frames, dtype=torch.float32, device=device).unsqueeze(1)
+                                prediction = model[0](t)
+                                prediction = prediction.t()
 
-                        fig = plt.figure(figsize=(16, 16))
-                        ax = fig.add_subplot(2, 2, 1)
-                        plt.title('neural field')
-                        plt.imshow(to_numpy(prediction), aspect='auto', cmap='viridis')
-                        ax = fig.add_subplot(2, 2, 2)
-                        plt.title('true activity')
-                        activity = torch.tensor(x_list[0][:, :, 6:7], device=device)
-                        activity = activity.squeeze()
-                        activity = activity.t()
-                        activity = torch.nan_to_num(activity, nan=0.0)
-                        plt.imshow(to_numpy(activity), aspect='auto', cmap='viridis')
-                        ax = fig.add_subplot(2, 2, 3)
-                        plt.scatter(to_numpy(activity.flatten()), to_numpy(prediction.flatten()), s=0.1, alpha=0.5,c='k')
+                                fig = plt.figure(figsize=(16, 16))
+                                ax = fig.add_subplot(2, 2, 1)
+                                plt.title('neural field')
+                                plt.imshow(to_numpy(prediction), aspect='auto', cmap='viridis')
+                                ax = fig.add_subplot(2, 2, 2)
+                                plt.title('true activity')
+                                activity = torch.tensor(x_list[0][:, :, 6:7], device=device)
+                                activity = activity.squeeze()
+                                activity = activity.t()
+                                activity = torch.nan_to_num(activity, nan=0.0)
+                                plt.imshow(to_numpy(activity), aspect='auto', cmap='viridis')
+                                ax = fig.add_subplot(2, 2, 3)
 
-                        activity_np = to_numpy(activity.flatten())
-                        prediction_np = to_numpy(prediction.flatten())
+                                activity_np = to_numpy(activity.flatten())
+                                prediction_np = to_numpy(prediction.flatten())
 
-                        # Remove points where activity = 0
-                        non_zero_mask = activity_np != 0
-                        activity_filtered = activity_np[non_zero_mask]
-                        prediction_filtered = prediction_np[non_zero_mask]
+                                non_zero_mask = activity_np > 1
+                                activity_filtered = activity_np[non_zero_mask]
+                                prediction_filtered = prediction_np[non_zero_mask]
 
-                        # Plot all points (including zeros) in light color
-                        plt.scatter(activity_np, prediction_np, s=0.1, alpha=0.3, c='lightgray', label='All data')
+                                plt.scatter(activity_filtered, prediction_filtered, s=0.1, alpha=0.5, c='k',
+                                            label='Non-zero activity')
 
-                        # Plot non-zero points in dark color
-                        plt.scatter(activity_filtered, prediction_filtered, s=0.1, alpha=0.5, c='k',
-                                    label='Non-zero activity')
+                                x_data = activity_filtered
+                                y_data = prediction_filtered
+                                lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+                                residuals = y_data - linear_model(x_data, *lin_fit)
+                                ss_res = np.sum(residuals ** 2)
+                                ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+                                r_squared = 1 - (ss_res / ss_tot)
 
-                        # Calculate statistics on filtered data
-                        r2 = r2_score(activity_filtered, prediction_filtered)
-                        slope, intercept, r_value, p_value, std_err = stats.linregress(activity_filtered,
-                                                                                       prediction_filtered)
+                                plt.text(0.05, 0.95,
+                                         f'R² = {r_squared:.4f}\nSlope = {lin_fit[0]:.4f}\nN = {len(activity_filtered)}',
+                                         transform=plt.gca().transAxes, fontsize=12, verticalalignment='top',
+                                         bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
 
-                        # Add regression line for filtered data
-                        x_line = np.linspace(activity_filtered.min(), activity_filtered.max(), 100)
-                        y_line = slope * x_line + intercept
-                        plt.plot(x_line, y_line, 'r-', linewidth=2)
+                                plt.xlabel('true activity')
+                                plt.ylabel('predicted activity')
+                                plt.title('prediction vs true')
+                                plt.legend()
+                                plt.tight_layout()
 
-                        # Statistics text
-                        plt.text(0.05, 0.95,
-                                 f'R² = {r2:.4f}\nSlope = {slope:.4f}\nIntercept = {intercept:.4f}\nN = {len(activity_filtered)}',
-                                 transform=plt.gca().transAxes, fontsize=12, verticalalignment='top',
-                                 bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+                                plt.savefig(f"outputs/output_{batch_size}_{hidden_dim_nnr}_{n_layers_nnr}.png")
+                                plt.close()
 
-                        plt.xlabel('Actual Activity')
-                        plt.ylabel('Predicted Activity')
-                        plt.title('Prediction vs Actual (Excluding Zero Activity)')
-                        plt.legend()
-                        plt.tight_layout()
-                        plt.show()
+
 
 
 

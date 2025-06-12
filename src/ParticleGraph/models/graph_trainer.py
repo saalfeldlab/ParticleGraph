@@ -2827,14 +2827,14 @@ def data_train_synaptic2(config, erase, best_model, device):
                         dataset_batch.append(dataset)
 
                         if len(dataset_batch) == 1:
-                            data_id = torch.ones((x.shape[0], 1), dtype=torch.int) * run
+                            data_id = torch.ones((x.shape[0], 1), dtype=torch.int, device=device) * run
                             x_batch = x[:, 6:7]
                             y_batch = y
                             k_batch = torch.ones((x.shape[0], 1), dtype=torch.int, device=device) * k
                             if (particle_batch_ratio < 1) | has_missing_activity:
                                 ids_batch = ids
                         else:
-                            data_id = torch.cat((data_id, torch.ones((x.shape[0], 1), dtype=torch.int) * run), dim=0)
+                            data_id = torch.cat((data_id, torch.ones((x.shape[0], 1), dtype=torch.int, device=device) * run), dim=0)
                             x_batch = torch.cat((x_batch, x[:, 6:7]), dim=0)
                             y_batch = torch.cat((y_batch, y), dim=0)
                             k_batch = torch.cat(

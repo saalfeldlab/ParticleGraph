@@ -5618,7 +5618,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                         t = torch.linspace(0, 1, n_frames // 100, dtype=torch.float32, device=device).unsqueeze(1)
                     else:
                         t = torch.linspace(0, 1, n_frames, dtype=torch.float32, device=device).unsqueeze(1)
-                    prediction = model_missing_activity[run](t) ** 2
+                    prediction = model_missing_activity[run](t)
                     prediction = prediction.t()
 
                     fig = plt.figure(figsize=(16, 16))

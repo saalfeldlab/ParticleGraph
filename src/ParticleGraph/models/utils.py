@@ -510,9 +510,8 @@ def plot_training_signal_missing_activity(n_frames, k, x_list, run, model_missin
             t = torch.linspace(0, 1, n_frames//100, dtype=torch.float32, device=device).unsqueeze(1)
         else:
             t = torch.linspace(0, 1, n_frames, dtype=torch.float32, device=device).unsqueeze(1)
-        prediction = model_missing_activity[0](t) ** 2
+        prediction = model_missing_activity[0](t)
         prediction = prediction.t()
-
         fig = plt.figure(figsize=(16, 16))
         ax = fig.add_subplot(2, 2, 1)
         plt.title('neural field')
@@ -526,13 +525,13 @@ def plot_training_signal_missing_activity(n_frames, k, x_list, run, model_missin
         plt.tight_layout()
         ax = fig.add_subplot(2, 2, 3)
         plt.title('learned missing activity')
-        pos = np.argwhere(x_list[run][k][:, 6] != 6)
+        pos = np.argwhere(x_list[0][k][:, 6] != 6)
         prediction_ = prediction.clone().detach()
         prediction_[pos[:,0]]=0
         plt.imshow(to_numpy(prediction_), aspect='auto', cmap='viridis')
         ax = fig.add_subplot(2, 2, 4)
         plt.title('learned observed activity')
-        pos = np.argwhere(x_list[run][k][:, 6] == 6)
+        pos = np.argwhere(x_list[0][k][:, 6] == 6)
         prediction_ = prediction.clone().detach()
         prediction_[pos[:,0]]=0
         plt.imshow(to_numpy(prediction_), aspect='auto', cmap='viridis')
