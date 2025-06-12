@@ -2716,7 +2716,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                     if has_missing_activity:
                         pos = torch.argwhere(x[:,6]==6)
                         ids = torch.argwhere(x[:,6]!=6)
-                        ids = to_numpy(ids)
+                        ids = to_numpy(ids.squeeze())
                         t = torch.tensor([k / n_frames], dtype=torch.float32, device=device)
                         missing_activity = model_missing_activity[run](t).squeeze()
                         if (train_config.coeff_missing_activity>0):
@@ -2856,11 +2856,23 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                 total_loss_regul += loss.item()
 
-                if time_step == 1:
-                    loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
+                # if time_step == 1:
+                #     loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
+                #
+                # elif time_step > 1:
+                #     loss = loss + (x_batch[ids_batch] + pred[ids_batch] * delta_t * time_step - y_batch[ids_batch]).norm(2) / time_step
 
+                if time_step == 1:
+                    if (particle_batch_ratio < 1) | has_missing_activity:
+                        loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
+                    else:
+                        loss = loss + (pred - y_batch).norm(2)
                 elif time_step > 1:
-                    loss = loss + (x_batch[ids_batch] + pred[ids_batch] * delta_t * time_step - y_batch[ids_batch]).norm(2) / time_step
+                    if (particle_batch_ratio < 1) | has_missing_activity:
+                        loss = loss + (x_batch[ids_batch] + pred[ids_batch] * delta_t * time_step - y_batch[
+                            ids_batch]).norm(2) / time_step
+                    else:
+                        loss = loss + (x_batch + pred * delta_t * time_step - y_batch).norm(2)
 
                 if ('PDE_N3' in model_config.signal_model_name):
                     loss = loss + train_config.coeff_model_a * (model.a[ind_a + 1] - model.a[ind_a]).norm(2)
