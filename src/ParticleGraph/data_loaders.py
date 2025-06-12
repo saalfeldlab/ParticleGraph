@@ -1849,7 +1849,7 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
     larynx_neuron_list = Cook_neuron_chem_names[0:20]
     with open(f"graphs_data/{dataset_name}/larynx_neuron_list.json", "w") as f:
         json.dump(larynx_neuron_list, f)
-    map_larynx_matrix , index = map_matrix(larynx_neuron_list, activity_neuron_list, mask_matrix)
+    map_larynx_matrix , index = map_matrix(larynx_neuron_list, all_neuron_list, mask_matrix)
 
     fig = plt.figure(figsize=(15, 15))
     ax = fig.add_subplot(111)

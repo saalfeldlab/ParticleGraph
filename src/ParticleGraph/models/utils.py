@@ -255,14 +255,15 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
         plt.close()
 
     if ('PDE_N8' in config.graph_model.signal_model_name):
+        dataset = config.dataset
         os.makedirs(f"./{log_dir}/tmp_training/matrix/larynx", exist_ok=True)
-        data_folder_name = './graphs_data/CElegans/CElegans_a1/'
-        with open(data_folder_name+"activity_neuron_list.json", "r") as f:
-            activity_neuron_list = json.load(f)
+        data_folder_name = f'./graphs_data/{config.dataset}/'
+        with open(data_folder_name+"all_neuron_list.json", "r") as f:
+            all_neuron_list = json.load(f)
         with open(data_folder_name+"larynx_neuron_list.json", "r") as f:
             larynx_neuron_list = json.load(f)
-        larynx_pred_weight, index_larynx =   map_matrix(larynx_neuron_list, activity_neuron_list, pred_weight)
-        larynx_gt_weight, _ = map_matrix(larynx_neuron_list, activity_neuron_list, gt_weight)
+        larynx_pred_weight, index_larynx =   map_matrix(larynx_neuron_list, all_neuron_list, pred_weight)
+        larynx_gt_weight, _ = map_matrix(larynx_neuron_list, all_neuron_list, gt_weight)
         fig = plt.figure(figsize=(16, 8))
         ax = fig.add_subplot(121)
         ax = sns.heatmap(np.transpose(larynx_pred_weight), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
@@ -459,7 +460,6 @@ def plot_training_signal_field(x, n_nodes, recursive_loop, kk, time_step, x_list
             t = torch.linspace(0, 1, n_frames//100, dtype=torch.float32, device=device).unsqueeze(1)
         else:
             t = torch.linspace(0, 1, n_frames, dtype=torch.float32, device=device).unsqueeze(1)
-
         prediction = model_f[0](t) ** 2
         prediction = prediction.t()
         plt.imshow(to_numpy(prediction), aspect='auto', cmap='viridis')
@@ -515,19 +515,32 @@ def plot_training_signal_missing_activity(n_frames, k, x_list, run, model_missin
         prediction = model_missing_activity[0](t) ** 2
         prediction = prediction.t()
 
-        fig = plt.figure(figsize=(16, 8))
-        ax = fig.add_subplot(1, 2, 1)
+        fig = plt.figure(figsize=(16, 16))
+        ax = fig.add_subplot(2, 2, 1)
+        plt.title('neural field')
         plt.imshow(to_numpy(prediction), aspect='auto', cmap='viridis')
-        ax = fig.add_subplot(1, 2, 2)
+        ax = fig.add_subplot(2, 2, 2)
+        plt.title('true activity')
+        activity = torch.tensor(x_list[0][:, :, 6:7], device=device)
+        activity = activity.squeeze()
+        activity = activity.t()
+        plt.imshow(to_numpy(activity), aspect='auto', cmap='viridis')
+        plt.tight_layout()
+        ax = fig.add_subplot(2, 2, 3)
+        plt.title('learned missing activity')
+        pos = np.argwhere(x_list[run][k][:, 6] != 6)
+        prediction_ = prediction.clone().detach()
+        prediction_[pos[:,0]]=0
+        plt.imshow(to_numpy(prediction_), aspect='auto', cmap='viridis')
+        ax = fig.add_subplot(2, 2, 4)
+        plt.title('learned observed activity')
         pos = np.argwhere(x_list[run][k][:, 6] == 6)
-        prediction[pos[:,0]]=0
-        plt.imshow(to_numpy(prediction), aspect='auto', cmap='viridis')
-
+        prediction_ = prediction.clone().detach()
+        prediction_[pos[:,0]]=0
+        plt.imshow(to_numpy(prediction_), aspect='auto', cmap='viridis')
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/field/missing_activity_{epoch}_{N}.tif", dpi=80)
         plt.close()
-
-
 
 def plot_training_particle_field(config, has_siren, has_siren_time, model_f,  n_frames, model_name, log_dir, epoch, N, x, x_mesh, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
 

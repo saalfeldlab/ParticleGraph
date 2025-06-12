@@ -4814,14 +4814,12 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
         has_field = True
     else:
         has_field = False
-    n_ghosts = int(train_config.n_ghosts)
-    has_ghost = n_ghosts > 0
     multi_connectivity = config.training.multi_connectivity
-
+    has_missing_activity = config.training.has_missing_activity
 
     data_folder_name = './graphs_data/CElegans/CElegans_a1/'
 
-    activity_neuron_list = json.load(open(f'graphs_data/{dataset_name}/activity_neuron_list.json', "r"))
+    all_neuron_list = json.load(open(f'graphs_data/{dataset_name}/all_neuron_list.json', "r"))
     larynx_neuron_list = json.load(open(f'graphs_data/{dataset_name}/larynx_neuron_list.json', "r"))
     sensory_neuron_list = json.load(open(f'graphs_data/{dataset_name}/sensory_neuron_list.json', "r"))
     inter_neuron_list = json.load(open(f'graphs_data/{dataset_name}/inter_neuron_list.json', "r"))
@@ -4947,17 +4945,6 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
     else:
         mc = 'k'
 
-    if has_ghost:
-        model_missing_activity = nn.ModuleList([
-            Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
-                  hidden_features=model_config.hidden_dim_nnr,
-                  hidden_layers=model_config.n_layers_nnr, first_omega_0=omega, hidden_omega_0=omega,
-                  outermost_linear=model_config.outermost_linear_nnr)
-            for n in range(n_runs)
-        ])
-        model_missing_activity.to(device=device)
-        model_missing_activity.eval()
-
     if has_field:
         if ('short_term_plasticity' in field_type) | ('modulation' in field_type):
             model_f = nn.ModuleList([
@@ -4979,6 +4966,17 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
         modulation = modulation.t()
         modulation = modulation.clone().detach()
         d_modulation = (modulation[:, 1:] - modulation[:, :-1]) / delta_t
+
+    if has_missing_activity:
+        model_missing_activity = nn.ModuleList([
+            Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
+                  hidden_features=model_config.hidden_dim_nnr,
+                  hidden_layers=model_config.n_layers_nnr, first_omega_0=model_config.omega,
+                  hidden_omega_0=model_config.omega,
+                  outermost_linear=model_config.outermost_linear_nnr)
+            for n in range(n_runs)
+        ])
+        model_missing_activity.to(device=device)
 
     if epoch_list[0] == 'all':
         files = glob.glob(f"{log_dir}/models/*.pt")
@@ -5577,7 +5575,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             plt.figure(figsize=(10, 10))
             if k==0: # config.graph_model.signal_model_name == 'PDE_N8':
                 plt.title('activity_larynx', fontsize=68)
-                map_larynx_matrix, n = map_matrix(larynx_neuron_list, activity_neuron_list, adjacency)
+                map_larynx_matrix, n = map_matrix(larynx_neuron_list, all_neuron_list, adjacency)
             else:
                 plt.title('activity', fontsize=68)
                 n = np.random.randint(0, n_particles, 50)
@@ -5607,20 +5605,59 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             model.edges = edge_index
             print(f'net: {net}')
 
-            neuron_OI = get_neuron_index('SAAVL', activity_neuron_list)
+            if has_missing_activity:
+                os.makedirs(f"./{log_dir}/results/missing_activity", exist_ok=True)
+                net = f'{log_dir}/models/best_model_missing_activity_with_{n_runs - 1}_graphs_{epoch}.pt'
+                state_dict = torch.load(net, map_location=device)
+                model_missing_activity.load_state_dict(state_dict['model_state_dict'])
+
+                for run in trange(n_runs):
+
+                    n_frames = n_frames - 10
+                    if n_frames > 1000:
+                        t = torch.linspace(0, 1, n_frames // 100, dtype=torch.float32, device=device).unsqueeze(1)
+                    else:
+                        t = torch.linspace(0, 1, n_frames, dtype=torch.float32, device=device).unsqueeze(1)
+                    prediction = model_missing_activity[run](t) ** 2
+                    prediction = prediction.t()
+
+                    fig = plt.figure(figsize=(16, 16))
+                    ax = fig.add_subplot(2, 2, 1)
+                    plt.title('neural field')
+                    plt.imshow(to_numpy(prediction), aspect='auto', cmap='viridis')
+                    ax = fig.add_subplot(2, 2, 2)
+                    plt.title('true activity')
+                    activity = torch.tensor(x_list[run][:, :, 6:7], device=device)
+                    activity = activity.squeeze()
+                    activity = activity.t()
+                    plt.imshow(to_numpy(activity), aspect='auto', cmap='viridis')
+                    plt.tight_layout()
+                    ax = fig.add_subplot(2, 2, 3)
+                    plt.title('learned missing activity')
+                    pos = np.argwhere(x_list[run][0][:, 6] != 6)
+                    prediction_ = prediction.clone().detach()
+                    prediction_[pos[:, 0]] = 0
+                    plt.imshow(to_numpy(prediction_), aspect='auto', cmap='viridis')
+                    ax = fig.add_subplot(2, 2, 4)
+                    plt.title('comparison')
+                    # pos = np.argwhere(x_list[run][0][:, 6] == 6)
+                    # prediction_ = prediction.clone().detach()
+                    # prediction_[pos[:, 0]] = 0
+                    # plt.imshow(to_numpy(prediction_), aspect='auto', cmap='viridis')
+                    plt.scatter(to_numpy(activity[pos, :prediction.shape[1]]), to_numpy(prediction[pos, :]), s=1, c=mc, alpha=0.1)
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/missing_activity/missing_activity_{run}.tif", dpi=80)
+                    plt.close()
 
 
+            neuron_OI = get_neuron_index('SAAVL', all_neuron_list)
             for data_OI in range(n_runs):
-
                 activity = torch.tensor(x_list[data_OI][:, :, 6:7], device=device)
                 activity = activity.squeeze()
                 activity = activity.t()
-
                 fig = plt.figure(figsize=(20, 2))
                 plt.plot(to_numpy(activity[neuron_OI, :]), linewidth=2, c=mc)
                 plt.show()
-
-
 
             if multi_connectivity:
                 os.makedirs(f"./{log_dir}/results/W", exist_ok=True)
@@ -5637,7 +5674,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                     plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=24)
                     plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=24)
                     plt.subplot(2, 2, 1)
-                    larynx_pred_weight, index_larynx = map_matrix(larynx_neuron_list, activity_neuron_list, A)
+                    larynx_pred_weight, index_larynx = map_matrix(larynx_neuron_list, all_neuron_list, A)
                     ax = sns.heatmap(to_numpy(larynx_pred_weight), cbar=False, center=0, square=True,
                                      cmap='bwr', vmin=-4, vmax=4)
                     plt.xticks([])
@@ -5645,8 +5682,6 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/results/W/W_{k}.tif", dpi=80)
                     plt.close()
-
-
             else:
 
                 i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
@@ -5663,7 +5698,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                 plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=24)
                 plt.subplot(2, 2, 1)
 
-                larynx_pred_weight, index_larynx = map_matrix(larynx_neuron_list, activity_neuron_list, A)
+                larynx_pred_weight, index_larynx = map_matrix(larynx_neuron_list, all_neuron_list, A)
                 ax = sns.heatmap(to_numpy(larynx_pred_weight) , cbar=False, center=0, square=True,
                                  cmap='bwr', vmin=-4, vmax=4)
 
@@ -5696,12 +5731,12 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             fig, ax = fig_init()
             for n in range(n_particles):
                 plt.scatter(to_numpy(model.a[:n_particles, 0]), to_numpy(model.a[:n_particles, 1]), s=50, color=mc, edgecolors='none')
-                plt.text(to_numpy(model.a[n, 0])-0.05, to_numpy(model.a[n, 1]) - 0.05, activity_neuron_list[n], fontsize=10)
+                plt.text(to_numpy(model.a[n, 0])-0.05, to_numpy(model.a[n, 1]) - 0.05, all_neuron_list[n], fontsize=10)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/all_embedding_text.tif", dpi=170.7)
             plt.close()
 
-            rl_pairs = find_suffix_pairs_with_index(activity_neuron_list, 'R', 'L')
+            rl_pairs = find_suffix_pairs_with_index(all_neuron_list, 'R', 'L')
 
             os.makedirs(f"./{log_dir}/results/pairs", exist_ok=True)
             print("Right-Left Neuron Pairs (with indexes):")
@@ -5729,9 +5764,9 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                 plt.scatter(to_numpy(model.a[i1, 0]), to_numpy(model.a[i1, 1]), s=100, color='g', edgecolors='none')
                 plt.scatter(to_numpy(model.a[i2, 0]), to_numpy(model.a[i2, 1]), s=100, color='r', edgecolors='none')
                 plt.text(to_numpy(model.a[i1, 0]) - 0.05, to_numpy(model.a[i1, 1]) - 0.07,
-                         activity_neuron_list[i1], fontsize=14, c='g')
+                         all_neuron_list[i1], fontsize=14, c='g')
                 plt.text(to_numpy(model.a[i2, 0]) - 0.05, to_numpy(model.a[i2, 1]) - 0.07,
-                         activity_neuron_list[i2], fontsize=14, c='r')
+                         all_neuron_list[i2], fontsize=14, c='r')
                 ax = fig.add_subplot(3, 3, 1)
                 plt.plot(to_numpy(activity[i1, :]), linewidth=0.5, c='g')
                 plt.plot(to_numpy(activity[i2, :]), linewidth=0.5, c='r')
@@ -5777,7 +5812,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
 
                     top3_indices = np.argsort(out_np)[-3:][::-1]
                     label_lines = [
-                        f"{activity_neuron_list[m]} ({neuron_types_list[int(x[m, 5])]})"
+                        f"{all_neuron_list[m]} ({neuron_types_list[int(x[m, 5])]})"
                         for m in top3_indices
                     ]
                     label_text = "\n".join(label_lines)
@@ -7468,9 +7503,9 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
         if True: # config.graph_model.signal_model_name == 'PDE_N8':
             with open(f'graphs_data/{dataset_name}/larynx_neuron_list.json', 'r') as file:
                 larynx_neuron_list = json.load(file)
-            with open(f'graphs_data/{dataset_name}/activity_neuron_list.json', 'r') as file:
+            with open(f'graphs_data/{dataset_name}/all_neuron_list.json', 'r') as file:
                 activity_neuron_list = json.load(file)
-            map_larynx_matrix, n = map_matrix(larynx_neuron_list, activity_neuron_list, adjacency)
+            map_larynx_matrix, n = map_matrix(larynx_neuron_list, all_neuron_list, adjacency)
         else:
             n = np.random.randint(0, n_particles, 50)
         for i in range(len(n)):
@@ -10507,7 +10542,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_video_bison_test']
     # config_list = ['RD_RPS']
     # config_list = ['cell_U2OS_8_12']
-    config_list = ['signal_CElegans_a3', 'signal_CElegans_a5', 'signal_CElegans_a6', 'signal_CElegans_a7', 'signal_CElegans_a8', 'signal_CElegans_a9', 'signal_CElegans_a10']
+    config_list = ['signal_CElegans_c2']
 
     # plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 

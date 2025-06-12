@@ -2409,8 +2409,6 @@ def data_train_synaptic2(config, erase, best_model, device):
 
     if field_type != '':
         n_nodes = simulation_config.n_nodes
-        if has_virtual_neuron:
-            n_nodes = n_particles + n_virtual_neurons
         has_neural_field = True
     else:
         n_nodes = simulation_config.n_particles
@@ -2544,7 +2542,7 @@ def data_train_synaptic2(config, erase, best_model, device):
             for n in range(n_runs)
         ])
         model_missing_activity.to(device=device)
-        optimizer_missing_activity = torch.optim.Adam(lr=train_config.learning_rate_NNR,
+        optimizer_missing_activity = torch.optim.Adam(lr=train_config.learning_rate_missing_activity,
                                                       params=model_missing_activity.parameters())
         model_missing_activity.train()
     if has_neural_field:
@@ -2719,6 +2717,9 @@ def data_train_synaptic2(config, erase, best_model, device):
                         ids = to_numpy(ids)
                         t = torch.tensor([k / n_frames], dtype=torch.float32, device=device)
                         missing_activity = model_missing_activity[run](t).squeeze()
+                        if (train_config.coeff_missing_activity>0):
+                            loss_missing_activity = (missing_activity[ids] - x[ids, 6]).norm(2)
+                            loss = loss + loss_missing_activity * train_config.coeff_missing_activity
                         x[pos,6] = missing_activity[pos]
                     if has_neural_field:
                         if 'visual' in field_type:
@@ -2748,6 +2749,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                         model_W = model.W[run]
                     else:
                         model_W = model.W
+
                     # regularisation lin_phi(0)=0
                     in_features = get_in_features_update(rr=None, model=model, device=device)
                     func_phi = model.lin_phi(in_features.float())
@@ -2861,19 +2863,18 @@ def data_train_synaptic2(config, erase, best_model, device):
                     else:
                         loss = loss + (x_batch + pred * delta_t * time_step - y_batch).norm(2)
 
-
                 if ('PDE_N3' in model_config.signal_model_name):
                     loss = loss + train_config.coeff_model_a * (model.a[ind_a + 1] - model.a[ind_a]).norm(2)
 
                 loss.backward()
                 optimizer.step()
 
+                total_loss += loss.item()
+
                 if has_missing_activity:
                     optimizer_missing_activity.step()
                 if has_neural_field:
                     optimizer_f.step()
-
-                total_loss += loss.item()
 
                 with torch.no_grad():
                     if multi_connectivity:
@@ -2956,20 +2957,20 @@ def data_train_synaptic2(config, erase, best_model, device):
 
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
-        fig = plt.figure(figsize=(8, 8))
+        fig = plt.figure(figsize=(18, 6))
 
         ax = fig.add_subplot(2, 3, 1)
         plt.plot(list_loss, color='k', linewidth=1)
         plt.xlim([0, n_epochs])
-        plt.ylabel('Loss', fontsize=12)
-        plt.xlabel('Epochs', fontsize=12)
+        plt.ylabel('loss', fontsize=12)
+        plt.xlabel('epochs', fontsize=12)
 
         ax = fig.add_subplot(2, 3, 2)
         for n in range(n_particle_types):
             pos = torch.argwhere(type_list == n)
             plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=1, color=cmap.color(n))
-        plt.xlabel('Embedding 0', fontsize=12)
-        plt.ylabel('Embedding 1', fontsize=12)
+        plt.xlabel('embedding 0', fontsize=12)
+        plt.ylabel('embedding 1', fontsize=12)
 
         if multi_connectivity:
             A = model.W[0].clone().detach() * model.mask.clone().detach()
@@ -2979,13 +2980,13 @@ def data_train_synaptic2(config, erase, best_model, device):
         ax = fig.add_subplot(2, 3, 4)
         ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},
                          vmin=-0.001, vmax=0.001)
-        plt.title('True connectivity matrix', fontsize=12)
+        plt.title('true connectivity', fontsize=12)
         plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
         plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
 
         ax = fig.add_subplot(2, 3, 5)
         ax = sns.heatmap(to_numpy(A), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
-        plt.title('Learned connectivity matrix', fontsize=12)
+        plt.title('learned connectivity', fontsize=12)
         plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
         plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
 
@@ -2998,7 +2999,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         plt.title('comparison')
 
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/loss_{epoch}.tif")
+        plt.savefig(f"./{log_dir}/tmp_training/epoch_{epoch}.tif")
         plt.close()
 
         if replace_with_cluster:

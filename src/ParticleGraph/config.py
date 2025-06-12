@@ -244,6 +244,7 @@ class TrainingConfig(BaseModel):
     Learning_rate_W_end: float = 0.0001
 
     learning_rate_NNR: float = 0.0001
+    learning_rate_missing_activity: float = 0.0001
 
     coeff_L1: float = 0.0
     coeff_anneal_L1: float = 0
@@ -259,6 +260,7 @@ class TrainingConfig(BaseModel):
     coeff_L1_ghost: float = 0
     coeff_sign: float = 0
     coeff_TV_norm: float = 0
+    coeff_missing_activity: float = 0
 
     diff_update_regul: str = 'none'
 
