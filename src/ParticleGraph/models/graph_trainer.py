@@ -2718,7 +2718,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                         t = torch.tensor([k / n_frames], dtype=torch.float32, device=device)
                         missing_activity = model_missing_activity[run](t).squeeze()
                         if (train_config.coeff_missing_activity>0):
-                            loss_missing_activity = (missing_activity[ids] - x[ids, 6]).norm(2)
+                            loss_missing_activity = (missing_activity[ids] - x[ids, 6].clone().detach()).norm(2)
                             loss = loss + loss_missing_activity * train_config.coeff_missing_activity
                         x[pos,6] = missing_activity[pos]
                     if has_neural_field:
@@ -3081,8 +3081,6 @@ def data_train_synaptic2(config, erase, best_model, device):
             if (epoch == 20) & (train_config.coeff_anneal_L1 > 0):
                 coeff_L1 = train_config.coeff_anneal_L1
                 logger.info(f'coeff_L1: {coeff_L1}')
-
-
 
 
 def data_train_agents(config, erase, best_model, device):

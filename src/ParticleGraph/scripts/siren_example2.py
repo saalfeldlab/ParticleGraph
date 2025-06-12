@@ -22,156 +22,10 @@ from PIL import Image
 import skimage
 from torchvision.transforms import Resize, Compose, ToTensor, Normalize
 
-
-class SineLayer(nn.Module):
-    # See paper sec. 3.2, final paragraph, and supplement Sec. 1.5 for discussion of omega_0.
-    
-    # If is_first=True, omega_0 is a frequency factor which simply multiplies the activations before the 
-    # nonlinearity. Different signals may require different omega_0 in the first layer - this is a 
-    # hyperparameter.
-    
-    # If is_first=False, then the weights will be divided by omega_0 so as to keep the magnitude of 
-    # activations constant, but boost gradients to the weight matrix (see supplement Sec. 1.5)
-    
-    def __init__(self, in_features, out_features, bias=True,
-                 is_first=False, omega_0=30):
-        super().__init__()
-        self.omega_0 = omega_0
-        self.is_first = is_first
-        
-        self.in_features = in_features
-        self.linear = nn.Linear(in_features, out_features, bias=bias)
-        
-        self.init_weights()
-    
-    def init_weights(self):
-        with torch.no_grad():
-            if self.is_first:
-                self.linear.weight.uniform_(-1 / self.in_features, 
-                                             1 / self.in_features)      
-            else:
-                self.linear.weight.uniform_(-np.sqrt(6 / self.in_features) / self.omega_0, 
-                                             np.sqrt(6 / self.in_features) / self.omega_0)
-        
-    def forward(self, input):
-        return torch.sin(self.omega_0 * self.linear(input))
-
-
-class Siren(nn.Module):
-    def __init__(self, in_features, hidden_features, hidden_layers, out_features, outermost_linear=False,
-                 first_omega_0=30, hidden_omega_0=30.):
-        super(Siren, self).__init__()
-
-        self.net = []
-        self.net.append(SineLayer(in_features, hidden_features,
-                                  is_first=True, omega_0=first_omega_0))
-
-        for i in range(hidden_layers):
-            self.net.append(SineLayer(hidden_features, hidden_features,
-                                      is_first=False, omega_0=hidden_omega_0))
-
-        if outermost_linear:
-            final_linear = nn.Linear(hidden_features, out_features)
-
-            with torch.no_grad():
-                final_linear.weight.uniform_(-np.sqrt(6 / hidden_features) / hidden_omega_0,
-                                             np.sqrt(6 / hidden_features) / hidden_omega_0)
-
-            self.net.append(final_linear)
-        else:
-            self.net.append(SineLayer(hidden_features, out_features,
-                                      is_first=False, omega_0=hidden_omega_0))
-
-        self.net = nn.Sequential(*self.net)
-
-    def forward(self, coords):
-
-        output = self.net(coords)
-        return output
-
-    def forward_with_activations(self, coords, retain_grad=False):
-        '''Returns not only model output, but also intermediate activations.
-        Only used for visualizing activations later!'''
-        activations = OrderedDict()
-
-        activation_count = 0
-        x = coords.clone().detach().requires_grad_(True)
-        activations['input'] = x
-        for i, layer in enumerate(self.net):
-            if isinstance(layer, SineLayer):
-                x, intermed = layer.forward_with_intermediate(x)
-
-                if retain_grad:
-                    x.retain_grad()
-                    intermed.retain_grad()
-
-                activations['_'.join((str(layer.__class__), "%d" % activation_count))] = intermed
-                activation_count += 1
-            else:
-                x = layer(x)
-
-                if retain_grad:
-                    x.retain_grad()
-
-            activations['_'.join((str(layer.__class__), "%d" % activation_count))] = x
-            activation_count += 1
-
-        return activations
-
-
-class SirenCollection(nn.Module):
-    def __init__(self, in_features, hidden_features, hidden_layers, out_features, outermost_linear=False, first_omega_0=30, hidden_omega_0=30.):
-        super(SirenCollection, self).__init__()
-
-        self.sirens = nn.ModuleList([Siren(in_features=in_features, hidden_features=hidden_features, hidden_layers=hidden_layers, out_features=out_features, outermost_linear=outermost_linear, first_omega_0=first_omega_0, hidden_omega_0=hidden_omega_0) for _ in range(100)])
-        # self.sirens = nn.ModuleList([Siren(in_features=in_features, hidden_features=hidden_features, hidden_layers=hidden_layers-1, out_features=hidden_features, outermost_linear=False, first_omega_0=first_omega_0, hidden_omega_0=hidden_omega_0) for _ in range(100)])
-        # self.common = Siren(in_features=hidden_features, hidden_features=hidden_features, hidden_layers=1, out_features=out_features, outermost_linear=True, first_omega_0=first_omega_0, hidden_omega_0=hidden_omega_0)
-
-    def forward(self, x, n):
-        outputs = self.sirens[n](x)
-        # outputs = self.common(outputs)
-        return outputs
-
-
-class MLP(nn.Module):
-
-    def __init__(self, input_size=None, output_size=None, nlayers=None, hidden_size=None, device=None, activation=None, initialisation=None):
-
-        super(MLP, self).__init__()
-        self.layers = nn.ModuleList()
-        self.layers.append(nn.Linear(input_size, hidden_size, device=device))
-        if nlayers > 2:
-            for i in range(1, nlayers - 1):
-                layer = nn.Linear(hidden_size, hidden_size, device=device)
-                nn.init.normal_(layer.weight, std=0.1)
-                nn.init.zeros_(layer.bias)
-                self.layers.append(layer)
-        layer = nn.Linear(hidden_size, output_size, device=device)
-
-        if initialisation == 'zeros':
-            nn.init.zeros_(layer.weight)
-            nn.init.zeros_(layer.bias)
-        else :
-            nn.init.normal_(layer.weight, std=0.1)
-            nn.init.zeros_(layer.bias)
-
-        self.layers.append(layer)
-
-        if activation=='tanh':
-            self.activation = F.tanh
-        else:
-            self.activation = F.relu
-
-    def forward(self, x):
-        for l in range(len(self.layers) - 1):
-            x = self.layers[l](x)
-            x = self.activation(x)
-        x = self.layers[-1](x)
-        return x
-
-
-
-
+from GNN_particles_Ntype import *
+from ParticleGraph.models.utils import *
+from ParticleGraph.utils import *
+from ParticleGraph.models.Siren_Network import *
 
 if __name__ == '__main__':
 
@@ -188,13 +42,13 @@ if __name__ == '__main__':
     matplotlib.use("Qt5Agg")
 
 
-    config_list = ['signal_N6_a1']
+    config_list = ['signal_CElegans_c2']
 
 
     for config_file_ in config_list:
 
         config_file, pre_folder = add_pre_folder(config_file_)
-        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+        config = ParticleGraphConfig.from_yaml(f'../../../config/{config_file}.yaml')
         config.dataset = pre_folder + config.dataset
         config.config_file = pre_folder + config_file_
 
@@ -207,29 +61,40 @@ if __name__ == '__main__':
         simulation_config = config.simulation
         train_config = config.training
         model_config = config.graph_model
-        n_frames = config.simulation.n_frames
-        n_particles = config.simulation.n_particles
-        n_runs = config.training.n_runs
-        n_particle_types = config.simulation.n_particle_types
-        delta_t = config.simulation.delta_t
-        p = config.simulation.params
-        omega = model_config.omega
-        cmap = CustomColorMap(config=config)
-        dimension = config.simulation.dimension
-        max_radius = config.simulation.max_radius
+
+        print(f'training with data {model_config.particle_model_name} {model_config.mesh_model_name}')
+
+        dimension = simulation_config.dimension
+        n_epochs = train_config.n_epochs
+        n_particles = simulation_config.n_particles
+        n_particle_types = simulation_config.n_particle_types
+        dataset_name = config.dataset
+        n_frames = simulation_config.n_frames
+        data_augmentation_loop = train_config.data_augmentation_loop
+        recursive_loop = train_config.recursive_loop
+        delta_t = simulation_config.delta_t
+        particle_batch_ratio = train_config.particle_batch_ratio
+        embedding_cluster = EmbeddingCluster(config)
+        n_runs = train_config.n_runs
         field_type = model_config.field_type
+        coeff_lin_modulation = train_config.coeff_lin_modulation
+        coeff_model_b = train_config.coeff_model_b
+        coeff_sign = train_config.coeff_sign
+        time_step = train_config.time_step
+        has_missing_activity = train_config.has_missing_activity
+        multi_connectivity = config.training.multi_connectivity
 
         x_list = []
         y_list = []
-        for run in trange(1):
-            if os.path.exists(f'graphs_data/{dataset_name}/x_list_{run}.pt'):
-                x = torch.load(f'graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device)
-                y = torch.load(f'graphs_data/{dataset_name}/y_list_{run}.pt', map_location=device)
+        for run in trange(n_runs):
+            if os.path.exists(f'../../../graphs_data/{dataset_name}/x_list_{run}.pt'):
+                x = torch.load(f'../../../graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device)
+                y = torch.load(f'../../../graphs_data/{dataset_name}/y_list_{run}.pt', map_location=device)
                 x = to_numpy(torch.stack(x))
                 y = to_numpy(torch.stack(y))
             else:
-                x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
-                y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
+                x = np.load(f'../../../graphs_data/{dataset_name}/x_list_{run}.npy')
+                y = np.load(f'../../../graphs_data/{dataset_name}/y_list_{run}.npy')
             x_list.append(x)
             y_list.append(y)
 
@@ -237,71 +102,81 @@ if __name__ == '__main__':
         activity = activity[:, :, 8:9].squeeze()
         activity = activity.t()
 
-        # plt.figure(figsize=(15, 10))
-        # n = np.random.permutation(n_particles)
-        # for i in range(10):
-        #     plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=2)
-        # plt.xlabel('time', fontsize=64)
-        # plt.ylabel('$x_{i}$', fontsize=64)
-        # plt.xticks([0, 20000], fontsize=48)
-        # plt.yticks(fontsize=48)
-        # plt.tight_layout()
-        # plt.show()
-
-        # nlayers = 32
-        # model = MLP(input_size=1, output_size=1, nlayers=nlayers, hidden_size=512, device=device)
-
-        model = SirenCollection(in_features=1, out_features=1, hidden_features=64,hidden_layers=3, first_omega_0=30, hidden_omega_0=30, outermost_linear=True)
-        model.to(device)
-
+        model = nn.ModuleList([
+            Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
+                  hidden_features=model_config.hidden_dim_nnr,
+                  hidden_layers=model_config.n_layers_nnr, first_omega_0=model_config.omega,
+                  hidden_omega_0=model_config.omega,
+                  outermost_linear=model_config.outermost_linear_nnr)
+            for n in range(n_runs)
+        ])
+        model.to(device=device)
+        optimizer = torch.optim.Adam(lr=train_config.learning_rate_missing_activity,params=model.parameters())
+        model.train()
 
         def count_parameters(model):
             return sum(p.numel() for p in model.parameters() if p.requires_grad)
-
         print(f'number of learnable parameters: {count_parameters(model) //100}')
 
+        list_loss_regul = []
+        time.sleep(0.2)
+
+        batch_size = 1
+
+        for epoch in range(20):
+
+            batch_size = 20
+            Niter = 10000
+            plot_frequency = 1000
+
+            total_loss = 0
+            k = 0
+
+            for N in range(Niter):
+
+                optimizer.zero_grad()
+
+                loss = 0
+                run = np.random.randint(n_runs)
+
+                for batch in range(batch_size):
+
+                    k = np.random.randint(n_frames - 1 - time_step)
+                    x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device)
+                    if not (torch.isnan(x).any()):
+                        t = torch.tensor([k / n_frames], dtype=torch.float32, device=device)
+                        missing_activity = model[run](t).squeeze()
+                        loss = loss + (missing_activity[:] - x[:, 6].clone().detach()).norm(2)
+
+                if loss !=0:
+                    loss.backward()
+                    optimizer.step()
+                    print(N, loss.item()/batch_size)
+
+                if (N % plot_frequency == 0):
+                    with torch.no_grad():
+
+                        n_frames = n_frames - 10
+                        t = torch.linspace(0, 1, n_frames, dtype=torch.float32, device=device).unsqueeze(1)
+                        prediction = model[0](t) ** 2
+                        prediction = prediction.t()
+
+                        fig = plt.figure(figsize=(16, 16))
+                        ax = fig.add_subplot(2, 2, 1)
+                        plt.title('neural field')
+                        plt.imshow(to_numpy(prediction), aspect='auto', cmap='viridis')
+                        ax = fig.add_subplot(2, 2, 2)
+                        plt.title('true activity')
+                        activity = torch.tensor(x_list[0][:, :, 6:7], device=device)
+                        activity = activity.squeeze()
+                        activity = activity.t()
+                        plt.imshow(to_numpy(activity), aspect='auto', cmap='viridis')
+                        plt.tight_layout()
+                        plt.show()
 
 
 
-        optimizer = optim.Adam(model.parameters(), lr=1E-5)
-        model.train()
 
-        indices = np.arange(0, n_frames+1).astype(int)
-        t = torch.linspace(0, n_frames+1,(n_frames+1), dtype=torch.float32, device=device) / n_frames
-        t = t[None,0:100000,None]
-
-        y_list = list([])
-        for k in range(100):
-            y = activity[k][indices]
-            y = y[None,0:100000,None]
-            y_list.append(y)
-
-        batch_size = 10
-
-        for epoch in trange(100000):
-
-            k = np.random.randint(0,10)
-            time = np.random.randint(0,100000,batch_size).astype(int)
-
-            optimizer.zero_grad()
-            pred = model(t[:,time,:],k)[0]
-            loss = (pred- y_list[k][:,time,:]).norm(2)
-            loss.backward()
-            optimizer.step()
-
-            if (epoch+1)%25000==0:
-                pred = model(t,k)[0]
-                fig = plt.figure()
-                plt.plot(to_numpy(t.squeeze()), to_numpy(y_list[k].squeeze()), linewidth=1)
-
-                plt.plot(to_numpy(t.squeeze()), to_numpy(pred.squeeze()), linewidth=1)
-                plt.tight_layout()
-
-                fig = plt.figure()
-                plt.plot(to_numpy(t.squeeze()), to_numpy(y_list[k].squeeze()), linewidth=1)
-                pred = model(t[:, time, :], k)[0]
-                plt.scatter(to_numpy(t[:,time,:].squeeze()), to_numpy(pred.squeeze()), c='r', s=10)
-                plt.tight_layout()
 
 
 
