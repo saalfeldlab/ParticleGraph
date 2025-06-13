@@ -5,7 +5,7 @@ simulation:
     connectivity_file: 'to be specified'
     adjacency_matrix: ''
 
-    phi: 'tanh'
+    params: [[1.0,1.0,1.0,1.0]]
 
     n_neurons: 2000
     n_neuron_types: 20

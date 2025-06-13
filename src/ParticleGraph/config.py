@@ -19,7 +19,7 @@ class SimulationConfig(BaseModel):
     bounce: bool = False
     bounce_coeff: float = 0.1
     min_radius: float = 0.0
-    max_radius: Annotated[float, Field(gt=0)]
+    max_radius: float = 0.1
 
     n_particles: int = 1000
     n_neurons: int = 1000

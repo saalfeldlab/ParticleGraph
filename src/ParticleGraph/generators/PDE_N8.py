@@ -37,7 +37,7 @@ class PDE_N8(pyg.nn.MessagePassing):
 
         v = x[:, 6:7]
         v_rest = self.p['V_i_rest']
-        e = x[:, 10:11]
+        e = x[:, 7:8]
 
         msg = self.propagate(edge_index, v=v)
 

@@ -260,7 +260,6 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
         dpos [0:n_wall_particles] = 0
         pos [0:n_wall_particles:] = pos_
 
-
     if (config.graph_model.signal_model_name == 'PDE_N6') | (config.graph_model.signal_model_name == 'PDE_N7'):
         features = torch.cat((torch.rand((n_particles, 1), device=device), 0.1 * torch.randn((n_particles, 1), device=device),
                               torch.ones((n_particles, 1), device=device), torch.zeros((n_particles, 1), device=device)), 1)
@@ -269,7 +268,6 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
     else:
         # features = torch.cat((torch.rand((n_particles, 1), device=device), 0.1 * torch.randn((n_particles, 1), device=device)), 1)
         features = torch.cat((torch.randn((n_particles, 1), device=device) * 5 , 0.1 * torch.randn((n_particles, 1), device=device)), 1)
-
 
     type = type[:, None]
     particle_id = torch.arange(n_particles, device=device)
