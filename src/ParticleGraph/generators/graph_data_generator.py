@@ -1574,6 +1574,7 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
     n_neuron_types = simulation_config.n_neuron_types
     delta_t = simulation_config.delta_t
     n_frames = simulation_config.n_frames
+    noise_level = training_config.noise_level
 
 
     folder = f'./graphs_data/{dataset_name}/'
@@ -1639,9 +1640,9 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
         x_list.append(to_numpy(x))
         y_list.append(to_numpy(y))
 
-        H1 = H1 + y * delta_t
+        V1 = V1 + y * delta_t
         if noise_level > 0:
-            H1[:, 0] = H1[:, 0] + torch.randn(n_particles, device=device) * noise_level
+            V1[:, 0] = V1[:, 0] + torch.randn(n_particles, device=device) * noise_level
 
         # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
         # print(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
@@ -1817,7 +1818,6 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
     plt.tight_layout()
     plt.savefig(f'graphs_data/{dataset_name}/activity_1000.png', dpi=300)
     plt.close()
-
 
 
 def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1, scenario='none', device=None, bSave=True):
