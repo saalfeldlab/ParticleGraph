@@ -543,7 +543,7 @@ def plot_training_signal_field(x, n_nodes, recursive_loop, kk, time_step, x_list
         plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
         plt.close()
 
-def plot_training_signal_missing_activity(n_frames, k, x_list, run, model_missing_activity, log_dir, epoch, N, device):
+def plot_training_signal_missing_activity(n_frames, k, x_list, baseline_value, model_missing_activity, log_dir, epoch, N, device):
 
         if n_frames > 1000:
             t = torch.linspace(0, 1, n_frames//100, dtype=torch.float32, device=device).unsqueeze(1)
@@ -564,13 +564,13 @@ def plot_training_signal_missing_activity(n_frames, k, x_list, run, model_missin
         plt.tight_layout()
         ax = fig.add_subplot(2, 2, 3)
         plt.title('learned missing activity')
-        pos = np.argwhere(x_list[0][k][:, 6] != 6)
+        pos = np.argwhere(x_list[0][k][:, 6] != baseline_value)
         prediction_ = prediction.clone().detach()
         prediction_[pos[:,0]]=0
         plt.imshow(to_numpy(prediction_), aspect='auto', cmap='viridis')
         ax = fig.add_subplot(2, 2, 4)
         plt.title('learned observed activity')
-        pos = np.argwhere(x_list[0][k][:, 6] == 6)
+        pos = np.argwhere(x_list[0][k][:, 6] == baseline_value)
         prediction_ = prediction.clone().detach()
         prediction_[pos[:,0]]=0
         plt.imshow(to_numpy(prediction_), aspect='auto', cmap='viridis')
@@ -1853,13 +1853,6 @@ def analyze_odor_responses_by_neuron(model, x_list, edges, n_runs, n_frames, tim
                 pred_baseline = model(dataset_baseline, data_id=result['data_id'],
                                       k=result['k_batch'], return_all=False)
 
-                # Store embeddings once
-                if valid_samples == 0:
-                    features = model(dataset_baseline, data_id=result['data_id'],
-                                     k=result['k_batch'], return_all=True)[1]
-                    embeddings_by_neuron = features[:, 1:3].cpu()
-
-                # Test each odor and compute difference from baseline
                 for i, odor in enumerate(odor_list):
                     x_odor = result['x'].clone()
                     x_odor[:, 10:13] = 0
@@ -1869,7 +1862,6 @@ def analyze_odor_responses_by_neuron(model, x_list, edges, n_runs, n_frames, tim
                     pred_odor = model(dataset_odor, data_id=result['data_id'],
                                       k=result['k_batch'], return_all=False)
 
-                    # Store difference (odor response - baseline)
                     odor_diff = pred_odor - pred_baseline
                     odor_responses[odor].append(odor_diff.cpu())
 
@@ -1881,13 +1873,13 @@ def analyze_odor_responses_by_neuron(model, x_list, edges, n_runs, n_frames, tim
 
         # Convert to tensors [n_samples, n_neurons]
         for odor in odor_list:
-            odor_responses[odor] = torch.cat(odor_responses[odor], dim=0)
+            odor_responses[odor] = torch.stack(odor_responses[odor]).squeeze()
 
     print(f"Collected {valid_samples} valid samples")
-    return odor_responses, embeddings_by_neuron
+    return odor_responses
 
 
-def plot_odor_heatmaps(odor_responses, embeddings_by_neuron):
+def plot_odor_heatmaps(odor_responses):
     """
     Plot 3 separate heatmaps showing mean response per neuron for each odor
     """
@@ -1907,7 +1899,7 @@ def plot_odor_heatmaps(odor_responses, embeddings_by_neuron):
 
         # Plot heatmap
         sns.heatmap(response_matrix, ax=axes[i], cmap='bwr', center=0,
-                    cbar=True, square=True, xticklabels=False, yticklabels=False)
+                    cbar=False, square=True, xticklabels=False, yticklabels=False)
         axes[i].set_title(f'{odor} mean response')
 
     plt.tight_layout()

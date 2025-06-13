@@ -434,10 +434,10 @@ def add_pre_folder(config_file_):
     elif 'springs' in config_file_:
         config_file = os.path.join('springs', config_file_)
         pre_folder = 'springs/'
-    if 'CElegans' in config_file_:
+    elif 'CElegans' in config_file_:
         config_file = os.path.join('CElegans', config_file_)
         pre_folder = 'CElegans/'
-    if 'fly' in config_file_:
+    elif 'fly' in config_file_:
         config_file = os.path.join('fly', config_file_)
         pre_folder = 'fly/'
     elif 'signal' in config_file_:

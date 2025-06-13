@@ -2406,6 +2406,7 @@ def data_train_synaptic2(config, erase, best_model, device):
     time_step = train_config.time_step
     has_missing_activity = train_config.has_missing_activity
     multi_connectivity = config.training.multi_connectivity
+    baseline_value = simulation_config.baseline_value
 
     if field_type != '':
         n_nodes = simulation_config.n_nodes
@@ -2713,8 +2714,8 @@ def data_train_synaptic2(config, erase, best_model, device):
                 x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device)
                 if not (torch.isnan(x).any()):
                     if has_missing_activity:
-                        pos = torch.argwhere(x[:,6]==6)
-                        ids = torch.argwhere(x[:,6]!=6)
+                        pos = torch.argwhere(x[:,6] == baseline_value)
+                        ids = torch.argwhere(x[:,6] != baseline_value)
                         ids = to_numpy(ids.squeeze())
                         t = torch.tensor([k / n_frames], dtype=torch.float32, device=device)
                         missing_activity = model_missing_activity[run](t).squeeze()
@@ -2928,7 +2929,7 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                         if has_missing_activity:
                             with torch.no_grad():
-                                plot_training_signal_missing_activity(n_frames, k, x_list, run, model_missing_activity, log_dir, epoch, N, device)
+                                plot_training_signal_missing_activity(n_frames, k, x_list, baseline_value, model_missing_activity, log_dir, epoch, N, device)
                             torch.save({'model_state_dict': model_missing_activity.state_dict(),
                                         'optimizer_state_dict': optimizer_missing_activity.state_dict()}, os.path.join(log_dir,'models',f'best_model_missing_activity_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
                         torch.save(

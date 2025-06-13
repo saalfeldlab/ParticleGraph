@@ -5610,7 +5610,6 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
         plt.savefig(f'./{log_dir}/results/activity_grid.tif', dpi=300)
         plt.close()
 
-
         true_model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, device=device)
 
         for epoch in epoch_list:
@@ -5634,16 +5633,15 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             if 'excitation' in model_config.update_type:
 
                 # Run the analysis
-                neuron_responses, embeddings_by_neuron = analyze_odor_responses_by_neuron(
+                neuron_responses = analyze_odor_responses_by_neuron(
                     model, x_list, edges, n_runs, n_frames, time_step, device,
                     has_missing_activity, model_missing_activity, has_field, model_f,
                     n_samples=100
                 )
 
-                fig = plot_odor_heatmaps(neuron_responses, embeddings_by_neuron)
+                fig = plot_odor_heatmaps(neuron_responses)
                 plt.savefig(f"./{log_dir}/results/odor_heatmaps.png", dpi=150, bbox_inches='tight')
-
-
+                plt.close()
 
 
             if has_missing_activity:
