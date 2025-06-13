@@ -76,21 +76,6 @@ class Siren(nn.Module):
         return output
 
 
-class Siren2(nn.Module):
-    def __init__(self, in_features=1, hidden_features=128, hidden_layers=3, out_features=1,
-                 first_omega_0=30, hidden_omega_0=30):
-        super().__init__()
-
-        layers = [SineLayer(in_features, hidden_features, is_first=True, omega_0=first_omega_0)]
-        for _ in range(hidden_layers):
-            layers.append(SineLayer(hidden_features, hidden_features, is_first=False, omega_0=hidden_omega_0))
-        layers.append(nn.Linear(hidden_features, out_features))  # final linear layer
-        self.net = nn.Sequential(*layers)
-
-    def forward(self, x):
-        return self.net(x)
-
-
 class MLP(nn.Module):
 
     def __init__(self, input_size=None, output_size=None, nlayers=None, hidden_size=None, device=None, activation=None,
