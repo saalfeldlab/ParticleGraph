@@ -20,6 +20,7 @@ simulation:
     dpos_init:  0
     boundary: 'no'
     start_frame: -1000
+    baseline_value: 6
 
 graph_model:
     signal_model_name: 'PDE_N8'
@@ -64,7 +65,6 @@ plotting:
 
 training:
     n_epochs: 20
-    recursive_loop: 1
     batch_size: 1
     small_init_batch_size: False
     device: 'auto'

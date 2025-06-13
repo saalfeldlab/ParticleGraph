@@ -12,8 +12,8 @@ simulation:
     tau: 1.0
     min_radius: 0.0
     max_radius: 100
-    n_particles: 86407
-    n_particle_types: 2
+    n_neurons: 86407
+    n_neuron_types: 2
     n_interactions: 2
     n_frames: 1598
     delta_t: 1

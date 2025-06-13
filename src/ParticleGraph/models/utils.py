@@ -138,38 +138,38 @@ def get_in_features_update(rr=None, model=None, embedding = None, device=None):
 
     return in_features
 
-def get_in_features_lin_edge(x, model, model_config, xnorm, n_particles, device):
+def get_in_features_lin_edge(x, model, model_config, xnorm, n_neurons, device):
 
     if model_config.signal_model_name in ['PDE_N4', 'PDE_N7']:
-        in_features_prev = torch.cat((x[:n_particles, 6:7] - xnorm / 150, model.a[:n_particles]), dim=1)
-        in_features = torch.cat((x[:n_particles, 6:7], model.a[:n_particles]), dim=1)
-        in_features_next = torch.cat((x[:n_particles, 6:7] + xnorm / 150, model.a[:n_particles]), dim=1)
+        in_features_prev = torch.cat((x[:n_neurons, 6:7] - xnorm / 150, model.a[:n_neurons]), dim=1)
+        in_features = torch.cat((x[:n_neurons, 6:7], model.a[:n_neurons]), dim=1)
+        in_features_next = torch.cat((x[:n_neurons, 6:7] + xnorm / 150, model.a[:n_neurons]), dim=1)
         if model.embedding_trial:
-            in_features_prev = torch.cat((in_features_prev, model.b[0].repeat(n_particles, 1)), dim=1)
-            in_features = torch.cat((in_features, model.b[0].repeat(n_particles, 1)), dim=1)
-            in_features_next = torch.cat((in_features_next, model.b[0].repeat(n_particles, 1)), dim=1)
+            in_features_prev = torch.cat((in_features_prev, model.b[0].repeat(n_neurons, 1)), dim=1)
+            in_features = torch.cat((in_features, model.b[0].repeat(n_neurons, 1)), dim=1)
+            in_features_next = torch.cat((in_features_next, model.b[0].repeat(n_neurons, 1)), dim=1)
     elif model_config.signal_model_name == 'PDE_N5':
         if model.embedding_trial:
-            in_features_prev = torch.cat((x[:n_particles, 6:7] - xnorm / 150, model.a[:n_particles], model.b[0].repeat(n_particles, 1), model.a[:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
-            in_features = torch.cat((x[:n_particles, 6:7], model.a[:n_particles], model.b[0].repeat(n_particles, 1), model.a[:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
-            in_features_next = torch.cat((x[:n_particles, 6:7] + xnorm / 150, model.a[:n_particles], model.b[0].repeat(n_particles, 1), model.a[:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
+            in_features_prev = torch.cat((x[:n_neurons, 6:7] - xnorm / 150, model.a[:n_neurons], model.b[0].repeat(n_neurons, 1), model.a[:n_neurons], model.b[0].repeat(n_neurons, 1)), dim=1)
+            in_features = torch.cat((x[:n_neurons, 6:7], model.a[:n_neurons], model.b[0].repeat(n_neurons, 1), model.a[:n_neurons], model.b[0].repeat(n_neurons, 1)), dim=1)
+            in_features_next = torch.cat((x[:n_neurons, 6:7] + xnorm / 150, model.a[:n_neurons], model.b[0].repeat(n_neurons, 1), model.a[:n_neurons], model.b[0].repeat(n_neurons, 1)), dim=1)
         else:
-            in_features_prev = torch.cat((x[:n_particles, 6:7] - xnorm / 150, model.a[:n_particles], model.a[:n_particles]), dim=1)
-            in_features = torch.cat((x[:n_particles, 6:7], model.a[:n_particles], model.a[:n_particles]), dim=1)
-            in_features_next = torch.cat((x[:n_particles, 6:7] + xnorm / 150, model.a[:n_particles], model.a[:n_particles]), dim=1)
+            in_features_prev = torch.cat((x[:n_neurons, 6:7] - xnorm / 150, model.a[:n_neurons], model.a[:n_neurons]), dim=1)
+            in_features = torch.cat((x[:n_neurons, 6:7], model.a[:n_neurons], model.a[:n_neurons]), dim=1)
+            in_features_next = torch.cat((x[:n_neurons, 6:7] + xnorm / 150, model.a[:n_neurons], model.a[:n_neurons]), dim=1)
     elif model_config.signal_model_name == 'PDE_N8':
         if model.embedding_trial:
-            in_features_prev = torch.cat((torch.zeros((n_particles, 1), dtype=torch.float32, device=device), x[:n_particles, 6:7] - xnorm / 150, model.a[:n_particles], model.b[0].repeat(n_particles, 1), model.a[:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
-            in_features = torch.cat((torch.zeros((n_particles, 1), dtype=torch.float32, device=device), x[:n_particles, 6:7], model.a[:n_particles], model.b[0].repeat(n_particles, 1), model.a[:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
-            in_features_next = torch.cat((torch.zeros((n_particles, 1), dtype=torch.float32, device=device), x[:n_particles, 6:7] + xnorm / 150, model.a[:n_particles], model.b[0].repeat(n_particles, 1), model.a[:n_particles], model.b[0].repeat(n_particles, 1)), dim=1)
+            in_features_prev = torch.cat((torch.zeros((n_neurons, 1), dtype=torch.float32, device=device), x[:n_neurons, 6:7] - xnorm / 150, model.a[:n_neurons], model.b[0].repeat(n_neurons, 1), model.a[:n_neurons], model.b[0].repeat(n_neurons, 1)), dim=1)
+            in_features = torch.cat((torch.zeros((n_neurons, 1), dtype=torch.float32, device=device), x[:n_neurons, 6:7], model.a[:n_neurons], model.b[0].repeat(n_neurons, 1), model.a[:n_neurons], model.b[0].repeat(n_neurons, 1)), dim=1)
+            in_features_next = torch.cat((torch.zeros((n_neurons, 1), dtype=torch.float32, device=device), x[:n_neurons, 6:7] + xnorm / 150, model.a[:n_neurons], model.b[0].repeat(n_neurons, 1), model.a[:n_neurons], model.b[0].repeat(n_neurons, 1)), dim=1)
         else:
-            in_features_prev = torch.cat((torch.zeros((n_particles, 1), dtype=torch.float32, device=device), x[:n_particles, 6:7] - xnorm / 150, model.a[:n_particles], model.a[:n_particles]), dim=1)
-            in_features = torch.cat((torch.zeros((n_particles, 1), dtype=torch.float32, device=device), x[:n_particles, 6:7], model.a[:n_particles], model.a[:n_particles]), dim=1)
-            in_features_next = torch.cat((torch.zeros((n_particles, 1), dtype=torch.float32, device=device), x[:n_particles, 6:7] + xnorm / 150, model.a[:n_particles], model.a[:n_particles]), dim=1)
+            in_features_prev = torch.cat((torch.zeros((n_neurons, 1), dtype=torch.float32, device=device), x[:n_neurons, 6:7] - xnorm / 150, model.a[:n_neurons], model.a[:n_neurons]), dim=1)
+            in_features = torch.cat((torch.zeros((n_neurons, 1), dtype=torch.float32, device=device), x[:n_neurons, 6:7], model.a[:n_neurons], model.a[:n_neurons]), dim=1)
+            in_features_next = torch.cat((torch.zeros((n_neurons, 1), dtype=torch.float32, device=device), x[:n_neurons, 6:7] + xnorm / 150, model.a[:n_neurons], model.a[:n_neurons]), dim=1)
     else:
-        in_features = x[:n_particles, 6:7]
-        in_features_next = x[:n_particles, 6:7] + xnorm / 150
-        in_features_prev = x[:n_particles, 6:7] - xnorm / 150
+        in_features = x[:n_neurons, 6:7]
+        in_features_next = x[:n_neurons, 6:7] + xnorm / 150
+        in_features_prev = x[:n_neurons, 6:7] - xnorm / 150
 
     return in_features_prev, in_features, in_features_next
 
@@ -226,7 +226,7 @@ def get_in_features(rr=None, embedding=None, model=[], model_name = [], max_radi
 
     return in_features
 
-def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_particles, n_particle_types, type_list, cmap, device):
+def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_neurons, n_neuron_types, type_list, cmap, device):
 
     if 'PDE_N3' in config.graph_model.signal_model_name:
 
@@ -235,7 +235,7 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
 
     else:
         fig = plt.figure(figsize=(8, 8))
-        for n in range(n_particle_types):
+        for n in range(n_neuron_types):
             pos=torch.argwhere(type_list==n).squeeze()
             if config.graph_model.signal_model_name=='PDE_N':
                 plt.scatter(to_numpy(model.a[1,pos, 0]), to_numpy(model.a[1,pos, 1]), s=20, color=cmap.color(n))
@@ -251,11 +251,11 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
     gt_weight = to_numpy(adjacency)
 
     if config.training.multi_connectivity:
-        pred_weight = to_numpy(model.W[0, :n_particles, :n_particles].clone().detach())
+        pred_weight = to_numpy(model.W[0, :n_neurons, :n_neurons].clone().detach())
     else:
-        pred_weight = to_numpy(model.W[:n_particles, :n_particles].clone().detach())
+        pred_weight = to_numpy(model.W[:n_neurons, :n_neurons].clone().detach())
 
-    if n_particles<1000:
+    if n_neurons<1000:
 
         # fig = plt.figure(figsize=(8, 8))
         # plt.scatter(gt_weight, pred_weight, s=10, c='k',alpha=0.2)
@@ -268,14 +268,14 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
         fig = plt.figure(figsize=(16, 8))
         ax = fig.add_subplot(121)
         ax = sns.heatmap(np.transpose(pred_weight), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
-        plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
-        plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+        plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=8)
+        plt.yticks([0, n_neurons - 1], [1, n_neurons], fontsize=8)
         plt.xlabel('postsynaptic')
         plt.ylabel('presynaptic')
         ax = fig.add_subplot(122)
         ax = sns.heatmap(np.transpose(gt_weight), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
-        plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
-        plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+        plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=8)
+        plt.yticks([0, n_neurons - 1], [1, n_neurons], fontsize=8)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/matrix/matrix_{epoch}_{N}.tif", dpi=87)
         plt.close()
@@ -285,7 +285,7 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
         plt.scatter(gt_weight, pred_weight / 10, s=0.1, c='k', alpha=0.1)
         plt.xlabel(r'true $W_{ij}$', fontsize=68)
         plt.ylabel(r'learned $W_{ij}$', fontsize=68)
-        if n_particles == 8000:
+        if n_neurons == 8000:
             plt.xlim([-0.05, 0.05])
         else:
             plt.xlim([-0.2, 0.2])
@@ -327,9 +327,9 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
         rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
         fig = plt.figure(figsize=(8, 8))
         for idx, k in enumerate(np.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 10)):  # Corrected step size to generate 13 evenly spaced values
-            for n in range(0, n_particles, 4):
+            for n in range(0, n_neurons, 4):
                 embedding_i = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-                embedding_j = model.a[np.random.randint(n_particles), :] * torch.ones(
+                embedding_j = model.a[np.random.randint(n_neurons), :] * torch.ones(
                     (1000, config.graph_model.embedding_dim), device=device)
                 if model.embedding_trial:
                     in_features = torch.cat((torch.ones_like(rr[:, None]) * k, rr[:, None], embedding_i, embedding_j,model.b[0].repeat(1000, 1)), dim=1)
@@ -351,7 +351,7 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
 
         fig = plt.figure(figsize=(8, 8))
         rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
-        for n in range(n_particles):
+        for n in range(n_neurons):
             if ('PDE_N4' in config.graph_model.signal_model_name) | ('PDE_N7' in config.graph_model.signal_model_name):
                 embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
                 if model.embedding_trial:
@@ -390,22 +390,22 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_p
         plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/func_{epoch}_{N}.tif", dpi=87)
         plt.close()
 
-    # i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+    # i, j = torch.triu_indices(n_neurons, n_neurons, requires_grad=False, device=device)
     # if (config.graph_model.signal_model_name)!='PDE_N':
     #     A = model.W.clone().detach()
     #     A[i,i] = 0
     # elif 'asymmetric' in config.simulation.adjacency_matrix:
     #     A = model.vals
     # else:
-    #     A = torch.zeros(n_particles, n_particles, device=device, requires_grad=False, dtype=torch.float32)
+    #     A = torch.zeros(n_neurons, n_neurons, device=device, requires_grad=False, dtype=torch.float32)
     #     A[i, j] = model.vals
     #     A.T[i, j] = model.vals
     #
     # fig = plt.figure(figsize=(8, 8))
     # ax = sns.heatmap(to_numpy(A),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046}, vmin=-1, vmax=1)
     # plt.title('Random connectivity matrix',fontsize=12);
-    # plt.xticks([0,n_particles-1],[1,n_particles],fontsize=8)
-    # plt.yticks([0,n_particles-1],[1,n_particles],fontsize=8)
+    # plt.xticks([0,n_neurons-1],[1,n_neurons],fontsize=8)
+    # plt.yticks([0,n_neurons-1],[1,n_neurons],fontsize=8)
     # plt.savefig(f"./{log_dir}/tmp_training/matrix/{epoch}_{N}.tif", dpi=87)
     # plt.close()
 
@@ -543,7 +543,7 @@ def plot_training_signal_field(x, n_nodes, recursive_loop, kk, time_step, x_list
         plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
         plt.close()
 
-def plot_training_signal_missing_activity(n_frames, k, x_list, run, model_missing_activity, log_dir, epoch, N, device):
+def plot_training_signal_missing_activity(n_frames, k, x_list, baseline_value, model_missing_activity, log_dir, epoch, N, device):
 
         if n_frames > 1000:
             t = torch.linspace(0, 1, n_frames//100, dtype=torch.float32, device=device).unsqueeze(1)
@@ -564,13 +564,13 @@ def plot_training_signal_missing_activity(n_frames, k, x_list, run, model_missin
         plt.tight_layout()
         ax = fig.add_subplot(2, 2, 3)
         plt.title('learned missing activity')
-        pos = np.argwhere(x_list[0][k][:, 6] != 6)
+        pos = np.argwhere(x_list[0][k][:, 6] != baseline_value)
         prediction_ = prediction.clone().detach()
         prediction_[pos[:,0]]=0
         plt.imshow(to_numpy(prediction_), aspect='auto', cmap='viridis')
         ax = fig.add_subplot(2, 2, 4)
         plt.title('learned observed activity')
-        pos = np.argwhere(x_list[0][k][:, 6] == 6)
+        pos = np.argwhere(x_list[0][k][:, 6] == baseline_value)
         prediction_ = prediction.clone().detach()
         prediction_[pos[:,0]]=0
         plt.imshow(to_numpy(prediction_), aspect='auto', cmap='viridis')
@@ -578,7 +578,7 @@ def plot_training_signal_missing_activity(n_frames, k, x_list, run, model_missin
         plt.savefig(f"./{log_dir}/tmp_training/field/missing_activity_{epoch}_{N}.tif", dpi=80)
         plt.close()
 
-def plot_training_particle_field(config, has_siren, has_siren_time, model_f,  n_frames, model_name, log_dir, epoch, N, x, x_mesh, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
+def plot_training_particle_field(config, has_siren, has_siren_time, model_f,  n_frames, model_name, log_dir, epoch, N, x, x_mesh, index_particles, n_neurons, n_neuron_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -603,10 +603,10 @@ def plot_training_particle_field(config, has_siren, has_siren_time, model_f,  n_
     else:
         plt.axis('off')
     embedding = get_embedding(model.a, dataset_num)
-    if n_particle_types > 1000:
-        plt.scatter(embedding[:, 0], embedding[:, 1], c=to_numpy(x[:, 5]) / n_particles, s=1, cmap='viridis')
+    if n_neuron_types > 1000:
+        plt.scatter(embedding[:, 0], embedding[:, 1], c=to_numpy(x[:, 5]) / n_neurons, s=1, cmap='viridis')
     else:
-        for n in range(n_particle_types):
+        for n in range(n_neuron_types):
             plt.scatter(embedding[index_particles[n], 0],
                         embedding[index_particles[n], 1], color=cmap.color(n), s=1)  #
 
@@ -636,7 +636,7 @@ def plot_training_particle_field(config, has_siren, has_siren_time, model_f,  n_
             rr = torch.tensor(np.linspace(0, simulation_config.max_radius, 200)).to(device)
         case 'PDE_ParticleField_B':
             rr = torch.tensor(np.linspace(-max_radius, max_radius, 200)).to(device)
-    for n in range(n_particles):
+    for n in range(n_neurons):
         embedding_ = model.a[dataset_num, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
         match model_config.particle_model_name:
             case 'PDE_ParticleField_A':
@@ -1853,13 +1853,6 @@ def analyze_odor_responses_by_neuron(model, x_list, edges, n_runs, n_frames, tim
                 pred_baseline = model(dataset_baseline, data_id=result['data_id'],
                                       k=result['k_batch'], return_all=False)
 
-                # Store embeddings once
-                if valid_samples == 0:
-                    features = model(dataset_baseline, data_id=result['data_id'],
-                                     k=result['k_batch'], return_all=True)[1]
-                    embeddings_by_neuron = features[:, 1:3].cpu()
-
-                # Test each odor and compute difference from baseline
                 for i, odor in enumerate(odor_list):
                     x_odor = result['x'].clone()
                     x_odor[:, 10:13] = 0
@@ -1869,7 +1862,6 @@ def analyze_odor_responses_by_neuron(model, x_list, edges, n_runs, n_frames, tim
                     pred_odor = model(dataset_odor, data_id=result['data_id'],
                                       k=result['k_batch'], return_all=False)
 
-                    # Store difference (odor response - baseline)
                     odor_diff = pred_odor - pred_baseline
                     odor_responses[odor].append(odor_diff.cpu())
 
@@ -1881,13 +1873,13 @@ def analyze_odor_responses_by_neuron(model, x_list, edges, n_runs, n_frames, tim
 
         # Convert to tensors [n_samples, n_neurons]
         for odor in odor_list:
-            odor_responses[odor] = torch.cat(odor_responses[odor], dim=0)
+            odor_responses[odor] = torch.stack(odor_responses[odor]).squeeze()
 
     print(f"Collected {valid_samples} valid samples")
-    return odor_responses, embeddings_by_neuron
+    return odor_responses
 
 
-def plot_odor_heatmaps(odor_responses, embeddings_by_neuron):
+def plot_odor_heatmaps(odor_responses):
     """
     Plot 3 separate heatmaps showing mean response per neuron for each odor
     """
@@ -1907,7 +1899,7 @@ def plot_odor_heatmaps(odor_responses, embeddings_by_neuron):
 
         # Plot heatmap
         sns.heatmap(response_matrix, ax=axes[i], cmap='bwr', center=0,
-                    cbar=True, square=True, xticklabels=False, yticklabels=False)
+                    cbar=False, square=True, xticklabels=False, yticklabels=False)
         axes[i].set_title(f'{odor} mean response')
 
     plt.tight_layout()

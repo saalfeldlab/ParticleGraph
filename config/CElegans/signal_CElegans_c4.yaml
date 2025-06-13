@@ -20,6 +20,7 @@ simulation:
     dpos_init:  0
     boundary: 'no'
     start_frame: -1000
+    baseline_value: 6
 
 graph_model:
     signal_model_name: 'PDE_N8'
@@ -43,8 +44,8 @@ graph_model:
     hidden_dim_excitation: 64
 
     input_size_nnr: 1
-    n_layers_nnr: 5
-    hidden_dim_nnr: 256
+    n_layers_nnr: 2
+    hidden_dim_nnr: 8
     output_size_nnr: 300
     omega: 30
 
@@ -64,7 +65,6 @@ plotting:
 
 training:
     n_epochs: 20
-    recursive_loop: 1
     batch_size: 32
     small_init_batch_size: False
     device: 'auto'
@@ -85,8 +85,8 @@ training:
     learning_rate_start: 1.0E-4
     learning_rate_embedding_start: 1.0E-4
     learning_rate_NNR: 1.0E-5
-    learning_rate_missing_activity: 1.0E-3
+    learning_rate_missing_activity: 1.0E-4
 
     coeff_diff: 100
-    coeff_sign : 10
+    coeff_sign : 20
     coeff_missing_activity: 1

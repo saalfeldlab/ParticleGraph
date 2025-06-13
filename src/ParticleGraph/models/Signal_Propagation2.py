@@ -33,7 +33,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         self.device = device
         self.model = model_config.signal_model_name
         self.embedding_dim = model_config.embedding_dim
-        self.n_neurons = simulation_config.n_particles
+        self.n_neurons = simulation_config.n_neurons
         self.n_dataset = config.training.n_runs
         self.n_frames = simulation_config.n_frames
         self.field_type = model_config.field_type

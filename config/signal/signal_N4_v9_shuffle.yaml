@@ -11,9 +11,9 @@ simulation:
     tau: 1.0
     min_radius: 1.0
     max_radius: 1.0E6
-    n_particles: 2048
+    n_neurons: 2048
     n_nodes: 1024
-    n_particle_types: 4
+    n_neuron_types: 4
     shuffle_particle_types: True
     n_frames: 10000
     delta_t: 0.01
