@@ -7,7 +7,7 @@ from tifffile import imread
 import torch
 from ParticleGraph.utils import *
 
-class PDE_N5(pyg.nn.MessagePassing):
+class PDE_N9(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 

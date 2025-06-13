@@ -1555,6 +1555,405 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         logger.removeHandler(handler)
 
 
+def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2,
+                           ratio=1, scenario='none', device=None, bSave=True):
+    if 'black' in style:
+        plt.style.use('dark_background')
+
+    simulation_config = config.simulation
+    training_config = config.training
+    model_config = config.graph_model
+
+    torch.random.fork_rng(devices=device)
+    torch.random.manual_seed(42)
+
+    print(f'generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+
+    dataset_name = config.dataset
+    n_neurons = simulation_config.n_neurons
+    n_neuron_types = simulation_config.n_neuron_types
+    delta_t = simulation_config.delta_t
+    n_frames = simulation_config.n_frames
+
+
+    folder = f'./graphs_data/{dataset_name}/'
+    if erase:
+        files = glob.glob(f"{folder}/*")
+        for f in files:
+            if (not ('X1.pt' in f)) & (not ('Signal' in f)) & (not ('Viz' in f)) & (not ('Exc' in f)) & (
+                    f[-3:] != 'Fig') & (f[-14:] != 'generated_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (
+                    f != 'model_config.json') & (f != 'generation_code.py'):
+                os.remove(f)
+    os.makedirs(folder, exist_ok=True)
+    os.makedirs(f'./graphs_data/{dataset_name}/Fig/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
+    for f in files:
+        os.remove(f)
+    os.makedirs(f'./graphs_data/{dataset_name}/Viz/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/{dataset_name}/Viz/*')
+    for f in files:
+        os.remove(f)
+    os.makedirs(f'./graphs_data/{dataset_name}/Exc/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/{dataset_name}/Exc/*')
+    for f in files:
+        os.remove(f)
+    os.makedirs(f'./graphs_data/{dataset_name}/Signal/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/{dataset_name}/Signal/*')
+    for f in files:
+        os.remove(f)
+
+    x_list = []
+    y_list = []
+
+    # initialize node states
+    N1 = torch.arange(n_neurons)
+    E1 = torch.ones((n_neurons, 1), dtype=torch.float32, device=device)
+    U1 = torch.rand_like(H1, device=device)
+    U1[:, 1] = 0
+
+
+
+            model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, device=device)
+
+            torch.save(edge_index, f'./graphs_data/{dataset_name}/edge_index.pt')
+            torch.save(mask, f'./graphs_data/{dataset_name}/mask.pt')
+            torch.save(adjacency, f'./graphs_data/{dataset_name}/adjacency.pt')
+
+        if run == run_vizualized:
+            if 'black' in style:
+                plt.style.use('dark_background')
+            plt.figure(figsize=(10, 10))
+            for n in range(n_particle_types):
+                pos = torch.argwhere(T1.squeeze() == n)
+                plt.scatter(to_numpy(X1[pos, 0]), to_numpy(X1[pos, 1]), s=100, color=cmap.color(n))
+            plt.xticks([])
+            plt.yticks([])
+            plt.tight_layout()
+            plt.savefig(f"graphs_data/{dataset_name}/type_distribution.tif", dpi=130)
+            plt.close()
+
+        if ('modulation' in field_type):
+            if run == 0:
+                X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
+                X1 = X1_mesh
+
+        elif ('visual' in field_type):
+            if run == 0:
+                X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
+                x, y = get_equidistant_points(n_points=1024)
+                X1 = torch.tensor(np.stack((x, y), axis=1), dtype=torch.float32, device=device) / 2
+                X1[:, 1] = X1[:, 1] + 1.5
+                X1[:, 0] = X1[:, 0] + 0.5
+                X1 = torch.cat((X1_mesh, X1[0:n_particles - n_nodes]), 0)
+
+        x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
+                               H1.clone().detach(), A1.clone().detach()), 1)
+        check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
+
+        time.sleep(0.5)
+        for it in trange(simulation_config.start_frame, n_frames + 1):
+
+            # calculate type change
+            with torch.no_grad():
+                if simulation_config.state_type == 'sequence':
+                    sample = torch.rand((len(T1), 1), device=device)
+                    sample = (sample < (1 / config.simulation.state_params[0])) * torch.randint(0, n_particle_types,
+                                                                                                (len(T1), 1),
+                                                                                                device=device)
+                    T1 = (T1 + sample) % n_particle_types
+                if ('modulation' in field_type) & (it >= 0):
+                    im_ = im[int(it / n_frames * 256)].squeeze()
+                    im_ = np.rot90(im_, 3)
+                    im_ = np.reshape(im_, (n_nodes_per_axis * n_nodes_per_axis))
+                    if 'permutation' in model_config.field_type:
+                        im_ = im_[permutation_indices]
+                    A1[:, 0:1] = torch.tensor(im_[:, None], dtype=torch.float32, device=device)
+                if ('visual' in field_type) & (it >= 0):
+                    im_ = im[int(it / n_frames * 256)].squeeze()
+                    im_ = np.rot90(im_, 3)
+                    im_ = np.reshape(im_, (n_nodes_per_axis * n_nodes_per_axis))
+                    A1[:n_nodes, 0:1] = torch.tensor(im_[:, None], dtype=torch.float32, device=device)
+                    A1[n_nodes:n_particles, 0:1] = 1
+
+                    # plt.scatter(to_numpy(X1_mesh[:, 1]), to_numpy(X1_mesh[:, 0]), s=40, c=to_numpy(A1), cmap='grey', vmin=0,vmax=1)
+                if 'excitation_single' in field_type:
+                    parts = field_type.split('_')
+                    period = int(parts[-2])
+                    amplitude = float(parts[-1])
+                    if (it - 100) % period == 0:
+                        H1[0, 0] = H1[0, 0] + torch.tensor(amplitude, dtype=torch.float32, device=device)
+
+                x = torch.concatenate(
+                    (N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
+                     H1.clone().detach(), A1.clone().detach(), U1.clone().detach()), 1)
+                X[:, it] = H1[:, 0].clone().detach()
+                dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
+
+                # model prediction
+                if ('modulation' in field_type) & (it >= 0):
+                    y = model(dataset, has_field=True)
+                elif ('visual' in field_type) & (it >= 0):
+                    y = model(dataset, has_field=True)
+                elif 'PDE_N3' in model_config.signal_model_name:
+                    y = model(dataset, has_field=False, alpha=it / n_frames)
+                elif 'PDE_N6' in model_config.signal_model_name:
+                    y, p, = model(dataset, has_field=False)
+                elif 'PDE_N7' in model_config.signal_model_name:
+                    y, p, = model(dataset, has_field=False)
+                else:
+                    y = model(dataset, has_field=False)
+
+            # append list
+            if (it >= 0) & bSave:
+                x_list.append(to_numpy(x))
+                y_list.append(to_numpy(y))
+
+            # Particle update
+            if (config.graph_model.signal_model_name == 'PDE_N6') | (config.graph_model.signal_model_name == 'PDE_N7'):
+                H1[:, 1] = y.squeeze()
+                H1[:, 0] = H1[:, 0] + H1[:, 1] * delta_t
+                if noise_level > 0:
+                    H1[:, 0] = H1[:, 0] + torch.randn(n_particles, device=device) * noise_level
+                H1[:, 3] = p.squeeze()
+                H1[:, 2] = torch.relu(H1[:, 2] + H1[:, 3] * delta_t)
+
+            else:
+                H1[:, 1] = y.squeeze()
+                H1[:, 0] = H1[:, 0] + H1[:, 1] * delta_t
+                if noise_level > 0:
+                    H1[:, 0] = H1[:, 0] + torch.randn(n_particles, device=device) * noise_level
+
+            # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
+            # print(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
+
+            # output plots
+            if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
+
+                if 'latex' in style:
+                    plt.rcParams['text.usetex'] = True
+                    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+
+                matplotlib.rcParams['savefig.pad_inches'] = 0
+                num = f"{it:06}"
+
+                if 'visual' in field_type:
+                    fig = plt.figure(figsize=(8, 8))
+                    plt.axis('off')
+                    plt.subplot(211)
+                    plt.axis('off')
+                    plt.title('neuromodulation $b_i$', fontsize=24)
+                    plt.scatter(to_numpy(X1[0:1024, 1]) * 0.95, to_numpy(X1[0:1024, 0]) * 0.95, s=15,
+                                c=to_numpy(A1[0:1024, 0]), cmap='viridis',
+                                vmin=0, vmax=2)
+                    plt.scatter(to_numpy(X1[1024:, 1]) * 0.95 + 0.2, to_numpy(X1[1024:, 0]) * 0.95, s=15,
+                                c=to_numpy(A1[1024:, 0]), cmap='viridis',
+                                vmin=0, vmax=2)
+                    # cbar = plt.colorbar()
+                    # cbar.ax.yaxis.set_tick_params(labelsize=8)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.subplot(212)
+                    plt.axis('off')
+                    plt.title('$x_i$', fontsize=24)
+                    plt.scatter(to_numpy(X1[0:1024, 1]), to_numpy(X1[0:1024, 0]), s=15, c=to_numpy(H1[0:1024, 0]),
+                                cmap='viridis', vmin=-10, vmax=10)
+                    plt.scatter(to_numpy(X1[1024:, 1]) + 0.2, to_numpy(X1[1024:, 0]), s=15, c=to_numpy(H1[1024:, 0]),
+                                cmap='viridis', vmin=-10, vmax=10)
+                    # cbar = plt.colorbar()
+                    # cbar.ax.yaxis.set_tick_params(labelsize=8)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=170)
+                    plt.close()
+
+                elif 'modulation' in field_type:
+                    fig = plt.figure(figsize=(12, 12))
+                    plt.subplot(221)
+                    plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=100, c=to_numpy(A1[:, 0]), cmap='viridis',
+                                vmin=0, vmax=2)
+                    plt.subplot(222)
+                    plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=100, c=to_numpy(H1[:, 0]), cmap='viridis',
+                                vmin=-5, vmax=5)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=170)
+                    plt.close()
+
+                else:
+
+                    if ('PDE_N6' in model_config.signal_model_name) | ('PDE_N7' in model_config.signal_model_name):
+                        plt.figure(figsize=(12, 5.6))
+                        plt.axis('off')
+                        plt.axis('off')
+                        plt.subplot(121)
+                        plt.title('activity $x_i$', fontsize=24)
+                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=200, c=to_numpy(x[:, 6]),
+                                    cmap='viridis', vmin=-5, vmax=5, edgecolors='k', alpha=1)
+                        cbar = plt.colorbar()
+                        cbar.ax.yaxis.set_tick_params(labelsize=12)
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.subplot(122)
+                        plt.title('short term plasticity $y_i$', fontsize=24)
+                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=200, c=to_numpy(x[:, 8]),
+                                    cmap='grey', vmin=0, vmax=1, edgecolors='k', alpha=1)
+                        cbar = plt.colorbar()
+                        cbar.ax.yaxis.set_tick_params(labelsize=12)
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+                        plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=170)
+                        plt.close()
+
+                    else:
+                        plt.figure(figsize=(10, 10))
+                        # plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=10, c=to_numpy(x[:, 6]),
+                        #             cmap='viridis', vmin=-10, vmax=10, edgecolors='k', alpha=1)
+                        plt.axis('off')
+                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=100, c=to_numpy(x[:, 6]), cmap='viridis',
+                                    vmin=-40, vmax=40)
+                        # cbar = plt.colorbar()
+                        # cbar.ax.yaxis.set_tick_params(labelsize=8)
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+                        plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=170)
+                        plt.close()
+
+                        im_ = imread(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif")
+                        plt.figure(figsize=(10, 10))
+                        plt.imshow(im_)
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.subplot(3, 3, 1)
+                        plt.imshow(im_[800:1000, 800:1000, :])
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+                        plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
+                        plt.close()
+
+        if bSave:
+            x_list = np.array(x_list)
+            y_list = np.array(y_list)
+            # torch.save(x_list, f'graphs_data/{dataset_name}/x_list_{run}.pt')
+            np.save(f'graphs_data/{dataset_name}/x_list_{run}.npy', x_list)
+            if has_particle_dropout:
+                torch.save(x_removed_list, f'graphs_data/{dataset_name}/x_removed_list_{run}.pt')
+                np.save(f'graphs_data/{dataset_name}/particle_dropout_mask.npy', particle_dropout_mask)
+                np.save(f'graphs_data/{dataset_name}/inv_particle_dropout_mask.npy', inv_particle_dropout_mask)
+            # torch.save(y_list, f'graphs_data/{dataset_name}/y_list_{run}.pt')
+            np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list)
+            torch.save(model.p, f'graphs_data/{dataset_name}/model_p.pt')
+
+        if measurement_noise_level > 0:
+            np.save(f'graphs_data/{dataset_name}/raw_x_list_{run}.npy', x_list)
+            np.save(f'graphs_data/{dataset_name}/raw_y_list_{run}.npy', y_list)
+
+            for k in range(x_list.shape[0]):
+                x_list[k, :, 6] = x_list[k, :, 6] + np.random.normal(0, measurement_noise_level, x_list.shape[1])
+            for k in range(1, x_list.shape[0] - 1):
+                y_list[k] = (x_list[k + 1, :, 6:7] - x_list[k, :, 6:7]) / delta_t
+
+            np.save(f'graphs_data/{dataset_name}/x_list_{run}.npy', x_list)
+            np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list)
+
+        activity = torch.tensor(x_list[:, :, 6:7], device=device)
+        activity = activity.squeeze()
+        activity = activity.t()
+        plt.figure(figsize=(15, 10))
+        ax = sns.heatmap(to_numpy(activity), center=0, cmap='viridis', cbar_kws={'fraction': 0.046})
+        cbar = ax.collections[0].colorbar
+        cbar.ax.tick_params(labelsize=32)
+        ax.invert_yaxis()
+        plt.ylabel('neurons', fontsize=64)
+        plt.xlabel('time', fontsize=64)
+        plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
+        plt.yticks([0, 999], [1, 1000], fontsize=48)
+        plt.xticks(rotation=0)
+        plt.tight_layout()
+        plt.savefig(f'graphs_data/{dataset_name}/kinograph.png', dpi=300)
+        plt.close()
+
+        plt.figure(figsize=(15, 10))
+        if n_particles > 2:
+            n = np.random.permutation(n_particles)
+            NN = 25
+        else:
+            n = np.arange(n_particles)
+            NN = 2
+        for i in range(NN):
+            plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=2)
+        plt.xlabel('time', fontsize=64)
+        plt.ylabel('$x_{i}$', fontsize=64)
+        # plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
+        plt.xticks(fontsize=48)
+        plt.yticks(fontsize=48)
+        plt.tight_layout()
+        plt.savefig(f'graphs_data/{dataset_name}/activity.png', dpi=300)
+        plt.xlim([0, 1000])
+        plt.tight_layout()
+        plt.savefig(f'graphs_data/{dataset_name}/activity_1000.png', dpi=300)
+        plt.close()
+
+        if False:  # (noise_level>0) | (measurement_noise_level>0):
+
+            plt.figure(figsize=(15, 10))
+            window_size = 25
+            window_end = x_list.shape[0] - window_size
+            ts = to_numpy(activity[600, :])
+            ts_avg = np.convolve(ts, np.ones(window_size) / window_size, mode='valid')
+            plt.plot(ts[window_size // 2:window_end + window_size // 2], linewidth=1)
+            plt.plot(ts_avg, linewidth=2)
+            plt.plot(ts[window_size // 2:window_end + window_size // 2] - ts_avg[0:window_end])
+            # plt.xlim([window_end - 5000, window_end])
+            signal_power = np.mean(ts_avg[window_size // 2:window_end + window_size // 2] ** 2)
+            # Compute the noise power
+            noise_power = np.mean((ts[window_size // 2:window_end + window_size // 2] - ts_avg[0:window_end]) ** 2)
+            # Calculate the signal-to-noise ratio (SNR)
+            snr = signal_power / noise_power
+            print(f"Signal-to-Noise Ratio (SNR): {snr:0.2f} 10log10 {10 * np.log10(snr):0.2f}")
+            plt.savefig(f'graphs_data/{dataset_name}/noise.png', dpi=300)
+            plt.close()
+
+            # Parameters
+            fs = 1000  # Sampling frequency
+            t = np.arange(0, 1, 1 / fs)  # Time vector
+            frequency = 5  # Frequency of the sine wave
+            desired_snr_db = 10 * np.log10(snr)  # Desired SNR in dB
+            # Generate a clean signal (sine wave)
+            clean_signal = np.sin(2 * np.pi * frequency * t)
+            # Calculate the power of the clean signal
+            signal_power = np.mean(clean_signal ** 2)
+            # Calculate the noise power required to achieve the desired SNR
+            desired_snr_linear = 10 ** (desired_snr_db / 10)
+            noise_power = signal_power / desired_snr_linear
+            # Generate noise with the calculated power
+            noise = np.sqrt(noise_power) * np.random.randn(len(t))
+            # Create a noisy signal by adding noise to the clean signal
+            noisy_signal = clean_signal + noise
+            # Plot the clean signal and the noisy signal
+            plt.figure(figsize=(15, 10))
+            plt.subplot(2, 1, 1)
+            plt.plot(t, clean_signal)
+            plt.title('Clean Signal')
+            plt.subplot(2, 1, 2)
+            plt.plot(t, noisy_signal)
+            plt.plot(t, noise)
+            plt.title(f'Noisy Signal with SNR = {snr:0.2f} {desired_snr_db:0.2f} dB')
+            plt.tight_layout()
+            plt.savefig(f'graphs_data/{dataset_name}/noise_on_sinusoid.png', dpi=300)
+            plt.close()
+
+        # torch.cuda.memory_allocated(device)
+        # gc.collect()
+        # torch.cuda.empty_cache()
+        # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
+        # print(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
+
+
 def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1, scenario='none', device=None, bSave=True):
     if 'black' in style:
         plt.style.use('dark_background')

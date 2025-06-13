@@ -22,9 +22,11 @@ class SimulationConfig(BaseModel):
     max_radius: Annotated[float, Field(gt=0)]
 
     n_particles: int = 1000
+    n_neurons: int = 1000
     n_particles_max: int = 20000
     max_edges: float = 1.0E6
     n_particle_types: int = 5
+    n_neuron_types: int = 5
     n_particle_type_distribution: list[int] = [0]
     shuffle_particle_types: bool = False
     pos_init: str = 'uniform'
