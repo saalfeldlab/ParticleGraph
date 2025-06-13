@@ -71,7 +71,7 @@ training:
     n_runs: 1
 
     multi_connectivity: True
-    with_connectivity_mask: False
+    with_connectivity_mask: True
     has_missing_activity: True
 
     time_step: 8
@@ -88,5 +88,5 @@ training:
     learning_rate_missing_activity: 1.0E-4
 
     coeff_diff: 100
-    coeff_sign : 20
+    coeff_sign : 10
     coeff_missing_activity: 1
