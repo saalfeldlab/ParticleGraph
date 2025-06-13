@@ -55,7 +55,7 @@ if __name__ == '__main__':
         config.dataset = pre_folder + config.dataset
         config.config_file = pre_folder + config_file_
 
-        device = set_device(config.training.device)
+        device = set_device('cuda:1')
         print(f'device  {device}')
         print(f'folder  {config.dataset}')
 

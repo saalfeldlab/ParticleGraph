@@ -2707,7 +2707,7 @@ def data_train_synaptic2(config, erase, best_model, device):
 
             for batch in range(batch_size):
 
-                k = np.random.randint(n_frames - 1 - time_step)
+                k = np.random.randint(n_frames - 4 - time_step)
                 ids = np.arange(n_particles)
 
                 x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device)
