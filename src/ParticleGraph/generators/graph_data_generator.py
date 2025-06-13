@@ -1578,28 +1578,13 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
 
 
     folder = f'./graphs_data/{dataset_name}/'
-    if erase:
-        files = glob.glob(f"{folder}/*")
-        for f in files:
-            if (not ('X1.pt' in f)) & (not ('Signal' in f)) & (not ('Viz' in f)) & (not ('Exc' in f)) & (
-                    f[-3:] != 'Fig') & (f[-14:] != 'generated_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (
-                    f != 'model_config.json') & (f != 'generation_code.py'):
-                os.remove(f)
     os.makedirs(folder, exist_ok=True)
     os.makedirs(f'./graphs_data/{dataset_name}/Fig/', exist_ok=True)
     files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
     for f in files:
         os.remove(f)
-    os.makedirs(f'./graphs_data/{dataset_name}/Viz/', exist_ok=True)
-    files = glob.glob(f'./graphs_data/{dataset_name}/Viz/*')
-    for f in files:
-        os.remove(f)
     os.makedirs(f'./graphs_data/{dataset_name}/Exc/', exist_ok=True)
     files = glob.glob(f'./graphs_data/{dataset_name}/Exc/*')
-    for f in files:
-        os.remove(f)
-    os.makedirs(f'./graphs_data/{dataset_name}/Signal/', exist_ok=True)
-    files = glob.glob(f'./graphs_data/{dataset_name}/Signal/*')
     for f in files:
         os.remove(f)
 
