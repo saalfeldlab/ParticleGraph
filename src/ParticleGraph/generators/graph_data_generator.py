@@ -1642,104 +1642,32 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
             matplotlib.rcParams['savefig.pad_inches'] = 0
             num = f"{it:06}"
 
-            if 'visual' in field_type:
-                fig = plt.figure(figsize=(8, 8))
-                plt.axis('off')
-                plt.subplot(211)
-                plt.axis('off')
-                plt.title('neuromodulation $b_i$', fontsize=24)
-                plt.scatter(to_numpy(X1[0:1024, 1]) * 0.95, to_numpy(X1[0:1024, 0]) * 0.95, s=15,
-                            c=to_numpy(A1[0:1024, 0]), cmap='viridis',
-                            vmin=0, vmax=2)
-                plt.scatter(to_numpy(X1[1024:, 1]) * 0.95 + 0.2, to_numpy(X1[1024:, 0]) * 0.95, s=15,
-                            c=to_numpy(A1[1024:, 0]), cmap='viridis',
-                            vmin=0, vmax=2)
-                # cbar = plt.colorbar()
-                # cbar.ax.yaxis.set_tick_params(labelsize=8)
-                plt.xticks([])
-                plt.yticks([])
-                plt.subplot(212)
-                plt.axis('off')
-                plt.title('$x_i$', fontsize=24)
-                plt.scatter(to_numpy(X1[0:1024, 1]), to_numpy(X1[0:1024, 0]), s=15, c=to_numpy(H1[0:1024, 0]),
-                            cmap='viridis', vmin=-10, vmax=10)
-                plt.scatter(to_numpy(X1[1024:, 1]) + 0.2, to_numpy(X1[1024:, 0]), s=15, c=to_numpy(H1[1024:, 0]),
-                            cmap='viridis', vmin=-10, vmax=10)
-                # cbar = plt.colorbar()
-                # cbar.ax.yaxis.set_tick_params(labelsize=8)
-                plt.xticks([])
-                plt.yticks([])
-                plt.tight_layout()
-                plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=170)
-                plt.close()
+            plt.figure(figsize=(10, 10))
+            # plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=10, c=to_numpy(x[:, 6]),
+            #             cmap='viridis', vmin=-10, vmax=10, edgecolors='k', alpha=1)
+            plt.axis('off')
+            plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=100, c=to_numpy(x[:, 6]), cmap='viridis',
+                        vmin=-40, vmax=40)
+            # cbar = plt.colorbar()
+            # cbar.ax.yaxis.set_tick_params(labelsize=8)
+            plt.xticks([])
+            plt.yticks([])
+            plt.tight_layout()
+            plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=170)
+            plt.close()
 
-            elif 'modulation' in field_type:
-                fig = plt.figure(figsize=(12, 12))
-                plt.subplot(221)
-                plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=100, c=to_numpy(A1[:, 0]), cmap='viridis',
-                            vmin=0, vmax=2)
-                plt.subplot(222)
-                plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=100, c=to_numpy(H1[:, 0]), cmap='viridis',
-                            vmin=-5, vmax=5)
-                plt.xticks([])
-                plt.yticks([])
-                plt.tight_layout()
-                plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=170)
-                plt.close()
-
-            else:
-
-                if ('PDE_N6' in model_config.signal_model_name) | ('PDE_N7' in model_config.signal_model_name):
-                    plt.figure(figsize=(12, 5.6))
-                    plt.axis('off')
-                    plt.axis('off')
-                    plt.subplot(121)
-                    plt.title('activity $x_i$', fontsize=24)
-                    plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=200, c=to_numpy(x[:, 6]),
-                                cmap='viridis', vmin=-5, vmax=5, edgecolors='k', alpha=1)
-                    cbar = plt.colorbar()
-                    cbar.ax.yaxis.set_tick_params(labelsize=12)
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.subplot(122)
-                    plt.title('short term plasticity $y_i$', fontsize=24)
-                    plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=200, c=to_numpy(x[:, 8]),
-                                cmap='grey', vmin=0, vmax=1, edgecolors='k', alpha=1)
-                    cbar = plt.colorbar()
-                    cbar.ax.yaxis.set_tick_params(labelsize=12)
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.tight_layout()
-                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=170)
-                    plt.close()
-
-                else:
-                    plt.figure(figsize=(10, 10))
-                    # plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=10, c=to_numpy(x[:, 6]),
-                    #             cmap='viridis', vmin=-10, vmax=10, edgecolors='k', alpha=1)
-                    plt.axis('off')
-                    plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=100, c=to_numpy(x[:, 6]), cmap='viridis',
-                                vmin=-40, vmax=40)
-                    # cbar = plt.colorbar()
-                    # cbar.ax.yaxis.set_tick_params(labelsize=8)
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.tight_layout()
-                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=170)
-                    plt.close()
-
-                    im_ = imread(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif")
-                    plt.figure(figsize=(10, 10))
-                    plt.imshow(im_)
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.subplot(3, 3, 1)
-                    plt.imshow(im_[800:1000, 800:1000, :])
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.tight_layout()
-                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
-                    plt.close()
+            im_ = imread(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif")
+            plt.figure(figsize=(10, 10))
+            plt.imshow(im_)
+            plt.xticks([])
+            plt.yticks([])
+            plt.subplot(3, 3, 1)
+            plt.imshow(im_[800:1000, 800:1000, :])
+            plt.xticks([])
+            plt.yticks([])
+            plt.tight_layout()
+            plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
+            plt.close()
 
     if bSave:
         x_list = np.array(x_list)
