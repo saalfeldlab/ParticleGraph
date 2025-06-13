@@ -4807,13 +4807,9 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
     dimension = config.simulation.dimension
     max_radius = config.simulation.max_radius
     embedding_cluster = EmbeddingCluster(config)
+    time_step =  config.training.time_step
     field_type = model_config.field_type
-    if field_type != '':
-        n_nodes = simulation_config.n_nodes
-        # n_nodes_per_axis = int(np.sqrt(n_nodes))
-        has_field = True
-    else:
-        has_field = False
+
     multi_connectivity = config.training.multi_connectivity
     has_missing_activity = config.training.has_missing_activity
 
@@ -4853,6 +4849,9 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
         xnorm = torch.tensor([5], device=device)
     print(f'xnorm: {to_numpy(xnorm)}, vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
 
+    edges = torch.load(f'./graphs_data/{dataset_name}/edge_index.pt', map_location=device)
+    edges_all = edges.clone().detach()
+
     print('update variables ...')
     x = x_list[0][n_frames - 5]
     n_particles = x.shape[0]
@@ -4868,11 +4867,13 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
 
     activity = torch.tensor(x_list[0][:, :, 6:7],device=device)
     activity = activity.squeeze()
-    distrib = to_numpy(activity.flatten())
     activity = activity.t()
 
-    excitation = torch.tensor(x_list[0][:, :, 10:13], device=device)
-    excitation = excitation[:,0,:].squeeze()
+    activity_list = []
+    for n in range(n_runs):
+        activity_ = torch.tensor(x_list[n][:, :, 6:7], device=device)
+        activity_ = activity_.squeeze().t()
+        activity_list.append(activity_)
 
     if os.path.exists(f'graphs_data/{dataset_name}/raw_x_list_{run}.npy'):
         raw_activity = torch.tensor(raw_x[:, :, 6:7], device=device)
@@ -4945,7 +4946,9 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
     else:
         mc = 'k'
 
-    if has_field:
+    if field_type != '':
+        has_field = True
+        n_nodes = simulation_config.n_nodes
         if ('short_term_plasticity' in field_type) | ('modulation' in field_type):
             model_f = nn.ModuleList([
                 Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
@@ -4960,12 +4963,14 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                                             hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device, first_omega_0=omega, hidden_omega_0=omega)
         model_f.to(device=device)
         model_f.train()
-
         modulation = torch.tensor(x_list[0], device=device)
         modulation = modulation[:, :, 8:9].squeeze()
         modulation = modulation.t()
         modulation = modulation.clone().detach()
         d_modulation = (modulation[:, 1:] - modulation[:, :-1]) / delta_t
+    else:
+        has_field = False
+        model_f = None
 
     if has_missing_activity:
         model_missing_activity = nn.ModuleList([
@@ -4977,6 +4982,8 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             for n in range(n_runs)
         ])
         model_missing_activity.to(device=device)
+    else:
+        model_missing_activity = None
 
     if epoch_list[0] == 'all':
         files = glob.glob(f"{log_dir}/models/*.pt")
@@ -5571,28 +5578,38 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
         plt.savefig(f'./{log_dir}/results/true connectivity.tif', dpi=300)
         plt.close()
 
-        for k in range(2):
-            plt.figure(figsize=(10, 10))
-            if k==0: # config.graph_model.signal_model_name == 'PDE_N8':
-                plt.title('activity_larynx', fontsize=68)
-                map_larynx_matrix, n = map_matrix(larynx_neuron_list, all_neuron_list, adjacency)
-            else:
-                plt.title('activity', fontsize=68)
-                n = np.random.randint(0, n_particles, 50)
-            for i in range(len(n)):
-                plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=1)
-            plt.xlabel('time', fontsize=64)
-            plt.ylabel('$x_{i}$', fontsize=64)
-            plt.xlim([0,n_frames])
-            plt.xticks(fontsize=28)
-            plt.yticks(fontsize=28)
-            plt.title(r'$x_i$ samples',fontsize=48)
-            plt.tight_layout()
-            if k == 0:
-                plt.savefig(f'./{log_dir}/results/activity_larynx.tif', dpi=300)
-            else:
-                plt.savefig(f'./{log_dir}/results/activity.tif', dpi=300)
-            plt.close()
+        map_larynx_matrix, n = map_matrix(larynx_neuron_list, all_neuron_list, adjacency)
+        fig, axes = plt.subplots(5, 4, figsize=(16, 20))
+        axes = axes.flatten()
+        for i, activity in enumerate(activity_list[:20]):
+            for j in range(len(n)):
+                axes[i].plot(to_numpy(activity[n[j].astype(int), :]), linewidth=1)
+            axes[i].set_title(f'dataset {i}', fontsize=12)
+            axes[i].set_xlim([0, n_frames])
+            axes[i].set_ylim([0, 10])
+        fig.suptitle('larynx neuron activity', fontsize=16)
+        fig.text(0.5, 0.04, 'time', ha='center', fontsize=14)
+        fig.text(0.04, 0.5, 'activity', va='center', rotation='vertical', fontsize=14)
+        plt.tight_layout()
+        plt.savefig(f'./{log_dir}/results/larynx_activity_grid.tif', dpi=300)
+        plt.close()
+
+        n = np.random.randint(0, n_particles, 50)
+        fig, axes = plt.subplots(5, 4, figsize=(16, 20))
+        axes = axes.flatten()
+        for i, activity in enumerate(activity_list[:20]):
+            for j in range(len(n)):
+                axes[i].plot(to_numpy(activity[n[j].astype(int), :]), linewidth=1)
+            axes[i].set_title(f'dataset {i}', fontsize=12)
+            axes[i].set_xlim([0, n_frames])
+            axes[i].set_ylim([0, 10])
+        fig.suptitle('sample neuron activity', fontsize=16)
+        fig.text(0.5, 0.04, 'time', ha='center', fontsize=14)
+        fig.text(0.04, 0.5, 'activity', va='center', rotation='vertical', fontsize=14)
+        plt.tight_layout()
+        plt.savefig(f'./{log_dir}/results/activity_grid.tif', dpi=300)
+        plt.close()
+
 
         true_model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, device=device)
 
@@ -5605,90 +5622,117 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             model.edges = edge_index
             print(f'net: {net}')
 
+            fig, axes = fig_init()
+            for n in range(n_particles):
+                if x_list[0][100][n, 6] != 6:
+                    plt.scatter(to_numpy(model.a[:n_particles, 0]), to_numpy(model.a[:n_particles, 1]), alpha=0.1, s=50, color='k', edgecolors='none')
+                    plt.text(to_numpy(model.a[n, 0]), to_numpy(model.a[n, 1]) - 0.01, all_neuron_list[n], fontsize=10)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/all_embedding_text.tif", dpi=170.7)
+            plt.close()
+
+            if 'excitation' in model_config.update_type:
+
+                # Run the analysis
+                neuron_responses, embeddings_by_neuron = analyze_odor_responses_by_neuron(
+                    model, x_list, edges, n_runs, n_frames, time_step, device,
+                    has_missing_activity, model_missing_activity, has_field, model_f,
+                    n_samples=100
+                )
+
+                fig = plot_odor_heatmaps(neuron_responses, embeddings_by_neuron)
+                plt.savefig(f"./{log_dir}/results/odor_heatmaps.png", dpi=150, bbox_inches='tight')
+
+
+
+
             if has_missing_activity:
-                os.makedirs(f"./{log_dir}/results/missing_activity", exist_ok=True)
                 net = f'{log_dir}/models/best_model_missing_activity_with_{n_runs - 1}_graphs_{epoch}.pt'
                 state_dict = torch.load(net, map_location=device)
                 model_missing_activity.load_state_dict(state_dict['model_state_dict'])
 
-                for run in trange(n_runs):
-
-                    n_frames = n_frames - 10
-                    if n_frames > 1000:
-                        t = torch.linspace(0, 1, n_frames // 100, dtype=torch.float32, device=device).unsqueeze(1)
+                fig, axes = plt.subplots(5, 4, figsize=(20, 25))
+                axes = axes.flatten()
+                for run in range(20):
+                    n_frames_temp = n_frames - 10
+                    if n_frames_temp > 1000:
+                        t = torch.linspace(0, 1, n_frames_temp // 100, dtype=torch.float32, device=device).unsqueeze(1)
                     else:
-                        t = torch.linspace(0, 1, n_frames, dtype=torch.float32, device=device).unsqueeze(1)
-                    prediction = model_missing_activity[run](t)
-                    prediction = prediction.t()
+                        t = torch.linspace(0, 1, n_frames_temp, dtype=torch.float32, device=device).unsqueeze(1)
+                    prediction = model_missing_activity[run](t).t()
+                    activity = torch.tensor(x_list[run][:, :, 6:7], device=device).squeeze().t()
+                    im = axes[run].imshow(to_numpy(prediction), aspect='auto', cmap='viridis', vmin=0, vmax=10)
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/neural_fields_grid.tif", dpi=150)
+                plt.close()
 
-                    fig = plt.figure(figsize=(16, 16))
-                    ax = fig.add_subplot(2, 2, 1)
-                    plt.title('neural field')
-                    plt.imshow(to_numpy(prediction), aspect='auto', cmap='viridis')
-                    ax = fig.add_subplot(2, 2, 2)
-                    plt.title('true activity')
-                    activity = torch.tensor(x_list[run][:, :, 6:7], device=device)
-                    activity = activity.squeeze()
-                    activity = activity.t()
-                    plt.imshow(to_numpy(activity), aspect='auto', cmap='viridis')
-                    plt.tight_layout()
-                    ax = fig.add_subplot(2, 2, 3)
-                    plt.title('learned missing activity')
+                fig, axes = plt.subplots(5, 4, figsize=(20, 25))
+                axes = axes.flatten()
+                for run in range(20):
+                    n_frames_temp = n_frames - 10
+                    t = torch.linspace(0, 1, n_frames_temp // 100 if n_frames_temp > 1000 else n_frames_temp,
+                                       dtype=torch.float32, device=device).unsqueeze(1)
+                    prediction = model_missing_activity[run](t).t()
+                    activity = torch.tensor(x_list[run][:, :, 6:7], device=device).squeeze().t()
                     pos = np.argwhere(x_list[run][0][:, 6] != 6)
-                    prediction_ = prediction.clone().detach()
-                    prediction_[pos[:, 0]] = 0
-                    plt.imshow(to_numpy(prediction_), aspect='auto', cmap='viridis')
-                    ax = fig.add_subplot(2, 2, 4)
-                    plt.title('comparison')
-                    # pos = np.argwhere(x_list[run][0][:, 6] == 6)
-                    # prediction_ = prediction.clone().detach()
-                    # prediction_[pos[:, 0]] = 0
-                    # plt.imshow(to_numpy(prediction_), aspect='auto', cmap='viridis')
-                    plt.scatter(to_numpy(activity[pos, :prediction.shape[1]]), to_numpy(prediction[pos, :]), s=1, c=mc, alpha=0.1)
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/results/missing_activity/missing_activity_{run}.tif", dpi=80)
-                    plt.close()
-
-
-            neuron_OI = get_neuron_index('SAAVL', all_neuron_list)
-            for data_OI in range(n_runs):
-                activity = torch.tensor(x_list[data_OI][:, :, 6:7], device=device)
-                activity = activity.squeeze()
-                activity = activity.t()
-                fig = plt.figure(figsize=(20, 2))
-                plt.plot(to_numpy(activity[neuron_OI, :]), linewidth=2, c=mc)
-                plt.show()
+                    axes[run].scatter(to_numpy(activity[pos, :prediction.shape[1]]),
+                                      to_numpy(prediction[pos, :]), s=0.5, alpha=0.3, c=mc)
+                    axes[run].set_xlim([0,10])
+                    axes[run].set_ylim([0,10])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/neural_fields_comparison_grid.tif", dpi=150)
+                plt.close()
 
             if multi_connectivity:
-                os.makedirs(f"./{log_dir}/results/W", exist_ok=True)
-                for k in range(model.W.shape[0]-1):
 
+                fig, axes = plt.subplots(4, 5, figsize=(20, 16))
+                axes = axes.flatten()
+
+                for k in range(min(20, model.W.shape[0] - 1)):
                     i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
                     A = model.W[k].clone().detach()
                     A[i, i] = 0
                     A = A.t()
-                    fig, ax = fig_init()
-                    ax = sns.heatmap(to_numpy(A), center=0, square=True, cmap='bwr',cbar_kws={'fraction': 0.046}, vmin=-4, vmax=4)
-                    cbar = ax.collections[0].colorbar
-                    cbar.ax.tick_params(labelsize=48)
-                    plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=24)
-                    plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=24)
-                    plt.subplot(2, 2, 1)
+                    sns.heatmap(to_numpy(A), ax=axes[k], center=0, square=True, cmap='bwr',
+                                cbar=False, vmin=-4, vmax=4, xticklabels=False, yticklabels=False)
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/W_grid.tif", dpi=80)
+                plt.close()
+
+                larynx_weights =[]
+                fig, axes = plt.subplots(4, 5, figsize=(20, 16))
+                axes = axes.flatten()
+                for k in range(min(20, model.W.shape[0] - 1)):
+                    i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+                    A = model.W[k].clone().detach()
+                    A[i, i] = 0
+                    A = A.t()
                     larynx_pred_weight, index_larynx = map_matrix(larynx_neuron_list, all_neuron_list, A)
-                    ax = sns.heatmap(to_numpy(larynx_pred_weight), cbar=False, center=0, square=True,
-                                     cmap='bwr', vmin=-4, vmax=4)
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/results/W/W_{k}.tif", dpi=80)
-                    plt.close()
+                    sns.heatmap(to_numpy(larynx_pred_weight), ax=axes[k], center=0, square=True,
+                                cmap='bwr', cbar=False, vmin=-4, vmax=4, xticklabels=False, yticklabels=False)
+                    larynx_weights.append(to_numpy(larynx_pred_weight))
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/W_larynx_grid.tif", dpi=80)
+                plt.close()
+
+                larynx_stack = np.stack(larynx_weights)
+                larynx_mean = np.mean(larynx_stack, axis=0)
+                larynx_std = np.std(larynx_stack, axis=0)
+                fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+                sns.heatmap(larynx_mean, ax=axes[0], center=0, square=True, cmap='bwr',
+                            cbar=True, vmin=-2, vmax=2, xticklabels=False, yticklabels=False)
+                sns.heatmap(larynx_std, ax=axes[1], square=True, cmap='viridis',
+                            cbar=True, xticklabels=False, yticklabels=False)
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/larynx_mean_std.tif", dpi=80)
+                plt.close()
+
             else:
 
                 i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
                 A = model.W.clone().detach()
                 A[i, i] = 0
                 A = A.t()
-
                 fig, ax = fig_init()
                 ax = sns.heatmap(to_numpy(A) , center=0, square=True, cmap='bwr',
                                  cbar_kws={'fraction': 0.046}, vmin=-4, vmax=4)
@@ -5697,11 +5741,9 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                 plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=24)
                 plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=24)
                 plt.subplot(2, 2, 1)
-
                 larynx_pred_weight, index_larynx = map_matrix(larynx_neuron_list, all_neuron_list, A)
                 ax = sns.heatmap(to_numpy(larynx_pred_weight) , cbar=False, center=0, square=True,
                                  cmap='bwr', vmin=-4, vmax=4)
-
                 plt.xticks([])
                 plt.yticks([])
                 plt.tight_layout()
@@ -5713,11 +5755,10 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                 state_dict = torch.load(net, map_location=device)
                 model_f.load_state_dict(state_dict['model_state_dict'])
 
-
             fig, ax = fig_init()
-            for n in range(n_particle_types,-1,-1):
-                    pos = torch.argwhere(type_list == n).squeeze()
-                    plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=200, color=cmap.color(n), alpha=0.25, edgecolors='none')
+            for n in range(n_particles):
+                if x_list[0][100][n, 6] != 6:
+                    plt.scatter(to_numpy(model.a[n, 0]), to_numpy(model.a[n, 1]), s=100, color=cmap.color(int(type_list[n])), alpha=1.0, edgecolors='none')
             if 'latex' in style:
                 plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
                 plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
@@ -5728,23 +5769,14 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             plt.savefig(f"./{log_dir}/results/all_embedding.tif", dpi=170.7)
             plt.close()
 
-            fig, ax = fig_init()
-            for n in range(n_particles):
-                plt.scatter(to_numpy(model.a[:n_particles, 0]), to_numpy(model.a[:n_particles, 1]), s=50, color=mc, edgecolors='none')
-                plt.text(to_numpy(model.a[n, 0])-0.05, to_numpy(model.a[n, 1]) - 0.05, all_neuron_list[n], fontsize=10)
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/all_embedding_text.tif", dpi=170.7)
-            plt.close()
-
-            rl_pairs = find_suffix_pairs_with_index(all_neuron_list, 'R', 'L')
-
             os.makedirs(f"./{log_dir}/results/pairs", exist_ok=True)
             print("Right-Left Neuron Pairs (with indexes):")
 
+            rl_pairs = find_suffix_pairs_with_index(all_neuron_list, 'R', 'L')
             d_i1_i2 = []
-
             for (i1, n1), (i2, n2) in rl_pairs:
-                print(f"{n1} (index {i1}) - {n2} (index {i2})")
+                if (x_list[0][100][i1, 6] != 6) & (x_list[0][100][i2, 6] != 6) :
+                    print(f"{n1} (index {i1}) - {n2} (index {i2})")
                 dist = torch.sum((model.a[i1, :] - model.a[i2, :]) ** 2)
                 d_i1_i2.append(dist)
 
@@ -5753,27 +5785,26 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             rl_pairs_sorted = [rl_pairs[i] for i in sorted_indices]
             d_i1_i2_sorted = d_i1_i2[sorted_indices]
 
-            # Optional: print sorted pairs
             pair = 0
             for ((i1, n1), (i2, n2)), dist in zip(rl_pairs_sorted, d_i1_i2_sorted):
-
-                fig, ax = fig_init()
-                plt.scatter(to_numpy(model.a[:n_particles, 0]), to_numpy(model.a[:n_particles, 1]), s=50, color=mc,
-                            edgecolors='none', alpha=0.25)
-                print(f"{n1} (index {i1}) - {n2} (index {i2}): distance = {dist.item():.4f}")
-                plt.scatter(to_numpy(model.a[i1, 0]), to_numpy(model.a[i1, 1]), s=100, color='g', edgecolors='none')
-                plt.scatter(to_numpy(model.a[i2, 0]), to_numpy(model.a[i2, 1]), s=100, color='r', edgecolors='none')
-                plt.text(to_numpy(model.a[i1, 0]) - 0.05, to_numpy(model.a[i1, 1]) - 0.07,
-                         all_neuron_list[i1], fontsize=14, c='g')
-                plt.text(to_numpy(model.a[i2, 0]) - 0.05, to_numpy(model.a[i2, 1]) - 0.07,
-                         all_neuron_list[i2], fontsize=14, c='r')
-                ax = fig.add_subplot(3, 3, 1)
-                plt.plot(to_numpy(activity[i1, :]), linewidth=0.5, c='g')
-                plt.plot(to_numpy(activity[i2, :]), linewidth=0.5, c='r')
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/pairs/all_embedding_text_{pair}.tif", dpi=80)
-                pair = pair + 1
-                plt.close()
+                if (x_list[0][100][i1, 6] != 6) & (x_list[0][100][i2, 6] != 6) :
+                    fig, ax = fig_init()
+                    plt.scatter(to_numpy(model.a[:n_particles, 0]), to_numpy(model.a[:n_particles, 1]), s=50, color='k',
+                                edgecolors='none', alpha=0.25)
+                    print(f"{n1} (index {i1}) - {n2} (index {i2}): distance = {dist.item():.4f}")
+                    plt.scatter(to_numpy(model.a[i1, 0]), to_numpy(model.a[i1, 1]), s=100, color='g', edgecolors='none')
+                    plt.scatter(to_numpy(model.a[i2, 0]), to_numpy(model.a[i2, 1]), s=100, color='r', edgecolors='none')
+                    plt.text(to_numpy(model.a[i1, 0]) - 0.05, to_numpy(model.a[i1, 1]) - 0.07,
+                             all_neuron_list[i1], fontsize=14, c='g')
+                    plt.text(to_numpy(model.a[i2, 0]) - 0.05, to_numpy(model.a[i2, 1]) - 0.07,
+                             all_neuron_list[i2], fontsize=14, c='r')
+                    ax = fig.add_subplot(3, 3, 1)
+                    plt.plot(to_numpy(activity[i1, :]), linewidth=0.5, c='g')
+                    plt.plot(to_numpy(activity[i2, :]), linewidth=0.5, c='r')
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/pairs/all_embedding_text_{pair}.tif", dpi=80)
+                    pair = pair + 1
+                    plt.close()
 
             fig, ax = fig_init(formatx='%.2f', formaty='%d')
             plt.hist(to_numpy(d_i1_i2_sorted), bins=100, color=mc)
@@ -5783,58 +5814,11 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             plt.savefig(f"./{log_dir}/results/histogram_d_pair_embedding.tif", dpi=80)
             plt.close()
 
-            if 'excitation' in model_config.update_type:
 
-                embedding = model.a[:n_particles]
-                excitation_ = torch.tensor([[1., 0., 0.], [0., 1., 0.], [0., 0., 1.0]], dtype=torch.float32, device=device)
 
-                for k, exc in enumerate(excitation_):
-                    fig = plt.figure(figsize=(12, 12))
-                    ax = fig.add_subplot(1, 1, 1)
-                    plt.title(odor_list[k], fontsize=18)
-                    print(exc)
-                    in_features = torch.cat([embedding, exc * torch.ones_like(embedding[:, 0:1])], dim=1)
-                    out = model.lin_exc(in_features.float())
-                    in_features = torch.cat([
-                        torch.ones((n_particles, 1), dtype=torch.float32, device=device) * 6,
-                        embedding,
-                        torch.zeros((n_particles, 1), dtype=torch.float32, device=device),
-                        torch.ones((n_particles, 1), dtype=torch.float32, device=device),
-                        out
-                    ], dim=1)
-                    out = model.lin_phi(in_features.float())
 
-                    embedding_np = to_numpy(embedding)
-                    out_np = to_numpy(out).flatten()
 
-                    plt.scatter(embedding_np[:, 0], embedding_np[:, 1], s=100, c=out_np, alpha=1, edgecolors='none',
-                                    cmap=black_to_green)
 
-                    top3_indices = np.argsort(out_np)[-3:][::-1]
-                    label_lines = [
-                        f"{all_neuron_list[m]} ({neuron_types_list[int(x[m, 5])]})"
-                        for m in top3_indices
-                    ]
-                    label_text = "\n".join(label_lines)
-                    ax.text(
-                        0.02, 0.05,  # relative axes coords (bottom-left)
-                        label_text,
-                        fontsize=10,
-                        ha='left',
-                        va='bottom',
-                        transform=ax.transAxes,
-                        bbox=dict(facecolor='white', alpha=0.0, edgecolor='gray')
-                    )
-
-                    ax = fig.add_subplot(3, 3, 1)
-                    for m in top3_indices:
-                        plt.plot(
-                            to_numpy(activity[m, :]),
-                            linewidth=0.5)
-                    plt.plot(to_numpy(excitation[:,k]), linewidth=0.5, c='yellow')
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/results/excitation_{odor_list[k]}.png", dpi=170.7)
-                    plt.close()
 
             # fig, ax = fig_init()
             # rr = torch.linspace(-xnorm.squeeze() * 4, xnorm.squeeze() * 4, 1000).to(device)

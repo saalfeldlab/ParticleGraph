@@ -22,6 +22,45 @@ from scipy.optimize import curve_fit
 from ParticleGraph.fitting_models import linear_model
 import json
 
+class KoLeoLoss(nn.Module):
+    """Kozachenko-Leonenko entropic loss regularizer from Sablayrolles et al. - 2018 - Spreading vectors for similarity search"""
+
+    # Copyright (c) Meta Platforms, Inc. and affiliates.
+    #
+    # This source code is licensed under the Apache License, Version 2.0
+    # found in the LICENSE file in the root directory of this source tree.
+
+    def __init__(self):
+        super().__init__()
+        self.pdist = nn.PairwiseDistance(2, eps=1e-8)
+
+    def pairwise_NNs_inner(self, x):
+        """
+        Pairwise nearest neighbors for L2-normalized vectors.
+        Uses Torch rather than Faiss to remain on GPU.
+        """
+        # parwise dot products (= inverse distance)
+        dots = torch.mm(x, x.t())
+        n = x.shape[0]
+        dots.view(-1)[:: (n + 1)].fill_(-1)  # Trick to fill diagonal with -1
+        # max inner prod -> min distance
+        _, I = torch.max(dots, dim=1)  # noqa: E741
+        return I
+
+    def forward(self, student_output, eps=1e-8):
+        """
+        Args:
+            student_output (BxD): backbone output of student
+        """
+        with torch.cuda.amp.autocast(enabled=False):
+
+            # student_output = F.normalize(student_output, eps=eps, p=2, dim=0)
+            I = self.pairwise_NNs_inner(student_output)  # noqa: E741
+            distances = self.pdist(student_output, student_output[I])  # BxD, BxD -> B
+            loss = -torch.log(distances + eps).mean()
+
+        return loss
+
 def linear_model(x, a, b):
     return a * x + b
 
@@ -1719,47 +1758,160 @@ def get_type_list(x, dimension):
     type_list = x[:, 1 + 2 * dimension:2 + 2 * dimension].clone().detach()
     return type_list
 
+def sample_synaptic_data_and_predict(model, x_list, edges, n_runs, n_frames, time_step, device,
+                            has_missing_activity=False, model_missing_activity=None,
+                            has_neural_field=False, model_f=None,
+                            run=None, k=None):
+    """
+    Sample data from x_list and get model predictions
 
-class KoLeoLoss(nn.Module):
-    """Kozachenko-Leonenko entropic loss regularizer from Sablayrolles et al. - 2018 - Spreading vectors for similarity search"""
+    Args:
+        model: trained GNN model
+        x_list: list of data arrays [n_runs][n_frames]
+        edges: edge indices for graph
+        n_runs, n_frames, time_step: data dimensions
+        device: torch device
+        has_missing_activity: whether to fill missing activity
+        model_missing_activity: model for missing activity (if needed)
+        has_neural_field: whether to compute neural field
+        model_f: field model (if needed)
+        run: specific run index (if None, random)
+        k: specific frame index (if None, random)
 
-    # Copyright (c) Meta Platforms, Inc. and affiliates.
-    #
-    # This source code is licensed under the Apache License, Version 2.0
-    # found in the LICENSE file in the root directory of this source tree.
+    Returns:
+        dict with pred, in_features, x, dataset, data_id, k_batch
+    """
+    # Sample random run and frame if not specified
+    if run is None:
+        run = np.random.randint(n_runs)
+    if k is None:
+        k = np.random.randint(n_frames - 4 - time_step)
 
-    def __init__(self):
-        super().__init__()
-        self.pdist = nn.PairwiseDistance(2, eps=1e-8)
+    # Get data
+    x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device)
 
-    def pairwise_NNs_inner(self, x):
-        """
-        Pairwise nearest neighbors for L2-normalized vectors.
-        Uses Torch rather than Faiss to remain on GPU.
-        """
-        # parwise dot products (= inverse distance)
-        dots = torch.mm(x, x.t())
-        n = x.shape[0]
-        dots.view(-1)[:: (n + 1)].fill_(-1)  # Trick to fill diagonal with -1
-        # max inner prod -> min distance
-        _, I = torch.max(dots, dim=1)  # noqa: E741
-        return I
+    # Handle missing activity if needed
+    if has_missing_activity and model_missing_activity is not None:
+        pos = torch.argwhere(x[:, 6] == 6)
+        if len(pos) > 0:
+            t = torch.tensor([k / n_frames], dtype=torch.float32, device=device)
+            missing_activity = model_missing_activity[run](t).squeeze()
+            x[pos, 6] = missing_activity[pos]
 
-    def forward(self, student_output, eps=1e-8):
-        """
-        Args:
-            student_output (BxD): backbone output of student
-        """
-        with torch.cuda.amp.autocast(enabled=False):
+    # Handle neural field if needed
+    if has_neural_field and model_f is not None:
+        t = torch.tensor([k / n_frames], dtype=torch.float32, device=device)
+        x[:, 8] = model_f[run](t) ** 2
 
-            # student_output = F.normalize(student_output, eps=eps, p=2, dim=0)
-            I = self.pairwise_NNs_inner(student_output)  # noqa: E741
-            distances = self.pdist(student_output, student_output[I])  # BxD, BxD -> B
-            loss = -torch.log(distances + eps).mean()
+    # Create dataset
+    dataset = data.Data(x=x, edge_index=edges)
+    data_id = torch.ones((x.shape[0], 1), dtype=torch.int, device=device) * run
+    k_batch = torch.ones((x.shape[0], 1), dtype=torch.int, device=device) * k
 
-        return loss
+    # Get predictions
+    pred, in_features = model(dataset, data_id=data_id, k=k_batch, return_all=True)
+
+    return {
+        'pred': pred,
+        'in_features': in_features,
+        'x': x,
+        'dataset': dataset,
+        'data_id': data_id,
+        'k_batch': k_batch,
+        'run': run,
+        'k': k
+    }
+
+def analyze_odor_responses_by_neuron(model, x_list, edges, n_runs, n_frames, time_step, device,
+                                     has_missing_activity=False, model_missing_activity=None,
+                                     has_neural_field=False, model_f=None, n_samples=50):
+    """
+    Analyze odor responses by comparing lin_phi output with and without excitation
+    """
+    odor_list = ['butanone', 'pentanedione', 'NaCL']
+
+    # Store responses: difference between excitation and baseline
+    odor_responses = {odor: [] for odor in odor_list}
+    embeddings_by_neuron = []
+    valid_samples = 0
+
+    model.eval()
+    with torch.no_grad():
+        sample = 0
+        while valid_samples < n_samples:
+            result = sample_synaptic_data_and_predict(
+                model, x_list, edges, n_runs, n_frames, time_step, device,
+                has_missing_activity, model_missing_activity,
+                has_neural_field, model_f, 0
+            )
+
+            if not (torch.isnan(result['x']).any()):
+                # Get baseline response (no excitation)
+                x_baseline = result['x'].clone()
+                x_baseline[:, 10:13] = 0  # no excitation
+                dataset_baseline = data.Data(x=x_baseline, edge_index=edges)
+                pred_baseline = model(dataset_baseline, data_id=result['data_id'],
+                                      k=result['k_batch'], return_all=False)
+
+                # Store embeddings once
+                if valid_samples == 0:
+                    features = model(dataset_baseline, data_id=result['data_id'],
+                                     k=result['k_batch'], return_all=True)[1]
+                    embeddings_by_neuron = features[:, 1:3].cpu()
+
+                # Test each odor and compute difference from baseline
+                for i, odor in enumerate(odor_list):
+                    x_odor = result['x'].clone()
+                    x_odor[:, 10:13] = 0
+                    x_odor[:, 10 + i] = 1  # activate specific odor
+
+                    dataset_odor = data.Data(x=x_odor, edge_index=edges)
+                    pred_odor = model(dataset_odor, data_id=result['data_id'],
+                                      k=result['k_batch'], return_all=False)
+
+                    # Store difference (odor response - baseline)
+                    odor_diff = pred_odor - pred_baseline
+                    odor_responses[odor].append(odor_diff.cpu())
+
+                valid_samples += 1
+
+            sample += 1
+            if sample > n_samples * 10:
+                break
+
+        # Convert to tensors [n_samples, n_neurons]
+        for odor in odor_list:
+            odor_responses[odor] = torch.cat(odor_responses[odor], dim=0)
+
+    print(f"Collected {valid_samples} valid samples")
+    return odor_responses, embeddings_by_neuron
 
 
+def plot_odor_heatmaps(odor_responses, embeddings_by_neuron):
+    """
+    Plot 3 separate heatmaps showing mean response per neuron for each odor
+    """
+    odor_list = ['butanone', 'pentanedione', 'NaCL']
+    n_neurons = odor_responses['butanone'].shape[1]
+
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+
+    for i, odor in enumerate(odor_list):
+        # Compute mean response per neuron
+        mean_responses = torch.mean(odor_responses[odor], dim=0).numpy()  # [n_neurons]
+
+        # Reshape to 2D for heatmap (assuming square-ish layout)
+        side_length = int(np.ceil(np.sqrt(n_neurons)))
+        padded_responses = np.pad(mean_responses, (0, side_length ** 2 - n_neurons), 'constant')
+        response_matrix = padded_responses.reshape(side_length, side_length)
+
+        # Plot heatmap
+        sns.heatmap(response_matrix, ax=axes[i], cmap='bwr', center=0,
+                    cbar=True, square=True, xticklabels=False, yticklabels=False)
+        axes[i].set_title(f'{odor} mean response')
+
+    plt.tight_layout()
+    return fig
 
 
 
