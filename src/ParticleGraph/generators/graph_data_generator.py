@@ -1609,125 +1609,39 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
     xc, yc = get_equidistant_points(n_points=n_neurons)
     pos = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
     perm = torch.randperm(pos.size(0))
-    POS1 = pos[perm]
-    SPEED1 = torch.ones_like(POS1)
-    N1 = torch.arange(n_neurons)
-    T1 = torch.zeros((n_neurons,1),  dtype=torch.float32, device=device)
-    V1 = torch.ones((n_neurons, 2), dtype=torch.float32, device=device)
-    E1 = torch.rand_like(H1, device=device)
-    U1[:, 1] = 0
+    X1 = pos[perm]
+    DX1 = torch.ones_like(POS1)
+    N1 = torch.arange(n_neurons, dtype=torch.float32, device=device).unsqueeze(1)
+    T1 = torch.zeros((n_neurons,1),  dtype=torch.float32, device=device)        # column 5 = type
+    V1 = torch.zeros((n_neurons, 1), dtype=torch.float32, device=device)        # column 6 = voltage
+    E1 = torch.zeros((n_neurons, 1), dtype=torch.float32, device=device)        # colum 7 = excitation
 
+    x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), DX1.clone().detach(), T1.clone().detach(),
+                           V1.clone().detach(), E1.clone().detach()), 1)
 
+    # fully connected matrix to be changed
+    W = torch.randn((n_neurons,n_neurons))
+    edge_index, edge_attr = dense_to_sparse(torch.ones((n_neurons)) - torch.eye(n_neurons))
+    torch.save(edge_index.to(device), f'./graphs_data/{dataset_name}/edge_index.pt')
 
-    model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, device=device)
+    model, bc_pos, bc_dpos = choose_model(config=config, W=W, device=device)
 
     torch.save(edge_index, f'./graphs_data/{dataset_name}/edge_index.pt')
-    torch.save(mask, f'./graphs_data/{dataset_name}/mask.pt')
-    torch.save(adjacency, f'./graphs_data/{dataset_name}/adjacency.pt')
-
-    if run == run_vizualized:
-        if 'black' in style:
-            plt.style.use('dark_background')
-        plt.figure(figsize=(10, 10))
-        for n in range(n_particle_types):
-            pos = torch.argwhere(T1.squeeze() == n)
-            plt.scatter(to_numpy(X1[pos, 0]), to_numpy(X1[pos, 1]), s=100, color=cmap.color(n))
-        plt.xticks([])
-        plt.yticks([])
-        plt.tight_layout()
-        plt.savefig(f"graphs_data/{dataset_name}/type_distribution.tif", dpi=130)
-        plt.close()
-
-    if ('modulation' in field_type):
-        if run == 0:
-            X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
-            X1 = X1_mesh
-
-    elif ('visual' in field_type):
-        if run == 0:
-            X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
-            x, y = get_equidistant_points(n_points=1024)
-            X1 = torch.tensor(np.stack((x, y), axis=1), dtype=torch.float32, device=device) / 2
-            X1[:, 1] = X1[:, 1] + 1.5
-            X1[:, 0] = X1[:, 0] + 0.5
-            X1 = torch.cat((X1_mesh, X1[0:n_particles - n_nodes]), 0)
-
-    x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
-                           H1.clone().detach(), A1.clone().detach()), 1)
-    check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
+    torch.save(W, f'./graphs_data/{dataset_name}/W.pt')
 
     time.sleep(0.5)
-    for it in trange(simulation_config.start_frame, n_frames + 1):
 
-        # calculate type change
-        with torch.no_grad():
-            if simulation_config.state_type == 'sequence':
-                sample = torch.rand((len(T1), 1), device=device)
-                sample = (sample < (1 / config.simulation.state_params[0])) * torch.randint(0, n_particle_types,
-                                                                                            (len(T1), 1),
-                                                                                            device=device)
-                T1 = (T1 + sample) % n_particle_types
-            if ('modulation' in field_type) & (it >= 0):
-                im_ = im[int(it / n_frames * 256)].squeeze()
-                im_ = np.rot90(im_, 3)
-                im_ = np.reshape(im_, (n_nodes_per_axis * n_nodes_per_axis))
-                if 'permutation' in model_config.field_type:
-                    im_ = im_[permutation_indices]
-                A1[:, 0:1] = torch.tensor(im_[:, None], dtype=torch.float32, device=device)
-            if ('visual' in field_type) & (it >= 0):
-                im_ = im[int(it / n_frames * 256)].squeeze()
-                im_ = np.rot90(im_, 3)
-                im_ = np.reshape(im_, (n_nodes_per_axis * n_nodes_per_axis))
-                A1[:n_nodes, 0:1] = torch.tensor(im_[:, None], dtype=torch.float32, device=device)
-                A1[n_nodes:n_particles, 0:1] = 1
+    for it in trange(0, n_frames + 1):
 
-                # plt.scatter(to_numpy(X1_mesh[:, 1]), to_numpy(X1_mesh[:, 0]), s=40, c=to_numpy(A1), cmap='grey', vmin=0,vmax=1)
-            if 'excitation_single' in field_type:
-                parts = field_type.split('_')
-                period = int(parts[-2])
-                amplitude = float(parts[-1])
-                if (it - 100) % period == 0:
-                    H1[0, 0] = H1[0, 0] + torch.tensor(amplitude, dtype=torch.float32, device=device)
+        dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
+        y = model(dataset, has_field=True)
 
-            x = torch.concatenate(
-                (N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
-                 H1.clone().detach(), A1.clone().detach(), U1.clone().detach()), 1)
-            X[:, it] = H1[:, 0].clone().detach()
-            dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
+        x_list.append(to_numpy(x))
+        y_list.append(to_numpy(y))
 
-            # model prediction
-            if ('modulation' in field_type) & (it >= 0):
-                y = model(dataset, has_field=True)
-            elif ('visual' in field_type) & (it >= 0):
-                y = model(dataset, has_field=True)
-            elif 'PDE_N3' in model_config.signal_model_name:
-                y = model(dataset, has_field=False, alpha=it / n_frames)
-            elif 'PDE_N6' in model_config.signal_model_name:
-                y, p, = model(dataset, has_field=False)
-            elif 'PDE_N7' in model_config.signal_model_name:
-                y, p, = model(dataset, has_field=False)
-            else:
-                y = model(dataset, has_field=False)
-
-        # append list
-        if (it >= 0) & bSave:
-            x_list.append(to_numpy(x))
-            y_list.append(to_numpy(y))
-
-        # Particle update
-        if (config.graph_model.signal_model_name == 'PDE_N6') | (config.graph_model.signal_model_name == 'PDE_N7'):
-            H1[:, 1] = y.squeeze()
-            H1[:, 0] = H1[:, 0] + H1[:, 1] * delta_t
-            if noise_level > 0:
-                H1[:, 0] = H1[:, 0] + torch.randn(n_particles, device=device) * noise_level
-            H1[:, 3] = p.squeeze()
-            H1[:, 2] = torch.relu(H1[:, 2] + H1[:, 3] * delta_t)
-
-        else:
-            H1[:, 1] = y.squeeze()
-            H1[:, 0] = H1[:, 0] + H1[:, 1] * delta_t
-            if noise_level > 0:
-                H1[:, 0] = H1[:, 0] + torch.randn(n_particles, device=device) * noise_level
+        H1 = H1 + y * delta_t
+        if noise_level > 0:
+            H1[:, 0] = H1[:, 0] + torch.randn(n_particles, device=device) * noise_level
 
         # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
         # print(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
