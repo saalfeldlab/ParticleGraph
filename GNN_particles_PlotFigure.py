@@ -4799,7 +4799,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
 
     n_frames = config.simulation.n_frames
     n_runs = config.training.n_runs
-    n_particle_types = config.simulation.n_particle_types
+    n_neuron_types = config.simulation.n_neuron_types
     delta_t = config.simulation.delta_t
     p = config.simulation.params
     omega = model_config.omega
@@ -4854,10 +4854,10 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
 
     print('update variables ...')
     x = x_list[0][n_frames - 5]
-    n_particles = x.shape[0]
-    print(f'N neurons: {n_particles}')
-    logger.info(f'N neurons: {n_particles}')
-    config.simulation.n_particles = n_particles
+    n_neurons = x.shape[0]
+    print(f'N neurons: {n_neurons}')
+    logger.info(f'N neurons: {n_neurons}')
+    config.simulation.n_neurons = n_neurons
     type_list = torch.tensor(x[:, 1 + 2 * dimension:2 + 2 * dimension], device=device)
 
     # activity = torch.tensor(x_list[0],device=device)
@@ -4930,12 +4930,12 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
     #     X1_first = torch.load(f'./graphs_data/{dataset_name}/X1.pt', map_location=device)
     #     X_msg = torch.load(f'./graphs_data/{dataset_name}/X_msg.pt', map_location=device)
     # else:
-    xc, yc = get_equidistant_points(n_points=n_particles)
+    xc, yc = get_equidistant_points(n_points=n_neurons)
     X1_first = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
     perm = torch.randperm(X1_first.size(0))
     X1_first = X1_first[perm]
     torch.save(X1_first, f'./graphs_data/{dataset_name}/X1.pt')
-    xc, yc = get_equidistant_points(n_points=n_particles ** 2)
+    xc, yc = get_equidistant_points(n_points=n_neurons ** 2)
     X_msg = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
     perm = torch.randperm(X_msg.size(0))
     X_msg = X_msg[perm]
@@ -5029,7 +5029,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                 model_a = (model.a - amin) / (amax - amin)
 
                 fig, ax = fig_init()
-                for n in range(n_particle_types-1,-1,-1):
+                for n in range(n_neuron_types-1,-1,-1):
                     pos = torch.argwhere(type_list == n).squeeze()
                     plt.scatter(to_numpy(model_a[pos[1:], 0]), to_numpy(model_a[pos[1:], 1]), s=50, color=cmap.color(n), alpha=1.0, edgecolors='none')
                     plt.scatter(to_numpy(model_a[pos[0], 0]), to_numpy(model_a[pos[0], 1]), s=50, color=cmap.color(n), alpha=1.0, edgecolors='none',
@@ -5050,7 +5050,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                     correction = torch.tensor(1.0, device=device)
                     second_correction = 1.0
 
-                i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+                i, j = torch.triu_indices(n_neurons, n_neurons, requires_grad=False, device=device)
                 A = model.W.clone().detach() / correction
                 A[i, i] = 0
                 A = A.t()
@@ -5059,8 +5059,8 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                 ax = sns.heatmap(to_numpy(A)/second_correction, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-4,vmax=4)
                 cbar = ax.collections[0].colorbar
                 cbar.ax.tick_params(labelsize=48)
-                plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=24)
-                plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=24)
+                plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=24)
+                plt.yticks([0, n_neurons - 1], [1, n_neurons], fontsize=24)
                 plt.subplot(2, 2, 1)
 
                 larynx_pred_weight, index_larynx = map_matrix(larynx_neuron_list, activity_neuron_list, A)
@@ -5076,14 +5076,14 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                 if model_config.signal_model_name == 'PDE_N5':
                     fig, ax = fig_init()
                     plt.axis('off')
-                    for k in range(n_particle_types):
+                    for k in range(n_neuron_types):
                         ax = fig.add_subplot(2, 2, k + 1)
                         for spine in ax.spines.values():
                             spine.set_edgecolor(cmap.color(k))  # Set the color of the outline
                             spine.set_linewidth(3)
                         if k==0:
                             plt.ylabel(r'learned $MLP_1( a_i, a_j, x_j)$', fontsize=32)
-                        for n in range(n_particle_types):
+                        for n in range(n_neuron_types):
                             for m in range(250):
                                 pos0 = to_numpy(torch.argwhere(type_list == k).squeeze())
                                 pos1 = to_numpy(torch.argwhere(type_list == n).squeeze())
@@ -5108,7 +5108,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                     plt.close()
                 elif (model_config.signal_model_name == 'PDE_N4'):
                     fig, ax = fig_init()
-                    for k in range(n_particle_types):
+                    for k in range(n_neuron_types):
                         for m in range(250):
                             pos0 = to_numpy(torch.argwhere(type_list == k).squeeze())
                             n0 = np.random.randint(len(pos0))
@@ -5136,9 +5136,9 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                     rr = torch.linspace(0, 10, 1000).to(device)
                     fig, ax = fig_init()
                     for idx, k in enumerate(np.linspace(4, 10, 13)):  # Corrected step size to generate 13 evenly spaced values
-                        for n in range(0,n_particles,4):
+                        for n in range(0,n_neurons,4):
                             embedding_i = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-                            embedding_j = model.a[np.random.randint(n_particles), :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                            embedding_j = model.a[np.random.randint(n_neurons), :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
                             if model.embedding_trial:
                                 in_features = torch.cat((rr[:, None], torch.ones_like(rr[:, None])*k, embedding_i, embedding_j, model.b[0].repeat(1000, 1)), dim=1)
                             else:
@@ -5175,7 +5175,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                 fig, ax = fig_init()
                 func_list = []
                 config_model = config.graph_model.signal_model_name
-                for n in range(n_particles):
+                for n in range(n_neurons):
                     embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
                     # in_features = torch.cat((rr[:, None], embedding_), dim=1)
                     in_features = get_in_features_update(rr[:, None], model, embedding_, device)
@@ -5197,7 +5197,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                 adj_t = torch.abs(adjacency_) > 0
                 edge_index = adj_t.nonzero().t().contiguous()
 
-                i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+                i, j = torch.triu_indices(n_neurons, n_neurons, requires_grad=False, device=device)
                 A = model.W.clone().detach() / correction
                 A[i, i] = 0
 
@@ -5207,7 +5207,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                 plt.scatter(gt_weight, pred_weight, s=0.1, c=mc, alpha=0.1)
                 plt.xlabel(r'true $W_{ij}$', fontsize=68)
                 plt.ylabel(r'learned $W_{ij}$', fontsize=68)
-                if n_particles == 8000:
+                if n_neurons == 8000:
                     plt.xlim([-0.05, 0.05])
                     plt.ylim([-0.05, 0.05])
                 else:
@@ -5216,8 +5216,8 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                     plt.xlim([-0.15, 0.15])
                     plt.ylim([-0.15, 0.15])
 
-                x_data = np.reshape(gt_weight, (n_particles * n_particles))
-                y_data = np.reshape(pred_weight, (n_particles * n_particles))
+                x_data = np.reshape(gt_weight, (n_neurons * n_neurons))
+                y_data = np.reshape(pred_weight, (n_neurons * n_neurons))
                 lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
                 residuals = y_data - linear_model(x_data, *lin_fit)
                 ss_res = np.sum(residuals ** 2)
@@ -5226,7 +5226,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                 r_squared_list.append(r_squared)
                 slope_list.append(lin_fit[0])
 
-                if n_particles == 8000:
+                if n_neurons == 8000:
                     plt.text(-0.042, 0.042, f'$R^2$: {np.round(r_squared, 3)}', fontsize=34)
                     plt.text(-0.042, 0.036, f'slope: {np.round(lin_fit[0], 2)}', fontsize=34)
                 else:
@@ -5356,9 +5356,9 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                     fig, ax = fig_init()
                     msg_list = []
                     u = torch.linspace(-xnorm.squeeze(), xnorm.squeeze(), 400).to(device)
-                    for sample in range(n_particles):
-                        id0 = np.random.randint(0, n_particles)
-                        id1 = np.random.randint(0, n_particles)
+                    for sample in range(n_neurons):
+                        id0 = np.random.randint(0, n_neurons)
+                        id1 = np.random.randint(0, n_neurons)
                         f = x[id0, 8:9]
                         embedding0 = model.a[id0, :] * torch.ones((400, config.graph_model.embedding_dim),
                                                                   device=device)
@@ -5483,8 +5483,8 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
 
             neuron_gt_list = torch.cat(neuron_gt_list, 0)
             neuron_pred_list = torch.cat(neuron_pred_list, 0)
-            neuron_gt_list = torch.reshape(neuron_gt_list, (1600, n_particles))
-            neuron_pred_list = torch.reshape(neuron_pred_list, (1600, n_particles))
+            neuron_gt_list = torch.reshape(neuron_gt_list, (1600, n_neurons))
+            neuron_pred_list = torch.reshape(neuron_pred_list, (1600, n_neurons))
 
             n = [20, 30, 100, 150, 260, 270, 520, 620, 720, 820]
 
@@ -5567,8 +5567,8 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
         ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.1, vmax=0.1)
         cbar = ax.collections[0].colorbar
         cbar.ax.tick_params(labelsize=32)
-        plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
-        plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+        plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=48)
+        plt.yticks([0, n_neurons - 1], [1, n_neurons], fontsize=48)
         plt.xticks(rotation=0)
         # plt.subplot(2, 2, 1)
         # ax = sns.heatmap(to_numpy(adjacency[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
@@ -5594,7 +5594,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
         plt.savefig(f'./{log_dir}/results/larynx_activity_grid.tif', dpi=300)
         plt.close()
 
-        n = np.random.randint(0, n_particles, 50)
+        n = np.random.randint(0, n_neurons, 50)
         fig, axes = plt.subplots(5, 4, figsize=(16, 20))
         axes = axes.flatten()
         for i, activity in enumerate(activity_list[:20]):
@@ -5622,9 +5622,9 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             print(f'net: {net}')
 
             fig, axes = fig_init()
-            for n in range(n_particles):
+            for n in range(n_neurons):
                 if x_list[0][100][n, 6] != 6:
-                    plt.scatter(to_numpy(model.a[:n_particles, 0]), to_numpy(model.a[:n_particles, 1]), alpha=0.1, s=50, color='k', edgecolors='none')
+                    plt.scatter(to_numpy(model.a[:n_neurons, 0]), to_numpy(model.a[:n_neurons, 1]), alpha=0.1, s=50, color='k', edgecolors='none')
                     plt.text(to_numpy(model.a[n, 0]), to_numpy(model.a[n, 1]) - 0.01, all_neuron_list[n], fontsize=10)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/all_embedding_text.tif", dpi=170.7)
@@ -5687,7 +5687,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                 axes = axes.flatten()
 
                 for k in range(min(20, model.W.shape[0] - 1)):
-                    i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+                    i, j = torch.triu_indices(n_neurons, n_neurons, requires_grad=False, device=device)
                     A = model.W[k].clone().detach()
                     A[i, i] = 0
                     A = A.t()
@@ -5701,7 +5701,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                 fig, axes = plt.subplots(4, 5, figsize=(20, 16))
                 axes = axes.flatten()
                 for k in range(min(20, model.W.shape[0] - 1)):
-                    i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+                    i, j = torch.triu_indices(n_neurons, n_neurons, requires_grad=False, device=device)
                     A = model.W[k].clone().detach()
                     A[i, i] = 0
                     A = A.t()
@@ -5727,7 +5727,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
 
             else:
 
-                i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+                i, j = torch.triu_indices(n_neurons, n_neurons, requires_grad=False, device=device)
                 A = model.W.clone().detach()
                 A[i, i] = 0
                 A = A.t()
@@ -5736,8 +5736,8 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                                  cbar_kws={'fraction': 0.046}, vmin=-4, vmax=4)
                 cbar = ax.collections[0].colorbar
                 cbar.ax.tick_params(labelsize=48)
-                plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=24)
-                plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=24)
+                plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=24)
+                plt.yticks([0, n_neurons - 1], [1, n_neurons], fontsize=24)
                 plt.subplot(2, 2, 1)
                 larynx_pred_weight, index_larynx = map_matrix(larynx_neuron_list, all_neuron_list, A)
                 ax = sns.heatmap(to_numpy(larynx_pred_weight) , cbar=False, center=0, square=True,
@@ -5754,7 +5754,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                 model_f.load_state_dict(state_dict['model_state_dict'])
 
             fig, ax = fig_init()
-            for n in range(n_particles):
+            for n in range(n_neurons):
                 if x_list[0][100][n, 6] != 6:
                     plt.scatter(to_numpy(model.a[n, 0]), to_numpy(model.a[n, 1]), s=100, color=cmap.color(int(type_list[n])), alpha=1.0, edgecolors='none')
             if 'latex' in style:
@@ -5787,7 +5787,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             for ((i1, n1), (i2, n2)), dist in zip(rl_pairs_sorted, d_i1_i2_sorted):
                 if (x_list[0][100][i1, 6] != 6) & (x_list[0][100][i2, 6] != 6) :
                     fig, ax = fig_init()
-                    plt.scatter(to_numpy(model.a[:n_particles, 0]), to_numpy(model.a[:n_particles, 1]), s=50, color='k',
+                    plt.scatter(to_numpy(model.a[:n_neurons, 0]), to_numpy(model.a[:n_neurons, 1]), s=50, color='k',
                                 edgecolors='none', alpha=0.25)
                     print(f"{n1} (index {i1}) - {n2} (index {i2}): distance = {dist.item():.4f}")
                     plt.scatter(to_numpy(model.a[i1, 0]), to_numpy(model.a[i1, 1]), s=100, color='g', edgecolors='none')
@@ -5821,7 +5821,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             # fig, ax = fig_init()
             # rr = torch.linspace(-xnorm.squeeze() * 4, xnorm.squeeze() * 4, 1000).to(device)
             # func_list = []
-            # for n in trange(0,n_particles,n_particles//100):
+            # for n in trange(0,n_neurons,n_neurons//100):
             #     if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
             #         embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
             #         in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
@@ -5833,7 +5833,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             #         func = func ** 2
             #     func_list.append(func)
             #     plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)),
-            #              linewidth=2 // ( 1 + (n_particle_types>16)*1.0), alpha=0.25)
+            #              linewidth=2 // ( 1 + (n_neuron_types>16)*1.0), alpha=0.25)
             # func_list = torch.stack(func_list).squeeze()
             # y_min, y_max = func_list.min().item(), func_list.max().item()
             # plt.xlabel(r'$x_i$', fontsize=68)
@@ -5855,15 +5855,15 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             #
             # matrix_correction = torch.mean(func_list[:,950:1000], dim=1)
             # A_corrected = A
-            # for i in range(n_particles):
+            # for i in range(n_neurons):
             #     A_corrected[i, :] = A[i, :] * matrix_correction[i]
             # plt.figure(figsize=(10, 10))
             # ax = sns.heatmap(to_numpy(A_corrected), center=0, square=True, cmap='bwr',
             #                  cbar_kws={'fraction': 0.046}, vmin=-0.1, vmax=0.1)
             # cbar = ax.collections[0].colorbar
             # cbar.ax.tick_params(labelsize=32)
-            # plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
-            # plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+            # plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=48)
+            # plt.yticks([0, n_neurons - 1], [1, n_neurons], fontsize=48)
             # plt.xticks(rotation=0)
             # # plt.subplot(2, 2, 1)
             # # ax = sns.heatmap(to_numpy(A[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
@@ -5889,15 +5889,15 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             #         ax.set_frame_on(False)
             #         ax.get_xaxis().set_visible(False)
             #         ax.get_yaxis().set_visible(False)
-            #         for k in range(n_particle_types):
+            #         for k in range(n_neuron_types):
             #             ax = fig.add_subplot(2, 2, k + 1)
             #             for spine in ax.spines.values():
             #                 spine.set_edgecolor(cmap.color(k))  # Set the color of the outline
             #                 spine.set_linewidth(3)
-            #             for m in range(n_particle_types):
+            #             for m in range(n_neuron_types):
             #                 true_func = true_model.func(rr, k, m, 'phi')
             #                 plt.plot(to_numpy(rr), to_numpy(true_func), c=mc, linewidth=1, label='original', alpha=0.21)
-            #             for n in range(n_particle_types):
+            #             for n in range(n_neuron_types):
             #                 for m in range(250):
             #                     pos0 = to_numpy(torch.argwhere(type_list == k).squeeze())
             #                     pos1 = to_numpy(torch.argwhere(type_list == n).squeeze())
@@ -5948,14 +5948,14 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             #         rr = torch.linspace(-xnorm.squeeze(), xnorm.squeeze(), 1500).to(device)
             #     if not(is_CElegans):
             #         if (model_config.signal_model_name == 'PDE_N4'):
-            #             for n in range(n_particle_types):
+            #             for n in range(n_neuron_types):
             #                 true_func = true_model.func(rr, n, 'phi')
             #                 plt.plot(to_numpy(rr), to_numpy(true_func), c = mc, linewidth = 16, label = 'original', alpha = 0.21)
             #         else:
             #             true_func = true_model.func(rr, 0, 'phi')
             #             plt.plot(to_numpy(rr), to_numpy(true_func), c = mc, linewidth = 16, label = 'original', alpha = 0.21)
             #
-            #     for n in trange(0,n_particles):
+            #     for n in trange(0,n_neurons):
             #         if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
             #             embedding_ = model.a[n, :] * torch.ones((1500, config.graph_model.embedding_dim), device=device)
             #             in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
@@ -5993,17 +5993,17 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             #
             # fig, ax = fig_init()
             # if not (is_CElegans):
-            #     for n in trange(n_particle_types):
+            #     for n in trange(n_neuron_types):
             #         if model_config.signal_model_name == 'PDE_N5':
             #             true_func = true_model.func(rr, n, n, 'update')
             #         else:
             #             true_func = true_model.func(rr, n, 'update')
             #         plt.plot(to_numpy(rr), to_numpy(true_func), c=mc, linewidth=16, label='original', alpha=0.21)
             # phi_list = []
-            # for n in trange(n_particles):
+            # for n in trange(n_neurons):
             #     embedding_ = model.a[n, :] * torch.ones((1500, config.graph_model.embedding_dim), device=device)
             #     # in_features = torch.cat((rr[:, None], embedding_), dim=1)
-            #     in_features = get_in_features_update(rr[:, None], n_particles, embedding_, model.update_type, device)
+            #     in_features = get_in_features_update(rr[:, None], n_neurons, embedding_, model.update_type, device)
             #     with torch.no_grad():
             #         func = model.lin_phi(in_features.float())
             #     func = func[:, 0]
@@ -6030,7 +6030,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             #
             # proj_interaction = (proj_interaction - np.min(proj_interaction)) / (np.max(proj_interaction) - np.min(proj_interaction) + 1e-10)
             # fig, ax = fig_init()
-            # for n in trange(n_particle_types):
+            # for n in trange(n_neuron_types):
             #     pos = torch.argwhere(type_list == n)
             #     pos = to_numpy(pos)
             #     if len(pos) > 0:
@@ -6049,21 +6049,21 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             # embedding = to_numpy(model.a.squeeze())
             # labels, n_clusters, new_labels = sparsify_cluster(config.training.cluster_method, proj_interaction, embedding,
             #                                                   config.training.cluster_distance_threshold, type_list,
-            #                                                   n_particle_types, embedding_cluster)
-            # accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels[:n_particles])
+            #                                                   n_neuron_types, embedding_cluster)
+            # accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels[:n_neurons])
             # print(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}  ')
             # logger.info(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method} ')
             #
             # # config.training.cluster_method = 'kmeans_auto_embedding'
             # # labels, n_clusters, new_labels = sparsify_cluster(config.training.cluster_method, proj_interaction, embedding,
             # #                                                   config.training.cluster_distance_threshold, type_list,
-            # #                                                   n_particle_types, embedding_cluster)
+            # #                                                   n_neuron_types, embedding_cluster)
             # # accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
             # # print(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}  ')
             # # logger.info(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method} ')
             #
             # plt.figure(figsize=(10, 10))
-            # plt.scatter(to_numpy(X1_first[:n_particles, 0]), to_numpy(X1_first[:n_particles, 1]), s=150, color=cmap.color(to_numpy(type_list).astype(int)))
+            # plt.scatter(to_numpy(X1_first[:n_neurons, 0]), to_numpy(X1_first[:n_neurons, 1]), s=150, color=cmap.color(to_numpy(type_list).astype(int)))
             # plt.xticks([])
             # plt.yticks([])
             # plt.axis('off')
@@ -6072,7 +6072,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             # plt.close()
             #
             # plt.figure(figsize=(10, 10))
-            # plt.scatter(to_numpy(X1_first[:n_particles, 0]), to_numpy(X1_first[:n_particles, 1]), s=150, color=cmap.color(new_labels[:n_particles].astype(int)))
+            # plt.scatter(to_numpy(X1_first[:n_neurons, 0]), to_numpy(X1_first[:n_neurons, 1]), s=150, color=cmap.color(new_labels[:n_neurons].astype(int)))
             # plt.xticks([])
             # plt.yticks([])
             # plt.axis('off')
@@ -6086,7 +6086,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             # plt.scatter(gt_weight, pred_weight / 10 , s=0.1, c=mc, alpha=0.1)
             # plt.xlabel(r'true $W_{ij}$', fontsize=68)
             # plt.ylabel(r'learned $W_{ij}$', fontsize=68)
-            # if n_particles == 8000:
+            # if n_neurons == 8000:
             #     plt.xlim([-0.05,0.05])
             #     plt.ylim([-0.05,0.05])
             # else:
@@ -6096,8 +6096,8 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             # plt.savefig(f"./{log_dir}/results/first_comparison.tif", dpi=87)
             # plt.close()
             #
-            # x_data = np.reshape(gt_weight, (n_particles * n_particles))
-            # y_data =  np.reshape(pred_weight, (n_particles * n_particles))
+            # x_data = np.reshape(gt_weight, (n_neurons * n_neurons))
+            # y_data =  np.reshape(pred_weight, (n_neurons * n_neurons))
             # lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
             # residuals = y_data - linear_model(x_data, *lin_fit)
             # ss_res = np.sum(residuals ** 2)
@@ -6116,7 +6116,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             # plt.scatter(gt_weight, pred_weight / second_correction, s=0.1, c=mc, alpha=0.1)
             # plt.xlabel(r'true $W_{ij}$', fontsize=68)
             # plt.ylabel(r'learned $W_{ij}$', fontsize=68)
-            # if n_particles == 8000:
+            # if n_neurons == 8000:
             #     plt.xlim([-0.05,0.05])
             #     plt.ylim([-0.05,0.05])
             # else:
@@ -6132,8 +6132,8 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             # cbar = ax.collections[0].colorbar
             # # here set the labelsize by 20
             # cbar.ax.tick_params(labelsize=32)
-            # plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
-            # plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+            # plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=48)
+            # plt.yticks([0, n_neurons - 1], [1, n_neurons], fontsize=48)
             # plt.xticks(rotation=0)
             # plt.subplot(2, 2, 1)
             # ax = sns.heatmap(to_numpy(A[0:20, 0:20]/second_correction), cbar=False, center=0, square=True, cmap='bwr')
@@ -6467,7 +6467,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             #     if has_field:
             #         if 'visual' in field_type:
             #             x[:n_nodes, 8:9] = model_f(time=k / n_frames) ** 2
-            #             x[n_nodes:n_particles, 8:9] = 1
+            #             x[n_nodes:n_neurons, 8:9] = 1
             #         elif 'learnable_short_term_plasticity' in field_type:
             #             alpha = (k % model.embedding_step) / model.embedding_step
             #             x[:, 8] = alpha * model.b[:, k // model.embedding_step + 1] ** 2 + (1 - alpha) * model.b[:,
@@ -6500,9 +6500,9 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             #     fig, ax = fig_init()
             #     msg_list = []
             #     u = torch.linspace(-xnorm.squeeze(), xnorm.squeeze(), 400).to(device)
-            #     for sample in range(n_particles):
-            #         id0 = np.random.randint(0, n_particles)
-            #         id1 = np.random.randint(0, n_particles)
+            #     for sample in range(n_neurons):
+            #         id0 = np.random.randint(0, n_neurons)
+            #         id1 = np.random.randint(0, n_neurons)
             #         f = x[id0, 8:9]
             #         embedding0 = model.a[id0, :] * torch.ones((400, config.graph_model.embedding_dim), device=device)
             #         embedding1 = model.a[id1, :] * torch.ones((400, config.graph_model.embedding_dim), device=device)
@@ -6526,8 +6526,8 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             #
             #     fig, ax = fig_init()
             #     u = torch.linspace(-xnorm.squeeze(), xnorm.squeeze(), 400).to(device)
-            #     for n in range(n_particle_types):
-            #         for m in range(n_particle_types):
+            #     for n in range(n_neuron_types):
+            #         for m in range(n_neuron_types):
             #             true_func = true_model.func(u, n, m, 'phi')
             #             plt.plot(to_numpy(u), to_numpy(true_func), c=cmap.color(n), linewidth=3)
             #     plt.xlabel(r'$x_i$', fontsize=68)
@@ -6543,8 +6543,8 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             #     fig, ax = fig_init()
             #     func_list = []
             #     rr_list = []
-            #     for sample in range(n_particles):
-            #         id0 = np.random.randint(0, n_particles)
+            #     for sample in range(n_neurons):
+            #         id0 = np.random.randint(0, n_neurons)
             #         embedding0 = model.a[id0, :] * torch.ones((400, config.graph_model.embedding_dim), device=device)
             #         in_features = torch.cat((torch.zeros((400, 1), device=device), embedding0, msgs[:,None], torch.ones((400, 1), device=device)), dim=1)
             #         pred = model.lin_phi(in_features)
@@ -6595,10 +6595,10 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             #     # if model_config.signal_model_name == 'PDE_N4':
             #     #
             #     #     fig, ax = fig_init()
-            #     #     for m in range(n_particle_types):
+            #     #     for m in range(n_neuron_types):
             #     #         u = torch.linspace(-xnorm.squeeze() * 2, xnorm.squeeze() * 2, 400).to(device)
             #     #         true_func = true_model.func(u, m, 'phi')
-            #     #         embedding0 = model.a[m * n_particles // n_particle_types, :] * torch.ones(
+            #     #         embedding0 = model.a[m * n_neurons // n_neuron_types, :] * torch.ones(
             #     #             (400, config.graph_model.embedding_dim), device=device)
             #     #         field = torch.ones((400, 1), device=device)
             #     #         in_features = torch.cat((u[:, None], embedding0), dim=1)
@@ -6655,7 +6655,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             #
             #         case 'PDE_N4':
             #
-            #             for k in range(n_particle_types):
+            #             for k in range(n_neuron_types):
             #                 print('  ')
             #                 print('  ')
             #                 print('  ')
@@ -6694,7 +6694,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             #                 #     print(symbolic(n))
             #                 #     logger.info(symbolic(n))
             #
-            #     for k in range(n_particle_types):
+            #     for k in range(n_neuron_types):
             #         print('  ')
             #         print('  ')
             #         print('  ')
@@ -6725,7 +6725,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
     n_frames = config.simulation.n_frames
     n_runs = config.training.n_runs
-    n_particle_types = config.simulation.n_particle_types
+    n_neuron_types = config.simulation.n_neuron_types
     delta_t = config.simulation.delta_t
     p = config.simulation.params
     omega = model_config.omega
@@ -6770,10 +6770,10 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
     print('update variables ...')
     x = x_list[0][n_frames - 5]
-    n_particles = x.shape[0]
-    print(f'N neurons: {n_particles}')
-    logger.info(f'N neurons: {n_particles}')
-    config.simulation.n_particles = n_particles
+    n_neurons = x.shape[0]
+    print(f'N neurons: {n_neurons}')
+    logger.info(f'N neurons: {n_neurons}')
+    config.simulation.n_neurons = n_neurons
     type_list = torch.tensor(x[:, 1 + 2 * dimension:2 + 2 * dimension], device=device)
 
     # activity = torch.tensor(x_list[0],device=device)
@@ -6841,12 +6841,12 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
     #     X1_first = torch.load(f'./graphs_data/{dataset_name}/X1.pt', map_location=device)
     #     X_msg = torch.load(f'./graphs_data/{dataset_name}/X_msg.pt', map_location=device)
     # else:
-    xc, yc = get_equidistant_points(n_points=n_particles)
+    xc, yc = get_equidistant_points(n_points=n_neurons)
     X1_first = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
     perm = torch.randperm(X1_first.size(0))
     X1_first = X1_first[perm]
     torch.save(X1_first, f'./graphs_data/{dataset_name}/X1.pt')
-    xc, yc = get_equidistant_points(n_points=n_particles ** 2)
+    xc, yc = get_equidistant_points(n_points=n_neurons ** 2)
     X_msg = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
     perm = torch.randperm(X_msg.size(0))
     X_msg = X_msg[perm]
@@ -6930,7 +6930,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 model_a = (model.a - amin) / (amax - amin)
 
                 fig, ax = fig_init()
-                for n in range(n_particle_types-1,-1,-1):
+                for n in range(n_neuron_types-1,-1,-1):
                     pos = torch.argwhere(type_list == n).squeeze()
                     plt.scatter(to_numpy(model_a[pos, 0]), to_numpy(model_a[pos, 1]), s=50, color=mc, alpha=1.0, edgecolors='none')   # cmap.color(n)
                 plt.xlabel(r'$a_{0}$', fontsize=68)
@@ -6949,7 +6949,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     second_correction = 1.0
 
 
-                i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+                i, j = torch.triu_indices(n_neurons, n_neurons, requires_grad=False, device=device)
                 A = model.W.clone().detach() / correction
                 A[i, i] = 0
                 A = A.t()
@@ -6958,8 +6958,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 ax = sns.heatmap(to_numpy(A)/second_correction, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-4,vmax=4)
                 cbar = ax.collections[0].colorbar
                 cbar.ax.tick_params(labelsize=48)
-                plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=24)
-                plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=24)
+                plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=24)
+                plt.yticks([0, n_neurons - 1], [1, n_neurons], fontsize=24)
                 plt.subplot(2, 2, 1)
 
                 ax = sns.heatmap(to_numpy(A[0:20, 0:20])/second_correction, cbar=False, center=0, square=True, cmap='bwr', vmin=-4, vmax=4)
@@ -6974,14 +6974,14 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 if model_config.signal_model_name == 'PDE_N5':
                     fig, ax = fig_init()
                     plt.axis('off')
-                    for k in range(n_particle_types):
+                    for k in range(n_neuron_types):
                         ax = fig.add_subplot(2, 2, k + 1)
                         for spine in ax.spines.values():
                             spine.set_edgecolor(cmap.color(k))  # Set the color of the outline
                             spine.set_linewidth(3)
                         if k==0:
                             plt.ylabel(r'learned $MLP_1( a_i, a_j, x_j)$', fontsize=32)
-                        for n in range(n_particle_types):
+                        for n in range(n_neuron_types):
                             for m in range(250):
                                 pos0 = to_numpy(torch.argwhere(type_list == k).squeeze())
                                 pos1 = to_numpy(torch.argwhere(type_list == n).squeeze())
@@ -7006,7 +7006,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     plt.close()
                 elif (model_config.signal_model_name == 'PDE_N4'):
                     fig, ax = fig_init()
-                    for k in range(n_particle_types):
+                    for k in range(n_neuron_types):
                         for m in range(250):
                             pos0 = to_numpy(torch.argwhere(type_list == k).squeeze())
                             n0 = np.random.randint(len(pos0))
@@ -7035,9 +7035,9 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     fig, ax = fig_init()
                     for idx, k in enumerate(np.linspace(4, 10, 13)):  # Corrected step size to generate 13 evenly spaced values
 
-                        for n in range(0,n_particles,4):
+                        for n in range(0,n_neurons,4):
                             embedding_i = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-                            embedding_j = model.a[np.random.randint(n_particles), :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                            embedding_j = model.a[np.random.randint(n_neurons), :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
                             if model.embedding_trial:
                                 in_features = torch.cat((torch.ones_like(rr[:, None]) * k, rr[:, None], embedding_i, embedding_j, model.b[0].repeat(1000, 1)), dim=1)
                             else:
@@ -7074,7 +7074,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 fig, ax = fig_init()
                 func_list = []
                 config_model = config.graph_model.signal_model_name
-                for n in range(n_particles):
+                for n in range(n_neurons):
                     embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
                     # in_features = torch.cat((rr[:, None], embedding_), dim=1)
                     in_features = get_in_features_update(rr[:, None], model, embedding_, device)
@@ -7096,7 +7096,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 adj_t = torch.abs(adjacency_) > 0
                 edge_index = adj_t.nonzero().t().contiguous()
 
-                i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+                i, j = torch.triu_indices(n_neurons, n_neurons, requires_grad=False, device=device)
                 A = model.W.clone().detach() / correction
                 A[i, i] = 0
 
@@ -7106,7 +7106,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 plt.scatter(gt_weight, pred_weight, s=0.1, c=mc, alpha=0.1)
                 plt.xlabel(r'true $W_{ij}$', fontsize=68)
                 plt.ylabel(r'learned $W_{ij}$', fontsize=68)
-                if n_particles == 8000:
+                if n_neurons == 8000:
                     plt.xlim([-0.05, 0.05])
                     plt.ylim([-0.05, 0.05])
                 else:
@@ -7115,8 +7115,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     plt.xlim([-0.15, 0.15])
                     plt.ylim([-0.15, 0.15])
 
-                x_data = np.reshape(gt_weight, (n_particles * n_particles))
-                y_data = np.reshape(pred_weight, (n_particles * n_particles))
+                x_data = np.reshape(gt_weight, (n_neurons * n_neurons))
+                y_data = np.reshape(pred_weight, (n_neurons * n_neurons))
                 lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
                 residuals = y_data - linear_model(x_data, *lin_fit)
                 ss_res = np.sum(residuals ** 2)
@@ -7125,7 +7125,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 r_squared_list.append(r_squared)
                 slope_list.append(lin_fit[0])
 
-                if n_particles == 8000:
+                if n_neurons == 8000:
                     plt.text(-0.042, 0.042, f'$R^2$: {np.round(r_squared, 3)}', fontsize=34)
                     plt.text(-0.042, 0.036, f'slope: {np.round(lin_fit[0], 2)}', fontsize=34)
                 else:
@@ -7255,9 +7255,9 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     fig, ax = fig_init()
                     msg_list = []
                     u = torch.linspace(-xnorm.squeeze(), xnorm.squeeze(), 400).to(device)
-                    for sample in range(n_particles):
-                        id0 = np.random.randint(0, n_particles)
-                        id1 = np.random.randint(0, n_particles)
+                    for sample in range(n_neurons):
+                        id0 = np.random.randint(0, n_neurons)
+                        id1 = np.random.randint(0, n_neurons)
                         f = x[id0, 8:9]
                         embedding0 = model.a[id0, :] * torch.ones((400, config.graph_model.embedding_dim),
                                                                   device=device)
@@ -7385,8 +7385,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
             neuron_gt_list = torch.cat(neuron_gt_list, 0)
             neuron_pred_list = torch.cat(neuron_pred_list, 0)
-            neuron_gt_list = torch.reshape(neuron_gt_list, (1600, n_particles))
-            neuron_pred_list = torch.reshape(neuron_pred_list, (1600, n_particles))
+            neuron_gt_list = torch.reshape(neuron_gt_list, (1600, n_neurons))
+            neuron_pred_list = torch.reshape(neuron_pred_list, (1600, n_neurons))
 
             n = [20, 30, 100, 150, 260, 270, 520, 620, 720, 820]
 
@@ -7470,8 +7470,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                          vmin=-0.1, vmax=0.1)
         cbar = ax.collections[0].colorbar
         cbar.ax.tick_params(labelsize=32)
-        plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
-        plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+        plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=48)
+        plt.yticks([0, n_neurons - 1], [1, n_neurons], fontsize=48)
         plt.xticks(rotation=0)
         # plt.subplot(2, 2, 1)
         # ax = sns.heatmap(to_numpy(adjacency[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
@@ -7489,7 +7489,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 activity_neuron_list = json.load(file)
             map_larynx_matrix, n = map_matrix(larynx_neuron_list, all_neuron_list, adjacency)
         else:
-            n = np.random.randint(0, n_particles, 50)
+            n = np.random.randint(0, n_neurons, 50)
         for i in range(len(n)):
             plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=1)
         plt.xlabel('time', fontsize=64)
@@ -7514,7 +7514,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             model.edges = edge_index
             print(f'net: {net}')
 
-            i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+            i, j = torch.triu_indices(n_neurons, n_neurons, requires_grad=False, device=device)
             A = model.W.clone().detach()
             A[i, i] = 0
 
@@ -7523,8 +7523,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                              cbar_kws={'fraction': 0.046}, vmin=-0.5, vmax=0.5)
             cbar = ax.collections[0].colorbar
             cbar.ax.tick_params(labelsize=32)
-            plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
-            plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+            plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=48)
+            plt.yticks([0, n_neurons - 1], [1, n_neurons], fontsize=48)
             plt.xticks(rotation=0)
             # plt.subplot(2, 2, 1)
             # ax = sns.heatmap(to_numpy(A[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
@@ -7535,7 +7535,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.savefig(f'./{log_dir}/results/first learned connectivity.tif', dpi=300)
             plt.close()
 
-            A = A[:n_particles,:n_particles]
+            A = A[:n_neurons,:n_neurons]
 
             if has_field:
                 net = f'{log_dir}/models/best_model_f_with_{n_runs - 1}_graphs_{epoch}.pt'
@@ -7610,9 +7610,9 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
             fig, ax = fig_init()
             if has_ghost:
-                plt.scatter(to_numpy(model.a[:n_particles, 0]), to_numpy(model.a[:n_particles, 1]), s=150, color=cmap.color(0), edgecolors='none')
+                plt.scatter(to_numpy(model.a[:n_neurons, 0]), to_numpy(model.a[:n_neurons, 1]), s=150, color=cmap.color(0), edgecolors='none')
             else:
-                for n in range(n_particle_types,-1,-1):
+                for n in range(n_neuron_types,-1,-1):
                     pos = torch.argwhere(type_list == n).squeeze()
                     plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=200, color=cmap.color(n), alpha=0.25, edgecolors='none')
             if 'latex' in style:
@@ -7626,7 +7626,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.close()
 
             if 'excitation' in model_config.update_type:
-                embedding = model.a[:n_particles]
+                embedding = model.a[:n_neurons]
                 excitation = torch.tensor(x_list[0][:, :, 10: 10 + model.excitation_dim],device=device)
                 excitation = torch.reshape(excitation, (excitation.shape[0]*excitation.shape[1], excitation.shape[2]))
                 fig = plt.figure(figsize=(10, 10))
@@ -7646,7 +7646,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             fig, ax = fig_init()
             rr = torch.linspace(-xnorm.squeeze() * 2 , xnorm.squeeze() * 2 , 1000).to(device)
             func_list = []
-            for n in trange(0,n_particles,n_particles//100):
+            for n in trange(0,n_neurons,n_neurons//100):
                 if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
                     embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
                     in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
@@ -7658,7 +7658,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     func = func ** 2
                 func_list.append(func)
                 plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)),
-                         linewidth=2 // ( 1 + (n_particle_types>16)*1.0), alpha=0.25)
+                         linewidth=2 // ( 1 + (n_neuron_types>16)*1.0), alpha=0.25)
             func_list = torch.stack(func_list).squeeze()
             y_min, y_max = func_list.min().item(), func_list.max().item()
             plt.xlabel(r'$x_i$', fontsize=68)
@@ -7680,15 +7680,15 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
             matrix_correction = torch.mean(func_list[:,950:1000], dim=1)
             A_corrected = A
-            for i in range(n_particles):
+            for i in range(n_neurons):
                 A_corrected[i, :] = A[i, :] * matrix_correction[i]
             plt.figure(figsize=(10, 10))
             ax = sns.heatmap(to_numpy(A_corrected), center=0, square=True, cmap='bwr',
                              cbar_kws={'fraction': 0.046}, vmin=-0.1, vmax=0.1)
             cbar = ax.collections[0].colorbar
             cbar.ax.tick_params(labelsize=32)
-            plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
-            plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+            plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=48)
+            plt.yticks([0, n_neurons - 1], [1, n_neurons], fontsize=48)
             plt.xticks(rotation=0)
             # plt.subplot(2, 2, 1)
             # ax = sns.heatmap(to_numpy(A[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
@@ -7714,15 +7714,15 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     ax.set_frame_on(False)
                     ax.get_xaxis().set_visible(False)
                     ax.get_yaxis().set_visible(False)
-                    for k in range(n_particle_types):
+                    for k in range(n_neuron_types):
                         ax = fig.add_subplot(2, 2, k + 1)
                         for spine in ax.spines.values():
                             spine.set_edgecolor(cmap.color(k))  # Set the color of the outline
                             spine.set_linewidth(3)
-                        for m in range(n_particle_types):
+                        for m in range(n_neuron_types):
                             true_func = true_model.func(rr, k, m, 'phi')
                             plt.plot(to_numpy(rr), to_numpy(true_func), c=mc, linewidth=1, label='original', alpha=0.21)
-                        for n in range(n_particle_types):
+                        for n in range(n_neuron_types):
                             for m in range(250):
                                 pos0 = to_numpy(torch.argwhere(type_list == k).squeeze())
                                 pos1 = to_numpy(torch.argwhere(type_list == n).squeeze())
@@ -7769,14 +7769,14 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 rr = torch.linspace(-xnorm.squeeze(), xnorm.squeeze(), 1500).to(device)
 
                 if (model_config.signal_model_name == 'PDE_N4'):
-                    for n in range(n_particle_types):
+                    for n in range(n_neuron_types):
                         true_func = true_model.func(rr, n, 'phi')
                         plt.plot(to_numpy(rr), to_numpy(true_func), c = mc, linewidth = 16, label = 'original', alpha = 0.21)
                 else:
                     true_func = true_model.func(rr, 0, 'phi')
                     plt.plot(to_numpy(rr), to_numpy(true_func), c = mc, linewidth = 16, label = 'original', alpha = 0.21)
 
-                for n in trange(0,n_particles):
+                for n in trange(0,n_neurons):
                     if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
                         embedding_ = model.a[n, :] * torch.ones((1500, config.graph_model.embedding_dim), device=device)
                         in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
@@ -7813,17 +7813,17 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             print('interaction functions ...')
 
             fig, ax = fig_init()
-            for n in trange(n_particle_types):
+            for n in trange(n_neuron_types):
                 if model_config.signal_model_name == 'PDE_N5':
                     true_func = true_model.func(rr, n, n, 'update')
                 else:
                     true_func = true_model.func(rr, n, 'update')
                 plt.plot(to_numpy(rr), to_numpy(true_func), c=mc, linewidth=16, label='original', alpha=0.21)
             phi_list = []
-            for n in trange(n_particles):
+            for n in trange(n_neurons):
                 embedding_ = model.a[n, :] * torch.ones((1500, config.graph_model.embedding_dim), device=device)
                 # in_features = torch.cat((rr[:, None], embedding_), dim=1)
-                in_features = get_in_features_update(rr[:, None], n_particles, embedding_, model.update_type, device)
+                in_features = get_in_features_update(rr[:, None], n_neurons, embedding_, model.update_type, device)
                 with torch.no_grad():
                     func = model.lin_phi(in_features.float())
                 func = func[:, 0]
@@ -7849,7 +7849,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
             proj_interaction = (proj_interaction - np.min(proj_interaction)) / (np.max(proj_interaction) - np.min(proj_interaction) + 1e-10)
             fig, ax = fig_init()
-            for n in trange(n_particle_types):
+            for n in trange(n_neuron_types):
                 pos = torch.argwhere(type_list == n)
                 pos = to_numpy(pos)
                 if len(pos) > 0:
@@ -7868,21 +7868,21 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             embedding = to_numpy(model.a.squeeze())
             labels, n_clusters, new_labels = sparsify_cluster(config.training.cluster_method, proj_interaction, embedding,
                                                               config.training.cluster_distance_threshold, type_list,
-                                                              n_particle_types, embedding_cluster)
-            accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels[:n_particles])
+                                                              n_neuron_types, embedding_cluster)
+            accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels[:n_neurons])
             print(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}  ')
             logger.info(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method} ')
 
             # config.training.cluster_method = 'kmeans_auto_embedding'
             # labels, n_clusters, new_labels = sparsify_cluster(config.training.cluster_method, proj_interaction, embedding,
             #                                                   config.training.cluster_distance_threshold, type_list,
-            #                                                   n_particle_types, embedding_cluster)
+            #                                                   n_neuron_types, embedding_cluster)
             # accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
             # print(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}  ')
             # logger.info(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method} ')
 
             plt.figure(figsize=(10, 10))
-            plt.scatter(to_numpy(X1_first[:n_particles, 0]), to_numpy(X1_first[:n_particles, 1]), s=150, color=cmap.color(to_numpy(type_list).astype(int)))
+            plt.scatter(to_numpy(X1_first[:n_neurons, 0]), to_numpy(X1_first[:n_neurons, 1]), s=150, color=cmap.color(to_numpy(type_list).astype(int)))
             plt.xticks([])
             plt.yticks([])
             plt.axis('off')
@@ -7891,7 +7891,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.close()
 
             plt.figure(figsize=(10, 10))
-            plt.scatter(to_numpy(X1_first[:n_particles, 0]), to_numpy(X1_first[:n_particles, 1]), s=150, color=cmap.color(new_labels[:n_particles].astype(int)))
+            plt.scatter(to_numpy(X1_first[:n_neurons, 0]), to_numpy(X1_first[:n_neurons, 1]), s=150, color=cmap.color(new_labels[:n_neurons].astype(int)))
             plt.xticks([])
             plt.yticks([])
             plt.axis('off')
@@ -7905,7 +7905,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.scatter(gt_weight, pred_weight / 10 , s=0.1, c=mc, alpha=0.1)
             plt.xlabel(r'true $W_{ij}$', fontsize=68)
             plt.ylabel(r'learned $W_{ij}$', fontsize=68)
-            if n_particles == 8000:
+            if n_neurons == 8000:
                 plt.xlim([-0.05,0.05])
                 plt.ylim([-0.05,0.05])
             else:
@@ -7915,8 +7915,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.savefig(f"./{log_dir}/results/first_comparison.tif", dpi=87)
             plt.close()
 
-            x_data = np.reshape(gt_weight, (n_particles * n_particles))
-            y_data =  np.reshape(pred_weight, (n_particles * n_particles))
+            x_data = np.reshape(gt_weight, (n_neurons * n_neurons))
+            y_data =  np.reshape(pred_weight, (n_neurons * n_neurons))
             lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
             residuals = y_data - linear_model(x_data, *lin_fit)
             ss_res = np.sum(residuals ** 2)
@@ -7935,7 +7935,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.scatter(gt_weight, pred_weight / second_correction, s=0.1, c=mc, alpha=0.1)
             plt.xlabel(r'true $W_{ij}$', fontsize=68)
             plt.ylabel(r'learned $W_{ij}$', fontsize=68)
-            if n_particles == 8000:
+            if n_neurons == 8000:
                 plt.xlim([-0.05,0.05])
                 plt.ylim([-0.05,0.05])
             else:
@@ -7951,8 +7951,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             cbar = ax.collections[0].colorbar
             # here set the labelsize by 20
             cbar.ax.tick_params(labelsize=32)
-            plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
-            plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+            plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=48)
+            plt.yticks([0, n_neurons - 1], [1, n_neurons], fontsize=48)
             plt.xticks(rotation=0)
             plt.subplot(2, 2, 1)
             ax = sns.heatmap(to_numpy(A[0:20, 0:20]/second_correction), cbar=False, center=0, square=True, cmap='bwr')
@@ -8305,7 +8305,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 if has_field:
                     if 'visual' in field_type:
                         x[:n_nodes, 8:9] = model_f(time=k / n_frames) ** 2
-                        x[n_nodes:n_particles, 8:9] = 1
+                        x[n_nodes:n_neurons, 8:9] = 1
                     elif 'learnable_short_term_plasticity' in field_type:
                         alpha = (k % model.embedding_step) / model.embedding_step
                         x[:, 8] = alpha * model.b[:, k // model.embedding_step + 1] ** 2 + (1 - alpha) * model.b[:,
@@ -8338,9 +8338,9 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 fig, ax = fig_init()
                 msg_list = []
                 u = torch.linspace(-xnorm.squeeze(), xnorm.squeeze(), 400).to(device)
-                for sample in range(n_particles):
-                    id0 = np.random.randint(0, n_particles)
-                    id1 = np.random.randint(0, n_particles)
+                for sample in range(n_neurons):
+                    id0 = np.random.randint(0, n_neurons)
+                    id1 = np.random.randint(0, n_neurons)
                     f = x[id0, 8:9]
                     embedding0 = model.a[id0, :] * torch.ones((400, config.graph_model.embedding_dim), device=device)
                     embedding1 = model.a[id1, :] * torch.ones((400, config.graph_model.embedding_dim), device=device)
@@ -8364,8 +8364,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
                 fig, ax = fig_init()
                 u = torch.linspace(-xnorm.squeeze(), xnorm.squeeze(), 400).to(device)
-                for n in range(n_particle_types):
-                    for m in range(n_particle_types):
+                for n in range(n_neuron_types):
+                    for m in range(n_neuron_types):
                         true_func = true_model.func(u, n, m, 'phi')
                         plt.plot(to_numpy(u), to_numpy(true_func), c=cmap.color(n), linewidth=3)
                 plt.xlabel(r'$x_i$', fontsize=68)
@@ -8381,8 +8381,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 fig, ax = fig_init()
                 func_list = []
                 rr_list = []
-                for sample in range(n_particles):
-                    id0 = np.random.randint(0, n_particles)
+                for sample in range(n_neurons):
+                    id0 = np.random.randint(0, n_neurons)
                     embedding0 = model.a[id0, :] * torch.ones((400, config.graph_model.embedding_dim), device=device)
                     in_features = torch.cat((torch.zeros((400, 1), device=device), embedding0, msgs[:,None], torch.ones((400, 1), device=device)), dim=1)
                     pred = model.lin_phi(in_features)
@@ -8433,10 +8433,10 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 # if model_config.signal_model_name == 'PDE_N4':
                 #
                 #     fig, ax = fig_init()
-                #     for m in range(n_particle_types):
+                #     for m in range(n_neuron_types):
                 #         u = torch.linspace(-xnorm.squeeze() * 2, xnorm.squeeze() * 2, 400).to(device)
                 #         true_func = true_model.func(u, m, 'phi')
-                #         embedding0 = model.a[m * n_particles // n_particle_types, :] * torch.ones(
+                #         embedding0 = model.a[m * n_neurons // n_neuron_types, :] * torch.ones(
                 #             (400, config.graph_model.embedding_dim), device=device)
                 #         field = torch.ones((400, 1), device=device)
                 #         in_features = torch.cat((u[:, None], embedding0), dim=1)
@@ -8493,7 +8493,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
                     case 'PDE_N4':
 
-                        for k in range(n_particle_types):
+                        for k in range(n_neuron_types):
                             print('  ')
                             print('  ')
                             print('  ')
@@ -8532,7 +8532,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                             #     print(symbolic(n))
                             #     logger.info(symbolic(n))
 
-                for k in range(n_particle_types):
+                for k in range(n_neuron_types):
                     print('  ')
                     print('  ')
                     print('  ')
@@ -8562,7 +8562,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
 
     n_frames = config.simulation.n_frames
     n_runs = config.training.n_runs
-    n_particle_types = config.simulation.n_particle_types
+    n_neuron_types = config.simulation.n_neuron_types
     delta_t = config.simulation.delta_t
     p = config.simulation.params
     omega = model_config.omega
@@ -8597,10 +8597,10 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
 
     print('update variables ...')
     x = x_list[0][n_frames - 1]
-    n_particles = x.shape[0]
-    print(f'N neurons: {n_particles}')
-    logger.info(f'N neurons: {n_particles}')
-    config.simulation.n_particles = n_particles
+    n_neurons = x.shape[0]
+    print(f'N neurons: {n_neurons}')
+    logger.info(f'N neurons: {n_neurons}')
+    config.simulation.n_neurons = n_neurons
     type_list = torch.tensor(x[:, 1 + 2 * dimension:2 + 2 * dimension], device=device)
 
     activity = torch.tensor(x_list[0],device=device)
@@ -8679,7 +8679,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                 model_a = (model.a - amin) / (amax - amin)
 
                 # fig, ax = fig_init()
-                # for n in range(n_particle_types):
+                # for n in range(n_neuron_types):
                 #     c1 = cmap.color(n)
                 #     c2 = cmap.color((n+1)%4)
                 #     c_list = np.linspace(c1, c2, 100)
@@ -8700,7 +8700,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                 # plt.close()
 
                 fig, ax = fig_init()
-                for k in range(n_particle_types):
+                for k in range(n_neuron_types):
                     # plt.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), s=1, color=mc, alpha=0.5, edgecolors='none')
                     plt.scatter(to_numpy(model.a[k*25000:(k+1)*25000, 0]), to_numpy(model.a[k*25000:(k+1)*25000, 1]), s=1, color=cmap.color(k),alpha=0.5, edgecolors='none')
                     # plt.scatter(to_numpy(model.a[k * 25000: k * 25000 + 100, 0]),
@@ -8722,7 +8722,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                 correction = torch.load(f'{log_dir}/correction.pt',map_location=device)
                 second_correction = np.load(f'{log_dir}/second_correction.npy')
 
-                i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+                i, j = torch.triu_indices(n_neurons, n_neurons, requires_grad=False, device=device)
                 A = model.W.clone().detach() / correction
                 A[i, i] = 0
 
@@ -8730,8 +8730,8 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                 ax = sns.heatmap(to_numpy(A)/second_correction, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.1,vmax=0.1)
                 cbar = ax.collections[0].colorbar
                 cbar.ax.tick_params(labelsize=48)
-                plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
-                plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+                plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=48)
+                plt.yticks([0, n_neurons - 1], [1, n_neurons], fontsize=48)
                 plt.subplot(2, 2, 1)
                 ax = sns.heatmap(to_numpy(A[0:20, 0:20])/second_correction, cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
                 plt.xticks([])
@@ -8776,7 +8776,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                 plt.close()
 
                 fig, ax = fig_init()
-                for n in range(0, n_particles):
+                for n in range(0, n_neurons):
                     in_features = rr[:, None]
                     with torch.no_grad():
                         func = model.lin_edge(in_features.float()) * correction
@@ -8795,7 +8795,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                 adj_t = torch.abs(adjacency_) > 0
                 edge_index = adj_t.nonzero().t().contiguous()
 
-                i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+                i, j = torch.triu_indices(n_neurons, n_neurons, requires_grad=False, device=device)
                 A = model.W.clone().detach() / correction
                 A[i, i] = 0
 
@@ -8805,7 +8805,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                 plt.scatter(gt_weight, pred_weight / 10 , s=0.1, c=mc, alpha=0.1)
                 plt.xlabel(r'true $W_{ij}$', fontsize=68)
                 plt.ylabel(r'learned $W_{ij}$', fontsize=68)
-                if n_particles == 8000:
+                if n_neurons == 8000:
                     plt.xlim([-0.05, 0.05])
                     plt.ylim([-0.05, 0.05])
                 else:
@@ -8815,8 +8815,8 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                 plt.savefig(f"./{log_dir}/results/all/comparison_{epoch}.tif", dpi=80)
                 plt.close()
 
-                x_data = np.reshape(gt_weight, (n_particles * n_particles))
-                y_data = np.reshape(pred_weight, (n_particles * n_particles))
+                x_data = np.reshape(gt_weight, (n_neurons * n_neurons))
+                y_data = np.reshape(pred_weight, (n_neurons * n_neurons))
                 lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
                 residuals = y_data - linear_model(x_data, *lin_fit)
                 ss_res = np.sum(residuals ** 2)
@@ -8889,11 +8889,11 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
 
         for n in trange(100):
 
-            indices = np.arange(n_particles)*100+n
+            indices = np.arange(n_neurons)*100+n
 
             fig, ax = fig_init()
             plt.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), s=1, color=mc, alpha=0.01)
-            for k in range(n_particle_types):
+            for k in range(n_neuron_types):
                 plt.scatter(to_numpy(model.a[indices[k * 250:(k + 1) * 250], 0]),
                             to_numpy(model.a[indices[k * 250:(k + 1) * 250], 1]), s=100, color=cmap.color(k), alpha=0.5,
                             edgecolors='none')
@@ -8955,7 +8955,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
             #     plt.ylabel(r'Learned $MLP_0(a_i(t), x_i)$', fontsize=16)
             #
             #
-            # for k in range(n_particle_types):
+            # for k in range(n_neuron_types):
             #     ax = plt.subplot(2, 2, k + 1)
             #     n = indices[k * 250:(k + 1) * 250]
             #     plt.scatter(to_numpy(model.a[indices[k * 250:(k + 1) * 250], 0]),
@@ -8999,7 +8999,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
         # plt.close()
         #
         # plt.figure(figsize=(15, 10))
-        # n = np.random.permutation(n_particles)
+        # n = np.random.permutation(n_neurons)
         # for i in range(25):
         #     plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=2)
         # plt.xlabel('time', fontsize=64)
@@ -9034,8 +9034,8 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                          vmin=-0.1, vmax=0.1)
         cbar = ax.collections[0].colorbar
         cbar.ax.tick_params(labelsize=32)
-        plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
-        plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+        plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=48)
+        plt.yticks([0, n_neurons - 1], [1, n_neurons], fontsize=48)
         plt.xticks(rotation=0)
         plt.subplot(2, 2, 1)
         ax = sns.heatmap(to_numpy(adjacency[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
@@ -9160,7 +9160,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                 print(f'R^2$: {r_squared:0.4f}  slope: {np.round(lin_fit[0], 4)}')
 
             if model_config.embedding_dim == 4:
-                for k in range(n_particle_types):
+                for k in range(n_neuron_types):
                     fig = plt.figure(figsize=(10, 10))
                     ax = fig.add_subplot(111, projection='3d')
                     # ax.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), to_numpy(model.a[:, 2]), s=1, color=mc, alpha=0.01, edgecolors='none')
@@ -9177,7 +9177,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                 fig = plt.figure(figsize=(10, 10))
                 ax = fig.add_subplot(111, projection='3d')
 
-                for k in range(n_particle_types):
+                for k in range(n_neuron_types):
                     # ax.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), to_numpy(model.a[:, 2]), s=1, color=mc, alpha=0.01, edgecolors='none')
                     ax.scatter(to_numpy(model.a[k * 25000:(k + 1) * 25000, 0]),
                             to_numpy(model.a[k * 25000:(k + 1) * 25000, 1]), to_numpy(model.a[k * 25000:(k + 1) * 25000, 2]), s=10, color=cmap.color(k), alpha=0.1, edgecolors='none')
@@ -9192,7 +9192,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
             else:
 
                 fig, ax = fig_init()
-                for n in range(n_particle_types):
+                for n in range(n_neuron_types):
                     c1 = cmap.color(n)
                     c2 = cmap.color((n+1)%4)
                     c_list = np.linspace(c1, c2, 100)
@@ -9209,7 +9209,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                 plt.close()
 
                 fig, ax = fig_init()
-                for k in range(n_particle_types):
+                for k in range(n_neuron_types):
                     # plt.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), s=1, color=mc, alpha=0.5, edgecolors='none')
                     plt.scatter(to_numpy(model.a[k*25000:(k+1)*25000, 0]), to_numpy(model.a[k*25000:(k+1)*25000, 1]), s=1, color=cmap.color(k),alpha=0.5, edgecolors='none')
                     # plt.scatter(to_numpy(model.a[k * 25000: k * 25000 + 100, 0]),
@@ -9224,7 +9224,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                 plt.savefig(f"./{log_dir}/results/all_embedding_1_{epoch}.tif", dpi=80)
                 plt.close()
 
-                for k in range(n_particle_types):
+                for k in range(n_neuron_types):
                     fig, ax = fig_init()
                     # plt.scatter(to_numpy(model.a[0:100000, 0]), to_numpy(model.a[0:100000, 1]), s=1, color=mc, alpha=0.25, edgecolors='none')
                     plt.scatter(to_numpy(model.a[k*25000:(k+1)*25000, 0]), to_numpy(model.a[k*25000:(k+1)*25000, 1]), s=1, color=cmap.color(k),alpha=0.5, edgecolors='none')
@@ -9271,7 +9271,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
             fig, ax = fig_init()
             rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
             func_list = []
-            for n in trange(0,n_particles,n_particles):
+            for n in trange(0,n_neurons,n_neurons):
                 if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
                     embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
                     in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
@@ -9285,7 +9285,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                 else:
                     func_list.append(func)
                 plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)),
-                         linewidth=8 // ( 1 + (n_particle_types>16)*1.0), alpha=0.25)
+                         linewidth=8 // ( 1 + (n_neuron_types>16)*1.0), alpha=0.25)
             func_list = torch.stack(func_list)
             plt.xlabel(r'$x_i$', fontsize=68)
             plt.ylabel(r'Learned $\psi^*(a_i, x_i)$', fontsize=68)
@@ -9302,14 +9302,14 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
             fig, ax = fig_init()
             rr = torch.tensor(np.linspace(-7.5, 7.5, 1500)).to(device)
             if model_config.signal_model_name == 'PDE_N4':
-                for n in range(n_particle_types):
+                for n in range(n_neuron_types):
                     true_func = true_model.func(rr, n, 'phi')
                     plt.plot(to_numpy(rr), to_numpy(true_func), c = 'k', linewidth = 16, label = 'original', alpha = 0.21)
             else:
                 true_func = true_model.func(rr, 0, 'phi')
                 plt.plot(to_numpy(rr), to_numpy(true_func), c = 'k', linewidth = 16, label = 'original', alpha = 0.21)
 
-            for n in trange(0,n_particles):
+            for n in trange(0,n_neurons):
                 in_features = rr[:, None]
                 with torch.no_grad():
                     func = model.lin_edge(in_features.float()) * correction
@@ -9324,7 +9324,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
             plt.close()
 
 
-            i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+            i, j = torch.triu_indices(n_neurons, n_neurons, requires_grad=False, device=device)
             A = model.W.clone().detach() / correction
             A[i, i] = 0
 
@@ -9334,7 +9334,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
             plt.scatter(gt_weight, pred_weight / 10 , s=0.1, c=mc, alpha=0.1)
             plt.xlabel(r'true $W_{ij}$', fontsize=68)
             plt.ylabel(r'learned $W_{ij}$', fontsize=68)
-            if n_particles == 8000:
+            if n_neurons == 8000:
                 plt.xlim([-0.05,0.05])
                 plt.ylim([-0.05,0.05])
             else:
@@ -9344,8 +9344,8 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
             plt.savefig(f"./{log_dir}/results/comparison_{epoch}.tif", dpi=87)
             plt.close()
 
-            x_data = np.reshape(gt_weight, (n_particles * n_particles))
-            y_data =  np.reshape(pred_weight, (n_particles * n_particles))
+            x_data = np.reshape(gt_weight, (n_neurons * n_neurons))
+            y_data =  np.reshape(pred_weight, (n_neurons * n_neurons))
             lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
             residuals = y_data - linear_model(x_data, *lin_fit)
             ss_res = np.sum(residuals ** 2)
@@ -9364,8 +9364,8 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
             cbar = ax.collections[0].colorbar
             # here set the labelsize by 20
             cbar.ax.tick_params(labelsize=32)
-            plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
-            plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+            plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=48)
+            plt.yticks([0, n_neurons - 1], [1, n_neurons], fontsize=48)
             plt.xticks(rotation=0)
             plt.subplot(2, 2, 1)
             ax = sns.heatmap(to_numpy(A[0:20, 0:20]/second_correction), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
