@@ -1610,6 +1610,7 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
     os.makedirs(folder, exist_ok=True)
     os.makedirs(f'./graphs_data/{dataset_name}/Fig/', exist_ok=True)
     os.makedirs(f'./graphs_data/{dataset_name}/Fig/AVFL/', exist_ok=True)
+    os.makedirs(f'./graphs_data/{dataset_name}/Fig/I1L/', exist_ok=True)
 
     # Loading Data from class Worm_Data_Loader(Dataset) in https://github.com/TuragaLab/wormvae
 
@@ -1692,6 +1693,17 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
         plt.plot(activity, linewidth=1, c='r')
         plt.title(f'{data_OI} {neuron_OI} {activity_neuron_list[neuron_OI]}', fontsize=18)
         plt.savefig(f"graphs_data/{dataset_name}/Fig/AVFL/Fig_{data_OI:03d}_{neuron_OI:03d}.tif", dpi=80)
+        plt.close()
+    neuron_OI = get_neuron_index('I1L', activity_neuron_list)
+    for data_OI in range(n_runs):
+        activity = activity_datasets[data_OI, neuron_OI, :]
+        fig = plt.figure(figsize=(20, 2))
+        activity = activity_datasets[data_OI, neuron_OI, :]
+        plt.plot(activity, linewidth=1, c='b')
+        activity = activity_datasets[data_OI, neuron_OI+1, :]
+        plt.plot(activity, linewidth=1, c='r')
+        plt.title(f'{data_OI} {neuron_OI} {activity_neuron_list[neuron_OI]}', fontsize=18)
+        plt.savefig(f"graphs_data/{dataset_name}/Fig/I1L/Fig_{data_OI:03d}_{neuron_OI:03d}.tif", dpi=80)
         plt.close()
 
     # add baseline
