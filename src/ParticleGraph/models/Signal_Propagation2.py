@@ -179,7 +179,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
                 T = self.W[data_id_i, :, :] * self.mask
                 return T[edge_index_i, edge_index_j][:, None] * line_edge
             else:
-                return self.W[data_id_i.squeeze(), edge_index_i % (self.W.shape[0]), edge_index_j % (self.W.shape[0])][:, None] * line_edge
+                return self.W[data_id_i.squeeze(), edge_index_i % (self.W.shape[1]), edge_index_j % (self.W.shape[1])][:, None] * line_edge
         else:
             T = self.W * self.mask
             if (self.batch_size==1):

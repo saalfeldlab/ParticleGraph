@@ -1563,28 +1563,28 @@ def plot_worm_adjacency_matrix(weights, all_neuron_list, title, output_path):
 
     # Plot adjacency matrix
     ax = fig.add_subplot(121)
-    sns.heatmap(np.transpose(weights > 0), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
+    sns.heatmap(weights > 0, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
     ax.set_xticks(range(len(all_neuron_list)))
     ax.set_xticklabels(all_neuron_list, fontsize=6, rotation=90)
     ax.set_yticks(range(len(all_neuron_list)))
     ax.set_yticklabels(all_neuron_list, fontsize=6)
     plt.title(title, fontsize=18)
-    plt.xlabel('postsynaptic', fontsize=18)
-    plt.ylabel('presynaptic', fontsize=18)
+    plt.xlabel('presynaptic', fontsize=18)
+    plt.ylabel('postsynaptic', fontsize=18)
 
     # Plot weights
     ax = fig.add_subplot(122)
-    sns.heatmap(np.transpose(weights), center=0, square=True, cmap='bwr', vmin=0, vmax=30, cbar_kws={'fraction': 0.046})
+    sns.heatmap(weights, center=0, square=True, cmap='bwr', vmin=0, vmax=30, cbar_kws={'fraction': 0.046})
     ax.set_xticks(range(len(all_neuron_list)))
     ax.set_xticklabels(all_neuron_list, fontsize=6, rotation=90)
     ax.set_yticks(range(len(all_neuron_list)))
     ax.set_yticklabels(all_neuron_list, fontsize=6)
     plt.title('weights', fontsize=18)
-    plt.xlabel('postsynaptic', fontsize=18)
-    plt.ylabel('presynaptic', fontsize=18)
+    plt.xlabel('presynaptic', fontsize=18)
+    plt.ylabel('postsynaptic', fontsize=18)
 
     plt.tight_layout()
-    plt.savefig(output_path, dpi=170)
+    plt.savefig(output_path, dpi=500)
     plt.close()
 
 
@@ -1600,6 +1600,7 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
 
     n_runs = train_config.n_runs
     n_particles = simulation_config.n_particles
+    baseline = simulation_config.baseline_value
 
     delta_t = simulation_config.delta_t
     bc_pos, bc_dpos = choose_boundary_values('no')
@@ -1693,8 +1694,8 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
         plt.savefig(f"graphs_data/{dataset_name}/Fig/AVFL/Fig_{data_OI:03d}_{neuron_OI:03d}.tif", dpi=80)
         plt.close()
 
-    # add baseline 2
-    activity_worm = activity_datasets + 6
+    # add baseline
+    activity_worm = activity_datasets + baseline
     # activity_with_zeros, missing_matrix = process_activity(activity_worm)
     # activity_worm = process_trace(activity_worm)
 
@@ -1802,7 +1803,7 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
 
     fig = plt.figure(figsize=(15, 15))
     ax = fig.add_subplot(111)
-    sns.heatmap(to_numpy(mask_matrix.t()), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
+    sns.heatmap(to_numpy(mask_matrix), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
     ax.set_xticks(range(len(activity_neuron_list)))
     ax.set_xticklabels(activity_neuron_list, fontsize=6, rotation=90)
     ax.set_yticks(range(len(activity_neuron_list)))
@@ -1853,7 +1854,7 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
 
     fig = plt.figure(figsize=(15, 15))
     ax = fig.add_subplot(111)
-    sns.heatmap(to_numpy(map_larynx_matrix.t()), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
+    sns.heatmap(to_numpy(map_larynx_matrix), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
     ax.set_xticks(range(len(larynx_neuron_list)))
     ax.set_xticklabels(larynx_neuron_list, fontsize=14, rotation=90)
     ax.set_yticks(range(len(larynx_neuron_list)))

@@ -65,7 +65,7 @@ plotting:
 
 training:
     n_epochs: 20
-    batch_size: 32
+    batch_size: 1
     small_init_batch_size: False
     device: 'auto'
     n_runs: 1

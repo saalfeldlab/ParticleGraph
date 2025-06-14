@@ -26,7 +26,6 @@ from sklearn.manifold import TSNE
 from ParticleGraph.denoise_data import *
 from scipy.spatial import KDTree
 from sklearn import neighbors, metrics
-import torch.nn.functional as F
 from scipy.ndimage import median_filter
 from tifffile import imwrite
 from matplotlib.colors import LinearSegmentedColormap
@@ -63,7 +62,7 @@ def data_train(config=None, erase=False, best_model=None, device=None):
     print(f'dataset_name: {dataset_name}')
 
     if 'Agents' in config.graph_model.particle_model_name:
-        data_train_agents(config, best_model, device)
+        data_train_agents(config, erase, best_model, device)
     elif has_mouse_city:
         data_train_rat_city(config, erase, best_model, device)
     elif has_WBI:
@@ -76,8 +75,6 @@ def data_train(config=None, erase=False, best_model=None, device=None):
         data_train_synaptic2(config, erase, best_model, device)
     elif do_tracking & has_cell_division:
         data_train_cell(config, erase, best_model, device)
-    elif do_tracking:
-        data_train_tracking(config, erase, best_model, device)
     elif has_cell_division:
         data_train_cell(config, erase, best_model, device)
     elif has_state:
@@ -2353,7 +2350,7 @@ def data_train_particle_field(config, erase, best_model, device):
 
 
 def data_train_potential_energy(config, erase, best_model, device):
-    model = SIREN(in_features=1, out_features=1, hidden_features=256, hidden_layers=3)
+    model = siren(in_features=1, out_features=1, hidden_features=256, hidden_layers=3)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
     criterion = nn.MSELoss()
 
