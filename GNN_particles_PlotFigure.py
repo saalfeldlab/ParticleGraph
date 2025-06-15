@@ -1041,130 +1041,6 @@ def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoc
     return accuracy
 
 
-def plot_cell_rates(config, device, log_dir, n_particle_types, type_list, x_list, new_labels, cmap, logger, style):
-
-    n_frames = config.simulation.n_frames
-    delta_t = config.simulation.delta_t
-
-    cell_cycle_length = np.array(config.simulation.cell_cycle_length)
-    if len(cell_cycle_length) == 1:
-        cell_cycle_length = to_numpy(torch.load(f'graphs_data/graphs_{config.dataset}/cycle_length.pt', map_location=device))
-
-
-    print('plot cell rates ...')
-    N_cells_alive = np.zeros((n_frames, n_particle_types))
-    N_cells_dead = np.zeros((n_frames, n_particle_types))
-
-    if os.path.exists(f"./{log_dir}/results/x_.npy"):
-        x_ = np.load(f"./{log_dir}/results/x_.npy")
-        N_cells_alive = np.load(f"./{log_dir}/results/cell_alive.npy")
-        N_cells_dead = np.load(f"./{log_dir}/results/cell_dead.npy")
-    else:
-        for it in trange(n_frames):
-
-            x = x_list[0][it].clone().detach()
-            particle_index = to_numpy(x[:, 0:1]).astype(int)
-            x[:, 5:6] = torch.tensor(new_labels[particle_index], device=device)
-            if it == 0:
-                x_=x_list[0][it].clone().detach()
-            else:
-                x_=torch.concatenate((x_,x),axis=0)
-
-            for k in range(n_particle_types):
-                pos = torch.argwhere((x[:, 5:6] == k) & (x[:, 6:7] == 1))
-                N_cells_alive[it, k] = pos.shape[0]
-                pos = torch.argwhere((x[:, 5:6] == k) & (x[:, 6:7] == 0))
-                N_cells_dead[it, k] = pos.shape[0]
-
-        x_list=[]
-        x_ = to_numpy(x_)
-
-        print('save data ...')
-
-        np.save(f"./{log_dir}/results/cell_alive.npy", N_cells_alive)
-        np.save(f"./{log_dir}/results/cell_dead.npy", N_cells_dead)
-        np.save(f"./{log_dir}/results/x_.npy", x_)
-
-    print('plot results ...')
-
-    last_frame_growth = np.argwhere(np.diff(N_cells_alive[:, 0], axis=0))
-    last_frame_growth = last_frame_growth[-1] - 1
-    N_cells_alive = N_cells_alive[0:int(last_frame_growth), :]
-    N_cells_dead = N_cells_dead[0:int(last_frame_growth), :]
-
-    fig, ax = fig_init()
-    for k in range(n_particle_types):
-        plt.plot(np.arange(last_frame_growth), N_cells_alive[:, k], color=cmap.color(k), linewidth=4,
-                 label=f'Cell type {k} alive')
-    plt.xlabel(r'Frame', fontsize=64)
-    plt.ylabel(r'Number of cells', fontsize=64)
-    ax.xaxis.set_major_formatter(FormatStrFormatter('%.0f'))
-    ax.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/cell_alive.tif", dpi=300)
-    plt.close()
-
-    fig, ax = fig_init()
-    for k in range(n_particle_types):
-        plt.plot(np.arange(last_frame_growth), N_cells_dead[:, k], color=cmap.color(k), linewidth=4,
-                 label=f'Cell type {k} dead')
-    plt.xlabel(r'Frame', fontsize=68)
-    plt.ylabel(r'Number of dead cells', fontsize=68)
-    ax.xaxis.set_major_formatter(FormatStrFormatter('%.0f'))
-    ax.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/cell_dead.tif", dpi=300)
-    plt.close()
-
-    #         6,7 H1 cell status dim=2  H1[:,0] = cell alive flag, alive : 0 , death : 0 , H1[:,1] = cell division flag, dividing : 1
-    #         8 A1 cell age dim=1
-
-    division_list = {}
-    for n in np.unique(new_labels):
-        division_list[n] = []
-    for n in trange(len(type_list)):
-        pos = np.argwhere(x_[:, 0:1] == n)
-        if len(pos)>0:
-            division_list[new_labels[n]].append(len(pos)* delta_t)
-
-    reconstructed_cell_cycle_length = np.zeros(n_particle_types)
-    for k in range(n_particle_types):
-        print(f'Cell type {k} division rate: {np.mean(division_list[k])}+/-{np.std(division_list[k])}')
-        logger.info(f'Cell type {k} division rate: {np.mean(division_list[k])}+/-{np.std(division_list[k])}')
-        reconstructed_cell_cycle_length[k] = np.mean(division_list[k])
-
-    x_data = cell_cycle_length
-    y_data = reconstructed_cell_cycle_length.squeeze()
-    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-    residuals = y_data - linear_model(x_data, *lin_fit)
-    ss_res = np.sum(residuals ** 2)
-    ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-    r_squared = 1 - (ss_res / ss_tot)
-    print(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
-    logger.info(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
-
-    fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
-    plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-    plt.scatter(cell_cycle_length,reconstructed_cell_cycle_length, color=cmap.color(np.arange(n_particle_types)), s=200)
-    plt.xlabel(r'True cell cycle length', fontsize=54)
-    plt.ylabel(r'Learned cell cycle length', fontsize=54)
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/cell_cycle_length.tif", dpi=170)
-    plt.close()
-
-
-    division_list = {}
-    for n in np.unique(new_labels):
-        division_list[n] = []
-    for n in trange(n_frames):
-        x = x_list[0][n].clone().detach()
-        pos = torch.argwhere(x[:, 7:8] == 0)
-        if pos.shape[0]>1:
-            x = x[pos]
-            for x_ in x:
-                division_list[x_[5]].append(x_[8])
-
-
 def plot_attraction_repulsion(config,epoch_list, log_dir, logger, style, device):
 
     dataset_name = config.dataset
@@ -1366,6 +1242,236 @@ def plot_attraction_repulsion(config,epoch_list, log_dir, logger, style, device)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/true_func.tif", dpi=170.7)
             plt.close()
+
+def plot_attraction_repulsion_asym(config, epoch_list, log_dir, logger, style, device):
+
+
+    dataset_name = config.dataset
+
+    dimension = config.simulation.dimension
+    max_radius = config.simulation.max_radius
+    min_radius = config.simulation.min_radius
+    n_particle_types = config.simulation.n_particle_types
+    n_particles = config.simulation.n_particles
+    cmap = CustomColorMap(config=config)
+    embedding_cluster = EmbeddingCluster(config)
+    n_runs = config.training.n_runs
+
+    x_list, y_list, vnorm, ynorm = load_training_data(dataset_name, n_runs, log_dir, device)
+    logger.info("vnorm:{:.2e},  ynorm:{:.2e}".format(to_numpy(vnorm), to_numpy(ynorm)))
+    model, bc_pos, bc_dpos = choose_training_model(config, device)
+
+    x = x_list[1][0].clone().detach()
+    index_particles = get_index_particles(x, n_particle_types, dimension)
+    type_list = get_type_list(x, dimension)
+
+    if 'black' in style:
+        mc = 'w'
+    else:
+        mc = 'k'
+
+    for epoch in epoch_list:
+
+        net = f"{log_dir}/models/best_model_with_1_graphs_{epoch}.pt"
+        print(f'network: {net}')
+        state_dict = torch.load(net, map_location=device)
+        model.load_state_dict(state_dict['model_state_dict'])
+        model.eval()
+
+        config.training.cluster_method = 'distance_embedding'
+        config.training.cluster_distance_threshold = 0.01
+        alpha = 0.1
+        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config,embedding_cluster,
+                                                                       cmap, index_particles, type_list,
+                                                                       n_particle_types, n_particles, ynorm, epoch,
+                                                                       log_dir, alpha, device)
+        print(
+            f'final result     accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+        logger.info(
+            f'final result     accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+
+        x = x_list[0][100].clone().detach()
+        index_particles = get_index_particles(x, n_particle_types, dimension)
+        type_list = to_numpy(get_type_list(x, dimension))
+        distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+        edges = adj_t.nonzero().t().contiguous()
+        indexes = np.random.randint(0, edges.shape[1], 5000)
+        edges = edges[:, indexes]
+
+        fig, ax = fig_init()
+        rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+        func_list = []
+        for n in trange(edges.shape[1]):
+            embedding_1 = model.a[1, edges[0, n], :] * torch.ones((1000, config.graph_model.embedding_dim),
+                                                                  device=device)
+            embedding_2 = model.a[1, edges[1, n], :] * torch.ones((1000, config.graph_model.embedding_dim),
+                                                                  device=device)
+            type = type_list[to_numpy(edges[0, n])].astype(int)
+            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                     rr[:, None] / max_radius, embedding_1, embedding_2), dim=1)
+            with torch.no_grad():
+                func = model.lin_edge(in_features.float())
+            func = func[:, 0]
+            func_list.append(func)
+            plt.plot(to_numpy(rr),
+                     to_numpy(func) * to_numpy(ynorm),
+                     color=cmap.color(type), linewidth=8)
+        if 'latex' in style:
+            plt.xlabel(r'$d_{ij}$', fontsize=68)
+            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=68)
+        else:
+            plt.xlabel('$d_{ij}$', fontsize=68)
+            plt.ylabel('$f(a_i, d_{ij})$', fontsize=68)
+        plt.ylim(config.plotting.ylim)
+        plt.xlim([0, max_radius])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/func_{epoch}.tif", dpi=170.7)
+        plt.close()
+
+        fig, ax = fig_init()
+        p = torch.load(f'graphs_data/{dataset_name}/model_p.pt', map_location=device)
+        true_func = []
+        for n in range(n_particle_types):
+            for m in range(n_particle_types):
+                true_func.append(model.psi(rr, p[n, m].squeeze(), p[n, m].squeeze()))
+                plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n,m], p[n,m]).squeeze()), color=cmap.color(n), linewidth=8)
+        if 'latex' in style:
+            plt.xlabel(r'$d_{ij}$', fontsize=68)
+            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=68)
+        else:
+            plt.xlabel('$d_{ij}$', fontsize=68)
+            plt.ylabel('$f(a_i, d_{ij})$', fontsize=68)
+        plt.ylim(config.plotting.ylim)
+        plt.xlim([0, max_radius])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/true_func.tif", dpi=170.7)
+        plt.close()
+
+        true_func_list = []
+        for k in trange(edges.shape[1]):
+            n = type_list[to_numpy(edges[0, k])].astype(int)
+            m = type_list[to_numpy(edges[1, k])].astype(int)
+            true_func_list.append(true_func[3 * n.squeeze() + m.squeeze()])
+        func_list = torch.stack(func_list) * ynorm
+        true_func_list = torch.stack(true_func_list)
+        rmserr_list = torch.sqrt(torch.mean((func_list - true_func_list) ** 2, axis=1))
+        rmserr_list = to_numpy(rmserr_list)
+        print("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+        logger.info("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+
+def plot_attraction_repulsion_continuous(config, epoch_list, log_dir, logger, style, device):
+
+    dataset_name = config.dataset
+
+    dimension = config.simulation.dimension
+    n_particle_types = config.simulation.n_particle_types
+    n_particles = config.simulation.n_particles
+    dataset_name = config.dataset
+    max_radius = config.simulation.max_radius
+    n_runs = config.training.n_runs
+    cmap = CustomColorMap(config=config)
+
+    embedding_cluster = EmbeddingCluster(config)
+
+    x_list, y_list, vnorm, ynorm = load_training_data(dataset_name, n_runs, log_dir, device)
+    logger.info("vnorm:{:.2e},  ynorm:{:.2e}".format(to_numpy(vnorm), to_numpy(ynorm)))
+    model, bc_pos, bc_dpos = choose_training_model(config, device)
+
+    x = x_list[1][0].clone().detach()
+
+    if 'black' in style:
+        mc = 'w'
+    else:
+        mc = 'k'
+
+    for epoch in epoch_list:
+
+        net = f"{log_dir}/models/best_model_with_1_graphs_{epoch}.pt"
+        print(f'network: {net}')
+        state_dict = torch.load(net, map_location=device)
+        model.load_state_dict(state_dict['model_state_dict'])
+
+        n_particle_types = 3
+        index_particles = []
+        for n in range(n_particle_types):
+            index_particles.append(
+                np.arange((n_particles // n_particle_types) * n, (n_particles // n_particle_types) * (n + 1)))
+
+        fig, ax = fig_init()
+        embedding = get_embedding(model.a, 1)
+        for n in range(n_particle_types):
+            plt.scatter(embedding[index_particles[n], 0],
+                        embedding[index_particles[n], 1], color=cmap.color(n), s=400, alpha=0.1)
+        if 'latex' in style:
+            plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
+            plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
+        else:
+            plt.xlabel(r'$a_{0}$', fontsize=68)
+            plt.ylabel(r'$a_{1}$', fontsize=68)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/first_embedding_{epoch}.tif", dpi=170.7)
+        plt.close()
+
+        fig, ax = fig_init()
+        rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+        func_list = []
+        for n in range(n_particles):
+            embedding = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                     rr[:, None] / max_radius, embedding), dim=1)
+            with torch.no_grad():
+                func = model.lin_edge(in_features.float())
+            func = func[:, 0]
+            func_list.append(func)
+            plt.plot(to_numpy(rr),
+                     to_numpy(func) * to_numpy(ynorm),
+                     color=cmap.color(n // 1600), linewidth=2, alpha=0.1)
+        if 'latex' in style:
+            plt.xlabel(r'$d_{ij}$', fontsize=68)
+            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=68)
+        else:
+            plt.xlabel('$d_{ij}$', fontsize=68)
+            plt.ylabel('$f(a_i, d_{ij})$', fontsize=68)
+        plt.xlim([0, max_radius])
+        plt.ylim(config.plotting.ylim)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/func_{epoch}.tif", dpi=170.7)
+        plt.close()
+
+        fig, ax = fig_init()
+        p = torch.load(f'graphs_data/{dataset_name}/model_p.pt')
+        true_func_list = []
+        csv_ = []
+        csv_.append(to_numpy(rr))
+        for n in range(n_particles):
+            plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n // 1600), linewidth=2,
+                     alpha=0.1)
+            true_func_list.append(model.psi(rr, p[n], p[n]))
+            csv_.append(to_numpy(model.psi(rr, p[n], p[n]).squeeze()))
+        if 'latex' in style:
+            plt.xlabel(r'$d_{ij}$', fontsize=68)
+            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=68)
+        else:
+            plt.xlabel(r'$d_{ij}$', fontsize=68)
+            plt.ylabel('$f(a_i, d_{ij})$', fontsize=68)
+        plt.xticks(fontsize=32)
+        plt.yticks(fontsize=32)
+        plt.xlim([0, max_radius])
+        plt.ylim(config.plotting.ylim)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/true_func.tif", dpi=170.7)
+        np.save(f"./{log_dir}/results/true_func_{epoch}.npy", csv_)
+        np.savetxt(f"./{log_dir}/results/true_func_{epoch}.txt", csv_)
+        plt.close()
+
+        func_list = torch.stack(func_list) * ynorm
+        true_func_list = torch.stack(true_func_list)
+
+        rmserr_list = torch.sqrt(torch.mean((func_list - true_func_list) ** 2, axis=1))
+        rmserr_list = to_numpy(rmserr_list)
+        print("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+        logger.info("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
 
 
 def plot_falling_particles(config, epoch_list, log_dir, logger, style, device):
@@ -2063,236 +2169,128 @@ def plot_cell_tracking(config, epoch_list, log_dir, logger, style, device):
             plt.savefig(f"./{log_dir}/results/tracking_errors_list.tif", dpi=170.7)
 
 
-def plot_attraction_repulsion_asym(config, epoch_list, log_dir, logger, style, device):
+def plot_cell_rates(config, device, log_dir, n_particle_types, type_list, x_list, new_labels, cmap, logger, style):
+
+    n_frames = config.simulation.n_frames
+    delta_t = config.simulation.delta_t
+
+    cell_cycle_length = np.array(config.simulation.cell_cycle_length)
+    if len(cell_cycle_length) == 1:
+        cell_cycle_length = to_numpy(torch.load(f'graphs_data/graphs_{config.dataset}/cycle_length.pt', map_location=device))
 
 
-    dataset_name = config.dataset
+    print('plot cell rates ...')
+    N_cells_alive = np.zeros((n_frames, n_particle_types))
+    N_cells_dead = np.zeros((n_frames, n_particle_types))
 
-    dimension = config.simulation.dimension
-    max_radius = config.simulation.max_radius
-    min_radius = config.simulation.min_radius
-    n_particle_types = config.simulation.n_particle_types
-    n_particles = config.simulation.n_particles
-    cmap = CustomColorMap(config=config)
-    embedding_cluster = EmbeddingCluster(config)
-    n_runs = config.training.n_runs
-
-    x_list, y_list, vnorm, ynorm = load_training_data(dataset_name, n_runs, log_dir, device)
-    logger.info("vnorm:{:.2e},  ynorm:{:.2e}".format(to_numpy(vnorm), to_numpy(ynorm)))
-    model, bc_pos, bc_dpos = choose_training_model(config, device)
-
-    x = x_list[1][0].clone().detach()
-    index_particles = get_index_particles(x, n_particle_types, dimension)
-    type_list = get_type_list(x, dimension)
-
-    if 'black' in style:
-        mc = 'w'
+    if os.path.exists(f"./{log_dir}/results/x_.npy"):
+        x_ = np.load(f"./{log_dir}/results/x_.npy")
+        N_cells_alive = np.load(f"./{log_dir}/results/cell_alive.npy")
+        N_cells_dead = np.load(f"./{log_dir}/results/cell_dead.npy")
     else:
-        mc = 'k'
+        for it in trange(n_frames):
 
-    for epoch in epoch_list:
+            x = x_list[0][it].clone().detach()
+            particle_index = to_numpy(x[:, 0:1]).astype(int)
+            x[:, 5:6] = torch.tensor(new_labels[particle_index], device=device)
+            if it == 0:
+                x_=x_list[0][it].clone().detach()
+            else:
+                x_=torch.concatenate((x_,x),axis=0)
 
-        net = f"{log_dir}/models/best_model_with_1_graphs_{epoch}.pt"
-        print(f'network: {net}')
-        state_dict = torch.load(net, map_location=device)
-        model.load_state_dict(state_dict['model_state_dict'])
-        model.eval()
+            for k in range(n_particle_types):
+                pos = torch.argwhere((x[:, 5:6] == k) & (x[:, 6:7] == 1))
+                N_cells_alive[it, k] = pos.shape[0]
+                pos = torch.argwhere((x[:, 5:6] == k) & (x[:, 6:7] == 0))
+                N_cells_dead[it, k] = pos.shape[0]
 
-        config.training.cluster_method = 'distance_embedding'
-        config.training.cluster_distance_threshold = 0.01
-        alpha = 0.1
-        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config,embedding_cluster,
-                                                                       cmap, index_particles, type_list,
-                                                                       n_particle_types, n_particles, ynorm, epoch,
-                                                                       log_dir, alpha, device)
-        print(
-            f'final result     accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
-        logger.info(
-            f'final result     accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+        x_list=[]
+        x_ = to_numpy(x_)
 
-        x = x_list[0][100].clone().detach()
-        index_particles = get_index_particles(x, n_particle_types, dimension)
-        type_list = to_numpy(get_type_list(x, dimension))
-        distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-        edges = adj_t.nonzero().t().contiguous()
-        indexes = np.random.randint(0, edges.shape[1], 5000)
-        edges = edges[:, indexes]
+        print('save data ...')
 
-        fig, ax = fig_init()
-        rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
-        func_list = []
-        for n in trange(edges.shape[1]):
-            embedding_1 = model.a[1, edges[0, n], :] * torch.ones((1000, config.graph_model.embedding_dim),
-                                                                  device=device)
-            embedding_2 = model.a[1, edges[1, n], :] * torch.ones((1000, config.graph_model.embedding_dim),
-                                                                  device=device)
-            type = type_list[to_numpy(edges[0, n])].astype(int)
-            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                     rr[:, None] / max_radius, embedding_1, embedding_2), dim=1)
-            with torch.no_grad():
-                func = model.lin_edge(in_features.float())
-            func = func[:, 0]
-            func_list.append(func)
-            plt.plot(to_numpy(rr),
-                     to_numpy(func) * to_numpy(ynorm),
-                     color=cmap.color(type), linewidth=8)
-        if 'latex' in style:
-            plt.xlabel(r'$d_{ij}$', fontsize=68)
-            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=68)
-        else:
-            plt.xlabel('$d_{ij}$', fontsize=68)
-            plt.ylabel('$f(a_i, d_{ij})$', fontsize=68)
-        plt.ylim(config.plotting.ylim)
-        plt.xlim([0, max_radius])
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/func_{epoch}.tif", dpi=170.7)
-        plt.close()
+        np.save(f"./{log_dir}/results/cell_alive.npy", N_cells_alive)
+        np.save(f"./{log_dir}/results/cell_dead.npy", N_cells_dead)
+        np.save(f"./{log_dir}/results/x_.npy", x_)
 
-        fig, ax = fig_init()
-        p = torch.load(f'graphs_data/{dataset_name}/model_p.pt', map_location=device)
-        true_func = []
-        for n in range(n_particle_types):
-            for m in range(n_particle_types):
-                true_func.append(model.psi(rr, p[n, m].squeeze(), p[n, m].squeeze()))
-                plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n,m], p[n,m]).squeeze()), color=cmap.color(n), linewidth=8)
-        if 'latex' in style:
-            plt.xlabel(r'$d_{ij}$', fontsize=68)
-            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=68)
-        else:
-            plt.xlabel('$d_{ij}$', fontsize=68)
-            plt.ylabel('$f(a_i, d_{ij})$', fontsize=68)
-        plt.ylim(config.plotting.ylim)
-        plt.xlim([0, max_radius])
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/true_func.tif", dpi=170.7)
-        plt.close()
+    print('plot results ...')
 
-        true_func_list = []
-        for k in trange(edges.shape[1]):
-            n = type_list[to_numpy(edges[0, k])].astype(int)
-            m = type_list[to_numpy(edges[1, k])].astype(int)
-            true_func_list.append(true_func[3 * n.squeeze() + m.squeeze()])
-        func_list = torch.stack(func_list) * ynorm
-        true_func_list = torch.stack(true_func_list)
-        rmserr_list = torch.sqrt(torch.mean((func_list - true_func_list) ** 2, axis=1))
-        rmserr_list = to_numpy(rmserr_list)
-        print("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
-        logger.info("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+    last_frame_growth = np.argwhere(np.diff(N_cells_alive[:, 0], axis=0))
+    last_frame_growth = last_frame_growth[-1] - 1
+    N_cells_alive = N_cells_alive[0:int(last_frame_growth), :]
+    N_cells_dead = N_cells_dead[0:int(last_frame_growth), :]
+
+    fig, ax = fig_init()
+    for k in range(n_particle_types):
+        plt.plot(np.arange(last_frame_growth), N_cells_alive[:, k], color=cmap.color(k), linewidth=4,
+                 label=f'Cell type {k} alive')
+    plt.xlabel(r'Frame', fontsize=64)
+    plt.ylabel(r'Number of cells', fontsize=64)
+    ax.xaxis.set_major_formatter(FormatStrFormatter('%.0f'))
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/results/cell_alive.tif", dpi=300)
+    plt.close()
+
+    fig, ax = fig_init()
+    for k in range(n_particle_types):
+        plt.plot(np.arange(last_frame_growth), N_cells_dead[:, k], color=cmap.color(k), linewidth=4,
+                 label=f'Cell type {k} dead')
+    plt.xlabel(r'Frame', fontsize=68)
+    plt.ylabel(r'Number of dead cells', fontsize=68)
+    ax.xaxis.set_major_formatter(FormatStrFormatter('%.0f'))
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/results/cell_dead.tif", dpi=300)
+    plt.close()
+
+    #         6,7 H1 cell status dim=2  H1[:,0] = cell alive flag, alive : 0 , death : 0 , H1[:,1] = cell division flag, dividing : 1
+    #         8 A1 cell age dim=1
+
+    division_list = {}
+    for n in np.unique(new_labels):
+        division_list[n] = []
+    for n in trange(len(type_list)):
+        pos = np.argwhere(x_[:, 0:1] == n)
+        if len(pos)>0:
+            division_list[new_labels[n]].append(len(pos)* delta_t)
+
+    reconstructed_cell_cycle_length = np.zeros(n_particle_types)
+    for k in range(n_particle_types):
+        print(f'Cell type {k} division rate: {np.mean(division_list[k])}+/-{np.std(division_list[k])}')
+        logger.info(f'Cell type {k} division rate: {np.mean(division_list[k])}+/-{np.std(division_list[k])}')
+        reconstructed_cell_cycle_length[k] = np.mean(division_list[k])
+
+    x_data = cell_cycle_length
+    y_data = reconstructed_cell_cycle_length.squeeze()
+    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+    residuals = y_data - linear_model(x_data, *lin_fit)
+    ss_res = np.sum(residuals ** 2)
+    ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+    r_squared = 1 - (ss_res / ss_tot)
+    print(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
+    logger.info(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
+
+    fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
+    plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+    plt.scatter(cell_cycle_length,reconstructed_cell_cycle_length, color=cmap.color(np.arange(n_particle_types)), s=200)
+    plt.xlabel(r'True cell cycle length', fontsize=54)
+    plt.ylabel(r'Learned cell cycle length', fontsize=54)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/results/cell_cycle_length.tif", dpi=170)
+    plt.close()
 
 
-def plot_attraction_repulsion_continuous(config, epoch_list, log_dir, logger, style, device):
-
-    dataset_name = config.dataset
-
-    dimension = config.simulation.dimension
-    n_particle_types = config.simulation.n_particle_types
-    n_particles = config.simulation.n_particles
-    dataset_name = config.dataset
-    max_radius = config.simulation.max_radius
-    n_runs = config.training.n_runs
-    cmap = CustomColorMap(config=config)
-
-    embedding_cluster = EmbeddingCluster(config)
-
-    x_list, y_list, vnorm, ynorm = load_training_data(dataset_name, n_runs, log_dir, device)
-    logger.info("vnorm:{:.2e},  ynorm:{:.2e}".format(to_numpy(vnorm), to_numpy(ynorm)))
-    model, bc_pos, bc_dpos = choose_training_model(config, device)
-
-    x = x_list[1][0].clone().detach()
-
-    if 'black' in style:
-        mc = 'w'
-    else:
-        mc = 'k'
-
-    for epoch in epoch_list:
-
-        net = f"{log_dir}/models/best_model_with_1_graphs_{epoch}.pt"
-        print(f'network: {net}')
-        state_dict = torch.load(net, map_location=device)
-        model.load_state_dict(state_dict['model_state_dict'])
-
-        n_particle_types = 3
-        index_particles = []
-        for n in range(n_particle_types):
-            index_particles.append(
-                np.arange((n_particles // n_particle_types) * n, (n_particles // n_particle_types) * (n + 1)))
-
-        fig, ax = fig_init()
-        embedding = get_embedding(model.a, 1)
-        for n in range(n_particle_types):
-            plt.scatter(embedding[index_particles[n], 0],
-                        embedding[index_particles[n], 1], color=cmap.color(n), s=400, alpha=0.1)
-        if 'latex' in style:
-            plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
-            plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
-        else:
-            plt.xlabel(r'$a_{0}$', fontsize=68)
-            plt.ylabel(r'$a_{1}$', fontsize=68)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/first_embedding_{epoch}.tif", dpi=170.7)
-        plt.close()
-
-        fig, ax = fig_init()
-        rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
-        func_list = []
-        for n in range(n_particles):
-            embedding = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                     rr[:, None] / max_radius, embedding), dim=1)
-            with torch.no_grad():
-                func = model.lin_edge(in_features.float())
-            func = func[:, 0]
-            func_list.append(func)
-            plt.plot(to_numpy(rr),
-                     to_numpy(func) * to_numpy(ynorm),
-                     color=cmap.color(n // 1600), linewidth=2, alpha=0.1)
-        if 'latex' in style:
-            plt.xlabel(r'$d_{ij}$', fontsize=68)
-            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=68)
-        else:
-            plt.xlabel('$d_{ij}$', fontsize=68)
-            plt.ylabel('$f(a_i, d_{ij})$', fontsize=68)
-        plt.xlim([0, max_radius])
-        plt.ylim(config.plotting.ylim)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/func_{epoch}.tif", dpi=170.7)
-        plt.close()
-
-        fig, ax = fig_init()
-        p = torch.load(f'graphs_data/{dataset_name}/model_p.pt')
-        true_func_list = []
-        csv_ = []
-        csv_.append(to_numpy(rr))
-        for n in range(n_particles):
-            plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n // 1600), linewidth=2,
-                     alpha=0.1)
-            true_func_list.append(model.psi(rr, p[n], p[n]))
-            csv_.append(to_numpy(model.psi(rr, p[n], p[n]).squeeze()))
-        if 'latex' in style:
-            plt.xlabel(r'$d_{ij}$', fontsize=68)
-            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=68)
-        else:
-            plt.xlabel(r'$d_{ij}$', fontsize=68)
-            plt.ylabel('$f(a_i, d_{ij})$', fontsize=68)
-        plt.xticks(fontsize=32)
-        plt.yticks(fontsize=32)
-        plt.xlim([0, max_radius])
-        plt.ylim(config.plotting.ylim)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/true_func.tif", dpi=170.7)
-        np.save(f"./{log_dir}/results/true_func_{epoch}.npy", csv_)
-        np.savetxt(f"./{log_dir}/results/true_func_{epoch}.txt", csv_)
-        plt.close()
-
-        func_list = torch.stack(func_list) * ynorm
-        true_func_list = torch.stack(true_func_list)
-
-        rmserr_list = torch.sqrt(torch.mean((func_list - true_func_list) ** 2, axis=1))
-        rmserr_list = to_numpy(rmserr_list)
-        print("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
-        logger.info("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+    division_list = {}
+    for n in np.unique(new_labels):
+        division_list[n] = []
+    for n in trange(n_frames):
+        x = x_list[0][n].clone().detach()
+        pos = torch.argwhere(x[:, 7:8] == 0)
+        if pos.shape[0]>1:
+            x = x[pos]
+            for x_ in x:
+                division_list[x_[5]].append(x_[8])
 
 
 def plot_gravity(config, epoch_list, log_dir, logger, style, device):
@@ -4791,10 +4789,8 @@ def plot_RD_mesh(config, epoch_list, log_dir, logger, cc, style, device):
 def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, device):
 
     dataset_name = config.dataset
-    data_folder_name = config.data_folder_name
 
-    simulation_config = config.simulation
-    train_config = config.training
+
     model_config = config.graph_model
 
     n_frames = config.simulation.n_frames
@@ -4806,14 +4802,11 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
     cmap = CustomColorMap(config=config)
     dimension = config.simulation.dimension
     max_radius = config.simulation.max_radius
-    embedding_cluster = EmbeddingCluster(config)
     time_step =  config.training.time_step
     field_type = model_config.field_type
 
     multi_connectivity = config.training.multi_connectivity
     has_missing_activity = config.training.has_missing_activity
-
-    data_folder_name = './graphs_data/CElegans/CElegans_a1/'
 
     all_neuron_list = json.load(open(f'graphs_data/{dataset_name}/all_neuron_list.json', "r"))
     larynx_neuron_list = json.load(open(f'graphs_data/{dataset_name}/larynx_neuron_list.json', "r"))
@@ -4860,11 +4853,6 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
     config.simulation.n_neurons = n_neurons
     type_list = torch.tensor(x[:, 1 + 2 * dimension:2 + 2 * dimension], device=device)
 
-    # activity = torch.tensor(x_list[0],device=device)
-    # activity = activity[:, :, 6:7].squeeze()
-    # distrib = to_numpy(activity.flatten())
-    # activity = activity.t()
-
     activity = torch.tensor(x_list[0][:, :, 6:7],device=device)
     activity = activity.squeeze()
     activity = activity.t()
@@ -4875,72 +4863,6 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
         activity_ = activity_.squeeze().t()
         activity_list.append(activity_)
 
-    if os.path.exists(f'graphs_data/{dataset_name}/raw_x_list_{run}.npy'):
-        raw_activity = torch.tensor(raw_x[:, :, 6:7], device=device)
-        raw_activity = raw_activity.squeeze()
-        raw_activity = raw_activity.t()
-
-    # plt.figure(figsize=(15, 10))
-    # window_size = 25
-    # window_end = 50000
-    # ts = to_numpy(activity[600, :])
-    # ts_avg = np.convolve(ts, np.ones(window_size) / window_size, mode='valid')
-    # plt.plot(ts[window_size // 2:window_end + window_size // 2], linewidth=1)
-    # plt.plot(ts_avg, linewidth=2)
-    # plt.plot(ts[window_size // 2:window_end + window_size // 2] - ts_avg[0:window_end])
-    # plt.xlim([window_end - 5000, window_end])
-    # plt.close
-    # signal_power = np.mean(ts_avg[window_size // 2:window_end + window_size // 2] ** 2)
-    # # Compute the noise power
-    # noise_power = np.mean((ts[window_size // 2:window_end + window_size // 2] - ts_avg[0:window_end]) ** 2)
-    # # Calculate the signal-to-noise ratio (SNR)
-    # snr = signal_power / noise_power
-    # print(f"Signal-to-Noise Ratio (SNR): {snr:0.2f} 10log10 {10 * np.log10(snr):0.2f}")
-
-    # # Parameters
-    # fs = 1000  # Sampling frequency
-    # t = np.arange(0, 1, 1 / fs)  # Time vector
-    # frequency = 5  # Frequency of the sine wave
-    # desired_snr_db = 10 * np.log10(snr)  # Desired SNR in dB
-    # # Generate a clean signal (sine wave)
-    # clean_signal = np.sin(2 * np.pi * frequency * t)
-    # # Calculate the power of the clean signal
-    # signal_power = np.mean(clean_signal ** 2)
-    # # Calculate the noise power required to achieve the desired SNR
-    # desired_snr_linear = 10 ** (desired_snr_db / 10)
-    # noise_power = signal_power / desired_snr_linear
-    # # Generate noise with the calculated power
-    # noise = np.sqrt(noise_power) * np.random.randn(len(t))
-    # # Create a noisy signal by adding noise to the clean signal
-    # noisy_signal = clean_signal + noise
-    # # Plot the clean signal and the noisy signal
-    # plt.figure(figsize=(15, 10))
-    # plt.subplot(2, 1, 1)
-    # plt.plot(t, clean_signal)
-    # plt.title('Clean Signal')
-    # plt.subplot(2, 1, 2)
-    # plt.plot(t, noisy_signal)
-    # plt.plot(t, noise)
-    # plt.title(f'Noisy Signal with SNR = {desired_snr_db} dB')
-    # plt.tight_layout()
-    # plt.show()
-
-
-    # if os.path.exists(f'./graphs_data/{dataset_name}/X1.pt') > 0:
-    #     X1_first = torch.load(f'./graphs_data/{dataset_name}/X1.pt', map_location=device)
-    #     X_msg = torch.load(f'./graphs_data/{dataset_name}/X_msg.pt', map_location=device)
-    # else:
-    xc, yc = get_equidistant_points(n_points=n_neurons)
-    X1_first = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
-    perm = torch.randperm(X1_first.size(0))
-    X1_first = X1_first[perm]
-    torch.save(X1_first, f'./graphs_data/{dataset_name}/X1.pt')
-    xc, yc = get_equidistant_points(n_points=n_neurons ** 2)
-    X_msg = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
-    perm = torch.randperm(X_msg.size(0))
-    X_msg = X_msg[perm]
-    torch.save(X_msg, f'./graphs_data/{dataset_name}/X_msg.pt')
-
     if 'black' in style:
         mc = 'w'
     else:
@@ -4948,7 +4870,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
 
     if field_type != '':
         has_field = True
-        n_nodes = simulation_config.n_nodes
+        n_nodes = config.simulation.n_nodes
         if ('short_term_plasticity' in field_type) | ('modulation' in field_type):
             model_f = nn.ModuleList([
                 Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
@@ -5448,102 +5370,6 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
         for f in files:
             os.remove(f)
 
-        # fig_init(formatx='%.0f', formaty='%.0f')
-        # plt.hist(distrib, bins=100, color=mc, alpha=0.5)
-        # plt.ylabel('counts', fontsize=64)
-        # plt.xlabel('$x_{ij}$', fontsize=64)
-        # plt.xticks(fontsize=24)
-        # plt.yticks(fontsize=24)
-        # plt.tight_layout()
-        # plt.savefig(f'./{log_dir}/results/signal_distribution.tif', dpi=300)
-        # plt.close()
-        # print(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
-        # logger.info(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
-        #
-        # plt.figure(figsize=(15, 10))
-        # ax = sns.heatmap(to_numpy(activity), center=0, cmap='viridis', cbar_kws={'fraction': 0.046})
-        # cbar = ax.collections[0].colorbar
-        # cbar.ax.tick_params(labelsize=32)
-        # ax.invert_yaxis()
-        # plt.ylabel('neurons', fontsize=64)
-        # plt.xlabel('time', fontsize=64)
-        # plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
-        # plt.yticks([0, 999], [1, 1000], fontsize=48)
-        # plt.xticks(rotation=0)
-        # plt.tight_layout()
-        # plt.savefig(f'./{log_dir}/results/kinograph.tif', dpi=300)
-        # plt.close()
-
-        if False: #os.path.exists(f"./{log_dir}/neuron_gt_list.pt"):
-
-            os.makedirs(f"./{log_dir}/results/activity", exist_ok=True)
-
-            neuron_gt_list = torch.load(f"./{log_dir}/neuron_gt_list.pt", map_location=device)
-            neuron_pred_list = torch.load(f"./{log_dir}/neuron_pred_list.pt", map_location=device)
-
-            neuron_gt_list = torch.cat(neuron_gt_list, 0)
-            neuron_pred_list = torch.cat(neuron_pred_list, 0)
-            neuron_gt_list = torch.reshape(neuron_gt_list, (1600, n_neurons))
-            neuron_pred_list = torch.reshape(neuron_pred_list, (1600, n_neurons))
-
-            n = [20, 30, 100, 150, 260, 270, 520, 620, 720, 820]
-
-            r_squared_list = []
-            slope_list = []
-            for i in trange(0,1500,10):
-                plt.figure(figsize=(20, 10))
-                ax = plt.subplot(121)
-                plt.plot(neuron_gt_list[:, n[0]].detach().cpu().numpy(), c='w', linewidth=8, label='true', alpha=0.25)
-                plt.plot(neuron_pred_list[0:i, n[0]].detach().cpu().numpy(), linewidth=4, c='w', label='learned')
-                plt.legend(fontsize=24)
-                plt.plot(neuron_gt_list[:, n[1:10]].detach().cpu().numpy(), c='w', linewidth=8, alpha=0.25)
-                plt.plot(neuron_pred_list[0:i, n[1:10]].detach().cpu().numpy(), linewidth=4)
-                plt.xlim([0, 1500])
-                plt.xlabel('time index', fontsize=48)
-                plt.ylabel(r'$x_i$', fontsize=48)
-                plt.xticks(fontsize=24)
-                plt.yticks(fontsize=24)
-                plt.ylim([-15,15])
-                plt.text(40, 13, 'N=10', fontsize=34)
-                plt.text(40, 11, f'time: {i}', fontsize=34)
-                ax = plt.subplot(122)
-                plt.scatter(to_numpy(neuron_gt_list[i, :]), to_numpy(neuron_pred_list[i, :]), s=10, c=mc)
-                plt.xlim([-15,15])
-                plt.ylim([-15,15])
-                plt.xticks(fontsize=24)
-                plt.yticks(fontsize=24)
-                x_data = to_numpy(neuron_gt_list[i, :])
-                y_data = to_numpy(neuron_pred_list[i, :])
-                lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-                residuals = y_data - linear_model(x_data, *lin_fit)
-                ss_res = np.sum(residuals ** 2)
-                ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-                r_squared = 1 - (ss_res / ss_tot)
-                r_squared_list.append(r_squared)
-                slope_list.append(lin_fit[0])
-                plt.xlabel(r'true $x_i$', fontsize=48)
-                plt.text(-13, 13, 'N=1024', fontsize=34)
-                plt.ylabel(r'learned $x_i$', fontsize=48)
-                plt.text(-13, 11, f'$R^2$: {np.round(r_squared, 3)}', fontsize=34)
-                plt.text(-13, 9, f'slope: {np.round(lin_fit[0], 2)}', fontsize=34)
-                plt.tight_layout()
-                plt.savefig(f'./{log_dir}/results/activity/comparison_{i}.tif', dpi=80)
-                plt.close()
-
-            plt.figure(figsize=(10, 10))
-            plt.plot(r_squared_list, linewidth=4, label='$R^2$')
-            plt.plot(slope_list, linewidth=4, label='slope')
-            plt.xticks([0,75,150],[0,375,750],fontsize=24)
-            plt.yticks(fontsize=24)
-            plt.ylim([0,1.4])
-            plt.xlim([0,150])
-            plt.xlabel(r'time', fontsize=48)
-            plt.title(r'true vs learned $x_i$', fontsize=48)
-            plt.legend(fontsize=24)
-            plt.tight_layout()
-            plt.savefig(f'./{log_dir}/results/activity_comparison.tif', dpi=80)
-            plt.close()
-
         adjacency = torch.load(f'./graphs_data/{dataset_name}/adjacency.pt', map_location=device)
         adjacency_ = adjacency.t().clone().detach()
         adj_t = torch.abs(adjacency_) > 0
@@ -5570,10 +5396,6 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
         plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=48)
         plt.yticks([0, n_neurons - 1], [1, n_neurons], fontsize=48)
         plt.xticks(rotation=0)
-        # plt.subplot(2, 2, 1)
-        # ax = sns.heatmap(to_numpy(adjacency[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
-        # plt.xticks([])
-        # plt.yticks([])
         plt.tight_layout()
         plt.savefig(f'./{log_dir}/results/true connectivity.tif', dpi=300)
         plt.close()
@@ -5591,7 +5413,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
         fig.text(0.5, 0.04, 'time', ha='center', fontsize=14)
         fig.text(0.04, 0.5, 'activity', va='center', rotation='vertical', fontsize=14)
         plt.tight_layout()
-        plt.savefig(f'./{log_dir}/results/larynx_activity_grid.tif', dpi=300)
+        plt.savefig(f'./{log_dir}/results/activity_larynx_grid.tif', dpi=300)
         plt.close()
 
         n = np.random.randint(0, n_neurons, 50)
@@ -5621,11 +5443,24 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             model.edges = edge_index
             print(f'net: {net}')
 
+            fig, ax = fig_init()
+            for n in range(n_neurons):
+                if x_list[0][100][n, 6] != config.simulation.baseline_value:
+                    plt.scatter(to_numpy(model.a[n, 0]), to_numpy(model.a[n, 1]), s=100, color=cmap.color(int(type_list[n])), alpha=1.0, edgecolors='none')
+            if 'latex' in style:
+                plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
+                plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
+            else:
+                plt.xlabel(r'$a_{0}$', fontsize=68)
+                plt.ylabel(r'$a_{1}$', fontsize=68)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/all_embedding.tif", dpi=170.7)
+            plt.close()
             fig, axes = fig_init()
             for n in range(n_neurons):
-                if x_list[0][100][n, 6] != 6:
+                if x_list[0][100][n, 6] != config.simulation.baseline_value:
                     plt.scatter(to_numpy(model.a[:n_neurons, 0]), to_numpy(model.a[:n_neurons, 1]), alpha=0.1, s=50, color='k', edgecolors='none')
-                    plt.text(to_numpy(model.a[n, 0]), to_numpy(model.a[n, 1]) - 0.01, all_neuron_list[n], fontsize=10)
+                    plt.text(to_numpy(model.a[n, 0]), to_numpy(model.a[n, 1]) - 0.01, all_neuron_list[n], fontsize=6)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/all_embedding_text.tif", dpi=170.7)
             plt.close()
@@ -5643,7 +5478,6 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                 plt.savefig(f"./{log_dir}/results/odor_heatmaps.png", dpi=150, bbox_inches='tight')
                 plt.close()
 
-
             if has_missing_activity:
                 net = f'{log_dir}/models/best_model_missing_activity_with_{n_runs - 1}_graphs_{epoch}.pt'
                 state_dict = torch.load(net, map_location=device)
@@ -5657,7 +5491,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                         t = torch.linspace(0, 1, n_frames_temp // 100, dtype=torch.float32, device=device).unsqueeze(1)
                     else:
                         t = torch.linspace(0, 1, n_frames_temp, dtype=torch.float32, device=device).unsqueeze(1)
-                    prediction = model_missing_activity[run](t).t()
+                    prediction = model_missing_activity[run](t).t() + config.simulation.baseline_value
                     activity = torch.tensor(x_list[run][:, :, 6:7], device=device).squeeze().t()
                     im = axes[run].imshow(to_numpy(prediction), aspect='auto', cmap='viridis', vmin=0, vmax=10)
                 plt.tight_layout()
@@ -5670,7 +5504,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                     n_frames_temp = n_frames - 10
                     t = torch.linspace(0, 1, n_frames_temp // 100 if n_frames_temp > 1000 else n_frames_temp,
                                        dtype=torch.float32, device=device).unsqueeze(1)
-                    prediction = model_missing_activity[run](t).t()
+                    prediction = model_missing_activity[run](t).t() + config.simulation.baseline_value
                     activity = torch.tensor(x_list[run][:, :, 6:7], device=device).squeeze().t()
                     pos = np.argwhere(x_list[run][0][:, 6] != 6)
                     axes[run].scatter(to_numpy(activity[pos, :prediction.shape[1]]),
@@ -5678,7 +5512,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                     axes[run].set_xlim([0,10])
                     axes[run].set_ylim([0,10])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/neural_fields_comparison_grid.tif", dpi=150)
+                plt.savefig(f"./{log_dir}/results/neural_fields_comparison.tif", dpi=150)
                 plt.close()
 
             if multi_connectivity:
@@ -5690,9 +5524,10 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                     i, j = torch.triu_indices(n_neurons, n_neurons, requires_grad=False, device=device)
                     A = model.W[k].clone().detach()
                     A[i, i] = 0
-                    A = A.t()
+                    pos = np.argwhere(x_list[k][100][:, 6] != config.simulation.baseline_value)
+                    A[pos,:] = 0
                     sns.heatmap(to_numpy(A), ax=axes[k], center=0, square=True, cmap='bwr',
-                                cbar=False, vmin=-4, vmax=4, xticklabels=False, yticklabels=False)
+                                cbar=False, xticklabels=False, yticklabels=False)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/W_grid.tif", dpi=80)
                 plt.close()
@@ -5704,10 +5539,11 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                     i, j = torch.triu_indices(n_neurons, n_neurons, requires_grad=False, device=device)
                     A = model.W[k].clone().detach()
                     A[i, i] = 0
-                    A = A.t()
+                    pos = np.argwhere(x_list[k][100][:, 6] != config.simulation.baseline_value)
+                    A[pos,:] = 0
                     larynx_pred_weight, index_larynx = map_matrix(larynx_neuron_list, all_neuron_list, A)
                     sns.heatmap(to_numpy(larynx_pred_weight), ax=axes[k], center=0, square=True,
-                                cmap='bwr', cbar=False, vmin=-4, vmax=4, xticklabels=False, yticklabels=False)
+                                cmap='bwr', cbar=False, xticklabels=False, yticklabels=False)
                     larynx_weights.append(to_numpy(larynx_pred_weight))
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/W_larynx_grid.tif", dpi=80)
@@ -5753,22 +5589,8 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                 state_dict = torch.load(net, map_location=device)
                 model_f.load_state_dict(state_dict['model_state_dict'])
 
-            fig, ax = fig_init()
-            for n in range(n_neurons):
-                if x_list[0][100][n, 6] != 6:
-                    plt.scatter(to_numpy(model.a[n, 0]), to_numpy(model.a[n, 1]), s=100, color=cmap.color(int(type_list[n])), alpha=1.0, edgecolors='none')
-            if 'latex' in style:
-                plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=68)
-                plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=68)
-            else:
-                plt.xlabel(r'$a_{0}$', fontsize=68)
-                plt.ylabel(r'$a_{1}$', fontsize=68)
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/all_embedding.tif", dpi=170.7)
-            plt.close()
-
             os.makedirs(f"./{log_dir}/results/pairs", exist_ok=True)
-            print("Right-Left Neuron Pairs (with indexes):")
+            print("right-Left neuron pairs (with indexes):")
 
             rl_pairs = find_suffix_pairs_with_index(all_neuron_list, 'R', 'L')
             d_i1_i2 = []
@@ -6304,7 +6126,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                     net = f'{log_dir}/models/best_model_f_with_{n_runs - 1}_graphs_{epoch}.pt'
                     state_dict = torch.load(net, map_location=device)
                     model_f.load_state_dict(state_dict['model_state_dict'])
-                    im = imread(f"graphs_data/{simulation_config.node_value_map}")
+                    im = imread(f"graphs_data/{config.simulation.node_value_map}")
 
                     x = x_list[0][0]
 
@@ -6719,7 +6541,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
     dataset_name = config.dataset
     data_folder_name = config.data_folder_name
 
-    simulation_config = config.simulation
     train_config = config.training
     model_config = config.graph_model
 
@@ -6735,7 +6556,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
     embedding_cluster = EmbeddingCluster(config)
     field_type = model_config.field_type
     if field_type != '':
-        n_nodes = simulation_config.n_nodes
+        n_nodes = config.simulation.n_nodes
         n_nodes_per_axis = int(np.sqrt(n_nodes))
         has_field = True
     else:
@@ -8142,7 +7963,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     net = f'{log_dir}/models/best_model_f_with_{n_runs - 1}_graphs_{epoch}.pt'
                     state_dict = torch.load(net, map_location=device)
                     model_f.load_state_dict(state_dict['model_state_dict'])
-                    im = imread(f"graphs_data/{simulation_config.node_value_map}")
+                    im = imread(f"graphs_data/{config.simulation.node_value_map}")
 
                     x = x_list[0][0]
 
@@ -8556,8 +8377,6 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
 
     dataset_name = config.dataset
 
-    simulation_config = config.simulation
-    train_config = config.training
     model_config = config.graph_model
 
     n_frames = config.simulation.n_frames
@@ -8572,7 +8391,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
     embedding_cluster = EmbeddingCluster(config)
     field_type = model_config.field_type
     if field_type != '':
-        n_nodes = simulation_config.n_nodes
+        n_nodes = config.simulation.n_nodes
         n_nodes_per_axis = int(np.sqrt(n_nodes))
         has_field = True
     else:
@@ -9058,7 +8877,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
 
             if has_field:
 
-                im = imread(f"graphs_data/{simulation_config.node_value_map}")
+                im = imread(f"graphs_data/{config.simulation.node_value_map}")
 
                 net = f'{log_dir}/models/best_model_f_with_{n_runs-1}_graphs_{epoch}.pt'
                 state_dict = torch.load(net, map_location=device)

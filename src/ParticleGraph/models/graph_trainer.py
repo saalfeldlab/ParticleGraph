@@ -2697,20 +2697,20 @@ def data_train_synaptic2(config, erase, best_model, device):
             for batch in range(batch_size):
 
                 k = np.random.randint(n_frames - 4 - time_step)
-                ids = np.arange(n_neurons)
 
                 x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device)
+                ids = torch.argwhere(x[:, 6] != baseline_value)
+                ids = to_numpy(ids.squeeze())
+
                 if not (torch.isnan(x).any()):
                     if has_missing_activity:
-                        pos = torch.argwhere(x[:,6] == baseline_value)
-                        ids = torch.argwhere(x[:,6] != baseline_value)
-                        ids = to_numpy(ids.squeeze())
                         t = torch.tensor([k / n_frames], dtype=torch.float32, device=device)
                         missing_activity = baseline_value + model_missing_activity[run](t).squeeze()
                         if (train_config.coeff_missing_activity>0):
                             loss_missing_activity = (missing_activity[ids] - x[ids, 6].clone().detach()).norm(2)
                             loss = loss + loss_missing_activity * train_config.coeff_missing_activity
-                        x[pos,6] = missing_activity[pos]
+                        ids_missing = torch.argwhere(x[:, 6] == baseline_value)
+                        x[ids_missing,6] = missing_activity[ids_missing]
                     if has_neural_field:
                         if 'visual' in field_type:
                             x[:n_nodes, 8:9] = model_f(time=k / n_frames) ** 2
@@ -2762,10 +2762,10 @@ def data_train_synaptic2(config, erase, best_model, device):
                     if (coeff_sign > 0) and (N%4 == 0):
                         W_sign = torch.tanh(5 * model_W)
                         loss_contribs = []
-                        for i in ids:
+                        for i in range(n_neurons):
                             indices = index_weight[int(i)]
                             if indices.numel() > 0:
-                                values = W_sign[indices, i]
+                                values = W_sign[indices]
                                 std = torch.std(values, unbiased=False)
                                 loss_contribs.append(std)
                         if loss_contribs:
@@ -2853,13 +2853,12 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                 loss.backward()
                 optimizer.step()
-
-                total_loss += loss.item()
-
                 if has_missing_activity:
                     optimizer_missing_activity.step()
                 if has_neural_field:
                     optimizer_f.step()
+
+                total_loss += loss.item()
 
                 if train_config.with_connectivity_mask & (N%100 == 0):
                     with torch.no_grad():
@@ -2870,68 +2869,65 @@ def data_train_synaptic2(config, erase, best_model, device):
                             model.W.copy_(model.W * model.mask)
 
                 if ((N % plot_frequency == 0) | (N == 0)):
-                    with torch.no_grad():
+                    plot_training_signal(config, model, x, adjacency, log_dir, epoch, N, n_neurons, type_list, cmap,
+                                         device)
+                    if time_step > 1:
+                        fig = plt.figure(figsize=(10, 10))
+                        plt.scatter(to_numpy(y_batch), to_numpy(x_batch + pred * delta_t * time_step), s=10, color='k')
+                        plt.scatter(to_numpy(y_batch), to_numpy(x_batch), s=1, color='b', alpha=0.5)
+                        plt.plot(to_numpy(y_batch), to_numpy(y_batch), color='g')
 
-                        if multi_connectivity:
-                            for run_ in range(n_runs):
-                                model.W[run_].copy_(model.W[run_] * model.mask)
-                        else:
-                            model.W.copy_(model.W * model.mask)
+                        x_data = y_batch
+                        y_data = x_batch
+                        err0 = torch.sqrt((y_data - x_data).norm(2))
 
-                        plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_neurons,
-                                             n_neuron_types, type_list, cmap, device)
-                        if time_step>1:
-                            fig = plt.figure(figsize=(10, 10))
-                            plt.scatter(to_numpy(y_batch), to_numpy(x_batch + pred * delta_t * time_step), s=10, color='k')
-                            plt.scatter(to_numpy(y_batch), to_numpy(x_batch), s=1, color='b', alpha=0.5)
-                            plt.plot(to_numpy(y_batch), to_numpy(y_batch), color='g')
+                        y_data = (x_batch + pred * delta_t * time_step)
+                        err = torch.sqrt((y_data - x_data).norm(2))
 
-                            x_data = y_batch
-                            y_data = x_batch
-                            err0 = torch.sqrt((y_data - x_data).norm(2))
+                        plt.text(0.05, 0.95, f'data: {run}   frame: {k}',
+                                 transform=plt.gca().transAxes, fontsize=12,
+                                 verticalalignment='top')
+                        plt.text(0.05, 0.9, f'err: {err.item():0.4f}  err0: {err0.item():0.4f}',
+                                 transform=plt.gca().transAxes, fontsize=12,
+                                 verticalalignment='top')
 
-                            y_data = (x_batch + pred * delta_t * time_step)
-                            err = torch.sqrt((y_data - x_data).norm(2))
+                        x_data = to_numpy(x_data.squeeze())
+                        y_data = to_numpy(y_data.squeeze())
+                        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
 
-                            plt.text(0.05, 0.95, f'data: {run}   frame: {k}',
-                                     transform=plt.gca().transAxes, fontsize=12,
-                                     verticalalignment='top')
-                            plt.text(0.05, 0.9, f'err: {err.item():0.4f}  err0: {err0.item():0.4f}',
-                                     transform=plt.gca().transAxes, fontsize=12,
-                                     verticalalignment='top')
+                        residuals = y_data - linear_model(x_data, *lin_fit)
+                        ss_res = np.sum(residuals ** 2)
+                        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+                        r_squared = 1 - (ss_res / ss_tot)
+                        plt.text(0.05, 0.85, f'R2: {r_squared:0.4f}  slope: {np.round(lin_fit[0], 4)}',
+                                 transform=plt.gca().transAxes, fontsize=12,
+                                 verticalalignment='top')
+                        plt.tight_layout()
+                        plt.savefig(f'{log_dir}/tmp_training/prediction/pred_{epoch}_{N}.tif')
+                        plt.close()
 
-                            x_data = to_numpy(x_data.squeeze())
-                            y_data = to_numpy(y_data.squeeze())
-                            lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+                    if has_neural_field:
+                        with torch.no_grad():
+                            plot_training_signal_field(x, n_nodes, recursive_loop, k, time_step,
+                                                       x_list, run, model, field_type, model_f,
+                                                       edges, y_list, ynorm, delta_t, n_frames, log_dir, epoch, N,
+                                                       recursive_parameters, modulation, device)
+                        torch.save({'model_state_dict': model_f.state_dict(),
+                                    'optimizer_state_dict': optimizer_f.state_dict()},
+                                   os.path.join(log_dir, 'models',
+                                                f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
-                            residuals = y_data - linear_model(x_data, *lin_fit)
-                            ss_res = np.sum(residuals ** 2)
-                            ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-                            r_squared = 1 - (ss_res / ss_tot)
-                            plt.text(0.05, 0.85, f'R2: {r_squared:0.4f}  slope: {np.round(lin_fit[0], 4)}',
-                                     transform=plt.gca().transAxes, fontsize=12,
-                                     verticalalignment='top')
-                            plt.tight_layout()
-                            plt.savefig(f'{log_dir}/tmp_training/prediction/pred_{epoch}_{N}.tif')
-                            plt.close()
-
-                        if has_neural_field:
-                            with torch.no_grad():
-                                plot_training_signal_field(x, n_nodes, recursive_loop, k, time_step,
-                                                           x_list, run, model, field_type, model_f,
-                                                           edges, y_list, ynorm, delta_t, n_frames, log_dir, epoch, N,
-                                                           recursive_parameters, modulation, device)
-                            torch.save({'model_state_dict': model_f.state_dict(),
-                                            'optimizer_state_dict': optimizer_f.state_dict()}, os.path.join(log_dir,'models',f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
-
-                        if has_missing_activity:
-                            with torch.no_grad():
-                                plot_training_signal_missing_activity(n_frames, k, x_list, baseline_value, model_missing_activity, log_dir, epoch, N, device)
-                            torch.save({'model_state_dict': model_missing_activity.state_dict(),
-                                        'optimizer_state_dict': optimizer_missing_activity.state_dict()}, os.path.join(log_dir,'models',f'best_model_missing_activity_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
-                        torch.save(
-                            {'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
-                            os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+                    if has_missing_activity:
+                        with torch.no_grad():
+                            plot_training_signal_missing_activity(n_frames, k, x_list, baseline_value,
+                                                                  model_missing_activity, log_dir, epoch, N, device)
+                        torch.save({'model_state_dict': model_missing_activity.state_dict(),
+                                    'optimizer_state_dict': optimizer_missing_activity.state_dict()},
+                                   os.path.join(log_dir, 'models',
+                                                f'best_model_missing_activity_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+                    torch.save(
+                        {'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
+                        os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
             # check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 50, memory_percentage_threshold=0.6)
 
@@ -2952,7 +2948,7 @@ def data_train_synaptic2(config, erase, best_model, device):
 
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
-        fig = plt.figure(figsize=(18, 6))
+        fig = plt.figure(figsize=(12, 6))
 
         ax = fig.add_subplot(2, 3, 1)
         plt.plot(list_loss, color='k', linewidth=1)

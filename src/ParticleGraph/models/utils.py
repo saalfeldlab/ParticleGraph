@@ -226,7 +226,7 @@ def get_in_features(rr=None, embedding=None, model=[], model_name = [], max_radi
 
     return in_features
 
-def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_neurons, n_neuron_types, type_list, cmap, device):
+def plot_training_signal(config, model, x, adjacency, log_dir, epoch, N, n_neurons, type_list, cmap, device):
 
     if 'PDE_N3' in config.graph_model.signal_model_name:
 
@@ -235,12 +235,10 @@ def plot_training_signal(config, model, adjacency, xnorm, log_dir, epoch, N, n_n
 
     else:
         fig = plt.figure(figsize=(8, 8))
-        for n in range(n_neuron_types):
-            pos=torch.argwhere(type_list==n).squeeze()
-            if config.graph_model.signal_model_name=='PDE_N':
-                plt.scatter(to_numpy(model.a[1,pos, 0]), to_numpy(model.a[1,pos, 1]), s=20, color=cmap.color(n))
-            else:
-                plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=20, color=cmap.color(n))
+        for n in range(n_neurons):
+            if x[n, 6] != config.simulation.baseline_value:
+                plt.scatter(to_numpy(model.a[n, 0]), to_numpy(model.a[n, 1]), s=100,
+                            color=cmap.color(int(type_list[n])), alpha=1.0, edgecolors='none')
 
     plt.xticks([])
     plt.yticks([])

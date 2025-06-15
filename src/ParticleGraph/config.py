@@ -27,7 +27,7 @@ class SimulationConfig(BaseModel):
     max_edges: float = 1.0E6
     n_particle_types: int = 5
     n_neuron_types: int = 5
-    baseline_value: float = 6
+    baseline_value: float = -999.0
     n_particle_type_distribution: list[int] = [0]
     shuffle_particle_types: bool = False
     pos_init: str = 'uniform'
