@@ -2405,6 +2405,7 @@ def data_train_synaptic2(config, erase, best_model, device):
     coeff_model_b = train_config.coeff_model_b
     coeff_sign = train_config.coeff_sign
     coeff_update_msg_diff = train_config.coeff_update_msg_diff
+    coeff_update_u_diff = train_config.coeff_update_u_diff
     time_step = train_config.time_step
     has_missing_activity = train_config.has_missing_activity
     multi_connectivity = config.training.multi_connectivity
@@ -2757,14 +2758,12 @@ def data_train_synaptic2(config, erase, best_model, device):
                     # regularisation sparsity on Wij
                     loss = loss + model_W[:n_neurons, :n_neurons].norm(1) * coeff_L1
                     # regularisation lin_edge
-                    in_features_prev, in_features, in_features_next = get_in_features_lin_edge(x, model, model_config, xnorm, n_neurons,device)
+                    in_features, in_features_next = get_in_features_lin_edge(x, model, model_config, xnorm, n_neurons,device)
                     if coeff_edge_diff > 0:
                         if model_config.lin_edge_positive:
-                            msg_1 = model.lin_edge(in_features_prev[ids]) ** 2
                             msg0 = model.lin_edge(in_features[ids]) ** 2
                             msg1 = model.lin_edge(in_features_next[ids]) ** 2
                         else:
-                            msg_1 = model.lin_edge(in_features_prev[ids])
                             msg0 = model.lin_edge(in_features[ids])
                             msg1 = model.lin_edge(in_features_next[ids])
                         loss = loss + torch.relu(msg0 - msg1).norm(2) * coeff_edge_diff
@@ -2851,12 +2850,18 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                 batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
                 for batch in batch_loader:
-                    if coeff_update_msg_diff > 0:
+                    if (coeff_update_msg_diff > 0) | (coeff_update_u_diff > 0):
                         pred, in_features = model(batch, data_id=data_id, k=k_batch, return_all=True)
-                        in_features_next = in_features.clone().detach()
-                        in_features_next[:, model_config.embedding_dim] = in_features_next[:, model_config.embedding_dim] * 1.05
-                        pred_next = model.lin_phi(in_features)
-                        loss = loss + (pred_next[ids_batch] - pred[ids_batch]).norm(2) * coeff_update_msg_diff
+                    if coeff_update_msg_diff > 0 :
+                        in_features_msg_next = in_features.clone().detach()
+                        in_features_msg_next[:, model_config.embedding_dim] = in_features_msg_next[:, model_config.embedding_dim] * 1.05
+                        pred_msg_next = model.lin_phi(in_features_msg_next.clone().detach())
+                        loss = loss + (pred_msg_next[ids_batch] - pred[ids_batch]).norm(2) * coeff_update_msg_diff
+                    if coeff_update_u_diff > 0:
+                        in_features_u_next = in_features.clone().detach()
+                        in_features_u_next[:, 0] = in_features_u_next[:, 0] * 1.05  # Perturb voltage (first column)
+                        pred_u_next = model.lin_phi(in_features_u_next.clone().detach())
+                        loss = loss + (pred_u_next[ids_batch] - pred[ids_batch]).norm(2) * coeff_update_u_diff
                     else:
                         pred = model(batch, data_id=data_id, k=k_batch)
 
@@ -2866,7 +2871,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                 elif time_step > 1:
                     loss = loss + (x_batch[ids_batch] + pred[ids_batch] * delta_t * time_step - y_batch[ids_batch]).norm(2) / time_step
 
-                if ('PDE_N3' in model_config.signal_model_name):
+                if 'PDE_N3' in model_config.signal_model_name:
                     loss = loss + train_config.coeff_model_a * (model.a[ind_a + 1] - model.a[ind_a]).norm(2)
 
                 loss.backward()

@@ -6,10 +6,12 @@ import seaborn as sns
 from tqdm import trange
 from mpl_toolkits.mplot3d import Axes3D
 
-def analyze_mlp_edge_synaptic(model, n_neurons=300, voltage_range=(0, 10), resolution=50, n_sample_pairs=200, device=None):
+
+def analyze_mlp_edge_synaptic(model, n_neurons=300, voltage_range=(0, 10), resolution=50, n_sample_pairs=200,
+                              device=None):
     """
     Analyze the learned MLP edge function with statistical sampling
-    Creates 2D heatmaps and 3D surface plots: mean and std dev across many neuron pairs
+    Creates 2D heatmaps, 3D surface plots, and scatter plot of edge function vs voltage difference
     """
 
     embedding = model.a  # Shape: (300, 2)
@@ -31,6 +33,10 @@ def analyze_mlp_edge_synaptic(model, n_neurons=300, voltage_range=(0, 10), resol
 
     # Store all outputs for statistics
     all_outputs = torch.zeros(n_sample_pairs, resolution, resolution, device=device)
+
+    # Store data for scatter plot (voltage differences and corresponding outputs)
+    voltage_diffs = []
+    edge_outputs = []
 
     # Process in batches to manage memory
     batch_size = 10
@@ -60,8 +66,21 @@ def analyze_mlp_edge_synaptic(model, n_neurons=300, voltage_range=(0, 10), resol
         lin_edge = lin_edge.reshape(batch_size_actual, resolution, resolution)
         all_outputs[batch_start:batch_end] = lin_edge
 
+        # Collect data for scatter plot
+        for batch_idx in range(batch_size_actual):
+            # Calculate voltage differences for this batch (u_j - u_i)
+            u_diff = (u_j_flat - u_i_flat).squeeze().cpu().numpy()  # (n_grid_points,)
+            edge_vals = lin_edge[batch_idx].flatten().cpu().numpy()  # (n_grid_points,)
+
+            voltage_diffs.extend(u_diff)
+            edge_outputs.extend(edge_vals)
+
     mean_output = torch.mean(all_outputs, dim=0).cpu().numpy()
     std_output = torch.std(all_outputs, dim=0).cpu().numpy()
+
+    # Convert scatter plot data to numpy arrays
+    voltage_diffs = np.array(voltage_diffs)
+    edge_outputs = np.array(edge_outputs)
 
     # Create 2D heatmap plots
     fig_2d, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
@@ -127,22 +146,38 @@ def analyze_mlp_edge_synaptic(model, n_neurons=300, voltage_range=(0, 10), resol
 
     plt.tight_layout()
 
-    # # Print some statistics
-    # print(f"\nstatistics over {n_sample_pairs} neuron pairs:")
-    # print(f"mean output range: [{mean_output.min():.4f}, {mean_output.max():.4f}]")
-    # print(f"std output range: [{std_output.min():.4f}, {std_output.max():.4f}]")
-    # print(f"average std across voltage space: {std_output.mean():.4f}")
-    #
-    # # Find peaks and valleys
-    # mean_max_idx = np.unravel_index(np.argmax(mean_output), mean_output.shape)
-    # mean_min_idx = np.unravel_index(np.argmin(mean_output), mean_output.shape)
-    # std_max_idx = np.unravel_index(np.argmax(std_output), std_output.shape)
-    #
-    # print(f"mean peak at u_i={u_vals_np[mean_max_idx[0]]:.2f}, u_j={u_vals_np[mean_max_idx[1]]:.2f}")
-    # print(f"mean valley at u_i={u_vals_np[mean_min_idx[0]]:.2f}, u_j={u_vals_np[mean_min_idx[1]]:.2f}")
-    # print(f"highest variability at u_i={u_vals_np[std_max_idx[0]]:.2f}, u_j={u_vals_np[std_max_idx[1]]:.2f}")
+    # Create scatter plot of edge function vs voltage difference
+    fig_scatter, ax_scatter = plt.subplots(1, 1, figsize=(10, 6))
 
-    return fig_2d, fig_3d
+    # Subsample for visualization if too many points
+    max_points = 10000
+    if len(voltage_diffs) > max_points:
+        indices = np.random.choice(len(voltage_diffs), max_points, replace=False)
+        voltage_diffs_plot = voltage_diffs[indices]
+        edge_outputs_plot = edge_outputs[indices]
+        alpha_val = 0.3
+    else:
+        voltage_diffs_plot = voltage_diffs
+        edge_outputs_plot = edge_outputs
+        alpha_val = 0.5
+
+    # Create scatter plot
+    scatter = ax_scatter.scatter(voltage_diffs_plot, edge_outputs_plot,
+                                 alpha=alpha_val, s=1, c=edge_outputs_plot,
+                                 cmap='viridis', rasterized=True)
+
+    ax_scatter.set_xlabel('u_j - u_i (voltage difference)')
+    ax_scatter.set_ylabel('edge function output')
+    ax_scatter.set_title(f'edge function vs voltage difference\n(sampled from {n_sample_pairs} neuron pairs)')
+    ax_scatter.grid(True, alpha=0.3)
+
+    # Add colorbar
+    cbar_scatter = plt.colorbar(scatter, ax=ax_scatter)
+    cbar_scatter.set_label('edge output')
+
+    plt.tight_layout()
+
+    return fig_2d, fig_3d, fig_scatter
 
 def analyze_embedding_space(model, n_neurons=300):
     """Analyze the learned embedding space"""

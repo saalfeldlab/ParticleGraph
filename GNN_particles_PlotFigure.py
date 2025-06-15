@@ -5466,11 +5466,13 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             plt.savefig(f"./{log_dir}/results/all_embedding_text.tif", dpi=170.7)
             plt.close()
 
-            fig, fig_3d = analyze_mlp_edge_synaptic(model, n_sample_pairs=10000, resolution=100, device=device)
+            fig, fig_3d, fig_scatter = analyze_mlp_edge_synaptic(model, n_sample_pairs=10000, resolution=100, device=device)
             fig.savefig(f"./{log_dir}/results/function_edge.png", dpi=300, bbox_inches='tight')
             fig_3d.savefig(f"./{log_dir}/results/function_edge_3d.png", dpi=300, bbox_inches='tight')
+            fig_scatter.savefig(f"./{log_dir}/results/function_edge_scatter.png", dpi=300, bbox_inches='tight')
             plt.close(fig)
             plt.close(fig_3d)
+            plt.close(fig_scatter)
 
             fig = analyze_mlp_phi_synaptic(model, n_sample_pairs=1000, resolution=100, device=device)
             fig.savefig(f"./{log_dir}/results/function_update.png", dpi=300, bbox_inches='tight')
@@ -10353,7 +10355,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_video_bison_test']
     # config_list = ['RD_RPS']
     # config_list = ['cell_U2OS_8_12']
-    config_list = ['signal_CElegans_c6', 'signal_CElegans_c7', 'signal_CElegans_c8']
+    config_list = ['signal_CElegans_c6', 'signal_CElegans_c7', 'signal_CElegans_c8', 'signal_CElegans_c9', 'signal_CElegans_c10']
 
     # plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 
