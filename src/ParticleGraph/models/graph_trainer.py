@@ -2761,11 +2761,11 @@ def data_train_synaptic2(config, erase, best_model, device):
                     in_features, in_features_next = get_in_features_lin_edge(x, model, model_config, xnorm, n_neurons,device)
                     if coeff_edge_diff > 0:
                         if model_config.lin_edge_positive:
-                            msg0 = model.lin_edge(in_features[ids]) ** 2
-                            msg1 = model.lin_edge(in_features_next[ids]) ** 2
+                            msg0 = model.lin_edge(in_features[ids].clone().detach()) ** 2
+                            msg1 = model.lin_edge(in_features_next[ids].clone().detach()) ** 2
                         else:
-                            msg0 = model.lin_edge(in_features[ids])
-                            msg1 = model.lin_edge(in_features_next[ids])
+                            msg0 = model.lin_edge(in_features[ids].clone().detach())
+                            msg1 = model.lin_edge(in_features_next[ids].clone().detach())
                         loss = loss + torch.relu(msg0 - msg1).norm(2) * coeff_edge_diff
                     # regularisation sign Wij
                     if (coeff_sign > 0) and (N%4 == 0):

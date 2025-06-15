@@ -1,4 +1,4 @@
-description: 'coeff_sign : 50  with_connectivity_mask: True   has_missing_activity: True   coeff_missing_activity: 1'
+description: 'coeff_sign : 50  with_connectivity_mask: True   has_missing_activity: True   coeff_missing_activity: 1     coeff_sign : 50'
 dataset: 'CElegans_c1'
 data_folder_name: '/groups/saalfeld/home/allierc/Py/wormvae/data/worm_activity/all_traces_Heads_new.mat'
 connectome_folder_name: '/groups/saalfeld/home/allierc/Py/wormvae/data/worm_connectivity/'

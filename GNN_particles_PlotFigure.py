@@ -5539,7 +5539,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                     pos = np.argwhere(x_list[k][100][:, 6] == config.simulation.baseline_value)
                     A[pos,:] = 0
                     A = torch.reshape(A, (n_neurons, n_neurons))
-                    plt.imshow(to_numpy(A), aspect='auto', cmap='bwr', vmin=-2, vmax=2)
+                    plt.imshow(to_numpy(A), aspect='auto', cmap='bwr', vmin=-0.5, vmax=0.5)
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/results/W/W_{k}.tif", dpi=80)
                     plt.close()
@@ -5555,7 +5555,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                     A[pos,:] = 0
                     larynx_pred_weight, index_larynx = map_matrix(larynx_neuron_list, all_neuron_list, A)
                     sns.heatmap(to_numpy(larynx_pred_weight), ax=axes[k], center=0, square=True,
-                                vmin=-2, vmax=2, cmap='bwr', cbar=False, xticklabels=False, yticklabels=False)
+                                vmin=-0.5, vmax=0.5, cmap='bwr', cbar=False, xticklabels=False, yticklabels=False)
                     larynx_weights.append(to_numpy(larynx_pred_weight))
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/W_larynx_grid.tif", dpi=80)
@@ -5566,7 +5566,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                 larynx_std = np.std(larynx_stack, axis=0)
                 fig, axes = plt.subplots(1, 2, figsize=(12, 5))
                 sns.heatmap(larynx_mean, ax=axes[0], center=0, square=True, cmap='bwr',
-                            cbar=True, vmin=-1, vmax=1, xticklabels=False, yticklabels=False)
+                            cbar=True, vmin=-0.5, vmax=0.5, xticklabels=False, yticklabels=False)
                 sns.heatmap(larynx_std, ax=axes[1], square=True, cmap='viridis',
                             cbar=True, xticklabels=False, yticklabels=False)
                 plt.tight_layout()
