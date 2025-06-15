@@ -20,6 +20,7 @@ from GNN_particles_Ntype import *
 from ParticleGraph.fitting_models import *
 from ParticleGraph.sparsify import *
 from ParticleGraph.models.utils import *
+from ParticleGraph.models.plot_utils import *
 from ParticleGraph.models.MLP import *
 from ParticleGraph.utils import to_numpy, CustomColorMap
 import matplotlib as mpl
@@ -5465,6 +5466,12 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             plt.savefig(f"./{log_dir}/results/all_embedding_text.tif", dpi=170.7)
             plt.close()
 
+            fig_2d, fig_3d = analyze_mlp_edge_synaptic(model, n_sample_pairs=10000, resolution=100, device=device)
+            fig_2d.savefig(f"./{log_dir}/results/edge_function_2d.png", dpi=300, bbox_inches='tight')
+            fig_3d.savefig(f"./{log_dir}/results/edge_function_3d.png", dpi=300, bbox_inches='tight')
+            plt.close(fig_2d)
+            plt.close(fig_3d)
+
             if 'excitation' in model_config.update_type:
 
                 # Run the analysis
@@ -5506,7 +5513,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                                        dtype=torch.float32, device=device).unsqueeze(1)
                     prediction = model_missing_activity[run](t).t() + config.simulation.baseline_value
                     activity = torch.tensor(x_list[run][:, :, 6:7], device=device).squeeze().t()
-                    pos = np.argwhere(x_list[run][0][:, 6] != 6)
+                    pos = np.argwhere(x_list[run][0][:, 6] == 6)
                     axes[run].scatter(to_numpy(activity[pos, :prediction.shape[1]]),
                                       to_numpy(prediction[pos, :]), s=0.5, alpha=0.3, c=mc)
                     axes[run].set_xlim([0,10])
@@ -5516,21 +5523,20 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                 plt.close()
 
             if multi_connectivity:
-
-                fig, axes = plt.subplots(4, 5, figsize=(20, 16))
-                axes = axes.flatten()
-
+                os.makedirs(f"./{log_dir}/results/W", exist_ok=True)
                 for k in range(min(20, model.W.shape[0] - 1)):
+                    fig, ax = fig_init()
+                    plt.axis('off')
                     i, j = torch.triu_indices(n_neurons, n_neurons, requires_grad=False, device=device)
                     A = model.W[k].clone().detach()
                     A[i, i] = 0
-                    pos = np.argwhere(x_list[k][100][:, 6] != config.simulation.baseline_value)
+                    pos = np.argwhere(x_list[k][100][:, 6] == config.simulation.baseline_value)
                     A[pos,:] = 0
-                    sns.heatmap(to_numpy(A), ax=axes[k], center=0, square=True, cmap='bwr',
-                                cbar=False, xticklabels=False, yticklabels=False)
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/W_grid.tif", dpi=80)
-                plt.close()
+                    A = torch.reshape(A, (n_neurons, n_neurons))
+                    plt.imshow(to_numpy(A), aspect='auto', cmap='bwr', vmin=-2, vmax=2)
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/W/W_{k}.tif", dpi=80)
+                    plt.close()
 
                 larynx_weights =[]
                 fig, axes = plt.subplots(4, 5, figsize=(20, 16))
@@ -5539,11 +5545,11 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                     i, j = torch.triu_indices(n_neurons, n_neurons, requires_grad=False, device=device)
                     A = model.W[k].clone().detach()
                     A[i, i] = 0
-                    pos = np.argwhere(x_list[k][100][:, 6] != config.simulation.baseline_value)
+                    pos = np.argwhere(x_list[k][100][:, 6] == config.simulation.baseline_value)
                     A[pos,:] = 0
                     larynx_pred_weight, index_larynx = map_matrix(larynx_neuron_list, all_neuron_list, A)
                     sns.heatmap(to_numpy(larynx_pred_weight), ax=axes[k], center=0, square=True,
-                                cmap='bwr', cbar=False, xticklabels=False, yticklabels=False)
+                                vmin=-2, vmax=2, cmap='bwr', cbar=False, xticklabels=False, yticklabels=False)
                     larynx_weights.append(to_numpy(larynx_pred_weight))
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/W_larynx_grid.tif", dpi=80)
@@ -5558,7 +5564,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                 sns.heatmap(larynx_std, ax=axes[1], square=True, cmap='viridis',
                             cbar=True, xticklabels=False, yticklabels=False)
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/larynx_mean_std.tif", dpi=80)
+                plt.savefig(f"./{log_dir}/results/W_larynx_mean_std.tif", dpi=80)
                 plt.close()
 
             else:
@@ -10343,7 +10349,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_video_bison_test']
     # config_list = ['RD_RPS']
     # config_list = ['cell_U2OS_8_12']
-    config_list = ['signal_CElegans_c2']
+    config_list = ['signal_CElegans_c1', 'signal_CElegans_c2', 'signal_CElegans_c3', 'signal_CElegans_c4', 'signal_CElegans_c5',]
 
     # plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 

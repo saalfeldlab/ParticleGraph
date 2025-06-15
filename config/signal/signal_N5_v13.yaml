@@ -81,8 +81,8 @@ training:
     fix_cluster_embedding: True
 
     coeff_L1: 1.0E-5
-    coeff_diff: 10
-    coeff_diff_update: 1
+    coeff_edge_diff: 10
+    coeff_update_diff: 1
     diff_update_regul: 'TV_second_derivative'
 
     learning_rate_W_start: 1.0E-3

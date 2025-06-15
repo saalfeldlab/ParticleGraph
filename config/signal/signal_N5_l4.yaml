@@ -1,4 +1,4 @@
-description: 'synaptic network random matrix   cluster embedding distance 0.2   1000 neurons 4 types phi neuron-neuron dependent lorentz std 0.03   coeff_diff 500'
+description: 'synaptic network random matrix   cluster embedding distance 0.2   1000 neurons 4 types phi neuron-neuron dependent lorentz std 0.03   coeff_edge_diff 500'
 dataset: 'signal_N5_l4'
 
 simulation:
@@ -68,4 +68,4 @@ training:
 
     noise_level: 0
 
-    coeff_diff: 500
+    coeff_edge_diff: 500

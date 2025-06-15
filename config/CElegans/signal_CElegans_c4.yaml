@@ -72,7 +72,7 @@ training:
 
     multi_connectivity: True
     with_connectivity_mask: True
-    has_missing_activity: True
+    has_missing_activity: False
 
     time_step: 8
     embedding_trial: False
@@ -89,6 +89,6 @@ training:
     learning_rate_NNR: 1.0E-5
     learning_rate_missing_activity: 1.0E-4
 
-    coeff_diff: 100
+    coeff_edge_diff: 100
     coeff_sign : 0
     coeff_missing_activity: 1

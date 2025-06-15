@@ -54,4 +54,4 @@ training:
     learning_rate_embedding_start: 5.0E-3
 
     noise_level: 0.5
-    coeff_diff: 500
+    coeff_edge_diff: 500

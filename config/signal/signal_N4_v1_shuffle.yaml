@@ -65,7 +65,7 @@ training:
     sparsity: 'replace_embedding_function'
     sparsity_freq: 4
 
-    coeff_diff: 100
+    coeff_edge_diff: 100
 
     learning_rate_NNR: 1.0E-6
     learning_rate_W_start: 1.0E-4

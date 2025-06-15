@@ -73,7 +73,7 @@ training:
     fix_cluster_embedding: True
 
     coeff_L1: 0
-    coeff_diff: 10
+    coeff_edge_diff: 10
 
     learning_rate_W_start: 1.0E-3
     learning_rate_start: 5.0E-4

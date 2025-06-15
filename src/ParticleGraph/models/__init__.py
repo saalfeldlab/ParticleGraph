@@ -17,9 +17,10 @@ from .graph_trainer import *
 from .utils import KoLeoLoss, get_embedding, get_embedding_time_series, choose_training_model, constant_batch_size, increasing_batch_size, set_trainable_parameters, set_trainable_division_parameters, plot_training
 from .Gumbel import sample_gumbel, gumbel_softmax_sample, gumbel_softmax
 from .WBI_Communication import WBI_Communication
+from .plot_utils import analyze_mlp_edge_synaptic, analyze_embedding_space
 
 __all__ = [graph_trainer, Interaction_Agent, Interaction_Particle, Interaction_Smooth_Particle, Interaction_PDE_Particle, Interaction_Particle2, Interaction_Particle3,
            Interaction_Cell, Cell_Area, Interaction_Particle_Field, Interaction_Mouse, Siren_Network, Siren,
            Signal_Propagation2, Mesh, Mesh_Laplacian, Ghost_Particles, KoLeoLoss, get_embedding, get_embedding_time_series,
            choose_training_model, constant_batch_size, increasing_batch_size, set_trainable_parameters, set_trainable_division_parameters,
-           plot_training, sample_gumbel, gumbel_softmax_sample, gumbel_softmax, WBI_Communication]
+           plot_training, sample_gumbel, gumbel_softmax_sample, gumbel_softmax, WBI_Communication, plot_utils]

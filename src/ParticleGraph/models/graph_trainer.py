@@ -2611,9 +2611,15 @@ def data_train_synaptic2(config, erase, best_model, device):
 
     adjacency = torch.load(f'./graphs_data/{dataset_name}/adjacency.pt', map_location=device)
 
+    # adjacency[10,:]=5
+    # fig = plt.figure(figsize=(8, 8))
+    # ax = fig.add_subplot(111)
+    # ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
+    # plt.show()
+
+
     if train_config.with_connectivity_mask:
         model.mask = (adjacency > 0) * 1.0
-        
 
     if coeff_sign > 0:
         index_weight = []
@@ -2624,10 +2630,6 @@ def data_train_synaptic2(config, erase, best_model, device):
     edges_all = edges.clone().detach()
 
     print(f'{edges.shape[1]} edges')
-
-    pos = torch.argwhere(edges[1, :] == 0)
-    id = edges[0, pos]
-
 
     if 'PDE_N3' in model_config.signal_model_name:
         ind_a = torch.tensor(np.arange(1, n_neurons * 100), device=device)
@@ -2642,10 +2644,10 @@ def data_train_synaptic2(config, erase, best_model, device):
         modulation_norm = torch.tensor(1.0E-2, device=device)
 
     coeff_L1 = train_config.coeff_L1
-    coeff_diff = train_config.coeff_diff
-    coeff_diff_update = train_config.coeff_diff_update
-    logger.info(f'coeff_L1: {coeff_L1} coeff_diff: {coeff_diff} coeff_diff_update: {coeff_diff_update}')
-    print(f'coeff_L1: {coeff_L1} coeff_diff: {coeff_diff} coeff_diff_update: {coeff_diff_update}')
+    coeff_edge_diff = train_config.coeff_edge_diff
+    coeff_update_diff = train_config.coeff_update_diff
+    logger.info(f'coeff_L1: {coeff_L1} coeff_edge_diff: {coeff_edge_diff} coeff_update_diff: {coeff_update_diff}')
+    print(f'coeff_L1: {coeff_L1} coeff_edge_diff: {coeff_edge_diff} coeff_update_diff: {coeff_update_diff}')
 
     print("start training ...")
 
@@ -2664,10 +2666,10 @@ def data_train_synaptic2(config, erase, best_model, device):
             logger.info(f'reset W model.a at epoch : {epoch}')
             print(f'reset W model.a at epoch : {epoch}')
         if epoch == train_config.n_epochs_init:
-            coeff_diff = coeff_diff_update / 100
-            coeff_diff_update = coeff_diff_update / 100
-            logger.info(f'coeff_L1: {coeff_L1} coeff_diff: {coeff_diff} coeff_diff_update: {coeff_diff_update}')
-            print(f'coeff_L1: {coeff_L1} coeff_diff: {coeff_diff} coeff_diff_update: {coeff_diff_update}')
+            coeff_edge_diff = coeff_update_diff / 100
+            coeff_update_diff = coeff_update_diff / 100
+            logger.info(f'coeff_L1: {coeff_L1} coeff_edge_diff: {coeff_edge_diff} coeff_update_diff: {coeff_update_diff}')
+            print(f'coeff_L1: {coeff_L1} coeff_edge_diff: {coeff_edge_diff} coeff_update_diff: {coeff_update_diff}')
 
         batch_size = get_batch_size(epoch)
         logger.info(f'batch_size: {batch_size}')
@@ -2755,7 +2757,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                     loss = loss + model_W[:n_neurons, :n_neurons].norm(1) * coeff_L1
                     # regularisation lin_edge
                     in_features_prev, in_features, in_features_next = get_in_features_lin_edge(x, model, model_config, xnorm, n_neurons,device)
-                    if coeff_diff > 0:
+                    if coeff_edge_diff > 0:
                         if model_config.lin_edge_positive:
                             msg_1 = model.lin_edge(in_features_prev[ids]) ** 2
                             msg0 = model.lin_edge(in_features[ids]) ** 2
@@ -2764,7 +2766,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                             msg_1 = model.lin_edge(in_features_prev[ids])
                             msg0 = model.lin_edge(in_features[ids])
                             msg1 = model.lin_edge(in_features_next[ids])
-                        loss = loss + torch.relu(msg0 - msg1).norm(2) * coeff_diff
+                        loss = loss + torch.relu(msg0 - msg1).norm(2) * coeff_edge_diff
                     # regularisation sign Wij
                     if (coeff_sign > 0) and (N%4 == 0):
                         W_sign = torch.tanh(5 * model_W)
@@ -2772,13 +2774,13 @@ def data_train_synaptic2(config, erase, best_model, device):
                         for i in range(n_neurons):
                             indices = index_weight[int(i)]
                             if indices.numel() > 0:
-                                values = W_sign[indices]
+                                values = W_sign[indices,i]
                                 std = torch.std(values, unbiased=False)
                                 loss_contribs.append(std)
                         if loss_contribs:
                             loss = loss + torch.stack(loss_contribs).norm(2) * coeff_sign
                     # miscalleneous regularisations
-                    if (model.update_type == 'generic') & (coeff_diff_update > 0):
+                    if (model.update_type == 'generic') & (coeff_update_diff > 0):
                         in_feature_update = torch.cat((torch.zeros((n_neurons, 1), device=device),
                                                        model.a[:n_neurons], msg0,
                                                        torch.ones((n_neurons, 1), device=device)), dim=1)
@@ -2788,7 +2790,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                                                             torch.ones((n_neurons, 1), device=device)), dim=1)
                         in_feature_update_next = in_feature_update_next[ids]
                         if 'positive' in train_config.diff_update_regul:
-                            loss = loss + torch.relu(model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next)).norm(2) * coeff_diff_update
+                            loss = loss + torch.relu(model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next)).norm(2) * coeff_update_diff
                         if 'TV' in train_config.diff_update_regul:
                             in_feature_update_next_bis = torch.cat((torch.zeros((n_neurons, 1), device=device),
                                                                     model.a[:n_neurons], msg1,
@@ -2796,7 +2798,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                                                                    dim=1)
                             in_feature_update_next_bis = in_feature_update_next_bis[ids]
                             loss = loss + (model.lin_phi(in_feature_update) - model.lin_phi(
-                                in_feature_update_next_bis)).norm(2) * coeff_diff_update
+                                in_feature_update_next_bis)).norm(2) * coeff_update_diff
                         if 'second_derivative' in train_config.diff_update_regul:
                             in_feature_update_prev = torch.cat((torch.zeros((n_neurons, 1), device=device),
                                                                 model.a[:n_neurons], msg_1,
@@ -2804,7 +2806,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                             in_feature_update_prev = in_feature_update_prev[ids]
                             loss = loss + (model.lin_phi(in_feature_update_prev) + model.lin_phi(
                                 in_feature_update_next) - 2 * model.lin_phi(in_feature_update)).norm(
-                                2) * coeff_diff_update
+                                2) * coeff_update_diff
 
                     if particle_batch_ratio < 1:
                         ids_ = np.random.permutation(ids.shape[0])[:int(ids.shape[0] * particle_batch_ratio)]
@@ -2867,13 +2869,13 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                 total_loss += loss.item()
 
-                if train_config.with_connectivity_mask & (N%100 == 0):
-                    with torch.no_grad():
-                        if multi_connectivity:
-                            for run_ in range(n_runs):
-                                model.W[run_].copy_(model.W[run_] * model.mask)
-                        else:
-                            model.W.copy_(model.W * model.mask)
+                # if train_config.with_connectivity_mask & (N%100 == 0):
+                #     with torch.no_grad():
+                #         if multi_connectivity:
+                #             for run_ in range(n_runs):
+                #                 model.W[run_].copy_(model.W[run_] * model.mask)
+                #         else:
+                #             model.W.copy_(model.W * model.mask)
 
                 if ((N % plot_frequency == 0) | (N == 0)):
                     plot_training_signal(config, model, x, adjacency, log_dir, epoch, N, n_neurons, type_list, cmap,
@@ -4543,14 +4545,14 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     log_coeff = torch.log(distance[1:])
                     log_coeff_min = torch.min(log_coeff)
                     log_coeff_max = torch.max(log_coeff)
-                    log_coeff_diff = log_coeff_max - log_coeff_min
-                    d_log = [log_coeff_min, log_coeff_max, log_coeff_diff]
+                    log_coeff_edge_diff = log_coeff_max - log_coeff_min
+                    d_log = [log_coeff_min, log_coeff_max, log_coeff_edge_diff]
 
                     log_coeff = torch.log(masses)
                     log_coeff_min = torch.min(log_coeff)
                     log_coeff_max = torch.max(log_coeff)
-                    log_coeff_diff = log_coeff_max - log_coeff_min
-                    m_log = [log_coeff_min, log_coeff_max, log_coeff_diff]
+                    log_coeff_edge_diff = log_coeff_max - log_coeff_min
+                    m_log = [log_coeff_min, log_coeff_max, log_coeff_edge_diff]
 
                     m_ = torch.log(masses) / m_log[2]
 

@@ -89,6 +89,6 @@ training:
     learning_rate_NNR: 1.0E-5
     learning_rate_missing_activity: 1.0E-4
 
-    coeff_diff: 100
+    coeff_edge_diff: 100
     coeff_sign : 50
     coeff_missing_activity: 1

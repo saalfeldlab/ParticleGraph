@@ -1873,7 +1873,6 @@ def analyze_odor_responses_by_neuron(model, x_list, edges, n_runs, n_frames, tim
         for odor in odor_list:
             odor_responses[odor] = torch.stack(odor_responses[odor]).squeeze()
 
-    print(f"Collected {valid_samples} valid samples")
     return odor_responses
 
 
