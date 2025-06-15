@@ -85,7 +85,7 @@ def analyze_mlp_edge_synaptic(model, n_neurons=300, voltage_range=(0, 10), resol
     # Create 2D heatmap plots
     fig_2d, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
 
-    im1 = ax1.imshow(mean_output, extent=[voltage_range[0], voltage_range[1],
+    im1 = ax1.imshow(np.flipud(mean_output), extent=[voltage_range[0], voltage_range[1],
                                           voltage_range[0], voltage_range[1]],
                      origin='lower', cmap='viridis', aspect='equal')
     ax1.set_title(f'mean edge function\n(over {n_sample_pairs} random pairs)')
@@ -94,7 +94,7 @@ def analyze_mlp_edge_synaptic(model, n_neurons=300, voltage_range=(0, 10), resol
     cbar1 = plt.colorbar(im1, ax=ax1, shrink=0.8)
     cbar1.set_label('mean output')
 
-    im2 = ax2.imshow(std_output, extent=[voltage_range[0], voltage_range[1],
+    im2 = ax2.imshow(np.flipud(std_output), extent=[voltage_range[0], voltage_range[1],
                                          voltage_range[0], voltage_range[1]],
                      origin='lower', cmap='plasma', aspect='equal')
     ax2.set_title(f'std dev of edge function\n(over {n_sample_pairs} random pairs)')
@@ -114,7 +114,7 @@ def analyze_mlp_edge_synaptic(model, n_neurons=300, voltage_range=(0, 10), resol
 
     # 3D plot for mean
     ax3d_1 = fig_3d.add_subplot(121, projection='3d')
-    surf1 = ax3d_1.plot_surface(U_i, U_j, mean_output, cmap='viridis',
+    surf1 = ax3d_1.plot_surface(U_i, U_j, np.flipud(mean_output), cmap='viridis',
                                 alpha=0.8, linewidth=0, antialiased=True)
     ax3d_1.set_xlabel('u_i (voltage)')
     ax3d_1.set_ylabel('u_j (voltage)')
@@ -123,12 +123,12 @@ def analyze_mlp_edge_synaptic(model, n_neurons=300, voltage_range=(0, 10), resol
     ax3d_1.view_init(elev=30, azim=45)
 
     # Add contour lines at the bottom
-    ax3d_1.contour(U_i, U_j, mean_output, zdir='z',
+    ax3d_1.contour(U_i, U_j, np.flipud(mean_output), zdir='z',
                    offset=mean_output.min(), cmap='viridis', alpha=0.5)
 
     # 3D plot for std dev
     ax3d_2 = fig_3d.add_subplot(122, projection='3d')
-    surf2 = ax3d_2.plot_surface(U_i, U_j, std_output, cmap='plasma',
+    surf2 = ax3d_2.plot_surface(U_i, U_j, np.flipud(std_output), cmap='plasma',
                                 alpha=0.8, linewidth=0, antialiased=True)
     ax3d_2.set_xlabel('u_i (voltage)')
     ax3d_2.set_ylabel('u_j (voltage)')

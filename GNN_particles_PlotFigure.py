@@ -5566,7 +5566,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                 larynx_std = np.std(larynx_stack, axis=0)
                 fig, axes = plt.subplots(1, 2, figsize=(12, 5))
                 sns.heatmap(larynx_mean, ax=axes[0], center=0, square=True, cmap='bwr',
-                            cbar=True, vmin=-2, vmax=2, xticklabels=False, yticklabels=False)
+                            cbar=True, vmin=-1, vmax=1, xticklabels=False, yticklabels=False)
                 sns.heatmap(larynx_std, ax=axes[1], square=True, cmap='viridis',
                             cbar=True, xticklabels=False, yticklabels=False)
                 plt.tight_layout()
@@ -5645,11 +5645,6 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/histogram_d_pair_embedding.tif", dpi=80)
             plt.close()
-
-
-
-
-
 
 
             # fig, ax = fig_init()
@@ -10355,7 +10350,8 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_video_bison_test']
     # config_list = ['RD_RPS']
     # config_list = ['cell_U2OS_8_12']
-    config_list = ['signal_CElegans_c6', 'signal_CElegans_c7', 'signal_CElegans_c8', 'signal_CElegans_c9', 'signal_CElegans_c10']
+    config_list = ['signal_CElegans_c1', 'signal_CElegans_c2', 'signal_CElegans_c3', 'signal_CElegans_c4', 'signal_CElegans_c5',
+                   'signal_CElegans_c6', 'signal_CElegans_c7', 'signal_CElegans_c8', 'signal_CElegans_c9', 'signal_CElegans_c10', 'signal_CElegans_c11', 'signal_CElegans_c12']
 
     # plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 
