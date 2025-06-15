@@ -2852,16 +2852,23 @@ def data_train_synaptic2(config, erase, best_model, device):
                 for batch in batch_loader:
                     if (coeff_update_msg_diff > 0) | (coeff_update_u_diff > 0):
                         pred, in_features = model(batch, data_id=data_id, k=k_batch, return_all=True)
-                    if coeff_update_msg_diff > 0 :
-                        in_features_msg_next = in_features.clone().detach()
-                        in_features_msg_next[:, model_config.embedding_dim] = in_features_msg_next[:, model_config.embedding_dim] * 1.05
-                        pred_msg_next = model.lin_phi(in_features_msg_next.clone().detach())
-                        loss = loss + (pred_msg_next[ids_batch] - pred[ids_batch]).norm(2) * coeff_update_msg_diff
-                    if coeff_update_u_diff > 0:
-                        in_features_u_next = in_features.clone().detach()
-                        in_features_u_next[:, 0] = in_features_u_next[:, 0] * 1.05  # Perturb voltage (first column)
-                        pred_u_next = model.lin_phi(in_features_u_next.clone().detach())
-                        loss = loss + (pred_u_next[ids_batch] - pred[ids_batch]).norm(2) * coeff_update_u_diff
+                        if coeff_update_msg_diff > 0 :
+                            in_features_msg_next = in_features.clone().detach()
+                            in_features_msg_next[:, model_config.embedding_dim] = in_features_msg_next[:, model_config.embedding_dim] * 1.05
+                            pred_msg_next = model.lin_phi(in_features_msg_next.clone().detach())
+                            loss = loss + torch.relu(pred[ids_batch]-pred_msg_next[ids_batch]).norm(2) * coeff_update_msg_diff
+                        if coeff_update_u_diff > 0:
+                            in_features_u_next = in_features.clone().detach()
+                            in_features_u_next[:, 0] = in_features_u_next[:, 0] * 1.05  # Perturb voltage (first column)
+                            pred_u_next = model.lin_phi(in_features_u_next.clone().detach())
+                            loss = loss + torch.relu(pred_u_next[ids_batch] - pred[ids_batch]).norm(2) * coeff_update_u_diff
+                    # Enable gradients for direct derivative computation
+                    # in_features.requires_grad_(True)
+                    # pred = model.lin_phi(in_features)
+                    # grad_u = torch.autograd.grad(pred.sum(), in_features, retain_graph=True)[0][:, 0]
+                    # grad_msg = torch.autograd.grad(pred.sum(), in_features)[0][:, model_config.embedding_dim]
+                    # loss += torch.relu(grad_u[ids_batch]).norm(2) * coeff_update_u_diff
+                    # loss += torch.relu(-grad_msg[ids_batch]).norm(2) * coeff_update_msg_diff
                     else:
                         pred = model(batch, data_id=data_id, k=k_batch)
 
