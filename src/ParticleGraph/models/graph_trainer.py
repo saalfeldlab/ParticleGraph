@@ -2404,6 +2404,7 @@ def data_train_synaptic2(config, erase, best_model, device):
     coeff_lin_modulation = train_config.coeff_lin_modulation
     coeff_model_b = train_config.coeff_model_b
     coeff_sign = train_config.coeff_sign
+    coeff_update_msg_diff = train_config.coeff_update_msg_diff
     time_step = train_config.time_step
     has_missing_activity = train_config.has_missing_activity
     multi_connectivity = config.training.multi_connectivity
@@ -2845,11 +2846,19 @@ def data_train_synaptic2(config, erase, best_model, device):
                         ids_index += x.shape[0]
 
             if not (dataset_batch == []):
-                batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
-                for batch in batch_loader:
-                    pred = model(batch, data_id=data_id, k=k_batch)
 
                 total_loss_regul += loss.item()
+
+                batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
+                for batch in batch_loader:
+                    if coeff_update_msg_diff > 0:
+                        pred, in_features = model(batch, data_id=data_id, k=k_batch, return_all=True)
+                        in_features_next = in_features.clone().detach()
+                        in_features_next[:, model_config.embedding_dim] = in_features_next[:, model_config.embedding_dim] * 1.05
+                        pred_next = model.lin_phi(in_features)
+                        loss = loss + (pred_next[ids_batch] - pred[ids_batch]).norm(2) * coeff_update_msg_diff
+                    else:
+                        pred = model(batch, data_id=data_id, k=k_batch)
 
                 if time_step == 1:
                     loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)

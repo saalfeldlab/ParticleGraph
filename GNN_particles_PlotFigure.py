@@ -5466,11 +5466,15 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             plt.savefig(f"./{log_dir}/results/all_embedding_text.tif", dpi=170.7)
             plt.close()
 
-            fig_2d, fig_3d = analyze_mlp_edge_synaptic(model, n_sample_pairs=10000, resolution=100, device=device)
-            fig_2d.savefig(f"./{log_dir}/results/edge_function_2d.png", dpi=300, bbox_inches='tight')
-            fig_3d.savefig(f"./{log_dir}/results/edge_function_3d.png", dpi=300, bbox_inches='tight')
-            plt.close(fig_2d)
+            fig, fig_3d = analyze_mlp_edge_synaptic(model, n_sample_pairs=10000, resolution=100, device=device)
+            fig.savefig(f"./{log_dir}/results/function_edge.png", dpi=300, bbox_inches='tight')
+            fig_3d.savefig(f"./{log_dir}/results/function_edge_3d.png", dpi=300, bbox_inches='tight')
+            plt.close(fig)
             plt.close(fig_3d)
+
+            fig = analyze_mlp_phi_synaptic(model, n_sample_pairs=1000, resolution=100, device=device)
+            fig.savefig(f"./{log_dir}/results/function_update.png", dpi=300, bbox_inches='tight')
+            plt.close(fig)
 
             if 'excitation' in model_config.update_type:
 
@@ -10349,7 +10353,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_video_bison_test']
     # config_list = ['RD_RPS']
     # config_list = ['cell_U2OS_8_12']
-    config_list = ['signal_CElegans_c1', 'signal_CElegans_c2', 'signal_CElegans_c3', 'signal_CElegans_c4', 'signal_CElegans_c5',]
+    config_list = ['signal_CElegans_c6', 'signal_CElegans_c7', 'signal_CElegans_c8']
 
     # plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 
