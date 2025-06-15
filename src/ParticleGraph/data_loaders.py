@@ -1878,7 +1878,6 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
     plt.savefig(f"graphs_data/{dataset_name}/mask_larynx_adjacency_matrix.png", dpi=170)
     plt.close()
 
-
     # generate data for GNN training
     # create fully connected edges
     n_neurons = len(all_neuron_list)

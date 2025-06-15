@@ -2613,14 +2613,21 @@ def data_train_synaptic2(config, erase, best_model, device):
 
     if train_config.with_connectivity_mask:
         model.mask = (adjacency > 0) * 1.0
+        
+
     if coeff_sign > 0:
         index_weight = []
         for i in range(n_neurons):
             index_weight.append(torch.argwhere(model.mask[:, i] > 0).squeeze())
+
     edges = torch.load(f'./graphs_data/{dataset_name}/edge_index.pt', map_location=device)
     edges_all = edges.clone().detach()
 
     print(f'{edges.shape[1]} edges')
+
+    pos = torch.argwhere(edges[1, :] == 0)
+    id = edges[0, pos]
+
 
     if 'PDE_N3' in model_config.signal_model_name:
         ind_a = torch.tensor(np.arange(1, n_neurons * 100), device=device)
