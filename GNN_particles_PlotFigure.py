@@ -5455,7 +5455,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                 plt.xlabel(r'$a_{0}$', fontsize=68)
                 plt.ylabel(r'$a_{1}$', fontsize=68)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/all_embedding.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/results/embedding.tif", dpi=170.7)
             plt.close()
             fig, axes = fig_init()
             for n in range(n_neurons):
@@ -5463,16 +5463,58 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
                     plt.scatter(to_numpy(model.a[:n_neurons, 0]), to_numpy(model.a[:n_neurons, 1]), alpha=0.1, s=50, color='k', edgecolors='none')
                     plt.text(to_numpy(model.a[n, 0]), to_numpy(model.a[n, 1]) - 0.01, all_neuron_list[n], fontsize=6)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/all_embedding_text.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/results/embedding_text.tif", dpi=170.7)
             plt.close()
 
-            fig, fig_3d, fig_scatter = analyze_mlp_edge_synaptic(model, n_sample_pairs=10000, resolution=100, device=device)
-            fig.savefig(f"./{log_dir}/results/function_edge.png", dpi=300, bbox_inches='tight')
-            fig_3d.savefig(f"./{log_dir}/results/function_edge_3d.png", dpi=300, bbox_inches='tight')
-            fig_scatter.savefig(f"./{log_dir}/results/function_edge_scatter.png", dpi=300, bbox_inches='tight')
-            plt.close(fig)
-            plt.close(fig_3d)
-            plt.close(fig_scatter)
+
+            # fig_2d, fig_scatter = analyze_mlp_edge_synaptic(model, n_sample_pairs=10000, resolution=100, device=device)
+            # fig_2d.savefig(f"./{log_dir}/results/function_edge.png", dpi=300, bbox_inches='tight')
+            # fig_scatter.savefig(f"./{log_dir}/results/function_edge_scatter.png", dpi=300, bbox_inches='tight')
+            # plt.close(fig_2d)
+            # plt.close(fig_scatter)
+
+            # Line plots for specific neurons
+            selected_neurons = ['ADAL', 'ADAR', 'AVAL']  # 1-5 neurons of interest
+            fig_lines = analyze_mlp_edge_lines(
+                model,
+                selected_neurons,
+                all_neuron_list,
+                to_numpy(adjacency),  # Your 300x300 adjacency matrix
+                signal_range=(0, 10),
+                resolution=100,
+                device=device
+            ) # Example neuron names
+            fig_lines.savefig(f"./{log_dir}/results/function_edge_lines.png", dpi=300, bbox_inches='tight')
+            plt.close(fig_lines)
+
+            fig_lines = analyze_mlp_edge_lines_weighted(
+                model,
+                'ADAL',  # Single neuron of interest
+                all_neuron_list,
+                to_numpy(adjacency),
+                to_numpy(model.W[0]),  # Your 300x300 weight matrix
+                signal_range=(0, 10),
+                resolution=100,
+                device=device
+            )
+            fig_lines.savefig(f"./{log_dir}/results/function_edge_lines_ADAL.png", dpi=300, bbox_inches='tight')
+            plt.close(fig_lines)
+
+
+            fig_lines = analyze_mlp_edge_lines(model, larynx_neuron_list, all_neuron_list, to_numpy(adjacency), signal_range=(0, 10), resolution=100, device=device)
+            fig_lines.savefig(f"./{log_dir}/results/function_edge_lines_larynx.png", dpi=300, bbox_inches='tight')
+            plt.close(fig_lines)
+
+            fig_lines = analyze_mlp_edge_lines(model, sensory_neuron_list, all_neuron_list, to_numpy(adjacency), signal_range=(0, 10), resolution=100, device=device)
+            fig_lines.savefig(f"./{log_dir}/results/function_edge_lines_sensory.png", dpi=300, bbox_inches='tight')
+            plt.close(fig_lines)
+
+            fig_lines = analyze_mlp_edge_lines(model, motor_neuron_list, all_neuron_list, to_numpy(adjacency), signal_range=(0, 10), resolution=100, device=device)
+            fig_lines.savefig(f"./{log_dir}/results/function_edge_motor_neuron.png", dpi=300, bbox_inches='tight')
+            plt.close(fig_lines)
+
+            larynx_neuron_list, sensory_neuron_list, inter_neuron_list, motor_neuron_list
+
 
             fig = analyze_mlp_phi_synaptic(model, n_sample_pairs=1000, resolution=100, device=device)
             fig.savefig(f"./{log_dir}/results/function_update.png", dpi=300, bbox_inches='tight')
@@ -5607,7 +5649,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             rl_pairs = find_suffix_pairs_with_index(all_neuron_list, 'R', 'L')
             d_i1_i2 = []
             for (i1, n1), (i2, n2) in rl_pairs:
-                if (x_list[0][100][i1, 6] != 6) & (x_list[0][100][i2, 6] != 6) :
+                if (x_list[0][100][i1, 6] != config.simulation.baseline_value) & (x_list[0][100][i2, 6] != config.simulation.baseline_value) :
                     print(f"{n1} (index {i1}) - {n2} (index {i2})")
                 dist = torch.sum((model.a[i1, :] - model.a[i2, :]) ** 2)
                 d_i1_i2.append(dist)
@@ -5643,7 +5685,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             plt.xlabel(r'$d_{aR,aL}$', fontsize=68)
             plt.ylabel('counts', fontsize=68)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/histogram_d_pair_embedding.tif", dpi=80)
+            plt.savefig(f"./{log_dir}/results/embedding_d_pair.tif", dpi=80)
             plt.close()
 
 
@@ -10350,8 +10392,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_video_bison_test']
     # config_list = ['RD_RPS']
     # config_list = ['cell_U2OS_8_12']
-    config_list = ['signal_CElegans_c1', 'signal_CElegans_c2', 'signal_CElegans_c3', 'signal_CElegans_c4', 'signal_CElegans_c5',
-                   'signal_CElegans_c6', 'signal_CElegans_c7', 'signal_CElegans_c8', 'signal_CElegans_c9', 'signal_CElegans_c10', 'signal_CElegans_c11', 'signal_CElegans_c12']
+    config_list = ['signal_CElegans_c13']
 
     # plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 
