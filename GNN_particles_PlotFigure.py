@@ -10392,7 +10392,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_video_bison_test']
     # config_list = ['RD_RPS']
     # config_list = ['cell_U2OS_8_12']
-    config_list = ['signal_CElegans_c13']
+    config_list = ['signal_CElegans_c9', 'signal_CElegans_c13', 'signal_CElegans_c14', 'signal_CElegans_c15', 'signal_CElegans_c16']
 
     # plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 
