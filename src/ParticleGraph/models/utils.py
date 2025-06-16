@@ -1819,11 +1819,13 @@ def sample_synaptic_data_and_predict(model, x_list, edges, n_runs, n_frames, tim
         'k': k
     }
 
+
 def analyze_odor_responses_by_neuron(model, x_list, edges, n_runs, n_frames, time_step, device,
-                                     has_missing_activity=False, model_missing_activity=None,
+                                     all_neuron_list, has_missing_activity=False, model_missing_activity=None,
                                      has_neural_field=False, model_f=None, n_samples=50):
     """
     Analyze odor responses by comparing lin_phi output with and without excitation
+    Returns top responding neurons by name for each odor
     """
     odor_list = ['butanone', 'pentanedione', 'NaCL']
 
@@ -1872,7 +1874,28 @@ def analyze_odor_responses_by_neuron(model, x_list, edges, n_runs, n_frames, tim
         for odor in odor_list:
             odor_responses[odor] = torch.stack(odor_responses[odor]).squeeze()
 
-    return odor_responses
+    # Identify top responding neurons for each odor
+    top_neurons = {}
+    for odor in odor_list:
+        # Calculate mean response across samples for each neuron
+        mean_response = torch.mean(odor_responses[odor], dim=0)  # [n_neurons]
+
+        # Get top 3 responding neurons (highest positive response)
+        top_20_indices = torch.topk(mean_response, k=20).indices.cpu().numpy()
+        top_20_names = [all_neuron_list[idx] for idx in top_20_indices]
+        top_20_values = [mean_response[idx].item() for idx in top_20_indices]
+
+        top_neurons[odor] = {
+            'names': top_20_names,
+            'indices': top_20_indices.tolist(),
+            'values': top_20_values
+        }
+
+        print(f"\ntop 20 responding neurons for {odor}:")
+        for i, (name, idx, val) in enumerate(zip(top_20_names, top_20_indices, top_20_values)):
+            print(f"  {i + 1}. {name} : {val:.4f}")
+
+    return odor_responses  # Return only odor_responses to match original function signature
 
 
 def plot_odor_heatmaps(odor_responses):

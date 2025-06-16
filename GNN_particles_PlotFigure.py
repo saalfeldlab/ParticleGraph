@@ -5466,15 +5466,28 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             plt.savefig(f"./{log_dir}/results/embedding_text.tif", dpi=170.7)
             plt.close()
 
-
             # fig_2d, fig_scatter = analyze_mlp_edge_synaptic(model, n_sample_pairs=10000, resolution=100, device=device)
             # fig_2d.savefig(f"./{log_dir}/results/function_edge.png", dpi=300, bbox_inches='tight')
             # fig_scatter.savefig(f"./{log_dir}/results/function_edge_scatter.png", dpi=300, bbox_inches='tight')
             # plt.close(fig_2d)
             # plt.close(fig_scatter)
 
+            if True:
+                for run in range(n_runs):
+                    # Find top 20 responding pairs across all neurons
+                    print(f"Top 20 pairs in CElegans #{run}:")
+                    top_pairs = find_top_responding_pairs(
+                        model, all_neuron_list, to_numpy(adjacency), to_numpy(model.W[run]),
+                        signal_range=(0, 10), resolution=100, device=device, top_k=20
+                    )
+                    # for i, fig in enumerate(top_figures):
+                    #     # fig.savefig(f"./{log_dir}/results/top_pair_{i + 1}.png", dpi=300, bbox_inches='tight')
+                    #     plt.close(fig)
+
+
+
             # Line plots for specific neurons
-            selected_neurons = ['ADAL', 'ADAR', 'AVAL']  # 1-5 neurons of interest
+            selected_neurons = ['ADAL', 'ADAR', 'AVAL', 'AVAR']  # 1-5 neurons of interest
             fig_lines = analyze_mlp_edge_lines(
                 model,
                 selected_neurons,
@@ -5487,18 +5500,20 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             fig_lines.savefig(f"./{log_dir}/results/function_edge_lines.png", dpi=300, bbox_inches='tight')
             plt.close(fig_lines)
 
-            fig_lines = analyze_mlp_edge_lines_weighted(
-                model,
-                'ADAL',  # Single neuron of interest
-                all_neuron_list,
-                to_numpy(adjacency),
-                to_numpy(model.W[0]),  # Your 300x300 weight matrix
-                signal_range=(0, 10),
-                resolution=100,
-                device=device
-            )
-            fig_lines.savefig(f"./{log_dir}/results/function_edge_lines_ADAL.png", dpi=300, bbox_inches='tight')
-            plt.close(fig_lines)
+
+            for neuron_OI in selected_neurons:
+                fig_lines, _ = analyze_mlp_edge_lines_weighted_with_max(
+                    model,
+                    neuron_OI,  # Single neuron of interest
+                    all_neuron_list,
+                    to_numpy(adjacency),
+                    to_numpy(model.W[0]),  # Your 300x300 weight matrix
+                    signal_range=(0, 10),
+                    resolution=100,
+                    device=device
+                )
+                fig_lines.savefig(f"./{log_dir}/results/function_edge_lines_{neuron_OI}.png", dpi=300, bbox_inches='tight')
+                plt.close(fig_lines)
 
 
             fig_lines = analyze_mlp_edge_lines(model, larynx_neuron_list, all_neuron_list, to_numpy(adjacency), signal_range=(0, 10), resolution=100, device=device)
@@ -5524,12 +5539,15 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
 
                 # Run the analysis
                 neuron_responses = analyze_odor_responses_by_neuron(
-                    model, x_list, edges, n_runs, n_frames, time_step, device,
-                    has_missing_activity, model_missing_activity, has_field, model_f,
-                    n_samples=100
+                    model=model, x_list=x_list, edges=edges, n_runs=n_runs, n_frames=n_frames, time_step=time_step,
+                    all_neuron_list=all_neuron_list, has_missing_activity=has_missing_activity,
+                    model_missing_activity=model_missing_activity,
+                    has_neural_field=has_field, model_f=model_f,
+                    n_samples=100, device=device
                 )
 
                 fig = plot_odor_heatmaps(neuron_responses)
+
                 plt.savefig(f"./{log_dir}/results/odor_heatmaps.png", dpi=150, bbox_inches='tight')
                 plt.close()
 
@@ -10392,7 +10410,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_video_bison_test']
     # config_list = ['RD_RPS']
     # config_list = ['cell_U2OS_8_12']
-    config_list = ['signal_CElegans_c9', 'signal_CElegans_c13', 'signal_CElegans_c14', 'signal_CElegans_c15', 'signal_CElegans_c16']
+    config_list = ['signal_CElegans_c14']
 
     # plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 

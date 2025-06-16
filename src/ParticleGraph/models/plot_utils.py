@@ -342,6 +342,277 @@ def analyze_mlp_edge_lines_weighted(model, neuron_name, all_neuron_list, adjacen
 
     return fig_lines
 
+
+def analyze_mlp_edge_lines_weighted_with_max(model, neuron_name, all_neuron_list, adjacency_matrix, weight_matrix,
+                                             signal_range=(0, 10), resolution=100, device=None):
+    """
+    Create line plots showing weighted edge function vs signal difference for a single neuron of interest
+    Uses adjacency matrix to find connections and weight matrix to scale the outputs
+    Plots individual lines for each incoming connection
+    Returns the connection with maximum response in signal difference range [8, 10]
+
+    Args:
+        model: The trained model with embeddings and lin_edge
+        neuron_name: Single neuron name of interest
+        all_neuron_list: Complete list of all 300 neuron names
+        adjacency_matrix: 2D array (300x300) where adjacency_matrix[i,j] = 1 if i->j connection exists
+        weight_matrix: 2D array (300x300) with connection weights to scale edge function output
+        signal_range: Tuple of (min_signal, max_signal) for DF/F0 measurements
+        resolution: Number of points for signal difference sampling
+        device: PyTorch device
+
+    Returns:
+        fig_lines: Figure with individual weighted line plots for each connection
+        max_response_data: Dict with info about the connection with maximum response in [8,10] range
+    """
+
+    embedding = model.a  # Shape: (300, 2)
+
+    # print(f"generating weighted line plots for {neuron_name} using adjacency and weight matrices...")
+
+    # Get index of the neuron of interest
+    try:
+        neuron_id = get_neuron_index(neuron_name, all_neuron_list)
+    except ValueError as e:
+        raise ValueError(f"Neuron '{neuron_name}' not found: {e}")
+
+    receiver_embedding = embedding[neuron_id]  # This neuron as receiver (embedding_i)
+
+    # Find all connected senders (where adjacency_matrix[sender, receiver] = 1)
+    connected_senders = np.where(adjacency_matrix[:, neuron_id] == 1)[0]
+
+    if len(connected_senders) == 0:
+        print(f"No incoming connections found for {neuron_name}")
+        return None, None
+
+    # print(f"Found {len(connected_senders)} incoming connections for {neuron_name}")
+
+    # Create signal difference array for line plots
+    u_diff_line = torch.linspace(-signal_range[1], signal_range[1], resolution * 2 - 1, device=device)
+    u_diff_line_np = u_diff_line.cpu().numpy()
+
+    # Find indices corresponding to signal difference range [8, 10]
+    target_range_mask = (u_diff_line_np >= 8.0) & (u_diff_line_np <= 10.0)
+    target_indices = np.where(target_range_mask)[0]
+
+    # Store outputs and metadata for all connections
+    connection_data = []
+    max_response = -float('inf')
+    max_response_data = None
+
+    for sender_id in connected_senders:
+        sender_name = all_neuron_list[sender_id]
+        sender_embedding = embedding[sender_id]  # Connected neuron as sender (embedding_j)
+        connection_weight = weight_matrix[sender_id, neuron_id]  # Weight for this connection
+
+        line_inputs = []
+        for diff_idx, diff in enumerate(u_diff_line):
+            # Create signal pairs that span the valid range
+            u_center = (signal_range[0] + signal_range[1]) / 2
+            u_i = torch.clamp(u_center - diff / 2, signal_range[0], signal_range[1])
+            u_j = torch.clamp(u_center + diff / 2, signal_range[0], signal_range[1])
+
+            # Ensure the actual difference matches what we want
+            actual_diff = u_j - u_i
+            if abs(actual_diff - diff) > 1e-6:
+                # Adjust to get the exact difference we want
+                u_i = torch.clamp(u_center - diff / 2, signal_range[0], signal_range[1])
+                u_j = u_i + diff
+                if u_j > signal_range[1]:
+                    u_j = torch.tensor(signal_range[1], device=device)
+                    u_i = u_j - diff
+                elif u_j < signal_range[0]:
+                    u_j = torch.tensor(signal_range[0], device=device)
+                    u_i = u_j - diff
+
+            # Create input feature vector: [u_i, u_j, embedding_i, embedding_j]
+            in_features = torch.cat([
+                u_i.unsqueeze(0),  # u_i as (1,)
+                u_j.unsqueeze(0),  # u_j as (1,)
+                receiver_embedding,  # embedding_i (receiver) as (2,)
+                sender_embedding  # embedding_j (sender) as (2,)
+            ], dim=0)  # Final shape: (6,)
+            line_inputs.append(in_features)
+
+        line_features = torch.stack(line_inputs, dim=0)  # (len(u_diff_line), 6)
+
+        with torch.no_grad():
+            lin_edge = model.lin_edge(line_features)
+            if model.lin_edge_positive:
+                lin_edge = lin_edge ** 2
+
+        # Apply weight scaling
+        edge_output = lin_edge.squeeze(-1).cpu().numpy()
+        weighted_output = edge_output * connection_weight
+
+        # Find maximum response in target range [8, 10]
+        if len(target_indices) > 0:
+            max_in_range = np.max(weighted_output[target_indices])
+            if max_in_range > max_response:
+                max_response = max_in_range
+                max_response_data = {
+                    'receiver_name': neuron_name,
+                    'sender_name': sender_name,
+                    'receiver_id': neuron_id,
+                    'sender_id': sender_id,
+                    'weight': connection_weight,
+                    'max_response': max_response,
+                    'signal_diff_range': [8.0, 10.0]
+                }
+
+        connection_data.append({
+            'sender_name': sender_name,
+            'sender_id': sender_id,
+            'weight': connection_weight,
+            'output': weighted_output,
+            'unweighted_output': edge_output
+        })
+
+    # Sort connections by weight magnitude for better visualization
+    connection_data.sort(key=lambda x: abs(x['weight']), reverse=True)
+
+    # Create line plot figure
+    fig_lines, ax_lines = plt.subplots(1, 1, figsize=(14, 10))
+
+    # Generate colors using a colormap that handles many lines well
+    if len(connection_data) <= 10:
+        colors = plt.cm.tab10(np.linspace(0, 1, len(connection_data)))
+    else:
+        colors = plt.cm.viridis(np.linspace(0, 1, len(connection_data)))
+
+    # Plot each connection
+    for conn_idx, conn_data in enumerate(connection_data):
+        color = colors[conn_idx]
+        sender_name = conn_data['sender_name']
+        weight = conn_data['weight']
+        weighted_output = conn_data['output']
+
+        # Line style based on weight sign
+        line_style = '-' if weight >= 0 else '--'
+        line_width = 1.5 + min(2.0, abs(weight) / np.max(
+            np.abs([c['weight'] for c in connection_data])))  # Thicker for stronger weights
+
+        ax_lines.plot(u_diff_line_np, weighted_output,
+                      color=color, linewidth=line_width, linestyle=line_style,
+                      label=f'{sender_name} (w={weight:.3f})')
+
+    # Highlight the target range [8, 10]
+    ax_lines.axvspan(8.0, 10.0, alpha=0.2, color='red', label='Target range [8,10]')
+
+    ax_lines.set_xlabel('u_j - u_i (signal difference)')
+    ax_lines.set_ylabel('weighted edge function output')
+    ax_lines.set_title(
+        f'weighted edge function vs signal difference\n(receiver: {neuron_name}, all incoming connections)')
+    ax_lines.grid(True, alpha=0.3)
+
+    # Adaptive legend placement based on number of connections
+    n_connections = len(connection_data)
+    if n_connections <= 5:
+        # For few connections, use right side
+        ax_lines.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize='small')
+    elif n_connections <= 15:
+        # For medium number, use multiple columns on right
+        ax_lines.legend(bbox_to_anchor=(1.05, 1), loc='upper left',
+                        fontsize='x-small', ncol=1)
+    else:
+        # For many connections, use multiple columns below plot
+        ncol = min(4, n_connections // 5 + 1)
+        ax_lines.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center',
+                        ncol=ncol, fontsize='x-small', framealpha=0.9)
+        # Add more space at bottom for legend
+        plt.subplots_adjust(bottom=0.25)
+
+    # Add text annotation explaining line styles
+    ax_lines.text(0.02, 0.98, 'Line style: solid (w≥0), dashed (w<0)\nLine width ∝ |weight|',
+                  transform=ax_lines.transAxes, verticalalignment='top',
+                  bbox=dict(boxstyle='round', facecolor='white', alpha=0.8),
+                  fontsize='small')
+
+    plt.tight_layout()
+
+    return fig_lines, max_response_data
+
+
+def find_top_responding_pairs(model, all_neuron_list, adjacency_matrix, weight_matrix,
+                              signal_range=(0, 10), resolution=100, device=None, top_k=10):
+    """
+    Find the top K receiver-sender pairs with largest response in signal difference range [8, 10]
+    by analyzing all neurons as receivers
+
+    Args:
+        model: The trained model with embeddings and lin_edge
+        all_neuron_list: Complete list of all 300 neuron names
+        adjacency_matrix: 2D array (300x300) where adjacency_matrix[i,j] = 1 if i->j connection exists
+        weight_matrix: 2D array (300x300) with connection weights
+        signal_range: Tuple of (min_signal, max_signal) for DF/F0 measurements
+        resolution: Number of points for signal difference sampling
+        device: PyTorch device
+        top_k: Number of top pairs to return
+
+    Returns:
+        top_pairs: List of top K pairs sorted by response magnitude
+        top_figures: List of figures for the top pairs
+    """
+
+    # print(f"Analyzing all {len(all_neuron_list)} neurons to find top {top_k} responding pairs...")
+
+    all_responses = []
+
+    # Analyze each neuron as receiver
+    for neuron_idx, neuron_name in enumerate(all_neuron_list):
+        try:
+            fig , max_response_data = analyze_mlp_edge_lines_weighted_with_max(
+                model, neuron_name, all_neuron_list, adjacency_matrix, weight_matrix,
+                signal_range, resolution, device
+            )
+
+            plt.close(fig)
+
+            if max_response_data is not None:
+                all_responses.append(max_response_data)
+
+        except Exception as e:
+            print(f"Error processing {neuron_name}: {e}")
+            continue
+
+    # Sort by response magnitude and get top K
+    all_responses.sort(key=lambda x: x['max_response'], reverse=True)
+    top_pairs = all_responses[:top_k]
+    for i, pair in enumerate(top_pairs):
+        print(f"{i + 1:2d}. {pair['receiver_name']} ← {pair['sender_name']}:  ({pair['max_response']:.4f})")
+
+    # # Generate plots for top pairs
+    # top_figures = []
+    # for i, pair in enumerate(top_pairs):
+    #     print(f"\nGenerating plot {i + 1}/{top_k} for {pair['receiver_name']} ← {pair['sender_name']}")
+    #
+    #     fig, _ = analyze_mlp_edge_lines_weighted_with_max(
+    #         model, pair['receiver_name'], all_neuron_list, adjacency_matrix, weight_matrix,
+    #         signal_range, resolution, device
+    #     )
+    #
+    #     if fig is not None:
+    #         # Update title to indicate this is a top pair
+    #         fig.suptitle(f"Top #{i + 1} responding pair: {pair['receiver_name']} ← {pair['sender_name']}\n"
+    #                      f"Max response: {pair['max_response']:.4f}", fontsize=14)
+    #         top_figures.append(fig)
+
+    return top_pairs    # , top_figures
+
+
+# Usage example:
+# top_pairs, top_figures = find_top_responding_pairs(
+#     model, all_neuron_list, adjacency_matrix, weight_matrix,
+#     signal_range=(0, 10), resolution=100, device=device, top_k=10
+# )
+#
+# # Save the top figures
+# for i, fig in enumerate(top_figures):
+#     fig.savefig(f"top_pair_{i+1}.png", dpi=300, bbox_inches='tight')
+#     plt.close(fig)
+
+
+
 def analyze_mlp_edge_synaptic(model, n_neurons=300, signal_range=(0, 10), resolution=50, n_sample_pairs=200,
                               device=None):
     """
