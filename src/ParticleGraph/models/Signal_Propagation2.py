@@ -101,9 +101,10 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
                                 hidden_size=self.hidden_dim_modulation, device=self.device)
 
         if self.multi_connectivity:
-            self.W = nn.Parameter(torch.zeros((int(self.n_dataset),int(self.n_neurons),int(self.n_neurons)), device=self.device, requires_grad=True, dtype=torch.float32))
+            self.W = nn.Parameter(torch.randn((int(self.n_dataset),int(self.n_neurons),int(self.n_neurons)), device=self.device, requires_grad=True, dtype=torch.float32))
         else:
             self.W = nn.Parameter(torch.randn((int(self.n_neurons),int(self.n_neurons)), device=self.device, requires_grad=True, dtype=torch.float32))
+
 
         self.mask = torch.ones((int(self.n_neurons),int(self.n_neurons)), device=self.device, requires_grad=False, dtype=torch.float32)
         self.mask.fill_diagonal_(0)
@@ -169,15 +170,13 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         else:
             in_features = u_j
 
-
         lin_edge = self.lin_edge(in_features)
         if self.lin_edge_positive:
             lin_edge = lin_edge**2
 
         if self.multi_connectivity:
             if self.batch_size == 1:
-                T = self.W[data_id_i, :, :] * self.mask
-                return T[edge_index_i, edge_index_j][:, None] * lin_edge
+                return self.W[data_id_i.squeeze(), edge_index_i, edge_index_j][:, None] * self.mask[edge_index_i, edge_index_j][:, None] * lin_edge
             else:
                 return self.W[data_id_i.squeeze(), edge_index_i % (self.W.shape[1]), edge_index_j % (self.W.shape[1])][:, None] * self.mask[edge_index_i % (self.W.shape[1]), edge_index_j % (self.W.shape[1])][:, None] * lin_edge
         else:
@@ -186,6 +185,11 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
                 return T[edge_index_i, edge_index_j][:, None] * lin_edge
             else:
                 return T[edge_index_i%(self.W.shape[0]), edge_index_j%(self.W.shape[0])][:,None] * lin_edge
+
+        # pos = torch.argwhere(edge_index_i==0)
+        # neurons_sender_to_0 = edge_index_j[pos]
+        # neurons_sender_to_0[0:20]
+        # torch.sum(self.W[data_id_i.squeeze()[pos], edge_index_i[pos], edge_index_j[pos]][:, None] * self.mask[edge_index_i[pos], edge_index_j[pos]][:, None] * lin_edge[pos])
 
 
     def update(self, aggr_out):

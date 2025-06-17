@@ -40,7 +40,8 @@ import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
-
+import pickle
+import json
 
 # from pysr import PySRRegressor
 
@@ -1244,6 +1245,7 @@ def plot_attraction_repulsion(config,epoch_list, log_dir, logger, style, device)
             plt.savefig(f"./{log_dir}/results/true_func.tif", dpi=170.7)
             plt.close()
 
+
 def plot_attraction_repulsion_asym(config, epoch_list, log_dir, logger, style, device):
 
 
@@ -1360,6 +1362,7 @@ def plot_attraction_repulsion_asym(config, epoch_list, log_dir, logger, style, d
         rmserr_list = to_numpy(rmserr_list)
         print("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
         logger.info("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+
 
 def plot_attraction_repulsion_continuous(config, epoch_list, log_dir, logger, style, device):
 
@@ -5466,25 +5469,104 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             plt.savefig(f"./{log_dir}/results/embedding_text.tif", dpi=170.7)
             plt.close()
 
-            # fig_2d, fig_scatter = analyze_mlp_edge_synaptic(model, n_sample_pairs=10000, resolution=100, device=device)
-            # fig_2d.savefig(f"./{log_dir}/results/function_edge.png", dpi=300, bbox_inches='tight')
-            # fig_scatter.savefig(f"./{log_dir}/results/function_edge_scatter.png", dpi=300, bbox_inches='tight')
+            fig_2d, fig_scatter = analyze_mlp_edge_synaptic(model, n_sample_pairs=10000, resolution=100, device=device)
+            fig_2d.savefig(f"./{log_dir}/results/function_edge.png", dpi=300, bbox_inches='tight')
+            fig_scatter.savefig(f"./{log_dir}/results/function_edge_scatter.png", dpi=300, bbox_inches='tight')
+            
             # plt.close(fig_2d)
             # plt.close(fig_scatter)
 
-            if True:
-                for run in range(n_runs):
-                    # Find top 20 responding pairs across all neurons
-                    print(f"Top 20 pairs in CElegans #{run}:")
-                    top_pairs = find_top_responding_pairs(
-                        model, all_neuron_list, to_numpy(adjacency), to_numpy(model.W[run]),
-                        signal_range=(0, 10), resolution=100, device=device, top_k=20
-                    )
-                    # for i, fig in enumerate(top_figures):
-                    #     # fig.savefig(f"./{log_dir}/results/top_pair_{i + 1}.png", dpi=300, bbox_inches='tight')
-                    #     plt.close(fig)
+            if False:
+                if os.path.exists(f"./{log_dir}/results/top_pairs_by_run.pkl"):
+                    with open(f"./{log_dir}/results/top_pairs_by_run.pkl", 'rb') as f:
+                        top_pairs_by_run = pickle.load(f)
+                else:
+                    top_pairs_by_run = {}
+                    for run in range(n_runs):
+                        print(f"top 20 pairs in CElegans #{run}:")
+                        top_pairs = find_top_responding_pairs(
+                            model, all_neuron_list, to_numpy(adjacency), to_numpy(model.W[run]),
+                            signal_range=(0, 10), resolution=100, device=device, top_k=20
+                        )
+                        top_pairs_by_run[run] = top_pairs
+                    with open(f"./{log_dir}/results/top_pairs_by_run.pkl", 'wb') as f:
+                        pickle.dump(top_pairs_by_run, f)
+                os.makedirs(f"./{log_dir}/results/odor_heatmaps/", exist_ok=True)
+                if os.path.exists(f"./{log_dir}/results/odor_responses_by_run.pkl"):
+                    with open(f"./{log_dir}/results/odor_responses_by_run.pkl", 'rb') as f:
+                        odor_responses_by_run = pickle.load(f)
+                else:
+                    odor_responses_by_run = {}  # Initialize the dictionary BEFORE the loop
 
+                    for run in range(n_runs):
+                        print(f"20 responding neurons in CElegans #{run}:")
+                        neuron_responses = analyze_odor_responses_by_neuron(
+                            model=model, x_list=x_list, edges=edges, n_runs=n_runs, n_frames=n_frames,
+                            time_step=time_step,
+                            all_neuron_list=all_neuron_list, has_missing_activity=has_missing_activity,
+                            model_missing_activity=model_missing_activity,
+                            has_neural_field=has_field, model_f=model_f,
+                            n_samples=100, device=device, run=run
+                        )
 
+                        # Process the raw tensor data to extract top responding neurons
+                        processed_responses = {}
+                        odor_list = ['butanone', 'pentanedione', 'NaCL']
+
+                        for i, odor in enumerate(odor_list):
+                            if odor in neuron_responses:
+                                # Calculate mean response across samples for each neuron
+                                mean_response = torch.mean(neuron_responses[odor], dim=0)  # [n_neurons]
+
+                                # Get top 20 responding neurons
+                                top_20_indices = torch.topk(mean_response, k=20).indices.cpu().numpy()
+                                top_20_names = [all_neuron_list[idx] for idx in top_20_indices]
+                                top_20_values = [mean_response[idx].item() for idx in top_20_indices]
+
+                                processed_responses[odor] = {
+                                    'names': top_20_names,
+                                    'indices': top_20_indices.tolist(),
+                                    'values': top_20_values
+                                }
+
+                                print(f"\ntop 20 responding neurons for {odor}:")
+                                for j, (name, idx, val) in enumerate(
+                                        zip(top_20_names, top_20_indices, top_20_values)):
+                                    print(f"  {j + 1}. {name} : {val:.4f}")
+
+                        # Store responses for this run (moved outside the odor loop)
+                        odor_responses_by_run[run] = processed_responses
+
+                        fig = plot_odor_heatmaps(neuron_responses)
+                        plt.savefig(f"./{log_dir}/results/odor_heatmaps/odor_heatmaps_{run}.png", dpi=150,
+                                    bbox_inches='tight')
+                        plt.close()
+
+                    # Save the complete dictionary AFTER the loop
+                    with open(f"./{log_dir}/results/odor_responses_by_run.pkl", 'wb') as f:
+                        pickle.dump(odor_responses_by_run, f)
+                results = run_neural_architecture_pipeline(top_pairs_by_run, odor_responses_by_run, all_neuron_list)
+                results['summary_figure'].savefig(f"./{log_dir}/results/neural_architecture_summary.png",dpi=150, bbox_inches='tight')
+                plt.close()
+                architecture_types = results['architecture_analysis']['architecture_data']
+                hub_neurons = results['hub_analysis']
+                pathway_patterns = results['pathway_analysis']
+                summary_plot = results['summary_figure']
+                # Finds neurons that appear in BOTH high connectivity AND high odor responses
+                # These are the "bridge" neurons between detection and integration
+                preprocessing_results = run_preprocessing_analysis(
+                    top_pairs_by_run,
+                    odor_responses_by_run,
+                    results['architecture_analysis'],  # From your previous analysis
+                    all_neuron_list
+                )
+                preprocessing_results['preprocessing_figure'].savefig(
+                    f"./{log_dir}/results/preprocessing_analysis.png",
+                    dpi=150, bbox_inches='tight'
+                )
+                plt.close()
+                with open(f"./{log_dir}/results/preprocessing_analysis.pkl", 'wb') as f:
+                    pickle.dump(preprocessing_results, f)
 
             # Line plots for specific neurons
             selected_neurons = ['ADAL', 'ADAR', 'AVAL', 'AVAR']  # 1-5 neurons of interest
@@ -5535,21 +5617,7 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             fig.savefig(f"./{log_dir}/results/function_update.png", dpi=300, bbox_inches='tight')
             plt.close(fig)
 
-            if 'excitation' in model_config.update_type:
 
-                # Run the analysis
-                neuron_responses = analyze_odor_responses_by_neuron(
-                    model=model, x_list=x_list, edges=edges, n_runs=n_runs, n_frames=n_frames, time_step=time_step,
-                    all_neuron_list=all_neuron_list, has_missing_activity=has_missing_activity,
-                    model_missing_activity=model_missing_activity,
-                    has_neural_field=has_field, model_f=model_f,
-                    n_samples=100, device=device
-                )
-
-                fig = plot_odor_heatmaps(neuron_responses)
-
-                plt.savefig(f"./{log_dir}/results/odor_heatmaps.png", dpi=150, bbox_inches='tight')
-                plt.close()
 
             if has_missing_activity:
                 net = f'{log_dir}/models/best_model_missing_activity_with_{n_runs - 1}_graphs_{epoch}.pt'
@@ -9974,18 +10042,6 @@ def data_plot(config, config_file, epoch_list, style, device):
         print(f'best model: {epoch_list}')
         logger.info(f'best model: {epoch_list}')
 
-
-    if config.training.sparsity != 'none':
-        print(
-            f'GNN trained with simulation {config.graph_model.particle_model_name} ({config.simulation.n_particle_types} types), with cluster method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
-        logger.info(
-            f'GNN trained with simulation {config.graph_model.particle_model_name} ({config.simulation.n_particle_types} types), with cluster method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
-    else:
-        print(
-            f'GNN trained with simulation {config.graph_model.particle_model_name} ({config.simulation.n_particle_types} types), no clustering')
-        logger.info(
-            f'GNN trained with simulation {config.graph_model.particle_model_name} ({config.simulation.n_particle_types} types), no clustering')
-
     if os.path.exists(f'{log_dir}/loss.pt'):
         loss = torch.load(f'{log_dir}/loss.pt')
         fig, ax = fig_init(formatx='%.0f', formaty='%.2f')
@@ -9998,7 +10054,6 @@ def data_plot(config, config_file, epoch_list, style, device):
         plt.close()
         # print('final loss {:.3e}'.format(loss[-1]))
         # logger.info('final loss {:.3e}'.format(loss[-1]))
-
 
     match config.graph_model.particle_model_name:
         case 'PDE_Agents_A' | 'PDE_Agents_B':
@@ -10410,7 +10465,8 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_video_bison_test']
     # config_list = ['RD_RPS']
     # config_list = ['cell_U2OS_8_12']
-    config_list = ['signal_CElegans_c14']
+    # config_list = ['signal_CElegans_c14_1', 'signal_CElegans_c14_2', 'signal_CElegans_c14_3', 'signal_CElegans_c14_4', 'signal_CElegans_c14_5', 'signal_CElegans_c14_6', 'signal_CElegans_c14_7', 'signal_CElegans_c14_8']
+    config_list = ['signal_CElegans_c14_1']
 
     # plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 

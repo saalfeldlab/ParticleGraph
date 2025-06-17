@@ -93,4 +93,4 @@ training:
     coeff_sign : 0
     coeff_missing_activity: 0
     coeff_update_msg_diff: 1
-    coeff_update_u_diff: 1
+    coeff_update_u_diff: 0

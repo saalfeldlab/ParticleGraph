@@ -1822,7 +1822,7 @@ def sample_synaptic_data_and_predict(model, x_list, edges, n_runs, n_frames, tim
 
 def analyze_odor_responses_by_neuron(model, x_list, edges, n_runs, n_frames, time_step, device,
                                      all_neuron_list, has_missing_activity=False, model_missing_activity=None,
-                                     has_neural_field=False, model_f=None, n_samples=50):
+                                     has_neural_field=False, model_f=None, n_samples=50, run=0):
     """
     Analyze odor responses by comparing lin_phi output with and without excitation
     Returns top responding neurons by name for each odor
@@ -1841,7 +1841,7 @@ def analyze_odor_responses_by_neuron(model, x_list, edges, n_runs, n_frames, tim
             result = sample_synaptic_data_and_predict(
                 model, x_list, edges, n_runs, n_frames, time_step, device,
                 has_missing_activity, model_missing_activity,
-                has_neural_field, model_f, 0
+                has_neural_field, model_f, run
             )
 
             if not (torch.isnan(result['x']).any()):

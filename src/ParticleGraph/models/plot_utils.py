@@ -1,11 +1,23 @@
-
+from tqdm import trange
+from mpl_toolkits.mplot3d import Axes3D
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from tqdm import trange
-from mpl_toolkits.mplot3d import Axes3D
+from scipy import stats
+from sklearn.cluster import KMeans
+from sklearn.mixture import GaussianMixture
+import pandas as pd
+from collections import defaultdict
+import warnings
+import torch
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
+from collections import defaultdict
 
+warnings.filterwarnings('ignore')
 
 def get_neuron_index(neuron_name, activity_neuron_list):
     """
@@ -380,10 +392,10 @@ def analyze_mlp_edge_lines_weighted_with_max(model, neuron_name, all_neuron_list
 
     # Find all connected senders (where adjacency_matrix[sender, receiver] = 1)
     connected_senders = np.where(adjacency_matrix[:, neuron_id] == 1)[0]
-
-    if len(connected_senders) == 0:
-        print(f"No incoming connections found for {neuron_name}")
-        return None, None
+    #
+    # if len(connected_senders) == 0:
+    #     print(f"No incoming connections found for {neuron_name}")
+    #     return None, None
 
     # print(f"Found {len(connected_senders)} incoming connections for {neuron_name}")
 
@@ -489,8 +501,13 @@ def analyze_mlp_edge_lines_weighted_with_max(model, neuron_name, all_neuron_list
 
         # Line style based on weight sign
         line_style = '-' if weight >= 0 else '--'
-        line_width = 1.5 + min(2.0, abs(weight) / np.max(
-            np.abs([c['weight'] for c in connection_data])))  # Thicker for stronger weights
+
+        # Calculate line width with safe division
+        max_weight = np.max(np.abs([c['weight'] for c in connection_data]))
+        if max_weight > 0:
+            line_width = 1.5 + min(2.0, abs(weight) / max_weight)
+        else:
+            line_width = 1.5  # Default width if all weights are zero
 
         ax_lines.plot(u_diff_line_np, weighted_output,
                       color=color, linewidth=line_width, linestyle=line_style,
@@ -598,19 +615,6 @@ def find_top_responding_pairs(model, all_neuron_list, adjacency_matrix, weight_m
     #         top_figures.append(fig)
 
     return top_pairs    # , top_figures
-
-
-# Usage example:
-# top_pairs, top_figures = find_top_responding_pairs(
-#     model, all_neuron_list, adjacency_matrix, weight_matrix,
-#     signal_range=(0, 10), resolution=100, device=device, top_k=10
-# )
-#
-# # Save the top figures
-# for i, fig in enumerate(top_figures):
-#     fig.savefig(f"top_pair_{i+1}.png", dpi=300, bbox_inches='tight')
-#     plt.close(fig)
-
 
 
 def analyze_mlp_edge_synaptic(model, n_neurons=300, signal_range=(0, 10), resolution=50, n_sample_pairs=200,
@@ -1152,3 +1156,964 @@ def analyze_mlp_phi_embedding(model, n_neurons=300, signal_range=(0, 10), resolu
 # fig_2d_heatmap.savefig(f"./{log_dir}/results/phi_function_2d.png", dpi=300, bbox_inches='tight')
 # plt.close(fig_2d_signal)
 # plt.close(fig_2d_heatmap)
+
+
+
+
+def compute_separation_index(connectivity_neurons, odor_responsive_neurons):
+    """
+    Compute functional separation between high connectivity and high odor-responsive neurons
+
+    Args:
+        connectivity_neurons: List of neuron names with high connectivity
+        odor_responsive_neurons: List of neuron names with high odor responses
+
+    Returns:
+        separation_metrics: Dict with separation statistics
+    """
+    connectivity_set = set(connectivity_neurons)
+    odor_set = set(odor_responsive_neurons)
+
+    # Find overlap
+    overlap = connectivity_set.intersection(odor_set)
+
+    # Compute separation metrics
+    total_unique = len(connectivity_set.union(odor_set))
+    overlap_count = len(overlap)
+    min_set_size = min(len(connectivity_set), len(odor_set))
+
+    # Separation index: 1 - (overlap / min_set_size)
+    separation_index = 1.0 - (overlap_count / min_set_size) if min_set_size > 0 else 1.0
+
+    # Additional metrics
+    connectivity_purity = 1.0 - (overlap_count / len(connectivity_set)) if len(connectivity_set) > 0 else 1.0
+    odor_purity = 1.0 - (overlap_count / len(odor_set)) if len(odor_set) > 0 else 1.0
+
+    return {
+        'separation_index': separation_index,
+        'overlap_count': overlap_count,
+        'connectivity_purity': connectivity_purity,
+        'odor_purity': odor_purity,
+        'total_connectivity_neurons': len(connectivity_set),
+        'total_odor_neurons': len(odor_set),
+        'overlapping_neurons': list(overlap)
+    }
+
+
+def classify_neural_architecture(separation_index, specialist_threshold=0.95, adapter_threshold=0.70):
+    """
+    Classify neural architecture based on separation index
+
+    Args:
+        separation_index: Float between 0 and 1
+        specialist_threshold: Threshold for specialist classification
+        adapter_threshold: Threshold for adapter classification
+
+    Returns:
+        architecture_type: String classification
+    """
+    if separation_index >= specialist_threshold:
+        return 'specialist'
+    elif separation_index >= adapter_threshold:
+        return 'adapter'
+    else:
+        return 'generalist'
+
+
+def analyze_individual_architectures(top_pairs_by_run, odor_responses_by_run, all_neuron_list,
+                                     specialist_threshold=0.95, adapter_threshold=0.70):
+    """
+    Analyze neural architectures across all individual worms
+
+    Args:
+        top_pairs_by_run: Dict with run_id -> list of top connectivity pairs
+        odor_responses_by_run: Dict with run_id -> odor response data
+        all_neuron_list: List of all neuron names
+        specialist_threshold: Threshold for specialist classification
+        adapter_threshold: Threshold for adapter classification
+
+    Returns:
+        architecture_analysis: Dict with comprehensive analysis results
+    """
+
+    architecture_data = []
+    separation_details = {}
+
+    print("=== INDIVIDUAL NEURAL ARCHITECTURE ANALYSIS ===")
+
+    for run_id in top_pairs_by_run.keys():
+        # Extract high connectivity neurons
+        connectivity_neurons = []
+        for pair in top_pairs_by_run[run_id]:
+            connectivity_neurons.extend([pair['sender_name'], pair['receiver_name']])
+        connectivity_neurons = list(set(connectivity_neurons))  # Remove duplicates
+
+        # Extract high odor-responsive neurons from all odors
+        odor_responsive_neurons = set()
+        if run_id in odor_responses_by_run:
+            for odor in ['butanone', 'pentanedione', 'NaCL']:
+                if odor in odor_responses_by_run[run_id]:
+                    odor_responsive_neurons.update(odor_responses_by_run[run_id][odor]['names'])
+        odor_responsive_neurons = list(odor_responsive_neurons)
+
+        # Compute separation metrics
+        separation_metrics = compute_separation_index(connectivity_neurons, odor_responsive_neurons)
+
+        # Classify architecture
+        architecture_type = classify_neural_architecture(
+            separation_metrics['separation_index'],
+            specialist_threshold,
+            adapter_threshold
+        )
+
+        # Store data
+        architecture_data.append({
+            'run_id': run_id,
+            'architecture_type': architecture_type,
+            'separation_index': separation_metrics['separation_index'],
+            'overlap_count': separation_metrics['overlap_count'],
+            'connectivity_purity': separation_metrics['connectivity_purity'],
+            'odor_purity': separation_metrics['odor_purity'],
+            'n_connectivity_neurons': separation_metrics['total_connectivity_neurons'],
+            'n_odor_neurons': separation_metrics['total_odor_neurons']
+        })
+
+        separation_details[run_id] = separation_metrics
+
+        print(f"Run {run_id}: {architecture_type.upper()} "
+              f"(separation: {separation_metrics['separation_index']:.3f}, "
+              f"overlap: {separation_metrics['overlap_count']})")
+
+    # Convert to DataFrame for analysis
+    df = pd.DataFrame(architecture_data)
+
+    # Summary statistics by architecture type
+    type_summary = df.groupby('architecture_type').agg({
+        'separation_index': ['count', 'mean', 'std', 'min', 'max'],
+        'overlap_count': ['mean', 'std'],
+        'n_connectivity_neurons': ['mean', 'std'],
+        'n_odor_neurons': ['mean', 'std']
+    }).round(3)
+
+    print("\n=== ARCHITECTURE TYPE SUMMARY ===")
+    print(type_summary)
+
+    return {
+        'architecture_data': df,
+        'separation_details': separation_details,
+        'type_summary': type_summary,
+        'classification_thresholds': {
+            'specialist': specialist_threshold,
+            'adapter': adapter_threshold
+        }
+    }
+
+
+def identify_hub_neurons_by_type(top_pairs_by_run, architecture_analysis, min_frequency=0.5):
+    """
+    Identify hub neurons for each architecture type
+
+    Args:
+        top_pairs_by_run: Dict with run_id -> list of top connectivity pairs
+        architecture_analysis: Results from analyze_individual_architectures
+        min_frequency: Minimum frequency to be considered a hub
+
+    Returns:
+        hub_analysis: Dict with hub neuron analysis by architecture type
+    """
+
+    # Get architecture types for each run
+    run_to_type = dict(zip(architecture_analysis['architecture_data']['run_id'],
+                           architecture_analysis['architecture_data']['architecture_type']))
+
+    # Group by architecture type
+    hubs_by_type = defaultdict(lambda: defaultdict(int))
+    connection_counts_by_type = defaultdict(int)
+
+    print("=== HUB NEURON ANALYSIS BY ARCHITECTURE TYPE ===")
+
+    for run_id, pairs in top_pairs_by_run.items():
+        arch_type = run_to_type[run_id]
+        connection_counts_by_type[arch_type] += 1
+
+        # Count neuron appearances in this run
+        neuron_counts = defaultdict(int)
+        for pair in pairs:
+            neuron_counts[pair['sender_name']] += 1
+            neuron_counts[pair['receiver_name']] += 1
+
+        # Add to architecture type totals
+        for neuron, count in neuron_counts.items():
+            hubs_by_type[arch_type][neuron] += count
+
+    # Analyze hubs for each architecture type
+    hub_analysis = {}
+
+    for arch_type in hubs_by_type.keys():
+        n_runs = connection_counts_by_type[arch_type]
+
+        # Calculate frequencies and identify hubs
+        neuron_frequencies = {}
+        for neuron, total_count in hubs_by_type[arch_type].items():
+            # Frequency = appearances / total possible appearances
+            max_possible = n_runs * 40  # Max appearances if in all top-20 pairs as both sender and receiver
+            frequency = total_count / max_possible
+            neuron_frequencies[neuron] = {
+                'total_count': total_count,
+                'frequency': frequency,
+                'n_runs': n_runs
+            }
+
+        # Sort by frequency
+        sorted_neurons = sorted(neuron_frequencies.items(),
+                                key=lambda x: x[1]['frequency'], reverse=True)
+
+        # Identify hubs above threshold
+        hubs = [(neuron, stats) for neuron, stats in sorted_neurons
+                if stats['frequency'] >= min_frequency]
+
+        hub_analysis[arch_type] = {
+            'all_neurons': dict(sorted_neurons),
+            'hub_neurons': hubs,
+            'n_runs': n_runs,
+            'top_10_neurons': sorted_neurons[:10]
+        }
+
+        print(f"\n{arch_type.upper()} ARCHITECTURE ({n_runs} individuals):")
+        print("Top 10 hub neurons:")
+        for i, (neuron, stats) in enumerate(sorted_neurons[:10]):
+            print(f"  {i + 1:2d}. {neuron}: {stats['frequency']:.3f} "
+                  f"({stats['total_count']} total appearances)")
+
+    return hub_analysis
+
+
+def compare_pathway_organization(top_pairs_by_run, architecture_analysis, all_neuron_list):
+    """
+    Compare pathway organization across architecture types
+
+    Args:
+        top_pairs_by_run: Dict with run_id -> list of top connectivity pairs
+        architecture_analysis: Results from analyze_individual_architectures
+        all_neuron_list: List of all neuron names
+
+    Returns:
+        pathway_analysis: Dict with pathway comparison results
+    """
+
+    # Define functional neuron classes
+    neuron_classes = {
+        'chemosensory': ['ADLR', 'ADLL', 'AWAL', 'AWAR', 'AWBL', 'AWBR', 'AWCL', 'AWCR',
+                         'ASKL', 'ASKR', 'ASHL', 'ASHR', 'ASJL', 'ASJR'],
+        'command': ['AVAR', 'AVAL', 'AVBL', 'AVBR', 'AVDL', 'AVDR', 'AVKL', 'AVKR',
+                    'AVHL', 'AVHR', 'AVJL', 'AVJR'],
+        'ring_integration': ['RID', 'RIS', 'RIML', 'RIMR', 'RIBL', 'RIBR', 'RIAR', 'RIAL',
+                             'RICL', 'RICR', 'RMDL', 'RMDR', 'RMDVL', 'RMDVR'],
+        'motor': ['SMDVL', 'SMDVR', 'SMDDL', 'SMDDR', 'SMBVL', 'SMBVR', 'SMBDL', 'SMBDR',
+                  'VB01', 'VB02', 'VB03', 'VB04', 'VB05', 'VB06', 'VB07', 'VB08', 'VB09', 'VB10', 'VB11',
+                  'DB01', 'DB02', 'DB03', 'DB04', 'DB05', 'DB06', 'DB07'],
+        'head_sensory': ['CEPVL', 'CEPVR', 'CEPDL', 'CEPDR', 'OLQVL', 'OLQVR', 'OLQDL', 'OLQDR',
+                         'OLLR', 'OLLL'],
+        'muscle': ['M1', 'M2L', 'M2R', 'M3L', 'M3R', 'M4', 'M5', 'MI', 'I1L', 'I1R', 'I2L', 'I2R',
+                   'I3', 'I4', 'I5', 'I6']
+    }
+
+    # Get architecture types for each run
+    run_to_type = dict(zip(architecture_analysis['architecture_data']['run_id'],
+                           architecture_analysis['architecture_data']['architecture_type']))
+
+    # Analyze pathway patterns by architecture type
+    pathway_stats = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
+    connection_types = defaultdict(lambda: defaultdict(int))
+
+    print("=== PATHWAY ORGANIZATION ANALYSIS ===")
+
+    for run_id, pairs in top_pairs_by_run.items():
+        arch_type = run_to_type[run_id]
+
+        for pair in pairs:
+            sender = pair['sender_name']
+            receiver = pair['receiver_name']
+            weight = pair.get('max_response', 0)  # Use weight if available
+
+            # Classify sender and receiver
+            sender_class = 'other'
+            receiver_class = 'other'
+
+            for class_name, neurons in neuron_classes.items():
+                if sender in neurons:
+                    sender_class = class_name
+                if receiver in neurons:
+                    receiver_class = class_name
+
+            # Record connection type
+            connection_type = f"{sender_class}→{receiver_class}"
+            connection_types[arch_type][connection_type] += 1
+
+            # Record pathway statistics
+            pathway_stats[arch_type][sender_class]['out_degree'] += 1
+            pathway_stats[arch_type][receiver_class]['in_degree'] += 1
+            pathway_stats[arch_type][sender_class]['out_weight'] += weight
+            pathway_stats[arch_type][receiver_class]['in_weight'] += weight
+
+    # Normalize by number of runs of each type
+    type_counts = architecture_analysis['architecture_data']['architecture_type'].value_counts()
+
+    normalized_connections = {}
+    for arch_type in connection_types.keys():
+        n_runs = type_counts[arch_type]
+        normalized_connections[arch_type] = {
+            conn_type: count / n_runs
+            for conn_type, count in connection_types[arch_type].items()
+        }
+
+    # Print results
+    for arch_type in ['specialist', 'adapter', 'generalist']:
+        if arch_type in normalized_connections:
+            print(f"\n{arch_type.upper()} PATHWAY PATTERNS (avg per individual):")
+
+            # Sort connection types by frequency
+            sorted_connections = sorted(normalized_connections[arch_type].items(),
+                                        key=lambda x: x[1], reverse=True)
+
+            for conn_type, avg_count in sorted_connections[:10]:
+                print(f"  {conn_type}: {avg_count:.2f}")
+
+    return {
+        'pathway_stats': dict(pathway_stats),
+        'connection_types': dict(connection_types),
+        'normalized_connections': normalized_connections,
+        'neuron_classes': neuron_classes
+    }
+
+
+def normalize_edge_function_amplitudes(edge_functions_by_run, method='z_score'):
+    """
+    Normalize edge function amplitudes across runs to account for different scales
+
+    Args:
+        edge_functions_by_run: Dict with run_id -> edge function data
+        method: Normalization method ('z_score', 'min_max', 'robust')
+
+    Returns:
+        normalized_functions: Dict with normalized edge function data
+    """
+
+    normalized_functions = {}
+
+    for run_id, edge_data in edge_functions_by_run.items():
+        if method == 'z_score':
+            # Z-score normalization
+            mean_val = np.mean(edge_data)
+            std_val = np.std(edge_data)
+            normalized = (edge_data - mean_val) / std_val if std_val > 0 else edge_data
+
+        elif method == 'min_max':
+            # Min-max normalization to [0, 1]
+            min_val = np.min(edge_data)
+            max_val = np.max(edge_data)
+            normalized = (edge_data - min_val) / (max_val - min_val) if max_val > min_val else edge_data
+
+        elif method == 'robust':
+            # Robust normalization using median and IQR
+            median_val = np.median(edge_data)
+            q75 = np.percentile(edge_data, 75)
+            q25 = np.percentile(edge_data, 25)
+            iqr = q75 - q25
+            normalized = (edge_data - median_val) / iqr if iqr > 0 else edge_data
+
+        else:
+            raise ValueError(f"Unknown normalization method: {method}")
+
+        normalized_functions[run_id] = normalized
+
+    return normalized_functions
+
+
+def plot_architecture_analysis_summary(architecture_analysis, hub_analysis, pathway_analysis):
+    """
+    Create comprehensive visualization of architecture analysis results
+
+    Args:
+        architecture_analysis: Results from analyze_individual_architectures
+        hub_analysis: Results from identify_hub_neurons_by_type
+        pathway_analysis: Results from compare_pathway_organization
+
+    Returns:
+        fig: matplotlib figure with summary plots
+    """
+
+    fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+
+    # 1. Distribution of architecture types
+    df = architecture_analysis['architecture_data']
+    type_counts = df['architecture_type'].value_counts()
+
+    axes[0, 0].pie(type_counts.values, labels=type_counts.index, autopct='%1.1f%%')
+    axes[0, 0].set_title('Distribution of Architecture Types')
+
+    # 2. Separation index distribution
+    for arch_type in df['architecture_type'].unique():
+        subset = df[df['architecture_type'] == arch_type]
+        axes[0, 1].hist(subset['separation_index'], alpha=0.7, label=arch_type, bins=10)
+
+    axes[0, 1].set_xlabel('Separation Index')
+    axes[0, 1].set_ylabel('Count')
+    axes[0, 1].set_title('Separation Index by Architecture Type')
+    axes[0, 1].legend()
+
+    # 3. Overlap count vs separation index
+    colors = {'specialist': 'blue', 'adapter': 'green', 'generalist': 'red'}
+    for arch_type in df['architecture_type'].unique():
+        subset = df[df['architecture_type'] == arch_type]
+        axes[0, 2].scatter(subset['separation_index'], subset['overlap_count'],
+                           c=colors.get(arch_type, 'gray'), label=arch_type, alpha=0.7)
+
+    axes[0, 2].set_xlabel('Separation Index')
+    axes[0, 2].set_ylabel('Overlap Count')
+    axes[0, 2].set_title('Separation vs Overlap')
+    axes[0, 2].legend()
+
+    # 4. Hub neuron frequency comparison
+    if len(hub_analysis) >= 2:
+        arch_types = list(hub_analysis.keys())[:2]  # Compare first two types
+
+        # Get top neurons for each type
+        neurons_type1 = [item[0] for item in hub_analysis[arch_types[0]]['top_10_neurons']]
+        freq_type1 = [item[1]['frequency'] for item in hub_analysis[arch_types[0]]['top_10_neurons']]
+
+        neurons_type2 = [item[0] for item in hub_analysis[arch_types[1]]['top_10_neurons']]
+        freq_type2 = [item[1]['frequency'] for item in hub_analysis[arch_types[1]]['top_10_neurons']]
+
+        x_pos = np.arange(len(neurons_type1))
+        width = 0.35
+
+        axes[1, 0].bar(x_pos - width / 2, freq_type1, width, label=arch_types[0])
+        axes[1, 0].bar(x_pos + width / 2, freq_type2, width, label=arch_types[1])
+
+        axes[1, 0].set_xlabel('Neurons')
+        axes[1, 0].set_ylabel('Hub Frequency')
+        axes[1, 0].set_title(f'Top Hub Neurons: {arch_types[0]} vs {arch_types[1]}')
+        axes[1, 0].set_xticks(x_pos)
+        axes[1, 0].set_xticklabels(neurons_type1, rotation=45)
+        axes[1, 0].legend()
+
+    # 5. Connection type heatmap
+    if 'normalized_connections' in pathway_analysis:
+        # Create matrix of connection types vs architecture types
+        all_arch_types = list(pathway_analysis['normalized_connections'].keys())
+        all_conn_types = set()
+        for arch_conns in pathway_analysis['normalized_connections'].values():
+            all_conn_types.update(arch_conns.keys())
+        all_conn_types = sorted(list(all_conn_types))
+
+        matrix = np.zeros((len(all_conn_types), len(all_arch_types)))
+        for i, conn_type in enumerate(all_conn_types):
+            for j, arch_type in enumerate(all_arch_types):
+                matrix[i, j] = pathway_analysis['normalized_connections'][arch_type].get(conn_type, 0)
+
+        im = axes[1, 1].imshow(matrix, cmap='viridis', aspect='auto')
+        axes[1, 1].set_xticks(range(len(all_arch_types)))
+        axes[1, 1].set_xticklabels(all_arch_types)
+        axes[1, 1].set_yticks(range(len(all_conn_types)))
+        axes[1, 1].set_yticklabels(all_conn_types, fontsize=8)
+        axes[1, 1].set_title('Connection Types by Architecture')
+        plt.colorbar(im, ax=axes[1, 1])
+
+    # 6. Summary statistics
+    axes[1, 2].axis('off')
+    summary_text = f"""
+    SUMMARY STATISTICS
+
+    Total Individuals: {len(df)}
+
+    Architecture Types:
+    """
+
+    for arch_type in df['architecture_type'].unique():
+        count = sum(df['architecture_type'] == arch_type)
+        mean_sep = df[df['architecture_type'] == arch_type]['separation_index'].mean()
+        summary_text += f"  {arch_type}: {count} ({count / len(df) * 100:.1f}%)\n"
+        summary_text += f"    Mean separation: {mean_sep:.3f}\n"
+
+    axes[1, 2].text(0.1, 0.9, summary_text, transform=axes[1, 2].transAxes,
+                    verticalalignment='top', fontfamily='monospace')
+
+    plt.tight_layout()
+    return fig
+
+def run_neural_architecture_pipeline(top_pairs_by_run, odor_responses_by_run, all_neuron_list,
+                                     specialist_threshold=0.95, adapter_threshold=0.70):
+    """
+    Run the complete neural architecture analysis pipeline
+
+    Args:
+        top_pairs_by_run: Dict with run_id -> list of top connectivity pairs
+        odor_responses_by_run: Dict with run_id -> odor response data
+        all_neuron_list: List of all neuron names
+        specialist_threshold: Threshold for specialist classification
+        adapter_threshold: Threshold for adapter classification
+
+    Returns:
+        complete_analysis: Dict with all analysis results
+    """
+
+    print("RUNNING NEURAL ARCHITECTURE ANALYSIS PIPELINE")
+    print("=" * 60)
+
+    # Phase 1: Individual Architecture Classification
+    architecture_analysis = analyze_individual_architectures(
+        top_pairs_by_run, odor_responses_by_run, all_neuron_list,
+        specialist_threshold, adapter_threshold
+    )
+
+    # Phase 2: Hub Neuron Analysis
+    hub_analysis = identify_hub_neurons_by_type(
+        top_pairs_by_run, architecture_analysis
+    )
+
+    # Phase 2: Pathway Organization Comparison
+    pathway_analysis = compare_pathway_organization(
+        top_pairs_by_run, architecture_analysis, all_neuron_list
+    )
+
+    # Create summary visualization
+    summary_fig = plot_architecture_analysis_summary(
+        architecture_analysis, hub_analysis, pathway_analysis
+    )
+
+    return {
+        'architecture_analysis': architecture_analysis,
+        'hub_analysis': hub_analysis,
+        'pathway_analysis': pathway_analysis,
+        'summary_figure': summary_fig
+    }
+
+
+
+def identify_preprocessing_neurons(top_pairs_by_run, odor_responses_by_run, all_neuron_list):
+    """
+    Identify preprocessing neurons that bridge detection and integration
+    These neurons should appear in BOTH high connectivity AND high odor responses
+
+    Args:
+        top_pairs_by_run: Dict with run_id -> list of top connectivity pairs
+        odor_responses_by_run: Dict with run_id -> odor response data
+        all_neuron_list: List of all neuron names
+
+    Returns:
+        preprocessing_analysis: Dict with preprocessing neuron analysis
+    """
+
+    print("=== PREPROCESSING LAYER DETECTION ANALYSIS ===")
+
+    preprocessing_data = []
+
+    for run_id in top_pairs_by_run.keys():
+        # Extract high connectivity neurons
+        connectivity_neurons = set()
+        for pair in top_pairs_by_run[run_id]:
+            connectivity_neurons.add(pair['sender_name'])
+            connectivity_neurons.add(pair['receiver_name'])
+
+        # Extract high odor-responsive neurons
+        odor_responsive_neurons = set()
+        if run_id in odor_responses_by_run:
+            for odor in ['butanone', 'pentanedione', 'NaCL']:
+                if odor in odor_responses_by_run[run_id]:
+                    # Take top 10 from each odor to focus on strongest responders
+                    top_responders = odor_responses_by_run[run_id][odor]['names'][:10]
+                    odor_responsive_neurons.update(top_responders)
+
+        # Find preprocessing neurons (overlap between connectivity and odor response)
+        preprocessing_neurons = connectivity_neurons.intersection(odor_responsive_neurons)
+
+        # Find pure detection neurons (odor responsive but not high connectivity)
+        pure_detection = odor_responsive_neurons - connectivity_neurons
+
+        # Find pure integration neurons (high connectivity but not odor responsive)
+        pure_integration = connectivity_neurons - odor_responsive_neurons
+
+        preprocessing_data.append({
+            'run_id': run_id,
+            'preprocessing_neurons': list(preprocessing_neurons),
+            'pure_detection': list(pure_detection),
+            'pure_integration': list(pure_integration),
+            'n_preprocessing': len(preprocessing_neurons),
+            'n_pure_detection': len(pure_detection),
+            'n_pure_integration': len(pure_integration),
+            'preprocessing_ratio': len(preprocessing_neurons) / len(connectivity_neurons) if len(
+                connectivity_neurons) > 0 else 0
+        })
+
+        print(f"\nRun {run_id}:")
+        print(f"  Preprocessing neurons ({len(preprocessing_neurons)}): {sorted(list(preprocessing_neurons))}")
+        print(
+            f"  Pure detection ({len(pure_detection)}): {sorted(list(pure_detection))[:5]}{'...' if len(pure_detection) > 5 else ''}")
+        print(
+            f"  Pure integration ({len(pure_integration)}): {sorted(list(pure_integration))[:5]}{'...' if len(pure_integration) > 5 else ''}")
+
+    return preprocessing_data
+
+
+def analyze_preprocessing_by_architecture(preprocessing_data, architecture_analysis):
+    """
+    Analyze preprocessing patterns by neural architecture type
+
+    Args:
+        preprocessing_data: Results from identify_preprocessing_neurons
+        architecture_analysis: Results from analyze_individual_architectures
+
+    Returns:
+        preprocessing_by_arch: Analysis of preprocessing patterns by architecture type
+    """
+
+    # Get architecture types for each run
+    run_to_type = dict(zip(architecture_analysis['architecture_data']['run_id'],
+                           architecture_analysis['architecture_data']['architecture_type']))
+
+    # Group preprocessing data by architecture type
+    arch_preprocessing = defaultdict(list)
+
+    for data in preprocessing_data:
+        arch_type = run_to_type[data['run_id']]
+        arch_preprocessing[arch_type].append(data)
+
+    print("\n=== PREPROCESSING ANALYSIS BY ARCHITECTURE TYPE ===")
+
+    # Analyze each architecture type
+    arch_summary = {}
+
+    for arch_type, data_list in arch_preprocessing.items():
+        n_individuals = len(data_list)
+
+        # Calculate statistics
+        preprocessing_counts = [d['n_preprocessing'] for d in data_list]
+        preprocessing_ratios = [d['preprocessing_ratio'] for d in data_list]
+
+        # Find most common preprocessing neurons
+        all_preprocessing = []
+        for d in data_list:
+            all_preprocessing.extend(d['preprocessing_neurons'])
+
+        from collections import Counter
+        preprocessing_freq = Counter(all_preprocessing)
+        common_preprocessing = preprocessing_freq.most_common(10)
+
+        arch_summary[arch_type] = {
+            'n_individuals': n_individuals,
+            'mean_preprocessing_count': np.mean(preprocessing_counts),
+            'std_preprocessing_count': np.std(preprocessing_counts),
+            'mean_preprocessing_ratio': np.mean(preprocessing_ratios),
+            'std_preprocessing_ratio': np.std(preprocessing_ratios),
+            'common_preprocessing_neurons': common_preprocessing,
+            'raw_data': data_list
+        }
+
+        print(f"\n{arch_type.upper()} ARCHITECTURE ({n_individuals} individuals):")
+        print(f"  Mean preprocessing neurons: {np.mean(preprocessing_counts):.1f} ± {np.std(preprocessing_counts):.1f}")
+        print(f"  Mean preprocessing ratio: {np.mean(preprocessing_ratios):.3f} ± {np.std(preprocessing_ratios):.3f}")
+        print(f"  Most common preprocessing neurons:")
+        for neuron, freq in common_preprocessing[:5]:
+            percentage = (freq / n_individuals) * 100
+            print(f"    {neuron}: {freq}/{n_individuals} individuals ({percentage:.1f}%)")
+
+    return arch_summary
+
+
+def classify_functional_layers(top_pairs_by_run, odor_responses_by_run, preprocessing_data):
+    """
+    Classify neurons into functional layers based on connectivity and responsiveness patterns
+
+    Args:
+        top_pairs_by_run: Dict with run_id -> list of top connectivity pairs
+        odor_responses_by_run: Dict with run_id -> odor response data
+        preprocessing_data: Results from identify_preprocessing_neurons
+
+    Returns:
+        functional_layers: Classification of neurons into functional layers
+    """
+
+    # Define known functional classes for validation
+    known_classes = {
+        'pure_chemosensory': ['ASEL', 'ASER', 'ASJL', 'ASJR', 'AWCL', 'AWCR'],
+        'chemosensory_integration': ['ADLR', 'ADLL', 'AWAL', 'AWAR'],
+        'command': ['AVAR', 'AVAL', 'AVBL', 'AVBR', 'AVDL', 'AVDR'],
+        'ring_integration': ['RID', 'RIS', 'RIML', 'RIMR', 'RIBL', 'RIBR'],
+        'motor': ['SMDVL', 'SMDVR', 'SMDDL', 'SMDDR', 'VB01', 'VB02', 'DB01', 'DB02']
+    }
+
+    print("\n=== FUNCTIONAL LAYER CLASSIFICATION ===")
+
+    layer_analysis = {}
+
+    for run_id, data in enumerate(preprocessing_data):
+        preprocessing_neurons = set(data['preprocessing_neurons'])
+        pure_detection = set(data['pure_detection'])
+        pure_integration = set(data['pure_integration'])
+
+        # Classify preprocessing neurons by known functional class
+        preprocessing_by_class = defaultdict(list)
+        for neuron in preprocessing_neurons:
+            for class_name, neurons in known_classes.items():
+                if neuron in neurons:
+                    preprocessing_by_class[class_name].append(neuron)
+                    break
+            else:
+                preprocessing_by_class['unknown'].append(neuron)
+
+        # Analyze layer organization
+        layer_stats = {
+            'pure_detection_count': len(pure_detection),
+            'preprocessing_count': len(preprocessing_neurons),
+            'pure_integration_count': len(pure_integration),
+            'preprocessing_by_class': dict(preprocessing_by_class)
+        }
+
+        layer_analysis[run_id] = layer_stats
+
+        print(f"\nRun {run_id} - Functional Layer Analysis:")
+        print(f"  Pure Detection: {len(pure_detection)} neurons")
+        print(f"  Preprocessing: {len(preprocessing_neurons)} neurons")
+        print(f"    Chemosensory integration: {len(preprocessing_by_class['chemosensory_integration'])}")
+        print(f"    Ring integration: {len(preprocessing_by_class['ring_integration'])}")
+        print(f"    Command: {len(preprocessing_by_class['command'])}")
+        print(f"    Motor: {len(preprocessing_by_class['motor'])}")
+        print(f"    Unknown: {len(preprocessing_by_class['unknown'])}")
+        print(f"  Pure Integration: {len(pure_integration)} neurons")
+
+    return layer_analysis
+
+
+def analyze_preprocessing_connections(top_pairs_by_run, preprocessing_data):
+    """
+    Analyze the connectivity patterns of preprocessing neurons
+
+    Args:
+        top_pairs_by_run: Dict with run_id -> list of top connectivity pairs
+        preprocessing_data: Results from identify_preprocessing_neurons
+
+    Returns:
+        connection_analysis: Analysis of preprocessing neuron connections
+    """
+
+    print("\n=== PREPROCESSING NEURON CONNECTION ANALYSIS ===")
+
+    connection_patterns = defaultdict(list)
+
+    for run_id, data in enumerate(preprocessing_data):
+        preprocessing_neurons = set(data['preprocessing_neurons'])
+
+        # Find connections involving preprocessing neurons
+        preprocessing_connections = []
+
+        for pair in top_pairs_by_run[run_id]:
+            sender = pair['sender_name']
+            receiver = pair['receiver_name']
+            weight = pair.get('max_response', 0)
+
+            if sender in preprocessing_neurons or receiver in preprocessing_neurons:
+                # Classify connection type
+                if sender in preprocessing_neurons and receiver in preprocessing_neurons:
+                    conn_type = "preprocessing→preprocessing"
+                elif sender in preprocessing_neurons:
+                    conn_type = "preprocessing→output"
+                else:
+                    conn_type = "input→preprocessing"
+
+                preprocessing_connections.append({
+                    'sender': sender,
+                    'receiver': receiver,
+                    'weight': weight,
+                    'type': conn_type,
+                    'preprocessing_neuron': sender if sender in preprocessing_neurons else receiver
+                })
+
+        connection_patterns[run_id] = preprocessing_connections
+
+        # Summarize connection types
+        type_counts = defaultdict(int)
+        for conn in preprocessing_connections:
+            type_counts[conn['type']] += 1
+
+        print(f"\nRun {run_id} - Preprocessing Connections:")
+        for conn_type, count in type_counts.items():
+            print(f"  {conn_type}: {count} connections")
+
+    return dict(connection_patterns)
+
+
+def plot_preprocessing_analysis(preprocessing_data, arch_summary, layer_analysis):
+    """
+    Create visualizations for preprocessing layer analysis
+
+    Args:
+        preprocessing_data: Results from identify_preprocessing_neurons
+        arch_summary: Results from analyze_preprocessing_by_architecture
+        layer_analysis: Results from classify_functional_layers
+
+    Returns:
+        fig: matplotlib figure with preprocessing analysis plots
+    """
+
+    fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+
+    # 1. Preprocessing neuron count distribution
+    preprocessing_counts = [d['n_preprocessing'] for d in preprocessing_data]
+    axes[0, 0].hist(preprocessing_counts, bins=10, alpha=0.7, edgecolor='black')
+    axes[0, 0].set_xlabel('Number of Preprocessing Neurons')
+    axes[0, 0].set_ylabel('Number of Individuals')
+    axes[0, 0].set_title('Distribution of Preprocessing Neuron Count')
+    axes[0, 0].grid(True, alpha=0.3)
+
+    # 2. Preprocessing ratio by architecture type
+    arch_types = list(arch_summary.keys())
+    if len(arch_types) >= 2:
+        ratios_by_arch = []
+        labels = []
+
+        for arch_type in arch_types:
+            ratios = [d['preprocessing_ratio'] for d in arch_summary[arch_type]['raw_data']]
+            ratios_by_arch.append(ratios)
+            labels.append(arch_type)
+
+        bp = axes[0, 1].boxplot(ratios_by_arch, labels=labels, patch_artist=True)
+        colors = ['lightblue', 'lightgreen', 'lightcoral']
+        for patch, color in zip(bp['boxes'], colors[:len(bp['boxes'])]):
+            patch.set_facecolor(color)
+
+        axes[0, 1].set_ylabel('Preprocessing Ratio')
+        axes[0, 1].set_title('Preprocessing Ratio by Architecture Type')
+        axes[0, 1].grid(True, alpha=0.3)
+
+    # 3. Most common preprocessing neurons across all individuals
+    all_preprocessing = []
+    for d in preprocessing_data:
+        all_preprocessing.extend(d['preprocessing_neurons'])
+
+    from collections import Counter
+    preprocessing_freq = Counter(all_preprocessing)
+    common_neurons = preprocessing_freq.most_common(10)
+
+    if common_neurons:
+        neurons, frequencies = zip(*common_neurons)
+        axes[0, 2].barh(range(len(neurons)), frequencies)
+        axes[0, 2].set_yticks(range(len(neurons)))
+        axes[0, 2].set_yticklabels(neurons)
+        axes[0, 2].set_xlabel('Frequency Across Individuals')
+        axes[0, 2].set_title('Most Common Preprocessing Neurons')
+        axes[0, 2].grid(True, alpha=0.3)
+
+    # 4. Functional layer composition across individuals
+    layer_types = ['pure_detection_count', 'preprocessing_count', 'pure_integration_count']
+    layer_labels = ['Pure Detection', 'Preprocessing', 'Pure Integration']
+
+    layer_means = []
+    layer_stds = []
+
+    for layer_type in layer_types:
+        values = [layer_analysis[run_id][layer_type] for run_id in layer_analysis.keys()]
+        layer_means.append(np.mean(values))
+        layer_stds.append(np.std(values))
+
+    x_pos = np.arange(len(layer_labels))
+    bars = axes[1, 0].bar(x_pos, layer_means, yerr=layer_stds, capsize=5,
+                          alpha=0.7, color=['skyblue', 'orange', 'lightgreen'])
+    axes[1, 0].set_xticks(x_pos)
+    axes[1, 0].set_xticklabels(layer_labels)
+    axes[1, 0].set_ylabel('Mean Number of Neurons')
+    axes[1, 0].set_title('Functional Layer Composition')
+    axes[1, 0].grid(True, alpha=0.3)
+
+    # 5. Preprocessing vs separation index
+    separation_indices = []
+    preprocessing_ratios = []
+
+    for d in preprocessing_data:
+        # Get separation index from somewhere - this would need to be passed in
+        # For now, use preprocessing ratio as proxy
+        preprocessing_ratios.append(d['preprocessing_ratio'])
+        # separation_indices.append(...)  # Would need actual separation data
+
+    # Skip this plot if we don't have separation data
+    axes[1, 1].text(0.5, 0.5, 'Separation vs Preprocessing\n(requires separation data)',
+                    ha='center', va='center', transform=axes[1, 1].transAxes)
+    axes[1, 1].set_title('Preprocessing vs Separation Index')
+
+    # 6. Summary statistics table
+    axes[1, 2].axis('off')
+    summary_text = "PREPROCESSING SUMMARY\n\n"
+
+    total_individuals = len(preprocessing_data)
+    individuals_with_preprocessing = sum(1 for d in preprocessing_data if d['n_preprocessing'] > 0)
+
+    summary_text += f"Total individuals: {total_individuals}\n"
+    summary_text += f"With preprocessing: {individuals_with_preprocessing} ({individuals_with_preprocessing / total_individuals * 100:.1f}%)\n\n"
+
+    mean_preprocessing = np.mean([d['n_preprocessing'] for d in preprocessing_data])
+    summary_text += f"Mean preprocessing neurons: {mean_preprocessing:.1f}\n\n"
+
+    if arch_summary:
+        summary_text += "By Architecture Type:\n"
+        for arch_type, data in arch_summary.items():
+            summary_text += f"  {arch_type}:\n"
+            summary_text += f"    Mean count: {data['mean_preprocessing_count']:.1f}\n"
+            summary_text += f"    Mean ratio: {data['mean_preprocessing_ratio']:.3f}\n"
+
+    axes[1, 2].text(0.1, 0.9, summary_text, transform=axes[1, 2].transAxes,
+                    verticalalignment='top', fontfamily='monospace', fontsize=10)
+
+    plt.tight_layout()
+    return fig
+
+
+def run_preprocessing_analysis(top_pairs_by_run, odor_responses_by_run, architecture_analysis, all_neuron_list):
+    """
+    Run complete preprocessing layer analysis
+
+    Args:
+        top_pairs_by_run: Dict with run_id -> list of top connectivity pairs
+        odor_responses_by_run: Dict with run_id -> odor response data
+        architecture_analysis: Results from analyze_individual_architectures
+        all_neuron_list: List of all neuron names
+
+    Returns:
+        preprocessing_results: Complete preprocessing analysis results
+    """
+
+    print("RUNNING PREPROCESSING LAYER ANALYSIS")
+    print("=" * 50)
+
+    # Step 1: Identify preprocessing neurons
+    preprocessing_data = identify_preprocessing_neurons(
+        top_pairs_by_run, odor_responses_by_run, all_neuron_list
+    )
+
+    # Step 2: Analyze by architecture type
+    arch_summary = analyze_preprocessing_by_architecture(
+        preprocessing_data, architecture_analysis
+    )
+
+    # Step 3: Classify functional layers
+    layer_analysis = classify_functional_layers(
+        top_pairs_by_run, odor_responses_by_run, preprocessing_data
+    )
+
+    # Step 4: Analyze preprocessing connections
+    connection_analysis = analyze_preprocessing_connections(
+        top_pairs_by_run, preprocessing_data
+    )
+
+    # Step 5: Create visualizations
+    preprocessing_fig = plot_preprocessing_analysis(
+        preprocessing_data, arch_summary, layer_analysis
+    )
+
+    return {
+        'preprocessing_data': preprocessing_data,
+        'architecture_summary': arch_summary,
+        'layer_analysis': layer_analysis,
+        'connection_analysis': connection_analysis,
+        'preprocessing_figure': preprocessing_fig
+    }
+

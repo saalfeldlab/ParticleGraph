@@ -2622,14 +2622,36 @@ def data_train_synaptic2(config, erase, best_model, device):
 
     if train_config.with_connectivity_mask:
         model.mask = (adjacency > 0) * 1.0
+        adj_t = model.mask.float() * 1
+        adj_t = adj_t.t()
+        edges = adj_t.nonzero().t().contiguous()
+        edges_all = edges.clone().detach()
+
+        with torch.no_grad():
+            if multi_connectivity:
+                for run_ in range(n_runs):
+                    model.W[run_].copy_(model.W[run_] * model.mask)
+            else:
+                model.W.copy_(model.W * model.mask)
+
+        # pos = torch.argwhere(edges[1,:]==0)
+        # neurons_sender_to_0 = edges[0,pos]
+        # model.mask = (adjacency > 0) * 1.0
+        # adj_t = model.mask.float() * 1
+        # adj_t = adj_t.t() #[ post, pre] -> [pre, post]
+        # edges = adj_t.nonzero().T.contiguous()   #[(pre, post), n_elements]
+        # edges_all = edges.clone().detach()
+
+    else:
+        edges = torch.load(f'./graphs_data/{dataset_name}/edge_index.pt', map_location=device)
+        edges_all = edges.clone().detach()
 
     if coeff_sign > 0:
         index_weight = []
         for i in range(n_neurons):
             index_weight.append(torch.argwhere(model.mask[:, i] > 0).squeeze())
 
-    edges = torch.load(f'./graphs_data/{dataset_name}/edge_index.pt', map_location=device)
-    edges_all = edges.clone().detach()
+
 
     print(f'{edges.shape[1]} edges')
 
@@ -2889,14 +2911,6 @@ def data_train_synaptic2(config, erase, best_model, device):
                     optimizer_f.step()
 
                 total_loss += loss.item()
-
-                # if train_config.with_connectivity_mask & (N%100 == 0):
-                #     with torch.no_grad():
-                #         if multi_connectivity:
-                #             for run_ in range(n_runs):
-                #                 model.W[run_].copy_(model.W[run_] * model.mask)
-                #         else:
-                #             model.W.copy_(model.W * model.mask)
 
                 if ((N % plot_frequency == 0) | (N == 0)):
                     plot_training_signal(config, model, x, adjacency, log_dir, epoch, N, n_neurons, type_list, cmap,
