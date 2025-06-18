@@ -2471,32 +2471,6 @@ def data_train_synaptic2(config, erase, best_model, device):
     print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
     logger.info(f'vnorm ynorm: {to_numpy(vnorm)} {to_numpy(ynorm)}')
 
-    if train_config.denoiser:
-        print('denoise data ...')
-        for k in range(len(x_list)):
-            x_, y_ = denoise_data(config, x_list[k], y_list[k], train_config.denoiser_param, device)
-            x_list[k] = x_
-            y_list[k] = y_
-
-        activity = torch.tensor(x_list[0][:, :, 6:7], device=device)
-        activity = activity.squeeze()
-        activity = activity.t()
-
-        plt.figure(figsize=(15, 10))
-        n = np.random.permutation(n_neurons)
-        for i in range(25):
-            plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=2)
-        plt.xlabel('time', fontsize=64)
-        plt.ylabel('$x_{i}$', fontsize=64)
-        plt.xlim([0, n_frames])
-        # plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
-        plt.xticks(fontsize=28)
-        plt.yticks(fontsize=28)
-        plt.title(r'$x_i$ samples', fontsize=48)
-        plt.tight_layout()
-        plt.savefig(f'./{log_dir}/denoised_activity.tif', dpi=300)
-        plt.close()
-
     if model_config.embedding_init != '':
         print('compute init embedding ...')
         for j in trange(n_frames):
