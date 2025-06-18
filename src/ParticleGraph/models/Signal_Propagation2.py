@@ -101,7 +101,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
                                 hidden_size=self.hidden_dim_modulation, device=self.device)
 
         if self.multi_connectivity:
-            self.W = nn.Parameter(torch.randn((int(self.n_dataset),int(self.n_neurons),int(self.n_neurons)), device=self.device, requires_grad=True, dtype=torch.float32))
+            self.W = nn.Parameter(torch.zeros((int(self.n_dataset),int(self.n_neurons),int(self.n_neurons)), device=self.device, requires_grad=True, dtype=torch.float32))
         else:
             self.W = nn.Parameter(torch.randn((int(self.n_neurons),int(self.n_neurons)), device=self.device, requires_grad=True, dtype=torch.float32))
 

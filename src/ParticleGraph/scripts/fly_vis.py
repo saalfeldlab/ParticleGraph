@@ -33,9 +33,9 @@ class PDE_N8(pyg.nn.MessagePassing):
 
     def forward(self, data=[], has_field=False):
         x, edge_index = data.x, data.edge_index
-        v = x[:, 6:7]
+        v = x[:, 3:4]
         v_rest = self.p["V_i_rest"]
-        e = x[:, 10:11]
+        e = x[:, 4:5]
         msg = self.propagate(edge_index, v=v)
         tau = self.p["tau_i"]
         dv = (-v + msg + e + v_rest) / tau
@@ -73,14 +73,10 @@ if __name__ == "__main__":
     n_neurons = len(initial_state)
     x = torch.zeros(n_neurons, 11)
     x[:, 0] = torch.arange(n_neurons, dtype=torch.float32)
-    x[:, 1:6] = torch.zeros((n_neurons, 5), dtype=torch.float32)
-    x[:, 6] = initial_state
-    x[:, 7] = torch.zeros(n_neurons, dtype=torch.float32)
-    x[:, 8] = torch.zeros(n_neurons, dtype=torch.float32)
-    x[:, 9] = torch.zeros(n_neurons, dtype=torch.float32)
+    x[:, 3] = initial_state
     frame = torch.randn(1, 1, 1, 721)
     net.stimulus.add_input(frame)
-    x[:, 10] = net.stimulus().squeeze()
+    x[:, 4] = net.stimulus().squeeze()
 
     dataset = pyg.data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
 

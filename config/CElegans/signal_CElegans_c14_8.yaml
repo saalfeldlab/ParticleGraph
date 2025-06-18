@@ -1,4 +1,4 @@
-description: 'idem c14       with_connectivity_mask: False   coeff_missing_activity: 0.1    coeff_L1: 1.0E-6'
+description: 'idem c14       with_connectivity_mask: False   coeff_missing_activity: 0.0    coeff_L1: 1.0E-6'
 dataset: 'CElegans_c1'
 data_folder_name: '/groups/saalfeld/home/allierc/Py/wormvae/data/worm_activity/all_traces_Heads_new.mat'
 connectome_folder_name: '/groups/saalfeld/home/allierc/Py/wormvae/data/worm_connectivity/'
@@ -91,7 +91,7 @@ training:
 
     coeff_edge_diff: 1
     coeff_sign : 0
-    coeff_missing_activity: 0.1
+    coeff_missing_activity: 0.0
     coeff_update_msg_diff: 1
     coeff_update_u_diff: 0
     coeff_L1: 1.0E-6

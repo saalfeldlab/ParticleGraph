@@ -2612,13 +2612,11 @@ def data_train_synaptic2(config, erase, best_model, device):
     logger.info(f'initial batch_size: {batch_size}')
 
     adjacency = torch.load(f'./graphs_data/{dataset_name}/adjacency.pt', map_location=device)
-
     # adjacency[10,:]=5
     # fig = plt.figure(figsize=(8, 8))
     # ax = fig.add_subplot(111)
     # ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
     # plt.show()
-
 
     if train_config.with_connectivity_mask:
         model.mask = (adjacency > 0) * 1.0
@@ -2650,8 +2648,6 @@ def data_train_synaptic2(config, erase, best_model, device):
         index_weight = []
         for i in range(n_neurons):
             index_weight.append(torch.argwhere(model.mask[:, i] > 0).squeeze())
-
-
 
     print(f'{edges.shape[1]} edges')
 
