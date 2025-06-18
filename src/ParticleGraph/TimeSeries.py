@@ -1,6 +1,7 @@
 import os
 from collections.abc import Sequence
-from typing import List, Tuple, Self
+from typing import List, Tuple
+from typing_extensions import Self
 
 import torch
 from torch_geometric.data import Data

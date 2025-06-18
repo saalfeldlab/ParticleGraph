@@ -7,7 +7,7 @@ import torch.nn as nn
 # from ParticleGraph.generators.utils import get_time_series
 import matplotlib
 from matplotlib import pyplot as plt
-from tifffile import imread, imsave
+from tifffile import imread, imwrite as imsave
 from tqdm import trange
 from ParticleGraph.utils import *
 from ParticleGraph.config import ParticleGraphConfig

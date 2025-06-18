@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from typing import Dict, Tuple, Literal
 
 import astropy.units as u
-import h5py
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -33,7 +32,7 @@ from torch_geometric.utils import dense_to_sparse
 import pickle
 import json
 import scipy.io
-import h5py
+# import h5py
 import re
 from skimage.draw import disk
 from skimage.transform import resize
@@ -41,6 +40,7 @@ from skimage import filters, feature
 import pandas as pd
 import scipy.io
 from matplotlib.colors import LinearSegmentedColormap
+from ParticleGraph.models.Siren_Network import *
 
 def extract_object_properties(segmentation_image, fluorescence_image=[], radius=40, offset_channel=[0.0, 0.0]):
     # Label the objects in the segmentation image
@@ -1629,7 +1629,7 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
     not_recorded_neurons = list(set(all_neuron_list) - set(activity_neuron_list))
 
     print(f"neurons with activity data: {len(activity_neuron_list)}")
-    print(f"Neurons without activity data: {len(not_recorded_neurons)}")
+    print(f"neurons without activity data: {len(not_recorded_neurons)}")
     print (f"total {len(all_neuron_list)} {len(not_recorded_neurons) + len(activity_neuron_list)}")
     # all_neuron_list = [*activity_neuron_list, *not_recorded_neurons]
 
@@ -1725,6 +1725,7 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
 
     os.makedirs(f"graphs_data/{dataset_name}/Fig/Fig/", exist_ok=True)
     os.makedirs(f"graphs_data/{dataset_name}/Fig/Kinograph/", exist_ok=True)
+    os.makedirs(f"graphs_data/{dataset_name}/Fig/Denoise/", exist_ok=True)
 
     print ('load connectome ...')
 
@@ -1734,7 +1735,7 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
     esym_sparsity = torch.load(connectome_folder_name + 'esym_sparsity.pt')
     map_Turuga_matrix = chem_weights+eassym_weights
     map_Turuga_matrix = map_Turuga_matrix.to(device=device)
-    plot_worm_adjacency_matrix(to_numpy(map_Turuga_matrix), all_neuron_list, 'adjacency matrix Turuga 2022', f"graphs_data/{dataset_name}/full_Turuga_adjacency_matrix.png")
+    # plot_worm_adjacency_matrix(to_numpy(map_Turuga_matrix), all_neuron_list, 'adjacency matrix Turuga 2022', f"graphs_data/{dataset_name}/full_Turuga_adjacency_matrix.png")
 
     print('load connectomes from other data ...')
 
@@ -1760,7 +1761,7 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
     map_Cook_matrix_chem , index = map_matrix(all_neuron_list, Cook_neuron_chem_names, Cook_matrix_chem)
     map_Cook_matrix_elec , index = map_matrix(all_neuron_list, Cook_neuron_elec_names, Cook_matrix_elec)
     map_Cook_matrix = map_Cook_matrix_chem + map_Cook_matrix_elec
-    plot_worm_adjacency_matrix(to_numpy(map_Cook_matrix), all_neuron_list, 'adjacency matrix Cook 2019', f"graphs_data/{dataset_name}/full_Cook_adjacency_matrix.png")
+    # plot_worm_adjacency_matrix(to_numpy(map_Cook_matrix), all_neuron_list, 'adjacency matrix Cook 2019', f"graphs_data/{dataset_name}/full_Cook_adjacency_matrix.png")
 
     # Comparison with data from https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.0020095
     data_Kaiser = scipy.io.loadmat('/groups/saalfeld/home/allierc/signaling/Celegans/Kaiser_2006/celegans277.mat')
@@ -1770,7 +1771,7 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
     Kaiser_matrix = np.array(data_Kaiser['celegans277matrix'])
     Kaiser_matrix = torch.tensor(Kaiser_matrix, dtype=torch.float32, device=device)
     map_Kaiser_matrix , index = map_matrix(all_neuron_list, Kaiser_neuron_names, Kaiser_matrix)
-    plot_worm_adjacency_matrix(to_numpy(map_Kaiser_matrix), all_neuron_list, 'adjacency matrix Kaiser 2006', f"graphs_data/{dataset_name}/full_Kaiser_adjacency_matrix.png")
+    # plot_worm_adjacency_matrix(to_numpy(map_Kaiser_matrix), all_neuron_list, 'adjacency matrix Kaiser 2006', f"graphs_data/{dataset_name}/full_Kaiser_adjacency_matrix.png")
 
     # Comparison with data from https://github.com/openworm/VarshneyEtAl2011
     # Structural Properties of the <i>Caenorhabditis elegans</i> Neuronal Network
@@ -1783,7 +1784,7 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
     Varshney_matrix = torch.tensor(Varshney_matrix, dtype=torch.float32, device=device).t()
     Varshney_neuron_names = [str(cell[0][0]) for cell in neuron_names_raw]
     map_Varshney_matrix , index = map_matrix(all_neuron_list, Varshney_neuron_names, Varshney_matrix)
-    plot_worm_adjacency_matrix(to_numpy(map_Varshney_matrix), all_neuron_list, 'adjacency matrix Varshney 2011', f"graphs_data/{dataset_name}/full_Varshney_adjacency_matrix.png")
+    # plot_worm_adjacency_matrix(to_numpy(map_Varshney_matrix), all_neuron_list, 'adjacency matrix Varshney 2011', f"graphs_data/{dataset_name}/full_Varshney_adjacency_matrix.png")
 
     # Comparison with data from 'Connectomes across development reveal principles of brain maturation'
     # https://www.nature.com/articles/s41586-021-03778-4
@@ -1800,9 +1801,9 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
     Zhen_matrix_8 = torch.tensor(np.array(Zhen_matrix), dtype=torch.float32, device=device)
     Zhen_matrix = Zhen_matrix_7 + Zhen_matrix_8  # combine both datasets
     map_Zhen_matrix , index = map_matrix(all_neuron_list, Zhen_neuron_names, Zhen_matrix_7)
-    plot_worm_adjacency_matrix(to_numpy(map_Zhen_matrix), all_neuron_list, 'adjacency matrix Mei Zhen 2021 (7)', f"graphs_data/{dataset_name}/full_Zhen_adjacency_matrix_7.png")
+    # plot_worm_adjacency_matrix(to_numpy(map_Zhen_matrix), all_neuron_list, 'adjacency matrix Mei Zhen 2021 (7)', f"graphs_data/{dataset_name}/full_Zhen_adjacency_matrix_7.png")
     map_Zhen_matrix , index = map_matrix(all_neuron_list, Zhen_neuron_names, Zhen_matrix_8)
-    plot_worm_adjacency_matrix(to_numpy(map_Zhen_matrix), all_neuron_list, 'adjacency matrix Mei Zhen 2021 (8)', f"graphs_data/{dataset_name}/full_Zhen_adjacency_matrix_8.png")
+    # plot_worm_adjacency_matrix(to_numpy(map_Zhen_matrix), all_neuron_list, 'adjacency matrix Mei Zhen 2021 (8)', f"graphs_data/{dataset_name}/full_Zhen_adjacency_matrix_8.png")
 
     print('generate mask ...')
 
@@ -1828,7 +1829,6 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
     plt.savefig(f"graphs_data/{dataset_name}/mask_adjacency_matrix.png", dpi=170)
     plt.close()
 
-
     # print('generate partial adjacency matrices ...')
     # # generate partial adjacency matrices for activity neurons
     # map_Cook_matrix_chem , index = map_matrix(activity_neuron_list, Cook_neuron_chem_names, Cook_matrix_chem)
@@ -1846,10 +1846,6 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
     #
     # map_Kaiser_matrix , index = map_matrix(activity_neuron_list, Kaiser_neuron_names, Kaiser_matrix)
     # plot_worm_adjacency_matrix(to_numpy(map_Kaiser_matrix), activity_neuron_list, 'partial adjacency matrix Kaiser 2006', f"graphs_data/{dataset_name}/partial full_Kaiser_adjacency_matrix.png")
-
-
-
-
 
     sensory_neuron_list = Cook_neuron_chem_names[20:103]
     with open(f"graphs_data/{dataset_name}/sensory_neuron_list.json", "w") as f:
@@ -1900,7 +1896,6 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
     # type 2 inter
     # type 3 motor
     # type 4 other
-
     T1 = np.ones((n_neurons, 1)) * 4
     type_dict = {}
     for name in larynx_neuron_list:
@@ -1914,6 +1909,89 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
 
     # Default to type 4 ("other") if not found
     T1[activity_idx] = np.array([[type_dict.get(name, 4)] for name in activity_neuron_list])
+
+    if train_config.denoiser:
+        print('denoise data with siren network')
+        n_layers_nnr = 5
+        hidden_dim_nnr = 128
+        batch_size = 32
+
+        print(f"n_layers_nnr:{n_layers_nnr}  hidden_dim_nnr: {hidden_dim_nnr}  batch_size: {batch_size}")
+
+        plot_frequency = 100000 // batch_size
+
+        for run in range(n_runs):
+
+            model = Siren(in_features=1, out_features=189,
+                          hidden_features=hidden_dim_nnr,
+                          hidden_layers=n_layers_nnr,
+                          first_omega_0=30.0,
+                          hidden_omega_0=30.,
+                          outermost_linear=True)
+
+            model.to(device=device)
+            optimizer = torch.optim.Adam(lr=train_config.learning_rate_missing_activity, params=model.parameters())
+            model.train()
+
+            activity = activity_worm[run, :, :].squeeze()
+
+            for N in trange(plot_frequency * 2 + 2):
+
+                optimizer.zero_grad()
+
+                loss = 0
+                for batch in range(batch_size):
+
+                    k = np.random.randint(n_frames+2)
+                    target = torch.tensor(activity[run][k], dtype=torch.float32, device=device)
+                    if not (torch.isnan(target).any()):
+                        t = torch.tensor([k / n_frames], dtype=torch.float32, device=device)
+                        prediction = model(t).squeeze()
+                        loss = loss + (prediction - target.clone().detach()).norm(2)
+
+                if loss != 0:
+                    loss.backward()
+                    optimizer.step()
+                    # print(N, loss.item()/batch_size)
+
+                if (N % plot_frequency == 0):
+                    with torch.no_grad():
+                        t = torch.linspace(0, 1, n_frames, dtype=torch.float32, device=device).unsqueeze(1)
+                        prediction = model(t).T
+                        fig = plt.figure(figsize=(16, 16))
+                        ax = fig.add_subplot(2, 2, 1)
+                        plt.title('neural field')
+                        plt.imshow(to_numpy(prediction), aspect='auto', cmap='viridis')
+                        ax = fig.add_subplot(2, 2, 2)
+                        plt.title('true activity')
+                        activity = torch.nan_to_num(activity, nan=0.0)
+                        plt.imshow(to_numpy(activity.T), aspect='auto', cmap='viridis')
+                        ax = fig.add_subplot(2, 2, 3)
+                        activity_np = to_numpy(activity.flatten())
+                        prediction_np = to_numpy(prediction.flatten())
+                        non_zero_mask = activity_np > 1
+                        activity_filtered = activity_np[non_zero_mask]
+                        prediction_filtered = prediction_np[non_zero_mask]
+                        plt.scatter(activity_filtered, prediction_filtered, s=0.1, alpha=0.5, c='k',
+                                    label='Non-zero activity')
+                        x_data = activity_filtered
+                        y_data = prediction_filtered
+                        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+                        residuals = y_data - linear_model(x_data, *lin_fit)
+                        ss_res = np.sum(residuals ** 2)
+                        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+                        r_squared = 1 - (ss_res / ss_tot)
+                        plt.text(0.05, 0.95,
+                                 f'R² = {r_squared:.4f}\nSlope = {lin_fit[0]:.4f}\nN = {len(activity_filtered)}',
+                                 transform=plt.gca().transAxes, fontsize=12, verticalalignment='top',
+                                 bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+                        plt.xlabel('true activity')
+                        plt.ylabel('predicted activity')
+                        plt.title('prediction vs true')
+                        plt.legend()
+                        plt.tight_layout()
+                        plt.savefig(f"graphs_data/{dataset_name}/Fig/Demoise/siren_{run}.png")
+                        plt.close()
 
     for run in range(config.training.n_runs):
 

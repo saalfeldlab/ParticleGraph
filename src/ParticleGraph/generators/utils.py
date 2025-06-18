@@ -3,7 +3,7 @@ from ParticleGraph.generators import *
 from ParticleGraph.utils import *
 from time import sleep
 from scipy.spatial import Delaunay
-from tifffile import imread, imsave
+from tifffile import imread, imwrite as imsave
 from torch_geometric.utils import get_mesh_laplacian
 from tqdm import trange
 from torch_geometric.utils import dense_to_sparse
