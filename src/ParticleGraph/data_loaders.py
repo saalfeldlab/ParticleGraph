@@ -41,6 +41,14 @@ import pandas as pd
 import scipy.io
 from matplotlib.colors import LinearSegmentedColormap
 from ParticleGraph.models.Siren_Network import *
+import pywt
+import torch.nn.functional as F
+from scipy.optimize import curve_fit
+
+
+def linear_model(x, a, b):
+    return a * x + b
+
 
 def extract_object_properties(segmentation_image, fluorescence_image=[], radius=40, offset_channel=[0.0, 0.0]):
     # Label the objects in the segmentation image
@@ -1913,8 +1921,8 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
     if train_config.denoiser:
         print('denoise data with siren network')
         n_layers_nnr = 5
-        hidden_dim_nnr = 128
-        batch_size = 32
+        hidden_dim_nnr = 512
+        batch_size = 100
 
         print(f"n_layers_nnr:{n_layers_nnr}  hidden_dim_nnr: {hidden_dim_nnr}  batch_size: {batch_size}")
 
@@ -1922,76 +1930,55 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
 
         for run in range(n_runs):
 
-            model = Siren(in_features=1, out_features=189,
-                          hidden_features=hidden_dim_nnr,
-                          hidden_layers=n_layers_nnr,
-                          first_omega_0=30.0,
-                          hidden_omega_0=30.,
-                          outermost_linear=True)
+            activity = torch.tensor(activity_worm[run, :, :], dtype=torch.float32, device=device)
 
-            model.to(device=device)
-            optimizer = torch.optim.Adam(lr=train_config.learning_rate_missing_activity, params=model.parameters())
-            model.train()
 
-            activity = activity_worm[run, :, :].squeeze()
 
-            for N in trange(plot_frequency * 2 + 2):
+            def gaussian_smooth(data, sigma=1.0):
+                kernel_size = int(6 * sigma + 1)
+                if kernel_size % 2 == 0:
+                    kernel_size += 1
 
-                optimizer.zero_grad()
+                # Create 1D Gaussian kernel on the same device as data
+                device = data.device  # Get the device of input data
+                x = torch.arange(kernel_size, dtype=torch.float32, device=device) - kernel_size // 2
+                kernel = torch.exp(-0.5 * (x / sigma) ** 2)
+                kernel = kernel / kernel.sum()
 
-                loss = 0
-                for batch in range(batch_size):
+                # Reshape data: (neurons, time) -> (neurons, 1, time) for conv1d
+                data_reshaped = data.unsqueeze(1)  # (189, 1, 960)
 
-                    k = np.random.randint(n_frames+2)
-                    target = torch.tensor(activity[run][k], dtype=torch.float32, device=device)
-                    if not (torch.isnan(target).any()):
-                        t = torch.tensor([k / n_frames], dtype=torch.float32, device=device)
-                        prediction = model(t).squeeze()
-                        loss = loss + (prediction - target.clone().detach()).norm(2)
+                # Apply padding
+                data_padded = F.pad(data_reshaped, (kernel_size // 2, kernel_size // 2), mode='reflect')
 
-                if loss != 0:
-                    loss.backward()
-                    optimizer.step()
-                    # print(N, loss.item()/batch_size)
+                # Apply convolution - kernel needs to be (out_channels, in_channels, kernel_size)
+                kernel_reshaped = kernel.view(1, 1, -1)  # (1, 1, kernel_size)
 
-                if (N % plot_frequency == 0):
-                    with torch.no_grad():
-                        t = torch.linspace(0, 1, n_frames, dtype=torch.float32, device=device).unsqueeze(1)
-                        prediction = model(t).T
-                        fig = plt.figure(figsize=(16, 16))
-                        ax = fig.add_subplot(2, 2, 1)
-                        plt.title('neural field')
-                        plt.imshow(to_numpy(prediction), aspect='auto', cmap='viridis')
-                        ax = fig.add_subplot(2, 2, 2)
-                        plt.title('true activity')
-                        activity = torch.nan_to_num(activity, nan=0.0)
-                        plt.imshow(to_numpy(activity.T), aspect='auto', cmap='viridis')
-                        ax = fig.add_subplot(2, 2, 3)
-                        activity_np = to_numpy(activity.flatten())
-                        prediction_np = to_numpy(prediction.flatten())
-                        non_zero_mask = activity_np > 1
-                        activity_filtered = activity_np[non_zero_mask]
-                        prediction_filtered = prediction_np[non_zero_mask]
-                        plt.scatter(activity_filtered, prediction_filtered, s=0.1, alpha=0.5, c='k',
-                                    label='Non-zero activity')
-                        x_data = activity_filtered
-                        y_data = prediction_filtered
-                        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-                        residuals = y_data - linear_model(x_data, *lin_fit)
-                        ss_res = np.sum(residuals ** 2)
-                        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-                        r_squared = 1 - (ss_res / ss_tot)
-                        plt.text(0.05, 0.95,
-                                 f'R² = {r_squared:.4f}\nSlope = {lin_fit[0]:.4f}\nN = {len(activity_filtered)}',
-                                 transform=plt.gca().transAxes, fontsize=12, verticalalignment='top',
-                                 bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
-                        plt.xlabel('true activity')
-                        plt.ylabel('predicted activity')
-                        plt.title('prediction vs true')
-                        plt.legend()
-                        plt.tight_layout()
-                        plt.savefig(f"graphs_data/{dataset_name}/Fig/Demoise/siren_{run}.png")
-                        plt.close()
+                # Convolve each neuron independently
+                smoothed = F.conv1d(data_padded, kernel_reshaped, padding=0)
+
+                return smoothed.squeeze(1)  # Remove the channel dimension: (189, 960)
+
+            # Apply smoothing
+            activity_filtered = gaussian_smooth(activity, sigma=2.0)
+
+            # Plotting code
+            fig, axes = plt.subplots(4, 1, figsize=(12, 8))
+            neurons_to_plot = [50, 60, 80, 100]
+
+            for i, neuron_idx in enumerate(neurons_to_plot):
+                axes[i].plot(to_numpy(activity[neuron_idx]), 'gray', alpha=0.7, label='Original')
+                axes[i].plot(to_numpy(activity_filtered[neuron_idx]), 'blue', label='Denoised')
+                axes[i].set_title(f'Neuron {neuron_idx}')
+                axes[i].legend()
+
+            plt.tight_layout()
+            plt.savefig(f"graphs_data/{dataset_name}/Fig/Denoise/plot_{run}.png")
+            plt.close()
+
+            activity_worm[run, :, :] = to_numpy(activity_filtered)
+
+
 
     for run in range(config.training.n_runs):
 
