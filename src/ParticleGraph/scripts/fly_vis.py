@@ -34,10 +34,10 @@ class PDE_N8(pyg.nn.MessagePassing):
     def forward(self, data=[], has_field=False):
         x, edge_index = data.x, data.edge_index
         v = x[:, 3:4]
-        v_rest = self.p["V_i_rest"]
+        v_rest = self.p["V_i_rest"][:, None]
         e = x[:, 4:5]
         msg = self.propagate(edge_index, v=v)
-        tau = self.p["tau_i"]
+        tau = self.p["tau_i"][:, None]
         dv = (-v + msg + e + v_rest) / tau
         return dv
 
