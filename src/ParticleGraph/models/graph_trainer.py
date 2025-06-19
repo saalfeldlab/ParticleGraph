@@ -3546,6 +3546,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     has_mesh_field = (model_config.field_type != '') & ('RD_Mesh' in model_config.mesh_model_name)
     has_field = (model_config.field_type != '') & (has_mesh_field == False) & (has_particle_field == False)
     has_missing_activity = train_config.has_missing_activity
+    has_excitation = ('excitation' in training_config.update_type)
     baseline_value = simulation_config.baseline_value
     omega = model_config.omega
 
@@ -3963,10 +3964,11 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             if has_mesh_field:
                 field = model_f(time=it / n_frames) ** 2
                 x[:, 9:10] = field
-
             dataset_mesh = data.Data(x=x, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
         if do_tracking:
             x = x0.clone().detach()
+        if has_excitation:
+            x[:, 10: 10 + model_config.excitation_dim] = x0[:, 10: 10 + model_config.excitation_dim]
 
         # error calculations
         if 'PDE_N' in model_config.signal_model_name:
