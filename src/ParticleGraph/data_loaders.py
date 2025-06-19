@@ -1919,47 +1919,34 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
     T1[activity_idx] = np.array([[type_dict.get(name, 4)] for name in activity_neuron_list])
 
     if train_config.denoiser:
-        print('denoise data with siren network')
-        n_layers_nnr = 5
-        hidden_dim_nnr = 512
-        batch_size = 100
+        print('denoise data with gaussian_smooth')
+        def gaussian_smooth(data, sigma=2.0):
+            kernel_size = int(6 * sigma + 1)
+            if kernel_size % 2 == 0:
+                kernel_size += 1
 
-        print(f"n_layers_nnr:{n_layers_nnr}  hidden_dim_nnr: {hidden_dim_nnr}  batch_size: {batch_size}")
+            # Create 1D Gaussian kernel on the same device as data
+            device = data.device  # Get the device of input data
+            x = torch.arange(kernel_size, dtype=torch.float32, device=device) - kernel_size // 2
+            kernel = torch.exp(-0.5 * (x / sigma) ** 2)
+            kernel = kernel / kernel.sum()
 
-        plot_frequency = 100000 // batch_size
+            # Reshape data: (neurons, time) -> (neurons, 1, time) for conv1d
+            data_reshaped = data.unsqueeze(1)  # (189, 1, 960)
 
-        for run in range(n_runs):
+            # Apply padding
+            data_padded = F.pad(data_reshaped, (kernel_size // 2, kernel_size // 2), mode='reflect')
+
+            # Apply convolution - kernel needs to be (out_channels, in_channels, kernel_size)
+            kernel_reshaped = kernel.view(1, 1, -1)  # (1, 1, kernel_size)
+
+            # Convolve each neuron independently
+            smoothed = F.conv1d(data_padded, kernel_reshaped, padding=0)
+
+            return smoothed.squeeze(1)  # Remove the channel dimension: (189, 960)
+        for run in trange(n_runs):
 
             activity = torch.tensor(activity_worm[run, :, :], dtype=torch.float32, device=device)
-
-
-
-            def gaussian_smooth(data, sigma=1.0):
-                kernel_size = int(6 * sigma + 1)
-                if kernel_size % 2 == 0:
-                    kernel_size += 1
-
-                # Create 1D Gaussian kernel on the same device as data
-                device = data.device  # Get the device of input data
-                x = torch.arange(kernel_size, dtype=torch.float32, device=device) - kernel_size // 2
-                kernel = torch.exp(-0.5 * (x / sigma) ** 2)
-                kernel = kernel / kernel.sum()
-
-                # Reshape data: (neurons, time) -> (neurons, 1, time) for conv1d
-                data_reshaped = data.unsqueeze(1)  # (189, 1, 960)
-
-                # Apply padding
-                data_padded = F.pad(data_reshaped, (kernel_size // 2, kernel_size // 2), mode='reflect')
-
-                # Apply convolution - kernel needs to be (out_channels, in_channels, kernel_size)
-                kernel_reshaped = kernel.view(1, 1, -1)  # (1, 1, kernel_size)
-
-                # Convolve each neuron independently
-                smoothed = F.conv1d(data_padded, kernel_reshaped, padding=0)
-
-                return smoothed.squeeze(1)  # Remove the channel dimension: (189, 960)
-
-            # Apply smoothing
             activity_filtered = gaussian_smooth(activity, sigma=2.0)
 
             # Plotting code

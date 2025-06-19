@@ -2868,7 +2868,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                     loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
 
                 elif time_step > 1:
-                    loss = loss + (x_batch[ids_batch] + pred[ids_batch] * delta_t * time_step - y_batch[ids_batch]).norm(2) / time_step
+                    loss = loss + (x_batch[ids_batch] + pred[ids_batch] * delta_t * time_step - y_batch[ids_batch]).norm(2)
 
                 if 'PDE_N3' in model_config.signal_model_name:
                     loss = loss + train_config.coeff_model_a * (model.a[ind_a + 1] - model.a[ind_a]).norm(2)
@@ -3545,6 +3545,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     has_particle_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
     has_mesh_field = (model_config.field_type != '') & ('RD_Mesh' in model_config.mesh_model_name)
     has_field = (model_config.field_type != '') & (has_mesh_field == False) & (has_particle_field == False)
+    has_missing_activity = train_config.has_missing_activity
+    baseline_value = simulation_config.baseline_value
     omega = model_config.omega
 
     do_tracking = training_config.do_tracking
@@ -3913,6 +3915,17 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             if verbose:
                 print(table)
                 print(f"Total Trainable Params: {total_params}")
+        if has_missing_activity:
+            model_missing_activity = nn.ModuleList([
+                Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
+                      hidden_features=model_config.hidden_dim_nnr,
+                      hidden_layers=model_config.n_layers_nnr, first_omega_0=model_config.omega,
+                      hidden_omega_0=model_config.omega,
+                      outermost_linear=model_config.outermost_linear_nnr)
+                for n in range(n_runs)
+            ])
+            model_missing_activity.to(device=device)
+            model_missing_activity.eval()
 
     rmserr_list = []
     pred_err_list = []
@@ -3992,6 +4005,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             data_id = torch.ones((n_particles, 1), dtype=torch.int) * run
 
         # update calculations
+
+
         if model_config.mesh_model_name == 'DiffMesh':
             with torch.no_grad():
                 pred = mesh_model(dataset_mesh, data_id=0, )
@@ -4166,13 +4181,13 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     if 'inference' in test_mode:
                         x[:, dimension + 1:2 * dimension + 1] = pred.clone().detach() / (delta_t * time_step)
                 elif 'PDE_N' in model_config.signal_model_name:
-                    loss = (pred[:n_particles, 0:dimension] * ynorm - y0).norm(2)
-                    if 'PDE_N' in model_config.signal_model_name:
-                        x[:n_particles, 6:7] += y[:n_particles] * delta_t  # signal update
-                    else:
-                        x[:n_particles, dimension + 1:2 * dimension + 1] = y[:n_particles]
+                    if has_missing_activity:
+                        t = torch.tensor([k / n_frames], dtype=torch.float32, device=device)
+                        missing_activity = baseline_value + model_missing_activity[run](t).squeeze()
+                        ids_missing = torch.argwhere(x[:, 6] == baseline_value)
+                        x[ids_missing,6] = missing_activity[ids_missing]
+                    x[:n_particles, 6:7] += y[:n_particles] * delta_t  # signal update
                 else:
-                    loss = (pred[:n_particles, 0:dimension] * ynorm - y0).norm(2)
                     pred_err_list.append(to_numpy(torch.sqrt(loss)))
                     if model_config.prediction == '2nd_derivative':
                         y = y * ynorm * delta_t
