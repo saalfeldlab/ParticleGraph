@@ -1,5 +1,5 @@
-description: 'idem c14      coeff_update_u_diff: 0.1'
-dataset: 'CElegans_c1'
+description: 'idem d1      time_step: 4'
+dataset: 'CElegans_d1'
 data_folder_name: '/groups/saalfeld/home/allierc/Py/wormvae/data/worm_activity/all_traces_Heads_new.mat'
 connectome_folder_name: '/groups/saalfeld/home/allierc/Py/wormvae/data/worm_connectivity/'
 
@@ -71,6 +71,8 @@ training:
     small_init_batch_size: False
     device: 'auto'
     n_runs: 21
+
+    denoiser: True
 
     multi_connectivity: True
     with_connectivity_mask: True
