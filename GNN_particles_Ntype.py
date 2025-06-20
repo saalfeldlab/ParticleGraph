@@ -66,8 +66,8 @@ if __name__ == '__main__':
         # config_list = ['cell_U2OS_9_2']
         # config_list = ['springs_matrix_N5_3']
         # config_list = ['cell_MDCK_15']
-        config_list = ['signal_CElegans_d3']
-        # config_list = ['signal_CElegans_c14_4', 'signal_CElegans_c14_4a', 'signal_CElegans_c14_4b', 'signal_CElegans_c14_4c' 'signal_CElegans_d1', 'signal_CElegans_d2', 'signal_CElegans_d3']
+        # config_list = ['signal_CElegans_d1', 'signal_CElegans_d2', 'signal_CElegans_d3']
+        config_list = ['signal_CElegans_c14_4', 'signal_CElegans_c14_4a', 'signal_CElegans_c14_4b', 'signal_CElegans_c14_4c']
         # config_list = ['fly_N8_1']
         # config_list = ['signal_N5_l6','signal_N5_l7','signal_N5_l8'] #,
         # config_list = ['signal_N5_l4','signal_N5_l5']

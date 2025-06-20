@@ -3558,9 +3558,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         n_nodes_per_axis = int(np.sqrt(n_nodes))
 
     log_dir = 'log/' + config.config_file
-    # files = glob.glob(f"./{log_dir}/tmp_recons/*")
-    # for f in files:
-    #     os.remove(f)
+    files = glob.glob(f"./{log_dir}/tmp_recons/*")
+    for f in files:
+        os.remove(f)
 
     if best_model == 'best':
         files = glob.glob(f"{log_dir}/models/*")
@@ -4109,8 +4109,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     y = pred
             # signal update
             x[:n_particles, 6:7] = x[:n_particles, 6:7] + y[:n_particles] * delta_t
-            if 'CElegans' in dataset_name:
-                x[:n_particles, 6:7] = torch.clamp(x[:n_particles, 6:7], min=0, max=10)
+            # if 'CElegans' in dataset_name:
+            #     x[:n_particles, 6:7] = torch.clamp(x[:n_particles, 6:7], min=0, max=10)
         else:
             with torch.no_grad():
                 if has_ghost:
@@ -4347,6 +4347,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.axis('off')
                 plt.xticks([])
                 plt.yticks([])
+                plt.xlim([-0.6, 0.6])
+                plt.ylim([-0.6, 0.6])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=80)
                 plt.close()

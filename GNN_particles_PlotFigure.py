@@ -5606,7 +5606,9 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
             fig_lines.savefig(f"./{log_dir}/results/function_edge_motor_neuron.png", dpi=300, bbox_inches='tight')
             plt.close(fig_lines)
 
-            larynx_neuron_list, sensory_neuron_list, inter_neuron_list, motor_neuron_list
+            fig_lines = analyze_mlp_edge_lines(model, inter_neuron_list, all_neuron_list, to_numpy(adjacency), signal_range=(0, 10), resolution=100, device=device)
+            fig_lines.savefig(f"./{log_dir}/results/function_edge_inter_neuron.png", dpi=300, bbox_inches='tight')
+            plt.close(fig_lines)
 
 
             fig = analyze_mlp_phi_synaptic(model, n_sample_pairs=1000, resolution=100, device=device)
@@ -10459,8 +10461,8 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_video_bison_test']
     # config_list = ['RD_RPS']
     # config_list = ['cell_U2OS_8_12']
-    config_list = [ 'signal_CElegans_c14_4a', 'signal_CElegans_c14_4b', 'signal_CElegans_c14_4c',  'signal_CElegans_d1', 'signal_CElegans_d2', 'signal_CElegans_d3', ]
-    # config_list = ['signal_CElegans_c14_1']
+    # config_list = [ 'signal_CElegans_c14_4a', 'signal_CElegans_c14_4b', 'signal_CElegans_c14_4c',  'signal_CElegans_d1', 'signal_CElegans_d2', 'signal_CElegans_d3', ]
+    config_list = ['signal_CElegans_c14_5','signal_CElegans_c14_6','signal_CElegans_c14_7','signal_CElegans_c14_8']
 
     # plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 

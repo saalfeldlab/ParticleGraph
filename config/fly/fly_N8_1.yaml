@@ -7,7 +7,7 @@ simulation:
 
     params: [[1.0,1.0,1.0,1.0]]
 
-    n_neurons: 2000
+    n_neurons: 45669
     n_neuron_types: 20
     n_frames: 2000
     delta_t: 0.01
