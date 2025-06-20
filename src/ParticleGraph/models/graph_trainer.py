@@ -4076,6 +4076,41 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 x[:, 3:5] = y
 
             x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t)
+        elif 'PDE_N' in model_config.signal_model_name:
+            if 'visual' in field_type:
+                x[:n_nodes, 8:9] = model_f(time=it / n_frames) ** 2
+                x[n_nodes:n_particles, 8:9] = 1
+            elif 'learnable_short_term_plasticity' in field_type:
+                alpha = (k % model.embedding_step) / model.embedding_step
+                x[:, 8] = alpha * model.b[:, it // model.embedding_step + 1] ** 2 + (1 - alpha) * model.b[:,
+                                                                                                  it // model.embedding_step] ** 2
+            elif ('short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
+                t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
+                t[:, 0, :] = torch.tensor(it / n_frames, dtype=torch.float32, device=device)
+                x[:, 8] = model_f(t).squeeze() ** 2
+            elif 'modulation' in field_type:
+                x[:, 8:9] = model_f(time=it / n_frames) ** 2
+
+            if has_missing_activity:
+                t = torch.tensor([it / n_frames], dtype=torch.float32, device=device)
+                missing_activity = baseline_value + model_missing_activity[run](t).squeeze()
+                ids_missing = torch.argwhere(x[:, 6] == baseline_value)
+                x[ids_missing, 6] = missing_activity[ids_missing]
+
+            nan_mask = torch.isnan(x[:, 6])
+            x[nan_mask, 6] = baseline_value
+
+            dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
+            if 'test_simulation' in test_mode:
+                y = y0 / ynorm
+            else:
+                with torch.no_grad():
+                    pred = model(dataset, data_id=data_id)
+                    y = pred
+            # signal update
+            x[:n_particles, 6:7] = x[:n_particles, 6:7] + y[:n_particles] * delta_t
+            if 'CElegans' in dataset_name:
+                x[:n_particles, 6:7] = torch.clamp(x[:n_particles, 6:7], min=0, max=10)
         else:
             with torch.no_grad():
                 if has_ghost:
@@ -4083,64 +4118,33 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     x_ghost = model_ghost.get_pos(dataset_id=run, frame=it, bc_pos=bc_pos)
                     x_ = torch.cat((x_, x_ghost), 0)
                 # compute connectivity and prediction
-                if has_adjacency_matrix & ('PDE_N' in model_config.signal_model_name):
-                    if 'visual' in field_type:
-                        x[:n_nodes, 8:9] = model_f(time=it / n_frames) ** 2
-                        x[n_nodes:n_particles, 8:9] = 1
-                    elif 'learnable_short_term_plasticity' in field_type:
-                        alpha = (k % model.embedding_step) / model.embedding_step
-                        x[:, 8] = alpha * model.b[:, it // model.embedding_step + 1] ** 2 + (1 - alpha) * model.b[:,
-                                                                                                          it // model.embedding_step] ** 2
-                    elif ('short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
-                        t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
-                        t[:, 0, :] = torch.tensor(it / n_frames, dtype=torch.float32, device=device)
-                        x[:, 8] = model_f(t).squeeze() ** 2
-                    elif 'modulation' in field_type:
-                        x[:, 8:9] = model_f(time=it / n_frames) ** 2
 
-                    if has_missing_activity:
-                        t = torch.tensor([it / n_frames], dtype=torch.float32, device=device)
-                        missing_activity = baseline_value + model_missing_activity[run](t).squeeze()
-                        ids_missing = torch.argwhere(x[:, 6] == baseline_value)
-                        x[ids_missing, 6] = missing_activity[ids_missing]
+                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                edge_index = adj_t.nonzero().t().contiguous()
 
-                    nan_mask = torch.isnan(x[:, 6])
-                    x[nan_mask, 6] = baseline_value
+                if has_field:
+                    field = model_f(time=it / n_frames) ** 2
+                    x[:, 6:7] = field
 
-                    dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
-                    if 'test_simulation' in test_mode:
-                        y = y0 / ynorm
-                    else:
-                        with torch.no_grad():
-                            pred = model(dataset, data_id=data_id)
-                            y = pred
+                if time_window > 0:
+                    xt = []
+                    for t in range(time_window):
+                        x_ = x_list[0][it - t].clone().detach()
+                        xt.append(x_[:, :])
+                    dataset = data.Data(x=xt, edge_index=edge_index)
                 else:
-                    distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                    adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                    edge_index = adj_t.nonzero().t().contiguous()
+                    dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
 
-                    if has_field:
-                        field = model_f(time=it / n_frames) ** 2
-                        x[:, 6:7] = field
+                if 'test_simulation' in test_mode:
+                    y = y0 / ynorm
+                    pred = y
+                else:
+                    pred = model(dataset, data_id=data_id, training=False, has_field=has_field, k=it)
+                    y = pred
 
-                    if time_window > 0:
-                        xt = []
-                        for t in range(time_window):
-                            x_ = x_list[0][it - t].clone().detach()
-                            xt.append(x_[:, :])
-                        dataset = data.Data(x=xt, edge_index=edge_index)
-                    else:
-                        dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
-
-                    if 'test_simulation' in test_mode:
-                        y = y0 / ynorm
-                        pred = y
-                    else:
-                        pred = model(dataset, data_id=data_id, training=False, has_field=has_field, k=it)
-                        y = pred
-
-                    if has_ghost:
-                        y = y[mask_ghost]
+                if has_ghost:
+                    y = y[mask_ghost]
 
                 if sub_sampling > 1:
                     # predict position, does not work with rotation_augmentation
@@ -4169,8 +4173,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     pred_err_list.append(to_numpy(torch.sqrt(loss)))
                     if 'inference' in test_mode:
                         x[:, dimension + 1:2 * dimension + 1] = pred.clone().detach() / (delta_t * time_step)
-                elif 'PDE_N' in model_config.signal_model_name:
-                    x[:n_particles, 6:7] += y[:n_particles] * delta_t  # signal update
+
                 else:
                     pred_err_list.append(to_numpy(torch.sqrt(loss)))
                     if model_config.prediction == '2nd_derivative':
@@ -4331,8 +4334,16 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 matplotlib.rcParams['savefig.pad_inches'] = 0
 
                 black_to_green = LinearSegmentedColormap.from_list('black_green', ['black', 'green'])
+                black_to_yellow = LinearSegmentedColormap.from_list('black_yellow', ['black', 'yellow'])
+
                 plt.figure(figsize=(10, 10))
                 plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=700, c=to_numpy(x[:, 6]), alpha=1, edgecolors='none', vmin =2 , vmax=8, cmap=black_to_green)
+
+                if 'excitation' in model.update_type:
+                    plt.scatter(-0.45, 0.5, s=700, c=to_numpy(x[0, 10]) + 0.25, cmap=black_to_yellow, vmin=0, vmax=1)
+                    plt.scatter(-0.4, 0.5, s=700, c=to_numpy(x[0, 11]) + 0.25, cmap=black_to_yellow, vmin=0, vmax=1)
+                    plt.scatter(-0.35, 0.5, s=700, c=to_numpy(x[0, 12]) + 0.25, cmap=black_to_yellow, vmin=0, vmax=1)
+
                 plt.axis('off')
                 plt.xticks([])
                 plt.yticks([])
