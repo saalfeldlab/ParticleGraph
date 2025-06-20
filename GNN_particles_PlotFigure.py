@@ -10462,7 +10462,7 @@ if __name__ == '__main__':
     # config_list = ['RD_RPS']
     # config_list = ['cell_U2OS_8_12']
     # config_list = [ 'signal_CElegans_c14_4a', 'signal_CElegans_c14_4b', 'signal_CElegans_c14_4c',  'signal_CElegans_d1', 'signal_CElegans_d2', 'signal_CElegans_d3', ]
-    config_list = ['signal_CElegans_c14_5','signal_CElegans_c14_6','signal_CElegans_c14_7','signal_CElegans_c14_8']
+    config_list = config_list = ['signal_CElegans_d2', 'signal_CElegans_d2a', 'signal_CElegans_d3', 'signal_CElegans_d3a', 'signal_CElegans_d3b']
 
     # plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 

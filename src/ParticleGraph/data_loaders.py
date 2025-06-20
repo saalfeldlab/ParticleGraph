@@ -94,21 +94,6 @@ def extract_object_properties(segmentation_image, fluorescence_image=[], radius=
             fluo_sum_radius = np.sum(fluorescence_image[rr_valid, cc_valid])
             fluo_sum_segmentation = region.mean_intensity * area
 
-            if id == 339:
-                rr_valid_339 = rr_valid
-                cc_valid_339 = cc_valid
-                pos_x_339 = pos_x
-                pos_y_339 = pos_y
-                fluo_sum_radius_339 = np.sum(fluorescence_image[rr_valid_339, cc_valid_339])
-                # print(len(object_properties), fluo_sum_radius_339)
-
-            if id == 104:
-                rr_valid_104 = rr_valid
-                cc_valid_104 = cc_valid
-                pos_x_104 = pos_x
-                pos_y_104 = pos_y
-                fluo_sum_radius_334 = np.sum(fluorescence_image[rr_valid_104, cc_valid_104])
-                # print(len(object_properties), fluo_sum_radius_334)
 
             object_properties.append((id, pos_x, pos_y, area, perimeter, aspect_ratio, orientation, fluo_sum_radius, fluo_sum_segmentation))
 
@@ -420,7 +405,7 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
                     im[:,:,i-1:i] = imgs_dn.copy()
                 tifffile.imsave(data_folder_name + 'DN/' + files[it], im[:,:,0])
 
-            masks, flows, styles = model_cellpose.eval(im[:,:,:], diameter=cellpose_diameter, flow_threshold=0.0, invert=False, normalize=True, channels=cellpose_channels+1)
+            masks, flows, styles = model_cellpose.eval(im[:,:,:], diameter=cellpose_diameter, flow_threshold=0.0, invert=False, normalize=True, channels=cellpose_channels)
             # fig = plt.figure(figsize=(12, 12))
             # plt.imshow(masks)
 

@@ -4000,8 +4000,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             data_id = torch.ones((n_particles, 1), dtype=torch.int, device=device) * run
 
         # update calculations
-
-
         if model_config.mesh_model_name == 'DiffMesh':
             with torch.no_grad():
                 pred = mesh_model(dataset_mesh, data_id=0, )
@@ -4621,11 +4619,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.savefig(f'./{log_dir}/results/comparison_xi_{it}.png', dpi=80)
                 plt.close()
 
-            if ('PDE_N' in model_config.signal_model_name) & (it % 50 == 0) & (it > 0):
-
-                if has_ghost & ('PDE_N' in model_config.signal_model_name):
-                    n = [1, 3, 10, 15, 26, 27, 52, 62, 92, 120]
-                elif 'CElegans' in dataset_name:
+            if ('PDE_N' in model_config.signal_model_name) & (it % 200 == 0) & (it > 0):
+                if 'CElegans' in dataset_name:
                     n = [20, 30, 40, 50, 60, 70, 80, 90, 100, 110]
                 else:
                     n = [20, 30, 100, 150, 260, 270, 520, 620, 720, 820]
@@ -4649,7 +4644,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.legend(fontsize=24)
                 plt.plot(neuron_gt_list_[:, n[1:10]].detach().cpu().numpy(), c=mc, linewidth=8, alpha=0.25)
                 plt.plot(neuron_pred_list_[:, n[1:10]].detach().cpu().numpy(), linewidth=4)
-                plt.xlim([0, 200])
+                plt.xlim([0, n_frames])
                 plt.xlabel(r'time-points', fontsize=48)
                 plt.ylabel(r'$x_i$', fontsize=48)
                 plt.xticks(fontsize=24)
@@ -4757,80 +4752,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.savefig(f"./{log_dir}/tmp_recons/Boundary_{config_file}_{num}.tif", dpi=80)
                 plt.close()
 
-            if has_ghost & ('PDE_N' not in model_config.signal_model_name):
-                x0 = x_list[0][it + 1].clone().detach()
-                x_ghost_pos = bc_pos(x_ghost[:, 1:3])
-                x_removed = x_removed_list[it]
-                x_all = torch.cat((x, x_removed), 0)
-
-                fig = plt.figure(figsize=(12, 12))
-                ax = fig.add_subplot(1, 1, 1)
-                ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-                ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-                ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                for n in range(n_particle_types):
-                    plt.scatter(x0[index_particles[n], 1].detach().cpu().numpy(),
-                                x0[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
-                if 'frame' in style:
-                    plt.xlabel(r'$x$', fontsize=78)
-                    plt.ylabel(r'$y$', fontsize=78)
-                    plt.xticks(fontsize=48.0)
-                    plt.yticks(fontsize=48.0)
-                else:
-                    plt.xticks([])
-                    plt.yticks([])
-                plt.xlim([0, 1])
-                plt.ylim([0, 1])
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_recons/Ghost1_{config_file}_{it}.tif", dpi=170.7)
-                plt.close()
-                fig = plt.figure(figsize=(12, 12))
-                ax = fig.add_subplot(1, 1, 1)
-                ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-                ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-                ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                plt.scatter(x_ghost_pos[:, 0].detach().cpu().numpy(),
-                            x_ghost_pos[:, 1].detach().cpu().numpy(), s=s_p, color='g')
-                if 'frame' in style:
-                    plt.xlabel(r'$x$', fontsize=78)
-                    plt.ylabel(r'$y$', fontsize=78)
-                    plt.xticks(fontsize=48.0)
-                    plt.yticks(fontsize=48.0)
-                else:
-                    plt.xticks([])
-                    plt.yticks([])
-                plt.xlim([0, 1])
-                plt.ylim([0, 1])
-                plt.xticks(fontsize=48.0)
-                plt.yticks(fontsize=48.0)
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_recons/Ghost2_{config_file}_{it}.tif", dpi=170.7)
-                plt.close()
-                fig = plt.figure(figsize=(12, 12))
-                ax = fig.add_subplot(1, 1, 1)
-                ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-                ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-                ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                plt.scatter(x_removed[:, 1].detach().cpu().numpy(),
-                            x_removed[:, 2].detach().cpu().numpy(), s=s_p, color='r')
-                if 'frame' in style:
-                    plt.xlabel(r'$x$', fontsize=78)
-                    plt.ylabel(r'$y$', fontsize=78)
-                    plt.xticks(fontsize=48.0)
-                    plt.yticks(fontsize=48.0)
-                else:
-                    plt.xticks([])
-                    plt.yticks([])
-                plt.xlim([0, 1])
-                plt.ylim([0, 1])
-                plt.xticks(fontsize=48.0)
-                plt.yticks(fontsize=48.0)
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_recons/Ghost3_{config_file}_{it}.tif", dpi=170.7)
-                plt.close()
+    
 
     if 'inference' in test_mode:
         torch.save(x_inference_list, f"./{log_dir}/x_inference_list_{run}.pt")
