@@ -1,5 +1,5 @@
-description: 'idem c14      coeff_update_u_diff: 0.1'
-dataset: 'CElegans_c1'
+description: 'idem d1      time_step: 2     coeff_missing_activity: 0.1     coeff_sign : 1.E-2'
+dataset: 'CElegans_d1'
 data_folder_name: '/groups/saalfeld/home/allierc/Py/wormvae/data/worm_activity/all_traces_Heads_new.mat'
 connectome_folder_name: '/groups/saalfeld/home/allierc/Py/wormvae/data/worm_connectivity/'
 
@@ -72,11 +72,13 @@ training:
     device: 'auto'
     n_runs: 21
 
+    denoiser: True
+
     multi_connectivity: True
     with_connectivity_mask: True
     has_missing_activity: True
 
-    time_step: 8
+    time_step: 2
     embedding_trial: False
 
     sparsity: 'none'
@@ -92,7 +94,7 @@ training:
     learning_rate_missing_activity: 1.0E-4
 
     coeff_edge_diff: 1
-    coeff_sign : 0
-    coeff_missing_activity: 0
+    coeff_sign : 1.E-2
+    coeff_missing_activity: 0.1
     coeff_update_msg_diff: 1
     coeff_update_u_diff: 0.1

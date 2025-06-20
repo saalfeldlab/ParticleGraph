@@ -3545,8 +3545,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     has_particle_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
     has_mesh_field = (model_config.field_type != '') & ('RD_Mesh' in model_config.mesh_model_name)
     has_field = (model_config.field_type != '') & (has_mesh_field == False) & (has_particle_field == False)
-    has_missing_activity = train_config.has_missing_activity
-    has_excitation = ('excitation' in training_config.update_type)
+    has_missing_activity = training_config.has_missing_activity
+    has_excitation = ('excitation' in model_config.update_type)
     baseline_value = simulation_config.baseline_value
     omega = model_config.omega
 
@@ -3734,19 +3734,18 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     if 'PDE_N' in model_config.signal_model_name:
         has_adjacency_matrix = True
         adjacency = torch.load(f'./graphs_data/{dataset_name}/adjacency.pt', map_location=device)
-        edge_index = torch.load(f'./graphs_data/{dataset_name}/edge_index.pt', map_location=device)
+        if training_config.with_connectivity_mask:
+            model_mask = (adjacency > 0) * 1.0
+            adj_t = model_mask.float() * 1
+            adj_t = adj_t.t()
+            edge_index = adj_t.nonzero().t().contiguous()
+        else:
+            edge_index = torch.load(f'./graphs_data/{dataset_name}/edge_index.pt', map_location=device)
+
         if ('modulation' in model_config.field_type) | ('visual' in model_config.field_type):
             print('load b_i movie ...')
             im = imread(f"graphs_data/{simulation_config.node_value_map}")
             A1 = torch.zeros((n_particles, 1), device=device)
-        # else:
-        #     print('create graph positions ...')
-        #     G_first = to_networkx(first_dataset.clone().detach(), remove_self_loops=True, to_undirected=True)
-        #     first_positions = nx.spring_layout(G_first, weight='weight', seed=42, k=1)
-        #     X1_first = torch.zeros((n_particles, 2), device=device)
-        #     for node, pos in first_positions.items():
-        #         X1_first[node, :] = torch.tensor([pos[0], pos[1]], device=device)
-        #     print('done ...')
 
         # neuron_index = torch.randint(0, n_particles, (6,))
         neuron_gt_list = []
@@ -3802,6 +3801,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         model.ynorm = ynorm
         model.vnorm = vnorm
         model.particle_of_interest = particle_of_interest
+        if training_config.with_connectivity_mask:
+            model.mask = (adjacency > 0) * 1.0
         table = PrettyTable(["Modules", "Parameters"])
         total_params = 0
         for name, parameter in model.named_parameters():
@@ -3845,8 +3846,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 model_f.load_state_dict(state_dict['model_state_dict'])
                 model_f.to(device=device)
                 model_f.eval()
-            if has_ghost & ('PDE_N' in model_config.signal_model_name):
-                print('load missing activity models ...')
+            if has_missing_activity:
                 model_missing_activity = nn.ModuleList([
                     Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
                           hidden_features=model_config.hidden_dim_nnr,
@@ -3856,9 +3856,11 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     for n in range(n_runs)
                 ])
                 model_missing_activity.to(device=device)
-                net = f'{log_dir}/models/best_model_f_with_{n_runs - 1}_graphs_{best_model}.pt'
+                net = f'{log_dir}/models/best_model_missing_activity_with_{n_runs - 1}_graphs_{best_model}.pt'
                 state_dict = torch.load(net, map_location=device)
                 model_missing_activity.load_state_dict(state_dict['model_state_dict'])
+                model_missing_activity.to(device=device)
+                model_missing_activity.eval()
 
         if has_particle_field:
             model_f_p = model
@@ -3916,17 +3918,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             if verbose:
                 print(table)
                 print(f"Total Trainable Params: {total_params}")
-        if has_missing_activity:
-            model_missing_activity = nn.ModuleList([
-                Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
-                      hidden_features=model_config.hidden_dim_nnr,
-                      hidden_layers=model_config.n_layers_nnr, first_omega_0=model_config.omega,
-                      hidden_omega_0=model_config.omega,
-                      outermost_linear=model_config.outermost_linear_nnr)
-                for n in range(n_runs)
-            ])
-            model_missing_activity.to(device=device)
-            model_missing_activity.eval()
+
 
     rmserr_list = []
     pred_err_list = []
@@ -3946,7 +3938,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     n_particles = x.shape[0]
     x_inference_list = []
 
-    for it in trange(start_it,start_it+200):  # start_it + min(9600+start_it,stop_it-time_step)): #  start_it+200): # min(9600+start_it,stop_it-time_step)):
+    for it in trange(start_it,start_it+800):  # start_it + min(9600+start_it,stop_it-time_step)): #  start_it+200): # min(9600+start_it,stop_it-time_step)):
 
         check_and_clear_memory(device=device, iteration_number=it, every_n_iterations=25,
                                memory_percentage_threshold=0.6)
@@ -4002,9 +3994,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         rmserr_list.append(rmserr.item())
 
         if config.training.shared_embedding:
-            data_id = torch.ones((n_particles, 1), dtype=torch.int)
+            data_id = torch.ones((n_particles, 1), dtype=torch.int, device=device)
         else:
-            data_id = torch.ones((n_particles, 1), dtype=torch.int) * run
+            data_id = torch.ones((n_particles, 1), dtype=torch.int, device=device) * run
 
         # update calculations
 
@@ -4089,37 +4081,31 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     x_ = x
                     x_ghost = model_ghost.get_pos(dataset_id=run, frame=it, bc_pos=bc_pos)
                     x_ = torch.cat((x_, x_ghost), 0)
-
                 # compute connectivity and prediction
-                if has_adjacency_matrix:
-                    if 'PDE_N' in model_config.signal_model_name:
-                        if 'visual' in field_type:
-                            x[:n_nodes, 8:9] = model_f(time=it / n_frames) ** 2
-                            x[n_nodes:n_particles, 8:9] = 1
-                        elif 'learnable_short_term_plasticity' in field_type:
-                            alpha = (k % model.embedding_step) / model.embedding_step
-                            x[:, 8] = alpha * model.b[:, it // model.embedding_step + 1] ** 2 + (1 - alpha) * model.b[:,
-                                                                                                              it // model.embedding_step] ** 2
-                        elif ('short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
-                            t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
-                            t[:, 0, :] = torch.tensor(it / n_frames, dtype=torch.float32, device=device)
-                            x[:, 8] = model_f(t).squeeze() ** 2
-                        elif 'modulation' in field_type:
-                            x[:, 8:9] = model_f(time=it / n_frames) ** 2
-                        if has_ghost & ('PDE_N' in model_config.signal_model_name):
-                            t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
-                            t[:, 0, :] = torch.tensor(it / n_frames, dtype=torch.float32, device=device)
-                            missing_activity = model_missing_activity[run](t).squeeze()
-                            x_ghost = torch.zeros((n_ghosts, x.shape[1]), device=device)
-                            x_ghost[:, 6:7] = missing_activity[:, None]
-                            x_ghost[:, 0] = n_particles + torch.arange(n_ghosts, device=device)
-                            x = torch.cat((x[:n_particles], x_ghost), 0)
-                            edges, edge_attr = dense_to_sparse(
-                                torch.ones((n_particles + n_ghosts)) - torch.eye(n_particles + n_ghosts))
-                            edges = edges.to(device=device)
-                            ids = np.arange(n_particles)
-                            mask = torch.isin(edges[1, :], torch.tensor(ids, device=device))
-                            edge_index = edges[:, mask]
+                if has_adjacency_matrix & ('PDE_N' in model_config.signal_model_name):
+                    if 'visual' in field_type:
+                        x[:n_nodes, 8:9] = model_f(time=it / n_frames) ** 2
+                        x[n_nodes:n_particles, 8:9] = 1
+                    elif 'learnable_short_term_plasticity' in field_type:
+                        alpha = (k % model.embedding_step) / model.embedding_step
+                        x[:, 8] = alpha * model.b[:, it // model.embedding_step + 1] ** 2 + (1 - alpha) * model.b[:,
+                                                                                                          it // model.embedding_step] ** 2
+                    elif ('short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
+                        t = torch.zeros((1, 1, 1), dtype=torch.float32, device=device)
+                        t[:, 0, :] = torch.tensor(it / n_frames, dtype=torch.float32, device=device)
+                        x[:, 8] = model_f(t).squeeze() ** 2
+                    elif 'modulation' in field_type:
+                        x[:, 8:9] = model_f(time=it / n_frames) ** 2
+
+                    if has_missing_activity:
+                        t = torch.tensor([it / n_frames], dtype=torch.float32, device=device)
+                        missing_activity = baseline_value + model_missing_activity[run](t).squeeze()
+                        ids_missing = torch.argwhere(x[:, 6] == baseline_value)
+                        x[ids_missing, 6] = missing_activity[ids_missing]
+
+                    nan_mask = torch.isnan(x[:, 6])
+                    x[nan_mask, 6] = baseline_value
+
                     dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
                     if 'test_simulation' in test_mode:
                         y = y0 / ynorm
@@ -4183,11 +4169,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     if 'inference' in test_mode:
                         x[:, dimension + 1:2 * dimension + 1] = pred.clone().detach() / (delta_t * time_step)
                 elif 'PDE_N' in model_config.signal_model_name:
-                    if has_missing_activity:
-                        t = torch.tensor([k / n_frames], dtype=torch.float32, device=device)
-                        missing_activity = baseline_value + model_missing_activity[run](t).squeeze()
-                        ids_missing = torch.argwhere(x[:, 6] == baseline_value)
-                        x[ids_missing,6] = missing_activity[ids_missing]
                     x[:n_particles, 6:7] += y[:n_particles] * delta_t  # signal update
                 else:
                     pred_err_list.append(to_numpy(torch.sqrt(loss)))
@@ -4350,59 +4331,30 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.close()
                 matplotlib.rcParams['savefig.pad_inches'] = 0
 
-                if has_ghost:
-                    plt.figure(figsize=(25, 25))
-                    plt.scatter(to_numpy(X1_first[:n_particles, 0]), 1.1 + to_numpy(X1_first[:n_particles, 1]), s=1000,
-                                c=to_numpy(x[:n_particles, 6]), vmin=-2, vmax=2, cmap='viridis', edgecolors='k',
-                                alpha=1)
-                    plt.scatter(to_numpy(X1_first[:n_ghosts, 0]) + 1.1, 1.1 + to_numpy(X1_first[:n_ghosts, 1]), s=1000,
-                                c=4 * to_numpy(x[n_particles:n_ghosts + n_particles, 6]), vmin=-2, vmax=2,
-                                cmap='viridis', edgecolors='k', alpha=1)
-                    plt.scatter(to_numpy(X1_first[:n_particles, 0]), to_numpy(X1_first[:n_particles, 1]), s=1000,
-                                c=to_numpy(x0[:n_particles, 6]), vmin=-2, vmax=2, cmap='viridis', edgecolors='k',
-                                alpha=1)
-                    plt.scatter(to_numpy(X1_first[:n_particles, 0]) + 1.1, to_numpy(X1_first[:n_particles, 1]), s=1000,
-                                c=to_numpy(y[:n_particles] * delta_t), vmin=-2, vmax=2, cmap='viridis', edgecolors='k',
-                                alpha=1)
+                black_to_green = LinearSegmentedColormap.from_list('black_green', ['black', 'green'])
+                plt.figure(figsize=(10, 10))
+                plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=700, c=to_numpy(x[:, 6]), alpha=1, edgecolors='none',
+                                cmap=black_to_green)
+                plt.axis('off')
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=170)
+                plt.close()
 
-                    plt.axis('off')
-                    plt.text(0.05, 1.0, r'neuron activity                             extra activity (*4)', fontsize=48,
-                             color='w', ha='left', va='top',
-                             transform=plt.gca().transAxes)
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=170)
-                    plt.close()
-                else:
-
-                    black_to_green = LinearSegmentedColormap.from_list('black_green', ['black', 'green'])
-                    plt.figure(figsize=(10, 10))
-                    # plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=200, c=to_numpy(x[:, 6]),
-                    #             cmap='viridis', vmin=-10, vmax=10, edgecolors='k', alpha=1)
-                    plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=700, c=to_numpy(x[:, 6]), alpha=1, edgecolors='none',
-                                    cmap=black_to_green)
-
-                    plt.axis('off')
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=170)
-                    plt.close()
-
-                    im = imread(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif")
-                    plt.figure(figsize=(10, 10))
-                    plt.imshow(im)
-                    plt.axis('off')
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.subplot(3, 3, 1)
-                    plt.imshow(im[800:1000, 800:1000, :])
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=80)
-                    plt.close()
+                im = imread(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif")
+                plt.figure(figsize=(10, 10))
+                plt.imshow(im)
+                plt.axis('off')
+                plt.xticks([])
+                plt.yticks([])
+                plt.subplot(3, 3, 1)
+                plt.imshow(im[800:1000, 800:1000, :])
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=80)
+                plt.close()
             elif 'PDE_K' in model_config.particle_model_name:
 
                 plt.close()

@@ -53,7 +53,7 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'generate_train'
+        task = 'test'
         best_model = ''
 
         # config_list = ['multimaterial_16_2']  #   ,'multimaterial_16_2', 'multimaterial_16_3', 'multimaterial_16_4']
@@ -66,7 +66,7 @@ if __name__ == '__main__':
         # config_list = ['cell_U2OS_9_2']
         # config_list = ['springs_matrix_N5_3']
         # config_list = ['cell_MDCK_15']
-        config_list = ['signal_CElegans_d1']
+        config_list = ['signal_CElegans_d3']
         # config_list = ['fly_N8_1']
         # config_list = ['signal_N5_l6','signal_N5_l7','signal_N5_l8'] #,
         # config_list = ['signal_N5_l4','signal_N5_l5']
@@ -93,7 +93,7 @@ if __name__ == '__main__':
                 #           run=run_, test_mode='fixed_bounce_all', sample_embedding=False, step=4,
                 #           device=device)  # particle_of_interest=100, 'fixed_bounce_all'
             data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best', run=0,
-                      test_mode='', sample_embedding=False, step=1, device=device, particle_of_interest=0)  # particle_of_interest=100,  'fixed_bounce_all'
+                      test_mode='', sample_embedding=False, step=4, device=device, particle_of_interest=0)  # particle_of_interest=100,  'fixed_bounce_all'
 
     if 'try_func' in task:
             try_func(max_radius=config.simulation.max_radius, device=device)
