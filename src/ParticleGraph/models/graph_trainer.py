@@ -3611,12 +3611,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     else:
         x_list = []
         y_list = []
-        if (model_config.signal_model_name == 'PDE_N'):
-            x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
-            y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
-            x_list.append(torch.tensor(x, device=device))
-            y_list.append(torch.tensor(y, device=device))
-        elif (model_config.particle_model_name == 'PDE_R'):
+        if (model_config.particle_model_name == 'PDE_R'):
             x = torch.load(f'graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device)
             x_list.append(x)
         else:
@@ -3632,7 +3627,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 y = torch.tensor(y, dtype=torch.float32, device=device)
                 x_list.append(x)
                 y_list.append(y)
-
                 x = x_list[0][0].clone().detach()
                 if ('PDE_MLPs' not in model_config.particle_model_name) & (
                         'PDE_F' not in model_config.particle_model_name) & (
@@ -3934,9 +3928,12 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         start_it = 0
         stop_it = n_frames - 1
 
+    start_it = 12
+
     x = x_list[0][start_it].clone().detach()
     n_particles = x.shape[0]
     x_inference_list = []
+
 
     for it in trange(start_it,start_it+800):  # start_it + min(9600+start_it,stop_it-time_step)): #  start_it+200): # min(9600+start_it,stop_it-time_step)):
 
@@ -3964,6 +3961,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
         # error calculations
         if 'PDE_N' in model_config.signal_model_name:
+            nan_mask = torch.isnan(x0[:, 6])
+            x0[nan_mask, 6] = baseline_value
+            nan_mask = torch.isnan(x[:, 6])
+            x[nan_mask, 6] = baseline_value
             rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:n_particles, 6:7] - x0[:, 6:7]) ** 2, axis=1)))
             neuron_gt_list.append(x0[:, 6:7])
             neuron_pred_list.append(x[:n_particles, 6:7].clone().detach())
@@ -4174,9 +4175,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     pred_err_list.append(to_numpy(torch.sqrt(loss)))
                     if model_config.prediction == '2nd_derivative':
                         y = y * ynorm * delta_t
-                        x[:n_particles, dimension + 1:2 * dimension + 1] = x[:n_particles,
-                                                                           dimension + 1:2 * dimension + 1] + y[
-                                                                                                              :n_particles]  # speed update
+                        x[:n_particles, dimension + 1:2 * dimension + 1] = x[:n_particles, dimension + 1:2 * dimension + 1] + y[:n_particles]  # speed update
                     else:
                         y = y * vnorm
                         if 'PDE_N' in model_config.signal_model_name:
@@ -4333,28 +4332,28 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
                 black_to_green = LinearSegmentedColormap.from_list('black_green', ['black', 'green'])
                 plt.figure(figsize=(10, 10))
-                plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=700, c=to_numpy(x[:, 6]), alpha=1, edgecolors='none',
-                                cmap=black_to_green)
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=700, c=to_numpy(x[:, 6]), alpha=1, edgecolors='none', vmin =2 , vmax=8, cmap=black_to_green)
                 plt.axis('off')
-                plt.xticks([])
-                plt.yticks([])
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=170)
-                plt.close()
-
-                im = imread(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif")
-                plt.figure(figsize=(10, 10))
-                plt.imshow(im)
-                plt.axis('off')
-                plt.xticks([])
-                plt.yticks([])
-                plt.subplot(3, 3, 1)
-                plt.imshow(im[800:1000, 800:1000, :])
                 plt.xticks([])
                 plt.yticks([])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=80)
                 plt.close()
+
+                # im = imread(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif")
+                # plt.figure(figsize=(10, 10))
+                # plt.imshow(im)
+                # plt.axis('off')
+                # plt.xticks([])
+                # plt.yticks([])
+                # plt.subplot(3, 3, 1)
+                # plt.imshow(im[800:1000, 800:1000, :])
+                # plt.xticks([])
+                # plt.yticks([])
+                # plt.tight_layout()
+                # plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=80)
+                # plt.close()
+
             elif 'PDE_K' in model_config.particle_model_name:
 
                 plt.close()
@@ -4564,7 +4563,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
                 plt.figure(figsize=(10, 10))
                 n_list = []
-                for k in range(0, n_particles, n_particles // 40):
+                for k in range(0, n_particles, n_particles // 20):
                     if torch.max(node_gt_list_[:, k, 0].squeeze()) > 0.5:
                         plt.plot(to_numpy(node_gt_list_[:, k, 0].squeeze()))
                         n_list.append(k)
@@ -4587,7 +4586,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.plot(to_numpy(node_gt_list_[:, n[1:5], 0]), c='r', linewidth=4, alpha=0.5)
                 plt.plot(to_numpy(node_pred_list_[:, n[1:5], 0]), c='r', linewidth=2)
                 plt.ylim([0, 1])
-                plt.xlim([0, 180])
+                plt.xlim([0, 200])
 
                 ax = plt.subplot(122)
                 plt.scatter(to_numpy(node_gt_list_[-1, :]), to_numpy(node_pred_list_[-1, :]), s=1, c=mc)
