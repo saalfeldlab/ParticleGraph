@@ -46,12 +46,12 @@ class PDE_N8(pyg.nn.MessagePassing):
 
 
 if __name__ == "__main__":
-    from datamate import Namespace
-    from flyvis.datasets.sintel import AugmentedSintel
-    from flyvis import NetworkView, Network
-    from flyvis.utils.config_utils import get_default_config, CONFIG_PATH
-    from flyvis.utils.hex_utils import get_num_hexals
-    from tqdm import tqdm
+    # from datamate import Namespace
+    # from flyvis.datasets.sintel import AugmentedSintel
+    # from flyvis import NetworkView, Network
+    # from flyvis.utils.config_utils import get_default_config, CONFIG_PATH
+    # from flyvis.utils.hex_utils import get_num_hexals
+    # from tqdm import tqdm
 
     extent = 8
     dt = 1 / 50

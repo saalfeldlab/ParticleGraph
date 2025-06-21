@@ -14,7 +14,9 @@ from torch_geometric.utils.convert import to_networkx
 from scipy.optimize import curve_fit
 from scipy.spatial import Delaunay
 from torchvision.transforms import GaussianBlur
-from matplotlib import pyplot as plt
+import matplotlib
+matplotlib.use('Agg')  # Non-interactive backend
+import matplotlib.pyplot as plt
 
 from matplotlib import rc
 from matplotlib.ticker import FuncFormatter
@@ -53,7 +55,7 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'test'
+        task = 'generate'
         best_model = ''
 
         # config_list = ['multimaterial_16_2']  #   ,'multimaterial_16_2', 'multimaterial_16_3', 'multimaterial_16_4']
@@ -65,8 +67,8 @@ if __name__ == '__main__':
         # config_list = ['RD_RPS_5']
         # config_list = ['cell_U2OS_9_2']
         # config_list = ['springs_matrix_N5_3']
-        # config_list = ['cell_MDCK_16']
-        config_list = ['signal_CElegans_d2', 'signal_CElegans_d2a', 'signal_CElegans_d3', 'signal_CElegans_d3a', 'signal_CElegans_d3b']
+        config_list = ['cell_MDCK_16']
+        # config_list = ['signal_CElegans_d2', 'signal_CElegans_d2a', 'signal_CElegans_d3', 'signal_CElegans_d3a', 'signal_CElegans_d3b']
         # config_list = ['signal_CElegans_c14_4', 'signal_CElegans_c14_4a', 'signal_CElegans_c14_4b', 'signal_CElegans_c14_4c']
         # config_list = ['fly_N8_1']
         # config_list = ['signal_N5_l6','signal_N5_l7','signal_N5_l8'] #,

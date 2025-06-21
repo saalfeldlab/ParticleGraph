@@ -1,3 +1,5 @@
+# from vedo.examples.basic.scalarbars import cmaps
+
 from ParticleGraph.generators.utils import *
 import os
 import re
@@ -95,7 +97,7 @@ def extract_object_properties(segmentation_image, fluorescence_image=[], radius=
             fluo_sum_segmentation = region.mean_intensity * area
 
 
-            object_properties.append((id, pos_x, pos_y, area, perimeter, aspect_ratio, orientation, fluo_sum_radius, fluo_sum_segmentation))
+            object_properties.append((id, pos_x, pos_y, area, perimeter, aspect_ratio, orientation, fluo_sum_segmentation, fluo_sum_radius))
 
     # tmp = fluorescence_image
     # tmp[rr_valid_104, cc_valid_104] = tmp[rr_valid_104, cc_valid_104] + 0.25
@@ -339,8 +341,8 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
     dimension = simulation_config.dimension
     n_frames = simulation_config.n_frames
     offset_channel = image_data.offset_channel
-
     delta_t = simulation_config.delta_t
+    run = 0
 
     bc_pos, bc_dpos = choose_boundary_values('no')
 
@@ -428,7 +430,7 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
             # distance closing gap 6 6 3
             # min track length 20
 
-    else:
+    elif not os.path.exists(f'graphs_data/{dataset_name}/x_list_{run}.npz'):
 
         #step 3
         df = pd.read_csv(f"{data_folder_name}/TRK/_spots.csv")
@@ -448,13 +450,19 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
 
         n_cells = np.max(trackmate['track_ID'])+100
 
-        time_series_list = []
-        for i in range(n_cells-1):
-            time_series_list.append(list([]))
+        # Create mapping between track IDs and list indices
+        unique_track_ids = np.unique(trackmate['track_ID'])
+        unique_track_ids = unique_track_ids[unique_track_ids >= 0]  # Remove -1 (untracked)
+        track_id_to_index = {track_id: idx for idx, track_id in enumerate(unique_track_ids)}
+        n_unique_tracks = len(unique_track_ids)
 
         run = 0
         x_list = []
         y_list = []
+
+        channels = ['R','G','B']
+        print (f'use channel {channels[cellpose_channels[0]-1]} for trace measurements')
+        channel_q = cellpose_channels[0]-1
 
         for it in trange(0, len(files)-2):
 
@@ -462,38 +470,67 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
             im_fluo = np.array(im_fluo).astype('float32') / 256
             im_seg = np.flipud(np.array(tifffile.imread(data_folder_name + 'SEG/' + files[it])))
             im_seg = np.array(im_seg)
-            object_properties = extract_object_properties(im_seg, im_fluo[:,:,cellpose_channels[1]], radius=measure_diameter, offset_channel = offset_channel)
+            object_properties = extract_object_properties(im_seg, im_fluo[:,:, channel_q], radius=measure_diameter, offset_channel = offset_channel)
             object_properties = np.array(object_properties, dtype=float)
 
-            N = np.arange(object_properties.shape[0], dtype=np.float32)[:, None]
-            X = object_properties[:,1:3]
-            V = np.zeros((X.shape[0], 2))
-            T = np.zeros((X.shape[0], 1))
-            F = np.zeros((X.shape[0], 3))
-            F [:, 0:1] = object_properties[:,7:8]
-            AREA = object_properties[:,3:4]
-            PERIMETER = object_properties[:,4:5]
-            ASPECT = object_properties[:,5:6]
-            ORIENTATION = object_properties[:,6:7]
-            ID = n_cells + np.arange(object_properties.shape[0])[:, None]
+            X = object_properties[:, 1:3]
+            F_fluo = np.zeros((X.shape[0], 3))
+            F_fluo[:, 0:1] = object_properties[:,7:8] / 50000
 
-            pos = np.argwhere(trackmate['frame'] == it // trackmate_frame_step)
+            # Get TrackMate spots for current frame
+            pos = np.argwhere(trackmate['frame'] == it // trackmate_frame_step).flatten()
 
-            X_trackmate = np.concatenate((trackmate['y'][pos], trackmate['x'][pos]), axis=1)
-            trackID = trackmate['track_ID'][pos]
+            if len(pos) == 0:
+                continue  # Skip frames with no TrackMate data
 
-            # Calculate distances between each point in X and each point in X_trackmate
+            # Extract TrackMate coordinates and IDs (keep consistent x,y order)
+            X_trackmate = np.column_stack((trackmate['y'][pos], trackmate['x'][pos]))
+            trackmate_IDs = trackmate['track_ID'][pos]
+
+            # Calculate distances: each object to each TrackMate spot
             distances = np.linalg.norm(X[:, None, :] - X_trackmate[None, :, :], axis=2)
-            # Find the index of the closest point in X_trackmate for each point in X
-            closest_indices = np.argmin(distances, axis=0)
-            # Map the track_ID from trackmate to X using the closest indices
 
-            X_track_ID = trackmate['track_ID'][pos]
+            # fig = plt.figure(figsize=(12, 12))
+            # plt.scatter(X[:, 1], X[:, 0], s=20, c=F_fluo[:, 0], cmap='viridis', vmin=0, vmax=1, alpha=0.75)
+            # plt.scatter(X_trackmate[:, 1], X_trackmate[:, 0], s=10, c='r', marker='x')
+            # plt.savefig(f"segmentation.tif", dpi=80)
+            # plt.close()
 
-            F[:, 1:2] = F[:, 0:1] / np.median(F[closest_indices,0:1])
+            # For each TrackMate spot, find closest object
+            closest_object_indices = np.argmin(distances, axis=0)
+            min_distances = np.min(distances, axis=0)
 
-            x = np.concatenate((X_track_ID, X[closest_indices], V[closest_indices], T[closest_indices], F[closest_indices]), axis=1)
-            x [:,]
+            # Apply distance threshold and bounds checking
+            distance_threshold = 20  # pixels
+            valid_matches = (min_distances < distance_threshold) & (closest_object_indices < F_fluo.shape[0])
+
+            # Assign fluorescence from matched objects to TrackMate spots
+            F_assigned = np.full((len(trackmate_IDs), 3), np.nan)
+            if np.any(valid_matches):
+                valid_object_idx = closest_object_indices[valid_matches]
+                F_assigned[valid_matches, 0] = F_fluo[valid_object_idx, 0]
+
+            # Build final array: TrackMate spots with assigned measurements
+            x = np.column_stack((
+                trackmate_IDs.reshape(-1, 1),  # Track IDs
+                X_trackmate,  # TrackMate positions
+                np.zeros((len(trackmate_IDs), 2)),  # Velocity (placeholder)
+                np.full((len(trackmate_IDs), 1), it),  # Time/frame
+                F_assigned  # Fluorescence measurements
+            ))
+
+            # Build final array: TrackMate spots with assigned measurements
+            x_all = np.column_stack((
+                trackmate_IDs.reshape(-1, 1),  # Track IDs
+                X_trackmate,  # TrackMate positions
+                np.zeros((len(trackmate_IDs), 2)),  # Velocity (placeholder)
+                np.full((len(trackmate_IDs), 1), it),  # Time/frame
+                F_assigned  # Fluorescence measurements
+            ))
+
+            # Keep only rows with valid fluorescence assignments
+            valid_fluo_mask = ~np.isnan(F_assigned[:, 0])
+            x = x_all[valid_fluo_mask]
 
             # pa = np.argwhere(X_track_ID==489)[0,0]
             # pb = np.argwhere(X_track_ID==494)[0,0]
@@ -501,20 +538,26 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
             # print(x[pb, 6:7], x[pa, 6:7])
 
 
-            for i in range(x.shape[0]):
-                time_series_list[int(x[i, 0])].append([it,x[i, 6],x[i, 7]])
+            if it%4==0: #True:
 
-            if True:
-
-                shifted_im2 = np.roll(im_fluo[:, :, cellpose_channels[0]], shift= -offset_channel[0], axis=0)
-                im3 = im_fluo[:,:,cellpose_channels[1]]/5 + feature.canny(shifted_im2*100,sigma=10)
-                fig = plt.figure(figsize=(12, 12))
-                plt.imshow(np.flipud(im3), vmin=0, vmax=0.25)
-                for i in range(X_trackmate.shape[0]):
-                    plt.text(X_trackmate[i,1], X_trackmate[i,0], f'{int(X_track_ID[i])}', fontsize=8, color='w')
+                black_to_green = LinearSegmentedColormap.from_list('black_green', ['black', 'green'])
+                im3 = im_fluo[:,:,channel_q]
+                fig = plt.figure(figsize=(20, 10))
+                ax = fig.add_subplot(121)
+                plt.imshow(im3, vmin=0, vmax=10, cmap=black_to_green)
+                plt.axis('off')
+                ax = fig.add_subplot(122)
+                plt.axis('off')
+                plt.imshow(im3*0, vmin=0, vmax=10, cmap=black_to_green)
+                if False: #it%100000 == 0:
+                    for i in range(X_trackmate.shape[0]):
+                        plt.text(X_trackmate[i,1], X_trackmate[i,0], f'{int(X_track_ID[i])}', fontsize=8, color='w')
+                else:
+                    plt.scatter(x[:,2], x[:,1], s=25, c=x[:,6], cmap=black_to_green, vmin=0, vmax=1)
+                plt.xlim([0, im3.shape[0]])
+                plt.ylim([0, im3.shape[1]])
                 plt.savefig(f"{data_folder_name}/TRK_RESULT/{it:06}.tif", dpi=80)
                 plt.close()
-
             if False:
                 fig = plt.figure(figsize=(12, 12))
                 plt.axis('off')
@@ -672,16 +715,25 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
 
                 n_cells = ID[-1] + 1
 
-
         np.savez(f'graphs_data/{dataset_name}/x_list_{run}', *x_list)
         np.savez(f'graphs_data/{dataset_name}/y_list_{run}', *y_list)
-        np.savez(f'graphs_data/{dataset_name}/time_series_list_{run}', *time_series_list)
-
-        # torch.save(x_list, f'graphs_data/{dataset_name}/x_list_{run}.pt')
-        # torch.save(y_list, f'graphs_data/{dataset_name}/y_list_{run}.pt')
-        # torch.save(full_vertice_list, f'graphs_data/{dataset_name}/full_vertice_list{run}.pt')
 
         print(f'n_cells: {n_cells}')
+
+    else:
+
+        x_list = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npz')
+        x_list = [x_list[f'arr_{i}'] for i in range(len(x_list.files))]
+
+        time_series_dict, track_info_dict = reconstruct_time_series_from_xlist(x_list)
+        filtered_time_series = filter_tracks_by_length(time_series_dict, min_length=100)
+        neighbor_pairs, track_positions = find_average_spatial_neighbors(track_info_dict, max_radius=90)
+
+        granger_results = analyze_neighbor_pairs(neighbor_pairs, filtered_time_series)
+        significant_pairs = statistical_testing(granger_results, filtered_time_series)
+        G = build_causality_network(significant_pairs, track_positions)
+        network_scores = compute_network_scores(G)
+        visualize_network(G, network_scores, track_positions, save_path= f'graphs_data/{dataset_name}/network_{run}.png')
 
 
 def load_3Dfluo_data_with_Cellpose(config, device, visualize):

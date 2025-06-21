@@ -959,3 +959,596 @@ def fit_polynomial_with_latex(x, y, degree=3):
 
     return poly, latex_str
 
+
+import numpy as np
+from collections import defaultdict
+
+
+def reconstruct_time_series_from_xlist(x_list):
+    """
+    Reconstruct time series data from x_list with proper track ID mapping.
+
+    Parameters:
+    x_list: List of arrays, each containing frame data with columns:
+            [track_ID, y_pos, x_pos, vel_y, vel_x, frame, fluo, fluo_unused1, fluo_unused2]
+
+    Returns:
+    time_series_dict: Dictionary {track_ID: [[frame, fluo_value], ...]}
+    track_info_dict: Dictionary {track_ID: {'positions': [[y,x], ...], 'frames': [...]}}
+    """
+
+    time_series_dict = defaultdict(list)
+    track_info_dict = defaultdict(lambda: {'positions': [], 'frames': []})
+
+    for frame_idx, x_frame in enumerate(x_list):
+        if x_frame.size == 0:  # Skip empty frames
+            continue
+
+        for i in range(x_frame.shape[0]):
+            track_id = int(x_frame[i, 0])
+
+            # Skip invalid track IDs
+            if track_id < 0:
+                continue
+
+            frame_number = int(x_frame[i, 5])
+            fluo_value = x_frame[i, 6]  # Only column 6 contains actual fluorescence data
+            y_pos = x_frame[i, 1]
+            x_pos = x_frame[i, 2]
+
+            # Append to time series
+            time_series_dict[track_id].append([frame_number, fluo_value])
+
+            # Store position and frame info
+            track_info_dict[track_id]['positions'].append([y_pos, x_pos])
+            track_info_dict[track_id]['frames'].append(frame_number)
+
+    time_series_dict = dict(time_series_dict)
+    track_info_dict = dict(track_info_dict)
+
+    for track_id in time_series_dict:
+        # Sort by frame number
+        time_series_dict[track_id] = sorted(time_series_dict[track_id], key=lambda x: x[0])
+
+        # Convert to numpy arrays for easier handling
+        time_series_dict[track_id] = np.array(time_series_dict[track_id])
+        track_info_dict[track_id]['positions'] = np.array(track_info_dict[track_id]['positions'])
+        track_info_dict[track_id]['frames'] = np.array(track_info_dict[track_id]['frames'])
+
+    print(f'found {len(time_series_dict)} time_series')
+
+    return time_series_dict, track_info_dict
+
+
+def filter_tracks_by_length(time_series_dict, min_length=100):
+    """
+    Filter tracks to keep only those with sufficient length for Granger analysis.
+
+    Parameters:
+    time_series_dict: Dictionary from reconstruct_time_series_from_xlist
+    min_length: Minimum number of time points required
+
+    Returns:
+    filtered_dict: Dictionary with only tracks meeting length requirement
+    """
+    filtered_dict = {}
+
+    for track_id, time_series in time_series_dict.items():
+        if len(time_series) >= min_length:
+            filtered_dict[track_id] = time_series
+
+    print(f"kept {len(filtered_dict)} tracks out of {len(time_series_dict)} total tracks")
+    # print(f"Track lengths: {[len(ts) for ts in filtered_dict.values()]}")
+
+    return filtered_dict
+
+from sklearn.linear_model import LinearRegression
+from scipy import stats
+
+import warnings
+
+warnings.filterwarnings('ignore')
+
+
+def find_average_spatial_neighbors(track_info_dict, max_radius=50, min_radius=0, device='cpu'):
+    """
+    Find spatial nearest neighbors between tracks using average positions.
+
+    Parameters:
+    track_info_dict: Dictionary with track positions from reconstruct_time_series_from_xlist
+    max_radius: Maximum distance for neighbors (pixels)
+    min_radius: Minimum distance for neighbors (pixels)
+    device: 'cpu' or 'cuda'
+
+    Returns:
+    neighbor_pairs: List of (track_id1, track_id2) tuples
+    track_positions: Dictionary {track_id: [avg_y, avg_x]}
+    """
+
+    # Extract track IDs and compute average positions
+    track_ids = list(track_info_dict.keys())
+    positions = []
+
+    for track_id in track_ids:
+        pos_array = track_info_dict[track_id]['positions']
+        avg_pos = np.mean(pos_array, axis=0)  # [avg_y, avg_x]
+        positions.append(avg_pos)
+
+    # Convert to torch tensors
+    track_ids = np.array(track_ids)
+    positions = torch.tensor(np.array(positions), dtype=torch.float32, device=device)
+
+    print(f"computing distances for {len(track_ids)} tracks...")
+
+    # Your distance calculation approach (adapted)
+    dimension = 2  # y, x coordinates
+    distance = torch.sum((positions[:, None, :] - positions[None, :, :]) ** 2, dim=2)
+
+    # Create adjacency matrix
+    adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float()
+
+    # Get edge indices
+    edge_index = adj_t.nonzero().t().contiguous()
+
+    # Convert back to track ID pairs
+    neighbor_pairs = []
+    for i in range(edge_index.shape[1]):
+        idx1, idx2 = edge_index[0, i].item(), edge_index[1, i].item()
+        track_id1, track_id2 = track_ids[idx1], track_ids[idx2]
+        neighbor_pairs.append((track_id1, track_id2))
+
+    # Create position lookup
+    track_positions = {track_ids[i]: positions[i].cpu().numpy() for i in range(len(track_ids))}
+
+    print(f"found {len(neighbor_pairs)} neighbor pairs within radius {max_radius}")
+
+    return neighbor_pairs, track_positions
+
+
+def fit_ar_model_with_bic(time_series, max_order=10):
+    """
+    Fit AR model with optimal order selection using BIC.
+
+    Parameters:
+    time_series: 1D array of time series values
+    max_order: Maximum AR order to test
+
+    Returns:
+    best_order: Optimal AR order
+    coefficients: AR coefficients for best model
+    residuals: Residuals from best model
+    bic_scores: BIC scores for all tested orders
+    """
+
+    if len(time_series) < max_order + 10:  # Need sufficient data
+        return None, None, None, None
+
+    bic_scores = []
+    models = []
+
+    # Test different AR orders
+    for p in range(1, min(max_order + 1, len(time_series) // 3)):
+        try:
+            # Create lagged features
+            X, y = create_ar_features(time_series, p)
+
+            if X.shape[0] < p + 5:  # Need sufficient samples
+                bic_scores.append(np.inf)
+                models.append(None)
+                continue
+
+            # Fit linear regression (AR model)
+            model = LinearRegression(fit_intercept=True)
+            model.fit(X, y)
+
+            # Calculate predictions and residuals
+            y_pred = model.predict(X)
+            residuals = y - y_pred
+
+            # Calculate BIC
+            n = len(y)
+            mse = np.mean(residuals ** 2)
+            log_likelihood = -0.5 * n * np.log(2 * np.pi * mse) - 0.5 * np.sum(residuals ** 2) / mse
+            bic = -2 * log_likelihood + (p + 1) * np.log(n)  # +1 for intercept
+
+            bic_scores.append(bic)
+            models.append((model, residuals))
+
+        except Exception as e:
+            bic_scores.append(np.inf)
+            models.append(None)
+
+    if not any(score != np.inf for score in bic_scores):
+        return None, None, None, None
+
+    # Find best order
+    best_idx = np.argmin(bic_scores)
+    best_order = best_idx + 1
+    best_model, best_residuals = models[best_idx]
+
+    return best_order, best_model.coef_, best_residuals, bic_scores
+
+
+def create_ar_features(time_series, order):
+    """
+    Create lagged features for AR model.
+
+    Parameters:
+    time_series: 1D array
+    order: AR order (number of lags)
+
+    Returns:
+    X: Feature matrix [n_samples, order]
+    y: Target vector [n_samples]
+    """
+    n = len(time_series)
+    X = np.zeros((n - order, order))
+
+    for i in range(order):
+        X[:, i] = time_series[order - 1 - i:n - 1 - i]
+
+    y = time_series[order:]
+
+    return X, y
+
+
+def fit_granger_models(ts1, ts2, max_order=10):
+    """
+    Fit both restricted and unrestricted models for Granger causality test.
+
+    Parameters:
+    ts1: Time series 1 (potential cause)
+    ts2: Time series 2 (potential effect)
+    max_order: Maximum AR order to test
+
+    Returns:
+    results: Dictionary with model results
+    """
+
+    # Ensure same length
+    min_len = min(len(ts1), len(ts2))
+    ts1 = ts1[:min_len]
+    ts2 = ts2[:min_len]
+
+    # Find optimal order for restricted model (ts2 only)
+    best_order, _, _, _ = fit_ar_model_with_bic(ts2, max_order)
+
+    if best_order is None:
+        return None
+
+    try:
+        # Restricted model: ts2(t) = f(ts2(t-1), ts2(t-2), ..., ts2(t-p))
+        X_restricted, y = create_ar_features(ts2, best_order)
+        model_restricted = LinearRegression(fit_intercept=True)
+        model_restricted.fit(X_restricted, y)
+        residuals_restricted = y - model_restricted.predict(X_restricted)
+
+        # Unrestricted model: ts2(t) = f(ts2(t-1), ..., ts2(t-p), ts1(t-1), ..., ts1(t-p))
+        X_ts1, _ = create_ar_features(ts1, best_order)
+        X_unrestricted = np.column_stack([X_restricted, X_ts1])
+
+        model_unrestricted = LinearRegression(fit_intercept=True)
+        model_unrestricted.fit(X_unrestricted, y)
+        residuals_unrestricted = y - model_unrestricted.predict(X_unrestricted)
+
+        return {
+            'order': best_order,
+            'residuals_restricted': residuals_restricted,
+            'residuals_unrestricted': residuals_unrestricted,
+            'n_samples': len(y)
+        }
+
+    except Exception as e:
+        return None
+
+
+def calculate_granger_causality(residuals_restricted, residuals_unrestricted):
+    """
+    Calculate Granger causality metric: GC = log(RSS_restricted / RSS_unrestricted)
+
+    Parameters:
+    residuals_restricted: Residuals from AR model (effect only)
+    residuals_unrestricted: Residuals from VAR model (effect + cause)
+
+    Returns:
+    gc_value: Granger causality metric
+    """
+    rss_restricted = np.sum(residuals_restricted ** 2)
+    rss_unrestricted = np.sum(residuals_unrestricted ** 2)
+
+    if rss_unrestricted == 0:
+        return 0
+
+    gc_value = np.log(rss_restricted / rss_unrestricted)
+    return gc_value
+
+
+def compute_granger_difference(ts1, ts2, max_order=10):
+    """
+    Compute bidirectional Granger causality and difference.
+
+    Parameters:
+    ts1, ts2: Time series arrays (fluorescence values)
+    max_order: Maximum AR order for BIC selection
+
+    Returns:
+    gc_12: Granger causality ts1 -> ts2
+    gc_21: Granger causality ts2 -> ts1
+    granger_diff: |gc_12 - gc_21|
+    direction: 1 if ts1->ts2 stronger, 2 if ts2->ts1 stronger
+    """
+
+    # Test ts1 -> ts2
+    result_12 = fit_granger_models(ts1, ts2, max_order)
+    if result_12 is None:
+        return None, None, None, None
+
+    gc_12 = calculate_granger_causality(
+        result_12['residuals_restricted'],
+        result_12['residuals_unrestricted']
+    )
+
+    # Test ts2 -> ts1
+    result_21 = fit_granger_models(ts2, ts1, max_order)
+    if result_21 is None:
+        return None, None, None, None
+
+    gc_21 = calculate_granger_causality(
+        result_21['residuals_restricted'],
+        result_21['residuals_unrestricted']
+    )
+
+    # Compute difference and direction
+    granger_diff = abs(gc_12 - gc_21)
+    direction = 1 if gc_12 > gc_21 else 2
+
+    return gc_12, gc_21, granger_diff, direction
+
+
+def analyze_neighbor_pairs(neighbor_pairs, filtered_time_series, max_order=10):
+    """
+    Compute Granger causality for all neighbor pairs.
+
+    Parameters:
+    neighbor_pairs: List of (track_id1, track_id2) tuples
+    filtered_time_series: Dictionary {track_id: time_series_array}
+    max_order: Maximum AR order
+
+    Returns:
+    granger_results: Dictionary with results for each pair
+    """
+
+    granger_results = {}
+
+    print(f"analyzing {len(neighbor_pairs)} neighbor pairs...")
+
+    for i, (track1, track2) in enumerate(neighbor_pairs):
+        if track1 not in filtered_time_series or track2 not in filtered_time_series:
+            continue
+
+        # Extract fluorescence values (column 1)
+        ts1 = filtered_time_series[track1][:, 1]
+        ts2 = filtered_time_series[track2][:, 1]
+
+        # Compute Granger causality
+        gc_12, gc_21, granger_diff, direction = compute_granger_difference(ts1, ts2, max_order)
+
+        if granger_diff is not None:
+            granger_results[(track1, track2)] = {
+                'gc_12': gc_12,
+                'gc_21': gc_21,
+                'granger_diff': granger_diff,
+                'direction': direction,
+                'stronger_direction': track1 if direction == 1 else track2
+            }
+
+    print(f"successfully analyzed {len(granger_results)}")
+    return granger_results
+
+
+import numpy as np
+from scipy.fft import fft, ifft
+import networkx as nx
+
+
+def iaaft_surrogate(time_series, max_iter=100, tolerance=1e-6):
+    """IAAFT: preserves power spectrum + amplitude distribution, destroys correlations"""
+    original = np.array(time_series)
+    n = len(original)
+
+    # Sort original amplitudes
+    sorted_amplitudes = np.sort(original)
+
+    # Initial random phase
+    phases = np.random.uniform(0, 2 * np.pi, n)
+    fft_original = fft(original)
+    amplitudes = np.abs(fft_original)
+
+    surrogate = original.copy()
+
+    for _ in range(max_iter):
+        # Step 1: match power spectrum
+        fft_surrogate = amplitudes * np.exp(1j * phases)
+        surrogate = np.real(ifft(fft_surrogate))
+
+        # Step 2: match amplitude distribution
+        sorted_indices = np.argsort(surrogate)
+        surrogate[sorted_indices] = sorted_amplitudes
+
+        # Update phases
+        phases = np.angle(fft(surrogate))
+
+    return surrogate
+
+
+def statistical_testing(granger_results, filtered_time_series, n_surrogates=5000):
+    """Generate surrogates and compute p-values"""
+    significant_pairs = {}
+
+    print(f"testing {len(granger_results)} pairs with {n_surrogates} surrogates...")
+
+    for i, (pair, result) in enumerate(granger_results.items()):
+        track1, track2 = pair
+        original_diff = result['granger_diff']
+        direction = result['direction']
+
+        # Get cause and effect time series
+        ts1 = filtered_time_series[track1][:, 1]
+        ts2 = filtered_time_series[track2][:, 1]
+        cause_ts = ts1 if direction == 1 else ts2
+        effect_ts = ts2 if direction == 1 else ts1
+
+        # Generate surrogates and test
+        surrogate_diffs = []
+        for _ in range(n_surrogates):
+            cause_surrogate = iaaft_surrogate(cause_ts)
+
+            if direction == 1:
+                _, _, surr_diff, _ = compute_granger_difference(cause_surrogate, effect_ts)
+            else:
+                _, _, surr_diff, _ = compute_granger_difference(effect_ts, cause_surrogate)
+
+            if surr_diff is not None:
+                surrogate_diffs.append(surr_diff)
+
+        # Calculate p-value
+        if len(surrogate_diffs) > 0:
+            p_value = np.mean(np.array(surrogate_diffs) > original_diff)
+
+            if p_value < 0.05:
+                significant_pairs[pair] = {
+                    **result,
+                    'p_value': p_value,
+                    'n_surrogates': len(surrogate_diffs)
+                }
+
+        if (i + 1) % 10 == 0:
+            print(f"tested {i + 1}/{len(granger_results)} pairs")
+
+    print(f"found {len(significant_pairs)} significant pairs (p < 0.05)")
+    return significant_pairs
+
+
+def build_causality_network(significant_pairs, track_positions):
+    """Build directed network from significant causality pairs"""
+    G = nx.DiGraph()
+
+    # Add nodes with positions
+    for track_id, pos in track_positions.items():
+        G.add_node(track_id, pos=pos)
+
+    # Add edges with causality info
+    for (track1, track2), result in significant_pairs.items():
+        if result['direction'] == 1:
+            G.add_edge(track1, track2, weight=result['granger_diff'], p_value=result['p_value'])
+        else:
+            G.add_edge(track2, track1, weight=result['granger_diff'], p_value=result['p_value'])
+
+    return G
+
+
+def compute_network_scores(G):
+    """Calculate leader/follower and hub/authority scores"""
+    # Leader/follower scores (out-degree vs in-degree)
+    leader_scores = dict(G.out_degree())
+    follower_scores = dict(G.in_degree())
+
+    # Normalize
+    max_leader = max(leader_scores.values()) if leader_scores.values() else 1
+    max_follower = max(follower_scores.values()) if follower_scores.values() else 1
+
+    leader_scores = {k: v / max_leader for k, v in leader_scores.items()}
+    follower_scores = {k: v / max_follower for k, v in follower_scores.items()}
+
+    # Hub/authority scores
+    try:
+        hub_scores, authority_scores = nx.hits(G, max_iter=1000)
+    except:
+        # Fallback if HITS fails
+        hub_scores = {node: 0 for node in G.nodes()}
+        authority_scores = {node: 0 for node in G.nodes()}
+
+    return {
+        'leader': leader_scores,
+        'follower': follower_scores,
+        'hub': hub_scores,
+        'authority': authority_scores
+    }
+
+
+def visualize_network(G, network_scores, track_positions, save_path=None):
+    """Create network visualization like Figure 1C & 1D"""
+    import matplotlib.pyplot as plt
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8))
+
+    # Extract positions
+    pos = {node: track_positions[node] for node in G.nodes()}
+
+    # Plot 1: Leader/Follower
+    leader_colors = [network_scores['leader'].get(node, 0) for node in G.nodes()]
+    follower_colors = [network_scores['follower'].get(node, 0) for node in G.nodes()]
+
+    ax1.scatter([pos[n][1] for n in G.nodes()], [pos[n][0] for n in G.nodes()],
+                c=leader_colors, cmap='Reds', s=50, alpha=0.8)
+    ax1.scatter([pos[n][1] for n in G.nodes()], [pos[n][0] for n in G.nodes()],
+                c=follower_colors, cmap='Blues', s=30, alpha=0.6)
+
+    # Draw edges
+    for edge in G.edges():
+        x_coords = [pos[edge[0]][1], pos[edge[1]][1]]
+        y_coords = [pos[edge[0]][0], pos[edge[1]][0]]
+        ax1.arrow(x_coords[0], y_coords[0],
+                  x_coords[1] - x_coords[0], y_coords[1] - y_coords[0],
+                  head_width=5, head_length=5, fc='gray', alpha=0.5)
+
+    ax1.set_title('leader/follower scores')
+    ax1.set_aspect('equal')
+
+    # Plot 2: Hub/Authority
+    hub_colors = [network_scores['hub'].get(node, 0) for node in G.nodes()]
+    authority_colors = [network_scores['authority'].get(node, 0) for node in G.nodes()]
+
+    ax2.scatter([pos[n][1] for n in G.nodes()], [pos[n][0] for n in G.nodes()],
+                c=hub_colors, cmap='Reds', s=50, alpha=0.8)
+    ax2.scatter([pos[n][1] for n in G.nodes()], [pos[n][0] for n in G.nodes()],
+                c=authority_colors, cmap='Blues', s=30, alpha=0.6)
+
+    for edge in G.edges():
+        x_coords = [pos[edge[0]][1], pos[edge[1]][1]]
+        y_coords = [pos[edge[0]][0], pos[edge[1]][0]]
+        ax2.arrow(x_coords[0], y_coords[0],
+                  x_coords[1] - x_coords[0], y_coords[1] - y_coords[0],
+                  head_width=5, head_length=5, fc='gray', alpha=0.5)
+
+    ax2.set_title('hub/authority scores')
+    ax2.set_aspect('equal')
+
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, dpi=150)
+    plt.close()
+
+
+# Full pipeline paper https://www.pnas.org/doi/epub/10.1073/pnas.2202204119
+
+def run_granger_network_analysis(neighbor_pairs, filtered_time_series, track_positions):
+    """Complete Granger causality network analysis"""
+
+    # Step 1: Compute Granger causality
+    granger_results = analyze_neighbor_pairs(neighbor_pairs, filtered_time_series)
+
+    # Step 2: Statistical testing with IAAFT
+    significant_pairs = statistical_testing(granger_results, filtered_time_series)
+
+    # Step 3: Build network
+    G = build_causality_network(significant_pairs, track_positions)
+
+    # Step 4: Compute scores
+    network_scores = compute_network_scores(G)
+
+    # Step 5: Visualize
+    visualize_network(G, network_scores, track_positions)
+
+    return G, network_scores, significant_pairs
+
