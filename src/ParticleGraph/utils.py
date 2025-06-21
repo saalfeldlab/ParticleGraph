@@ -15,7 +15,7 @@ import gc
 from torch import cuda
 import subprocess
 import re
-
+from tqdm import *
 def sort_key(filename):
             # Extract the numeric parts using regular expressions
             if filename.split('_')[-2] == 'graphs':
@@ -1020,25 +1020,37 @@ def reconstruct_time_series_from_xlist(x_list):
     return time_series_dict, track_info_dict
 
 
-def filter_tracks_by_length(time_series_dict, min_length=100):
+def filter_tracks_by_length(time_series_dict, min_length=100, required_frame=None):
     """
     Filter tracks to keep only those with sufficient length for Granger analysis.
 
     Parameters:
     time_series_dict: Dictionary from reconstruct_time_series_from_xlist
     min_length: Minimum number of time points required
+    required_frame: Frame number that must be present in the track (optional)
 
     Returns:
-    filtered_dict: Dictionary with only tracks meeting length requirement
+    filtered_dict: Dictionary with only tracks meeting requirements
     """
     filtered_dict = {}
 
     for track_id, time_series in time_series_dict.items():
-        if len(time_series) >= min_length:
-            filtered_dict[track_id] = time_series
+        # Check length requirement
+        if len(time_series) < min_length:
+            continue
+
+        # Check required frame if specified
+        if required_frame is not None:
+            frames = time_series[:, 0]  # First column contains frame numbers
+            if required_frame not in frames:
+                continue
+
+        filtered_dict[track_id] = time_series
 
     print(f"kept {len(filtered_dict)} tracks out of {len(time_series_dict)} total tracks")
-    # print(f"Track lengths: {[len(ts) for ts in filtered_dict.values()]}")
+    if required_frame is not None:
+        print(f"all tracks contain frame {required_frame}")
+
 
     return filtered_dict
 
@@ -1050,11 +1062,12 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
-def find_average_spatial_neighbors(track_info_dict, max_radius=50, min_radius=0, device='cpu'):
+def find_average_spatial_neighbors(filtered_time_series, track_info_dict, max_radius=50, min_radius=0, device='cpu', save_path=None):
     """
-    Find spatial nearest neighbors between tracks using average positions.
+    Find spatial nearest neighbors between filtered tracks using average positions.
 
     Parameters:
+    filtered_time_series: Dictionary {track_id: time_series_array} - only tracks to analyze
     track_info_dict: Dictionary with track positions from reconstruct_time_series_from_xlist
     max_radius: Maximum distance for neighbors (pixels)
     min_radius: Minimum distance for neighbors (pixels)
@@ -1065,20 +1078,24 @@ def find_average_spatial_neighbors(track_info_dict, max_radius=50, min_radius=0,
     track_positions: Dictionary {track_id: [avg_y, avg_x]}
     """
 
-    # Extract track IDs and compute average positions
-    track_ids = list(track_info_dict.keys())
+    # Only use tracks that are in filtered_time_series
+    track_ids = list(filtered_time_series.keys())
     positions = []
 
     for track_id in track_ids:
-        pos_array = track_info_dict[track_id]['positions']
-        avg_pos = np.mean(pos_array, axis=0)  # [avg_y, avg_x]
-        positions.append(avg_pos)
+        if track_id in track_info_dict:
+            pos_array = track_info_dict[track_id]['positions']
+            avg_pos = np.mean(pos_array, axis=0)  # [avg_y, avg_x]
+            positions.append(avg_pos)
+        else:
+            # This shouldn't happen but handle gracefully
+            positions.append([0, 0])
 
     # Convert to torch tensors
     track_ids = np.array(track_ids)
     positions = torch.tensor(np.array(positions), dtype=torch.float32, device=device)
 
-    print(f"computing distances for {len(track_ids)} tracks...")
+    print(f"computing distances for {len(track_ids)} filtered tracks...")
 
     # Your distance calculation approach (adapted)
     dimension = 2  # y, x coordinates
@@ -1101,6 +1118,33 @@ def find_average_spatial_neighbors(track_info_dict, max_radius=50, min_radius=0,
     track_positions = {track_ids[i]: positions[i].cpu().numpy() for i in range(len(track_ids))}
 
     print(f"found {len(neighbor_pairs)} neighbor pairs within radius {max_radius}")
+
+    # Plot neighbor connections if save_path provided
+    if save_path is not None:
+
+        plt.figure(figsize=(12, 10))
+
+        # Plot all track positions
+        pos_array = np.array(list(track_positions.values()))
+        plt.scatter(pos_array[:, 1], pos_array[:, 0], s=30, c='green', alpha=0.6, label=f'{len(track_positions)} tracks')
+
+        # Plot connections
+        for track1, track2 in neighbor_pairs:
+            pos1 = track_positions[track1]
+            pos2 = track_positions[track2]
+            plt.plot([pos1[1], pos2[1]], [pos1[0], pos2[0]], 'gray', alpha=0.3, linewidth=0.5)
+
+        plt.xlabel('x position')
+        plt.ylabel('y position')
+        plt.title(
+            f'spatial neighbor connections (radius={max_radius})\n{len(neighbor_pairs)} connections between {len(track_positions)} tracks')
+        # plt.legend()
+        # plt.grid(True, alpha=0.3)
+        plt.axis('equal')
+        plt.tight_layout()
+
+        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        plt.close()
 
     return neighbor_pairs, track_positions
 
@@ -1322,7 +1366,7 @@ def analyze_neighbor_pairs(neighbor_pairs, filtered_time_series, max_order=10):
 
     print(f"analyzing {len(neighbor_pairs)} neighbor pairs...")
 
-    for i, (track1, track2) in enumerate(neighbor_pairs):
+    for i, (track1, track2) in enumerate(tqdm(neighbor_pairs, desc="processing pairs")):
         if track1 not in filtered_time_series or track2 not in filtered_time_series:
             continue
 
@@ -1366,7 +1410,7 @@ def iaaft_surrogate(time_series, max_iter=100, tolerance=1e-6):
 
     surrogate = original.copy()
 
-    for _ in range(max_iter):
+    for _ in range(max_iter): # tqdm(range(max_iter), desc="iaaft iterations", leave=False):
         # Step 1: match power spectrum
         fft_surrogate = amplitudes * np.exp(1j * phases)
         surrogate = np.real(ifft(fft_surrogate))
@@ -1381,13 +1425,13 @@ def iaaft_surrogate(time_series, max_iter=100, tolerance=1e-6):
     return surrogate
 
 
-def statistical_testing(granger_results, filtered_time_series, n_surrogates=5000):
+def statistical_testing(granger_results, filtered_time_series, n_surrogates=500):
     """Generate surrogates and compute p-values"""
     significant_pairs = {}
 
     print(f"testing {len(granger_results)} pairs with {n_surrogates} surrogates...")
 
-    for i, (pair, result) in enumerate(granger_results.items()):
+    for i, (pair, result) in enumerate(tqdm(granger_results.items(), desc="testing pairs")):
         track1, track2 = pair
         original_diff = result['granger_diff']
         direction = result['direction']
@@ -1422,8 +1466,8 @@ def statistical_testing(granger_results, filtered_time_series, n_surrogates=5000
                     'n_surrogates': len(surrogate_diffs)
                 }
 
-        if (i + 1) % 10 == 0:
-            print(f"tested {i + 1}/{len(granger_results)} pairs")
+        # if (i + 1) % 10 == 0:
+        #     print(f"tested {i + 1}/{len(granger_results)} pairs")
 
     print(f"found {len(significant_pairs)} significant pairs (p < 0.05)")
     return significant_pairs
