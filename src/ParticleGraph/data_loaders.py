@@ -720,20 +720,30 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
 
         print(f'n_cells: {n_cells}')
 
+    elif not os.path.exists(f'graphs_data/{dataset_name}/significant_pairs_1400.npy'):
+        x_list = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npz')
+        x_list = [x_list[f'arr_{i}'] for i in range(len(x_list.files))]
+        for frame in range(400,1400,200):
+            time_series_dict, track_info_dict = reconstruct_time_series_from_xlist(x_list)
+            filtered_time_series = filter_tracks_by_length(time_series_dict, min_length=250, required_frame=frame)
+            neighbor_pairs, track_positions = find_average_spatial_neighbors(filtered_time_series, track_info_dict, max_radius=75, save_path= f'graphs_data/{dataset_name}/pairs_{run}.png')
+            granger_results = analyze_neighbor_pairs(neighbor_pairs, filtered_time_series)
+            significant_pairs = statistical_testing(granger_results, filtered_time_series, n_surrogates=10)
+            np.save(f'graphs_data/{dataset_name}/significant_pairs_{frame}.npy', significant_pairs)
+            G = build_causality_network(significant_pairs, track_positions)
+            network_scores = compute_network_scores(G)
+            visualize_network_leader_follower(G, network_scores, track_positions, save_path= f'graphs_data/{dataset_name}/network_{frame}.png')
     else:
 
         x_list = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npz')
         x_list = [x_list[f'arr_{i}'] for i in range(len(x_list.files))]
-
         time_series_dict, track_info_dict = reconstruct_time_series_from_xlist(x_list)
         filtered_time_series = filter_tracks_by_length(time_series_dict, min_length=250, required_frame=500)
-        neighbor_pairs, track_positions = find_average_spatial_neighbors(filtered_time_series, track_info_dict, max_radius=75, save_path= f'graphs_data/{dataset_name}/pairs_{run}.png')
-        granger_results = analyze_neighbor_pairs(neighbor_pairs, filtered_time_series)
-        significant_pairs = statistical_testing(granger_results, filtered_time_series, n_surrogates=10)
+        neighbor_pairs, track_positions = find_average_spatial_neighbors(filtered_time_series, track_info_dict,max_radius=75,save_path=f'graphs_data/{dataset_name}/pairs_{run}.png')
+        significant_pairs = np.load(f'graphs_data/{dataset_name}/significant_pairs_{run}.npy', allow_pickle=True).item()
         G = build_causality_network(significant_pairs, track_positions)
         network_scores = compute_network_scores(G)
-        visualize_network(G, network_scores, track_positions, save_path= f'graphs_data/{dataset_name}/network_{run}.png')
-
+        visualize_network_leader_follower(G, network_scores, track_positions, save_path= f'graphs_data/{dataset_name}/network_{run}.png')
 
 def load_3Dfluo_data_with_Cellpose(config, device, visualize):
 

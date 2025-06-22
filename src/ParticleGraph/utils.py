@@ -1132,7 +1132,7 @@ def find_average_spatial_neighbors(filtered_time_series, track_info_dict, max_ra
         for track1, track2 in neighbor_pairs:
             pos1 = track_positions[track1]
             pos2 = track_positions[track2]
-            plt.plot([pos1[1], pos2[1]], [pos1[0], pos2[0]], 'gray', alpha=0.3, linewidth=0.5)
+            plt.plot([pos1[1], pos2[1]], [pos1[0], pos2[0]], 'gray', alpha=0.7, linewidth=0.5)
 
         plt.xlabel('x position')
         plt.ylabel('y position')
@@ -1390,10 +1390,81 @@ def analyze_neighbor_pairs(neighbor_pairs, filtered_time_series, max_order=10):
     return granger_results
 
 
-import numpy as np
 from scipy.fft import fft, ifft
 import networkx as nx
 
+
+def iaaft_surrogate_gpu(time_series, n_surrogates=1, max_iter=50, device='cuda'):
+    """
+    GPU-accelerated IAAFT: generates multiple surrogates simultaneously
+
+    Parameters:
+    time_series: 1D array or torch tensor
+    n_surrogates: Number of surrogates to generate
+    max_iter: Maximum iterations for IAAFT algorithm
+    device: 'cuda' or 'cpu'
+
+    Returns:
+    surrogates: torch tensor [n_surrogates, n] or [n] if n_surrogates=1
+    """
+
+    # Convert to torch tensor and move to GPU
+    if isinstance(time_series, np.ndarray):
+        original = torch.tensor(time_series, dtype=torch.float32, device=device)
+    else:
+        original = time_series.to(device=device, dtype=torch.float32)
+
+    n = len(original)
+
+    # Sort original amplitudes
+    sorted_amplitudes = torch.sort(original)[0]
+
+    # Get original power spectrum
+    fft_original = torch.fft.fft(original)
+    amplitudes = torch.abs(fft_original)
+
+    if n_surrogates == 1:
+        # Single surrogate
+        phases = torch.rand(n, device=device) * 2 * torch.pi
+        surrogate = original.clone()
+
+        for _ in range(max_iter):
+            # Step 1: match power spectrum
+            fft_surrogate = amplitudes * torch.exp(1j * phases)
+            surrogate = torch.real(torch.fft.ifft(fft_surrogate))
+
+            # Step 2: match amplitude distribution
+            sorted_indices = torch.argsort(surrogate)
+            surrogate[sorted_indices] = sorted_amplitudes
+
+            # Update phases
+            phases = torch.angle(torch.fft.fft(surrogate))
+
+        return surrogate.cpu().numpy()
+
+    else:
+        # Batch processing
+        phases = torch.rand(n_surrogates, n, device=device) * 2 * torch.pi
+        surrogates = original.unsqueeze(0).repeat(n_surrogates, 1)
+
+        # Expand for batch
+        amplitudes_batch = amplitudes.unsqueeze(0).repeat(n_surrogates, 1)
+        sorted_amplitudes_batch = sorted_amplitudes.unsqueeze(0).repeat(n_surrogates, 1)
+
+        for _ in range(max_iter):
+            # Step 1: match power spectrum (vectorized)
+            fft_surrogates = amplitudes_batch * torch.exp(1j * phases)
+            surrogates = torch.real(torch.fft.ifft(fft_surrogates, dim=1))
+
+            # Step 2: match amplitude distribution (vectorized)
+            sorted_indices = torch.argsort(surrogates, dim=1)
+            batch_idx = torch.arange(n_surrogates, device=device).unsqueeze(1)
+            surrogates[batch_idx, sorted_indices] = sorted_amplitudes_batch
+
+            # Update phases (vectorized)
+            phases = torch.angle(torch.fft.fft(surrogates, dim=1))
+
+        return surrogates.cpu().numpy()
 
 def iaaft_surrogate(time_series, max_iter=100, tolerance=1e-6):
     """IAAFT: preserves power spectrum + amplitude distribution, destroys correlations"""
@@ -1442,10 +1513,12 @@ def statistical_testing(granger_results, filtered_time_series, n_surrogates=500)
         cause_ts = ts1 if direction == 1 else ts2
         effect_ts = ts2 if direction == 1 else ts1
 
-        # Generate surrogates and test
+        all_surrogates = iaaft_surrogate_gpu(cause_ts, n_surrogates=n_surrogates)
+
+        # Test each surrogate
         surrogate_diffs = []
-        for _ in range(n_surrogates):
-            cause_surrogate = iaaft_surrogate(cause_ts)
+        for i in range(n_surrogates):
+            cause_surrogate = all_surrogates[i]
 
             if direction == 1:
                 _, _, surr_diff, _ = compute_granger_difference(cause_surrogate, effect_ts)
@@ -1454,6 +1527,19 @@ def statistical_testing(granger_results, filtered_time_series, n_surrogates=500)
 
             if surr_diff is not None:
                 surrogate_diffs.append(surr_diff)
+
+        # # Generate surrogates and test
+        # surrogate_diffs = []
+        # for _ in range(n_surrogates):
+        #     cause_surrogate = iaaft_surrogate(cause_ts)
+        #
+        #     if direction == 1:
+        #         _, _, surr_diff, _ = compute_granger_difference(cause_surrogate, effect_ts)
+        #     else:
+        #         _, _, surr_diff, _ = compute_granger_difference(effect_ts, cause_surrogate)
+        #
+        #     if surr_diff is not None:
+        #         surrogate_diffs.append(surr_diff)
 
         # Calculate p-value
         if len(surrogate_diffs) > 0:
@@ -1520,59 +1606,186 @@ def compute_network_scores(G):
     }
 
 
-def visualize_network(G, network_scores, track_positions, save_path=None):
-    """Create network visualization like Figure 1C & 1D"""
-    import matplotlib.pyplot as plt
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8))
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+from matplotlib.colors import LinearSegmentedColormap
+
+
+def visualize_network_leader_follower(G, network_scores, track_positions, save_path=None,
+                               min_node_size=30, max_node_size=100):
+    """
+    Create improved network visualization with better leader/follower contrast
+
+    Parameters:
+    G: NetworkX directed graph
+    network_scores: Dictionary with leader/follower/hub/authority scores
+    track_positions: Dictionary {track_id: [y, x]}
+    save_path: Path to save plot
+    min_node_size: Minimum node size
+    max_node_size: Maximum node size
+    """
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
 
     # Extract positions
     pos = {node: track_positions[node] for node in G.nodes()}
 
-    # Plot 1: Leader/Follower
-    leader_colors = [network_scores['leader'].get(node, 0) for node in G.nodes()]
-    follower_colors = [network_scores['follower'].get(node, 0) for node in G.nodes()]
+    # Get scores
+    leader_scores = np.array([network_scores['leader'].get(node, 0) for node in G.nodes()])
+    follower_scores = np.array([network_scores['follower'].get(node, 0) for node in G.nodes()])
+    hub_scores = np.array([network_scores['hub'].get(node, 0) for node in G.nodes()])
+    authority_scores = np.array([network_scores['authority'].get(node, 0) for node in G.nodes()])
 
-    ax1.scatter([pos[n][1] for n in G.nodes()], [pos[n][0] for n in G.nodes()],
-                c=leader_colors, cmap='Reds', s=50, alpha=0.8)
-    ax1.scatter([pos[n][1] for n in G.nodes()], [pos[n][0] for n in G.nodes()],
-                c=follower_colors, cmap='Blues', s=30, alpha=0.6)
+    # Calculate node categories and colors
+    def categorize_nodes(leader_scores, follower_scores, threshold=0.3):
+        """Categorize nodes as leader, follower, or mixed"""
+        categories = []
+        colors = []
+
+        for l_score, f_score in zip(leader_scores, follower_scores):
+            if l_score > threshold and f_score < threshold:
+                categories.append('leader')
+                colors.append('#FF4444')  # Bright red
+            elif f_score > threshold and l_score < threshold:
+                categories.append('follower')
+                colors.append('#4444FF')  # Bright blue
+            elif l_score > threshold and f_score > threshold:
+                categories.append('mixed')
+                colors.append('#AA44AA')  # Purple
+            else:
+                categories.append('neutral')
+                colors.append('#CCCCCC')  # Light gray
+
+        return categories, colors
+
+    # Plot 1: Leader/Follower with improved categorization
+    categories1, node_colors1 = categorize_nodes(leader_scores, follower_scores)
+
+    # Calculate node sizes based on total connectivity
+    total_degree = np.array([G.degree(node) for node in G.nodes()])
+    if len(total_degree) > 0 and np.max(total_degree) > 0:
+        node_sizes1 = min_node_size + (max_node_size - min_node_size) * (total_degree / np.max(total_degree))
+    else:
+        node_sizes1 = np.full(len(G.nodes()), min_node_size)
+
+    # Draw edges first (behind nodes)
+    for edge in G.edges():
+        x_coords = [pos[edge[0]][1], pos[edge[1]][1]]
+        y_coords = [pos[edge[0]][0], pos[edge[1]][0]]
+
+        # Get edge weight for thickness
+        weight = G[edge[0]][edge[1]].get('weight', 1)
+        edge_width = 0.3 + min(2.0, weight * 0.5)  # Scale edge thickness
+
+        ax1.plot(x_coords, y_coords, 'w-', alpha=0.2, linewidth=edge_width)
+
+        # Add arrowhead
+        dx = x_coords[1] - x_coords[0]
+        dy = y_coords[1] - y_coords[0]
+        length = np.sqrt(dx ** 2 + dy ** 2)
+        if length > 0:
+            dx_norm, dy_norm = dx / length, dy / length
+            arrow_length = 8
+            arrow_x = x_coords[1] - dx_norm * arrow_length
+            arrow_y = y_coords[1] - dy_norm * arrow_length
+
+            ax1.annotate('', xy=(x_coords[1], y_coords[1]),
+                         xytext=(arrow_x, arrow_y),
+                         arrowprops=dict(arrowstyle='->', color='white', alpha=0.4, lw=1))
+
+    # Draw nodes with categories
+    node_positions = np.array([[pos[node][1], pos[node][0]] for node in G.nodes()])
+    scatter1 = ax1.scatter(node_positions[:, 0], node_positions[:, 1],
+                           c=node_colors1, s=node_sizes1,
+                           alpha=0.8, edgecolors='black', linewidths=0.5)
+
+    ax1.set_title('Leader/Follower Network\n(Red=Leader, Blue=Follower, Purple=Mixed, Gray=Neutral)',
+                  fontsize=14, fontweight='bold')
+    ax1.set_xlabel('X Position')
+    ax1.set_ylabel('Y Position')
+    ax1.set_aspect('equal')
+
+    # Add legend for categories
+    legend_elements1 = [
+        patches.Patch(color='#FF4444', label=f'Leaders ({np.sum(np.array(categories1) == "leader")})'),
+        patches.Patch(color='#4444FF', label=f'Followers ({np.sum(np.array(categories1) == "follower")})'),
+        patches.Patch(color='#AA44AA', label=f'Mixed ({np.sum(np.array(categories1) == "mixed")})'),
+        patches.Patch(color='#CCCCCC', label=f'Neutral ({np.sum(np.array(categories1) == "neutral")})')
+    ]
+    ax1.legend(handles=legend_elements1, loc='upper right')
+
+    # Plot 2: Hub/Authority with improved categorization
+    categories2, node_colors2 = categorize_nodes(hub_scores, authority_scores)
 
     # Draw edges
     for edge in G.edges():
         x_coords = [pos[edge[0]][1], pos[edge[1]][1]]
         y_coords = [pos[edge[0]][0], pos[edge[1]][0]]
-        ax1.arrow(x_coords[0], y_coords[0],
-                  x_coords[1] - x_coords[0], y_coords[1] - y_coords[0],
-                  head_width=5, head_length=5, fc='gray', alpha=0.5)
 
-    ax1.set_title('leader/follower scores')
-    ax1.set_aspect('equal')
+        weight = G[edge[0]][edge[1]].get('weight', 1)
+        edge_width = 0.3 + min(2.0, weight * 0.5)
 
-    # Plot 2: Hub/Authority
-    hub_colors = [network_scores['hub'].get(node, 0) for node in G.nodes()]
-    authority_colors = [network_scores['authority'].get(node, 0) for node in G.nodes()]
+        ax2.plot(x_coords, y_coords, 'k-', alpha=0.2, linewidth=edge_width)
 
-    ax2.scatter([pos[n][1] for n in G.nodes()], [pos[n][0] for n in G.nodes()],
-                c=hub_colors, cmap='Reds', s=50, alpha=0.8)
-    ax2.scatter([pos[n][1] for n in G.nodes()], [pos[n][0] for n in G.nodes()],
-                c=authority_colors, cmap='Blues', s=30, alpha=0.6)
+        # Add arrowhead
+        dx = x_coords[1] - x_coords[0]
+        dy = y_coords[1] - y_coords[0]
+        length = np.sqrt(dx ** 2 + dy ** 2)
+        if length > 0:
+            dx_norm, dy_norm = dx / length, dy / length
+            arrow_length = 8
+            arrow_x = x_coords[1] - dx_norm * arrow_length
+            arrow_y = y_coords[1] - dy_norm * arrow_length
 
-    for edge in G.edges():
-        x_coords = [pos[edge[0]][1], pos[edge[1]][1]]
-        y_coords = [pos[edge[0]][0], pos[edge[1]][0]]
-        ax2.arrow(x_coords[0], y_coords[0],
-                  x_coords[1] - x_coords[0], y_coords[1] - y_coords[0],
-                  head_width=5, head_length=5, fc='gray', alpha=0.5)
+            ax2.annotate('', xy=(x_coords[1], y_coords[1]),
+                         xytext=(arrow_x, arrow_y),
+                         arrowprops=dict(arrowstyle='->', color='black', alpha=0.4, lw=1))
 
-    ax2.set_title('hub/authority scores')
+    # Draw nodes
+    scatter2 = ax2.scatter(node_positions[:, 0], node_positions[:, 1],
+                           c=node_colors2, s=node_sizes1,  # Same sizes as plot 1
+                           alpha=0.8, edgecolors='black', linewidths=0.5)
+
+    ax2.set_title('Hub/Authority Network\n(Red=Hub, Blue=Authority, Purple=Mixed, Gray=Neutral)',
+                  fontsize=14, fontweight='bold')
+    ax2.set_xlabel('X Position')
+    ax2.set_ylabel('Y Position')
     ax2.set_aspect('equal')
 
+    # Add legend for categories
+    legend_elements2 = [
+        patches.Patch(color='#FF4444', label=f'Hubs ({np.sum(np.array(categories2) == "leader")})'),
+        patches.Patch(color='#4444FF', label=f'Authorities ({np.sum(np.array(categories2) == "follower")})'),
+        patches.Patch(color='#AA44AA', label=f'Mixed ({np.sum(np.array(categories2) == "mixed")})'),
+        patches.Patch(color='#CCCCCC', label=f'Neutral ({np.sum(np.array(categories2) == "neutral")})')
+    ]
+    ax2.legend(handles=legend_elements2, loc='upper right')
+
+    # Add network statistics
+    stats_text = f"""Network Statistics:
+Nodes: {G.number_of_nodes()}
+Edges: {G.number_of_edges()}
+Density: {G.number_of_edges() / (G.number_of_nodes() * (G.number_of_nodes() - 1)):.3f}
+Avg Degree: {np.mean(total_degree):.1f}"""
+
+    fig.text(0.02, 0.02, stats_text, fontsize=10, fontfamily='monospace',
+             bbox=dict(boxstyle="round,pad=0.3", facecolor="lightgray", alpha=0.8))
+
     plt.tight_layout()
+
     if save_path:
-        plt.savefig(save_path, dpi=150)
+        plt.savefig(save_path, dpi=300, bbox_inches='tight', facecolor='white')
+
     plt.close()
 
+
+# Usage:
+# visualize_network_improved(G, network_scores, track_positions,
+#                           save_path=f'graphs_data/{dataset_name}/network_improved_{run}.png')
 
 # Full pipeline paper https://www.pnas.org/doi/epub/10.1073/pnas.2202204119
 
