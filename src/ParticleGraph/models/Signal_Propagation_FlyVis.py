@@ -26,14 +26,36 @@ class Signal_Propagation_FlyVis(pyg.nn.MessagePassing):
     """
 
     def __init__(
-        self, aggr_type=None, config=None, device=None, bc_dpos=None, projections=None
-    ):
+        self, aggr_type=None, config=None, device=None ):
         super(Signal_Propagation_FlyVis, self).__init__(aggr=aggr_type)
 
         simulation_config = config.simulation
         model_config = config.graph_model
 
         self.device = device
+        self.model = model_config.signal_model_name
+        self.embedding_dim = model_config.embedding_dim
+        self.n_neurons = simulation_config.n_neurons
+        self.n_dataset = config.training.n_runs
+        self.n_frames = simulation_config.n_frames
+        self.field_type = model_config.field_type
+        self.embedding_trial = config.training.embedding_trial
+        self.multi_connectivity = config.training.multi_connectivity
+
+        self.input_size = model_config.input_size
+        self.output_size = model_config.output_size
+        self.hidden_dim = model_config.hidden_dim
+        self.n_layers = model_config.n_layers
+
+        self.n_layers_update = model_config.n_layers_update
+        self.hidden_dim_update = model_config.hidden_dim_update
+        self.input_size_update = model_config.input_size_update
+
+        self.n_edges = simulation_config.n_edges
+        self.lin_edge_positive = model_config.lin_edge_positive
+
+        self.batch_size = config.training.batch_size
+        self.update_type = model_config.update_type
 
         self.lin_edge = MLP(
             input_size=self.input_size,
@@ -54,34 +76,32 @@ class Signal_Propagation_FlyVis(pyg.nn.MessagePassing):
         # embedding
         self.a = nn.Parameter(
             torch.tensor(
-                projections,
-                device=self.device,
-                requires_grad=True,
-                dtype=torch.float32,
-            )
-        )
+                np.ones((self.n_dataset, int(self.n_neurons), self.embedding_dim)),
+                         device=self.device,
+                         requires_grad=True, dtype=torch.float32))
 
         self.W = nn.Parameter(
             torch.randn(
-                simulation_config.data_ids
-                self.edge_index.shape[1],
+                self.n_dataset,
+                self.n_edges,
                 device=self.device,
                 requires_grad=True,
                 dtype=torch.float32,
             )[:, None]
         )
 
-    def forward(self, data=[], data_id=[], k=[], return_all=False):
+    def forward(self, data=[], data_id=[], mask=[], return_all=False):
         self.return_all = return_all
         x, edge_index = data.x, data.edge_index
 
         self.data_id = data_id.squeeze().long().clone().detach()
+        self.mask = mask.squeeze().long().clone().detach()
 
         v = data.x[:, 3:4]
         excitation = data.x[:, 4:5]
 
         particle_id = x[:, 0].long()
-        embedding = self.a[particle_id, :]
+        embedding = self.a[data_id, particle_id, :]
 
         msg = self.propagate(
             edge_index, v=v, embedding=embedding, data_id=self.data_id[:, None]
@@ -95,15 +115,13 @@ class Signal_Propagation_FlyVis(pyg.nn.MessagePassing):
         else:
             return pred
 
-    def message(
-        self, v_i, v_j, embedding_i, embedding_j, data_id_i
-    ):
+    def message(self, v_i, v_j, embedding_i, embedding_j, data_id_i):
 
         in_features = torch.cat([v_i, v_j, embedding_i, embedding_j], dim=1)
 
         lin_edge = self.lin_edge(in_features)
 
-        return self.W[data_id_i.squeeze(), :, :] * lin_edge
+        return self.W[data_id_i.squeeze()] * lin_edge
 
     def update(self, aggr_out):
         return aggr_out

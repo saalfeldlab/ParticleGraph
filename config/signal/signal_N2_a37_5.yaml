@@ -53,7 +53,7 @@ training:
 
     recursive_loop: 1
     batch_size: 8
-    particle_batch_ratio: 0.25
+    batch_ratio: 0.25
     small_init_batch_size: False
 
     time_step: 8

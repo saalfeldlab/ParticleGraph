@@ -10,6 +10,7 @@ from GNN_particles_Ntype import *
 from ParticleGraph.models.utils import *
 from ParticleGraph.utils import *
 from ParticleGraph.models.Siren_Network import *
+from ParticleGraph.models.Signal_Propagation_FlyVis import *
 from ParticleGraph.models.Ghost_Particles import *
 from geomloss import SamplesLoss
 from ParticleGraph.sparsify import EmbeddingCluster, sparsify_cluster
@@ -71,6 +72,8 @@ def data_train(config=None, erase=False, best_model=None, device=None):
         data_train_particle_field(config, erase, best_model, device)
     elif has_mesh:
         data_train_mesh(config, erase, best_model, device)
+    elif 'fly' in config.dataset:
+        data_train_flyvis(config, erase, best_model, device)
     elif has_signal:
         data_train_synaptic2(config, erase, best_model, device)
     elif do_tracking & has_cell_division:
@@ -123,7 +126,7 @@ def data_train_particle(config, erase, best_model, device):
         get_batch_size = increasing_batch_size(target_batch_size)
     else:
         get_batch_size = constant_batch_size(target_batch_size)
-    particle_batch_ratio = train_config.particle_batch_ratio
+    batch_ratio = train_config.batch_ratio
     batch_size = get_batch_size(0)
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     embedding_cluster = EmbeddingCluster(config)
@@ -267,8 +270,8 @@ def data_train_particle(config, erase, best_model, device):
             mask_ghost = np.argwhere(mask_ghost == 1)
             mask_ghost = mask_ghost[:, 0].astype(int)
 
-        if particle_batch_ratio < 1:
-            Niter = int(n_frames * data_augmentation_loop // batch_size / particle_batch_ratio)
+        if batch_ratio < 1:
+            Niter = int(n_frames * data_augmentation_loop // batch_size / batch_ratio)
         else:
             Niter = n_frames * data_augmentation_loop // batch_size
         plot_frequency = int(Niter // 20)
@@ -321,8 +324,8 @@ def data_train_particle(config, erase, best_model, device):
                     adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
                     edges = adj_t.nonzero().t().contiguous()
 
-                if particle_batch_ratio < 1:
-                    ids = np.random.permutation(x.shape[0])[:int(x.shape[0] * particle_batch_ratio)]
+                if batch_ratio < 1:
+                    ids = np.random.permutation(x.shape[0])[:int(x.shape[0] * batch_ratio)]
                     ids = np.sort(ids)
                     mask = torch.isin(edges[1, :], torch.tensor(ids, device=device))
                     edges = edges[:, mask]
@@ -360,7 +363,7 @@ def data_train_particle(config, erase, best_model, device):
                     x_batch = x
                     y_batch = y
                     k_batch = torch.ones((x.shape[0], 1), dtype=torch.int, device=device) * k
-                    if particle_batch_ratio < 1:
+                    if batch_ratio < 1:
                         ids_batch = ids
                 else:
                     data_id = torch.cat((data_id, torch.ones((y.shape[0], 1), dtype=torch.int) * run), dim=0)
@@ -368,7 +371,7 @@ def data_train_particle(config, erase, best_model, device):
                     y_batch = torch.cat((y_batch, y), dim=0)
                     k_batch = torch.cat((k_batch, torch.ones((x.shape[0], 1), dtype=torch.int, device=device) * k),
                                         dim=0)
-                    if particle_batch_ratio < 1:
+                    if batch_ratio < 1:
                         ids_batch = np.concatenate((ids_batch, ids + ids_index), axis=0)
 
                 ids_index += x.shape[0]
@@ -425,13 +428,13 @@ def data_train_particle(config, erase, best_model, device):
                     loss = loss + coeff_continuous * grad.norm(2)
 
             if recursive_loop>1:
-                if particle_batch_ratio < 1:
+                if batch_ratio < 1:
                     loss = (pred[ids_batch] - y_batch[ids_batch]).norm(2)
                 else:
                     loss = (pred - y_batch).norm(2)
                 torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             elif time_step == 1:
-                if particle_batch_ratio < 1:
+                if batch_ratio < 1:
                     loss = (pred[ids_batch] - y_batch[ids_batch]).norm(2)
                 else:
                     loss = (pred - y_batch).norm(2)
@@ -442,7 +445,7 @@ def data_train_particle(config, erase, best_model, device):
                 else:
                     x_pos_pred = x_batch[:, 1:dimension + 1] + delta_t * time_step * pred * ynorm
 
-                if particle_batch_ratio < 1:
+                if batch_ratio < 1:
                     loss = loss + (x_pos_pred[ids_batch] - y_batch[ids_batch]).norm(2)
                 else:
                     loss = loss + (x_pos_pred - y_batch).norm(2)
@@ -2395,7 +2398,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         get_batch_size = increasing_batch_size(target_batch_size)
     else:
         get_batch_size = constant_batch_size(target_batch_size)
-    particle_batch_ratio = train_config.particle_batch_ratio
+    batch_ratio = train_config.batch_ratio
     batch_size = get_batch_size(0)
     embedding_cluster = EmbeddingCluster(config)
     cmap = CustomColorMap(config=config)
@@ -2510,7 +2513,7 @@ def data_train_synaptic2(config, erase, best_model, device):
     print('create models ...')
     model, bc_pos, bc_dpos = choose_training_model(model_config=config, device=device, projections=projections)
     if has_missing_activity:
-        assert particle_batch_ratio == 1, f"particle_batch_ratio must be 1, got {particle_batch_ratio}"
+        assert batch_ratio == 1, f"batch_ratio must be 1, got {batch_ratio}"
         model_missing_activity = nn.ModuleList([
             Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
                   hidden_features=model_config.hidden_dim_nnr,
@@ -2668,8 +2671,8 @@ def data_train_synaptic2(config, erase, best_model, device):
         batch_size = get_batch_size(epoch)
         logger.info(f'batch_size: {batch_size}')
 
-        if particle_batch_ratio < 1:
-            Niter = int(n_frames * data_augmentation_loop // batch_size / particle_batch_ratio * 0.2)
+        if batch_ratio < 1:
+            Niter = int(n_frames * data_augmentation_loop // batch_size / batch_ratio * 0.2)
         else:
             Niter = int(n_frames * data_augmentation_loop // batch_size * 0.2 // max(recursive_loop, 1))
 
@@ -2800,10 +2803,9 @@ def data_train_synaptic2(config, erase, best_model, device):
                                 in_feature_update_next) - 2 * model.lin_phi(in_feature_update)).norm(
                                 2) * coeff_update_diff
 
-                    if particle_batch_ratio < 1:
-                        ids_ = np.random.permutation(ids.shape[0])[:int(ids.shape[0] * particle_batch_ratio)]
-                        ids_ = np.sort(ids)
-                        ids = ids(ids_)
+                    if batch_ratio < 1:
+                        ids_ = np.random.permutation(ids.shape[0])[:int(ids.shape[0] * batch_ratio)]
+                        ids = np.sort(ids)
                         edges = edges_all.clone().detach()
                         mask = torch.isin(edges[1, :], torch.tensor(ids, device=device))
                         edges = edges[:, mask]
@@ -2872,6 +2874,565 @@ def data_train_synaptic2(config, erase, best_model, device):
 
                 if 'PDE_N3' in model_config.signal_model_name:
                     loss = loss + train_config.coeff_model_a * (model.a[ind_a + 1] - model.a[ind_a]).norm(2)
+
+                loss.backward()
+                optimizer.step()
+                if has_missing_activity:
+                    optimizer_missing_activity.step()
+                if has_neural_field:
+                    optimizer_f.step()
+
+                total_loss += loss.item()
+
+                if ((N % plot_frequency == 0) | (N == 0)):
+                    plot_training_signal(config, model, x, adjacency, log_dir, epoch, N, n_neurons, type_list, cmap,
+                                         device)
+                    if time_step > 1:
+                        fig = plt.figure(figsize=(10, 10))
+                        plt.scatter(to_numpy(y_batch), to_numpy(x_batch + pred * delta_t * time_step), s=10, color='k')
+                        plt.scatter(to_numpy(y_batch), to_numpy(x_batch), s=1, color='b', alpha=0.5)
+                        plt.plot(to_numpy(y_batch), to_numpy(y_batch), color='g')
+
+                        x_data = y_batch
+                        y_data = x_batch
+                        err0 = torch.sqrt((y_data - x_data).norm(2))
+
+                        y_data = (x_batch + pred * delta_t * time_step)
+                        err = torch.sqrt((y_data - x_data).norm(2))
+
+                        plt.text(0.05, 0.95, f'data: {run}   frame: {k}',
+                                 transform=plt.gca().transAxes, fontsize=12,
+                                 verticalalignment='top')
+                        plt.text(0.05, 0.9, f'err: {err.item():0.4f}  err0: {err0.item():0.4f}',
+                                 transform=plt.gca().transAxes, fontsize=12,
+                                 verticalalignment='top')
+
+                        x_data = to_numpy(x_data.squeeze())
+                        y_data = to_numpy(y_data.squeeze())
+                        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+
+                        residuals = y_data - linear_model(x_data, *lin_fit)
+                        ss_res = np.sum(residuals ** 2)
+                        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+                        r_squared = 1 - (ss_res / ss_tot)
+                        plt.text(0.05, 0.85, f'R2: {r_squared:0.4f}  slope: {np.round(lin_fit[0], 4)}',
+                                 transform=plt.gca().transAxes, fontsize=12,
+                                 verticalalignment='top')
+                        plt.tight_layout()
+                        plt.savefig(f'{log_dir}/tmp_training/prediction/pred_{epoch}_{N}.tif')
+                        plt.close()
+
+                    if has_neural_field:
+                        with torch.no_grad():
+                            plot_training_signal_field(x, n_nodes, recursive_loop, k, time_step,
+                                                       x_list, run, model, field_type, model_f,
+                                                       edges, y_list, ynorm, delta_t, n_frames, log_dir, epoch, N,
+                                                       recursive_parameters, modulation, device)
+                        torch.save({'model_state_dict': model_f.state_dict(),
+                                    'optimizer_state_dict': optimizer_f.state_dict()},
+                                   os.path.join(log_dir, 'models',
+                                                f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+
+                    if has_missing_activity:
+                        with torch.no_grad():
+                            plot_training_signal_missing_activity(n_frames, k, x_list, baseline_value,
+                                                                  model_missing_activity, log_dir, epoch, N, device)
+                        torch.save({'model_state_dict': model_missing_activity.state_dict(),
+                                    'optimizer_state_dict': optimizer_missing_activity.state_dict()},
+                                   os.path.join(log_dir, 'models',
+                                                f'best_model_missing_activity_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+                    torch.save(
+                        {'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
+                        os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+
+            # check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 50, memory_percentage_threshold=0.6)
+
+        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / n_neurons))
+        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / n_neurons))
+        logger.info(f'recursive_parameters: {recursive_parameters[0]:.2f}')
+        torch.save({'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict()},
+                   os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
+        if has_neural_field:
+            torch.save({'model_state_dict': model_f.state_dict(),
+                        'optimizer_state_dict': optimizer_f.state_dict()},
+                       os.path.join(log_dir, 'models', f'best_model_f_with_{n_runs - 1}_graphs_{epoch}.pt'))
+
+        list_loss.append((total_loss-total_loss_regul) / n_neurons)
+
+        list_loss_regul.append(total_loss_regul / n_neurons)
+
+        torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
+
+        fig = plt.figure(figsize=(12, 6))
+
+        ax = fig.add_subplot(2, 3, 1)
+        plt.plot(list_loss, color='k', linewidth=1)
+        plt.xlim([0, n_epochs])
+        plt.ylabel('loss', fontsize=12)
+        plt.xlabel('epochs', fontsize=12)
+
+        ax = fig.add_subplot(2, 3, 2)
+        for n in range(n_neuron_types):
+            pos = torch.argwhere(type_list == n)
+            plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=1, color=cmap.color(n))
+        plt.xlabel('embedding 0', fontsize=12)
+        plt.ylabel('embedding 1', fontsize=12)
+
+        if multi_connectivity:
+            A = model.W[0].clone().detach() * model.mask.clone().detach()
+        else:
+            A = model.W.clone().detach() * model.mask.clone().detach()
+
+        ax = fig.add_subplot(2, 3, 4)
+        ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},
+                         vmin=-0.001, vmax=0.001)
+        plt.title('true connectivity', fontsize=12)
+        plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=8)
+        plt.yticks([0, n_neurons - 1], [1, n_neurons], fontsize=8)
+
+        ax = fig.add_subplot(2, 3, 5)
+        ax = sns.heatmap(to_numpy(A), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
+        plt.title('learned connectivity', fontsize=12)
+        plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=8)
+        plt.yticks([0, n_neurons - 1], [1, n_neurons], fontsize=8)
+
+        ax = fig.add_subplot(2, 3, 6)
+        gt_weight = to_numpy(adjacency)
+        pred_weight = to_numpy(A[:n_neurons, :n_neurons])
+        plt.scatter(gt_weight, pred_weight, s=0.1, c='k', alpha=0.01)
+        plt.xlabel('true weight', fontsize=12)
+        plt.ylabel('learned weight', fontsize=12)
+        plt.title('comparison')
+
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/epoch_{epoch}.tif")
+        plt.close()
+
+        if replace_with_cluster:
+
+            if (epoch % sparsity_freq == sparsity_freq - 1) & (epoch < n_epochs - sparsity_freq):
+
+                embedding = to_numpy(model.a.squeeze())
+                model_MLP = model.lin_phi
+                update_type = model.update_type
+
+                func_list, proj_interaction_ = analyze_edge_function(rr=torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device),
+                                                                     vizualize=True, config=config,
+                                                                     model_MLP=model_MLP, model=model,
+                                                                     n_nodes=0,
+                                                                     n_particles=n_neurons, ynorm=ynorm,
+                                                                     type_list=to_numpy(x[:, 1 + 2 * dimension]),
+                                                                     cmap=cmap, update_type=update_type, device=device)
+
+
+
+                # Constrain embedding domain
+                with torch.no_grad():
+                    model.a.copy_(model_a_)
+                print(f'regul_embedding: replaced')
+                logger.info(f'regul_embedding: replaced')
+
+                # Constrain function domain
+                if train_config.sparsity == 'replace_embedding_function':
+
+                    logger.info(f'replace_embedding_function')
+                    y_func_list = func_list * 0
+
+                    ax = fig.add_subplot(2, 5, 9)
+                    for n in np.unique(new_labels):
+                        pos = np.argwhere(new_labels == n)
+                        pos = pos.squeeze()
+                        if pos.size > 0:
+                            target_func = torch.median(func_list[pos, :], dim=0).values.squeeze()
+                            y_func_list[pos] = target_func
+                        plt.plot(to_numpy(target_func) * to_numpy(ynorm), linewidth=2, alpha=1)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+
+                    lr_embedding = 1E-12
+                    optimizer, n_total_params = set_trainable_parameters(model=model, lr_embedding=lr_embedding, lr=lr,
+                                                                         lr_update=lr_update, lr_W=lr_W,
+                                                                         lr_modulation=lr_modulation)
+                    for sub_epochs in trange(20):
+                        rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
+                        pred = []
+                        optimizer.zero_grad()
+                        for n in range(n_neurons):
+                            embedding_ = model.a[n, :].clone().detach() * torch.ones((1000, model_config.embedding_dim),
+                                                                                     device=device)
+                            in_features = get_in_features_update(rr=rr[:, None], model=model, device=device)
+                            pred.append(model.lin_phi(in_features.float()))
+                        pred = torch.stack(pred)
+                        loss = (pred[:, :, 0] - y_func_list.clone().detach()).norm(2)
+                        logger.info(f'    loss: {np.round(loss.item() / n_neurons, 3)}')
+                        loss.backward()
+                        optimizer.step()
+                if train_config.fix_cluster_embedding:
+                    lr = 1E-12
+                    lr_embedding = 1E-12
+                    optimizer, n_total_params = set_trainable_parameters(model=model, lr_embedding=lr_embedding, lr=lr,
+                                                                         lr_update=lr_update, lr_W=lr_W,
+                                                                         lr_modulation=lr_modulation)
+                    logger.info(
+                        f'learning rates: lr_W {lr_W}, lr {lr}, lr_embedding {lr_embedding}, lr_modulation {lr_modulation}')
+            else:
+                lr = train_config.learning_rate_start
+                lr_embedding = train_config.learning_rate_embedding_start
+                optimizer, n_total_params = set_trainable_parameters(model=model, lr_embedding=lr_embedding, lr=lr,
+                                                                     lr_update=lr_update, lr_W=lr_W,
+                                                                     lr_modulation=lr_modulation)
+                logger.info( f'learning rates: lr_W {lr_W}, lr {lr}, lr_embedding {lr_embedding}, lr_modulation {lr_modulation}')
+
+            if (epoch == 20) & (train_config.coeff_anneal_L1 > 0):
+                coeff_L1 = train_config.coeff_anneal_L1
+                logger.info(f'coeff_L1: {coeff_L1}')
+
+
+def data_train_flyvis(config, erase, best_model, device):
+    simulation_config = config.simulation
+    train_config = config.training
+    model_config = config.graph_model
+
+    dimension = simulation_config.dimension
+    n_epochs = train_config.n_epochs
+    n_neurons = simulation_config.n_neurons
+    n_input_neurons = simulation_config.n_input_neurons
+    n_neuron_types = simulation_config.n_neuron_types
+    delta_t = simulation_config.delta_t
+
+    dataset_name = config.dataset
+    n_runs = train_config.n_runs
+    n_frames = simulation_config.n_frames
+
+    data_augmentation_loop = train_config.data_augmentation_loop
+    recursive_loop = train_config.recursive_loop
+    batch_size = train_config.batch_size
+    batch_ratio = train_config.batch_ratio
+
+    field_type = model_config.field_type
+    time_step = train_config.time_step
+    has_missing_activity = train_config.has_missing_activity
+    multi_connectivity = config.training.multi_connectivity
+    baseline_value = simulation_config.baseline_value
+
+    coeff_sign = train_config.coeff_sign
+    coeff_update_msg_diff = train_config.coeff_update_msg_diff
+    coeff_update_u_diff = train_config.coeff_update_u_diff
+    cmap = CustomColorMap(config=config)
+
+    if field_type != '':
+        n_nodes = n_input_neurons
+        has_neural_field = True
+    else:
+        n_nodes = n_input_neurons
+        has_neural_field = False
+
+    print(f'has_neural_field: {has_neural_field}, has_missing_activity: {has_missing_activity}')
+
+    replace_with_cluster = 'replace' in train_config.sparsity
+    sparsity_freq = train_config.sparsity_freq
+    recursive_parameters = train_config.recursive_parameters.copy()
+
+    log_dir, logger = create_log_dir(config, erase)
+    print(f'loading graph files N: {n_runs} ...')
+    logger.info(f'Graph files N: {n_runs}')
+
+    x_list = []
+    y_list = []
+    for run in trange(0,n_runs):
+        x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
+        y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
+        x_list.append(x)
+        y_list.append(y)
+    x = x_list[0][n_frames - 10]
+
+    # activity = torch.tensor(x_list[0][:, :, 3:4], device=device)
+    # activity = activity.squeeze()
+    # distrib = activity.flatten()
+    # valid_distrib = distrib[~torch.isnan(distrib)]
+    # if len(valid_distrib) > 0:
+    #     xnorm = torch.round(1.5 * torch.std(valid_distrib))
+    # else:
+    #     print('no valid distribution found, setting xnorm to 1.0')
+    #     xnorm = torch.tensor(1.0, device=device)
+
+    xnorm = torch.tensor(1.0, device=device)
+    torch.save(xnorm, os.path.join(log_dir, 'xnorm.pt'))
+    print(f'xnorm: {to_numpy(xnorm)}')
+
+    logger.info(f'xnorm: {to_numpy(xnorm)}')
+
+    n_neurons = x.shape[0]
+    print(f'N neurons: {n_neurons}')
+    logger.info(f'N neurons: {n_neurons}')
+    config.simulation.n_neurons =n_neurons
+    type_list = torch.tensor(x[:, 1 + 2 * dimension:2 + 2 * dimension], device=device)
+    vnorm = torch.tensor(1.0, device=device)
+    ynorm = torch.tensor(1.0, device=device)
+    torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
+    torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
+    time.sleep(0.5)
+    print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
+    logger.info(f'vnorm ynorm: {to_numpy(vnorm)} {to_numpy(ynorm)}')
+
+
+
+    print('create models ...')
+    model = Signal_Propagation_FlyVis(config=config, device=device)
+    if has_missing_activity:
+        assert batch_ratio == 1, f"batch_ratio must be 1, got {batch_ratio}"
+        model_missing_activity = nn.ModuleList([
+            Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
+                  hidden_features=model_config.hidden_dim_nnr,
+                  hidden_layers=model_config.n_layers_nnr, first_omega_0=model_config.omega,
+                  hidden_omega_0=model_config.omega,
+                  outermost_linear=model_config.outermost_linear_nnr)
+            for n in range(n_runs)
+        ])
+        model_missing_activity.to(device=device)
+        optimizer_missing_activity = torch.optim.Adam(lr=train_config.learning_rate_missing_activity,
+                                                      params=model_missing_activity.parameters())
+        model_missing_activity.train()
+    if has_neural_field:
+        if ('short_term_plasticity' in field_type) | ('modulation' in field_type):
+            model_f = nn.ModuleList([
+                Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
+                      hidden_features=model_config.hidden_dim_nnr,
+                      hidden_layers=model_config.n_layers_nnr, first_omega_0=model_config.omega,
+                      hidden_omega_0=model_config.omega,
+                      outermost_linear=model_config.outermost_linear_nnr)
+                for n in range(n_runs)
+            ])
+        else:
+            n_nodes_per_axis = int(np.sqrt(n_nodes))
+            model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
+                                    out_features=model_config.output_size_nnr,
+                                    hidden_features=model_config.hidden_dim_nnr,
+                                    hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device,
+                                    first_omega_0=model_config.omega, hidden_omega_0=model_config.omega)
+        model_f.to(device=device)
+        optimizer_f = torch.optim.Adam(lr=train_config.learning_rate_NNR, params=model_f.parameters())
+        model_f.train()
+
+    if (best_model != None) & (best_model != '') & (best_model != 'None'):
+        net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{best_model}.pt"
+        print(f'load {net} ...')
+        state_dict = torch.load(net, map_location=device)
+        model.load_state_dict(state_dict['model_state_dict'])
+        start_epoch = int(best_model.split('_')[0])
+        print(f'best_model: {best_model}  start_epoch: {start_epoch}')
+        logger.info(f'best_model: {best_model}  start_epoch: {start_epoch}')
+        if has_neural_field:
+            net = f'{log_dir}/models/best_model_f_with_{n_runs - 1}_graphs_{best_model}.pt'
+            state_dict = torch.load(net, map_location=device)
+            model_f.load_state_dict(state_dict['model_state_dict'])
+        list_loss = torch.load(os.path.join(log_dir, 'loss.pt'))
+    else:
+        start_epoch = 0
+        list_loss = []
+    lr = train_config.learning_rate_start
+    if train_config.learning_rate_update_start == 0:
+        lr_update = train_config.learning_rate_start
+    else:
+        lr_update = train_config.learning_rate_update_start
+    lr_embedding = train_config.learning_rate_embedding_start
+    lr_W = train_config.learning_rate_W_start
+    lr_modulation = train_config.learning_rate_modulation_start
+
+    print(
+        f'learning rates: lr_W {lr_W}, lr {lr}, lr_update {lr_update}, lr_embedding {lr_embedding}, lr_modulation {lr_modulation}')
+    logger.info(
+        f'learning rates: lr_W {lr_W}, lr {lr}, lr_update {lr_update}, lr_embedding {lr_embedding}, lr_modulation {lr_modulation}')
+
+    optimizer, n_total_params = set_trainable_parameters(model=model, lr_embedding=lr_embedding, lr=lr,
+                                                         lr_update=lr_update, lr_W=lr_W, lr_modulation=lr_modulation)
+    model.train()
+
+    net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs.pt"
+    print(f'network: {net}')
+    print(f'initial batch_size: {batch_size}')
+    logger.info(f'network: {net}')
+    logger.info(f'N epochs: {n_epochs}')
+    logger.info(f'initial batch_size: {batch_size}')
+
+    adjacency = torch.load(f'./graphs_data/{dataset_name}/adjacency.pt', map_location=device)
+    # adjacency[10,:]=5
+    # fig = plt.figure(figsize=(8, 8))
+    # ax = fig.add_subplot(111)
+    # ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
+    # plt.show()
+    edges = torch.load(f'./graphs_data/{dataset_name}/edge_index.pt', map_location=device)
+    edges_all = edges.clone().detach()
+    print(f'{edges.shape[1]} edges')
+
+    if coeff_sign > 0:
+        index_weight = []
+        for i in range(n_neurons):
+            index_weight.append(torch.argwhere(model.mask[:, i] > 0).squeeze())
+
+    coeff_L1 = train_config.coeff_L1
+    coeff_edge_diff = train_config.coeff_edge_diff
+    coeff_update_diff = train_config.coeff_update_diff
+    logger.info(f'coeff_L1: {coeff_L1} coeff_edge_diff: {coeff_edge_diff} coeff_update_diff: {coeff_update_diff}')
+    print(f'coeff_L1: {coeff_L1} coeff_edge_diff: {coeff_edge_diff} coeff_update_diff: {coeff_update_diff}')
+
+    print("start training ...")
+
+    check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
+    # torch.autograd.set_detect_anomaly(True)
+
+    list_loss_regul = []
+    time.sleep(0.2)
+
+    for epoch in range(start_epoch, n_epochs + 1):
+
+        if (epoch == train_config.epoch_reset) | ((epoch > 0) & (epoch % train_config.epoch_reset_freq == 0)):
+            with torch.no_grad():
+                model.W.copy_(model.W * 0)
+                model.a.copy_(model.a * 0)
+            logger.info(f'reset W model.a at epoch : {epoch}')
+            print(f'reset W model.a at epoch : {epoch}')
+        if epoch == train_config.n_epochs_init:
+            coeff_edge_diff = coeff_update_diff / 100
+            coeff_update_diff = coeff_update_diff / 100
+            logger.info(f'coeff_L1: {coeff_L1} coeff_edge_diff: {coeff_edge_diff} coeff_update_diff: {coeff_update_diff}')
+            print(f'coeff_L1: {coeff_L1} coeff_edge_diff: {coeff_edge_diff} coeff_update_diff: {coeff_update_diff}')
+
+        if batch_ratio < 1:
+            Niter = int(n_frames * data_augmentation_loop // batch_size / batch_ratio * 0.2)
+        else:
+            Niter = int(n_frames * data_augmentation_loop // batch_size * 0.2 // max(recursive_loop, 1))
+
+        plot_frequency = int(Niter // 20)
+        print(f'{Niter} iterations per epoch')
+        logger.info(f'{Niter} iterations per epoch')
+        print(f'plot every {plot_frequency} iterations')
+
+        total_loss = 0
+        total_loss_regul = 0
+        k = 0
+
+        for N in trange(Niter):
+
+            if has_missing_activity:
+                optimizer_missing_activity.zero_grad()
+            if has_neural_field:
+                optimizer_f.zero_grad()
+            optimizer.zero_grad()
+
+            dataset_batch = []
+            ids_batch = []
+            ids_index = 0
+            mask_index = 0
+
+            loss = 0
+            run = np.random.randint(n_runs)
+
+            for batch in range(batch_size):
+
+                k = np.random.randint(n_frames - 4 - time_step)
+                x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device)
+                ids = np.arange(n_neurons)
+
+                if not (torch.isnan(x).any()):
+
+                    # # regularisation lin_phi(0)=0
+                    # in_features = get_in_features_update(rr=None, model=model, device=device)
+                    # func_phi = model.lin_phi(in_features[ids].float())
+                    # loss = loss + func_phi.norm(2)
+                    # # regularisation sparsity on Wij
+                    # loss = loss + model_W[:n_neurons, :n_neurons].norm(1) * coeff_L1
+                    # # regularisation lin_edge
+                    # in_features, in_features_next = get_in_features_lin_edge(x, model, model_config, xnorm, n_neurons,device)
+                    # if coeff_edge_diff > 0:
+                    #     if model_config.lin_edge_positive:
+                    #         msg0 = model.lin_edge(in_features[ids].clone().detach()) ** 2
+                    #         msg1 = model.lin_edge(in_features_next[ids].clone().detach()) ** 2
+                    #     else:
+                    #         msg0 = model.lin_edge(in_features[ids].clone().detach())
+                    #         msg1 = model.lin_edge(in_features_next[ids].clone().detach())
+                    #     loss = loss + torch.relu(msg0 - msg1).norm(2) * coeff_edge_diff
+                    # # regularisation sign Wij
+                    # if (coeff_sign > 0) and (N%4 == 0):
+                    #     W_sign = torch.tanh(5 * model_W)
+                    #     loss_contribs = []
+                    #     for i in range(n_neurons):
+                    #         indices = index_weight[int(i)]
+                    #         if indices.numel() > 0:
+                    #             values = W_sign[indices,i]
+                    #             std = torch.std(values, unbiased=False)
+                    #             loss_contribs.append(std)
+                    #     if loss_contribs:
+                    #         loss = loss + torch.stack(loss_contribs).norm(2) * coeff_sign
+
+                    if batch_ratio < 1:
+                        ids_ = np.random.permutation(ids.shape[0])[:int(ids.shape[0] * batch_ratio)]
+                        ids = np.sort(ids_)
+
+                        edges = edges_all.clone().detach()
+                        mask = torch.isin(edges[1, :], torch.tensor(ids, device=device))
+                        edges = edges[:, mask]
+                        mask = torch.arange(edges_all.shape[1],device=device)[mask]
+
+                    else:
+                        edges = edges_all.clone().detach()
+                        mask = torch.arange(edges_all.shape[1])
+
+                    y = torch.tensor(y_list[run][k], device=device) / ynorm
+
+                    if not (torch.isnan(y).any()):
+
+                        dataset = data.Data(x=x, edge_index=edges)
+                        dataset_batch.append(dataset)
+
+                        if len(dataset_batch) == 1:
+                            data_id = torch.ones((x.shape[0], 1), dtype=torch.int, device=device) * run
+                            x_batch = x[:, 3:4]
+                            y_batch = y
+                            k_batch = torch.ones((x.shape[0], 1), dtype=torch.int, device=device) * k
+                            ids_batch = ids
+                            mask_batch = mask
+                        else:
+                            data_id = torch.cat((data_id, torch.ones((x.shape[0], 1), dtype=torch.int, device=device) * run), dim=0)
+                            x_batch = torch.cat((x_batch, x[:, 4:5]), dim=0)
+                            y_batch = torch.cat((y_batch, y), dim=0)
+                            ids_batch = np.concatenate((ids_batch, ids + ids_index), axis=0)
+                            mask_batch = torch.cat((mask_batch, mask + mask_index), dim=0)
+
+                        ids_index += x.shape[0]
+                        mask_index += edges_all.shape[1]
+
+            if not (dataset_batch == []):
+
+                # total_loss_regul += loss.item()
+
+                batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
+                for batch in batch_loader:
+                    if (coeff_update_msg_diff > 0) | (coeff_update_u_diff > 0):
+                        pred, in_features = model(batch, data_id=data_id, mask=mask_batch, return_all=True)
+                        if coeff_update_msg_diff > 0 :
+                            in_features_msg_next = in_features.clone().detach()
+                            in_features_msg_next[:, model_config.embedding_dim] = in_features_msg_next[:, model_config.embedding_dim] * 1.05
+                            pred_msg_next = model.lin_phi(in_features_msg_next.clone().detach())
+                            loss = loss + torch.relu(pred[ids_batch]-pred_msg_next[ids_batch]).norm(2) * coeff_update_msg_diff
+                        if coeff_update_u_diff > 0:
+                            in_features_u_next = in_features.clone().detach()
+                            in_features_u_next[:, 0] = in_features_u_next[:, 0] * 1.05  # Perturb voltage (first column)
+                            pred_u_next = model.lin_phi(in_features_u_next.clone().detach())
+                            loss = loss + torch.relu(pred_u_next[ids_batch] - pred[ids_batch]).norm(2) * coeff_update_u_diff
+                    # Enable gradients for direct derivative computation
+                    # in_features.requires_grad_(True)
+                    # pred = model.lin_phi(in_features)
+                    # grad_u = torch.autograd.grad(pred.sum(), in_features, retain_graph=True)[0][:, 0]
+                    # grad_msg = torch.autograd.grad(pred.sum(), in_features)[0][:, model_config.embedding_dim]
+                    # loss += torch.relu(grad_u[ids_batch]).norm(2) * coeff_update_u_diff
+                    # loss += torch.relu(-grad_msg[ids_batch]).norm(2) * coeff_update_msg_diff
+                    else:
+                        pred = model(batch, data_id=data_id, mask=mask_batch)
+
+                loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
 
                 loss.backward()
                 optimizer.step()

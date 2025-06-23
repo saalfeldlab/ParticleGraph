@@ -33,7 +33,7 @@ plotting:
 training:
   n_epochs: 20
   batch_size: 99
-  particle_batch_ratio: 0.1
+  batch_ratio: 0.1
   small_init_batch_size: False
   n_runs: 99
 

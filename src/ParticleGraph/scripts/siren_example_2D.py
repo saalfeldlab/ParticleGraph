@@ -76,7 +76,7 @@ if __name__ == '__main__':
         data_augmentation_loop = train_config.data_augmentation_loop
         recursive_loop = train_config.recursive_loop
         delta_t = simulation_config.delta_t
-        particle_batch_ratio = train_config.particle_batch_ratio
+        batch_ratio = train_config.batch_ratio
         embedding_cluster = EmbeddingCluster(config)
         n_runs = train_config.n_runs
         field_type = model_config.field_type

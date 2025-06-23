@@ -47,7 +47,7 @@ plotting:
 
 training:
 
-    particle_batch_ratio: 1.0
+    batch_ratio: 1.0
 
     n_epochs: 20
     n_runs: 2

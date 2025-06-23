@@ -13,6 +13,7 @@ simulation:
     n_edges: 434112
     n_frames: 90720
     delta_t: 0.02
+    baseline_value: 0
 
 
 graph_model:
@@ -45,7 +46,7 @@ training:
 
     recursive_loop: 1
     batch_size: 1
-    small_init_batch_size: False
+    batch_ratio: 0.1
 
     sparsity: 'none'
     rotation_augmentation: False
@@ -55,5 +56,6 @@ training:
     learning_rate_start: 5.0E-4
     learning_rate_embedding_start: 5.0E-3
 
-    noise_level: 0.5
+    noise_level: 0.0
+    measurement_noise_level: 0.0
     coeff_edge_diff: 500

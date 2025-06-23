@@ -53,7 +53,7 @@ training:
 
     recursive_loop: 1
     batch_size: 1
-    particle_batch_ratio: 0.25
+    batch_ratio: 0.25
     small_init_batch_size: False
 
     epoch_reset: -1

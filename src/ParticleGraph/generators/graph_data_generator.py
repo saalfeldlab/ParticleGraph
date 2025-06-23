@@ -1576,6 +1576,7 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
     delta_t = simulation_config.delta_t
     n_frames = simulation_config.n_frames
     noise_level = training_config.noise_level
+    measurement_noise_level = training_config.measurement_noise_level
     run = 0
 
     os.makedirs('./graphs_data/fly', exist_ok=True)
@@ -1585,11 +1586,6 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
     files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
     for f in files:
         os.remove(f)
-    os.makedirs(f'./graphs_data/{dataset_name}/Exc/', exist_ok=True)
-    files = glob.glob(f'./graphs_data/{dataset_name}/Exc/*')
-    for f in files:
-        os.remove(f)
-
 
     from datamate import Namespace
     from flyvis.datasets.sintel import AugmentedSintel
@@ -1645,6 +1641,24 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
     edge_index = edge_index.to(device)
     torch.save(edge_index, f"graphs_data/{dataset_name}/edge_index.pt")
 
+    adjacency = torch.zeros((n_neurons, n_neurons), dtype=torch.float32, device=device)
+    adjacency[edge_index[1], edge_index[0]] = p["w"]
+    mask = (adjacency != 0).float()
+    torch.save(mask, f'./graphs_data/{dataset_name}/mask.pt')
+    torch.save(adjacency, f'./graphs_data/{dataset_name}/adjacency.pt')
+
+    # plt.figure(figsize=(10, 10))
+    # ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},
+    #                  vmin=-0.1, vmax=0.1)
+    # cbar = ax.collections[0].colorbar
+    # cbar.ax.tick_params(labelsize=32)
+    # plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=48)
+    # plt.yticks([0, n_neurons - 1], [1, n_neurons], fontsize=48)
+    # plt.xticks(rotation=0)
+    # plt.tight_layout()
+    # plt.savefig(f'graphs_data/{dataset_name}/connectivity.png', dpi=300)
+    # plt.close()
+
     pde = PDE_N8(p=p, f=torch.nn.functional.relu, device=device)
 
     x_coords, y_coords, u_coords, v_coords = get_photoreceptor_positions_from_net(net)
@@ -1675,19 +1689,6 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
     x[n_input_neurons:, 5] = 1  # others neurons
 
     dataset = pyg.data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
-
-
-
-    # fig = plt.figure(figsize=(10, 10))
-    # plt.scatter(x_coords, y_coords, s=100, alpha=0.7)
-    # plt.axis('equal')
-    # plt.xlabel('X coordinate')
-    # plt.ylabel('Y coordinate')
-    # plt.grid(True, alpha=0.3)
-    # plt.savefig(f'graphs_data/{dataset_name}/photoreceptor_positions.png', dpi=300)
-    # plt.close
-
-
 
     y_list = []
     x_list = []
@@ -1738,9 +1739,10 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
     print (f'generated {len(x_list)} frames')
 
     if bSave:
-
-        np.save(f"graphs_data/{dataset_name}/x_list.npy", x_list)
-        np.save(f"graphs_data/{dataset_name}/y_list.npy", y_list)
+        x_list = to_numpy(torch.stack(x_list, dim=0))
+        y_list = to_numpy(torch.stack(y_list, dim=0))
+        np.save(f"graphs_data/{dataset_name}/x_list_{run}.npy", x_list)
+        np.save(f"graphs_data/{dataset_name}/y_list_{run}.npy", y_list)
 
     if measurement_noise_level > 0:
         np.save(f'graphs_data/{dataset_name}/raw_x_list_{run}.npy', x_list)
@@ -1762,9 +1764,6 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
     ax.invert_yaxis()
     plt.ylabel('neurons', fontsize=64)
     plt.xlabel('time', fontsize=64)
-    plt.xticks([10000, 40000], [10000, 40000], fontsize=48)
-    plt.yticks([0, 999], [1, 1000], fontsize=48)
-    plt.xticks(rotation=0)
     plt.tight_layout()
     plt.savefig(f'graphs_data/{dataset_name}/kinograph.png', dpi=300)
     plt.close()
@@ -2176,57 +2175,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         plt.tight_layout()
         plt.savefig(f'graphs_data/{dataset_name}/activity_1000.png', dpi=300)
         plt.close()
-
-        if False: # (noise_level>0) | (measurement_noise_level>0):
-
-            plt.figure(figsize=(15, 10))
-            window_size = 25
-            window_end = x_list.shape[0] - window_size
-            ts = to_numpy(activity[600, :])
-            ts_avg = np.convolve(ts, np.ones(window_size) / window_size, mode='valid')
-            plt.plot(ts[window_size // 2:window_end + window_size // 2], linewidth=1)
-            plt.plot(ts_avg, linewidth=2)
-            plt.plot(ts[window_size // 2:window_end + window_size // 2] - ts_avg[0:window_end])
-            # plt.xlim([window_end - 5000, window_end])
-            signal_power = np.mean(ts_avg[window_size // 2:window_end + window_size // 2] ** 2)
-            # Compute the noise power
-            noise_power = np.mean((ts[window_size // 2:window_end + window_size // 2] - ts_avg[0:window_end]) ** 2)
-            # Calculate the signal-to-noise ratio (SNR)
-            snr = signal_power / noise_power
-            print(f"Signal-to-Noise Ratio (SNR): {snr:0.2f} 10log10 {10 * np.log10(snr):0.2f}")
-            plt.savefig(f'graphs_data/{dataset_name}/noise.png', dpi=300)
-            plt.close()
-
-            # Parameters
-            fs = 1000  # Sampling frequency
-            t = np.arange(0, 1, 1 / fs)  # Time vector
-            frequency = 5  # Frequency of the sine wave
-            desired_snr_db = 10 * np.log10(snr)  # Desired SNR in dB
-            # Generate a clean signal (sine wave)
-            clean_signal = np.sin(2 * np.pi * frequency * t)
-            # Calculate the power of the clean signal
-            signal_power = np.mean(clean_signal ** 2)
-            # Calculate the noise power required to achieve the desired SNR
-            desired_snr_linear = 10 ** (desired_snr_db / 10)
-            noise_power = signal_power / desired_snr_linear
-            # Generate noise with the calculated power
-            noise = np.sqrt(noise_power) * np.random.randn(len(t))
-            # Create a noisy signal by adding noise to the clean signal
-            noisy_signal = clean_signal + noise
-            # Plot the clean signal and the noisy signal
-            plt.figure(figsize=(15, 10))
-            plt.subplot(2, 1, 1)
-            plt.plot(t, clean_signal)
-            plt.title('Clean Signal')
-            plt.subplot(2, 1, 2)
-            plt.plot(t, noisy_signal)
-            plt.plot(t, noise)
-            plt.title(f'Noisy Signal with SNR = {snr:0.2f} {desired_snr_db:0.2f} dB')
-            plt.tight_layout()
-            plt.savefig(f'graphs_data/{dataset_name}/noise_on_sinusoid.png', dpi=300)
-            plt.close()
-
-
 
         # torch.cuda.memory_allocated(device)
         # gc.collect()
