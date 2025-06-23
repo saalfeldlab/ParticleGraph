@@ -25,8 +25,8 @@ image_data:
     cellpose_channel: [2, 3]
     trackmate_size_ratio: 4.0
     trackmate_frame_step: 4
-    offset_channel: [0, 0]
-    measure_diameter: 40
+    offset_channel: [15, 0]
+    measure_diameter: 0
 
 graph_model:
   particle_model_name: 'PDE_Cell'

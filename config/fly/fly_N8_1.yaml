@@ -7,10 +7,11 @@ simulation:
 
     params: [[1.0,1.0,1.0,1.0]]
 
-    n_neurons: 45669
-    n_neuron_types: 20
-    n_frames: 2000
-    delta_t: 0.01
+    n_neurons: 13741
+    n_neuron_types: 2
+    n_edges: 434112
+    n_frames: 90720
+    delta_t: 0.02
 
 
 graph_model:
@@ -38,7 +39,7 @@ plotting:
 
 training:
     n_epochs: 20
-    n_runs: 2
+    n_runs: 1
     device: 'auto'
 
     recursive_loop: 1

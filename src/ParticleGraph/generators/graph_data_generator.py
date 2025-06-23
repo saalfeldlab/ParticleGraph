@@ -1576,7 +1576,7 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
     n_frames = simulation_config.n_frames
     noise_level = training_config.noise_level
 
-
+    os.makedirs('./graphs_data/flyvis', exist_ok=True)
     folder = f'./graphs_data/{dataset_name}/'
     os.makedirs(folder, exist_ok=True)
     os.makedirs(f'./graphs_data/{dataset_name}/Fig/', exist_ok=True)
@@ -1588,51 +1588,108 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
     for f in files:
         os.remove(f)
 
-    x_list = []
-    y_list = []
+
+    from datamate import Namespace
+    from flyvis.datasets.sintel import AugmentedSintel
+    from flyvis import NetworkView, Network
+    from flyvis.utils.config_utils import get_default_config, CONFIG_PATH
+    from flyvis.utils.hex_utils import get_num_hexals
+    from ParticleGraph.generators.PDE_N8 import PDE_N8
+
+
+    extent = 8
+
+    # Initialize input stimulus data
+    config = Namespace(
+        n_frames=19,
+        flip_axes=[0, 1],
+        n_rotations=[0, 1, 2, 3, 4, 5],
+        temporal_split=True,
+        dt=delta_t,
+        interpolate=True,
+        boxfilter=dict(extent=extent, kernel_size=13),
+        vertical_splits=3,
+        center_crop_fraction=0.7,
+    )
+
+    stimulus_dataset = AugmentedSintel(**config)
+    # Initialize a model with a connectome/eye of less extent to save memory
+    # Fine with this connectome version, because inputs don't span more than 8 hexals
+    config = get_default_config(
+        overrides=[], path=f"{CONFIG_PATH}/network/network.yaml"
+    )
+    config.connectome.extent = extent
+    net = Network(**config)
+    # Now load pretrained weights
+    nnv = NetworkView("flow/0000/000")
+    trained_net = nnv.init_network(checkpoint=0)
+    net.load_state_dict(trained_net.state_dict())
+    torch.set_grad_enabled(False)
+
+    params = net._param_api()
+    p = {
+        "tau_i": params.nodes.time_const,
+        "V_i_rest": params.nodes.bias,
+        "w": params.edges.syn_strength * params.edges.syn_count * params.edges.sign,
+    }
+    edge_index = torch.stack(
+        [
+            torch.tensor(net.connectome.edges.source_index[:]),
+            torch.tensor(net.connectome.edges.target_index[:]),
+        ],
+        dim=0,
+    )
+    edge_index = edge_index.to(device)
+    torch.save(edge_index, "graphs_data/flyvis/edge_index.pt")
+
+    pde = PDE_N8(p=p, f=torch.nn.functional.relu, device=device)
+
 
     # initialize random positions
     xc, yc = get_equidistant_points(n_points=n_neurons)
     pos = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
-    perm = torch.randperm(pos.size(0))
-    X1 = pos[perm]
-    DX1 = torch.ones_like(POS1)
-    N1 = torch.arange(n_neurons, dtype=torch.float32, device=device).unsqueeze(1)
-    T1 = torch.zeros((n_neurons,1),  dtype=torch.float32, device=device)        # column 5 = type
-    V1 = torch.zeros((n_neurons, 1), dtype=torch.float32, device=device)        # column 6 = voltage
-    E1 = torch.zeros((n_neurons, 1), dtype=torch.float32, device=device)        # colum 7 = excitation
+    X1 = pos[torch.randperm(pos.size(0))]
 
-    x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), DX1.clone().detach(), T1.clone().detach(),
-                           V1.clone().detach(), E1.clone().detach()), 1)
+    state = net.steady_state(t_pre=2.0, dt=delta_t, batch_size=1)
+    initial_state = state.nodes.activity.squeeze()
+    n_neurons = len(initial_state)
+    n_edges = len(edge_index[0])
+    x = torch.zeros(n_neurons, 5)
+    x[:, 1:3] = X1
+    x[:, 0] = torch.arange(n_neurons, dtype=torch.float32)
+    x[:, 3] = initial_state
+    # frame = torch.randn(1, 1, 1, get_num_hexals(config.connectome.extent))
+    # print(frame.shape)
 
-    # fully connected matrix to be changed
-    W = torch.randn((n_neurons,n_neurons))
-    edge_index, edge_attr = dense_to_sparse(torch.ones((n_neurons)) - torch.eye(n_neurons))
-    torch.save(edge_index.to(device), f'./graphs_data/{dataset_name}/edge_index.pt')
+    # (n_frames, 1, n_receptors)
+    sequences = stimulus_dataset[0]["lum"]
+    frame = sequences[0][None, None]
+    net.stimulus.add_input(frame)
+    x[:, 4] = net.stimulus().squeeze()
 
-    model, bc_pos, bc_dpos = choose_model(config=config, W=W, device=device)
+    dataset = pyg.data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
 
-    torch.save(edge_index, f'./graphs_data/{dataset_name}/edge_index.pt')
-    torch.save(W, f'./graphs_data/{dataset_name}/W.pt')
 
-    time.sleep(0.5)
+    y = pde(dataset, has_field=False)
+    print(y)
+    print(len(stimulus_dataset))
 
-    for it in trange(0, n_frames + 1):
+    y_list = []
+    x_list = []
+    for data in tqdm(stimulus_dataset):
+        x[:, 3] = initial_state
+        sequences = data["lum"]
+        for frame_id in range(sequences.shape[0]):
+            frame = sequences[frame_id][None, None]
+            net.stimulus.add_input(frame)
+            x[:, 4] = net.stimulus().squeeze()
+            dataset = pyg.data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
+            y = pde(dataset, has_field=False)
+            y_list.append(y)
+            x_list.append(x)
+            x[:, 3:4] = x[:, 3:4] + delta_t * y
 
-        dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
-        y = model(dataset, has_field=True)
 
-        x_list.append(to_numpy(x))
-        y_list.append(to_numpy(y))
-
-        V1 = V1 + y * delta_t
-        if noise_level > 0:
-            V1[:, 0] = V1[:, 0] + torch.randn(n_particles, device=device) * noise_level
-
-        # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
-        # print(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
-
-        # output plots
         if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
 
             if 'latex' in style:
@@ -1643,10 +1700,8 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
             num = f"{it:06}"
 
             plt.figure(figsize=(10, 10))
-            # plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=10, c=to_numpy(x[:, 6]),
-            #             cmap='viridis', vmin=-10, vmax=10, edgecolors='k', alpha=1)
             plt.axis('off')
-            plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=100, c=to_numpy(x[:, 6]), cmap='viridis',
+            plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=100, c=to_numpy(x[:, 3]), cmap='viridis',
                         vmin=-40, vmax=40)
             # cbar = plt.colorbar()
             # cbar.ax.yaxis.set_tick_params(labelsize=8)
@@ -1656,45 +1711,24 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
             plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=170)
             plt.close()
 
-            im_ = imread(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif")
-            plt.figure(figsize=(10, 10))
-            plt.imshow(im_)
-            plt.xticks([])
-            plt.yticks([])
-            plt.subplot(3, 3, 1)
-            plt.imshow(im_[800:1000, 800:1000, :])
-            plt.xticks([])
-            plt.yticks([])
-            plt.tight_layout()
-            plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
-            plt.close()
 
     if bSave:
         x_list = np.array(x_list)
         y_list = np.array(y_list)
-        # torch.save(x_list, f'graphs_data/{dataset_name}/x_list_{run}.pt')
         np.save(f'graphs_data/{dataset_name}/x_list_{run}.npy', x_list)
-        if has_particle_dropout:
-            torch.save(x_removed_list, f'graphs_data/{dataset_name}/x_removed_list_{run}.pt')
-            np.save(f'graphs_data/{dataset_name}/particle_dropout_mask.npy', particle_dropout_mask)
-            np.save(f'graphs_data/{dataset_name}/inv_particle_dropout_mask.npy', inv_particle_dropout_mask)
-        # torch.save(y_list, f'graphs_data/{dataset_name}/y_list_{run}.pt')
-        np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list)
-        torch.save(model.p, f'graphs_data/{dataset_name}/model_p.pt')
+        torch.save(y_list, f'graphs_data/{dataset_name}/y_list_{run}.pt')
 
     if measurement_noise_level > 0:
         np.save(f'graphs_data/{dataset_name}/raw_x_list_{run}.npy', x_list)
         np.save(f'graphs_data/{dataset_name}/raw_y_list_{run}.npy', y_list)
-
         for k in range(x_list.shape[0]):
-            x_list[k, :, 6] = x_list[k, :, 6] + np.random.normal(0, measurement_noise_level, x_list.shape[1])
+            x_list[k, :, 3] = x_list[k, :, 3] + np.random.normal(0, measurement_noise_level, x_list.shape[1])
         for k in range(1, x_list.shape[0] - 1):
-            y_list[k] = (x_list[k + 1, :, 6:7] - x_list[k, :, 6:7]) / delta_t
-
+            y_list[k] = (x_list[k + 1, :, 3:4] - x_list[k, :, 3:4]) / delta_t
         np.save(f'graphs_data/{dataset_name}/x_list_{run}.npy', x_list)
         np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list)
 
-    activity = torch.tensor(x_list[:, :, 6:7], device=device)
+    activity = torch.tensor(x_list[:, :, 3:4], device=device)
     activity = activity.squeeze()
     activity = activity.t()
     plt.figure(figsize=(15, 10))
@@ -1704,7 +1738,7 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
     ax.invert_yaxis()
     plt.ylabel('neurons', fontsize=64)
     plt.xlabel('time', fontsize=64)
-    plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
+    plt.xticks([10000, 40000], [10000, 40000], fontsize=48)
     plt.yticks([0, 999], [1, 1000], fontsize=48)
     plt.xticks(rotation=0)
     plt.tight_layout()

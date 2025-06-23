@@ -1123,7 +1123,7 @@ def find_average_spatial_neighbors(filtered_time_series, track_info_dict, max_ra
     if save_path is not None:
 
         plt.figure(figsize=(12, 10))
-
+        plt.axis('off')
         # Plot all track positions
         pos_array = np.array(list(track_positions.values()))
         plt.scatter(pos_array[:, 1], pos_array[:, 0], s=30, c='green', alpha=0.6, label=f'{len(track_positions)} tracks')
@@ -1413,7 +1413,6 @@ def iaaft_surrogate_gpu(time_series, n_surrogates=1, max_iter=50, device='cuda')
         original = torch.tensor(time_series, dtype=torch.float32, device=device)
     else:
         original = time_series.to(device=device, dtype=torch.float32)
-
     n = len(original)
 
     # Sort original amplitudes
@@ -1423,78 +1422,28 @@ def iaaft_surrogate_gpu(time_series, n_surrogates=1, max_iter=50, device='cuda')
     fft_original = torch.fft.fft(original)
     amplitudes = torch.abs(fft_original)
 
-    if n_surrogates == 1:
-        # Single surrogate
-        phases = torch.rand(n, device=device) * 2 * torch.pi
-        surrogate = original.clone()
+    # Batch processing
+    phases = torch.rand(n_surrogates, n, device=device) * 2 * torch.pi
+    surrogates = original.unsqueeze(0).repeat(n_surrogates, 1)
 
-        for _ in range(max_iter):
-            # Step 1: match power spectrum
-            fft_surrogate = amplitudes * torch.exp(1j * phases)
-            surrogate = torch.real(torch.fft.ifft(fft_surrogate))
+    # Expand for batch
+    amplitudes_batch = amplitudes.unsqueeze(0).repeat(n_surrogates, 1)
+    sorted_amplitudes_batch = sorted_amplitudes.unsqueeze(0).repeat(n_surrogates, 1)
 
-            # Step 2: match amplitude distribution
-            sorted_indices = torch.argsort(surrogate)
-            surrogate[sorted_indices] = sorted_amplitudes
+    for _ in range(max_iter):
+        # Step 1: match power spectrum (vectorized)
+        fft_surrogates = amplitudes_batch * torch.exp(1j * phases)
+        surrogates = torch.real(torch.fft.ifft(fft_surrogates, dim=1))
 
-            # Update phases
-            phases = torch.angle(torch.fft.fft(surrogate))
+        # Step 2: match amplitude distribution (vectorized)
+        sorted_indices = torch.argsort(surrogates, dim=1)
+        batch_idx = torch.arange(n_surrogates, device=device).unsqueeze(1)
+        surrogates[batch_idx, sorted_indices] = sorted_amplitudes_batch
 
-        return surrogate.cpu().numpy()
+        # Update phases (vectorized)
+        phases = torch.angle(torch.fft.fft(surrogates, dim=1))
 
-    else:
-        # Batch processing
-        phases = torch.rand(n_surrogates, n, device=device) * 2 * torch.pi
-        surrogates = original.unsqueeze(0).repeat(n_surrogates, 1)
-
-        # Expand for batch
-        amplitudes_batch = amplitudes.unsqueeze(0).repeat(n_surrogates, 1)
-        sorted_amplitudes_batch = sorted_amplitudes.unsqueeze(0).repeat(n_surrogates, 1)
-
-        for _ in range(max_iter):
-            # Step 1: match power spectrum (vectorized)
-            fft_surrogates = amplitudes_batch * torch.exp(1j * phases)
-            surrogates = torch.real(torch.fft.ifft(fft_surrogates, dim=1))
-
-            # Step 2: match amplitude distribution (vectorized)
-            sorted_indices = torch.argsort(surrogates, dim=1)
-            batch_idx = torch.arange(n_surrogates, device=device).unsqueeze(1)
-            surrogates[batch_idx, sorted_indices] = sorted_amplitudes_batch
-
-            # Update phases (vectorized)
-            phases = torch.angle(torch.fft.fft(surrogates, dim=1))
-
-        return surrogates.cpu().numpy()
-
-def iaaft_surrogate(time_series, max_iter=100, tolerance=1e-6):
-    """IAAFT: preserves power spectrum + amplitude distribution, destroys correlations"""
-    original = np.array(time_series)
-    n = len(original)
-
-    # Sort original amplitudes
-    sorted_amplitudes = np.sort(original)
-
-    # Initial random phase
-    phases = np.random.uniform(0, 2 * np.pi, n)
-    fft_original = fft(original)
-    amplitudes = np.abs(fft_original)
-
-    surrogate = original.copy()
-
-    for _ in range(max_iter): # tqdm(range(max_iter), desc="iaaft iterations", leave=False):
-        # Step 1: match power spectrum
-        fft_surrogate = amplitudes * np.exp(1j * phases)
-        surrogate = np.real(ifft(fft_surrogate))
-
-        # Step 2: match amplitude distribution
-        sorted_indices = np.argsort(surrogate)
-        surrogate[sorted_indices] = sorted_amplitudes
-
-        # Update phases
-        phases = np.angle(fft(surrogate))
-
-    return surrogate
-
+    return surrogates.cpu().numpy()
 
 def statistical_testing(granger_results, filtered_time_series, n_surrogates=500):
     """Generate surrogates and compute p-values"""
@@ -1519,7 +1468,6 @@ def statistical_testing(granger_results, filtered_time_series, n_surrogates=500)
         surrogate_diffs = []
         for i in range(n_surrogates):
             cause_surrogate = all_surrogates[i]
-
             if direction == 1:
                 _, _, surr_diff, _ = compute_granger_difference(cause_surrogate, effect_ts)
             else:
@@ -1527,19 +1475,6 @@ def statistical_testing(granger_results, filtered_time_series, n_surrogates=500)
 
             if surr_diff is not None:
                 surrogate_diffs.append(surr_diff)
-
-        # # Generate surrogates and test
-        # surrogate_diffs = []
-        # for _ in range(n_surrogates):
-        #     cause_surrogate = iaaft_surrogate(cause_ts)
-        #
-        #     if direction == 1:
-        #         _, _, surr_diff, _ = compute_granger_difference(cause_surrogate, effect_ts)
-        #     else:
-        #         _, _, surr_diff, _ = compute_granger_difference(effect_ts, cause_surrogate)
-        #
-        #     if surr_diff is not None:
-        #         surrogate_diffs.append(surr_diff)
 
         # Calculate p-value
         if len(surrogate_diffs) > 0:
@@ -1606,11 +1541,6 @@ def compute_network_scores(G):
     }
 
 
-
-
-
-import numpy as np
-import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.colors import LinearSegmentedColormap
 
@@ -1629,7 +1559,7 @@ def visualize_network_leader_follower(G, network_scores, track_positions, save_p
     max_node_size: Maximum node size
     """
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
+    fig, ax = plt.subplots(1, 1, figsize=(12, 10))
 
     # Extract positions
     pos = {node: track_positions[node] for node in G.nodes()}
@@ -1637,8 +1567,6 @@ def visualize_network_leader_follower(G, network_scores, track_positions, save_p
     # Get scores
     leader_scores = np.array([network_scores['leader'].get(node, 0) for node in G.nodes()])
     follower_scores = np.array([network_scores['follower'].get(node, 0) for node in G.nodes()])
-    hub_scores = np.array([network_scores['hub'].get(node, 0) for node in G.nodes()])
-    authority_scores = np.array([network_scores['authority'].get(node, 0) for node in G.nodes()])
 
     # Calculate node categories and colors
     def categorize_nodes(leader_scores, follower_scores, threshold=0.3):
@@ -1662,15 +1590,15 @@ def visualize_network_leader_follower(G, network_scores, track_positions, save_p
 
         return categories, colors
 
-    # Plot 1: Leader/Follower with improved categorization
-    categories1, node_colors1 = categorize_nodes(leader_scores, follower_scores)
+    # Leader/Follower visualization
+    categories, node_colors = categorize_nodes(leader_scores, follower_scores)
 
     # Calculate node sizes based on total connectivity
     total_degree = np.array([G.degree(node) for node in G.nodes()])
     if len(total_degree) > 0 and np.max(total_degree) > 0:
-        node_sizes1 = min_node_size + (max_node_size - min_node_size) * (total_degree / np.max(total_degree))
+        node_sizes = min_node_size + (max_node_size - min_node_size) * (total_degree / np.max(total_degree))
     else:
-        node_sizes1 = np.full(len(G.nodes()), min_node_size)
+        node_sizes = np.full(len(G.nodes()), min_node_size)
 
     # Draw edges first (behind nodes)
     for edge in G.edges():
@@ -1681,7 +1609,7 @@ def visualize_network_leader_follower(G, network_scores, track_positions, save_p
         weight = G[edge[0]][edge[1]].get('weight', 1)
         edge_width = 0.3 + min(2.0, weight * 0.5)  # Scale edge thickness
 
-        ax1.plot(x_coords, y_coords, 'w-', alpha=0.2, linewidth=edge_width)
+        ax.plot(x_coords, y_coords, 'w-', alpha=0.4, linewidth = edge_width * 2)
 
         # Add arrowhead
         dx = x_coords[1] - x_coords[0]
@@ -1692,95 +1620,51 @@ def visualize_network_leader_follower(G, network_scores, track_positions, save_p
             arrow_length = 8
             arrow_x = x_coords[1] - dx_norm * arrow_length
             arrow_y = y_coords[1] - dy_norm * arrow_length
-
-            ax1.annotate('', xy=(x_coords[1], y_coords[1]),
-                         xytext=(arrow_x, arrow_y),
-                         arrowprops=dict(arrowstyle='->', color='white', alpha=0.4, lw=1))
+            ax.annotate('', xy=(x_coords[1], y_coords[1]),
+                        xytext=(arrow_x, arrow_y),
+                        arrowprops=dict(arrowstyle='->', color='w', alpha=0.4, lw=1))
 
     # Draw nodes with categories
     node_positions = np.array([[pos[node][1], pos[node][0]] for node in G.nodes()])
-    scatter1 = ax1.scatter(node_positions[:, 0], node_positions[:, 1],
-                           c=node_colors1, s=node_sizes1,
-                           alpha=0.8, edgecolors='black', linewidths=0.5)
+    scatter = ax.scatter(node_positions[:, 0], node_positions[:, 1],
+                         c=node_colors, s=node_sizes,
+                         alpha=0.8, edgecolors='None')
 
-    ax1.set_title('Leader/Follower Network\n(Red=Leader, Blue=Follower, Purple=Mixed, Gray=Neutral)',
-                  fontsize=14, fontweight='bold')
-    ax1.set_xlabel('X Position')
-    ax1.set_ylabel('Y Position')
-    ax1.set_aspect('equal')
-
-    # Add legend for categories
-    legend_elements1 = [
-        patches.Patch(color='#FF4444', label=f'Leaders ({np.sum(np.array(categories1) == "leader")})'),
-        patches.Patch(color='#4444FF', label=f'Followers ({np.sum(np.array(categories1) == "follower")})'),
-        patches.Patch(color='#AA44AA', label=f'Mixed ({np.sum(np.array(categories1) == "mixed")})'),
-        patches.Patch(color='#CCCCCC', label=f'Neutral ({np.sum(np.array(categories1) == "neutral")})')
-    ]
-    ax1.legend(handles=legend_elements1, loc='upper right')
-
-    # Plot 2: Hub/Authority with improved categorization
-    categories2, node_colors2 = categorize_nodes(hub_scores, authority_scores)
-
-    # Draw edges
-    for edge in G.edges():
-        x_coords = [pos[edge[0]][1], pos[edge[1]][1]]
-        y_coords = [pos[edge[0]][0], pos[edge[1]][0]]
-
-        weight = G[edge[0]][edge[1]].get('weight', 1)
-        edge_width = 0.3 + min(2.0, weight * 0.5)
-
-        ax2.plot(x_coords, y_coords, 'k-', alpha=0.2, linewidth=edge_width)
-
-        # Add arrowhead
-        dx = x_coords[1] - x_coords[0]
-        dy = y_coords[1] - y_coords[0]
-        length = np.sqrt(dx ** 2 + dy ** 2)
-        if length > 0:
-            dx_norm, dy_norm = dx / length, dy / length
-            arrow_length = 8
-            arrow_x = x_coords[1] - dx_norm * arrow_length
-            arrow_y = y_coords[1] - dy_norm * arrow_length
-
-            ax2.annotate('', xy=(x_coords[1], y_coords[1]),
-                         xytext=(arrow_x, arrow_y),
-                         arrowprops=dict(arrowstyle='->', color='black', alpha=0.4, lw=1))
-
-    # Draw nodes
-    scatter2 = ax2.scatter(node_positions[:, 0], node_positions[:, 1],
-                           c=node_colors2, s=node_sizes1,  # Same sizes as plot 1
-                           alpha=0.8, edgecolors='black', linewidths=0.5)
-
-    ax2.set_title('Hub/Authority Network\n(Red=Hub, Blue=Authority, Purple=Mixed, Gray=Neutral)',
-                  fontsize=14, fontweight='bold')
-    ax2.set_xlabel('X Position')
-    ax2.set_ylabel('Y Position')
-    ax2.set_aspect('equal')
+    ax.set_title('Leader/Follower Causality Network\n(Red=Leader, Blue=Follower, Purple=Mixed, Gray=Neutral)',
+                 fontsize=16, fontweight='bold')
+    ax.set_xlabel('X Position', fontsize=12)
+    ax.set_ylabel('Y Position', fontsize=12)
+    ax.set_aspect('equal')
 
     # Add legend for categories
-    legend_elements2 = [
-        patches.Patch(color='#FF4444', label=f'Hubs ({np.sum(np.array(categories2) == "leader")})'),
-        patches.Patch(color='#4444FF', label=f'Authorities ({np.sum(np.array(categories2) == "follower")})'),
-        patches.Patch(color='#AA44AA', label=f'Mixed ({np.sum(np.array(categories2) == "mixed")})'),
-        patches.Patch(color='#CCCCCC', label=f'Neutral ({np.sum(np.array(categories2) == "neutral")})')
+    legend_elements = [
+        patches.Patch(color='#FF4444', label=f'Leaders ({np.sum(np.array(categories) == "leader")})'),
+        patches.Patch(color='#4444FF', label=f'Followers ({np.sum(np.array(categories) == "follower")})'),
+        patches.Patch(color='#AA44AA', label=f'Mixed ({np.sum(np.array(categories) == "mixed")})'),
+        patches.Patch(color='#CCCCCC', label=f'Neutral ({np.sum(np.array(categories) == "neutral")})')
     ]
-    ax2.legend(handles=legend_elements2, loc='upper right')
+    # ax.legend(handles=legend_elements, loc='upper right', fontsize=10)
 
     # Add network statistics
-    stats_text = f"""Network Statistics:
-Nodes: {G.number_of_nodes()}
-Edges: {G.number_of_edges()}
-Density: {G.number_of_edges() / (G.number_of_nodes() * (G.number_of_nodes() - 1)):.3f}
-Avg Degree: {np.mean(total_degree):.1f}"""
+    total_possible_pairs = len(neighbor_pairs) if 'neighbor_pairs' in locals() else G.number_of_nodes() * (
+                G.number_of_nodes() - 1) // 2
+    causal_percentage = (G.number_of_edges() / total_possible_pairs) * 100 if total_possible_pairs > 0 else 0
 
-    fig.text(0.02, 0.02, stats_text, fontsize=10, fontfamily='monospace',
-             bbox=dict(boxstyle="round,pad=0.3", facecolor="lightgray", alpha=0.8))
+#     stats_text = f"""network statistics:
+# nodes: {G.number_of_nodes()}
+# causal edges: {G.number_of_edges()}
+# """
+#
+#     fig.text(0.02, 0.02, stats_text, fontsize=11, fontfamily='monospace',
+#              bbox=dict(boxstyle="round,pad=0.3", facecolor="lightgray", alpha=0.8))
 
     plt.tight_layout()
 
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches='tight', facecolor='white')
+        print(f"improved network visualization saved to {save_path}")
 
-    plt.close()
+    plt.show()
 
 
 # Usage:
@@ -1808,4 +1692,469 @@ def run_granger_network_analysis(neighbor_pairs, filtered_time_series, track_pos
     visualize_network(G, network_scores, track_positions)
 
     return G, network_scores, significant_pairs
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+def plot_combined_causality_analysis(leader_track_id, follower_track_id, filtered_time_series,
+                                     track_positions, significant_pairs, max_lag=20, save_path=None):
+    """
+    Plot combined causality analysis: time traces, spatial position, and lag analysis
+
+    Parameters:
+    leader_track_id: TrackMate track ID of the leader cell
+    follower_track_id: TrackMate track ID of the follower cell
+    filtered_time_series: Dictionary of time series data
+    track_positions: Dictionary of track positions
+    significant_pairs: Dictionary of significant pairs with results
+    max_lag: Maximum lag for cross-correlation
+    save_path: Path to save the plot
+    """
+
+    # Check if pair exists in significant_pairs
+    pair_key = None
+    pair_result = None
+
+    # Try both directions
+    if (leader_track_id, follower_track_id) in significant_pairs:
+        pair_key = (leader_track_id, follower_track_id)
+        pair_result = significant_pairs[pair_key]
+    elif (follower_track_id, leader_track_id) in significant_pairs:
+        pair_key = (follower_track_id, leader_track_id)
+        pair_result = significant_pairs[pair_key]
+    else:
+        print(f"Error: Pair ({leader_track_id}, {follower_track_id}) not found in significant_pairs")
+        return
+
+    # Get time series data
+    ts_leader = filtered_time_series[leader_track_id]
+    ts_follower = filtered_time_series[follower_track_id]
+
+    frames_leader = ts_leader[:, 0]
+    fluo_leader = ts_leader[:, 1]
+    frames_follower = ts_follower[:, 0]
+    fluo_follower = ts_follower[:, 1]
+
+    # Find overlapping time range
+    min_frame = max(frames_leader.min(), frames_follower.min())
+    max_frame = min(frames_leader.max(), frames_follower.max())
+
+    # Filter to overlapping range
+    mask_leader = (frames_leader >= min_frame) & (frames_leader <= max_frame)
+    mask_follower = (frames_follower >= min_frame) & (frames_follower <= max_frame)
+
+    overlap_frames_leader = frames_leader[mask_leader]
+    overlap_fluo_leader = fluo_leader[mask_leader]
+    overlap_frames_follower = frames_follower[mask_follower]
+    overlap_fluo_follower = fluo_follower[mask_follower]
+
+    # Normalize fluorescence for visualization
+    norm_fluo_leader = (overlap_fluo_leader - overlap_fluo_leader.mean()) / overlap_fluo_leader.std()
+    norm_fluo_follower = (overlap_fluo_follower - overlap_fluo_follower.mean()) / overlap_fluo_follower.std()
+
+    # Create figure with 2x2 panels
+    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 12))
+
+    # Panel 1: Time series traces
+    ax1.plot(overlap_frames_leader, norm_fluo_leader, 'r-', linewidth=2, alpha=0.8,
+             label=f'leader ({leader_track_id})')
+    ax1.plot(overlap_frames_follower, norm_fluo_follower + 3, 'b-', linewidth=2, alpha=0.8,
+             label=f'follower ({follower_track_id})')
+
+    # Add visual separation line
+    ax1.axhline(y=1.5, color='gray', linestyle='--', alpha=0.5)
+
+    # Add statistics to title
+    gc_12 = pair_result.get('gc_12', 0)
+    gc_21 = pair_result.get('gc_21', 0)
+    granger_diff = pair_result.get('granger_diff', 0)
+    p_value = pair_result.get('p_value', 1)
+
+    title1 = f'fluorescence traces\n'
+    title1 += f'gc: {gc_12:.3f}→{gc_21:.3f}, diff: {granger_diff:.3f}, p: {p_value:.4f}'
+    ax1.set_title(title1, fontsize=12, fontweight='bold')
+    ax1.set_xlabel('frame')
+    ax1.set_ylabel('normalized fluorescence')
+    ax1.legend(fontsize=10)
+    ax1.grid(True, alpha=0.3)
+
+    # Panel 2: Spatial position
+    pos_leader = track_positions[leader_track_id]
+    pos_follower = track_positions[follower_track_id]
+
+    # Plot all tracks as background
+    all_positions = np.array(list(track_positions.values()))
+    ax2.scatter(all_positions[:, 1], all_positions[:, 0],
+                s=15, c='lightgray', alpha=0.4, label='other tracks')
+
+    # Plot the specific pair
+    ax2.scatter(pos_leader[1], pos_leader[0], s=20, c='red',
+                alpha=0.9, edgecolors='black', linewidths=2,
+                label=f'leader ({leader_track_id})', zorder=5)
+    ax2.scatter(pos_follower[1], pos_follower[0], s=20, c='blue',
+                alpha=0.9, edgecolors='black', linewidths=2,
+                label=f'follower ({follower_track_id})', zorder=5)
+
+    # Draw arrow from leader to follower
+    dx = pos_follower[1] - pos_leader[1]
+    dy = pos_follower[0] - pos_leader[0]
+    ax2.annotate('', xy=(pos_follower[1], pos_follower[0]),
+                 xytext=(pos_leader[1], pos_leader[0]),
+                 arrowprops=dict(arrowstyle='->', color='black', lw=3, alpha=0.8))
+
+    # Calculate distance
+    distance = np.sqrt(dx ** 2 + dy ** 2)
+
+    ax2.set_title(f'spatial positions\ndistance: {distance:.1f} pixels',
+                  fontsize=12, fontweight='bold')
+    ax2.set_xlabel('x position')
+    ax2.set_ylabel('y position')
+    ax2.set_aspect('equal')
+    ax2.grid(True, alpha=0.3)
+
+    # Panel 3: Cross-correlation analysis (bottom left)
+    # Get time series for correlation (same length)
+    ts1 = overlap_fluo_leader
+    ts2 = overlap_fluo_follower
+
+    # Ensure exactly same length by interpolation if needed
+    if len(ts1) != len(ts2):
+        min_len = min(len(ts1), len(ts2))
+        ts1 = ts1[:min_len]
+        ts2 = ts2[:min_len]
+
+    # Normalize for correlation
+    ts1_norm = (ts1 - ts1.mean()) / ts1.std()
+    ts2_norm = (ts2 - ts2.mean()) / ts2.std()
+
+    # Calculate cross-correlation
+    cross_corr = np.correlate(ts1_norm, ts2_norm, mode='full')
+    cross_corr = cross_corr / (len(ts1_norm) * ts1_norm.std() * ts2_norm.std())
+
+    # Get lag range
+    mid = len(cross_corr) // 2
+    lags = np.arange(-max_lag, max_lag + 1)
+    cross_corr_subset = cross_corr[mid - max_lag:mid + max_lag + 1]
+
+    # Plot cross-correlation
+    ax3.plot(lags, cross_corr_subset, 'g-', linewidth=3, alpha=0.8)
+    ax3.axvline(x=0, color='red', linestyle='--', alpha=0.7, linewidth=2)
+    ax3.axhline(y=0, color='gray', linestyle='-', alpha=0.4)
+
+    # Find and mark peak lag
+    peak_idx = np.argmax(np.abs(cross_corr_subset))
+    peak_lag = lags[peak_idx]
+    peak_corr = cross_corr_subset[peak_idx]
+
+    ax3.scatter([peak_lag], [peak_corr], color='red', s=100, zorder=5,
+                edgecolors='black', linewidths=1)
+
+    # Interpret lag direction
+    if abs(peak_corr) < 0.3:
+        lag_interpretation = "weak temporal relationship"
+    elif peak_lag > 0:
+        if peak_corr > 0:
+            lag_interpretation = f"leader leads by {peak_lag} frames"
+        else:
+            lag_interpretation = f"leader leads by {peak_lag} frames (anti-corr)"
+    elif peak_lag < 0:
+        if peak_corr > 0:
+            lag_interpretation = f"follower leads by {-peak_lag} frames"
+        else:
+            lag_interpretation = f"follower leads by {-peak_lag} frames (anti-corr)"
+    else:  # peak_lag == 0
+        if peak_corr > 0.7:
+            lag_interpretation = "synchronous (strong positive)"
+        elif peak_corr > 0.3:
+            lag_interpretation = "synchronous (moderate positive)"
+        elif peak_corr < -0.7:
+            lag_interpretation = "synchronous anti-correlated (strong)"
+        elif peak_corr < -0.3:
+            lag_interpretation = "synchronous anti-correlated (moderate)"
+        else:
+            lag_interpretation = "synchronous (weak correlation)"
+
+    title3 = f'cross-correlation\n'
+    title3 += f'peak lag: {peak_lag}, corr: {peak_corr:.3f}\n'
+    title3 += f'{lag_interpretation}'
+    ax3.set_title(title3, fontsize=12, fontweight='bold')
+    ax3.set_xlabel('lag (frames)')
+    ax3.set_ylabel('cross-correlation')
+    ax3.grid(True, alpha=0.3)
+
+    # Panel 4: Text results (bottom right)
+    ax4.axis('off')  # Hide axes for text panel
+
+    # Create comprehensive text summary
+    results_text = f"""causality analysis results
+track pair: {leader_track_id} → {follower_track_id}
+
+granger causality:
+  gc({leader_track_id}→{follower_track_id}): {gc_12:.4f}
+  gc({follower_track_id}→{leader_track_id}): {gc_21:.4f}
+  granger difference: {granger_diff:.4f}
+  p-value: {p_value:.4f}
+  stronger direction: {pair_result.get('stronger_direction', 'unknown')}
+
+spatial relationship:
+  leader position: ({pos_leader[0]:.1f}, {pos_leader[1]:.1f})
+  follower position: ({pos_follower[0]:.1f}, {pos_follower[1]:.1f})
+  distance: {distance:.1f} pixels
+
+temporal analysis:
+  peak cross-correlation: {peak_corr:.4f}
+  peak lag: {peak_lag} frames
+  interpretation: {lag_interpretation}
+
+data quality:
+  leader time series: {len(ts_leader)} points
+  follower time series: {len(ts_follower)} points
+  overlapping frames: {len(overlap_frames_leader)} points
+  frame range: {int(min_frame)} - {int(max_frame)}
+
+conclusion:"""
+
+    # Statistical significance interpretation
+    if p_value < 0.001:
+        significance = "extremely significant (p < 0.001)"
+    elif p_value < 0.01:
+        significance = "highly significant (p < 0.01)"
+    elif p_value < 0.05:
+        significance = "significant (p < 0.05)"
+    else:
+        significance = "not significant (p ≥ 0.05)"
+
+    # Overall assessment
+    if granger_diff > 0.1 and p_value < 0.01:
+        assessment = "strong causal relationship"
+    elif granger_diff > 0.05:
+        assessment = "moderate causal relationship"
+    else:
+        assessment = "weak causal relationship"
+
+    results_text += f"""
+  causality strength: {significance}
+  spatial proximity: {distance:.1f} pixels
+  temporal consistency: {'✓' if (peak_lag >= 0 and gc_12 > gc_21) or (peak_lag <= 0 and gc_21 > gc_12) else '✗'}
+  overall assessment: {assessment}"""
+
+    ax4.text(0.05, 0.95, results_text, transform=ax4.transAxes, fontsize=10,
+             horizontalalignment='left', verticalalignment='top', fontfamily='monospace')
+
+    plt.tight_layout()
+
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        print(f"combined causality analysis saved to {save_path}")
+
+    plt.close()
+
+    # Also print to console (simplified version)
+    print(f"\ncausality analysis: {leader_track_id} → {follower_track_id}")
+    print(f"granger difference: {granger_diff:.4f} (p={p_value:.4f})")
+    print(f"spatial distance: {distance:.1f} pixels")
+    print(f"temporal relationship: {lag_interpretation}")
+    print(f"overall assessment: {assessment}")
+
+
+import numpy as np
+from collections import defaultdict
+
+
+def plot_interesting_causality_pairs(significant_pairs, filtered_time_series, track_positions,
+                                     network_scores, dataset_name, n_pairs=20):
+    """
+    Plot the most interesting leader-follower pairs based on different criteria
+
+    Parameters:
+    significant_pairs: Dictionary of significant causal pairs
+    filtered_time_series: Dictionary of time series data
+    track_positions: Dictionary of track positions
+    network_scores: Dictionary with leader/follower scores
+    dataset_name: Name of dataset for file paths
+    n_pairs: Number of pairs to plot
+    """
+
+    print(f"analyzing {len(significant_pairs)} significant pairs to find interesting examples...")
+
+    # Get leader and follower scores
+    leader_scores = network_scores['leader']
+    follower_scores = network_scores['follower']
+
+    # Categorize pairs by different criteria
+    interesting_pairs = []
+
+    for (track1, track2), result in significant_pairs.items():
+        # Get scores and metrics
+        track1_leader = leader_scores.get(track1, 0)
+        track1_follower = follower_scores.get(track1, 0)
+        track2_leader = leader_scores.get(track2, 0)
+        track2_follower = follower_scores.get(track2, 0)
+
+        stronger_track = result['stronger_direction']
+        granger_diff = result['granger_diff']
+        p_value = result['p_value']
+        gc_12 = result['gc_12']
+        gc_21 = result['gc_21']
+
+        # Determine leader and follower based on stronger direction
+        if stronger_track == track1:
+            leader_id = track1
+            follower_id = track2
+            leader_score = track1_leader
+            follower_score = track2_follower
+        else:
+            leader_id = track2
+            follower_id = track1
+            leader_score = track2_leader
+            follower_score = track1_follower
+
+        # Calculate spatial distance
+        pos1 = track_positions[track1]
+        pos2 = track_positions[track2]
+        distance = np.sqrt((pos1[0] - pos2[0]) ** 2 + (pos1[1] - pos2[1]) ** 2)
+
+        # Create different categories of interesting pairs
+        category = "other"
+        interest_score = granger_diff  # Default sorting
+
+        # Category 1: Strong leaders with high Granger causality
+        if leader_score > 0.7 and granger_diff > 0.05 and p_value < 0.01:
+            category = "strong_leader"
+            interest_score = granger_diff * leader_score
+
+        # Category 2: High asymmetry (very directional)
+        elif granger_diff > 0.08:
+            category = "high_asymmetry"
+            interest_score = granger_diff
+
+        # Category 3: Long-range causality
+        elif distance > 100 and granger_diff > 0.03:
+            category = "long_range"
+            interest_score = granger_diff * (distance / 100)
+
+        # Category 4: Short-range strong causality
+        elif distance < 50 and granger_diff > 0.04:
+            category = "short_range"
+            interest_score = granger_diff * (50 / distance)
+
+        # Category 5: Very significant (low p-value)
+        elif p_value < 0.001 and granger_diff > 0.03:
+            category = "very_significant"
+            interest_score = granger_diff * (-np.log10(p_value + 1e-10))
+
+        # Category 6: Bidirectional (both directions strong)
+        elif min(gc_12, gc_21) > 0.02 and granger_diff < 0.05:
+            category = "bidirectional"
+            interest_score = min(gc_12, gc_21)
+
+        interesting_pairs.append({
+            'leader_id': leader_id,
+            'follower_id': follower_id,
+            'category': category,
+            'interest_score': interest_score,
+            'granger_diff': granger_diff,
+            'p_value': p_value,
+            'distance': distance,
+            'leader_score': leader_score,
+            'follower_score': follower_score
+        })
+
+    # Sort by interest score and select diverse examples
+    interesting_pairs.sort(key=lambda x: x['interest_score'], reverse=True)
+
+    # Select diverse pairs (max 4 per category)
+    selected_pairs = []
+    category_counts = defaultdict(int)
+
+    for pair in interesting_pairs:
+        if len(selected_pairs) >= n_pairs:
+            break
+        if category_counts[pair['category']] < 4:  # Max 4 per category
+            selected_pairs.append(pair)
+            category_counts[pair['category']] += 1
+
+    # Fill remaining slots with top pairs regardless of category
+    remaining_slots = n_pairs - len(selected_pairs)
+    if remaining_slots > 0:
+        for pair in interesting_pairs:
+            if len(selected_pairs) >= n_pairs:
+                break
+            if pair not in selected_pairs:
+                selected_pairs.append(pair)
+
+    # Print summary of selected pairs
+    print(f"\nselected {len(selected_pairs)} interesting pairs:")
+    print("category distribution:")
+    for category, count in category_counts.items():
+        print(f"  {category}: {count}")
+
+    print(f"\ntop examples:")
+    for i, pair in enumerate(selected_pairs[:5]):
+        print(f"  {i + 1}. {pair['leader_id']}→{pair['follower_id']}: "
+              f"{pair['category']}, diff={pair['granger_diff']:.3f}, "
+              f"dist={pair['distance']:.1f}px")
+
+    # Plot each selected pair
+    print(f"\ngenerating plots...")
+    for i, pair in enumerate(selected_pairs):
+        l = pair['leader_id']
+        f = pair['follower_id']
+
+        print(f"  plotting pair {i + 1}/{len(selected_pairs)}: {l}→{f} ({pair['category']})")
+
+        plot_combined_causality_analysis(
+            leader_track_id=l,
+            follower_track_id=f,
+            filtered_time_series=filtered_time_series,
+            track_positions=track_positions,
+            significant_pairs=significant_pairs,
+            save_path=f'graphs_data/{dataset_name}/causality_pair_{i + 1:02d}_{l}_{f}_{pair["category"]}.png'
+        )
+
+    # Create summary report
+    summary_filename = f'graphs_data/{dataset_name}/causality_pairs_summary.txt'
+    with open(summary_filename, 'w') as f:
+        f.write("INTERESTING CAUSALITY PAIRS ANALYSIS\n")
+        f.write("=" * 50 + "\n\n")
+
+        for i, pair in enumerate(selected_pairs):
+            f.write(f"Pair {i + 1}: {pair['leader_id']} → {pair['follower_id']}\n")
+            f.write(f"  Category: {pair['category']}\n")
+            f.write(f"  Granger difference: {pair['granger_diff']:.4f}\n")
+            f.write(f"  P-value: {pair['p_value']:.4f}\n")
+            f.write(f"  Distance: {pair['distance']:.1f} pixels\n")
+            f.write(f"  Leader score: {pair['leader_score']:.3f}\n")
+            f.write(f"  Follower score: {pair['follower_score']:.3f}\n")
+            f.write(f"  Interest score: {pair['interest_score']:.4f}\n")
+            f.write("\n")
+
+    print(f"\nsummary saved to {summary_filename}")
+    print(f"all plots saved to graphs_data/{dataset_name}/causality_pair_*.png")
+
+    return selected_pairs
+
+# Usage:
+# interesting_pairs = plot_interesting_causality_pairs(
+#     significant_pairs=significant_pairs,
+#     filtered_time_series=filtered_time_series,
+#     track_positions=track_positions,
+#     network_scores=network_scores,
+#     dataset_name=dataset_name,
+#     n_pairs=20
+# )
+
+
+
 

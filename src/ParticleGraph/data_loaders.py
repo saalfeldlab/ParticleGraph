@@ -558,6 +558,7 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
                 plt.ylim([0, im3.shape[1]])
                 plt.savefig(f"{data_folder_name}/TRK_RESULT/{it:06}.tif", dpi=80)
                 plt.close()
+
             if False:
                 fig = plt.figure(figsize=(12, 12))
                 plt.axis('off')
@@ -720,30 +721,87 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
 
         print(f'n_cells: {n_cells}')
 
-    elif not os.path.exists(f'graphs_data/{dataset_name}/significant_pairs_1400.npy'):
-        x_list = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npz')
-        x_list = [x_list[f'arr_{i}'] for i in range(len(x_list.files))]
-        for frame in range(400,1400,200):
-            time_series_dict, track_info_dict = reconstruct_time_series_from_xlist(x_list)
-            filtered_time_series = filter_tracks_by_length(time_series_dict, min_length=250, required_frame=frame)
-            neighbor_pairs, track_positions = find_average_spatial_neighbors(filtered_time_series, track_info_dict, max_radius=75, save_path= f'graphs_data/{dataset_name}/pairs_{run}.png')
-            granger_results = analyze_neighbor_pairs(neighbor_pairs, filtered_time_series)
-            significant_pairs = statistical_testing(granger_results, filtered_time_series, n_surrogates=10)
-            np.save(f'graphs_data/{dataset_name}/significant_pairs_{frame}.npy', significant_pairs)
-            G = build_causality_network(significant_pairs, track_positions)
-            network_scores = compute_network_scores(G)
-            visualize_network_leader_follower(G, network_scores, track_positions, save_path= f'graphs_data/{dataset_name}/network_{frame}.png')
-    else:
+    elif not os.path.exists(f'graphs_data/{dataset_name}/significant_pairs_1000.npy'):
+        frame = 1000
+        plt.style.use('dark_background')
 
         x_list = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npz')
         x_list = [x_list[f'arr_{i}'] for i in range(len(x_list.files))]
+        x = x_list[frame]
+
+        channel_q = cellpose_channels[0]-1
+        black_to_green = LinearSegmentedColormap.from_list('black_green', ['black', 'green'])
+        im_fluo = tifffile.imread(data_folder_name + files[frame])
+        im_fluo = np.array(im_fluo).astype('float32') / 256
+        im = im_fluo[:, :, channel_q]
+
+        fig = plt.figure(figsize=(20, 10))
+        plt.imshow(np.flipud(im), vmin=0, vmax=5, cmap=black_to_green)
+        for i in range(x.shape[0]):
+            plt.text(x[i, 2], x[i, 1], f'{int(x[i, 0])}', fontsize=3, color='w')
+        plt.scatter(x[:, 2], x[:, 1], s=0.2, c='w')
+        plt.xlim([0, im.shape[0]])
+        plt.ylim([0, im.shape[1]])
+        plt.savefig(f"graphs_data/{dataset_name}/track_ID_{frame:06}.tif", dpi=500)  # 170.7)
+        plt.close()
+
+
         time_series_dict, track_info_dict = reconstruct_time_series_from_xlist(x_list)
-        filtered_time_series = filter_tracks_by_length(time_series_dict, min_length=250, required_frame=500)
-        neighbor_pairs, track_positions = find_average_spatial_neighbors(filtered_time_series, track_info_dict,max_radius=75,save_path=f'graphs_data/{dataset_name}/pairs_{run}.png')
-        significant_pairs = np.load(f'graphs_data/{dataset_name}/significant_pairs_{run}.npy', allow_pickle=True).item()
+        filtered_time_series = filter_tracks_by_length(time_series_dict, min_length=250, required_frame=frame)
+        neighbor_pairs, track_positions = find_average_spatial_neighbors(filtered_time_series, track_info_dict, max_radius=75, save_path= f'graphs_data/{dataset_name}/pairs_{frame}.png')
+        granger_results = analyze_neighbor_pairs(neighbor_pairs, filtered_time_series, max_order=20)
+        significant_pairs = statistical_testing(granger_results, filtered_time_series, n_surrogates=100)
+        np.save(f'graphs_data/{dataset_name}/significant_pairs_{frame}.npy', significant_pairs)
         G = build_causality_network(significant_pairs, track_positions)
         network_scores = compute_network_scores(G)
-        visualize_network_leader_follower(G, network_scores, track_positions, save_path= f'graphs_data/{dataset_name}/network_{run}.png')
+        visualize_network_leader_follower(G, network_scores, track_positions, save_path= f'graphs_data/{dataset_name}/network_{frame}.png')
+    else:
+        frame = 1000
+        print(f'loading data for frame {frame}')
+        x_list = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npz')
+        x_list = [x_list[f'arr_{i}'] for i in range(len(x_list.files))]
+        time_series_dict, track_info_dict = reconstruct_time_series_from_xlist(x_list)
+        filtered_time_series = filter_tracks_by_length(time_series_dict, min_length=250, required_frame=frame)
+        neighbor_pairs, track_positions = find_average_spatial_neighbors(filtered_time_series, track_info_dict,max_radius=75,save_path=f'graphs_data/{dataset_name}/pairs_{frame}.png')
+
+        fig = plt.figure(figsize=(20, 10))
+        plt.plot(time_series_dict[2430][:,1])
+        plt.savefig(f'graphs_data/{dataset_name}/track_2430.png', dpi=200)
+        plt.close()
+
+
+        significant_pairs = np.load(f'graphs_data/{dataset_name}/significant_pairs_{frame}.npy', allow_pickle=True).item()
+        G = build_causality_network(significant_pairs, track_positions)
+        network_scores = compute_network_scores(G)
+        # visualize_network_leader_follower(G, network_scores, track_positions, save_path= f'graphs_data/{dataset_name}/network_{frame}.png')
+
+        granger_diffs = [result['granger_diff'] for result in significant_pairs.values()]
+        p_values = [result['p_value'] for result in significant_pairs.values()]
+
+        print(f"granger diff range: {np.min(granger_diffs):.3f} - {np.max(granger_diffs):.3f}")
+        print(f"p-value range: {np.min(p_values):.4f} - {np.max(p_values):.4f}")
+
+        interesting_pairs = plot_interesting_causality_pairs(
+            significant_pairs=significant_pairs,
+            filtered_time_series=filtered_time_series,
+            track_positions=track_positions,
+            network_scores=network_scores,
+            dataset_name=dataset_name,
+            n_pairs=20
+        )
+
+        l = 2048
+        f = 2064
+        plot_combined_causality_analysis(
+            leader_track_id=l,
+            follower_track_id=f,
+            filtered_time_series=filtered_time_series,
+            track_positions=track_positions,
+            significant_pairs=significant_pairs,
+            save_path=f'graphs_data/{dataset_name}/causality_pair_{l}_{f}.png'
+        )
+
+
 
 def load_3Dfluo_data_with_Cellpose(config, device, visualize):
 

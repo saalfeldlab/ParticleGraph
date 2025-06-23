@@ -24,6 +24,7 @@ class SimulationConfig(BaseModel):
     n_particles: int = 1000
     n_neurons: int = 1000
     n_particles_max: int = 20000
+    n_edges: int =0
     max_edges: float = 1.0E6
     n_particle_types: int = 5
     n_neuron_types: int = 5

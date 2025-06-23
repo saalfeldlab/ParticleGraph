@@ -4,8 +4,10 @@ matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
 from scipy.fft import fft, ifft
 
+plt.style.use('dark_background')
 
-def iaaft_surrogate_example(time_series, max_iter=1):
+
+def iaaft_surrogate_example(time_series, max_iter=100):
     """Simple IAAFT implementation for demonstration"""
     original = np.array(time_series)
     n = len(original)
@@ -99,6 +101,7 @@ def autocorr(x, maxlags=50):
     autocorr_full = autocorr_full / autocorr_full[len(autocorr_full) // 2]
     mid = len(autocorr_full) // 2
     return autocorr_full[mid:mid + maxlags + 1]
+
 
 
 lags = np.arange(51)
