@@ -3256,7 +3256,7 @@ def data_train_flyvis(config, erase, best_model, device):
     logger.info(f'initial batch_size: {batch_size}')
 
     connectivity = torch.load(f'./graphs_data/{dataset_name}/connectivity.pt', map_location=device)
-    weights = torch.load(f'./graphs_data/{dataset_name}/weights.pt', map_location=device)
+    gt_weights = torch.load(f'./graphs_data/{dataset_name}/weights.pt', map_location=device)
     edges = torch.load(f'./graphs_data/{dataset_name}/edge_index.pt', map_location=device)
     edges_all = edges.clone().detach()
     print(f'{edges.shape[1]} edges')
@@ -3318,6 +3318,7 @@ def data_train_flyvis(config, erase, best_model, device):
 
             dataset_batch = []
             ids_batch = []
+            mask_batch = []
             ids_index = 0
             mask_index = 0
 
@@ -3362,9 +3363,9 @@ def data_train_flyvis(config, erase, best_model, device):
                     #         loss = loss + torch.stack(loss_contribs).norm(2) * coeff_sign
 
                     if batch_ratio < 1:
-                        # ids = np.arange(5)
                         ids_ = np.random.permutation(ids.shape[0])[:int(ids.shape[0] * batch_ratio)]
                         ids = np.sort(ids_)
+                        ids = np.arange(5)
                         edges = edges_all.clone().detach()
                         mask = torch.isin(edges[1, :], torch.tensor(ids, device=device))
                         edges = edges[:, mask]
@@ -3415,6 +3416,7 @@ def data_train_flyvis(config, erase, best_model, device):
                             in_features_u_next[:, 0] = in_features_u_next[:, 0] * 1.05  # Perturb voltage (first column)
                             pred_u_next = model.lin_phi(in_features_u_next.clone().detach())
                             loss = loss + torch.relu(pred_u_next[ids_batch] - pred[ids_batch]).norm(2) * coeff_update_u_diff
+
                     # Enable gradients for direct derivative computation
                     # in_features.requires_grad_(True)
                     # pred = model.lin_phi(in_features)
@@ -3438,9 +3440,17 @@ def data_train_flyvis(config, erase, best_model, device):
                 total_loss += loss.item()
 
 
-                if False: #((N % plot_frequency == 0) | (N == 0)):
-                    plot_training_signal(config, model, x, adjacency, log_dir, epoch, N, n_neurons, type_list, cmap,
-                                         device)
+                if ((N % plot_frequency == 0) | (N == 0)):
+
+                    fig = plt.figure(figsize=(8, 8))
+                    fig, ax = fig_init()
+                    plt.scatter(to_numpy(gt_weights), to_numpy(model.W), s=0.1, c='k', alpha=1)
+                    plt.xlabel(r'true $W_{ij}$', fontsize=68)
+                    plt.ylabel(r'learned $W_{ij}$', fontsize=68)
+                    plt.xlim([-0.2, 0.2])
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/tmp_training/matrix/comparison_{epoch}_{N}.tif", dpi=87)
+                    plt.close()
 
                     if has_neural_field:
                         with torch.no_grad():

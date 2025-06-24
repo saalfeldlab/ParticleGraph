@@ -48,8 +48,8 @@ training:
     device: 'auto'
 
     recursive_loop: 1
-    batch_size: 1
-    batch_ratio: 1.0
+    batch_size: 2
+    batch_ratio: 0.1
 
     sparsity: 'none'
     rotation_augmentation: False
