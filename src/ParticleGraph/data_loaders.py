@@ -2152,7 +2152,6 @@ def load_wormvae_data(config, device=None, visualize=None, step=None, cmap=None)
         plt.close()
 
 
-
 def load_shrofflab_celegans(
         file_path,
         *,

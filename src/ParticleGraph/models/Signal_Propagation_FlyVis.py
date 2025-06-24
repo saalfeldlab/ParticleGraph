@@ -82,7 +82,7 @@ class Signal_Propagation_FlyVis(pyg.nn.MessagePassing):
 
         self.W = nn.Parameter(
             torch.randn(
-                self.n_edges,
+                self.n_edges+1,
                 device=self.device,
                 requires_grad=True,
                 dtype=torch.float32,
@@ -116,7 +116,7 @@ class Signal_Propagation_FlyVis(pyg.nn.MessagePassing):
         else:
             return pred
 
-    def message(self, v_i, v_j, embedding_i, embedding_j, data_id_i):
+    def message(self, edge_index_i, edge_index_j, v_i, v_j, embedding_i, embedding_j, data_id_i):
 
         in_features = torch.cat([v_i, v_j, embedding_i, embedding_j], dim=1)
 
@@ -124,7 +124,7 @@ class Signal_Propagation_FlyVis(pyg.nn.MessagePassing):
         if self.lin_edge_positive:
             lin_edge = lin_edge**2
 
-        return self.W[self.mask.shape][:,None] * lin_edge
+        return self.W[self.mask % self.n_edges] * lin_edge
 
     def update(self, aggr_out):
         return aggr_out

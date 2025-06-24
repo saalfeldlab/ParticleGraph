@@ -49,7 +49,7 @@ training:
 
     recursive_loop: 1
     batch_size: 1
-    batch_ratio: 0.1
+    batch_ratio: 1.0
 
     sparsity: 'none'
     rotation_augmentation: False

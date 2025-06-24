@@ -3177,10 +3177,8 @@ def data_train_flyvis(config, erase, best_model, device):
     print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
     logger.info(f'vnorm ynorm: {to_numpy(vnorm)} {to_numpy(ynorm)}')
 
-
-
     print('create models ...')
-    model = Signal_Propagation_FlyVis(aggr_type='add', config=config, device=device)
+    model = Signal_Propagation_FlyVis(aggr_type=model_config.aggr_type, config=config, device=device)
     if has_missing_activity:
         assert batch_ratio == 1, f"batch_ratio must be 1, got {batch_ratio}"
         model_missing_activity = nn.ModuleList([
@@ -3257,12 +3255,8 @@ def data_train_flyvis(config, erase, best_model, device):
     logger.info(f'N epochs: {n_epochs}')
     logger.info(f'initial batch_size: {batch_size}')
 
-    adjacency = torch.load(f'./graphs_data/{dataset_name}/adjacency.pt', map_location=device)
-    # adjacency[10,:]=5
-    # fig = plt.figure(figsize=(8, 8))
-    # ax = fig.add_subplot(111)
-    # ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
-    # plt.show()
+    connectivity = torch.load(f'./graphs_data/{dataset_name}/connectivity.pt', map_location=device)
+    weights = torch.load(f'./graphs_data/{dataset_name}/weights.pt', map_location=device)
     edges = torch.load(f'./graphs_data/{dataset_name}/edge_index.pt', map_location=device)
     edges_all = edges.clone().detach()
     print(f'{edges.shape[1]} edges')
@@ -3368,9 +3362,9 @@ def data_train_flyvis(config, erase, best_model, device):
                     #         loss = loss + torch.stack(loss_contribs).norm(2) * coeff_sign
 
                     if batch_ratio < 1:
+                        # ids = np.arange(5)
                         ids_ = np.random.permutation(ids.shape[0])[:int(ids.shape[0] * batch_ratio)]
                         ids = np.sort(ids_)
-
                         edges = edges_all.clone().detach()
                         mask = torch.isin(edges[1, :], torch.tensor(ids, device=device))
                         edges = edges[:, mask]
@@ -3391,7 +3385,6 @@ def data_train_flyvis(config, erase, best_model, device):
                             data_id = torch.ones((x.shape[0], 1), dtype=torch.int, device=device) * run
                             x_batch = x[:, 3:4]
                             y_batch = y
-                            k_batch = torch.ones((x.shape[0], 1), dtype=torch.int, device=device) * k
                             ids_batch = ids
                             mask_batch = mask
                         else:
@@ -3436,6 +3429,7 @@ def data_train_flyvis(config, erase, best_model, device):
 
                 loss.backward()
                 optimizer.step()
+
                 if has_missing_activity:
                     optimizer_missing_activity.step()
                 if has_neural_field:
@@ -3447,40 +3441,6 @@ def data_train_flyvis(config, erase, best_model, device):
                 if False: #((N % plot_frequency == 0) | (N == 0)):
                     plot_training_signal(config, model, x, adjacency, log_dir, epoch, N, n_neurons, type_list, cmap,
                                          device)
-                    if time_step > 1:
-                        fig = plt.figure(figsize=(10, 10))
-                        plt.scatter(to_numpy(y_batch), to_numpy(x_batch + pred * delta_t * time_step), s=10, color='k')
-                        plt.scatter(to_numpy(y_batch), to_numpy(x_batch), s=1, color='b', alpha=0.5)
-                        plt.plot(to_numpy(y_batch), to_numpy(y_batch), color='g')
-
-                        x_data = y_batch
-                        y_data = x_batch
-                        err0 = torch.sqrt((y_data - x_data).norm(2))
-
-                        y_data = (x_batch + pred * delta_t * time_step)
-                        err = torch.sqrt((y_data - x_data).norm(2))
-
-                        plt.text(0.05, 0.95, f'data: {run}   frame: {k}',
-                                 transform=plt.gca().transAxes, fontsize=12,
-                                 verticalalignment='top')
-                        plt.text(0.05, 0.9, f'err: {err.item():0.4f}  err0: {err0.item():0.4f}',
-                                 transform=plt.gca().transAxes, fontsize=12,
-                                 verticalalignment='top')
-
-                        x_data = to_numpy(x_data.squeeze())
-                        y_data = to_numpy(y_data.squeeze())
-                        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-
-                        residuals = y_data - linear_model(x_data, *lin_fit)
-                        ss_res = np.sum(residuals ** 2)
-                        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-                        r_squared = 1 - (ss_res / ss_tot)
-                        plt.text(0.05, 0.85, f'R2: {r_squared:0.4f}  slope: {np.round(lin_fit[0], 4)}',
-                                 transform=plt.gca().transAxes, fontsize=12,
-                                 verticalalignment='top')
-                        plt.tight_layout()
-                        plt.savefig(f'{log_dir}/tmp_training/prediction/pred_{epoch}_{N}.tif')
-                        plt.close()
 
                     if has_neural_field:
                         with torch.no_grad():

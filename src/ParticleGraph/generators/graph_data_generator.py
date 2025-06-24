@@ -1583,9 +1583,9 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
     folder = f'./graphs_data/{dataset_name}/'
     os.makedirs(folder, exist_ok=True)
     os.makedirs(f'./graphs_data/{dataset_name}/Fig/', exist_ok=True)
-    files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
-    for f in files:
-        os.remove(f)
+    # files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
+    # for f in files:
+    #     os.remove(f)
 
     from datamate import Namespace
     from flyvis.datasets.sintel import AugmentedSintel
@@ -1641,15 +1641,16 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
     edge_index = edge_index.to(device)
     torch.save(edge_index, f"graphs_data/{dataset_name}/edge_index.pt")
 
-    adjacency = torch.zeros((n_neurons, n_neurons), dtype=torch.float32, device=device)
-    adjacency[edge_index[1], edge_index[0]] = p["w"]
-    mask = (adjacency != 0).float()
+    connectivity = torch.zeros((n_neurons, n_neurons), dtype=torch.float32, device=device)
+    connectivity[edge_index[1], edge_index[0]] = p["w"]
+    mask = (connectivity != 0).float()
     torch.save(mask, f'./graphs_data/{dataset_name}/mask.pt')
-    torch.save(adjacency, f'./graphs_data/{dataset_name}/adjacency.pt')
+    torch.save(connectivity, f'./graphs_data/{dataset_name}/connectivity.pt')
+    torch.save(p["w"], f'./graphs_data/{dataset_name}/weights.pt')
 
     # plt.figure(figsize=(10, 10))
-    # ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},
-    #                  vmin=-0.1, vmax=0.1)
+    # ax = sns.heatmap(to_numpy(connectivity), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},
+    #                  vmin=-0.2, vmax=0.2)
     # cbar = ax.collections[0].colorbar
     # cbar.ax.tick_params(labelsize=32)
     # plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=48)
@@ -1735,7 +1736,6 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
 
             it = it + 1
 
-
     print (f'generated {len(x_list)} frames')
 
     if bSave:
@@ -1743,6 +1743,8 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
         y_list = to_numpy(torch.stack(y_list, dim=0))
         np.save(f"graphs_data/{dataset_name}/x_list_{run}.npy", x_list)
         np.save(f"graphs_data/{dataset_name}/y_list_{run}.npy", y_list)
+
+    print ('data saved ...')
 
     if measurement_noise_level > 0:
         np.save(f'graphs_data/{dataset_name}/raw_x_list_{run}.npy', x_list)
