@@ -1,4 +1,4 @@
-description: ''
+description: 'coeff_update_u_diff: 1'
 dataset: 'fly_N8_1'
 
 simulation:
@@ -61,5 +61,5 @@ training:
     noise_level: 0.0
     measurement_noise_level: 0.0
     coeff_edge_diff: 500
-    coeff_update_u_diff: 0
+    coeff_update_u_diff: 1
     coeff_update_msg_diff: 0

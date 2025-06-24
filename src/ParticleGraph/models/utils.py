@@ -230,16 +230,18 @@ def get_in_features(rr=None, embedding=None, model=[], model_name = [], max_radi
 
 
 def plot_training_flyvis(model, config, epoch, N, log_dir, device, cmap, type_list,
-                         gt_weights, to_numpy, fig_init, n_neurons=None):
+                         gt_weights, n_neurons=None, n_neuron_types=None):
 
     if n_neurons is None:
         n_neurons = len(type_list)
 
     # Plot 1: Embedding scatter plot
     fig = plt.figure(figsize=(8, 8))
-    for n in range(n_neurons):
-        plt.scatter(to_numpy(model.a[n, 0]), to_numpy(model.a[n, 1]), s=100,
-                    color=cmap.color(int(type_list[n])), alpha=1.0, edgecolors='none')
+    for n in range(n_neuron_types):
+        pos = torch.argwhere(type_list == n)
+        plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=1, color=cmap.color(n), alpha=0.1, edgecolors='none')
+    plt.xlabel('embedding 0', fontsize=12)
+    plt.ylabel('embedding 1', fontsize=12)
     plt.xticks([])
     plt.yticks([])
     plt.tight_layout()
@@ -248,13 +250,13 @@ def plot_training_flyvis(model, config, epoch, N, log_dir, device, cmap, type_li
 
     # Plot 2: Weight comparison scatter plot
     fig = plt.figure(figsize=(8, 8))
-    fig, ax = fig_init()
     plt.scatter(to_numpy(gt_weights), to_numpy(model.W.squeeze()), s=0.1, c='k', alpha=0.01)
     plt.xlabel(r'true $W_{ij}$', fontsize=68)
     plt.ylabel(r'learned $W_{ij}$', fontsize=68)
     plt.xlim([-0.2, 0.2])
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/matrix/comparison_{epoch}_{N}.tif", dpi=87)
+    plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
+    plt.savefig(f"./{log_dir}/tmp_training/matrix/comparison_{epoch}_{N}.tif",
+                dpi=87, bbox_inches='tight', pad_inches=0)
     plt.close()
 
     # Plot 3: Edge function visualization

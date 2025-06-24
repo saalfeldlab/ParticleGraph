@@ -2846,12 +2846,12 @@ def data_train_synaptic2(config, erase, best_model, device):
                 for batch in batch_loader:
                     if (coeff_update_msg_diff > 0) | (coeff_update_u_diff > 0):
                         pred, in_features = model(batch, data_id=data_id, k=k_batch, return_all=True)
-                        if coeff_update_msg_diff > 0 :
+                        if coeff_update_msg_diff > 0 : # Penalized when pred_u_next > pred (output increases with voltage)
                             in_features_msg_next = in_features.clone().detach()
                             in_features_msg_next[:, model_config.embedding_dim] = in_features_msg_next[:, model_config.embedding_dim] * 1.05
                             pred_msg_next = model.lin_phi(in_features_msg_next.clone().detach())
                             loss = loss + torch.relu(pred[ids_batch]-pred_msg_next[ids_batch]).norm(2) * coeff_update_msg_diff
-                        if coeff_update_u_diff > 0:
+                        if coeff_update_u_diff > 0: #  Penalizes when pred > pred_msg_next (output decreases with message)
                             in_features_u_next = in_features.clone().detach()
                             in_features_u_next[:, 0] = in_features_u_next[:, 0] * 1.05  # Perturb voltage (first column)
                             pred_u_next = model.lin_phi(in_features_u_next.clone().detach())
@@ -3353,16 +3353,6 @@ def data_train_flyvis(config, erase, best_model, device):
                             msg0 = model.lin_edge(in_features[ids].clone().detach())
                             msg1 = model.lin_edge(in_features_next[ids].clone().detach())
                         loss = loss + torch.relu(msg0 - msg1).norm(2) * coeff_edge_diff
-                    if (model.update_type == 'generic') & (coeff_update_diff > 0):
-                        in_feature_update = torch.cat((torch.zeros((n_neurons, 1), device=device),
-                                                       model.a[:n_neurons], msg0,
-                                                       torch.zeros((n_neurons, 1), device=device)), dim=1)
-                        in_feature_update = in_feature_update[ids]
-                        in_feature_update_next = torch.cat((torch.zeros((n_neurons, 1), device=device),
-                                                            model.a[:n_neurons], msg1,
-                                                            torch.zeros((n_neurons, 1), device=device)), dim=1)
-                        in_feature_update_next = in_feature_update_next[ids]
-                        loss = loss + torch.relu(model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next)).norm(2) * coeff_update_diff
 
                     # # regularisation sign Wij
                     # if (coeff_sign > 0) and (N%4 == 0):
@@ -3419,12 +3409,12 @@ def data_train_flyvis(config, erase, best_model, device):
                 for batch in batch_loader:
                     if (coeff_update_msg_diff > 0) | (coeff_update_u_diff > 0):
                         pred, in_features = model(batch, data_id=data_id, mask=mask_batch, return_all=True)
-                        if coeff_update_msg_diff > 0 :
+                        if coeff_update_msg_diff > 0 : # Penalized when pred_u_next > pred (output increases with voltage)
                             in_features_msg_next = in_features.clone().detach()
                             in_features_msg_next[:, model_config.embedding_dim] = in_features_msg_next[:, model_config.embedding_dim] * 1.05
                             pred_msg_next = model.lin_phi(in_features_msg_next.clone().detach())
                             loss = loss + torch.relu(pred[ids_batch]-pred_msg_next[ids_batch]).norm(2) * coeff_update_msg_diff
-                        if coeff_update_u_diff > 0:
+                        if coeff_update_u_diff > 0: #  Penalizes when pred > pred_msg_next (output decreases with message)
                             in_features_u_next = in_features.clone().detach()
                             in_features_u_next[:, 0] = in_features_u_next[:, 0] * 1.05  # Perturb voltage (first column)
                             pred_u_next = model.lin_phi(in_features_u_next.clone().detach())
@@ -3455,7 +3445,7 @@ def data_train_flyvis(config, erase, best_model, device):
 
                 if ((N % plot_frequency == 0) | (N == 0)):
 
-                    plot_training_flyvis(model, config, epoch, N, log_dir, device, cmap, type_list, gt_weights, to_numpy, fig_init)
+                    plot_training_flyvis(model, config, epoch, N, log_dir, device, cmap, type_list, gt_weights, n_neurons=n_neurons, n_neuron_types=n_neuron_types)
 
                     if has_neural_field:
                         with torch.no_grad():
@@ -3514,115 +3504,16 @@ def data_train_flyvis(config, erase, best_model, device):
         plt.xlabel('embedding 0', fontsize=12)
         plt.ylabel('embedding 1', fontsize=12)
 
-        if multi_connectivity:
-            A = model.W[0].clone().detach() * model.mask.clone().detach()
-        else:
-            A = model.W.clone().detach() * model.mask.clone().detach()
-
-        ax = fig.add_subplot(2, 3, 4)
-        ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},
-                         vmin=-0.001, vmax=0.001)
-        plt.title('true connectivity', fontsize=12)
-        plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=8)
-        plt.yticks([0, n_neurons - 1], [1, n_neurons], fontsize=8)
-
-        ax = fig.add_subplot(2, 3, 5)
-        ax = sns.heatmap(to_numpy(A), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
-        plt.title('learned connectivity', fontsize=12)
-        plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=8)
-        plt.yticks([0, n_neurons - 1], [1, n_neurons], fontsize=8)
-
-        ax = fig.add_subplot(2, 3, 6)
-        gt_weight = to_numpy(adjacency)
-        pred_weight = to_numpy(A[:n_neurons, :n_neurons])
-        plt.scatter(gt_weight, pred_weight, s=0.1, c='k', alpha=0.01)
-        plt.xlabel('true weight', fontsize=12)
-        plt.ylabel('learned weight', fontsize=12)
+        ax = fig.add_subplot(2, 3, 3)
+        plt.scatter(to_numpy(gt_weights), to_numpy(model.W.squeeze()), s=0.1, c='k', alpha=0.01)
+        plt.xlabel(r'true $W_{ij}$', fontsize=12)
+        plt.ylabel(r'learned $W_{ij}$', fontsize=12)
+        plt.xlim([-0.2, 0.2])
         plt.title('comparison')
 
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/epoch_{epoch}.tif")
         plt.close()
-
-        if replace_with_cluster:
-
-            if (epoch % sparsity_freq == sparsity_freq - 1) & (epoch < n_epochs - sparsity_freq):
-
-                embedding = to_numpy(model.a.squeeze())
-                model_MLP = model.lin_phi
-                update_type = model.update_type
-
-                func_list, proj_interaction_ = analyze_edge_function(rr=torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device),
-                                                                     vizualize=True, config=config,
-                                                                     model_MLP=model_MLP, model=model,
-                                                                     n_nodes=0,
-                                                                     n_particles=n_neurons, ynorm=ynorm,
-                                                                     type_list=to_numpy(x[:, 1 + 2 * dimension]),
-                                                                     cmap=cmap, update_type=update_type, device=device)
-
-
-
-                # Constrain embedding domain
-                with torch.no_grad():
-                    model.a.copy_(model_a_)
-                print(f'regul_embedding: replaced')
-                logger.info(f'regul_embedding: replaced')
-
-                # Constrain function domain
-                if train_config.sparsity == 'replace_embedding_function':
-
-                    logger.info(f'replace_embedding_function')
-                    y_func_list = func_list * 0
-
-                    ax = fig.add_subplot(2, 5, 9)
-                    for n in np.unique(new_labels):
-                        pos = np.argwhere(new_labels == n)
-                        pos = pos.squeeze()
-                        if pos.size > 0:
-                            target_func = torch.median(func_list[pos, :], dim=0).values.squeeze()
-                            y_func_list[pos] = target_func
-                        plt.plot(to_numpy(target_func) * to_numpy(ynorm), linewidth=2, alpha=1)
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.tight_layout()
-
-                    lr_embedding = 1E-12
-                    optimizer, n_total_params = set_trainable_parameters(model=model, lr_embedding=lr_embedding, lr=lr,
-                                                                         lr_update=lr_update, lr_W=lr_W,
-                                                                         lr_modulation=lr_modulation)
-                    for sub_epochs in trange(20):
-                        rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
-                        pred = []
-                        optimizer.zero_grad()
-                        for n in range(n_neurons):
-                            embedding_ = model.a[n, :].clone().detach() * torch.ones((1000, model_config.embedding_dim),
-                                                                                     device=device)
-                            in_features = get_in_features_update(rr=rr[:, None], model=model, device=device)
-                            pred.append(model.lin_phi(in_features.float()))
-                        pred = torch.stack(pred)
-                        loss = (pred[:, :, 0] - y_func_list.clone().detach()).norm(2)
-                        logger.info(f'    loss: {np.round(loss.item() / n_neurons, 3)}')
-                        loss.backward()
-                        optimizer.step()
-                if train_config.fix_cluster_embedding:
-                    lr = 1E-12
-                    lr_embedding = 1E-12
-                    optimizer, n_total_params = set_trainable_parameters(model=model, lr_embedding=lr_embedding, lr=lr,
-                                                                         lr_update=lr_update, lr_W=lr_W,
-                                                                         lr_modulation=lr_modulation)
-                    logger.info(
-                        f'learning rates: lr_W {lr_W}, lr {lr}, lr_embedding {lr_embedding}, lr_modulation {lr_modulation}')
-            else:
-                lr = train_config.learning_rate_start
-                lr_embedding = train_config.learning_rate_embedding_start
-                optimizer, n_total_params = set_trainable_parameters(model=model, lr_embedding=lr_embedding, lr=lr,
-                                                                     lr_update=lr_update, lr_W=lr_W,
-                                                                     lr_modulation=lr_modulation)
-                logger.info( f'learning rates: lr_W {lr_W}, lr {lr}, lr_embedding {lr_embedding}, lr_modulation {lr_modulation}')
-
-            if (epoch == 20) & (train_config.coeff_anneal_L1 > 0):
-                coeff_L1 = train_config.coeff_anneal_L1
-                logger.info(f'coeff_L1: {coeff_L1}')
 
 
 def data_train_agents(config, erase, best_model, device):
