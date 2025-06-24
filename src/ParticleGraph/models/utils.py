@@ -217,8 +217,6 @@ def get_in_features(rr=None, embedding=None, model=[], model_name = [], max_radi
             in_features = torch.cat((rr[:, None], embedding), dim=1)
         case 'PDE_N8':
             in_features = torch.cat((rr[:, None]*0, rr[:, None], embedding, embedding), dim=1)
-        case 'PDE_N9':
-            in_features = torch.cat((rr[:, None], embedding, torch.ones_like(rr[:, None])), dim=1)
         case 'PDE_N5':
             in_features = torch.cat((rr[:, None], embedding, embedding), dim=1)
         case 'PDE_K':
@@ -229,6 +227,78 @@ def get_in_features(rr=None, embedding=None, model=[], model_name = [], max_radi
             in_features = torch.cat((rr[:, None] / max_radius, rr[:, None] / max_radius, embedding, embedding), dim=-1)
 
     return in_features
+
+
+def plot_training_flyvis(model, config, epoch, N, log_dir, device, cmap, type_list,
+                         gt_weights, to_numpy, fig_init, n_neurons=None):
+
+    if n_neurons is None:
+        n_neurons = len(type_list)
+
+    # Plot 1: Embedding scatter plot
+    fig = plt.figure(figsize=(8, 8))
+    for n in range(n_neurons):
+        plt.scatter(to_numpy(model.a[n, 0]), to_numpy(model.a[n, 1]), s=100,
+                    color=cmap.color(int(type_list[n])), alpha=1.0, edgecolors='none')
+    plt.xticks([])
+    plt.yticks([])
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/embedding/{epoch}_{N}.tif", dpi=87)
+    plt.close()
+
+    # Plot 2: Weight comparison scatter plot
+    fig = plt.figure(figsize=(8, 8))
+    fig, ax = fig_init()
+    plt.scatter(to_numpy(gt_weights), to_numpy(model.W.squeeze()), s=0.1, c='k', alpha=0.01)
+    plt.xlabel(r'true $W_{ij}$', fontsize=68)
+    plt.ylabel(r'learned $W_{ij}$', fontsize=68)
+    plt.xlim([-0.2, 0.2])
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/matrix/comparison_{epoch}_{N}.tif", dpi=87)
+    plt.close()
+
+    # Plot 3: Edge function visualization
+    fig = plt.figure(figsize=(8, 8))
+    rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
+    for n in range(n_neurons):
+        embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+        if ('PDE_N8_A' in config.graph_model.signal_model_name):
+            in_features = torch.cat((rr[:, None], embedding_,), dim=1)
+        elif ('PDE_N8_B' in config.graph_model.signal_model_name):
+            in_features = torch.cat((rr[:, None] * 0, rr[:, None], embedding_, embedding_), dim=1)
+        with torch.no_grad():
+            func = model.lin_edge(in_features.float())
+        if config.graph_model.lin_edge_positive:
+            func = func ** 2
+        if (n % 10 == 0):
+            plt.plot(to_numpy(rr), to_numpy(func), 2,
+                     color=cmap.color(to_numpy(type_list)[n].astype(int)),
+                     linewidth=2, alpha=0.25)
+    plt.xlim(config.plotting.xlim)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/func_{epoch}_{N}.tif", dpi=87)
+    plt.close()
+
+    # Plot 4: Phi function visualization
+    fig = plt.figure(figsize=(8, 8))
+    for n in range(n_neurons):
+        embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+        in_features = torch.cat((rr[:, None], embedding_, rr[:, None] * 0, rr[:, None] * 0), dim=1)
+        with torch.no_grad():
+            func = model.lin_phi(in_features.float())
+        if (n % 10 == 0):
+            plt.plot(to_numpy(rr), to_numpy(func), 2,
+                     color=cmap.color(to_numpy(type_list)[n].astype(int)),
+                     linewidth=2, alpha=0.25)
+    plt.xlim(config.plotting.xlim)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/function/lin_phi/func_{epoch}_{N}.tif", dpi=87)
+    plt.close()
+
+
+# Example usage:
+# plot_training_flyvis(model, config, epoch, N, log_dir, device, cmap,
+#                     type_list, gt_weights, to_numpy, fig_init)
 
 def plot_training_signal(config, model, x, adjacency, log_dir, epoch, N, n_neurons, type_list, cmap, device):
 

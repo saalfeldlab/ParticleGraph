@@ -259,7 +259,7 @@ class TrainingConfig(BaseModel):
     coeff_loss2: float = 1
     coeff_loss3: float = 1
     coeff_edge_diff: float = 10
-    coeff_update_diff: float = 10
+    coeff_update_diff: float = 0
     coeff_update_msg_diff: float = 0
     coeff_update_u_diff: float = 0
     coeff_sign: float = 0
