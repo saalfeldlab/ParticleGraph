@@ -55,7 +55,7 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'train'  # 'generate', 'train', 'test'
+        task = 'generate'  # 'generate', 'train', 'test'
         best_model = ''
 
         # config_list = ['multimaterial_16_2']  #   ,'multimaterial_16_2', 'multimaterial_16_3', 'multimaterial_16_4']
@@ -70,7 +70,7 @@ if __name__ == '__main__':
         # config_list = ['cell_MDCK_16']
         # config_list = ['signal_CElegans_d2', 'signal_CElegans_d2a', 'signal_CElegans_d3', 'signal_CElegans_d3a', 'signal_CElegans_d3b']
         # config_list = ['signal_CElegans_c14_4', 'signal_CElegans_c14_4a', 'signal_CElegans_c14_4b', 'signal_CElegans_c14_4c']
-        config_list = ['fly_N8_5']
+        config_list = ['fly_N8_6','fly_N8_7']
         # config_list = ['signal_N5_l6','signal_N5_l7','signal_N5_l8'] #,
         # config_list = ['signal_N5_l4','signal_N5_l5']
 
@@ -87,7 +87,7 @@ if __name__ == '__main__':
         print(f'folder  {config.dataset}')
 
         if 'generate' in task:
-            data_generate(config, device=device, visualize=False, run_vizualized=0, style='black color', alpha=1, erase=False, bSave=True, step=10)  #config.simulation.n_frames // 100)
+            data_generate(config, device=device, visualize=True, run_vizualized=0, style='black color', alpha=1, erase=False, bSave=True, step=10)  #config.simulation.n_frames // 100)
         if 'train' in task:
             data_train(config=config, erase=False, best_model=best_model, device=device)
         if 'test' in task:
