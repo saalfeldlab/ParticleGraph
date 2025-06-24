@@ -62,7 +62,7 @@ if __name__ == '__main__':
         # config_list = ['fluids_m19']
         # config_list = ['signal_N5_v11_bis']
         # config_list = ['falling_water_ramp_x6_11_1']
-        # config_list = ['arbitrary_3_5']
+        # config_list = ['arbitrary_3']
         # config_list = ['cell_cardio_2_4']
         # config_list = ['RD_RPS_5']
         # config_list = ['cell_U2OS_9_2']

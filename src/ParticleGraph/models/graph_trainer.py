@@ -3180,7 +3180,7 @@ def data_train_flyvis(config, erase, best_model, device):
 
 
     print('create models ...')
-    model = Signal_Propagation_FlyVis(config=config, device=device)
+    model = Signal_Propagation_FlyVis(aggr_type='add', config=config, device=device)
     if has_missing_activity:
         assert batch_ratio == 1, f"batch_ratio must be 1, got {batch_ratio}"
         model_missing_activity = nn.ModuleList([
@@ -3443,7 +3443,8 @@ def data_train_flyvis(config, erase, best_model, device):
 
                 total_loss += loss.item()
 
-                if ((N % plot_frequency == 0) | (N == 0)):
+
+                if False: #((N % plot_frequency == 0) | (N == 0)):
                     plot_training_signal(config, model, x, adjacency, log_dir, epoch, N, n_neurons, type_list, cmap,
                                          device)
                     if time_step > 1:

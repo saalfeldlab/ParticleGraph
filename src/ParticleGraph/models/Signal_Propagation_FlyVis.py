@@ -26,7 +26,7 @@ class Signal_Propagation_FlyVis(pyg.nn.MessagePassing):
     """
 
     def __init__(
-        self, aggr_type=None, config=None, device=None ):
+        self, aggr_type='add', config=None, device=None ):
         super(Signal_Propagation_FlyVis, self).__init__(aggr=aggr_type)
 
         simulation_config = config.simulation
@@ -76,13 +76,12 @@ class Signal_Propagation_FlyVis(pyg.nn.MessagePassing):
         # embedding
         self.a = nn.Parameter(
             torch.tensor(
-                np.ones((self.n_dataset, int(self.n_neurons), self.embedding_dim)),
+                np.ones((int(self.n_neurons), self.embedding_dim)),
                          device=self.device,
                          requires_grad=True, dtype=torch.float32))
 
         self.W = nn.Parameter(
             torch.randn(
-                self.n_dataset,
                 self.n_edges,
                 device=self.device,
                 requires_grad=True,
@@ -101,7 +100,9 @@ class Signal_Propagation_FlyVis(pyg.nn.MessagePassing):
         excitation = data.x[:, 4:5]
 
         particle_id = x[:, 0].long()
-        embedding = self.a[data_id, particle_id, :]
+        embedding = self.a[particle_id].squeeze()
+
+
 
         msg = self.propagate(
             edge_index, v=v, embedding=embedding, data_id=self.data_id[:, None]
@@ -120,8 +121,10 @@ class Signal_Propagation_FlyVis(pyg.nn.MessagePassing):
         in_features = torch.cat([v_i, v_j, embedding_i, embedding_j], dim=1)
 
         lin_edge = self.lin_edge(in_features)
+        if self.lin_edge_positive:
+            lin_edge = lin_edge**2
 
-        return self.W[data_id_i.squeeze()] * lin_edge
+        return self.W[self.mask.shape][:,None] * lin_edge
 
     def update(self, aggr_out):
         return aggr_out
