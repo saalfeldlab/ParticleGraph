@@ -81,8 +81,8 @@ class Signal_Propagation_FlyVis(pyg.nn.MessagePassing):
                          requires_grad=True, dtype=torch.float32))
 
         self.W = nn.Parameter(
-            torch.randn(
-                self.n_edges+1,
+            torch.zeros(
+                self.n_edges,
                 device=self.device,
                 requires_grad=True,
                 dtype=torch.float32,
@@ -102,8 +102,6 @@ class Signal_Propagation_FlyVis(pyg.nn.MessagePassing):
         particle_id = x[:, 0].long()
         embedding = self.a[particle_id].squeeze()
 
-
-
         msg = self.propagate(
             edge_index, v=v, embedding=embedding, data_id=self.data_id[:, None]
         )
@@ -118,7 +116,10 @@ class Signal_Propagation_FlyVis(pyg.nn.MessagePassing):
 
     def message(self, edge_index_i, edge_index_j, v_i, v_j, embedding_i, embedding_j, data_id_i):
 
-        in_features = torch.cat([v_i, v_j, embedding_i, embedding_j], dim=1)
+        if (self.model=='PDE_N8_A'):
+            in_features = torch.cat([v_j, embedding_j], dim=1)
+        elif (self.model=='PDE_N8_B'):
+            in_features = torch.cat([v_i, v_j, embedding_i, embedding_j], dim=1)
 
         lin_edge = self.lin_edge(in_features)
         if self.lin_edge_positive:

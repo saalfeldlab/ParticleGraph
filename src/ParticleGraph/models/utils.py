@@ -154,6 +154,13 @@ def get_in_features_lin_edge(x, model, model_config, xnorm, n_neurons, device):
         else:
             in_features = torch.cat((x[:n_neurons, 6:7], model.a[:n_neurons], model.a[:n_neurons]), dim=1)
             in_features_next = torch.cat((x[:n_neurons, 6:7] + xnorm / 150, model.a[:n_neurons], model.a[:n_neurons]), dim=1)
+    elif model_config.signal_model_name == 'PDE_N8_A':
+        in_features = torch.cat((x[:, 3:4], model.a), dim=1)
+        in_features_next = torch.cat((x[:,3:4] * 1.05, model.a), dim=1)
+    elif model_config.signal_model_name == 'PDE_N8_B':
+        perm_indices = torch.randperm(n_neurons, device=model.a.device)
+        in_features = torch.cat((x[:, 3:4], x[:, 3:4], model.a, model.a[perm_indices]), dim=1)
+        in_features_next = torch.cat((x[:, 3:4], x[:, 3:4] * 1.05, model.a, model.a[perm_indices]), dim=1)
     elif model_config.signal_model_name == 'PDE_N8':
         if model.embedding_trial:
             perm_indices = torch.randperm(n_neurons, device=model.a.device)
@@ -161,10 +168,8 @@ def get_in_features_lin_edge(x, model, model_config, xnorm, n_neurons, device):
             in_features_next = torch.cat((x[:n_neurons, 6:7], x[:n_neurons, 6:7]*1.05, model.a[:n_neurons], model.b[0].repeat(n_neurons, 1), model.a[perm_indices[:n_neurons]], model.b[0].repeat(n_neurons, 1)), dim=1)
         else:
             perm_indices = torch.randperm(n_neurons, device=model.a.device)
-            in_features = torch.cat((x[:n_neurons, 6:7], x[:n_neurons, 6:7],
-                                     model.a[:n_neurons], model.a[perm_indices[:n_neurons]]), dim=1)
-            in_features_next = torch.cat((x[:n_neurons, 6:7], x[:n_neurons, 6:7] * 1.05,
-                                          model.a[:n_neurons], model.a[perm_indices[:n_neurons]]), dim=1)
+            in_features = torch.cat((x[:n_neurons, 6:7], x[:n_neurons, 6:7], model.a[:n_neurons], model.a[perm_indices[:n_neurons]]), dim=1)
+            in_features_next = torch.cat((x[:n_neurons, 6:7], x[:n_neurons, 6:7] * 1.05, model.a[:n_neurons], model.a[perm_indices[:n_neurons]]), dim=1)
     else:
         in_features = x[:n_neurons, 6:7]
         in_features_next = x[:n_neurons, 6:7] + xnorm / 150

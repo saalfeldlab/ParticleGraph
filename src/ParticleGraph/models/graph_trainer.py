@@ -3148,17 +3148,15 @@ def data_train_flyvis(config, erase, best_model, device):
         y_list.append(y)
     x = x_list[0][n_frames - 10]
 
-    # activity = torch.tensor(x_list[0][:, :, 3:4], device=device)
-    # activity = activity.squeeze()
-    # distrib = activity.flatten()
-    # valid_distrib = distrib[~torch.isnan(distrib)]
-    # if len(valid_distrib) > 0:
-    #     xnorm = torch.round(1.5 * torch.std(valid_distrib))
-    # else:
-    #     print('no valid distribution found, setting xnorm to 1.0')
-    #     xnorm = torch.tensor(1.0, device=device)
-
-    xnorm = torch.tensor(1.0, device=device)
+    activity = torch.tensor(x_list[0][:, :, 3:4], device=device)
+    activity = activity.squeeze()
+    distrib = activity.flatten()
+    valid_distrib = distrib[~torch.isnan(distrib)]
+    if len(valid_distrib) > 0:
+        xnorm = torch.round(1.5 * torch.std(valid_distrib))
+    else:
+        print('no valid distribution found, setting xnorm to 1.0')
+        xnorm = torch.tensor(1.0, device=device)
     torch.save(xnorm, os.path.join(log_dir, 'xnorm.pt'))
     print(f'xnorm: {to_numpy(xnorm)}')
 
@@ -3308,7 +3306,7 @@ def data_train_flyvis(config, erase, best_model, device):
         total_loss_regul = 0
         k = 0
 
-        for N in trange(Niter):
+        for N in range(Niter):
 
             if has_missing_activity:
                 optimizer_missing_activity.zero_grad()
@@ -3333,22 +3331,27 @@ def data_train_flyvis(config, erase, best_model, device):
 
                 if not (torch.isnan(x).any()):
 
-                    # # regularisation lin_phi(0)=0
-                    # in_features = get_in_features_update(rr=None, model=model, device=device)
-                    # func_phi = model.lin_phi(in_features[ids].float())
-                    # loss = loss + func_phi.norm(2)
-                    # # regularisation sparsity on Wij
-                    # loss = loss + model_W[:n_neurons, :n_neurons].norm(1) * coeff_L1
-                    # # regularisation lin_edge
-                    # in_features, in_features_next = get_in_features_lin_edge(x, model, model_config, xnorm, n_neurons,device)
-                    # if coeff_edge_diff > 0:
-                    #     if model_config.lin_edge_positive:
-                    #         msg0 = model.lin_edge(in_features[ids].clone().detach()) ** 2
-                    #         msg1 = model.lin_edge(in_features_next[ids].clone().detach()) ** 2
-                    #     else:
-                    #         msg0 = model.lin_edge(in_features[ids].clone().detach())
-                    #         msg1 = model.lin_edge(in_features_next[ids].clone().detach())
-                    #     loss = loss + torch.relu(msg0 - msg1).norm(2) * coeff_edge_diff
+                    # regularisation lin_phi(0)=0
+                    in_features = torch.cat((
+                        torch.zeros((n_neurons, 1), device=device),
+                        model.a[0:n_neurons],
+                        torch.zeros((n_neurons, 1), device=device),
+                        torch.zeros((n_neurons, 1), device=device)
+                    ), dim=1)
+                    func_phi = model.lin_phi(in_features[ids].float())
+                    loss = loss + func_phi.norm(2)
+                    # regularisation sparsity on Wij
+                    loss = loss + model.W.norm(1) * coeff_L1
+                    # regularisation lin_edge
+                    in_features, in_features_next = get_in_features_lin_edge(x, model, model_config, xnorm, n_neurons,device)
+                    if coeff_edge_diff > 0:
+                        if model_config.lin_edge_positive:
+                            msg0 = model.lin_edge(in_features[ids].clone().detach()) ** 2
+                            msg1 = model.lin_edge(in_features_next[ids].clone().detach()) ** 2
+                        else:
+                            msg0 = model.lin_edge(in_features[ids].clone().detach())
+                            msg1 = model.lin_edge(in_features_next[ids].clone().detach())
+                        loss = loss + torch.relu(msg0 - msg1).norm(2) * coeff_edge_diff
                     # # regularisation sign Wij
                     # if (coeff_sign > 0) and (N%4 == 0):
                     #     W_sign = torch.tanh(5 * model_W)
@@ -3365,12 +3368,10 @@ def data_train_flyvis(config, erase, best_model, device):
                     if batch_ratio < 1:
                         ids_ = np.random.permutation(ids.shape[0])[:int(ids.shape[0] * batch_ratio)]
                         ids = np.sort(ids_)
-                        ids = np.arange(5)
                         edges = edges_all.clone().detach()
                         mask = torch.isin(edges[1, :], torch.tensor(ids, device=device))
                         edges = edges[:, mask]
                         mask = torch.arange(edges_all.shape[1],device=device)[mask]
-
                     else:
                         edges = edges_all.clone().detach()
                         mask = torch.arange(edges_all.shape[1])
@@ -3432,6 +3433,8 @@ def data_train_flyvis(config, erase, best_model, device):
                 loss.backward()
                 optimizer.step()
 
+                print(loss.item())
+
                 if has_missing_activity:
                     optimizer_missing_activity.step()
                 if has_neural_field:
@@ -3444,12 +3447,48 @@ def data_train_flyvis(config, erase, best_model, device):
 
                     fig = plt.figure(figsize=(8, 8))
                     fig, ax = fig_init()
-                    plt.scatter(to_numpy(gt_weights), to_numpy(model.W), s=0.1, c='k', alpha=1)
+                    plt.scatter(to_numpy(gt_weights), to_numpy(model.W.squeeze()), s=0.1, c='k', alpha=0.01)
                     plt.xlabel(r'true $W_{ij}$', fontsize=68)
                     plt.ylabel(r'learned $W_{ij}$', fontsize=68)
                     plt.xlim([-0.2, 0.2])
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/tmp_training/matrix/comparison_{epoch}_{N}.tif", dpi=87)
+                    plt.close()
+
+                    fig = plt.figure(figsize=(8, 8))
+                    rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
+                    for n in range(n_neurons):
+                        embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim),device=device)
+                        if ('PDE_N8_A' in config.graph_model.signal_model_name):
+                            in_features = torch.cat((rr[:, None], embedding_,), dim=1)
+                        elif ('PDE_N8_B' in config.graph_model.signal_model_name):
+                            in_features = torch.cat((rr[:, None] * 0, rr[:, None], embedding_, embedding_), dim=1)
+                        with torch.no_grad():
+                            func = model.lin_edge(in_features.float())
+                        if config.graph_model.lin_edge_positive:
+                            func = func ** 2
+                        if (n % 10 == 0):
+                            plt.plot(to_numpy(rr), to_numpy(func), 2,
+                                     color=cmap.color(to_numpy(type_list)[n].astype(int)),
+                                     linewidth=2, alpha=0.25)
+                    plt.xlim(config.plotting.xlim)
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/func_{epoch}_{N}.tif", dpi=87)
+                    plt.close()
+
+                    fig = plt.figure(figsize=(8, 8))
+                    for n in range(n_neurons):
+                        embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim),device=device)
+                        in_features = torch.cat((rr[:, None], embedding_, rr*0, rr*0), dim=1)
+                        with torch.no_grad():
+                            func = model.lin_phi(in_features.float())
+                        if (n % 10 == 0):
+                            plt.plot(to_numpy(rr), to_numpy(func), 2,
+                                     color=cmap.color(to_numpy(type_list)[n].astype(int)),
+                                     linewidth=2, alpha=0.25)
+                    plt.xlim(config.plotting.xlim)
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/tmp_training/function/lin_phi/func_{epoch}_{N}.tif", dpi=87)
                     plt.close()
 
                     if has_neural_field:

@@ -1694,53 +1694,52 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
     y_list = []
     x_list = []
     it = 0
-    for data in tqdm(stimulus_dataset):
-        x[:, 3] = initial_state
-        sequences = data["lum"]
-        for frame_id in range(sequences.shape[0]):
-            frame = sequences[frame_id][None, None]
-            net.stimulus.add_input(frame) # (1, 1, n_input_neurons)
-            x[:, 4] = net.stimulus().squeeze()
-            dataset = pyg.data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
-            y = pde(dataset, has_field=False)
-            y_list.append(y)
-            x_list.append(x)
-            x[:,3:4] = x[:,3:4] + delta_t * y
+    with torch.no_grad():
+        for data in tqdm(stimulus_dataset):
+            x[:, 3] = initial_state
+            sequences = data["lum"]
+            for frame_id in range(sequences.shape[0]):
+                frame = sequences[frame_id][None, None]
+                net.stimulus.add_input(frame) # (1, 1, n_input_neurons)
+                x[:, 4] = net.stimulus().squeeze()
+                dataset = pyg.data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
+                y = pde(dataset, has_field=False)
+                y_list.append(to_numpy(y.clone().detach()))
+                x_list.append(to_numpy(x.clone().detach()))
+                x[:,3:4] = x[:,3:4] + delta_t * y
+                if visualize & (run == run_vizualized) & (it % step == 0) & (it <= 500 * step):
 
-            if visualize & (run == run_vizualized) & (it % step == 0) & (it <= 500 * step):
+                    if 'latex' in style:
+                        plt.rcParams['text.usetex'] = True
+                        rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
-                if 'latex' in style:
-                    plt.rcParams['text.usetex'] = True
-                    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+                    matplotlib.rcParams['savefig.pad_inches'] = 0
+                    num = f"{it:06}"
 
-                matplotlib.rcParams['savefig.pad_inches'] = 0
-                num = f"{it:06}"
+                    plt.figure(figsize=(10, 10))
+                    plt.axis('off')
+                    plt.scatter(to_numpy(X1[n_input_neurons:, 0]), to_numpy(X1[n_input_neurons:, 1]), s=8, c=to_numpy(x[n_input_neurons:, 3]), cmap='viridis',
+                                vmin=-2, vmax=2)
+                    # cbar = plt.colorbar()
+                    # cbar.ax.yaxis.set_tick_params(labelsize=8)
+                    plt.xticks([])
+                    plt.yticks([])
+                    ax = plt.subplot(771, frame_on=True)
+                    plt.axis('off')
+                    plt.scatter(to_numpy(X1[:n_input_neurons, 0]), to_numpy(X1[:n_input_neurons, 1]), s=32, c=to_numpy(x[:n_input_neurons, 4]), cmap='viridis',
+                                vmin=0, vmax=1.5)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
+                    plt.close()
+                it = it + 1
 
-                plt.figure(figsize=(10, 10))
-                plt.axis('off')
-                plt.scatter(to_numpy(X1[n_input_neurons:, 0]), to_numpy(X1[n_input_neurons:, 1]), s=8, c=to_numpy(x[n_input_neurons:, 3]), cmap='viridis',
-                            vmin=-2, vmax=2)
-                # cbar = plt.colorbar()
-                # cbar.ax.yaxis.set_tick_params(labelsize=8)
-                plt.xticks([])
-                plt.yticks([])
-                ax = plt.subplot(771, frame_on=True)
-                plt.axis('off')
-                plt.scatter(to_numpy(X1[:n_input_neurons, 0]), to_numpy(X1[:n_input_neurons, 1]), s=32, c=to_numpy(x[:n_input_neurons, 4]), cmap='viridis',
-                            vmin=0, vmax=1.5)
-                plt.xticks([])
-                plt.yticks([])
-                plt.tight_layout()
-                plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
-                plt.close()
-
-            it = it + 1
-
-    print (f'generated {len(x_list)} frames')
+        print (f'generated {len(x_list)} frames')
 
     if bSave:
-        x_list = to_numpy(torch.stack(x_list, dim=0))
-        y_list = to_numpy(torch.stack(y_list, dim=0))
+        x_list = np.array(x_list)
+        y_list = np.array(y_list)
         np.save(f"graphs_data/{dataset_name}/x_list_{run}.npy", x_list)
         np.save(f"graphs_data/{dataset_name}/y_list_{run}.npy", y_list)
 
