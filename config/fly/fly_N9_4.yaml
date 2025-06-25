@@ -1,5 +1,5 @@
 description: 'coeff_update_u_diff: 1     coeff_update_msg_diff: 1'
-dataset: 'fly_N8_1'
+dataset: 'fly_N9_1'
 
 simulation:
     connectivity_file: 'to be specified'

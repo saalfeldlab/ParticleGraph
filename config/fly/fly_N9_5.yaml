@@ -1,5 +1,5 @@
 description: 'coeff_L1: 1.0E-5'
-dataset: 'fly_N8_1'
+dataset: 'fly_N9_1'
 
 simulation:
     connectivity_file: 'to be specified'

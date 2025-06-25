@@ -1,5 +1,5 @@
 description: 'noise_level: 1.0E-3'
-dataset: 'fly_N8_6'
+dataset: 'fly_N9_6'
 
 simulation:
     connectivity_file: 'to be specified'

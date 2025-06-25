@@ -69,8 +69,8 @@ if __name__ == '__main__':
         # config_list = ['springs_matrix_N5_3']
         # config_list = ['cell_MDCK_16']
         # config_list = ['signal_CElegans_d2', 'signal_CElegans_d2a', 'signal_CElegans_d3', 'signal_CElegans_d3a', 'signal_CElegans_d3b']
-        # config_list = ['signal_CElegans_c14_4', 'signal_CElegans_c14_4a', 'signal_CElegans_c14_4b', 'signal_CElegans_c14_4c']
-        config_list = ['fly_N8_2']
+        config_list = ['signal_CElegans_c14_4']
+        # config_list = ['fly_N9_2']
         # config_list = ['signal_N5_l6','signal_N5_l7','signal_N5_l8'] #,
         # config_list = ['signal_N5_l4','signal_N5_l5']
 

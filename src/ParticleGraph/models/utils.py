@@ -154,10 +154,10 @@ def get_in_features_lin_edge(x, model, model_config, xnorm, n_neurons, device):
         else:
             in_features = torch.cat((x[:n_neurons, 6:7], model.a[:n_neurons], model.a[:n_neurons]), dim=1)
             in_features_next = torch.cat((x[:n_neurons, 6:7] + xnorm / 150, model.a[:n_neurons], model.a[:n_neurons]), dim=1)
-    elif model_config.signal_model_name == 'PDE_N8_A':
+    elif model_config.signal_model_name == 'PDE_N9_A':
         in_features = torch.cat((x[:, 3:4], model.a), dim=1)
         in_features_next = torch.cat((x[:,3:4] * 1.05, model.a), dim=1)
-    elif model_config.signal_model_name == 'PDE_N8_B':
+    elif model_config.signal_model_name == 'PDE_N9_B':
         perm_indices = torch.randperm(n_neurons, device=model.a.device)
         in_features = torch.cat((x[:, 3:4], x[:, 3:4], model.a, model.a[perm_indices]), dim=1)
         in_features_next = torch.cat((x[:, 3:4], x[:, 3:4] * 1.05, model.a, model.a[perm_indices]), dim=1)
@@ -264,9 +264,9 @@ def plot_training_flyvis(model, config, epoch, N, log_dir, device, cmap, type_li
     rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
     for n in range(n_neurons):
         embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-        if ('PDE_N8_A' in config.graph_model.signal_model_name):
+        if ('PDE_N9_A' in config.graph_model.signal_model_name):
             in_features = torch.cat((rr[:, None], embedding_,), dim=1)
-        elif ('PDE_N8_B' in config.graph_model.signal_model_name):
+        elif ('PDE_N9_B' in config.graph_model.signal_model_name):
             in_features = torch.cat((rr[:, None] * 0, rr[:, None], embedding_, embedding_), dim=1)
         with torch.no_grad():
             func = model.lin_edge(in_features.float())
