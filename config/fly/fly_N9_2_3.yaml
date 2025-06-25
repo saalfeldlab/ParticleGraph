@@ -1,0 +1,65 @@
+description: 'coeff_update_msg_diff: 1     coeff_edge_diff: 1E5'
+dataset: 'fly_N9_1'
+
+simulation:
+    connectivity_file: 'to be specified'
+    adjacency_matrix: ''
+
+    params: [[1.0,1.0,1.0,1.0]]
+
+    n_neurons: 13741
+    n_input_neurons: 1736
+    n_neuron_types: 2
+    n_edges: 434112
+    n_frames: 90720
+    delta_t: 0.02
+    baseline_value: 0
+
+
+graph_model:
+    signal_model_name: 'PDE_N9_A'
+    prediction: 'first_derivative'
+
+    input_size: 3
+    output_size: 1
+    hidden_dim: 64
+    n_layers: 5
+
+    input_size_update: 5
+    n_layers_update: 3
+    hidden_dim_update: 64
+    aggr_type: 'add'
+    embedding_dim: 2
+
+    update_type: 'generic'
+    lin_edge_positive: True
+
+
+plotting:
+    colormap: 'tab10'
+    arrow_length: 1
+    xlim: [ -2.5,2.5 ]
+    ylim: [ -8,8 ]
+
+training:
+    n_epochs: 20
+    n_runs: 1
+    device: 'auto'
+
+    recursive_loop: 1
+    batch_size: 1
+    batch_ratio: 1
+
+    sparsity: 'none'
+    rotation_augmentation: False
+    data_augmentation_loop: 25
+
+    learning_rate_W_start: 1.0E-3
+    learning_rate_start: 5.0E-4
+    learning_rate_embedding_start: 5.0E-3
+
+    noise_level: 0.0
+    measurement_noise_level: 0.0
+    coeff_edge_diff: 1.E5
+    coeff_update_u_diff: 0
+    coeff_update_msg_diff: 1
