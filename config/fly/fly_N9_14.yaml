@@ -1,5 +1,5 @@
-description: 'coeff_update_msg_diff: 0'
-dataset: 'fly_N9_1'
+description: 'with 20 neuron types per function, '
+dataset: 'fly_N9_13'
 
 simulation:
     connectivity_file: 'to be specified'
@@ -9,7 +9,7 @@ simulation:
 
     n_neurons: 13741
     n_input_neurons: 1736
-    n_neuron_types: 2
+    n_neuron_types: 20
     n_edges: 434112
     n_frames: 90720
     delta_t: 0.02
@@ -36,7 +36,7 @@ graph_model:
 
 
 plotting:
-    colormap: 'tab10'
+    colormap: 'tab20'
     arrow_length: 1
     xlim: [ -2.5,2.5 ]
     ylim: [ -8,8 ]
@@ -60,6 +60,7 @@ training:
 
     noise_level: 0.0
     measurement_noise_level: 0.0
-    coeff_edge_diff: 1.E4
+    coeff_edge_diff: 500
     coeff_update_u_diff: 0
     coeff_update_msg_diff: 0
+    coeff_edge_norm: 1000.0
