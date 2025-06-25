@@ -1,5 +1,5 @@
-description: 'coeff_update_u_diff: 1     coeff_update_msg_diff: 1'
-dataset: 'fly_N8_1'
+description: 'noise_level: 1.0E-3'
+dataset: 'fly_N8_6'
 
 simulation:
     connectivity_file: 'to be specified'
@@ -17,7 +17,7 @@ simulation:
 
 
 graph_model:
-    signal_model_name: 'PDE_N8_A'
+    signal_model_name: 'PDE_N9_A'
     prediction: 'first_derivative'
 
     input_size: 3
@@ -58,8 +58,8 @@ training:
     learning_rate_start: 5.0E-4
     learning_rate_embedding_start: 5.0E-3
 
-    noise_level: 0.0
+    noise_level: 1.0E-3
     measurement_noise_level: 0.0
     coeff_edge_diff: 500
-    coeff_update_u_diff: 1
-    coeff_update_msg_diff: 1
+    coeff_update_u_diff: 0
+    coeff_update_msg_diff: 0

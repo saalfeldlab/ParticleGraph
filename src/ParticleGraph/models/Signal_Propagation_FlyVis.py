@@ -78,13 +78,13 @@ class Signal_Propagation_FlyVis(pyg.nn.MessagePassing):
             torch.tensor(
                 np.ones((int(self.n_neurons), self.embedding_dim)),
                          device=self.device,
-                         requires_grad=True, dtype=torch.float32))
+                         requires_grad=False, dtype=torch.float32))
 
         self.W = nn.Parameter(
             torch.zeros(
                 self.n_edges,
                 device=self.device,
-                requires_grad=True,
+                requires_grad=False,
                 dtype=torch.float32,
             )[:, None]
         )
@@ -116,9 +116,9 @@ class Signal_Propagation_FlyVis(pyg.nn.MessagePassing):
 
     def message(self, edge_index_i, edge_index_j, v_i, v_j, embedding_i, embedding_j, data_id_i):
 
-        if (self.model=='PDE_N8_A'):
+        if (self.model=='PDE_N9_A'):
             in_features = torch.cat([v_j, embedding_j], dim=1)
-        elif (self.model=='PDE_N8_B'):
+        elif (self.model=='PDE_N9_B'):
             in_features = torch.cat([v_i, v_j, embedding_i, embedding_j], dim=1)
 
         lin_edge = self.lin_edge(in_features)

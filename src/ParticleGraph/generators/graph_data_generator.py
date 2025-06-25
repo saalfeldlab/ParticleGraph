@@ -1592,7 +1592,7 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
     from flyvis import NetworkView, Network
     from flyvis.utils.config_utils import get_default_config, CONFIG_PATH
     from flyvis.utils.hex_utils import get_num_hexals
-    from ParticleGraph.generators.PDE_N8 import PDE_N8, get_photoreceptor_positions_from_net      # plot_stimulus_hex, plot_stimulus_hex_flyvis_coords, plot_flyvis_stimulus_sequence
+    from ParticleGraph.generators.PDE_N9 import PDE_N9, get_photoreceptor_positions_from_net      # plot_stimulus_hex, plot_stimulus_hex_flyvis_coords, plot_flyvis_stimulus_sequence
 
     plt.style.use('dark_background')
 
@@ -1660,7 +1660,7 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
     # plt.savefig(f'graphs_data/{dataset_name}/connectivity.png', dpi=300)
     # plt.close()
 
-    pde = PDE_N8(p=p, f=torch.nn.functional.relu, device=device)
+    pde = PDE_N9(p=p, f=torch.nn.functional.relu, device=device)
 
     x_coords, y_coords, u_coords, v_coords = get_photoreceptor_positions_from_net(net)
     X1 = torch.tensor(np.stack((x_coords, y_coords), axis=1), dtype=torch.float32, device=device)

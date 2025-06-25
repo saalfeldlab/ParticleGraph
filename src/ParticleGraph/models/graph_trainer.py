@@ -3409,9 +3409,9 @@ def data_train_flyvis(config, erase, best_model, device):
                 for batch in batch_loader:
                     if (coeff_update_msg_diff > 0) | (coeff_update_u_diff > 0):
                         pred, in_features = model(batch, data_id=data_id, mask=mask_batch, return_all=True)
-                        if coeff_update_msg_diff > 0 : # Penalized when pred_u_next > pred (output increases with voltage)
+                        if coeff_update_msg_diff > 0 : # Penalized when pred_u_next > pred     (output must increases with voltage)
                             in_features_msg_next = in_features.clone().detach()
-                            in_features_msg_next[:, model_config.embedding_dim] = in_features_msg_next[:, model_config.embedding_dim] * 1.05
+                            in_features_msg_next[:, model_config.embedding_dim+1] = in_features_msg_next[:, model_config.embedding_dim+1] * 1.05
                             pred_msg_next = model.lin_phi(in_features_msg_next.clone().detach())
                             loss = loss + torch.relu(pred[ids_batch]-pred_msg_next[ids_batch]).norm(2) * coeff_update_msg_diff
                         if coeff_update_u_diff > 0: #  Penalizes when pred > pred_msg_next (output decreases with message)

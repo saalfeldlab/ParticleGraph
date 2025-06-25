@@ -7,7 +7,7 @@ import torch
 from ParticleGraph.utils import *
 
 
-class PDE_N8(pyg.nn.MessagePassing):
+class PDE_N9(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
@@ -26,7 +26,7 @@ class PDE_N8(pyg.nn.MessagePassing):
     """
 
     def __init__(self, aggr_type="add", p=[], f=torch.nn.functional.relu, device=None):
-        super(PDE_N8, self).__init__(aggr=aggr_type)
+        super(PDE_N9, self).__init__(aggr=aggr_type)
 
         self.p = p
         self.f = f
@@ -156,7 +156,7 @@ if __name__ == "__main__":
         "w": params.edges.syn_strength * params.edges.syn_count * params.edges.sign,
     }
 
-    pde = PDE_N8(p=p, f=torch.nn.functional.relu,  device=device)
+    pde = PDE_N9(p=p, f=torch.nn.functional.relu,  device=device)
 
     edge_index = torch.stack(
         [
