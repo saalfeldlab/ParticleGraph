@@ -250,10 +250,12 @@ def plot_training_flyvis(model, config, epoch, N, log_dir, device, cmap, type_li
 
     # Plot 2: Weight comparison scatter plot
     fig = plt.figure(figsize=(8, 8))
+    # plt.hist(to_numpy(gt_weights), bins=100, density=True, alpha=0.5, color='k', label='true weights')
     plt.scatter(to_numpy(gt_weights), to_numpy(model.W.squeeze()), s=0.1, c='k', alpha=0.01)
     plt.xlabel(r'true $W_{ij}$', fontsize=68)
     plt.ylabel(r'learned $W_{ij}$', fontsize=68)
     plt.xlim([-0.2, 0.2])
+    plt.ylim([-0.75, 0.75])
     plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
     plt.savefig(f"./{log_dir}/tmp_training/matrix/comparison_{epoch}_{N}.tif",
                 dpi=87, bbox_inches='tight', pad_inches=0)
@@ -275,7 +277,7 @@ def plot_training_flyvis(model, config, epoch, N, log_dir, device, cmap, type_li
         if (n % 10 == 0):
             plt.plot(to_numpy(rr), to_numpy(func), 2,
                      color=cmap.color(to_numpy(type_list)[n].astype(int)),
-                     linewidth=2, alpha=0.25)
+                     linewidth=2, alpha=0.1)
     plt.xlim(config.plotting.xlim)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/func_{epoch}_{N}.tif", dpi=87)
@@ -291,7 +293,7 @@ def plot_training_flyvis(model, config, epoch, N, log_dir, device, cmap, type_li
         if (n % 10 == 0):
             plt.plot(to_numpy(rr), to_numpy(func), 2,
                      color=cmap.color(to_numpy(type_list)[n].astype(int)),
-                     linewidth=2, alpha=0.25)
+                     linewidth=2, alpha=0.1)
     plt.xlim(config.plotting.xlim)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/function/lin_phi/func_{epoch}_{N}.tif", dpi=87)
