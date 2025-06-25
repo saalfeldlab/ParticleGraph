@@ -1,5 +1,5 @@
-description: 'with 20 neuron types per function, '
-dataset: 'fly_N9_13'
+description: 'with 20 neuron types per function, noise_level: 1.0E-1'
+dataset: 'fly_N9_14'
 
 simulation:
     connectivity_file: 'to be specified'
@@ -58,7 +58,7 @@ training:
     learning_rate_start: 5.0E-4
     learning_rate_embedding_start: 5.0E-3
 
-    noise_level: 0.0
+    noise_level: 1.0E-1
     measurement_noise_level: 0.0
     coeff_edge_diff: 500
     coeff_update_u_diff: 0

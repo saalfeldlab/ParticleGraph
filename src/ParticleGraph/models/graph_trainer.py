@@ -31,6 +31,7 @@ from scipy.ndimage import median_filter
 from tifffile import imwrite, imread
 from matplotlib.colors import LinearSegmentedColormap
 
+
 def data_train(config=None, erase=False, best_model=None, device=None):
     # plt.rcParams['text.usetex'] = True
     # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
@@ -3342,17 +3343,6 @@ def data_train_flyvis(config, erase, best_model, device):
                 ids = np.arange(n_neurons)
 
                 if not (torch.isnan(x).any()):
-
-                    # regularisation lin_phi(0)=0
-                    # in_features = torch.cat((
-                    #     torch.zeros((n_neurons, 1), device=device),
-                    #     model.a[0:n_neurons],
-                    #     torch.zeros((n_neurons, 1), device=device),
-                    #     torch.zeros((n_neurons, 1), device=device)
-                    # ), dim=1)
-                    # func_phi = model.lin_phi(in_features[ids].float())
-                    # loss = loss + func_phi.norm(2)
-
                     # regularisation sparsity on Wij
                     if coeff_L1>0:
                         loss = loss + model.W.norm(1) * coeff_L1
@@ -3520,34 +3510,43 @@ def data_train_flyvis(config, erase, best_model, device):
         plt.ylabel('loss', fontsize=12)
         plt.xlabel('epochs', fontsize=12)
 
-        # Load and display last saved figures
-        from tifffile import imread
+        # Find the last saved file to get epoch and N
+        embedding_files = glob.glob(f"./{log_dir}/tmp_training/embedding/*.tif")
+        if embedding_files:
+            last_file = max(embedding_files, key=os.path.getctime)  # or use os.path.getmtime for modification time
+            filename = os.path.basename(last_file)
+            last_epoch, last_N = filename.replace('.tif', '').split('_')
 
-        # Plot 2: Last embedding
-        ax = fig.add_subplot(2, 3, 2)
-        img = imread(f"./{log_dir}/tmp_training/embedding/{epoch}_{N}.tif")
-        plt.imshow(img)
-        plt.axis('off')
+            # Load and display last saved figures
+            from tifffile import imread
 
-        # Plot 3: Last weight comparison
-        ax = fig.add_subplot(2, 3, 3)
-        img = imread(f"./{log_dir}/tmp_training/matrix/comparison_{epoch}_{N}.tif")
-        plt.imshow(img)
-        plt.axis('off')
+            # Plot 2: Last embedding
+            ax = fig.add_subplot(2, 3, 2)
+            img = imread(f"./{log_dir}/tmp_training/embedding/{last_epoch}_{last_N}.tif")
+            plt.imshow(img)
+            plt.axis('off')
+            plt.title('Embedding', fontsize=12)
 
-        # Plot 4: Last phi function
-        ax = fig.add_subplot(2, 3, 4)
-        img = imread(f"./{log_dir}/tmp_training/function/lin_phi/func_{epoch}_{N}.tif")
-        plt.imshow(img)
-        plt.axis('off')
-        plt.title('Phi function', fontsize=12)
+            # Plot 3: Last weight comparison
+            ax = fig.add_subplot(2, 3, 3)
+            img = imread(f"./{log_dir}/tmp_training/matrix/comparison_{last_epoch}_{last_N}.tif")
+            plt.imshow(img)
+            plt.axis('off')
+            plt.title('Weight Comparison', fontsize=12)
 
-        # Plot 5: Last edge function
-        ax = fig.add_subplot(2, 3, 5)
-        img = imread(f"./{log_dir}/tmp_training/function/lin_edge/func_{epoch}_{N}.tif")
-        plt.imshow(img)
-        plt.axis('off')
-        plt.title('Edge (Psi) function', fontsize=12)
+            # Plot 4: Last edge function
+            ax = fig.add_subplot(2, 3, 4)
+            img = imread(f"./{log_dir}/tmp_training/function/lin_edge/func_{last_epoch}_{last_N}.tif")
+            plt.imshow(img)
+            plt.axis('off')
+            plt.title('Edge Function', fontsize=12)
+
+            # Plot 5: Last phi function
+            ax = fig.add_subplot(2, 3, 5)
+            img = imread(f"./{log_dir}/tmp_training/function/lin_phi/func_{last_epoch}_{last_N}.tif")
+            plt.imshow(img)
+            plt.axis('off')
+            plt.title('Phi Function', fontsize=12)
 
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/epoch_{epoch}.tif")
