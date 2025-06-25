@@ -21,7 +21,7 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 # import xarray as xr
 import pandas as pd
 import tables
-
+import json
 import torch_geometric.utils as pyg_utils
 from scipy.ndimage import zoom
 import re
@@ -1592,7 +1592,7 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
     from flyvis import NetworkView, Network
     from flyvis.utils.config_utils import get_default_config, CONFIG_PATH
     from flyvis.utils.hex_utils import get_num_hexals
-    from ParticleGraph.generators.PDE_N9 import PDE_N9, get_photoreceptor_positions_from_net      # plot_stimulus_hex, plot_stimulus_hex_flyvis_coords, plot_flyvis_stimulus_sequence
+    from ParticleGraph.generators.PDE_N9 import PDE_N9, get_photoreceptor_positions_from_net, group_by_direction_and_function      # plot_stimulus_hex, plot_stimulus_hex_flyvis_coords, plot_flyvis_stimulus_sequence
 
     plt.style.use('dark_background')
 
@@ -1663,6 +1663,22 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
     pde = PDE_N9(p=p, f=torch.nn.functional.relu, device=device)
 
     x_coords, y_coords, u_coords, v_coords = get_photoreceptor_positions_from_net(net)
+
+    # Create neuron type mapping
+    node_types = np.array(net.connectome.nodes['type'])
+    node_types_str = [t.decode('utf-8') if isinstance(t, bytes) else str(t) for t in node_types]
+    grouped_types = np.array([group_by_direction_and_function(t) for t in node_types_str])
+
+    group_names = ['R1-R6', 'R7-R8', 'L1-L5', 'Lamina_Inter', 'Mi_Early', 'Mi_Mid', 'Mi_Late',
+                   'Tm_Early', 'Tm5_Family', 'Tm_Mid', 'Tm_Late', 'TmY', 'T4a_Up', 'T4b_Right',
+                   'T4c_Down', 'T4d_Left', 'T5_OFF', 'Tangential', 'Wide_Field', 'Other']
+
+    print(f'using {len(group_names)} neuron groups: {group_names}')
+
+    group_mapping = {i: name for i, name in enumerate(group_names)}
+    with open(f'./graphs_data/{dataset_name}/neuron_group_mapping.json', 'w') as f:
+        json.dump(group_mapping, f, indent=2)
+
     X1 = torch.tensor(np.stack((x_coords, y_coords), axis=1), dtype=torch.float32, device=device)
 
     # initialize random positions
@@ -1686,8 +1702,7 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
     frame = sequences[0][None, None]
     net.stimulus.add_input(frame)
     x[:, 4] = net.stimulus().squeeze()
-    x[:, 5] = 0 # visual input neurons
-    x[n_input_neurons:, 5] = 1  # others neurons
+    x[:, 5] = torch.tensor(grouped_types, dtype=torch.float32, device=device)
 
     dataset = pyg.data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
 

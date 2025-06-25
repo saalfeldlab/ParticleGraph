@@ -46,6 +46,48 @@ class PDE_N9(pyg.nn.MessagePassing):
     def message(self, v_j):
         return self.p["w"][:, None] * self.f(v_j)
 
+def group_by_direction_and_function(neuron_type):
+    if neuron_type in ['R1', 'R2', 'R3', 'R4', 'R5', 'R6']:
+        return 0  # Outer photoreceptors
+    elif neuron_type in ['R7', 'R8']:
+        return 1  # Inner photoreceptors
+    elif neuron_type in ['L1', 'L2', 'L3', 'L4', 'L5']:
+        return 2  # Lamina monopolar
+    elif neuron_type in ['Am', 'C2', 'C3']:
+        return 3  # Lamina interneurons
+    elif neuron_type in ['Mi1', 'Mi2', 'Mi3', 'Mi4']:
+        return 4  # Early Mi neurons
+    elif neuron_type in ['Mi9', 'Mi10', 'Mi11', 'Mi12']:
+        return 5  # Mid Mi neurons
+    elif neuron_type in ['Mi13', 'Mi14', 'Mi15']:
+        return 6  # Late Mi neurons
+    elif neuron_type in ['Tm1', 'Tm2', 'Tm3', 'Tm4']:
+        return 7  # Early Tm neurons
+    elif neuron_type in ['Tm5a', 'Tm5b', 'Tm5c', 'Tm5Y']:
+        return 8  # Tm5 family
+    elif neuron_type in ['Tm9', 'Tm16', 'Tm20']:
+        return 9  # Mid Tm neurons
+    elif neuron_type in ['Tm28', 'Tm30']:
+        return 10  # Late Tm neurons
+    elif neuron_type.startswith('TmY'):
+        return 11  # TmY neurons
+    elif neuron_type == 'T4a':
+        return 12  # T4a (upward motion)
+    elif neuron_type == 'T4b':
+        return 13  # T4b (rightward motion)
+    elif neuron_type == 'T4c':
+        return 14  # T4c (downward motion)
+    elif neuron_type == 'T4d':
+        return 15  # T4d (leftward motion)
+    elif neuron_type in ['T5a', 'T5b', 'T5c', 'T5d']:
+        return 16  # T5 OFF motion detectors
+    elif neuron_type in ['T1', 'T2', 'T2a', 'T3']:
+        return 17  # Tangential neurons
+    elif neuron_type.startswith('Lawf'):
+        return 18  # Wide-field neurons
+    else:
+        return 19  # Other/CT1
+
 
 def get_photoreceptor_positions_from_net(net):
     """
@@ -104,108 +146,3 @@ def get_photoreceptor_positions_from_net(net):
     return x_coords, y_coords, u_photo, v_photo
 
 
-
-
-if __name__ == "__main__":
-    from datamate import Namespace
-    from flyvis.datasets.sintel import AugmentedSintel
-    from flyvis import NetworkView, Network
-    from flyvis.utils.config_utils import get_default_config, CONFIG_PATH
-    from flyvis.utils.hex_utils import get_num_hexals
-    from tqdm import tqdm
-
-    device = 'cuda:0'
-    extent = 8
-    dt = 1 / 50
-
-    # Initialize input stimulus data
-
-    config = Namespace(
-        n_frames=19,
-        flip_axes=[0, 1],
-        n_rotations=[0, 1, 2, 3, 4, 5],
-        temporal_split=True,
-        dt=dt,
-        interpolate=True,
-        boxfilter=dict(extent=8, kernel_size=13),
-        vertical_splits=3,
-        center_crop_fraction=0.7,
-    )
-
-    stimulus_dataset = AugmentedSintel(**config)
-
-    # Initialize a model with a connectome/eye of less extent to save memory
-    # Fine with this connectome version, because inputs don't span more than 8 hexals
-    config = get_default_config(
-        overrides=[], path=f"{CONFIG_PATH}/network/network.yaml"
-    )
-    config.connectome.extent = extent
-    net = Network(**config)
-
-    # Now load pretrained weights
-    nnv = NetworkView("flow/0000/000")
-    trained_net = nnv.init_network(checkpoint=0)
-    net.load_state_dict(trained_net.state_dict())
-
-    torch.set_grad_enabled(False)
-
-    params = net._param_api()
-    p = {
-        "tau_i": params.nodes.time_const,
-        "V_i_rest": params.nodes.bias,
-        "w": params.edges.syn_strength * params.edges.syn_count * params.edges.sign,
-    }
-
-    pde = PDE_N9(p=p, f=torch.nn.functional.relu,  device=device)
-
-    edge_index = torch.stack(
-        [
-            torch.tensor(net.connectome.edges.source_index[:]),
-            torch.tensor(net.connectome.edges.target_index[:]),
-        ],
-        dim=0,
-    )
-    edge_index = edge_index.to(device)
-
-    # How to generate dummy x?
-    state = net.steady_state(t_pre=2.0, dt=dt, batch_size=1)
-    initial_state = state.nodes.activity.squeeze()
-    n_neurons = len(initial_state)
-    n_edges = len(edge_index[0])
-
-    x = torch.zeros(n_neurons, 5, device=device)
-    x[:, 0] = torch.arange(n_neurons, dtype=torch.float32)
-    x[:, 3] = initial_state
-    # frame = torch.randn(1, 1, 1, get_num_hexals(config.connectome.extent))
-    # print(frame.shape)
-
-    # (n_frames, 1, n_receptors)
-    sequences = stimulus_dataset[0]["lum"]
-    frame = sequences[0][None, None]
-    net.stimulus.add_input(frame)
-    x[:, 4] = net.stimulus().squeeze()
-
-    dataset = pyg.data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
-
-
-    y = pde(dataset, has_field=False)
-    print(y)
-    print(len(stimulus_dataset))
-
-    y_list = []
-    x_list = []
-    for data in tqdm(stimulus_dataset):
-        x[:, 3] = initial_state
-        sequences = data["lum"]
-        for frame_id in range(sequences.shape[0]):
-            frame = sequences[frame_id][None, None]
-            net.stimulus.add_input(frame)
-            x[:, 4] = net.stimulus().squeeze()
-            dataset = pyg.data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
-            y = pde(dataset, has_field=False)
-            y_list.append(y)
-            x_list.append(x)
-            x[:, 3:4] = x[:, 3:4] + dt * y
-
-    np.save(f"graphs_data/flyvis/y_list.npy", y_list)
-    np.save(f"graphs_data/flyvis/x_list.npy", x_list)

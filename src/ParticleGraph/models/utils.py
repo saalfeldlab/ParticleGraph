@@ -239,24 +239,34 @@ def plot_training_flyvis(model, config, epoch, N, log_dir, device, cmap, type_li
     fig = plt.figure(figsize=(8, 8))
     for n in range(n_neuron_types):
         pos = torch.argwhere(type_list == n)
-        plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=1, color=cmap.color(n), alpha=0.1, edgecolors='none')
-    plt.xlabel('embedding 0', fontsize=12)
-    plt.ylabel('embedding 1', fontsize=12)
+        plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=5, color=cmap.color(n), alpha=0.1, edgecolors='none')
+    plt.xlabel('embedding 0', fontsize=18)
+    plt.ylabel('embedding 1', fontsize=18)
     plt.xticks([])
     plt.yticks([])
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/embedding/{epoch}_{N}.tif", dpi=87)
     plt.close()
 
+    x_data = to_numpy(gt_weights)
+    y_data = to_numpy(model.W.squeeze())
+    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+    residuals = y_data - linear_model(x_data, *lin_fit)
+    ss_res = np.sum(residuals ** 2)
+    ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+    r_squared = 1 - (ss_res / ss_tot)
+    # print(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
+
+
     # Plot 2: Weight comparison scatter plot
     fig = plt.figure(figsize=(8, 8))
-    # plt.hist(to_numpy(gt_weights), bins=100, density=True, alpha=0.5, color='k', label='true weights')
     plt.scatter(to_numpy(gt_weights), to_numpy(model.W.squeeze()), s=0.1, c='k', alpha=0.01)
-    plt.xlabel(r'true $W_{ij}$', fontsize=68)
-    plt.ylabel(r'learned $W_{ij}$', fontsize=68)
+    plt.xlabel(r'true $W_{ij}$', fontsize=18)
+    plt.ylabel(r'learned $W_{ij}$', fontsize=18)
+    plt.text(-0.19, 0.65, f'R^2: {np.round(r_squared, 3)}\nslope: {np.round(lin_fit[0], 2)}', fontsize=12)
     plt.xlim([-0.2, 0.2])
     plt.ylim([-0.75, 0.75])
-    plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
+    plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/matrix/comparison_{epoch}_{N}.tif",
                 dpi=87, bbox_inches='tight', pad_inches=0)
     plt.close()
@@ -274,10 +284,10 @@ def plot_training_flyvis(model, config, epoch, N, log_dir, device, cmap, type_li
             func = model.lin_edge(in_features.float())
         if config.graph_model.lin_edge_positive:
             func = func ** 2
-        if (n % 10 == 0):
+        if (n % 20 == 0):
             plt.plot(to_numpy(rr), to_numpy(func), 2,
                      color=cmap.color(to_numpy(type_list)[n].astype(int)),
-                     linewidth=2, alpha=0.1)
+                     linewidth=1, alpha=0.1)
     plt.xlim(config.plotting.xlim)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/func_{epoch}_{N}.tif", dpi=87)
@@ -290,10 +300,10 @@ def plot_training_flyvis(model, config, epoch, N, log_dir, device, cmap, type_li
         in_features = torch.cat((rr[:, None], embedding_, rr[:, None] * 0, rr[:, None] * 0), dim=1)
         with torch.no_grad():
             func = model.lin_phi(in_features.float())
-        if (n % 10 == 0):
+        if (n % 20 == 0):
             plt.plot(to_numpy(rr), to_numpy(func), 2,
                      color=cmap.color(to_numpy(type_list)[n].astype(int)),
-                     linewidth=2, alpha=0.1)
+                     linewidth=1, alpha=0.1)
     plt.xlim(config.plotting.xlim)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/function/lin_phi/func_{epoch}_{N}.tif", dpi=87)

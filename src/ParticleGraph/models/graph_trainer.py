@@ -28,7 +28,7 @@ from ParticleGraph.denoise_data import *
 from scipy.spatial import KDTree
 from sklearn import neighbors, metrics
 from scipy.ndimage import median_filter
-from tifffile import imwrite
+from tifffile import imwrite, imread
 from matplotlib.colors import LinearSegmentedColormap
 
 def data_train(config=None, erase=False, best_model=None, device=None):
@@ -3344,14 +3344,15 @@ def data_train_flyvis(config, erase, best_model, device):
                 if not (torch.isnan(x).any()):
 
                     # regularisation lin_phi(0)=0
-                    in_features = torch.cat((
-                        torch.zeros((n_neurons, 1), device=device),
-                        model.a[0:n_neurons],
-                        torch.zeros((n_neurons, 1), device=device),
-                        torch.zeros((n_neurons, 1), device=device)
-                    ), dim=1)
-                    func_phi = model.lin_phi(in_features[ids].float())
-                    loss = loss + func_phi.norm(2)
+                    # in_features = torch.cat((
+                    #     torch.zeros((n_neurons, 1), device=device),
+                    #     model.a[0:n_neurons],
+                    #     torch.zeros((n_neurons, 1), device=device),
+                    #     torch.zeros((n_neurons, 1), device=device)
+                    # ), dim=1)
+                    # func_phi = model.lin_phi(in_features[ids].float())
+                    # loss = loss + func_phi.norm(2)
+
                     # regularisation sparsity on Wij
                     if coeff_L1>0:
                         loss = loss + model.W.norm(1) * coeff_L1
@@ -3461,7 +3462,7 @@ def data_train_flyvis(config, erase, best_model, device):
                 if has_neural_field:
                     optimizer_f.step()
 
-                total_loss += loss.item()
+                total_loss += loss.item() - total_loss_regul
 
 
                 if ((N % plot_frequency == 0) | (N == 0)):
@@ -3510,27 +3511,43 @@ def data_train_flyvis(config, erase, best_model, device):
 
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
-        fig = plt.figure(figsize=(12, 6))
+        fig = plt.figure(figsize=(15, 10))
 
+        # Plot 1: Loss
         ax = fig.add_subplot(2, 3, 1)
         plt.plot(list_loss, color='k', linewidth=1)
         plt.xlim([0, n_epochs])
         plt.ylabel('loss', fontsize=12)
         plt.xlabel('epochs', fontsize=12)
 
-        ax = fig.add_subplot(2, 3, 2)
-        for n in range(n_neuron_types):
-            pos = torch.argwhere(type_list == n)
-            plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=1, color=cmap.color(n))
-        plt.xlabel('embedding 0', fontsize=12)
-        plt.ylabel('embedding 1', fontsize=12)
+        # Load and display last saved figures
+        from tifffile import imread
 
+        # Plot 2: Last embedding
+        ax = fig.add_subplot(2, 3, 2)
+        img = imread(f"./{log_dir}/tmp_training/embedding/{epoch}_{N}.tif")
+        plt.imshow(img)
+        plt.axis('off')
+
+        # Plot 3: Last weight comparison
         ax = fig.add_subplot(2, 3, 3)
-        plt.scatter(to_numpy(gt_weights), to_numpy(model.W.squeeze()), s=0.1, c='k', alpha=0.01)
-        plt.xlabel(r'true $W_{ij}$', fontsize=12)
-        plt.ylabel(r'learned $W_{ij}$', fontsize=12)
-        plt.xlim([-0.2, 0.2])
-        plt.title('comparison')
+        img = imread(f"./{log_dir}/tmp_training/matrix/comparison_{epoch}_{N}.tif")
+        plt.imshow(img)
+        plt.axis('off')
+
+        # Plot 4: Last phi function
+        ax = fig.add_subplot(2, 3, 4)
+        img = imread(f"./{log_dir}/tmp_training/function/lin_phi/func_{epoch}_{N}.tif")
+        plt.imshow(img)
+        plt.axis('off')
+        plt.title('Phi function', fontsize=12)
+
+        # Plot 5: Last edge function
+        ax = fig.add_subplot(2, 3, 5)
+        img = imread(f"./{log_dir}/tmp_training/function/lin_edge/func_{epoch}_{N}.tif")
+        plt.imshow(img)
+        plt.axis('off')
+        plt.title('Edge (Psi) function', fontsize=12)
 
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/epoch_{epoch}.tif")
