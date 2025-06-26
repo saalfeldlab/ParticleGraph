@@ -62,7 +62,7 @@ plotting:
     ylim: [0,0.3]
 
 training:
-    n_epochs: 20
+    n_epochs: 10
     n_runs: 2
     device: 'auto'
 

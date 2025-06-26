@@ -2509,6 +2509,7 @@ def data_train_synaptic2(config, erase, best_model, device):
 
     print('create models ...')
     model, bc_pos, bc_dpos = choose_training_model(model_config=config, device=device, projections=projections)
+    model.train()
     if has_missing_activity:
         assert batch_ratio == 1, f"batch_ratio must be 1, got {batch_ratio}"
         model_missing_activity = nn.ModuleList([
@@ -2523,7 +2524,9 @@ def data_train_synaptic2(config, erase, best_model, device):
         optimizer_missing_activity = torch.optim.Adam(lr=train_config.learning_rate_missing_activity,
                                                       params=model_missing_activity.parameters())
         model_missing_activity.train()
+
     if has_neural_field:
+        modulation = None
         if ('short_term_plasticity' in field_type) | ('modulation' in field_type):
             model_f = nn.ModuleList([
                 Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
@@ -2533,6 +2536,14 @@ def data_train_synaptic2(config, erase, best_model, device):
                       outermost_linear=model_config.outermost_linear_nnr)
                 for n in range(n_runs)
             ])
+            if ('short_term_plasticity' in field_type):
+                modulation = torch.tensor(x_list[0], device=device)
+                modulation = modulation[:, :, 8:9].squeeze()
+                modulation = modulation.t()
+                modulation = modulation.clone().detach()
+                d_modulation = (modulation[:, 1:] - modulation[:, :-1]) / delta_t
+                modulation_norm = torch.tensor(1.0E-2, device=device)
+
         elif 'visual' in field_type:
             n_nodes_per_axis = int(np.sqrt(n_nodes))
             model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
@@ -2560,6 +2571,8 @@ def data_train_synaptic2(config, erase, best_model, device):
     else:
         start_epoch = 0
         list_loss = []
+
+    print('set optimizer ...')
     lr = train_config.learning_rate_start
     if train_config.learning_rate_update_start == 0:
         lr_update = train_config.learning_rate_start
@@ -2576,7 +2589,6 @@ def data_train_synaptic2(config, erase, best_model, device):
 
     optimizer, n_total_params = set_trainable_parameters(model=model, lr_embedding=lr_embedding, lr=lr,
                                                          lr_update=lr_update, lr_W=lr_W, lr_modulation=lr_modulation)
-    model.train()
 
     net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs.pt"
     print(f'network: {net}')
@@ -2585,10 +2597,12 @@ def data_train_synaptic2(config, erase, best_model, device):
     logger.info(f'N epochs: {n_epochs}')
     logger.info(f'initial batch_size: {batch_size}')
 
+
+    print('training setup ...')
     connectivity = torch.load(f'./graphs_data/{dataset_name}/connectivity.pt', map_location=device)
 
     if train_config.with_connectivity_mask:
-        model.mask = (adjacency > 0) * 1.0
+        model.mask = (connectivity > 0) * 1.0
         adj_t = model.mask.float() * 1
         adj_t = adj_t.t()
         edges = adj_t.nonzero().t().contiguous()
@@ -2620,17 +2634,10 @@ def data_train_synaptic2(config, erase, best_model, device):
 
     print(f'{edges.shape[1]} edges')
 
-    if 'PDE_N3' in model_config.signal_model_name:
+    if 'PDE_N3' in model_config.signal_model_name:          # PDE_N3 is special, embedding changes over time
         ind_a = torch.tensor(np.arange(1, n_neurons * 100), device=device)
         pos = torch.argwhere(ind_a % 100 != 99).squeeze()
         ind_a = ind_a[pos]
-    if has_neural_field:
-        modulation = torch.tensor(x_list[0], device=device)
-        modulation = modulation[:, :, 8:9].squeeze()
-        modulation = modulation.t()
-        modulation = modulation.clone().detach()
-        d_modulation = (modulation[:, 1:] - modulation[:, :-1]) / delta_t
-        modulation_norm = torch.tensor(1.0E-2, device=device)
 
     coeff_L1 = train_config.coeff_L1
     coeff_edge_diff = train_config.coeff_edge_diff
@@ -2791,8 +2798,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                                                                     torch.ones((n_neurons, 1), device=device) * 1.1),
                                                                    dim=1)
                             in_feature_update_next_bis = in_feature_update_next_bis[ids]
-                            loss = loss + (model.lin_phi(in_feature_update) - model.lin_phi(
-                                in_feature_update_next_bis)).norm(2) * coeff_update_diff
+                            loss = loss + (model.lin_phi(in_feature_update) - model.lin_phi(in_feature_update_next_bis)).norm(2) * coeff_update_diff
                         if 'second_derivative' in train_config.diff_update_regul:
                             in_feature_update_prev = torch.cat((torch.zeros((n_neurons, 1), device=device),
                                                                 model.a[:n_neurons], msg_1,
@@ -2852,10 +2858,11 @@ def data_train_synaptic2(config, erase, best_model, device):
                             pred_msg_next = model.lin_phi(in_features_msg_next.clone().detach())
                             loss = loss + torch.relu(pred_msg[ids_batch]-pred_msg_next[ids_batch]).norm(2) * coeff_update_msg_diff
                         if coeff_update_u_diff > 0: #  Penalizes when pred > pred_msg_next (output decreases with message)
+                            pred_u =  model.lin_phi(in_features.clone().detach())
                             in_features_u_next = in_features.clone().detach()
                             in_features_u_next[:, 0] = in_features_u_next[:, 0] * 1.05  # Perturb voltage (first column)
                             pred_u_next = model.lin_phi(in_features_u_next.clone().detach())
-                            loss = loss + torch.relu(pred_u_next[ids_batch] - pred_msg[ids_batch]).norm(2) * coeff_update_u_diff
+                            loss = loss + torch.relu(pred_u_next[ids_batch] - pred_u[ids_batch]).norm(2) * coeff_update_u_diff
                     # Enable gradients for direct derivative computation
                     # in_features.requires_grad_(True)
                     # pred = model.lin_phi(in_features)
@@ -2951,8 +2958,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / n_neurons))
         logger.info(f'recursive_parameters: {recursive_parameters[0]:.2f}')
         torch.save({'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict()},
-                   os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
+                    'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
         if has_neural_field:
             torch.save({'model_state_dict': model_f.state_dict(),
                         'optimizer_state_dict': optimizer_f.state_dict()},
@@ -2964,46 +2970,52 @@ def data_train_synaptic2(config, erase, best_model, device):
 
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
-        fig = plt.figure(figsize=(12, 6))
+        fig = plt.figure(figsize=(15, 10))
 
+        # Plot 1: Loss
         ax = fig.add_subplot(2, 3, 1)
         plt.plot(list_loss, color='k', linewidth=1)
         plt.xlim([0, n_epochs])
         plt.ylabel('loss', fontsize=12)
         plt.xlabel('epochs', fontsize=12)
 
-        ax = fig.add_subplot(2, 3, 2)
-        for n in range(n_neuron_types):
-            pos = torch.argwhere(type_list == n)
-            plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=1, color=cmap.color(n))
-        plt.xlabel('embedding 0', fontsize=12)
-        plt.ylabel('embedding 1', fontsize=12)
+        # Find the last saved file to get epoch and N
+        embedding_files = glob.glob(f"./{log_dir}/tmp_training/embedding/*.tif")
+        if embedding_files:
+            last_file = max(embedding_files, key=os.path.getctime)  # or use os.path.getmtime for modification time
+            filename = os.path.basename(last_file)
+            last_epoch, last_N = filename.replace('.tif', '').split('_')
 
-        if multi_connectivity:
-            A = model.W[0].clone().detach() * model.mask.clone().detach()
-        else:
-            A = model.W.clone().detach() * model.mask.clone().detach()
+            # Load and display last saved figures
+            from tifffile import imread
 
-        ax = fig.add_subplot(2, 3, 4)
-        ax = sns.heatmap(to_numpy(connectivity), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},
-                         vmin=-0.001, vmax=0.001)
-        plt.title('true connectivity', fontsize=12)
-        plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=8)
-        plt.yticks([0, n_neurons - 1], [1, n_neurons], fontsize=8)
+            # Plot 2: Last embedding
+            ax = fig.add_subplot(2, 3, 2)
+            img = imread(f"./{log_dir}/tmp_training/embedding/{last_epoch}_{last_N}.tif")
+            plt.imshow(img)
+            plt.axis('off')
+            plt.title('Embedding', fontsize=12)
 
-        ax = fig.add_subplot(2, 3, 5)
-        ax = sns.heatmap(to_numpy(A), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
-        plt.title('learned connectivity', fontsize=12)
-        plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=8)
-        plt.yticks([0, n_neurons - 1], [1, n_neurons], fontsize=8)
+            # Plot 3: Last weight comparison
+            ax = fig.add_subplot(2, 3, 3)
+            img = imread(f"./{log_dir}/tmp_training/matrix/comparison_{last_epoch}_{last_N}.tif")
+            plt.imshow(img)
+            plt.axis('off')
+            plt.title('Weight Comparison', fontsize=12)
 
-        ax = fig.add_subplot(2, 3, 6)
-        gt_weight = to_numpy(connectivity)
-        pred_weight = to_numpy(A[:n_neurons, :n_neurons])
-        plt.scatter(gt_weight, pred_weight, s=0.1, c='k', alpha=0.01)
-        plt.xlabel('true weight', fontsize=12)
-        plt.ylabel('learned weight', fontsize=12)
-        plt.title('comparison')
+            # Plot 4: Last edge function
+            ax = fig.add_subplot(2, 3, 4)
+            img = imread(f"./{log_dir}/tmp_training/function/lin_edge/func_{last_epoch}_{last_N}.tif")
+            plt.imshow(img)
+            plt.axis('off')
+            plt.title('Edge Function', fontsize=12)
+
+            # Plot 5: Last phi function
+            ax = fig.add_subplot(2, 3, 5)
+            img = imread(f"./{log_dir}/tmp_training/function/lin_phi/func_{last_epoch}_{last_N}.tif")
+            plt.imshow(img)
+            plt.axis('off')
+            plt.title('Phi Function', fontsize=12)
 
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/epoch_{epoch}.tif")
@@ -3431,8 +3443,7 @@ def data_train_flyvis(config, erase, best_model, device):
                     else:
                         pred = model(batch, data_id=data_id, mask=mask_batch)
 
-                pred_err = (pred[ids_batch] - y_batch[ids_batch]).norm(2)
-                loss = loss + pred_err
+                loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
 
                 loss.backward()
                 optimizer.step()
@@ -3442,7 +3453,7 @@ def data_train_flyvis(config, erase, best_model, device):
                 if has_neural_field:
                     optimizer_f.step()
 
-                total_loss += pred_err.item()
+                total_loss += loss.item()
 
 
                 if ((N % plot_frequency == 0) | (N == 0)):

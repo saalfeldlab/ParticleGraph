@@ -16,6 +16,17 @@ from torch import cuda
 import subprocess
 import re
 from tqdm import *
+from scipy.fft import fft, ifft
+import networkx as nx
+from collections import defaultdict
+from sklearn.linear_model import LinearRegression
+from scipy import stats
+
+import warnings
+from collections import defaultdict
+
+warnings.filterwarnings('ignore')
+
 def sort_key(filename):
             # Extract the numeric parts using regular expressions
             if filename.split('_')[-2] == 'graphs':
@@ -843,9 +854,6 @@ def get_top_fft_modes_per_pixel(im0, dt=1.0, top_n=3):
     return top_freqs, top_amps
 
 
-import torch.nn.functional as F
-
-
 def total_variation_norm(im):
     # Compute the differences along the x-axis (horizontal direction)
     dx = im[:, 1:, :] - im[:, :-1, :]  # (batch, height-1, width, channels)
@@ -959,11 +967,6 @@ def fit_polynomial_with_latex(x, y, degree=3):
 
     return poly, latex_str
 
-
-import numpy as np
-from collections import defaultdict
-
-
 def reconstruct_time_series_from_xlist(x_list):
     """
     Reconstruct time series data from x_list with proper track ID mapping.
@@ -1053,13 +1056,6 @@ def filter_tracks_by_length(time_series_dict, min_length=100, required_frame=Non
 
 
     return filtered_dict
-
-from sklearn.linear_model import LinearRegression
-from scipy import stats
-
-import warnings
-
-warnings.filterwarnings('ignore')
 
 
 def find_average_spatial_neighbors(filtered_time_series, track_info_dict, max_radius=50, min_radius=0, device='cpu', save_path=None):
@@ -1390,10 +1386,6 @@ def analyze_neighbor_pairs(neighbor_pairs, filtered_time_series, max_order=10):
     return granger_results
 
 
-from scipy.fft import fft, ifft
-import networkx as nx
-
-
 def iaaft_surrogate_gpu(time_series, n_surrogates=1, max_iter=50, device='cuda'):
     """
     GPU-accelerated IAAFT: generates multiple surrogates simultaneously
@@ -1444,6 +1436,7 @@ def iaaft_surrogate_gpu(time_series, n_surrogates=1, max_iter=50, device='cuda')
         phases = torch.angle(torch.fft.fft(surrogates, dim=1))
 
     return surrogates.cpu().numpy()
+
 
 def statistical_testing(granger_results, filtered_time_series, n_surrogates=500):
     """Generate surrogates and compute p-values"""
@@ -1692,19 +1685,6 @@ def run_granger_network_analysis(neighbor_pairs, filtered_time_series, track_pos
     visualize_network(G, network_scores, track_positions)
 
     return G, network_scores, significant_pairs
-
-
-import numpy as np
-import matplotlib.pyplot as plt
-
-import numpy as np
-import matplotlib.pyplot as plt
-
-import numpy as np
-import matplotlib.pyplot as plt
-
-import numpy as np
-import matplotlib.pyplot as plt
 
 
 def plot_combined_causality_analysis(leader_track_id, follower_track_id, filtered_time_series,
@@ -1968,9 +1948,6 @@ conclusion:"""
     print(f"overall assessment: {assessment}")
 
 
-import numpy as np
-from collections import defaultdict
-
 
 def plot_interesting_causality_pairs(significant_pairs, filtered_time_series, track_positions,
                                      network_scores, dataset_name, n_pairs=20):
@@ -2154,7 +2131,115 @@ def plot_interesting_causality_pairs(significant_pairs, filtered_time_series, tr
 #     dataset_name=dataset_name,
 #     n_pairs=20
 # )
+import torch
+import networkx as nx
+import numpy as np
+import pandas as pd
+import datashader as ds
+import datashader.transfer_functions as tf
+from datashader.layout import random_layout, circular_layout
+import matplotlib.pyplot as plt
 
+
+def create_graph_from_torch(edges, weights=None):
+    """Convert torch edge tensor to NetworkX graph"""
+    G = nx.Graph()
+
+    # Add edges from torch tensor [2, num_edges] format
+    edge_list = to_numpy(edges.T)  # Convert to [num_edges, 2]
+
+    if weights is not None:
+        # Add weighted edges
+        weighted_edges = [(int(edge[0]), int(edge[1]), float(w))
+                          for edge, w in zip(edge_list, to_numpy(weights))]
+        G.add_weighted_edges_from(weighted_edges)
+    else:
+        G.add_edges_from(edge_list)
+
+    return G
+
+
+def force_atlas_layout(G, iterations=50):
+    """Apply spring layout (reliable alternative to Force Atlas 2)"""
+    # Use NetworkX's spring layout with parameters similar to Force Atlas 2
+    positions = nx.spring_layout(
+        G,
+        k=1 / np.sqrt(G.number_of_nodes()),  # Optimal distance between nodes
+        iterations=iterations,
+        pos=None,
+        weight='weight' if nx.is_weighted(G) else None,
+        scale=1.0,
+        center=None,
+        dim=2,
+        seed=42  # For reproducible layouts
+    )
+    return positions
+
+
+def create_datashader_viz(G, positions, width=800, height=600):
+    """Create Datashader visualization of the network"""
+
+    # Create node dataframe
+    nodes_df = pd.DataFrame([
+        {'x': pos[0], 'y': pos[1], 'node_id': node}
+        for node, pos in positions.items()
+    ])
+
+    # Create edge dataframe
+    edges_data = []
+    for edge in G.edges():
+        x0, y0 = positions[edge[0]]
+        x1, y1 = positions[edge[1]]
+        edges_data.append({'x0': x0, 'y0': y0, 'x1': x1, 'y1': y1})
+
+    edges_df = pd.DataFrame(edges_data)
+
+    # Create canvas
+    canvas = ds.Canvas(plot_width=width, plot_height=height)
+
+    # Aggregate edges (lines)
+    edge_agg = canvas.line(edges_df, x=['x0', 'x1'], y=['y0', 'y1'],
+                           line_width=0.5, agg=ds.count())
+
+    # Aggregate nodes (points)
+    node_agg = canvas.points(nodes_df, 'x', 'y', agg=ds.count())
+
+    # Create image with edges
+    edge_img = tf.shade(edge_agg, cmap=['black', 'blue', 'cyan', 'yellow'], how='log')
+
+    # Add nodes on top
+    combined = tf.stack(edge_img,
+                        tf.shade(node_agg, cmap=['white', 'red'], how='log'),
+                        how='over')
+
+    return combined, nodes_df, edges_df
+
+
+def visualize_neural_network(edges, weights=None, iterations=50, save_path=None):
+    """Complete pipeline: torch tensors -> Force Atlas layout -> Datashader viz"""
+
+    print(f"creating graph with {edges.shape[1]} edges...")
+    G = create_graph_from_torch(edges, weights)
+
+    print(f"graph created: {G.number_of_nodes()} nodes, {G.number_of_edges()} edges")
+
+    print("computing Force Atlas 2 layout...")
+    positions = force_atlas_layout(G, iterations=iterations)
+
+    print("creating datashader visualization...")
+    img, nodes_df, edges_df = create_datashader_viz(G, positions)
+
+    # Display with matplotlib
+    plt.figure(figsize=(12, 9))
+    plt.imshow(img.to_pil())
+    plt.axis('off')
+
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+
+    plt.show()
+
+    return img, positions, nodes_df, edges_df
 
 
 

@@ -297,7 +297,7 @@ def plot_training_flyvis(model, config, epoch, N, log_dir, device, cmap, type_li
     fig = plt.figure(figsize=(8, 8))
     for n in range(n_neurons):
         embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-        in_features = torch.cat((rr[:, None], embedding_, rr[:, None] * 0, rr[:, None] * 0), dim=1)
+        in_features = torch.cat((rr[:, None], embedding_, rr[:, None] * 0, torch.ones_like(rr[:, None])), dim=1)
         with torch.no_grad():
             func = model.lin_phi(in_features.float())
         if (n % 20 == 0):
@@ -473,24 +473,23 @@ def plot_training_signal(config, model, x, adjacency, log_dir, epoch, N, n_neuro
         plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/func_{epoch}_{N}.tif", dpi=87)
         plt.close()
 
-    # i, j = torch.triu_indices(n_neurons, n_neurons, requires_grad=False, device=device)
-    # if (config.graph_model.signal_model_name)!='PDE_N':
-    #     A = model.W.clone().detach()
-    #     A[i,i] = 0
-    # elif 'asymmetric' in config.simulation.adjacency_matrix:
-    #     A = model.vals
-    # else:
-    #     A = torch.zeros(n_neurons, n_neurons, device=device, requires_grad=False, dtype=torch.float32)
-    #     A[i, j] = model.vals
-    #     A.T[i, j] = model.vals
-    #
-    # fig = plt.figure(figsize=(8, 8))
-    # ax = sns.heatmap(to_numpy(A),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046}, vmin=-1, vmax=1)
-    # plt.title('Random connectivity matrix',fontsize=12);
-    # plt.xticks([0,n_neurons-1],[1,n_neurons],fontsize=8)
-    # plt.yticks([0,n_neurons-1],[1,n_neurons],fontsize=8)
-    # plt.savefig(f"./{log_dir}/tmp_training/matrix/{epoch}_{N}.tif", dpi=87)
-    # plt.close()
+    rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
+    fig = plt.figure(figsize=(8, 8))
+    for n in range(n_neurons):
+        embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+        in_features = torch.cat((rr[:, None], embedding_, rr[:, None] * 0, rr[:, None] * 0), dim=1)
+        with torch.no_grad():
+            func = model.lin_phi(in_features.float())
+        if (n % 2 == 0):
+            plt.plot(to_numpy(rr), to_numpy(func), 2,
+                     color=cmap.color(to_numpy(type_list)[n].astype(int)),
+                     linewidth=1, alpha=0.1)
+    plt.xlim(config.plotting.xlim)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/function/lin_phi/func_{epoch}_{N}.tif", dpi=87)
+    plt.close()
+
+
 
 def plot_training_signal_field(x, n_nodes, recursive_loop, kk, time_step, x_list, run, model, field_type, model_f, edges, y_list, ynorm, delta_t, n_frames, log_dir, epoch, N, recursive_parameters, modulation, device):
     if recursive_loop > 1:
