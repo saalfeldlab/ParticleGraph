@@ -48,7 +48,7 @@ class Interaction_Particle3(pyg.nn.MessagePassing):
         self.remove_self = train_config.remove_self
 
         self.time_window = train_config.time_window
-        self.time_window_noise = train_config.time_window_noise
+        self.noise_model_level = train_config.noise_model_level
         self.sub_sampling = simulation_config.sub_sampling
         self.prediction = model_config.prediction
 
@@ -110,8 +110,8 @@ class Interaction_Particle3(pyg.nn.MessagePassing):
             pos = torch.reshape(pos, (pos.shape[0], pos.shape[1] * pos.shape[2]))
             d_pos = torch.zeros((pos.shape[0], self.dimension), dtype=torch.float32, device=self.device)
 
-        if training & (self.time_window_noise > 0):
-            noise = torch.randn_like(pos) * self.time_window_noise
+        if training & (self.noise_model_level > 0):
+            noise = torch.randn_like(pos) * self.noise_model_level
             pos = pos + noise
 
         self.step = 0

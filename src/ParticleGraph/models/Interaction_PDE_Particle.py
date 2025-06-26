@@ -55,7 +55,7 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
         self.velocity_augmentation = train_config.velocity_augmentation
 
         self.time_window = train_config.time_window
-        self.time_window_noise = train_config.time_window_noise
+        self.noise_model_level = train_config.noise_model_level
 
         self.kernel_type = model_config.kernel_type
         self.omega = model_config.omega
@@ -96,8 +96,8 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
             field = torch.ones_like(x[:,6:7])
 
         pos = x[:, 1:self.dimension+1]
-        if training & (self.time_window_noise > 0):
-            noise = torch.randn_like(pos) * self.time_window_noise
+        if training & (self.noise_model_level > 0):
+            noise = torch.randn_like(pos) * self.noise_model_level
             pos = pos + noise
 
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
@@ -182,8 +182,8 @@ class Interaction_PDE_Particle(pyg.nn.MessagePassing):
             pos = torch.reshape(pos, (pos.shape[0], pos.shape[1] * pos.shape[2]))
             d_pos = pos * 0
 
-        if training & (self.time_window_noise > 0):
-            noise = torch.randn_like(pos) * self.time_window_noise
+        if training & (self.noise_model_level > 0):
+            noise = torch.randn_like(pos) * self.noise_model_level
             pos = pos + noise
         if training & self.rotation_augmentation:
             self.phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=self.device) * np.pi * 2

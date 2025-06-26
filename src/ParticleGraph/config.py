@@ -279,7 +279,7 @@ class TrainingConfig(BaseModel):
 
     noise_level: float = 0
     measurement_noise_level: float = 0
-    time_window_noise: float = 0
+    noise_model_level: float = 0
     rotation_augmentation: bool = False
     translation_augmentation: bool = False
     reflection_augmentation: bool = False

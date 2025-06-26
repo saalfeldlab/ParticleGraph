@@ -2410,6 +2410,8 @@ def data_train_synaptic2(config, erase, best_model, device):
     coeff_sign = train_config.coeff_sign
     coeff_update_msg_diff = train_config.coeff_update_msg_diff
     coeff_update_u_diff = train_config.coeff_update_u_diff
+    coeff_edge_norm = train_config.coeff_edge_norm
+
     time_step = train_config.time_step
     has_missing_activity = train_config.has_missing_activity
     multi_connectivity = config.training.multi_connectivity
@@ -3442,7 +3444,8 @@ def data_train_flyvis(config, erase, best_model, device):
                     else:
                         pred = model(batch, data_id=data_id, mask=mask_batch)
 
-                loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
+                pred_err = (pred[ids_batch] - y_batch[ids_batch]).norm(2)
+                loss = loss + pred_err
 
                 loss.backward()
                 optimizer.step()
@@ -3452,7 +3455,7 @@ def data_train_flyvis(config, erase, best_model, device):
                 if has_neural_field:
                     optimizer_f.step()
 
-                total_loss += loss.item() - total_loss_regul
+                total_loss += pred_err.item()
 
 
                 if ((N % plot_frequency == 0) | (N == 0)):

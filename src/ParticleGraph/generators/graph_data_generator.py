@@ -1575,8 +1575,8 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
     n_input_neurons = simulation_config.n_input_neurons
     delta_t = simulation_config.delta_t
     n_frames = simulation_config.n_frames
-    noise_level = training_config.noise_level
     measurement_noise_level = training_config.measurement_noise_level
+    noise_model_level = training_config.noise_model_level
     run = 0
 
     os.makedirs('./graphs_data/fly', exist_ok=True)
@@ -1721,7 +1721,10 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
                 y = pde(dataset, has_field=False)
                 y_list.append(to_numpy(y.clone().detach()))
                 x_list.append(to_numpy(x.clone().detach()))
-                x[:,3:4] = x[:,3:4] + delta_t * y
+                if noise_model_level > 0:
+                    x[:, 3:4] = x[:, 3:4] + delta_t * y + torch.randn((n_neurons,1), dtype=torch.float32, device=device) * noise_model_level
+                else:
+                    x[:, 3:4] = x[:, 3:4] + delta_t * y
                 if visualize & (run == run_vizualized) & (it % step == 0) & (it <= 500 * step):
 
                     if 'latex' in style:
@@ -1830,7 +1833,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     has_particle_dropout = training_config.particle_dropout > 0
     dataset_name = config.dataset
     excitation = simulation_config.excitation
-    noise_level = training_config.noise_level
+    noise_model_level = training_config.noise_model_level
     measurement_noise_level = training_config.measurement_noise_level
     cmap = CustomColorMap(config=config)
 
@@ -2014,16 +2017,16 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             if (config.graph_model.signal_model_name == 'PDE_N6') | (config.graph_model.signal_model_name == 'PDE_N7'):
                 H1[:, 1] = y.squeeze()
                 H1[:, 0] = H1[:, 0] + H1[:, 1] * delta_t
-                if noise_level > 0:
-                    H1[:, 0] = H1[:, 0] + torch.randn(n_particles, device=device) * noise_level
+                if noise_model_level > 0:
+                    H1[:, 0] = H1[:, 0] + torch.randn(n_particles, device=device) * noise_model_level
                 H1[:, 3] = p.squeeze()
                 H1[:, 2] = torch.relu(H1[:, 2] + H1[:, 3] * delta_t)
 
             else:
                 H1[:, 1] = y.squeeze()
                 H1[:, 0] = H1[:, 0] + H1[:, 1] * delta_t
-                if noise_level > 0:
-                    H1[:, 0] = H1[:, 0] + torch.randn(n_particles, device=device) * noise_level
+                if noise_model_level > 0:
+                    H1[:, 0] = H1[:, 0] + torch.randn(n_particles, device=device) * noise_model_level
 
             # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
             # print(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")

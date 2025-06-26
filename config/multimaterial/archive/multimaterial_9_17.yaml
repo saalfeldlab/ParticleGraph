@@ -40,7 +40,7 @@ training:
   small_init_batch_size: False
   n_runs: 999
 
-  time_window_noise: 1.0E-5
+  noise_model_level: 1.0E-5
 
   sparsity: 'none'
   sparsity_freq: 3

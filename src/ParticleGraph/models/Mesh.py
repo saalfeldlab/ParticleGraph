@@ -41,7 +41,7 @@ class Mesh(pyg.nn.MessagePassing):
         self.nparticles = simulation_config.n_particles
         self.ndataset = config.training.n_runs
         self.bc_dpos = bc_dpos
-        self.time_window_noise = train_config.time_window_noise
+        self.noise_model_level = train_config.noise_model_level
         self.rotation_augmentation = train_config.rotation_augmentation
         self.field_type = model_config.field_type
 
@@ -95,8 +95,8 @@ class Mesh(pyg.nn.MessagePassing):
                 laplacian_uvw = self.propagate(edge_index, uvw=uvw, pos=pos, embedding=embedding, discrete_laplacian=edge_attr)
                 self.laplacian_uvw = laplacian_uvw
                 input_phi = torch.cat((laplacian_uvw, uvw, embedding), dim=-1)
-                if self.time_window_noise > 0:
-                    noise = torch.randn_like(input_phi[:, 0:6]) * self.time_window_noise
+                if self.noise_model_level > 0:
+                    noise = torch.randn_like(input_phi[:, 0:6]) * self.noise_model_level
                     input_phi[:, 0:6] = input_phi[:, 0:6] + noise
             case 'RD_Mesh2':
                 self.step = 0
@@ -105,22 +105,22 @@ class Mesh(pyg.nn.MessagePassing):
                 self.step = 1
                 uvw_msg = self.propagate(edge_index, uvw=uvw, pos=pos, embedding=embedding, discrete_laplacian=edge_attr)
                 input_phi = torch.cat((laplacian_uvw, uvw, uvw_msg, embedding), dim=-1)
-                if self.time_window_noise > 0:
-                    noise = torch.randn_like(input_phi[:,0:9]) * self.time_window_noise
+                if self.noise_model_level > 0:
+                    noise = torch.randn_like(input_phi[:,0:9]) * self.noise_model_level
                     input_phi[:,0:9] = input_phi[:,0:9] + noise
             case 'RD_Mesh3':
                 self.step = 2
                 uvw_msg = self.propagate(edge_index, uvw=uvw, pos=pos, embedding=embedding, discrete_laplacian=edge_attr)
                 input_phi = torch.cat((uvw, uvw_msg, embedding), dim=-1)
-                if self.time_window_noise > 0:
-                    noise = torch.randn_like(input_phi[:, 0:9]) * self.time_window_noise
+                if self.noise_model_level > 0:
+                    noise = torch.randn_like(input_phi[:, 0:9]) * self.noise_model_level
                     input_phi[:, 0:9] = input_phi[:, 0:9] + noise
             case 'RD_Mesh4':
                 self.step = 3
                 uvw_msg = self.propagate(edge_index, uvw=uvw, pos=pos, embedding=embedding, discrete_laplacian=edge_attr)
                 input_phi = torch.cat((uvw, uvw_msg, embedding), dim=-1)
-                if self.time_window_noise > 0:
-                    noise = torch.randn_like(input_phi[:, 0:9]) * self.time_window_noise
+                if self.noise_model_level > 0:
+                    noise = torch.randn_like(input_phi[:, 0:9]) * self.noise_model_level
                     input_phi[:, 0:9] = input_phi[:, 0:9] + noise
 
         if (self.has_field) & ('additive' in self.field_type):

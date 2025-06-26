@@ -85,5 +85,5 @@ training:
 
     learning_rate_NNR: 1.0E-5
 
-    noise_level: 1
+   measurement_noise_level: 1
 

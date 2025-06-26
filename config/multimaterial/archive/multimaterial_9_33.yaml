@@ -38,7 +38,7 @@ training:
   n_runs: 99
 
   recursive_loop: 1
-  time_window_noise: 1.0E-5
+  noise_model_level: 1.0E-5
 
   sparsity: 'none'
   sparsity_freq: 3

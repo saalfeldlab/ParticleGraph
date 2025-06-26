@@ -61,7 +61,7 @@ class Interaction_Smooth_Particle(pyg.nn.MessagePassing):
         self.max_radius = simulation_config.max_radius
         self.rotation_augmentation = train_config.rotation_augmentation
         self.time_window = train_config.time_window
-        self.time_window_noise = train_config.time_window_noise
+        self.noise_model_level = train_config.noise_model_level
         self.sub_sampling = simulation_config.sub_sampling
         self.state = simulation_config.state_type
 
@@ -110,8 +110,8 @@ class Interaction_Smooth_Particle(pyg.nn.MessagePassing):
             field = torch.ones_like(x[:,6:7])
 
         pos = x[:, 1:self.dimension+1]
-        if training & (self.time_window_noise > 0):
-            noise = torch.randn_like(pos) * self.time_window_noise
+        if training & (self.noise_model_level > 0):
+            noise = torch.randn_like(pos) * self.noise_model_level
             pos = pos + noise
 
         d_pos = x[:, self.dimension+1:1+2*self.dimension]

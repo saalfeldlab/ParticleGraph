@@ -75,7 +75,7 @@ class Operator_smooth(pyg.nn.MessagePassing):
         self.n_particles_max = simulation_config.n_particles_max
         self.delta_t = simulation_config.delta_t
         self.max_radius = simulation_config.max_radius
-        self.time_window_noise = train_config.time_window_noise
+        self.noise_model_level = train_config.noise_model_level
         self.embedding_dim = model_config.embedding_dim
         self.n_dataset = train_config.n_runs
         self.update_type = model_config.update_type

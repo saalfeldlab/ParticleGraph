@@ -78,5 +78,5 @@ training:
     coeff_L1: 1.0E-5
     coeff_edge_diff: 100
 
-    noise_level: 5
+   measurement_noise_level: 5
 

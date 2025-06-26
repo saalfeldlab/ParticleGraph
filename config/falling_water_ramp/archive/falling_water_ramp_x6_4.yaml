@@ -44,8 +44,8 @@ training:
   small_init_batch_size: False
   n_runs: 500
   time_window: 4
-  time_window_noise: 0
-  time_window_noise: 5.0E-5
+  noise_model_level: 0
+  noise_model_level: 5.0E-5
 
   sparsity: 'none'
   sparsity_freq: 3

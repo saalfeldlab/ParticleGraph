@@ -53,7 +53,7 @@ training:
   batch_size: 4
   small_init_batch_size: False
 
-  time_window_noise: 1.0E-5
+  noise_model_level: 1.0E-5
 
   rotation_augmentation: False
   data_augmentation_loop: 20
