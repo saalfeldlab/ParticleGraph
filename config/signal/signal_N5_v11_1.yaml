@@ -13,6 +13,9 @@ simulation:
     min_radius: 1.0
     max_radius: 1.0E6
     n_neurons: 2048
+    n_neuron_types: 4
+
+    n_neurons: 2048
     n_nodes: 1024
     n_neuron_types: 4
     shuffle_particle_types: True
@@ -56,7 +59,7 @@ plotting:
     colormap: 'tab10'
     arrow_length: 1
     xlim: [-5,5]
-    ylim: [-8,8]
+    ylim: [0,0.3]
 
 training:
     n_epochs: 20
@@ -72,7 +75,7 @@ training:
     n_epochs_init: 2
 
     rotation_augmentation: False
-    data_augmentation_loop: 50
+    data_augmentation_loop: 18
 
     sparsity: 'none'
     sparsity_freq: 4
@@ -92,4 +95,4 @@ training:
 
     learning_rate_NNR: 1.0E-5
 
-   measurement_noise_level: 1
+    measurement_noise_level: 1
