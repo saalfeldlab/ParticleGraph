@@ -1919,14 +1919,14 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                 T1 = first_T1.clone().detach()
 
         if run == 0:
-            edge_index, adjacency, mask = init_adjacency(simulation_config.connectivity_file, simulation_config.connectivity_distribution,
-                                                         simulation_config.connectivity_filling_factor, T1, n_particles, n_particle_types, dataset_name, device)
+            edge_index, connectivity, mask = init_connectivity(simulation_config.connectivity_file, simulation_config.connectivity_distribution,
+                                                               simulation_config.connectivity_filling_factor, T1, n_particles, n_particle_types, dataset_name, device)
 
-            model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, device=device)
+            model, bc_pos, bc_dpos = choose_model(config=config, W=connectivity, device=device)
 
             torch.save(edge_index, f'./graphs_data/{dataset_name}/edge_index.pt')
             torch.save(mask, f'./graphs_data/{dataset_name}/mask.pt')
-            torch.save(adjacency, f'./graphs_data/{dataset_name}/adjacency.pt')
+            torch.save(connectivity, f'./graphs_data/{dataset_name}/connectivity.pt')
 
         if run == run_vizualized:
             if 'black' in style:

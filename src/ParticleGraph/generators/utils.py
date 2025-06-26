@@ -495,7 +495,7 @@ def init_synapse_map(config, x, edge_attr_adjacency, device):
     #     X1[k,:] = torch.tensor([p[0],p[1]], device=device)
     
     
-def init_adjacency(connectivity_file, connectivity_distribution, connectivity_filling_factor, T1, n_particles, n_particle_types, dataset_name, device):
+def init_connectivity(connectivity_file, connectivity_distribution, connectivity_filling_factor, T1, n_particles, n_particle_types, dataset_name, device):
 
     if 'adjacency.pt' in connectivity_file:
         adjacency = torch.load(connectivity_file, map_location=device)

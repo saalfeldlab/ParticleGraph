@@ -2585,12 +2585,7 @@ def data_train_synaptic2(config, erase, best_model, device):
     logger.info(f'N epochs: {n_epochs}')
     logger.info(f'initial batch_size: {batch_size}')
 
-    adjacency = torch.load(f'./graphs_data/{dataset_name}/adjacency.pt', map_location=device)
-    # adjacency[10,:]=5
-    # fig = plt.figure(figsize=(8, 8))
-    # ax = fig.add_subplot(111)
-    # ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
-    # plt.show()
+    connectivity = torch.load(f'./graphs_data/{dataset_name}/connectivity.pt', map_location=device)
 
     if train_config.with_connectivity_mask:
         model.mask = (adjacency > 0) * 1.0
@@ -2608,7 +2603,7 @@ def data_train_synaptic2(config, erase, best_model, device):
 
         # pos = torch.argwhere(edges[1,:]==0)
         # neurons_sender_to_0 = edges[0,pos]
-        # model.mask = (adjacency > 0) * 1.0
+        # model.mask = (connectivity > 0) * 1.0
         # adj_t = model.mask.float() * 1
         # adj_t = adj_t.t() #[ post, pre] -> [pre, post]
         # edges = adj_t.nonzero().T.contiguous()   #[(pre, post), n_elements]
@@ -2890,7 +2885,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                 total_loss += loss.item()
 
                 if ((N % plot_frequency == 0) | (N == 0)):
-                    plot_training_signal(config, model, x, adjacency, log_dir, epoch, N, n_neurons, type_list, cmap,
+                    plot_training_signal(config, model, x, connectivity, log_dir, epoch, N, n_neurons, type_list, cmap,
                                          device)
                     if time_step > 1:
                         fig = plt.figure(figsize=(10, 10))
@@ -2990,7 +2985,7 @@ def data_train_synaptic2(config, erase, best_model, device):
             A = model.W.clone().detach() * model.mask.clone().detach()
 
         ax = fig.add_subplot(2, 3, 4)
-        ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},
+        ax = sns.heatmap(to_numpy(connectivity), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},
                          vmin=-0.001, vmax=0.001)
         plt.title('true connectivity', fontsize=12)
         plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=8)
@@ -3003,7 +2998,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         plt.yticks([0, n_neurons - 1], [1, n_neurons], fontsize=8)
 
         ax = fig.add_subplot(2, 3, 6)
-        gt_weight = to_numpy(adjacency)
+        gt_weight = to_numpy(connectivity)
         pred_weight = to_numpy(A[:n_neurons, :n_neurons])
         plt.scatter(gt_weight, pred_weight, s=0.1, c='k', alpha=0.01)
         plt.xlabel('true weight', fontsize=12)
