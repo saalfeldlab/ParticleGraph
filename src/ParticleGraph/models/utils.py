@@ -387,7 +387,7 @@ def plot_training_signal(config, model, x, adjacency, log_dir, epoch, N, n_neuro
             all_neuron_list = json.load(f)
         with open(data_folder_name+"larynx_neuron_list.json", "r") as f:
             larynx_neuron_list = json.load(f)
-        larynx_pred_weight, index_larynx =   map_matrix(larynx_neuron_list, all_neuron_list, pred_weight)
+        larynx_pred_weight, index_larynx = map_matrix(larynx_neuron_list, all_neuron_list, pred_weight)
         larynx_gt_weight, _ = map_matrix(larynx_neuron_list, all_neuron_list, gt_weight)
         fig = plt.figure(figsize=(16, 8))
         ax = fig.add_subplot(121)
@@ -451,9 +451,6 @@ def plot_training_signal(config, model, x, adjacency, log_dir, epoch, N, n_neuro
                         dim=1)
                 else:
                     in_features = torch.cat((rr[:, None], embedding_, embedding_), dim=1)
-            elif ('PDE_N9' in config.graph_model.signal_model_name):
-                embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-                in_features = torch.cat((rr[:, None], embedding_, torch.ones_like(rr[:, None])), dim=1)
             elif ('PDE_N8' in config.graph_model.signal_model_name):
                 embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
                 if model.embedding_trial:

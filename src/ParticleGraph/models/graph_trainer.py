@@ -2379,15 +2379,9 @@ def data_train_synaptic2(config, erase, best_model, device):
     train_config = config.training
     model_config = config.graph_model
 
-    print(f'training with data {model_config.particle_model_name} {model_config.mesh_model_name}')
-
     dimension = simulation_config.dimension
     n_epochs = train_config.n_epochs
-    n_neurons = simulation_config.n_neurons
     n_neuron_types = simulation_config.n_neuron_types
-
-    # n_particles = simulation_config.n_particles
-    # n_particle_types = simulation_config.n_particle_types
 
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
@@ -2539,7 +2533,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                       outermost_linear=model_config.outermost_linear_nnr)
                 for n in range(n_runs)
             ])
-        else:
+        elif 'visual' in field_type:
             n_nodes_per_axis = int(np.sqrt(n_nodes))
             model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
                                     out_features=model_config.output_size_nnr,
@@ -2772,8 +2766,6 @@ def data_train_synaptic2(config, erase, best_model, device):
                         else:
                             msg = model.lin_edge(in_features[ids].clone().detach())
                         loss = loss + (msg-1).norm(2) * coeff_edge_norm                 # normalization lin_edge(xnorm) = 1 for all embedding values
-
-
                     # regularisation sign Wij
                     if (coeff_sign > 0) and (N%4 == 0):
                         W_sign = torch.tanh(5 * model_W)
