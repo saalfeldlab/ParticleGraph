@@ -159,6 +159,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         else:
             return pred
 
+
     def message(self, edge_index_i, edge_index_j, u_i, u_j, embedding_i, embedding_j, data_id_i):
 
         if (self.model=='PDE_N4') | (self.model=='PDE_N7'):
