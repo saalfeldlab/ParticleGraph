@@ -265,7 +265,7 @@ def plot_training_flyvis(model, config, epoch, N, log_dir, device, cmap, type_li
     plt.ylabel(r'learned $W_{ij}$', fontsize=18)
     plt.text(-0.19, 0.65, f'R^2: {np.round(r_squared, 3)}\nslope: {np.round(lin_fit[0], 2)}', fontsize=12)
     plt.xlim([-0.2, 0.2])
-    plt.ylim([-0.75, 0.75])
+    plt.ylim([-1.25, 1.25])
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/matrix/comparison_{epoch}_{N}.tif",
                 dpi=87, bbox_inches='tight', pad_inches=0)

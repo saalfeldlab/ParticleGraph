@@ -2854,22 +2854,22 @@ def data_train_synaptic2(config, erase, best_model, device):
                         pred, in_features = model(batch, data_id=data_id, k=k_batch, return_all=True)
                         if coeff_update_msg_diff > 0 : # Penalized when pred_u_next > pred (output increases with voltage)
                             pred_msg = model.lin_phi(in_features)
-                            in_features_msg_next = in_features.clone()
+                            in_features_msg_next = in_features.clone().detach()
                             in_features_msg_next[:, model_config.embedding_dim+1] = in_features_msg_next[:, model_config.embedding_dim+1] * 1.05
-                            pred_msg_next = model.lin_phi(in_features_msg_next.clone())
+                            pred_msg_next = model.lin_phi(in_features_msg_next.clone().detach())
                             loss = loss + torch.relu(pred_msg[ids_batch]-pred_msg_next[ids_batch]).norm(2) * coeff_update_msg_diff
                         if coeff_update_u_diff > 0: #  Penalizes when pred > pred_msg_next (output decreases with message)
                             pred_u =  model.lin_phi(in_features)
-                            in_features_u_next = in_features.clone()
+                            in_features_u_next = in_features.clone().detach()
                             in_features_u_next[:, 0] = in_features_u_next[:, 0] * 1.05  # Perturb voltage (first column)
-                            pred_u_next = model.lin_phi(in_features_u_next.clone())
+                            pred_u_next = model.lin_phi(in_features_u_next.clone().detach())
                             loss = loss + torch.relu(pred_u_next[ids_batch] - pred_u[ids_batch]).norm(2) * coeff_update_u_diff
                         if coeff_update_msg_sign > 0: # Penalizes when pred_msg not of same sign as msg
-                            in_features_modified = in_features.clone()
+                            in_features_modified = in_features.clone().detach()
                             in_features_modified[:, 0] = 0
                             pred_msg = model.lin_phi(in_features_modified)
-                            msg = in_features[:,model_config.embedding_dim+1].clone()
-                            loss = loss + (torch.tanh(pred_msg / 0.1) - torch.tanh(msg / 0.1)).norm(2) * coeff_update_msg_sign
+                            msg = in_features[:,model_config.embedding_dim+1].clone().detach()
+                            loss = loss + (torch.tanh(pred_msg / 0.001) - torch.tanh(msg / 0.001)).norm(2) * coeff_update_msg_sign
                     # Enable gradients for direct derivative computation
                     # in_features.requires_grad_(True)
                     # pred = model.lin_phi(in_features)
@@ -3140,6 +3140,7 @@ def data_train_flyvis(config, erase, best_model, device):
     coeff_update_msg_diff = train_config.coeff_update_msg_diff
     coeff_update_u_diff = train_config.coeff_update_u_diff
     coeff_edge_norm = train_config.coeff_edge_norm
+    coeff_update_msg_sign = train_config.coeff_update_msg_sign
 
     cmap = CustomColorMap(config=config)
 
@@ -3428,22 +3429,22 @@ def data_train_flyvis(config, erase, best_model, device):
                     if (coeff_update_msg_diff > 0) | (coeff_update_u_diff > 0) | (coeff_update_msg_sign>0):
                         pred, in_features = model(batch, data_id=data_id, mask=mask_batch, return_all=True)
                         if coeff_update_msg_diff > 0 :      # Enforces that increasing the message input should increase the output (monotonic increasing)
-                            pred_msg = model.lin_phi(in_features.clone())
-                            in_features_msg_next = in_features.clone()
+                            pred_msg = model.lin_phi(in_features.clone().detach())
+                            in_features_msg_next = in_features.clone().detach()
                             in_features_msg_next[:, model_config.embedding_dim+1] = in_features_msg_next[:, model_config.embedding_dim+1] * 1.05
-                            pred_msg_next = model.lin_phi(in_features_msg_next.clone())
+                            pred_msg_next = model.lin_phi(in_features_msg_next.clone().detach())
                             loss = loss + torch.relu(pred_msg[ids_batch]-pred_msg_next[ids_batch]).norm(2) * coeff_update_msg_diff
                         if coeff_update_u_diff > 0:
-                            pred_u = model.lin_phi(in_features.clone())
-                            in_features_u_next = in_features.clone()
+                            pred_u = model.lin_phi(in_features.clone().detach())
+                            in_features_u_next = in_features.clone().detach()
                             in_features_u_next[:, 0] = in_features_u_next[:, 0] * 1.05  # Perturb voltage (first column)
-                            pred_u_next = model.lin_phi(in_features_u_next.clone())
+                            pred_u_next = model.lin_phi(in_features_u_next.clone().detach())
                             loss = loss + torch.relu(pred_u_next[ids_batch] - pred_u[ids_batch]).norm(2) * coeff_update_u_diff
                         if coeff_update_msg_sign > 0: # Penalizes when pred_msg not of same sign as msg
-                            in_features_modified = in_features.clone()
+                            in_features_modified = in_features.clone().detach()
                             in_features_modified[:, 0] = 0
                             pred_msg = model.lin_phi(in_features_modified)
-                            msg = in_features[:,model_config.embedding_dim+1].clone()
+                            msg = in_features[:,model_config.embedding_dim+1].clone().detach()
                             loss = loss + (torch.tanh(pred_msg / 0.1) - torch.tanh(msg / 0.1)).norm(2) * coeff_update_msg_sign
 
                     # Enable gradients for direct derivative computation

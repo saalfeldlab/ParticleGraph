@@ -1,4 +1,4 @@
-description: 'test neuro-neuron dependent structure matrix modulation      coeff_update_diff: 0    coeff_update_msg_diff: 10  coeff_update_u_diff: 1    coeff_edge_norm: 1000.0'
+description: 'test neuro-neuron dependent structure matrix modulation   coeff_update_msg_sign: 1    coeff_update_diff: 0    coeff_update_msg_diff: 0  coeff_update_u_diff: 1    coeff_edge_norm: 1000.0'
 dataset: 'signal_N5_v1'
 
 simulation:
@@ -87,11 +87,12 @@ training:
     coeff_edge_diff: 10
     coeff_update_diff: 0
 
-    coeff_update_msg_diff: 10
+    coeff_update_msg_diff: 0
     coeff_update_u_diff: 1
     coeff_edge_norm: 1000.0
+    coeff_update_msg_sign: 1
 
-    diff_update_regul: 'TV'
+    diff_update_regul: ''
 
     learning_rate_W_start: 1.0E-3
     learning_rate_start: 5.0E-4
