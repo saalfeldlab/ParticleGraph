@@ -221,12 +221,12 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
 
     # Try to load pre-trained model
-    try:
-        state_dict = torch.load(f'tmp/model_0.pt', map_location=device)
-        model.load_state_dict(state_dict['model_state_dict'])
-        print("Loaded pre-trained model")
-    except:
-        print("No pre-trained model found, starting from scratch")
+    # try:
+    #     state_dict = torch.load(f'tmp/model_0.pt', map_location=device)
+    #     model.load_state_dict(state_dict['model_state_dict'])
+    #     print("Loaded pre-trained model")
+    # except:
+    print("no pre-trained model loaded, starting from scratch ...")
 
     n_epochs = 200000
     batch_size = 2000
@@ -263,7 +263,7 @@ if __name__ == '__main__':
                 v = v_true[idx, None].clone().detach()
                 optimizer.zero_grad()
 
-                recursive_loop = 3
+                recursive_loop = 1
 
                 for loop in range(recursive_loop):
                     dv_pred = model.mlp0(torch.cat((v, w, I_ext[idx, None].clone().detach()), dim=1))
