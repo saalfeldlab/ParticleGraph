@@ -274,14 +274,12 @@ if __name__ == '__main__':
 
         # Reinitialize model for each run
         model = model_duo(device=device)
-        optimizer = torch.optim.Adam(model.parameters(), lr=5e-5)  # Reduced learning rate for stability
+        optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 
         run_converged = False
 
         for iter in range(n_iter):
-            # Ensure we have enough buffer for the recursive loop
-            max_start_idx = n_steps - 10  # Buffer for recursive_loop + safety margin
-            idx = torch.randint(1, max_start_idx, (batch_size,))
+            idx = torch.randint(1, n_steps - 5, (batch_size,))
             t_batch = t_full[idx]
             idx = to_numpy(idx)
 
@@ -295,10 +293,6 @@ if __name__ == '__main__':
 
                     optimizer.zero_grad()
                     loss.backward()
-
-                    # Add gradient clipping
-                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-
                     optimizer.step()
 
                     if iter % 1000 == 0:
@@ -322,50 +316,19 @@ if __name__ == '__main__':
                     recursive_loop = 3
 
                     for loop in range(recursive_loop):
-                        # Check bounds before accessing arrays
-                        if np.any(idx + 1 >= n_steps):
-                            print(f"Index out of bounds detected, skipping batch")
-                            break
-
                         dv_pred = model.mlp0(torch.cat((v, w, I_ext[idx, None].clone().detach()), dim=1))
                         dw_pred = model.mlp1(torch.cat((v, w), dim=1))
-
-                        # Check for NaN/inf in predictions
-                        if torch.isnan(dv_pred).any() or torch.isinf(dv_pred).any():
-                            print(f"NaN/inf detected in dv_pred at iteration {iter}")
-                            break
-                        if torch.isnan(dw_pred).any() or torch.isinf(dw_pred).any():
-                            print(f"NaN/inf detected in dw_pred at iteration {iter}")
-                            break
-
-                        # Clamp derivatives to prevent explosion
-                        dv_pred = torch.clamp(dv_pred, -10.0, 10.0)
-                        dw_pred = torch.clamp(dw_pred, -10.0, 10.0)
 
                         v = v + dt * dv_pred
                         w = w + dt * dw_pred
 
-                        # Clamp state variables to reasonable bounds
-                        v = torch.clamp(v, -5.0, 5.0)
-                        w = torch.clamp(w, -5.0, 5.0)
-
                         idx = idx + 1
-
-                    # Check bounds for final access
-                    if np.any(idx >= n_steps):
-                        continue  # Skip this batch if out of bounds
 
                     w_siren = model.siren(t_full[idx])
 
-                    # Calculate individual losses with numerical stability
-                    v_target = v_true[idx, None]
-                    v_loss = F.mse_loss(v, v_target)
-                    w_loss = F.mse_loss(w, w_siren)
-
-                    # Check for NaN/inf in losses
-                    if torch.isnan(v_loss) or torch.isinf(v_loss) or torch.isnan(w_loss) or torch.isinf(w_loss):
-                        print(f"NaN/inf detected in losses at iteration {iter}")
-                        continue
+                    # Calculate individual losses
+                    v_loss = (v - v_true[idx, None]).norm(2)
+                    w_loss = (w - w_siren).norm(2)
 
                     # Add sparsity constraint on MLP1 (dW inference) weights
                     l1_lambda = 0.001  # Sparsity regularization strength
@@ -380,19 +343,10 @@ if __name__ == '__main__':
                     # Combine with weights and sparsity penalty
                     loss = v_weight * v_loss + w_weight * w_loss + l1_lambda * l1_penalty
 
-                    # Final check for loss validity
-                    if torch.isnan(loss) or torch.isinf(loss):
-                        print(f"NaN/inf detected in total loss at iteration {iter}")
-                        continue
-
                     loss.backward()
 
-                    # Add gradient clipping with check
-                    grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-                    if torch.isnan(grad_norm) or torch.isinf(grad_norm):
-                        print(f"NaN/inf detected in gradients at iteration {iter}")
-                        optimizer.zero_grad()
-                        continue
+                    # Add gradient clipping
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
 
                     optimizer.step()
 
@@ -409,30 +363,12 @@ if __name__ == '__main__':
                             v_list.append(v.clone().detach())
                             w_list.append(w.clone().detach())
 
-                            # Safe rollout with bounds checking
                             for step in range(1, n_steps):
                                 dv_pred = model.mlp0(torch.cat((v[:, None], w[:, None], I_ext[step:step + 1, None]), dim=1))
                                 dw_pred = model.mlp1(torch.cat((v[:, None], w[:, None]), dim=1))
 
-                                # Check for NaN/inf during rollout
-                                if torch.isnan(dv_pred).any() or torch.isinf(dv_pred).any() or torch.isnan(dw_pred).any() or torch.isinf(dw_pred).any():
-                                    print(f"NaN/inf detected during rollout at step {step}")
-                                    # Fill remaining with NaN to signal failure
-                                    for remaining_step in range(step, n_steps):
-                                        v_list.append(torch.full_like(v, float('nan')))
-                                        w_list.append(torch.full_like(w, float('nan')))
-                                    break
-
-                                # Clamp derivatives and update
-                                dv_pred = torch.clamp(dv_pred, -10.0, 10.0)
-                                dw_pred = torch.clamp(dw_pred, -10.0, 10.0)
-
                                 v += dt * dv_pred.squeeze()
                                 w += dt * dw_pred.squeeze()
-
-                                # Clamp state variables
-                                v = torch.clamp(v, -5.0, 5.0)
-                                w = torch.clamp(w, -5.0, 5.0)
 
                                 v_list.append(v.clone().detach())
                                 w_list.append(w.clone().detach())
@@ -441,8 +377,8 @@ if __name__ == '__main__':
                             w_list = torch.stack(w_list, dim=0)
 
                             # Calculate simple convergence metric (excluding first 500 time steps)
-                            if torch.isnan(v_list).any() or torch.isnan(w_list).any() or torch.isinf(v_list).any() or torch.isinf(w_list).any():
-                                print(f"NaN/inf detected in rollout for run {run+1}")
+                            if torch.isnan(v_list).any() or torch.isnan(w_list).any():
+                                print(f"NaN detected in rollout for run {run+1}")
                                 v_mse = float('nan')
                                 w_mse = float('nan')
                                 total_mse = float('nan')
