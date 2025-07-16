@@ -580,7 +580,6 @@ def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', e
         # Change to gui.show(f'{frame:06d}.png') to write images to disk
         gui.show()
 
-
     simulation_config = config.simulation
     training_config = config.training
     model_config = config.graph_model
