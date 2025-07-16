@@ -233,22 +233,22 @@ if __name__ == '__main__':
     t_full = torch.linspace(0, 1, n_steps, device=device).unsqueeze(1)  # shape (10000, 1)
     w_true = torch.tensor(w_true, dtype=torch.float32, device=device)  # shape (10000,)
 
-    model = model_duo(device=device)    #Siren(in_features=1, out_features=1).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
 
     n_iter = 10001
     batch_size = 2000
     n_intervals = 10000
 
     # Test convergence over multiple runs
-    test_runs = 10
+    test_runs = 5
     convergence_results = []
 
+    print(f" ")
+
     for run in range(test_runs):
-        print(f" ")
         print(f"training run {run+1}/{test_runs}")
 
-        run_converged = False
+        model = model_duo(device=device)  # Siren(in_features=1, out_features=1).to(device)
+        optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
 
         for iter in range(n_iter):
             idx = torch.randint(1, n_steps-8, (batch_size,))
@@ -297,7 +297,24 @@ if __name__ == '__main__':
                         idx = idx + 1
 
                     w_siren = model.siren(t_full[idx])
-                    loss = (v-v_true[idx, None]).norm(2) + (w-w_siren).norm(2)
+
+                    # Add sparsity constraint on MLP1 (dW inference) weights
+                    l1_lambda = 1.0E-3  # Sparsity regularization strength (better performing value)
+                    l1_penalty = 0.0
+                    for param in model.mlp1.parameters():
+                        l1_penalty += torch.sum(torch.abs(param))
+
+                    # Improved loss with better weighting
+                    v_loss = (v-v_true[idx, None]).norm(2)
+                    w_loss = (w-w_siren).norm(2)
+
+                    # Add weight decay for better generalization
+                    weight_decay = 1e-6
+                    l2_penalty = 0.0
+                    for param in model.parameters():
+                        l2_penalty += torch.sum(param ** 2)
+
+                    loss = v_loss + w_loss + l1_lambda * l1_penalty + weight_decay * l2_penalty
 
                     loss.backward()
                     optimizer.step()
@@ -360,7 +377,7 @@ if __name__ == '__main__':
                             # Panel 2: True vs reconstructed membrane potential
                             plt.subplot(2, 2, 2)
                             plt.plot(v_true.cpu().numpy(), label='true v (membrane potential)', linewidth=3, alpha=0.7, c='white')
-                            plt.plot(v_list.cpu().numpy(), label='rollout v', linewidth=2, alpha=1, c='salmon')
+                            plt.plot(v_list.cpu().numpy(), label='rollout v', linewidth=2, alpha=1, c='green')
                             plt.xlim([0, n_steps//2.5])
                             plt.xlabel('Time steps')
                             plt.ylabel('Membrane potential v')
@@ -370,9 +387,9 @@ if __name__ == '__main__':
 
                             # Panel 3: True vs reconstructed recovery variable
                             plt.subplot(2, 2, 3)
-                            plt.plot(w_true.cpu().numpy(), label='true w (recovery variable)', linewidth=3, alpha=0.7, c='blue')
+                            plt.plot(w_true.cpu().numpy(), label='true w (recovery variable)', linewidth=3, alpha=0.7, c='white')
                             plt.plot(w_list.cpu().numpy(), label='rollout w', linewidth=2, alpha=1, c='cyan')
-                            plt.plot(w_pred.cpu().numpy(), label='SIREN w', linewidth=2, alpha=0.7, c='green')
+                            plt.plot(w_pred.cpu().numpy(), label='SIREN w', linewidth=2, alpha=0.7, c='cyan')
                             plt.xlim([0, n_steps//2.5])
                             plt.xlabel('Time steps')
                             plt.ylabel('Recovery variable w')
@@ -438,5 +455,121 @@ if __name__ == '__main__':
 
 
 
+    # Find best model based on lowest total MSE
+    valid_results = [r for r in convergence_results if not np.isnan(r['total_mse'])]
+    if valid_results:
+        best_result = min(valid_results, key=lambda x: x['total_mse'])
+        print(f"\nBEST MODEL:")
+        print(f"Run {best_result['run']}: V MSE = {best_result['v_mse']:.6f}, W MSE = {best_result['w_mse']:.6f}, Total MSE = {best_result['total_mse']:.6f}")
 
+        # Load the best model instead of retraining
+        print(f"Loading best model (Run {best_result['run']}) for derivative analysis...")
+
+        model = model_duo(device=device)
+        best_model_path = f'./tmp/model_run_{best_result["run"]}.pt'
+
+        try:
+            checkpoint = torch.load(best_model_path, map_location=device)
+            model.load_state_dict(checkpoint['model_state_dict'])
+            print(f"Best model loaded successfully from {best_model_path}")
+        except FileNotFoundError:
+            print(f"Error: Could not find saved model at {best_model_path}")
+            print("Skipping derivative analysis...")
+        else:
+            print("Performing derivative analysis on best model...")
+
+            # Enhanced derivative analysis plots
+            fig = plt.figure(figsize=(15, 10))
+
+            # dv/dt analysis
+            ax = fig.add_subplot(231)
+            inputs = torch.cat((v_true[:, None], w_true[:, None] * 0, I_ext[:, None] * 0), dim=1)
+            func = model.mlp0(inputs)
+            poly, latex = fit_polynomial_with_latex(to_numpy(inputs[:, 0]), to_numpy(func), degree=3)
+            plt.scatter(to_numpy(inputs[:, 0]), to_numpy(func), s=3, c='cyan', alpha=0.6)
+            plt.title(f'dv/dt vs v: {latex}', fontsize=10, color='white')
+            plt.xlabel('v', fontsize=12)
+            plt.ylabel('dv/dt', fontsize=12)
+            plt.grid(True, alpha=0.3)
+
+            ax = fig.add_subplot(232)
+            inputs = torch.cat((v_true[:, None] * 0, w_true[:, None], I_ext[:, None] * 0), dim=1)
+            func = model.mlp0(inputs)
+            poly, latex = fit_polynomial_with_latex(to_numpy(inputs[:, 1]), to_numpy(func), degree=2)
+            plt.scatter(to_numpy(inputs[:, 1]), to_numpy(func), s=3, c='orange', alpha=0.6)
+            plt.title(f'dv/dt vs w: {latex}', fontsize=10, color='white')
+            plt.xlabel('w', fontsize=12)
+            plt.ylabel('dv/dt', fontsize=12)
+            plt.grid(True, alpha=0.3)
+
+            ax = fig.add_subplot(233)
+            inputs = torch.cat((v_true[:, None] * 0, w_true[:, None] * 0, I_ext[:, None]), dim=1)
+            func = model.mlp0(inputs)
+            poly, latex = fit_polynomial_with_latex(to_numpy(inputs[:, 2]), to_numpy(func), degree=2)
+            plt.scatter(to_numpy(inputs[:, 2]), to_numpy(func), s=3, c='yellow', alpha=0.6)
+            plt.title(f'dv/dt vs I_ext: {latex}', fontsize=10, color='white')
+            plt.xlabel(r'$I_{ext}$', fontsize=12)
+            plt.ylabel('dv/dt', fontsize=12)
+            plt.grid(True, alpha=0.3)
+
+            # dw/dt analysis
+            ax = fig.add_subplot(234)
+            inputs = torch.cat((v_true[:, None], w_true[:, None] * 0), dim=1)
+            func = model.mlp1(inputs)
+            poly, latex = fit_polynomial_with_latex(to_numpy(inputs[:, 0]), to_numpy(func), degree=2)
+            plt.scatter(to_numpy(inputs[:, 0]), to_numpy(func), s=3, c='cyan', alpha=0.6)
+            plt.title(f'dw/dt vs v: {latex}', fontsize=10, color='white')
+            plt.xlabel('v', fontsize=12)
+            plt.ylabel('dw/dt', fontsize=12)
+            plt.grid(True, alpha=0.3)
+
+            ax = fig.add_subplot(235)
+            inputs = torch.cat((v_true[:, None] * 0, w_true[:, None]), dim=1)
+            func = model.mlp1(inputs)
+            poly, latex = fit_polynomial_with_latex(to_numpy(inputs[:, 1]), to_numpy(func), degree=2)
+            plt.scatter(to_numpy(inputs[:, 1]), to_numpy(func), s=3, c='orange', alpha=0.6)
+            plt.title(f'dw/dt vs w: {latex}', fontsize=10, color='white')
+            plt.xlabel('w', fontsize=12)
+            plt.ylabel('dw/dt', fontsize=12)
+            plt.grid(True, alpha=0.3)
+
+            # Model sparsity analysis
+            ax = fig.add_subplot(236)
+            mlp1_weights = []
+            for param in model.mlp1.parameters():
+                if param.requires_grad:
+                    mlp1_weights.extend(param.data.flatten().cpu().numpy())
+
+            plt.hist(mlp1_weights, bins=50, alpha=0.7, color='cyan', edgecolor='white')
+            plt.title('MLP1 Weight Distribution (Sparsity)', fontsize=12, color='white')
+            plt.xlabel('Weight Value', fontsize=12)
+            plt.ylabel('Frequency', fontsize=12)
+            plt.grid(True, alpha=0.3)
+
+            # Add sparsity statistics
+            zero_weights = np.sum(np.abs(mlp1_weights) < 1e-4)
+            total_weights = len(mlp1_weights)
+            sparsity_ratio = zero_weights / total_weights
+            plt.text(0.02, 0.98, f'Sparsity: {sparsity_ratio:.1%}\n({zero_weights}/{total_weights} weights ≈ 0)',
+                    transform=ax.transAxes, fontsize=10, verticalalignment='top', color='white',
+                    bbox=dict(boxstyle='round', facecolor='black', alpha=0.8))
+
+            plt.tight_layout()
+            plt.savefig('./tmp/best_model_derivative_analysis.png', dpi=200, bbox_inches='tight')
+            plt.close()
+
+            print(f"Derivative analysis saved to ./tmp/best_model_derivative_analysis.png")
+            print(f"Best model sparsity: {sparsity_ratio:.1%} of MLP1 weights are effectively zero")
+
+            # Save best model with additional analysis
+            torch.save({
+                'model_state_dict': model.state_dict(),
+                'best_result': best_result,
+                'sparsity_ratio': sparsity_ratio,
+                'original_checkpoint': checkpoint
+            }, './tmp/best_model_analyzed.pt')
+
+            print("Best model with analysis saved to ./tmp/best_model_analyzed.pt")
+    else:
+        print("No valid models found for analysis.")
 

@@ -1,0 +1,43 @@
+------------------------------------------------------------
+l1_lambda = 1.0E-4  # Sparsity regularization strength
+
+------------------------------------------------------------
+l1_lambda = 1.0E-3  # Sparsity regularization strength
+
+training run 1/5
+V MSE: 0.064967, W MSE: 0.247895, Total MSE: 0.312862
+training run 2/5
+V MSE: 0.053817, W MSE: 0.826770, Total MSE: 0.880588
+training run 3/5
+V MSE: 0.115946, W MSE: 0.319842, Total MSE: 0.435788
+training run 4/5
+V MSE: 0.003432, W MSE: 1.757668, Total MSE: 1.761100
+training run 5/5
+V MSE: 0.006257, W MSE: 0.225234, Total MSE: 0.231491
+ 
+convergence summary
+run  Loss         V MSE        W MSE        Total MSE   
+------------------------------------------------------------
+1    0.134875     0.064967     0.247895     0.312862    
+2    0.091319     0.053817     0.826770     0.880588    
+3    0.125936     0.115946     0.319842     0.435788    
+4    0.091453     0.003432     1.757668     1.761100    
+5    0.072555     0.006257     0.225234     0.231491    
+
+STATISTICS:
+Total MSE - Mean: 0.724366, Std: 0.564759
+Training Loss - Mean: 0.103228, Std: 0.023403
+Convergence Rate: 5/5 runs completed successfully
+
+BEST MODEL:
+Run 5: V MSE = 0.006257, W MSE = 0.225234, Total MSE = 0.231491
+Loading best model (Run 5) for derivative analysis...
+Best model loaded successfully from ./tmp/model_run_5.pt
+Performing derivative analysis on best model...
+Derivative analysis saved to ./tmp/best_model_derivative_analysis.png
+Best model sparsity: 17.6% of MLP1 weights are effectively zero
+Best model with analysis saved to ./tmp/best_model_analyzed.pt
+
+------------------------------------------------------------
+l1_lambda = 1.0E-2  # Sparsity regularization strength
+
