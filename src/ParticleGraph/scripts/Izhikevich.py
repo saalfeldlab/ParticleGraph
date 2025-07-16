@@ -378,7 +378,7 @@ if __name__ == '__main__':
                 'optimizer_state': optimizer.state_dict()
             })
 
-            print(f"pre-run {run+1}: V MSE = {v_mse:.6f}, U MSE = {u_mse:.6f}, Total MSE = {total_mse:.6f}")
+            print(f"pre-run {run+1}: V MSE = {v_mse:.6f}, U MSE = {u_mse:.6f}, total MSE = {total_mse:.6f}")
 
     # Select best pre-trained model (filter out NaN and inf values)
     valid_pretraining_results = [r for r in pretraining_results if
@@ -423,9 +423,9 @@ if __name__ == '__main__':
                 if iter < 10000:
                     recursive_loop = 2
                 elif iter < 30000:
-                    recursive_loop = 4
+                    recursive_loop = 2
                 else:
-                    recursive_loop = 6
+                    recursive_loop = 2
 
                 # Store intermediate states for gradient accumulation
                 accumulated_loss = 0.0

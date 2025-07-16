@@ -250,8 +250,6 @@ if __name__ == '__main__':
                             recursive_loop = 3
 
                         # Store intermediate states for gradient accumulation
-                        v_states = [v.clone()]
-                        w_states = [w.clone()]
                         accumulated_loss = 0.0
 
                         for loop in range(recursive_loop):
@@ -262,26 +260,17 @@ if __name__ == '__main__':
                             v = v + dt * dv_pred
                             w = w + dt * dw_pred
 
-                            # Store states for gradient accumulation
-                            v_states.append(v.clone())
-                            w_states.append(w.clone())
-
-                            idx = idx + 1
-
-                        # Gradient accumulation across all recursive steps
-                        for step in range(recursive_loop):
-                            step_idx = idx - recursive_loop + step + 1
-
-                            # Get target values for this step
+                            # Compute loss for this step directly
+                            step_idx = idx + loop + 1
                             v_target = v_true[step_idx, None]
                             w_target_siren = model.siren(t_full[step_idx])
 
                             # Calculate losses for this step
-                            v_step_loss = (v_states[step + 1] - v_target).norm(2)
-                            w_step_loss = (w_states[step + 1] - w_target_siren).norm(2)
+                            v_step_loss = (v - v_target).norm(2)
+                            w_step_loss = (w - w_target_siren).norm(2)
 
                             # Weight losses by step (later steps get higher weight)
-                            step_weight = (step + 1) / recursive_loop
+                            step_weight = (loop + 1) / recursive_loop
                             step_loss = step_weight * (v_step_loss + w_step_loss)
 
                             accumulated_loss += step_loss
@@ -392,7 +381,7 @@ if __name__ == '__main__':
                                 plt.grid(True, alpha=0.3)
 
                                 plt.tight_layout()
-                                plt.savefig(f'./tmp/training_noise_{noise_level}_run_{run+1}_iter_{iter}.png', dpi=170)
+                                plt.savefig(f'./tmp/nagumo_training_noise_{noise_level}_run_{run+1}_iter_{iter}.png', dpi=170)
                                 plt.close()
 
                                 # Save model state for each run
