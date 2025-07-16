@@ -226,7 +226,7 @@ if __name__ == '__main__':
             model = model_duo(device=device)  # Siren(in_features=1, out_features=1).to(device)
             optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
 
-            for iter in range(n_iter):
+            for iter in trange(n_iter):
                 idx = torch.randint(1, n_steps-8, (batch_size,))
                 t_batch = t_full[idx]
                 idx = to_numpy(idx)
@@ -259,7 +259,12 @@ if __name__ == '__main__':
                         v = v_true[idx, None].clone().detach()
                         optimizer.zero_grad()
 
-                        recursive_loop = 3
+                         if n_iter < 1000:
+                            recursive_loop = 1
+                         elif n_iter < 5000:
+                            recursive_loop = 2
+                        else:
+                            recursive_loop = 3
 
                         # Store intermediate states for gradient accumulation
                         v_states = [v.clone()]
