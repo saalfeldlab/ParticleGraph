@@ -193,37 +193,61 @@ if __name__ == '__main__':
 
     plt.style.use('dark_background')
 
-    # Plotting
-    fig = plt.figure(figsize=(12, 6))
-    # Time series
-    plt.subplot(2, 1, 1)
-    plt.plot(time, v, label='v (membrane potential)')
-    plt.plot(time, w, label='w (recovery variable)', alpha=0.7)
-    plt.xlabel('Time')
-    plt.ylabel('State')
-    plt.title('FitzHugh-Nagumo with Periodic Excitation')
-    plt.legend()
-    plt.grid(True)
-    # Plot I_ext
-    plt.subplot(2, 1, 2)
-    plt.plot(time, I_ext, color='red', label='External input $I_{ext}$')
-    plt.xlabel('Time')
-    plt.ylabel('Input current')
-    plt.legend()
-    plt.grid(True)
+    # Plotting ground truth
+    fig = plt.figure(figsize=(16, 12))
+
+    # Panel 1: External input (I_ext)
+    plt.subplot(2, 2, 1)
+    plt.plot(time, I_ext, color='red', linewidth=2)
+    plt.xlabel('time', fontsize=16)
+    plt.ylabel(r'$I_{ext}$', fontsize=16)
+    plt.xlim([0, 300])
+    plt.ylim([0, 1])
+    plt.title('External Input Current', fontsize=16)
+    plt.grid(True, alpha=0.3)
+
+    # Panel 2: Membrane potential (v)
+    plt.subplot(2, 2, 2)
+    plt.plot(time, v, c='white', linewidth=2)
+    plt.xlim([0, 300])
+    plt.ylim([-2, 2])
+    plt.xlabel('time', fontsize=16)
+    plt.ylabel('v', fontsize=16)
+    plt.title('Membrane Potential', fontsize=16)
+    plt.grid(True, alpha=0.3)
+
+    # Panel 3: Recovery variable (w)
+    plt.subplot(2, 2, 3)
+    plt.plot(time, w, c='green', linewidth=2)
+    plt.xlim([0, 300])
+    plt.ylim([-1.5, 1.5])
+    plt.xlabel('time', fontsize=16)
+    plt.ylabel('w', fontsize=16)
+    plt.title('Recovery Variable', fontsize=16)
+    plt.grid(True, alpha=0.3)
+
+    # Panel 4: Phase portrait
+    plt.subplot(2, 2, 4)
+    plt.plot(v, w, c='white', linewidth=2)
+    plt.xlabel('v', fontsize=16)
+    plt.ylabel('w', fontsize=16)
+    plt.title('Phase Portrait', fontsize=16)
+    plt.grid(True, alpha=0.3)
+
     plt.tight_layout()
-    plt.savefig('./tmp/time_series.png', dpi=170)
+    plt.savefig('./tmp/time_series_Nagumo.png', dpi=170)
     plt.close()
 
-    plt.figure(figsize=(8, 8))
-    plt.plot(v, w)
-    plt.xlabel('v')
-    plt.ylabel('w')
-    plt.title('Phase Portrait')
-    plt.grid(True)
-    plt.tight_layout()
-    plt.savefig('./tmp/phase_portrait.png', dpi=170)
-    plt.close()
+    # Remove the separate phase portrait plot since it's now included in the 2x2 layout
+    # plt.figure(figsize=(8, 8))
+    # plt.plot(v, w)
+    # plt.xlabel('v')
+    # plt.ylabel('w')
+    # plt.title('Phase Portrait')
+    # plt.grid(True)
+    # plt.tight_layout()
+    # plt.savefig('./tmp/phase_portrait.png', dpi=170)
+    # plt.close()
 
     v_true = torch.tensor(v, dtype=torch.float32, device=device)
     w_true = torch.tensor(w, dtype=torch.float32, device=device)
@@ -236,107 +260,429 @@ if __name__ == '__main__':
     model = model_duo(device=device)    #Siren(in_features=1, out_features=1).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
 
-    n_epochs = 200000
+    n_iter = 10001
     batch_size = 2000
+    n_intervals = 10000
 
-    for epoch in trange(n_epochs):
-        idx = torch.randint(1, n_steps-8, (batch_size,))
-        t_batch = t_full[idx]
-        idx = to_numpy(idx)
+    # Test convergence over multiple runs
+    test_runs = 10
+    convergence_results = []
 
-        training ='recursive'
+    for run in range(test_runs):
+        print(f" ")
+        print(f"training run {run+1}/{test_runs}")
 
-        match training:
-            case '1D':
-                pred = model.siren(t_batch)
-                w_batch = w_true[idx].unsqueeze(1)
-                loss = F.mse_loss(pred, w_batch)
+        # Reinitialize model for each run
+        model = model_duo(device=device)
+        optimizer = torch.optim.Adam(model.parameters(), lr=5e-5)  # Reduced learning rate for stability
 
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
+        run_converged = False
 
-                if epoch % 1000 == 0:
-                    print(f"Epoch {epoch}, Loss: {loss.item():.6f}")
-                    with torch.no_grad():
-                        pred_full = model.siren(t_full).squeeze().cpu().numpy()
-                        plt.figure(figsize=(10, 4))
-                        plt.plot(w_true.cpu().numpy(), label="Target")
-                        plt.plot(pred_full, label="SIREN Output")
-                        plt.title(f"Epoch {epoch}")
-                        plt.legend()
-                        plt.show()
+        for iter in range(n_iter):
+            # Ensure we have enough buffer for the recursive loop
+            max_start_idx = n_steps - 10  # Buffer for recursive_loop + safety margin
+            idx = torch.randint(1, max_start_idx, (batch_size,))
+            t_batch = t_full[idx]
+            idx = to_numpy(idx)
 
-            case 'recursive':
+            training ='recursive'
 
-                w = model.siren(t_batch)
-                v = v_true[idx, None].clone().detach()
-                optimizer.zero_grad()
+            match training:
+                case '1D':
+                    pred = model.siren(t_batch)
+                    w_batch = w_true[idx].unsqueeze(1)
+                    loss = F.mse_loss(pred, w_batch)
 
-                recursive_loop = 3
+                    optimizer.zero_grad()
+                    loss.backward()
 
-                for loop in range(recursive_loop):
+                    # Add gradient clipping
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
 
-                    dv_pred = model.mlp0(torch.cat((v, w, I_ext[idx, None].clone().detach()), dim=1))
-                    dw_pred = model.mlp1(torch.cat((v, w), dim=1))
+                    optimizer.step()
 
-                    v = v + dt * dv_pred
-                    w = w + dt * dw_pred
+                    if iter % 1000 == 0:
+                        print(f"Iteration {iter}, Loss: {loss.item():.6f}")
+                        with torch.no_grad():
+                            pred_full = model.siren(t_full).squeeze().cpu().numpy()
+                            plt.figure(figsize=(10, 4))
+                            plt.plot(w_true.cpu().numpy(), label="Target")
+                            plt.plot(pred_full, label="SIREN Output")
+                            plt.title(f"Iteration {iter}")
+                            plt.legend()
+                            plt.savefig(f'./tmp/siren_iter_{iter}.png', dpi=170)
+                            plt.close()
 
-                    idx = idx + 1
+                case 'recursive':
 
-                w_siren = model.siren(t_full[idx])
-                loss = (v-v_true[idx, None]).norm(2) + (w-w_siren).norm(2)
+                    w = model.siren(t_batch)
+                    v = v_true[idx, None].clone().detach()
+                    optimizer.zero_grad()
 
-                loss.backward()
-                optimizer.step()
+                    recursive_loop = 3
 
-                if (epoch>0) & (epoch % 10000 == 0):
-                    print(f"Epoch {epoch}, Loss: {loss.item():.6f}")
+                    for loop in range(recursive_loop):
+                        # Check bounds before accessing arrays
+                        if np.any(idx + 1 >= n_steps):
+                            print(f"Index out of bounds detected, skipping batch")
+                            break
 
-                    with torch.no_grad():
-                        w_pred = model(t_full)
+                        dv_pred = model.mlp0(torch.cat((v, w, I_ext[idx, None].clone().detach()), dim=1))
+                        dw_pred = model.mlp1(torch.cat((v, w), dim=1))
 
-                        v = v_true[0:1].clone().detach()
-                        w = w_true[0:1].clone().detach()
-                        v_list = []
-                        w_list = []
-                        v_list.append(v.clone().detach())
-                        w_list.append(w.clone().detach())
+                        # Check for NaN/inf in predictions
+                        if torch.isnan(dv_pred).any() or torch.isinf(dv_pred).any():
+                            print(f"NaN/inf detected in dv_pred at iteration {iter}")
+                            break
+                        if torch.isnan(dw_pred).any() or torch.isinf(dw_pred).any():
+                            print(f"NaN/inf detected in dw_pred at iteration {iter}")
+                            break
 
-                        for step in range(1, n_steps):
-                            with torch.no_grad():
-                                # w = model.siren(t_full[step])
+                        # Clamp derivatives to prevent explosion
+                        dv_pred = torch.clamp(dv_pred, -10.0, 10.0)
+                        dw_pred = torch.clamp(dw_pred, -10.0, 10.0)
 
+                        v = v + dt * dv_pred
+                        w = w + dt * dw_pred
+
+                        # Clamp state variables to reasonable bounds
+                        v = torch.clamp(v, -5.0, 5.0)
+                        w = torch.clamp(w, -5.0, 5.0)
+
+                        idx = idx + 1
+
+                    # Check bounds for final access
+                    if np.any(idx >= n_steps):
+                        continue  # Skip this batch if out of bounds
+
+                    w_siren = model.siren(t_full[idx])
+
+                    # Calculate individual losses with numerical stability
+                    v_target = v_true[idx, None]
+                    v_loss = F.mse_loss(v, v_target)
+                    w_loss = F.mse_loss(w, w_siren)
+
+                    # Check for NaN/inf in losses
+                    if torch.isnan(v_loss) or torch.isinf(v_loss) or torch.isnan(w_loss) or torch.isinf(w_loss):
+                        print(f"NaN/inf detected in losses at iteration {iter}")
+                        continue
+
+                    # Add sparsity constraint on MLP1 (dW inference) weights
+                    l1_lambda = 0.001  # Sparsity regularization strength
+                    l1_penalty = 0.0
+                    for param in model.mlp1.parameters():
+                        l1_penalty += torch.sum(torch.abs(param))
+
+                    # Balanced loss weighting
+                    v_weight = 1.0
+                    w_weight = 1.5
+
+                    # Combine with weights and sparsity penalty
+                    loss = v_weight * v_loss + w_weight * w_loss + l1_lambda * l1_penalty
+
+                    # Final check for loss validity
+                    if torch.isnan(loss) or torch.isinf(loss):
+                        print(f"NaN/inf detected in total loss at iteration {iter}")
+                        continue
+
+                    loss.backward()
+
+                    # Add gradient clipping with check
+                    grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                    if torch.isnan(grad_norm) or torch.isinf(grad_norm):
+                        print(f"NaN/inf detected in gradients at iteration {iter}")
+                        optimizer.zero_grad()
+                        continue
+
+                    optimizer.step()
+
+                    if (iter > 0) & (iter % n_intervals == 0):
+                        print(f"Run {run+1}, Iteration {iter}, Loss: {loss.item():.6f}")
+
+                        with torch.no_grad():
+                            w_pred = model(t_full)
+
+                            v = v_true[0:1].clone().detach()
+                            w = w_true[0:1].clone().detach()
+                            v_list = []
+                            w_list = []
+                            v_list.append(v.clone().detach())
+                            w_list.append(w.clone().detach())
+
+                            # Safe rollout with bounds checking
+                            for step in range(1, n_steps):
                                 dv_pred = model.mlp0(torch.cat((v[:, None], w[:, None], I_ext[step:step + 1, None]), dim=1))
                                 dw_pred = model.mlp1(torch.cat((v[:, None], w[:, None]), dim=1))
+
+                                # Check for NaN/inf during rollout
+                                if torch.isnan(dv_pred).any() or torch.isinf(dv_pred).any() or torch.isnan(dw_pred).any() or torch.isinf(dw_pred).any():
+                                    print(f"NaN/inf detected during rollout at step {step}")
+                                    # Fill remaining with NaN to signal failure
+                                    for remaining_step in range(step, n_steps):
+                                        v_list.append(torch.full_like(v, float('nan')))
+                                        w_list.append(torch.full_like(w, float('nan')))
+                                    break
+
+                                # Clamp derivatives and update
+                                dv_pred = torch.clamp(dv_pred, -10.0, 10.0)
+                                dw_pred = torch.clamp(dw_pred, -10.0, 10.0)
 
                                 v += dt * dv_pred.squeeze()
                                 w += dt * dw_pred.squeeze()
 
-                            v_list.append(v.clone().detach())
-                            w_list.append(w.clone().detach())
+                                # Clamp state variables
+                                v = torch.clamp(v, -5.0, 5.0)
+                                w = torch.clamp(w, -5.0, 5.0)
 
-                        v_list = torch.stack(v_list, dim=0)
-                        w_list = torch.stack(w_list, dim=0)
+                                v_list.append(v.clone().detach())
+                                w_list.append(w.clone().detach())
 
+                            v_list = torch.stack(v_list, dim=0)
+                            w_list = torch.stack(w_list, dim=0)
 
-                        fig = plt.figure(figsize=(12, 6))
-                        plt.plot(I_ext.cpu().numpy(), label='I_ext (external input)', linewidth=2, alpha=0.5, c='red')
-                        plt.plot(v_true.cpu().numpy(), label='true v (membrane potential)', linewidth=10, alpha=0.5, c='salmon')
-                        plt.plot(v_list.cpu().numpy(), label='rollout v', linewidth=2, alpha=1, c='salmon')
-                        plt.plot(w_true.cpu().numpy(), label='w (recovery variable)', linewidth=10, alpha=0.5, c='blue')
-                        plt.plot(w_list.cpu().numpy(), label='w NNR', linewidth=2, alpha=1, c='blue')
-                        plt.plot(w_pred.cpu().numpy(), label='w NNR', linewidth=2, alpha=0.5, c='blue')
-                        plt.xlim([0, n_steps//2.5])
-                        plt.legend(loc='upper left')
-                        plt.savefig('./tmp/training.png', dpi=170)
-                        plt.show()
-                        # plt.close()
+                            # Calculate simple convergence metric (excluding first 500 time steps)
+                            if torch.isnan(v_list).any() or torch.isnan(w_list).any() or torch.isinf(v_list).any() or torch.isinf(w_list).any():
+                                print(f"NaN/inf detected in rollout for run {run+1}")
+                                v_mse = float('nan')
+                                w_mse = float('nan')
+                                total_mse = float('nan')
+                            else:
+                                v_mse = F.mse_loss(v_list[500:].squeeze(), v_true[500:]).item()
+                                w_mse = F.mse_loss(w_list[500:].squeeze(), w_true[500:]).item()
+                                total_mse = v_mse + w_mse
 
+                            convergence_results.append({
+                                'run': run+1,
+                                'iteration': iter,
+                                'loss': loss.item(),
+                                'v_mse': v_mse,
+                                'w_mse': w_mse,
+                                'total_mse': total_mse
+                            })
 
+                            print(f"V MSE: {v_mse:.6f}, W MSE: {w_mse:.6f}, Total MSE: {total_mse:.6f}")
 
+                            # Save results for this run
+                            fig = plt.figure(figsize=(16, 12))
 
+                            # Panel 1: External input only
+                            plt.subplot(2, 2, 1)
+                            plt.plot(I_ext.cpu().numpy(), label='I_ext (external input)', linewidth=2, alpha=0.7, c='red')
+                            plt.xlim([0, n_steps//2.5])
+                            plt.xlabel('Time steps')
+                            plt.ylabel('External input')
+                            plt.legend(loc='upper left')
+                            plt.title('External Input Current')
+                            plt.grid(True, alpha=0.3)
 
+                            # Panel 2: True vs reconstructed membrane potential
+                            plt.subplot(2, 2, 2)
+                            plt.plot(v_true.cpu().numpy(), label='true v (membrane potential)', linewidth=3, alpha=0.7, c='white')
+                            plt.plot(v_list.cpu().numpy(), label='rollout v', linewidth=2, alpha=1, c='salmon')
+                            plt.xlim([0, n_steps//2.5])
+                            plt.xlabel('Time steps')
+                            plt.ylabel('Membrane potential v')
+                            plt.legend(loc='upper left')
+                            plt.title(f'Run {run+1}: Membrane Potential (MSE: {v_mse:.4f})')
+                            plt.grid(True, alpha=0.3)
 
+                            # Panel 3: True vs reconstructed recovery variable
+                            plt.subplot(2, 2, 3)
+                            plt.plot(w_true.cpu().numpy(), label='true w (recovery variable)', linewidth=3, alpha=0.7, c='blue')
+                            plt.plot(w_list.cpu().numpy(), label='rollout w', linewidth=2, alpha=1, c='cyan')
+                            plt.plot(w_pred.cpu().numpy(), label='SIREN w', linewidth=2, alpha=0.7, c='green')
+                            plt.xlim([0, n_steps//2.5])
+                            plt.xlabel('Time steps')
+                            plt.ylabel('Recovery variable w')
+                            plt.legend(loc='upper left')
+                            plt.title(f'Run {run+1}: Recovery Variable (MSE: {w_mse:.4f})')
+                            plt.grid(True, alpha=0.3)
+
+                            # Panel 4: Phase portrait
+                            plt.subplot(2, 2, 4)
+                            plt.plot(v_true.cpu().numpy(), w_true.cpu().numpy(), label='true trajectory', linewidth=3, alpha=0.7, c='white')
+                            plt.plot(v_list.cpu().numpy(), w_list.cpu().numpy(), label='rollout trajectory', linewidth=2, alpha=1, c='magenta')
+                            plt.xlabel('Membrane potential v')
+                            plt.ylabel('Recovery variable w')
+                            plt.legend(loc='upper right')
+                            plt.title(f'Run {run+1}: Phase Portrait')
+                            plt.grid(True, alpha=0.3)
+
+                            plt.tight_layout()
+                            plt.savefig(f'./tmp/training_run_{run+1}_iter_{iter}.png', dpi=170)
+                            plt.close()
+
+                            # Save model state for each run
+                            torch.save({
+                                'model_state_dict': model.state_dict(),
+                                'optimizer_state_dict': optimizer.state_dict(),
+                                'run': run+1,
+                                'iteration': iter,
+                                'loss': loss.item(),
+                                'v_mse': v_mse,
+                                'w_mse': w_mse,
+                                'total_mse': total_mse
+                            }, f'./tmp/model_run_{run+1}.pt')
+
+                            # Stop this run after first results
+                            run_converged = True
+                            break
+
+            # Break out of iteration loop if run completed
+            if run_converged:
+                break
+
+    # Print convergence summary
+    print(f" ")
+    print("Convergence summary")
+
+    print(f"{'Run':<4} {'Loss':<12} {'V MSE':<12} {'W MSE':<12} {'Total MSE':<12}")
+    print(f"{'-'*60}")
+
+    for result in convergence_results:
+        print(f"{result['run']:<4} {result['loss']:<12.6f} {result['v_mse']:<12.6f} {result['w_mse']:<12.6f} {result['total_mse']:<12.6f}")
+
+    # Calculate statistics
+    total_mses = [r['total_mse'] for r in convergence_results if not np.isnan(r['total_mse'])]
+    losses = [r['loss'] for r in convergence_results if not np.isnan(r['loss'])]
+
+    print(f"\nSTATISTICS:")
+    if total_mses:
+        print(f"Total MSE - Mean: {np.mean(total_mses):.6f}, Std: {np.std(total_mses):.6f}")
+    else:
+        print("Total MSE - No valid results")
+
+    if losses:
+        print(f"Training Loss - Mean: {np.mean(losses):.6f}, Std: {np.std(losses):.6f}")
+    else:
+        print("Training Loss - No valid results")
+
+    valid_runs = len([r for r in convergence_results if not np.isnan(r['total_mse'])])
+    print(f"Convergence Rate: {valid_runs}/{test_runs} runs completed successfully")
+
+    # Save results
+    import json
+    with open('./tmp/convergence_results.json', 'w') as f:
+        json.dump(convergence_results, f, indent=2)
+
+    print(f"\nResults saved to ./tmp/convergence_results.json")
+    print("Training plots saved to ./tmp/training_run_X_iter_10000.png")
+
+    # Find best model based on lowest total MSE
+    valid_results = [r for r in convergence_results if not np.isnan(r['total_mse'])]
+    if valid_results:
+        best_result = min(valid_results, key=lambda x: x['total_mse'])
+        print(f"\nBEST MODEL:")
+        print(f"Run {best_result['run']}: V MSE = {best_result['v_mse']:.6f}, W MSE = {best_result['w_mse']:.6f}, Total MSE = {best_result['total_mse']:.6f}")
+
+        # Load the best model instead of retraining
+        print(f"Loading best model (Run {best_result['run']}) for derivative analysis...")
+
+        model = model_duo(device=device)
+        best_model_path = f'./tmp/model_run_{best_result["run"]}.pt'
+
+        try:
+            checkpoint = torch.load(best_model_path, map_location=device)
+            model.load_state_dict(checkpoint['model_state_dict'])
+            print(f"Best model loaded successfully from {best_model_path}")
+        except FileNotFoundError:
+            print(f"Error: Could not find saved model at {best_model_path}")
+            print("Skipping derivative analysis...")
+        else:
+            print("Performing derivative analysis on best model...")
+
+            # Enhanced derivative analysis plots
+            fig = plt.figure(figsize=(15, 10))
+
+            # dv/dt analysis
+            ax = fig.add_subplot(231)
+            inputs = torch.cat((v_true[:, None], w_true[:, None] * 0, I_ext[:, None] * 0), dim=1)
+            func = model.mlp0(inputs)
+            poly, latex = fit_polynomial_with_latex(to_numpy(inputs[:, 0]), to_numpy(func), degree=3)
+            plt.scatter(to_numpy(inputs[:, 0]), to_numpy(func), s=3, c='cyan', alpha=0.6)
+            plt.title(f'dv/dt vs v: {latex}', fontsize=10, color='white')
+            plt.xlabel('v', fontsize=12)
+            plt.ylabel('dv/dt', fontsize=12)
+            plt.grid(True, alpha=0.3)
+
+            ax = fig.add_subplot(232)
+            inputs = torch.cat((v_true[:, None] * 0, w_true[:, None], I_ext[:, None] * 0), dim=1)
+            func = model.mlp0(inputs)
+            poly, latex = fit_polynomial_with_latex(to_numpy(inputs[:, 1]), to_numpy(func), degree=2)
+            plt.scatter(to_numpy(inputs[:, 1]), to_numpy(func), s=3, c='orange', alpha=0.6)
+            plt.title(f'dv/dt vs w: {latex}', fontsize=10, color='white')
+            plt.xlabel('w', fontsize=12)
+            plt.ylabel('dv/dt', fontsize=12)
+            plt.grid(True, alpha=0.3)
+
+            ax = fig.add_subplot(233)
+            inputs = torch.cat((v_true[:, None] * 0, w_true[:, None] * 0, I_ext[:, None]), dim=1)
+            func = model.mlp0(inputs)
+            poly, latex = fit_polynomial_with_latex(to_numpy(inputs[:, 2]), to_numpy(func), degree=2)
+            plt.scatter(to_numpy(inputs[:, 2]), to_numpy(func), s=3, c='yellow', alpha=0.6)
+            plt.title(f'dv/dt vs I_ext: {latex}', fontsize=10, color='white')
+            plt.xlabel(r'$I_{ext}$', fontsize=12)
+            plt.ylabel('dv/dt', fontsize=12)
+            plt.grid(True, alpha=0.3)
+
+            # dw/dt analysis
+            ax = fig.add_subplot(234)
+            inputs = torch.cat((v_true[:, None], w_true[:, None] * 0), dim=1)
+            func = model.mlp1(inputs)
+            poly, latex = fit_polynomial_with_latex(to_numpy(inputs[:, 0]), to_numpy(func), degree=2)
+            plt.scatter(to_numpy(inputs[:, 0]), to_numpy(func), s=3, c='cyan', alpha=0.6)
+            plt.title(f'dw/dt vs v: {latex}', fontsize=10, color='white')
+            plt.xlabel('v', fontsize=12)
+            plt.ylabel('dw/dt', fontsize=12)
+            plt.grid(True, alpha=0.3)
+
+            ax = fig.add_subplot(235)
+            inputs = torch.cat((v_true[:, None] * 0, w_true[:, None]), dim=1)
+            func = model.mlp1(inputs)
+            poly, latex = fit_polynomial_with_latex(to_numpy(inputs[:, 1]), to_numpy(func), degree=2)
+            plt.scatter(to_numpy(inputs[:, 1]), to_numpy(func), s=3, c='orange', alpha=0.6)
+            plt.title(f'dw/dt vs w: {latex}', fontsize=10, color='white')
+            plt.xlabel('w', fontsize=12)
+            plt.ylabel('dw/dt', fontsize=12)
+            plt.grid(True, alpha=0.3)
+
+            # Model sparsity analysis
+            ax = fig.add_subplot(236)
+            mlp1_weights = []
+            for param in model.mlp1.parameters():
+                if param.requires_grad:
+                    mlp1_weights.extend(param.data.flatten().cpu().numpy())
+
+            plt.hist(mlp1_weights, bins=50, alpha=0.7, color='cyan', edgecolor='white')
+            plt.title('MLP1 Weight Distribution (Sparsity)', fontsize=12, color='white')
+            plt.xlabel('Weight Value', fontsize=12)
+            plt.ylabel('Frequency', fontsize=12)
+            plt.grid(True, alpha=0.3)
+
+            # Add sparsity statistics
+            zero_weights = np.sum(np.abs(mlp1_weights) < 1e-4)
+            total_weights = len(mlp1_weights)
+            sparsity_ratio = zero_weights / total_weights
+            plt.text(0.02, 0.98, f'Sparsity: {sparsity_ratio:.1%}\n({zero_weights}/{total_weights} weights ≈ 0)',
+                    transform=ax.transAxes, fontsize=10, verticalalignment='top', color='white',
+                    bbox=dict(boxstyle='round', facecolor='black', alpha=0.8))
+
+            plt.tight_layout()
+            plt.savefig('./tmp/best_model_derivative_analysis.png', dpi=200, bbox_inches='tight')
+            plt.close()
+
+            print(f"Derivative analysis saved to ./tmp/best_model_derivative_analysis.png")
+            print(f"Best model sparsity: {sparsity_ratio:.1%} of MLP1 weights are effectively zero")
+
+            # Save best model with additional analysis
+            torch.save({
+                'model_state_dict': model.state_dict(),
+                'best_result': best_result,
+                'sparsity_ratio': sparsity_ratio,
+                'original_checkpoint': checkpoint
+            }, './tmp/best_model_analyzed.pt')
+
+            print("Best model with analysis saved to ./tmp/best_model_analyzed.pt")
+    else:
+        print("No valid models found for analysis.")
 

@@ -6,6 +6,7 @@ import torch.nn as nn
 
 # from ParticleGraph.generators.utils import get_time_series
 import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend
 from matplotlib import pyplot as plt
 from tifffile import imread, imwrite as imsave
 from tqdm import trange
@@ -263,7 +264,7 @@ if __name__ == '__main__':
                 v = v_true[idx, None].clone().detach()
                 optimizer.zero_grad()
 
-                recursive_loop = 1
+                recursive_loop = 3  # Changed from 1 to 3
 
                 for loop in range(recursive_loop):
                     dv_pred = model.mlp0(torch.cat((v, w, I_ext[idx, None].clone().detach()), dim=1))
@@ -277,7 +278,16 @@ if __name__ == '__main__':
                 w_siren = model.siren(t_full[idx])
                 loss = (v - v_true[idx, None]).norm(2) + (w - w_siren).norm(2)
 
+                # Check for NaN in loss before backpropagation
+                if torch.isnan(loss):
+                    print(f"NaN loss detected at epoch {epoch}, skipping this batch")
+                    continue
+
                 loss.backward()
+
+                # Gradient clipping to prevent exploding gradients
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+
                 optimizer.step()
 
                 train_losses.append(loss.item())
@@ -295,17 +305,49 @@ if __name__ == '__main__':
                         v_list.append(v.clone().detach())
                         w_list.append(w.clone().detach())
 
+                        # Add stability tracking
+                        nan_detected = False
+
                         for step in range(1, n_steps):
                             with torch.no_grad():
                                 dv_pred = model.mlp0(
                                     torch.cat((v[:, None], w[:, None], I_ext[step:step + 1, None]), dim=1))
                                 dw_pred = model.mlp1(torch.cat((v[:, None], w[:, None]), dim=1))
 
+                                # Check for NaN or extreme values
+                                if torch.isnan(dv_pred).any() or torch.isnan(dw_pred).any():
+                                    print(f"NaN detected at step {step}")
+                                    nan_detected = True
+                                    break
+
+                                if torch.abs(dv_pred).max() > 100 or torch.abs(dw_pred).max() > 100:
+                                    print(f"Extreme values detected at step {step}: dv={dv_pred.max():.3f}, dw={dw_pred.max():.3f}")
+                                    # Clamp extreme values
+                                    dv_pred = torch.clamp(dv_pred, -10, 10)
+                                    dw_pred = torch.clamp(dw_pred, -10, 10)
+
                                 v += dt * dv_pred.squeeze()
                                 w += dt * dw_pred.squeeze()
 
+                                # Additional stability check after integration
+                                if torch.isnan(v).any() or torch.isnan(w).any():
+                                    print(f"NaN in states at step {step}")
+                                    nan_detected = True
+                                    break
+
                             v_list.append(v.clone().detach())
                             w_list.append(w.clone().detach())
+
+                        # Handle NaN case
+                        if nan_detected:
+                            print("NaN detected during rollout, using partial results")
+                            # Truncate lists to valid length
+                            v_list = v_list[:len(v_list)]
+                            w_list = w_list[:len(w_list)]
+                            # Pad with last valid values if needed
+                            while len(v_list) < n_steps:
+                                v_list.append(v_list[-1].clone())
+                                w_list.append(w_list[-1].clone())
 
                         v_rollout = torch.stack(v_list, dim=0).squeeze().cpu().numpy()
                         w_rollout = torch.stack(w_list, dim=0).squeeze().cpu().numpy()
@@ -386,7 +428,6 @@ if __name__ == '__main__':
 
                         plt.tight_layout()
                         plt.savefig('./tmp/comprehensive_siren_fitzhugh_nagumo.png', dpi=200, bbox_inches='tight')
-                        plt.show()
                         plt.close()
 
                         # Calculate comprehensive metrics
@@ -513,7 +554,6 @@ if __name__ == '__main__':
 
                         plt.tight_layout()
                         plt.savefig('./tmp/enhanced_derivative_analysis.png', dpi=200, bbox_inches='tight')
-                        plt.show()
                         plt.close()
 
     print("Training completed!")
