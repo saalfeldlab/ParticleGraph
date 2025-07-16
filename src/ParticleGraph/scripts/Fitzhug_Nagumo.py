@@ -204,7 +204,6 @@ if __name__ == '__main__':
         print(f" ")
 
         for run in range(test_runs):
-            print(f"training run {run+1}/{test_runs}")
 
             model = model_duo(device=device)  # Siren(in_features=1, out_features=1).to(device)
             optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
@@ -305,7 +304,7 @@ if __name__ == '__main__':
 
                                 for step in range(1, n_steps):
                                     with torch.no_grad():
-                                        # w = model.siren(t_full[step])
+                                        w = model.siren(t_full[step])
 
                                         dv_pred = model.mlp0(torch.cat((v[:, None], w[:, None], I_ext[step:step + 1, None]), dim=1))
                                         dw_pred = model.mlp1(torch.cat((v[:, None], w[:, None]), dim=1))
