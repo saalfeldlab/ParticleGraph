@@ -155,421 +155,416 @@ if __name__ == '__main__':
     device = set_device('auto')
     print(f'device  {device}')
 
-    # Parameters
-    a = 0.7
-    b = 0.8
-    epsilon = 0.18
+    noise_level_list =  [1.0E-3]  # Only test noise level 0.001 for gradient accumulation experiment
 
-    # Simulation settings
-    T = 1000       # total time
-    dt = 0.1      # time step
-    n_steps = int(T / dt)
-    time = np.linspace(0, T, n_steps)
+    for noise_level in noise_level_list:
 
-    # Initialize variables
-    v = np.zeros(n_steps)
-    w = np.zeros(n_steps)
-    I_ext = np.zeros(n_steps)
-
-    # Initial conditions
-    v[0] = -1.0
-    w[0] = 1.0
-
-    # External excitation: periodic pulse every 30s lasting 1s
-    pulse_interval = 80.0  # seconds
-    pulse_duration = 1.0   # seconds
-    pulse_amplitude = 0.8  # strength of excitation
-
-    for i, t in enumerate(time):
-        if (t % pulse_interval) < pulse_duration:
-            I_ext[i] = pulse_amplitude
-
-    # Rollout using Euler method
-    for i in range(n_steps - 1):
-        dv = v[i] - (v[i]**3)/3 - w[i] + I_ext[i]
-        dw = epsilon * (v[i] + a - b * w[i])
-        v[i+1] = v[i] + dt * dv
-        w[i+1] = w[i] + dt * dw
-
-    plt.style.use('dark_background')
-
-    # Plotting
-    fig = plt.figure(figsize=(12, 6))
-    # Time series
-    plt.subplot(2, 1, 1)
-    plt.plot(time, v, label='v (membrane potential)')
-    plt.plot(time, w, label='w (recovery variable)', alpha=0.7)
-    plt.xlabel('Time')
-    plt.ylabel('State')
-    plt.title('FitzHugh-Nagumo with Periodic Excitation')
-    plt.legend()
-    plt.grid(True)
-    # Plot I_ext
-    plt.subplot(2, 1, 2)
-    plt.plot(time, I_ext, color='red', label='External input $I_{ext}$')
-    plt.xlabel('Time')
-    plt.ylabel('Input current')
-    plt.legend()
-    plt.grid(True)
-    plt.tight_layout()
-    plt.savefig('./tmp/time_series.png', dpi=170)
-    plt.close()
-
-    plt.figure(figsize=(8, 8))
-    plt.plot(v, w)
-    plt.xlabel('v')
-    plt.ylabel('w')
-    plt.title('Phase Portrait')
-    plt.grid(True)
-    plt.tight_layout()
-    plt.savefig('./tmp/phase_portrait.png', dpi=170)
-    plt.close()
-
-    v_true = torch.tensor(v, dtype=torch.float32, device=device)
-    w_true = torch.tensor(w, dtype=torch.float32, device=device)
-    I_ext = torch.tensor(I_ext, dtype=torch.float32, device=device)
-
-    n_steps = len(w_true)
-    t_full = torch.linspace(0, 1, n_steps, device=device).unsqueeze(1)  # shape (10000, 1)
-    w_true = torch.tensor(w_true, dtype=torch.float32, device=device)  # shape (10000,)
+        print(f" ")
+        print(f"running simulation with noise level: {noise_level}")
 
 
-    n_iter = 10001
-    batch_size = 2000
-    n_intervals = 10000
+        # Parameters
+        a = 0.7
+        b = 0.8
+        epsilon = 0.18
 
-    # Test convergence over multiple runs
-    test_runs = 5
-    convergence_results = []
+        # Simulation settings
+        T = 1000       # total time
+        dt = 0.1      # time step
+        n_steps = int(T / dt)
+        time = np.linspace(0, T, n_steps)
 
-    print(f" ")
+        # Initialize variables
+        v = np.zeros(n_steps)
+        w = np.zeros(n_steps)
+        I_ext = np.zeros(n_steps)
 
-    for run in range(test_runs):
-        print(f"training run {run+1}/{test_runs}")
+        # Initial conditions
+        v[0] = -1.0
+        w[0] = 1.0
 
-        model = model_duo(device=device)  # Siren(in_features=1, out_features=1).to(device)
-        optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
+        # External excitation: periodic pulse every 30s lasting 1s
+        pulse_interval = 80.0  # seconds
+        pulse_duration = 1.0   # seconds
+        pulse_amplitude = 0.8  # strength of excitation
 
-        for iter in range(n_iter):
-            idx = torch.randint(1, n_steps-8, (batch_size,))
-            t_batch = t_full[idx]
-            idx = to_numpy(idx)
+        for i, t in enumerate(time):
+            if (t % pulse_interval) < pulse_duration:
+                I_ext[i] = pulse_amplitude
 
-            training ='recursive'
+        # Rollout using Euler method
+        for i in range(n_steps - 1):
+            dv = v[i] - (v[i]**3)/3 - w[i] + I_ext[i]
+            dw = epsilon * (v[i] + a - b * w[i])
+            v[i+1] = v[i] + dt * dv + noise_level * np.random.randn()
+            w[i+1] = w[i] + dt * dw + noise_level * np.random.randn()
 
-            match training:
-                case '1D':
-                    pred = model.siren(t_batch)
-                    w_batch = w_true[idx].unsqueeze(1)
-                    loss = F.mse_loss(pred, w_batch)
+        plt.style.use('dark_background')
 
-                    optimizer.zero_grad()
-                    loss.backward()
-                    optimizer.step()
+        v_true = torch.tensor(v, dtype=torch.float32, device=device)
+        w_true = torch.tensor(w, dtype=torch.float32, device=device)
+        I_ext = torch.tensor(I_ext, dtype=torch.float32, device=device)
 
-                    if iter % 1000 == 0:
-                        print(f"iter {iter}, Loss: {loss.item():.6f}")
-                        with torch.no_grad():
-                            pred_full = model.siren(t_full).squeeze().cpu().numpy()
-                            plt.figure(figsize=(10, 4))
-                            plt.plot(w_true.cpu().numpy(), label="Target")
-                            plt.plot(pred_full, label="SIREN Output")
-                            plt.title(f"iter {iter}")
-                            plt.legend()
-                            plt.show()
+        n_steps = len(w_true)
+        t_full = torch.linspace(0, 1, n_steps, device=device).unsqueeze(1)  # shape (10000, 1)
+        w_true = torch.tensor(w_true, dtype=torch.float32, device=device)  # shape (10000,)
 
-                case 'recursive':
 
-                    w = model.siren(t_batch)
-                    v = v_true[idx, None].clone().detach()
-                    optimizer.zero_grad()
+        n_iter = 10001
+        batch_size = 2000
+        n_intervals = 10000
 
-                    recursive_loop = 3
+        # Test convergence over multiple runs
+        test_runs = 5
+        convergence_results = []
 
-                    for loop in range(recursive_loop):
+        print(f" ")
 
-                        dv_pred = model.mlp0(torch.cat((v, w, I_ext[idx, None].clone().detach()), dim=1))
-                        dw_pred = model.mlp1(torch.cat((v, w), dim=1))
+        for run in range(test_runs):
+            print(f"training run {run+1}/{test_runs}")
 
-                        v = v + dt * dv_pred
-                        w = w + dt * dw_pred
+            model = model_duo(device=device)  # Siren(in_features=1, out_features=1).to(device)
+            optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
 
-                        idx = idx + 1
+            for iter in range(n_iter):
+                idx = torch.randint(1, n_steps-8, (batch_size,))
+                t_batch = t_full[idx]
+                idx = to_numpy(idx)
 
-                    w_siren = model.siren(t_full[idx])
+                training ='recursive'
 
-                    # Add sparsity constraint on MLP1 (dW inference) weights
-                    l1_lambda = 1.0E-3  # Sparsity regularization strength (better performing value)
-                    l1_penalty = 0.0
-                    for param in model.mlp1.parameters():
-                        l1_penalty += torch.sum(torch.abs(param))
+                match training:
+                    case '1D':
+                        pred = model.siren(t_batch)
+                        w_batch = w_true[idx].unsqueeze(1)
+                        loss = F.mse_loss(pred, w_batch)
 
-                    # Improved loss with better weighting
-                    v_loss = (v-v_true[idx, None]).norm(2)
-                    w_loss = (w-w_siren).norm(2)
+                        optimizer.zero_grad()
+                        loss.backward()
+                        optimizer.step()
 
-                    # Add weight decay for better generalization
-                    weight_decay = 1e-6
-                    l2_penalty = 0.0
-                    for param in model.parameters():
-                        l2_penalty += torch.sum(param ** 2)
+                        if iter % 1000 == 0:
+                            print(f"iter {iter}, Loss: {loss.item():.6f}")
+                            with torch.no_grad():
+                                pred_full = model.siren(t_full).squeeze().cpu().numpy()
+                                plt.figure(figsize=(10, 4))
+                                plt.plot(w_true.cpu().numpy(), label="Target")
+                                plt.plot(pred_full, label="SIREN Output")
+                                plt.title(f"iter {iter}")
+                                plt.legend()
+                                plt.show()
 
-                    loss = v_loss + w_loss + l1_lambda * l1_penalty + weight_decay * l2_penalty
+                    case 'recursive':
+                        w = model.siren(t_batch)
+                        v = v_true[idx, None].clone().detach()
+                        optimizer.zero_grad()
 
-                    loss.backward()
-                    optimizer.step()
+                        recursive_loop = 3
 
-                    if (iter>0) & (iter % n_intervals == 0):
-                        with torch.no_grad():
-                            w_pred = model(t_full)
+                        # Store intermediate states for gradient accumulation
+                        v_states = [v.clone()]
+                        w_states = [w.clone()]
+                        accumulated_loss = 0.0
 
-                            v = v_true[0:1].clone().detach()
-                            w = w_true[0:1].clone().detach()
-                            v_list = []
-                            w_list = []
-                            v_list.append(v.clone().detach())
-                            w_list.append(w.clone().detach())
+                        for loop in range(recursive_loop):
 
-                            for step in range(1, n_steps):
-                                with torch.no_grad():
-                                    # w = model.siren(t_full[step])
+                            dv_pred = model.mlp0(torch.cat((v, w, I_ext[idx, None].clone().detach()), dim=1))
+                            dw_pred = model.mlp1(torch.cat((v, w), dim=1))
 
-                                    dv_pred = model.mlp0(torch.cat((v[:, None], w[:, None], I_ext[step:step + 1, None]), dim=1))
-                                    dw_pred = model.mlp1(torch.cat((v[:, None], w[:, None]), dim=1))
+                            v = v + dt * dv_pred
+                            w = w + dt * dw_pred
 
-                                    v += dt * dv_pred.squeeze()
-                                    w += dt * dw_pred.squeeze()
+                            # Store states for gradient accumulation
+                            v_states.append(v.clone())
+                            w_states.append(w.clone())
 
+                            idx = idx + 1
+
+                        # Gradient accumulation across all recursive steps
+                        for step in range(recursive_loop):
+                            step_idx = idx - recursive_loop + step + 1
+
+                            # Get target values for this step
+                            v_target = v_true[step_idx, None]
+                            w_target_siren = model.siren(t_full[step_idx])
+
+                            # Calculate losses for this step
+                            v_step_loss = (v_states[step + 1] - v_target).norm(2)
+                            w_step_loss = (w_states[step + 1] - w_target_siren).norm(2)
+
+                            # Weight losses by step (later steps get higher weight)
+                            step_weight = (step + 1) / recursive_loop
+                            step_loss = step_weight * (v_step_loss + w_step_loss)
+
+                            accumulated_loss += step_loss
+
+                        # Add regularization penalties
+                        l1_lambda = 1.0E-3
+                        l1_penalty = 0.0
+                        for param in model.mlp1.parameters():
+                            l1_penalty += torch.sum(torch.abs(param))
+
+                        weight_decay = 1e-6
+                        l2_penalty = 0.0
+                        for param in model.parameters():
+                            l2_penalty += torch.sum(param ** 2)
+
+                        # Final loss with regularization
+                        loss = accumulated_loss + l1_lambda * l1_penalty + weight_decay * l2_penalty
+
+                        loss.backward()
+                        optimizer.step()
+
+                        if (iter>0) & (iter % n_intervals == 0):
+                            with torch.no_grad():
+                                w_pred = model(t_full)
+
+                                v = v_true[0:1].clone().detach()
+                                w = w_true[0:1].clone().detach()
+                                v_list = []
+                                w_list = []
                                 v_list.append(v.clone().detach())
                                 w_list.append(w.clone().detach())
 
-                            v_list = torch.stack(v_list, dim=0)
-                            w_list = torch.stack(w_list, dim=0)
+                                for step in range(1, n_steps):
+                                    with torch.no_grad():
+                                        # w = model.siren(t_full[step])
 
-                            v_mse = F.mse_loss(v_list[500:].squeeze(), v_true[500:]).item()
-                            w_mse = F.mse_loss(w_list[500:].squeeze(), w_true[500:]).item()
-                            total_mse = v_mse + w_mse
+                                        dv_pred = model.mlp0(torch.cat((v[:, None], w[:, None], I_ext[step:step + 1, None]), dim=1))
+                                        dw_pred = model.mlp1(torch.cat((v[:, None], w[:, None]), dim=1))
 
-                            convergence_results.append({
-                                'run': run+1,
-                                'iteration': iter,
-                                'loss': loss.item(),
-                                'v_mse': v_mse,
-                                'w_mse': w_mse,
-                                'total_mse': total_mse
-                            })
+                                        v += dt * dv_pred.squeeze()
+                                        w += dt * dw_pred.squeeze()
 
-                            print(f"V MSE: {v_mse:.6f}, W MSE: {w_mse:.6f}, Total MSE: {total_mse:.6f}")
+                                    v_list.append(v.clone().detach())
+                                    w_list.append(w.clone().detach())
 
-                            # Save results for this run
-                            fig = plt.figure(figsize=(16, 12))
+                                v_list = torch.stack(v_list, dim=0)
+                                w_list = torch.stack(w_list, dim=0)
 
-                            # Panel 1: External input only
-                            plt.subplot(2, 2, 1)
-                            plt.plot(I_ext.cpu().numpy(), label='I_ext (external input)', linewidth=2, alpha=0.7, c='red')
-                            plt.xlim([0, n_steps//2.5])
-                            plt.xlabel('Time steps')
-                            plt.ylabel('External input')
-                            plt.legend(loc='upper left')
-                            plt.title('External Input Current')
-                            plt.grid(True, alpha=0.3)
+                                v_mse = F.mse_loss(v_list[500:].squeeze(), v_true[500:]).item()
+                                w_mse = F.mse_loss(w_list[500:].squeeze(), w_true[500:]).item()
+                                total_mse = v_mse + w_mse
 
-                            # Panel 2: True vs reconstructed membrane potential
-                            plt.subplot(2, 2, 2)
-                            plt.plot(v_true.cpu().numpy(), label='true v (membrane potential)', linewidth=3, alpha=0.7, c='white')
-                            plt.plot(v_list.cpu().numpy(), label='rollout v', linewidth=2, alpha=1, c='green')
-                            plt.xlim([0, n_steps//2.5])
-                            plt.xlabel('Time steps')
-                            plt.ylabel('Membrane potential v')
-                            plt.legend(loc='upper left')
-                            plt.title(f'Run {run+1}: Membrane Potential (MSE: {v_mse:.4f})')
-                            plt.grid(True, alpha=0.3)
+                                convergence_results.append({
+                                    'run': run+1,
+                                    'iteration': iter,
+                                    'loss': loss.item(),
+                                    'v_mse': v_mse,
+                                    'w_mse': w_mse,
+                                    'total_mse': total_mse
+                                })
 
-                            # Panel 3: True vs reconstructed recovery variable
-                            plt.subplot(2, 2, 3)
-                            plt.plot(w_true.cpu().numpy(), label='true w (recovery variable)', linewidth=3, alpha=0.7, c='white')
-                            plt.plot(w_list.cpu().numpy(), label='rollout w', linewidth=2, alpha=1, c='cyan')
-                            plt.plot(w_pred.cpu().numpy(), label='SIREN w', linewidth=2, alpha=0.7, c='cyan')
-                            plt.xlim([0, n_steps//2.5])
-                            plt.xlabel('Time steps')
-                            plt.ylabel('Recovery variable w')
-                            plt.legend(loc='upper left')
-                            plt.title(f'Run {run+1}: Recovery Variable (MSE: {w_mse:.4f})')
-                            plt.grid(True, alpha=0.3)
+                                print(f"V MSE: {v_mse:.6f}, W MSE: {w_mse:.6f}, Total MSE: {total_mse:.6f}")
 
-                            # Panel 4: Phase portrait
-                            plt.subplot(2, 2, 4)
-                            plt.plot(v_true.cpu().numpy(), w_true.cpu().numpy(), label='true trajectory', linewidth=3, alpha=0.7, c='white')
-                            plt.plot(v_list.cpu().numpy(), w_list.cpu().numpy(), label='rollout trajectory', linewidth=2, alpha=1, c='magenta')
-                            plt.xlabel('Membrane potential v')
-                            plt.ylabel('Recovery variable w')
-                            plt.legend(loc='upper right')
-                            plt.title(f'Run {run+1}: Phase Portrait')
-                            plt.grid(True, alpha=0.3)
+                                # Save results for this run
+                                fig = plt.figure(figsize=(16, 12))
 
-                            plt.tight_layout()
-                            plt.savefig(f'./tmp/training_run_{run+1}_iter_{iter}.png', dpi=170)
-                            plt.close()
+                                # Panel 1: External input only
+                                plt.subplot(2, 2, 1)
+                                plt.plot(I_ext.cpu().numpy(), label='I_ext (external input)', linewidth=2, alpha=0.7, c='red')
+                                plt.xlim([0, n_steps//2.5])
+                                plt.xlabel('Time steps')
+                                plt.ylabel('External input')
+                                plt.legend(loc='upper left')
+                                plt.title('External Input Current')
+                                plt.grid(True, alpha=0.3)
 
-                            # Save model state for each run
-                            torch.save({
-                                'model_state_dict': model.state_dict(),
-                                'optimizer_state_dict': optimizer.state_dict(),
-                                'run': run+1,
-                                'iteration': iter,
-                                'loss': loss.item(),
-                                'v_mse': v_mse,
-                                'w_mse': w_mse,
-                                'total_mse': total_mse
-                            }, f'./tmp/model_run_{run+1}.pt')
+                                # Panel 2: True vs reconstructed membrane potential
+                                plt.subplot(2, 2, 2)
+                                plt.plot(v_true.cpu().numpy(), label='true v (membrane potential)', linewidth=3, alpha=0.7, c='white')
+                                plt.plot(v_list.cpu().numpy(), label='rollout v', linewidth=2, alpha=1, c='green')
+                                plt.xlim([0, n_steps//2.5])
+                                plt.xlabel('Time steps')
+                                plt.ylabel('Membrane potential v')
+                                plt.legend(loc='upper left')
+                                plt.title(f'Run {run+1}: Membrane Potential (MSE: {v_mse:.4f})')
+                                plt.grid(True, alpha=0.3)
 
+                                # Panel 3: True vs reconstructed recovery variable
+                                plt.subplot(2, 2, 3)
+                                plt.plot(w_true.cpu().numpy(), label='true w (recovery variable)', linewidth=3, alpha=0.7, c='white')
+                                plt.plot(w_list.cpu().numpy(), label='rollout w', linewidth=2, alpha=1, c='cyan')
+                                plt.plot(w_pred.cpu().numpy(), label='SIREN w', linewidth=2, alpha=0.7, c='cyan')
+                                plt.xlim([0, n_steps//2.5])
+                                plt.xlabel('Time steps')
+                                plt.ylabel('Recovery variable w')
+                                plt.legend(loc='upper left')
+                                plt.title(f'Run {run+1}: Recovery Variable (MSE: {w_mse:.4f})')
+                                plt.grid(True, alpha=0.3)
 
-    # Print convergence summary
-    print(f" ")
-    print("convergence summary")
+                                # Panel 4: Phase portrait
+                                plt.subplot(2, 2, 4)
+                                plt.plot(v_true.cpu().numpy(), w_true.cpu().numpy(), label='true trajectory', linewidth=3, alpha=0.7, c='white')
+                                plt.plot(v_list.cpu().numpy(), w_list.cpu().numpy(), label='rollout trajectory', linewidth=2, alpha=1, c='magenta')
+                                plt.xlabel('Membrane potential v')
+                                plt.ylabel('Recovery variable w')
+                                plt.legend(loc='upper right')
+                                plt.title(f'Run {run+1}: Phase Portrait')
+                                plt.grid(True, alpha=0.3)
 
-    print(f"{'run':<4} {'Loss':<12} {'V MSE':<12} {'W MSE':<12} {'Total MSE':<12}")
-    print(f"{'-' * 60}")
+                                plt.tight_layout()
+                                plt.savefig(f'./tmp/training_noise_{noise_level}_run_{run+1}_iter_{iter}.png', dpi=170)
+                                plt.close()
 
-    for result in convergence_results:
-        print(
-            f"{result['run']:<4} {result['loss']:<12.6f} {result['v_mse']:<12.6f} {result['w_mse']:<12.6f} {result['total_mse']:<12.6f}")
-
-    # Calculate statistics
-    total_mses = [r['total_mse'] for r in convergence_results if not np.isnan(r['total_mse'])]
-    losses = [r['loss'] for r in convergence_results if not np.isnan(r['loss'])]
-
-    print(f"\nSTATISTICS:")
-    if total_mses:
-        print(f"Total MSE - Mean: {np.mean(total_mses):.6f}, Std: {np.std(total_mses):.6f}")
-    else:
-        print("Total MSE - No valid results")
-
-    if losses:
-        print(f"Training Loss - Mean: {np.mean(losses):.6f}, Std: {np.std(losses):.6f}")
-    else:
-        print("Training Loss - No valid results")
-
-    valid_runs = len([r for r in convergence_results if not np.isnan(r['total_mse'])])
-    print(f"Convergence Rate: {valid_runs}/{test_runs} runs completed successfully")
+                                # Save model state for each run
+                                torch.save({
+                                    'model_state_dict': model.state_dict(),
+                                    'optimizer_state_dict': optimizer.state_dict(),
+                                    'run': run+1,
+                                    'iteration': iter,
+                                    'loss': loss.item(),
+                                    'v_mse': v_mse,
+                                    'w_mse': w_mse,
+                                    'total_mse': total_mse
+                                }, f'./tmp/model_run_{run+1}.pt')
 
 
+        # Print convergence summary
+        print(f" ")
+        print("convergence summary")
 
-    # Find best model based on lowest total MSE
-    valid_results = [r for r in convergence_results if not np.isnan(r['total_mse'])]
-    if valid_results:
-        best_result = min(valid_results, key=lambda x: x['total_mse'])
-        print(f"\nBEST MODEL:")
-        print(f"Run {best_result['run']}: V MSE = {best_result['v_mse']:.6f}, W MSE = {best_result['w_mse']:.6f}, Total MSE = {best_result['total_mse']:.6f}")
+        print(f"{'run':<4} {'Loss':<12} {'V MSE':<12} {'W MSE':<12} {'Total MSE':<12}")
+        print(f"{'-' * 60}")
 
-        # Load the best model instead of retraining
-        print(f"Loading best model (Run {best_result['run']}) for derivative analysis...")
+        for result in convergence_results:
+            print(
+                f"{result['run']:<4} {result['loss']:<12.6f} {result['v_mse']:<12.6f} {result['w_mse']:<12.6f} {result['total_mse']:<12.6f}")
 
-        model = model_duo(device=device)
-        best_model_path = f'./tmp/model_run_{best_result["run"]}.pt'
+        # Calculate statistics
+        total_mses = [r['total_mse'] for r in convergence_results if not np.isnan(r['total_mse'])]
+        losses = [r['loss'] for r in convergence_results if not np.isnan(r['loss'])]
 
-        try:
-            checkpoint = torch.load(best_model_path, map_location=device)
-            model.load_state_dict(checkpoint['model_state_dict'])
-            print(f"Best model loaded successfully from {best_model_path}")
-        except FileNotFoundError:
-            print(f"Error: Could not find saved model at {best_model_path}")
-            print("Skipping derivative analysis...")
+        print(f"\nSTATISTICS:")
+        if total_mses:
+            print(f"Total MSE - Mean: {np.mean(total_mses):.6f}, Std: {np.std(total_mses):.6f}")
         else:
-            print("Performing derivative analysis on best model...")
+            print("Total MSE - No valid results")
 
-            # Enhanced derivative analysis plots
-            fig = plt.figure(figsize=(15, 10))
+        if losses:
+            print(f"Training Loss - Mean: {np.mean(losses):.6f}, Std: {np.std(losses):.6f}")
+        else:
+            print("Training Loss - No valid results")
 
-            # dv/dt analysis
-            ax = fig.add_subplot(231)
-            inputs = torch.cat((v_true[:, None], w_true[:, None] * 0, I_ext[:, None] * 0), dim=1)
-            func = model.mlp0(inputs)
-            poly, latex = fit_polynomial_with_latex(to_numpy(inputs[:, 0]), to_numpy(func), degree=3)
-            plt.scatter(to_numpy(inputs[:, 0]), to_numpy(func), s=3, c='cyan', alpha=0.6)
-            plt.title(f'dv/dt vs v: {latex}', fontsize=10, color='white')
-            plt.xlabel('v', fontsize=12)
-            plt.ylabel('dv/dt', fontsize=12)
-            plt.grid(True, alpha=0.3)
+        valid_runs = len([r for r in convergence_results if not np.isnan(r['total_mse'])])
+        print(f"Convergence Rate: {valid_runs}/{test_runs} runs completed successfully")
 
-            ax = fig.add_subplot(232)
-            inputs = torch.cat((v_true[:, None] * 0, w_true[:, None], I_ext[:, None] * 0), dim=1)
-            func = model.mlp0(inputs)
-            poly, latex = fit_polynomial_with_latex(to_numpy(inputs[:, 1]), to_numpy(func), degree=2)
-            plt.scatter(to_numpy(inputs[:, 1]), to_numpy(func), s=3, c='orange', alpha=0.6)
-            plt.title(f'dv/dt vs w: {latex}', fontsize=10, color='white')
-            plt.xlabel('w', fontsize=12)
-            plt.ylabel('dv/dt', fontsize=12)
-            plt.grid(True, alpha=0.3)
 
-            ax = fig.add_subplot(233)
-            inputs = torch.cat((v_true[:, None] * 0, w_true[:, None] * 0, I_ext[:, None]), dim=1)
-            func = model.mlp0(inputs)
-            poly, latex = fit_polynomial_with_latex(to_numpy(inputs[:, 2]), to_numpy(func), degree=2)
-            plt.scatter(to_numpy(inputs[:, 2]), to_numpy(func), s=3, c='yellow', alpha=0.6)
-            plt.title(f'dv/dt vs I_ext: {latex}', fontsize=10, color='white')
-            plt.xlabel(r'$I_{ext}$', fontsize=12)
-            plt.ylabel('dv/dt', fontsize=12)
-            plt.grid(True, alpha=0.3)
 
-            # dw/dt analysis
-            ax = fig.add_subplot(234)
-            inputs = torch.cat((v_true[:, None], w_true[:, None] * 0), dim=1)
-            func = model.mlp1(inputs)
-            poly, latex = fit_polynomial_with_latex(to_numpy(inputs[:, 0]), to_numpy(func), degree=2)
-            plt.scatter(to_numpy(inputs[:, 0]), to_numpy(func), s=3, c='cyan', alpha=0.6)
-            plt.title(f'dw/dt vs v: {latex}', fontsize=10, color='white')
-            plt.xlabel('v', fontsize=12)
-            plt.ylabel('dw/dt', fontsize=12)
-            plt.grid(True, alpha=0.3)
+        # Find best model based on lowest total MSE
+        valid_results = [r for r in convergence_results if not np.isnan(r['total_mse'])]
+        if valid_results:
+            best_result = min(valid_results, key=lambda x: x['total_mse'])
+            print(f"\nBEST MODEL:")
+            print(f"Run {best_result['run']}: V MSE = {best_result['v_mse']:.6f}, W MSE = {best_result['w_mse']:.6f}, Total MSE = {best_result['total_mse']:.6f}")
 
-            ax = fig.add_subplot(235)
-            inputs = torch.cat((v_true[:, None] * 0, w_true[:, None]), dim=1)
-            func = model.mlp1(inputs)
-            poly, latex = fit_polynomial_with_latex(to_numpy(inputs[:, 1]), to_numpy(func), degree=2)
-            plt.scatter(to_numpy(inputs[:, 1]), to_numpy(func), s=3, c='orange', alpha=0.6)
-            plt.title(f'dw/dt vs w: {latex}', fontsize=10, color='white')
-            plt.xlabel('w', fontsize=12)
-            plt.ylabel('dw/dt', fontsize=12)
-            plt.grid(True, alpha=0.3)
+            # Load the best model instead of retraining
+            print(f"Loading best model (Run {best_result['run']}) for derivative analysis...")
 
-            # Model sparsity analysis
-            ax = fig.add_subplot(236)
-            mlp1_weights = []
-            for param in model.mlp1.parameters():
-                if param.requires_grad:
-                    mlp1_weights.extend(param.data.flatten().cpu().numpy())
+            model = model_duo(device=device)
+            best_model_path = f'./tmp/model_run_{best_result["run"]}.pt'
 
-            plt.hist(mlp1_weights, bins=50, alpha=0.7, color='cyan', edgecolor='white')
-            plt.title('MLP1 Weight Distribution (Sparsity)', fontsize=12, color='white')
-            plt.xlabel('Weight Value', fontsize=12)
-            plt.ylabel('Frequency', fontsize=12)
-            plt.grid(True, alpha=0.3)
+            try:
+                checkpoint = torch.load(best_model_path, map_location=device)
+                model.load_state_dict(checkpoint['model_state_dict'])
+                print(f"Best model loaded successfully from {best_model_path}")
+            except FileNotFoundError:
+                print(f"Error: Could not find saved model at {best_model_path}")
+                print("Skipping derivative analysis...")
+            else:
+                print("Performing derivative analysis on best model...")
 
-            # Add sparsity statistics
-            zero_weights = np.sum(np.abs(mlp1_weights) < 1e-4)
-            total_weights = len(mlp1_weights)
-            sparsity_ratio = zero_weights / total_weights
-            plt.text(0.02, 0.98, f'Sparsity: {sparsity_ratio:.1%}\n({zero_weights}/{total_weights} weights ≈ 0)',
-                    transform=ax.transAxes, fontsize=10, verticalalignment='top', color='white',
-                    bbox=dict(boxstyle='round', facecolor='black', alpha=0.8))
+                # Enhanced derivative analysis plots
+                fig = plt.figure(figsize=(15, 10))
 
-            plt.tight_layout()
-            plt.savefig('./tmp/best_model_derivative_analysis.png', dpi=200, bbox_inches='tight')
-            plt.close()
+                # dv/dt analysis
+                ax = fig.add_subplot(231)
+                inputs = torch.cat((v_true[:, None], w_true[:, None] * 0, I_ext[:, None] * 0), dim=1)
+                func = model.mlp0(inputs)
+                poly, latex = fit_polynomial_with_latex(to_numpy(inputs[:, 0]), to_numpy(func), degree=3)
+                plt.scatter(to_numpy(inputs[:, 0]), to_numpy(func), s=3, c='cyan', alpha=0.6)
+                plt.title(f'dv/dt vs v: {latex}', fontsize=10, color='white')
+                plt.xlabel('v', fontsize=12)
+                plt.ylabel('dv/dt', fontsize=12)
+                plt.grid(True, alpha=0.3)
 
-            print(f"Derivative analysis saved to ./tmp/best_model_derivative_analysis.png")
-            print(f"Best model sparsity: {sparsity_ratio:.1%} of MLP1 weights are effectively zero")
+                ax = fig.add_subplot(232)
+                inputs = torch.cat((v_true[:, None] * 0, w_true[:, None], I_ext[:, None] * 0), dim=1)
+                func = model.mlp0(inputs)
+                poly, latex = fit_polynomial_with_latex(to_numpy(inputs[:, 1]), to_numpy(func), degree=2)
+                plt.scatter(to_numpy(inputs[:, 1]), to_numpy(func), s=3, c='orange', alpha=0.6)
+                plt.title(f'dv/dt vs w: {latex}', fontsize=10, color='white')
+                plt.xlabel('w', fontsize=12)
+                plt.ylabel('dv/dt', fontsize=12)
+                plt.grid(True, alpha=0.3)
 
-            # Save best model with additional analysis
-            torch.save({
-                'model_state_dict': model.state_dict(),
-                'best_result': best_result,
-                'sparsity_ratio': sparsity_ratio,
-                'original_checkpoint': checkpoint
-            }, './tmp/best_model_analyzed.pt')
+                ax = fig.add_subplot(233)
+                inputs = torch.cat((v_true[:, None] * 0, w_true[:, None] * 0, I_ext[:, None]), dim=1)
+                func = model.mlp0(inputs)
+                poly, latex = fit_polynomial_with_latex(to_numpy(inputs[:, 2]), to_numpy(func), degree=2)
+                plt.scatter(to_numpy(inputs[:, 2]), to_numpy(func), s=3, c='yellow', alpha=0.6)
+                plt.title(f'dv/dt vs I_ext: {latex}', fontsize=10, color='white')
+                plt.xlabel(r'$I_{ext}$', fontsize=12)
+                plt.ylabel('dv/dt', fontsize=12)
+                plt.grid(True, alpha=0.3)
 
-            print("Best model with analysis saved to ./tmp/best_model_analyzed.pt")
-    else:
-        print("No valid models found for analysis.")
+                # dw/dt analysis
+                ax = fig.add_subplot(234)
+                inputs = torch.cat((v_true[:, None], w_true[:, None] * 0), dim=1)
+                func = model.mlp1(inputs)
+                poly, latex = fit_polynomial_with_latex(to_numpy(inputs[:, 0]), to_numpy(func), degree=2)
+                plt.scatter(to_numpy(inputs[:, 0]), to_numpy(func), s=3, c='cyan', alpha=0.6)
+                plt.title(f'dw/dt vs v: {latex}', fontsize=10, color='white')
+                plt.xlabel('v', fontsize=12)
+                plt.ylabel('dw/dt', fontsize=12)
+                plt.grid(True, alpha=0.3)
 
+                ax = fig.add_subplot(235)
+                inputs = torch.cat((v_true[:, None] * 0, w_true[:, None]), dim=1)
+                func = model.mlp1(inputs)
+                poly, latex = fit_polynomial_with_latex(to_numpy(inputs[:, 1]), to_numpy(func), degree=2)
+                plt.scatter(to_numpy(inputs[:, 1]), to_numpy(func), s=3, c='orange', alpha=0.6)
+                plt.title(f'dw/dt vs w: {latex}', fontsize=10, color='white')
+                plt.xlabel('w', fontsize=12)
+                plt.ylabel('dw/dt', fontsize=12)
+                plt.grid(True, alpha=0.3)
+
+                # Model sparsity analysis
+                ax = fig.add_subplot(236)
+                mlp1_weights = []
+                for param in model.mlp1.parameters():
+                    if param.requires_grad:
+                        mlp1_weights.extend(param.data.flatten().cpu().numpy())
+
+                plt.hist(mlp1_weights, bins=50, alpha=0.7, color='cyan', edgecolor='white')
+                plt.title('MLP1 Weight Distribution (Sparsity)', fontsize=12, color='white')
+                plt.xlabel('Weight Value', fontsize=12)
+                plt.ylabel('Frequency', fontsize=12)
+                plt.grid(True, alpha=0.3)
+
+                # Add sparsity statistics
+                zero_weights = np.sum(np.abs(mlp1_weights) < 1e-4)
+                total_weights = len(mlp1_weights)
+                sparsity_ratio = zero_weights / total_weights
+                plt.text(0.02, 0.98, f'Sparsity: {sparsity_ratio:.1%}\n({zero_weights}/{total_weights} weights ≈ 0)',
+                        transform=ax.transAxes, fontsize=10, verticalalignment='top', color='white',
+                        bbox=dict(boxstyle='round', facecolor='black', alpha=0.8))
+
+                plt.tight_layout()
+                plt.savefig('./tmp/best_model_derivative_analysis.png', dpi=200, bbox_inches='tight')
+                plt.close()
+
+                print(f"Derivative analysis saved to ./tmp/best_model_derivative_analysis.png")
+                print(f"Best model sparsity: {sparsity_ratio:.1%} of MLP1 weights are effectively zero")
+
+                # Save best model with additional analysis
+                torch.save({
+                    'model_state_dict': model.state_dict(),
+                    'best_result': best_result,
+                    'sparsity_ratio': sparsity_ratio,
+                    'original_checkpoint': checkpoint
+                }, './tmp/best_model_analyzed.pt')
+
+                print("Best model with analysis saved to ./tmp/best_model_analyzed.pt")
+        else:
+            print("No valid models found for analysis.")

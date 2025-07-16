@@ -19,6 +19,7 @@ archive/*/*
 *.jpg
 *.png
 src/models/data/*
+src/ParticleGraph/scripts/tmp/*
 *.iml
 *.mp4
 *.avi
