@@ -285,43 +285,43 @@ if __name__ == '__main__':
                         recursive_loop = 6
 
                     # Store intermediate states for gradient accumulation
-                    v_states = [v.clone()]
-                    u_states = [u.clone()]
                     accumulated_loss = 0.0
+                    cross_derivative_penalty = 0.0  # Initialize penalty accumulator
 
                     for loop in range(recursive_loop):
+                        # Prepare inputs with gradient tracking for cross-derivative computation
+                        v_input = v.clone().requires_grad_(True)
+                        u_input = u.clone().requires_grad_(True)
 
-                        # Predict derivatives
-                        dv_pred = model.mlp_v(torch.cat((v, u), dim=1))
-                        du_pred = model.mlp_u(torch.cat((v, u), dim=1))
+                        # Predict derivatives with gradient tracking
+                        dv_pred = model.mlp_v(torch.cat((v_input, u_input), dim=1))
+                        du_pred = model.mlp_u(torch.cat((v_input, u_input), dim=1))
 
-                        # Euler step
+                        # Compute only the cross-derivatives we need for the penalty
+                        dv_dv = torch.autograd.grad(dv_pred.sum(), v_input, create_graph=True, retain_graph=True)[0]
+
+                        # Accumulate cross-derivative penalty: penalize dv_dv=0
+                        cross_derivative_penalty = cross_derivative_penalty + torch.exp(-torch.abs(dv_dv).mean())
+
+                        # Euler step - keep gradients for loss computation
                         v = v + dt * dv_pred
                         u = u + dt * du_pred
 
-                        # Store states for gradient accumulation
-                        v_states.append(v.clone())
-                        u_states.append(u.clone())
-
-                        idx = idx + 1
-
-                    # Gradient accumulation across all recursive steps
-                    for step in range(recursive_loop):
-                        step_idx = idx - recursive_loop + step + 1
-
-                        # Get target values for this step
+                        # Compute loss for this step directly
+                        step_idx = idx + loop + 1
                         v_target = v_true[step_idx, None]
                         u_target_siren = model.siren(t_full[step_idx])
 
-                        # Calculate losses for this step
-                        v_step_loss = (v_states[step + 1] - v_target).norm(2)
-                        u_step_loss = (u_states[step + 1] - u_target_siren).norm(2)
+                        v_step_loss = (v - v_target).norm(2)
+                        u_step_loss = (u - u_target_siren).norm(2)
 
                         # Weight losses by step (later steps get higher weight)
-                        step_weight = (step + 1) / recursive_loop
-                        step_loss = step_weight * (v_step_loss + u_step_loss)
+                        step_weight = (loop + 1) / recursive_loop
+                        step_loss = step_weight * (10 * v_step_loss + u_step_loss)
 
-                        accumulated_loss += step_loss
+                        accumulated_loss = accumulated_loss + step_loss
+
+                    idx = idx + recursive_loop
 
                     # Add regularization penalties
                     l1_lambda = 1.0E-3
@@ -334,8 +334,10 @@ if __name__ == '__main__':
                     for param in model.parameters():
                         l2_penalty += torch.sum(param ** 2)
 
-                    # Final loss with regularization
-                    loss = accumulated_loss + l1_lambda * l1_penalty + weight_decay * l2_penalty
+                    cross_derivative_weight = 1E-4
+
+                    # Final loss with regularization and cross-derivative penalty
+                    loss = accumulated_loss + l1_lambda * l1_penalty + weight_decay * l2_penalty + cross_derivative_weight * cross_derivative_penalty
 
                     loss.backward()
                     optimizer.step()
@@ -426,8 +428,6 @@ if __name__ == '__main__':
                     recursive_loop = 6
 
                 # Store intermediate states for gradient accumulation
-                v_states = [v.clone()]
-                u_states = [u.clone()]
                 accumulated_loss = 0.0
                 cross_derivative_penalty = 0.0  # Initialize penalty accumulator
 
@@ -443,43 +443,33 @@ if __name__ == '__main__':
                     # Compute cross-derivatives to enforce coupling
                     # For dv/dt: should depend on both v and u
                     dv_dv = torch.autograd.grad(dv_pred.sum(), v_input, create_graph=True, retain_graph=True)[0]
-                    dv_du = torch.autograd.grad(dv_pred.sum(), u_input, create_graph=True, retain_graph=True)[0]
+                    # dv_du = torch.autograd.grad(dv_pred.sum(), u_input, create_graph=True, retain_graph=True)[0]
 
                     # For du/dt: should depend on both v and u
-                    du_dv = torch.autograd.grad(du_pred.sum(), v_input, create_graph=True, retain_graph=True)[0]
-                    du_du = torch.autograd.grad(du_pred.sum(), u_input, create_graph=True, retain_graph=True)[0]
+                    # du_dv = torch.autograd.grad(du_pred.sum(), v_input, create_graph=True, retain_graph=True)[0]
+                    # du_du = torch.autograd.grad(du_pred.sum(), u_input, create_graph=True, retain_graph=True)[0]
 
                     # Accumulate cross-derivative penalty: penalize when cross-derivatives are too small
-                    # Penalty for dv/dt not depending on u (should be non-zero for coupling)
-                    cross_derivative_penalty += torch.exp(-torch.abs(dv_du).mean())
+                    # Penalty for dv/dt not depending on v (should be non-zero for coupling)
+                    cross_derivative_penalty += torch.exp(-torch.abs(dv_dv).mean())
 
                     # Penalty for du/dt not depending on v (should be non-zero for coupling)
-                    cross_derivative_penalty += torch.exp(-torch.abs(du_dv).mean())
+                    # cross_derivative_penalty += torch.exp(-torch.abs(du_dv).mean())
 
                     # Euler step - keep gradients for loss computation on v_states
                     v = v + dt * dv_pred  # Don't detach - needed for gradient flow to v_states
                     u = u + dt * du_pred  # Don't detach - needed for gradient flow to u_states
 
-                    # Store states
-                    v_states.append(v.clone())
-                    u_states.append(u.clone())
-
-                    idx = idx + 1
-
-                # Gradient accumulation across all recursive steps
-                for step in range(recursive_loop):
-                    step_idx = idx - recursive_loop + step + 1
-
-                    # Get target values for this step
+                    # Compute loss for this step directly
+                    step_idx = idx + loop + 1
                     v_target = v_true[step_idx, None]
                     u_target_siren = model.siren(t_full[step_idx])
 
-                    # Calculate losses for this step
-                    v_step_loss = (v_states[step + 1] - v_target).norm(2)
-                    u_step_loss = (u_states[step + 1] - u_target_siren).norm(2)
+                    v_step_loss = (v - v_target).norm(2)
+                    u_step_loss = (u - u_target_siren).norm(2)
 
                     # Weight losses by step (later steps get higher weight)
-                    step_weight = (step + 1) / recursive_loop
+                    step_weight = (loop + 1) / recursive_loop
                     step_loss = step_weight * (10 * v_step_loss + u_step_loss)
 
                     accumulated_loss += step_loss
@@ -495,8 +485,7 @@ if __name__ == '__main__':
                 for param in model.parameters():
                     l2_penalty += torch.sum(param ** 2)
 
-                # Cross-derivative penalty weight (start small and increase over training)
-                cross_derivative_weight = min(1e-3 * (iter / 10000), 1e-2)
+                cross_derivative_weight = 1E-4
 
                 # Final loss with regularization and cross-derivative penalty
                 loss = accumulated_loss + l1_lambda * l1_penalty + weight_decay * l2_penalty + cross_derivative_weight * cross_derivative_penalty
