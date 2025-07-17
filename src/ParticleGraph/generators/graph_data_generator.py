@@ -756,10 +756,6 @@ def taichi_MPM_debug():
 
 
 
-
-
-
-
 def taichi_MPM_init(seed=42, device='cpu'):
 
     ti.init(arch=ti.gpu)
@@ -858,8 +854,8 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
 
     # Test initialization: set C matrix to small test values for first particle
     # if True:  # Enable test initialization
-    #     C[0, 0, 0] = 0.01  # Small test value
-    #     C[0, 1, 1] = 0.02  # Small test value
+        C[0, 0, 0] = 0.01  # Small test value
+        C[0, 1, 1] = 0.02  # Small test value
 
     # Material masks
     liquid_mask = (T.squeeze() == 0)
@@ -1212,7 +1208,7 @@ def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', e
         group_indices = torch.arange(n_particles, device=device) // group_size
 
         # Main simulation loop
-        for it in range(10):
+        for it in range(1):
             # Concatenate state for logging
             x = torch.cat((N.clone().detach(), X.clone().detach(), V.clone().detach(),
                                C.reshape(n_particles, 4).clone().detach(),
