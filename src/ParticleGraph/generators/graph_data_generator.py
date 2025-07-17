@@ -620,9 +620,8 @@ def taichi_MPM_debug():
     def substep_debug():
 
         # # Test initialization: set C matrix to small test values for first particle
-        C[0][0, 0] = 0.1
-        C[0][0, 1] = 0.1
-        C[0][1, 1] = 0.3
+        C[0][0, 0] = 0.01  # Element (0,0) of particle 0's C matrix
+        C[0][1, 1] = 0.02
 
         for i, j in grid_m:
             grid_v[i, j] = [0, 0]
@@ -672,9 +671,23 @@ def taichi_MPM_debug():
             elif material[p] == 2:
                 # Reconstruct elastic deformation gradient after plasticity
                 F[p] = U @ sig @ V.transpose()
+
+            if p < 1:
+                print(f"Taichi Debug sig after plasticity[{p}]: [{sig[0, 0]:.8f}, {sig[1, 1]:.8f}]")
+                print(
+                    f"Taichi Debug F after reconstruction[{p}]: [[{F[p][0, 0]:.8f}, {F[p][0, 1]:.8f}], [{F[p][1, 0]:.8f}, {F[p][1, 1]:.8f}]]")
+
             stress = 2 * mu * (F[p] - U @ V.transpose()) @ F[p].transpose() + ti.Matrix.identity(float, 2) * la * J * (
                     J - 1
             )
+
+            if p < 1:
+                R = U @ V.transpose()
+                print(f"Taichi Debug R[{p}]: [[{R[0, 0]:.8f}, {R[0, 1]:.8f}], [{R[1, 0]:.8f}, {R[1, 1]:.8f}]]")
+                F_minus_R = F[p] - R
+                print(
+                    f"Taichi Debug F-R[{p}]: [[{F_minus_R[0, 0]:.8f}, {F_minus_R[0, 1]:.8f}], [{F_minus_R[1, 0]:.8f}, {F_minus_R[1, 1]:.8f}]]")
+
             stress = (-dt * p_vol * 4 * inv_dx * inv_dx) * stress
 
             if p < 1:  # Debug first particle only
@@ -844,9 +857,9 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
     import torch
 
     # Test initialization: set C matrix to small test values for first particle
-    C[0][0, 0] = 0.1
-    C[0][0, 1] = 0.1
-    C[0][1, 1] = 0.3
+    # if True:  # Enable test initialization
+    #     C[0, 0, 0] = 0.01  # Small test value
+    #     C[0, 1, 1] = 0.02  # Small test value
 
     # Material masks
     liquid_mask = (T.squeeze() == 0)
@@ -904,7 +917,7 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
 
     U, sig, Vh = torch.linalg.svd(F)
 
-    # Strategy 1: Apply the proven fix for near-diagonal matrices (small deformations)
+    # Strategy: Apply the proven fix for near-diagonal matrices (small deformations)
     off_diagonal_max = torch.max(torch.abs(F[:, 0, 1]), torch.abs(F[:, 1, 0]))
     is_near_diagonal = off_diagonal_max < 1e-5
 
@@ -929,13 +942,70 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
         Vh[neg_det_Vh, -1, :] *= -1
         sig[neg_det_Vh, -1] *= -1
 
-    # Debug SVD results
+    # Debug SVD results (before plasticity)
     if True:
         p = 0
         print(f"PyTorch Debug U[{p}]: [[{U[p, 0, 0]:.8f}, {U[p, 0, 1]:.8f}], [{U[p, 1, 0]:.8f}, {U[p, 1, 1]:.8f}]]")
         print(f"PyTorch Debug sig[{p}]: [{sig[p, 0]:.8f}, {sig[p, 1]:.8f}]")
         print(
             f"PyTorch Debug Vh[{p}]: [[{Vh[p, 0, 0]:.8f}, {Vh[p, 0, 1]:.8f}], [{Vh[p, 1, 0]:.8f}, {Vh[p, 1, 1]:.8f}]]")
+
+    # Clamp singular values to prevent degenerate cases
+    sig = torch.clamp(sig, min=1e-6)
+    original_sig = sig.clone()
+
+    # Apply plasticity constraints for snow
+    new_sig = torch.where(snow_mask.unsqueeze(1),
+                          torch.clamp(sig, min=1 - 2.5e-2, max=1 + 4.5e-3),
+                          sig)
+
+    # Update plastic deformation
+    plastic_ratio = torch.prod(original_sig / new_sig, dim=1, keepdim=True)
+    Jp = Jp * plastic_ratio
+
+    # Update singular values
+    sig = new_sig
+    J = torch.prod(sig, dim=1)
+
+    # Debug after plasticity processing
+    if True:
+        p = 0
+        print(f"PyTorch Debug J[{p}]: {J[p]:.8f}")
+        print(f"PyTorch Debug mu[{p}]: {mu[p]:.8f}, la[{p}]: {la[p]:.8f}")
+        print(f"PyTorch Debug sig after plasticity[{p}]: [{sig[p, 0]:.8f}, {sig[p, 1]:.8f}]")
+
+    # Reconstruct deformation gradient based on material type
+    F_liquid = torch.eye(2, device=device).unsqueeze(0).expand(n_particles, -1, -1) * torch.sqrt(J).unsqueeze(
+        -1).unsqueeze(-1)
+    sig_diag = torch.diag_embed(sig)
+    F_snow = U @ sig_diag @ Vh
+
+    # Apply material-specific deformation gradients
+    F = torch.where(liquid_mask.unsqueeze(-1).unsqueeze(-1), F_liquid, F)
+    F = torch.where(snow_mask.unsqueeze(-1).unsqueeze(-1), F_snow, F)
+
+    # Debug reconstructed F
+    if True:
+        p = 0
+        print(
+            f"PyTorch Debug F after reconstruction[{p}]: [[{F[p, 0, 0]:.8f}, {F[p, 0, 1]:.8f}], [{F[p, 1, 0]:.8f}, {F[p, 1, 1]:.8f}]]")
+
+    # Calculate stress - match Taichi formula exactly
+    R = U @ Vh.transpose(-2, -1)  # Rotation matrix
+    stress = (2 * mu.unsqueeze(-1).unsqueeze(-1) * (F - R) @ F.transpose(-2, -1) +
+              identity * (la * J * (J - 1)).unsqueeze(-1).unsqueeze(-1))
+
+    # Apply stress scaling factor exactly like Taichi
+    stress = (-dt * (dx * 0.5) ** 2 * 4 * inv_dx * inv_dx) * stress
+
+    # Debug stress calculation
+    if True:
+        p = 0
+        print(f"PyTorch Debug R[{p}]: [[{R[p, 0, 0]:.8f}, {R[p, 0, 1]:.8f}], [{R[p, 1, 0]:.8f}, {R[p, 1, 1]:.8f}]]")
+        print(
+            f"PyTorch Debug F-R[{p}]: [[{(F - R)[p, 0, 0]:.8f}, {(F - R)[p, 0, 1]:.8f}], [{(F - R)[p, 1, 0]:.8f}, {(F - R)[p, 1, 1]:.8f}]]")
+        print(
+            f"PyTorch Debug stress[{p}]: [[{stress[p, 0, 0]:.8f}, {stress[p, 0, 1]:.8f}], [{stress[p, 1, 0]:.8f}, {stress[p, 1, 1]:.8f}]]")
 
     # Clamp singular values to prevent degenerate cases
     sig = torch.clamp(sig, min=1e-6)
@@ -1142,7 +1212,7 @@ def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', e
         group_indices = torch.arange(n_particles, device=device) // group_size
 
         # Main simulation loop
-        for it in range(1):
+        for it in range(10):
             # Concatenate state for logging
             x = torch.cat((N.clone().detach(), X.clone().detach(), V.clone().detach(),
                                C.reshape(n_particles, 4).clone().detach(),
