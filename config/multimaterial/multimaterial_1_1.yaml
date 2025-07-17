@@ -6,9 +6,10 @@ simulation:
   min_radius: 0
   max_radius: 0.05
   n_particles: 9000
+  n_grid: 128
   n_particle_types: 3
-  n_frames: 600
-  delta_t: 0.0025
+  n_frames: 1000
+  delta_t: 1.E-4
   dpos_init: 1.0
   boundary: 'no'
   start_frame: 0
@@ -40,8 +41,8 @@ training:
   n_epochs: 20
   batch_size: 8
   small_init_batch_size: False
-  n_runs: 500
-  time_window: 4
+  n_runs: 1
+
   noise_model_level: 0
   noise_model_level: 1.0E-5
 

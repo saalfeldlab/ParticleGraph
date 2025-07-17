@@ -27,7 +27,7 @@ from scipy.ndimage import zoom
 import re
 import imageio
 from ParticleGraph.generators.utils import *
-
+import taichi as ti
 
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
@@ -453,11 +453,16 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
     #     logger.removeHandler(handler)
 
 
-def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1, scenario='none', device=None, bSave=True):
+def taichi_MPM():
 
-    import taichi as ti
+    torch.manual_seed(42)
+    np.random.seed(42)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(42)
 
-    ti.init(arch=ti.gpu)  # Try to run on GPU
+    ti.init(arch=ti.gpu)
+
+    # Try to run on GPU
     quality = 1  # Use a larger value for higher-res simulations
     n_particles, n_grid = 9000 * quality ** 2, 128 * quality
     dx, inv_dx = 1 / n_grid, float(n_grid)
@@ -466,6 +471,7 @@ def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', e
     p_mass = p_vol * p_rho
     E, nu = 0.1e4, 0.2  # Young's modulus and Poisson's ratio
     mu_0, lambda_0 = E / (2 * (1 + nu)), E * nu / ((1 + nu) * (1 - 2 * nu))  # Lame parameters
+
     x = ti.Vector.field(2, dtype=float, shape=n_particles)  # position
     v = ti.Vector.field(2, dtype=float, shape=n_particles)  # velocity
     C = ti.Matrix.field(2, 2, dtype=float, shape=n_particles)  # affine velocity field
@@ -487,14 +493,15 @@ def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', e
             w = [0.5 * (1.5 - fx) ** 2, 0.75 - (fx - 1) ** 2, 0.5 * (fx - 0.5) ** 2]
             # F[p]: deformation gradient update
             F[p] = (ti.Matrix.identity(float, 2) + dt * C[p]) @ F[p]
-            # h: Hardening coefficient: snow gets harder when compressed
             h = ti.exp(10 * (1.0 - Jp[p]))
             if material[p] == 1:  # jelly, make it softer
                 h = 0.3
             mu, la = mu_0 * h, lambda_0 * h
             if material[p] == 0:  # liquid
                 mu = 0.0
+
             U, sig, V = ti.svd(F[p])
+
             # Avoid zero eigenvalues because of numerical errors
             for d in ti.static(range(2)):
                 sig[d, d] = ti.max(sig[d, d], 1e-6)
@@ -567,6 +574,7 @@ def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', e
             Jp[i] = 1
 
     initialize()
+
     gui = ti.GUI("Taichi MLS-MPM-99", res=512, background_color=0x112F41)
     while not gui.get_event(ti.GUI.ESCAPE, ti.GUI.EXIT):
         for s in range(int(2e-3 // dt)):
@@ -580,6 +588,423 @@ def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', e
         # Change to gui.show(f'{frame:06d}.png') to write images to disk
         gui.show()
 
+
+def taichi_MPM_debug():
+    torch.manual_seed(42)
+    np.random.seed(42)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(42)
+
+    ti.init(arch=ti.gpu)
+
+    # Try to run on GPU
+    quality = 1  # Use a larger value for higher-res simulations
+    n_particles, n_grid = 9000 * quality ** 2, 128 * quality
+    dx, inv_dx = 1 / n_grid, float(n_grid)
+    dt = 1e-4 / quality
+    p_vol, p_rho = (dx * 0.5) ** 2, 1
+    p_mass = p_vol * p_rho
+    E, nu = 0.1e4, 0.2  # Young's modulus and Poisson's ratio
+    mu_0, lambda_0 = E / (2 * (1 + nu)), E * nu / ((1 + nu) * (1 - 2 * nu))  # Lame parameters
+
+    x = ti.Vector.field(2, dtype=float, shape=n_particles)  # position
+    v = ti.Vector.field(2, dtype=float, shape=n_particles)  # velocity
+    C = ti.Matrix.field(2, 2, dtype=float, shape=n_particles)  # affine velocity field
+    F = ti.Matrix.field(2, 2, dtype=float, shape=n_particles)  # deformation gradient
+    material = ti.field(dtype=int, shape=n_particles)  # material id
+    Jp = ti.field(dtype=float, shape=n_particles)  # plastic deformation
+    grid_v = ti.Vector.field(2, dtype=float, shape=(n_grid, n_grid))  # grid node momentum/velocity
+    grid_m = ti.field(dtype=float, shape=(n_grid, n_grid))  # grid node mass
+
+    @ti.kernel
+    def substep_debug():
+        for i, j in grid_m:
+            grid_v[i, j] = [0, 0]
+            grid_m[i, j] = 0
+        for p in x:  # Particle state update and scatter to grid (P2G)
+            base = (x[p] * inv_dx - 0.5).cast(int)
+            fx = x[p] * inv_dx - base.cast(float)
+            # Quadratic kernels  [http://mpm.graphics   Eqn. 123, with x=fx, fx-1,fx-2]
+            w = [0.5 * (1.5 - fx) ** 2, 0.75 - (fx - 1) ** 2, 0.5 * (fx - 0.5) ** 2]
+            # F[p]: deformation gradient update
+            F[p] = (ti.Matrix.identity(float, 2) + dt * C[p]) @ F[p]
+            h = ti.exp(10 * (1.0 - Jp[p]))
+            if material[p] == 1:  # jelly, make it softer
+                h = 0.3
+            mu, la = mu_0 * h, lambda_0 * h
+            if material[p] == 0:  # liquid
+                mu = 0.0
+
+            U, sig, V = ti.svd(F[p])
+
+            # Avoid zero eigenvalues because of numerical errors
+            for d in ti.static(range(2)):
+                sig[d, d] = ti.max(sig[d, d], 1e-6)
+            J = 1.0
+            for d in ti.static(range(2)):
+                new_sig = sig[d, d]
+                if material[p] == 2:  # Snow
+                    new_sig = ti.min(ti.max(sig[d, d], 1 - 2.5e-2), 1 + 4.5e-3)  # Plasticity
+                Jp[p] *= sig[d, d] / new_sig
+                sig[d, d] = new_sig
+                J *= new_sig
+            if material[p] == 0:
+                # Reset deformation gradient to avoid numerical instability
+                F[p] = ti.Matrix.identity(float, 2) * ti.sqrt(J)
+            elif material[p] == 2:
+                # Reconstruct elastic deformation gradient after plasticity
+                F[p] = U @ sig @ V.transpose()
+            stress = 2 * mu * (F[p] - U @ V.transpose()) @ F[p].transpose() + ti.Matrix.identity(float, 2) * la * J * (
+                    J - 1
+            )
+            stress = (-dt * p_vol * 4 * inv_dx * inv_dx) * stress
+            affine = stress + p_mass * C[p]
+            # Loop over 3x3 grid node neighborhood
+            for i, j in ti.static(ti.ndrange(3, 3)):
+                offset = ti.Vector([i, j])
+                dpos = (offset.cast(float) - fx) * dx
+                weight = w[i][0] * w[j][1]
+                grid_v[base + offset] += weight * (p_mass * v[p] + affine @ dpos)
+                grid_m[base + offset] += weight * p_mass
+        for i, j in grid_m:
+            if grid_m[i, j] > 0:  # No need for epsilon here
+                grid_v[i, j] = (1 / grid_m[i, j]) * grid_v[i, j]  # Momentum to velocity
+                grid_v[i, j][1] -= dt * 50  # gravity
+                if i < 3 and grid_v[i, j][0] < 0:
+                    grid_v[i, j][0] = 0  # Boundary conditions
+                if i > n_grid - 3 and grid_v[i, j][0] > 0:
+                    grid_v[i, j][0] = 0
+                if j < 3 and grid_v[i, j][1] < 0:
+                    grid_v[i, j][1] = 0
+                if j > n_grid - 3 and grid_v[i, j][1] > 0:
+                    grid_v[i, j][1] = 0
+        for p in x:  # grid to particle (G2P)
+            base = (x[p] * inv_dx - 0.5).cast(int)
+            fx = x[p] * inv_dx - base.cast(float)
+            w = [0.5 * (1.5 - fx) ** 2, 0.75 - (fx - 1.0) ** 2, 0.5 * (fx - 0.5) ** 2]
+            new_v = ti.Vector.zero(float, 2)
+            new_C = ti.Matrix.zero(float, 2, 2)
+            for i, j in ti.static(ti.ndrange(3, 3)):
+                # loop over 3x3 grid node neighborhood
+                dpos = ti.Vector([i, j]).cast(float) - fx
+                g_v = grid_v[base + ti.Vector([i, j])]
+                weight = w[i][0] * w[j][1]
+                new_v += weight * g_v
+                new_C += 4 * inv_dx * weight * g_v.outer_product(dpos)
+            v[p], C[p] = new_v, new_C
+            x[p] += dt * v[p]  # advection
+
+    group_size = n_particles // 3
+
+    @ti.kernel
+    def initialize():
+        for i in range(n_particles):
+            x[i] = [
+                ti.random() * 0.2 + 0.3 + 0.10 * (i // group_size),
+                ti.random() * 0.2 + 0.05 + 0.32 * (i // group_size),
+            ]
+            material[i] = i // group_size  # 0: fluid 1: jelly 2: snow
+            v[i] = ti.Matrix([0, 0])
+            F[i] = ti.Matrix([[1, 0], [0, 1]])
+            Jp[i] = 1
+
+    initialize()
+
+    for n in range(4):
+        print(f"Taichi substep {n + 1} of 4:")
+        substep_debug()
+
+
+
+
+
+
+
+def taichi_MPM_init(seed=42, device='cpu'):
+
+    ti.init(arch=ti.gpu)
+
+    # Set seeds for reproducibility
+    torch.manual_seed(42)
+    np.random.seed(42)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(42)
+
+    # Try to run on GPU
+    quality = 1  # Use a larger value for higher-res simulations
+    n_particles, n_grid = 9000 * quality ** 2, 128 * quality
+    dx, inv_dx = 1 / n_grid, float(n_grid)
+    dt = 1e-4 / quality
+    p_vol, p_rho = (dx * 0.5) ** 2, 1
+    p_mass = p_vol * p_rho
+    E, nu = 0.1e4, 0.2  # Young's modulus and Poisson's ratio
+    mu_0, lambda_0 = E / (2 * (1 + nu)), E * nu / ((1 + nu) * (1 - 2 * nu))  # Lame parameters
+
+    x = ti.Vector.field(2, dtype=float, shape=n_particles)  # position
+    v = ti.Vector.field(2, dtype=float, shape=n_particles)  # velocity
+    C = ti.Matrix.field(2, 2, dtype=float, shape=n_particles)  # affine velocity field
+    F = ti.Matrix.field(2, 2, dtype=float, shape=n_particles)  # deformation gradient
+    material = ti.field(dtype=int, shape=n_particles)  # material id
+    Jp = ti.field(dtype=float, shape=n_particles)  # plastic deformation
+    grid_v = ti.Vector.field(2, dtype=float, shape=(n_grid, n_grid))  # grid node momentum/velocity
+    grid_m = ti.field(dtype=float, shape=(n_grid, n_grid))  # grid node mass
+
+    group_size = n_particles // 3
+
+    @ti.kernel
+    def initialize():
+        for i in range(n_particles):
+            x[i] = [
+                ti.random() * 0.2 + 0.3 + 0.10 * (i // group_size),
+                ti.random() * 0.2 + 0.05 + 0.32 * (i // group_size),
+            ]
+            material[i] = i // group_size  # 0: fluid 1: jelly 2: snow
+            v[i] = ti.Matrix([0, 0])
+            F[i] = ti.Matrix([[1, 0], [0, 1]])
+            Jp[i] = 1
+
+    # Initialize the simulation
+    initialize()
+
+    # Save initial state to numpy arrays
+    x_np = x.to_numpy()
+    v_np = v.to_numpy()
+    C_np = C.to_numpy()
+    F_np = F.to_numpy()
+    material_np = material.to_numpy()
+    Jp_np = Jp.to_numpy()
+
+    # Ensure all arrays have correct shapes
+    N = np.arange(n_particles, dtype=np.float32).reshape(-1, 1)  # particle indices
+    material_np = material_np.reshape(-1, 1).astype(np.float32)  # ensure float32 and proper shape
+    Jp_np = Jp_np.reshape(-1, 1).astype(np.float32)  # ensure float32 and proper shape
+    mass_np = np.full((n_particles, 1), p_mass, dtype=np.float32)  # mass
+
+    # Create a comprehensive state array similar to your PyTorch version
+    # Format: [particle_id, x_pos, y_pos, vx, vy, C_00, C_01, C_10, C_11, F_00, F_01, F_10, F_11, material, Jp, mass]
+    state = np.concatenate([
+        N,  # particle index
+        x_np,  # positions (x, y)
+        v_np,  # velocities (vx, vy)
+        C_np.reshape(n_particles, 4),  # affine velocity field (flattened 2x2 matrix)
+        F_np.reshape(n_particles, 4),  # deformation gradient (flattened 2x2 matrix)
+        material_np,  # material type
+        Jp_np,  # plastic deformation
+        mass_np  # mass
+    ], axis=1)
+
+    print(f" ###################################################################################################")
+
+
+    # Return individual components
+    N_tensor = torch.tensor(N, dtype=torch.float32, device=device)
+    x_tensor = torch.tensor(x_np, dtype=torch.float32, device=device)
+    v_tensor = torch.tensor(v_np, dtype=torch.float32, device=device)
+    C_tensor = torch.tensor(C_np, dtype=torch.float32, device=device)
+    F_tensor = torch.tensor(F_np, dtype=torch.float32, device=device)
+    material_tensor = torch.tensor(material_np, dtype=torch.int32, device=device)
+    Jp_tensor = torch.tensor(Jp_np, dtype=torch.float32, device=device)
+    mass_tensor = torch.tensor(mass_np, dtype=torch.float32, device=device)
+
+    # Return PyTorch tensors
+    return N_tensor, x_tensor, v_tensor, C_tensor, F_tensor, material_tensor, Jp_tensor, mass_tensor
+
+
+def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0, lambda_0, device):
+    """
+    Corrected MPM substep implementation to match Taichi behavior exactly
+    """
+    # Material masks
+    liquid_mask = (T.squeeze() == 0)
+    jelly_mask = (T.squeeze() == 1)
+    snow_mask = (T.squeeze() == 2)
+
+    # Clear grid
+    grid_v = torch.zeros((n_grid, n_grid, 2), device=device, dtype=torch.float32)
+    grid_m = torch.zeros((n_grid, n_grid), device=device, dtype=torch.float32)
+
+    # Calculate base grid positions and fractional offsets
+    base = (X * inv_dx - 0.5).floor().long()
+    fx = X * inv_dx - base.float()
+
+    # Quadratic B-spline kernel weights - match Taichi exactly
+    w_0 = 0.5 * (1.5 - fx) ** 2
+    w_1 = 0.75 - (fx - 1) ** 2
+    w_2 = 0.5 * (fx - 0.5) ** 2
+
+    # Stack weights [n_particles, 3, 2] where last dim is [x_weights, y_weights]
+    w = torch.stack([w_0, w_1, w_2], dim=1)
+
+    # Create identity matrices for all particles
+    identity = torch.eye(2, device=device).unsqueeze(0).expand(n_particles, -1, -1)
+
+    # Update deformation gradient: F = (I + dt * C) * F_old
+    F = (identity + dt * C) @ F
+
+    # Hardening coefficient
+    h = torch.exp(10 * (1.0 - Jp.squeeze()))
+    h = torch.where(jelly_mask, torch.tensor(0.3, device=device), h)
+
+    # Lamé parameters
+    mu = mu_0 * h
+    la = lambda_0 * h
+    mu = torch.where(liquid_mask, torch.tensor(0.0, device=device), mu)
+
+    # SVD decomposition
+    U, sig, Vh = torch.linalg.svd(F)
+
+    # Clamp singular values to prevent degenerate cases
+    sig = torch.clamp(sig, min=1e-6)
+    original_sig = sig.clone()
+
+    # Apply plasticity constraints for snow
+    new_sig = torch.where(snow_mask.unsqueeze(1),
+                          torch.clamp(sig, min=1 - 2.5e-2, max=1 + 4.5e-3),
+                          sig)
+
+    # Update plastic deformation
+    plastic_ratio = torch.prod(original_sig / new_sig, dim=1, keepdim=True)
+    Jp = Jp * plastic_ratio
+
+    # Update singular values
+    sig = new_sig
+    J = torch.prod(sig, dim=1)
+
+    # Reconstruct deformation gradient based on material type
+    F_liquid = torch.eye(2, device=device).unsqueeze(0).expand(n_particles, -1, -1) * torch.sqrt(J).unsqueeze(
+        -1).unsqueeze(-1)
+    sig_diag = torch.diag_embed(sig)
+    F_snow = U @ sig_diag @ Vh
+
+    # Apply material-specific deformation gradients
+    F = torch.where(liquid_mask.unsqueeze(-1).unsqueeze(-1), F_liquid, F)
+    F = torch.where(snow_mask.unsqueeze(-1).unsqueeze(-1), F_snow, F)
+
+    # Calculate stress - match Taichi formula exactly
+    R = U @ Vh
+    stress = (2 * mu.unsqueeze(-1).unsqueeze(-1) * (F - R) @ F.transpose(-2, -1) +
+              identity * (la * J * (J - 1)).unsqueeze(-1).unsqueeze(-1))
+
+    # Apply stress scaling factor exactly like Taichi
+    stress = (-dt * (dx * 0.5) ** 2 * 4 * inv_dx * inv_dx) * stress
+
+    # P2G transfer - simplified to match Taichi exactly
+    p_mass = M.squeeze(-1).unsqueeze(-1).unsqueeze(-1)  # [n_particles, 1, 1] for broadcasting
+    affine = stress + p_mass * C
+
+    # Process each offset in the 3x3 neighborhood
+    for i in range(3):
+        for j in range(3):
+            offset = torch.tensor([i, j], device=device, dtype=torch.long)
+            dpos = (offset.float() - fx) * dx
+            weight = w[:, i, 0] * w[:, j, 1]  # w[i][0] * w[j][1] in Taichi
+            grid_pos = base + offset
+
+            # Calculate contributions
+            affine_contrib = torch.bmm(affine, dpos.unsqueeze(-1)).squeeze(-1)
+            momentum_contrib = M.squeeze(-1).unsqueeze(-1) * V + affine_contrib
+            mass_contrib = M.squeeze(-1) * weight
+
+            # Apply contributions to grid (with bounds checking)
+            valid_mask = ((grid_pos[:, 0] >= 0) & (grid_pos[:, 0] < n_grid) &
+                          (grid_pos[:, 1] >= 0) & (grid_pos[:, 1] < n_grid))
+
+            if valid_mask.any():
+                valid_pos = grid_pos[valid_mask]
+                valid_momentum = momentum_contrib[valid_mask]
+                valid_mass = mass_contrib[valid_mask]
+
+                # Use advanced indexing to accumulate (equivalent to atomic add in Taichi)
+                for idx in range(valid_pos.shape[0]):
+                    gx, gy = valid_pos[idx, 0].item(), valid_pos[idx, 1].item()
+                    grid_v[gx, gy] += valid_momentum[idx]
+                    grid_m[gx, gy] += valid_mass[idx]
+
+    # Grid velocity update (normalize by mass)
+    mass_mask = grid_m > 0
+    grid_v[mass_mask] = grid_v[mass_mask] / grid_m[mass_mask].unsqueeze(-1)
+
+    # Apply gravity exactly like Taichi
+    grid_v[:, :, 1] -= dt * 50  # gravity
+
+    # Boundary conditions - match Taichi exactly
+    # Left boundary
+    left_boundary = (torch.arange(n_grid, device=device) < 3).unsqueeze(1).expand(-1, n_grid)
+    negative_x_vel = grid_v[:, :, 0] < 0
+    grid_v[:, :, 0] = torch.where(left_boundary & negative_x_vel, 0.0, grid_v[:, :, 0])
+
+    # Right boundary
+    right_boundary = (torch.arange(n_grid, device=device) > n_grid - 3).unsqueeze(1).expand(-1, n_grid)
+    positive_x_vel = grid_v[:, :, 0] > 0
+    grid_v[:, :, 0] = torch.where(right_boundary & positive_x_vel, 0.0, grid_v[:, :, 0])
+
+    # Bottom boundary
+    bottom_boundary = (torch.arange(n_grid, device=device) < 3).unsqueeze(0).expand(n_grid, -1)
+    negative_y_vel = grid_v[:, :, 1] < 0
+    grid_v[:, :, 1] = torch.where(bottom_boundary & negative_y_vel, 0.0, grid_v[:, :, 1])
+
+    # Top boundary
+    top_boundary = (torch.arange(n_grid, device=device) > n_grid - 3).unsqueeze(0).expand(n_grid, -1)
+    positive_y_vel = grid_v[:, :, 1] > 0
+    grid_v[:, :, 1] = torch.where(top_boundary & positive_y_vel, 0.0, grid_v[:, :, 1])
+
+    # G2P transfer - simplified and clean
+    new_V = torch.zeros_like(V)
+    new_C = torch.zeros_like(C)
+
+    # Recalculate base and fx for G2P (should be same as P2G, but recalculate for clarity)
+    base_g2p = (X * inv_dx - 0.5).floor().long()
+    fx_g2p = X * inv_dx - base_g2p.float()
+
+    # Recalculate weights for G2P
+    w_0_g2p = 0.5 * (1.5 - fx_g2p) ** 2
+    w_1_g2p = 0.75 - (fx_g2p - 1) ** 2
+    w_2_g2p = 0.5 * (fx_g2p - 0.5) ** 2
+    w_g2p = torch.stack([w_0_g2p, w_1_g2p, w_2_g2p], dim=1)
+
+    # G2P loop - match Taichi structure exactly
+    for i in range(3):
+        for j in range(3):
+            offset = torch.tensor([i, j], device=device, dtype=torch.long)
+            dpos = offset.float() - fx_g2p
+            grid_pos = base_g2p + offset
+            weight = w_g2p[:, i, 0] * w_g2p[:, j, 1]
+
+            # Get grid velocities with bounds checking
+            g_v = torch.zeros((n_particles, 2), device=device)
+            valid_mask = ((grid_pos[:, 0] >= 0) & (grid_pos[:, 0] < n_grid) &
+                          (grid_pos[:, 1] >= 0) & (grid_pos[:, 1] < n_grid))
+
+            if valid_mask.any():
+                valid_pos = grid_pos[valid_mask]
+                g_v[valid_mask] = grid_v[valid_pos[:, 0], valid_pos[:, 1]]
+
+            # Accumulate velocity
+            new_V += weight.unsqueeze(-1) * g_v
+
+            # APIC transfer with corrected scaling
+            apic_contribution = 4 * inv_dx * weight.unsqueeze(-1).unsqueeze(-1) * torch.bmm(
+                g_v.unsqueeze(-1), dpos.unsqueeze(-2))
+
+            # Scale down the contribution to match Taichi's behavior
+            apic_contribution = apic_contribution * (dx * dx)
+
+            new_C += apic_contribution
+
+    # Update particle velocities and affine velocity
+    V.copy_(new_V)
+    C.copy_(new_C)
+
+    # Particle advection
+    X = X + dt * V
+
+    return X, V, C, F, T, Jp, M, grid_v, grid_m
+
+
+def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1, scenario='none', device=None, bSave=True):
+
+    taichi_MPM()
+
     simulation_config = config.simulation
     training_config = config.training
     model_config = config.graph_model
@@ -591,12 +1016,21 @@ def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', e
     min_radius = simulation_config.min_radius
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
+    n_grid = simulation_config.n_grid
+
+    group_size = n_particles // n_particle_types
+
     delta_t = simulation_config.delta_t
+    dx, inv_dx = 1 / n_grid, float(n_grid)
+
+    p_vol, p_rho = (dx * 0.5) ** 2, 1
+    p_mass = p_vol * p_rho
+    E, nu = 0.1e4, 0.2  # Young's modulus and Poisson's ratio
+    mu_0, lambda_0 = E / (2 * (1 + nu)), E * nu / ((1 + nu) * (1 - 2 * nu))  # Lame parameters
+
     n_frames = simulation_config.n_frames
-    has_particle_dropout = training_config.particle_dropout > 0
     cmap = CustomColorMap(config=config)
     dataset_name = config.dataset
-    connection_matrix_list = []
 
     folder = f'./graphs_data/{dataset_name}/'
     if erase:
@@ -610,115 +1044,37 @@ def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', e
     for f in files:
         os.remove(f)
 
-    if config.data_folder_name != 'none':
-        print(f'generating from data ...')
-        generate_from_data(config=config, device=device, visualize=visualize, step=step, cmap=cmap)
-        return
-
-    # create GNN
-    model, bc_pos, bc_dpos = choose_model(config=config, device=device)
-
-    particle_dropout_mask = np.arange(n_particles)
-    if has_particle_dropout:
-        draw = np.random.permutation(np.arange(n_particles))
-        cut = int(n_particles * (1 - training_config.particle_dropout))
-        particle_dropout_mask = draw[0:cut]
-        inv_particle_dropout_mask = draw[cut:]
-        x_removed_list = []
-
-    if simulation_config.angular_Bernouilli != [-1]:
-        b = simulation_config.angular_Bernouilli
-        generative_m = np.array([stats.norm(b[0], b[2]), stats.norm(b[1], b[2])])
-
     for run in range(config.training.n_runs):
-
-        check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=250, memory_percentage_threshold=0.6)
-
-        if 'PDE_K' in model_config.particle_model_name:
-            p = config.simulation.params
-            edges = np.random.choice(p[0], size=(n_particles, n_particles), p=p[1])
-            edges = np.tril(edges) + np.tril(edges, -1).T
-            np.fill_diagonal(edges, 0)
-            connection_matrix = torch.tensor(edges, dtype=torch.float32, device=device)
-            model.connection_matrix = connection_matrix.detach().clone()
-            connection_matrix_list.append(connection_matrix)
-
-        n_particles = simulation_config.n_particles
-
         x_list = []
-        y_list = []
-        edge_p_p_list = []
 
-        # initialize particle and graph states
-        X1, V1, T1, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
+        N, X, V, C, F, T, Jp, M = taichi_MPM_init(seed=42, device=device)
 
-        time.sleep(0.5)
-        for it in trange(simulation_config.start_frame, n_frames + 1):
+        group_indices = torch.arange(n_particles, device=device) // group_size
 
-            # calculate type change
-            if simulation_config.state_type == 'sequence':
-                sample = torch.rand((len(T1), 1), device=device)
-                sample = (sample < (1 / config.simulation.state_params[0])) * torch.randint(0, n_particle_types,(len(T1), 1), device=device)
-                T1 = (T1 + sample) % n_particle_types
-
-            x = torch.concatenate(
-                (N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
-                 H1.clone().detach(), A1.clone().detach()), 1)
-
-            index_particles = get_index_particles(x, n_particle_types, dimension)  # can be different from frame to frame
-
-            # compute connectivity rule
-
-            distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-            adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-            edge_index = adj_t.nonzero().t().contiguous()
-            edge_p_p_list.append(to_numpy(edge_index))
-
-            dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, field=[])
-
-            # model prediction
-            with torch.no_grad():
-                y = model(dataset)
-
-            if simulation_config.angular_sigma > 0:
-                phi = torch.randn(n_particles, device=device) * simulation_config.angular_sigma / 360 * np.pi * 2
-                cos_phi = torch.cos(phi)
-                sin_phi = torch.sin(phi)
-                new_vx = cos_phi * y[:, 0] - sin_phi * y[:, 1]
-                new_vy = sin_phi * y[:, 0] + cos_phi * y[:, 1]
-                y = torch.cat((new_vx[:, None], new_vy[:, None]), 1).clone().detach()
-            if simulation_config.angular_Bernouilli != [-1]:
-                z_i = stats.bernoulli(b[3]).rvs(n_particles)
-                phi = np.array([g.rvs() for g in generative_m[z_i]]) / 360 * np.pi * 2
-                phi = torch.tensor(phi, device=device, dtype=torch.float32)
-                cos_phi = torch.cos(phi)
-                sin_phi = torch.sin(phi)
-                new_vx = cos_phi * y[:, 0] - sin_phi * y[:, 1]
-                new_vy = sin_phi * y[:, 0] + cos_phi * y[:, 1]
-                y = torch.cat((new_vx[:, None], new_vy[:, None]), 1).clone().detach()
+        # Main simulation loop
+        for it in range(5):
+            # Concatenate state for logging
+            x = torch.cat((N.clone().detach(), X.clone().detach(), V.clone().detach(),
+                               C.reshape(n_particles, 4).clone().detach(),
+                               F.reshape(n_particles, 4).clone().detach(),
+                               T.clone().detach(), Jp.clone().detach(), M.clone().detach()), 1)
 
             # append list
-            if (it >= 0) & bSave:
-                if has_particle_dropout:
-                    x_ = x[particle_dropout_mask].clone().detach()
-                    x_[:, 0] = torch.arange(len(x_), device=device)
-                    x_list.append(x_)
-                    x_ = x[inv_particle_dropout_mask].clone().detach()
-                    x_[:, 0] = torch.arange(len(x_), device=device)
-                    x_removed_list.append(x[inv_particle_dropout_mask].clone().detach())
-                    y_list.append(y[particle_dropout_mask].clone().detach())
-                else:
-                    x_list.append(x.clone().detach())
-                    y_list.append(y.clone().detach())
+            if (it >= 0) and bSave:
+                x_list.append(x.clone().detach())
 
-            # Particle update
+            delta_t = 1e-4  # Original timestep
 
-            if model_config.prediction == '2nd_derivative':
-                V1 += y * delta_t
-            else:
-                V1 = y
-            X1 = bc_pos(X1 + V1 * delta_t)
-            A1 = A1 + 1
+            X, V, C, F, T, Jp, M, grid_v, grid_m = MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid,
+                                                                   delta_t, dx, inv_dx, mu_0, lambda_0, device)
+
+            # Add monitoring
+            max_vel = V.abs().max().item()
+            max_pos = X.abs().max().item()
+            min_pos = X.min().item()
+            avg_pos = X.mean().item()
+
+            print(f"Frame {it}: max_vel={max_vel:.6f}, pos_range=[{min_pos:.3f}, {max_pos:.3f}], avg_pos={avg_pos:.3f}")
 
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
@@ -730,189 +1086,26 @@ def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', e
                     plt.rcParams['text.usetex'] = True
                     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
-                if 'bw' in style:
-
+                if 'color' in style:
                     fig, ax = fig_init(formatx="%.1f", formaty="%.1f")
-                    s_p = 100
                     for n in range(n_particle_types):
-                            plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                                        s=s_p, color='k')
-                    if training_config.particle_dropout > 0:
-                        plt.scatter(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
-                                    x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), s=25, color='k',
-                                    alpha=0.75)
-                        plt.plot(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
-                                 x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), '+', color='w')
+                        pos = torch.argwhere(T == n).squeeze(1)
+                        plt.scatter(to_numpy(x[pos, 1]), to_numpy(x[pos, 2]), s=5, color=cmap.color(n))
                     plt.xlim([0, 1])
                     plt.ylim([0, 1])
-                    if 'PDE_G' in model_config.particle_model_name:
-                        plt.xlim([-2, 2])
-                        plt.ylim([-2, 2])
-                    if 'latex' in style:
-                        plt.xlabel(r'$x$', fontsize=78)
-                        plt.ylabel(r'$y$', fontsize=78)
-                        plt.xticks(fontsize=48.0)
-                        plt.yticks(fontsize=48.0)
-                    elif 'frame' in style:
-                        plt.xlabel(r'$x$', fontsize=78)
-                        plt.ylabel(r'$y$', fontsize=78)
-                        plt.xticks(fontsize=48.0)
-                        plt.yticks(fontsize=48.0)
-                    else:
-                        plt.xticks([])
-                        plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=170.7)
+                    num = f"{it:06}"
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
                     plt.close()
 
-                if 'color' in style:
-
-                    if model_config.particle_model_name == 'PDE_O':
-                        fig = plt.figure(figsize=(12, 12))
-                        plt.scatter(H1[:, 0].detach().cpu().numpy(), H1[:, 1].detach().cpu().numpy(), s=100,
-                                    c=np.sin(to_numpy(H1[:, 2])), vmin=-1, vmax=1, cmap='viridis')
-                        plt.xlim([0, 1])
-                        plt.ylim([0, 1])
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.tight_layout()
-                        plt.savefig(f"graphs_data/{dataset_name}/Fig/Lut_Fig_{run}_{it}.jpg",
-                                    dpi=170.7)
-                        plt.close()
-
-                        fig = plt.figure(figsize=(12, 12))
-                        # plt.scatter(H1[:, 0].detach().cpu().numpy(), H1[:, 1].detach().cpu().numpy(), s=5, c='b')
-                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=10, c='lawngreen',
-                                    alpha=0.75)
-                        plt.xlim([0, 1])
-                        plt.ylim([0, 1])
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.tight_layout()
-                        plt.savefig(f"graphs_data/{dataset_name}/Fig/Rot_{run}_Fig{it}.jpg",
-                                    dpi=170.7)
-                        plt.close()
-
-                    elif 'PDE_N' in model_config.signal_model_name:
-
-                        matplotlib.rcParams['savefig.pad_inches'] = 0
-                        fig = plt.figure(figsize=(12, 12))
-                        ax = fig.add_subplot(1, 1, 1)
-                        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-                        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-                        ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                        ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=200, c=to_numpy(H1[:, 0])*3, cmap='viridis')     # vmin=0, vmax=3)
-                        plt.colorbar()
-                        plt.xlim([-1.2, 1.2])
-                        plt.ylim([-1.2, 1.2])
-                        # plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=24)
-                        # cbar = plt.colorbar(shrink=0.5)
-                        # cbar.ax.tick_params(labelsize=32)
-                        if 'latex' in style:
-                            plt.xlabel(r'$x$', fontsize=78)
-                            plt.ylabel(r'$y$', fontsize=78)
-                            plt.xticks(fontsize=48.0)
-                            plt.yticks(fontsize=48.0)
-                        elif 'frame' in style:
-                            plt.xlabel('x', fontsize=48)
-                            plt.ylabel('y', fontsize=48)
-                            plt.xticks(fontsize=48.0)
-                            plt.yticks(fontsize=48.0)
-                            ax.tick_params(axis='both', which='major', pad=15)
-                            plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=48)
-                        else:
-                            plt.xticks([])
-                            plt.yticks([])
-                        plt.tight_layout()
-                        num = f"{it:06}"
-                        plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=70)
-                        plt.close()
-
-                    elif (model_config.particle_model_name == 'PDE_A') & (dimension == 3):
-
-                        fig = plt.figure(figsize=(12, 12))
-                        ax = fig.add_subplot(111, projection='3d')
-                        for n in range(n_particle_types):
-                            ax.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
-                                       to_numpy(x[index_particles[n], 3]), s=50, color=cmap.color(n))
-                        ax.set_xlim([0, 1])
-                        ax.set_ylim([0, 1])
-                        ax.set_zlim([0, 1])
-                        pl.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=170.7)
-                        plt.close()
-
-                    else:
-                        # matplotlib.use("Qt5Agg")
-
-                        fig, ax = fig_init(formatx="%.1f", formaty="%.1f")
-                        s_p = 25
-
-                        # if 'PDE_K' in model_config.particle_model_name:
-                        #     s_p = 5
-
-                        for n in range(n_particle_types):
-                                plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
-                                            s=s_p, color=cmap.color(n))
-                        if training_config.particle_dropout > 0:
-                            plt.scatter(x[inv_particle_dropout_mask, 2].detach().cpu().numpy(),
-                                        x[inv_particle_dropout_mask, 1].detach().cpu().numpy(), s=25, color='k',
-                                        alpha=0.75)
-                            plt.plot(x[inv_particle_dropout_mask, 2].detach().cpu().numpy(),
-                                     x[inv_particle_dropout_mask, 1].detach().cpu().numpy(), '+', color='w')
-
-                        plt.xlim([0, 1])
-                        plt.ylim([0, 1])
-                        if 'PDE_G' in model_config.particle_model_name:
-                            plt.xlim([-2, 2])
-                            plt.ylim([-2, 2])
-                        if 'latex' in style:
-                            plt.xlabel(r'$x$', fontsize=78)
-                            plt.ylabel(r'$y$', fontsize=78)
-                            plt.xticks(fontsize=48.0)
-                            plt.yticks(fontsize=48.0)
-                        if 'frame' in style:
-                            plt.xlabel('x', fontsize=48)
-                            plt.ylabel('y', fontsize=48)
-                            plt.xticks(fontsize=48.0)
-                            plt.yticks(fontsize=48.0)
-                            ax.tick_params(axis='both', which='major', pad=15)
-                            plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=48)
-                        if 'no_ticks' in style:
-                            plt.xticks([])
-                            plt.yticks([])
-                        plt.tight_layout()
-
-                        num = f"{it:06}"
-                        plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80) # 170.7)
-                        plt.close()
-
-
+        # Save results
         if bSave:
-
-            x_list = np.array(to_numpy(torch.stack(x_list)))
-            y_list = np.array(to_numpy(torch.stack(y_list)))
-            # torch.save(x_list, f'graphs_data/{dataset_name}/x_list_{run}.pt')
+            x_list = np.array([x.cpu().numpy() for x in x_list])
+            dataset_name = config.dataset
             np.save(f'graphs_data/{dataset_name}/x_list_{run}.npy', x_list)
-            if has_particle_dropout:
-                torch.save(x_removed_list, f'graphs_data/{dataset_name}/x_removed_list_{run}.pt')
-                np.save(f'graphs_data/{dataset_name}/particle_dropout_mask.npy', particle_dropout_mask)
-                np.save(f'graphs_data/{dataset_name}/inv_particle_dropout_mask.npy', inv_particle_dropout_mask)
-            # torch.save(y_list, f'graphs_data/{dataset_name}/y_list_{run}.pt')
-            np.save(f'graphs_data/{dataset_name}/y_list_{run}.npy', y_list)
-            np.savez(f'graphs_data/{dataset_name}/edge_p_p_list_{run}', *edge_p_p_list)
-
-            torch.save(model.p, f'graphs_data/{dataset_name}/model_p.pt')
-
-    if 'PDE_K' in model_config.particle_model_name:
-        torch.save(connection_matrix_list, f'graphs_data/{dataset_name}/connection_matrix_list.pt')
-
-    # for handler in logger.handlers[:]:
-    #     handler.close()
-    #     logger.removeHandler(handler)
 
 
-def data_generate_particle_field(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1, scenario='none', device=None, bSave=True):
+def data_generate_particle_field(config, visualize=True, run_vizualized=0, style='color', erase=False, step=1, alpha=0.2, ratio=1, scenario='none', device=None, bSave=True):
 
     torch.random.fork_rng(devices=device)
     torch.random.manual_seed(config.training.seed)

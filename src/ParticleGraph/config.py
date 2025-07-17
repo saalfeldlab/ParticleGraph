@@ -41,6 +41,8 @@ class SimulationConfig(BaseModel):
     angular_sigma: float = 0
     angular_Bernouilli: list[float] = [-1]
 
+    n_grid: int = 128
+
     n_nodes: Optional[int] = None
     n_node_types: Optional[int] = None
     node_coeff_map: Optional[str] = None
