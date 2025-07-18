@@ -623,12 +623,12 @@ def taichi_MPM_debug():
         debug_particles = [0, 8999]  # liquid and solid materials
 
         # In Taichi substep_debug() kernel, replace the random C generation with:
-        for p in range(n_particles):
-            # Use exact same deterministic pattern as PyTorch
-            C[p][0, 0] = 0.01 * (p % 5 - 2) / 10  # -0.002, -0.001, 0, 0.001, 0.002
-            C[p][0, 1] = 0.005 * (p % 3 - 1) / 10  # -0.0005, 0, 0.0005
-            C[p][1, 0] = C[p][0, 1]  # Symmetric
-            C[p][1, 1] = 0.02 * (p % 4 - 1.5) / 10  # -0.003, -0.001, 0.001, 0.003
+        # for p in range(n_particles):
+        #     # Use exact same deterministic pattern as PyTorch
+        #     C[p][0, 0] = 0.01 * (p % 5 - 2) / 10  # -0.002, -0.001, 0, 0.001, 0.002
+        #     C[p][0, 1] = 0.005 * (p % 3 - 1) / 10  # -0.0005, 0, 0.0005
+        #     C[p][1, 0] = C[p][0, 1]  # Symmetric
+        #     C[p][1, 1] = 0.02 * (p % 4 - 1.5) / 10  # -0.003, -0.001, 0.001, 0.003
 
         for i, j in grid_m:
             grid_v[i, j] = [0, 0]
@@ -686,8 +686,6 @@ def taichi_MPM_debug():
             if p == 0 or p == 8999:  # Only track these 2 particles
                 base_p = (x[p] * inv_dx - 0.5).cast(int)
                 print(f"Taichi P[{p}]: pos=[{x[p][0]:.6f}, {x[p][1]:.6f}] vel=[{v[p][0]:.6f}, {v[p][1]:.6f}]")
-                print(
-                    f"Taichi P[{p}]: F=[{F[p][0, 0]:.6f}, {F[p][1, 1]:.6f}] J={J:.6f} stress=[{stress[0, 0]:.6f}, {stress[1, 1]:.6f}]")
                 print(
                     f"Taichi P[{p}]: Grid[{base_p[0]}, {base_p[1]}] v=[{grid_v[base_p[0], base_p[1]][0]:.6f}, {grid_v[base_p[0], base_p[1]][1]:.6f}] m={grid_m[base_p[0], base_p[1]]:.6f}")
 
@@ -748,7 +746,7 @@ def taichi_MPM_debug():
     initialize()
 
     for n in range(3):
-        print(f"Taichi step 1:")
+        print(f"Taichi step {n}:")
         substep_debug()
 
 
@@ -852,16 +850,16 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
     debug_particles = [0, 8999]  # liquid and solid materials
 
     # Test initialization: generate deterministic C matrices for all particles to match Taichi
-    if True:  # Enable test initialization
-        # Use deterministic pattern to match Taichi exactly
-        C_pattern = torch.zeros(n_particles, 2, 2, device=device)
-        for p in range(n_particles):
-            # Match Taichi's deterministic pattern exactly
-            C_pattern[p, 0, 0] = 0.01 * (p % 5 - 2) / 10  # Varies by particle: -0.002, -0.001, 0, 0.001, 0.002
-            C_pattern[p, 0, 1] = 0.005 * (p % 3 - 1) / 10  # Varies: -0.0005, 0, 0.0005
-            C_pattern[p, 1, 0] = C_pattern[p, 0, 1]  # Symmetric
-            C_pattern[p, 1, 1] = 0.02 * (p % 4 - 1.5) / 10  # Varies: -0.003, -0.001, 0.001, 0.003
-        C.copy_(C_pattern)
+    # if True:  # Enable test initialization
+    #     # Use deterministic pattern to match Taichi exactly
+    #     C_pattern = torch.zeros(n_particles, 2, 2, device=device)
+    #     for p in range(n_particles):
+    #         # Match Taichi's deterministic pattern exactly
+    #         C_pattern[p, 0, 0] = 0.01 * (p % 5 - 2) / 10  # Varies by particle: -0.002, -0.001, 0, 0.001, 0.002
+    #         C_pattern[p, 0, 1] = 0.005 * (p % 3 - 1) / 10  # Varies: -0.0005, 0, 0.0005
+    #         C_pattern[p, 1, 0] = C_pattern[p, 0, 1]  # Symmetric
+    #         C_pattern[p, 1, 1] = 0.02 * (p % 4 - 1.5) / 10  # Varies: -0.003, -0.001, 0.001, 0.003
+    #     C.copy_(C_pattern)
 
     # Material masks
     liquid_mask = (T.squeeze() == 0)
@@ -1141,6 +1139,9 @@ def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', e
 
         # Main simulation loop
         for it in range(3):
+
+            print(f"Pytorch step {it}:")
+
             # Concatenate state for logging
             x = torch.cat((N.clone().detach(), X.clone().detach(), V.clone().detach(),
                                C.reshape(n_particles, 4).clone().detach(),
