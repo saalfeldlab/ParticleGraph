@@ -619,6 +619,9 @@ def taichi_MPM_debug():
 
     @ti.kernel
     def substep_debug():
+        # Track only 2 representative particles for cleaner debugging
+        debug_particles = [0, 8999]  # liquid and solid materials
+
         # In Taichi substep_debug() kernel, replace the random C generation with:
         for p in range(n_particles):
             # Use exact same deterministic pattern as PyTorch
@@ -626,12 +629,6 @@ def taichi_MPM_debug():
             C[p][0, 1] = 0.005 * (p % 3 - 1) / 10  # -0.0005, 0, 0.0005
             C[p][1, 0] = C[p][0, 1]  # Symmetric
             C[p][1, 1] = 0.02 * (p % 4 - 1.5) / 10  # -0.003, -0.001, 0.001, 0.003
-
-        # Debug: print debug particles' C matrices
-        for p in range(n_particles):
-            if p == 0 or p == 1 or p == 2 or p == 100 or p == 500 or p == 1000 or p == 2500 or p == 5000 or p == 7500 or p == 8500 or p == 8999:
-                print(
-                    f"Taichi Debug C[{p}]: [[{C[p][0, 0]:.8f}, {C[p][0, 1]:.8f}], [{C[p][1, 0]:.8f}, {C[p][1, 1]:.8f}]]")
 
         for i, j in grid_m:
             grid_v[i, j] = [0, 0]
@@ -670,31 +667,10 @@ def taichi_MPM_debug():
                 # Reconstruct elastic deformation gradient after plasticity
                 F[p] = U @ sig @ V.transpose()
 
-            if p == 0 or p == 1 or p == 2 or p == 100 or p == 500 or p == 1000 or p == 2500 or p == 5000 or p == 7500 or p == 8500 or p == 8999:
-                print(
-                    f"Taichi Debug F after reconstruction[{p}]: [[{F[p][0, 0]:.8f}, {F[p][0, 1]:.8f}], [{F[p][1, 0]:.8f}, {F[p][1, 1]:.8f}]]")
-
             stress = 2 * mu * (F[p] - U @ V.transpose()) @ F[p].transpose() + ti.Matrix.identity(float, 2) * la * J * (
                     J - 1
             )
-
-            if p == 0 or p == 1 or p == 2 or p == 100 or p == 500 or p == 1000 or p == 2500 or p == 5000 or p == 7500 or p == 8500 or p == 8999:
-                R = U @ V.transpose()
-                print(f"Taichi Debug R[{p}]: [[{R[0, 0]:.8f}, {R[0, 1]:.8f}], [{R[1, 0]:.8f}, {R[1, 1]:.8f}]]")
-                F_minus_R = F[p] - R
-                print(
-                    f"Taichi Debug F-R[{p}]: [[{F_minus_R[0, 0]:.8f}, {F_minus_R[0, 1]:.8f}], [{F_minus_R[1, 0]:.8f}, {F_minus_R[1, 1]:.8f}]]")
-
             stress = (-dt * p_vol * 4 * inv_dx * inv_dx) * stress
-
-            if p == 0 or p == 1 or p == 2 or p == 100 or p == 500 or p == 1000 or p == 2500 or p == 5000 or p == 7500 or p == 8500 or p == 8999:  # Debug selected particles
-                print(f"Taichi Debug J[{p}]: {J:.8f}")
-                print(f"Taichi Debug mu[{p}]: {mu:.8f}, la[{p}]: {la:.8f}")
-                R = U @ V.transpose()
-                print(f"Taichi Debug R[{p}]: [[{R[0, 0]:.8f}, {R[0, 1]:.8f}], [{R[1, 0]:.8f}, {R[1, 1]:.8f}]]")
-                print(
-                    f"Taichi Debug stress[{p}]: [[{stress[0, 0]:.8f}, {stress[0, 1]:.8f}], [{stress[1, 0]:.8f}, {stress[1, 1]:.8f}]]")
-
             affine = stress + p_mass * C[p]
 
             # Loop over 3x3 grid node neighborhood
@@ -702,22 +678,18 @@ def taichi_MPM_debug():
                 offset = ti.Vector([i, j])
                 dpos = (offset.cast(float) - fx) * dx
                 weight = w[i][0] * w[j][1]
-
-                if (
-                        p == 0 or p == 1 or p == 2 or p == 100 or p == 500 or p == 1000 or p == 2500 or p == 5000 or p == 7500 or p == 8500 or p == 8999) and i < 2 and j < 2:
-                    print(
-                        f"Taichi Debug offset[{i},{j}]: dpos[{p}] = [{dpos[0]:.8f}, {dpos[1]:.8f}], weight[{p}] = {weight:.8f}")
-
                 grid_v[base + offset] += weight * (p_mass * v[p] + affine @ dpos)
                 grid_m[base + offset] += weight * p_mass
 
-                # In Taichi P2G loop:
-                if (
-                        p == 0 or p == 1 or p == 2 or p == 100 or p == 500 or p == 1000 or p == 2500 or p == 5000 or p == 7500 or p == 8500 or p == 8999) and i == 0 and j == 0:
-                    momentum_contrib = p_mass * v[p] + affine @ dpos
-                    print(
-                        f"Taichi Debug momentum_contrib[{p}] = [{momentum_contrib[0]:.8f}, {momentum_contrib[1]:.8f}]")
-                    print(f"Taichi Debug grid_pos[{p}] = [{(base + offset)[0]}, {(base + offset)[1]}]")
+        # SIMPLIFIED DEBUG OUTPUT - Key values for divergence tracking
+        for p in range(n_particles):
+            if p == 0 or p == 8999:  # Only track these 2 particles
+                base_p = (x[p] * inv_dx - 0.5).cast(int)
+                print(f"Taichi P[{p}]: pos=[{x[p][0]:.6f}, {x[p][1]:.6f}] vel=[{v[p][0]:.6f}, {v[p][1]:.6f}]")
+                print(
+                    f"Taichi P[{p}]: F=[{F[p][0, 0]:.6f}, {F[p][1, 1]:.6f}] J={J:.6f} stress=[{stress[0, 0]:.6f}, {stress[1, 1]:.6f}]")
+                print(
+                    f"Taichi P[{p}]: Grid[{base_p[0]}, {base_p[1]}] v=[{grid_v[base_p[0], base_p[1]][0]:.6f}, {grid_v[base_p[0], base_p[1]][1]:.6f}] m={grid_m[base_p[0], base_p[1]]:.6f}")
 
         for i, j in grid_m:
             if grid_m[i, j] > 0:  # No need for epsilon here
@@ -732,32 +704,13 @@ def taichi_MPM_debug():
                 if j > n_grid - 3 and grid_v[i, j][1] > 0:
                     grid_v[i, j][1] = 0
 
-        # Debug grid velocities for each debug particle's neighborhood
-        for p in range(n_particles):
-            if (
-                    p == 0 or p == 1 or p == 2 or p == 100 or p == 500 or p == 1000 or p == 2500 or p == 5000 or p == 7500 or p == 8500 or p == 8999) and p < n_particles:
-                base_p = (x[p] * inv_dx - 0.5).cast(int)
-                print(f"Taichi Debug particle[{p}] base grid position: [{base_p[0]}, {base_p[1]}]")
-
-                # Check 3x3 neighborhood around this particle
-                for i in ti.static(range(3)):
-                    for j in ti.static(range(3)):
-                        grid_pos_x = base_p[0] + i
-                        grid_pos_y = base_p[1] + j
-
-                        # Bounds check
-                        if 0 <= grid_pos_x < n_grid and 0 <= grid_pos_y < n_grid:
-                            print(
-                                f"Taichi Debug grid_v[{grid_pos_x},{grid_pos_y}] final = [{grid_v[grid_pos_x, grid_pos_y][0]:.8f}, {grid_v[grid_pos_x, grid_pos_y][1]:.8f}]")
-                            print(
-                                f"Taichi Debug grid_m[{grid_pos_x},{grid_pos_y}] = {grid_m[grid_pos_x, grid_pos_y]:.8f}")
-
         for p in x:  # grid to particle (G2P)
             base = (x[p] * inv_dx - 0.5).cast(int)
             fx = x[p] * inv_dx - base.cast(float)
             w = [0.5 * (1.5 - fx) ** 2, 0.75 - (fx - 1.0) ** 2, 0.5 * (fx - 0.5) ** 2]
             new_v = ti.Vector.zero(float, 2)
             new_C = ti.Matrix.zero(float, 2, 2)
+
             for i, j in ti.static(ti.ndrange(3, 3)):
                 # loop over 3x3 grid node neighborhood
                 dpos = ti.Vector([i, j]).cast(float) - fx
@@ -765,8 +718,16 @@ def taichi_MPM_debug():
                 weight = w[i][0] * w[j][1]
                 new_v += weight * g_v
                 new_C += 4 * inv_dx * weight * g_v.outer_product(dpos)
+
             v[p], C[p] = new_v, new_C
             x[p] += dt * v[p]  # advection
+
+        # Final debug output for tracked particles
+        for p in range(n_particles):
+            if p == 0 or p == 8999:  # Only track these 2 particles
+                print(
+                    f"Taichi P[{p}]: final_pos=[{x[p][0]:.6f}, {x[p][1]:.6f}] final_vel=[{v[p][0]:.6f}, {v[p][1]:.6f}]")
+                print(f"Taichi P[{p}]: final_C=[{C[p][0, 0]:.6f}, {C[p][1, 1]:.6f}]")
 
 
 
@@ -786,7 +747,7 @@ def taichi_MPM_debug():
 
     initialize()
 
-    for n in range(1):
+    for n in range(3):
         print(f"Taichi step 1:")
         substep_debug()
 
@@ -883,11 +844,12 @@ def taichi_MPM_init(seed=42, device='cpu'):
 
 def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0, lambda_0, device):
     """
-    Fixed MPM substep implementation with proper SVD handling to match Taichi behavior exactly
+    FIXED MPM substep implementation with simplified debug output for divergence tracking
     """
     import torch
 
-    debug_particles = [0, 1, 2, 100, 500, 1000, 2500, 5000, 7500, 8500, 8999]
+    # Track only 2 representative particles for cleaner debugging
+    debug_particles = [0, 8999]  # liquid and solid materials
 
     # Test initialization: generate deterministic C matrices for all particles to match Taichi
     if True:  # Enable test initialization
@@ -900,12 +862,6 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
             C_pattern[p, 1, 0] = C_pattern[p, 0, 1]  # Symmetric
             C_pattern[p, 1, 1] = 0.02 * (p % 4 - 1.5) / 10  # Varies: -0.003, -0.001, 0.001, 0.003
         C.copy_(C_pattern)
-
-        # Debug: print debug particles' C matrices
-        for p in debug_particles:
-            if p < n_particles:
-                print(
-                    f"PyTorch Debug C[{p}]: [[{C[p, 0, 0]:.8f}, {C[p, 0, 1]:.8f}], [{C[p, 1, 0]:.8f}, {C[p, 1, 1]:.8f}]]")
 
     # Material masks
     liquid_mask = (T.squeeze() == 0)
@@ -934,15 +890,6 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
     # Update deformation gradient: F = (I + dt * C) * F_old
     F = (identity + dt * C) @ F
 
-    # Debug selected particles before SVD
-    for p in debug_particles:
-        if p < n_particles:
-            print(f"PyTorch Debug C[{p}]: [[{C[p, 0, 0]:.8f}, {C[p, 0, 1]:.8f}], [{C[p, 1, 0]:.8f}, {C[p, 1, 1]:.8f}]]")
-            print(
-                f"PyTorch Debug dt * C[{p}]: [[{(dt * C[p, 0, 0]):.8f}, {(dt * C[p, 0, 1]):.8f}], [{(dt * C[p, 1, 0]):.8f}, {(dt * C[p, 1, 1]):.8f}]]")
-            print(
-                f"PyTorch Debug F[{p}] before SVD: [[{F[p, 0, 0]:.8f}, {F[p, 0, 1]:.8f}], [{F[p, 1, 0]:.8f}, {F[p, 1, 1]:.8f}]]")
-
     # Hardening coefficient
     h = torch.exp(10 * (1.0 - Jp.squeeze()))
     h = torch.where(jelly_mask, torch.tensor(0.3, device=device), h)
@@ -952,65 +899,27 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
     la = lambda_0 * h
     mu = torch.where(liquid_mask, torch.tensor(0.0, device=device), mu)
 
-    # Enhanced SVD decomposition with robust Taichi compatibility
-    #
-    # IMPORTANT: Taichi uses iterative SVD methods (McAdams et al. 2011) optimized for
-    # physical simulation, while PyTorch uses direct/analytical SVD (LAPACK-based).
-    # These different algorithms can produce different but equally valid U,V matrices.
-    #
-    # Source: Taichi documentation on complex kernels and SVD implementation
-    # "Fast SVD solvers used in physical simulation are often iterative"
-
+    # SVD decomposition with proper handling
     U, sig, Vh = torch.linalg.svd(F)
 
-    # Enhanced SVD alignment strategy for physical simulation compatibility
-    # Step 1: Check for small deformation assumption (most MPM particles)
-    F_frobenius = torch.norm(F - identity, dim=(-2, -1))
-    is_small_deformation = F_frobenius < 0.1  # Most particles should be small deformation
-
-    # Step 2: For small deformations, enforce canonical SVD form
-    # Taichi's iterative SVD tends to produce U and V closer to identity for small deformations
-    if is_small_deformation.any():
-        # Check if U and V are close to identity (indicating small rotation)
-        U_deviation = torch.norm(U - identity, dim=(-2, -1))
-        V_deviation = torch.norm(Vh - identity, dim=(-2, -1))
-
-        # If SVD produced non-identity U,V for small deformations, correct them
-        needs_correction = is_small_deformation & ((U_deviation > 0.1) | (V_deviation > 0.1))
-
-        if needs_correction.any():
-            # For small deformations, reconstruct with identity rotations
-            # This matches Taichi's behavior for near-identity matrices
-            U_corrected = identity.clone()
-            Vh_corrected = identity.clone()
-
-            # Apply correction only to problematic particles
-            U = torch.where(needs_correction.unsqueeze(-1).unsqueeze(-1), U_corrected, U)
-            Vh = torch.where(needs_correction.unsqueeze(-1).unsqueeze(-1), Vh_corrected, Vh)
-
-    # Step 3: Ensure proper rotation matrices (det = 1)
+    # Proper SVD sign correction to match Taichi
+    # Ensure determinant of U and Vh are positive (proper rotations)
     det_U = torch.det(U)
     det_Vh = torch.det(Vh)
 
+    # Correct U if determinant is negative
     neg_det_U = det_U < 0
     if neg_det_U.any():
         U[neg_det_U, :, -1] *= -1
         sig[neg_det_U, -1] *= -1
 
+    # Correct Vh if determinant is negative
     neg_det_Vh = det_Vh < 0
     if neg_det_Vh.any():
         Vh[neg_det_Vh, -1, :] *= -1
         sig[neg_det_Vh, -1] *= -1
 
-    # Debug SVD results (before plasticity) for selected particles
-    for p in debug_particles:
-        if p < n_particles:
-            print(f"PyTorch Debug U[{p}]: [[{U[p, 0, 0]:.8f}, {U[p, 0, 1]:.8f}], [{U[p, 1, 0]:.8f}, {U[p, 1, 1]:.8f}]]")
-            print(f"PyTorch Debug sig[{p}]: [{sig[p, 0]:.8f}, {sig[p, 1]:.8f}]")
-            print(
-                f"PyTorch Debug Vh[{p}]: [[{Vh[p, 0, 0]:.8f}, {Vh[p, 0, 1]:.8f}], [{Vh[p, 1, 0]:.8f}, {Vh[p, 1, 1]:.8f}]]")
-
-    # Clamp singular values to prevent degenerate cases
+    # Clamp singular values to prevent degenerate cases (match Taichi)
     sig = torch.clamp(sig, min=1e-6)
     original_sig = sig.clone()
 
@@ -1027,51 +936,38 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
     sig = new_sig
     J = torch.prod(sig, dim=1)
 
-    # Debug after plasticity processing for selected particles
-    for p in debug_particles:
-        if p < n_particles:
-            print(f"PyTorch Debug J[{p}]: {J[p]:.8f}")
-            print(f"PyTorch Debug mu[{p}]: {mu[p]:.8f}, la[{p}]: {la[p]:.8f}")
-            print(f"PyTorch Debug sig after plasticity[{p}]: [{sig[p, 0]:.8f}, {sig[p, 1]:.8f}]")
+    # Reconstruct deformation gradient to exactly match Taichi logic
+    sig_diag = torch.diag_embed(sig)
 
-    # Reconstruct deformation gradient based on material type
+    # For liquid: F = sqrt(J) * I
     F_liquid = torch.eye(2, device=device).unsqueeze(0).expand(n_particles, -1, -1) * torch.sqrt(J).unsqueeze(
         -1).unsqueeze(-1)
-    sig_diag = torch.diag_embed(sig)
-    F_snow = U @ sig_diag @ Vh
 
-    # Apply material-specific deformation gradients
+    # For solid materials: F = U @ sig @ Vh
+    F_solid = U @ sig_diag @ Vh
+
+    # Apply reconstruction based on material type
     F = torch.where(liquid_mask.unsqueeze(-1).unsqueeze(-1), F_liquid, F)
-    F = torch.where(snow_mask.unsqueeze(-1).unsqueeze(-1), F_snow, F)
+    F = torch.where((jelly_mask | snow_mask).unsqueeze(-1).unsqueeze(-1), F_solid, F)
 
-    # Debug reconstructed F for selected particles
-    for p in debug_particles:
-        if p < n_particles:
-            print(
-                f"PyTorch Debug F after reconstruction[{p}]: [[{F[p, 0, 0]:.8f}, {F[p, 0, 1]:.8f}], [{F[p, 1, 0]:.8f}, {F[p, 1, 1]:.8f}]]")
+    # Calculate stress exactly like Taichi
+    R = U @ Vh  # Rotation matrix
 
-    # Calculate stress - match Taichi formula exactly
-    R = U @ Vh.transpose(-2, -1)  # Rotation matrix
-    stress = (2 * mu.unsqueeze(-1).unsqueeze(-1) * (F - R) @ F.transpose(-2, -1) +
+    # Stress calculation matching Taichi exactly
+    F_minus_R = F - R
+    stress = (2 * mu.unsqueeze(-1).unsqueeze(-1) * F_minus_R @ F.transpose(-2, -1) +
               identity * (la * J * (J - 1)).unsqueeze(-1).unsqueeze(-1))
 
-    # Apply stress scaling factor exactly like Taichi
-    stress = (-dt * (dx * 0.5) ** 2 * 4 * inv_dx * inv_dx) * stress
+    # Apply stress scaling factor EXACTLY like Taichi
+    # Taichi uses: (-dt * p_vol * 4 * inv_dx * inv_dx) where p_vol = (dx * 0.5) ** 2
+    p_vol = (dx * 0.5) ** 2
+    stress = (-dt * p_vol * 4 * inv_dx * inv_dx) * stress
 
-    # Debug stress calculation for selected particles
-    for p in debug_particles:
-        if p < n_particles:
-            print(f"PyTorch Debug R[{p}]: [[{R[p, 0, 0]:.8f}, {R[p, 0, 1]:.8f}], [{R[p, 1, 0]:.8f}, {R[p, 1, 1]:.8f}]]")
-            print(
-                f"PyTorch Debug F-R[{p}]: [[{(F - R)[p, 0, 0]:.8f}, {(F - R)[p, 0, 1]:.8f}], [{(F - R)[p, 1, 0]:.8f}, {(F - R)[p, 1, 1]:.8f}]]")
-            print(
-                f"PyTorch Debug stress[{p}]: [[{stress[p, 0, 0]:.8f}, {stress[p, 0, 1]:.8f}], [{stress[p, 1, 0]:.8f}, {stress[p, 1, 1]:.8f}]]")
+    # P2G transfer - use scatter operations for proper accumulation
+    p_mass = M.squeeze(-1)  # [n_particles]
+    affine = stress + p_mass.unsqueeze(-1).unsqueeze(-1) * C
 
-    # P2G transfer - simplified to match Taichi exactly
-    p_mass = M.squeeze(-1).unsqueeze(-1).unsqueeze(-1)  # [n_particles, 1, 1] for broadcasting
-    affine = stress + p_mass * C
-
-    # Process each offset in the 3x3 neighborhood
+    # P2G: Process each offset in the 3x3 neighborhood using proper scatter
     for i in range(3):
         for j in range(3):
             offset = torch.tensor([i, j], device=device, dtype=torch.long)
@@ -1079,25 +975,12 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
             weight = w[:, i, 0] * w[:, j, 1]  # w[i][0] * w[j][1] in Taichi
             grid_pos = base + offset
 
-            # Debug weight and dpos for selected particles, first few offsets
-            for p in debug_particles:
-                if p < n_particles and i < 2 and j < 2:
-                    print(
-                        f"PyTorch Debug offset[{i},{j}]: dpos[{p}] = [{dpos[p, 0]:.8f}, {dpos[p, 1]:.8f}], weight[{p}] = {weight[p]:.8f}")
-
             # Calculate contributions
-            affine_contrib = torch.bmm(affine, dpos.unsqueeze(-1)).squeeze(-1)
-            momentum_contrib = M.squeeze(-1).unsqueeze(-1) * V + affine_contrib
-            mass_contrib = M.squeeze(-1) * weight
+            affine_contrib = torch.sum(affine * dpos.unsqueeze(-2), dim=-1)  # affine @ dpos
+            momentum_contrib = p_mass.unsqueeze(-1) * V + affine_contrib
+            mass_contrib = p_mass * weight
 
-            # Debug momentum contribution for selected particles at first offset
-            for p in debug_particles:
-                if p < n_particles and i == 0 and j == 0:
-                    print(
-                        f"PyTorch Debug momentum_contrib[{p}] = [{momentum_contrib[p, 0]:.8f}, {momentum_contrib[p, 1]:.8f}]")
-                    print(f"PyTorch Debug grid_pos[{p}] = [{grid_pos[p, 0]}, {grid_pos[p, 1]}]")
-
-            # Apply contributions to grid (with bounds checking)
+            # Apply contributions to grid with bounds checking
             valid_mask = ((grid_pos[:, 0] >= 0) & (grid_pos[:, 0] < n_grid) &
                           (grid_pos[:, 1] >= 0) & (grid_pos[:, 1] < n_grid))
 
@@ -1106,24 +989,32 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
                 valid_momentum = momentum_contrib[valid_mask]
                 valid_mass = mass_contrib[valid_mask]
 
-                # Use advanced indexing to accumulate
-                for idx in range(valid_pos.shape[0]):
-                    gx, gy = valid_pos[idx, 0].item(), valid_pos[idx, 1].item()
-                    grid_v[gx, gy] += valid_momentum[idx]
-                    grid_m[gx, gy] += valid_mass[idx]
+                # Use proper scatter_add for atomic-like accumulation
+                flat_indices = valid_pos[:, 0] * n_grid + valid_pos[:, 1]
 
-    # Grid velocity update (normalize by mass) + gravity + boundary conditions
-    # Match Taichi's approach: do everything in one pass
+                # Scatter momentum contributions
+                grid_v_flat = grid_v.view(-1, 2)
+                grid_v_flat.scatter_add_(0, flat_indices.unsqueeze(-1).expand(-1, 2), valid_momentum)
+
+                # Scatter mass contributions
+                grid_m_flat = grid_m.view(-1)
+                grid_m_flat.scatter_add_(0, flat_indices, valid_mass)
+
+    # Grid velocity update - exactly match Taichi's approach
+    nonzero_mask = grid_m > 0
+
+    # Momentum to velocity conversion
+    grid_v[nonzero_mask] = grid_v[nonzero_mask] / grid_m[nonzero_mask].unsqueeze(-1)
+
+    # Apply gravity - fix the indexing issue
+    gravity_mask = nonzero_mask.unsqueeze(-1).expand(-1, -1, 2)
+    gravity_vector = torch.tensor([0.0, -dt * 50], device=device)
+    grid_v = torch.where(gravity_mask, grid_v + gravity_vector, grid_v)
+
+    # Boundary conditions - match Taichi exactly
     for i in range(n_grid):
         for j in range(n_grid):
             if grid_m[i, j] > 0:
-                # Momentum to velocity
-                grid_v[i, j] = grid_v[i, j] / grid_m[i, j]
-
-                # Apply gravity
-                grid_v[i, j, 1] -= dt * 50
-
-                # Boundary conditions - match Taichi exactly
                 if i < 3 and grid_v[i, j, 0] < 0:
                     grid_v[i, j, 0] = 0.0
                 if i > n_grid - 3 and grid_v[i, j, 0] > 0:
@@ -1133,29 +1024,21 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
                 if j > n_grid - 3 and grid_v[i, j, 1] > 0:
                     grid_v[i, j, 1] = 0.0
 
-    # Debug grid velocities and masses for selected particles' neighborhoods
+    # SIMPLIFIED DEBUG OUTPUT - Key values for divergence tracking
     for p in debug_particles:
         if p < n_particles:
             base_p = base[p]
-            print(f"PyTorch Debug particle[{p}] base grid position: [{base_p[0]}, {base_p[1]}]")
+            print(f"PyTorch P[{p}]: pos=[{X[p, 0]:.6f}, {X[p, 1]:.6f}] vel=[{V[p, 0]:.6f}, {V[p, 1]:.6f}]")
+            print(
+                f"PyTorch P[{p}]: F=[{F[p, 0, 0]:.6f}, {F[p, 1, 1]:.6f}] J={J[p]:.6f} stress=[{stress[p, 0, 0]:.6f}, {stress[p, 1, 1]:.6f}]")
+            print(
+                f"PyTorch P[{p}]: Grid[{base_p[0]}, {base_p[1]}] v=[{grid_v[base_p[0], base_p[1], 0]:.6f}, {grid_v[base_p[0], base_p[1], 1]:.6f}] m={grid_m[base_p[0], base_p[1]]:.6f}")
 
-            # Check 3x3 neighborhood around this particle
-            for i in range(3):
-                for j in range(3):
-                    grid_pos_x = base_p[0] + i
-                    grid_pos_y = base_p[1] + j
-
-                    # Bounds check
-                    if 0 <= grid_pos_x < n_grid and 0 <= grid_pos_y < n_grid:
-                        print(
-                            f"PyTorch Debug grid_v[{grid_pos_x},{grid_pos_y}] final = [{grid_v[grid_pos_x, grid_pos_y, 0]:.8f}, {grid_v[grid_pos_x, grid_pos_y, 1]:.8f}]")
-                        print(f"PyTorch Debug grid_m[{grid_pos_x},{grid_pos_y}] = {grid_m[grid_pos_x, grid_pos_y]:.8f}")
-
-    # G2P transfer - simplified and clean
+    # G2P transfer
     new_V = torch.zeros_like(V)
     new_C = torch.zeros_like(C)
 
-    # Recalculate base and fx for G2P
+    # Recalculate base and fx for G2P (should be same as P2G)
     base_g2p = (X * inv_dx - 0.5).floor().long()
     fx_g2p = X * inv_dx - base_g2p.float()
 
@@ -1186,7 +1069,6 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
             new_V += weight.unsqueeze(-1) * g_v
 
             # APIC transfer - match Taichi exactly
-            # new_C += 4 * inv_dx * weight * g_v.outer_product(dpos)
             apic_contribution = 4 * inv_dx * weight.unsqueeze(-1).unsqueeze(-1) * torch.bmm(
                 g_v.unsqueeze(-1), dpos.unsqueeze(-2))
             new_C += apic_contribution
@@ -1197,6 +1079,12 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
 
     # Particle advection
     X = X + dt * V
+
+    # Final debug output for tracked particles
+    for p in debug_particles:
+        if p < n_particles:
+            print(f"PyTorch P[{p}]: final_pos=[{X[p, 0]:.6f}, {X[p, 1]:.6f}] final_vel=[{V[p, 0]:.6f}, {V[p, 1]:.6f}]")
+            print(f"PyTorch P[{p}]: final_C=[{C[p, 0, 0]:.6f}, {C[p, 1, 1]:.6f}]")
 
     return X, V, C, F, T, Jp, M, grid_v, grid_m
 
@@ -1252,7 +1140,7 @@ def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', e
         group_indices = torch.arange(n_particles, device=device) // group_size
 
         # Main simulation loop
-        for it in range(1):
+        for it in range(3):
             # Concatenate state for logging
             x = torch.cat((N.clone().detach(), X.clone().detach(), V.clone().detach(),
                                C.reshape(n_particles, 4).clone().detach(),
