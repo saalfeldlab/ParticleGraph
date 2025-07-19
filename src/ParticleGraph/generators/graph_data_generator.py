@@ -9,6 +9,8 @@ from ParticleGraph.data_loaders import *
 from GNN_particles_Ntype import *
 from ParticleGraph.utils import set_size
 from ParticleGraph.generators.cell_utils import *
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score
 from scipy import stats
 from scipy.spatial import Voronoi, voronoi_plot_2d
 from matplotlib.patches import Polygon
@@ -576,6 +578,50 @@ def taichi_MPM():
 
     initialize()
 
+    for n in range(5000):
+        substep()
+
+    # Separate particle visualization
+    x_np = x.to_numpy()
+    material_np = material.to_numpy()
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+
+    colors = ['blue', 'red', 'green']
+    material_names = ['Liquid', 'Jelly', 'Snow']
+
+    # Full domain view
+    for mat_type in range(3):
+        mask = material_np == mat_type
+        if np.any(mask):
+            ax1.scatter(x_np[mask, 0], x_np[mask, 1], s=3, color=colors[mat_type],
+                        label=material_names[mat_type], alpha=0.7)
+    ax1.set_xlim([0, 1])
+    ax1.set_ylim([0, 1])
+    ax1.set_title('Final Particle Positions')
+    ax1.set_xlabel('x')
+    ax1.set_ylabel('y')
+    ax1.legend()
+    ax1.grid(True, alpha=0.3)
+
+    # Zoomed view
+    for mat_type in range(3):
+        mask = material_np == mat_type
+        if np.any(mask):
+            ax2.scatter(x_np[mask, 0], x_np[mask, 1], s=8, color=colors[mat_type],
+                        label=material_names[mat_type], alpha=0.7)
+    ax2.set_xlim([0.2, 0.8])
+    ax2.set_ylim([0.2, 0.8])
+    ax2.set_title('Particle Positions (Zoomed)')
+    ax2.set_xlabel('x')
+    ax2.set_ylabel('y')
+    ax2.legend()
+    ax2.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig('particles_taichi.png', dpi=150, bbox_inches='tight')
+    plt.close()
+
     gui = ti.GUI("Taichi MLS-MPM-99", res=512, background_color=0x112F41)
     while not gui.get_event(ti.GUI.ESCAPE, ti.GUI.EXIT):
         for s in range(int(2e-3 // dt)):
@@ -669,9 +715,18 @@ def taichi_MPM_debug():
 
             # Calculate stress
             stress = 2 * mu * (F[p] - U @ V.transpose()) @ F[p].transpose() + ti.Matrix.identity(float, 2) * la * J * (
-                        J - 1)
+                    J - 1)
             stress = (-dt * p_vol * 4 * inv_dx * inv_dx) * stress
             affine = stress + p_mass * C[p]
+
+            # DEBUG PRINTS for first particle
+            if p == 0:
+                print(
+                    f"Taichi affine[0]: [[{affine[0, 0]:.8f}, {affine[0, 1]:.8f}], [{affine[1, 0]:.8f}, {affine[1, 1]:.8f}]]")
+                print(f"Taichi v[0]: [{v[p][0]:.8f}, {v[p][1]:.8f}]")
+                print(f"Taichi p_mass: {p_mass:.8f}")
+                print(f"Taichi base[0]: [{base[0]}, {base[1]}]")
+                print(f"Taichi fx[0]: [{fx[0]:.8f}, {fx[1]:.8f}]")
 
             # Stats collection
             stress_norm = (stress[0, 0] ** 2 + stress[0, 1] ** 2 + stress[1, 0] ** 2 + stress[1, 1] ** 2) ** 0.5
@@ -713,7 +768,7 @@ def taichi_MPM_debug():
             J = sig[0, 0] * sig[1, 1]
 
             stress = 2 * mu * (F[p] - U @ V.transpose()) @ F[p].transpose() + ti.Matrix.identity(float, 2) * la * J * (
-                        J - 1)
+                    J - 1)
             stress = (-dt * p_vol * 4 * inv_dx * inv_dx) * stress
             stress_norm = (stress[0, 0] ** 2 + stress[0, 1] ** 2 + stress[1, 0] ** 2 + stress[1, 1] ** 2) ** 0.5
 
@@ -853,18 +908,18 @@ def taichi_MPM_debug():
             Jp[i] = 1
 
             # Deterministic initialization
-            val = (i % 100) * 0.001 - 0.05
-            C[i] = ti.Matrix([[val, val * 0.5], [val * 0.5, val]])
-
-            pert = (i % 50) * 0.0008 - 0.02
-            F[i] = ti.Matrix([[1.0 + pert, pert * 0.3], [pert * 0.3, 1.0 + pert]])
-
-            v_val = (i % 200) * 0.0001 - 0.01
-            v[i] = ti.Matrix([v_val, v_val * 0.7])
+            # val = (i % 100) * 0.001 - 0.05
+            # C[i] = ti.Matrix([[val, val * 0.5], [val * 0.5, val]])
+            #
+            # pert = (i % 50) * 0.0008 - 0.02
+            # F[i] = ti.Matrix([[1.0 + pert, pert * 0.3], [pert * 0.3, 1.0 + pert]])
+            #
+            # v_val = (i % 200) * 0.0001 - 0.01
+            # v[i] = ti.Matrix([v_val, v_val * 0.7])
 
     initialize()
 
-    for n in range(1):
+    for n in range(500):
         print(f"Taichi step {n}:")
         substep_debug()
 
@@ -878,6 +933,7 @@ def taichi_MPM_debug():
     import matplotlib.pyplot as plt
     grid_v_norm = np.sqrt(grid_v_np[:, :, 0] ** 2 + grid_v_np[:, :, 1] ** 2)
 
+    # Grid visualization
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
 
     im1 = ax1.imshow(grid_m_np.T, origin='lower', cmap='viridis')
@@ -894,6 +950,47 @@ def taichi_MPM_debug():
 
     plt.tight_layout()
     plt.savefig('grid_visualization_taichi.png', dpi=150, bbox_inches='tight')
+    plt.close()
+
+    # Separate particle visualization
+    x_np = x.to_numpy()
+    material_np = material.to_numpy()
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+
+    colors = ['blue', 'red', 'green']
+    material_names = ['Liquid', 'Jelly', 'Snow']
+
+    # Full domain view
+    for mat_type in range(3):
+        mask = material_np == mat_type
+        if np.any(mask):
+            ax1.scatter(x_np[mask, 0], x_np[mask, 1], s=3, color=colors[mat_type],
+                        label=material_names[mat_type], alpha=0.7)
+    ax1.set_xlim([0, 1])
+    ax1.set_ylim([0, 1])
+    ax1.set_title('Final Particle Positions')
+    ax1.set_xlabel('x')
+    ax1.set_ylabel('y')
+    ax1.legend()
+    ax1.grid(True, alpha=0.3)
+
+    # Zoomed view
+    for mat_type in range(3):
+        mask = material_np == mat_type
+        if np.any(mask):
+            ax2.scatter(x_np[mask, 0], x_np[mask, 1], s=8, color=colors[mat_type],
+                        label=material_names[mat_type], alpha=0.7)
+    ax2.set_xlim([0.2, 0.8])
+    ax2.set_ylim([0.2, 0.8])
+    ax2.set_title('Particle Positions (Zoomed)')
+    ax2.set_xlabel('x')
+    ax2.set_ylabel('y')
+    ax2.legend()
+    ax2.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig('particles_taichi.png', dpi=150, bbox_inches='tight')
     plt.close()
 
 
@@ -994,29 +1091,29 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
 
     p_indices = torch.arange(n_particles, device=device)
 
-    # C matrix: same pattern as Taichi
-    val = (p_indices % 100) * 0.001 - 0.05
-    C_init = torch.zeros(n_particles, 2, 2, device=device)
-    C_init[:, 0, 0] = val
-    C_init[:, 1, 1] = val
-    C_init[:, 0, 1] = val * 0.5
-    C_init[:, 1, 0] = val * 0.5
-    C.copy_(C_init)
+    # # C matrix: same pattern as Taichi
+    # val = (p_indices % 100) * 0.001 - 0.05
+    # C_init = torch.zeros(n_particles, 2, 2, device=device)
+    # C_init[:, 0, 0] = val
+    # C_init[:, 1, 1] = val
+    # C_init[:, 0, 1] = val * 0.5
+    # C_init[:, 1, 0] = val * 0.5
+    # C.copy_(C_init)
+    #
+    # # F matrix: same pattern as Taichi
+    # pert = (p_indices % 50) * 0.0008 - 0.02
+    # F_init = torch.eye(2, device=device).unsqueeze(0).expand(n_particles, -1, -1).clone()
+    # F_init[:, 0, 0] += pert
+    # F_init[:, 1, 1] += pert
+    # F_init[:, 0, 1] = pert * 0.3
+    # F_init[:, 1, 0] = pert * 0.3
+    # F.copy_(F_init)
 
-    # F matrix: same pattern as Taichi
-    pert = (p_indices % 50) * 0.0008 - 0.02
-    F_init = torch.eye(2, device=device).unsqueeze(0).expand(n_particles, -1, -1).clone()
-    F_init[:, 0, 0] += pert
-    F_init[:, 1, 1] += pert
-    F_init[:, 0, 1] = pert * 0.3
-    F_init[:, 1, 0] = pert * 0.3
-    F.copy_(F_init)
-
-    v_indices = torch.arange(n_particles, device=device)
-    v_val = (v_indices % 200) * 0.0001 - 0.01
-    V = torch.zeros(n_particles, 2, device=device)
-    V[:, 0] = v_val
-    V[:, 1] = v_val * 0.7
+    # v_indices = torch.arange(n_particles, device=device)
+    # v_val = (v_indices % 200) * 0.0001 - 0.01
+    # V = torch.zeros(n_particles, 2, device=device)
+    # V[:, 0] = v_val
+    # V[:, 1] = v_val * 0.7
 
     v_sum_initial = torch.sum(V)
     print(f"step start - V_sum: {v_sum_initial:.6f}")
@@ -1120,7 +1217,6 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
     # P2G transfer
     p_mass = M.squeeze(-1)
     affine = stress + p_mass.unsqueeze(-1).unsqueeze(-1) * C
-
     affine_norm = torch.norm(affine.view(n_particles, -1), dim=1)
     print(f"Affine max: {torch.max(affine_norm):.6f}, Mean: {torch.mean(affine_norm):.6f}")
 
@@ -1130,7 +1226,7 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
     grid_v = torch.zeros((n_grid, n_grid, 2), device=device, dtype=torch.float32)
     grid_m = torch.zeros((n_grid, n_grid), device=device, dtype=torch.float32)
 
-    # P2G - Direct Taichi translation
+    # P2G - loop through each particle
     for p in range(n_particles):
         # Calculate base grid position and fractional offset for this particle
         base_p = (X[p] * inv_dx - 0.5).int()
@@ -1168,7 +1264,6 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
     print(
         f"grid_m - Min: {torch.min(grid_m):.6f}, Max: {torch.max(grid_m):.6f}, Mean: {torch.mean(grid_m):.6f}, Std: {torch.std(grid_m):.6f}")
     print(f"Total grid mass: {torch.sum(grid_m):.6f}")
-
     np.save('pytorch_grid_m.npy', grid_m.cpu().numpy())
 
     for i in range(n_grid):
@@ -1176,10 +1271,8 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
             if grid_m[i, j] > 0:
                 # Convert momentum to velocity
                 grid_v[i, j] = grid_v[i, j] / grid_m[i, j]
-
                 # Apply gravity
                 grid_v[i, j, 1] += dt * (-50)
-
                 # Boundary conditions
                 if i < 3 and grid_v[i, j, 0] < 0:
                     grid_v[i, j, 0] = 0.0
@@ -1191,10 +1284,7 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
                     grid_v[i, j, 1] = 0.0
 
     grid_v_norm = torch.norm(grid_v, dim=2)
-    print(
-        f"grid_v norm - Min: {torch.min(grid_v_norm):.12f}, Max: {torch.max(grid_v_norm):.12f}, Mean: {torch.mean(grid_v_norm):.12f}, Std: {torch.std(grid_v_norm):.12f}")
-
-    # Save grid_v after velocity conversion and boundary conditions
+    print(f"grid_v norm - Min: {torch.min(grid_v_norm):.12f}, Max: {torch.max(grid_v_norm):.12f}, Mean: {torch.mean(grid_v_norm):.12f}, Std: {torch.std(grid_v_norm):.12f}")
     np.save('pytorch_grid_v.npy', grid_v.cpu().numpy())
 
     # G2P transfer - CORRECTED VERSION
@@ -1241,33 +1331,34 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
     grid_v_np = grid_v.cpu().numpy()
     grid_v_norm = np.sqrt(grid_v_np[:, :, 0] ** 2 + grid_v_np[:, :, 1] ** 2)
 
-    # Create plots
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    if False:
+        # Create plots
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
 
-    # Plot grid_m
-    im1 = ax1.imshow(grid_m_np.T, origin='lower', cmap='viridis')
-    ax1.set_title('Grid Mass (grid_m)')
-    ax1.set_xlabel('i')
-    ax1.set_ylabel('j')
-    plt.colorbar(im1, ax=ax1)
+        # Plot grid_m
+        im1 = ax1.imshow(grid_m_np.T, origin='lower', cmap='viridis')
+        ax1.set_title('Grid Mass (grid_m)')
+        ax1.set_xlabel('i')
+        ax1.set_ylabel('j')
+        plt.colorbar(im1, ax=ax1)
 
-    # Plot grid_v norm
-    im2 = ax2.imshow(grid_v_norm.T, origin='lower', cmap='plasma')
-    ax2.set_title('Grid Velocity Norm')
-    ax2.set_xlabel('i')
-    ax2.set_ylabel('j')
-    plt.colorbar(im2, ax=ax2)
+        # Plot grid_v norm
+        im2 = ax2.imshow(grid_v_norm.T, origin='lower', cmap='plasma')
+        ax2.set_title('Grid Velocity Norm')
+        ax2.set_xlabel('i')
+        ax2.set_ylabel('j')
+        plt.colorbar(im2, ax=ax2)
 
-    plt.tight_layout()
-    plt.savefig('grid_visualization_pytorch.png', dpi=150, bbox_inches='tight')
-    plt.close()
+        plt.tight_layout()
+        plt.savefig('grid_visualization_pytorch.png', dpi=150, bbox_inches='tight')
+        plt.close()
 
     return X, V, C, F, T, Jp, M, grid_v, grid_m
 
 
 def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                       scenario='none', device=None, bSave=True):
-    taichi_MPM_debug()
+    taichi_MPM()
 
     simulation_config = config.simulation
     training_config = config.training
@@ -1317,7 +1408,7 @@ def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', e
         group_indices = torch.arange(n_particles, device=device) // group_size
 
         # Main simulation loop
-        for it in range(1):
+        for it in range(1000):
 
             print(f"Pytorch step {it}:")
 
@@ -1364,8 +1455,7 @@ def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', e
             dataset_name = config.dataset
             np.save(f'graphs_data/{dataset_name}/x_list_{run}.npy', x_list)
 
-    from sklearn.linear_model import LinearRegression
-    from sklearn.metrics import r2_score
+
 
     # Load data - now comparing grid_v instead of momentum
     taichi_grid_m = np.load('taichi_grid_m.npy')
