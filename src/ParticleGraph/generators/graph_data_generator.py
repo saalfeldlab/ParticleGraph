@@ -571,15 +571,15 @@ def taichi_MPM():
                 ti.random() * 0.2 + 0.3 + 0.10 * (i // group_size),
                 ti.random() * 0.2 + 0.05 + 0.32 * (i // group_size),
             ]
-            material[i] = i // group_size  # 0: fluid 1: jelly 2: snow
+            material[i] = 1 #i // group_size  # 0: fluid 1: jelly 2: snow
             v[i] = ti.Matrix([0, 0])
             F[i] = ti.Matrix([[1, 0], [0, 1]])
             Jp[i] = 1
 
     initialize()
 
-    for n in range(2000):
-        substep()
+    # for n in range(2000):
+    #     substep()
 
     # Separate particle visualization
     x_np = x.to_numpy()
@@ -1039,31 +1039,27 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
     MPM substep implementation
     """
 
-    p_indices = torch.arange(n_particles, device=device)
-
-    # C matrix: same pattern as Taichi
-    val = (p_indices % 100) * 0.001 - 0.05
-    C_init = torch.zeros(n_particles, 2, 2, device=device)
-    C_init[:, 0, 0] = val
-    C_init[:, 1, 1] = val
-    C_init[:, 0, 1] = val * 0.5
-    C_init[:, 1, 0] = val * 0.5
-    C.copy_(C_init)
-
-    # F matrix: same pattern as Taichi
-    pert = (p_indices % 50) * 0.0008 - 0.02
-    F_init = torch.eye(2, device=device).unsqueeze(0).expand(n_particles, -1, -1).clone()
-    F_init[:, 0, 0] += pert
-    F_init[:, 1, 1] += pert
-    F_init[:, 0, 1] = pert * 0.3
-    F_init[:, 1, 0] = pert * 0.3
-    F.copy_(F_init)
-
-    v_indices = torch.arange(n_particles, device=device)
-    v_val = (v_indices % 200) * 0.0001 - 0.01
-    V = torch.zeros(n_particles, 2, device=device)
-    V[:, 0] = v_val
-    V[:, 1] = v_val * 0.7
+    # test init
+    # p_indices = torch.arange(n_particles, device=device)
+    # val = (p_indices % 100) * 0.001 - 0.05
+    # C_init = torch.zeros(n_particles, 2, 2, device=device)
+    # C_init[:, 0, 0] = val
+    # C_init[:, 1, 1] = val
+    # C_init[:, 0, 1] = val * 0.5
+    # C_init[:, 1, 0] = val * 0.5
+    # C.copy_(C_init)
+    # pert = (p_indices % 50) * 0.0008 - 0.02
+    # F_init = torch.eye(2, device=device).unsqueeze(0).expand(n_particles, -1, -1).clone()
+    # F_init[:, 0, 0] += pert
+    # F_init[:, 1, 1] += pert
+    # F_init[:, 0, 1] = pert * 0.3
+    # F_init[:, 1, 0] = pert * 0.3
+    # F.copy_(F_init)
+    # v_indices = torch.arange(n_particles, device=device)
+    # v_val = (v_indices % 200) * 0.0001 - 0.01
+    # V = torch.zeros(n_particles, 2, device=device)
+    # V[:, 0] = v_val
+    # V[:, 1] = v_val * 0.7
 
     v_sum_initial = torch.sum(V)
     print(f"step start - V_sum: {v_sum_initial:.6f}")
@@ -1316,7 +1312,7 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
     grid_v_np = grid_v.cpu().numpy()
     grid_v_norm = np.sqrt(grid_v_np[:, :, 0] ** 2 + grid_v_np[:, :, 1] ** 2)
 
-    if True:
+    if False:
         # Create plots
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
 
@@ -1343,7 +1339,7 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
 
 def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                       scenario='none', device=None, bSave=True):
-    taichi_MPM_debug()
+    #taichi_MPM_deubg()
 
     simulation_config = config.simulation
     training_config = config.training
@@ -1393,7 +1389,7 @@ def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', e
         group_indices = torch.arange(n_particles, device=device) // group_size
 
         # Main simulation loop
-        for it in range(1):
+        for it in range(10000):
 
             print(f"Pytorch step {it}:")
 
@@ -1424,9 +1420,9 @@ def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', e
 
                 if 'color' in style:
                     fig, ax = fig_init(formatx="%.1f", formaty="%.1f")
-                    for n in range(n_particle_types):
-                        pos = torch.argwhere(T == n).squeeze(1)
-                        plt.scatter(to_numpy(x[pos, 1]), to_numpy(x[pos, 2]), s=5, color=cmap.color(n))
+                    for n in range(3):
+                        pos = torch.argwhere(T == n)[:,0]
+                        plt.scatter(to_numpy(x[pos, 1]), to_numpy(x[pos, 2]), s=1, color=cmap.color(n))
                     plt.xlim([0, 1])
                     plt.ylim([0, 1])
                     plt.tight_layout()
@@ -1440,103 +1436,105 @@ def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', e
             dataset_name = config.dataset
             np.save(f'graphs_data/{dataset_name}/x_list_{run}.npy', x_list)
 
-    # Load data - now comparing grid_v instead of momentum
-    taichi_grid_m = np.load('taichi_grid_m.npy')
-    pytorch_grid_m = np.load('pytorch_grid_m.npy')
-    taichi_grid_v = np.load('taichi_grid_v.npy')
-    pytorch_grid_v = np.load('pytorch_grid_v.npy')
+    if False:
+        # Load data - now comparing grid_v instead of momentum
+        taichi_grid_m = np.load('taichi_grid_m.npy')
+        pytorch_grid_m = np.load('pytorch_grid_m.npy')
+        taichi_grid_v = np.load('taichi_grid_v.npy')
+        pytorch_grid_v = np.load('pytorch_grid_v.npy')
 
-    # Flatten arrays and filter non-zero values
-    taichi_m_flat = taichi_grid_m.flatten()
-    pytorch_m_flat = pytorch_grid_m.flatten()
+        # Flatten arrays and filter non-zero values
+        taichi_m_flat = taichi_grid_m.flatten()
+        pytorch_m_flat = pytorch_grid_m.flatten()
 
-    # For grid_v comparison - flatten both x and y components
-    taichi_v_flat = taichi_grid_v.reshape(-1, 2)  # [N, 2]
-    pytorch_v_flat = pytorch_grid_v.reshape(-1, 2)  # [N, 2]
+        # For grid_v comparison - flatten both x and y components
+        taichi_v_flat = taichi_grid_v.reshape(-1, 2)  # [N, 2]
+        pytorch_v_flat = pytorch_grid_v.reshape(-1, 2)  # [N, 2]
 
-    # Calculate velocity norms
-    taichi_v_norm = np.sqrt(taichi_v_flat[:, 0] ** 2 + taichi_v_flat[:, 1] ** 2)
-    pytorch_v_norm = np.sqrt(pytorch_v_flat[:, 0] ** 2 + pytorch_v_flat[:, 1] ** 2)
+        # Calculate velocity norms
+        taichi_v_norm = np.sqrt(taichi_v_flat[:, 0] ** 2 + taichi_v_flat[:, 1] ** 2)
+        pytorch_v_norm = np.sqrt(pytorch_v_flat[:, 0] ** 2 + pytorch_v_flat[:, 1] ** 2)
 
-    # For grid_m comparison - only compare non-zero values from either implementation
-    nonzero_mask_m = (taichi_m_flat > 0) | (pytorch_m_flat > 0)
-    taichi_m_nz = taichi_m_flat[nonzero_mask_m]
-    pytorch_m_nz = pytorch_m_flat[nonzero_mask_m]
+        # For grid_m comparison - only compare non-zero values from either implementation
+        nonzero_mask_m = (taichi_m_flat > 0) | (pytorch_m_flat > 0)
+        taichi_m_nz = taichi_m_flat[nonzero_mask_m]
+        pytorch_m_nz = pytorch_m_flat[nonzero_mask_m]
 
-    # For velocity comparison - only compare non-zero values from either implementation
-    nonzero_mask_v = (taichi_v_norm > 0) | (pytorch_v_norm > 0)
-    taichi_v_nz = taichi_v_norm[nonzero_mask_v]
-    pytorch_v_nz = pytorch_v_norm[nonzero_mask_v]
+        # For velocity comparison - only compare non-zero values from either implementation
+        nonzero_mask_v = (taichi_v_norm > 0) | (pytorch_v_norm > 0)
+        taichi_v_nz = taichi_v_norm[nonzero_mask_v]
+        pytorch_v_nz = pytorch_v_norm[nonzero_mask_v]
 
-    # Calculate statistics for grid_m
-    if len(taichi_m_nz) > 1:
-        lr_m = LinearRegression()
-        lr_m.fit(taichi_m_nz.reshape(-1, 1), pytorch_m_nz)
-        r2_m = r2_score(pytorch_m_nz, lr_m.predict(taichi_m_nz.reshape(-1, 1)))
-        slope_m = lr_m.coef_[0]
-        intercept_m = lr_m.intercept_
-    else:
-        r2_m, slope_m, intercept_m = 0, 0, 0
+        # Calculate statistics for grid_m
+        if len(taichi_m_nz) > 1:
+            lr_m = LinearRegression()
+            lr_m.fit(taichi_m_nz.reshape(-1, 1), pytorch_m_nz)
+            r2_m = r2_score(pytorch_m_nz, lr_m.predict(taichi_m_nz.reshape(-1, 1)))
+            slope_m = lr_m.coef_[0]
+            intercept_m = lr_m.intercept_
+        else:
+            r2_m, slope_m, intercept_m = 0, 0, 0
 
-    # Calculate statistics for velocity
-    if len(taichi_v_nz) > 1:
-        lr_v = LinearRegression()
-        lr_v.fit(taichi_v_nz.reshape(-1, 1), pytorch_v_nz)
-        r2_v = r2_score(pytorch_v_nz, lr_v.predict(taichi_v_nz.reshape(-1, 1)))
-        slope_v = lr_v.coef_[0]
-        intercept_v = lr_v.intercept_
-    else:
-        r2_v, slope_v, intercept_v = 0, 0, 0
+        # Calculate statistics for velocity
+        if len(taichi_v_nz) > 1:
+            lr_v = LinearRegression()
+            lr_v.fit(taichi_v_nz.reshape(-1, 1), pytorch_v_nz)
+            r2_v = r2_score(pytorch_v_nz, lr_v.predict(taichi_v_nz.reshape(-1, 1)))
+            slope_v = lr_v.coef_[0]
+            intercept_v = lr_v.intercept_
+        else:
+            r2_v, slope_v, intercept_v = 0, 0, 0
 
-    # Create plots
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
+        # Create plots
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
 
-    # Grid mass comparison
-    ax1.scatter(taichi_m_nz, pytorch_m_nz, alpha=0.6, s=10)
-    if len(taichi_m_nz) > 1:
-        x_range = np.linspace(taichi_m_nz.min(), taichi_m_nz.max(), 100)
-        y_pred = lr_m.predict(x_range.reshape(-1, 1))
-        ax1.plot(x_range, y_pred, 'r-', linewidth=2, label=f'Fit: y={slope_m:.3f}x+{intercept_m:.2e}')
-        ax1.plot(x_range, x_range, 'k--', alpha=0.5, label='Perfect agreement')
-    ax1.set_xlabel('Taichi grid_m')
-    ax1.set_ylabel('PyTorch grid_m')
-    ax1.set_title(f'Grid Mass Comparison\nR²={r2_m:.4f}, Slope={slope_m:.4f}')
-    ax1.legend()
-    ax1.grid(True, alpha=0.3)
+        # Grid mass comparison
+        ax1.scatter(taichi_m_nz, pytorch_m_nz, alpha=0.6, s=10)
+        if len(taichi_m_nz) > 1:
+            x_range = np.linspace(taichi_m_nz.min(), taichi_m_nz.max(), 100)
+            y_pred = lr_m.predict(x_range.reshape(-1, 1))
+            ax1.plot(x_range, y_pred, 'r-', linewidth=2, label=f'Fit: y={slope_m:.3f}x+{intercept_m:.2e}')
+            ax1.plot(x_range, x_range, 'k--', alpha=0.5, label='Perfect agreement')
+        ax1.set_xlabel('Taichi grid_m')
+        ax1.set_ylabel('PyTorch grid_m')
+        ax1.set_title(f'Grid Mass Comparison\nR²={r2_m:.4f}, Slope={slope_m:.4f}')
+        ax1.legend()
+        ax1.grid(True, alpha=0.3)
 
-    # Velocity comparison
-    ax2.scatter(taichi_v_nz, pytorch_v_nz, alpha=0.6, s=10)
-    if len(taichi_v_nz) > 1:
-        x_range = np.linspace(taichi_v_nz.min(), taichi_v_nz.max(), 100)
-        y_pred = lr_v.predict(x_range.reshape(-1, 1))
-        ax2.plot(x_range, y_pred, 'r-', linewidth=2, label=f'Fit: y={slope_v:.3f}x+{intercept_v:.2e}')
-        ax2.plot(x_range, x_range, 'k--', alpha=0.5, label='Perfect agreement')
-    ax2.set_xlabel('Taichi grid_v norm')
-    ax2.set_ylabel('PyTorch grid_v norm')
-    ax2.set_title(f'Grid Velocity Comparison\nR²={r2_v:.4f}, Slope={slope_v:.4f}')
-    ax2.legend()
-    ax2.grid(True, alpha=0.3)
+        # Velocity comparison
+        ax2.scatter(taichi_v_nz, pytorch_v_nz, alpha=0.6, s=10)
+        if len(taichi_v_nz) > 1:
+            x_range = np.linspace(taichi_v_nz.min(), taichi_v_nz.max(), 100)
+            y_pred = lr_v.predict(x_range.reshape(-1, 1))
+            ax2.plot(x_range, y_pred, 'r-', linewidth=2, label=f'Fit: y={slope_v:.3f}x+{intercept_v:.2e}')
+            ax2.plot(x_range, x_range, 'k--', alpha=0.5, label='Perfect agreement')
+        ax2.set_xlabel('Taichi grid_v norm')
+        ax2.set_ylabel('PyTorch grid_v norm')
+        ax2.set_title(f'Grid Velocity Comparison\nR²={r2_v:.4f}, Slope={slope_v:.4f}')
+        ax2.legend()
+        ax2.grid(True, alpha=0.3)
 
-    plt.tight_layout()
-    plt.savefig('grid_comparison.png', dpi=150, bbox_inches='tight')
-    plt.show()
+        plt.tight_layout()
+        plt.savefig('grid_comparison.png', dpi=150, bbox_inches='tight')
+        plt.show()
 
-    # Print summary statistics
-    print("=== COMPARISON SUMMARY ===")
-    print(f"Grid Mass:")
-    print(f"  R² = {r2_m:.6f}")
-    print(f"  Slope = {slope_m:.6f}")
-    print(f"  Taichi sum: {np.sum(taichi_grid_m):.6f}")
-    print(f"  PyTorch sum: {np.sum(pytorch_grid_m):.6f}")
+        # Print summary statistics
+        print("=== COMPARISON SUMMARY ===")
+        print(f"Grid Mass:")
+        print(f"  R² = {r2_m:.6f}")
+        print(f"  Slope = {slope_m:.6f}")
+        print(f"  Taichi sum: {np.sum(taichi_grid_m):.6f}")
+        print(f"  PyTorch sum: {np.sum(pytorch_grid_m):.6f}")
 
-    print(f"\nGrid Velocity:")
-    print(f"  R² = {r2_v:.6f}")
-    print(f"  Slope = {slope_v:.6f}")
-    print(f"  Taichi max: {np.max(taichi_v_norm):.6f}")
-    print(f"  PyTorch max: {np.max(pytorch_v_norm):.6f}")
+        print(f"\nGrid Velocity:")
+        print(f"  R² = {r2_v:.6f}")
+        print(f"  Slope = {slope_v:.6f}")
+        print(f"  Taichi max: {np.max(taichi_v_norm):.6f}")
+        print(f"  PyTorch max: {np.max(pytorch_v_norm):.6f}")
 
-    print(f"\nGrid shape: {taichi_grid_m.shape}")
-    print(f"Total grid points: {taichi_grid_m.size}")
+        print(f"\nGrid shape: {taichi_grid_m.shape}")
+        print(f"Total grid points: {taichi_grid_m.size}")
+
 
 def data_generate_particle_field(config, visualize=True, run_vizualized=0, style='color', erase=False, step=1, alpha=0.2, ratio=1, scenario='none', device=None, bSave=True):
 
