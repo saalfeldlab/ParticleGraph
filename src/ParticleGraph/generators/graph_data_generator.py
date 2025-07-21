@@ -2927,7 +2927,7 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
     initial_state = state.nodes.activity.squeeze()
     n_neurons = len(initial_state)
     n_edges = len(edge_index[0])
-    x = torch.zeros(n_neurons, 6)
+    x = torch.zeros(n_neurons, 7)
     x[:, 1:3] = X1
     x[:, 0] = torch.arange(n_neurons, dtype=torch.float32)
     x[:, 3] = initial_state
