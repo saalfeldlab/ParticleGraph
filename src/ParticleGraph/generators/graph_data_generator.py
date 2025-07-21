@@ -982,7 +982,7 @@ def taichi_MPM_init(seed=42, device='cpu'):
                 ti.random() * 0.2 + 0.3 + 0.10 * (i // group_size),
                 ti.random() * 0.2 + 0.05 + 0.32 * (i // group_size),
             ]
-            material[i] = i // group_size  # 0: fluid 1: jelly 2: snow
+            material[i] = 2 # i // group_size  # 0: fluid 1: jelly 2: snow
             v[i] = ti.Matrix([0, 0])
             F[i] = ti.Matrix([[1, 0], [0, 1]])
             Jp[i] = 1
@@ -1029,12 +1029,15 @@ def taichi_MPM_init(seed=42, device='cpu'):
     material_tensor = torch.tensor(material_np, dtype=torch.int32, device=device)
     Jp_tensor = torch.tensor(Jp_np, dtype=torch.float32, device=device)
     mass_tensor = torch.tensor(mass_np, dtype=torch.float32, device=device)
+    S_tensor = torch.zeros((n_particles, 1), dtype=torch.float32, device=device)
+    GM_tensor = torch.zeros((n_grid, n_grid), dtype=torch.float32, device=device)
+    GP_tensor = torch.zeros((n_grid, n_grid), dtype=torch.float32, device=device)
 
-    # Return PyTorch tensors
-    return N_tensor, x_tensor, v_tensor, C_tensor, F_tensor, material_tensor, Jp_tensor, mass_tensor
+    return N_tensor, x_tensor, v_tensor, C_tensor, F_tensor, material_tensor, Jp_tensor, mass_tensor, S_tensor, GM_tensor, GP_tensor
 
 
-def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0, lambda_0, p_vol, device):
+def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0, lambda_0, p_vol, device,
+                verbose=False):
     """
     MPM substep implementation
     """
@@ -1062,7 +1065,8 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
     # V[:, 1] = v_val * 0.7
 
     v_sum_initial = torch.sum(V)
-    print(f"step start - V_sum: {v_sum_initial:.6f}")
+    if verbose:
+        print(f"step start - V_sum: {v_sum_initial:.6f}")
 
     # Material masks
     liquid_mask = (T.squeeze() == 0)
@@ -1154,17 +1158,20 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
     stress = (-dt * p_vol * 4 * inv_dx * inv_dx) * stress
 
     stress_norm = torch.norm(stress.view(n_particles, -1), dim=1)
-    print(
-        f"stress - Max: {torch.max(stress_norm):.6f}, Mean: {torch.mean(stress_norm):.6f}, Std: {torch.std(stress_norm):.6f}")
+    if verbose:
+        print(
+            f"stress - Max: {torch.max(stress_norm):.6f}, Mean: {torch.mean(stress_norm):.6f}, Std: {torch.std(stress_norm):.6f}")
 
     C_norm = torch.norm(C.view(n_particles, -1), dim=1)
-    print(f"C matrix - Max: {torch.max(C_norm):.6f}, Mean: {torch.mean(C_norm):.6f}, Std: {torch.std(C_norm):.6f}")
+    if verbose:
+        print(f"C matrix - Max: {torch.max(C_norm):.6f}, Mean: {torch.mean(C_norm):.6f}, Std: {torch.std(C_norm):.6f}")
 
     # P2G transfer
     p_mass = M.squeeze(-1)
     affine = stress + p_mass.unsqueeze(-1).unsqueeze(-1) * C
     affine_norm = torch.norm(affine.view(n_particles, -1), dim=1)
-    print(f"Affine max: {torch.max(affine_norm):.6f}, Mean: {torch.mean(affine_norm):.6f}")
+    if verbose:
+        print(f"Affine max: {torch.max(affine_norm):.6f}, Mean: {torch.mean(affine_norm):.6f}")
 
     # P2G loop: Process each offset in the 3x3 neighborhood
 
@@ -1239,12 +1246,11 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
         grid_v_flat.scatter_add_(0, grid_1d_idx.unsqueeze(-1).expand(-1, 2), momentum_contrib)
         grid_m_flat.scatter_add_(0, grid_1d_idx, mass_contrib)
 
-
-
     # Grid statistics
-    print(
-        f"grid_m - Min: {torch.min(grid_m):.6f}, Max: {torch.max(grid_m):.6f}, Mean: {torch.mean(grid_m):.6f}, Std: {torch.std(grid_m):.6f}")
-    print(f"Total grid mass: {torch.sum(grid_m):.6f}")
+    if verbose:
+        print(
+            f"grid_m - Min: {torch.min(grid_m):.6f}, Max: {torch.max(grid_m):.6f}, Mean: {torch.mean(grid_m):.6f}, Std: {torch.std(grid_m):.6f}")
+        print(f"Total grid mass: {torch.sum(grid_m):.6f}")
     np.save('pytorch_grid_m.npy', grid_m.cpu().numpy())
 
     for i in range(n_grid):
@@ -1265,7 +1271,9 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
                     grid_v[i, j, 1] = 0.0
 
     grid_v_norm = torch.norm(grid_v, dim=2)
-    print(f"grid_v norm - Min: {torch.min(grid_v_norm):.12f}, Max: {torch.max(grid_v_norm):.12f}, Mean: {torch.mean(grid_v_norm):.12f}, Std: {torch.std(grid_v_norm):.12f}")
+    if verbose:
+        print(
+            f"grid_v norm - Min: {torch.min(grid_v_norm):.12f}, Max: {torch.max(grid_v_norm):.12f}, Mean: {torch.mean(grid_v_norm):.12f}, Std: {torch.std(grid_v_norm):.12f}")
     np.save('pytorch_grid_v.npy', grid_v.cpu().numpy())
 
     # G2P transfer - CORRECTED VERSION
@@ -1334,7 +1342,13 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
         plt.savefig('grid_visualization_pytorch.png', dpi=150, bbox_inches='tight')
         plt.close()
 
-    return X, V, C, F, T, Jp, M, grid_v, grid_m
+    # Calculate stress for return (S)
+    stress_norm_return = torch.norm(stress.view(n_particles, -1), dim=1, keepdim=True)
+
+    # Grid momentum norm before velocity conversion (GP)
+    grid_momentum_norm = torch.norm(grid_v, dim=2)
+
+    return X, V, C, F, T, Jp, M, stress_norm_return, grid_m, grid_momentum_norm
 
 
 def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
@@ -1380,11 +1394,15 @@ def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', e
     files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
     for f in files:
         os.remove(f)
+    os.makedirs(f'./graphs_data/{dataset_name}/Grid/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/{dataset_name}/Grid/*')
+    for f in files:
+        os.remove(f)
 
     for run in range(config.training.n_runs):
         x_list = []
 
-        N, X, V, C, F, T, Jp, M = taichi_MPM_init(seed=42, device=device)
+        N, X, V, C, F, T, Jp, M, S, GM, GP = taichi_MPM_init(seed=42, device=device)
 
         group_indices = torch.arange(n_particles, device=device) // group_size
 
@@ -1397,16 +1415,16 @@ def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', e
             x = torch.cat((N.clone().detach(), X.clone().detach(), V.clone().detach(),
                            C.reshape(n_particles, 4).clone().detach(),
                            F.reshape(n_particles, 4).clone().detach(),
-                           T.clone().detach(), Jp.clone().detach(), M.clone().detach()), 1)
+                           T.clone().detach(), Jp.clone().detach(), M.clone().detach(),
+                           S.clone().detach()), 1)
 
-            # append list
             if (it >= 0) and bSave:
                 x_list.append(x.clone().detach())
 
-            delta_t = 1e-4  # Original timestep
+            delta_t = 1e-4
 
-            X, V, C, F, T, Jp, M, grid_v, grid_m = MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid,
-                                                               delta_t, dx, inv_dx, mu_0, lambda_0, p_vol, device)
+            X, V, C, F, T, Jp, M, S, GM, GP = MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid,
+                                                          delta_t, dx, inv_dx, mu_0, lambda_0, p_vol, device)
 
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
@@ -1419,6 +1437,7 @@ def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', e
                     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
                 if 'color' in style:
+
                     fig, ax = fig_init(formatx="%.1f", formaty="%.1f")
                     for n in range(3):
                         pos = torch.argwhere(T == n)[:,0]
@@ -1428,6 +1447,83 @@ def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', e
                     plt.tight_layout()
                     num = f"{it:06}"
                     plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
+                    plt.close()
+
+                    plt.figure(figsize=(15, 10))
+
+                    # 1. V particle level
+                    plt.subplot(2, 3, 1)
+                    v_norm = torch.norm(V, dim=1).cpu().numpy()
+                    plt.scatter(X[:, 0].cpu(), X[:, 1].cpu(), c=v_norm, s=1, cmap='viridis', vmin=0, vmax=6)
+                    plt.colorbar(fraction=0.046, pad=0.04)
+                    plt.title('velocity')
+                    plt.xlim([0, 1])
+                    plt.ylim([0, 1])
+                    plt.gca().set_aspect('equal')
+
+                    # 2. C particle level
+                    plt.subplot(2, 3, 2)
+                    c_norm = torch.norm(C.view(n_particles, -1), dim=1).cpu().numpy()
+                    plt.scatter(X[:, 0].cpu(), X[:, 1].cpu(), c=c_norm, s=1, cmap='viridis', vmin=0, vmax=80)
+                    plt.colorbar(fraction=0.046, pad=0.04)
+                    plt.title('C (affine velocity)')
+                    plt.xlim([0, 1])
+                    plt.ylim([0, 1])
+                    plt.gca().set_aspect('equal')
+
+                    # 3. F particle level
+                    plt.subplot(2, 3, 3)
+                    f_norm = torch.norm(F.view(n_particles, -1), dim=1).cpu().numpy()
+                    plt.scatter(X[:, 0].cpu(), X[:, 1].cpu(), c=f_norm, s=1, cmap='coolwarm', vmin=1, vmax=2)
+                    plt.colorbar(fraction=0.046, pad=0.04)
+                    # print(
+                    #     f"F min: {np.min(f_norm):.6f}, max: {np.max(f_norm):.6f}, mean: {np.mean(f_norm):.6f}, std: {np.std(f_norm):.6f}")
+                    plt.title('F (deformation)')
+                    plt.xlim([0, 1])
+                    plt.ylim([0, 1])
+                    plt.gca().set_aspect('equal')
+
+                    # 4. Stress particle level
+                    plt.subplot(2, 3, 4)
+                    plt.scatter(X[:, 0].cpu(), X[:, 1].cpu(), c=S[:, 0].cpu(), s=1, cmap='hot', vmin=0, vmax=6E-3)
+                    plt.colorbar(fraction=0.046, pad=0.04)
+                    plt.title('stress')
+                    plt.xlim([0, 1])
+                    plt.ylim([0, 1])
+                    plt.gca().set_aspect('equal')
+
+                    # 5. M grid level - scatter plot (every 2nd point)
+                    plt.subplot(2, 3, 5)
+                    grid_x, grid_y = torch.meshgrid(torch.linspace(0, 1, n_grid), torch.linspace(0, 1, n_grid),
+                                                    indexing='ij')
+                    # Take every 2nd row and column
+                    grid_x_sub = grid_x[::2, ::2]
+                    grid_y_sub = grid_y[::2, ::2]
+                    gm_sub = GM[::2, ::2]
+                    grid_x_flat = grid_x_sub.flatten()
+                    grid_y_flat = grid_y_sub.flatten()
+                    gm_flat = gm_sub.cpu().flatten()
+                    plt.scatter(grid_x_flat, grid_y_flat, c=gm_flat, s=4, cmap='viridis', vmin=0, vmax=1E-4)
+                    plt.colorbar(fraction=0.046, pad=0.04)
+                    plt.title('grid mass')
+                    plt.xlim([0, 1])
+                    plt.ylim([0, 1])
+                    plt.gca().set_aspect('equal')
+
+                    # 6. Momentum grid level - scatter plot (every 2nd point)
+                    plt.subplot(2, 3, 6)
+                    gp_sub = GP[::2, ::2]
+                    gp_flat = gp_sub.cpu().flatten()
+                    plt.scatter(grid_x_flat, grid_y_flat, c=gp_flat, s=4, cmap='viridis', vmin=0, vmax=6)
+                    plt.colorbar(fraction=0.046, pad=0.04)
+                    plt.title('grid momentum')
+                    plt.xlim([0, 1])
+                    plt.ylim([0, 1])
+                    plt.gca().set_aspect('equal')
+
+                    plt.tight_layout()
+                    num = f"{it:06}"
+                    plt.savefig(f"graphs_data/{dataset_name}/Grid/Fig_{run}_{num}.tif", dpi=80)
                     plt.close()
 
         # Save results
@@ -2762,10 +2858,20 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
                    'T4c_Down', 'T4d_Left', 'T5_OFF', 'Tangential', 'Wide_Field', 'Other']
 
     print(f'using {len(group_names)} neuron groups: {group_names}')
-
     group_mapping = {i: name for i, name in enumerate(group_names)}
     with open(f'./graphs_data/{dataset_name}/neuron_group_mapping.json', 'w') as f:
         json.dump(group_mapping, f, indent=2)
+
+    unique_types, node_types_int = np.unique(node_types, return_inverse=True)
+
+    print(f"Number of unique types: {len(unique_types)}")  # Should be 64
+    print(f"node_types_int shape: {node_types_int.shape}")
+    print(f"node_types_int range: {node_types_int.min()} to {node_types_int.max()}")
+
+    type_to_id = {cell_type.decode('utf-8'): i for i, cell_type in enumerate(unique_types)}
+    print("Cell type mapping:")
+    for i, cell_type in enumerate(unique_types):
+        print(f"{i}: {cell_type.decode('utf-8')}")
 
     X1 = torch.tensor(np.stack((x_coords, y_coords), axis=1), dtype=torch.float32, device=device)
 
@@ -2784,13 +2890,13 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
     x[:, 3] = initial_state
     # frame = torch.randn(1, 1, 1, get_num_hexals(config.connectome.extent))
     # print(frame.shape)
-
     # (n_frames, 1, n_receptors)
     sequences = stimulus_dataset[0]["lum"]
     frame = sequences[0][None, None]
     net.stimulus.add_input(frame)
     x[:, 4] = net.stimulus().squeeze()
     x[:, 5] = torch.tensor(grouped_types, dtype=torch.float32, device=device)
+    x[:, 6] = torch.tensor(node_types_int, dtype=torch.float32, device=device)
 
     dataset = pyg.data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
 
