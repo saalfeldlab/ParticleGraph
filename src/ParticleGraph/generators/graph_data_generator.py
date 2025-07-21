@@ -30,6 +30,7 @@ import re
 import imageio
 from ParticleGraph.generators.utils import *
 import taichi as ti
+import random
 
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
@@ -2762,6 +2763,7 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
     measurement_noise_level = training_config.measurement_noise_level
     noise_model_level = training_config.noise_model_level
     run = 0
+    n_extra_null_edges = simulation_config.n_extra_null_edges
 
     os.makedirs('./graphs_data/fly', exist_ok=True)
     folder = f'./graphs_data/{dataset_name}/'
@@ -2823,6 +2825,47 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
         dim=0,
     )
     edge_index = edge_index.to(device)
+
+    if n_extra_null_edges > 0:
+        print(f"adding {n_extra_null_edges} extra null edges...")
+
+        # convert existing edges to set for fast lookup
+        existing_edges = set(zip(edge_index[0].cpu().numpy(), edge_index[1].cpu().numpy()))
+
+        # generate random non-existing edges on-the-fly
+        import random
+        extra_edges = []
+        max_attempts = n_extra_null_edges * 10  # avoid infinite loop
+        attempts = 0
+
+        while len(extra_edges) < n_extra_null_edges and attempts < max_attempts:
+            # randomly sample source and target
+            i = random.randint(0, n_neurons - 1)
+            j = random.randint(0, n_neurons - 1)
+
+            # check if valid (not self-connection, not existing)
+            if i != j and (i, j) not in existing_edges:
+                extra_edges.append((i, j))
+                existing_edges.add((i, j))  # avoid duplicates
+
+            attempts += 1
+
+        if len(extra_edges) < n_extra_null_edges:
+            print(f"warning: could only generate {len(extra_edges)} new edges after {attempts} attempts")
+            n_extra_null_edges = len(extra_edges)
+
+        if n_extra_null_edges > 0:
+            # convert to tensor and add to edge_index
+            extra_edge_tensor = torch.tensor(extra_edges, dtype=edge_index.dtype, device=device).T
+            edge_index = torch.cat([edge_index, extra_edge_tensor], dim=1)
+
+            # add corresponding zero weights
+            extra_weights = torch.zeros(n_extra_null_edges, dtype=p['w'].dtype, device=device)
+            p['w'] = torch.cat([p['w'], extra_weights])
+
+            print(f"total edges after adding nulls: {edge_index.shape[1]}")
+            print(f"original edges: {edge_index.shape[1] - n_extra_null_edges}, extra null edges: {n_extra_null_edges}")
+
     torch.save(edge_index, f"graphs_data/{dataset_name}/edge_index.pt")
 
     connectivity = torch.zeros((n_neurons, n_neurons), dtype=torch.float32, device=device)

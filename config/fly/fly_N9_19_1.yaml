@@ -11,6 +11,7 @@ simulation:
     n_input_neurons: 1736
     n_neuron_types: 20
     n_edges: 434112
+    n_extra_null_edges: 10Can we mak couils
     n_frames: 90720
     delta_t: 0.02
     baseline_value: 0
