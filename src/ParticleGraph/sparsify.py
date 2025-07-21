@@ -3,15 +3,14 @@ import numpy as np
 import torch
 import scipy.cluster.hierarchy as hcluster
 
-from sklearn.metrics import silhouette_score
-from matplotlib import pyplot as plt
 from ParticleGraph.utils import *
 import time
 import numpy as np
 from sklearn.cluster import KMeans
-from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score, accuracy_score
+from sklearn.cluster import DBSCAN
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score, accuracy_score, silhouette_score
 from scipy.optimize import linear_sum_assignment
-
 
 class EmbeddingCluster:
     def __init__(self, config):
@@ -290,12 +289,6 @@ def functional_clustering_evaluation(func_list, type_list, eps=0.5, min_samples=
     - min_samples: DBSCAN min_samples parameter
     - normalize: Whether to normalize function responses
     """
-    import numpy as np
-    import torch
-    from sklearn.cluster import DBSCAN
-    from sklearn.preprocessing import StandardScaler
-    from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score, accuracy_score, silhouette_score
-    from scipy.optimize import linear_sum_assignment
 
     if isinstance(func_list, torch.Tensor):
         # func_list is already a tensor
@@ -336,8 +329,6 @@ def functional_clustering_evaluation(func_list, type_list, eps=0.5, min_samples=
     unique_clusters = np.unique(cluster_labels)
     n_clusters_found = len(unique_clusters) - (1 if -1 in unique_clusters else 0)
     n_noise_points = np.sum(cluster_labels == -1)
-
-    print(f"found {n_clusters_found} functional clusters with {n_noise_points} noise points")
 
     # Handle noise points for metrics (assign to separate cluster)
     cluster_labels_clean = cluster_labels.copy()

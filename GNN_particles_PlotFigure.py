@@ -6859,42 +6859,6 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
             functional_results = functional_clustering_evaluation(func_list, type_list, eps=eps)  # Current functional result
             print(f"eps={eps}: {functional_results['n_clusters_found']} clusters, {functional_results['accuracy']:.3f} accuracy")
 
-        # Plot 5: Phi functions
-        fig = plt.figure(figsize=(10, 8))
-        for n in range(actual_n_types):
-            pos = torch.argwhere(type_list == n).squeeze()
-            if pos.numel() > 0:
-                if pos.dim() == 0:
-                    pos = pos.unsqueeze(0)
-
-                # Get representative neuron for this type
-                representative_neuron = pos[0]
-                embedding_ = model.a[representative_neuron, :] * torch.ones((1000, config.graph_model.embedding_dim),
-                                                                            device=device)
-                in_features = torch.cat((rr[:, None], embedding_, rr[:, None] * 0, torch.ones_like(rr[:, None])), dim=1)
-
-                with torch.no_grad():
-                    func = model.lin_phi(in_features.float())
-
-                group_name = group_names[n] if n < len(group_names) else 'Other'
-                region_color = None
-                for region, types in region_colors.items():
-                    if group_name in types:
-                        region_idx = list(region_colors.keys()).index(region)
-                        region_color = cmap.color(region_idx)
-                        break
-                if region_color is None:
-                    region_color = cmap.color(n)
-
-                plt.plot(to_numpy(rr), to_numpy(func), color=region_color, linewidth=2, alpha=0.8)
-        plt.xlim(config.plotting.xlim)
-        plt.xlabel('Input u')
-        plt.ylabel('$\\phi(u)$')
-        plt.title('Phi Functions')
-        plt.tight_layout()
-        plt.savefig(f'{log_dir}/results/phi_functions_{epoch}.tif', dpi=300)
-        plt.close()
-
 
 def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
