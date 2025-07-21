@@ -6854,50 +6854,10 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
 
         func_list = torch.stack(func_list).squeeze()
 
-        # Plot 4: Edge functions
-        fig = plt.figure(figsize=(10, 8))
-        rr = torch.tensor(np.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000), device=device)
-        for n in range(n_types):
-            pos = torch.argwhere(type_list == n).squeeze()
-            if pos.numel() > 0:
-                if pos.dim() == 0:
-                    pos = pos.unsqueeze(0)
-                # Get representative neuron for this type
-                representative_neuron = pos[0]
-                embedding_ = model.a[representative_neuron, :] * torch.ones((1000, config.graph_model.embedding_dim),
-                                                                            device=device)
-                if 'PDE_N9_A' in config.graph_model.signal_model_name:
-                    in_features = torch.cat((rr[:, None], embedding_), dim=1)
-                elif 'PDE_N9_B' in config.graph_model.signal_model_name:
-                    in_features = torch.cat((rr[:, None] * 0, rr[:, None], embedding_, embedding_), dim=1)
-
-                with torch.no_grad():
-                    func = model.lin_edge(in_features.float())
-                if config.graph_model.lin_edge_positive:
-                    func = func ** 2
-
-                group_name = group_names[n] if n < len(group_names) else 'Other'
-                region_color = None
-                for region, types in region_colors.items():
-                    if group_name in types:
-                        region_idx = list(region_colors.keys()).index(region)
-                        region_color = cmap.color(region_idx)
-                        break
-                if region_color is None:
-                    region_color = cmap.color(n)
-
-                plt.plot(to_numpy(rr), to_numpy(func), color=region_color, linewidth=2, alpha=0.8)
-        plt.xlim(config.plotting.xlim)
-        plt.xlabel('Distance r')
-        plt.ylabel('$\\psi(r)$')
-        plt.title('Edge Functions')
-        plt.tight_layout()
-        plt.savefig(f'{log_dir}/results/edge_functions_{epoch}.tif', dpi=300)
-        plt.close()
-
+        print('functionnal results')
         for eps in [0.05, 0.075, 0.1, 0.2, 0.3]:
             functional_results = functional_clustering_evaluation(func_list, type_list, eps=eps)  # Current functional result
-            print(f"functional (eps={eps}):  {functional_results['n_clusters_found']} clusters, {functional_results['accuracy']:.3f} accuracy")
+            print(f"eps={eps}: {functional_results['n_clusters_found']} clusters, {functional_results['accuracy']:.3f} accuracy")
 
         # Plot 5: Phi functions
         fig = plt.figure(figsize=(10, 8))
@@ -10734,7 +10694,7 @@ if __name__ == '__main__':
     # config_list = ['cell_U2OS_8_12']
     # config_list = [ 'signal_CElegans_c14_4a', 'signal_CElegans_c14_4b', 'signal_CElegans_c14_4c',  'signal_CElegans_d1', 'signal_CElegans_d2', 'signal_CElegans_d3', ]
     # config_list = config_list = ['signal_CElegans_d2', 'signal_CElegans_d2a', 'signal_CElegans_d3', 'signal_CElegans_d3a', 'signal_CElegans_d3b']
-    config_list = ['fly_N9_18_4']
+    config_list = ['fly_N9_18_4','fly_N9_18_4_1']
 
     # plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 
