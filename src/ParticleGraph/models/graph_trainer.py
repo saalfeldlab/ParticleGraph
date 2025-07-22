@@ -3356,6 +3356,7 @@ def data_train_flyvis(config, erase, best_model, device):
                     # regularisation sparsity on Wij
                     if coeff_L1>0:
                         loss = loss + model.W.norm(1) * coeff_L1
+                    # regularisation sparsity on weights of model.lin_edge
                     if coeff_edge_weight_L1>0:
                         for param in model.lin_edge.parameters():
                             loss = loss + torch.sum(torch.abs(param)) * coeff_edge_weight_L1

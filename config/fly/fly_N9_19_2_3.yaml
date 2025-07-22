@@ -1,4 +1,4 @@
-description: 'with 20 neuron types per function,     noise_model_level: 5E-1    smaller MLP    n_extra_null_edges: 10000  increase coeff_L1 1'
+description: 'with 20 neuron types per function,     noise_model_level: 5E-1    smaller MLP    n_extra_null_edges: 10000  increase coeff_L1 0.1'
 dataset: 'fly_N9_19_2'
 
 simulation:
@@ -39,7 +39,7 @@ graph_model:
 plotting:
     colormap: 'tab20'
     arrow_length: 1
-    xlim: [ -2.5,2.5 ]
+    xlim: [ -2.5,5 ]
     ylim: [ -8,8 ]
 
 training:
@@ -65,4 +65,4 @@ training:
     coeff_update_u_diff: 0
     coeff_update_msg_diff: 0
     coeff_edge_norm: 1000.0
-    coeff_L1: 1.0
+    coeff_L1: 0.1
