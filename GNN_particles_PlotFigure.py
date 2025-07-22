@@ -10658,7 +10658,7 @@ if __name__ == '__main__':
     # config_list = ['cell_U2OS_8_12']
     # config_list = [ 'signal_CElegans_c14_4a', 'signal_CElegans_c14_4b', 'signal_CElegans_c14_4c',  'signal_CElegans_d1', 'signal_CElegans_d2', 'signal_CElegans_d3', ]
     # config_list = config_list = ['signal_CElegans_d2', 'signal_CElegans_d2a', 'signal_CElegans_d3', 'signal_CElegans_d3a', 'signal_CElegans_d3b']
-    config_list = ['fly_N9_18_4','fly_N9_18_4_1']
+    config_list = ['fly_N9_19_1', 'fly_N9_19_2']
 
     # plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 

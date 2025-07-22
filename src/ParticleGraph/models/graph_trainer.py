@@ -3141,6 +3141,7 @@ def data_train_flyvis(config, erase, best_model, device):
     coeff_update_u_diff = train_config.coeff_update_u_diff
     coeff_edge_norm = train_config.coeff_edge_norm
     coeff_update_msg_sign = train_config.coeff_update_msg_sign
+    coeff_edge_weight_L1 = train_config.coeff_edge_weight_L1
 
     cmap = CustomColorMap(config=config)
 
@@ -3355,6 +3356,10 @@ def data_train_flyvis(config, erase, best_model, device):
                     # regularisation sparsity on Wij
                     if coeff_L1>0:
                         loss = loss + model.W.norm(1) * coeff_L1
+                    if coeff_edge_weight_L1>0:
+                        for param in model.lin_edge.parameters():
+                            loss = loss + torch.sum(torch.abs(param)) * coeff_edge_weight_L1
+
                     # regularisation lin_edge
                     in_features, in_features_next = get_in_features_lin_edge(x, model, model_config, xnorm, n_neurons,device)
                     if coeff_edge_diff > 0:
