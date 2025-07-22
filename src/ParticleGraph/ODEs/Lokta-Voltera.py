@@ -203,419 +203,305 @@ if __name__ == '__main__':
     device = set_device('auto')
     print(f'device  {device}')
 
-    noise_level_list =  [0]  # Only test noise level 0.001 for gradient accumulation experiment
+    noise_level = 0
 
-    for noise_level in noise_level_list:
+    # Actual Bakarji paper predator-prey coefficients from source code
+    args = [1.0, 0.1, 1.5, 0.75]  # [a, b, c, d_factor]
+    a = args[0]  # 1.0 - prey growth rate
+    b = args[1]  # 0.1 - predation rate
+    c = args[2]  # 1.5 - predator death rate
+    d = args[1] * args[3]  # 0.1 * 0.75 = 0.075 - conversion efficiency
 
-        # Actual Bakarji paper predator-prey coefficients from source code
-        args = [1.0, 0.1, 1.5, 0.75]  # [a, b, c, d_factor]
-        a = args[0]  # 1.0 - prey growth rate
-        b = args[1]  # 0.1 - predation rate
-        c = args[2]  # 1.5 - predator death rate
-        d = args[1] * args[3]  # 0.1 * 0.75 = 0.075 - conversion efficiency
+    # Simulation settings
+    T = 60  # total time to see oscillations
+    dt = 0.01  # time step
+    noise_level = 0.0  # set to 0 first to see clean oscillations
+    n_steps = int(T / dt)
+    time = np.linspace(0, T, n_steps)
 
-        # Simulation settings
-        T = 60  # total time to see oscillations
-        dt = 0.01  # time step
-        noise_level = 0.0  # set to 0 first to see clean oscillations
-        n_steps = int(T / dt)
-        time = np.linspace(0, T, n_steps)
+    # Initialize variables
+    v = np.zeros(n_steps)  # x (prey/species 1)
+    w = np.zeros(n_steps)  # y (predator/species 2)
 
-        # Initialize variables
-        v = np.zeros(n_steps)  # x (prey/species 1)
-        w = np.zeros(n_steps)  # y (predator/species 2)
+    # Bakarji paper initial conditions from source code
+    v[0] = 10.0  # z0_mean_sug[0] = 10
+    w[0] = 5.0  # z0_mean_sug[1] = 5
 
-        # Bakarji paper initial conditions from source code
-        v[0] = 10.0  # z0_mean_sug[0] = 10
-        w[0] = 5.0  # z0_mean_sug[1] = 5
+    # Exact Bakarji paper equations from source code
+    # see https://github.com/josephbakarji/deep-delay-autoencoder/tree/main
+    for i in range(n_steps - 1):
+        dv = a * v[i] - b * v[i] * w[i]  # args[0]*z[0] - args[1]*z[0]*z[1]
+        dw = -c * w[i] + d * v[i] * w[i]  # -args[2]*z[1] + args[1]*args[3]*z[0]*z[1]
 
-        # Exact Bakarji paper equations from source code
-        # see https://github.com/josephbakarji/deep-delay-autoencoder/tree/main
-        for i in range(n_steps - 1):
-            dv = a * v[i] - b * v[i] * w[i]  # args[0]*z[0] - args[1]*z[0]*z[1]
-            dw = -c * w[i] + d * v[i] * w[i]  # -args[2]*z[1] + args[1]*args[3]*z[0]*z[1]
+        v[i + 1] = v[i] + dt * dv + noise_level * np.random.randn()
+        w[i + 1] = w[i] + dt * dw + noise_level * np.random.randn()
 
-            v[i + 1] = v[i] + dt * dv + noise_level * np.random.randn()
-            w[i + 1] = w[i] + dt * dw + noise_level * np.random.randn()
+    # Plot
+    plt.style.use('dark_background')
+    plt.figure(figsize=(15, 4))
 
-        # Plot
-        plt.style.use('dark_background')
-        plt.figure(figsize=(15, 4))
+    # Panel 1: v vs t
+    plt.subplot(1, 3, 1)
+    plt.plot(time, v, 'cyan', linewidth=1, label='x (prey)')
+    plt.xlabel('Time')
+    plt.ylabel('x')
+    plt.title('x vs Time')
 
-        # Panel 1: v vs t
-        plt.subplot(1, 3, 1)
-        plt.plot(time, v, 'cyan', linewidth=1, label='x (prey)')
-        plt.xlabel('Time')
-        plt.ylabel('x')
-        plt.title('x vs Time')
+    # Panel 2: w vs t
+    plt.subplot(1, 3, 2)
+    plt.plot(time, w, 'orange', linewidth=1, label='y (predator)')
+    plt.xlabel('Time')
+    plt.ylabel('y')
+    plt.title('y vs Time')
 
-        # Panel 2: w vs t
-        plt.subplot(1, 3, 2)
-        plt.plot(time, w, 'orange', linewidth=1, label='y (predator)')
-        plt.xlabel('Time')
-        plt.ylabel('y')
-        plt.title('y vs Time')
+    # Panel 3: v vs w (phase plot)
+    plt.subplot(1, 3, 3)
+    plt.plot(v, w, 'lime', linewidth=1, alpha=0.7)
+    plt.xlabel('x (prey)')
+    plt.ylabel('y (predator)')
+    plt.title('Phase Plot (x vs y)')
 
-        # Panel 3: v vs w (phase plot)
-        plt.subplot(1, 3, 3)
-        plt.plot(v, w, 'lime', linewidth=1, alpha=0.7)
-        plt.xlabel('x (prey)')
-        plt.ylabel('y (predator)')
-        plt.title('Phase Plot (x vs y)')
+    plt.tight_layout()
+    plt.savefig(f'./tmp/voltera_bakarji_ode_simulation_noise_{noise_level}.png', dpi=200, bbox_inches='tight')
+    plt.close()
 
-        plt.tight_layout()
-        plt.savefig(f'./tmp/voltera_bakarji_ode_simulation_noise_{noise_level}.png', dpi=200, bbox_inches='tight')
-        plt.close()
+    # print(f'mean min max v: {np.mean(v):.4f} {np.min(v):.4f} {np.max(v):.4f}')
 
-        # print(f'mean min max v: {np.mean(v):.4f} {np.min(v):.4f} {np.max(v):.4f}')
+    v_true = torch.tensor(v, dtype=torch.float32, device=device)
+    w_true = torch.tensor(w, dtype=torch.float32, device=device)
 
-        v_true = torch.tensor(v, dtype=torch.float32, device=device)
-        w_true = torch.tensor(w, dtype=torch.float32, device=device)
+    n_steps = len(w_true) # shape (10000, 1)
+    w_true = torch.tensor(w_true, dtype=torch.float32, device=device)
+    t_full = torch.linspace(0, 1, n_steps, device=device).unsqueeze(1)
 
-        n_steps = len(w_true)
-        t_full = torch.linspace(0, 1, n_steps, device=device).unsqueeze(1)  # shape (10000, 1)
-        w_true = torch.tensor(w_true, dtype=torch.float32, device=device)
+    n_iter = 8000
+    batch_size = n_steps // 2
+
+    # Test convergence over multiple runs
+    test_runs = 5
+    convergence_results = []
+
+    print(f" ")
+
+    for run in range(test_runs):
+        print(f"training run {run+1}/{test_runs}")
+
+        model = model_duo(device=device)  # Siren(in_features=1, out_features=1).to(device)
+        optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+
+        # Initialize SIREN with v values
+        # model = initialize_siren_with_v(model, v_true, t_full, device, n_init_steps=5000)
+        # plot_siren_v_init(model, v_true, t_full)
+
+        Time.sleep(1)
+        loss_list = []
+        for iter in range(n_iter):
+            idx = torch.randint(1, n_steps-8, (batch_size,))
+            idx = torch.sort(torch.unique(idx)).values
+            t_batch = t_full[idx.clone().detach()]
+            idx = to_numpy(idx)
+
+            w = model.siren(t_batch)
+            v = v_true[idx, None].clone().detach()
+            optimizer.zero_grad()
+
+            recursive_loop = 8
+            l1_lambda = 1E-3
+
+            # Store intermediate states for gradient accumulation
+            accumulated_loss = 0.0
+
+            for loop in range(recursive_loop):
+
+                dv_pred = model.mlp0(torch.cat((v, w), dim=1))
+                dw_pred = model.mlp1(torch.cat((v, w), dim=1))
+
+                v = v + dt * dv_pred
+                w = w + dt * dw_pred
+
+                # Compute loss for this step directly
+                step_idx = idx + loop + 1
+                v_target = v_true[step_idx, None]
+                w_target_siren = model.siren(t_full[step_idx])
+
+                # Calculate losses for this step
+                v_step_loss = (v - v_target).norm(2) * 100
+                w_step_loss = (w - w_target_siren).norm(2)
+
+                # Weight losses by step (later steps get higher weight)
+                step_weight = (loop + 1) / recursive_loop
+                step_loss = step_weight * (v_step_loss + w_step_loss)
+
+                accumulated_loss += step_loss
+
+            # Add regularization penalties
 
 
-        n_iter = 5000
-        batch_size = n_steps // 5
+            l1_penalty = 0.0
+            for param in model.mlp1.parameters():
+                l1_penalty += torch.sum(torch.abs(param))
 
-        # Test convergence over multiple runs
-        test_runs = 5
-        convergence_results = []
+            # weight_decay = 1e-6
+            # l2_penalty = 0.0
+            # for param in model.parameters():
+            #     l2_penalty += torch.sum(param ** 2)
 
-        print(f" ")
+            # Final loss with regularization
+            loss = accumulated_loss + l1_lambda * l1_penalty # + weight_decay * l2_penalty
 
-        for run in range(test_runs):
-            print(f"training run {run+1}/{test_runs}")
+            loss.backward()
+            optimizer.step()
+            loss_list.append(loss.item())
 
-            model = model_duo(device=device)  # Siren(in_features=1, out_features=1).to(device)
-            optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+            if iter % 500 == 0:
+                print(f"iteration {iter+1}/{n_iter}, loss: {loss.item():.6f}")
 
-            # Initialize SIREN with v values
-            model = initialize_siren_with_v(model, v_true, t_full, device, n_init_steps=5000)
-            plot_siren_v_init(model, v_true, t_full)
+        Time.sleep(1)
+        # rollout analysis
+        with torch.no_grad():
+            w_pred = model(t_full)
 
-            Time.sleep(1)
-            loss_list = []
-            for iter in range(n_iter):
-                idx = torch.randint(1, n_steps-8, (batch_size,))
-                idx = torch.sort(torch.unique(idx)).values
-                t_batch = t_full[idx.clone().detach()]
-                idx = to_numpy(idx)
+            v = v_true[0:1].clone().detach()
+            w = w_true[0:1].clone().detach()
+            v_list = []
+            w_list = []
+            v_list.append(v.clone().detach())
+            w_list.append(w.clone().detach())
 
-                w = model.siren(t_batch)
-                v = v_true[idx, None].clone().detach()
-                optimizer.zero_grad()
+            for step in range(1, n_steps):
+                with torch.no_grad():
+                    w = model.siren(t_full[step])
 
-                if n_iter < 500:
-                    recursive_loop = 1
-                elif n_iter < 4000:
-                    recursive_loop = 3
-                else:
-                    recursive_loop = 4
+                    dv_pred = model.mlp0(torch.cat((v[:, None], w[:, None]), dim=1))
+                    dw_pred = model.mlp1(torch.cat((v[:, None], w[:, None]), dim=1))
 
-                # Store intermediate states for gradient accumulation
-                accumulated_loss = 0.0
+                    v += dt * dv_pred.squeeze()
+                    w += dt * dw_pred.squeeze()
 
-                for loop in range(recursive_loop):
-
-                    dv_pred = model.mlp0(torch.cat((v, w), dim=1))
-                    dw_pred = model.mlp1(torch.cat((v, w), dim=1))
-
-                    v = v + dt * dv_pred
-                    w = w + dt * dw_pred
-
-                    # Compute loss for this step directly
-                    step_idx = idx + loop + 1
-                    v_target = v_true[step_idx, None]
-                    w_target_siren = model.siren(t_full[step_idx])
-
-                    # Calculate losses for this step
-                    v_step_loss = (v - v_target).norm(2) * 100
-                    w_step_loss = (w - w_target_siren).norm(2)
-
-                    # Weight losses by step (later steps get higher weight)
-                    step_weight = (loop + 1) / recursive_loop
-                    step_loss = step_weight * (v_step_loss + w_step_loss)
-
-                    accumulated_loss += step_loss
-
-                # Add regularization penalties
-                # l1_lambda = 1.0E-3
-                # l1_penalty = 0.0
-                # for param in model.mlp0.parameters():
-                #     l1_penalty += param.norm(1)
-                # for param in model.mlp1.parameters():
-                #     l1_penalty += param.norm(1)
-
-                # weight_decay = 1e-6
-                # l2_penalty = 0.0
-                # for param in model.parameters():
-                #     l2_penalty += torch.sum(param ** 2)
-
-                # Final loss with regularization
-                loss = accumulated_loss # + l1_lambda * l1_penalty + weight_decay * l2_penalty
-
-                loss.backward()
-                optimizer.step()
-                loss_list.append(loss.item())
-
-                if iter % 250 == 0:
-                    print(f"iteration {iter+1}/{n_iter}, loss: {loss.item():.6f}")
-
-            Time.sleep(1)
-            # rollout analysis
-            with torch.no_grad():
-                w_pred = model(t_full)
-
-                v = v_true[0:1].clone().detach()
-                w = w_true[0:1].clone().detach()
-                v_list = []
-                w_list = []
                 v_list.append(v.clone().detach())
                 w_list.append(w.clone().detach())
 
-                for step in range(1, n_steps):
-                    with torch.no_grad():
-                        w = model.siren(t_full[step])
+            v_list = torch.stack(v_list, dim=0)
+            w_list = torch.stack(w_list, dim=0)
 
-                        dv_pred = model.mlp0(torch.cat((v[:, None], w[:, None]), dim=1))
-                        dw_pred = model.mlp1(torch.cat((v[:, None], w[:, None]), dim=1))
+            v_mse = F.mse_loss(v_list[500:].squeeze(), v_true[500:]).item()
+            w_mse = F.mse_loss(w_list[500:].squeeze(), w_true[500:]).item()
+            total_mse = v_mse + w_mse
 
-                        v += dt * dv_pred.squeeze()
-                        w += dt * dw_pred.squeeze()
+            convergence_results.append({
+                'run': run+1,
+                'iteration': iter,
+                'loss': loss.item(),
+                'v_mse': v_mse,
+                'w_mse': w_mse,
+                'total_mse': total_mse
+            })
 
-                    v_list.append(v.clone().detach())
-                    w_list.append(w.clone().detach())
+            print(f"V MSE: {v_mse:.6f}, W MSE: {w_mse:.6f}, Total MSE: {total_mse:.6f}")
 
-                v_list = torch.stack(v_list, dim=0)
-                w_list = torch.stack(w_list, dim=0)
+            # Save results for this run
+            fig = plt.figure(figsize=(16, 12))
 
-                v_mse = F.mse_loss(v_list[500:].squeeze(), v_true[500:]).item()
-                w_mse = F.mse_loss(w_list[500:].squeeze(), w_true[500:]).item()
-                total_mse = v_mse + w_mse
-
-                convergence_results.append({
-                    'run': run+1,
-                    'iteration': iter,
-                    'loss': loss.item(),
-                    'v_mse': v_mse,
-                    'w_mse': w_mse,
-                    'total_mse': total_mse
-                })
-
-                print(f"V MSE: {v_mse:.6f}, W MSE: {w_mse:.6f}, Total MSE: {total_mse:.6f}")
-
-                # Save results for this run
-                fig = plt.figure(figsize=(16, 12))
-
-                # Panel 2: True vs reconstructed membrane potential
-                plt.subplot(2, 2, 1)
-                plt.plot(v_true.cpu().numpy(), label='true v (membrane potential)', linewidth=3, alpha=0.7, c='white')
-                plt.plot(v_list.cpu().numpy(), label='rollout v', linewidth=2, alpha=1, c='green')
-                plt.xlim([0, n_steps])
-                plt.xlabel('Time steps')
-                plt.ylabel('Membrane potential v')
-                plt.legend(loc='upper left')
-                plt.title(f'Run {run+1}: Membrane Potential (MSE: {v_mse:.4f})')
-                plt.grid(True, alpha=0.3)
-
-                # Panel 3: True vs reconstructed recovery variable
-                plt.subplot(2, 2, 2)
-                plt.plot(w_true.cpu().numpy(), label='true w (recovery variable)', linewidth=3, alpha=0.7, c='white')
-                plt.plot(w_list.cpu().numpy(), label='rollout w', linewidth=2, alpha=1, c='cyan')
-                plt.plot(w_pred.cpu().numpy(), label='SIREN w', linewidth=2, alpha=0.7, c='cyan')
-                plt.xlim([0, n_steps])
-                plt.xlabel('Time steps')
-                plt.ylabel('Recovery variable w')
-                plt.legend(loc='upper left')
-                plt.title(f'Run {run+1}: Recovery Variable (MSE: {w_mse:.4f})')
-                plt.grid(True, alpha=0.3)
-
-                # Panel 4: Phase portrait
-                plt.subplot(2, 2, 3)
-                plt.plot(v_true.cpu().numpy(), w_true.cpu().numpy(), label='true trajectory', linewidth=3, alpha=0.7, c='white')
-                plt.plot(v_list.cpu().numpy(), w_list.cpu().numpy(), label='rollout trajectory', linewidth=2, alpha=1, c='magenta')
-                plt.xlabel('Membrane potential v')
-                plt.ylabel('Recovery variable w')
-                plt.legend(loc='upper right')
-                plt.title(f'Run {run+1}: Phase Portrait')
-                plt.grid(True, alpha=0.3)
-
-                plt.tight_layout()
-                plt.savefig(f'./tmp/voltera_training_run_{run+1}_noise_{noise_level}_iter_{iter+1}.png', dpi=170)
-                plt.close()
-
-                # Save model state for each run
-                torch.save({
-                    'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict(),
-                    'run': run+1,
-                    'iteration': iter,
-                    'loss': loss.item(),
-                    'v_mse': v_mse,
-                    'w_mse': w_mse,
-                    'total_mse': total_mse
-                }, f'./tmp/model_run_{run+1}.pt')
-
-            fig = plt.figure(figsize=(10, 5))
-            plt.plot(loss_list, label='Training Loss', color='cyan', linewidth=1, alpha=0.8)
-            plt.xlabel('iteration')
-            plt.ylabel('loss')
-            plt.title(f'Training Loss over {n_iter} iterations (Noise Level: {noise_level})')
-            plt.grid(True, alpha=0.3)
-            plt.savefig(f'./tmp/voltera_loss_run_{run+1}_noise_{noise_level}_iter_{iter+1}.png', dpi=200, bbox_inches='tight')
-            plt.close()
-
-        # Print convergence summary
-        print(f" ")
-        print("convergence summary")
-
-        print(f"{'run':<4} {'Loss':<12} {'V MSE':<12} {'W MSE':<12} {'Total MSE':<12}")
-        print(f"{'-' * 60}")
-
-        for result in convergence_results:
-            print(
-                f"{result['run']:<4} {result['loss']:<12.6f} {result['v_mse']:<12.6f} {result['w_mse']:<12.6f} {result['total_mse']:<12.6f}")
-
-        # Calculate statistics
-        total_mses = [r['total_mse'] for r in convergence_results if not np.isnan(r['total_mse'])]
-        losses = [r['loss'] for r in convergence_results if not np.isnan(r['loss'])]
-
-        print(f"\nSTATISTICS:")
-        if total_mses:
-            print(f"total MSE - Mean: {np.mean(total_mses):.6f}, Std: {np.std(total_mses):.6f}")
-        else:
-            print("total MSE - No valid results")
-
-        if losses:
-            print(f"training Loss - Mean: {np.mean(losses):.6f}, Std: {np.std(losses):.6f}")
-        else:
-            print("training Loss - No valid results")
-
-        valid_runs = len([r for r in convergence_results if not np.isnan(r['total_mse'])])
-        print(f"convergence Rate: {valid_runs}/{test_runs} runs completed successfully")
-
-        # Find best model based on lowest total MSE
-        valid_results = [r for r in convergence_results if not np.isnan(r['total_mse'])]
-        if valid_results:
-            best_result = min(valid_results, key=lambda x: x['total_mse'])
-            print(f"\nBEST MODEL:")
-            print(f"Run {best_result['run']}: V MSE = {best_result['v_mse']:.6f}, W MSE = {best_result['w_mse']:.6f}, Total MSE = {best_result['total_mse']:.6f}")
-
-            # Load the best model instead of retraining
-            print(f"loading best model (Run {best_result['run']}) for derivative analysis...")
-
-            model = model_duo(device=device)
-            best_model_path = f'./tmp/model_run_{best_result["run"]}.pt'
-
-
-            print("Performing derivative analysis on best model...")
-
-            # Enhanced derivative analysis plots
-            fig = plt.figure(figsize=(15, 10))
-
-            # dv/dt analysis
-            ax = fig.add_subplot(231)
-            inputs = torch.cat((v_true[:, None], w_true[:, None] * 0), dim=1)
-            func = model.mlp0(inputs)
-            poly, latex = fit_polynomial_with_latex(to_numpy(inputs[:, 0]), to_numpy(func), degree=3)
-            plt.scatter(to_numpy(inputs[:, 0]), to_numpy(func), s=3, c='cyan', alpha=0.6)
-            plt.title(f'dv/dt vs v: {latex}', fontsize=10, color='white')
-            plt.xlabel('v', fontsize=12)
-            plt.ylabel('dv/dt', fontsize=12)
+            # Panel 2: True vs reconstructed membrane potential
+            plt.subplot(2, 2, 1)
+            plt.plot(v_true.cpu().numpy(), label='true v (membrane potential)', linewidth=3, alpha=0.7, c='white')
+            plt.plot(v_list.cpu().numpy(), label='rollout v', linewidth=2, alpha=1, c='green')
+            plt.xlim([0, n_steps//2])
+            plt.xlabel('Time steps')
+            plt.ylabel('Membrane potential v')
+            plt.legend(loc='upper left')
+            plt.title(f'Run {run+1}: Membrane Potential (MSE: {v_mse:.4f})')
             plt.grid(True, alpha=0.3)
 
-            ax = fig.add_subplot(232)
-            inputs = torch.cat((v_true[:, None] * 0, w_true[:, None]), dim=1)
-            func = model.mlp0(inputs)
-            poly, latex = fit_polynomial_with_latex(to_numpy(inputs[:, 1]), to_numpy(func), degree=2)
-            plt.scatter(to_numpy(inputs[:, 1]), to_numpy(func), s=3, c='orange', alpha=0.6)
-            plt.title(f'dv/dt vs w: {latex}', fontsize=10, color='white')
-            plt.xlabel('w', fontsize=12)
-            plt.ylabel('dv/dt', fontsize=12)
+            # Panel 3: True vs reconstructed recovery variable
+            plt.subplot(2, 2, 2)
+            plt.plot(w_true.cpu().numpy(), label='true w (recovery variable)', linewidth=3, alpha=0.7, c='white')
+            plt.plot(w_list.cpu().numpy(), label='rollout w', linewidth=2, alpha=1, c='cyan')
+            plt.plot(w_pred.cpu().numpy(), label='SIREN w', linewidth=2, alpha=0.7, c='cyan')
+            plt.xlim([0, n_steps//2])
+            plt.xlabel('Time steps')
+            plt.ylabel('Recovery variable w')
+            plt.legend(loc='upper left')
+            plt.title(f'Run {run+1}: Recovery Variable (MSE: {w_mse:.4f})')
             plt.grid(True, alpha=0.3)
 
-            ax = fig.add_subplot(233)
-            inputs = torch.cat((v_true[:, None] * 0, w_true[:, None] * 0), dim=1)
-            func = model.mlp0(inputs)
-            poly, latex = fit_polynomial_with_latex(to_numpy(inputs[:, 2]), to_numpy(func), degree=2)
-            plt.scatter(to_numpy(inputs[:, 2]), to_numpy(func), s=3, c='yellow', alpha=0.6)
-            plt.title(f'dv/dt vs I_ext: {latex}', fontsize=10, color='white')
-            plt.xlabel(r'$I_{ext}$', fontsize=12)
-            plt.ylabel('dv/dt', fontsize=12)
+            # Panel 4: Phase portrait
+            plt.subplot(2, 2, 3)
+            plt.plot(v_true[0:n_steps//2].cpu().numpy(), w_true[0:n_steps//2].cpu().numpy(), label='true trajectory', linewidth=3, alpha=0.7, c='white')
+            plt.plot(v_list[0:n_steps//2].cpu().numpy(), w_list[0:n_steps//2].cpu().numpy(), label='rollout trajectory', linewidth=2, alpha=1, c='magenta')
+            plt.xlabel('Membrane potential v')
+            plt.ylabel('Recovery variable w')
+            plt.legend(loc='upper right')
+            plt.title(f'Run {run+1}: Phase Portrait')
             plt.grid(True, alpha=0.3)
-
-            # dw/dt analysis
-            ax = fig.add_subplot(234)
-            inputs = torch.cat((v_true[:, None], w_true[:, None] * 0), dim=1)
-            func = model.mlp1(inputs)
-            poly, latex = fit_polynomial_with_latex(to_numpy(inputs[:, 0]), to_numpy(func), degree=2)
-            plt.scatter(to_numpy(inputs[:, 0]), to_numpy(func), s=3, c='cyan', alpha=0.6)
-            plt.title(f'dw/dt vs v: {latex}', fontsize=10, color='white')
-            plt.xlabel('v', fontsize=12)
-            plt.ylabel('dw/dt', fontsize=12)
-            plt.grid(True, alpha=0.3)
-
-            ax = fig.add_subplot(235)
-            inputs = torch.cat((v_true[:, None] * 0, w_true[:, None]), dim=1)
-            func = model.mlp1(inputs)
-            poly, latex = fit_polynomial_with_latex(to_numpy(inputs[:, 1]), to_numpy(func), degree=2)
-            plt.scatter(to_numpy(inputs[:, 1]), to_numpy(func), s=3, c='orange', alpha=0.6)
-            plt.title(f'dw/dt vs w: {latex}', fontsize=10, color='white')
-            plt.xlabel('w', fontsize=12)
-            plt.ylabel('dw/dt', fontsize=12)
-            plt.grid(True, alpha=0.3)
-
-            # Model sparsity analysis
-            ax = fig.add_subplot(236)
-            mlp1_weights = []
-            for param in model.mlp1.parameters():
-                if param.requires_grad:
-                    mlp1_weights.extend(param.data.flatten().cpu().numpy())
-
-            plt.hist(mlp1_weights, bins=50, alpha=0.7, color='cyan', edgecolor='white')
-            plt.title('MLP1 Weight Distribution (Sparsity)', fontsize=12, color='white')
-            plt.xlabel('Weight Value', fontsize=12)
-            plt.ylabel('Frequency', fontsize=12)
-            plt.grid(True, alpha=0.3)
-
-            # Add sparsity statistics
-            zero_weights = np.sum(np.abs(mlp1_weights) < 1e-4)
-            total_weights = len(mlp1_weights)
-            sparsity_ratio = zero_weights / total_weights
-            plt.text(0.02, 0.98, f'Sparsity: {sparsity_ratio:.1%}\n({zero_weights}/{total_weights} weights ≈ 0)',
-                    transform=ax.transAxes, fontsize=10, verticalalignment='top', color='white',
-                    bbox=dict(boxstyle='round', facecolor='black', alpha=0.8))
 
             plt.tight_layout()
-            plt.savefig('./tmp/best_model_derivative_analysis.png', dpi=200, bbox_inches='tight')
+            plt.savefig(f'./tmp/voltera_training_run_{run+1}_noise_{noise_level}_iter_{iter+1}.png', dpi=170)
             plt.close()
 
-            print(f"derivative analysis saved to ./tmp/best_model_derivative_analysis.png")
-            print(f"best model sparsity: {sparsity_ratio:.1%} of MLP1 weights are effectively zero")
-
-            # Save best model with additional analysis
+            # Save model state for each run
             torch.save({
                 'model_state_dict': model.state_dict(),
-                'best_result': best_result,
-                'sparsity_ratio': sparsity_ratio,
-            }, './tmp/best_model_analyzed.pt')
+                'optimizer_state_dict': optimizer.state_dict(),
+                'run': run+1,
+                'iteration': iter,
+                'loss': loss.item(),
+                'v_mse': v_mse,
+                'w_mse': w_mse,
+                'total_mse': total_mse
+            }, f'./tmp/model_run_{run+1}.pt')
 
-            print("best model with analysis saved to ./tmp/best_model_analyzed.pt")
-
-            print("\nGROUND TRUTH vs RECONSTRUCTED EQUATIONS:")
-            print("Ground Truth:")
-            print("  dv/dt = v - v³/3 - w + I_ext")
-            print("  dw/dt = 0.18(v + 0.7 - 0.8w)")
-            print("Reconstructed:")
-            _, dv_v_eq = fit_polynomial_with_latex(to_numpy(v_true), to_numpy(model.mlp0(torch.cat((v_true[:, None], w_true[:, None] * 0, I_ext[:, None] * 0), dim=1))), degree=3)
-            _, dw_v_eq = fit_polynomial_with_latex(to_numpy(v_true), to_numpy(model.mlp1(torch.cat((v_true[:, None], w_true[:, None] * 0), dim=1))), degree=2)
-            _, dw_w_eq = fit_polynomial_with_latex(to_numpy(w_true), to_numpy(model.mlp1(torch.cat((v_true[:, None] * 0, w_true[:, None]), dim=1))), degree=2)
-            print(f"  dv/dt ≈ {dv_v_eq} (w=0, I=0)")
-            print(f"  dw/dt ≈ {dw_v_eq} (w=0) + {dw_w_eq} terms")
+        fig = plt.figure(figsize=(10, 5))
+        plt.plot(loss_list, label='Training Loss', color='cyan', linewidth=1, alpha=0.8)
+        plt.xlabel('iteration')
+        plt.ylabel('loss')
+        plt.title(f'Training Loss over {n_iter} iterations (Noise Level: {noise_level})')
+        plt.grid(True, alpha=0.3)
+        plt.savefig(f'./tmp/voltera_loss_run_{run+1}_noise_{noise_level}_iter_{iter+1}.png', dpi=200, bbox_inches='tight')
+        plt.close()
 
 
-        else:
-            print("No valid models found for analysis.")
+        def extract_coeffs_regression(model, device, v_traj, w_traj):
+            """Extract Volterra coefficients using polynomial regression"""
+
+            # Use trajectory points directly (no meshgrid needed)
+            inputs = torch.stack([v_traj, w_traj], dim=1)
+
+            with torch.no_grad():
+                # Get MLP outputs
+                dv_dt = model.mlp0(inputs).squeeze()
+                dw_dt = model.mlp1(inputs).squeeze()
+
+                # Rest stays the same...
+                v_flat = v_traj  # rename for consistency
+                w_flat = w_traj
+
+                # Build feature matrices for order 2 regression
+                # For mlp0 (dv/dt): expect a*v - b*v*w
+                X0 = torch.stack([v_flat, v_flat * w_flat], dim=1)  # [v, v*w]
+
+                # For mlp1 (dw/dt): expect -c*w + d*v*w
+                X1 = torch.stack([w_flat, v_flat * w_flat], dim=1)  # [w, v*w]
+
+                # Solve least squares: X * coeffs = y
+                coeffs0 = torch.linalg.lstsq(X0, dv_dt).solution
+                coeffs1 = torch.linalg.lstsq(X1, dw_dt).solution
+
+                # Extract coefficients
+                a_reg = coeffs0[0].item()  # coeff of v
+                b_reg = -coeffs0[1].item()  # coeff of -v*w
+                c_reg = -coeffs1[0].item()  # coeff of -w
+                d_reg = coeffs1[1].item()  # coeff of v*w
+
+            return a_reg, b_reg, c_reg, d_reg
+
+
+        # Extract coefficients using regression
+        t_full_ = torch.linspace(0, 0.5, n_steps//2, device=device).unsqueeze(1)
+        w_pred = model.siren(t_full_).squeeze()
+        a_reg, b_reg, c_reg, d_reg = extract_coeffs_regression(model, device, v_true[0:n_steps//2], w_pred[0:n_steps//2])
+
+        print("\nREGRESSION COEFFICIENT EXTRACTION:")
+        print("ground Truth: a=1.0, b=0.1, c=1.5, d=0.075")
+        print(f"regression:   a={a_reg:.3f}, b={b_reg:.3f}, c={c_reg:.3f}, d={d_reg:.3f}")
+

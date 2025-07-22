@@ -272,15 +272,15 @@ if __name__ == '__main__':
             print(f"training run {run+1}/{test_runs}")
 
             model = model_duo(device=device)  # Siren(in_features=1, out_features=1).to(device)
-            optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
+            optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 
             # Initialize SIREN with v values
-            model = initialize_siren_with_v(model, v_true, t_full, device, n_init_steps=1000)
-            plot_siren_v_init(model, v_true, t_full)
+            # model = initialize_siren_with_v(model, v_true, t_full, device, n_init_steps=1000)
+            # plot_siren_v_init(model, v_true, t_full)
 
             Time.sleep(1)
             loss_list = []
-            for iter in trange(n_iter):
+            for iter in range(n_iter):
                 idx = torch.randint(1, n_steps-8, (batch_size,))
                 idx = torch.unique(idx)
                 t_batch = t_full[idx]
@@ -290,12 +290,7 @@ if __name__ == '__main__':
                 v = v_true[idx, None].clone().detach()
                 optimizer.zero_grad()
 
-                if n_iter < 500:
-                    recursive_loop = 1
-                elif n_iter < 4000:
-                    recursive_loop = 3
-                else:
-                    recursive_loop = 4
+                recursive_loop = 3
 
                 # Store intermediate states for gradient accumulation
                 accumulated_loss = 0.0
@@ -342,9 +337,13 @@ if __name__ == '__main__':
 
                 loss_list.append(loss.item())
 
+                if iter % 250 == 0:
+                    print(f"iteration {iter+1}/{n_iter}, loss: {loss.item():.6f}")
+
             Time.sleep(1)
             # rollout analysis
             with torch.no_grad():
+                t_full = torch.linspace(0, 0.5, n_steps//2, device=device).unsqueeze(1)
                 w_pred = model(t_full)
 
                 v = v_true[0:1].clone().detach()
