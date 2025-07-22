@@ -2895,26 +2895,18 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
     node_types = np.array(net.connectome.nodes['type'])
     node_types_str = [t.decode('utf-8') if isinstance(t, bytes) else str(t) for t in node_types]
     grouped_types = np.array([group_by_direction_and_function(t) for t in node_types_str])
-
     group_names = ['R1-R6', 'R7-R8', 'L1-L5', 'Lamina_Inter', 'Mi_Early', 'Mi_Mid', 'Mi_Late',
                    'Tm_Early', 'Tm5_Family', 'Tm_Mid', 'Tm_Late', 'TmY', 'T4a_Up', 'T4b_Right',
                    'T4c_Down', 'T4d_Left', 'T5_OFF', 'Tangential', 'Wide_Field', 'Other']
-
-    print(f'using {len(group_names)} neuron groups: {group_names}')
     group_mapping = {i: name for i, name in enumerate(group_names)}
     with open(f'./graphs_data/{dataset_name}/neuron_group_mapping.json', 'w') as f:
         json.dump(group_mapping, f, indent=2)
 
     unique_types, node_types_int = np.unique(node_types, return_inverse=True)
 
-    print(f"Number of unique types: {len(unique_types)}")  # Should be 64
+    print(f"number of unique types: {len(unique_types)}")  # Should be 64
     print(f"node_types_int shape: {node_types_int.shape}")
     print(f"node_types_int range: {node_types_int.min()} to {node_types_int.max()}")
-
-    type_to_id = {cell_type.decode('utf-8'): i for i, cell_type in enumerate(unique_types)}
-    print("Cell type mapping:")
-    for i, cell_type in enumerate(unique_types):
-        print(f"{i}: {cell_type.decode('utf-8')}")
 
     X1 = torch.tensor(np.stack((x_coords, y_coords), axis=1), dtype=torch.float32, device=device)
 

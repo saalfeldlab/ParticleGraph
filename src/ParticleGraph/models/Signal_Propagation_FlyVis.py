@@ -52,6 +52,7 @@ class Signal_Propagation_FlyVis(pyg.nn.MessagePassing):
         self.input_size_update = model_config.input_size_update
 
         self.n_edges = simulation_config.n_edges
+        self.n_extra_null_edges = simulation_config.n_extra_null_edges
         self.lin_edge_positive = model_config.lin_edge_positive
 
         self.batch_size = config.training.batch_size
@@ -82,7 +83,7 @@ class Signal_Propagation_FlyVis(pyg.nn.MessagePassing):
 
         self.W = nn.Parameter(
             torch.zeros(
-                self.n_edges,
+                self.n_edges + self.n_extra_null_edges,
                 device=self.device,
                 requires_grad=False,
                 dtype=torch.float32,
