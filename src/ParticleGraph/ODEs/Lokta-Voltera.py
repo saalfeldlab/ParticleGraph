@@ -125,7 +125,7 @@ class model_duo(nn.Module):
         super(model_duo, self).__init__()
 
         self.siren = Siren(in_features=1, out_features=1, hidden_features=128, hidden_layers=3, outermost_linear=True).to(device)
-        self.mlp0 = MLP(input_size=2, output_size=1, nlayers=5, hidden_size=128, device=device)
+        self.mlp0 = MLP(input_size=2, output_size=1, nlayers=2, hidden_size=4, device=device)
         self.mlp1 = MLP(input_size=2, output_size=1, nlayers=2, hidden_size=4, device=device)
 
     def forward(self, x):
@@ -145,7 +145,7 @@ def initialize_siren_with_v(model, v_true, t_full, device, n_init_steps=1000):
         n_init_steps: Number of initialization steps
     """
 
-    print("Initializing SIREN with v values...")
+    print("initializing SIREN with v values...")
 
     # Create separate optimizer for SIREN initialization
     siren_optimizer = torch.optim.Adam(model.siren.parameters(), lr=1e-4)
@@ -215,7 +215,7 @@ if __name__ == '__main__':
         d = args[1] * args[3]  # 0.1 * 0.75 = 0.075 - conversion efficiency
 
         # Simulation settings
-        T = 30  # total time to see oscillations
+        T = 60  # total time to see oscillations
         dt = 0.01  # time step
         noise_level = 0.0  # set to 0 first to see clean oscillations
         n_steps = int(T / dt)
@@ -290,7 +290,7 @@ if __name__ == '__main__':
             print(f"training run {run+1}/{test_runs}")
 
             model = model_duo(device=device)  # Siren(in_features=1, out_features=1).to(device)
-            optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
+            optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 
             # Initialize SIREN with v values
             model = initialize_siren_with_v(model, v_true, t_full, device, n_init_steps=5000)
@@ -298,10 +298,10 @@ if __name__ == '__main__':
 
             Time.sleep(1)
             loss_list = []
-            for iter in trange(n_iter):
+            for iter in range(n_iter):
                 idx = torch.randint(1, n_steps-8, (batch_size,))
-                idx = torch.unique(idx)
-                t_batch = t_full[idx]
+                idx = torch.sort(torch.unique(idx)).values
+                t_batch = t_full[idx.clone().detach()]
                 idx = to_numpy(idx)
 
                 w = model.siren(t_batch)
@@ -332,7 +332,7 @@ if __name__ == '__main__':
                     w_target_siren = model.siren(t_full[step_idx])
 
                     # Calculate losses for this step
-                    v_step_loss = (v - v_target).norm(2)
+                    v_step_loss = (v - v_target).norm(2) * 100
                     w_step_loss = (w - w_target_siren).norm(2)
 
                     # Weight losses by step (later steps get higher weight)
@@ -342,22 +342,27 @@ if __name__ == '__main__':
                     accumulated_loss += step_loss
 
                 # Add regularization penalties
-                l1_lambda = 1.0E-3
-                l1_penalty = 0.0
-                for param in model.mlp1.parameters():
-                    l1_penalty += torch.sum(torch.abs(param))
+                # l1_lambda = 1.0E-3
+                # l1_penalty = 0.0
+                # for param in model.mlp0.parameters():
+                #     l1_penalty += param.norm(1)
+                # for param in model.mlp1.parameters():
+                #     l1_penalty += param.norm(1)
 
-                weight_decay = 1e-6
-                l2_penalty = 0.0
-                for param in model.parameters():
-                    l2_penalty += torch.sum(param ** 2)
+                # weight_decay = 1e-6
+                # l2_penalty = 0.0
+                # for param in model.parameters():
+                #     l2_penalty += torch.sum(param ** 2)
 
                 # Final loss with regularization
-                loss = accumulated_loss + l1_lambda * l1_penalty + weight_decay * l2_penalty
+                loss = accumulated_loss # + l1_lambda * l1_penalty + weight_decay * l2_penalty
 
                 loss.backward()
                 optimizer.step()
                 loss_list.append(loss.item())
+
+                if iter % 250 == 0:
+                    print(f"iteration {iter+1}/{n_iter}, loss: {loss.item():.6f}")
 
             Time.sleep(1)
             # rollout analysis
@@ -439,7 +444,7 @@ if __name__ == '__main__':
                 plt.grid(True, alpha=0.3)
 
                 plt.tight_layout()
-                plt.savefig(f'./tmp/voltera_training_noise_{noise_level}_run_{run+1}_iter_{iter+1}.png', dpi=170)
+                plt.savefig(f'./tmp/voltera_training_run_{run+1}_noise_{noise_level}_iter_{iter+1}.png', dpi=170)
                 plt.close()
 
                 # Save model state for each run
@@ -460,7 +465,7 @@ if __name__ == '__main__':
             plt.ylabel('loss')
             plt.title(f'Training Loss over {n_iter} iterations (Noise Level: {noise_level})')
             plt.grid(True, alpha=0.3)
-            plt.savefig(f'./tmp/voltera_loss_noise_{noise_level}_run_{run+1}_iter_{iter+1}.png', dpi=200, bbox_inches='tight')
+            plt.savefig(f'./tmp/voltera_loss_run_{run+1}_noise_{noise_level}_iter_{iter+1}.png', dpi=200, bbox_inches='tight')
             plt.close()
 
         # Print convergence summary

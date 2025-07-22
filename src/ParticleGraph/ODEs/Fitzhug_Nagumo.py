@@ -432,7 +432,7 @@ if __name__ == '__main__':
                 plt.grid(True, alpha=0.3)
 
                 plt.tight_layout()
-                plt.savefig(f'./tmp/nagumo_training_noise_{noise_level}_run_{run+1}_iter_{iter+1}.png', dpi=170)
+                plt.savefig(f'./tmp/nagumo_training_run_{run+1}_noise_{noise_level}_iter_{iter+1}.png', dpi=170)
                 plt.close()
 
                 # Save model state for each run
@@ -453,7 +453,7 @@ if __name__ == '__main__':
             plt.ylabel('loss')
             plt.title(f'Training Loss over {n_iter} iterations (Noise Level: {noise_level})')
             plt.grid(True, alpha=0.3)
-            plt.savefig(f'./tmp/nagumo_loss_noise_{noise_level}_run_{run+1}_iter_{iter+1}.png', dpi=200, bbox_inches='tight')
+            plt.savefig(f'./tmp/nagumo_loss_run_{run+1}_noise_{noise_level}_iter_{iter+1}.png', dpi=200, bbox_inches='tight')
             plt.close()
 
         # Print convergence summary
