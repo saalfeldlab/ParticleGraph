@@ -1,4 +1,4 @@
-description: 'test sparsity   
+description: 'test sparsity + generic update function 
 synaptic network 100.000 points
 1,000 sparsely (5%) connected neurons
 with 4 neuron dependent update functions. Results are obtained af-
@@ -34,15 +34,15 @@ graph_model:
     input_size: 1
     output_size: 1
     hidden_dim: 64
-
     n_layers: 3
-    input_size_update: 3
+
+    input_size_update: 5
     n_layers_update: 3
     hidden_dim_update: 64
 
     aggr_type: 'add'
     embedding_dim: 2
-    update_type: 'none'
+    update_type: 'generic'
 
 
 plotting:
