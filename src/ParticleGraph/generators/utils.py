@@ -214,12 +214,6 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
                 pos = pos * 0.2 + 0.4
         elif n_particles<=500:
             pos = pos * 0.5 + 0.25
-    elif 'PDE_N' in config.graph_model.signal_model_name:
-        xc, yc = get_equidistant_points(n_points=n_particles)
-        pos = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
-        perm = torch.randperm(pos.size(0))
-        pos = pos[perm]
-
     else:
         pos = torch.randn(n_particles, dimension, device=device) * 0.5
     dpos = dpos_init * torch.randn((n_particles, dimension), device=device)
@@ -234,10 +228,6 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
 
     if simulation_config.bounce:
         n_wall_particles = n_particles // n_particle_types
-        # real_n_particles = n_particles - n_wall_particles
-        # pos = torch.rand(real_n_particles, dimension, device=device)
-        # pos[:, 0] = pos[:, 0] * 0.2 + 0.75
-        # pos[:, 1] = pos[:, 1] * 0.95 + 0.025
         n_particles_wall = n_wall_particles // 4
         wall_pos = torch.linspace(0.1, 0.9, n_particles_wall, device=device)
         wall0 = torch.zeros(n_particles_wall, 2, device=device)
@@ -258,14 +248,7 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
         dpos [0:n_wall_particles] = 0
         pos [0:n_wall_particles:] = pos_
 
-    if (config.graph_model.signal_model_name == 'PDE_N6') | (config.graph_model.signal_model_name == 'PDE_N7'):
-        features = torch.cat((torch.rand((n_particles, 1), device=device), 0.1 * torch.randn((n_particles, 1), device=device),
-                              torch.ones((n_particles, 1), device=device), torch.zeros((n_particles, 1), device=device)), 1)
-    elif 'excitation_single' in config.graph_model.field_type:
-        features = torch.zeros((n_particles, 2), device=device)
-    else:
-        # features = torch.cat((torch.rand((n_particles, 1), device=device), 0.1 * torch.randn((n_particles, 1), device=device)), 1)
-        features = torch.cat((torch.randn((n_particles, 1), device=device) * 5 , 0.1 * torch.randn((n_particles, 1), device=device)), 1)
+    features = torch.cat((torch.randn((n_particles, 1), device=device) * 5 , 0.1 * torch.randn((n_particles, 1), device=device)), 1)
 
     type = type[:, None]
     particle_id = torch.arange(n_particles, device=device)
@@ -286,6 +269,46 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
             index = np.arange(n*l, (n+1)*l)
             pos[index, 1:2] = torch.rand(l, 1, device=device) * (1/n_particle_types) + n/n_particle_types
 
+    return pos, dpos, type, features, age, particle_id
+
+
+def init_neurons(config=[], scenario='none', ratio=1, device=[]):
+    simulation_config = config.simulation
+    n_frames = config.simulation.n_frames
+    n_neurons = simulation_config.n_neurons * ratio
+    n_neuron_types = simulation_config.n_neuron_types
+    dimension = simulation_config.dimension
+
+    dpos_init = simulation_config.dpos_init
+
+
+    xc, yc = get_equidistant_points(n_points=n_neurons)
+    pos = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
+    perm = torch.randperm(pos.size(0))
+    pos = pos[perm]
+
+    dpos = dpos_init * torch.randn((n_neurons, dimension), device=device)
+    dpos = torch.clamp(dpos, min=-torch.std(dpos), max=+torch.std(dpos))
+
+    type = torch.zeros(int(n_neurons / n_neuron_types), device=device)
+
+    for n in range(1, n_neuron_types):
+        type = torch.cat((type, n * torch.ones(int(n_neurons / n_neuron_types), device=device)), 0)
+    if type.shape[0] < n_neurons:
+        type = torch.cat((type, n * torch.ones(n_neurons - type.shape[0], device=device)), 0)
+
+    if (config.graph_model.signal_model_name == 'PDE_N6') | (config.graph_model.signal_model_name == 'PDE_N7'):
+        features = torch.cat((torch.rand((n_neurons, 1), device=device), 0.1 * torch.randn((n_neurons, 1), device=device),
+                              torch.ones((n_neurons, 1), device=device), torch.zeros((n_neurons, 1), device=device)), 1)
+    elif 'excitation_single' in config.graph_model.field_type:
+        features = torch.zeros((n_neurons, 2), device=device)
+    else:
+        features = torch.cat((torch.randn((n_neurons, 1), device=device) * 5 , 0.1 * torch.randn((n_neurons, 1), device=device)), 1)
+
+    type = type[:, None]
+    particle_id = torch.arange(n_neurons, device=device)
+    particle_id = particle_id[:, None]
+    age = torch.zeros((n_neurons,1), device=device)
 
     return pos, dpos, type, features, age, particle_id
 

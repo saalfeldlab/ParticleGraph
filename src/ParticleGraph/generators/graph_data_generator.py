@@ -3141,7 +3141,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         y_list = []
 
         # initialize particle and graph states
-        X1, V1, T1, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
+        X1, V1, T1, H1, A1, N1 = init_neurons(config=config, scenario=scenario, ratio=ratio, device=device)
 
         A1 = torch.ones((n_neurons, 1), dtype=torch.float32, device=device)
         U1 = torch.rand_like(H1, device=device)
