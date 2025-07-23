@@ -755,6 +755,7 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
         G = build_causality_network(significant_pairs, track_positions)
         network_scores = compute_network_scores(G)
         visualize_network_leader_follower(G, network_scores, track_positions, save_path= f'graphs_data/{dataset_name}/network_{frame}.png')
+
     else:
         frame = 1000
         print(f'loading data for frame {frame}')

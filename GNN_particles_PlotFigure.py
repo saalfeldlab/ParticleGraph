@@ -6786,10 +6786,11 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         plt.savefig(f'{log_dir}/results/embedding_{epoch}.png', dpi=300)
         plt.close()
 
-        for eps in [0.005, 0.0075, 0.01, 0.02, 0.05]:
-            results = clustering_evaluation(model, type_list, eps=eps)
-            print(f"eps={eps}: {results['n_clusters_found']} clusters, "
-                  f"accuracy={results['accuracy']:.3f}")
+        if False:
+            for eps in [0.005, 0.0075, 0.01, 0.02, 0.05]:
+                results = clustering_evaluation(model, type_list, eps=eps)
+                print(f"eps={eps}: {results['n_clusters_found']} clusters, "
+                      f"accuracy={results['accuracy']:.3f}")
 
 
         # Plot 3: Weight comparison using model.W and gt_weights
@@ -6839,7 +6840,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         fig = plt.figure(figsize=(8, 8))
         for n in range(n_neurons):
             embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-            in_features = torch.cat((rr[:, None], embedding_, rr[:, None] * 0, torch.ones_like(rr[:, None])), dim=1)
+            in_features = torch.cat((rr[:, None], embedding_, rr[:, None] * 0, torch.zeros_like(rr[:, None])), dim=1)
             with torch.no_grad():
                 func = model.lin_phi(in_features.float())
             func_list.append(func)
@@ -6854,10 +6855,67 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
 
         func_list = torch.stack(func_list).squeeze()
 
-        print('functionnal results')
-        for eps in [0.05, 0.075, 0.1, 0.2, 0.3]:
-            functional_results = functional_clustering_evaluation(func_list, type_list, eps=eps)  # Current functional result
-            print(f"eps={eps}: {functional_results['n_clusters_found']} clusters, {functional_results['accuracy']:.3f} accuracy")
+        if False:
+            print('functionnal results')
+            for eps in [0.05, 0.075, 0.1, 0.2, 0.3]:
+                functional_results = functional_clustering_evaluation(func_list, type_list, eps=eps)  # Current functional result
+                print(f"eps={eps}: {functional_results['n_clusters_found']} clusters, {functional_results['accuracy']:.3f} accuracy")
+
+
+        # Plot 6: Phi / W
+        fig = plt.figure(figsize=(8, 8))
+
+        zeros = torch.zeros((n_neurons, 1), dtype=torch.float32, device=device)
+        ones = torch.ones((n_neurons, 1), dtype=torch.float32, device=device)
+
+        in_features = torch.cat((zeros, model.a, ones , zeros), dim=1)
+        with torch.no_grad():
+            coeff1 = model.lin_phi(in_features.float())
+        in_features = torch.cat((zeros, model.a, zeros , zeros), dim=1)
+        with torch.no_grad():
+            coeff = coeff1 - model.lin_phi(in_features.float())
+        plt.plot(to_numpy(coeff), linewidth=1, c=mc, alpha=0.5)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/phi_W_{epoch}.tif", dpi=300)
+        plt.close()
+        coeff = coeff / torch.mean(coeff)
+        print(f'phi_W mean: {to_numpy(torch.mean(coeff)):.4f}, std: {to_numpy(torch.std(coeff)):.4f}')
+        print(' ')
+
+        reconstructed_connectivity = torch.zeros((n_neurons, n_neurons), dtype=torch.float32, device=device)
+        reconstructed_connectivity[edges[0, :], edges[1, :]] = model.W.flatten()
+
+        print (coeff.shape)
+        print (reconstructed_connectivity.shape)
+        reconstructed_connectivity = reconstructed_connectivity / coeff
+        pos = torch.argwhere(coeff == 0)
+        if len(pos) > 0:
+            print(f'Warning: {len(pos)} neurons have zero phi_W coefficient, setting connectivity to zero for these neurons.')
+            reconstructed_connectivity[pos[:, 0], pos[:, 1]] = 0
+        corrected_W = reconstructed_connectivity[edges[0, :], edges[1, :]]
+
+        # Plot 7: Weight comparison using model.W and gt_weights
+        fig = plt.figure(figsize=(8, 8))
+        learned_weights = to_numpy(corrected_W.squeeze())
+        true_weights = to_numpy(gt_weights)
+        if len(true_weights) > 0 and len(learned_weights) > 0:
+            plt.scatter(true_weights, learned_weights, c=mc, s=1, alpha=0.5)
+            lin_fit, lin_fitv = curve_fit(linear_model, true_weights, learned_weights)
+            residuals = learned_weights - linear_model(true_weights, *lin_fit)
+            ss_res = np.sum(residuals ** 2)
+            ss_tot = np.sum((learned_weights - np.mean(learned_weights)) ** 2)
+            r_squared = 1 - (ss_res / ss_tot)
+
+            plt.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}',
+                     transform=plt.gca().transAxes, verticalalignment='top', fontsize=12)
+        plt.xlabel('true $W_{ij}$')
+        plt.ylabel('learned $W_{ij}$')
+        plt.ylim([-20,20])
+        plt.tight_layout()
+
+        plt.savefig(f'{log_dir}/results/second_comparison_{epoch}.png', dpi=300)
+        plt.close()
+
 
 
 def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
@@ -10658,7 +10716,7 @@ if __name__ == '__main__':
     # config_list = ['cell_U2OS_8_12']
     # config_list = [ 'signal_CElegans_c14_4a', 'signal_CElegans_c14_4b', 'signal_CElegans_c14_4c',  'signal_CElegans_d1', 'signal_CElegans_d2', 'signal_CElegans_d3', ]
     # config_list = config_list = ['signal_CElegans_d2', 'signal_CElegans_d2a', 'signal_CElegans_d3', 'signal_CElegans_d3a', 'signal_CElegans_d3b']
-    config_list = ['fly_N9_19_1', 'fly_N9_19_2']
+    config_list = ['fly_N9_19_2_1', 'fly_N9_19_2_2', 'fly_N9_19_2_3']
 
     # plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 

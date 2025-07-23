@@ -1,4 +1,6 @@
 #%%
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend for headless environments
 import numpy as np
 import matplotlib.pyplot as plt
 np.random.seed(42)
@@ -128,11 +130,13 @@ ax[1].set_title('Nonstationary GP Sample with Random Envelopes')
 
 plt.tight_layout()
 plt.savefig(save_path + "gp_realization.png")
+plt.close()
 
 plt.figure()
 plt.title("PSD")
 plt.plot(freqs, pxy[0,0])
 plt.savefig(save_path + "psd.png")
+plt.close()
 
 min_freq = freqs[0]
 max_freq = freqs[-1]
@@ -145,6 +149,8 @@ plt.xlabel("Time (s)")
 plt.ylabel("Frequency (Hz)")
 plt.colorbar()
 plt.savefig(save_path + "spectrogram.png")
+plt.close()
+
 #%%
 reload(myspectral_funcs)
 num_levels = 10
@@ -155,6 +161,7 @@ coefs_xnkfs, freqs_ = myspectral_funcs.compute_multiscale_spectral_coefs(xnt=y_n
 spectrogram, final_freqs, min_freq, max_freq = myspectral_funcs.wrangle_multiscale_coefs(coefs_xnkfs, freqs_)
 
 xax = np.linspace(0, T, spectrogram.shape[1])
+
 plt.figure(figsize=(4, 3))
 cmap = plt.get_cmap("coolwarm")
 dxx = spectrogram.shape[1]
@@ -168,7 +175,7 @@ plt.title("Multiscale Spectrogram")
 plt.xlabel("Time (s)")
 plt.ylabel("Frequency (Hz)")
 plt.savefig(save_path + "multiscale_spectrogram.png")
-
+plt.close()
 
 
 
@@ -185,4 +192,5 @@ plt.savefig(save_path + "multiscale_spectrogram.png")
 # highest_freq = (N/2)/(N/fps) # i.e.: 2/fps
 # num_levels = 10
 # freqs_ = (np.arange(0, int(N/2))/(N/fps))[::(int(N/2)//num_levels)]
-# freqs_ 
+# freqs_
+
