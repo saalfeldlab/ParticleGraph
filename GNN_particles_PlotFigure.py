@@ -6743,6 +6743,24 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
     n_region_types = len(np.unique(to_numpy(region_list)))
     n_neurons = len(type_list)
 
+    activity = torch.tensor(x_list[0][:, :, 3:4],device=device)
+    activity = activity.squeeze()
+    activity = activity.t()
+
+    plt.figure(figsize=(10, 10))
+    n = np.random.randint(0, n_neurons, 10)
+    for i in range(len(n)):
+        plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=1)
+    plt.xlabel('time', fontsize=64)
+    plt.ylabel('$x_{i}$', fontsize=64)
+    plt.xlim([0, n_frames//200])
+    plt.xticks(fontsize=28)
+    plt.yticks(fontsize=28)
+    plt.title(r'$x_i$ samples', fontsize=48)
+    plt.tight_layout()
+    plt.savefig(f'./{log_dir}/results/activity.tif', dpi=300)
+    plt.close()
+
     print(f'number of neurons: {n_neurons}')
     print(f'true edges: {edges.shape[1]}')
     print(f'true number of neuron types: {n_types}')
@@ -6758,7 +6776,6 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         model.load_state_dict(state_dict['model_state_dict'])
         model.edges = edges
         print(f'net: {net}')
-
 
         # Plot 1: Loss curve
         fig = plt.figure(figsize=(8, 6))
@@ -6786,12 +6803,11 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         plt.savefig(f'{log_dir}/results/embedding_{epoch}.png', dpi=300)
         plt.close()
 
-        if False:
+        if True:
             for eps in [0.005, 0.0075, 0.01, 0.02, 0.05]:
                 results = clustering_evaluation(model, type_list, eps=eps)
                 print(f"eps={eps}: {results['n_clusters_found']} clusters, "
                       f"accuracy={results['accuracy']:.3f}")
-
 
         # Plot 3: Weight comparison using model.W and gt_weights
         fig = plt.figure(figsize=(8, 8))
@@ -6914,7 +6930,6 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
             plt.close()
 
             print(' ')
-
 
 
 def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
@@ -10715,7 +10730,7 @@ if __name__ == '__main__':
     # config_list = ['cell_U2OS_8_12']
     # config_list = [ 'signal_CElegans_c14_4a', 'signal_CElegans_c14_4b', 'signal_CElegans_c14_4c',  'signal_CElegans_d1', 'signal_CElegans_d2', 'signal_CElegans_d3', ]
     # config_list = config_list = ['signal_CElegans_d2', 'signal_CElegans_d2a', 'signal_CElegans_d3', 'signal_CElegans_d3a', 'signal_CElegans_d3b']
-    config_list = ['fly_N9_19_2_1', 'fly_N9_19_2_2', 'fly_N9_19_2_3']
+    config_list = ['fly_N9_18_4_1']
 
     # plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 

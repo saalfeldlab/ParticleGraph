@@ -154,7 +154,7 @@ def get_in_features_lin_edge(x, model, model_config, xnorm, n_neurons, device):
         else:
             in_features = torch.cat((x[:n_neurons, 6:7], model.a[:n_neurons], model.a[:n_neurons]), dim=1)
             in_features_next = torch.cat((x[:n_neurons, 6:7] + xnorm / 150, model.a[:n_neurons], model.a[:n_neurons]), dim=1)
-    elif model_config.signal_model_name == 'PDE_N9_A':
+    elif (model_config.signal_model_name == 'PDE_N9_A') | (model_config.signal_model_name == 'PDE_N9_C') :
         in_features = torch.cat((x[:, 3:4], model.a), dim=1)
         in_features_next = torch.cat((x[:,3:4] * 1.05, model.a), dim=1)
     elif model_config.signal_model_name == 'PDE_N9_B':
@@ -276,7 +276,7 @@ def plot_training_flyvis(model, config, epoch, N, log_dir, device, cmap, type_li
     rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
     for n in range(n_neurons):
         embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-        if ('PDE_N9_A' in config.graph_model.signal_model_name):
+        if ('PDE_N9_A' in config.graph_model.signal_model_name) | ('PDE_N9_C' in config.graph_model.signal_model_name):
             in_features = torch.cat((rr[:, None], embedding_,), dim=1)
         elif ('PDE_N9_B' in config.graph_model.signal_model_name):
             in_features = torch.cat((rr[:, None] * 0, rr[:, None], embedding_, embedding_), dim=1)
@@ -480,7 +480,10 @@ def plot_training_signal(config, model, x, adjacency, log_dir, epoch, N, n_neuro
     fig = plt.figure(figsize=(8, 8))
     for n in range(n_neurons):
         embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-        in_features = torch.cat((rr[:, None], embedding_, rr[:, None] * 0, rr[:, None] * 0), dim=1)
+        if 'generic' in config.graph_model.update_type:
+            in_features = torch.cat((rr[:, None], embedding_, rr[:, None] * 0, rr[:, None] * 0), dim=1)
+        else:
+            in_features = torch.cat((rr[:, None], embedding_), dim=1)
         with torch.no_grad():
             func = model.lin_phi(in_features.float())
         if (n % 2 == 0):

@@ -55,9 +55,9 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'generate'  # 'generate', 'train', 'test'
+        task = 'train'  # 'generate', 'train', 'test'
         best_model = ''
-        config_list = ['multimaterial_2_1']
+        # config_list = ['multimaterial_2_1']
         # config_list = ['fluids_m19']
         # config_list = ['falling_water_ramp_x6_11_1']
         # config_list = ['arbitrary_3']
@@ -69,6 +69,7 @@ if __name__ == '__main__':
         # config_list = ['signal_CElegans_d2', 'signal_CElegans_d2a', 'signal_CElegans_d3', 'signal_CElegans_d3a', 'signal_CElegans_d3b']
         # config_list = ['signal_CElegans_c14_4']
         # config_list = ['signal_N5_v11_bis']
+        config_list = ['signal_N2_e4_bis']
         # config_list = ['fly_N9_19_4','fly_N9_19_5']
         # config_list = ['signal_N5_l4','signal_N5_l5']
 
@@ -82,7 +83,7 @@ if __name__ == '__main__':
 
         print(f'config_file  {config.config_file}')
         print(f'\033[92mdevice  {device}\033[0m')
-        print(f'folder  {config.dataset}')
+        print(f'data folder  {config.dataset}')
 
         if 'generate' in task:
             data_generate(config, device=device, visualize=True, run_vizualized=0, style='black color', alpha=1, erase=False, bSave=True, step=20)  #config.simulation.n_frames // 100)

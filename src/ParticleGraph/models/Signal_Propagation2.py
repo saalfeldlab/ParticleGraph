@@ -146,13 +146,12 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             pred = self.lin_phi(in_features)
         else:
             field = x[:, 8:9]
+            in_features = torch.cat([u, embedding], dim=1)
+            pred = self.lin_phi(in_features) + msg * field
             if 'excitation' in self.update_type:
                 excitation = x[:, 10: 10 + self.excitation_dim]
-                in_features = torch.cat([u, embedding, msg], dim=1)
-                pred = self.lin_phi(in_features) + msg * field + excitation
-            else:
-                in_features = torch.cat([u, embedding], dim=1)
-                pred = self.lin_phi(in_features) + msg * field  # MLP1(u, embedding) + field * \sum MLP0(u, embedding)
+                pred = pred  + excitation
+
 
         if return_all:
             return pred, in_features

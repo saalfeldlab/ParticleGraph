@@ -3440,7 +3440,6 @@ def data_train_flyvis(config, erase, best_model, device):
                             pred_msg = model.lin_phi(in_features_modified)
                             msg = in_features[:,model_config.embedding_dim+1].clone().detach()
                             loss = loss + (torch.tanh(pred_msg / 0.1) - torch.tanh(msg / 0.1)).norm(2) * coeff_update_msg_sign
-
                     # Enable gradients for direct derivative computation
                     # in_features.requires_grad_(True)
                     # pred = model.lin_phi(in_features)
