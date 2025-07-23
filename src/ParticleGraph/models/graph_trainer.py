@@ -2652,7 +2652,7 @@ def data_train_synaptic2(config, erase, best_model, device):
     # torch.autograd.set_detect_anomaly(True)
 
     list_loss_regul = []
-    time.sleep(0.2)
+    time.sleep(1.0)
 
     for epoch in range(start_epoch, n_epochs + 1):
 
@@ -2685,6 +2685,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         total_loss_regul = 0
         k = 0
 
+        time.sleep(1.0)
         for N in trange(Niter):
 
             if has_missing_activity:
