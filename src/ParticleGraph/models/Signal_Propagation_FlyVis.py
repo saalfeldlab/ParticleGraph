@@ -107,8 +107,12 @@ class Signal_Propagation_FlyVis(pyg.nn.MessagePassing):
             edge_index, v=v, embedding=embedding, data_id=self.data_id[:, None]
         )
 
-        in_features = torch.cat([v, embedding, msg, excitation], dim=1)
-        pred = self.lin_phi(in_features)
+        if 'PDE_N9_C' in self.model:
+            in_features = torch.cat([v, embedding, excitation], dim=1)
+            pred = self.lin_phi(in_features) + msg
+        else:
+            in_features = torch.cat([v, embedding, msg, excitation], dim=1)
+            pred = self.lin_phi(in_features)
         
         if return_all:
             return pred, in_features
@@ -117,7 +121,7 @@ class Signal_Propagation_FlyVis(pyg.nn.MessagePassing):
 
     def message(self, edge_index_i, edge_index_j, v_i, v_j, embedding_i, embedding_j, data_id_i):
 
-        if (self.model=='PDE_N9_A'):
+        if (self.model=='PDE_N9_A') | (self.model=='PDE_N9_C'):
             in_features = torch.cat([v_j, embedding_j], dim=1)
         elif (self.model=='PDE_N9_B'):
             in_features = torch.cat([v_i, v_j, embedding_i, embedding_j], dim=1)

@@ -467,6 +467,7 @@ def analyze_embedding_space(model, n_neurons=300):
 
     return embedding, distances
 
+
 def analyze_mlp_phi_synaptic(model, n_neurons=300, signal_range=(0, 10), resolution=50, n_sample_pairs=200,
                              device=None):
     """
@@ -703,10 +704,6 @@ def analyze_mlp_phi_embedding(model, n_neurons=300, signal_range=(0, 10), resolu
 # fig_2d_heatmap.savefig(f"./{log_dir}/results/phi_function_2d.png", dpi=300, bbox_inches='tight')
 # plt.close(fig_2d_signal)
 # plt.close(fig_2d_heatmap)
-
-
-
-
 def compute_separation_index(connectivity_neurons, odor_responsive_neurons):
     """
     Compute functional separation between high connectivity and high odor-responsive neurons

@@ -297,7 +297,10 @@ def plot_training_flyvis(model, config, epoch, N, log_dir, device, cmap, type_li
     fig = plt.figure(figsize=(8, 8))
     for n in range(n_neurons):
         embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-        in_features = torch.cat((rr[:, None], embedding_, rr[:, None] * 0, torch.zeros_like(rr[:, None])), dim=1)
+        if ('PDE_N9_C' in config.graph_model.signal_model_name):
+            in_features = torch.cat((rr[:, None], embedding_, torch.zeros_like(rr[:, None])), dim=1)
+        else:
+            in_features = torch.cat((rr[:, None], embedding_, rr[:, None] * 0, torch.zeros_like(rr[:, None])), dim=1)
         with torch.no_grad():
             func = model.lin_phi(in_features.float())
         if (n % 20 == 0):
