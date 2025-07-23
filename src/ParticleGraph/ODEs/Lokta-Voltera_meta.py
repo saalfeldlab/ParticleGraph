@@ -133,7 +133,7 @@ class model_duo(nn.Module):
         return self.siren(x)
 
 
-def train_volterra_model(noise_level=0.0, verbose=True):
+def train_volterra_model(noise_level=0.0, verbose=True, random_seed=None):
     """
     Train Volterra predator-prey model with SIREN and MLPs
 
@@ -143,10 +143,18 @@ def train_volterra_model(noise_level=0.0, verbose=True):
     Args:
         noise_level: Noise level for data generation
         verbose: Whether to print progress
+        random_seed: Random seed for reproducibility
 
     Returns:
         dict: Contains reconstructed coefficients and MSE values
     """
+
+    # Set random seed for reproducibility
+    if random_seed is not None:
+        np.random.seed(random_seed)
+        torch.manual_seed(random_seed)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed(random_seed)
 
     device = set_device('auto')
 
@@ -399,9 +407,9 @@ def run_parameter_sweep():
 
                 # Call with exact parameter name
                 if param_name == 'noise_level':
-                    result = train_volterra_model(noise_level=param_value, verbose=False)
+                    result = train_volterra_model(noise_level=param_value, verbose=False, random_seed=42 + run)
                 else:
-                    result = train_volterra_model(verbose=False)
+                    result = train_volterra_model(verbose=False, random_seed=42 + run)
 
                 # Check for NaN values
                 mse = result['mse']['total_mse']
@@ -493,9 +501,12 @@ def run_parameter_sweep():
 
 
 if __name__ == '__main__':
-    # Test single run first
-    print("Testing single run...")
-    result = train_volterra_model(noise_level=0.0, verbose=True)
+    # Test single run first with fixed seed
+    print("Testing single run with fixed seed...")
+    result = train_volterra_model(noise_level=0.0, verbose=True, random_seed=42)
+
+    print("\nTesting single run with different seed...")
+    result2 = train_volterra_model(noise_level=0.0, verbose=True, random_seed=123)
 
     # Then run parameter sweep
     print("\n" + "=" * 60)

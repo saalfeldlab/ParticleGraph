@@ -3303,18 +3303,6 @@ def data_train_flyvis(config, erase, best_model, device):
 
     for epoch in range(start_epoch, n_epochs + 1):
 
-        if (epoch == train_config.epoch_reset) | ((epoch > 0) & (epoch % train_config.epoch_reset_freq == 0)):
-            with torch.no_grad():
-                model.W.copy_(model.W * 0)
-                model.a.copy_(model.a * 0)
-            logger.info(f'reset W model.a at epoch : {epoch}')
-            print(f'reset W model.a at epoch : {epoch}')
-        if epoch == train_config.n_epochs_init:
-            coeff_edge_diff = coeff_update_diff / 100
-            coeff_update_diff = coeff_update_diff / 100
-            logger.info(f'coeff_L1: {coeff_L1} coeff_edge_diff: {coeff_edge_diff} coeff_update_diff: {coeff_update_diff}')
-            print(f'coeff_L1: {coeff_L1} coeff_edge_diff: {coeff_edge_diff} coeff_update_diff: {coeff_update_diff}')
-
         if batch_ratio < 1:
             Niter = int(n_frames * data_augmentation_loop // batch_size / batch_ratio * 0.2)
         else:
