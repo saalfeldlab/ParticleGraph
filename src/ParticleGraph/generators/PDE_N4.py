@@ -35,20 +35,20 @@ class PDE_N4(pyg.nn.MessagePassing):
 
     def forward(self, data=[], has_field=False):
         x, edge_index = data.x, data.edge_index
-        particle_type = x[:, 5].long()
+        neuron_type = x[:, 5].long()
 
-        n_particle_types = torch.max(particle_type).item() + 1
+        n_neuron_types = torch.max(neuron_type).item() + 1
         n_parameters = self.p.size(0)
 
-        if n_particle_types > n_parameters:
-            parameters = self.p[particle_type // (n_particle_types//n_parameters)]
+        if n_neuron_types > n_parameters:
+            parameters = self.p[neuron_type // (n_neuron_types//n_parameters)]
             g = parameters[:, 0:1]
             s = parameters[:, 1:2]
             c = parameters[:, 2:3]
-            t_ = torch.linspace(1, 8, n_particle_types)[:, None].to(x.device)
-            t = t_[particle_type]
+            t_ = torch.linspace(1, 8, n_neuron_types)[:, None].to(x.device)
+            t = t_[neuron_type]
         else:
-            parameters = self.p[particle_type]
+            parameters = self.p[neuron_type]
             g = parameters[:, 0:1]
             s = parameters[:, 1:2]
             c = parameters[:, 2:3]

@@ -36,8 +36,8 @@ class PDE_N5(pyg.nn.MessagePassing):
         x, edge_index = data.x, data.edge_index
         # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
-        particle_type = x[:, 5].long()
-        parameters = self.p[particle_type]
+        neuron_type = x[:, 5].long()
+        parameters = self.p[neuron_type]
         g = parameters[:, 0:1]
         s = parameters[:, 1:2]
         c = parameters[:, 2:3]

@@ -33,8 +33,8 @@ class PDE_N3(pyg.nn.MessagePassing):
     def forward(self, data=[], has_field=False, alpha=1.0):
         x, edge_index = data.x, data.edge_index
         # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        particle_type = x[:, 5].long()
-        parameters = alpha * self.p[particle_type + 1] + (1-alpha) * self.p[particle_type]
+        neuron_type = x[:, 5].long()
+        parameters = alpha * self.p[neuron_type + 1] + (1-alpha) * self.p[neuron_type]
         g = parameters[:, 0:1]
         s = parameters[:, 1:2]
         c = parameters[:, 2:3]

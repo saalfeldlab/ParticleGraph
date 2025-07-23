@@ -1,5 +1,10 @@
-description: 'test sparsity   synaptic network 100.000 points'
-dataset: 'signal_N2_e4'
+description: 'test sparsity   synaptic network 100.000 points
+1,000 sparsely (5%) connected neurons
+with 4 neuron dependent update functions. Results are obtained af-
+ter 20 epochs. (a) Activity time series used for GNN training. The
+training dataset contains 105 time-points.'
+
+dataset: 'signal_fig_supp6'
 
 simulation:
     connectivity_file: 'random'

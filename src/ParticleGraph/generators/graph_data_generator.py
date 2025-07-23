@@ -3049,8 +3049,6 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style='c
 
 
 def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1, scenario='none', device=None, bSave=True):
-    if 'black' in style:
-        plt.style.use('dark_background')
 
     simulation_config = config.simulation
     training_config = config.training
@@ -3061,8 +3059,8 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
     print(f'generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
-    n_particle_types = simulation_config.n_particle_types
-    n_particles = simulation_config.n_particles
+    n_neuron_types = simulation_config.n_neuron_types
+    n_neurons = simulation_config.n_neurons
 
     delta_t = simulation_config.delta_t
     n_frames = simulation_config.n_frames
@@ -3111,10 +3109,10 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     for f in files:
         os.remove(f)
 
-    particle_dropout_mask = np.arange(n_particles)
+    particle_dropout_mask = np.arange(n_neurons)
     if has_particle_dropout:
-        draw = np.random.permutation(np.arange(n_particles))
-        cut = int(n_particles * (1 - training_config.particle_dropout))
+        draw = np.random.permutation(np.arange(n_neurons))
+        cut = int(n_neurons * (1 - training_config.particle_dropout))
         particle_dropout_mask = draw[0:cut]
         inv_particle_dropout_mask = draw[cut:]
         x_removed_list = []
@@ -3123,7 +3121,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         im = imread(f"graphs_data/{simulation_config.node_value_map}")
 
     if 'permutation' in field_type:
-        permutation_indices = torch.randperm(n_particles)
+        permutation_indices = torch.randperm(n_neurons)
         inverse_permutation_indices = torch.argsort(permutation_indices)
         torch.save(permutation_indices, f'./graphs_data/{dataset_name}/permutation_indices.pt')
         torch.save(inverse_permutation_indices, f'./graphs_data/{dataset_name}/inverse_permutation_indices.pt')
@@ -3132,9 +3130,12 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         period = int(parts[-2])
         amplitude = float(parts[-1])
 
+    if 'black' in style:
+        plt.style.use('dark_background')
+
     for run in range(config.training.n_runs):
 
-        X = torch.zeros((n_particles, n_frames + 1), device=device)
+        X = torch.zeros((n_neurons, n_frames + 1), device=device)
 
         x_list = []
         y_list = []
@@ -3142,13 +3143,13 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         # initialize particle and graph states
         X1, V1, T1, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
 
-        A1 = torch.ones((n_particles, 1), dtype=torch.float32, device=device)
+        A1 = torch.ones((n_neurons, 1), dtype=torch.float32, device=device)
         U1 = torch.rand_like(H1, device=device)
         U1[:, 1] = 0
 
         if simulation_config.shuffle_particle_types:
             if run == 0:
-                index = torch.randperm(n_particles)
+                index = torch.randperm(n_neurons)
                 T1 = T1[index]
                 first_T1 = T1.clone().detach()
             else:
@@ -3156,7 +3157,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
         if run == 0:
             edge_index, connectivity, mask = init_connectivity(simulation_config.connectivity_file, simulation_config.connectivity_distribution,
-                                                               simulation_config.connectivity_filling_factor, T1, n_particles, n_particle_types, dataset_name, device)
+                                                               simulation_config.connectivity_filling_factor, T1, n_neurons, n_neuron_types, dataset_name, device)
 
             model, bc_pos, bc_dpos = choose_model(config=config, W=connectivity, device=device)
 
@@ -3168,7 +3169,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             if 'black' in style:
                 plt.style.use('dark_background')
             plt.figure(figsize=(10, 10))
-            for n in range(n_particle_types):
+            for n in range(n_neuron_types):
                 pos = torch.argwhere(T1.squeeze() == n)
                 plt.scatter(to_numpy(X1[pos, 0]), to_numpy(X1[pos, 1]), s=100, color=cmap.color(n))
             plt.xticks([])
@@ -3189,7 +3190,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                 X1 = torch.tensor(np.stack((x, y), axis=1), dtype=torch.float32, device=device) / 2
                 X1[:,1] = X1[:,1] + 1.5
                 X1[:, 0] = X1[:, 0] + 0.5
-                X1 = torch.cat((X1_mesh,X1[0:n_particles-n_nodes]), 0)
+                X1 = torch.cat((X1_mesh,X1[0:n_neurons-n_nodes]), 0)
 
         x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
         check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
@@ -3201,8 +3202,8 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             with torch.no_grad():
                 if simulation_config.state_type == 'sequence':
                     sample = torch.rand((len(T1), 1), device=device)
-                    sample = (sample < (1 / config.simulation.state_params[0])) * torch.randint(0, n_particle_types,(len(T1), 1), device=device)
-                    T1 = (T1 + sample) % n_particle_types
+                    sample = (sample < (1 / config.simulation.state_params[0])) * torch.randint(0, n_neuron_types,(len(T1), 1), device=device)
+                    T1 = (T1 + sample) % n_neuron_types
                 if ('modulation' in field_type)  & (it >= 0):
                     im_ = im[int(it/n_frames*256)].squeeze()
                     im_ = np.rot90(im_, 3)
@@ -3215,7 +3216,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     im_ = np.rot90(im_, 3)
                     im_ = np.reshape(im_, (n_nodes_per_axis * n_nodes_per_axis))
                     A1[:n_nodes, 0:1] = torch.tensor(im_[:, None], dtype=torch.float32, device=device)
-                    A1[n_nodes:n_particles, 0:1] = 1
+                    A1[n_nodes:n_neurons, 0:1] = 1
 
                     # plt.scatter(to_numpy(X1_mesh[:, 1]), to_numpy(X1_mesh[:, 0]), s=40, c=to_numpy(A1), cmap='grey', vmin=0,vmax=1)
                 if 'excitation_single' in field_type:
@@ -3254,7 +3255,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                 H1[:, 1] = y.squeeze()
                 H1[:, 0] = H1[:, 0] + H1[:, 1] * delta_t
                 if noise_model_level > 0:
-                    H1[:, 0] = H1[:, 0] + torch.randn(n_particles, device=device) * noise_model_level
+                    H1[:, 0] = H1[:, 0] + torch.randn(n_neurons, device=device) * noise_model_level
                 H1[:, 3] = p.squeeze()
                 H1[:, 2] = torch.relu(H1[:, 2] + H1[:, 3] * delta_t)
 
@@ -3262,7 +3263,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                 H1[:, 1] = y.squeeze()
                 H1[:, 0] = H1[:, 0] + H1[:, 1] * delta_t
                 if noise_model_level > 0:
-                    H1[:, 0] = H1[:, 0] + torch.randn(n_particles, device=device) * noise_model_level
+                    H1[:, 0] = H1[:, 0] + torch.randn(n_neurons, device=device) * noise_model_level
 
             # print(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
             # print(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
@@ -3414,11 +3415,11 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         plt.close()
 
         plt.figure(figsize=(15, 10))
-        if n_particles > 2:
-            n = np.random.permutation(n_particles)
+        if n_neurons > 2:
+            n = np.random.permutation(n_neurons)
             NN = 25
         else:
-            n = np.arange(n_particles)
+            n = np.arange(n_neurons)
             NN = 2
         for i in range(NN):
             plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=2)
