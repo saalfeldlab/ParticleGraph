@@ -14,6 +14,8 @@ from torch_geometric.utils.convert import to_networkx
 from scipy.optimize import curve_fit
 from scipy.spatial import Delaunay
 from torchvision.transforms import GaussianBlur
+import matplotlib
+matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 
 from matplotlib import rc
@@ -55,10 +57,10 @@ if __name__ == '__main__':
             best_model = None
     else:
 
-        task = 'train'
+        task = 'generate'
         best_model = ''
         # config_list = ['falling_water_ramp_x6_11']
-        config_list = ['signal_N4_c14']
+        config_list = ['signal_fig_supp6']
         # config_list = ['signal_N4_all_1']
         # config_list = ['arbitrary_3_test']
         # config_list = ['wave_smooth_3']

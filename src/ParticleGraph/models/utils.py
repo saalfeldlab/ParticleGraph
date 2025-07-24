@@ -13,7 +13,7 @@ import warnings
 import numpy as np
 import time
 import tqdm
-from tifffile import imsave
+from tifffile import imwrite
 
 import torch.nn as nn
 import torch.nn.functional as F

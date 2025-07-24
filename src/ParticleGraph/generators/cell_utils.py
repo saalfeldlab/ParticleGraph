@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-from tifffile import imread, imsave
+# from tifffile import imread, imsave
 import glob
 from skimage.measure import regionprops
 import os, time, argparse
