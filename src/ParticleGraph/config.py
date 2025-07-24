@@ -5,17 +5,21 @@ from typing import List, Union
 
 # Sub-config schemas for ParticleGraph
 
+
 class SimulationConfig(BaseModel):
-    model_config = ConfigDict(extra='forbid')
+    model_config = ConfigDict(extra="forbid")
 
     dimension: int = 2
     n_frames: int = 1000
     start_frame: int = 0
 
+    model_id: str = "000"
+    ensemble_id: str = "0000"
+
     sub_sampling: int = 1
     delta_t: float = 1
 
-    boundary: Literal['periodic', 'no', 'periodic_special', 'wall'] = 'periodic'
+    boundary: Literal["periodic", "no", "periodic_special", "wall"] = "periodic"
     bounce: bool = False
     bounce_coeff: float = 0.1
     min_radius: float = 0.0
@@ -26,15 +30,15 @@ class SimulationConfig(BaseModel):
     n_input_neurons: int = 0
     n_excitatory_neurons: int = 0
     n_particles_max: int = 20000
-    n_edges: int =0
-    max_edges: float = 1.0E6
+    n_edges: int = 0
+    max_edges: float = 1.0e6
     n_extra_null_edges: int = 0
     n_particle_types: int = 5
     n_neuron_types: int = 5
     baseline_value: float = -999.0
     n_particle_type_distribution: list[int] = [0]
     shuffle_particle_types: bool = False
-    pos_init: str = 'uniform'
+    pos_init: str = "uniform"
     dpos_init: float = 0
 
     diffusion_coefficients: list[list[float]] = None
@@ -47,32 +51,32 @@ class SimulationConfig(BaseModel):
     n_nodes: Optional[int] = None
     n_node_types: Optional[int] = None
     node_coeff_map: Optional[str] = None
-    node_value_map: Optional[str] = 'input_data/pattern_Null.tif'
+    node_value_map: Optional[str] = "input_data/pattern_Null.tif"
     node_proliferation_map: Optional[str] = None
 
-    adjacency_matrix: str = ''
+    adjacency_matrix: str = ""
 
-    short_term_plasticity_mode : str = 'depression'
+    short_term_plasticity_mode: str = "depression"
 
-    connectivity_file: str = ''
-    connectivity_init: list[float] =[-1]
+    connectivity_file: str = ""
+    connectivity_init: list[float] = [-1]
     connectivity_filling_factor: float = 1
-    connectivity_type : Literal['none', 'distance', 'voronoi', 'k_nearest'] = 'distance'
+    connectivity_type: Literal["none", "distance", "voronoi", "k_nearest"] = "distance"
     connectivity_parameter: float = 1.0
-    connectivity_distribution: str = 'Gaussian'
+    connectivity_distribution: str = "Gaussian"
     connectivity_distribution_params: float = 1
 
     excitation_value_map: Optional[str] = None
-    excitation: str='none'
+    excitation: str = "none"
 
     params: list[list[float]]
     func_params: list[tuple] = None
 
-    phi: str = 'tanh'
+    phi: str = "tanh"
     tau: float = 1.0
     sigma: float = 0.005
 
-    cell_cycle_length: list[float] =[-1]
+    cell_cycle_length: list[float] = [-1]
     cell_death_rate: list[float] = [-1]
     cell_area: list[float] = [-1]
     cell_type_map: Optional[str] = None
@@ -89,21 +93,21 @@ class SimulationConfig(BaseModel):
     coeff_perimeter: float = 0
     kill_cell_leaving: bool = False
 
-    state_type: Literal['discrete', 'sequence', 'continuous'] = 'discrete'
-    state_params: list[float] =[-1]
+    state_type: Literal["discrete", "sequence", "continuous"] = "discrete"
+    state_params: list[float] = [-1]
 
 
 class GraphModelConfig(BaseModel):
-    model_config = ConfigDict(extra='forbid')
-    particle_model_name: str = ''
-    cell_model_name: str = ''
-    mesh_model_name: str = ''
-    signal_model_name: str = ''
-    prediction: Literal['first_derivative', '2nd_derivative'] = '2nd_derivative'
-    integration: Literal['Euler', 'Runge-Kutta'] = 'Euler'
+    model_config = ConfigDict(extra="forbid")
+    particle_model_name: str = ""
+    cell_model_name: str = ""
+    mesh_model_name: str = ""
+    signal_model_name: str = ""
+    prediction: Literal["first_derivative", "2nd_derivative"] = "2nd_derivative"
+    integration: Literal["Euler", "Runge-Kutta"] = "Euler"
 
-    field_type: str = ''
-    field_grid: Optional[str] = ''
+    field_type: str = ""
+    field_grid: Optional[str] = ""
 
     input_size: int = 1
     output_size: int = 1
@@ -120,31 +124,43 @@ class GraphModelConfig(BaseModel):
     hidden_dim_decoder: int = 1
     n_layers_decoder: int = 1
 
-    multi_mlp_params: List[List[Union[int, int, int, int, str]]]  = None
+    multi_mlp_params: List[List[Union[int, int, int, int, str]]] = None
 
     lin_edge_positive: bool = False
 
     aggr_type: str
 
-    mesh_aggr_type: str = 'add'
+    mesh_aggr_type: str = "add"
     embedding_dim: int = 2
-    embedding_init: str = ''
+    embedding_init: str = ""
 
-    update_type: Literal['linear', 'mlp', 'pre_mlp', '2steps', 'none', 'no_pos', 'generic', 'excitation', 'generic_excitation', 'embedding_MLP', 'test_field'] = 'none'
+    update_type: Literal[
+        "linear",
+        "mlp",
+        "pre_mlp",
+        "2steps",
+        "none",
+        "no_pos",
+        "generic",
+        "excitation",
+        "generic_excitation",
+        "embedding_MLP",
+        "test_field",
+    ] = "none"
 
     input_size_update: int = 3
     n_layers_update: int = 3
     hidden_dim_update: int = 64
     output_size_update: int = 1
 
-    kernel_type: str = 'mlp'
+    kernel_type: str = "mlp"
 
     input_size_nnr: int = 3
     n_layers_nnr: int = 5
     hidden_dim_nnr: int = 128
     output_size_nnr: int = 1
     outermost_linear_nnr: bool = True
-    omega : float = 80.0
+    omega: float = 80.0
 
     input_size_modulation: int = 2
     n_layers_modulation: int = 3
@@ -159,43 +175,42 @@ class GraphModelConfig(BaseModel):
 
 
 class PlottingConfig(BaseModel):
-    model_config = ConfigDict(extra='forbid')
+    model_config = ConfigDict(extra="forbid")
 
-    colormap: str = 'tab10'
+    colormap: str = "tab10"
     arrow_length: int = 10
     marker_size: int = 100
     xlim: list[float] = [-0.1, 0.1]
     ylim: list[float] = [-0.1, 0.1]
     embedding_lim: list[float] = [-40, 40]
     speedlim: list[float] = [0, 1]
-    pic_folder: str = 'none'
-    pic_format: str = 'jpg'
+    pic_folder: str = "none"
+    pic_format: str = "jpg"
     pic_size: list[int] = [1000, 1100]
     data_embedding: int = 1
 
 
 class ImageData(BaseModel):
-    model_config = ConfigDict(extra='forbid')
+    model_config = ConfigDict(extra="forbid")
 
-    file_type: str = 'none'
-    cellpose_model: str = 'cyto3'
-    cellpose_denoise_model: str = ''
+    file_type: str = "none"
+    cellpose_model: str = "cyto3"
+    cellpose_denoise_model: str = ""
     cellpose_diameter: float = 30
     cellpose_flow_threshold: int = 0.4
     cellpose_cellprob_threshold: int = 0.0
     cellpose_channel: list[int] = [1]
     offset_channel: list[float] = [0.0, 0.0]
-    tracking_file: str =''
+    tracking_file: str = ""
     trackmate_size_ratio: float = 1.0
     trackmate_frame_step: int = 1
     measure_diameter: float = 40.0
 
 
-
 class TrainingConfig(BaseModel):
-    model_config = ConfigDict(extra='forbid')
-    device: Annotated[str, Field(pattern=r'^(auto|cpu|cuda:\d+)$')] = 'auto'
-    
+    model_config = ConfigDict(extra="forbid")
+    device: Annotated[str, Field(pattern=r"^(auto|cpu|cuda:\d+)$")] = "auto"
+
     n_epochs: int = 20
     n_epochs_init: int = 99999
     epoch_reset: int = -1
@@ -213,33 +228,51 @@ class TrainingConfig(BaseModel):
     has_missing_activity: bool = False
 
     do_tracking: bool = False
-    tracking_gt_file: str = ''
+    tracking_gt_file: str = ""
     ctrl_tracking: bool = False
     distance_threshold: float = 0.1
     epoch_distance_replace: int = 20
 
     denoiser: bool = False
-    denoiser_type: Literal['none', 'window', 'LSTM', 'Gaussian_filter', 'wavelet'] = 'none'
+    denoiser_type: Literal["none", "window", "LSTM", "Gaussian_filter", "wavelet"] = (
+        "none"
+    )
     denoiser_param: float = 1.0
 
-    time_window: int=0
+    time_window: int = 0
 
     n_runs: int = 2
-    seed : int = 40
+    seed: int = 40
     clamp: float = 0
-    pred_limit: float = 1.E+10
+    pred_limit: float = 1.0e10
 
     particle_dropout: float = 0
     n_ghosts: int = 0
-    ghost_method: Literal['none', 'tensor', 'MLP'] = 'none'
+    ghost_method: Literal["none", "tensor", "MLP"] = "none"
     ghost_logvar: float = -12
 
-    sparsity_freq : int = 5
-    sparsity: Literal['none', 'replace_embedding', 'replace_embedding_function', 'replace_state', 'replace_track'] = 'none'
+    sparsity_freq: int = 5
+    sparsity: Literal[
+        "none",
+        "replace_embedding",
+        "replace_embedding_function",
+        "replace_state",
+        "replace_track",
+    ] = "none"
     fix_cluster_embedding: bool = False
-    cluster_method: Literal['kmeans', 'kmeans_auto_plot', 'kmeans_auto_embedding', 'distance_plot', 'distance_embedding', 'distance_both', 'inconsistent_plot', 'inconsistent_embedding', 'none'] = 'distance_plot'
+    cluster_method: Literal[
+        "kmeans",
+        "kmeans_auto_plot",
+        "kmeans_auto_embedding",
+        "distance_plot",
+        "distance_embedding",
+        "distance_both",
+        "inconsistent_plot",
+        "inconsistent_embedding",
+        "none",
+    ] = "distance_plot"
     cluster_distance_threshold: float = 0.01
-    cluster_connectivity: Literal['single','average'] = 'single'
+    cluster_connectivity: Literal["single", "average"] = "single"
 
     learning_rate_start: float = 0.001
     learning_rate_embedding_start: float = 0.001
@@ -275,7 +308,7 @@ class TrainingConfig(BaseModel):
     coeff_edge_norm: float = 0
     coeff_edge_weight_L1: float = 0
 
-    diff_update_regul: str = 'none'
+    diff_update_regul: str = "none"
 
     coeff_model_a: float = 0
     coeff_model_b: float = 0
@@ -293,35 +326,35 @@ class TrainingConfig(BaseModel):
 
     recursive_loop: int = 0
     time_step: int = 1
-    recursive_sequence: str = ''
+    recursive_sequence: str = ""
     recursive_parameters: list[float] = [0, 0]
 
     regul_matrix: bool = False
     sub_batches: int = 1
-    sequence: list[str] = ['to track','to cell']
+    sequence: list[str] = ["to track", "to cell"]
 
 
 # Main config schema for ParticleGraph
 
-class ParticleGraphConfig(BaseModel):
-    model_config = ConfigDict(extra='forbid')
 
-    description: Optional[str] = 'ParticleGraph'
+class ParticleGraphConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    description: Optional[str] = "ParticleGraph"
     dataset: str
-    data_folder_name: str = 'none'
-    connectome_folder_name: str = 'none'
-    data_folder_mesh_name: str = 'none'
-    config_file: str = 'none'
+    data_folder_name: str = "none"
+    connectome_folder_name: str = "none"
+    data_folder_mesh_name: str = "none"
+    config_file: str = "none"
     simulation: SimulationConfig
     graph_model: GraphModelConfig
     plotting: PlottingConfig
     training: TrainingConfig
     image_data: Optional[ImageData] = None
 
-
     @staticmethod
     def from_yaml(file_name: str):
-        with open(file_name, 'r') as file:
+        with open(file_name, "r") as file:
             raw_config = yaml.safe_load(file)
         return ParticleGraphConfig(**raw_config)
 
@@ -329,11 +362,9 @@ class ParticleGraphConfig(BaseModel):
         return yaml.dump(self, default_flow_style=False, sort_keys=False, indent=4)
 
 
-if __name__ == '__main__':
-
-    config_file = '../../config/arbitrary_3.yaml' # Insert path to config file
+if __name__ == "__main__":
+    config_file = "../../config/arbitrary_3.yaml"  # Insert path to config file
     config = ParticleGraphConfig.from_yaml(config_file)
     print(config.pretty())
 
-    print('Successfully loaded config file. Model description:', config.description)
-    
+    print("Successfully loaded config file. Model description:", config.description)

@@ -32,3 +32,4 @@ dependencies:
     - tables
     - vedo
     - joblib
+    - taichi
