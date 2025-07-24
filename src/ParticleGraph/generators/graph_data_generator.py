@@ -1473,24 +1473,42 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
         grid_v_flat.scatter_add_(0, grid_1d_idx.unsqueeze(-1).expand(-1, 2), momentum_contrib)
         grid_m_flat.scatter_add_(0, grid_1d_idx, mass_contrib)
 
-    # Convert momentum to velocity and apply boundary conditions   ################################################
+    # VECTORIZED: Convert momentum to velocity and apply boundary conditions ################################################
 
-    for i in range(n_grid):
-        for j in range(n_grid):
-            if grid_m[i, j] > 0:
-                # Convert momentum to velocity
-                grid_v[i, j] = grid_v[i, j] / grid_m[i, j]
-                # Apply gravity
-                grid_v[i, j, 1] += dt * (-50)
-                # Boundary conditions
-                if i < 3 and grid_v[i, j, 0] < 0:
-                    grid_v[i, j, 0] = 0.0
-                if i > n_grid - 3 and grid_v[i, j, 0] > 0:
-                    grid_v[i, j, 0] = 0.0
-                if j < 3 and grid_v[i, j, 1] < 0:
-                    grid_v[i, j, 1] = 0.0
-                if j > n_grid - 3 and grid_v[i, j, 1] > 0:
-                    grid_v[i, j, 1] = 0.0
+    # Create mask for valid grid points (non-zero mass)
+    valid_mass_mask = grid_m > 0
+
+    # Convert momentum to velocity (vectorized)
+    grid_v = torch.where(valid_mass_mask.unsqueeze(-1),
+                         grid_v / grid_m.unsqueeze(-1),
+                         grid_v)
+
+    # Apply gravity (vectorized)
+    gravity_force = torch.tensor([0.0, dt * (-50)], device=device)
+    grid_v = torch.where(valid_mass_mask.unsqueeze(-1),
+                         grid_v + gravity_force,
+                         grid_v)
+
+    # VECTORIZED Boundary conditions
+    # Create coordinate grids for boundary checking
+    i_coords = torch.arange(n_grid, device=device).unsqueeze(1).expand(n_grid, n_grid)  # [n_grid, n_grid]
+    j_coords = torch.arange(n_grid, device=device).unsqueeze(0).expand(n_grid, n_grid)  # [n_grid, n_grid]
+
+    # Left boundary: i < 3 and v_x < 0 → set v_x = 0
+    left_boundary_mask = (i_coords < 3) & (grid_v[:, :, 0] < 0) & valid_mass_mask
+    grid_v[:, :, 0] = torch.where(left_boundary_mask, 0.0, grid_v[:, :, 0])
+
+    # Right boundary: i > n_grid - 3 and v_x > 0 → set v_x = 0
+    right_boundary_mask = (i_coords > n_grid - 3) & (grid_v[:, :, 0] > 0) & valid_mass_mask
+    grid_v[:, :, 0] = torch.where(right_boundary_mask, 0.0, grid_v[:, :, 0])
+
+    # Bottom boundary: j < 3 and v_y < 0 → set v_y = 0
+    bottom_boundary_mask = (j_coords < 3) & (grid_v[:, :, 1] < 0) & valid_mass_mask
+    grid_v[:, :, 1] = torch.where(bottom_boundary_mask, 0.0, grid_v[:, :, 1])
+
+    # Top boundary: j > n_grid - 3 and v_y > 0 → set v_y = 0
+    top_boundary_mask = (j_coords > n_grid - 3) & (grid_v[:, :, 1] > 0) & valid_mass_mask
+    grid_v[:, :, 1] = torch.where(top_boundary_mask, 0.0, grid_v[:, :, 1])
 
     # G2P transfer - CORRECTED VERSION
     new_V = torch.zeros_like(V)

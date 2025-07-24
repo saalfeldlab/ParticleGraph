@@ -92,13 +92,13 @@ if __name__ == "__main__":
             data_generate(
                 config,
                 device=device,
-                visualize=False,
+                visualize=True,
                 run_vizualized=0,
                 style="black color",
                 alpha=1,
                 erase=False,
                 bSave=True,
-                step=20,
+                step=500,
             )  # config.simulation.n_frames // 100)
             
         if "train" in task:
