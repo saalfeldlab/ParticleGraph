@@ -1,5 +1,5 @@
 description: ''
-dataset: 'signal_N4_c14'
+dataset: 'signal_fig_supp6'
 
 simulation:
     connectivity_file: 'random'
