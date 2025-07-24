@@ -990,7 +990,7 @@ def taichi_MPM_init(seed=42, device='cpu'):
     return N_tensor, x_tensor, v_tensor, C_tensor, F_tensor, material_tensor, Jp_tensor, mass_tensor, S_tensor, GM_tensor, GP_tensor
 
 
-def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0, lambda_0, p_vol, offsets, particle_offsets, device,
+def MPM_substep(model_MPM, X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0, lambda_0, p_vol, offsets, particle_offsets, grid_coords, device,
                 verbose=False):
     """
     MPM substep implementation
@@ -1002,7 +1002,6 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
     snow_mask = (T.squeeze() == 2)
     # Create identity matrices for all particles
     identity = torch.eye(2, device=device).unsqueeze(0).expand(n_particles, -1, -1)
-
 
     # Calculate F ############################################################################################
 
@@ -1085,6 +1084,23 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
 
     # P2G loop ###################################################################################################
 
+    # Calculate distances between grid points and particles
+    base = (X * inv_dx - 0.5).int()
+    fx = X * inv_dx - base.float()
+    w_0 = 0.5 * (1.5 - fx) ** 2
+    w_1 = 0.75 - (fx - 1) ** 2
+    w_2 = 0.5 * (fx - 0.5) ** 2
+    w = torch.stack([w_0, w_1, w_2], dim=1)
+    grid_positions = base.unsqueeze(1) + offsets.long()  # [n_particles, 9, 2]
+    particle_indices = torch.arange(n_particles, device=device).unsqueeze(1).expand(-1, 9).flatten()
+    grid_indices = grid_positions.flatten().reshape(-1, 2)  # Flatten to [n_particles*9, 2]
+    grid_indices_1d = grid_indices[:, 0] * n_grid + grid_indices[:, 1]
+    edge_index = torch.stack([particle_indices, grid_indices_1d], dim=0)
+    edge_index [0,:] += n_grid**2  # offset particle indices
+    x_ = torch.cat((torch.zeros((n_grid,1),dtype=torch.float32,device=device),p_mass[:,None]))
+    dataset = data.Data(x=x_, edge_index=edge_index, w=w)
+    grid_m = model_MPM(dataset)
+
     # Clear grid
     grid_v = torch.zeros((n_grid, n_grid, 2), device=device, dtype=torch.float32)
     grid_m = torch.zeros((n_grid, n_grid), device=device, dtype=torch.float32)
@@ -1098,7 +1114,6 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
     w_2 = 0.5 * (fx - 0.5) ** 2
     # Stack weights [n_particles, 3, 2]
     w = torch.stack([w_0, w_1, w_2], dim=1)
-
 
     # P2G transfer (using pre-computed offsets)
     # Expand for all particles: [n_particles, 9, 2]
@@ -1264,6 +1279,15 @@ def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', e
 
     delta_t = simulation_config.delta_t
     dx, inv_dx = 1 / n_grid, float(n_grid)
+    grid_i, grid_j = torch.meshgrid(
+        torch.arange(n_grid, device=device, dtype=torch.float32),
+        torch.arange(n_grid, device=device, dtype=torch.float32),
+        indexing='ij'
+    ) # Shape: [n_grid, n_grid]
+    grid_coords = dx * torch.stack([
+        grid_i ,  # x coordinates
+        grid_j   # y coordinates
+    ], dim=-1).reshape(-1, 2)  # Shape: [1024, 2]
 
     p_vol, p_rho = (dx * 0.5) ** 2, 1
     p_mass = p_vol * p_rho
@@ -1272,6 +1296,8 @@ def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', e
     offsets = torch.tensor([[i, j] for i in range(3) for j in range(3)],
                            device=device, dtype=torch.float32)  # [9, 2]
     particle_offsets = offsets.unsqueeze(0).expand(n_particles, -1, -1)
+
+    model_MPM = MPM_P2G(aggr_type='add', device=device)
 
     n_frames = simulation_config.n_frames
     cmap = CustomColorMap(config=config)
@@ -1316,8 +1342,8 @@ def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', e
 
             delta_t = 1e-4
 
-            X, V, C, F, T, Jp, M, S, GM, GP = MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid,
-                                                          delta_t, dx, inv_dx, mu_0, lambda_0, p_vol, offsets, particle_offsets, device)
+            X, V, C, F, T, Jp, M, S, GM, GP = MPM_substep(model_MPM, X, V, C, F, T, Jp, M, n_particles, n_grid,
+                                                          delta_t, dx, inv_dx, mu_0, lambda_0, p_vol, offsets, particle_offsets, grid_coords, device)
 
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
