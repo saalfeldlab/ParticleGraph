@@ -990,7 +990,7 @@ def taichi_MPM_init(seed=42, device='cpu'):
     return N_tensor, x_tensor, v_tensor, C_tensor, F_tensor, material_tensor, Jp_tensor, mass_tensor, S_tensor, GM_tensor, GP_tensor
 
 
-def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0, lambda_0, p_vol, device,
+def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0, lambda_0, p_vol, offsets, particle_offsets, device,
                 verbose=False):
     """
     MPM substep implementation
@@ -1003,25 +1003,6 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
     # Create identity matrices for all particles
     identity = torch.eye(2, device=device).unsqueeze(0).expand(n_particles, -1, -1)
 
-    # Clear grid
-    grid_v = torch.zeros((n_grid, n_grid, 2), device=device, dtype=torch.float32)
-    grid_m = torch.zeros((n_grid, n_grid), device=device, dtype=torch.float32)
-
-    # Calculate base grid positions and fractional offsets
-    base = (X * inv_dx - 0.5).int()
-    fx = X * inv_dx - base.float()
-
-    # Quadratic B-spline kernel weights
-    w_0 = 0.5 * (1.5 - fx) ** 2
-    w_1 = 0.75 - (fx - 1) ** 2
-    w_2 = 0.5 * (fx - 0.5) ** 2
-    # Stack weights [n_particles, 3, 2]
-    w = torch.stack([w_0, w_1, w_2], dim=1)
-
-    # COMPUTE ONCE: Create all 9 offset combinations for 3x3 neighborhood
-    # This replaces both meshgrid and list comprehension approaches
-    offsets = torch.tensor([[i, j] for i in range(3) for j in range(3)],
-                           device=device, dtype=torch.float32)  # [9, 2]
 
     # Calculate F ############################################################################################
 
@@ -1078,9 +1059,23 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
 
     # P2G loop ###################################################################################################
 
+    # Clear grid
+    grid_v = torch.zeros((n_grid, n_grid, 2), device=device, dtype=torch.float32)
+    grid_m = torch.zeros((n_grid, n_grid), device=device, dtype=torch.float32)
+    # Calculate base grid positions and fractional offsets
+    base = (X * inv_dx - 0.5).int()
+    fx = X * inv_dx - base.float()
+
+    # Quadratic B-spline kernel weights
+    w_0 = 0.5 * (1.5 - fx) ** 2
+    w_1 = 0.75 - (fx - 1) ** 2
+    w_2 = 0.5 * (fx - 0.5) ** 2
+    # Stack weights [n_particles, 3, 2]
+    w = torch.stack([w_0, w_1, w_2], dim=1)
+
+
     # P2G transfer (using pre-computed offsets)
     # Expand for all particles: [n_particles, 9, 2]
-    particle_offsets = offsets.unsqueeze(0).expand(n_particles, -1, -1)
     particle_base = base.unsqueeze(1).expand(-1, 9, -1)  # [n_particles, 9, 2]
     particle_fx = fx.unsqueeze(1).expand(-1, 9, -1)  # [n_particles, 9, 2]
     # Calculate grid positions for all particle-offset combinations
@@ -1097,24 +1092,24 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
     particle_idx = valid_indices[0]  # Which particle
     offset_idx = valid_indices[1]  # Which offset (0-8)
 
-    if len(particle_idx) > 0:
-        # Get valid data
-        valid_grid_pos = grid_positions[valid_indices]  # [num_valid, 2]
-        valid_weights = weights[valid_indices]  # [num_valid]
-        valid_dpos = dpos[valid_indices]  # [num_valid, 2]
-        # Calculate contributions
-        affine_contrib = torch.bmm(affine[particle_idx],
-                                   valid_dpos.unsqueeze(-1)).squeeze(-1)  # [num_valid, 2]
-        momentum_contrib = valid_weights.unsqueeze(-1) * (
-                p_mass[particle_idx].unsqueeze(-1) * V[particle_idx] + affine_contrib)
-        mass_contrib = valid_weights * p_mass[particle_idx]
-        # Convert 2D grid positions to 1D indices for scatter
-        grid_1d_idx = valid_grid_pos[:, 0] * n_grid + valid_grid_pos[:, 1]
-        # Scatter add to flattened grid
-        grid_v_flat = grid_v.view(-1, 2)
-        grid_m_flat = grid_m.view(-1)
-        grid_v_flat.scatter_add_(0, grid_1d_idx.unsqueeze(-1).expand(-1, 2), momentum_contrib)
-        grid_m_flat.scatter_add_(0, grid_1d_idx, mass_contrib)
+
+    # Get valid data
+    valid_grid_pos = grid_positions[valid_indices]  # [num_valid, 2]
+    valid_weights = weights[valid_indices]  # [num_valid]
+    valid_dpos = dpos[valid_indices]  # [num_valid, 2]
+    # Calculate contributions
+    affine_contrib = torch.bmm(affine[particle_idx],
+                               valid_dpos.unsqueeze(-1)).squeeze(-1)  # [num_valid, 2]
+    momentum_contrib = valid_weights.unsqueeze(-1) * (
+            p_mass[particle_idx].unsqueeze(-1) * V[particle_idx] + affine_contrib)
+    mass_contrib = valid_weights * p_mass[particle_idx]
+    # Convert 2D grid positions to 1D indices for scatter
+    grid_1d_idx = valid_grid_pos[:, 0] * n_grid + valid_grid_pos[:, 1]
+    # Scatter add to flattened grid
+    grid_v_flat = grid_v.view(-1, 2)
+    grid_m_flat = grid_m.view(-1)
+    grid_v_flat.scatter_add_(0, grid_1d_idx.unsqueeze(-1).expand(-1, 2), momentum_contrib)
+    grid_m_flat.scatter_add_(0, grid_1d_idx, mass_contrib)
 
     # VECTORIZED: Convert momentum to velocity and apply boundary conditions ################################################
 
@@ -1248,6 +1243,9 @@ def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', e
     p_mass = p_vol * p_rho
     E, nu = 0.1e4, 0.2  # Young's modulus and Poisson's ratio
     mu_0, lambda_0 = E / (2 * (1 + nu)), E * nu / ((1 + nu) * (1 - 2 * nu))  # Lame parameters
+    offsets = torch.tensor([[i, j] for i in range(3) for j in range(3)],
+                           device=device, dtype=torch.float32)  # [9, 2]
+    particle_offsets = offsets.unsqueeze(0).expand(n_particles, -1, -1)
 
     n_frames = simulation_config.n_frames
     cmap = CustomColorMap(config=config)
@@ -1293,7 +1291,7 @@ def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', e
             delta_t = 1e-4
 
             X, V, C, F, T, Jp, M, S, GM, GP = MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid,
-                                                          delta_t, dx, inv_dx, mu_0, lambda_0, p_vol, device)
+                                                          delta_t, dx, inv_dx, mu_0, lambda_0, p_vol, offsets, particle_offsets, device)
 
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
