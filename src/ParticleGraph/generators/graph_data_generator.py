@@ -1017,32 +1017,58 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
     mu = torch.where(liquid_mask, torch.tensor(0.0, device=device), mu)
     # SVD decomposition
     U, sig, Vh = torch.linalg.svd(F, driver='gesvdj')
-    # SVD sign correction
+    # SVD sign correction without in-place ops
     det_U = torch.det(U)
     det_Vh = torch.det(Vh)
-    neg_det_U = det_U < 0
-    if neg_det_U.any():
-        U[neg_det_U, :, -1] *= -1
-        sig[neg_det_U, -1] *= -1
+    neg_det_U = det_U < 0  # [n_particles] bool tensor
     neg_det_Vh = det_Vh < 0
-    if neg_det_Vh.any():
-        Vh[neg_det_Vh, -1, :] *= -1
-        sig[neg_det_Vh, -1] *= -1
+    # Reshape masks for broadcasting
+    neg_det_U_mask = neg_det_U.unsqueeze(-1).unsqueeze(-1)  # [n_particles,1,1]
+    neg_det_sig_U_mask = neg_det_U.unsqueeze(-1)  # [n_particles,1]
+    neg_det_Vh_mask = neg_det_Vh.unsqueeze(-1).unsqueeze(-1)  # [n_particles,1,1]
+    neg_det_sig_Vh_mask = neg_det_Vh.unsqueeze(-1)  # [n_particles,1]
+    # Flip signs on last columns/rows accordingly, out-of-place
+    U = torch.where(
+        neg_det_U_mask.expand_as(U),
+        torch.cat([U[:, :, :-1], -U[:, :, -1:].clone()], dim=2),
+        U
+    )
+    sig = torch.where(
+        neg_det_sig_U_mask.expand_as(sig),
+        torch.cat([sig[:, :-1], -sig[:, -1:].clone()], dim=1),
+        sig
+    )
+    Vh = torch.where(
+        neg_det_Vh_mask.expand_as(Vh),
+        torch.cat([Vh[:, :-1, :], -Vh[:, -1:, :].clone()], dim=1),
+        Vh
+    )
+    sig = torch.where(
+        neg_det_sig_Vh_mask.expand_as(sig),
+        torch.cat([sig[:, :-1], -sig[:, -1:].clone()], dim=1),
+        sig
+    )
     # Clamp singular values
-    sig = torch.clamp(sig, min=1e-6)
+    min_val = 1e-6
+    sig = torch.where(
+        sig < min_val,
+        min_val + 0.01 * (sig - min_val),  # small slope below min_val
+        sig
+    )
     original_sig = sig.clone()
     # Apply plasticity constraints for snow
-    new_sig = torch.where(snow_mask.unsqueeze(1), torch.clamp(sig, min=1 - 2.5e-2, max=1 + 4.5e-3), sig)
+    new_sig = torch.where(snow_mask.unsqueeze(1),
+                          torch.clamp(sig, min=1 - 2.5e-2, max=1 + 4.5e-3),
+                          sig)
     # Update plastic deformation
     plastic_ratio = torch.prod(original_sig / new_sig, dim=1, keepdim=True)
     Jp = Jp * plastic_ratio
     sig = new_sig
     J = torch.prod(sig, dim=1)
-    # Reconstruct deformation gradient
     sig_diag = torch.diag_embed(sig)
     # For liquid: F = sqrt(J) * I
     F_liquid = identity * torch.sqrt(J).unsqueeze(-1).unsqueeze(-1)
-    # For solid materials: F = U @ sig @ Vh
+    # For solid materials: F = U @ sig_diag @ Vh
     F_solid = U @ sig_diag @ Vh
     # Apply reconstruction based on material type
     F = torch.where(liquid_mask.unsqueeze(-1).unsqueeze(-1), F_liquid, F)
