@@ -983,7 +983,7 @@ def taichi_MPM_init(seed=42, device='cpu'):
                 ti.random() * 0.2 + 0.3 + 0.10 * (i // group_size),
                 ti.random() * 0.2 + 0.05 + 0.32 * (i // group_size),
             ]
-            material[i] = 1 # i // group_size  # 0: fluid 1: jelly 2: snow
+            material[i] = i // group_size  # 0: fluid 1: jelly 2: snow
             v[i] = ti.Matrix([0, 0])
             F[i] = ti.Matrix([[1, 0], [0, 1]])
             Jp[i] = 1
