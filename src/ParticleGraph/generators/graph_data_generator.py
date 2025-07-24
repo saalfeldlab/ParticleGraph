@@ -1065,14 +1065,16 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
     # V[:, 0] = v_val
     # V[:, 1] = v_val * 0.7
 
-    v_sum_initial = torch.sum(V)
     if verbose:
+        v_sum_initial = torch.sum(V)
         print(f"step start - V_sum: {v_sum_initial:.6f}")
 
     # Material masks
     liquid_mask = (T.squeeze() == 0)
     jelly_mask = (T.squeeze() == 1)
     snow_mask = (T.squeeze() == 2)
+    # Create identity matrices for all particles
+    identity = torch.eye(2, device=device).unsqueeze(0).expand(n_particles, -1, -1)
 
     # Clear grid
     grid_v = torch.zeros((n_grid, n_grid, 2), device=device, dtype=torch.float32)
@@ -1086,87 +1088,68 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
     w_0 = 0.5 * (1.5 - fx) ** 2
     w_1 = 0.75 - (fx - 1) ** 2
     w_2 = 0.5 * (fx - 0.5) ** 2
-
     # Stack weights [n_particles, 3, 2]
     w = torch.stack([w_0, w_1, w_2], dim=1)
 
-    # Create identity matrices for all particles
-    identity = torch.eye(2, device=device).unsqueeze(0).expand(n_particles, -1, -1)
+    # Calculate F ############################################################################################
 
     # Update deformation gradient: F = (I + dt * C) * F_old
     F = (identity + dt * C) @ F
-
     # Hardening coefficient
     h = torch.exp(10 * (1.0 - Jp.squeeze()))
     h = torch.where(jelly_mask, torch.tensor(0.3, device=device), h)
-
     # Lamé parameters
     mu = mu_0 * h
     la = lambda_0 * h
     mu = torch.where(liquid_mask, torch.tensor(0.0, device=device), mu)
-
     # SVD decomposition
     U, sig, Vh = torch.linalg.svd(F, driver='gesvdj')
-
     # SVD sign correction
     det_U = torch.det(U)
     det_Vh = torch.det(Vh)
-
     neg_det_U = det_U < 0
     if neg_det_U.any():
         U[neg_det_U, :, -1] *= -1
         sig[neg_det_U, -1] *= -1
-
     neg_det_Vh = det_Vh < 0
     if neg_det_Vh.any():
         Vh[neg_det_Vh, -1, :] *= -1
         sig[neg_det_Vh, -1] *= -1
-
     # Clamp singular values
     sig = torch.clamp(sig, min=1e-6)
     original_sig = sig.clone()
-
     # Apply plasticity constraints for snow
     new_sig = torch.where(snow_mask.unsqueeze(1),
                           torch.clamp(sig, min=1 - 2.5e-2, max=1 + 4.5e-3),
                           sig)
-
     # Update plastic deformation
     plastic_ratio = torch.prod(original_sig / new_sig, dim=1, keepdim=True)
     Jp = Jp * plastic_ratio
-
     sig = new_sig
     J = torch.prod(sig, dim=1)
-
     # Reconstruct deformation gradient
     sig_diag = torch.diag_embed(sig)
-
     # For liquid: F = sqrt(J) * I
     F_liquid = identity * torch.sqrt(J).unsqueeze(-1).unsqueeze(-1)
-
     # For solid materials: F = U @ sig @ Vh
     F_solid = U @ sig_diag @ Vh
-
     # Apply reconstruction based on material type
     F = torch.where(liquid_mask.unsqueeze(-1).unsqueeze(-1), F_liquid, F)
     F = torch.where((jelly_mask | snow_mask).unsqueeze(-1).unsqueeze(-1), F_solid, F)
 
-    # Calculate stress
+    # Calculate stress ############################################################################################
     R = U @ Vh
     F_minus_R = F - R
     stress = (2 * mu.unsqueeze(-1).unsqueeze(-1) * F_minus_R @ F.transpose(-2, -1) +
               identity * (la * J * (J - 1)).unsqueeze(-1).unsqueeze(-1))
     stress = (-dt * p_vol * 4 * inv_dx * inv_dx) * stress
-
     stress_norm = torch.norm(stress.view(n_particles, -1), dim=1)
     if verbose:
         print(
             f"stress - Max: {torch.max(stress_norm):.6f}, Mean: {torch.mean(stress_norm):.6f}, Std: {torch.std(stress_norm):.6f}")
-
     C_norm = torch.norm(C.view(n_particles, -1), dim=1)
     if verbose:
         print(f"C matrix - Max: {torch.max(C_norm):.6f}, Mean: {torch.mean(C_norm):.6f}, Std: {torch.std(C_norm):.6f}")
-
     # P2G transfer
     p_mass = M.squeeze(-1)
     affine = stress + p_mass.unsqueeze(-1).unsqueeze(-1) * C
@@ -1174,7 +1157,8 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
     if verbose:
         print(f"Affine max: {torch.max(affine_norm):.6f}, Mean: {torch.mean(affine_norm):.6f}")
 
-    # P2G loop: Process each offset in the 3x3 neighborhood
+
+    # P2G loop ###################################################################################################
 
     # Clear grid
     grid_v = torch.zeros((n_grid, n_grid, 2), device=device, dtype=torch.float32)
@@ -1206,19 +1190,16 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
     particle_base = base.unsqueeze(1).expand(-1, 9, -1)  # [n_particles, 9, 2]
     particle_fx = fx.unsqueeze(1).expand(-1, 9, -1)  # [n_particles, 9, 2]
 
+
     # Calculate grid positions for all particle-offset combinations
     grid_positions = particle_base + offsets.long()  # [n_particles, 9, 2]
-
     # Calculate weights for all combinations
     weights = w[:, offsets[:, 0], 0] * w[:, offsets[:, 1], 1]  # [n_particles, 9]
-
     # Calculate dpos for all combinations
     dpos = (particle_offsets - particle_fx) * dx  # [n_particles, 9, 2]
-
     # Bounds checking
     valid_mask = ((grid_positions[:, :, 0] >= 0) & (grid_positions[:, :, 0] < n_grid) &
                   (grid_positions[:, :, 1] >= 0) & (grid_positions[:, :, 1] < n_grid))
-
     # Flatten everything for scatter operations
     valid_indices = torch.where(valid_mask)
     particle_idx = valid_indices[0]  # Which particle
@@ -1252,7 +1233,9 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
         print(
             f"grid_m - Min: {torch.min(grid_m):.6f}, Max: {torch.max(grid_m):.6f}, Mean: {torch.mean(grid_m):.6f}, Std: {torch.std(grid_m):.6f}")
         print(f"Total grid mass: {torch.sum(grid_m):.6f}")
-    np.save('pytorch_grid_m.npy', grid_m.cpu().numpy())
+        np.save('pytorch_grid_m.npy', grid_m.cpu().numpy())
+
+    # Convert momentum to velocity and apply boundary conditions   ################################################
 
     for i in range(n_grid):
         for j in range(n_grid):
@@ -1281,33 +1264,53 @@ def MPM_substep(X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0,
     new_V = torch.zeros_like(V)
     new_C = torch.zeros_like(C)
 
-    # G2P loop
-    for i in range(3):
-        for j in range(3):
-            offset = torch.tensor([i, j], device=device, dtype=torch.float32)
-            dpos = offset.unsqueeze(0).expand(n_particles, -1) - fx
-            grid_pos = base + torch.tensor([i, j], device=device, dtype=torch.long)
-            weight = w[:, i, 0] * w[:, j, 1]
+    # G2P loop ###################################################################################################
+    # Vectorized G2P loop - process all 9 neighbors simultaneously
+    # Create all 9 offset combinations: (0,0), (0,1), (0,2), (1,0), (1,1), (1,2), (2,0), (2,1), (2,2)
+    offsets = torch.tensor([[i, j] for i in range(3) for j in range(3)],
+                           device=device, dtype=torch.float32)  # [9, 2]
 
-            # Get grid velocities with bounds checking
-            g_v = torch.zeros((n_particles, 2), device=device)
-            valid_mask = ((grid_pos[:, 0] >= 0) & (grid_pos[:, 0] < n_grid) &
-                          (grid_pos[:, 1] >= 0) & (grid_pos[:, 1] < n_grid))
+    # Expand offset for all particles and compute dpos for all neighbors
+    dpos_all = offsets.unsqueeze(0) - fx.unsqueeze(1)  # [n_particles, 9, 2]
 
-            if valid_mask.any():
-                valid_pos = grid_pos[valid_mask]
-                g_v[valid_mask] = grid_v[valid_pos[:, 0], valid_pos[:, 1]]
+    # Grid positions for all neighbors
+    grid_pos_all = base.unsqueeze(1) + offsets.long().unsqueeze(0)  # [n_particles, 9, 2]
 
-            # Accumulate velocity
-            velocity_contrib = weight.unsqueeze(-1) * g_v
-            new_V += velocity_contrib
+    # Weights for all neighbors: w[:, i, 0] * w[:, j, 1] for all (i,j) combinations
+    i_indices = torch.tensor([i for i in range(3) for j in range(3)], device=device, dtype=torch.long)
+    j_indices = torch.tensor([j for i in range(3) for j in range(3)], device=device, dtype=torch.long)
+    weights_all = w[:, i_indices, 0] * w[:, j_indices, 1]  # [n_particles, 9]
 
-            # CORRECTED APIC update - matches Taichi: weight * g_v.outer_product(dpos)
-            # g_v: [n_particles, 2], dpos: [n_particles, 2]
-            # outer_product should be: g_v[:, :, None] * dpos[:, None, :] = [n_particles, 2, 2]
-            outer_product = torch.bmm(g_v.unsqueeze(-1), dpos.unsqueeze(-2))  # [n_particles, 2, 2]
-            weighted_outer_product = weight.unsqueeze(-1).unsqueeze(-1) * outer_product
-            new_C += 4 * inv_dx * weighted_outer_product
+    # Bounds checking for all neighbors
+    valid_mask_all = ((grid_pos_all[:, :, 0] >= 0) & (grid_pos_all[:, :, 0] < n_grid) &
+                      (grid_pos_all[:, :, 1] >= 0) & (grid_pos_all[:, :, 1] < n_grid))  # [n_particles, 9]
+
+    # Get grid velocities for all neighbors with bounds checking
+    g_v_all = torch.zeros((n_particles, 9, 2), device=device)
+
+    # Flatten for efficient indexing
+    flat_valid = valid_mask_all.flatten()  # [n_particles * 9]
+    flat_grid_pos = grid_pos_all.reshape(-1, 2)  # [n_particles * 9, 2]
+
+    if flat_valid.any():
+        valid_positions = flat_grid_pos[flat_valid]
+        flat_g_v = torch.zeros((n_particles * 9, 2), device=device)
+        flat_g_v[flat_valid] = grid_v[valid_positions[:, 0], valid_positions[:, 1]]
+        g_v_all = flat_g_v.reshape(n_particles, 9, 2)
+
+    # Accumulate velocity contributions from all neighbors
+    velocity_contribs = weights_all.unsqueeze(-1) * g_v_all  # [n_particles, 9, 2]
+    new_V += velocity_contribs.sum(dim=1)  # Sum over the 9 neighbors
+
+    # CORRECTED APIC update - vectorized outer product for all neighbors
+    # Reshape for batch matrix multiplication: [n_particles * 9, 2, 1] x [n_particles * 9, 1, 2]
+    g_v_flat = g_v_all.reshape(-1, 2, 1)  # [n_particles * 9, 2, 1]
+    dpos_flat = dpos_all.reshape(-1, 1, 2)  # [n_particles * 9, 1, 2]
+    outer_products = torch.bmm(g_v_flat, dpos_flat).reshape(n_particles, 9, 2, 2)  # [n_particles, 9, 2, 2]
+
+    # Weight the outer products and sum over neighbors
+    weighted_outer_products = weights_all.unsqueeze(-1).unsqueeze(-1) * outer_products  # [n_particles, 9, 2, 2]
+    new_C += 4 * inv_dx * weighted_outer_products.sum(dim=1)  # Sum over the 9 neighbors
 
     # Update particle state
     V.copy_(new_V)
@@ -1408,9 +1411,7 @@ def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', e
         group_indices = torch.arange(n_particles, device=device) // group_size
 
         # Main simulation loop
-        for it in range(10000):
-
-            print(f"Pytorch step {it}:")
+        for it in trange(10000):
 
             # Concatenate state for logging
             x = torch.cat((N.clone().detach(), X.clone().detach(), V.clone().detach(),
