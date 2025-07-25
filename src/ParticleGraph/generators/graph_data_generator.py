@@ -1066,7 +1066,16 @@ def MPM_substep(
 
     fx = X * inv_dx - base.float()
     fx_per_edge = fx.unsqueeze(1).expand(-1, 9, -1).flatten(end_dim=1)  # [n_particles*9, 2]
+
+
+    
+
+
     x_ = torch.cat((torch.zeros((n_grid ** 2, 1), dtype=torch.float32, device=device), p_mass[:, None]))
+
+
+
+
 
     dataset = data.Data(x=x_, edge_index=edge_index, fx_per_edge=fx_per_edge)
     grid_m_ = model_MPM(dataset)
