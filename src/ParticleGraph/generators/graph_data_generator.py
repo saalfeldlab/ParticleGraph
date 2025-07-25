@@ -1223,18 +1223,18 @@ def data_generate_MPM(
         N, X, V, C, F, T, Jp, M, S = init_MPM_shapes(geometry='discs', n_shapes=9, seed=42, n_particles=n_particles, n_grid=n_grid, dx=dx, inv_dx=inv_dx, device=device)
 
         # Main simulation loop
-        for it in trange(n_frames):
+        for it in trange(simulation_config.start_frame, n_frames):
             x = torch.cat((N.clone().detach(), X.clone().detach(), V.clone().detach(),
                            C.reshape(n_particles, 4).clone().detach(),
                            F.reshape(n_particles, 4).clone().detach(),
                            T.clone().detach(), Jp.clone().detach(), M.clone().detach(),
                            S.reshape(n_particles, 4).clone().detach()), 1)
-
-            if (it >= 0) and bSave:
+            if (it >= 0):
                 x_list.append(x.clone().detach())
 
             X, V, C, F, T, Jp, M, S, GM, GV = MPM_substep(model_MPM, X, V, C, F, T, Jp, M, n_particles, n_grid,
                                                           delta_t, dx, inv_dx, mu_0, lambda_0, p_vol, offsets, particle_offsets, grid_coords, device)
+
 
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
@@ -1348,9 +1348,9 @@ def data_generate_MPM(
 
         # Save results
         if bSave:
-            x_list = np.array([x.cpu().numpy() for x in x_list])
             dataset_name = config.dataset
-            np.save(f'graphs_data/{dataset_name}/x_list_{run}.npy', x_list)
+            x_list = np.array(to_numpy(torch.stack(x_list)))
+            np.save(f"graphs_data/{dataset_name}/x_list_{run}.npy", x_list)
 
 def data_generate_particle_field(
     config,

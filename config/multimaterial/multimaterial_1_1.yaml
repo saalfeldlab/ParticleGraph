@@ -12,7 +12,7 @@ simulation:
   delta_t: 1.E-4
   dpos_init: 1.0
   boundary: 'no'
-  start_frame: 0
+  start_frame: -1000
 
 graph_model:
   particle_model_name: 'PDE_MPM'
@@ -38,7 +38,7 @@ plotting:
   ylim: [-0.001, 0]
 
 training:
-  n_epochs: 20
+  n_epochs: 5
   batch_size: 8
   small_init_batch_size: False
   n_runs: 1
@@ -51,7 +51,7 @@ training:
   cluster_method: 'kmeans_auto_embedding'
   rotation_augmentation: False
   translation_augmentation: True
-  data_augmentation_loop: 5000
+  data_augmentation_loop: 100
   fix_cluster_embedding: True
   device: 'auto'
 

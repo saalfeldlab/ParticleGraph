@@ -17,9 +17,20 @@ class Interaction_MPM(nn.Module):
 
         self.device = device
 
+        self.model = model_config.particle_model_name
+        self.n_dataset = train_config.n_runs
+        self.dimension = dimension
+        self.n_particles = simulation_config.n_particles
+        self.embedding_dim = model_config.embedding_dim
+
         self.siren = Siren(in_features=3, out_features=4, hidden_features=128, hidden_layers=5, outermost_linear=True).to(device)
         # self.mlp0 = MLP(input_size=3, output_size=1, nlayers=5, hidden_size=128, device=device)
         # self.mlp1 = MLP(input_size=2, output_size=1, nlayers=2, hidden_size=4, device=device)
+
+        self.a = nn.Parameter(
+            torch.tensor(np.ones((self.n_dataset, int(self.n_particles) , self.embedding_dim)),
+                         device=self.device,
+                         requires_grad=True, dtype=torch.float32))
 
     def forward(self, data=[], data_id=[], training=[]):
 

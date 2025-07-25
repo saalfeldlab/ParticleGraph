@@ -199,12 +199,6 @@ def data_train_material(config, erase, best_model, device):
     logger.info(f'N epochs: {n_epochs}')
     logger.info(f'initial batch_size: {batch_size}')
 
-    x = torch.tensor(x_list[plot_config.data_embedding][0], dtype=torch.float32, device=device)
-    index_particles = get_index_particles(x, n_particle_types, dimension)
-    type_list = get_type_list(x, dimension)
-    print(f'N particles: {n_particles} {len(torch.unique(type_list))} types')
-    logger.info(f'N particles:  {n_particles} {len(torch.unique(type_list))} types')
-
     print("start training particles ...")
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
 
@@ -236,29 +230,30 @@ def data_train_material(config, erase, best_model, device):
         for N in trange(Niter):
 
             dataset_batch = []
-            ids_batch = []
-            ids_index = 0
             loss = 0
             for batch in range(batch_size):
 
-                run = 1 + np.random.randint(n_runs - 1)
+                run = 0
                 k = time_window + np.random.randint(run_lengths[run] - 1 - time_window - time_step - recursive_loop)
                 x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
+                y = x[:, 5 + dimension * 2: 9 + dimension * 2].clone().detach() # F
+                # y = x[:, 9 + dimension * 2: 13 + dimension * 2].clone().detach() # S
 
                 t = torch.ones((n_particles,1), dtype=torch.float32, device=device) * k/n_frames
-                x = torch.cat((x[:, 1:1 + dimension], t), dim=1).clone().detach()
-                y = x[:, 1:1 + dimension].clone().detach()
+                x_ = torch.cat((x[:, 1:1 + dimension], t), dim=1).clone().detach()
+
+
+                dataset = data.Data(x=x_, edge_index=[], num_nodes=x.shape[0])
+                dataset_batch.append(dataset)
 
                 if batch == 0:
-                    data_id = torch.ones((y.shape[0], 1), dtype=torch.int) * run
+                    data_id = torch.ones((n_particles,1), dtype=torch.float32, device=device) * run
                     x_batch = x
                     y_batch = y
                 else:
-                    data_id = torch.cat((data_id, torch.ones((y.shape[0], 1), dtype=torch.int) * run), dim=0)
+                    data_id = torch.cat((data_id, torch.ones((n_particles,1), dtype=torch.float32, device=device) * run), dim=0)
                     x_batch = torch.cat((x_batch, x), dim=0)
                     y_batch = torch.cat((y_batch, y), dim=0)
-
-                ids_index += x.shape[0]
 
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
@@ -275,7 +270,42 @@ def data_train_material(config, erase, best_model, device):
 
             if ((epoch < 30) & (N % plot_frequency == 0)) | (N == 0):
 
+                k_list = [250, 340, 680, 930]
+                error = list([])
+                with torch.no_grad():
+                    for k in k_list:
+                        x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
+                        y = x[:, 5 + dimension * 2: 9 + dimension * 2].clone().detach() # F
+                        t = torch.ones((n_particles,1), dtype=torch.float32, device=device) * k/n_frames
+                        x_ = torch.cat((x[:, 1:1 + dimension], t), dim=1).clone().detach()
+                        data_id = torch.ones((n_particles, 1), dtype=torch.float32, device=device) * run
+                        dataset = data.Data(x=x_, edge_index=[], num_nodes=x.shape[0])
+                        pred = model(dataset,data_id,True)
+                        error.append(F.mse_loss(pred, y).item())
 
+                # print(f'iteration {N} Error: {np.mean(1000 * error)/len(k_list):.6f}')
+                fig = plt.figure(figsize=(18, 8))
+                plt.subplot(1, 2, 1)
+                f_norm = torch.norm(y.view(n_particles, -1), dim=1).cpu().numpy()
+                plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=f_norm, s=1, cmap='coolwarm', vmin=1.44 - 0.2,
+                            vmax=1.44 + 0.2)
+                plt.colorbar(fraction=0.046, pad=0.04)
+                plt.title('F (deformation)')
+                plt.xlim([0, 1])
+                plt.ylim([0, 1])
+                plt.subplot(1, 2, 2)
+                f_norm = torch.norm(pred.view(n_particles, -1), dim=1).cpu().numpy()
+                plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=f_norm, s=1, cmap='coolwarm', vmin=1.44 - 0.2,
+                            vmax=1.44 + 0.2)
+                plt.colorbar(fraction=0.046, pad=0.04)
+                plt.title('F (deformation)')
+                plt.text(0.05, 0.95,
+                         f'Epoch: {epoch} Iteration: {N} Error: {np.mean(1000 * error) / len(k_list):.6f}', )
+                plt.xlim([0, 1])
+                plt.ylim([0, 1])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_training/field/{epoch}_{N}.tif", dpi=87)
+                plt.close()
 
                 torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
                            os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
@@ -295,6 +325,15 @@ def data_train_material(config, erase, best_model, device):
         print(f'Epoch {epoch + 1}')
         logger.info(f'Epoch {epoch + 1}')
 
+        fig = plt.figure(figsize=(22, 5))
+        ax = fig.add_subplot(1, 5, 1)
+        plt.plot(list_loss, color='k')
+        plt.xlim([0, n_epochs])
+        plt.ylabel('Loss', fontsize=12)
+        plt.xlabel('Epochs', fontsize=12)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/Fig_{epoch}.tif")
+        plt.close()
 
 
 def data_train_particle(config, erase, best_model, device):
