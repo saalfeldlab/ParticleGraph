@@ -13,14 +13,14 @@ class MPM_P2G(pyg.nn.MessagePassing):
         self.n_edges = torch.arange(self.subgrid, device=device).long()
 
     def forward(self, data):
-        x, edge_index, w = data.x, data.edge_index, data.w
+        x, edge_index = data.x, data.edge_index
 
         return self.propagate(edge_index, x=x)
 
     def message(self, edge_index_i, edge_index_j, x_j):
 
         # B-spline weight = w[particle, i, 0] * w[particle, j, 1]
-        # weights = w_i[self.n_edges, i_idx, 0] * w_i[self.n_edges, j_idx, 1]
-        # return x_j.squeeze(-1) * weights
+        weights = w_i[self.n_edges, i_idx, 0] * w_i[self.n_edges, j_idx, 1]
+        return x_j.squeeze(-1) * weights
 
         return x_j

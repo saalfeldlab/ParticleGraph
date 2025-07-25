@@ -1097,8 +1097,8 @@ def MPM_substep(model_MPM, X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, in
     grid_indices_1d = grid_indices[:, 0] * n_grid + grid_indices[:, 1]
     edge_index = torch.stack([particle_indices, grid_indices_1d], dim=0)
     edge_index [0,:] += n_grid**2  # offset particle indices
-    x_ = torch.cat((torch.zeros((n_grid,1),dtype=torch.float32,device=device),p_mass[:,None]))
-    dataset = data.Data(x=x_, edge_index=edge_index, w=w)
+    x_ = torch.cat((torch.zeros((n_grid**2,1),dtype=torch.float32,device=device),p_mass[:,None]))
+    dataset = data.Data(x=x_, edge_index=edge_index)
     grid_m = model_MPM(dataset)
 
     # Clear grid
