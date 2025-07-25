@@ -9,16 +9,16 @@ class MPM_P2G(pyg.nn.MessagePassing):
 
     def forward(self, data):
         x, edge_index, fx_per_edge = data.x, data.edge_index, data.fx_per_edge
-        return self.propagate(edge_index, x=x, fx=fx_per_edge)
+        pred = self.propagate(edge_index, x=x, fx=fx_per_edge)
+        return pred
 
-    def message(self, x_i, fx):
+    def message(self, x_j, fx):
         # Each edge corresponds to one 3x3 offset
-        n_edges = x_i.size(0)
+        n_edges = x_j.size(0)
         offset_idx = torch.arange(n_edges, device=self.device) % 9
         # Convert flat index to 2D: 0->(0,0), 1->(0,1), 2->(0,2), 3->(1,0), etc.
         i_idx = offset_idx // 3  # [0,0,0,1,1,1,2,2,2, ...]
         j_idx = offset_idx % 3  # [0,1,2,0,1,2,0,1,2, ...]
-
 
         # Quadratic B-spline weights
         w_0 = 0.5 * (1.5 - fx) ** 2
@@ -30,4 +30,6 @@ class MPM_P2G(pyg.nn.MessagePassing):
         edge_indices = torch.arange(n_edges, device=self.device)
         weights = w[edge_indices, i_idx, 0] * w[edge_indices, j_idx, 1]
 
-        return x_i.squeeze(-1) * weights
+        out = x_j.squeeze(-1) * weights
+
+        return out[:,None]

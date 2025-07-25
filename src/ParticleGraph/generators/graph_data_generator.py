@@ -1056,19 +1056,22 @@ def MPM_substep(
 
     # Calculate distances between grid points and particles
 
+    base = (X * inv_dx - 0.5).int()
+    grid_positions = base.unsqueeze(1) + offsets.unsqueeze(0)  # [n_particles, 9, 2]
+    particle_indices = torch.arange(n_particles, device=device).unsqueeze(1).expand(-1, 9).flatten()
+    grid_indices = grid_positions.flatten().reshape(-1, 2)  # Flatten to [n_particles*9, 2]
+    grid_indices_1d = grid_indices[:, 0] * n_grid + grid_indices[:, 1]
+    edge_index = torch.stack([particle_indices, grid_indices_1d], dim=0).long()
+    edge_index[0, :] += n_grid ** 2  # offset particle indices
 
-    # GNN P2G ####################################################################################################
-    # particle_indices = torch.arange(n_particles, device=device).unsqueeze(1).expand(-1, 9).flatten()
-    # grid_indices = grid_positions.flatten().reshape(-1, 2)  # Flatten to [n_particles*9, 2]
-    # grid_indices_1d = grid_indices[:, 0] * n_grid + grid_indices[:, 1]
-    # edge_index = torch.stack([particle_indices, grid_indices_1d], dim=0)
-    # edge_index [0,:] += n_grid**2  # offset particle indices
-    # base = (X * inv_dx - 0.5).int()
-    # fx = X * inv_dx - base.float()
-    # fx_per_edge = fx.unsqueeze(1).expand(-1, 9, -1).flatten(end_dim=1)  # [n_particles*9, 2]
-    # x_ = torch.cat((torch.zeros((n_grid**2,1),dtype=torch.float32,device=device),p_mass[:,None]))
-    # dataset = data.Data(x=x_, edge_index=edge_index, fx_per_edge=fx_per_edge)
-    # grid_m = model_MPM(dataset)
+    fx = X * inv_dx - base.float()
+    fx_per_edge = fx.unsqueeze(1).expand(-1, 9, -1).flatten(end_dim=1)  # [n_particles*9, 2]
+    x_ = torch.cat((torch.zeros((n_grid ** 2, 1), dtype=torch.float32, device=device), p_mass[:, None]))
+
+    dataset = data.Data(x=x_, edge_index=edge_index, fx_per_edge=fx_per_edge)
+    grid_m_ = model_MPM(dataset)
+    grid_m_ = grid_m_[0:n_grid**2]
+    grid_m_ = grid_m_.view(n_grid, n_grid)  # Reshape to [n_grid, n_grid]
 
     # Clear grid
     grid_v = torch.zeros((n_grid, n_grid, 2), device=device, dtype=torch.float32)
@@ -1214,7 +1217,7 @@ def MPM_substep(
     # Particle advection
     X = X + dt * V
 
-    return X, V, C, F, T, Jp, M, stress, grid_m, grid_v
+    return X, V, C, F, T, Jp, M, stress, grid_m_, grid_v
 
 
 def data_generate_MPM(
