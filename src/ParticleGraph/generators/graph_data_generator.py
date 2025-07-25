@@ -1174,6 +1174,7 @@ def data_generate_MPM(
     group_size = n_particles // n_particle_types
 
     delta_t = simulation_config.delta_t
+    n_frames = simulation_config.n_frames
     dx, inv_dx = 1 / n_grid, float(n_grid)
     grid_i, grid_j = torch.meshgrid(
         torch.arange(n_grid, device=device, dtype=torch.float32),
@@ -1222,7 +1223,7 @@ def data_generate_MPM(
         N, X, V, C, F, T, Jp, M, S = init_MPM_shapes(geometry='discs', n_shapes=9, seed=42, n_particles=n_particles, n_grid=n_grid, dx=dx, inv_dx=inv_dx, device=device)
 
         # Main simulation loop
-        for it in trange(10000):
+        for it in trange(n_frames):
             x = torch.cat((N.clone().detach(), X.clone().detach(), V.clone().detach(),
                            C.reshape(n_particles, 4).clone().detach(),
                            F.reshape(n_particles, 4).clone().detach(),

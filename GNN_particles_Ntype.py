@@ -32,6 +32,8 @@ from ParticleGraph.models.Ghost_Particles import Ghost_Particles
 from ParticleGraph.models.utils import *
 
 import warnings
+warnings.filterwarnings("ignore", message="pkg_resources is deprecated as an API")
+
 
 if __name__ == "__main__":
     warnings.filterwarnings("ignore", category=FutureWarning)
@@ -57,7 +59,7 @@ if __name__ == "__main__":
         else:
             best_model = None
     else:
-        task = 'generate'  # 'generate', 'train', 'test'
+        task = 'train'  # 'generate', 'train', 'test'
         best_model = ''
         config_list = ['multimaterial_1_1']
         # config_list = ['fluids_m19']
@@ -98,7 +100,7 @@ if __name__ == "__main__":
                 alpha=1,
                 erase=False,
                 bSave=True,
-                step=100,
+                step=10,
             )  # config.simulation.n_frames // 100)
             
         if "train" in task:
