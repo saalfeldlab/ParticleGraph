@@ -1126,6 +1126,8 @@ def MPM_substep(
 
     # VECTORIZED: Convert momentum to velocity and apply boundary conditions ################################################
 
+    grid_m = grid_m_
+
     # Create mask for valid grid points (non-zero mass)
     valid_mass_mask = grid_m > 0
 
