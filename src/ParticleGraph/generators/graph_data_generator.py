@@ -898,47 +898,6 @@ def taichi_MPM():
         gui.show()
 
 
-def MPM_init(
-        seed=42,
-        n_particles=[],
-        n_grid=[],
-        dx=[],
-        inv_dx=[],
-        dt=[],
-        device='cpu'
-):
-
-    p_vol, p_rho = (dx * 0.5) ** 2, 1
-    p_mass = p_vol * p_rho
-    E, nu = 0.1e4, 0.2  # Young's modulus and Poisson's ratio
-    mu_0, lambda_0 = E / (2 * (1 + nu)), E * nu / ((1 + nu) * (1 - 2 * nu))  # Lame parameters
-
-    N = torch.arange(n_particles, dtype=torch.float32, device=device)
-    N = N[:,None]
-    x = torch.zeros((n_particles,2), dtype=torch.float32, device=device)
-    v = torch.zeros((n_particles,2), dtype=torch.float32, device=device)
-    C = torch.zeros((n_particles,2,2), dtype=torch.float32, device=device)
-    F = torch.zeros((n_particles,2,2), dtype=torch.float32, device=device)
-    T = torch.zeros((n_particles,1), dtype=torch.int32, device=device)
-    Jp = torch.zeros((n_particles,1), dtype=torch.float32, device=device)
-    M = torch.zeros((n_particles,1), dtype=torch.float32, device=device)
-    S = torch.zeros((n_particles, 2,2), dtype=torch.float32, device=device)
-    GM = torch.zeros((n_grid, n_grid), dtype=torch.float32, device=device)
-    GP = torch.zeros((n_grid, n_grid), dtype=torch.float32, device=device)
-
-    group_size = n_particles // 3
-    group_indices = torch.arange(n_particles, device=device) // group_size
-
-    x[:,0] =torch.rand(n_particles, device=device) * 0.2 + 0.3 + 0.10 * group_indices.float()
-    x[:,1] =torch.rand(n_particles, device=device) * 0.2 + 0.05 + 0.32 * group_indices.float()
-    F = torch.eye(2, dtype=torch.float32, device=device).unsqueeze(0).expand(n_particles, -1, -1)
-    T = (torch.arange(n_particles, device=device) // group_size).unsqueeze(1).int()  # 0: fluid 1: jelly 2: snow
-    Jp.fill_(1.0)
-    M.fill_(p_mass)
-
-    return N, x, v, C, F, T, Jp, M, S
-
-
 def MPM_substep(
         model_MPM,
         X,
@@ -1067,27 +1026,28 @@ def MPM_substep(
     fx = X * inv_dx - base.float()
     fx_per_edge = fx.unsqueeze(1).expand(-1, 9, -1).flatten(end_dim=1)  # [n_particles*9, 2]
 
+    # Compute dpos for each edge (needed for affine contribution)
+    particle_offsets_expanded = offsets.unsqueeze(0).expand(n_particles, -1, -1)  # [n_particles, 9, 2]
+    particle_fx_expanded = fx.unsqueeze(1).expand(-1, 9, -1)  # [n_particles, 9, 2]
+    dpos = (particle_offsets_expanded - particle_fx_expanded) * dx  # [n_particles, 9, 2]
+    dpos_per_edge = dpos.flatten(end_dim=1)  # [n_particles*9, 2]
 
-    
+    # Affine matrices per edge (replicate for each particle's 9 edges)
+    affine_per_edge = affine.unsqueeze(1).expand(-1, 9, -1, -1).flatten(end_dim=1)  # [n_particles*9, 2, 2]
 
+    # Extended node features: [mass, vel_x, vel_y] for particles, [0, 0, 0] for grid
+    grid_features = torch.zeros((n_grid ** 2, 3), dtype=torch.float32, device=device)  # [mass, vel_x, vel_y]
+    particle_features = torch.cat([p_mass[:, None], V], dim=1)  # [n_particles, 3]
+    x_ = torch.cat([grid_features, particle_features], dim=0)  # [n_grid**2 + n_particles, 3]
 
-    x_ = torch.cat((torch.zeros((n_grid ** 2, 1), dtype=torch.float32, device=device), p_mass[:, None]))
+    # x_ = torch.cat((torch.zeros((n_grid ** 2, 1), dtype=torch.float32, device=device), p_mass[:, None]))
 
+    dataset = data.Data(x=x_, edge_index=edge_index, fx_per_edge=fx_per_edge,
+                        affine_per_edge=affine_per_edge, dpos_per_edge=dpos_per_edge)
+    grid_output = model_MPM(dataset)[0:n_grid ** 2]  # [n_grid**2, 3]
+    grid_m = grid_output[:, 0].view(n_grid, n_grid)  # Mass component
+    grid_v = grid_output[:, 1:3].view(n_grid, n_grid, 2)  # Velocity components # Reshape to [n_grid, n_grid]
 
-
-
-
-    dataset = data.Data(x=x_, edge_index=edge_index, fx_per_edge=fx_per_edge)
-    grid_m_ = model_MPM(dataset)
-    grid_m_ = grid_m_[0:n_grid**2]
-    grid_m_ = grid_m_.view(n_grid, n_grid)  # Reshape to [n_grid, n_grid]
-
-    # Clear grid
-    grid_v = torch.zeros((n_grid, n_grid, 2), device=device, dtype=torch.float32)
-    grid_m = torch.zeros((n_grid, n_grid), device=device, dtype=torch.float32)
-    # Calculate base grid positions and fractional offsets
-    base = (X * inv_dx - 0.5).int()
-    fx = X * inv_dx - base.float()
 
     # Quadratic B-spline kernel weights
     w_0 = 0.5 * (1.5 - fx) ** 2
@@ -1096,50 +1056,9 @@ def MPM_substep(
     # Stack weights [n_particles, 3, 2]
     w = torch.stack([w_0, w_1, w_2], dim=1)
 
-    # P2G transfer (using pre-computed offsets)
-    # Expand for all particles: [n_particles, 9, 2]
-    particle_base = base.unsqueeze(1).expand(-1, 9, -1)  # [n_particles, 9, 2]
-    particle_fx = fx.unsqueeze(1).expand(-1, 9, -1)  # [n_particles, 9, 2]
-    # Calculate grid positions for all particle-offset combinations
-    grid_positions = particle_base + offsets.long()  # [n_particles, 9, 2]
-    # Calculate weights for all combinations
-    weights = w[:, offsets[:, 0].long(), 0] * w[:, offsets[:, 1].long(), 1]  # [n_particles, 9]
-    # Calculate dpos for all combinations
-    dpos = (particle_offsets - particle_fx) * dx  # [n_particles, 9, 2]
-    # Bounds checking
-    valid_mask = ((grid_positions[:, :, 0] >= 0) & (grid_positions[:, :, 0] < n_grid) &
-                  (grid_positions[:, :, 1] >= 0) & (grid_positions[:, :, 1] < n_grid))
-    # Flatten everything for scatter operations
-    valid_indices = torch.where(valid_mask)
-    particle_idx = valid_indices[0]  # Which particle
-    offset_idx = valid_indices[1]  # Which offset (0-8)
-
-
-    # Get valid data
-    valid_grid_pos = grid_positions[valid_indices]  # [num_valid, 2]
-    valid_weights = weights[valid_indices]  # [num_valid]
-    valid_dpos = dpos[valid_indices]  # [num_valid, 2]
-    # Calculate contributions
-    affine_contrib = torch.bmm(affine[particle_idx],
-                               valid_dpos.unsqueeze(-1)).squeeze(-1)  # [num_valid, 2]
-    momentum_contrib = valid_weights.unsqueeze(-1) * (
-            p_mass[particle_idx].unsqueeze(-1) * V[particle_idx] + affine_contrib)
-    mass_contrib = valid_weights * p_mass[particle_idx]
-    # Convert 2D grid positions to 1D indices for scatter
-    grid_1d_idx = valid_grid_pos[:, 0] * n_grid + valid_grid_pos[:, 1]
-    # Scatter add to flattened grid
-    grid_v_flat = grid_v.view(-1, 2)
-    grid_m_flat = grid_m.view(-1)
-    grid_v_flat.scatter_add_(0, grid_1d_idx.unsqueeze(-1).expand(-1, 2), momentum_contrib)
-    grid_m_flat.scatter_add_(0, grid_1d_idx, mass_contrib)
-
-    # VECTORIZED: Convert momentum to velocity and apply boundary conditions ################################################
-
-    grid_m = grid_m_
 
     # Create mask for valid grid points (non-zero mass)
     valid_mass_mask = grid_m > 0
-
     # Convert momentum to velocity (vectorized)
     grid_v = torch.where(valid_mass_mask.unsqueeze(-1),
                          grid_v / grid_m.unsqueeze(-1),
@@ -1155,19 +1074,15 @@ def MPM_substep(
     # Create coordinate grids for boundary checking
     i_coords = torch.arange(n_grid, device=device).unsqueeze(1).expand(n_grid, n_grid)  # [n_grid, n_grid]
     j_coords = torch.arange(n_grid, device=device).unsqueeze(0).expand(n_grid, n_grid)  # [n_grid, n_grid]
-
     # Left boundary: i < 3 and v_x < 0 → set v_x = 0
     left_boundary_mask = (i_coords < 3) & (grid_v[:, :, 0] < 0) & valid_mass_mask
     grid_v[:, :, 0] = torch.where(left_boundary_mask, 0.0, grid_v[:, :, 0])
-
     # Right boundary: i > n_grid - 3 and v_x > 0 → set v_x = 0
     right_boundary_mask = (i_coords > n_grid - 3) & (grid_v[:, :, 0] > 0) & valid_mass_mask
     grid_v[:, :, 0] = torch.where(right_boundary_mask, 0.0, grid_v[:, :, 0])
-
     # Bottom boundary: j < 3 and v_y < 0 → set v_y = 0
     bottom_boundary_mask = (j_coords < 3) & (grid_v[:, :, 1] < 0) & valid_mass_mask
     grid_v[:, :, 1] = torch.where(bottom_boundary_mask, 0.0, grid_v[:, :, 1])
-
     # Top boundary: j > n_grid - 3 and v_y > 0 → set v_y = 0
     top_boundary_mask = (j_coords > n_grid - 3) & (grid_v[:, :, 1] > 0) & valid_mass_mask
     grid_v[:, :, 1] = torch.where(top_boundary_mask, 0.0, grid_v[:, :, 1])
@@ -1228,7 +1143,7 @@ def MPM_substep(
     # Particle advection
     X = X + dt * V
 
-    return X, V, C, F, T, Jp, M, stress, grid_m_, grid_v
+    return X, V, C, F, T, Jp, M, stress, grid_m, grid_v
 
 
 def data_generate_MPM(
@@ -1307,7 +1222,7 @@ def data_generate_MPM(
     for run in range(config.training.n_runs):
         x_list = []
 
-        N, X, V, C, F, T, Jp, M, S = MPM_init(seed=42, n_particles=n_particles, n_grid=n_grid, dx=dx, inv_dx=inv_dx, device=device)
+        N, X, V, C, F, T, Jp, M, S = init_MPM_9cubes(seed=42, n_particles=n_particles, n_grid=n_grid, dx=dx, inv_dx=inv_dx, device=device)
 
         # Main simulation loop
         for it in trange(10000):
@@ -1378,7 +1293,7 @@ def data_generate_MPM(
                     # 3. F particle level
                     plt.subplot(2, 3, 3)
                     f_norm = torch.norm(F.view(n_particles, -1), dim=1).cpu().numpy()
-                    plt.scatter(X[:, 0].cpu(), X[:, 1].cpu(), c=f_norm, s=1, cmap='coolwarm', vmin=1, vmax=2)
+                    plt.scatter(X[:, 0].cpu(), X[:, 1].cpu(), c=f_norm, s=1, cmap='coolwarm', vmin=1.44-0.2, vmax=1.44+0.2)
                     plt.colorbar(fraction=0.046, pad=0.04)
                     # print(
                     #     f"F min: {np.min(f_norm):.6f}, max: {np.max(f_norm):.6f}, mean: {np.mean(f_norm):.6f}, std: {np.std(f_norm):.6f}")

@@ -8,13 +8,18 @@ class MPM_P2G(pyg.nn.MessagePassing):
         self.device = device
 
     def forward(self, data):
-        x, edge_index, fx_per_edge = data.x, data.edge_index, data.fx_per_edge
-        pred = self.propagate(edge_index, x=x, fx=fx_per_edge)
+        x, edge_index, fx_per_edge, affine_per_edge, dpos_per_edge = (data.x, data.edge_index,
+                                                                      data.fx_per_edge, data.affine_per_edge, data.dpos_per_edge)
+
+        mass = x[:, 0:1]
+        d_pos = x[:, 1:3]
+
+        pred = self.propagate(edge_index, mass=mass, d_pos=d_pos, fx=fx_per_edge, affine=affine_per_edge, dpos_per_edge=dpos_per_edge)
         return pred
 
-    def message(self, x_j, fx):
+    def message(self, mass_j, d_pos_j, fx, affine, dpos_per_edge):
         # Each edge corresponds to one 3x3 offset
-        n_edges = x_j.size(0)
+        n_edges = mass_j.size(0)
         offset_idx = torch.arange(n_edges, device=self.device) % 9
         # Convert flat index to 2D: 0->(0,0), 1->(0,1), 2->(0,2), 3->(1,0), etc.
         i_idx = offset_idx // 3  # [0,0,0,1,1,1,2,2,2, ...]
@@ -30,6 +35,8 @@ class MPM_P2G(pyg.nn.MessagePassing):
         edge_indices = torch.arange(n_edges, device=self.device)
         weights = w[edge_indices, i_idx, 0] * w[edge_indices, j_idx, 1]
 
-        out = x_j.squeeze(-1) * weights
+        out_m = mass_j.squeeze(-1) * weights
 
-        return out[:,None]
+        out_v = weights.unsqueeze(-1) * (mass_j * d_pos_j + torch.bmm(affine, dpos_per_edge.unsqueeze(-1)).squeeze(-1))
+
+        return torch.cat([out_m.unsqueeze(-1), out_v], dim=-1)

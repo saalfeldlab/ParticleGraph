@@ -313,6 +313,93 @@ def init_neurons(config=[], scenario='none', ratio=1, device=[]):
     return pos, dpos, type, features, age, particle_id
 
 
+def init_MPM_9cubes(
+        seed=42,
+        n_particles=[],
+        n_grid=[],
+        dx=[],
+        inv_dx=[],
+        dt=[],
+        device='cpu'
+):
+    torch.manual_seed(seed)
+
+    p_vol, p_rho = (dx * 0.5) ** 2, 1
+    p_mass = p_vol * p_rho
+
+    N = torch.arange(n_particles, dtype=torch.float32, device=device)[:, None]
+    x = torch.zeros((n_particles, 2), dtype=torch.float32, device=device)
+    v = torch.zeros((n_particles, 2), dtype=torch.float32, device=device)
+    C = torch.zeros((n_particles, 2, 2), dtype=torch.float32, device=device)
+    F = torch.eye(2, dtype=torch.float32, device=device).unsqueeze(0).expand(n_particles, -1, -1)
+    T = torch.zeros((n_particles, 1), dtype=torch.int32, device=device)
+    Jp = torch.ones((n_particles, 1), dtype=torch.float32, device=device)
+    M = torch.full((n_particles, 1), p_mass, dtype=torch.float32, device=device)
+    S = torch.zeros((n_particles, 2, 2), dtype=torch.float32, device=device)
+    GM = torch.zeros((n_grid, n_grid), dtype=torch.float32, device=device)
+    GP = torch.zeros((n_grid, n_grid), dtype=torch.float32, device=device)
+
+    group_size = n_particles // 9
+    group_indices = torch.arange(n_particles, device=device) // group_size
+
+    # 3x3 grid of cubes
+    cube_row = group_indices // 3
+    cube_col = group_indices % 3
+
+    x[:, 0] = torch.rand(n_particles, device=device) * 0.15 + 0.2 + 0.25 * cube_col.float()
+    x[:, 1] = torch.rand(n_particles, device=device) * 0.15 + 0.3 + 0.25 * cube_row.float()
+
+    # Random materials for each cube
+    cube_materials = torch.randperm(9, device=device) % 3
+    T = cube_materials[group_indices].unsqueeze(1).int()
+
+    # Random velocity per cube
+    cube_velocities = (torch.rand(9, 2, device=device) - 0.5) * 4.0  # Random velocities in [-2, 2]
+    v = cube_velocities[group_indices]
+
+    return N, x, v, C, F, T, Jp, M, S
+
+def init_MPM(
+        seed=42,
+        n_particles=[],
+        n_grid=[],
+        dx=[],
+        inv_dx=[],
+        dt=[],
+        device='cpu'
+):
+
+    p_vol, p_rho = (dx * 0.5) ** 2, 1
+    p_mass = p_vol * p_rho
+    E, nu = 0.1e4, 0.2  # Young's modulus and Poisson's ratio
+    mu_0, lambda_0 = E / (2 * (1 + nu)), E * nu / ((1 + nu) * (1 - 2 * nu))  # Lame parameters
+
+    N = torch.arange(n_particles, dtype=torch.float32, device=device)
+    N = N[:,None]
+    x = torch.zeros((n_particles,2), dtype=torch.float32, device=device)
+    v = torch.zeros((n_particles,2), dtype=torch.float32, device=device)
+    C = torch.zeros((n_particles,2,2), dtype=torch.float32, device=device)
+    F = torch.zeros((n_particles,2,2), dtype=torch.float32, device=device)
+    T = torch.zeros((n_particles,1), dtype=torch.int32, device=device)
+    Jp = torch.zeros((n_particles,1), dtype=torch.float32, device=device)
+    M = torch.zeros((n_particles,1), dtype=torch.float32, device=device)
+    S = torch.zeros((n_particles, 2,2), dtype=torch.float32, device=device)
+    GM = torch.zeros((n_grid, n_grid), dtype=torch.float32, device=device)
+    GP = torch.zeros((n_grid, n_grid), dtype=torch.float32, device=device)
+
+    group_size = n_particles // 3
+    group_indices = torch.arange(n_particles, device=device) // group_size
+
+    x[:,0] =torch.rand(n_particles, device=device) * 0.2 + 0.3 + 0.10 * group_indices.float()
+    x[:,1] =torch.rand(n_particles, device=device) * 0.2 + 0.05 + 0.32 * group_indices.float()
+    F = torch.eye(2, dtype=torch.float32, device=device).unsqueeze(0).expand(n_particles, -1, -1)
+    T = (torch.arange(n_particles, device=device) // group_size).unsqueeze(1).int()  # 0: fluid 1: jelly 2: snow
+    Jp.fill_(1.0)
+    M.fill_(p_mass)
+
+    return N, x, v, C, F, T, Jp, M, S
+
+
 def get_index(n_particles, n_particle_types):
     index_particles = []
     for n in range(n_particle_types):
