@@ -1013,8 +1013,6 @@ def MPM_substep(
 
     # P2G loop ###################################################################################################
 
-    # Calculate distances between grid points and particles
-
     base = (X * inv_dx - 0.5).int()
     grid_positions = base.unsqueeze(1) + offsets.unsqueeze(0)  # [n_particles, 9, 2]
     particle_indices = torch.arange(n_particles, device=device).unsqueeze(1).expand(-1, 9).flatten()
@@ -1173,7 +1171,6 @@ def data_generate_MPM(
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
     n_grid = simulation_config.n_grid
-
     group_size = n_particles // n_particle_types
 
     delta_t = simulation_config.delta_t
@@ -1222,7 +1219,7 @@ def data_generate_MPM(
     for run in range(config.training.n_runs):
         x_list = []
 
-        N, X, V, C, F, T, Jp, M, S = init_MPM_shapes(geometry='letters', n_shapes=9, seed=42, n_particles=n_particles, n_grid=n_grid, dx=dx, inv_dx=inv_dx, device=device)
+        N, X, V, C, F, T, Jp, M, S = init_MPM_shapes(geometry='discs', n_shapes=9, seed=42, n_particles=n_particles, n_grid=n_grid, dx=dx, inv_dx=inv_dx, device=device)
 
         # Main simulation loop
         for it in trange(10000):
