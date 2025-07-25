@@ -1222,7 +1222,7 @@ def data_generate_MPM(
     for run in range(config.training.n_runs):
         x_list = []
 
-        N, X, V, C, F, T, Jp, M, S = init_MPM_9cubes(seed=42, n_particles=n_particles, n_grid=n_grid, dx=dx, inv_dx=inv_dx, device=device)
+        N, X, V, C, F, T, Jp, M, S = init_MPM_shapes(geometry='letters', n_shapes=9, seed=42, n_particles=n_particles, n_grid=n_grid, dx=dx, inv_dx=inv_dx, device=device)
 
         # Main simulation loop
         for it in trange(10000):
