@@ -990,8 +990,29 @@ def taichi_MPM_init(seed=42, device='cpu'):
     return N_tensor, x_tensor, v_tensor, C_tensor, F_tensor, material_tensor, Jp_tensor, mass_tensor, S_tensor, GM_tensor, GP_tensor
 
 
-def MPM_substep(model_MPM, X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, inv_dx, mu_0, lambda_0, p_vol, offsets, particle_offsets, grid_coords, device,
-                verbose=False):
+def MPM_substep(
+        model_MPM,
+        X,
+        V,
+        C,
+        F,
+        T,
+        Jp,
+        M,
+        n_particles,
+        n_grid,
+        dt,
+        dx,
+        inv_dx,
+        mu_0,
+        lambda_0,
+        p_vol,
+        offsets,
+        particle_offsets,
+        grid_coords,
+        device,
+        verbose=False
+):
     """
     MPM substep implementation
     """
@@ -1085,20 +1106,21 @@ def MPM_substep(model_MPM, X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, in
     # P2G loop ###################################################################################################
 
     # Calculate distances between grid points and particles
-    base = (X * inv_dx - 0.5).int()
-    fx = X * inv_dx - base.float()
-    w_0 = 0.5 * (1.5 - fx) ** 2
-    w_1 = 0.75 - (fx - 1) ** 2
-    w_2 = 0.5 * (fx - 0.5) ** 2
-    w = torch.stack([w_0, w_1, w_2], dim=1)
+
+
+
     grid_positions = base.unsqueeze(1) + offsets.long()  # [n_particles, 9, 2]
     particle_indices = torch.arange(n_particles, device=device).unsqueeze(1).expand(-1, 9).flatten()
     grid_indices = grid_positions.flatten().reshape(-1, 2)  # Flatten to [n_particles*9, 2]
     grid_indices_1d = grid_indices[:, 0] * n_grid + grid_indices[:, 1]
     edge_index = torch.stack([particle_indices, grid_indices_1d], dim=0)
     edge_index [0,:] += n_grid**2  # offset particle indices
+    base = (X * inv_dx - 0.5).int()
+    fx = X * inv_dx - base.float()
+    fx_per_edge = fx.unsqueeze(1).expand(-1, 9, -1).flatten(end_dim=1)  # [n_particles*9, 2]
     x_ = torch.cat((torch.zeros((n_grid**2,1),dtype=torch.float32,device=device),p_mass[:,None]))
-    dataset = data.Data(x=x_, edge_index=edge_index)
+
+    dataset = data.Data(x=x_, edge_index=edge_index, fx_per_edge=fx_per_edge)
     grid_m = model_MPM(dataset)
 
     # Clear grid
@@ -1258,8 +1280,19 @@ def MPM_substep(model_MPM, X, V, C, F, T, Jp, M, n_particles, n_grid, dt, dx, in
     return X, V, C, F, T, Jp, M, stress_norm_return, grid_m, grid_momentum_norm
 
 
-def data_generate_MPM(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
-                      scenario='none', device=None, bSave=True):
+def data_generate_MPM(
+        config,
+        visualize=True,
+        run_vizualized=0,
+        style='color',
+        erase=False,
+        step=5,
+        alpha=0.2,
+        ratio=1,
+        scenario='none',
+        device=None,
+        bSave=True
+):
     #taichi_MPM_deubg()
 
     simulation_config = config.simulation
