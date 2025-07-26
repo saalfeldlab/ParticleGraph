@@ -333,6 +333,8 @@ class TrainingConfig(BaseModel):
     sub_batches: int = 1
     sequence: list[str] = ["to track", "to cell"]
 
+    MPM_trainer : str = "F"
+
 
 # Main config schema for ParticleGraph
 

@@ -98,7 +98,9 @@ def data_train_material(config, erase, best_model, device):
     model_config = config.graph_model
     plot_config = config.plotting
 
-    print(f'training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+    trainer = train_config.MPM_trainer
+
+    print(f'training data ... {model_config.particle_model_name} {model_config.mesh_model_name} loss on {trainer}')
 
     dimension = simulation_config.dimension
     n_epochs = train_config.n_epochs
@@ -236,8 +238,10 @@ def data_train_material(config, erase, best_model, device):
                 run = 0
                 k = time_window + np.random.randint(run_lengths[run] - 1 - time_window - time_step - recursive_loop)
                 x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
-                y = x[:, 5 + dimension * 2: 9 + dimension * 2].clone().detach() # F
-                # y = x[:, 9 + dimension * 2: 13 + dimension * 2].clone().detach() # S
+                if trainer == 'F':
+                    y = x[:, 5 + dimension * 2: 9 + dimension * 2].clone().detach() # F
+                elif trainer == 'S':
+                    y = x[:, 12 + dimension * 2: 16 + dimension * 2].clone().detach() # S
 
                 t = torch.ones((n_particles,1), dtype=torch.float32, device=device) * k/n_frames
                 x_ = torch.cat((x[:, 1:1 + dimension], t), dim=1).clone().detach()
@@ -274,7 +278,10 @@ def data_train_material(config, erase, best_model, device):
                 with torch.no_grad():
                     for k in k_list:
                         x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
-                        y = x[:, 9 + dimension * 2: 13 + dimension * 2].clone().detach() # F
+                        if trainer == 'F':
+                            y = x[:, 5 + dimension * 2: 9 + dimension * 2].clone().detach() # F
+                        elif trainer == 'S':
+                            y = x[:, 12 + dimension * 2: 16 + dimension * 2].clone().detach()  # S
                         t = torch.ones((n_particles,1), dtype=torch.float32, device=device) * k/n_frames
                         x_ = torch.cat((x[:, 1:1 + dimension], t), dim=1).clone().detach()
                         data_id = torch.ones((n_particles, 1), dtype=torch.float32, device=device) * run
@@ -282,32 +289,34 @@ def data_train_material(config, erase, best_model, device):
                         pred = model(dataset,data_id,True)
                         error.append(F.mse_loss(pred, y).item())
 
-                # print(f'iteration {N} Error: {np.mean(1000 * error)/len(k_list):.6f}')
-
                 plt.style.use('dark_background')
 
                 fig = plt.figure(figsize=(18, 8))
                 plt.subplot(1, 2, 1)
-                f_norm = torch.norm(y.view(n_particles, -1), dim=1).cpu().numpy()
-                plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=f_norm, s=1, cmap='coolwarm', vmin=1.44 - 0.2,
-                            vmax=1.44 + 0.2)
-                plt.colorbar(fraction=0.046, pad=0.04)
-                # stress_norm = torch.norm(y.view(n_particles, -1), dim=1)
-                # stress_norm = stress_norm[:, None]
-                # plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=stress_norm[:, 0].cpu(), s=1, cmap='hot', vmin=0, vmax=6E-3)
-                # plt.colorbar(fraction=0.046, pad=0.04)
+                if trainer == 'F':
+                    f_norm = torch.norm(y.view(n_particles, -1), dim=1).cpu().numpy()
+                    plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=f_norm, s=1, cmap='coolwarm', vmin=1.44 - 0.2,
+                                vmax=1.44 + 0.2)
+                    plt.colorbar(fraction=0.046, pad=0.04)
+                elif trainer == 'S':
+                    stress_norm = torch.norm(y.view(n_particles, -1), dim=1)
+                    stress_norm = stress_norm[:, None]
+                    plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=stress_norm[:, 0].cpu(), s=1, cmap='hot', vmin=0, vmax=6E-3)
+                    plt.colorbar(fraction=0.046, pad=0.04)
                 plt.title('F (deformation)')
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
                 plt.subplot(1, 2, 2)
-                f_norm = torch.norm(pred.view(n_particles, -1), dim=1).cpu().numpy()
-                plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=f_norm, s=1, cmap='coolwarm', vmin=1.44 - 0.2,
-                            vmax=1.44 + 0.2)
-                plt.colorbar(fraction=0.046, pad=0.04)
-                # stress_norm = torch.norm(pred.view(n_particles, -1), dim=1)
-                # stress_norm = stress_norm[:, None]
-                # plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=stress_norm[:, 0].cpu(), s=1, cmap='hot', vmin=0, vmax=6E-3)
-                # plt.colorbar(fraction=0.046, pad=0.04)
+                if trainer == 'F':
+                    f_norm = torch.norm(pred.view(n_particles, -1), dim=1).cpu().numpy()
+                    plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=f_norm, s=1, cmap='coolwarm', vmin=1.44 - 0.2,
+                                vmax=1.44 + 0.2)
+                    plt.colorbar(fraction=0.046, pad=0.04)
+                elif trainer == 'S':
+                    stress_norm = torch.norm(pred.view(n_particles, -1), dim=1)
+                    stress_norm = stress_norm[:, None]
+                    plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=stress_norm[:, 0].cpu(), s=1, cmap='hot', vmin=0, vmax=6E-3)
+                    plt.colorbar(fraction=0.046, pad=0.04)
                 plt.title('F (deformation)')
                 plt.text(0.05, 0.95,
                          f'epoch: {epoch} iteration: {N} error: {np.mean(1000 * error) / len(k_list):.6f}', )

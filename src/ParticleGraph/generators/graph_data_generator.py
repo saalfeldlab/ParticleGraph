@@ -989,7 +989,6 @@ def data_generate_MPM(
             X, V, C, F, T, Jp, M, S, GM, GV = MPM_step(model_MPM, X, V, C, F, T, Jp, M, n_particles, n_grid,
                                                           delta_t, dx, inv_dx, mu_0, lambda_0, p_vol, offsets, particle_offsets, grid_coords, device)
 
-
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
 
