@@ -231,6 +231,9 @@ def data_train_material(config, erase, best_model, device):
 
         for N in trange(Niter):
 
+            # check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 500,
+            #                        memory_percentage_threshold=0.6)
+
             dataset_batch = []
             loss = 0
             for batch in range(batch_size):
@@ -5495,7 +5498,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.savefig(f"./{log_dir}/tmp_recons/Boundary_{config_file}_{num}.tif", dpi=80)
                 plt.close()
 
-    
+
 
     if 'inference' in test_mode:
         torch.save(x_inference_list, f"./{log_dir}/x_inference_list_{run}.pt")

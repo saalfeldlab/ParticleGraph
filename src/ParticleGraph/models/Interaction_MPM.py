@@ -4,6 +4,7 @@ from ParticleGraph.models.MLP import MLP
 from ParticleGraph.utils import to_numpy, reparameterize
 from ParticleGraph.models.Siren_Network import *
 from ParticleGraph.models.Gumbel import gumbel_softmax_sample, gumbel_softmax
+from ParticleGraph.generators.MPM_P2G import MPM_P2G
 
 class Interaction_MPM(nn.Module):
 
@@ -30,16 +31,6 @@ class Interaction_MPM(nn.Module):
         self.outermost_linear_nnr = model_config.outermost_linear_nnr
         self.omega= model_config.omega
 
-        self.siren = Siren(in_features=self.input_size_nnr, out_features=self.output_size_nnr, hidden_features=self.hidden_dim_nnr,
-                           hidden_layers=self.n_layers_nnr, first_omega_0=self.omega, hidden_omega_0=self.omega, outermost_linear=True).to(device)
-
-        # self.mlp0 = MLP(input_size=3, output_size=1, nlayers=5, hidden_size=128, device=device)
-        # self.mlp1 = MLP(input_size=2, output_size=1, nlayers=2, hidden_size=4, device=device)
-
-        self.a = nn.Parameter(
-            torch.tensor(np.ones((self.n_dataset, int(self.n_particles) , self.embedding_dim)),
-                         device=self.device,
-                         requires_grad=True, dtype=torch.float32))
 
         self.n_particle_types = simulation_config.n_particle_types
         self.n_particles = simulation_config.n_particles
@@ -60,13 +51,29 @@ class Interaction_MPM(nn.Module):
 
         self.p_vol, self.p_rho = (self.dx * 0.5) ** 2, 1
         E, nu = 0.1e4, 0.2  # Young's modulus and Poisson's ratio
-        mu_0, lambda_0 = E / (2 * (1 + nu)), E * nu / ((1 + nu) * (1 - 2 * nu))  # Lame parameters
+        self.mu_0, self.lambda_0 = E / (2 * (1 + nu)), E * nu / ((1 + nu) * (1 - 2 * nu))  # Lame parameters
 
         self.offsets = torch.tensor([[i, j] for i in range(3) for j in range(3)],
                                device=device, dtype=torch.float32)  # [9, 2]
         self.particle_offsets = self.offsets.unsqueeze(0).expand(self.n_particles, -1, -1)
         self.expansion_factor = simulation_config.MPM_expansion_factor
         self.gravity = simulation_config.MPM_gravity
+
+
+
+        self.model_MPM = MPM_P2G(aggr_type='add', device=device)
+
+        self.siren = Siren(in_features=self.input_size_nnr, out_features=self.output_size_nnr, hidden_features=self.hidden_dim_nnr,
+                           hidden_layers=self.n_layers_nnr, first_omega_0=self.omega, hidden_omega_0=self.omega, outermost_linear=True).to(device)
+
+        # self.mlp0 = MLP(input_size=3, output_size=1, nlayers=5, hidden_size=128, device=device)
+        # self.mlp1 = MLP(input_size=2, output_size=1, nlayers=2, hidden_size=4, device=device)
+
+        self.a = nn.Parameter(
+            torch.tensor(np.ones((self.n_dataset, int(self.n_particles) , self.embedding_dim)),
+                         device=self.device,
+                         requires_grad=True, dtype=torch.float32))
+
 
     def forward(self, data=[], data_id=[], k=[], training=[]):
 
@@ -75,38 +82,38 @@ class Interaction_MPM(nn.Module):
         N = x[:,0:1]
         pos = x[:,1:3]  # pos is the absolute position
         d_pos = x[:,3:5]  # d_pos is the velocity
-        C = x[:,5:9].view(-1, 2, 2)  # C is the affine deformation gradient
-        F = x[:,9:13].view(-1, 2, 2) # F is the deformation gradient
+        C = x[:,5:9].reshape(-1, 2, 2)  # C is the affine deformation gradient
+        F = x[:,9:13].reshape(-1, 2, 2) # F is the deformation gradient
         T = x[:,13:14].long() # T is the type of particle
         Jp = x[:,14:15] # Jp is the Jacobian of the deformation gradient
         M = x[:,15:16]  # M is the mass of the particle
-        S = x[:,16:20].view(-1, 2, 2)
+        S = x[:,16:20].reshape(-1, 2, 2)
 
         frame = k / self.n_frames
-        features = torch.cat((pos, frame), dim=1).clone().detach()
-        F_sample = self.siren(features)
+        features = torch.cat((pos, frame), dim=1).detach()
+        F_sample = self.siren(features).reshape(-1, 2, 2)
 
-        X_, V_, C_, F_, T_, Jp_, M_, S_, GM_, GV_ = self.MPM_engine(model_MPM, pos, d_pos, C, F_sample, T, Jp, M, self.n_particles, self.n_grid,
+        X_, V_, C_, F_, T_, Jp_, M_, S_, GM_, GV_ = self.MPM_engine(self.model_MPM, pos, d_pos, C, F_sample,
+                                                    T, Jp, M, self.n_particles, self.n_grid,
                                                    self.delta_t, self.dx, self.inv_dx, self.mu_0, self.lambda_0, self.p_vol,
                                                    self.offsets, self.particle_offsets, self.grid_coords,
-                                                   self.expansion_factor, self.gravity)
+                                                   self.expansion_factor, self.gravity, self.device)
 
         return F_
 
 
-
-    def MPM_engine(model_MPM, X, V, C, F, T, Jp, M, n_particles,
+    def MPM_engine(self, model_MPM, X, V, C, F, T, Jp, M, n_particles,
                        n_grid, dt, dx, inv_dx, mu_0, lambda_0, p_vol,
                        offsets, particle_offsets, grid_coords, expansion_factor,
-                        gravity, frame,device):
+                        gravity, device):
         """
         MPM substep implementation
         """
 
         # Material masks
-        liquid_mask = (T.squeeze() == 0)
-        jelly_mask = (T.squeeze() == 1)
-        snow_mask = (T.squeeze() == 2)
+        liquid_mask = (T.squeeze() == 0).detach()
+        jelly_mask = (T.squeeze() == 1).detach()
+        snow_mask = (T.squeeze() == 2).detach()
 
         # Initialize
         p_mass = M.squeeze(-1)
@@ -114,17 +121,12 @@ class Interaction_MPM(nn.Module):
         grid_v = torch.zeros((n_grid, n_grid, 2), device=device, dtype=torch.float32)
 
         # Create identity matrices for all particles
-        identity = torch.eye(2, device=device).unsqueeze(0).expand(n_particles, -1, -1)
+        identity = torch.eye(2, device=device).unsqueeze(0).expand(X.shape[0], -1, -1)
 
         # Calculate F ############################################################################################
 
         # Update deformation gradient: F = (I + dt * C) * F_old
         F = (identity + dt * C) @ F
-
-        return X, V, C, F, T, Jp, M, stress, grid_m, grid_v
-
-
-
 
         # Hardening coefficient
         h = torch.exp(10 * (1.0 - Jp.squeeze()))
@@ -133,11 +135,14 @@ class Interaction_MPM(nn.Module):
         mu = mu_0 * h
         la = lambda_0 * h
         mu = torch.where(liquid_mask, torch.tensor(0.0, device=device), mu)
+
         # SVD decomposition
         U, sig, Vh = torch.linalg.svd(F, driver='gesvdj')
+
         # SVD sign correction without in-place ops
         det_U = torch.det(U)
         det_Vh = torch.det(Vh)
+
         neg_det_U = det_U < 0  # [n_particles] bool tensor
         neg_det_Vh = det_Vh < 0
         # Reshape masks for broadcasting
@@ -180,22 +185,34 @@ class Interaction_MPM(nn.Module):
                               sig)
         # Update plastic deformation
         plastic_ratio = torch.prod(original_sig / new_sig, dim=1, keepdim=True)
+
         Jp = Jp * plastic_ratio
         sig = new_sig
         J = torch.prod(sig, dim=1)
+        sig_diag = torch.diag_embed(sig)
 
-        if frame > 1000:
-            expansion_factor = 1.0  # 1% expansion per timestep
-
-        J = J / expansion_factor
-        sig_diag = torch.diag_embed(sig) / expansion_factor
         # For liquid: F = sqrt(J) * I
         F_liquid = identity * torch.sqrt(J).unsqueeze(-1).unsqueeze(-1)
         # For solid materials: F = U @ sig_diag @ Vh
         F_solid = U @ sig_diag @ Vh
+
         # Apply reconstruction based on material type
-        F = torch.where(liquid_mask.unsqueeze(-1).unsqueeze(-1), F_liquid, F)
-        F = torch.where((jelly_mask | snow_mask).unsqueeze(-1).unsqueeze(-1), F_solid, F)
+        # F = torch.where(liquid_mask.unsqueeze(-1).unsqueeze(-1), F_liquid, F)
+        # F = torch.where((jelly_mask | snow_mask).unsqueeze(-1).unsqueeze(-1), F_solid, F)
+
+        F[liquid_mask] = F_liquid[liquid_mask]
+        solid_mask = jelly_mask | snow_mask
+        F[solid_mask] = F_solid[solid_mask]
+
+        F = F.reshape(n_particles, 4)
+        return X, V, C, F, T, Jp, M, F, grid_m, grid_v
+
+
+
+
+
+
+
 
         # Calculate stress ############################################################################################
         R = U @ Vh
@@ -332,3 +349,5 @@ class Interaction_MPM(nn.Module):
         X = X + dt * V
 
         return X, V, C, F, T, Jp, M, stress, grid_m, grid_v
+
+
