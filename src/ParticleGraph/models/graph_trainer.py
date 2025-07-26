@@ -238,31 +238,31 @@ def data_train_material(config, erase, best_model, device):
                 run = 0
                 k = time_window + np.random.randint(run_lengths[run] - 1 - time_window - time_step - recursive_loop)
                 x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
+                x_next = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
                 if trainer == 'F':
-                    y = x[:, 5 + dimension * 2: 9 + dimension * 2].clone().detach() # F
+                    y = x_next[:, 5 + dimension * 2: 9 + dimension * 2].clone().detach() # F
                 elif trainer == 'S':
-                    y = x[:, 12 + dimension * 2: 16 + dimension * 2].clone().detach() # S
+                    y = x_next[:, 12 + dimension * 2: 16 + dimension * 2].clone().detach() # S
 
-                t = torch.ones((n_particles,1), dtype=torch.float32, device=device) * k/n_frames
-                x_ = torch.cat((x[:, 1:1 + dimension], t), dim=1).clone().detach()
-
-                dataset = data.Data(x=x_, edge_index=[], num_nodes=x.shape[0])
+                dataset = data.Data(x=x, edge_index=[], num_nodes=x.shape[0])
                 dataset_batch.append(dataset)
 
                 if batch == 0:
                     data_id = torch.ones((n_particles,1), dtype=torch.float32, device=device) * run
                     x_batch = x
                     y_batch = y
+                    k_batch = torch.ones((x.shape[0], 1), dtype=torch.int, device=device) * k
                 else:
                     data_id = torch.cat((data_id, torch.ones((n_particles,1), dtype=torch.float32, device=device) * run), dim=0)
                     x_batch = torch.cat((x_batch, x), dim=0)
                     y_batch = torch.cat((y_batch, y), dim=0)
+                    k_batch = torch.cat((k_batch, torch.ones((x.shape[0], 1), dtype=torch.int, device=device) * k), dim=0)
 
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
 
             for batch in batch_loader:
-                pred = model(batch, data_id=data_id, training=True)
+                pred = model(batch, data_id=data_id, k=k_batch, training=True)
 
             loss = F.mse_loss(pred, y_batch)
 
@@ -271,7 +271,7 @@ def data_train_material(config, erase, best_model, device):
 
             total_loss += loss.item()
 
-            if ((epoch < 30) & (N % plot_frequency == 0)) | (N == 0):
+            if False: # ((epoch < 30) & (N % plot_frequency == 0)) | (N == 0):
 
                 k_list = [250, 340, 680, 930]
                 error = list([])
@@ -282,11 +282,10 @@ def data_train_material(config, erase, best_model, device):
                             y = x[:, 5 + dimension * 2: 9 + dimension * 2].clone().detach() # F
                         elif trainer == 'S':
                             y = x[:, 12 + dimension * 2: 16 + dimension * 2].clone().detach()  # S
-                        t = torch.ones((n_particles,1), dtype=torch.float32, device=device) * k/n_frames
-                        x_ = torch.cat((x[:, 1:1 + dimension], t), dim=1).clone().detach()
                         data_id = torch.ones((n_particles, 1), dtype=torch.float32, device=device) * run
-                        dataset = data.Data(x=x_, edge_index=[], num_nodes=x.shape[0])
-                        pred = model(dataset,data_id,True)
+                        k_list = torch.ones((n_particles, 1), dtype=torch.int, device=device) * k
+                        dataset = data.Data(x=x, edge_index=[], num_nodes=x.shape[0])
+                        pred = model(dataset,data_id,k_list,True)
                         error.append(F.mse_loss(pred, y).item())
 
                 plt.style.use('dark_background')
@@ -337,7 +336,7 @@ def data_train_material(config, erase, best_model, device):
                    os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / n_particles))
-        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / n_particles))
+        logger.info("Epoch {}. Loss: {:.10f}".format(epoch, total_loss / n_particles))
         list_loss.append(total_loss / n_particles)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
@@ -347,7 +346,7 @@ def data_train_material(config, erase, best_model, device):
         plt.xlim([0, n_epochs])
         plt.ylabel('Loss', fontsize=12)
         plt.xlabel('Epochs', fontsize=12)
-        plt.text(0.05, 0.95, f'epoch: {epoch} final loss: {list_loss[-1]:.6f}', transform=ax.transAxes,)
+        plt.text(0.05, 0.95, f'epoch: {epoch} final loss: {list_loss[-1]:.10f}', transform=ax.transAxes,)
         plt.tight_layout()
         ax = fig.add_subplot(1, 5, 2)
         embedding = to_numpy(model.a[0])
@@ -641,8 +640,7 @@ def data_train_particle(config, erase, best_model, device):
                     data_id = torch.cat((data_id, torch.ones((y.shape[0], 1), dtype=torch.int) * run), dim=0)
                     x_batch = torch.cat((x_batch, x), dim=0)
                     y_batch = torch.cat((y_batch, y), dim=0)
-                    k_batch = torch.cat((k_batch, torch.ones((x.shape[0], 1), dtype=torch.int, device=device) * k),
-                                        dim=0)
+                    k_batch = torch.cat((k_batch, torch.ones((x.shape[0], 1), dtype=torch.int, device=device) * k), dim=0)
                     if batch_ratio < 1:
                         ids_batch = np.concatenate((ids_batch, ids + ids_index), axis=0)
 

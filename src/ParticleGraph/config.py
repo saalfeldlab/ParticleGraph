@@ -41,6 +41,11 @@ class SimulationConfig(BaseModel):
     pos_init: str = "uniform"
     dpos_init: float = 0
 
+    MPM_expansion_factor: float = 1.0
+    MPM_n_objects: int = 9
+    MPM_object_type: Literal['cubes', 'discs', 'stars', 'letters'] = 'discs'
+    MPM_gravity: float = -50
+
     diffusion_coefficients: list[list[float]] = None
 
     angular_sigma: float = 0

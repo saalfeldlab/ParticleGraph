@@ -318,6 +318,7 @@ def init_MPM_shapes(
         n_shapes=3,
         seed=42,
         n_particles=[],
+        n_particle_types=[],
         n_grid=[],
         dx=[],
         inv_dx=[],
@@ -334,7 +335,7 @@ def init_MPM_shapes(
     v = torch.zeros((n_particles, 2), dtype=torch.float32, device=device)
     C = torch.zeros((n_particles, 2, 2), dtype=torch.float32, device=device)
     F = torch.eye(2, dtype=torch.float32, device=device).unsqueeze(0).expand(n_particles, -1, -1)
-    T = torch.zeros((n_particles, 1), dtype=torch.int32, device=device)
+    T = torch.ones((n_particles, 1), dtype=torch.int32, device=device)
     Jp = torch.ones((n_particles, 1), dtype=torch.float32, device=device)
     M = torch.full((n_particles, 1), p_mass, dtype=torch.float32, device=device)
     S = torch.zeros((n_particles, 2, 2), dtype=torch.float32, device=device)
@@ -608,8 +609,8 @@ def init_MPM_shapes(
         x[:, 1] = letter_positions[:, 1]
 
     # Random materials for each shape
-    shape_materials = torch.randperm(n_shapes, device=device) % 3
-    T = shape_materials[group_indices].unsqueeze(1).int()
+    # shape_materials = torch.randperm(n_shapes, device=device) % n_particle_types
+    # T = shape_materials[group_indices].unsqueeze(1).int()
 
     # Random velocity per shape
     shape_velocities = (torch.rand(n_shapes, 2, device=device) - 0.5) * 4.0

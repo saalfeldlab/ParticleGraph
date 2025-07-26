@@ -926,6 +926,10 @@ def data_generate_MPM(
     n_particles = simulation_config.n_particles
     n_grid = simulation_config.n_grid
     group_size = n_particles // n_particle_types
+    MPM_n_objects = simulation_config.MPM_n_objects
+    MPM_object_type = simulation_config.MPM_object_type
+    gravity = simulation_config.MPM_gravity
+
 
     delta_t = simulation_config.delta_t
     n_frames = simulation_config.n_frames
@@ -947,8 +951,10 @@ def data_generate_MPM(
     offsets = torch.tensor([[i, j] for i in range(3) for j in range(3)],
                            device=device, dtype=torch.float32)  # [9, 2]
     particle_offsets = offsets.unsqueeze(0).expand(n_particles, -1, -1)
+    expansion_factor = simulation_config.MPM_expansion_factor
 
     model_MPM = MPM_P2G(aggr_type='add', device=device)
+
 
     n_frames = simulation_config.n_frames
     cmap = CustomColorMap(config=config)
@@ -974,7 +980,7 @@ def data_generate_MPM(
     for run in range(config.training.n_runs):
         x_list = []
 
-        N, X, V, C, F, T, Jp, M, S = init_MPM_shapes(geometry='discs', n_shapes=9, seed=42, n_particles=n_particles, n_grid=n_grid, dx=dx, inv_dx=inv_dx, device=device)
+        N, X, V, C, F, T, Jp, M, S = init_MPM_shapes(geometry=MPM_object_type, n_shapes=MPM_n_objects, seed=42, n_particles=n_particles, n_particle_types=n_particle_types, n_grid=n_grid, dx=dx, inv_dx=inv_dx, device=device)
 
         # Main simulation loop
         for it in trange(simulation_config.start_frame, n_frames):
@@ -987,7 +993,7 @@ def data_generate_MPM(
                 x_list.append(x.clone().detach())
 
             X, V, C, F, T, Jp, M, S, GM, GV = MPM_step(model_MPM, X, V, C, F, T, Jp, M, n_particles, n_grid,
-                                                          delta_t, dx, inv_dx, mu_0, lambda_0, p_vol, offsets, particle_offsets, grid_coords, device)
+                                                          delta_t, dx, inv_dx, mu_0, lambda_0, p_vol, offsets, particle_offsets, grid_coords, expansion_factor, gravity, it, device)
 
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):

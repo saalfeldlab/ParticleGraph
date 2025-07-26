@@ -34,7 +34,7 @@ graph_model:
 
   input_size_nnr: 3
   n_layers_nnr: 5
-  hidden_dim_nnr: 128
+  hidden_dim_nnr: 256
   output_size_nnr: 4
   outermost_linear_nnr: True
   omega: 80.0

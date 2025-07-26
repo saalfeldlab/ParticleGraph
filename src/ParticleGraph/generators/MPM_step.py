@@ -23,6 +23,9 @@ def MPM_step(
         offsets,
         particle_offsets,
         grid_coords,
+        expansion_factor,
+        gravity,
+        frame,
         device,
         verbose=False
 ):
@@ -34,6 +37,10 @@ def MPM_step(
     liquid_mask = (T.squeeze() == 0)
     jelly_mask = (T.squeeze() == 1)
     snow_mask = (T.squeeze() == 2)
+
+    # Initialize mass
+    p_mass = M.squeeze(-1)
+
     # Create identity matrices for all particles
     identity = torch.eye(2, device=device).unsqueeze(0).expand(n_particles, -1, -1)
 
@@ -98,7 +105,12 @@ def MPM_step(
     Jp = Jp * plastic_ratio
     sig = new_sig
     J = torch.prod(sig, dim=1)
-    sig_diag = torch.diag_embed(sig)
+
+    if frame > 1000:
+        expansion_factor = 1.0  # 1% expansion per timestep
+
+    J = J / expansion_factor
+    sig_diag = torch.diag_embed(sig) / expansion_factor
     # For liquid: F = sqrt(J) * I
     F_liquid = identity * torch.sqrt(J).unsqueeze(-1).unsqueeze(-1)
     # For solid materials: F = U @ sig_diag @ Vh
@@ -113,7 +125,6 @@ def MPM_step(
     stress = (2 * mu.unsqueeze(-1).unsqueeze(-1) * F_minus_R @ F.transpose(-2, -1) +
               identity * (la * J * (J - 1)).unsqueeze(-1).unsqueeze(-1))
     stress = (-dt * p_vol * 4 * inv_dx * inv_dx) * stress
-    p_mass = M.squeeze(-1)
     affine = stress + p_mass.unsqueeze(-1).unsqueeze(-1) * C
 
     # P2G loop ###################################################################################################
@@ -164,7 +175,7 @@ def MPM_step(
                          grid_v)
 
     # Apply gravity (vectorized)
-    gravity_force = torch.tensor([0.0, dt * (-50)], device=device)
+    gravity_force = torch.tensor([0.0, dt * (gravity)], device=device)
     grid_v = torch.where(valid_mass_mask.unsqueeze(-1),
                          grid_v + gravity_force,
                          grid_v)
