@@ -59,9 +59,10 @@ if __name__ == "__main__":
         else:
             best_model = None
     else:
-        task = 'train'  # 'generate', 'train', 'test'
+        task = 'generate'  # 'generate', 'train', 'test'
         best_model = ''
-        config_list = ['multimaterial_1_1']
+        # config_list = ['multimaterial_1_1', 'multimaterial_1_2', 'multimaterial_1_3', 'multimaterial_1_4']
+        config_list = ['multimaterial_1_0']
         # config_list = ['fluids_m19']
         # config_list = ['falling_water_ramp_x6_11_1']
         # config_list = ['arbitrary_3']

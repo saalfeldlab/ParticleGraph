@@ -242,7 +242,6 @@ def data_train_material(config, erase, best_model, device):
                 t = torch.ones((n_particles,1), dtype=torch.float32, device=device) * k/n_frames
                 x_ = torch.cat((x[:, 1:1 + dimension], t), dim=1).clone().detach()
 
-
                 dataset = data.Data(x=x_, edge_index=[], num_nodes=x.shape[0])
                 dataset_batch.append(dataset)
 
@@ -275,7 +274,7 @@ def data_train_material(config, erase, best_model, device):
                 with torch.no_grad():
                     for k in k_list:
                         x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
-                        y = x[:, 5 + dimension * 2: 9 + dimension * 2].clone().detach() # F
+                        y = x[:, 9 + dimension * 2: 13 + dimension * 2].clone().detach() # F
                         t = torch.ones((n_particles,1), dtype=torch.float32, device=device) * k/n_frames
                         x_ = torch.cat((x[:, 1:1 + dimension], t), dim=1).clone().detach()
                         data_id = torch.ones((n_particles, 1), dtype=torch.float32, device=device) * run
@@ -284,12 +283,19 @@ def data_train_material(config, erase, best_model, device):
                         error.append(F.mse_loss(pred, y).item())
 
                 # print(f'iteration {N} Error: {np.mean(1000 * error)/len(k_list):.6f}')
+
+                plt.style.use('dark_background')
+
                 fig = plt.figure(figsize=(18, 8))
                 plt.subplot(1, 2, 1)
                 f_norm = torch.norm(y.view(n_particles, -1), dim=1).cpu().numpy()
                 plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=f_norm, s=1, cmap='coolwarm', vmin=1.44 - 0.2,
                             vmax=1.44 + 0.2)
                 plt.colorbar(fraction=0.046, pad=0.04)
+                # stress_norm = torch.norm(y.view(n_particles, -1), dim=1)
+                # stress_norm = stress_norm[:, None]
+                # plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=stress_norm[:, 0].cpu(), s=1, cmap='hot', vmin=0, vmax=6E-3)
+                # plt.colorbar(fraction=0.046, pad=0.04)
                 plt.title('F (deformation)')
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
@@ -298,9 +304,13 @@ def data_train_material(config, erase, best_model, device):
                 plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=f_norm, s=1, cmap='coolwarm', vmin=1.44 - 0.2,
                             vmax=1.44 + 0.2)
                 plt.colorbar(fraction=0.046, pad=0.04)
+                # stress_norm = torch.norm(pred.view(n_particles, -1), dim=1)
+                # stress_norm = stress_norm[:, None]
+                # plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=stress_norm[:, 0].cpu(), s=1, cmap='hot', vmin=0, vmax=6E-3)
+                # plt.colorbar(fraction=0.046, pad=0.04)
                 plt.title('F (deformation)')
                 plt.text(0.05, 0.95,
-                         f'Epoch: {epoch} Iteration: {N} Error: {np.mean(1000 * error) / len(k_list):.6f}', )
+                         f'epoch: {epoch} iteration: {N} error: {np.mean(1000 * error) / len(k_list):.6f}', )
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
                 plt.tight_layout()
@@ -322,16 +332,21 @@ def data_train_material(config, erase, best_model, device):
         list_loss.append(total_loss / n_particles)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
-        print(f'Epoch {epoch + 1}')
-        logger.info(f'Epoch {epoch + 1}')
-
         fig = plt.figure(figsize=(22, 5))
         ax = fig.add_subplot(1, 5, 1)
-        plt.plot(list_loss, color='k')
+        plt.plot(list_loss, color='w')
         plt.xlim([0, n_epochs])
         plt.ylabel('Loss', fontsize=12)
         plt.xlabel('Epochs', fontsize=12)
+        plt.text(0.05, 0.95, f'epoch: {epoch} final loss: {list_loss[-1]:.6f}', transform=ax.transAxes,)
         plt.tight_layout()
+        ax = fig.add_subplot(1, 5, 2)
+        embedding = to_numpy(model.a[0])
+        type_list = to_numpy(x[:,14])
+        for n in range(n_particle_types):
+            plt.scatter(embedding[type_list == n, 0], embedding[type_list == n, 1], s=1,
+                        c=cmap.color(n), label=f'type {n}', alpha=0.5)
+
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{epoch}.tif")
         plt.close()
 

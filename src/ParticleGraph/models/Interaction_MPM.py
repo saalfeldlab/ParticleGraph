@@ -23,7 +23,16 @@ class Interaction_MPM(nn.Module):
         self.n_particles = simulation_config.n_particles
         self.embedding_dim = model_config.embedding_dim
 
-        self.siren = Siren(in_features=3, out_features=4, hidden_features=128, hidden_layers=5, outermost_linear=True).to(device)
+        self.input_size_nnr = model_config.input_size_nnr
+        self.n_layers_nnr = model_config.n_layers_nnr
+        self.hidden_dim_nnr = model_config.hidden_dim_nnr
+        self.output_size_nnr = model_config.output_size_nnr
+        self.outermost_linear_nnr = model_config.outermost_linear_nnr
+        self.omega= model_config.omega
+
+        self.siren = Siren(in_features=self.input_size_nnr, out_features=self.output_size_nnr, hidden_features=self.hidden_dim_nnr,
+                           hidden_layers=self.n_layers_nnr, first_omega_0=self.omega, hidden_omega_0=self.omega, outermost_linear=True).to(device)
+
         # self.mlp0 = MLP(input_size=3, output_size=1, nlayers=5, hidden_size=128, device=device)
         # self.mlp1 = MLP(input_size=2, output_size=1, nlayers=2, hidden_size=4, device=device)
 

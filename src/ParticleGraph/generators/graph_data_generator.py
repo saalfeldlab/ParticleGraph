@@ -1038,14 +1038,11 @@ def MPM_substep(
     particle_features = torch.cat([p_mass[:, None], V], dim=1)  # [n_particles, 3]
     x_ = torch.cat([grid_features, particle_features], dim=0)  # [n_grid**2 + n_particles, 3]
 
-    # x_ = torch.cat((torch.zeros((n_grid ** 2, 1), dtype=torch.float32, device=device), p_mass[:, None]))
-
     dataset = data.Data(x=x_, edge_index=edge_index, fx_per_edge=fx_per_edge,
                         affine_per_edge=affine_per_edge, dpos_per_edge=dpos_per_edge)
     grid_output = model_MPM(dataset)[0:n_grid ** 2]  # [n_grid**2, 3]
     grid_m = grid_output[:, 0].view(n_grid, n_grid)  # Mass component
     grid_v = grid_output[:, 1:3].view(n_grid, n_grid, 2)  # Velocity components # Reshape to [n_grid, n_grid]
-
 
     # Quadratic B-spline kernel weights
     w_0 = 0.5 * (1.5 - fx) ** 2
@@ -1053,7 +1050,6 @@ def MPM_substep(
     w_2 = 0.5 * (fx - 0.5) ** 2
     # Stack weights [n_particles, 3, 2]
     w = torch.stack([w_0, w_1, w_2], dim=1)
-
 
     # Create mask for valid grid points (non-zero mass)
     valid_mass_mask = grid_m > 0
