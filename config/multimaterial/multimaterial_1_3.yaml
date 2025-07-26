@@ -36,7 +36,7 @@ graph_model:
   n_layers_nnr: 5
   hidden_dim_nnr: 128
   output_size_nnr: 4
-  outermost_linear_nnr: bool = True
+  outermost_linear_nnr: True
   omega: 80.0
 
 plotting:
