@@ -5,6 +5,8 @@ from ParticleGraph.utils import to_numpy, reparameterize
 from ParticleGraph.models.Siren_Network import *
 from ParticleGraph.models.Gumbel import gumbel_softmax_sample, gumbel_softmax
 from ParticleGraph.generators.MPM_P2G import MPM_P2G
+from ParticleGraph.utils import *
+import torch_geometric.data as data
 
 class Interaction_MPM(nn.Module):
 
@@ -204,16 +206,6 @@ class Interaction_MPM(nn.Module):
         solid_mask = jelly_mask | snow_mask
         F[solid_mask] = F_solid[solid_mask]
 
-        F = F.reshape(n_particles, 4)
-        return X, V, C, F, T, Jp, M, F, grid_m, grid_v
-
-
-
-
-
-
-
-
         # Calculate stress ############################################################################################
         R = U @ Vh
         F_minus_R = F - R
@@ -341,12 +333,11 @@ class Interaction_MPM(nn.Module):
         weighted_outer_products = weights_all.unsqueeze(-1).unsqueeze(-1) * outer_products  # [n_particles, 9, 2, 2]
         new_C += 4 * inv_dx * weighted_outer_products.sum(dim=1)  # Sum over the 9 neighbors
 
-        # Update particle state
-        V.copy_(new_V)
-        C.copy_(new_C)
-
         # Particle advection
-        X = X + dt * V
+        X = X + dt * new_V
+
+        F = F.reshape(n_particles, 4)
+        return X, new_V, new_C, F, T, Jp, M, F, grid_m, grid_v
 
         return X, V, C, F, T, Jp, M, stress, grid_m, grid_v
 
