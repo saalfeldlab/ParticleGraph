@@ -934,18 +934,10 @@ def data_generate_MPM(
     delta_t = simulation_config.delta_t
     n_frames = simulation_config.n_frames
     dx, inv_dx = 1 / n_grid, float(n_grid)
-    grid_i, grid_j = torch.meshgrid(
-        torch.arange(n_grid, device=device, dtype=torch.float32),
-        torch.arange(n_grid, device=device, dtype=torch.float32),
-        indexing='ij'
-    ) # Shape: [n_grid, n_grid]
-    grid_coords = dx * torch.stack([
-        grid_i ,  # x coordinates
-        grid_j   # y coordinates
-    ], dim=-1).reshape(-1, 2)  # Shape: [1024, 2]
 
-    p_vol, p_rho = (dx * 0.5) ** 2, 1
-    p_mass = p_vol * p_rho
+    p_vol = (dx * 0.5) ** 2
+    rho_list = simulation_config.MPM_rho_list
+
     E, nu = 0.1e4, 0.2  # Young's modulus and Poisson's ratio
     mu_0, lambda_0 = E / (2 * (1 + nu)), E * nu / ((1 + nu) * (1 - 2 * nu))  # Lame parameters
     offsets = torch.tensor([[i, j] for i in range(3) for j in range(3)],
@@ -980,7 +972,8 @@ def data_generate_MPM(
     for run in range(config.training.n_runs):
         x_list = []
 
-        N, X, V, C, F, T, Jp, M, S = init_MPM_shapes(geometry=MPM_object_type, n_shapes=MPM_n_objects, seed=42, n_particles=n_particles, n_particle_types=n_particle_types, n_grid=n_grid, dx=dx, inv_dx=inv_dx, device=device)
+        N, X, V, C, F, T, Jp, M, S = init_MPM_shapes(geometry=MPM_object_type, n_shapes=MPM_n_objects, seed=42, n_particles=n_particles,
+                                                     n_particle_types=n_particle_types, n_grid=n_grid, dx=dx, rho_list=rho_list, device=device)
 
         # Main simulation loop
         for it in trange(simulation_config.start_frame, n_frames):
@@ -993,7 +986,8 @@ def data_generate_MPM(
                 x_list.append(x.clone().detach())
 
             X, V, C, F, T, Jp, M, S, GM, GV = MPM_step(model_MPM, X, V, C, F, T, Jp, M, n_particles, n_grid,
-                                                          delta_t, dx, inv_dx, mu_0, lambda_0, p_vol, offsets, particle_offsets, grid_coords, expansion_factor, gravity, it, device)
+                                                       delta_t, dx, inv_dx, mu_0, lambda_0, p_vol, offsets, particle_offsets,
+                                                       expansion_factor, gravity, it, device)
 
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):

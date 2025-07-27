@@ -22,12 +22,10 @@ def MPM_step(
         p_vol,
         offsets,
         particle_offsets,
-        grid_coords,
         expansion_factor,
         gravity,
         frame,
         device,
-        verbose=False
 ):
     """
     MPM substep implementation
@@ -141,9 +139,8 @@ def MPM_step(
     fx_per_edge = fx.unsqueeze(1).expand(-1, 9, -1).flatten(end_dim=1)  # [n_particles*9, 2]
 
     # Compute dpos for each edge (needed for affine contribution)
-    particle_offsets_expanded = offsets.unsqueeze(0).expand(n_particles, -1, -1)  # [n_particles, 9, 2]
     particle_fx_expanded = fx.unsqueeze(1).expand(-1, 9, -1)  # [n_particles, 9, 2]
-    dpos = (particle_offsets_expanded - particle_fx_expanded) * dx  # [n_particles, 9, 2]
+    dpos = (particle_offsets - particle_fx_expanded) * dx  # [n_particles, 9, 2]
     dpos_per_edge = dpos.flatten(end_dim=1)  # [n_particles*9, 2]
 
     # Affine matrices per edge (replicate for each particle's 9 edges)

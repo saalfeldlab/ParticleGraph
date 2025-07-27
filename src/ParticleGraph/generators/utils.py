@@ -321,14 +321,12 @@ def init_MPM_shapes(
         n_particle_types=[],
         n_grid=[],
         dx=[],
-        inv_dx=[],
-        dt=[],
+        rho_list=[],
         device='cpu'
 ):
     torch.manual_seed(seed)
 
-    p_vol, p_rho = (dx * 0.5) ** 2, 1
-    p_mass = p_vol * p_rho
+    p_vol = (dx * 0.5) ** 2
 
     N = torch.arange(n_particles, dtype=torch.float32, device=device)[:, None]
     x = torch.zeros((n_particles, 2), dtype=torch.float32, device=device)
@@ -337,7 +335,6 @@ def init_MPM_shapes(
     F = torch.eye(2, dtype=torch.float32, device=device).unsqueeze(0).expand(n_particles, -1, -1)
     T = torch.ones((n_particles, 1), dtype=torch.int32, device=device)
     Jp = torch.ones((n_particles, 1), dtype=torch.float32, device=device)
-    M = torch.full((n_particles, 1), p_mass, dtype=torch.float32, device=device)
     S = torch.zeros((n_particles, 2, 2), dtype=torch.float32, device=device)
     GM = torch.zeros((n_grid, n_grid), dtype=torch.float32, device=device)
     GP = torch.zeros((n_grid, n_grid), dtype=torch.float32, device=device)
@@ -609,8 +606,16 @@ def init_MPM_shapes(
         x[:, 1] = letter_positions[:, 1]
 
     # Random materials for each shape
-    # shape_materials = torch.randperm(n_shapes, device=device) % n_particle_types
-    # T = shape_materials[group_indices].unsqueeze(1).int()
+    shape_materials = torch.randperm(n_shapes, device=device) % n_particle_types
+    T = shape_materials[group_indices].unsqueeze(1).int()
+
+    # Calculate mass based on material type
+    # Material 0: water (density = 1.0)
+    # Material 1: jelly (density = 0.5, twice lighter than water)
+    # Material 2: snow (density = 0.25, four times lighter than water)
+    material_densities = torch.tensor(rho_list, device=device)
+    particle_densities = material_densities[T.squeeze()]
+    M = torch.full((n_particles, 1), p_vol, dtype=torch.float32, device=device) * particle_densities.unsqueeze(1)
 
     # Random velocity per shape
     shape_velocities = (torch.rand(n_shapes, 2, device=device) - 0.5) * 4.0
