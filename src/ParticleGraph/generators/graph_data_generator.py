@@ -163,19 +163,34 @@ def data_generate(
             bSave=bSave,
         )
     elif has_MPM:
-        data_generate_MPM(
-            config,
-            visualize=visualize,
-            run_vizualized=run_vizualized,
-            style=style,
-            erase=erase,
-            step=step,
-            alpha=0.2,
-            ratio=ratio,
-            scenario=scenario,
-            device=device,
-            bSave=bSave,
-        )
+        if '3D' in config.dataset:
+            data_generate_MPM_3D(
+                config,
+                visualize=visualize,
+                run_vizualized=run_vizualized,
+                style=style,
+                erase=erase,
+                step=step,
+                alpha=0.2,
+                ratio=ratio,
+                scenario=scenario,
+                device=device,
+                bSave=bSave,
+            )
+        else:
+            data_generate_MPM(
+                config,
+                visualize=visualize,
+                run_vizualized=run_vizualized,
+                style=style,
+                erase=erase,
+                step=step,
+                alpha=0.2,
+                ratio=ratio,
+                scenario=scenario,
+                device=device,
+                bSave=bSave,
+            )
     else:
         data_generate_particle(
             config,
@@ -898,6 +913,227 @@ def taichi_MPM():
         gui.show()
 
 
+def data_generate_MPM_3D(
+        config,
+        visualize=True,
+        run_vizualized=0,
+        style='color',
+        erase=False,
+        step=5,
+        alpha=0.2,
+        ratio=1,
+        scenario='none',
+        device=None,
+        bSave=True
+):
+    """
+    3D MPM data generation function
+    """
+
+    simulation_config = config.simulation
+    training_config = config.training
+    model_config = config.graph_model
+
+    print(f'generating 3D data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+
+    dimension = 3  # Force 3D
+    max_radius = simulation_config.max_radius
+    min_radius = simulation_config.min_radius
+    n_particle_types = simulation_config.n_particle_types
+    n_particles = simulation_config.n_particles
+    n_grid = simulation_config.n_grid
+    group_size = n_particles // n_particle_types
+    MPM_n_objects = simulation_config.MPM_n_objects
+    MPM_object_type = simulation_config.MPM_object_type
+    gravity = simulation_config.MPM_gravity
+    friction = simulation_config.MPM_friction
+
+    delta_t = simulation_config.delta_t
+    n_frames = simulation_config.n_frames
+    dx, inv_dx = 1 / n_grid, float(n_grid)
+
+    # 3D volume instead of 2D area
+    p_vol = (dx * 0.5) ** 3
+    rho_list = simulation_config.MPM_rho_list
+    young_coeff = simulation_config.MPM_young_coeff
+
+    E, nu = 0.1e4 / young_coeff, 0.2  # Young's modulus and Poisson's ratio
+    mu_0, lambda_0 = E / (2 * (1 + nu)), E * nu / ((1 + nu) * (1 - 2 * nu))  # Lame parameters
+
+    # 3D offsets for 27 neighbors (3x3x3)
+    offsets = torch.tensor([[i, j, k] for i in range(3) for j in range(3) for k in range(3)],
+                           device=device, dtype=torch.float32)  # [27, 3]
+    particle_offsets = offsets.unsqueeze(0).expand(n_particles, -1, -1)
+    expansion_factor = simulation_config.MPM_expansion_factor
+
+    # Initialize 3D MPM model
+    model_MPM = MPM_3D_P2G(aggr_type='add', device=device)
+
+    n_frames = simulation_config.n_frames
+    cmap = CustomColorMap(config=config)
+    dataset_name = config.dataset
+
+    folder = f'./graphs_data/{dataset_name}/'
+    if erase:
+        files = glob.glob(f"{folder}/*")
+        for f in files:
+            if (f[-3:] != 'Fig') & (f[-14:] != 'generated_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (
+                    f != 'model_config.json') & (f != 'generation_code.py'):
+                os.remove(f)
+    os.makedirs(folder, exist_ok=True)
+    os.makedirs(f'./graphs_data/{dataset_name}/Fig/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
+    for f in files:
+        os.remove(f)
+    os.makedirs(f'./graphs_data/{dataset_name}/Grid/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/{dataset_name}/Grid/*')
+    for f in files:
+        os.remove(f)
+
+    for run in range(config.training.n_runs):
+        x_list = []
+
+        # Initialize 3D MPM shapes
+        N, X, V, C, F, T, Jp, M, S, ID = init_MPM_3D_shapes(
+            geometry=MPM_object_type,
+            n_shapes=MPM_n_objects,
+            seed=42,
+            n_particles=n_particles,
+            n_particle_types=n_particle_types,
+            n_grid=n_grid,
+            dx=dx,
+            rho_list=rho_list,
+            device=device
+        )
+
+        # Main simulation loop
+        for it in trange(simulation_config.start_frame, n_frames):
+            # Concatenate state tensors - 3D matrices flattened to 9 components
+            x = torch.cat((N.clone().detach(), X.clone().detach(), V.clone().detach(),
+                           C.reshape(n_particles, 9).clone().detach(),  # 3x3 matrix flattened
+                           F.reshape(n_particles, 9).clone().detach(),  # 3x3 matrix flattened
+                           T.clone().detach(), Jp.clone().detach(), M.clone().detach(),
+                           S.reshape(n_particles, 9).clone().detach(),  # 3x3 matrix flattened
+                           ID.clone().detach()), 1)
+
+            if (it >= 0):
+                x_list.append(x.clone().detach())
+
+            # # 3D MPM step
+            # X, V, C, F, T, Jp, M, S, GM, GV = MPM_3D_step(
+            #     model_MPM, X, V, C, F, T, Jp, M, n_particles, n_grid,
+            #     delta_t, dx, inv_dx, mu_0, lambda_0, p_vol, offsets, particle_offsets,
+            #     expansion_factor, gravity, friction, it, device
+            # )
+
+            # 3D visualization (if enabled)
+            if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
+
+                if 'black' in style:
+                    plt.style.use('dark_background')
+
+                if 'latex' in style:
+                    plt.rcParams['text.usetex'] = True
+                    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+
+                if 'color' in style:
+                    # 1. 3D Angled View
+                    from mpl_toolkits.mplot3d import Axes3D
+                    ax = fig.add_subplot(2, 3, 1, projection='3d')
+                    ax.set_title('3D Angled View')
+                    for n in range(min(3, MPM_n_objects)):
+                        pos = torch.argwhere(T == n)[:,0]
+                        if len(pos) > 0:
+                            ax.scatter(to_numpy(X[pos, 0]), to_numpy(X[pos, 1]), to_numpy(X[pos, 2]),
+                                     s=1, color=cmap.color(n), alpha=0.7)
+                    ax.set_xlim([0, 1])
+                    ax.set_ylim([0, 1])
+                    ax.set_zlim([0, 1])
+                    ax.set_xlabel('X')
+                    ax.set_ylabel('Y')
+                    ax.set_zlabel('Z')
+                    # Set viewing angle (elevation, azimuth)
+                    ax.view_init(elev=20, azim=45)
+                    #
+                    # # 2. XZ projection (front view)
+                    # plt.subplot(2, 3, 2)
+                    # plt.title('XZ Projection (Front View)')
+                    # for n in range(min(3, MPM_n_objects)):
+                    #     pos = torch.argwhere(T == n)[:, 0]
+                    #     if len(pos) > 0:
+                    #         plt.scatter(to_numpy(X[pos, 0]), to_numpy(X[pos, 2]), s=1, color=cmap.color(n), alpha=0.6)
+                    # plt.xlim([0, 1])
+                    # plt.ylim([0, 1])
+                    # plt.xlabel('X')
+                    # plt.ylabel('Z')
+                    # plt.gca().set_aspect('equal')
+                    #
+                    # # 3. YZ projection (side view)
+                    # plt.subplot(2, 3, 3)
+                    # plt.title('YZ Projection (Side View)')
+                    # for n in range(min(3, MPM_n_objects)):
+                    #     pos = torch.argwhere(T == n)[:, 0]
+                    #     if len(pos) > 0:
+                    #         plt.scatter(to_numpy(X[pos, 1]), to_numpy(X[pos, 2]), s=1, color=cmap.color(n), alpha=0.6)
+                    # plt.xlim([0, 1])
+                    # plt.ylim([0, 1])
+                    # plt.xlabel('Y')
+                    # plt.ylabel('Z')
+                    # plt.gca().set_aspect('equal')
+                    #
+                    # # 4. Velocity magnitude
+                    # plt.subplot(2, 3, 4)
+                    # plt.title('3D Velocity Magnitude')
+                    # v_norm = torch.norm(V, dim=1).cpu().numpy()
+                    # scatter = plt.scatter(X[:, 0].cpu(), X[:, 1].cpu(), c=v_norm, s=1, cmap='viridis', alpha=0.6)
+                    # plt.colorbar(scatter, fraction=0.046, pad=0.04)
+                    # plt.xlim([0, 1])
+                    # plt.ylim([0, 1])
+                    # plt.xlabel('X')
+                    # plt.ylabel('Y')
+                    # plt.gca().set_aspect('equal')
+                    #
+                    # # 5. Grid mass (XY slice at z=n_grid//2)
+                    # plt.subplot(2, 3, 5)
+                    # plt.title('Grid Mass (Mid Z-slice)')
+                    # if len(GM.shape) == 1:
+                    #     GM_3d = GM.reshape(n_grid, n_grid, n_grid)
+                    #     mid_z = n_grid // 2
+                    #     im = plt.imshow(to_numpy(GM_3d[:, :, mid_z].T), cmap='plasma',
+                    #                     extent=[0, 1, 0, 1], origin='lower', alpha=0.8)
+                    #     plt.colorbar(im, fraction=0.046, pad=0.04)
+                    # plt.xlabel('X')
+                    # plt.ylabel('Y')
+                    #
+                    # # 6. Deformation gradient determinant (volume change)
+                    # plt.subplot(2, 3, 6)
+                    # plt.title('Volume Change (det F)')
+                    # det_F = torch.det(F.view(n_particles, 3, 3)).cpu().numpy()
+                    # scatter = plt.scatter(X[:, 0].cpu(), X[:, 1].cpu(), c=det_F, s=1,
+                    #                       cmap='RdBu_r', vmin=0.5, vmax=1.5, alpha=0.6)
+                    # plt.colorbar(scatter, fraction=0.046, pad=0.04)
+                    # plt.xlim([0, 1])
+                    # plt.ylim([0, 1])
+                    # plt.xlabel('X')
+                    # plt.ylabel('Y')
+                    # plt.gca().set_aspect('equal')
+
+                    plt.tight_layout()
+                    num = f"{it:06}"
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.png", dpi=150, bbox_inches='tight')
+                    plt.close()
+
+        if bSave:
+            torch.save(x_list, f'graphs_data/{dataset_name}/generated_data_{run}.pt')
+            print(f'data saved at: graphs_data/{dataset_name}/generated_data_{run}.pt')
+
+    # Save configuration
+    with open(f"graphs_data/{dataset_name}/model_config.json", "w") as json_file:
+        json.dump(config, json_file, default=lambda o: dict(o) if hasattr(o, '__dict__') else str(o))
+
+    print(f'3D MPM data generation completed for {config.training.n_runs} runs')
+
+
 def data_generate_MPM(
         config,
         visualize=True,
@@ -1112,6 +1348,9 @@ def data_generate_MPM(
             dataset_name = config.dataset
             x_list = np.array(to_numpy(torch.stack(x_list)))
             np.save(f"graphs_data/{dataset_name}/x_list_{run}.npy", x_list)
+
+
+
 
 def data_generate_particle_field(
     config,

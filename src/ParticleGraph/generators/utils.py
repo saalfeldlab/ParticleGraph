@@ -639,6 +639,192 @@ def init_MPM_shapes(
     return N, x, v, C, F, T, Jp, M, S, ID
 
 
+def init_MPM_3D_shapes(
+        geometry='cubes',  # 'cubes', 'spheres', 'stars', 'letters'
+        n_shapes=3,
+        seed=42,
+        n_particles=[],
+        n_particle_types=[],
+        n_grid=[],
+        dx=[],
+        rho_list=[],
+        device='cpu'
+):
+    torch.manual_seed(seed)
+
+    # 3D volume instead of 2D area
+    p_vol = (dx * 0.5) ** 3
+
+    N = torch.arange(n_particles, dtype=torch.float32, device=device)[:, None]
+    x = torch.zeros((n_particles, 3), dtype=torch.float32, device=device)  # 3D positions
+    v = torch.zeros((n_particles, 3), dtype=torch.float32, device=device)  # 3D velocities
+    C = torch.zeros((n_particles, 3, 3), dtype=torch.float32, device=device)  # 3x3 affine matrix
+    F = torch.eye(3, dtype=torch.float32, device=device).unsqueeze(0).expand(n_particles, -1,
+                                                                             -1)  # 3x3 deformation gradient
+    T = torch.ones((n_particles, 1), dtype=torch.int32, device=device)
+    Jp = torch.ones((n_particles, 1), dtype=torch.float32, device=device)
+    S = torch.zeros((n_particles, 3, 3), dtype=torch.float32, device=device)  # 3x3 stress tensor
+    GM = torch.zeros((n_grid, n_grid, n_grid), dtype=torch.float32, device=device)  # 3D grid mass
+    GP = torch.zeros((n_grid, n_grid, n_grid), dtype=torch.float32, device=device)  # 3D grid momentum
+
+    group_size = n_particles // n_shapes
+    group_indices = torch.arange(n_particles, device=device) // group_size
+
+    # Determine 3D grid layout and spacing
+    if n_shapes == 3:
+        # Linear arrangement along x-axis
+        shape_row = torch.zeros_like(group_indices)
+        shape_col = torch.zeros_like(group_indices)
+        shape_depth = group_indices
+        size, spacing_x, spacing_y, spacing_z = 0.1, 0.32, 0.0, 0.32
+        start_x, start_y, start_z = 0.3, 0.4, 0.15
+    elif n_shapes == 8:
+        # 2x2x2 cube arrangement
+        shape_depth = group_indices // 4
+        temp = group_indices % 4
+        shape_row = temp // 2
+        shape_col = temp % 2
+        size, spacing_x, spacing_y, spacing_z = 0.08, 0.3, 0.3, 0.3
+        start_x, start_y, start_z = 0.25, 0.25, 0.25
+    elif n_shapes == 9:
+        # 3x3x1 arrangement
+        shape_depth = torch.zeros_like(group_indices)
+        shape_row = group_indices // 3
+        shape_col = group_indices % 3
+        size, spacing_x, spacing_y, spacing_z = 0.075, 0.25, 0.25, 0.0
+        start_x, start_y, start_z = 0.2, 0.2, 0.4
+    elif n_shapes == 16:
+        # 4x4x1 arrangement
+        shape_depth = torch.zeros_like(group_indices)
+        shape_row = group_indices // 4
+        shape_col = group_indices % 4
+        size, spacing_x, spacing_y, spacing_z = 0.04, 0.2, 0.2, 0.0
+        start_x, start_y, start_z = 0.2, 0.2, 0.4
+    elif n_shapes == 25:
+        # 5x5x1 arrangement
+        shape_depth = torch.zeros_like(group_indices)
+        shape_row = group_indices // 5
+        shape_col = group_indices % 5
+        size, spacing_x, spacing_y, spacing_z = 0.035, 0.16, 0.16, 0.0
+        start_x, start_y, start_z = 0.15, 0.15, 0.4
+    elif n_shapes == 27:
+        # 3x3x3 cube arrangement
+        shape_depth = group_indices // 9
+        temp = group_indices % 9
+        shape_row = temp // 3
+        shape_col = temp % 3
+        size, spacing_x, spacing_y, spacing_z = 0.06, 0.25, 0.25, 0.25
+        start_x, start_y, start_z = 0.2, 0.2, 0.2
+    else:
+        # General case: try to make a cubic grid
+        grid_size = int(round(n_shapes ** (1 / 3)))
+        if grid_size ** 3 < n_shapes:
+            grid_size += 1
+
+        shape_depth = group_indices // (grid_size * grid_size)
+        temp = group_indices % (grid_size * grid_size)
+        shape_row = temp // grid_size
+        shape_col = temp % grid_size
+
+        size = 0.8 / (grid_size + 1)
+        spacing_x = spacing_y = spacing_z = 0.8 / grid_size
+        start_x = start_y = start_z = 0.1
+
+    # Calculate center positions for each shape
+    center_x = start_x + shape_col.float() * spacing_x
+    center_y = start_y + shape_row.float() * spacing_y
+    center_z = start_z + shape_depth.float() * spacing_z
+
+    # Generate particles within each shape
+    if geometry == 'cubes':
+        # Generate particles in cubic volumes
+        particles_per_dim = int(round((group_size) ** (1 / 3)))
+        if particles_per_dim ** 3 < group_size:
+            particles_per_dim += 1
+
+        for i in range(n_particles):
+            group_idx = i // group_size
+            local_idx = i % group_size
+
+            # 3D indexing within cube
+            z_idx = local_idx // (particles_per_dim * particles_per_dim)
+            temp = local_idx % (particles_per_dim * particles_per_dim)
+            y_idx = temp // particles_per_dim
+            x_idx = temp % particles_per_dim
+
+            # Normalize to [-0.5, 0.5] range then scale and translate
+            local_x = (x_idx / max(particles_per_dim - 1, 1) - 0.5) * size
+            local_y = (y_idx / max(particles_per_dim - 1, 1) - 0.5) * size
+            local_z = (z_idx / max(particles_per_dim - 1, 1) - 0.5) * size
+
+            x[i, 0] = center_x[i] + local_x
+            x[i, 1] = center_y[i] + local_y
+            x[i, 2] = center_z[i] + local_z
+
+    elif geometry == 'spheres':
+        # Generate particles in spherical volumes
+        for i in range(n_particles):
+            group_idx = i // group_size
+
+            # Generate random point in unit sphere using rejection sampling
+            while True:
+                rand_x = torch.rand(1, device=device) * 2 - 1
+                rand_y = torch.rand(1, device=device) * 2 - 1
+                rand_z = torch.rand(1, device=device) * 2 - 1
+
+                if rand_x ** 2 + rand_y ** 2 + rand_z ** 2 <= 1.0:
+                    break
+
+            # Scale by size and translate to center
+            x[i, 0] = center_x[i] + rand_x * size * 0.5
+            x[i, 1] = center_y[i] + rand_y * size * 0.5
+            x[i, 2] = center_z[i] + rand_z * size * 0.5
+
+    else:  # Default to cubes
+        # Same as cubes case
+        particles_per_dim = int(round((group_size) ** (1 / 3)))
+        if particles_per_dim ** 3 < group_size:
+            particles_per_dim += 1
+
+        for i in range(n_particles):
+            group_idx = i // group_size
+            local_idx = i % group_size
+
+            z_idx = local_idx // (particles_per_dim * particles_per_dim)
+            temp = local_idx % (particles_per_dim * particles_per_dim)
+            y_idx = temp // particles_per_dim
+            x_idx = temp % particles_per_dim
+
+            local_x = (x_idx / max(particles_per_dim - 1, 1) - 0.5) * size
+            local_y = (y_idx / max(particles_per_dim - 1, 1) - 0.5) * size
+            local_z = (z_idx / max(particles_per_dim - 1, 1) - 0.5) * size
+
+            x[i, 0] = center_x[i] + local_x
+            x[i, 1] = center_y[i] + local_y
+            x[i, 2] = center_z[i] + local_z
+
+    # Assign material types
+    for i in range(n_particles):
+        group_idx = i // group_size
+        T[i] = group_idx % n_particle_types  # Cycle through material types 0, 1, 2, ...
+
+    # Generate masses based on density
+    M = torch.ones((n_particles, 1), dtype=torch.float32, device=device) * p_vol
+    for i in range(n_particles):
+        group_idx = i // group_size
+        if group_idx < len(rho_list):
+            M[i] = M[i] * rho_list[group_idx]
+        else:
+            # Use the last density if we run out of densities
+            M[i] = M[i] * rho_list[-1] if len(rho_list) > 0 else M[i]
+
+    # Generate shape IDs for tracking
+    ID = torch.zeros((n_particles, 1), dtype=torch.int32, device=device)
+    for i in range(n_particles):
+        ID[i] = i // group_size
+
+    return N, x, v, C, F, T, Jp, M, S, ID
+
 def init_MPM_cells(
         n_shapes=3,
         seed=42,
