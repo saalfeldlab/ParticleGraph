@@ -27,18 +27,16 @@ def MPM_3D_step(
         friction,
         frame,
         device,
+        verbose=False
 ):
     """
-    3D MPM substep implementation
+    Fast vectorized 3D MPM substep implementation
     """
 
     # Material masks
     liquid_mask = (T.squeeze() == 0)
     jelly_mask = (T.squeeze() == 1)
     snow_mask = (T.squeeze() == 2)
-
-    # Initialize mass
-    p_mass = M.squeeze(-1)
 
     # Create 3D identity matrices for all particles
     identity = torch.eye(3, device=device).unsqueeze(0).expand(n_particles, -1, -1)
@@ -50,7 +48,7 @@ def MPM_3D_step(
 
     # Hardening coefficient
     h = torch.exp(10 * (1.0 - Jp.squeeze()))
-    h = torch.where(jelly_mask, torch.tensor(0.3, device=device), h)
+    h = torch.where(jelly_mask, torch.tensor(1.0, device=device), h)
 
     # Lamé parameters
     mu = mu_0 * h
@@ -60,199 +58,231 @@ def MPM_3D_step(
     # SVD decomposition for 3x3 matrices
     U, sig, Vh = torch.linalg.svd(F, driver='gesvdj')
 
-    # SVD sign correction without in-place ops for 3D
+    # SVD sign correction
     det_U = torch.det(U)
     det_Vh = torch.det(Vh)
-    neg_det_U = det_U < 0  # [n_particles] bool tensor
+    neg_det_U = det_U < 0
+    if neg_det_U.any():
+        U[neg_det_U, :, -1] *= -1
+        sig[neg_det_U, -1] *= -1
     neg_det_Vh = det_Vh < 0
+    if neg_det_Vh.any():
+        Vh[neg_det_Vh, -1, :] *= -1
+        sig[neg_det_Vh, -1] *= -1
 
-    # Reshape masks for broadcasting
-    neg_det_U_mask = neg_det_U.unsqueeze(-1).unsqueeze(-1)  # [n_particles,1,1]
-    neg_det_sig_U_mask = neg_det_U.unsqueeze(-1)  # [n_particles,1]
-    neg_det_Vh_mask = neg_det_Vh.unsqueeze(-1).unsqueeze(-1)  # [n_particles,1,1]
-    neg_det_sig_Vh_mask = neg_det_Vh.unsqueeze(-1)  # [n_particles,1]
+    # Clamp singular values
+    sig = torch.clamp(sig, min=1e-6)
+    original_sig = sig.clone()
 
-    # Flip signs on last columns/rows accordingly, out-of-place for 3D
-    U = torch.where(
-        neg_det_U_mask.expand_as(U),
-        torch.cat([U[:, :, :-1], -U[:, :, -1:].clone()], dim=2),
-        U
-    )
-    sig = torch.where(
-        neg_det_sig_U_mask.expand_as(sig),
-        torch.cat([sig[:, :-1], -sig[:, -1:].clone()], dim=1),
-        sig
-    )
-    Vh = torch.where(
-        neg_det_Vh_mask.expand_as(Vh),
-        torch.cat([Vh[:, :-1, :], -Vh[:, -1:, :].clone()], dim=1),
-        Vh
-    )
+    # Apply plasticity constraints for snow
+    new_sig = torch.where(snow_mask.unsqueeze(1), torch.clamp(sig, min=1 - 2.5e-2, max=1 + 4.5e-3), sig)
 
-    # Clamp singular values for snow plasticity (3D)
-    sig_clamped = torch.clamp(sig, 1.0 - 2.5e-2, 1.0 + 4.5e-3)
-    sig = torch.where(snow_mask.unsqueeze(-1).expand_as(sig), sig_clamped, sig)
+    # Update plastic deformation
+    plastic_ratio = torch.prod(original_sig / new_sig, dim=1, keepdim=True)
+    Jp = Jp * plastic_ratio
+    sig = new_sig
+    J = torch.prod(sig, dim=1)
 
-    # Update Jp for snow
-    old_J = torch.det(F)
-    new_J = torch.prod(sig, dim=1)
-    Jp = torch.where(snow_mask.unsqueeze(-1), Jp * old_J / new_J, Jp)
+    # Reconstruct deformation gradient
+    sig_diag = torch.diag_embed(sig)
 
-    # Reconstruct F
-    F = U @ torch.diag_embed(sig) @ Vh
+    # For liquid: F = sqrt(J) * I
+    F_liquid = identity * torch.sqrt(J).unsqueeze(-1).unsqueeze(-1)
+    # For solid materials: F = U @ sig @ Vh
+    F_solid = U @ sig_diag @ Vh
 
-    # Calculate stress tensor (3D Cauchy stress)
-    J = torch.det(F)
+    # Apply reconstruction based on material type
+    F = torch.where(liquid_mask.unsqueeze(-1).unsqueeze(-1), F_liquid, F)
+    F = torch.where((jelly_mask | snow_mask).unsqueeze(-1).unsqueeze(-1), F_solid, F)
 
-    # Create diagonal sigma matrix for 3D
-    sig_matrix = torch.diag_embed(sig)
+    # Calculate stress ############################################################################################
+    R = U @ Vh
+    F_minus_R = F - R
+    stress = (2 * mu.unsqueeze(-1).unsqueeze(-1) * F_minus_R @ F.transpose(-2, -1) +
+              identity * (la * J * (J - 1)).unsqueeze(-1).unsqueeze(-1))
+    stress = (-dt * p_vol * 4 * inv_dx * inv_dx) * stress
+    p_mass = M.squeeze(-1)
+    affine = stress + p_mass.unsqueeze(-1).unsqueeze(-1) * C
 
-    # 3D stress calculation
-    stress = (2 * mu.unsqueeze(-1).unsqueeze(-1) * (F - U @ Vh) @ F.transpose(-2, -1) +
-              la.unsqueeze(-1).unsqueeze(-1) * (J - 1).unsqueeze(-1).unsqueeze(-1) *
-              torch.eye(3, device=device).unsqueeze(0).expand(n_particles, -1, -1)) / J.unsqueeze(-1).unsqueeze(-1)
+    # P2G loop ###################################################################################################
 
-    # P2G Transfer ############################################################################################
+    # Clear 3D grid
+    grid_v = torch.zeros((n_grid, n_grid, n_grid, 3), device=device, dtype=torch.float32)
+    grid_m = torch.zeros((n_grid, n_grid, n_grid), device=device, dtype=torch.float32)
 
-    # Initialize 3D grid
-    grid_m = torch.zeros((n_grid, n_grid, n_grid), dtype=torch.float32, device=device)
-    grid_v = torch.zeros((n_grid, n_grid, n_grid, 3), dtype=torch.float32, device=device)  # 3D velocity
-
-    # Particle to grid mapping
+    # Calculate base grid positions and fractional offsets
     base = (X * inv_dx - 0.5).int()  # [n_particles, 3]
     fx = X * inv_dx - base.float()  # [n_particles, 3]
 
-    # 3D B-spline weights
+    # Quadratic B-spline kernel weights for 3D
     w_0 = 0.5 * (1.5 - fx) ** 2
     w_1 = 0.75 - (fx - 1) ** 2
     w_2 = 0.5 * (fx - 0.5) ** 2
-    w = torch.stack([w_0, w_1, w_2], dim=1)  # [n_particles, 3, 3]
+    # Stack weights [n_particles, 3, 3]
+    w = torch.stack([w_0, w_1, w_2], dim=1)
 
-    # 27-neighbor loop for 3D
-    for i in range(3):
-        for j in range(3):
-            for k in range(3):
-                offset = torch.tensor([i, j, k], device=device)
-                dpos = (offset.float() - fx) * dx  # [n_particles, 3]
-                weight = w[:, i, 0] * w[:, j, 1] * w[:, k, 2]  # [n_particles]
+    # P2G transfer (using pre-computed 3D offsets)
+    # Expand for all particles: [n_particles, 27, 3]
+    particle_base = base.unsqueeze(1).expand(-1, 27, -1)  # [n_particles, 27, 3]
+    particle_fx = fx.unsqueeze(1).expand(-1, 27, -1)  # [n_particles, 27, 3]
 
-                # Grid indices with boundary checking
-                grid_pos = base + offset  # [n_particles, 3]
-                valid_mask = ((grid_pos >= 0).all(dim=1) &
-                              (grid_pos < n_grid).all(dim=1))
+    # Calculate grid positions for all particle-offset combinations
+    grid_positions = particle_base + offsets.long()  # [n_particles, 27, 3]
 
-                if valid_mask.any():
-                    valid_particles = torch.where(valid_mask)[0]
-                    valid_grid_pos = grid_pos[valid_particles]
-                    valid_weight = weight[valid_particles]
+    # Calculate weights for all 27 combinations
+    # offsets is [27, 3] with entries like [0,0,0], [0,0,1], [0,0,2], [0,1,0], etc.
+    weights = (w[:, offsets[:, 0].long(), 0] *
+               w[:, offsets[:, 1].long(), 1] *
+               w[:, offsets[:, 2].long(), 2])  # [n_particles, 27]
 
-                    # Mass contribution
-                    mass_contrib = p_mass[valid_particles] * valid_weight
+    # Calculate dpos for all combinations
+    dpos = (particle_offsets - particle_fx) * dx  # [n_particles, 27, 3]
 
-                    # Momentum contribution (including affine and stress)
-                    if len(valid_particles) > 0:
-                        affine_contrib = torch.bmm(C[valid_particles], dpos[valid_particles].unsqueeze(-1)).squeeze(-1)
-                        stress_contrib = -dt * p_vol * torch.bmm(stress[valid_particles],
-                                                                 dpos[valid_particles].unsqueeze(-1)).squeeze(-1)
-                    else:
-                        continue
+    # Bounds checking for 3D
+    valid_mask = ((grid_positions[:, :, 0] >= 0) & (grid_positions[:, :, 0] < n_grid) &
+                  (grid_positions[:, :, 1] >= 0) & (grid_positions[:, :, 1] < n_grid) &
+                  (grid_positions[:, :, 2] >= 0) & (grid_positions[:, :, 2] < n_grid))
 
-                    # Weighted momentum contribution
-                    weighted_velocity = valid_weight.unsqueeze(-1) * V[valid_particles]
-                    weighted_affine = valid_weight.unsqueeze(-1) * affine_contrib
-                    weighted_stress = valid_weight.unsqueeze(-1) * stress_contrib
+    # Flatten everything for scatter operations
+    valid_indices = torch.where(valid_mask)
+    particle_idx = valid_indices[0]  # Which particle
+    offset_idx = valid_indices[1]  # Which offset (0-26)
 
-                    momentum = (p_mass[valid_particles].unsqueeze(-1) *
-                                (weighted_velocity + weighted_affine + weighted_stress))
+    # Get valid data
+    valid_grid_pos = grid_positions[valid_indices]  # [num_valid, 3]
+    valid_weights = weights[valid_indices]  # [num_valid]
+    valid_dpos = dpos[valid_indices]  # [num_valid, 3]
 
-                    # Scatter to grid
-                    for idx in range(len(valid_particles)):
-                        gx, gy, gz = valid_grid_pos[idx]
-                        grid_m[gx, gy, gz] += mass_contrib[idx]
-                        grid_v[gx, gy, gz] += momentum[idx]
+    # Calculate contributions
+    affine_contrib = torch.bmm(affine[particle_idx],
+                               valid_dpos.unsqueeze(-1)).squeeze(-1)  # [num_valid, 3]
+    momentum_contrib = valid_weights.unsqueeze(-1) * (
+            p_mass[particle_idx].unsqueeze(-1) * V[particle_idx] + affine_contrib)
+    mass_contrib = valid_weights * p_mass[particle_idx]
 
-    # Grid Operations ############################################################################################
+    # Convert 3D grid positions to 1D indices for scatter
+    grid_1d_idx = (valid_grid_pos[:, 0] * n_grid * n_grid +
+                   valid_grid_pos[:, 1] * n_grid +
+                   valid_grid_pos[:, 2])
 
-    # Convert momentum to velocity
+    # Scatter add to flattened grid
+    grid_v_flat = grid_v.view(-1, 3)
+    grid_m_flat = grid_m.view(-1)
+    grid_v_flat.scatter_add_(0, grid_1d_idx.unsqueeze(-1).expand(-1, 3), momentum_contrib)
+    grid_m_flat.scatter_add_(0, grid_1d_idx, mass_contrib)
+
+    # VECTORIZED: Convert momentum to velocity and apply boundary conditions ################################################
+
+    # Create mask for valid grid points (non-zero mass)
     valid_mass_mask = grid_m > 0
-    grid_v[valid_mass_mask] = grid_v[valid_mass_mask] / grid_m[valid_mass_mask].unsqueeze(-1)
 
-    # Apply gravity (3D)
-    gravity_3d = torch.tensor([0.0, gravity, 0.0], device=device)  # Gravity in y-direction
-    grid_v[valid_mass_mask] += dt * gravity_3d
+    # Convert momentum to velocity (vectorized)
+    grid_v = torch.where(valid_mass_mask.unsqueeze(-1),
+                         grid_v / grid_m.unsqueeze(-1),
+                         grid_v)
 
-    # Boundary conditions for 3D grid
-    boundary_mask = torch.zeros_like(valid_mass_mask)
+    # Apply gravity (vectorized) - in Y direction
+    gravity_force = torch.tensor([0.0, dt * gravity, 0.0], device=device)
+    grid_v = torch.where(valid_mass_mask.unsqueeze(-1),
+                         grid_v + gravity_force,
+                         grid_v)
 
-    # Set boundary conditions for all 6 faces of the cube
-    boundary_mask[0, :, :] = True  # x=0 face
-    boundary_mask[-1, :, :] = True  # x=n_grid-1 face
-    boundary_mask[:, 0, :] = True  # y=0 face
-    boundary_mask[:, -1, :] = True  # y=n_grid-1 face
-    boundary_mask[:, :, 0] = True  # z=0 face
-    boundary_mask[:, :, -1] = True  # z=n_grid-1 face
+    # VECTORIZED Boundary conditions for 3D (6 faces)
+    # Create coordinate grids for boundary checking
+    i_coords = torch.arange(n_grid, device=device).view(n_grid, 1, 1).expand(n_grid, n_grid, n_grid)
+    j_coords = torch.arange(n_grid, device=device).view(1, n_grid, 1).expand(n_grid, n_grid, n_grid)
+    k_coords = torch.arange(n_grid, device=device).view(1, 1, n_grid).expand(n_grid, n_grid, n_grid)
 
-    # Apply boundary conditions with friction
-    grid_v[boundary_mask] *= friction
+    # Apply friction to all boundary faces
+    boundary_thickness = 3
 
-    # G2P Transfer ############################################################################################
+    # X boundaries
+    left_boundary_mask = (i_coords < boundary_thickness) & (grid_v[:, :, :, 0] < 0) & valid_mass_mask
+    right_boundary_mask = (i_coords > n_grid - boundary_thickness) & (grid_v[:, :, :, 0] > 0) & valid_mass_mask
+    grid_v[:, :, :, 0] = torch.where(left_boundary_mask, grid_v[:, :, :, 0] * friction, grid_v[:, :, :, 0])
+    grid_v[:, :, :, 0] = torch.where(right_boundary_mask, grid_v[:, :, :, 0] * friction, grid_v[:, :, :, 0])
 
-    # Reset particle velocities and affine matrix
-    new_v = torch.zeros_like(V)
+    # Y boundaries
+    bottom_boundary_mask = (j_coords < boundary_thickness) & (grid_v[:, :, :, 1] < 0) & valid_mass_mask
+    top_boundary_mask = (j_coords > n_grid - boundary_thickness) & (grid_v[:, :, :, 1] > 0) & valid_mass_mask
+    grid_v[:, :, :, 1] = torch.where(bottom_boundary_mask, grid_v[:, :, :, 1] * friction, grid_v[:, :, :, 1])
+    grid_v[:, :, :, 1] = torch.where(top_boundary_mask, grid_v[:, :, :, 1] * friction, grid_v[:, :, :, 1])
+
+    # Z boundaries
+    front_boundary_mask = (k_coords < boundary_thickness) & (grid_v[:, :, :, 2] < 0) & valid_mass_mask
+    back_boundary_mask = (k_coords > n_grid - boundary_thickness) & (grid_v[:, :, :, 2] > 0) & valid_mass_mask
+    grid_v[:, :, :, 2] = torch.where(front_boundary_mask, grid_v[:, :, :, 2] * friction, grid_v[:, :, :, 2])
+    grid_v[:, :, :, 2] = torch.where(back_boundary_mask, grid_v[:, :, :, 2] * friction, grid_v[:, :, :, 2])
+
+    # G2P transfer - VECTORIZED VERSION
+    new_V = torch.zeros_like(V)
     new_C = torch.zeros_like(C)
 
-    # Grid to particle transfer
-    for i in range(3):
-        for j in range(3):
-            for k in range(3):
-                offset = torch.tensor([i, j, k], device=device)
-                dpos = (offset.float() - fx) * dx  # [n_particles, 3]
-                weight = w[:, i, 0] * w[:, j, 1] * w[:, k, 2]  # [n_particles]
+    # G2P loop ###################################################################################################
+    # Process all 27 neighbors simultaneously (using pre-computed offsets)
 
-                # Grid indices with boundary checking
-                grid_pos = base + offset  # [n_particles, 3]
-                valid_mask = ((grid_pos >= 0).all(dim=1) &
-                              (grid_pos < n_grid).all(dim=1))
+    # Expand offset for all particles and compute dpos for all neighbors (using pre-computed fx)
+    dpos_all = offsets.unsqueeze(0) - fx.unsqueeze(1)  # [n_particles, 27, 3]
 
-                if valid_mask.any():
-                    valid_particles = torch.where(valid_mask)[0]
-                    valid_grid_pos = grid_pos[valid_particles]
-                    valid_weight = weight[valid_particles]
-                    valid_dpos = dpos[valid_particles]
+    # Grid positions for all neighbors (using pre-computed base)
+    grid_pos_all = base.unsqueeze(1) + offsets.long().unsqueeze(0)  # [n_particles, 27, 3]
 
-                    if len(valid_particles) == 0:
-                        continue
+    # Weights for all neighbors: w[:, i, 0] * w[:, j, 1] * w[:, k, 2] for all (i,j,k) combinations
+    i_indices = offsets[:, 0].long()  # [27] - i values
+    j_indices = offsets[:, 1].long()  # [27] - j values
+    k_indices = offsets[:, 2].long()  # [27] - k values
+    weights_all = (w[:, i_indices, 0] *
+                   w[:, j_indices, 1] *
+                   w[:, k_indices, 2])  # [n_particles, 27]
 
-                    # Gather grid velocities
-                    grid_vel = torch.stack([
-                        grid_v[valid_grid_pos[:, 0], valid_grid_pos[:, 1], valid_grid_pos[:, 2]]
-                    ])
+    # Bounds checking for all neighbors
+    valid_mask_all = ((grid_pos_all[:, :, 0] >= 0) & (grid_pos_all[:, :, 0] < n_grid) &
+                      (grid_pos_all[:, :, 1] >= 0) & (grid_pos_all[:, :, 1] < n_grid) &
+                      (grid_pos_all[:, :, 2] >= 0) & (grid_pos_all[:, :, 2] < n_grid))  # [n_particles, 27]
 
-                    if len(grid_vel.shape) == 3:
-                        grid_vel = grid_vel.squeeze(0)
+    # Get grid velocities for all neighbors with bounds checking
+    g_v_all = torch.zeros((n_particles, 27, 3), device=device)
 
-                    # Update particle velocity
-                    new_v[valid_particles] += valid_weight.unsqueeze(-1) * grid_vel
+    # Flatten for efficient indexing
+    flat_valid = valid_mask_all.flatten()  # [n_particles * 27]
+    flat_grid_pos = grid_pos_all.reshape(-1, 3)  # [n_particles * 27, 3]
 
-                    # Update affine matrix (3x3)
-                    if len(valid_particles) > 0:
-                        new_C[valid_particles] += (4 * inv_dx * inv_dx * valid_weight).unsqueeze(-1).unsqueeze(
-                            -1) * torch.bmm(
-                            grid_vel.unsqueeze(-1), valid_dpos.unsqueeze(1)
-                        )
+    if flat_valid.any():
+        valid_positions = flat_grid_pos[flat_valid]
+        flat_g_v = torch.zeros((n_particles * 27, 3), device=device)
+        flat_g_v[flat_valid] = grid_v[valid_positions[:, 0], valid_positions[:, 1], valid_positions[:, 2]]
+        g_v_all = flat_g_v.reshape(n_particles, 27, 3)
 
-    # Update particle positions
-    X = X + dt * new_v
+    # Accumulate velocity contributions from all neighbors
+    velocity_contribs = weights_all.unsqueeze(-1) * g_v_all  # [n_particles, 27, 3]
+    new_V += velocity_contribs.sum(dim=1)  # Sum over the 27 neighbors
 
-    # Boundary conditions for particles
+    # CORRECTED APIC update - vectorized outer product for all neighbors
+    # Reshape for batch matrix multiplication: [n_particles * 27, 3, 1] x [n_particles * 27, 1, 3]
+    g_v_flat = g_v_all.reshape(-1, 3, 1)  # [n_particles * 27, 3, 1]
+    dpos_flat = dpos_all.reshape(-1, 1, 3)  # [n_particles * 27, 1, 3]
+    outer_products = torch.bmm(g_v_flat, dpos_flat).reshape(n_particles, 27, 3, 3)  # [n_particles, 27, 3, 3]
+
+    # Weight the outer products and sum over neighbors
+    weighted_outer_products = weights_all.unsqueeze(-1).unsqueeze(-1) * outer_products  # [n_particles, 27, 3, 3]
+    new_C += 4 * inv_dx * weighted_outer_products.sum(dim=1)  # Sum over the 27 neighbors
+
+    # Update particle state
+    V.copy_(new_V)
+    C.copy_(new_C)
+
+    # Particle advection
+    X = X + dt * V
+
+    # Boundary conditions for particles (keep them in [0,1] bounds)
     X = torch.clamp(X, 0.01, 0.99)
 
     # Update particle velocities where they hit boundaries
     boundary_hit = (X <= 0.01) | (X >= 0.99)
-    new_v = torch.where(boundary_hit, new_v * 0.0, new_v)
+    V = torch.where(boundary_hit, V * friction, V)
 
-    # Prepare grid outputs (flatten for compatibility)
-    GM = grid_m.flatten()
-    GV = grid_v.reshape(-1, 3)
 
-    return X, new_v, new_C, F, T, Jp, M, stress, GM, GV
+    # Grid momentum norm before velocity conversion (GP)
+    grid_momentum_norm = torch.norm(grid_v, dim=3)
+
+    return X, V, C, F, T, Jp, M, stress, grid_m, grid_momentum_norm

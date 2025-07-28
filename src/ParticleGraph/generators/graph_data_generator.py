@@ -1019,12 +1019,12 @@ def data_generate_MPM_3D(
             if (it >= 0):
                 x_list.append(x.clone().detach())
 
-            # # 3D MPM step
-            # X, V, C, F, T, Jp, M, S, GM, GV = MPM_3D_step(
-            #     model_MPM, X, V, C, F, T, Jp, M, n_particles, n_grid,
-            #     delta_t, dx, inv_dx, mu_0, lambda_0, p_vol, offsets, particle_offsets,
-            #     expansion_factor, gravity, friction, it, device
-            # )
+            # 3D MPM step
+            X, V, C, F, T, Jp, M, S, GM, GV = MPM_3D_step(
+                model_MPM, X, V, C, F, T, Jp, M, n_particles, n_grid,
+                delta_t, dx, inv_dx, mu_0, lambda_0, p_vol, offsets, particle_offsets,
+                expansion_factor, gravity, friction, it, device
+            )
 
             # 3D visualization (if enabled)
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
@@ -1039,89 +1039,66 @@ def data_generate_MPM_3D(
                 if 'color' in style:
                     # 1. 3D Angled View
                     from mpl_toolkits.mplot3d import Axes3D
-                    ax = fig.add_subplot(2, 3, 1, projection='3d')
-                    ax.set_title('3D Angled View')
-                    for n in range(min(3, MPM_n_objects)):
-                        pos = torch.argwhere(T == n)[:,0]
-                        if len(pos) > 0:
-                            ax.scatter(to_numpy(X[pos, 0]), to_numpy(X[pos, 1]), to_numpy(X[pos, 2]),
-                                     s=1, color=cmap.color(n), alpha=0.7)
-                    ax.set_xlim([0, 1])
-                    ax.set_ylim([0, 1])
-                    ax.set_zlim([0, 1])
-                    ax.set_xlabel('X')
-                    ax.set_ylabel('Y')
-                    ax.set_zlabel('Z')
-                    # Set viewing angle (elevation, azimuth)
-                    ax.view_init(elev=20, azim=45)
-                    #
-                    # # 2. XZ projection (front view)
-                    # plt.subplot(2, 3, 2)
-                    # plt.title('XZ Projection (Front View)')
-                    # for n in range(min(3, MPM_n_objects)):
-                    #     pos = torch.argwhere(T == n)[:, 0]
-                    #     if len(pos) > 0:
-                    #         plt.scatter(to_numpy(X[pos, 0]), to_numpy(X[pos, 2]), s=1, color=cmap.color(n), alpha=0.6)
-                    # plt.xlim([0, 1])
-                    # plt.ylim([0, 1])
-                    # plt.xlabel('X')
-                    # plt.ylabel('Z')
-                    # plt.gca().set_aspect('equal')
-                    #
-                    # # 3. YZ projection (side view)
-                    # plt.subplot(2, 3, 3)
-                    # plt.title('YZ Projection (Side View)')
-                    # for n in range(min(3, MPM_n_objects)):
-                    #     pos = torch.argwhere(T == n)[:, 0]
-                    #     if len(pos) > 0:
-                    #         plt.scatter(to_numpy(X[pos, 1]), to_numpy(X[pos, 2]), s=1, color=cmap.color(n), alpha=0.6)
-                    # plt.xlim([0, 1])
-                    # plt.ylim([0, 1])
-                    # plt.xlabel('Y')
-                    # plt.ylabel('Z')
-                    # plt.gca().set_aspect('equal')
-                    #
-                    # # 4. Velocity magnitude
-                    # plt.subplot(2, 3, 4)
-                    # plt.title('3D Velocity Magnitude')
-                    # v_norm = torch.norm(V, dim=1).cpu().numpy()
-                    # scatter = plt.scatter(X[:, 0].cpu(), X[:, 1].cpu(), c=v_norm, s=1, cmap='viridis', alpha=0.6)
-                    # plt.colorbar(scatter, fraction=0.046, pad=0.04)
-                    # plt.xlim([0, 1])
-                    # plt.ylim([0, 1])
-                    # plt.xlabel('X')
-                    # plt.ylabel('Y')
-                    # plt.gca().set_aspect('equal')
-                    #
-                    # # 5. Grid mass (XY slice at z=n_grid//2)
-                    # plt.subplot(2, 3, 5)
-                    # plt.title('Grid Mass (Mid Z-slice)')
-                    # if len(GM.shape) == 1:
-                    #     GM_3d = GM.reshape(n_grid, n_grid, n_grid)
-                    #     mid_z = n_grid // 2
-                    #     im = plt.imshow(to_numpy(GM_3d[:, :, mid_z].T), cmap='plasma',
-                    #                     extent=[0, 1, 0, 1], origin='lower', alpha=0.8)
-                    #     plt.colorbar(im, fraction=0.046, pad=0.04)
-                    # plt.xlabel('X')
-                    # plt.ylabel('Y')
-                    #
-                    # # 6. Deformation gradient determinant (volume change)
-                    # plt.subplot(2, 3, 6)
-                    # plt.title('Volume Change (det F)')
-                    # det_F = torch.det(F.view(n_particles, 3, 3)).cpu().numpy()
-                    # scatter = plt.scatter(X[:, 0].cpu(), X[:, 1].cpu(), c=det_F, s=1,
-                    #                       cmap='RdBu_r', vmin=0.5, vmax=1.5, alpha=0.6)
-                    # plt.colorbar(scatter, fraction=0.046, pad=0.04)
-                    # plt.xlim([0, 1])
-                    # plt.ylim([0, 1])
-                    # plt.xlabel('X')
-                    # plt.ylabel('Y')
-                    # plt.gca().set_aspect('equal')
 
-                    plt.tight_layout()
-                    num = f"{it:06}"
-                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.png", dpi=150, bbox_inches='tight')
-                    plt.close()
+                    import pyvista as pv
+
+                    def plot_3d_shaded_pointcloud(X, ID, T, output_path):
+                        plotter = pv.Plotter(off_screen=True, window_size=(1800, 1200))
+                        plotter.set_background("black")
+
+                        MPM_n_objects = 3
+
+                        for n in range(min(3, MPM_n_objects)):
+                            pos = torch.argwhere(T == n)[:, 0]
+                            if len(pos) > 0:
+                                pts = to_numpy(X[pos])
+                                ids = to_numpy(ID[pos].squeeze())
+                                cloud = pv.PolyData(pts)
+                                cloud["ID"] = ids
+                                plotter.add_points(
+                                    cloud,
+                                    scalars="ID",
+                                    cmap="nipy_spectral",
+                                    point_size=15,
+                                    render_points_as_spheres=True,
+                                    opacity=0.9,
+                                )
+
+                        plotter.view_vector((1, 1, 0.5))
+                        plotter.enable_eye_dome_lighting()
+                        plotter.camera.zoom(1.5)
+                        plotter.screenshot(output_path)
+                        plotter.close()
+
+                    output_path_3d = f"graphs_data/{dataset_name}/Fig/Fig_{run}_{it:06}_3D.png"
+                    plot_3d_shaded_pointcloud(X, ID, T, output_path_3d)
+
+                    #
+                    # fig = plt.figure(figsize=(18, 12))
+                    # ax = fig.add_subplot(2, 3, 1, projection='3d')
+                    # ax.set_title('3D Angled View')
+                    # for n in range(min(3, MPM_n_objects)):
+                    #     pos = torch.argwhere(T == n)[:,0]
+                    #     if len(pos) > 0:
+                    #         ax.scatter(to_numpy(X[pos, 0]), to_numpy(X[pos, 2]), to_numpy(X[pos, 1]),
+                    #                    cmap='nipy_spectral', edgecolors = 'none',
+                    #                    s=20, c=to_numpy(ID.squeeze()), alpha=0.7)
+                    #
+                    #         # plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), c=to_numpy(ID.squeeze()), s=2, alpha=0.3,
+                    #         #             cmap='nipy_spectral', edgecolors = 'none')
+                    #
+                    # ax.set_xlim([0, 1])
+                    # ax.set_ylim([0, 1])
+                    # ax.set_zlim([0, 1])
+                    # ax.set_xlabel('X')
+                    # ax.set_ylabel('Y')
+                    # ax.set_zlabel('Z')
+                    # # Set viewing angle (elevation, azimuth)
+                    # ax.view_init(elev=20, azim=45)
+                    # plt.tight_layout()
+                    # num = f"{it:06}"
+                    # plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.png", dpi=150, bbox_inches='tight')
+                    # plt.close()
 
         if bSave:
             torch.save(x_list, f'graphs_data/{dataset_name}/generated_data_{run}.pt')
