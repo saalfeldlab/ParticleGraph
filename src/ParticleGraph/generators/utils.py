@@ -697,14 +697,6 @@ def init_MPM_3D_shapes(
         size, spacing_x, spacing_y, spacing_z = 0.075, 0.25, 0.25, 0.0
         start_x, start_y, start_z = 0.2, 0.2, 0.4
     elif n_shapes == 27:
-        # 3x3x3 cube arrangement
-        shape_depth = group_indices // 9
-        temp = group_indices % 9
-        shape_row = temp // 3
-        shape_col = temp % 3
-        size, spacing_x, spacing_y, spacing_z = 0.06, 0.25, 0.25, 0.25
-        start_x, start_y, start_z = 0.2, 0.2, 0.2
-    else:
         # General case: try to make a cubic grid
         grid_size = int(round(n_shapes ** (1 / 3)))
         if grid_size ** 3 < n_shapes:
@@ -715,7 +707,7 @@ def init_MPM_3D_shapes(
         shape_row = temp // grid_size
         shape_col = temp % grid_size
 
-        size = 0.2 / (grid_size + 1)
+        size = 0.3 / (grid_size + 1)
         spacing_x = spacing_y = spacing_z = 0.6 / grid_size
         start_x = start_y = start_z = 0.2
 

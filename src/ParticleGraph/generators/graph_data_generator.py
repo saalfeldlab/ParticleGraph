@@ -1044,14 +1044,15 @@ def data_generate_MPM_3D(
 
                     def plot_3d_shaded_pointcloud(X, ID, T, output_path):
                         plotter = pv.Plotter(off_screen=True, window_size=(1800, 1200))
-                        plotter.set_background("black")
+                        plotter.set_background("lightgray")
 
                         MPM_n_objects = 3
 
                         for n in range(min(3, MPM_n_objects)):
                             pos = torch.argwhere(T == n)[:, 0]
                             if len(pos) > 0:
-                                pts = to_numpy(X[pos])
+                                # pts = to_numpy(X[pos])
+                                pts = to_numpy(X[pos])[:, [0, 2, 1]]
                                 ids = to_numpy(ID[pos].squeeze())
                                 cloud = pv.PolyData(pts)
                                 cloud["ID"] = ids
@@ -1062,11 +1063,25 @@ def data_generate_MPM_3D(
                                     point_size=15,
                                     render_points_as_spheres=True,
                                     opacity=0.9,
+                                    show_scalar_bar=False  # ✅ correct
                                 )
 
+                        # Add bounding box (wireframe cube)
+                        cube = pv.Cube(center=(0.5, 0.5, 0.5), x_length=1.0, y_length=1.0, z_length=1.0)
+                        frame = cube.extract_all_edges()
+                        plotter.add_mesh(frame, color='white', line_width=1.0, opacity=0.5)
+
+                        # Add axes with bounds
+                        # plotter.show_bounds(grid='back', location='outer', all_edges=True,
+                        #                     color='white', line_width=1.5,
+                        #                     xlabel='X', ylabel='Y', zlabel='Z')
+
                         plotter.view_vector((1, 1, 0.5))
+
                         plotter.enable_eye_dome_lighting()
-                        plotter.camera.zoom(1.5)
+
+                        plotter.camera.zoom(0.9)
+
                         plotter.screenshot(output_path)
                         plotter.close()
 
