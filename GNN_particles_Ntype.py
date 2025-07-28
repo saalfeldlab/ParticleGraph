@@ -100,7 +100,7 @@ if __name__ == "__main__":
                 alpha=1,
                 erase=False,
                 bSave=True,
-                step=50,
+                step=20,
             )  # config.simulation.n_frames // 100)
             
         if "train" in task:

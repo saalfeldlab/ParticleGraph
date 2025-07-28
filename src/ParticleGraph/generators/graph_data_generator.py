@@ -929,7 +929,7 @@ def data_generate_MPM(
     MPM_n_objects = simulation_config.MPM_n_objects
     MPM_object_type = simulation_config.MPM_object_type
     gravity = simulation_config.MPM_gravity
-
+    friction = simulation_config.MPM_friction
 
     delta_t = simulation_config.delta_t
     n_frames = simulation_config.n_frames
@@ -938,7 +938,7 @@ def data_generate_MPM(
     p_vol = (dx * 0.5) ** 2
     rho_list = simulation_config.MPM_rho_list
 
-    E, nu = 0.1e4, 0.2  # Young's modulus and Poisson's ratio
+    E, nu = 0.1e4 / 30, 0.2  # Young's modulus and Poisson's ratio
     mu_0, lambda_0 = E / (2 * (1 + nu)), E * nu / ((1 + nu) * (1 - 2 * nu))  # Lame parameters
     offsets = torch.tensor([[i, j] for i in range(3) for j in range(3)],
                            device=device, dtype=torch.float32)  # [9, 2]
@@ -987,7 +987,7 @@ def data_generate_MPM(
 
             X, V, C, F, T, Jp, M, S, GM, GV = MPM_step(model_MPM, X, V, C, F, T, Jp, M, n_particles, n_grid,
                                                        delta_t, dx, inv_dx, mu_0, lambda_0, p_vol, offsets, particle_offsets,
-                                                       expansion_factor, gravity, it, device)
+                                                       expansion_factor, gravity, friction, it, device)
 
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):

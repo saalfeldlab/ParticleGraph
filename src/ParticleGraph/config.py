@@ -46,6 +46,7 @@ class SimulationConfig(BaseModel):
     MPM_object_type: Literal['cubes', 'discs', 'stars', 'letters'] = 'discs'
     MPM_gravity: float = -50
     MPM_rho_list: list[float] = [1.0, 1.0, 1.0]
+    MPM_friction: float = 0.0
 
     diffusion_coefficients: list[list[float]] = None
 

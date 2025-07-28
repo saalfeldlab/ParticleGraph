@@ -202,6 +202,9 @@ class Interaction_MPM(nn.Module):
         # F = torch.where(liquid_mask.unsqueeze(-1).unsqueeze(-1), F_liquid, F)
         # F = torch.where((jelly_mask | snow_mask).unsqueeze(-1).unsqueeze(-1), F_solid, F)
 
+        F = F.reshape(n_particles, 4)
+        return X, V, C, F, T, Jp, M, F, grid_m, grid_v
+
         F[liquid_mask] = F_liquid[liquid_mask]
         solid_mask = jelly_mask | snow_mask
         F[solid_mask] = F_solid[solid_mask]

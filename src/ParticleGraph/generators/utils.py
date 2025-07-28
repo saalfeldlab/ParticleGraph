@@ -351,6 +351,14 @@ def init_MPM_shapes(
         shape_row = group_indices // 3
         shape_col = group_indices % 3
         size, spacing, start_x, start_y = 0.075, 0.25, 0.2, 0.375
+    elif n_shapes == 16:
+        shape_row = group_indices // 4
+        shape_col = group_indices % 4
+        size, spacing, start_x, start_y = 0.04, 0.2, 0.2, 0.2
+    elif n_shapes == 25:
+        shape_row = group_indices // 5
+        shape_col = group_indices % 5
+        size, spacing, start_x, start_y = 0.035, 0.16, 0.15, 0.2
     elif n_shapes == 36:
         shape_row = group_indices // 6
         shape_col = group_indices % 6
@@ -606,8 +614,9 @@ def init_MPM_shapes(
         x[:, 1] = letter_positions[:, 1]
 
     # Random materials for each shape
-    shape_materials = torch.randperm(n_shapes, device=device) % n_particle_types
-    T = shape_materials[group_indices].unsqueeze(1).int()
+    if n_particle_types> 1:
+        shape_materials = torch.randperm(n_shapes, device=device) % n_particle_types
+        T = shape_materials[group_indices].unsqueeze(1).int()
 
     # Calculate mass based on material type
     # Material 0: water (density = 1.0)

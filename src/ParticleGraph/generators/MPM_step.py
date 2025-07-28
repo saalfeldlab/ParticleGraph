@@ -24,6 +24,7 @@ def MPM_step(
         particle_offsets,
         expansion_factor,
         gravity,
+        friction,
         frame,
         device,
 ):
@@ -177,22 +178,37 @@ def MPM_step(
                          grid_v + gravity_force,
                          grid_v)
 
-    # VECTORIZED Boundary conditions
-    # Create coordinate grids for boundary checking
-    i_coords = torch.arange(n_grid, device=device).unsqueeze(1).expand(n_grid, n_grid)  # [n_grid, n_grid]
-    j_coords = torch.arange(n_grid, device=device).unsqueeze(0).expand(n_grid, n_grid)  # [n_grid, n_grid]
-    # Left boundary: i < 3 and v_x < 0 → set v_x = 0
-    left_boundary_mask = (i_coords < 3) & (grid_v[:, :, 0] < 0) & valid_mass_mask
-    grid_v[:, :, 0] = torch.where(left_boundary_mask, 0.0, grid_v[:, :, 0])
-    # Right boundary: i > n_grid - 3 and v_x > 0 → set v_x = 0
-    right_boundary_mask = (i_coords > n_grid - 3) & (grid_v[:, :, 0] > 0) & valid_mass_mask
-    grid_v[:, :, 0] = torch.where(right_boundary_mask, 0.0, grid_v[:, :, 0])
-    # Bottom boundary: j < 3 and v_y < 0 → set v_y = 0
-    bottom_boundary_mask = (j_coords < 3) & (grid_v[:, :, 1] < 0) & valid_mass_mask
-    grid_v[:, :, 1] = torch.where(bottom_boundary_mask, 0.0, grid_v[:, :, 1])
-    # Top boundary: j > n_grid - 3 and v_y > 0 → set v_y = 0
-    top_boundary_mask = (j_coords > n_grid - 3) & (grid_v[:, :, 1] > 0) & valid_mass_mask
-    grid_v[:, :, 1] = torch.where(top_boundary_mask, 0.0, grid_v[:, :, 1])
+    # Create coordinate grids
+    i_coords = torch.arange(n_grid, device=device).unsqueeze(1).expand(n_grid, n_grid)
+    j_coords = torch.arange(n_grid, device=device).unsqueeze(0).expand(n_grid, n_grid)
+    valid_mass_mask = torch.ones_like(grid_v[:, :, 0], dtype=torch.bool)
+
+    # Boundary masks
+    left_mask = (i_coords < 3) & valid_mass_mask
+    right_mask = (i_coords > n_grid - 3) & valid_mass_mask
+    bottom_mask = (j_coords < 3) & valid_mass_mask
+    top_mask = (j_coords > n_grid - 3) & valid_mass_mask
+
+    # Apply normal boundary conditions (prevent penetration)
+    grid_v[:, :, 0] = torch.where(left_mask & (grid_v[:, :, 0] < 0), 0.0, grid_v[:, :, 0])
+    grid_v[:, :, 0] = torch.where(right_mask & (grid_v[:, :, 0] > 0), 0.0, grid_v[:, :, 0])
+    grid_v[:, :, 1] = torch.where(bottom_mask & (grid_v[:, :, 1] < 0), 0.0, grid_v[:, :, 1])
+    grid_v[:, :, 1] = torch.where(top_mask & (grid_v[:, :, 1] > 0), 0.0, grid_v[:, :, 1])
+
+    # Apply friction to tangential components
+    friction_factor = 1.0 - friction
+
+    # Horizontal boundaries affect v_y (tangential)
+    horizontal_boundary_mask = left_mask | right_mask
+    grid_v[:, :, 1] = torch.where(horizontal_boundary_mask,
+                                  grid_v[:, :, 1] * friction_factor,
+                                  grid_v[:, :, 1])
+
+    # Vertical boundaries affect v_x (tangential)
+    vertical_boundary_mask = bottom_mask | top_mask
+    grid_v[:, :, 0] = torch.where(vertical_boundary_mask,
+                                  grid_v[:, :, 0] * friction_factor,
+                                  grid_v[:, :, 0])
 
     # G2P transfer - CORRECTED VERSION
     new_V = torch.zeros_like(V)
