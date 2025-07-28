@@ -937,8 +937,9 @@ def data_generate_MPM(
 
     p_vol = (dx * 0.5) ** 2
     rho_list = simulation_config.MPM_rho_list
+    young_coeff = simulation_config.MPM_young_coeff
 
-    E, nu = 0.1e4, 0.2  # Young's modulus and Poisson's ratio
+    E, nu = 0.1e4 / young_coeff, 0.2  # Young's modulus and Poisson's ratio
     mu_0, lambda_0 = E / (2 * (1 + nu)), E * nu / ((1 + nu) * (1 - 2 * nu))  # Lame parameters
     offsets = torch.tensor([[i, j] for i in range(3) for j in range(3)],
                            device=device, dtype=torch.float32)  # [9, 2]
@@ -972,16 +973,17 @@ def data_generate_MPM(
     for run in range(config.training.n_runs):
         x_list = []
 
-        N, X, V, C, F, T, Jp, M, S = init_MPM_shapes(geometry=MPM_object_type, n_shapes=MPM_n_objects, seed=42, n_particles=n_particles,
-                                                     n_particle_types=n_particle_types, n_grid=n_grid, dx=dx, rho_list=rho_list, device=device)
-
+        # N, X, V, C, F, T, Jp, M, S, ID = init_MPM_shapes(geometry=MPM_object_type, n_shapes=MPM_n_objects, seed=42, n_particles=n_particles,
+        #                                              n_particle_types=n_particle_types, n_grid=n_grid, dx=dx, rho_list=rho_list, device=device)
+        N, X, V, C, F, T, Jp, M, S, ID = init_MPM_cells(n_shapes=MPM_n_objects, seed=42, n_particles=n_particles,
+                                                     n_grid=n_grid, dx=dx, rho_list=rho_list, nucleus_ratio=0.6, device=device)
         # Main simulation loop
         for it in trange(simulation_config.start_frame, n_frames):
             x = torch.cat((N.clone().detach(), X.clone().detach(), V.clone().detach(),
                            C.reshape(n_particles, 4).clone().detach(),
                            F.reshape(n_particles, 4).clone().detach(),
                            T.clone().detach(), Jp.clone().detach(), M.clone().detach(),
-                           S.reshape(n_particles, 4).clone().detach()), 1)
+                           S.reshape(n_particles, 4).clone().detach(),ID.clone().detach()), 1)
             if (it >= 0):
                 x_list.append(x.clone().detach())
 
@@ -1019,11 +1021,17 @@ def data_generate_MPM(
                     # v_norm = torch.norm(V, dim=1).cpu().numpy()
                     # plt.scatter(X[:, 0].cpu(), X[:, 1].cpu(), c=v_norm, s=1, cmap='viridis', vmin=0, vmax=6)
                     # plt.colorbar(fraction=0.046, pad=0.04)
-                    plt.title('material')
+                    plt.title('objects')
 
                     for n in range(3):
                         pos = torch.argwhere(T == n)[:,0]
                         plt.scatter(to_numpy(x[pos, 1]), to_numpy(x[pos, 2]), s=1, color=cmap.color(n))
+
+                    # Overlay transparent color based on object ID
+                    # plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), c='w', s=2, edgecolors = 'none')
+                    # plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), c=to_numpy(ID.squeeze()), s=2, alpha=0.3,
+                    #             cmap='nipy_spectral', edgecolors = 'none')
+
                     plt.xlim([0, 1])
                     plt.ylim([0, 1])
                     plt.tight_layout()

@@ -362,7 +362,7 @@ def init_MPM_shapes(
     elif n_shapes == 36:
         shape_row = group_indices // 6
         shape_col = group_indices % 6
-        size, spacing, start_x, start_y = 0.04, 0.13, 0.1, 0.14
+        size, spacing, start_x, start_y = 0.035, 0.13, 0.1, 0.14
     else:
         # General case: try to make a square grid
         grid_size = int(n_shapes ** 0.5)
@@ -630,7 +630,149 @@ def init_MPM_shapes(
     shape_velocities = (torch.rand(n_shapes, 2, device=device) - 0.5) * 4.0
     v = shape_velocities[group_indices]
 
-    return N, x, v, C, F, T, Jp, M, S
+    # Object ID for each particle
+    ID = group_indices.unsqueeze(1).int()
+    id_permutation = torch.randperm(n_shapes, device=device)
+    ID = id_permutation[ID.squeeze()].unsqueeze(1)
+
+
+    return N, x, v, C, F, T, Jp, M, S, ID
+
+
+def init_MPM_cells(
+        n_shapes=3,
+        seed=42,
+        n_particles=[],
+        n_grid=[],
+        dx=[],
+        rho_list=[],
+        nucleus_ratio=0.6,  # nucleus radius / total radius
+        device='cpu'
+):
+    torch.manual_seed(seed)
+
+    p_vol = (dx * 0.5) ** 2
+
+    N = torch.arange(n_particles, dtype=torch.float32, device=device)[:, None]
+    x = torch.zeros((n_particles, 2), dtype=torch.float32, device=device)
+    v = torch.zeros((n_particles, 2), dtype=torch.float32, device=device)
+    C = torch.zeros((n_particles, 2, 2), dtype=torch.float32, device=device)
+    F = torch.eye(2, dtype=torch.float32, device=device).unsqueeze(0).expand(n_particles, -1, -1)
+    T = torch.ones((n_particles, 1), dtype=torch.int32, device=device)
+    Jp = torch.ones((n_particles, 1), dtype=torch.float32, device=device)
+    S = torch.zeros((n_particles, 2, 2), dtype=torch.float32, device=device)
+    GM = torch.zeros((n_grid, n_grid), dtype=torch.float32, device=device)
+    GP = torch.zeros((n_grid, n_grid), dtype=torch.float32, device=device)
+
+    group_size = n_particles // n_shapes
+    group_indices = torch.arange(n_particles, device=device) // group_size
+
+    # Determine grid layout and spacing
+    if n_shapes == 3:
+        shape_row = group_indices
+        shape_col = torch.zeros_like(group_indices)
+        size, spacing, start_x, start_y = 0.1, 0.32, 0.3, 0.15
+    elif n_shapes == 9:
+        shape_row = group_indices // 3
+        shape_col = group_indices % 3
+        size, spacing, start_x, start_y = 0.075, 0.25, 0.2, 0.375
+    elif n_shapes == 16:
+        shape_row = group_indices // 4
+        shape_col = group_indices % 4
+        size, spacing, start_x, start_y = 0.04, 0.2, 0.2, 0.2
+    elif n_shapes == 25:
+        shape_row = group_indices // 5
+        shape_col = group_indices % 5
+        size, spacing, start_x, start_y = 0.035, 0.16, 0.15, 0.2
+    elif n_shapes == 36:
+        shape_row = group_indices // 6
+        shape_col = group_indices % 6
+        size, spacing, start_x, start_y = 0.035, 0.13, 0.1, 0.14
+    else:
+        # General case: try to make a square grid
+        grid_size = int(n_shapes ** 0.5)
+        shape_row = group_indices // grid_size
+        shape_col = group_indices % grid_size
+        size, spacing = 0.4 / grid_size, 0.8 / grid_size
+        start_x, start_y = 0.1 + size, 0.1 + size
+
+    center_x = start_x + spacing * shape_col.float()
+    center_y = start_y + spacing * shape_row.float()
+
+    # Generate cell particles (discs with nucleus and membrane)
+    outer_radius = size
+    nucleus_radius = outer_radius * nucleus_ratio
+
+    particles_per_shape = group_size
+    valid_particles = []
+    particle_materials = []
+
+    # Calculate particles distribution: nucleus area vs membrane area
+    nucleus_area = torch.pi * nucleus_radius ** 2
+    membrane_area = torch.pi * (outer_radius ** 2 - nucleus_radius ** 2)
+    total_area = nucleus_area + membrane_area
+
+    particles_nucleus = int(particles_per_shape * nucleus_area / total_area)
+    particles_membrane = particles_per_shape - particles_nucleus
+
+    for shape_idx in range(n_shapes):
+        shape_particles = []
+        shape_materials = []
+
+        shape_center_x = center_x[shape_idx * group_size]
+        shape_center_y = center_y[shape_idx * group_size]
+
+        # Generate nucleus particles (material 0 - liquid)
+        for _ in range(particles_nucleus):
+            r_test = torch.rand(1, device=device).sqrt() * nucleus_radius
+            theta_test = torch.rand(1, device=device) * 2 * torch.pi
+
+            px = shape_center_x + r_test * torch.cos(theta_test)
+            py = shape_center_y + r_test * torch.sin(theta_test)
+            shape_particles.append([px.item(), py.item()])
+            shape_materials.append(0)  # Material 0 for nucleus
+
+        # Generate membrane particles (material 1 - jelly)
+        for _ in range(particles_membrane):
+            # Sample in annular region between nucleus_radius and outer_radius
+            r_min_sq = nucleus_radius ** 2
+            r_max_sq = outer_radius ** 2
+            r_test = torch.sqrt(torch.rand(1, device=device) * (r_max_sq - r_min_sq) + r_min_sq)
+            theta_test = torch.rand(1, device=device) * 2 * torch.pi
+
+            px = shape_center_x + r_test * torch.cos(theta_test)
+            py = shape_center_y + r_test * torch.sin(theta_test)
+            shape_particles.append([px.item(), py.item()])
+            shape_materials.append(1)  # Material 1 for membrane
+
+        valid_particles.extend(shape_particles)
+        particle_materials.extend(shape_materials)
+
+    cell_positions = torch.tensor(valid_particles[:n_particles], device=device)
+    x[:, 0] = cell_positions[:, 0]
+    x[:, 1] = cell_positions[:, 1]
+
+    # Set materials based on nucleus/membrane assignment
+    T = torch.tensor(particle_materials[:n_particles], device=device).unsqueeze(1).int()
+
+    # Calculate mass based on material type
+    # Material 0: liquid (nucleus)
+    # Material 1: jelly (membrane)
+    material_densities = torch.tensor(rho_list, device=device)
+    particle_densities = material_densities[T.squeeze()]
+    M = torch.full((n_particles, 1), p_vol, dtype=torch.float32, device=device) * particle_densities.unsqueeze(1)
+
+    # Random velocity per shape
+    shape_velocities = (torch.rand(n_shapes, 2, device=device) - 0.5) * 4.0
+    v = shape_velocities[group_indices]
+
+    # Object ID for each particle
+    ID = group_indices.unsqueeze(1).int()
+    id_permutation = torch.randperm(n_shapes, device=device)
+    ID = id_permutation[ID.squeeze()].unsqueeze(1)
+
+    return N, x, v, C, F, T, Jp, M, S, ID
+
 
 def get_index(n_particles, n_particle_types):
     index_particles = []

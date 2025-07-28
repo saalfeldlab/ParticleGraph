@@ -207,6 +207,8 @@ def data_train_material(config, erase, best_model, device):
     list_loss = []
     time.sleep(1)
 
+    trainer = 'C'
+
     # torch.autograd.set_detect_anomaly(True)
     for epoch in range(start_epoch, n_epochs + 1):
 
@@ -246,6 +248,8 @@ def data_train_material(config, erase, best_model, device):
                     y = x_next[:, 5 + dimension * 2: 9 + dimension * 2].clone().detach() # F
                 elif trainer == 'S':
                     y = x_next[:, 12 + dimension * 2: 16 + dimension * 2].clone().detach() # S
+                elif trainer == 'C':
+                    y = x_next[:, 1 + dimension * 2: 5 + dimension * 2].clone().detach()
 
                 dataset = data.Data(x=x, edge_index=[], num_nodes=x.shape[0])
                 dataset_batch.append(dataset)
@@ -265,7 +269,7 @@ def data_train_material(config, erase, best_model, device):
             optimizer.zero_grad()
 
             for batch in batch_loader:
-                pred = model(batch, data_id=data_id, k=k_batch, training=True)
+                pred = model(batch, data_id=data_id, k=k_batch, trainer=trainer)
 
             loss = F.mse_loss(pred, y_batch)
 
@@ -274,7 +278,7 @@ def data_train_material(config, erase, best_model, device):
 
             total_loss += loss.item()
 
-            if False: # ((epoch < 30) & (N % plot_frequency == 0)) | (N == 0):
+            if ((epoch < 30) & (N % plot_frequency == 0)) | (N == 0):
 
                 k_list = [250, 340, 680, 930]
                 error = list([])
@@ -285,10 +289,12 @@ def data_train_material(config, erase, best_model, device):
                             y = x[:, 5 + dimension * 2: 9 + dimension * 2].clone().detach() # F
                         elif trainer == 'S':
                             y = x[:, 12 + dimension * 2: 16 + dimension * 2].clone().detach()  # S
+                        elif trainer == 'C':
+                            y = x[:, 1 + dimension * 2: 5 + dimension * 2].clone().detach()
                         data_id = torch.ones((n_particles, 1), dtype=torch.float32, device=device) * run
                         k_list = torch.ones((n_particles, 1), dtype=torch.int, device=device) * k
                         dataset = data.Data(x=x, edge_index=[], num_nodes=x.shape[0])
-                        pred = model(dataset,data_id,k_list,True)
+                        pred = model(dataset, data_id=data_id, k=k_list, trainer=trainer)
                         error.append(F.mse_loss(pred, y).item())
 
                 plt.style.use('dark_background')
@@ -305,7 +311,12 @@ def data_train_material(config, erase, best_model, device):
                     stress_norm = stress_norm[:, None]
                     plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=stress_norm[:, 0].cpu(), s=1, cmap='hot', vmin=0, vmax=6E-3)
                     plt.colorbar(fraction=0.046, pad=0.04)
-                plt.title('F (deformation)')
+                elif trainer == 'C':
+                    c_norm = torch.norm(y.view(n_particles, -1), dim=1)
+                    c_norm = c_norm[:, None]
+                    plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=c_norm[:, 0].cpu(), s=1, cmap='viridis', vmin=0, vmax=80)
+                    plt.colorbar(fraction=0.046, pad=0.04)
+
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
                 plt.subplot(1, 2, 2)
@@ -319,7 +330,12 @@ def data_train_material(config, erase, best_model, device):
                     stress_norm = stress_norm[:, None]
                     plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=stress_norm[:, 0].cpu(), s=1, cmap='hot', vmin=0, vmax=6E-3)
                     plt.colorbar(fraction=0.046, pad=0.04)
-                plt.title('F (deformation)')
+                elif trainer == 'C':
+                    c_norm = torch.norm(pred.view(n_particles, -1), dim=1)
+                    c_norm = c_norm[:, None]
+                    plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=c_norm[:, 0].cpu(), s=1, cmap='viridis', vmin=0, vmax=80)
+                    plt.colorbar(fraction=0.046, pad=0.04)
+
                 plt.text(0.05, 0.95,
                          f'epoch: {epoch} iteration: {N} error: {np.mean(1000 * error) / len(k_list):.6f}', )
                 plt.xlim([0, 1])

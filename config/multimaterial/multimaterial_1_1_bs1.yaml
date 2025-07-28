@@ -1,4 +1,4 @@
-description: 'system of particles falling down in a box'
+description: 'system of particles falling down in a box   training with batch size 1'
 dataset: 'multimaterial_1'
 
 simulation:
@@ -46,7 +46,7 @@ plotting:
 
 training:
   n_epochs: 5
-  batch_size: 8
+  batch_size: 1
   small_init_batch_size: False
   n_runs: 1
 
@@ -64,8 +64,6 @@ training:
 
   learning_rate_start: 5E-5
   learning_rate_embedding_start: 5E-5
-
-  MPM_trainer: 'S'
 
 
 

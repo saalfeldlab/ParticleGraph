@@ -1,4 +1,4 @@
-description: 'system of particles falling down in a box'
+description: 'system of particles falling down in a box   training with batch size 32'
 dataset: 'multimaterial_1'
 
 simulation:
@@ -34,10 +34,10 @@ graph_model:
 
   input_size_nnr: 3
   n_layers_nnr: 5
-  hidden_dim_nnr: 128
+  hidden_dim_nnr: 256
   output_size_nnr: 4
   outermost_linear_nnr: True
-  omega: 80.0
+  omega: 30.0
 
 plotting:
   colormap: 'tab10'
@@ -46,7 +46,7 @@ plotting:
 
 training:
   n_epochs: 5
-  batch_size: 8
+  batch_size: 32
   small_init_batch_size: False
   n_runs: 1
 
@@ -64,8 +64,6 @@ training:
 
   learning_rate_start: 5E-5
   learning_rate_embedding_start: 5E-5
-
-  MPM_trainer: 'S'
 
 
 

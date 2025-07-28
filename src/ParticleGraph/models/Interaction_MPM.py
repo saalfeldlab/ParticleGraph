@@ -65,8 +65,11 @@ class Interaction_MPM(nn.Module):
 
         self.model_MPM = MPM_P2G(aggr_type='add', device=device)
 
-        self.siren = Siren(in_features=self.input_size_nnr, out_features=self.output_size_nnr, hidden_features=self.hidden_dim_nnr,
+        self.siren_F_Jp = Siren(in_features=3, out_features=4, hidden_features=self.hidden_dim_nnr,
                            hidden_layers=self.n_layers_nnr, first_omega_0=self.omega, hidden_omega_0=self.omega, outermost_linear=True).to(device)
+
+        self.siren_C = Siren(in_features=5, out_features=4, hidden_features=self.hidden_dim_nnr,
+                           hidden_layers=self.n_layers_nnr, first_omega_0=80, hidden_omega_0=80, outermost_linear=True).to(device)
 
         # self.mlp0 = MLP(input_size=3, output_size=1, nlayers=5, hidden_size=128, device=device)
         # self.mlp1 = MLP(input_size=2, output_size=1, nlayers=2, hidden_size=4, device=device)
@@ -77,7 +80,7 @@ class Interaction_MPM(nn.Module):
                          requires_grad=True, dtype=torch.float32))
 
 
-    def forward(self, data=[], data_id=[], k=[], training=[]):
+    def forward(self, data=[], data_id=[], k=[], trainer=[]):
 
         x = data.x
 
@@ -90,18 +93,27 @@ class Interaction_MPM(nn.Module):
         Jp = x[:,14:15] # Jp is the Jacobian of the deformation gradient
         M = x[:,15:16]  # M is the mass of the particle
         S = x[:,16:20].reshape(-1, 2, 2)
-
         frame = k / self.n_frames
-        features = torch.cat((pos, frame), dim=1).detach()
-        F_sample = self.siren(features).reshape(-1, 2, 2)
 
-        X_, V_, C_, F_, T_, Jp_, M_, S_, GM_, GV_ = self.MPM_engine(self.model_MPM, pos, d_pos, C, F_sample,
-                                                    T, Jp, M, self.n_particles, self.n_grid,
-                                                   self.delta_t, self.dx, self.inv_dx, self.mu_0, self.lambda_0, self.p_vol,
-                                                   self.offsets, self.particle_offsets, self.grid_coords,
-                                                   self.expansion_factor, self.gravity, self.device)
+        if trainer == 'C':
+            features = torch.cat((pos, d_pos, frame), dim=1).detach()
+            C_sample = self.siren_C(features).reshape(-1, 2, 2)
+            return C_sample.reshape(-1, 4)
 
-        return F_
+        elif trainer == 'F':
+            features = torch.cat((pos, frame), dim=1).detach()
+            F_sample = self.siren_F_Jp(features)[:,0:4]
+            return F_sample.reshape(-1, 4)
+
+        elif trainer == 'full':
+            features = torch.cat((pos, frame), dim=1).detach()
+            F_sample = self.siren_F_Jp(features).reshape(-1, 2, 2)
+            X_, V_, C_, F_, T_, Jp_, M_, S_, GM_, GV_ = self.MPM_engine(self.model_MPM, pos, d_pos, C, F_sample,
+                                                        T, Jp, M, self.n_particles, self.n_grid,
+                                                       self.delta_t, self.dx, self.inv_dx, self.mu_0, self.lambda_0, self.p_vol,
+                                                       self.offsets, self.particle_offsets, self.grid_coords,
+                                                       self.expansion_factor, self.gravity, self.device)
+            return F_
 
 
     def MPM_engine(self, model_MPM, X, V, C, F, T, Jp, M, n_particles,
