@@ -938,7 +938,7 @@ def data_generate_MPM(
     p_vol = (dx * 0.5) ** 2
     rho_list = simulation_config.MPM_rho_list
 
-    E, nu = 0.1e4 / 30, 0.2  # Young's modulus and Poisson's ratio
+    E, nu = 0.1e4, 0.2  # Young's modulus and Poisson's ratio
     mu_0, lambda_0 = E / (2 * (1 + nu)), E * nu / ((1 + nu) * (1 - 2 * nu))  # Lame parameters
     offsets = torch.tensor([[i, j] for i in range(3) for j in range(3)],
                            device=device, dtype=torch.float32)  # [9, 2]
