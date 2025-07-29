@@ -247,13 +247,13 @@ def data_train_material(config, erase, best_model, device):
                 run = 0
                 k = time_window + np.random.randint(run_lengths[run] - 1 - time_window - time_step - recursive_loop)
                 x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
-                x_next = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
+                x_next = torch.tensor(x_list[run][k+1], dtype=torch.float32, device=device).clone().detach()
                 if 'F' in trainer:
                     y = x_next[:, 5 + dimension * 2: 9 + dimension * 2].clone().detach()  # F
                 elif trainer == 'S':
-                    y = x_next[:, 12 + dimension * 2: 16 + dimension * 2].clone().detach()  # S
+                    y = x[:, 12 + dimension * 2: 16 + dimension * 2].clone().detach()  # S
                 elif trainer == 'C':
-                    y = x_next[:, 1 + dimension * 2: 5 + dimension * 2].clone().detach()
+                    y = x[:, 1 + dimension * 2: 5 + dimension * 2].clone().detach()
                 elif 'k-nearest' in trainer:
                     # For k-nearest, we need positions and velocities for neighbor loss
                     pos = x[:, 1:3].clone().detach()  # positions
@@ -349,8 +349,9 @@ def data_train_material(config, erase, best_model, device):
                 with torch.no_grad():
                     for k in k_list:
                         x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
+                        x_next = torch.tensor(x_list[run][k+1], dtype=torch.float32, device=device).clone().detach()
                         if 'F' in trainer:
-                            y = x[:, 5 + dimension * 2: 9 + dimension * 2].clone().detach()  # F
+                            y = x_next[:, 5 + dimension * 2: 9 + dimension * 2].clone().detach()  # F
                         elif trainer == 'S':
                             y = x[:, 12 + dimension * 2: 16 + dimension * 2].clone().detach()  # S
                         elif 'C' in trainer:
@@ -449,12 +450,13 @@ def data_train_material(config, erase, best_model, device):
 
         plt.style.use('dark_background')
 
-        for k in trange(0, n_frames, n_frames // 50):
+        for k in trange(0, n_frames-10, n_frames // 50):
 
             with torch.no_grad():
                 x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
+                x_next = torch.tensor(x_list[run][k+1], dtype=torch.float32, device=device).clone().detach()
                 if 'F' in trainer:
-                    y = x[:, 5 + dimension * 2: 9 + dimension * 2].clone().detach()  # F
+                    y = x_next[:, 5 + dimension * 2: 9 + dimension * 2].clone().detach()  # F
                 elif trainer == 'S':
                     y = x[:, 12 + dimension * 2: 16 + dimension * 2].clone().detach()  # S
                 elif 'C' in trainer:

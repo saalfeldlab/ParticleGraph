@@ -72,6 +72,8 @@ class Interaction_MPM(nn.Module):
                            hidden_layers=self.n_layers_nnr, first_omega_0=self.omega, hidden_omega_0=self.omega, outermost_linear=True).to(device)
 
         self.MLP_mu_lambda = MLP(input_size=self.embedding_dim + 1, output_size=2, nlayers=3, hidden_size=32, device=device)
+        self.MLP_sig_plastic_ratio = MLP(input_size=self.embedding_dim + 12, output_size=3, nlayers=5, hidden_size=128, device=device)
+        self.MLP_F = MLP(input_size=self.embedding_dim + 13, output_size=4, nlayers=5, hidden_size=128, device=device)
 
         # self.mlp0 = MLP(input_size=3, output_size=1, nlayers=5, hidden_size=128, device=device)
         # self.mlp1 = MLP(input_size=2, output_size=1, nlayers=2, hidden_size=4, device=device)
@@ -145,80 +147,27 @@ class Interaction_MPM(nn.Module):
         # Hardening coefficient
         h = torch.exp(10 * (1.0 - Jp.squeeze()))
 
-        in_features = torch.cat((embedding, h), dim=1)
-        out = self.MLP_mu_lambda(in_features)
-        mu = out[:, 0]**2  # Shear modulus >0
-        la = out[:, 1]  # Lame's first parameter
+        in_features = torch.cat((embedding, h[:,None]), dim=1)
+        out1 = self.MLP_mu_lambda(in_features)
+        mu = out1[:, 0]**2  # Shear modulus >0
+        la = out1[:, 1]  # Lame's first parameter
 
         # SVD decomposition
         U, sig, Vh = torch.linalg.svd(F, driver='gesvdj')
 
-        in_features = torch.cat((embedding, U, sig, Vh, det(U), det(Vh)), dim=1)
-        F = self.MLP_sig_plastic_ratio()
-
-
-        # SVD sign correction without in-place ops
-        det_U = torch.det(U)
-        det_Vh = torch.det(Vh)
-
-        neg_det_U = det_U < 0  # [n_particles] bool tensor
-        neg_det_Vh = det_Vh < 0
-        # Reshape masks for broadcasting
-        neg_det_U_mask = neg_det_U.unsqueeze(-1).unsqueeze(-1)  # [n_particles,1,1]
-        neg_det_sig_U_mask = neg_det_U.unsqueeze(-1)  # [n_particles,1]
-        neg_det_Vh_mask = neg_det_Vh.unsqueeze(-1).unsqueeze(-1)  # [n_particles,1,1]
-        neg_det_sig_Vh_mask = neg_det_Vh.unsqueeze(-1)  # [n_particles,1]
-        # Flip signs on last columns/rows accordingly, out-of-place
-        U = torch.where(
-            neg_det_U_mask.expand_as(U),
-            torch.cat([U[:, :, :-1], -U[:, :, -1:].clone()], dim=2),
-            U
-        )
-        sig = torch.where(
-            neg_det_sig_U_mask.expand_as(sig),
-            torch.cat([sig[:, :-1], -sig[:, -1:].clone()], dim=1),
-            sig
-        )
-        Vh = torch.where(
-            neg_det_Vh_mask.expand_as(Vh),
-            torch.cat([Vh[:, :-1, :], -Vh[:, -1:, :].clone()], dim=1),
-            Vh
-        )
-        sig = torch.where(
-            neg_det_sig_Vh_mask.expand_as(sig),
-            torch.cat([sig[:, :-1], -sig[:, -1:].clone()], dim=1),
-            sig
-        )
-        # Clamp singular values
-        min_val = 1e-6
-        sig = torch.where(
-            sig < min_val,
-            min_val + 0.01 * (sig - min_val),  # small slope below min_val
-            sig
-        )
-        original_sig = sig.clone()
-        # Apply plasticity constraints for snow
-        new_sig = torch.where(snow_mask.unsqueeze(1),
-                              torch.clamp(sig, min=1 - 2.5e-2, max=1 + 4.5e-3),
-                              sig)
-        # Update plastic deformation
-        plastic_ratio = torch.prod(original_sig / new_sig, dim=1, keepdim=True)
+        in_features = torch.cat((embedding, U.reshape(-1, 4), sig, Vh.reshape(-1, 4),
+                                 torch.det(U)[:,None], torch.det(Vh)[:,None]), dim=1)
+        out2 = self.MLP_sig_plastic_ratio(in_features)
+        sig = out2[:, 0:2]**2 # Singular values
+        plastic_ratio = out2[:, 2:3]**2  # Plastic ratio
 
         Jp = Jp * plastic_ratio
-        sig = new_sig
         J = torch.prod(sig, dim=1)
         sig_diag = torch.diag_embed(sig)
 
-        # For liquid: F = sqrt(J) * I
-        F_liquid = identity * torch.sqrt(J).unsqueeze(-1).unsqueeze(-1)
-        # For solid materials: F = U @ sig_diag @ Vh
-        F_solid = U @ sig_diag @ Vh
+        in_features = torch.cat((embedding, J[:,None], U.reshape(-1, 4), sig_diag.reshape(-1, 4), Vh.reshape(-1, 4)), dim=1)
+        F = self.MLP_F(in_features)
 
-        # Apply reconstruction based on material type
-        # F = torch.where(liquid_mask.unsqueeze(-1).unsqueeze(-1), F_liquid, F)
-        # F = torch.where((jelly_mask | snow_mask).unsqueeze(-1).unsqueeze(-1), F_solid, F)
-
-        F = F.reshape(n_particles, 4)
         return X, V, C, F, T, Jp, M, F, grid_m, grid_v
 
         F[liquid_mask] = F_liquid[liquid_mask]
