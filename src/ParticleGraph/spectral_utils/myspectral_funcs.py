@@ -88,7 +88,6 @@ def estimate_spectrum(
     return_coefs=False,
     y_in_coefs=False,
     x_in_coefs=False,
-    normalize_per_trial=False,
 ):
     """Calculate various forms of windowed FFTs for PSD, CSD, etc.
 
@@ -159,7 +158,7 @@ def estimate_spectrum(
         if len(xnt.shape) < 2:
             xnt = xnt[None]
         xn = xnt.shape[0]
-        coefs_xnkf, freqs = compute_spectral_coefs(
+        coefs_xnkf, freqs, win = compute_spectral_coefs(
             xnt=xnt,
             fs=fs,
             window=window,
@@ -184,7 +183,7 @@ def estimate_spectrum(
             if len(ynt.shape) < 2:
                 ynt = ynt[None]
             yn = ynt.shape[0]
-            coefs_ynkf, _ = compute_spectral_coefs(
+            coefs_ynkf, _, _ = compute_spectral_coefs(
                 xnt=ynt,
                 fs=fs,
                 window=window,
@@ -225,10 +224,15 @@ def estimate_spectrum(
             # pxy = jnp.einsum("nkf, nkf-> nf", coefs_xnkf, np.conj(coefs_xnkf))
             pxy = da.einsum("nkf, nkf-> nf", coefs_xnkf, da.conj(coefs_xnkf), optimize = True)
 
+    pxy /= (kn*(win**2).sum())
+ 
     if abs:
         pxy = np.abs(pxy).real
-    if normalize_per_trial:
-        pxy /= kn
+    if scaling == "density":
+        pxy /= fs
+    
+
+        
     if return_coefs:
         if ynt is not None:
             return pxy, freqs, coefs_xnkf, coefs_ynkf
@@ -290,17 +294,10 @@ def compute_multiscale_spectral_coefs(xnt: np.ndarray, fs: float, window: str, n
         elif sides == "onesided":
             freqs = sp_fft.rfftfreq(nfft, 1 / fs)
 
-        if scaling == "density":
-            scale = 1.0 / (fs * (win * win).sum())
-        elif scaling == "spectrum":
-            scale = 1.0 / win.sum() ** 2
-        else:
-            raise ValueError("Unknown scaling: %r" % scaling)
 
         if detrend is False:
             detrend_func = None
         coefs_xnkf = myfft_helper(xnt, win, detrend_func, nperseg, noverlap, nfft, sides)
-        coefs_xnkf *= scale
         spectra.append(coefs_xnkf)
         freqs_all.append(freqs)
 
@@ -396,23 +393,16 @@ def compute_spectral_coefs(  # used in coherence
     elif sides == "onesided":
         freqs = sp_fft.rfftfreq(nfft, 1 / fs)
 
-    if scaling == "density":
-        scale = 1.0 / (fs * (win * win).sum())
-    elif scaling == "spectrum":
-        scale = 1.0 / win.sum() ** 2
-    else:
-        raise ValueError("Unknown scaling: %r" % scaling)
 
     if detrend is False:
         detrend_func = None
     coefs_xnkf = myfft_helper(xnt, win, detrend_func, nperseg, noverlap, nfft, sides)
-    coefs_xnkf *= scale
 
     valid_freqs = (np.abs(freqs) >= freq_minmax[0]) & (np.abs(freqs) <= freq_minmax[1])
     freqs = freqs[valid_freqs]
     coefs_xnkf = coefs_xnkf[:, :, valid_freqs]
 
-    return coefs_xnkf, freqs
+    return coefs_xnkf, freqs, win
 
 
 def myfft_helper(
@@ -452,8 +442,7 @@ def myfft_helper(
         result = detrend_func(result)  # default to last axis - result is N x K x T
 
     # Apply window by multiplication
-
-    result = win * result
+    result = win * result # vmsr
 
     # Perform the fft. Acts on last axis by default. Zero-pads automatically
     if sides == "twosided":
@@ -466,7 +455,4 @@ def myfft_helper(
     coefs_nkf = func(result, n=nfft)
 
     return coefs_nkf
-
-
-
 
