@@ -69,7 +69,7 @@ class Interaction_MPM(nn.Module):
                            hidden_layers=self.n_layers_nnr, first_omega_0=self.omega, hidden_omega_0=self.omega, outermost_linear=True).to(device)
 
         self.siren_C = Siren(in_features=5, out_features=4, hidden_features=self.hidden_dim_nnr,
-                           hidden_layers=self.n_layers_nnr, first_omega_0=80, hidden_omega_0=80, outermost_linear=True).to(device)
+                           hidden_layers=self.n_layers_nnr, first_omega_0=self.omega, hidden_omega_0=self.omega, outermost_linear=True).to(device)
 
         # self.mlp0 = MLP(input_size=3, output_size=1, nlayers=5, hidden_size=128, device=device)
         # self.mlp1 = MLP(input_size=2, output_size=1, nlayers=2, hidden_size=4, device=device)
@@ -95,7 +95,7 @@ class Interaction_MPM(nn.Module):
         S = x[:,16:20].reshape(-1, 2, 2)
         frame = k / self.n_frames
 
-        if trainer == 'C':
+        if trainer == 'C' or trainer == 'C_k-nearest':
             features = torch.cat((pos, d_pos, frame), dim=1).detach()
             C_sample = self.siren_C(features).reshape(-1, 2, 2)
             return C_sample.reshape(-1, 4)

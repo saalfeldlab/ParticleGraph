@@ -1,4 +1,4 @@
-description: 'system of particles falling down in a box   training with batch size 16'
+description: 'system of particles falling down in a box   training with batch size 16  training affine C  omega 50'
 dataset: 'multimaterial_1'
 
 simulation:
@@ -37,7 +37,7 @@ graph_model:
   hidden_dim_nnr: 256
   output_size_nnr: 4
   outermost_linear_nnr: True
-  omega: 30.0
+  omega: 50.0
 
 plotting:
   colormap: 'tab10'

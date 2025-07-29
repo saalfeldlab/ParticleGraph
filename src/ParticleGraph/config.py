@@ -43,7 +43,7 @@ class SimulationConfig(BaseModel):
 
     MPM_expansion_factor: float = 1.0
     MPM_n_objects: int = 9
-    MPM_object_type: Literal['cubes', 'discs', 'stars', 'letters'] = 'discs'
+    MPM_object_type: Literal['cubes', 'discs', 'spheres', 'stars', 'letters'] = 'discs'
     MPM_gravity: float = -50
     MPM_rho_list: list[float] = [1.0, 1.0, 1.0]
     MPM_friction: float = 0.0

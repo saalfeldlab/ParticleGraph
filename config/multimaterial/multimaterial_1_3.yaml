@@ -1,4 +1,4 @@
-description: 'system of particles falling down in a box   training with batch size 16'
+description: 'system of particles falling down in a box   training with batch size 16  training affine C   batch_size: 32'
 dataset: 'multimaterial_1'
 
 simulation:
@@ -46,7 +46,7 @@ plotting:
 
 training:
   n_epochs: 5
-  batch_size: 16
+  batch_size: 32
   small_init_batch_size: False
   n_runs: 1
 

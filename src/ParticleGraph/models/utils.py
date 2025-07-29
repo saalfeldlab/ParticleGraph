@@ -2022,6 +2022,3 @@ def plot_odor_heatmaps(odor_responses):
 
 
 
-
-
-

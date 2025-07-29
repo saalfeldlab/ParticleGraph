@@ -1006,6 +1006,18 @@ def data_generate_MPM_3D(
             device=device
         )
 
+        # # Initialize 3D MPM shapes
+        # N, X, V, C, F, T, Jp, M, S, ID = init_MPM_3D_cells(
+        #     n_shapes=MPM_n_objects,
+        #     seed=42,
+        #     n_particles=n_particles,
+        #     n_grid=n_grid,
+        #     dx=dx,
+        #     rho_list=rho_list,
+        #     nucleus_ratio=0.6,
+        #     device=device
+        # )
+
         # Main simulation loop
         for it in trange(simulation_config.start_frame, n_frames):
             # Concatenate state tensors - 3D matrices flattened to 9 components
@@ -1060,7 +1072,7 @@ def data_generate_MPM_3D(
                                     cloud,
                                     scalars="ID",
                                     cmap="nipy_spectral",
-                                    point_size=15,
+                                    point_size=5,
                                     render_points_as_spheres=True,
                                     opacity=0.9,
                                     show_scalar_bar=False  # ✅ correct
@@ -1076,11 +1088,54 @@ def data_generate_MPM_3D(
                         #                     color='white', line_width=1.5,
                         #                     xlabel='X', ylabel='Y', zlabel='Z')
 
-                        plotter.view_vector((1, 1, 0.5))
+                        plotter.view_vector((1.1, 0.9, 0.45))
 
                         plotter.enable_eye_dome_lighting()
 
-                        plotter.camera.zoom(0.9)
+                        plotter.camera.zoom(1.1)
+
+                        plotter.screenshot(output_path)
+                        plotter.close()
+
+                    def plot_3d_material_pointcloud_separated(X, ID, T, output_path):
+                        """Alternative version that plots each material type separately for better control"""
+                        plotter = pv.Plotter(off_screen=True, window_size=(1800, 1200))
+                        plotter.set_background("lightgray")
+
+                        # Get unique material types
+                        unique_materials = torch.unique(T).cpu().numpy()
+
+                        # Define colors for different materials
+                        material_colors = ['blue', 'red', 'green', 'yellow', 'purple', 'orange', 'cyan', 'magenta']
+                        material_names = ['Liquid', 'Jelly', 'Snow', 'Material_3', 'Material_4', 'Material_5',
+                                          'Material_6', 'Material_7']
+
+                        for i, mat in enumerate(unique_materials):
+                            pos = torch.argwhere(T.squeeze() == mat)[:, 0]
+                            if len(pos) > 0:
+                                pts = to_numpy(X[pos])[:, [0, 2, 1]]  # Swap y and z coordinates
+
+                                cloud = pv.PolyData(pts)
+                                color = material_colors[i % len(material_colors)]
+                                mat_name = material_names[i % len(material_names)]
+
+                                plotter.add_points(
+                                    cloud,
+                                    color=color,
+                                    point_size=15,
+                                    render_points_as_spheres=True,
+                                    opacity=0.05,
+                                    label=f'{mat_name} (Type {mat})'
+                                )
+
+                        # Add bounding box (wireframe cube)
+                        cube = pv.Cube(center=(0.5, 0.5, 0.5), x_length=1.0, y_length=1.0, z_length=1.0)
+                        frame = cube.extract_all_edges()
+                        plotter.add_mesh(frame, color='white', line_width=1.0, opacity=0.5)
+
+                        plotter.view_vector((1.1, 0.9, 0.45))
+                        plotter.enable_eye_dome_lighting()
+                        plotter.camera.zoom(1.1)
 
                         plotter.screenshot(output_path)
                         plotter.close()

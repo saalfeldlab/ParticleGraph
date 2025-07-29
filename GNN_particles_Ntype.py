@@ -59,9 +59,9 @@ if __name__ == "__main__":
         else:
             best_model = None
     else:
-        task = 'generate'  # 'generate', 'train', 'test'
+        task = 'train'  # 'generate', 'train', 'test'
         best_model = ''
-        config_list = ['multimaterial_4_0']
+        config_list = ['multimaterial_1_1_bs16_k-nearest']
         # config_list = ['fluids_m19']
         # config_list = ['falling_water_ramp_x6_11_1']
         # config_list = ['arbitrary_3']
@@ -88,7 +88,6 @@ if __name__ == "__main__":
 
         print(f"config_file  {config.config_file}")
         print(f"\033[92mdevice  {device}\033[0m")
-        print(f"data folder  {config.dataset}")
 
         if "generate" in task:
             data_generate(

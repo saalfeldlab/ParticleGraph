@@ -1,5 +1,5 @@
-description: 'system of particles falling down in a box  MPM_young_coeff: 20.0   3D    MPM_expansion_factor: 1.00075'
-dataset: 'multimaterial_4_1_3D'
+description: 'system of particles falling down in a box  MPM_young_coeff: 20.0   3D spheres   MPM_expansion_factor: 1.00025'
+dataset: 'multimaterial_4_2_3D'
 
 simulation:
   params: [[0, 0.2, 0.4, 0.6, 0.8], [0.2, 0.2, 0.2, 0.2, 0.2]]
@@ -16,7 +16,7 @@ simulation:
 
   MPM_expansion_factor: 1.00025
   MPM_n_objects: 27
-  MPM_object_type : 'discs'
+  MPM_object_type : 'spheres'
   MPM_gravity: -20
   MPM_rho_list: [1.0, 0.5, 0.25]
   MPM_friction: 0.02

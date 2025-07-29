@@ -83,8 +83,12 @@ def MPM_3D_step(
     sig = new_sig
     J = torch.prod(sig, dim=1)
 
+    if frame > 1000:
+        expansion_factor = 1.0
+
+    J = J / expansion_factor  # Adjust J for expansion factor
     # Reconstruct deformation gradient
-    sig_diag = torch.diag_embed(sig)
+    sig_diag = torch.diag_embed(sig) / expansion_factor
 
     # For liquid: F = sqrt(J) * I
     F_liquid = identity * torch.sqrt(J).unsqueeze(-1).unsqueeze(-1)
