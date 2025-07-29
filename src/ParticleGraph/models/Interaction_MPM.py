@@ -71,6 +71,8 @@ class Interaction_MPM(nn.Module):
         self.siren_C = Siren(in_features=5, out_features=4, hidden_features=self.hidden_dim_nnr,
                            hidden_layers=self.n_layers_nnr, first_omega_0=self.omega, hidden_omega_0=self.omega, outermost_linear=True).to(device)
 
+        self.MLP_mu_lambda = MLP(input_size=self.embedding_dim + 1, output_size=2, nlayers=3, hidden_size=32, device=device)
+
         # self.mlp0 = MLP(input_size=3, output_size=1, nlayers=5, hidden_size=128, device=device)
         # self.mlp1 = MLP(input_size=2, output_size=1, nlayers=2, hidden_size=4, device=device)
 
@@ -83,6 +85,7 @@ class Interaction_MPM(nn.Module):
     def forward(self, data=[], data_id=[], k=[], trainer=[]):
 
         x = data.x
+        self.data_id = data_id.long()
 
         N = x[:,0:1]
         pos = x[:,1:3]  # pos is the absolute position
@@ -95,7 +98,9 @@ class Interaction_MPM(nn.Module):
         S = x[:,16:20].reshape(-1, 2, 2)
         frame = k / self.n_frames
 
-        if trainer == 'C' or trainer == 'C_k-nearest':
+        embedding = self.a[self.data_id.detach(), N.long(), :].squeeze()
+
+        if 'C' in trainer:
             features = torch.cat((pos, d_pos, frame), dim=1).detach()
             C_sample = self.siren_C(features).reshape(-1, 2, 2)
             return C_sample.reshape(-1, 4)
@@ -105,29 +110,24 @@ class Interaction_MPM(nn.Module):
             F_sample = self.siren_F_Jp(features)[:,0:4]
             return F_sample.reshape(-1, 4)
 
-        elif trainer == 'full':
+        elif trainer == 'next_F':
             features = torch.cat((pos, frame), dim=1).detach()
             F_sample = self.siren_F_Jp(features).reshape(-1, 2, 2)
             X_, V_, C_, F_, T_, Jp_, M_, S_, GM_, GV_ = self.MPM_engine(self.model_MPM, pos, d_pos, C, F_sample,
                                                         T, Jp, M, self.n_particles, self.n_grid,
-                                                       self.delta_t, self.dx, self.inv_dx, self.mu_0, self.lambda_0, self.p_vol,
+                                                       self.delta_t, self.dx, self.inv_dx, embedding,
                                                        self.offsets, self.particle_offsets, self.grid_coords,
                                                        self.expansion_factor, self.gravity, self.device)
             return F_
 
 
     def MPM_engine(self, model_MPM, X, V, C, F, T, Jp, M, n_particles,
-                       n_grid, dt, dx, inv_dx, mu_0, lambda_0, p_vol,
+                       n_grid, dt, dx, inv_dx, embedding,
                        offsets, particle_offsets, grid_coords, expansion_factor,
                         gravity, device):
         """
         MPM substep implementation
         """
-
-        # Material masks
-        liquid_mask = (T.squeeze() == 0).detach()
-        jelly_mask = (T.squeeze() == 1).detach()
-        snow_mask = (T.squeeze() == 2).detach()
 
         # Initialize
         p_mass = M.squeeze(-1)
@@ -144,14 +144,18 @@ class Interaction_MPM(nn.Module):
 
         # Hardening coefficient
         h = torch.exp(10 * (1.0 - Jp.squeeze()))
-        h = torch.where(jelly_mask, torch.tensor(0.3, device=device), h)
-        # Lamé parameters
-        mu = mu_0 * h
-        la = lambda_0 * h
-        mu = torch.where(liquid_mask, torch.tensor(0.0, device=device), mu)
+
+        in_features = torch.cat((embedding, h), dim=1)
+        out = self.MLP_mu_lambda(in_features)
+        mu = out[:, 0]**2  # Shear modulus >0
+        la = out[:, 1]  # Lame's first parameter
 
         # SVD decomposition
         U, sig, Vh = torch.linalg.svd(F, driver='gesvdj')
+
+        in_features = torch.cat((embedding, U, sig, Vh, det(U), det(Vh)), dim=1)
+        F = self.MLP_sig_plastic_ratio()
+
 
         # SVD sign correction without in-place ops
         det_U = torch.det(U)

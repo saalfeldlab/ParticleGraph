@@ -213,8 +213,6 @@ def data_train_material(config, erase, best_model, device):
     list_loss = []
     time.sleep(1)
 
-    trainer = train_config.MPM_trainer
-
     # torch.autograd.set_detect_anomaly(True)
     for epoch in range(start_epoch, n_epochs + 1):
 
@@ -250,13 +248,13 @@ def data_train_material(config, erase, best_model, device):
                 k = time_window + np.random.randint(run_lengths[run] - 1 - time_window - time_step - recursive_loop)
                 x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
                 x_next = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
-                if trainer == 'F':
+                if 'F' in trainer:
                     y = x_next[:, 5 + dimension * 2: 9 + dimension * 2].clone().detach()  # F
                 elif trainer == 'S':
                     y = x_next[:, 12 + dimension * 2: 16 + dimension * 2].clone().detach()  # S
                 elif trainer == 'C':
                     y = x_next[:, 1 + dimension * 2: 5 + dimension * 2].clone().detach()
-                elif trainer == 'C_k-nearest':
+                elif 'k-nearest' in trainer:
                     # For k-nearest, we need positions and velocities for neighbor loss
                     pos = x[:, 1:3].clone().detach()  # positions
                     vel = x[:, 3:5].clone().detach()  # velocities
@@ -268,21 +266,23 @@ def data_train_material(config, erase, best_model, device):
                 if batch == 0:
                     data_id = torch.ones((n_particles, 1), dtype=torch.float32, device=device) * run
                     x_batch = x
-                    if trainer != 'C_k-nearest':
-                        y_batch = y
-                    else:
+                    if 'k-nearest' in trainer:
                         pos_batch = pos
                         vel_batch = vel
+                    else:
+                        y_batch = y
+
                     k_batch = torch.ones((x.shape[0], 1), dtype=torch.int, device=device) * k
                 else:
                     data_id = torch.cat(
                         (data_id, torch.ones((n_particles, 1), dtype=torch.float32, device=device) * run), dim=0)
                     x_batch = torch.cat((x_batch, x), dim=0)
-                    if trainer != 'C_k-nearest':
-                        y_batch = torch.cat((y_batch, y), dim=0)
-                    else:
+                    if 'k-nearest' in trainer:
                         pos_batch = torch.cat((pos_batch, pos), dim=0)
                         vel_batch = torch.cat((vel_batch, vel), dim=0)
+                    else:
+                        y_batch = torch.cat((y_batch, y), dim=0)
+
                     k_batch = torch.cat((k_batch, torch.ones((x.shape[0], 1), dtype=torch.int, device=device) * k),
                                         dim=0)
 
@@ -290,7 +290,7 @@ def data_train_material(config, erase, best_model, device):
             optimizer.zero_grad()
 
             for batch_loader_data in batch_loader:
-                pred = model(batch_loader_data, data_id=data_id, k=k_batch, trainer='C')
+                pred = model(batch_loader_data, data_id=data_id, k=k_batch, trainer=trainer)
 
             if trainer == 'C_k-nearest':
                 pred_C = pred.reshape(-1, 2, 2)
@@ -349,7 +349,7 @@ def data_train_material(config, erase, best_model, device):
                 with torch.no_grad():
                     for k in k_list:
                         x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
-                        if trainer == 'F':
+                        if 'F' in trainer:
                             y = x[:, 5 + dimension * 2: 9 + dimension * 2].clone().detach()  # F
                         elif trainer == 'S':
                             y = x[:, 12 + dimension * 2: 16 + dimension * 2].clone().detach()  # S
@@ -367,7 +367,7 @@ def data_train_material(config, erase, best_model, device):
 
                 fig = plt.figure(figsize=(18, 8))
                 plt.subplot(1, 2, 1)
-                if trainer == 'F':
+                if 'F' in trainer:
                     f_norm = torch.norm(y.view(n_particles, -1), dim=1).cpu().numpy()
                     plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=f_norm, s=1, cmap='coolwarm', vmin=1.44 - 0.2,
                                 vmax=1.44 + 0.2)
@@ -388,7 +388,7 @@ def data_train_material(config, erase, best_model, device):
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
                 plt.subplot(1, 2, 2)
-                if trainer == 'F':
+                if 'F' in trainer:
                     f_norm = torch.norm(pred.view(n_particles, -1), dim=1).cpu().numpy()
                     plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=f_norm, s=1, cmap='coolwarm', vmin=1.44 - 0.2,
                                 vmax=1.44 + 0.2)
@@ -453,7 +453,7 @@ def data_train_material(config, erase, best_model, device):
 
             with torch.no_grad():
                 x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
-                if trainer == 'F':
+                if 'F' in trainer:
                     y = x[:, 5 + dimension * 2: 9 + dimension * 2].clone().detach()  # F
                 elif trainer == 'S':
                     y = x[:, 12 + dimension * 2: 16 + dimension * 2].clone().detach()  # S
@@ -469,7 +469,7 @@ def data_train_material(config, erase, best_model, device):
 
             fig = plt.figure(figsize=(18, 8))
             plt.subplot(1, 2, 1)
-            if trainer == 'F':
+            if 'F' in trainer:
                 f_norm = torch.norm(y.view(n_particles, -1), dim=1).cpu().numpy()
                 plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=f_norm, s=1, cmap='coolwarm', vmin=1.44 - 0.2,
                             vmax=1.44 + 0.2)
@@ -488,7 +488,7 @@ def data_train_material(config, erase, best_model, device):
             plt.ylim([0, 1])
 
             plt.subplot(1, 2, 2)
-            if trainer == 'F':
+            if 'F' in trainer:
                 f_norm = torch.norm(pred.view(n_particles, -1), dim=1).cpu().numpy()
                 plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=f_norm, s=1, cmap='coolwarm', vmin=1.44 - 0.2,
                             vmax=1.44 + 0.2)
