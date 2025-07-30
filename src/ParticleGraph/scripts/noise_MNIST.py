@@ -31,12 +31,12 @@ class NoisyMLP(nn.Module):
         x = x.view(-1, 784)
 
         x = self.fc1(x)
-        if self.training and self.noise_level > 0:
+        if self.noise_level > 0:
             x += torch.randn_like(x) * self.noise_level
         x = self.relu(x)
 
         x = self.fc2(x)
-        if self.training and self.noise_level > 0:
+        if self.noise_level > 0:
             x += torch.randn_like(x) * self.noise_level
         x = self.relu(x)
 
@@ -62,14 +62,17 @@ def train_model(model, train_loader, test_loader, epochs=1):
             optimizer.step()
             train_loss += loss.item()
 
-        # Testing
+        # Testing (explicitly disable noise for inference)
         model.eval()
+        original_noise = model.noise_level
+        model.noise_level = 0.0  # Ensure no noise during testing
         correct = 0
         with torch.no_grad():
             for data, target in test_loader:
                 output = model(data)
                 pred = output.argmax(dim=1)
                 correct += pred.eq(target).sum().item()
+        model.noise_level = original_noise  # Restore original noise level
 
         test_acc = 100. * correct / len(test_loader.dataset)
         train_losses.append(train_loss / len(train_loader))
@@ -90,7 +93,7 @@ train_loader = DataLoader(train_dataset, batch_size=256, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=1000, shuffle=False)
 
 # Test different noise levels with multiple runs
-noise_levels = [0.0, 0.1, 0.01, 0.001, 1e-4, 1e-5, 1e-6, 1e-7]
+noise_levels = [0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4]
 results = {}
 n_runs = 5
 
@@ -117,28 +120,35 @@ for noise in noise_levels:
         'std_acc': (sum([(acc - sum(final_accs) / n_runs) ** 2 for acc in final_accs]) / (n_runs - 1)) ** 0.5
     }
 
-# Plot results (showing all runs)
-plt.figure(figsize=(12, 5))
+# Plot results as bar charts (better for single epoch)
+plt.figure(figsize=(14, 5))
+
+# Extract means and stds for plotting
+noise_labels = [str(n) for n in noise_levels]
+mean_losses = [np.mean([losses[0] for losses in results[noise]['all_train_losses']]) for noise in noise_levels]
+std_losses = [np.std([losses[0] for losses in results[noise]['all_train_losses']]) for noise in noise_levels]
+mean_accs = [results[noise]['mean_acc'] for noise in noise_levels]
+std_accs = [results[noise]['std_acc'] for noise in noise_levels]
 
 plt.subplot(1, 2, 1)
-for noise in noise_levels:
-    for i, train_losses in enumerate(results[noise]['all_train_losses']):
-        alpha = 0.3 if i > 0 else 1.0  # First run solid, others transparent
-        plt.plot(train_losses, label=f'Noise: {noise}' if i == 0 else '', alpha=alpha)
-plt.xlabel('Epoch')
+bars1 = plt.bar(noise_labels, mean_losses, yerr=std_losses, capsize=5, alpha=0.7)
+plt.xlabel('Noise Level')
 plt.ylabel('Training Loss')
-plt.title('Training Loss vs Noise Level (5 runs)')
-plt.legend()
+plt.title('Final Training Loss vs Noise Level')
+plt.xticks(rotation=45)
+# Color the best performer
+best_loss_idx = np.argmin(mean_losses)
+bars1[best_loss_idx].set_color('red')
 
 plt.subplot(1, 2, 2)
-for noise in noise_levels:
-    for i, test_accs in enumerate(results[noise]['all_test_accs']):
-        alpha = 0.3 if i > 0 else 1.0  # First run solid, others transparent
-        plt.plot(test_accs, label=f'Noise: {noise}' if i == 0 else '', alpha=alpha)
-plt.xlabel('Epoch')
+bars2 = plt.bar(noise_labels, mean_accs, yerr=std_accs, capsize=5, alpha=0.7)
+plt.xlabel('Noise Level')
 plt.ylabel('Test Accuracy (%)')
-plt.title('Test Accuracy vs Noise Level (5 runs)')
-plt.legend()
+plt.title('Final Test Accuracy vs Noise Level')
+plt.xticks(rotation=45)
+# Color the best performer
+best_acc_idx = np.argmax(mean_accs)
+bars2[best_acc_idx].set_color('green')
 
 plt.tight_layout()
 plt.savefig('mnist_noise_comparison.png', dpi=150, bbox_inches='tight')

@@ -130,7 +130,7 @@ class Signal_Propagation_FlyVis(pyg.nn.MessagePassing):
         if self.lin_edge_positive:
             lin_edge = lin_edge**2
 
-        return self.W[self.mask % self.n_edges] * lin_edge
+        return self.W[self.mask % (self.n_edges+ self.n_extra_null_edges)] * lin_edge
 
     def update(self, aggr_out):
         return aggr_out
