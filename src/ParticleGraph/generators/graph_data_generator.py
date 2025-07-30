@@ -1088,11 +1088,11 @@ def data_generate_MPM_3D(
                         #                     color='white', line_width=1.5,
                         #                     xlabel='X', ylabel='Y', zlabel='Z')
 
-                        plotter.view_vector((1.1, 0.9, 0.45))
+                        plotter.view_vector((0.7, 1.3, 0.05))
 
                         plotter.enable_eye_dome_lighting()
 
-                        plotter.camera.zoom(1.1)
+                        plotter.camera.zoom(1.3)
 
                         plotter.screenshot(output_path)
                         plotter.close()
@@ -1256,10 +1256,13 @@ def data_generate_MPM(
     for run in range(config.training.n_runs):
         x_list = []
 
-        # N, X, V, C, F, T, Jp, M, S, ID = init_MPM_shapes(geometry=MPM_object_type, n_shapes=MPM_n_objects, seed=42, n_particles=n_particles,
-        #                                              n_particle_types=n_particle_types, n_grid=n_grid, dx=dx, rho_list=rho_list, device=device)
-        N, X, V, C, F, T, Jp, M, S, ID = init_MPM_cells(n_shapes=MPM_n_objects, seed=42, n_particles=n_particles,
-                                                     n_grid=n_grid, dx=dx, rho_list=rho_list, nucleus_ratio=0.6, device=device)
+
+        N, X, V, C, F, T, Jp, M, S, ID = init_MPM_shapes(geometry=MPM_object_type, n_shapes=MPM_n_objects, seed=42, n_particles=n_particles,
+                                                     n_particle_types=n_particle_types, n_grid=n_grid, dx=dx, rho_list=rho_list, device=device)
+
+        # N, X, V, C, F, T, Jp, M, S, ID = init_MPM_cells(n_shapes=MPM_n_objects, seed=42, n_particles=n_particles,
+        #                                              n_grid=n_grid, dx=dx, rho_list=rho_list, nucleus_ratio=0.6, device=device)
+
         # Main simulation loop
         for it in trange(simulation_config.start_frame, n_frames):
             x = torch.cat((N.clone().detach(), X.clone().detach(), V.clone().detach(),
@@ -1286,16 +1289,18 @@ def data_generate_MPM(
 
                 if 'color' in style:
 
-                    # fig, ax = fig_init(formatx="%.1f", formaty="%.1f")
-                    # for n in range(3):
-                    #     pos = torch.argwhere(T == n)[:,0]
-                    #     plt.scatter(to_numpy(x[pos, 1]), to_numpy(x[pos, 2]), s=1, color=cmap.color(n))
-                    # plt.xlim([0, 1])
-                    # plt.ylim([0, 1])
-                    # plt.tight_layout()
-                    # num = f"{it:06}"
-                    # plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
-                    # plt.close()
+                    fig, ax = fig_init(formatx="%.1f", formaty="%.1f")
+                    for n in range(3):
+                        pos = torch.argwhere(T == n)[:,0]
+                        plt.scatter(to_numpy(x[pos, 1]), to_numpy(x[pos, 2]), s=1, color=cmap.color(n))
+                    plt.xlim([0, 1])
+                    plt.ylim([0, 1])
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    num = f"{it:06}"
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
+                    plt.close()
 
                     plt.figure(figsize=(15, 10))
 

@@ -639,6 +639,93 @@ def init_MPM_shapes(
     return N, x, v, C, F, T, Jp, M, S, ID
 
 
+def random_rotation_matrix(device='cpu'):
+    # Random Euler angles
+    roll = torch.rand(1, device=device) * 2 * torch.pi
+    pitch = torch.rand(1, device=device) * 2 * torch.pi
+    yaw = torch.rand(1, device=device) * 2 * torch.pi
+
+    cos_r, sin_r = torch.cos(roll), torch.sin(roll)
+    cos_p, sin_p = torch.cos(pitch), torch.sin(pitch)
+    cos_y, sin_y = torch.cos(yaw), torch.sin(yaw)
+
+    # Rotation matrices around each axis
+    R_x = torch.tensor([
+        [1, 0, 0],
+        [0, cos_r, -sin_r],
+        [0, sin_r, cos_r]
+    ], device=device).squeeze()
+
+    R_y = torch.tensor([
+        [cos_p, 0, sin_p],
+        [0, 1, 0],
+        [-sin_p, 0, cos_p]
+    ], device=device).squeeze()
+
+    R_z = torch.tensor([
+        [cos_y, -sin_y, 0],
+        [sin_y, cos_y, 0],
+        [0, 0, 1]
+    ], device=device).squeeze()
+
+    # Combined rotation matrix: R = R_z * R_y * R_x
+    R = R_z @ R_y @ R_x
+    return R
+
+def stratified_sphere_points(n_points, radius=1.0, device='cpu'):
+    # Estimate number of shells (radial layers)
+    n_shells = int(torch.ceil(torch.tensor(n_points ** (1/3))).item())
+    points = []
+
+    total_points = 0
+    for i in range(n_shells):
+        r_lower = i / n_shells
+        r_upper = (i + 1) / n_shells
+        r_mean = (r_lower + r_upper) / 2
+
+        # Fraction of points proportional to shell volume
+        shell_volume = r_upper**3 - r_lower**3
+        n_shell_points = int(shell_volume * n_points)
+
+        if n_shell_points == 0:
+            continue
+
+        # Stratified indices within shell
+        indices = torch.arange(n_shell_points, dtype=torch.float32, device=device) + 0.5
+
+        # Spherical coordinates for points uniformly distributed on shell surface
+        phi = torch.acos(1 - 2 * indices / n_shell_points)  # polar angle [0, pi]
+        theta = 2 * torch.pi * indices * ((1 + 5 ** 0.5) / 2)  # golden angle for good azimuthal spacing
+
+        x = torch.sin(phi) * torch.cos(theta)
+        y = torch.sin(phi) * torch.sin(theta)
+        z = torch.cos(phi)
+
+        shell_points = torch.stack([x, y, z], dim=1) * (r_mean * radius)
+        points.append(shell_points)
+
+        total_points += n_shell_points
+
+    # If not enough points generated due to rounding, fill with random points inside the sphere
+    if total_points < n_points:
+        remaining = n_points - total_points
+
+        u = torch.rand(remaining, device=device)
+        r = radius * u.pow(1/3)  # Correct radius distribution for uniform volume density
+
+        phi = torch.acos(1 - 2 * torch.rand(remaining, device=device))
+        theta = 2 * torch.pi * torch.rand(remaining, device=device)
+
+        x = torch.sin(phi) * torch.cos(theta)
+        y = torch.sin(phi) * torch.sin(theta)
+        z = torch.cos(phi)
+
+        random_points = torch.stack([x, y, z], dim=1) * r.unsqueeze(1)
+        points.append(random_points)
+
+    all_points = torch.cat(points, dim=0)
+    return all_points[:n_points]
+
 def init_MPM_3D_shapes(
         geometry='cubes',  # 'cubes' or 'spheres' only
         n_shapes=3,
@@ -763,23 +850,34 @@ def init_MPM_3D_shapes(
             x[start_idx:end_idx, 2] = center_z[start_idx] + rotated_positions[:, 2]
 
     elif geometry == 'spheres':
-        # Generate particles in spherical volumes
+
         for shape_idx in range(n_shapes):
             start_idx = shape_idx * group_size
             end_idx = min(start_idx + group_size, n_particles)
             actual_particles = end_idx - start_idx
 
-            shape_center = torch.tensor([center_x[start_idx], center_y[start_idx], center_z[start_idx]], device=device)
+            shape_center = torch.tensor([
+                center_x[start_idx].item(),
+                center_y[start_idx].item(),
+                center_z[start_idx].item()
+            ], device=device)
 
-            for i in range(actual_particles):
-                # Generate random point in unit sphere using rejection sampling
-                while True:
-                    rand_pos = torch.rand(3, device=device) * 2 - 1  # [-1, 1]³
-                    if torch.sum(rand_pos ** 2) <= 1.0:
-                        break
+            local_positions = stratified_sphere_points(actual_particles, radius=size / 1.5, device=device)
 
-                # Scale by size and translate to center
-                x[start_idx + i] = shape_center + rand_pos * size * 0.75
+            # Generate random rotation matrix for this shape
+            R = random_rotation_matrix(device=device)
+
+            # Apply rotation
+            rotated_positions = local_positions @ R.T
+
+            # Translate to shape center
+            x[start_idx:end_idx] = shape_center.unsqueeze(0) + rotated_positions
+
+
+
+
+
+
 
     else:  # Default to cubes
         # Same as cubes case

@@ -83,7 +83,7 @@ def MPM_3D_step(
     sig = new_sig
     J = torch.prod(sig, dim=1)
 
-    if frame > 1000:
+    if frame > 1500:
         expansion_factor = 1.0
 
     J = J / expansion_factor  # Adjust J for expansion factor

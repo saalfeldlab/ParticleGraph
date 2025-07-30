@@ -97,7 +97,6 @@ def main():
         ('src/ParticleGraph/utils.py', 'MPM/src/ParticleGraph/utils.py'),
         ('src/ParticleGraph/__init__.py', 'MPM/src/ParticleGraph/__init__.py'),
         ('src/ParticleGraph/generators/__init__.py', 'MPM/src/ParticleGraph/generators/__init__.py'),
-        ('ParticleGraph/plot_utils.py', 'MPM/ParticleGraph/plot_utils.py'),
 
         # Main execution scripts
         ('GNN_particles_Ntype.py', 'MPM/GNN_particles_Ntype.py'),

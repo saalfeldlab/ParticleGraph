@@ -743,6 +743,8 @@ def large_tensor_nonzero(tensor, chunk_size=2**30):
     col_indices = indices % tensor.size(1)
     return torch.stack([row_indices, col_indices])
 
+
+
 def get_equidistant_points(n_points=1024):
     indices = np.arange(0, n_points, dtype=float) + 0.5
     r = np.sqrt(indices / n_points)
@@ -750,6 +752,7 @@ def get_equidistant_points(n_points=1024):
     x, y = r * np.cos(theta), r * np.sin(theta)
 
     return x, y
+
 
 def get_matrix_rank(matrix):
     return np.linalg.matrix_rank(matrix)
