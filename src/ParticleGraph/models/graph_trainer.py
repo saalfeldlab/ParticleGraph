@@ -440,7 +440,7 @@ def data_train_material(config, erase, best_model, device):
         plt.tight_layout()
         ax = fig.add_subplot(1, 5, 2)
         embedding = to_numpy(model.a[0])
-        type_list = to_numpy(x[:, 14])
+        type_list = to_numpy(x[:, 13])
         for n in range(n_particle_types):
             plt.scatter(embedding[type_list == n, 0], embedding[type_list == n, 1], s=1,
                         c=cmap.color(n), label=f'type {n}', alpha=0.5)
