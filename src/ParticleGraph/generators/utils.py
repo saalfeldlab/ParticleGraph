@@ -672,6 +672,7 @@ def random_rotation_matrix(device='cpu'):
     R = R_z @ R_y @ R_x
     return R
 
+
 def stratified_sphere_points(n_points, radius=1.0, device='cpu'):
     # Estimate number of shells (radial layers)
     n_shells = int(torch.ceil(torch.tensor(n_points ** (1/3))).item())
@@ -726,8 +727,49 @@ def stratified_sphere_points(n_points, radius=1.0, device='cpu'):
     all_points = torch.cat(points, dim=0)
     return all_points[:n_points]
 
+
+import numpy as np
+import torch
+
+
+def get_equidistant_3D_points(n_points=1024):
+    """
+    Generate equidistant points within a unit sphere using improved 3D distribution.
+
+    Args:
+        n_points: Number of points to generate
+
+    Returns:
+        x, y, z: Arrays of coordinates for points within unit sphere
+    """
+    indices = np.arange(0, n_points, dtype=float) + 0.5
+
+    # Radial distribution for uniform density in sphere volume
+    # Use cube root for 3D volume distribution
+    r = np.cbrt(indices / n_points)
+
+    # Use Fibonacci spiral for uniform surface distribution
+    # Golden angle in radians
+    golden_angle = np.pi * (3.0 - np.sqrt(5.0))
+    theta = golden_angle * indices
+
+    # For uniform distribution on sphere surface (not clustered at poles)
+    # y should be uniform in [-1, 1], not cos(phi)
+    y = 1 - 2 * indices / n_points
+
+    # Calculate radius in xy-plane
+    radius_xy = np.sqrt(1 - y * y)
+
+    # Convert to Cartesian coordinates
+    x = radius_xy * np.cos(theta) * r
+    y = y * r
+    z = radius_xy * np.sin(theta) * r
+
+    return x, y, z
+
+
 def init_MPM_3D_shapes(
-        geometry='cubes',  # 'cubes' or 'spheres' only
+        geometry='cubes',  # 'cubes', 'spheres', or 'stars'
         n_shapes=3,
         seed=42,
         n_particles=[],
@@ -761,7 +803,25 @@ def init_MPM_3D_shapes(
     shape_rotations_z = torch.rand(n_shapes, device=device) * 2 * torch.pi  # Yaw
 
     # Determine 3D grid layout and spacing
-    if n_shapes == 27:
+    if n_shapes == 8:
+        # 2x2x2 cube
+        shape_depth = group_indices // 4
+        temp = group_indices % 4
+        shape_row = temp // 2
+        shape_col = temp % 2
+        size = 0.15
+        spacing_x = spacing_y = spacing_z = 0.4
+        start_x = start_y = start_z = 0.2
+    elif n_shapes == 27:
+        # 3x3x3 cube
+        shape_depth = group_indices // 9
+        temp = group_indices % 9
+        shape_row = temp // 3
+        shape_col = temp % 3
+        size = 0.08
+        spacing_x = spacing_y = spacing_z = 0.25
+        start_x = start_y = start_z = 0.15
+    else:
         # General case: try to make a cubic grid
         grid_size = int(round(n_shapes ** (1 / 3)))
         if grid_size ** 3 < n_shapes:
@@ -850,34 +910,171 @@ def init_MPM_3D_shapes(
             x[start_idx:end_idx, 2] = center_z[start_idx] + rotated_positions[:, 2]
 
     elif geometry == 'spheres':
+        # Generate particles in spherical volumes using equidistant distribution
+        for shape_idx in range(n_shapes):
+            start_idx = shape_idx * group_size
+            end_idx = min(start_idx + group_size, n_particles)
+            actual_particles = end_idx - start_idx
+
+            # Get equidistant points in unit sphere
+            sphere_x, sphere_y, sphere_z = get_equidistant_3D_points(actual_particles)
+
+            # Convert to torch tensors and move to device
+            sphere_points = torch.stack([
+                torch.from_numpy(sphere_x).float(),
+                torch.from_numpy(sphere_y).float(),
+                torch.from_numpy(sphere_z).float()
+            ], dim=1).to(device)
+
+            # Apply 3D rotation
+            rotated_positions = torch.matmul(sphere_points, rotation_matrices[shape_idx].T)
+
+            # Scale by size and translate to shape center
+            shape_center = torch.tensor([center_x[start_idx], center_y[start_idx], center_z[start_idx]], device=device)
+            x[start_idx:end_idx] = shape_center + rotated_positions * size * 0.75
+
+    elif geometry == 'stars':
+        # Generate 3D stars
+        outer_radius = size
+        inner_radius = outer_radius * 0.4
+        n_points = 5  # 5-pointed stars
 
         for shape_idx in range(n_shapes):
             start_idx = shape_idx * group_size
             end_idx = min(start_idx + group_size, n_particles)
             actual_particles = end_idx - start_idx
 
-            shape_center = torch.tensor([
-                center_x[start_idx].item(),
-                center_y[start_idx].item(),
-                center_z[start_idx].item()
-            ], device=device)
+            # Adaptive layers based on particle count for this shape
+            n_layers = min(10, max(3, actual_particles // 50))
 
-            local_positions = stratified_sphere_points(actual_particles, radius=size / 1.5, device=device)
+            shape_center = torch.tensor([center_x[start_idx], center_y[start_idx], center_z[start_idx]], device=device)
 
-            # Generate random rotation matrix for this shape
-            R = random_rotation_matrix(device=device)
+            # Ensure we have enough particles per layer
+            particles_per_layer = max(1, actual_particles // n_layers)
+            star_particles = []
 
-            # Apply rotation
-            rotated_positions = local_positions @ R.T
+            for layer_idx in range(n_layers):
+                # Z position for this layer - make stars flatter by reducing z-extent
+                z_progress = layer_idx / max(n_layers - 1, 1)  # 0 to 1
+                local_z = (z_progress - 0.5) * size * 0.3  # Reduced from size to size * 0.3 for flatter stars
 
-            # Translate to shape center
-            x[start_idx:end_idx] = shape_center.unsqueeze(0) + rotated_positions
+                # Vary radius to create 3D star shape (double cone/spindle)
+                # Maximum radius at center, tapering to points at ends
+                layer_radius_scale = 1.0 - 2 * abs(z_progress - 0.5)  # Diamond profile
+                layer_radius_scale = max(layer_radius_scale, 0.1)  # Minimum scale
 
+                layer_outer_radius = outer_radius * layer_radius_scale
+                layer_inner_radius = inner_radius * layer_radius_scale
 
+                # Create 5-pointed star vertices for this layer
+                star_angles = torch.linspace(0, 2 * torch.pi, n_points * 2 + 1, device=device)[:-1]
+                star_radii = torch.zeros_like(star_angles)
+                star_radii[::2] = layer_outer_radius  # Outer points
+                star_radii[1::2] = layer_inner_radius  # Inner points
 
+                # Create star vertices for this layer
+                star_x = star_radii * torch.cos(star_angles)
+                star_y = star_radii * torch.sin(star_angles)
 
+                # Calculate particles for this layer
+                if layer_idx == n_layers - 1:
+                    # Last layer gets remaining particles
+                    layer_particles = actual_particles - len(star_particles)
+                else:
+                    layer_particles = particles_per_layer
 
+                # Ensure we have at least some particles per triangle
+                particles_per_triangle = max(1,
+                                             layer_particles // (n_points * 2))  # Split between two triangles per point
 
+                particles_added_this_layer = 0
+
+                for i in range(n_points):
+                    if particles_added_this_layer >= layer_particles:
+                        break
+
+                    # Each star triangle: center -> outer point -> inner point -> next outer point
+                    p1_x, p1_y, p1_z = 0.0, 0.0, local_z  # Center of this layer
+                    p2_x, p2_y, p2_z = star_x[i * 2].item(), star_y[i * 2].item(), local_z  # Outer point
+                    p3_x, p3_y, p3_z = star_x[(i * 2 + 1) % (n_points * 2)].item(), star_y[
+                        (i * 2 + 1) % (n_points * 2)].item(), local_z  # Inner point
+                    p4_x, p4_y, p4_z = star_x[(i * 2 + 2) % (n_points * 2)].item(), star_y[
+                        (i * 2 + 2) % (n_points * 2)].item(), local_z  # Next outer point
+
+                    # Fill triangle (center, outer, inner)
+                    triangle_particles = min(particles_per_triangle, layer_particles - particles_added_this_layer)
+                    for _ in range(triangle_particles):
+                        r1, r2 = torch.rand(2, device=device)
+                        if r1 + r2 > 1:
+                            r1, r2 = 1 - r1, 1 - r2
+
+                        px = p1_x + r1.item() * (p2_x - p1_x) + r2.item() * (p3_x - p1_x)
+                        py = p1_y + r1.item() * (p2_y - p1_y) + r2.item() * (p3_y - p1_y)
+                        pz = p1_z
+
+                        star_particles.append([float(px), float(py), float(pz)])
+                        particles_added_this_layer += 1
+
+                        if particles_added_this_layer >= layer_particles:
+                            break
+
+                    if particles_added_this_layer >= layer_particles:
+                        break
+
+                    # Fill triangle (center, inner, next outer)
+                    triangle_particles = min(particles_per_triangle, layer_particles - particles_added_this_layer)
+                    for _ in range(triangle_particles):
+                        r1, r2 = torch.rand(2, device=device)
+                        if r1 + r2 > 1:
+                            r1, r2 = 1 - r1, 1 - r2
+
+                        px = p1_x + r1.item() * (p3_x - p1_x) + r2.item() * (p4_x - p1_x)
+                        py = p1_y + r1.item() * (p3_y - p1_y) + r2.item() * (p4_y - p1_y)
+                        pz = p1_z
+
+                        star_particles.append([float(px), float(py), float(pz)])
+                        particles_added_this_layer += 1
+
+                        if particles_added_this_layer >= layer_particles:
+                            break
+
+            # Fill any remaining particles with random points in inner region
+            while len(star_particles) < actual_particles:
+                # Random layer
+                layer_idx = torch.randint(0, n_layers, (1,)).item()
+                z_progress = layer_idx / max(n_layers - 1, 1)
+                local_z = (z_progress - 0.5) * size * 0.3  # Flatter profile
+                layer_radius_scale = max(1.0 - 2 * abs(z_progress - 0.5), 0.1)
+
+                r_fill = torch.rand(1, device=device).sqrt().item() * inner_radius * layer_radius_scale * 0.5
+                theta_fill = torch.rand(1, device=device).item() * 2 * torch.pi
+                px = r_fill * np.cos(theta_fill)
+                py = r_fill * np.sin(theta_fill)
+                pz = local_z
+
+                star_particles.append([float(px), float(py), float(pz)])
+
+            # Convert to tensor and apply 3D rotation
+            if len(star_particles) > 0:
+                star_positions = torch.tensor(star_particles[:actual_particles], device=device)
+                rotated_positions = torch.matmul(star_positions, rotation_matrices[shape_idx].T)
+
+                # Translate to shape center
+                x[start_idx:end_idx] = shape_center + rotated_positions
+            else:
+                # Fallback: create a simple star shape
+                print(f"Warning: Star generation failed for shape {shape_idx}, using fallback")
+                # Create a simple cross pattern as fallback
+                for i in range(actual_particles):
+                    angle = (i / actual_particles) * 2 * torch.pi
+                    radius = outer_radius * (0.5 + 0.5 * torch.cos(5 * angle))
+                    px = radius * torch.cos(angle)
+                    py = radius * torch.sin(angle)
+                    pz = (torch.rand(1) - 0.5) * size * 0.3  # Flatter profile
+
+                    rel_pos = torch.tensor([px, py, pz], device=device)
+                    rotated_pos = torch.matmul(rel_pos, rotation_matrices[shape_idx].T)
+                    x[start_idx + i] = shape_center + rotated_pos
 
     else:  # Default to cubes
         # Same as cubes case
@@ -938,6 +1135,8 @@ def init_MPM_3D_shapes(
     return N, x, v, C, F, T, Jp, M, S, ID
 
 
+
+
 def init_MPM_3D_cells(
         n_shapes=3,
         seed=42,
@@ -959,7 +1158,7 @@ def init_MPM_3D_cells(
     C = torch.zeros((n_particles, 3, 3), dtype=torch.float32, device=device)  # 3x3 affine matrix
     F = torch.eye(3, dtype=torch.float32, device=device).unsqueeze(0).expand(n_particles, -1,
                                                                              -1)  # 3x3 deformation gradient
-    T = torch.ones((n_particles, 1), dtype=torch.int32, device=device)
+    T = torch.zeros((n_particles, 1), dtype=torch.int32, device=device)
     Jp = torch.ones((n_particles, 1), dtype=torch.float32, device=device)
     S = torch.zeros((n_particles, 3, 3), dtype=torch.float32, device=device)  # 3x3 stress tensor
 
