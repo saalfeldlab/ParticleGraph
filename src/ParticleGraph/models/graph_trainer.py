@@ -5941,7 +5941,8 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
                 plt.ylim([0, 1])
 
                 error_val = to_numpy(error_pos)
-                plt.text(0.05, 0.95, f'error: {error_val:0.3f}', fontsize=18, transform=plt.gca().transAxes)
+                formatted_error = np.format_float_scientific(error_val, precision=3, exp_digits=2)
+                plt.text(0.05, 0.95, f'error: {formatted_error}', fontsize=10, transform=plt.gca().transAxes)
 
                 plt.gca().set_aspect('equal')
 
