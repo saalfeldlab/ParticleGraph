@@ -310,10 +310,12 @@ def data_train_material(config, erase, best_model, device):
                     v_target = d_pos[nearest_neighbor_indices].squeeze(-1).detach()
 
                     loss = loss + F.mse_loss(v_pred, v_target)
-            elif trainer == 'C_5-k-nearest':
-                k_neighbors = 5
+            elif (trainer == 'C_5-k-nearest') or (trainer == 'C_10-k-nearest'):
+                if trainer == 'C_5-k-nearest':
+                    k_neighbors = 5
+                else:
+                    k_neighbors = 10
                 pred_C = pred.reshape(-1, 2, 2)
-
                 for k in range(batch_size):
                     batch_indices = np.arange(k * n_particles, (k + 1) * n_particles)
                     positions = to_numpy(dataset_batch[k].x[:, 1:3])  # shape: [N, 2]
@@ -333,7 +335,40 @@ def data_train_material(config, erase, best_model, device):
                     C = pred_C[batch_indices]  # [N, 2, 2]
 
                     pred_vel_diff = torch.bmm(pos_diff, C.transpose(1, 2))  # [N, k, 2]
+
                     loss = loss + F.mse_loss(pred_vel_diff, vel_diff)
+            elif trainer == 'C_fr_5-k-nearest':
+                k_neighbors = 5
+                pred_C = pred.reshape(-1, 2, 2)
+                for k in range(batch_size):
+                    batch_indices = np.arange(k * n_particles, (k + 1) * n_particles)
+                    positions = to_numpy(dataset_batch[k].x[:, 1:3])  # shape: [N, 2]
+                    velocities = to_numpy(dataset_batch[k].x[:, 3:5])  # shape: [N, 2]
+
+                    tree = cKDTree(positions)
+                    dists, indices = tree.query(positions, k=k_neighbors + 1)  # +1 to skip self
+                    neighbor_indices = indices[:, 1:]  # shape: [N, k]
+
+                    # position and velocity diffs
+                    pos_diff_np = positions[neighbor_indices] - positions[:, None, :]  # [N, k, 2]
+                    vel_diff_np = velocities[neighbor_indices] - velocities[:, None, :]  # [N, k, 2]
+
+                    pos_diff = torch.tensor(pos_diff_np, dtype=torch.float32, device=device)  # [N, k, 2]
+                    vel_diff = torch.tensor(vel_diff_np, dtype=torch.float32, device=device)  # [N, k, 2]
+
+                    C = pred_C[batch_indices]  # [N, 2, 2]
+
+                    pred_vel_diff = torch.bmm(pos_diff, C.transpose(1, 2))  # [N, k, 2]
+
+                    distances = pos_diff.norm(dim=-1)  # [N, k]
+                    weights = 1.0 / (distances + 1E-8)  # [N, k]
+
+                    # Compute weighted squared error
+                    squared_error = (pred_vel_diff - vel_norm) ** 2  # [N, k, 2]
+                    weighted_error = squared_error.sum(dim=-1) * weights  # [N, k]
+
+                    loss = loss + weighted_error.mean()
+
             else:
                 loss = F.mse_loss(pred, y_batch)
 
@@ -5851,7 +5886,7 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
 
     error_pos_list=[]
     error_dpos_list=[]
-    recursive_loop = 1
+    recursive_loop = 5
 
     for it in trange(n_frames - recursive_loop -5):
 
@@ -5872,7 +5907,7 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
                 frame = torch.ones((X.shape[0], 1), dtype=torch.int, device=device) * it / n_frames
                 features = torch.cat((X, V, frame), dim=1).detach()
                 C_sample = trained_model.siren_C(features).reshape(-1, 2, 2)
-                # C = C_sample.clone().detach()
+                C = C_sample.clone().detach()
 
                 X, V, C, F, T, Jp, M, S, GM, GV = MPM_step(model_MPM, X, V, C, F, T, Jp, M, n_particles, n_grid,
                                                            delta_t, dx, inv_dx, mu_0, lambda_0, p_vol, offsets, particle_offsets,
@@ -6016,9 +6051,6 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
                 plt.close()
 
         # plot results saved in error_pos_list and error_dpos_list
-
-    error_pos_list = np.concatenate(error_pos_list, axis=0)
-    error_dpos_list = np.concatenate(error_dpos_list, axis=0)
 
     print(f'average error pos: {np.mean(error_pos_list):.3e} +/- {np.std(error_pos_list):.3e}')
     print(f'average error dpos: {np.mean(error_dpos_list):.3e} +/- {np.std(error_dpos_list):.3e}')
