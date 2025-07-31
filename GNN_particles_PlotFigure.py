@@ -6686,6 +6686,21 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
     max_radius = config.simulation.max_radius if hasattr(config.simulation, 'max_radius') else 2.5
     dimension = config.simulation.dimension
 
+    log_file = os.path.join(log_dir, 'results.log')
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+    logging.basicConfig(
+        filename=log_file,
+        format='%(asctime)s %(message)s',
+        filemode='w'
+    )
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+
+
+    print(f'experiment description: {config.description}')
+    logger.info(f'experiment description: {config.description}')
+
     # Load neuron group mapping for flyvis
     group_names = ['R1-R6', 'R7-R8', 'L1-L5', 'Lamina_Inter', 'Mi_Early', 'Mi_Mid', 'Mi_Late',
                    'Tm_Early', 'Tm5_Family', 'Tm_Mid', 'Tm_Late', 'TmY', 'T4a_Up', 'T4b_Right',
@@ -6708,6 +6723,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
 
     x_list = []
     y_list = []
+    time.sleep(0.5)
     for run in trange(0, n_runs):
         if os.path.exists(f'graphs_data/{dataset_name}/x_list_{run}.pt'):
             x = torch.load(f'graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device)
@@ -6728,6 +6744,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         xnorm = torch.tensor([5], device=device)
 
     print(f'xnorm: {to_numpy(xnorm)}, vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
+    logger.info(f'xnorm: {to_numpy(xnorm)}, vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
 
     # Load data with new format
     connectivity = torch.load(f'./graphs_data/{dataset_name}/connectivity.pt', map_location=device)
@@ -6735,6 +6752,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
     edges = torch.load(f'./graphs_data/{dataset_name}/edge_index.pt', map_location=device)
     edges_all = edges.clone().detach()
     print(f'{edges.shape[1]} edges')
+    logger.info(f'{edges.shape[1]} edges')
 
     x = x_list[0][n_frames - 10]
     type_list = torch.tensor(x[:, 2 + 2 * dimension:3 + 2 * dimension], device=device)
@@ -6765,6 +6783,10 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
     print(f'true edges: {edges.shape[1]}')
     print(f'true number of neuron types: {n_types}')
     print(f'true number of region types: {n_region_types}')
+    logger.info(f'number of neurons: {n_neurons}')
+    logger.info(f'true edges: {edges.shape[1]}')
+    logger.info(f'true number of neuron types: {n_types}')
+    logger.info(f'true number of region types: {n_region_types}')
 
     os.makedirs(f'{log_dir}/results/', exist_ok=True)
 
@@ -6776,6 +6798,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         model.load_state_dict(state_dict['model_state_dict'])
         model.edges = edges
         print(f'net: {net}')
+        logger.info(f'net: {net}')
 
         # Plot 1: Loss curve
         fig = plt.figure(figsize=(8, 6))
@@ -6808,6 +6831,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                 results = clustering_evaluation(model, type_list, eps=eps)
                 print(f"eps={eps}: {results['n_clusters_found']} clusters, "
                       f"accuracy={results['accuracy']:.3f}")
+                logger.info(f"eps={eps}: {results['n_clusters_found']} clusters, "f"accuracy={results['accuracy']:.3f}")
 
         # Plot 3: Weight comparison using model.W and gt_weights
         fig = plt.figure(figsize=(8, 8))
@@ -6828,6 +6852,8 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         plt.tight_layout()
         plt.savefig(f'{log_dir}/results/comparison_{epoch}.png', dpi=300)
         plt.close()
+        print(f"weights fit   R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
+        logger.info(f"weights fit   R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
 
         # Plot 4: Edge function visualization
         fig = plt.figure(figsize=(8, 8))
@@ -6873,9 +6899,11 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
 
         if True:
             print('functionnal results')
+            logger.info('functionnal results')
             for eps in [0.05, 0.075, 0.1, 0.2, 0.3]:
                 functional_results = functional_clustering_evaluation(func_list, type_list, eps=eps)  # Current functional result
                 print(f"eps={eps}: {functional_results['n_clusters_found']} clusters, {functional_results['accuracy']:.3f} accuracy")
+                logger.info(f"eps={eps}: {functional_results['n_clusters_found']} clusters, {functional_results['accuracy']:.3f} accuracy")
 
         if False:
             # Plot 6: Phi / W
@@ -10730,7 +10758,7 @@ if __name__ == '__main__':
     # config_list = ['cell_U2OS_8_12']
     # config_list = [ 'signal_CElegans_c14_4a', 'signal_CElegans_c14_4b', 'signal_CElegans_c14_4c',  'signal_CElegans_d1', 'signal_CElegans_d2', 'signal_CElegans_d3', ]
     # config_list = config_list = ['signal_CElegans_d2', 'signal_CElegans_d2a', 'signal_CElegans_d3', 'signal_CElegans_d3a', 'signal_CElegans_d3b']
-    config_list = ['fly_N9_18_4_1']
+    config_list = ['fly_N9_18_4_1', 'fly_N9_19_1', 'fly_N9_19_2', 'fly_N9_19_3', 'fly_N9_19_4']
 
     # plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 

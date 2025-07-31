@@ -44,7 +44,7 @@ class NoisyMLP(nn.Module):
         return x
 
 
-def train_model(model, train_loader, test_loader, epochs=1):
+def train_model(model, train_loader, test_loader, epochs=10):
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
@@ -86,8 +86,11 @@ def train_model(model, train_loader, test_loader, epochs=1):
 # Load MNIST data (automatically downloads if not present)
 transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
 
-train_dataset = datasets.MNIST('data', train=True, download=True, transform=transform)
-test_dataset = datasets.MNIST('data', train=False, transform=transform)
+# train_dataset = datasets.MNIST('data', train=True, download=True, transform=transform)
+# test_dataset = datasets.MNIST('data', train=False, transform=transform)
+
+train_dataset = datasets.FashionMNIST('data', train=True, download=True, transform=transform)
+test_dataset = datasets.FashionMNIST('data', train=False, transform=transform)
 
 train_loader = DataLoader(train_dataset, batch_size=256, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=1000, shuffle=False)
@@ -152,7 +155,7 @@ bars2[best_acc_idx].set_color('green')
 
 plt.tight_layout()
 plt.savefig('mnist_noise_comparison.png', dpi=150, bbox_inches='tight')
-print("Plot saved as 'mnist_noise_comparison.png'")
+print("Plot saved as 'noise_MNIST_comparison.png'")
 
 # Statistical significance test for all noise levels vs baseline
 baseline_accs = results[0.0]['final_accs']  # No noise baseline

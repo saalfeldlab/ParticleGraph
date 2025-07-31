@@ -1,4 +1,4 @@
-description: 'with 20 neuron types per function,     noise_model_level: 5E-1    smaller MLP  redo 18_4'
+description: 'noise_model_level: 5E-1, small MLP, redo 18_4'
 dataset: 'fly_N9_18_4_1'
 
 simulation:
