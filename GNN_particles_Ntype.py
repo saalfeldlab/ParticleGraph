@@ -59,9 +59,9 @@ if __name__ == "__main__":
         else:
             best_model = None
     else:
-        task = 'generate'  # 'generate', 'train', 'test'
-        best_model = ''
-        config_list = ['multimaterial_4_0']
+        task = 'test'  # 'generate', 'train', 'test'
+        config_list = ['multimaterial_1_2']
+        # config_list = ['multimaterial_1_2']
         # config_list = ['fluids_m19']
         # config_list = ['falling_water_ramp_x6_11_1']
         # config_list = ['arbitrary_3']
@@ -74,7 +74,7 @@ if __name__ == "__main__":
         # config_list = ['signal_CElegans_c14_4']
         # config_list = ['signal_N5_v11_bis']
         # config_list = ['signal_fig_supp6_4']
-        # config_list = ['fly_N9_19_1']
+        # config_list = ['fly_N9_19_6', 'fly_N9_19_7']
         # config_list = ['signal_N5_l4','signal_N5_l5']
 
     for config_file_ in config_list:
@@ -99,7 +99,8 @@ if __name__ == "__main__":
                 alpha=1,
                 erase=False,
                 bSave=True,
-                step=20,
+                step=10,
+                best_model=best_model
             )  # config.simulation.n_frames // 100)
             
         if "train" in task:
@@ -119,7 +120,7 @@ if __name__ == "__main__":
                 run=0,
                 test_mode="",
                 sample_embedding=False,
-                step=2,
+                step=20,
                 device=device,
                 particle_of_interest=0,
             )  # particle_of_interest=100,  'fixed_bounce_all'

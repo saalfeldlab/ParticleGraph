@@ -44,6 +44,7 @@ def data_generate(
     alpha=0.2,
     ratio=1,
     scenario="none",
+    best_model=None,
     device=None,
     bSave=True,
 ):
@@ -174,6 +175,7 @@ def data_generate(
                 alpha=0.2,
                 ratio=ratio,
                 scenario=scenario,
+                best_model = best_model,
                 device=device,
                 bSave=bSave,
             )
@@ -188,6 +190,7 @@ def data_generate(
                 alpha=0.2,
                 ratio=ratio,
                 scenario=scenario,
+                best_model = best_model,
                 device=device,
                 bSave=bSave,
             )
@@ -923,6 +926,7 @@ def data_generate_MPM_3D(
         alpha=0.2,
         ratio=1,
         scenario='none',
+        best_model=[],
         device=None,
         bSave=True
 ):
@@ -1191,6 +1195,7 @@ def data_generate_MPM(
         alpha=0.2,
         ratio=1,
         scenario='none',
+        best_model=[],
         device=None,
         bSave=True
 ):
@@ -1230,7 +1235,6 @@ def data_generate_MPM(
     expansion_factor = simulation_config.MPM_expansion_factor
 
     model_MPM = MPM_P2G(aggr_type='add', device=device)
-
 
     n_frames = simulation_config.n_frames
     cmap = CustomColorMap(config=config)

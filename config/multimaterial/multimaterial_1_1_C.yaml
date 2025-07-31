@@ -1,5 +1,5 @@
-description: 'system of particles falling down in a box   training with batch size 16'
-dataset: 'multimaterial_1'
+description: 'system of particles falling down in a box   training with batch size 16  training affine C'
+dataset: 'multimaterial_1_C'
 
 simulation:
   params: [[0, 0.2, 0.4, 0.6, 0.8], [0.2, 0.2, 0.2, 0.2, 0.2]]
