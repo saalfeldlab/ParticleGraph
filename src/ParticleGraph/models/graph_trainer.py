@@ -214,7 +214,7 @@ def data_train_material(config, erase, best_model, device):
     list_loss = []
     time.sleep(1)
 
-    # torch.autograd.set_detect_anomaly(True)
+    torch.autograd.set_detect_anomaly(True)
     for epoch in range(start_epoch, n_epochs + 1):
 
         logger.info(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
@@ -261,7 +261,14 @@ def data_train_material(config, erase, best_model, device):
                     vel = x[:, 3:5].clone().detach()  # velocities
                     y = None  # No direct target needed
 
-                dataset = data.Data(x=x, edge_index=[], num_nodes=x.shape[0])
+                if 'GNN_C' in trainer:
+                    distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                    adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
+                    edges = adj_t.nonzero().t().contiguous()
+                else:
+                    edges = []
+
+                dataset = data.Data(x=x, edge_index=edges, num_nodes=x.shape[0])
                 dataset_batch.append(dataset)
 
                 if batch == 0:
@@ -291,7 +298,11 @@ def data_train_material(config, erase, best_model, device):
             optimizer.zero_grad()
 
             for batch_loader_data in batch_loader:
-                pred = model(batch_loader_data, data_id=data_id, k=k_batch, trainer=trainer)
+
+                if 'GNN_C' in trainer:
+                    pred = model.GNN_C(batch_loader_data, training=True)
+                else:
+                    pred = model(batch_loader_data, data_id=data_id, k=k_batch, trainer=trainer)
 
             if trainer == 'C_k-nearest':
                 pred_C = pred.reshape(-1, 2, 2)
@@ -310,8 +321,8 @@ def data_train_material(config, erase, best_model, device):
                     v_target = d_pos[nearest_neighbor_indices].squeeze(-1).detach()
 
                     loss = loss + F.mse_loss(v_pred, v_target)
-            elif (trainer == 'C_5-k-nearest') or (trainer == 'C_10-k-nearest'):
-                if trainer == 'C_5-k-nearest':
+            elif (trainer == 'C_5-k-nearest') or (trainer == 'C_10-k-nearest') or (trainer == 'GNN_C_5-k-nearest'):
+                if 'C_5-k-nearest' in trainer:
                     k_neighbors = 5
                 else:
                     k_neighbors = 10
@@ -337,8 +348,11 @@ def data_train_material(config, erase, best_model, device):
                     pred_vel_diff = torch.bmm(pos_diff, C.transpose(1, 2))  # [N, k, 2]
 
                     loss = loss + F.mse_loss(pred_vel_diff, vel_diff)
-            elif trainer == 'C_fr_5-k-nearest':
-                k_neighbors = 5
+            elif (trainer == 'C_fr_5-k-nearest') or (trainer == 'C_fr_10-k-nearest'):
+                if trainer == 'C_fr_5-k-nearest':
+                    k_neighbors = 5
+                else:
+                    k_neighbors = 10
                 pred_C = pred.reshape(-1, 2, 2)
                 for k in range(batch_size):
                     batch_indices = np.arange(k * n_particles, (k + 1) * n_particles)
@@ -364,7 +378,7 @@ def data_train_material(config, erase, best_model, device):
                     weights = 1.0 / (distances + 1E-8)  # [N, k]
 
                     # Compute weighted squared error
-                    squared_error = (pred_vel_diff - vel_norm) ** 2  # [N, k, 2]
+                    squared_error = (pred_vel_diff - vel_diff) ** 2  # [N, k, 2]
                     weighted_error = squared_error.sum(dim=-1) * weights  # [N, k]
 
                     loss = loss + weighted_error.mean()
@@ -391,12 +405,17 @@ def data_train_material(config, erase, best_model, device):
                             y = x[:, 12 + dimension * 2: 16 + dimension * 2].clone().detach()  # S
                         elif 'C' in trainer:
                             y = x[:, 1 + dimension * 2: 5 + dimension * 2].clone().detach()
-
-                        data_id = torch.ones((n_particles, 1), dtype=torch.float32, device=device) * run
-                        k_list_tensor = torch.ones((n_particles, 1), dtype=torch.int, device=device) * k
-                        dataset = data.Data(x=x, edge_index=[], num_nodes=x.shape[0])
-
-                        pred = model(dataset, data_id=data_id, k=k_list_tensor, trainer=trainer)
+                        if 'GNN_C' in trainer:
+                            distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                            adj_t = ((distance < max_radius ** 2) & (distance >=  min_radius ** 2)).float() * 1
+                            edges = adj_t.nonzero().t().contiguous()
+                            dataset = data.Data(x=x, edge_index=edges, num_nodes=x.shape[0])
+                            pred = model.GNN_C(dataset, training=False)
+                        else:
+                            data_id = torch.ones((n_particles, 1), dtype=torch.float32, device=device) * run
+                            k_list_tensor = torch.ones((n_particles, 1), dtype=torch.int, device=device) * k
+                            dataset = data.Data(x=x, edge_index=[], num_nodes=x.shape[0])
+                            pred = model(dataset, data_id=data_id, k=k_list_tensor, trainer=trainer)
                         error.append(F.mse_loss(pred, y).item())
 
                 plt.style.use('dark_background')
@@ -497,11 +516,18 @@ def data_train_material(config, erase, best_model, device):
                 elif 'C' in trainer:
                     y = x[:, 1 + dimension * 2: 5 + dimension * 2].clone().detach()
 
-                data_id = torch.ones((n_particles, 1), dtype=torch.float32, device=device) * run
-                k_list_tensor = torch.ones((n_particles, 1), dtype=torch.int, device=device) * k
-                dataset = data.Data(x=x, edge_index=[], num_nodes=x.shape[0])
+                if 'GNN_C' in trainer:
+                    distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                    adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
+                    edges = adj_t.nonzero().t().contiguous()
+                    dataset = data.Data(x=x, edge_index=edges, num_nodes=x.shape[0])
+                    pred = model.GNN_C(dataset, training=False)
+                else:
+                    data_id = torch.ones((n_particles, 1), dtype=torch.float32, device=device) * run
+                    k_list_tensor = torch.ones((n_particles, 1), dtype=torch.int, device=device) * k
+                    dataset = data.Data(x=x, edge_index=[], num_nodes=x.shape[0])
+                    pred = model(dataset, data_id=data_id, k=k_list_tensor, trainer=trainer)
 
-                pred = model(dataset, data_id=data_id, k=k_list_tensor, trainer=trainer)
                 error = F.mse_loss(pred, y).item()
 
             fig = plt.figure(figsize=(18, 8))
@@ -5888,6 +5914,8 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
     error_dpos_list=[]
     recursive_loop = 5
 
+    x = torch.tensor(x_list[run][0], dtype=torch.float32, device=device).clone().detach()
+
     for it in trange(n_frames - recursive_loop -5):
 
         x = torch.tensor(x_list[run][it], dtype=torch.float32, device=device).clone().detach()
@@ -5909,7 +5937,7 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
                 C_sample = trained_model.siren_C(features).reshape(-1, 2, 2)
                 C = C_sample.clone().detach()
 
-                X, V, C, F, T, Jp, M, S, GM, GV = MPM_step(model_MPM, X, V, C, F, T, Jp, M, n_particles, n_grid,
+                X, V, _, F, T, Jp, M, S, GM, GV = MPM_step(model_MPM, X, V, C, F, T, Jp, M, n_particles, n_grid,
                                                            delta_t, dx, inv_dx, mu_0, lambda_0, p_vol, offsets, particle_offsets,
                                                            expansion_factor, gravity, friction, it, device)
 
@@ -5918,7 +5946,6 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
                            F.reshape(n_particles, 4).clone().detach(),
                            T.clone().detach(), Jp.clone().detach(), M.clone().detach(),
                            S.reshape(n_particles, 4).clone().detach(),ID.clone().detach()), 1)
-
             x_next = torch.tensor(x_list[run][it+recursive_loop], dtype=torch.float32, device=device).clone().detach()
 
             error_pos = (x[:, 1:3] - x_next[:, 1:3]).norm(2)

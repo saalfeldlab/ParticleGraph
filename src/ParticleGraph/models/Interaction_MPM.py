@@ -7,6 +7,9 @@ from ParticleGraph.models.Gumbel import gumbel_softmax_sample, gumbel_softmax
 from ParticleGraph.generators.MPM_P2G import MPM_P2G
 from ParticleGraph.utils import *
 import torch_geometric.data as data
+import torch_geometric.data as data
+
+from ParticleGraph.models.Affine_Particle import Affine_Particle
 
 class Interaction_MPM(nn.Module):
 
@@ -32,7 +35,6 @@ class Interaction_MPM(nn.Module):
         self.output_size_nnr = model_config.output_size_nnr
         self.outermost_linear_nnr = model_config.outermost_linear_nnr
         self.omega= model_config.omega
-
 
         self.n_particle_types = simulation_config.n_particle_types
         self.n_particles = simulation_config.n_particles
@@ -61,8 +63,6 @@ class Interaction_MPM(nn.Module):
         self.expansion_factor = simulation_config.MPM_expansion_factor
         self.gravity = simulation_config.MPM_gravity
 
-
-
         self.model_MPM = MPM_P2G(aggr_type='add', device=device)
 
         self.siren_F_Jp = Siren(in_features=3, out_features=4, hidden_features=self.hidden_dim_nnr,
@@ -75,8 +75,7 @@ class Interaction_MPM(nn.Module):
         self.MLP_sig_plastic_ratio = MLP(input_size=self.embedding_dim + 12, output_size=3, nlayers=5, hidden_size=128, device=device)
         self.MLP_F = MLP(input_size=self.embedding_dim + 13, output_size=4, nlayers=5, hidden_size=128, device=device)
 
-        # self.mlp0 = MLP(input_size=3, output_size=1, nlayers=5, hidden_size=128, device=device)
-        # self.mlp1 = MLP(input_size=2, output_size=1, nlayers=2, hidden_size=4, device=device)
+        self.GNN_C = Affine_Particle(aggr_type='mean', config=config, device=device, bc_dpos=bc_dpos, dimension=dimension)
 
         self.a = nn.Parameter(
             torch.tensor(np.ones((self.n_dataset, int(self.n_particles) , self.embedding_dim)),
@@ -84,9 +83,9 @@ class Interaction_MPM(nn.Module):
                          requires_grad=True, dtype=torch.float32))
 
 
-    def forward(self, data=[], data_id=[], k=[], trainer=[]):
+    def forward(self, data=[], data_id=[], k=[], trainer=[], training=True):
 
-        x = data.x
+        x, edge_index = data.x, data.edge_index
         self.data_id = data_id.long()
 
         N = x[:,0:1]
@@ -101,6 +100,7 @@ class Interaction_MPM(nn.Module):
         frame = k / self.n_frames
 
         embedding = self.a[self.data_id.detach(), N.long(), :].squeeze()
+
 
         if 'C' in trainer:
             features = torch.cat((pos, d_pos, frame), dim=1).detach()

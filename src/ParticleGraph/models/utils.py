@@ -495,8 +495,6 @@ def plot_training_signal(config, model, x, adjacency, log_dir, epoch, N, n_neuro
     plt.savefig(f"./{log_dir}/tmp_training/function/lin_phi/func_{epoch}_{N}.tif", dpi=87)
     plt.close()
 
-
-
 def plot_training_signal_field(x, n_nodes, recursive_loop, kk, time_step, x_list, run, model, field_type, model_f, edges, y_list, ynorm, delta_t, n_frames, log_dir, epoch, N, recursive_parameters, modulation, device):
     if recursive_loop > 1:
         x = torch.tensor(x_list[run][kk], device=device).clone().detach()

@@ -1,4 +1,4 @@
-description: 'system of particles falling down in a box   training with batch size 16  training affine C   MPM_trainer C_10-k-nearest'
+description: 'system of particles falling down in a box   training with batch size 16  training affine C   MPM_trainer GNN_C_5-k-nearest  rotation=True'
 dataset: 'multimaterial_1'
 
 simulation:
@@ -19,18 +19,18 @@ graph_model:
   mesh_model_name: ''
   prediction: '2nd_derivative'
 
-  input_size: 18
-  output_size: 512
-  hidden_dim: 512
-  n_layers: 4
-  aggr_type: 'add'
+  input_size: 6
+  output_size: 8
+  hidden_dim: 256
+  n_layers: 5
+  aggr_type: 'mean'
   embedding_dim: 2
 
   update_type: 'mlp'
-  input_size_update: 520
+  input_size_update: 8
   n_layers_update: 4
-  hidden_dim_update: 128
-  output_size_update: 2
+  hidden_dim_update: 64
+  output_size_update: 4
 
   input_size_nnr: 3
   n_layers_nnr: 5
@@ -50,14 +50,12 @@ training:
   small_init_batch_size: False
   n_runs: 1
 
-  noise_model_level: 0
-  noise_model_level: 1.0E-5
+  noise_level: 0
 
   sparsity: 'none'
   sparsity_freq: 3
   cluster_method: 'kmeans_auto_embedding'
-  rotation_augmentation: False
-  translation_augmentation: True
+  rotation_augmentation: True
   data_augmentation_loop: 100
   fix_cluster_embedding: True
   device: 'auto'
@@ -65,7 +63,7 @@ training:
   learning_rate_start: 5E-5
   learning_rate_embedding_start: 5E-5
 
-  MPM_trainer : 'C_10-k-nearest'
+  MPM_trainer : 'GNN_C_5-k-nearest'
 
 
 

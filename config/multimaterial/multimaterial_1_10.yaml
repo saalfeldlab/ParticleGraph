@@ -1,4 +1,4 @@
-description: 'system of particles falling down in a box   training with batch size 16  training affine C   MPM_trainer C_10-k-nearest'
+description: 'system of particles falling down in a box   training with batch size 16  training affine C   MPM_trainer C_fr_5-k-nearest'
 dataset: 'multimaterial_1'
 
 simulation:
@@ -65,7 +65,7 @@ training:
   learning_rate_start: 5E-5
   learning_rate_embedding_start: 5E-5
 
-  MPM_trainer : 'C_10-k-nearest'
+  MPM_trainer : 'C_fr_5-k-nearest'
 
 
 

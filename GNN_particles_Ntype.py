@@ -61,7 +61,7 @@ if __name__ == "__main__":
     else:
         task = 'train'  # 'generate', 'train', 'test'
         # config_list = ['multimaterial_1_2', 'multimaterial_1_3', 'multimaterial_1_4', 'multimaterial_1_5', 'multimaterial_1_6', 'multimaterial_1_7', 'multimaterial_1_8']
-        config_list = ['multimaterial_1_9']
+        config_list = ['multimaterial_1_11']
         # config_list = ['fluids_m19']
         # config_list = ['falling_water_ramp_x6_11_1']
         # config_list = ['arbitrary_3']
@@ -120,7 +120,7 @@ if __name__ == "__main__":
                 run=0,
                 test_mode="",
                 sample_embedding=False,
-                step=50,
+                step=20,
                 device=device,
                 particle_of_interest=0,
             )  # particle_of_interest=100,  'fixed_bounce_all'
