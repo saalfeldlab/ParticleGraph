@@ -5845,6 +5845,8 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
     training_config = config.training
     model_config = config.graph_model
 
+    trainer = training_config.MPM_trainer
+
     print(f'generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
     dimension = simulation_config.dimension
@@ -5898,9 +5900,9 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
         print(f'best model: {best_model}')
     net = f"{log_dir}/models/best_model_with_0_graphs_{best_model}.pt"
     print('create trained models ...')
-    trained_model, bc_pos, bc_dpos = choose_training_model(config, device)
+    model, bc_pos, bc_dpos = choose_training_model(config, device)
     state_dict = torch.load(net, map_location=device)
-    trained_model.load_state_dict(state_dict['model_state_dict'])
+    model.load_state_dict(state_dict['model_state_dict'])
     print(f'best_model: {best_model}')
 
     n_frames = simulation_config.n_frames
@@ -5912,13 +5914,13 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
 
     error_pos_list=[]
     error_dpos_list=[]
-    recursive_loop = 5
+    recursive_loop = 1
 
     x = torch.tensor(x_list[run][0], dtype=torch.float32, device=device).clone().detach()
 
     for it in trange(n_frames - recursive_loop -5):
 
-        x = torch.tensor(x_list[run][it], dtype=torch.float32, device=device).clone().detach()
+        # x = torch.tensor(x_list[run][it], dtype=torch.float32, device=device).clone().detach()
 
         X = x[:, 1:3]  # pos is the absolute position
         V = x[:, 3:5]  # d_pos is the velocity
@@ -5934,8 +5936,18 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
 
                 frame = torch.ones((X.shape[0], 1), dtype=torch.int, device=device) * it / n_frames
                 features = torch.cat((X, V, frame), dim=1).detach()
-                C_sample = trained_model.siren_C(features).reshape(-1, 2, 2)
+
+                if 'GNN_C' in trainer:
+                    distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                    adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
+                    edges = adj_t.nonzero().t().contiguous()
+                    dataset = data.Data(x=x, edge_index=edges, num_nodes=x.shape[0])
+                    C_sample = model.GNN_C(dataset, training=False)
+                else:
+                    C_sample = model.siren_C(features)
+
                 C = C_sample.clone().detach()
+                C = C.reshape(-1, 2, 2)
 
                 X, V, _, F, T, Jp, M, S, GM, GV = MPM_step(model_MPM, X, V, C, F, T, Jp, M, n_particles, n_grid,
                                                            delta_t, dx, inv_dx, mu_0, lambda_0, p_vol, offsets, particle_offsets,

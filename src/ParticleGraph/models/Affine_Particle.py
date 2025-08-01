@@ -111,9 +111,7 @@ class Affine_Particle(pyg.nn.MessagePassing):
         # Un-rotate predicted Jacobians if present
         if self.rotation_augmentation and self.training:
             C_rotated = out[:, :4].reshape(-1, 2, 2)
-            # Apply similarity transform: C = R C' R^T
-            C_original = R @ C_rotated @ R_T
-            # Replace the transformed C back into the output
+            C_original = R_T @ C_rotated @ R
             out[:, :4] = C_original.reshape(-1, 4)
 
         return out

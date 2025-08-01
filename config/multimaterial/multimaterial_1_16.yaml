@@ -1,4 +1,4 @@
-description: 'system of particles falling down in a box   training with batch size 16  training affine C   MPM_trainer GNN_C_5-k-nearest  rotation=True   noise_level: 1.0E-4 '
+description: 'system of particles falling down in a box   training with batch size 16  training affine C   MPM_trainer GNN_C_5-k-nearest  rotation=True   noise_level: 1.0E-5 '
 dataset: 'multimaterial_1'
 
 simulation:
@@ -50,7 +50,7 @@ training:
   small_init_batch_size: False
   n_runs: 1
 
-  noise_level: 1.0E-4
+  noise_level: 1.0E-5
 
   sparsity: 'none'
   sparsity_freq: 3
