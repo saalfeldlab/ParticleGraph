@@ -75,12 +75,14 @@ class Interaction_MPM(nn.Module):
         self.MLP_sig_plastic_ratio = MLP(input_size=self.embedding_dim + 12, output_size=3, nlayers=5, hidden_size=128, device=device)
         self.MLP_F = MLP(input_size=self.embedding_dim + 13, output_size=4, nlayers=5, hidden_size=128, device=device)
 
-        # self.GNN_C = Affine_Particle(aggr_type='mean', config=config, device=device, bc_dpos=bc_dpos, dimension=dimension)
-
         self.a = nn.Parameter(
             torch.tensor(np.ones((self.n_dataset, int(self.n_particles) , self.embedding_dim)),
                          device=self.device,
                          requires_grad=True, dtype=torch.float32))
+
+        self.GNN_C = Affine_Particle(aggr_type='mean', config=config, device=device, bc_dpos=bc_dpos, dimension=dimension)
+
+
 
 
     def forward(self, data=[], data_id=[], k=[], trainer=[], training=True):

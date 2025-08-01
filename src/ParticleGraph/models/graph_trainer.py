@@ -419,7 +419,7 @@ def data_train_material(config, erase, best_model, device):
 
                 plt.style.use('dark_background')
 
-                fig = plt.figure(figsize=(18, 6))
+                fig = plt.figure(figsize=(20, 6))
                 plt.subplot(1, 3, 1)
                 if 'F' in trainer:
                     f_norm = torch.norm(y.view(n_particles, -1), dim=1).cpu().numpy()
@@ -435,9 +435,12 @@ def data_train_material(config, erase, best_model, device):
                 elif 'C' in trainer:
                     c_norm = torch.norm(y.view(n_particles, -1), dim=1)
                     c_norm = c_norm[:, None]
-                    plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=c_norm[:, 0].cpu(), s=1, cmap='viridis', vmin=0,
-                                vmax=80)
+                    c_norm_np = c_norm[:, 0].cpu().numpy()
+                    x_cpu = x.cpu()
+                    topk_indices = c_norm_np.argsort()[-250:]
+                    plt.scatter(x_cpu[:, 1], x_cpu[:, 2], c=c_norm_np, s=1, cmap='viridis', vmin=0, vmax=80)
                     plt.colorbar(fraction=0.046, pad=0.04)
+                    plt.scatter(x_cpu[topk_indices, 1], x_cpu[topk_indices, 2], c='red', s=1)
 
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
@@ -456,9 +459,12 @@ def data_train_material(config, erase, best_model, device):
                 elif 'C' in trainer:
                     c_norm = torch.norm(pred.view(n_particles, -1), dim=1)
                     c_norm = c_norm[:, None]
-                    plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=c_norm[:, 0].cpu(), s=1, cmap='viridis', vmin=0,
-                                vmax=80)
+                    c_norm_np = c_norm[:, 0].cpu().numpy()
+                    x_cpu = x.cpu()
+                    topk_indices = c_norm_np.argsort()[-250:]
+                    plt.scatter(x_cpu[:, 1], x_cpu[:, 2], c=c_norm_np, s=1, cmap='viridis', vmin=0, vmax=80)
                     plt.colorbar(fraction=0.046, pad=0.04)
+                    plt.scatter(x_cpu[topk_indices, 1], x_cpu[topk_indices, 2], c='red', s=1)
 
                 plt.text(0.05, 0.95,
                          f'epoch: {epoch} iteration: {N} error: {np.mean(1000 * error) / len(k_list):.6f}', )
@@ -470,10 +476,10 @@ def data_train_material(config, erase, best_model, device):
                     # c_norm = torch.norm(y.view(n_particles, -1), dim=1)
                     # c_norm_pred = torch.norm(pred.view(n_particles, -1), dim=1)
                     # plt.scatter(c_norm.cpu(), c_norm_pred.cpu(), s=1, c='w', alpha=0.5, edgecolors='none')
-                    for k in range(4):
-                        plt.scatter(pred[:,k].cpu(), y[:,k].cpu(), s=1, c='w', alpha=0.5, edgecolors='none')
-
-
+                    for m in range(4):
+                        plt.scatter(y[:, m].cpu(), pred[:, m].cpu(), s=1, c='w', alpha=0.5, edgecolors='none')
+                plt.xlim([-200, 200])
+                plt.ylim([-200, 200])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_training/field/{epoch}_{N}.tif", dpi=87)
                 plt.close()
@@ -502,7 +508,10 @@ def data_train_material(config, erase, best_model, device):
         plt.text(0.05, 0.95, f'epoch: {epoch} final loss: {list_loss[-1]:.10f}', transform=ax.transAxes, )
         plt.tight_layout()
         ax = fig.add_subplot(1, 5, 2)
-        embedding = to_numpy(model.a[0])
+        if 'PDE_MPM_A' in model_config.particle_model_name:
+            embedding = to_numpy(model.GNN_C.a)
+        else:
+            embedding = to_numpy(model.a[0])
         type_list = to_numpy(x[:, 13])
         for n in range(n_particle_types):
             plt.scatter(embedding[type_list == n, 0], embedding[type_list == n, 1], s=1,
@@ -545,7 +554,7 @@ def data_train_material(config, erase, best_model, device):
 
                 error = F.mse_loss(pred, y).item()
 
-            fig = plt.figure(figsize=(18, 8))
+            fig = plt.figure(figsize=(20, 6))
             plt.subplot(1, 3, 1)
             if 'F' in trainer:
                 f_norm = torch.norm(y.view(n_particles, -1), dim=1).cpu().numpy()
@@ -560,8 +569,12 @@ def data_train_material(config, erase, best_model, device):
             elif 'C' in trainer:
                 c_norm = torch.norm(y.view(n_particles, -1), dim=1)
                 c_norm = c_norm[:, None]
-                plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=c_norm[:, 0].cpu(), s=1, cmap='viridis', vmin=0, vmax=80)
+                c_norm_np = c_norm[:, 0].cpu().numpy()
+                x_cpu = x.cpu()
+                topk_indices = c_norm_np.argsort()[-250:]
+                plt.scatter(x_cpu[:, 1], x_cpu[:, 2], c=c_norm_np, s=1, cmap='viridis', vmin=0, vmax=80)
                 plt.colorbar(fraction=0.046, pad=0.04)
+                plt.scatter(x_cpu[topk_indices, 1], x_cpu[topk_indices, 2], c='red', s=1)
             plt.xlim([0, 1])
             plt.ylim([0, 1])
 
@@ -579,8 +592,12 @@ def data_train_material(config, erase, best_model, device):
             elif 'C' in trainer:
                 c_norm = torch.norm(pred.view(n_particles, -1), dim=1)
                 c_norm = c_norm[:, None]
-                plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=c_norm[:, 0].cpu(), s=1, cmap='viridis', vmin=0, vmax=80)
+                c_norm_np = c_norm[:, 0].cpu().numpy()
+                x_cpu = x.cpu()
+                topk_indices = c_norm_np.argsort()[-250:]
+                plt.scatter(x_cpu[:, 1], x_cpu[:, 2], c=c_norm_np, s=1, cmap='viridis', vmin=0, vmax=80)
                 plt.colorbar(fraction=0.046, pad=0.04)
+                plt.scatter(x_cpu[topk_indices, 1], x_cpu[topk_indices, 2], c='red', s=1)
 
             plt.xlim([0, 1])
             plt.ylim([0, 1])
@@ -592,9 +609,10 @@ def data_train_material(config, erase, best_model, device):
                 # c_norm = torch.norm(y.view(n_particles, -1), dim=1)
                 # c_norm_pred = torch.norm(pred.view(n_particles, -1), dim=1)
                 # plt.scatter(c_norm.cpu(), c_norm_pred.cpu(), s=1, c='w', alpha=0.5, edgecolors='none')
-                for k in range(4):
-                    plt.scatter(pred[:, k].cpu(), y[:, k].cpu(), s=1, c='w', alpha=0.5, edgecolors='none')
-
+                for m in range(4):
+                    plt.scatter(y[:, m].cpu(), pred[:, m].cpu(), s=1, c='w', alpha=0.5, edgecolors='none')
+                plt.xlim([-200, 200])
+                plt.ylim([-200, 200])
 
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/tmp_training/movie/pred_{k}.tif", dpi=87)

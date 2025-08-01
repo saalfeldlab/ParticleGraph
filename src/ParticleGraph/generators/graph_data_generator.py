@@ -1310,23 +1310,18 @@ def data_generate_MPM(
 
                     # 1. V particle level
                     plt.subplot(2, 3, 1)
-                    # v_norm = torch.norm(V, dim=1).cpu().numpy()
-                    # plt.scatter(X[:, 0].cpu(), X[:, 1].cpu(), c=v_norm, s=1, cmap='viridis', vmin=0, vmax=6)
-                    # plt.colorbar(fraction=0.046, pad=0.04)
                     plt.title('objects')
-
                     for n in range(3):
                         pos = torch.argwhere(T == n)[:,0]
                         plt.scatter(to_numpy(x[pos, 1]), to_numpy(x[pos, 2]), s=1, color=cmap.color(n))
-
-                    # Overlay transparent color based on object ID
-                    # plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), c='w', s=2, edgecolors = 'none')
-                    # plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), c=to_numpy(ID.squeeze()), s=2, alpha=0.3,
-                    #             cmap='nipy_spectral', edgecolors = 'none')
-
                     plt.xlim([0, 1])
                     plt.ylim([0, 1])
-                    plt.tight_layout()
+                    plt.gca().set_aspect('equal')
+
+                    plt.subplot(2, 3, 4)
+                    plt.title('Jp (volume deformation)')
+                    plt.scatter(X[:, 0].cpu(), X[:, 1].cpu(), c=Jp.cpu(), s=1, cmap='viridis', vmin=0.75, vmax=1.25)
+                    plt.colorbar(fraction=0.046, pad=0.04)
                     plt.xlim([0, 1])
                     plt.ylim([0, 1])
                     plt.gca().set_aspect('equal')
@@ -1344,7 +1339,7 @@ def data_generate_MPM(
                     # 3. F particle level
                     plt.subplot(2, 3, 3)
                     f_norm = torch.norm(F.view(n_particles, -1), dim=1).cpu().numpy()
-                    plt.scatter(X[:, 0].cpu(), X[:, 1].cpu(), c=f_norm, s=1, cmap='coolwarm', vmin=1.44-0.2, vmax=1.44+0.2)
+                    plt.scatter(X[:, 0].cpu(), X[:, 1].cpu(), c=f_norm, s=1, cmap='coolwarm', vmin=1.44-0.1, vmax=1.44+0.1)
                     plt.colorbar(fraction=0.046, pad=0.04)
                     # print(
                     #     f"F min: {np.min(f_norm):.6f}, max: {np.max(f_norm):.6f}, mean: {np.mean(f_norm):.6f}, std: {np.std(f_norm):.6f}")
@@ -1354,7 +1349,7 @@ def data_generate_MPM(
                     plt.gca().set_aspect('equal')
 
                     # 4. Stress particle level
-                    plt.subplot(2, 3, 4)
+                    plt.subplot(2, 3, 5)
                     stress_norm = torch.norm(S.view(n_particles, -1), dim=1)
                     stress_norm = stress_norm[:,None]
                     plt.scatter(X[:, 0].cpu(), X[:, 1].cpu(), c=stress_norm[:, 0].cpu(), s=1, cmap='hot', vmin=0, vmax=6E-3)
@@ -1364,8 +1359,8 @@ def data_generate_MPM(
                     plt.ylim([0, 1])
                     plt.gca().set_aspect('equal')
 
-                    # 5. M grid level - scatter plot (every 2nd point)
-                    plt.subplot(2, 3, 5)
+                    # # 5. M grid level - scatter plot (every 2nd point)
+                    # plt.subplot(2, 3, 6)
                     grid_x, grid_y = torch.meshgrid(torch.linspace(0, 1, n_grid), torch.linspace(0, 1, n_grid),
                                                     indexing='ij')
                     # Take every 2nd row and column
@@ -1375,12 +1370,12 @@ def data_generate_MPM(
                     grid_x_flat = grid_x_sub.flatten()
                     grid_y_flat = grid_y_sub.flatten()
                     gm_flat = gm_sub.cpu().flatten()
-                    plt.scatter(grid_x_flat, grid_y_flat, c=gm_flat, s=4, cmap='viridis', vmin=0, vmax=1E-4)
-                    plt.colorbar(fraction=0.046, pad=0.04)
-                    plt.title('grid mass')
-                    plt.xlim([0, 1])
-                    plt.ylim([0, 1])
-                    plt.gca().set_aspect('equal')
+                    # plt.scatter(grid_x_flat, grid_y_flat, c=gm_flat, s=4, cmap='viridis', vmin=0, vmax=1E-4)
+                    # plt.colorbar(fraction=0.046, pad=0.04)
+                    # plt.title('grid mass')
+                    # plt.xlim([0, 1])
+                    # plt.ylim([0, 1])
+                    # plt.gca().set_aspect('equal')
 
                     # 6. Momentum grid level - scatter plot (every 2nd point)
                     plt.subplot(2, 3, 6)

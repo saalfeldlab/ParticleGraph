@@ -51,6 +51,8 @@ class Affine_Particle(pyg.nn.MessagePassing):
         self.n_dataset = train_config.n_runs
         self.dimension = dimension
 
+        self.n_particles = simulation_config.n_particles
+        self.embedding_dim = model_config.embedding_dim
         self.n_frames = simulation_config.n_frames
         self.prediction = model_config.prediction
         self.bc_dpos = bc_dpos
@@ -70,12 +72,21 @@ class Affine_Particle(pyg.nn.MessagePassing):
                                nlayers=self.n_layers_update,
                                hidden_size=self.hidden_dim_update, device=self.device)
 
+        self.a = nn.Parameter(
+            torch.tensor(np.ones((int(self.n_particles) , self.embedding_dim)),
+                         device=self.device,
+                         requires_grad=True, dtype=torch.float32))
+
+
     def forward(self, data=[], training=True):
         x, edge_index = data.x, data.edge_index
         self.training = training
 
         pos = x[:, 1:self.dimension + 1]
         d_pos = x[:, self.dimension + 1:1 + 2 * self.dimension]
+
+        particle_id = x[:, 0:1].long()
+        embedding = self.a[particle_id, :].squeeze()
 
         if (self.noise_level>0) and self.training:
             # Add noise to the position and velocity vectors
@@ -102,7 +113,7 @@ class Affine_Particle(pyg.nn.MessagePassing):
             d_pos[:, :2] = d_pos[:, :2] @ R
 
         # Message passing
-        out = self.propagate(edge_index, pos=pos, d_pos=d_pos)
+        out = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding)
 
         # Optional update step (e.g., MLP)
         if self.update_type == 'mlp':
@@ -116,7 +127,7 @@ class Affine_Particle(pyg.nn.MessagePassing):
 
         return out
 
-    def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j):
+    def message(self, edge_index_i, edge_index_j, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i):
 
         # distance normalized by the max radius
         r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
@@ -124,7 +135,11 @@ class Affine_Particle(pyg.nn.MessagePassing):
         if self.rotation_augmentation & self.training:
             delta_pos[:, :2] = delta_pos[:, :2] @ self.rotation_matrix
 
-        in_features = torch.cat((delta_pos, d_pos_i, d_pos_j), dim=-1)
+        match self.model:
+            case 'PDE_MPM':
+                in_features = torch.cat((delta_pos, d_pos_i, d_pos_j), dim=-1)
+            case 'PDE_MPM_A':
+                in_features = torch.cat((delta_pos, d_pos_i, d_pos_j, embedding_i), dim=-1)
 
         out = self.lin_edge(in_features)
 

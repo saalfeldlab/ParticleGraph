@@ -1697,7 +1697,7 @@ def choose_training_model(model_config=None, device=None, projections=None):
         case 'PDE_R':
             model = Interaction_Mouse(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos,
                                      dimension=dimension)
-        case 'PDE_MPM':
+        case 'PDE_MPM' | 'PDE_MPM_A':
             model = Interaction_MPM(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos,
                                     dimension=dimension)
         case  'PDE_Cell' | 'PDE_Cell_area':

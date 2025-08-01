@@ -61,7 +61,9 @@ if __name__ == "__main__":
     else:
         task = 'train'  # 'generate', 'train', 'test'
         # config_list = ['multimaterial_1_2', 'multimaterial_1_3', 'multimaterial_1_4', 'multimaterial_1_5', 'multimaterial_1_6', 'multimaterial_1_7', 'multimaterial_1_8']
-        config_list = ['multimaterial_1_12']
+        # config_list = ['multimaterial_1_C', 'multimaterial_1_A','multimaterial_1_B']
+        # config_list = ['multimaterial_1_12']
+        config_list = ['multimaterial_1_17']
         # config_list = ['fluids_m19']
         # config_list = ['falling_water_ramp_x6_11_1']
         # config_list = ['arbitrary_3']
@@ -99,8 +101,8 @@ if __name__ == "__main__":
                 alpha=1,
                 erase=False,
                 bSave=True,
-                step=10,
-                best_model=best_model
+                step=20,
+                best_model=None
             )  # config.simulation.n_frames // 100)
             
         if "train" in task:
