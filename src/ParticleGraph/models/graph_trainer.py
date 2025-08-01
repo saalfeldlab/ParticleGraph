@@ -382,7 +382,6 @@ def data_train_material(config, erase, best_model, device):
                     weighted_error = squared_error.sum(dim=-1) * weights  # [N, k]
 
                     loss = loss + weighted_error.mean()
-
             else:
                 loss = F.mse_loss(pred, y_batch)
 
@@ -420,8 +419,8 @@ def data_train_material(config, erase, best_model, device):
 
                 plt.style.use('dark_background')
 
-                fig = plt.figure(figsize=(18, 8))
-                plt.subplot(1, 2, 1)
+                fig = plt.figure(figsize=(18, 6))
+                plt.subplot(1, 3, 1)
                 if 'F' in trainer:
                     f_norm = torch.norm(y.view(n_particles, -1), dim=1).cpu().numpy()
                     plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=f_norm, s=1, cmap='coolwarm', vmin=1.44 - 0.2,
@@ -442,7 +441,7 @@ def data_train_material(config, erase, best_model, device):
 
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
-                plt.subplot(1, 2, 2)
+                plt.subplot(1, 3, 2)
                 if 'F' in trainer:
                     f_norm = torch.norm(pred.view(n_particles, -1), dim=1).cpu().numpy()
                     plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=f_norm, s=1, cmap='coolwarm', vmin=1.44 - 0.2,
@@ -465,6 +464,16 @@ def data_train_material(config, erase, best_model, device):
                          f'epoch: {epoch} iteration: {N} error: {np.mean(1000 * error) / len(k_list):.6f}', )
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
+
+                plt.subplot(1, 3, 3)
+                if 'C' in trainer:
+                    # c_norm = torch.norm(y.view(n_particles, -1), dim=1)
+                    # c_norm_pred = torch.norm(pred.view(n_particles, -1), dim=1)
+                    # plt.scatter(c_norm.cpu(), c_norm_pred.cpu(), s=1, c='w', alpha=0.5, edgecolors='none')
+                    for k in range(4):
+                        plt.scatter(pred[:,k].cpu(), y[:,k].cpu(), s=1, c='w', alpha=0.5, edgecolors='none')
+
+
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_training/field/{epoch}_{N}.tif", dpi=87)
                 plt.close()
@@ -504,6 +513,12 @@ def data_train_material(config, erase, best_model, device):
 
         plt.style.use('dark_background')
 
+        net = os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt')
+        state_dict = torch.load(net, map_location=device)
+        model.load_state_dict(state_dict['model_state_dict'])
+        print(f'reload best_model: {net}')
+
+
         for k in trange(0, n_frames-10, n_frames // 50):
 
             with torch.no_grad():
@@ -531,7 +546,7 @@ def data_train_material(config, erase, best_model, device):
                 error = F.mse_loss(pred, y).item()
 
             fig = plt.figure(figsize=(18, 8))
-            plt.subplot(1, 2, 1)
+            plt.subplot(1, 3, 1)
             if 'F' in trainer:
                 f_norm = torch.norm(y.view(n_particles, -1), dim=1).cpu().numpy()
                 plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=f_norm, s=1, cmap='coolwarm', vmin=1.44 - 0.2,
@@ -550,7 +565,7 @@ def data_train_material(config, erase, best_model, device):
             plt.xlim([0, 1])
             plt.ylim([0, 1])
 
-            plt.subplot(1, 2, 2)
+            plt.subplot(1, 3, 2)
             if 'F' in trainer:
                 f_norm = torch.norm(pred.view(n_particles, -1), dim=1).cpu().numpy()
                 plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=f_norm, s=1, cmap='coolwarm', vmin=1.44 - 0.2,
@@ -571,6 +586,16 @@ def data_train_material(config, erase, best_model, device):
             plt.ylim([0, 1])
             plt.text(0.05, 0.95,
                      f'epoch: {epoch} iteration: {N} error: {error:.2f}', )
+
+            plt.subplot(1, 3, 3)
+            if 'C' in trainer:
+                # c_norm = torch.norm(y.view(n_particles, -1), dim=1)
+                # c_norm_pred = torch.norm(pred.view(n_particles, -1), dim=1)
+                # plt.scatter(c_norm.cpu(), c_norm_pred.cpu(), s=1, c='w', alpha=0.5, edgecolors='none')
+                for k in range(4):
+                    plt.scatter(pred[:, k].cpu(), y[:, k].cpu(), s=1, c='w', alpha=0.5, edgecolors='none')
+
+
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/tmp_training/movie/pred_{k}.tif", dpi=87)
             plt.close()
@@ -5847,7 +5872,7 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
 
     trainer = training_config.MPM_trainer
 
-    print(f'generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+    print(f'testing ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
     dimension = simulation_config.dimension
     max_radius = simulation_config.max_radius
@@ -5932,24 +5957,22 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
         S = x[:, 16:20].reshape(-1, 2, 2)
 
         with torch.no_grad():
-            for n in range(recursive_loop):
 
-                frame = torch.ones((X.shape[0], 1), dtype=torch.int, device=device) * it / n_frames
-                features = torch.cat((X, V, frame), dim=1).detach()
-
-                if 'GNN_C' in trainer:
-                    distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                    adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
-                    edges = adj_t.nonzero().t().contiguous()
-                    dataset = data.Data(x=x, edge_index=edges, num_nodes=x.shape[0])
-                    C_sample = model.GNN_C(dataset, training=False)
-                else:
-                    C_sample = model.siren_C(features)
-
-                C = C_sample.clone().detach()
+            frame = torch.ones((X.shape[0], 1), dtype=torch.int, device=device) * it / n_frames
+            features = torch.cat((X, V, frame), dim=1).detach()
+            if 'GNN_C' in trainer:
+                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
+                edges = adj_t.nonzero().t().contiguous()
+                dataset = data.Data(x=x, edge_index=edges, num_nodes=x.shape[0])
+                C = model.GNN_C(dataset, training=False)
+                C = C.reshape(-1, 2, 2)
+            else:
+                C = model.siren_C(features)
                 C = C.reshape(-1, 2, 2)
 
-                X, V, _, F, T, Jp, M, S, GM, GV = MPM_step(model_MPM, X, V, C, F, T, Jp, M, n_particles, n_grid,
+            for n in range(recursive_loop):
+                X, V, C, F, T, Jp, M, S, GM, GV = MPM_step(model_MPM, X, V, C, F, T, Jp, M, n_particles, n_grid,
                                                            delta_t, dx, inv_dx, mu_0, lambda_0, p_vol, offsets, particle_offsets,
                                                            expansion_factor, gravity, friction, it, device)
 
@@ -6014,9 +6037,9 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
 
-                error_val = to_numpy(error_pos)
-                formatted_error = np.format_float_scientific(error_val, precision=3, exp_digits=2)
-                plt.text(0.05, 0.95, f'error: {formatted_error}', fontsize=10, transform=plt.gca().transAxes)
+                # error_val = to_numpy(error_pos)
+                # formatted_error = np.format_float_scientific(error_val, precision=3, exp_digits=2)
+                # plt.text(0.05, 0.95, f'error: {formatted_error}', fontsize=10, transform=plt.gca().transAxes)
 
                 plt.gca().set_aspect('equal')
 
@@ -6025,7 +6048,7 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
                 c_norm = torch.norm(C.view(n_particles, -1), dim=1).cpu().numpy()
                 plt.scatter(X[:, 0].cpu(), X[:, 1].cpu(), c=c_norm, s=1, cmap='viridis', vmin=0, vmax=80)
                 plt.colorbar(fraction=0.046, pad=0.04)
-                plt.title('C (affine velocity)')
+                # plt.title('C (Jacobian of velocity)')
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
                 plt.gca().set_aspect('equal')

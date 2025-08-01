@@ -1336,7 +1336,7 @@ def data_generate_MPM(
                     c_norm = torch.norm(C.view(n_particles, -1), dim=1).cpu().numpy()
                     plt.scatter(X[:, 0].cpu(), X[:, 1].cpu(), c=c_norm, s=1, cmap='viridis', vmin=0, vmax=80)
                     plt.colorbar(fraction=0.046, pad=0.04)
-                    plt.title('C (affine velocity)')
+                    plt.title('C (Jacobian of velocity)')
                     plt.xlim([0, 1])
                     plt.ylim([0, 1])
                     plt.gca().set_aspect('equal')

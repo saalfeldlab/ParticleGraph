@@ -59,7 +59,7 @@ if __name__ == "__main__":
         else:
             best_model = None
     else:
-        task = 'test'  # 'generate', 'train', 'test'
+        task = 'train'  # 'generate', 'train', 'test'
         # config_list = ['multimaterial_1_2', 'multimaterial_1_3', 'multimaterial_1_4', 'multimaterial_1_5', 'multimaterial_1_6', 'multimaterial_1_7', 'multimaterial_1_8']
         config_list = ['multimaterial_1_12']
         # config_list = ['fluids_m19']
@@ -67,7 +67,7 @@ if __name__ == "__main__":
         # config_list = ['arbitrary_3']
         # config_list = ['cell_cardio_2_4']
         # config_list = ['RD_RPS_5']
-        # config_list = ['cell_U2OS_9_2']
+        # config_list = ['cell_U2OS_9_2']a
         # config_list = ['springs_matrix_N5_3']
         # config_list = ['cell_MDCK_16']
         # config_list = ['signal_CElegans_d2', 'signal_CElegans_d2a', 'signal_CElegans_d3', 'signal_CElegans_d3a', 'signal_CElegans_d3b']
@@ -116,7 +116,7 @@ if __name__ == "__main__":
                 visualize=True,
                 style="black color name",
                 verbose=False,
-                best_model="best",
+                best_model='best',
                 run=0,
                 test_mode="",
                 sample_embedding=False,
