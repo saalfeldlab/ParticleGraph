@@ -5986,6 +5986,9 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
                 C = model.GNN_C(dataset, training=False)
                 C = C.reshape(-1, 2, 2)
             else:
+                if 'PDE_MPM_A' in model_config.particle_model_name:
+                    embedding = model.a[0]
+                    features = torch.cat((X, V, embedding, frame), dim=1).detach()
                 C = model.siren_C(features)
                 C = C.reshape(-1, 2, 2)
 
