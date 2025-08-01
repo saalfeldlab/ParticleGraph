@@ -508,7 +508,7 @@ def data_train_material(config, erase, best_model, device):
         plt.text(0.05, 0.95, f'epoch: {epoch} final loss: {list_loss[-1]:.10f}', transform=ax.transAxes, )
         plt.tight_layout()
         ax = fig.add_subplot(1, 5, 2)
-        if 'PDE_MPM_A' in model_config.particle_model_name:
+        if ('PDE_MPM_A' in model_config.particle_model_name) and ('GNN_C' in trainer) :
             embedding = to_numpy(model.GNN_C.a)
         else:
             embedding = to_numpy(model.a[0])
@@ -5963,15 +5963,15 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
 
     for it in trange(n_frames - recursive_loop -5):
 
-        # x = torch.tensor(x_list[run][it], dtype=torch.float32, device=device).clone().detach()
+        x_ = torch.tensor(x_list[run][it], dtype=torch.float32, device=device).clone().detach()
 
-        X = x[:, 1:3]  # pos is the absolute position
-        V = x[:, 3:5]  # d_pos is the velocity
-        C = x[:, 5:9].reshape(-1, 2, 2)  # C is the affine deformation gradient
-        F = x[:, 9:13].reshape(-1, 2, 2)  # F is the deformation gradient
-        T = x[:, 13:14].long()  # T is the type of particle
-        Jp = x[:, 14:15]  # Jp is the Jacobian of the deformation gradient
-        M = x[:, 15:16]  # M is the mass of the particle
+        X = x[:, 1:3].detach()  # pos is the absolute position
+        V = x[:, 3:5].detach()  # d_pos is the velocity
+        C = x[:, 5:9].reshape(-1, 2, 2).detach()  # C is the affine deformation gradient
+        F = x[:, 9:13].reshape(-1, 2, 2) .detach() # F is the deformation gradient
+        T = x[:, 13:14].long().detach() # T is the type of particle
+        Jp = x[:, 14:15].detach() # Jp is the Jacobian of the deformation gradient
+        M = x[:, 15:16].detach() # M is the mass of the particle
         S = x[:, 16:20].reshape(-1, 2, 2)
 
         with torch.no_grad():
@@ -5993,6 +5993,7 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
                 X, V, C, F, T, Jp, M, S, GM, GV = MPM_step(model_MPM, X, V, C, F, T, Jp, M, n_particles, n_grid,
                                                            delta_t, dx, inv_dx, mu_0, lambda_0, p_vol, offsets, particle_offsets,
                                                            expansion_factor, gravity, friction, it, device)
+
 
             x = torch.cat((N.clone().detach(), X.clone().detach(), V.clone().detach(),
                            C.reshape(n_particles, 4).clone().detach(),
@@ -6054,11 +6055,14 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
                 plt.tight_layout()
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
+                plt.gca().set_aspect('equal')
 
-                # error_val = to_numpy(error_pos)
-                # formatted_error = np.format_float_scientific(error_val, precision=3, exp_digits=2)
-                # plt.text(0.05, 0.95, f'error: {formatted_error}', fontsize=10, transform=plt.gca().transAxes)
-
+                plt.subplot(2, 3, 4)
+                plt.title('Jp (volume deformation)')
+                plt.scatter(X[:, 0].cpu(), X[:, 1].cpu(), c=Jp.cpu(), s=1, cmap='viridis', vmin=0.75, vmax=1.25)
+                plt.colorbar(fraction=0.046, pad=0.04)
+                plt.xlim([0, 1])
+                plt.ylim([0, 1])
                 plt.gca().set_aspect('equal')
 
                 # 2. C particle level
@@ -6066,7 +6070,7 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
                 c_norm = torch.norm(C.view(n_particles, -1), dim=1).cpu().numpy()
                 plt.scatter(X[:, 0].cpu(), X[:, 1].cpu(), c=c_norm, s=1, cmap='viridis', vmin=0, vmax=80)
                 plt.colorbar(fraction=0.046, pad=0.04)
-                # plt.title('C (Jacobian of velocity)')
+                plt.title('C (Jacobian of velocity)')
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
                 plt.gca().set_aspect('equal')
@@ -6084,7 +6088,7 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
                 plt.gca().set_aspect('equal')
 
                 # 4. Stress particle level
-                plt.subplot(2, 3, 4)
+                plt.subplot(2, 3, 5)
                 stress_norm = torch.norm(S.view(n_particles, -1), dim=1)
                 stress_norm = stress_norm[:,None]
                 plt.scatter(X[:, 0].cpu(), X[:, 1].cpu(), c=stress_norm[:, 0].cpu(), s=1, cmap='hot', vmin=0, vmax=6E-3)
@@ -6095,7 +6099,7 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
                 plt.gca().set_aspect('equal')
 
                 # 5. M grid level - scatter plot (every 2nd point)
-                plt.subplot(2, 3, 5)
+                # plt.subplot(2, 3, 5)
                 grid_x, grid_y = torch.meshgrid(torch.linspace(0, 1, n_grid), torch.linspace(0, 1, n_grid),
                                                 indexing='ij')
                 # Take every 2nd row and column
@@ -6105,12 +6109,12 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
                 grid_x_flat = grid_x_sub.flatten()
                 grid_y_flat = grid_y_sub.flatten()
                 gm_flat = gm_sub.cpu().flatten()
-                plt.scatter(grid_x_flat, grid_y_flat, c=gm_flat, s=4, cmap='viridis', vmin=0, vmax=1E-4)
-                plt.colorbar(fraction=0.046, pad=0.04)
-                plt.title('grid mass')
-                plt.xlim([0, 1])
-                plt.ylim([0, 1])
-                plt.gca().set_aspect('equal')
+                # plt.scatter(grid_x_flat, grid_y_flat, c=gm_flat, s=4, cmap='viridis', vmin=0, vmax=1E-4)
+                # plt.colorbar(fraction=0.046, pad=0.04)
+                # plt.title('grid mass')
+                # plt.xlim([0, 1])
+                # plt.ylim([0, 1])
+                # plt.gca().set_aspect('equal')
 
                 # 6. Momentum grid level - scatter plot (every 2nd point)
                 plt.subplot(2, 3, 6)

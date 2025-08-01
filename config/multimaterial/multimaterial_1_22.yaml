@@ -1,0 +1,74 @@
+description: 'system of particles falling down in a box   training with batch size 16  training affine C   MPM_trainer GNN_C_5-k-nearest larger GNN'
+dataset: 'multimaterial_1'
+
+simulation:
+  params: [[0, 0.2, 0.4, 0.6, 0.8], [0.2, 0.2, 0.2, 0.2, 0.2]]
+  min_radius: 0
+  max_radius: 0.0125
+  n_particles: 9000
+  n_grid: 128
+  n_particle_types: 3
+  n_frames: 1000
+  delta_t: 1.E-4
+  dpos_init: 1.0
+  boundary: 'no'
+  start_frame: -1000
+
+graph_model:
+  particle_model_name: 'PDE_MPM_A'
+  mesh_model_name: ''
+  prediction: '2nd_derivative'
+
+  input_size: 8
+  output_size: 8
+  hidden_dim: 256
+  n_layers: 5
+  aggr_type: 'mean'
+  embedding_dim: 2
+
+  update_type: 'mlp'
+  input_size_update: 8
+  n_layers_update: 2
+  hidden_dim_update: 32
+  output_size_update: 4
+
+  input_size_nnr: 3
+  n_layers_nnr: 5
+  hidden_dim_nnr: 256
+  output_size_nnr: 4
+  outermost_linear_nnr: True
+  omega: 30.0
+
+plotting:
+  colormap: 'tab10'
+  arrow_length: 2
+  ylim: [-0.001, 0]
+
+training:
+  n_epochs: 5
+  batch_size: 16
+  small_init_batch_size: False
+  n_runs: 1
+
+  noise_level: 0
+
+  sparsity: 'none'
+  sparsity_freq: 3
+  cluster_method: 'kmeans_auto_embedding'
+  rotation_augmentation: False
+  translation_augmentation: True
+  data_augmentation_loop: 100
+  fix_cluster_embedding: True
+  device: 'auto'
+
+  learning_rate_start: 5E-5
+  learning_rate_embedding_start: 5E-5
+
+  MPM_trainer : 'GNN_C_5-k-nearest'
+
+
+
+
+
+
+

@@ -68,8 +68,12 @@ class Interaction_MPM(nn.Module):
         self.siren_F_Jp = Siren(in_features=3, out_features=4, hidden_features=self.hidden_dim_nnr,
                            hidden_layers=self.n_layers_nnr, first_omega_0=self.omega, hidden_omega_0=self.omega, outermost_linear=True).to(device)
 
-        self.siren_C = Siren(in_features=5, out_features=4, hidden_features=self.hidden_dim_nnr,
-                           hidden_layers=self.n_layers_nnr, first_omega_0=self.omega, hidden_omega_0=self.omega, outermost_linear=True).to(device)
+        if self.model == 'PDE_MPM_A':
+            self.siren_C = Siren(in_features=7, out_features=4, hidden_features=self.hidden_dim_nnr,
+                               hidden_layers=self.n_layers_nnr, first_omega_0=self.omega, hidden_omega_0=self.omega, outermost_linear=True).to(device)
+        else:
+            self.siren_C = Siren(in_features=5, out_features=4, hidden_features=self.hidden_dim_nnr,
+                               hidden_layers=self.n_layers_nnr, first_omega_0=self.omega, hidden_omega_0=self.omega, outermost_linear=True).to(device)
 
         self.MLP_mu_lambda = MLP(input_size=self.embedding_dim + 1, output_size=2, nlayers=3, hidden_size=32, device=device)
         self.MLP_sig_plastic_ratio = MLP(input_size=self.embedding_dim + 12, output_size=3, nlayers=5, hidden_size=128, device=device)
@@ -105,7 +109,10 @@ class Interaction_MPM(nn.Module):
 
 
         if 'C' in trainer:
-            features = torch.cat((pos, d_pos, frame), dim=1).detach()
+            if self.model == 'PDE_MPM_A':
+                features = torch.cat((pos, d_pos, embedding, frame), dim=1).detach()
+            else:
+                features = torch.cat((pos, d_pos, frame), dim=1).detach()
             C_sample = self.siren_C(features).reshape(-1, 2, 2)
             return C_sample.reshape(-1, 4)
 
