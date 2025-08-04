@@ -57,7 +57,7 @@ if __name__ == '__main__':
 
         task = 'generate'  # 'generate', 'train', 'test'
         best_model = ''
-        config_list = ['multimaterial_1_1']
+        config_list = ['fly_N9_18_4_0_test']
         # config_list = ['fluids_m19']
         # config_list = ['falling_water_ramp_x6_11_1']
         # config_list = ['arbitrary_3']
