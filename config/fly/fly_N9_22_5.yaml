@@ -1,5 +1,5 @@
-description: 'small MLP, no extra null edges, noise_model_level: 0 generator seed 12 training seed 42'
-dataset: 'fly_N9_21_4'
+description: 'small MLP, no extra null edges, noise_model_level: 0 training seed: 42 (no seeding)'
+dataset: 'fly_N9_18_4_0'
 
 simulation:
     connectivity_file: 'to be specified'
@@ -14,8 +14,6 @@ simulation:
     n_frames: 90720
     delta_t: 0.02
     baseline_value: 0
-
-    seed: 12
 
 graph_model:
     signal_model_name: 'PDE_N9_A'

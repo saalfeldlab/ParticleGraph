@@ -2958,7 +2958,8 @@ def data_generate_fly_voltage(
     model_config = config.graph_model
 
     torch.random.fork_rng(devices=device)
-    torch.random.manual_seed(simulation_config.seed)
+    if simulation_config.seed != 42:
+        torch.random.manual_seed(simulation_config.seed)
 
     print(
         f"generating data ... {model_config.particle_model_name} {model_config.mesh_model_name} seed: {simulation_config.seed}"
@@ -3094,16 +3095,18 @@ def data_generate_fly_voltage(
                 f"original edges: {edge_index.shape[1] - n_extra_null_edges}, extra null edges: {n_extra_null_edges}"
             )
 
-    torch.save(edge_index, f"graphs_data/{dataset_name}/edge_index.pt")
+
 
     connectivity = torch.zeros(
         (n_neurons, n_neurons), dtype=torch.float32, device=device
     )
     connectivity[edge_index[1], edge_index[0]] = p["w"]
     mask = (connectivity != 0).float()
-    torch.save(mask, f"./graphs_data/{dataset_name}/mask.pt")
-    torch.save(connectivity, f"./graphs_data/{dataset_name}/connectivity.pt")
-    torch.save(p["w"], f"./graphs_data/{dataset_name}/weights.pt")
+
+    # torch.save(mask, f"./graphs_data/{dataset_name}/mask.pt")
+    # torch.save(connectivity, f"./graphs_data/{dataset_name}/connectivity.pt")
+    # torch.save(p["w"], f"./graphs_data/{dataset_name}/weights.pt")
+    # torch.save(edge_index, f"graphs_data/{dataset_name}/edge_index.pt")
 
     # plt.figure(figsize=(10, 10))
     # ax = sns.heatmap(to_numpy(connectivity), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},
@@ -3192,6 +3195,38 @@ def data_generate_fly_voltage(
 
     dataset = pyg.data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
 
+    # neuron_types = to_numpy(x[:, 6]).astype(int)
+    # print("=== MAPPING INDICES TO NEURON NAMES ===")
+    # # Create a mapping from index to neuron type name
+    # index_to_name = {}
+    # for i in range(len(node_types_str)):
+    #     type_idx = node_types_int[i]
+    #     type_name = node_types_str[i]
+    #     if type_idx not in index_to_name:
+    #         index_to_name[type_idx] = type_name
+    # # Print the mapping sorted by index
+    # print("Index -> Neuron Type Name:")
+    # for idx in sorted(index_to_name.keys()):
+    #     count = np.sum(neuron_types == idx)
+    #     print(f"Index {idx:2d}: {index_to_name[idx]:15s} ({count:3d} neurons)")
+    # # Specifically find R1-R6 indices
+    # print("\n=== FOUND R1-R6 INDICES ===")
+    # r_mapping = {}
+    # for idx, name in index_to_name.items():
+    #     if name in ['R1', 'R2', 'R3', 'R4', 'R5', 'R6']:
+    #         count = np.sum(neuron_types == idx)
+    #         r_mapping[name] = idx
+    #         print(f"{name} -> Index {idx} ({count} neurons)")
+    # # Print the final array you need for your code
+    # if len(r_mapping) == 6:
+    #     r_indices = [r_mapping['R1'], r_mapping['R2'], r_mapping['R3'],
+    #                  r_mapping['R4'], r_mapping['R5'], r_mapping['R6']]
+    #     print(f"\nUse this in your code:")
+    #     print(f"neuron_type_indices = {r_indices}  # [R1, R2, R3, R4, R5, R6]")
+    # else:
+    #     print(f"Warning: Found {len(r_mapping)} R-types instead of 6")
+
+
     y_list = []
     x_list = []
     it = 0
@@ -3207,6 +3242,7 @@ def data_generate_fly_voltage(
                     x[:n_input_neurons, 4:5] = x[:n_input_neurons, 4:5] + torch.randn(
                         (n_input_neurons, 1), dtype=torch.float32, device=device
                     ) * noise_visual_input
+
                 dataset = pyg.data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
                 y = pde(dataset, has_field=False)
                 y_list.append(to_numpy(y.clone().detach()))
@@ -3264,10 +3300,156 @@ def data_generate_fly_voltage(
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(
-                        f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80
-                    )
+                    # plt.savefig(
+                    #     f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80
+                    # )
                     plt.close()
+
+
+
+
+                    # Define neuron_types at the beginning for use throughout visualization
+                    neuron_types = to_numpy(x[:, 6]).astype(int)  # Individual cell type indices (0-64)
+                    # Create mapping from index to neuron type name
+                    index_to_name = {
+                        0: 'Am', 1: 'C2', 2: 'C3', 3: 'CT1(Lo1)', 4: 'CT1(M10)', 5: 'L1', 6: 'L2', 7: 'L3', 8: 'L4',
+                        9: 'L5',
+                        10: 'Lawf1', 11: 'Lawf2', 12: 'Mi1', 13: 'Mi10', 14: 'Mi11', 15: 'Mi12', 16: 'Mi13', 17: 'Mi14',
+                        18: 'Mi15', 19: 'Mi2',
+                        20: 'Mi3', 21: 'Mi4', 22: 'Mi9', 23: 'R1', 24: 'R2', 25: 'R3', 26: 'R4', 27: 'R5', 28: 'R6',
+                        29: 'R7',
+                        30: 'R8', 31: 'T1', 32: 'T2', 33: 'T2a', 34: 'T3', 35: 'T4a', 36: 'T4b', 37: 'T4c', 38: 'T4d',
+                        39: 'T5a',
+                        40: 'T5b', 41: 'T5c', 42: 'T5d', 43: 'Tm1', 44: 'Tm16', 45: 'Tm2', 46: 'Tm20', 47: 'Tm28',
+                        48: 'Tm3', 49: 'Tm30',
+                        50: 'Tm4', 51: 'Tm5Y', 52: 'Tm5a', 53: 'Tm5b', 54: 'Tm5c', 55: 'Tm9', 56: 'TmY10', 57: 'TmY13',
+                        58: 'TmY14', 59: 'TmY15',
+                        60: 'TmY18', 61: 'TmY3', 62: 'TmY4', 63: 'TmY5a', 64: 'TmY9'
+                    }
+
+                    # Define anatomical order for panels (stimulus first, then anatomical progression)
+                    anatomical_order = [
+                        None,  # Stimulus
+                        23, 24, 25, 26, 27, 28, 29, 30,  # R1-R8 (Retina)
+                        5, 6, 7, 8, 9, 10, 11,  # L1-L5, Lawf1, Lawf2 (Lamina)
+                        12, 19, 20, 21, 22, 13, 14, 15, 16, 17, 18,  # Mi1, Mi2, Mi3, Mi4, Mi9, Mi10-Mi15 (Medulla Mi)
+                        43, 45, 48, 50, 44, 46, 47, 49, 51, 52, 53, 54, 55,
+                        # Tm1, Tm2, Tm3, Tm4, Tm16, Tm20, Tm28, Tm30, Tm5Y, Tm5a-c, Tm9
+                        61, 62, 63, 56, 57, 58, 59, 60, 64,  # TmY3, TmY4, TmY5a, TmY10, TmY13-15, TmY18, TmY9
+                        1, 2, 4, 3,  # C2, C3, CT1(M10), CT1(Lo1)
+                        31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42,  # T1, T2, T2a, T3, T4a-d, T5a-d (Motion)
+                        0  # Am (Other)
+                    ]
+
+                    fig, axes = plt.subplots(8, 9, figsize=(36, 32), facecolor='black')
+                    axes_flat = axes.flatten()
+                    all_voltages = to_numpy(x[:, 3])
+                    if it==0:
+                        vmin, vmax = np.percentile(all_voltages, [5, 95])
+
+                    panel_idx = 0
+                    total_neurons_plotted = 0
+
+                    for type_idx in anatomical_order:
+                        if panel_idx >= len(axes_flat):
+                            break
+
+                        ax = axes_flat[panel_idx]
+
+                        if type_idx is None:  # Stimulus panel
+                            stimulus_scatter = ax.scatter(
+                                to_numpy(X1[:n_input_neurons, 0]),
+                                to_numpy(X1[:n_input_neurons, 1]),
+                                s=128,  # increased by 2
+                                c=to_numpy(x[:n_input_neurons, 4]),
+                                cmap="viridis",
+                                vmin=0,
+                                vmax=1.5,
+                                marker='h',  # hexagonal markers
+                                alpha=1.0,
+                                linewidths=0.0,
+                                edgecolors='black'
+                            )
+                            ax.set_title('Input', fontsize=24, color='white', pad=5)
+
+                        else:  # Neuron type panel
+                            # Get neurons of this specific type
+                            type_mask = neuron_types == type_idx
+                            type_count = np.sum(type_mask)
+                            total_neurons_plotted += type_count
+
+                            # Get neuron type name
+                            type_name = index_to_name.get(type_idx, f'Type_{type_idx}')
+
+                            if type_count > 0:
+                                # Use the same hexagonal lattice positions as stimulus (X1)
+                                type_voltages = to_numpy(x[type_mask, 3])
+
+                                # For neuron types with 217 neurons (one per column), use columnar positions
+                                if type_count == 217:
+                                    # Use first 217 positions from X1 (columnar arrangement)
+                                    hex_positions_x = to_numpy(X1[:type_count, 0])
+                                    hex_positions_y = to_numpy(X1[:type_count, 1])
+                                else:
+                                    # For other counts, use actual positions
+                                    type_positions = to_numpy(x[type_mask, 1:3])
+                                    hex_positions_x = type_positions[:, 0]
+                                    hex_positions_y = type_positions[:, 1]
+
+                                # Plot each neuron as individual hexagon
+                                neural_scatter = ax.scatter(
+                                    hex_positions_x,
+                                    hex_positions_y,
+                                    s=128,
+                                    c=type_voltages,
+                                    cmap='viridis',
+                                    vmin=vmin,
+                                    vmax=vmax,
+                                    alpha=1,
+                                    linewidths=0.0,
+                                    edgecolors='black'
+                                )
+
+                                # Color-code title based on neuron type category
+                                if type_name.startswith('R'):
+                                    title_color = 'yellow'  # Photoreceptors
+                                elif type_name.startswith(('L', 'Lawf')):
+                                    title_color = 'cyan'  # Lamina
+                                elif type_name.startswith(('Mi', 'Tm', 'TmY')):
+                                    title_color = 'orange'  # Medulla
+                                elif type_name.startswith('T'):
+                                    title_color = 'red'  # T-cells
+                                elif type_name.startswith('C'):
+                                    title_color = 'magenta'  # C-cells
+                                else:
+                                    title_color = 'white'  # Others
+
+                                ax.set_title(f'{type_name}', fontsize=24, color='white', pad=5)
+
+                            else:
+                                ax.text(0.5, 0.5, f'No {type_name}\nNeurons', transform=ax.transAxes,
+                                        ha='center', va='center', color='red', fontsize=8)
+                                ax.set_title(f'{type_name}\n(0)', fontsize=10, color='gray', pad=5)
+
+                        ax.set_facecolor('black')
+                        ax.set_xticks([])
+                        ax.set_yticks([])
+                        ax.set_aspect('equal')
+                        for spine in ax.spines.values():
+                            spine.set_visible(False)
+
+                        panel_idx += 1
+
+                    for i in range(panel_idx, len(axes_flat)):
+                        axes_flat[i].set_visible(False)
+
+                    plt.tight_layout()
+                    plt.subplots_adjust(top=0.95, bottom=0.05)
+
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
+                    plt.close()
+
+
                 it = it + 1
 
         print(f"generated {len(x_list)} frames")
@@ -3278,37 +3460,58 @@ def data_generate_fly_voltage(
     activity = torch.tensor(x_list[:, :, 3:4],device=device)
     activity = activity.squeeze()
     activity = activity.t()
+    input_visual = torch.tensor(x_list[:, :, 4:5],device=device)
+    input_visual = input_visual.squeeze()
+    input_visual = input_visual.t()
 
-    plt.figure(figsize=(10, 10))
-    n = np.random.randint(0, n_neurons, 10)
+    plt.figure(figsize=(16, 8))
+    plt.subplot(1,2,1)
+    plt.title(f"input to visual neurons", fontsize=24)
+
+
+    # n = np.random.randint(0, n_input_neurons, 10)
+    n = [ 731, 1042, 329, 1110, 1176, 1526, 1350, 90, 813, 1695]
     for i in range(len(n)):
-        plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=1)
-    plt.xlabel('time', fontsize=64)
-    plt.ylabel('$x_{i}$', fontsize=64)
-    plt.xlim([0, n_frames//200])
-    plt.xticks(fontsize=28)
-    plt.yticks(fontsize=28)
-    plt.title(r'$x_i$ samples', fontsize=48)
+        plt.plot(to_numpy(input_visual[n[i], :]), linewidth=1)
+    plt.xlabel('time', fontsize=24)
+    plt.ylabel('$x_{i}$', fontsize=24)
+    plt.xlim([0, n_frames//300])
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
+    plt.subplot(1,2,2)
+    plt.title(f"activity of neurons (x10)", fontsize=24)
+    # n = np.random.randint(0, n_neurons - n_input_neurons, 10) + n_input_neurons
+
+    n = [ 2602, 3175, 12915, 10391, 13120, 9939, 12463, 3758, 10341, 4293]
+
+    for i in range(len(n)):
+        plt.plot(to_numpy(activity[n[i], :]), linewidth=1)
+    plt.xlabel('time', fontsize=24)
+    plt.ylabel('$x_{i}$', fontsize=24)
+    plt.xlim([0, n_frames//300])
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
     plt.tight_layout()
     plt.savefig(f"graphs_data/{dataset_name}/activity.tif", dpi=300)
     plt.close()
 
-    if measurement_noise_level > 0:
-        np.save(f"graphs_data/{dataset_name}/raw_x_list_{run}.npy", x_list)
-        np.save(f"graphs_data/{dataset_name}/raw_y_list_{run}.npy", y_list)
-        for k in range(x_list.shape[0]):
-            x_list[k, :, 3] = x_list[k, :, 3] + np.random.normal(
-                0, measurement_noise_level, x_list.shape[1]
-            )
-        for k in range(1, x_list.shape[0] - 1):
-            y_list[k] = (x_list[k + 1, :, 3:4] - x_list[k, :, 3:4]) / delta_t
-        np.save(f"graphs_data/{dataset_name}/x_list_{run}.npy", x_list)
-        np.save(f"graphs_data/{dataset_name}/y_list_{run}.npy", y_list)
-        print("data + noise saved ...")
-    else:
-        np.save(f"graphs_data/{dataset_name}/x_list_{run}.npy", x_list)
-        np.save(f"graphs_data/{dataset_name}/y_list_{run}.npy", y_list)
-        print("data saved ...")
+    if False:
+        if measurement_noise_level > 0:
+            np.save(f"graphs_data/{dataset_name}/raw_x_list_{run}.npy", x_list)
+            np.save(f"graphs_data/{dataset_name}/raw_y_list_{run}.npy", y_list)
+            for k in range(x_list.shape[0]):
+                x_list[k, :, 3] = x_list[k, :, 3] + np.random.normal(
+                    0, measurement_noise_level, x_list.shape[1]
+                )
+            for k in range(1, x_list.shape[0] - 1):
+                y_list[k] = (x_list[k + 1, :, 3:4] - x_list[k, :, 3:4]) / delta_t
+            np.save(f"graphs_data/{dataset_name}/x_list_{run}.npy", x_list)
+            np.save(f"graphs_data/{dataset_name}/y_list_{run}.npy", y_list)
+            print("data + noise saved ...")
+        else:
+            np.save(f"graphs_data/{dataset_name}/x_list_{run}.npy", x_list)
+            np.save(f"graphs_data/{dataset_name}/y_list_{run}.npy", y_list)
+            print("data saved ...")
 
     if False:
         activity = torch.tensor(x_list[:, :, 3:4], device=device)

@@ -3673,7 +3673,9 @@ def data_train_flyvis(config, erase, best_model, device):
     coeff_update_msg_sign = train_config.coeff_update_msg_sign
     coeff_edge_weight_L1 = train_config.coeff_edge_weight_L1
 
-    torch.random.manual_seed(config.training.seed)
+    if config.training.seed != 42:
+        torch.random.fork_rng(devices=device)
+        torch.random.manual_seed(config.training.seed)
 
     cmap = CustomColorMap(config=config)
 
