@@ -2961,7 +2961,7 @@ def data_generate_fly_voltage(
     torch.random.manual_seed(simulation_config.seed)
 
     print(
-        f"generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}"
+        f"generating data ... {model_config.particle_model_name} {model_config.mesh_model_name} seed: {simulation_config.seed}"
     )
 
     dataset_name = config.dataset
@@ -2976,6 +2976,7 @@ def data_generate_fly_voltage(
     noise_model_level = training_config.noise_model_level
     run = 0
     n_extra_null_edges = simulation_config.n_extra_null_edges
+    noise_visual_input = simulation_config.noise_visual_input
 
     os.makedirs("./graphs_data/fly", exist_ok=True)
     folder = f"./graphs_data/{dataset_name}/"
@@ -3202,6 +3203,10 @@ def data_generate_fly_voltage(
                 frame = sequences[frame_id][None, None]
                 net.stimulus.add_input(frame)  # (1, 1, n_input_neurons)
                 x[:, 4] = net.stimulus().squeeze()
+                if noise_visual_input > 0:
+                    x[:n_input_neurons, 4:5] = x[:n_input_neurons, 4:5] + torch.randn(
+                        (n_input_neurons, 1), dtype=torch.float32, device=device
+                    ) * noise_visual_input
                 dataset = pyg.data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
                 y = pde(dataset, has_field=False)
                 y_list.append(to_numpy(y.clone().detach()))
@@ -3221,7 +3226,7 @@ def data_generate_fly_voltage(
                     visualize
                     & (run == run_vizualized)
                     & (it % step == 0)
-                    & (it <= 500 * step)
+                    & (it <= 200 * step)
                 ):
                     if "latex" in style:
                         plt.rcParams["text.usetex"] = True
@@ -3269,6 +3274,24 @@ def data_generate_fly_voltage(
 
     x_list = np.array(x_list)
     y_list = np.array(y_list)
+
+    activity = torch.tensor(x_list[:, :, 3:4],device=device)
+    activity = activity.squeeze()
+    activity = activity.t()
+
+    plt.figure(figsize=(10, 10))
+    n = np.random.randint(0, n_neurons, 10)
+    for i in range(len(n)):
+        plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=1)
+    plt.xlabel('time', fontsize=64)
+    plt.ylabel('$x_{i}$', fontsize=64)
+    plt.xlim([0, n_frames//200])
+    plt.xticks(fontsize=28)
+    plt.yticks(fontsize=28)
+    plt.title(r'$x_i$ samples', fontsize=48)
+    plt.tight_layout()
+    plt.savefig(f"graphs_data/{dataset_name}/activity.tif", dpi=300)
+    plt.close()
 
     if measurement_noise_level > 0:
         np.save(f"graphs_data/{dataset_name}/raw_x_list_{run}.npy", x_list)

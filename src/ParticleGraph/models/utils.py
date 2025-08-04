@@ -263,9 +263,9 @@ def plot_training_flyvis(model, config, epoch, N, log_dir, device, cmap, type_li
     plt.scatter(to_numpy(gt_weights), to_numpy(model.W.squeeze()), s=0.1, c='k', alpha=0.01)
     plt.xlabel(r'true $W_{ij}$', fontsize=18)
     plt.ylabel(r'learned $W_{ij}$', fontsize=18)
-    plt.text(-0.19, 0.65, f'R^2: {np.round(r_squared, 3)}\nslope: {np.round(lin_fit[0], 2)}', fontsize=12)
-    plt.xlim([-0.2, 0.2])
-    # plt.ylim([-1.25, 1.25])
+    plt.text(-0.9, 4.5, f'R^2: {np.round(r_squared, 3)}\nslope: {np.round(lin_fit[0], 2)}', fontsize=12)
+    plt.xlim([-1, 5])
+    plt.ylim([-5, 5])
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/matrix/comparison_{epoch}_{N}.tif",
                 dpi=87, bbox_inches='tight', pad_inches=0)
