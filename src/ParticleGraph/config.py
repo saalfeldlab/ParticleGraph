@@ -12,6 +12,7 @@ class SimulationConfig(BaseModel):
     dimension: int = 2
     n_frames: int = 1000
     start_frame: int = 0
+    seed: int = 42
 
     model_id: str = "000"
     ensemble_id: str = "0000"
@@ -250,7 +251,7 @@ class TrainingConfig(BaseModel):
     time_window: int = 0
 
     n_runs: int = 2
-    seed: int = 40
+    seed: int = 42
     clamp: float = 0
     pred_limit: float = 1.0e10
 

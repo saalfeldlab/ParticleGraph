@@ -6838,13 +6838,12 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         learned_weights = to_numpy(model.W.squeeze())
         true_weights = to_numpy(gt_weights)
         if len(true_weights) > 0 and len(learned_weights) > 0:
-            plt.scatter(true_weights, learned_weights, c=mc, s=1, alpha=0.5)
+            plt.scatter(true_weights, learned_weights, c=mc, s=0.1, alpha=0.01)
             lin_fit, lin_fitv = curve_fit(linear_model, true_weights, learned_weights)
             residuals = learned_weights - linear_model(true_weights, *lin_fit)
             ss_res = np.sum(residuals ** 2)
             ss_tot = np.sum((learned_weights - np.mean(learned_weights)) ** 2)
             r_squared = 1 - (ss_res / ss_tot)
-
             plt.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}',
                      transform=plt.gca().transAxes, verticalalignment='top', fontsize=12)
         plt.xlabel('true $W_{ij}$')
@@ -10758,7 +10757,7 @@ if __name__ == '__main__':
     # config_list = ['cell_U2OS_8_12']
     # config_list = [ 'signal_CElegans_c14_4a', 'signal_CElegans_c14_4b', 'signal_CElegans_c14_4c',  'signal_CElegans_d1', 'signal_CElegans_d2', 'signal_CElegans_d3', ]
     # config_list = config_list = ['signal_CElegans_d2', 'signal_CElegans_d2a', 'signal_CElegans_d3', 'signal_CElegans_d3a', 'signal_CElegans_d3b']
-    config_list = ['fly_N9_20_0','fly_N9_20_1','fly_N9_20_2','fly_N9_20_3','fly_N9_20_4','fly_N9_20_5','fly_N9_20_6'] #, 'fly_N9_18_4_1', 'fly_N9_18_4_2', 'fly_N9_18_4_3', 'fly_N9_18_4_4', 'fly_N9_18_4_5', 'fly_N9_18_4_6']
+    config_list = ['fly_N9_18_4_0', 'fly_N9_19_0', 'fly_N9_20_0']
 
     # plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 

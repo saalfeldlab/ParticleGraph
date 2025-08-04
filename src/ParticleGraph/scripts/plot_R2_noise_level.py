@@ -13,13 +13,13 @@ null_functional_optimal = [77.6, 75.9, 83.3, 80.4, 76.6]
 # Signal noise experiments - CORRECTED DATA
 # The original noise=0.0 point was actually noise=0.5, now corrected with true baseline from config 20_0
 noise_levels = [0.0, 0.01, 0.05, 0.1, 0.5, 1.0, 2.0]
-noise_r2 = [0.6466, 0.9112, 0.9234, 0.8792, 0.9889, 0.5154, 0.0003]  # First value corrected to true baseline
+noise_r2 = [0.89, 0.9112, 0.9234, 0.8792, 0.9889, 0.5154, 0.0003]  # First value corrected to true baseline
 noise_embedding = [35.7, 37.3, 66.9, 68.9, 72.9, 51.2, 58.8]  # First value corrected to true baseline
 noise_functional = [25.5, 32.6, 63.7, 62.3, 77.6, 47.6, 40.9]  # First value corrected to true baseline
 
 # Null edges experiments at clean conditions (noise=0)
 null_edges_clean = [0, 1000, 10000, 100000, 1000000, 2000000, 4000000]
-null_r2_clean = [0.6466, 0.7790, 0.6450, 0.9137, 0.7046, 0.7417, 0.4642]
+null_r2_clean = [0.89, 0.7790, 0.6450, 0.9137, 0.7046, 0.7417, 0.4642]
 null_embedding_clean = [35.7, 39.0, 40.8, 26.0, 26.7, 29.8, 36.6]
 null_functional_clean = [25.5, 35.5, 31.8, 18.8, 13.7, 14.8, 24.0]
 
@@ -153,7 +153,7 @@ conditions = ['baseline', 'extra edges', 'extra noise', 'extra noise\n+ edges']
 
 # Best R² values (0-1 scale)
 r2_values = [
-    0.6466,  # Baseline (clean, no extras)
+    0.89,  # Baseline (clean, no extras)
     0.9137,  # Extra edges alone (best at 100K edges)
     0.9889,  # Extra noise alone (best at noise=0.5)
     0.9995   # Extra noise + edges (best at 100K edges)

@@ -1001,7 +1001,7 @@ def data_generate_MPM_3D(
         N, X, V, C, F, T, Jp, M, S, ID = init_MPM_3D_shapes(
             geometry=MPM_object_type,
             n_shapes=MPM_n_objects,
-            seed=42,
+            seed=simulation_config.seed,
             n_particles=n_particles,
             n_particle_types=n_particle_types,
             n_grid=n_grid,
@@ -1013,7 +1013,7 @@ def data_generate_MPM_3D(
         # # Initialize 3D MPM shapes
         # N, X, V, C, F, T, Jp, M, S, ID = init_MPM_3D_cells(
         #     n_shapes=MPM_n_objects,
-        #     seed=42,
+        #     seed=simulation_config.seed,
         #     n_particles=n_particles,
         #     n_grid=n_grid,
         #     dx=dx,
@@ -1261,10 +1261,10 @@ def data_generate_MPM(
         x_list = []
 
 
-        N, X, V, C, F, T, Jp, M, S, ID = init_MPM_shapes(geometry=MPM_object_type, n_shapes=MPM_n_objects, seed=42, n_particles=n_particles,
+        N, X, V, C, F, T, Jp, M, S, ID = init_MPM_shapes(geometry=MPM_object_type, n_shapes=MPM_n_objects, seed=simulation_config.seed, n_particles=n_particles,
                                                      n_particle_types=n_particle_types, n_grid=n_grid, dx=dx, rho_list=rho_list, device=device)
 
-        # N, X, V, C, F, T, Jp, M, S, ID = init_MPM_cells(n_shapes=MPM_n_objects, seed=42, n_particles=n_particles,
+        # N, X, V, C, F, T, Jp, M, S, ID = init_MPM_cells(n_shapes=MPM_n_objects, seed=simulation_config.seed, n_particles=n_particles,
         #                                              n_grid=n_grid, dx=dx, rho_list=rho_list, nucleus_ratio=0.6, device=device)
 
         # Main simulation loop
@@ -1417,7 +1417,7 @@ def data_generate_particle_field(
     bSave=True,
 ):
     torch.random.fork_rng(devices=device)
-    torch.random.manual_seed(config.training.seed)
+    torch.random.manual_seed(simulation_config.seed)
 
     simulation_config = config.simulation
     training_config = config.training
@@ -2101,7 +2101,7 @@ def data_generate_cell(
     bSave=True,
 ):
     torch.random.fork_rng(devices=device)
-    torch.random.manual_seed(config.training.seed)
+    torch.random.manual_seed(simulation_config.seed)
 
     simulation_config = config.simulation
     training_config = config.training
@@ -2958,7 +2958,7 @@ def data_generate_fly_voltage(
     model_config = config.graph_model
 
     torch.random.fork_rng(devices=device)
-    torch.random.manual_seed(42)
+    torch.random.manual_seed(simulation_config.seed)
 
     print(
         f"generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}"
@@ -3344,7 +3344,7 @@ def data_generate_synaptic(
     model_config = config.graph_model
 
     torch.random.fork_rng(devices=device)
-    torch.random.manual_seed(42)
+    torch.random.manual_seed(simulation_config.seed)
 
     print(
         f"generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}"
@@ -3368,7 +3368,7 @@ def data_generate_synaptic(
         n_nodes_per_axis = int(np.sqrt(n_nodes))
 
     torch.random.fork_rng(devices=device)
-    torch.random.manual_seed(training_config.seed)
+    torch.random.manual_seed(simulation_config.seed)
 
     if config.data_folder_name != "none":
         print(f"generating from data ...")
@@ -3938,9 +3938,6 @@ def data_generate_rat_city(
     # sudo mkdir /nearline/
     # sudo mount -o rw,hard,bg,nolock,nfsvers=4.1,sec=krb5 nearline4.hhmi.org:/nearline/ /nearline/
 
-    torch.random.fork_rng(devices=device)
-    torch.random.manual_seed(42)
-
     simulation_config = config.simulation
     training_config = config.training
     model_config = config.graph_model
@@ -3948,7 +3945,7 @@ def data_generate_rat_city(
     data_folder_name = config.data_folder_name
 
     torch.random.fork_rng(devices=device)
-    torch.random.manual_seed(42)
+    torch.random.manual_seed(simulation_config.seed)
 
     print(
         f"generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}"
@@ -3971,7 +3968,7 @@ def data_generate_rat_city(
     pic_size = config.plotting.pic_size
 
     torch.random.fork_rng(devices=device)
-    torch.random.manual_seed(training_config.seed)
+    torch.random.manual_seed(simulation_config.seed)
 
     folder = f"./graphs_data/{dataset_name}/"
     if erase:
@@ -4233,7 +4230,7 @@ def data_generate_WBI(
     model_config = config.graph_model
 
     torch.random.fork_rng(devices=device)
-    torch.random.manual_seed(42)
+    torch.random.manual_seed(simulation_config.seed)
 
     print(
         f"generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}"
@@ -4250,7 +4247,7 @@ def data_generate_WBI(
     dataset_name = config.dataset
 
     torch.random.fork_rng(devices=device)
-    torch.random.manual_seed(training_config.seed)
+    torch.random.manual_seed(simulation_config.seed)
 
     folder = f"./graphs_data/{dataset_name}/"
     if erase:
