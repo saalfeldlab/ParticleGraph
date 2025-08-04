@@ -1,5 +1,5 @@
-description: 'with 20 neuron types per function,     noise_model_level: 5E-1    smaller MLP  redo 18_4'
-dataset: 'fly_N9_18_4_1'
+description: 'noise_model_level: 0, small MLP, n_extra_null_edges: 10000'
+dataset: 'fly_N9_20_2'
 
 simulation:
     connectivity_file: 'to be specified'
@@ -11,13 +11,14 @@ simulation:
     n_input_neurons: 1736
     n_neuron_types: 20
     n_edges: 434112
+    n_extra_null_edges: 10000
     n_frames: 90720
     delta_t: 0.02
     baseline_value: 0
 
 
 graph_model:
-    signal_model_name: 'PDE_N9_C'
+    signal_model_name: 'PDE_N9_A'
     prediction: 'first_derivative'
 
     input_size: 3
@@ -25,7 +26,7 @@ graph_model:
     hidden_dim: 32
     n_layers: 2
 
-    input_size_update: 4
+    input_size_update: 5
     n_layers_update: 3
     hidden_dim_update: 64
     aggr_type: 'add'
@@ -38,7 +39,7 @@ graph_model:
 plotting:
     colormap: 'tab20'
     arrow_length: 1
-    xlim: [ -2.5, 5]
+    xlim: [ -2.5,5 ]
     ylim: [ -8,8 ]
 
 training:
@@ -59,7 +60,7 @@ training:
     learning_rate_embedding_start: 5.0E-3
 
     measurement_noise_level: 0
-    noise_model_level: 5.0E-1
+    noise_model_level: 0
     coeff_edge_diff: 500
     coeff_update_u_diff: 0
     coeff_update_msg_diff: 0
