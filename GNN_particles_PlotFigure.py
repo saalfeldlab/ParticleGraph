@@ -6922,7 +6922,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         print(f"weights fit   R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
         logger.info(f"weights fit   R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
 
-        print('weights comparison per type')
+        logger.info('weights comparison per type')
         # Plot 4bis: Weight comparison using model.W and gt_weights
         fig = plt.figure(figsize=(8, 8))
         type_edge_list = x[to_numpy(edges[1, :]), 6]
@@ -7016,8 +7016,9 @@ def data_flyvis_compare(config_list, varied_parameter):
     import os
     from collections import defaultdict
     import numpy as np
+    import matplotlib.pyplot as plt
     from ParticleGraph.config import ParticleGraphConfig
-    from ParticleGraph.models.utils import add_pre_folder, get_log_dir
+    from ParticleGraph.models.utils import add_pre_folder
 
     results = []
 
@@ -7029,32 +7030,32 @@ def data_flyvis_compare(config_list, varied_parameter):
 
             # Get parameter value from config using section.parameter format
             if '.' not in varied_parameter:
-                raise ValueError(f"Parameter must be in 'section.parameter' format, got: {varied_parameter}")
+                raise ValueError(f"parameter must be in 'section.parameter' format, got: {varied_parameter}")
 
             section_name, param_name = varied_parameter.split('.', 1)
             section = getattr(config, section_name, None)
             if section is None:
-                raise ValueError(f"Config section '{section_name}' not found")
+                raise ValueError(f"config section '{section_name}' not found")
 
             param_value = getattr(section, param_name, None)
             if param_value is None:
-                print(f"Warning: Parameter '{param_name}' not found in section '{section_name}' for {config_file_}")
+                print(f"warning: parameter '{param_name}' not found in section '{section_name}' for {config_file_}")
                 continue
 
             # Get log directory
             results_log_path = os.path.join('./log', config_file, 'results.log')
 
             if not os.path.exists(results_log_path):
-                print(f"Warning: {results_log_path} not found")
+                print(f"warning: {results_log_path} not found")
                 continue
 
             # Parse results.log
             with open(results_log_path, 'r') as f:
                 content = f.read()
 
-            # Extract overall R²
+            # Extract R²
             r2_match = re.search(r'weights fit\s+R²:\s*([\d.-]+)', content)
-            overall_r2 = float(r2_match.group(1)) if r2_match else None
+            r2 = float(r2_match.group(1)) if r2_match else None
 
             # Extract best clustering accuracy and corresponding eps
             clustering_results = []
@@ -7079,24 +7080,24 @@ def data_flyvis_compare(config_list, varied_parameter):
             results.append({
                 'config': config_file_,
                 'param_value': param_value,
-                'overall_r2': overall_r2,
+                'r2': r2,
                 'best_clustering_acc': best_clustering_acc,
                 'best_eps': best_eps
             })
 
         except Exception as e:
-            print(f"Error processing {config_file_}: {e}")
+            print(f"error processing {config_file_}: {e}")
 
     # Group results by parameter value
     grouped_results = defaultdict(list)
     for r in results:
-        if r['overall_r2'] is not None and r['best_clustering_acc'] is not None and r['best_eps'] is not None:
+        if r['r2'] is not None and r['best_clustering_acc'] is not None and r['best_eps'] is not None:
             grouped_results[r['param_value']].append(r)
 
     # Calculate statistics for each parameter value
     summary_results = []
     for param_val, group in grouped_results.items():
-        r2_values = [r['overall_r2'] for r in group]
+        r2_values = [r['r2'] for r in group]
         acc_values = [r['best_clustering_acc'] for r in group]
         eps_values = [r['best_eps'] for r in group]
         configs = [r['config'] for r in group]
@@ -7139,7 +7140,7 @@ def data_flyvis_compare(config_list, varied_parameter):
     # Print comparison summary
     param_display_name = varied_parameter.split('.')[1]  # Show just parameter name in table
     print(f"\n=== parameter comparison: {varied_parameter} ===")
-    print(f"{param_display_name:<15} {'r²':<15} {'clustering acc':<18} {'best eps':<10} {'n_configs':<10}")
+    print(f"{param_display_name:<15} {'R²':<15} {'clustering acc':<18} {'best eps':<10} {'n_configs':<10}")
     print("-" * 70)
 
     for r in summary_results:
@@ -7152,13 +7153,96 @@ def data_flyvis_compare(config_list, varied_parameter):
         best_r2_result = max(summary_results, key=lambda x: x['r2_mean'])
         best_acc_result = max(summary_results, key=lambda x: x['acc_mean'])
 
-        print(f"\n🏆 best mean overall r²: {best_r2_result['r2_str']}")
+        print(f"\n🏆 best mean R²: {best_r2_result['r2_str']}")
         print(f"   {param_display_name}: {best_r2_result['param_value']}, n={best_r2_result['n_configs']}")
 
         print(f"\n🎯 best mean clustering accuracy: {best_acc_result['acc_str']}")
         print(f"   {param_display_name}: {best_acc_result['param_value']}, n={best_acc_result['n_configs']}")
 
     print("\n" + "=" * 70)
+
+    param_display_name = varied_parameter.split('.')[1]
+
+    # Prepare data for plotting
+    param_values_str = [str(r['param_value']) for r in summary_results]
+    r2_means = [r['r2_mean'] for r in summary_results]
+    acc_means = [r['acc_mean'] for r in summary_results]
+
+    # Calculate error bars (std for n>1, None for n=1)
+    r2_errors = []
+    acc_errors = []
+    for r in summary_results:
+        if r['n_configs'] > 1:
+            r2_errors.append(np.std(r['r2_values']))
+            acc_errors.append(np.std(r['acc_values']))
+        else:
+            r2_errors.append(0)  # No error bar for single values
+            acc_errors.append(0)
+
+    # Create figure with two panels
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+
+    # R² panel
+    ax1.errorbar(param_values_str, r2_means, yerr=r2_errors,
+                 fmt='o-', capsize=5, capthick=2, markersize=8, linewidth=2)
+    ax1.set_xlabel(param_display_name, fontsize=12)
+    ax1.set_ylabel('R²', fontsize=12)
+    ax1.set_title('R² vs ' + param_display_name, fontsize=14)
+    ax1.set_ylim(0, 1.2)
+    ax1.grid(True, alpha=0.3)
+
+    # Add sample size annotations
+    for i, (x, y, n) in enumerate(zip(param_values_str, r2_means, [r['n_configs'] for r in summary_results])):
+        if n > 1:
+            ax1.text(x, y + r2_errors[i] + 0.02, f'n={n}', ha='center', va='bottom', fontsize=8)
+
+    # Clustering accuracy panel (convert to percentage)
+    acc_means_pct = [acc * 100 for acc in acc_means]
+    acc_errors_pct = [err * 100 for err in acc_errors]
+
+    ax2.errorbar(param_values_str, acc_means_pct, yerr=acc_errors_pct,
+                 fmt='s-', capsize=5, capthick=2, markersize=8, linewidth=2, color='orange')
+    ax2.set_xlabel(param_display_name, fontsize=12)
+    ax2.set_ylabel('clustering accuracy (%)', fontsize=12)
+    ax2.set_title('best clustering accuracy vs ' + param_display_name, fontsize=14)
+    ax2.set_ylim(0, 100)
+    ax2.grid(True, alpha=0.3)
+
+    # Add sample size annotations
+    for i, (x, y, n) in enumerate(zip(param_values_str, acc_means_pct, [r['n_configs'] for r in summary_results])):
+        if n > 1:
+            ax2.text(x, y + acc_errors_pct[i] + 2, f'n={n}', ha='center', va='bottom', fontsize=8)
+
+    plt.tight_layout()
+
+    # Add best results text annotations on top of best points
+    if summary_results:
+        best_r2_result = max(summary_results, key=lambda x: x['r2_mean'])
+        best_acc_result = max(summary_results, key=lambda x: x['acc_mean'])
+
+        # Find indices of best results
+        best_r2_idx = next(
+            i for i, r in enumerate(summary_results) if r['param_value'] == best_r2_result['param_value'])
+        best_acc_idx = next(
+            i for i, r in enumerate(summary_results) if r['param_value'] == best_acc_result['param_value'])
+
+        # R² panel annotation on top of best point
+        best_r2_x = param_values_str[best_r2_idx]
+        best_r2_y = r2_means[best_r2_idx]
+        ax1.text(best_r2_x, best_r2_y + r2_errors[best_r2_idx] + 0.05, f"{best_r2_result['r2_mean']:.3f}",
+                 ha='center', va='bottom', fontsize=10, weight='bold')
+
+        # Accuracy panel annotation on top of best point
+        best_acc_x = param_values_str[best_acc_idx]
+        best_acc_y = acc_means_pct[best_acc_idx]
+        ax2.text(best_acc_x, best_acc_y + acc_errors_pct[best_acc_idx] + 3, f"{best_acc_result['acc_mean'] * 100:.1f}%",
+                 ha='center', va='bottom', fontsize=10, weight='bold')
+
+    # Save figure
+    plot_filename = f'parameter_comparison_{param_display_name}.png'
+    plt.savefig(plot_filename, dpi=300, bbox_inches='tight')
+    print(f"\nplot saved as: {plot_filename}")
+    plt.close()
 
     return summary_results
 
@@ -10961,14 +11045,9 @@ if __name__ == '__main__':
     # config_list = ['cell_U2OS_8_12']
     # config_list = [ 'signal_CElegans_c14_4a', 'signal_CElegans_c14_4b', 'signal_CElegans_c14_4c',  'signal_CElegans_d1', 'signal_CElegans_d2', 'signal_CElegans_d3', ]
     # config_list = config_list = ['signal_CElegans_d2', 'signal_CElegans_d2a', 'signal_CElegans_d3', 'signal_CElegans_d3a', 'signal_CElegans_d3b']
-    config_list = ['fly_N9_18_4_0','fly_N9_18_4_6','fly_N9_18_4_5','fly_N9_18_4_4','fly_N9_18_4_1','fly_N9_18_4_2','fly_N9_18_4_3']
-    config_list = ['fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4', 'fly_N9_22_5']
-    # plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 
-
-    # f_list = ['4']
-    # for f in f_list:
-    #     config_list,epoch_list = get_figures(f)
+    # config_list = ['fly_N9_18_4_0','fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4', 'fly_N9_22_5','fly_N9_18_4_6','fly_N9_18_4_5','fly_N9_18_4_4','fly_N9_18_4_1','fly_N9_18_4_2','fly_N9_18_4_3']
+    config_list = ['fly_N9_18_4_1', 'fly_N9_19_1', 'fly_N9_19_2', 'fly_N9_19_3', 'fly_N9_19_4', 'fly_N9_19_5', 'fly_N9_19_6', 'fly_N9_19_7', 'fly_N9_19_8', 'fly_N9_19_9']
 
     # for config_file_ in config_list:
     #     print(' ')
@@ -10984,8 +11063,12 @@ if __name__ == '__main__':
     #     os.makedirs(folder_name, exist_ok=True)
     #     data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
 
+    # data_flyvis_compare(config_list, 'training.noise_model_level')
+    data_flyvis_compare(config_list, 'simulation.n_extra_null_edges')
 
-    data_flyvis_compare(config_list, 'training.noise_model_level')
+    # f_list = ['4']
+    # for f in f_list:
+    #     config_list,epoch_list = get_figures(f)
 
 
 
