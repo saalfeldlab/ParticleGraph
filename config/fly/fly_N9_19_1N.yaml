@@ -18,7 +18,7 @@ simulation:
 
 
 graph_model:
-    signal_model_name: 'PDE_N9_A'
+    signal_model_name: 'PDE_N9_N'
     prediction: 'first_derivative'
 
     input_size: 3
