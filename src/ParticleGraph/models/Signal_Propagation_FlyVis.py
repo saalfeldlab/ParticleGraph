@@ -74,6 +74,27 @@ class Signal_Propagation_FlyVis(pyg.nn.MessagePassing):
             device=self.device,
         )
 
+        if config.training.init_update_gradient:
+            for i, layer in enumerate(self.lin_phi.layers[:-1]):  # All except final layer
+                nn.init.normal_(layer.weight, mean=0, std=0.01)  # Very small weights
+                nn.init.zeros_(layer.bias)
+
+            # Initialize final layer to achieve desired gradients:
+            # v: -1, embedding: 0, msg: 1, excitation: 1
+            final_layer = self.lin_phi.layers[-1]
+            with torch.no_grad():
+                # Create a weight vector that approximates desired gradients
+                # This is approximate since we have hidden layers, but should be close
+                desired_gradients = torch.tensor([-1.0, 0.0, 0.0, 1.0, 1.0], device=self.device)
+
+                # Initialize final layer weights as a scaled version of desired gradients
+                # Scale by 1/hidden_dim to account for the fact that input gets spread across hidden units
+                scale_factor = 1.0 / self.hidden_dim_update
+                final_layer.weight.data = desired_gradients.unsqueeze(0) * scale_factor
+
+                # Initialize final bias to zero
+                final_layer.bias.data.zero_()
+
         # embedding
         self.a = nn.Parameter(
             torch.tensor(
@@ -123,6 +144,8 @@ class Signal_Propagation_FlyVis(pyg.nn.MessagePassing):
 
         if (self.model=='PDE_N9_A') | (self.model=='PDE_N9_C'):
             in_features = torch.cat([v_j, embedding_j], dim=1)
+        elif self.model=='PDE_N9_D':
+            in_features = torch.cat([v_j, embedding_i], dim=1)
         elif (self.model=='PDE_N9_B'):
             in_features = torch.cat([v_i, v_j, embedding_i, embedding_j], dim=1)
 

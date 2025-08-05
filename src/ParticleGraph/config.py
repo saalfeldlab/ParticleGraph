@@ -162,6 +162,7 @@ class GraphModelConfig(BaseModel):
     n_layers_update: int = 3
     hidden_dim_update: int = 64
     output_size_update: int = 1
+    init_update_gradient: bool = False
 
     kernel_type: str = "mlp"
 

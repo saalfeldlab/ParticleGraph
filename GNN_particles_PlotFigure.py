@@ -6853,7 +6853,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
         for n in range(n_neurons):
             embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-            if ('PDE_N9_A' in config.graph_model.signal_model_name):
+            if ('PDE_N9_A' in config.graph_model.signal_model_name) | ('PDE_N9_D' in config.graph_model.signal_model_name):
                 in_features = torch.cat((rr[:, None], embedding_,), dim=1)
             elif ('PDE_N9_B' in config.graph_model.signal_model_name):
                 in_features = torch.cat((rr[:, None] * 0, rr[:, None], embedding_, embedding_), dim=1)
@@ -11106,13 +11106,13 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_18_4_0','fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4', 'fly_N9_22_5','fly_N9_18_4_6','fly_N9_18_4_5','fly_N9_18_4_4','fly_N9_18_4_1','fly_N9_18_4_2','fly_N9_18_4_3']
     # data_flyvis_compare(config_list, 'training.noise_model_level')
 
-    config_list = ['fly_N9_18_4_1', 'fly_N9_19_1', 'fly_N9_19_2', 'fly_N9_19_3', 'fly_N9_19_4', 'fly_N9_19_5', 'fly_N9_19_6', 'fly_N9_19_7', 'fly_N9_19_8', 'fly_N9_19_9']
+    # config_list = ['fly_N9_18_4_1', 'fly_N9_19_1', 'fly_N9_19_2', 'fly_N9_19_3', 'fly_N9_19_4', 'fly_N9_19_5', 'fly_N9_19_6', 'fly_N9_19_7', 'fly_N9_19_8', 'fly_N9_19_9']
     # data_flyvis_compare(config_list, 'simulation.n_extra_null_edges')
 
     # config_list = ['fly_N9_18_4_0','fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4', 'fly_N9_22_5', 'fly_N9_20_0', 'fly_N9_20_1', 'fly_N9_20_2', 'fly_N9_20_3', 'fly_N9_20_4', 'fly_N9_20_5', 'fly_N9_20_6']
     # data_flyvis_compare(config_list, 'simulation.n_extra_null_edges')
 
-    # config_list = ['fly_N9_18_4_1']
+    config_list = ['fly_N9_27_1']
 
     for config_file_ in config_list:
         print(' ')
@@ -11128,7 +11128,7 @@ if __name__ == '__main__':
         os.makedirs(folder_name, exist_ok=True)
         data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
 
-    data_flyvis_compare(config_list, 'simulation.n_extra_null_edges')
+    # data_flyvis_compare(config_list, 'simulation.n_extra_null_edges')
 
 
 

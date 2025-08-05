@@ -3644,6 +3644,8 @@ def data_train_flyvis(config, erase, best_model, device):
     train_config = config.training
     model_config = config.graph_model
 
+    signal_model_name = model_config.signal_model_name
+
     dimension = simulation_config.dimension
     n_epochs = train_config.n_epochs
     n_neurons = simulation_config.n_neurons
@@ -3902,7 +3904,11 @@ def data_train_flyvis(config, erase, best_model, device):
                             msg = model.lin_edge(in_features[ids].clone()) ** 2
                         else:
                             msg = model.lin_edge(in_features[ids].clone())
-                        loss = loss + (msg-1).norm(2) * coeff_edge_norm                 # normalization lin_edge(xnorm) = 1 for all embedding values
+
+                        if signal_model_name == 'PDE_N9_D':
+                            loss = loss + (msg - 2 * xnorm).norm(2) * coeff_edge_norm
+                        else:
+                            loss = loss + (msg-1).norm(2) * coeff_edge_norm                 # normalization lin_edge(xnorm) = 1 for all embedding values
 
                     # # regularisation sign Wij
                     # if (coeff_sign > 0) and (N%4 == 0):
@@ -3998,7 +4004,6 @@ def data_train_flyvis(config, erase, best_model, device):
                     optimizer_f.step()
 
                 total_loss += loss.item()
-
 
                 if ((N % plot_frequency == 0) | (N == 0)):
 

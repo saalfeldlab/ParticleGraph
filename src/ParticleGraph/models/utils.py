@@ -140,28 +140,30 @@ def get_in_features_update(rr=None, model=None, embedding = None, device=None):
 
 def get_in_features_lin_edge(x, model, model_config, xnorm, n_neurons, device):
 
-    if model_config.signal_model_name in ['PDE_N4', 'PDE_N7']:
+    signal_model_name = model_config.signal_model_name
+
+    if signal_model_name in ['PDE_N4', 'PDE_N7']:
         in_features = torch.cat((x[:n_neurons, 6:7], model.a[:n_neurons]), dim=1)
         in_features_next = torch.cat((x[:n_neurons, 6:7] + xnorm / 150, model.a[:n_neurons]), dim=1)
         if model.embedding_trial:
             in_features_prev = torch.cat((in_features_prev, model.b[0].repeat(n_neurons, 1)), dim=1)
             in_features = torch.cat((in_features, model.b[0].repeat(n_neurons, 1)), dim=1)
             in_features_next = torch.cat((in_features_next, model.b[0].repeat(n_neurons, 1)), dim=1)
-    elif model_config.signal_model_name == 'PDE_N5':
+    elif signal_model_name == 'PDE_N5':
         if model.embedding_trial:
             in_features = torch.cat((x[:n_neurons, 6:7], model.a[:n_neurons], model.b[0].repeat(n_neurons, 1), model.a[:n_neurons], model.b[0].repeat(n_neurons, 1)), dim=1)
             in_features_next = torch.cat((x[:n_neurons, 6:7] + xnorm / 150, model.a[:n_neurons], model.b[0].repeat(n_neurons, 1), model.a[:n_neurons], model.b[0].repeat(n_neurons, 1)), dim=1)
         else:
             in_features = torch.cat((x[:n_neurons, 6:7], model.a[:n_neurons], model.a[:n_neurons]), dim=1)
             in_features_next = torch.cat((x[:n_neurons, 6:7] + xnorm / 150, model.a[:n_neurons], model.a[:n_neurons]), dim=1)
-    elif (model_config.signal_model_name == 'PDE_N9_A') | (model_config.signal_model_name == 'PDE_N9_C') :
+    elif (signal_model_name == 'PDE_N9_A') | (signal_model_name == 'PDE_N9_C') | (signal_model_name == 'PDE_N9_D') :
         in_features = torch.cat((x[:, 3:4], model.a), dim=1)
         in_features_next = torch.cat((x[:,3:4] * 1.05, model.a), dim=1)
-    elif model_config.signal_model_name == 'PDE_N9_B':
+    elif signal_model_name == 'PDE_N9_B':
         perm_indices = torch.randperm(n_neurons, device=model.a.device)
         in_features = torch.cat((x[:, 3:4], x[:, 3:4], model.a, model.a[perm_indices]), dim=1)
         in_features_next = torch.cat((x[:, 3:4], x[:, 3:4] * 1.05, model.a, model.a[perm_indices]), dim=1)
-    elif model_config.signal_model_name == 'PDE_N8':
+    elif signal_model_name == 'PDE_N8':
         if model.embedding_trial:
             perm_indices = torch.randperm(n_neurons, device=model.a.device)
             in_features = torch.cat((x[:n_neurons, 6:7], x[:n_neurons, 6:7], model.a[:n_neurons], model.b[0].repeat(n_neurons, 1), model.a[perm_indices[:n_neurons]], model.b[0].repeat(n_neurons, 1)), dim=1)
@@ -231,6 +233,7 @@ def get_in_features(rr=None, embedding=None, model=[], model_name = [], max_radi
 
 def plot_training_flyvis(model, config, epoch, N, log_dir, device, cmap, type_list,
                          gt_weights, n_neurons=None, n_neuron_types=None):
+    signal_model_name = config.graph_model.signal_model_name
 
     if n_neurons is None:
         n_neurons = len(type_list)
@@ -276,9 +279,9 @@ def plot_training_flyvis(model, config, epoch, N, log_dir, device, cmap, type_li
     rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
     for n in range(n_neurons):
         embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-        if ('PDE_N9_A' in config.graph_model.signal_model_name) | ('PDE_N9_C' in config.graph_model.signal_model_name):
+        if ('PDE_N9_A' in signal_model_name) | ('PDE_N9_C' in signal_model_name) | ('PDE_N9_D' in signal_model_name):
             in_features = torch.cat((rr[:, None], embedding_,), dim=1)
-        elif ('PDE_N9_B' in config.graph_model.signal_model_name):
+        elif ('PDE_N9_B' in signal_model_name):
             in_features = torch.cat((rr[:, None] * 0, rr[:, None], embedding_, embedding_), dim=1)
         with torch.no_grad():
             func = model.lin_edge(in_features.float())
@@ -297,7 +300,7 @@ def plot_training_flyvis(model, config, epoch, N, log_dir, device, cmap, type_li
     fig = plt.figure(figsize=(8, 8))
     for n in range(n_neurons):
         embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-        if ('PDE_N9_C' in config.graph_model.signal_model_name):
+        if ('PDE_N9_C' in signal_model_name):
             in_features = torch.cat((rr[:, None], embedding_, torch.zeros_like(rr[:, None])), dim=1)
         else:
             in_features = torch.cat((rr[:, None], embedding_, rr[:, None] * 0, torch.zeros_like(rr[:, None])), dim=1)
