@@ -58,7 +58,7 @@ if __name__ == "__main__":
         else:
             best_model = None
     else:
-        task = 'generate'  # 'generate', 'train', 'test'
+        task = 'train'  # 'generate', 'train', 'test'
         # config_list = ['multimaterial_1_2', 'multimaterial_1_3', 'multimaterial_1_4', 'multimaterial_1_5', 'multimaterial_1_6', 'multimaterial_1_7', 'multimaterial_1_8']
         # config_list = ['multimaterial_1_C', 'multimaterial_1_A','multimaterial_1_B']
         # config_list = ['multimaterial_1_12']
@@ -75,7 +75,7 @@ if __name__ == "__main__":
         # config_list = ['signal_CElegans_c14_4']
         # config_list = ['signal_N5_v11_bis']
         # config_list = ['signal_fig_supp6_4']
-        config_list = ['fly_N9_23_0', 'fly_N9_23_1','fly_N9_23_2','fly_N9_23_3','fly_N9_23_4','fly_N9_23_5']
+        config_list = ['fly_N9_26_1', 'fly_N9_26_2','fly_N9_26_3','fly_N9_26_4','fly_N9_26_5']
         # config_list = ['signal_N5_l4','signal_N5_l5']
 
     for config_file_ in config_list:

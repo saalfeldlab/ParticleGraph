@@ -6892,7 +6892,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
 
         func_list = torch.stack(func_list).squeeze()
 
-        if True:
+        if False:
             print('functionnal clustering results')
             logger.info('functionnal results')
             for eps in [0.05, 0.075, 0.1, 0.2, 0.3]:
@@ -6938,7 +6938,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
             ss_tot = np.sum((learned_weights[pos] - np.mean(learned_weights[pos])) ** 2)
             r_squared = 1 - (ss_res / ss_tot)
             true_weights_mean = np.mean(true_weights[pos])
-            print(f"{index_to_name[n]} R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}  edges: {len(pos)}  weights mean: {true_weights_mean:.4f}")
+            # print(f"{index_to_name[n]} R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}  edges: {len(pos)}  weights mean: {true_weights_mean:.4f}")
             logger.info(f"{index_to_name[n]} R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}  edges: {len(pos)}  weights mean: {true_weights_mean:.4f}")
         plt.xlabel('true $W_{ij}$')
         plt.ylabel('learned $W_{ij}$')
@@ -7001,6 +7001,166 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
             plt.close()
 
             print(' ')
+
+
+def data_flyvis_compare(config_list, varied_parameter):
+    """
+    Compare flyvis experiments by reading config files and results.log files
+
+    Args:
+        config_list: List of config file names (e.g., ['fly_N9_18_4_0', 'fly_N9_18_4_1'])
+        varied_parameter: Parameter path in section.parameter format (e.g., 'training.noise_model_level')
+    """
+    import yaml
+    import re
+    import os
+    from collections import defaultdict
+    import numpy as np
+    from ParticleGraph.config import ParticleGraphConfig
+    from ParticleGraph.models.utils import add_pre_folder, get_log_dir
+
+    results = []
+
+    for config_file_ in config_list:
+        try:
+            # Load config to get parameter value
+            config_file, pre_folder = add_pre_folder(config_file_)
+            config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+
+            # Get parameter value from config using section.parameter format
+            if '.' not in varied_parameter:
+                raise ValueError(f"Parameter must be in 'section.parameter' format, got: {varied_parameter}")
+
+            section_name, param_name = varied_parameter.split('.', 1)
+            section = getattr(config, section_name, None)
+            if section is None:
+                raise ValueError(f"Config section '{section_name}' not found")
+
+            param_value = getattr(section, param_name, None)
+            if param_value is None:
+                print(f"Warning: Parameter '{param_name}' not found in section '{section_name}' for {config_file_}")
+                continue
+
+            # Get log directory
+            results_log_path = os.path.join('./log', config_file, 'results.log')
+
+            if not os.path.exists(results_log_path):
+                print(f"Warning: {results_log_path} not found")
+                continue
+
+            # Parse results.log
+            with open(results_log_path, 'r') as f:
+                content = f.read()
+
+            # Extract overall R²
+            r2_match = re.search(r'weights fit\s+R²:\s*([\d.-]+)', content)
+            overall_r2 = float(r2_match.group(1)) if r2_match else None
+
+            # Extract best clustering accuracy and corresponding eps
+            clustering_results = []
+            for line in content.split('\n'):
+                if 'eps=' in line and 'accuracy' in line:
+                    eps_match = re.search(r'eps=([\d.-]+)', line)
+                    acc_match = re.search(r'accuracy[=:]\s*([\d.-]+)', line)
+                    if eps_match and acc_match:
+                        clustering_results.append({
+                            'eps': float(eps_match.group(1)),
+                            'accuracy': float(acc_match.group(1))
+                        })
+
+            if clustering_results:
+                best_clustering_result = max(clustering_results, key=lambda x: x['accuracy'])
+                best_clustering_acc = best_clustering_result['accuracy']
+                best_eps = best_clustering_result['eps']
+            else:
+                best_clustering_acc = None
+                best_eps = None
+
+            results.append({
+                'config': config_file_,
+                'param_value': param_value,
+                'overall_r2': overall_r2,
+                'best_clustering_acc': best_clustering_acc,
+                'best_eps': best_eps
+            })
+
+        except Exception as e:
+            print(f"Error processing {config_file_}: {e}")
+
+    # Group results by parameter value
+    grouped_results = defaultdict(list)
+    for r in results:
+        if r['overall_r2'] is not None and r['best_clustering_acc'] is not None and r['best_eps'] is not None:
+            grouped_results[r['param_value']].append(r)
+
+    # Calculate statistics for each parameter value
+    summary_results = []
+    for param_val, group in grouped_results.items():
+        r2_values = [r['overall_r2'] for r in group]
+        acc_values = [r['best_clustering_acc'] for r in group]
+        eps_values = [r['best_eps'] for r in group]
+        configs = [r['config'] for r in group]
+
+        n_configs = len(group)
+
+        # Handle eps display
+        unique_eps = list(set(eps_values))
+        if len(unique_eps) == 1:
+            eps_str = f"{unique_eps[0]}"
+        else:
+            # Show range if multiple different eps values
+            eps_str = f"{min(unique_eps)}-{max(unique_eps)}"
+
+        if n_configs == 1:
+            r2_str = f"{r2_values[0]:.4f}"
+            acc_str = f"{acc_values[0]:.3f}"
+        else:
+            r2_mean, r2_std = np.mean(r2_values), np.std(r2_values)
+            acc_mean, acc_std = np.mean(acc_values), np.std(acc_values)
+            r2_str = f"{r2_mean:.4f}±{r2_std:.4f}"
+            acc_str = f"{acc_mean:.3f}±{acc_std:.3f}"
+
+        summary_results.append({
+            'param_value': param_val,
+            'r2_values': r2_values,
+            'acc_values': acc_values,
+            'r2_mean': np.mean(r2_values),
+            'acc_mean': np.mean(acc_values),
+            'r2_str': r2_str,
+            'acc_str': acc_str,
+            'eps_str': eps_str,
+            'n_configs': n_configs,
+            'configs': configs
+        })
+
+    # Sort by parameter value
+    summary_results.sort(key=lambda x: x['param_value'])
+
+    # Print comparison summary
+    param_display_name = varied_parameter.split('.')[1]  # Show just parameter name in table
+    print(f"\n=== parameter comparison: {varied_parameter} ===")
+    print(f"{param_display_name:<15} {'r²':<15} {'clustering acc':<18} {'best eps':<10} {'n_configs':<10}")
+    print("-" * 70)
+
+    for r in summary_results:
+        print(f"{r['param_value']:<15} {r['r2_str']:<15} {r['acc_str']:<18} {r['eps_str']:<10} {r['n_configs']:<10}")
+
+    print("-" * 70)
+
+    # Find and print best results
+    if summary_results:
+        best_r2_result = max(summary_results, key=lambda x: x['r2_mean'])
+        best_acc_result = max(summary_results, key=lambda x: x['acc_mean'])
+
+        print(f"\n🏆 best mean overall r²: {best_r2_result['r2_str']}")
+        print(f"   {param_display_name}: {best_r2_result['param_value']}, n={best_r2_result['n_configs']}")
+
+        print(f"\n🎯 best mean clustering accuracy: {best_acc_result['acc_str']}")
+        print(f"   {param_display_name}: {best_acc_result['param_value']}, n={best_acc_result['n_configs']}")
+
+    print("\n" + "=" * 70)
+
+    return summary_results
 
 
 def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
@@ -10801,8 +10961,8 @@ if __name__ == '__main__':
     # config_list = ['cell_U2OS_8_12']
     # config_list = [ 'signal_CElegans_c14_4a', 'signal_CElegans_c14_4b', 'signal_CElegans_c14_4c',  'signal_CElegans_d1', 'signal_CElegans_d2', 'signal_CElegans_d3', ]
     # config_list = config_list = ['signal_CElegans_d2', 'signal_CElegans_d2a', 'signal_CElegans_d3', 'signal_CElegans_d3a', 'signal_CElegans_d3b']
-    config_list = ['fly_N9_18_4_1']
-
+    config_list = ['fly_N9_18_4_0','fly_N9_18_4_6','fly_N9_18_4_5','fly_N9_18_4_4','fly_N9_18_4_1','fly_N9_18_4_2','fly_N9_18_4_3']
+    config_list = ['fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4', 'fly_N9_22_5']
     # plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 
 
@@ -10810,29 +10970,22 @@ if __name__ == '__main__':
     # for f in f_list:
     #     config_list,epoch_list = get_figures(f)
 
-    for config_file_ in config_list:
-        print(' ')
+    # for config_file_ in config_list:
+    #     print(' ')
+    #
+    #     config_file, pre_folder = add_pre_folder(config_file_)
+    #     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+    #     config.dataset = pre_folder + config.dataset
+    #     config.config_file = pre_folder + config_file_
+    #
+    #     print(f'config_file  {config.config_file}')
+    #
+    #     folder_name = './log/' + pre_folder + '/tmp_results/'
+    #     os.makedirs(folder_name, exist_ok=True)
+    #     data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
 
-        config_file, pre_folder = add_pre_folder(config_file_)
-        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        config.dataset = pre_folder + config.dataset
-        config.config_file = pre_folder + config_file_
 
-        print(f'config_file  {config.config_file}')
-
-        folder_name = './log/' + pre_folder + '/tmp_results/'
-        os.makedirs(folder_name, exist_ok=True)
-
-        data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
-        # data_plot(config=config, config_file=config_file, epoch_list=['all'], style='black color', device=device)
-        # data_plot(config=config, epoch_list=['time'], style='black color', device=device)
-        # plot_generated(config=config, run=0, style='black voronoi color', step = 10, style=False, device=device)
-        # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
-
-        # get figure and put it in folder tmp
-
-        # filename = 'first learned connectivity.tif'
-        # shutil.copyfile('./log/' + pre_folder + config_file_ + '/results/' + filename, './log/' + pre_folder + '/tmp_results/' + config_file_ + '_' + filename)
+    data_flyvis_compare(config_list, 'training.noise_model_level')
 
 
 
