@@ -6750,7 +6750,6 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
     connectivity = torch.load(f'./graphs_data/{dataset_name}/connectivity.pt', map_location=device)
     gt_weights = torch.load(f'./graphs_data/{dataset_name}/weights.pt', map_location=device)
     edges = torch.load(f'./graphs_data/{dataset_name}/edge_index.pt', map_location=device)
-    edges_all = edges.clone().detach()
     print(f'{edges.shape[1]} edges')
     logger.info(f'{edges.shape[1]} edges')
 
@@ -6760,6 +6759,22 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
     region_list = torch.tensor(x[:, 1 + 2 * dimension:2 + 2 * dimension], device=device)
     n_region_types = len(np.unique(to_numpy(region_list)))
     n_neurons = len(type_list)
+
+    index_to_name = {
+        0: 'Am', 1: 'C2', 2: 'C3', 3: 'CT1(Lo1)', 4: 'CT1(M10)', 5: 'L1', 6: 'L2', 7: 'L3', 8: 'L4',
+        9: 'L5',
+        10: 'Lawf1', 11: 'Lawf2', 12: 'Mi1', 13: 'Mi10', 14: 'Mi11', 15: 'Mi12', 16: 'Mi13', 17: 'Mi14',
+        18: 'Mi15', 19: 'Mi2',
+        20: 'Mi3', 21: 'Mi4', 22: 'Mi9', 23: 'R1', 24: 'R2', 25: 'R3', 26: 'R4', 27: 'R5', 28: 'R6',
+        29: 'R7',
+        30: 'R8', 31: 'T1', 32: 'T2', 33: 'T2a', 34: 'T3', 35: 'T4a', 36: 'T4b', 37: 'T4c', 38: 'T4d',
+        39: 'T5a',
+        40: 'T5b', 41: 'T5c', 42: 'T5d', 43: 'Tm1', 44: 'Tm16', 45: 'Tm2', 46: 'Tm20', 47: 'Tm28',
+        48: 'Tm3', 49: 'Tm30',
+        50: 'Tm4', 51: 'Tm5Y', 52: 'Tm5a', 53: 'Tm5b', 54: 'Tm5c', 55: 'Tm9', 56: 'TmY10', 57: 'TmY13',
+        58: 'TmY14', 59: 'TmY15',
+        60: 'TmY18', 61: 'TmY3', 62: 'TmY4', 63: 'TmY5a', 64: 'TmY9'
+    }
 
     activity = torch.tensor(x_list[0][:, :, 3:4],device=device)
     activity = activity.squeeze()
@@ -6827,34 +6842,14 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         plt.close()
 
         if True:
+            print('embedding clustering results')
             for eps in [0.005, 0.0075, 0.01, 0.02, 0.05]:
                 results = clustering_evaluation(model, type_list, eps=eps)
                 print(f"eps={eps}: {results['n_clusters_found']} clusters, "
                       f"accuracy={results['accuracy']:.3f}")
                 logger.info(f"eps={eps}: {results['n_clusters_found']} clusters, "f"accuracy={results['accuracy']:.3f}")
 
-        # Plot 3: Weight comparison using model.W and gt_weights
-        fig = plt.figure(figsize=(8, 8))
-        learned_weights = to_numpy(model.W.squeeze())
-        true_weights = to_numpy(gt_weights)
-        if len(true_weights) > 0 and len(learned_weights) > 0:
-            plt.scatter(true_weights, learned_weights, c=mc, s=0.1, alpha=0.01)
-            lin_fit, lin_fitv = curve_fit(linear_model, true_weights, learned_weights)
-            residuals = learned_weights - linear_model(true_weights, *lin_fit)
-            ss_res = np.sum(residuals ** 2)
-            ss_tot = np.sum((learned_weights - np.mean(learned_weights)) ** 2)
-            r_squared = 1 - (ss_res / ss_tot)
-            plt.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}',
-                     transform=plt.gca().transAxes, verticalalignment='top', fontsize=12)
-        plt.xlabel('true $W_{ij}$')
-        plt.ylabel('learned $W_{ij}$')
-        plt.tight_layout()
-        plt.savefig(f'{log_dir}/results/comparison_{epoch}.png', dpi=300)
-        plt.close()
-        print(f"weights fit   R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
-        logger.info(f"weights fit   R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
-
-        # Plot 4: Edge function visualization
+        # Plot 3: Edge function visualization
         fig = plt.figure(figsize=(8, 8))
         rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
         for n in range(n_neurons):
@@ -6875,6 +6870,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/edge_functions_{epoch}.tif", dpi=300)
         plt.close()
+
 
         # Plot 5: Phi function visualization
         func_list=[]
@@ -6897,12 +6893,60 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         func_list = torch.stack(func_list).squeeze()
 
         if True:
-            print('functionnal results')
+            print('functionnal clustering results')
             logger.info('functionnal results')
             for eps in [0.05, 0.075, 0.1, 0.2, 0.3]:
                 functional_results = functional_clustering_evaluation(func_list, type_list, eps=eps)  # Current functional result
                 print(f"eps={eps}: {functional_results['n_clusters_found']} clusters, {functional_results['accuracy']:.3f} accuracy")
                 logger.info(f"eps={eps}: {functional_results['n_clusters_found']} clusters, {functional_results['accuracy']:.3f} accuracy")
+
+
+
+        # Plot 4: Weight comparison using model.W and gt_weights
+        fig = plt.figure(figsize=(8, 8))
+        learned_weights = to_numpy(model.W.squeeze())
+        true_weights = to_numpy(gt_weights)
+        plt.scatter(true_weights, learned_weights, c=mc, s=0.1, alpha=0.01)
+        lin_fit, lin_fitv = curve_fit(linear_model, true_weights, learned_weights)
+        residuals = learned_weights - linear_model(true_weights, *lin_fit)
+        ss_res = np.sum(residuals ** 2)
+        ss_tot = np.sum((learned_weights - np.mean(learned_weights)) ** 2)
+        r_squared = 1 - (ss_res / ss_tot)
+        plt.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}',
+                 transform=plt.gca().transAxes, verticalalignment='top', fontsize=12)
+        plt.xlabel('true $W_{ij}$')
+        plt.ylabel('learned $W_{ij}$')
+        plt.tight_layout()
+        plt.savefig(f'{log_dir}/results/comparison_{epoch}.png', dpi=300)
+        plt.close()
+        print(f"weights fit   R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
+        logger.info(f"weights fit   R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
+
+        print('weights comparison per type')
+        # Plot 4bis: Weight comparison using model.W and gt_weights
+        fig = plt.figure(figsize=(8, 8))
+        type_edge_list = x[to_numpy(edges[1, :]), 6]
+        for n in range(n_types):
+            pos_neurons = torch.argwhere(type_list == n)
+            pos_neurons = pos_neurons.squeeze()
+            pos = np.argwhere(type_edge_list == n)
+            pos = pos.astype(int).squeeze()
+            plt.scatter(true_weights[pos], learned_weights[pos], c=colors_65[n], s=0.1, alpha=0.01)
+            lin_fit, lin_fitv = curve_fit(linear_model, true_weights[pos], learned_weights[pos])
+            residuals = learned_weights[pos] - linear_model(true_weights[pos], *lin_fit)
+            ss_res = np.sum(residuals ** 2)
+            ss_tot = np.sum((learned_weights[pos] - np.mean(learned_weights[pos])) ** 2)
+            r_squared = 1 - (ss_res / ss_tot)
+            true_weights_mean = np.mean(true_weights[pos])
+            print(f"{index_to_name[n]} R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}  edges: {len(pos)}  weights mean: {true_weights_mean:.4f}")
+            logger.info(f"{index_to_name[n]} R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}  edges: {len(pos)}  weights mean: {true_weights_mean:.4f}")
+        plt.xlabel('true $W_{ij}$')
+        plt.ylabel('learned $W_{ij}$')
+        plt.tight_layout()
+        plt.savefig(f'{log_dir}/results/comparison_color_{epoch}.png', dpi=300)
+        plt.close()
+
+
 
         if False:
             # Plot 6: Phi / W
@@ -10757,7 +10801,7 @@ if __name__ == '__main__':
     # config_list = ['cell_U2OS_8_12']
     # config_list = [ 'signal_CElegans_c14_4a', 'signal_CElegans_c14_4b', 'signal_CElegans_c14_4c',  'signal_CElegans_d1', 'signal_CElegans_d2', 'signal_CElegans_d3', ]
     # config_list = config_list = ['signal_CElegans_d2', 'signal_CElegans_d2a', 'signal_CElegans_d3', 'signal_CElegans_d3a', 'signal_CElegans_d3b']
-    config_list = ['fly_N9_18_4_0', 'fly_N9_19_0', 'fly_N9_20_0']
+    config_list = ['fly_N9_18_4_1']
 
     # plot_loss_curves(log_dir='./log/multimaterial/', ylim=[0,0.0075])
 

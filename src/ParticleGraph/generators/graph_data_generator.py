@@ -3095,8 +3095,6 @@ def data_generate_fly_voltage(
                 f"original edges: {edge_index.shape[1] - n_extra_null_edges}, extra null edges: {n_extra_null_edges}"
             )
 
-
-
     connectivity = torch.zeros(
         (n_neurons, n_neurons), dtype=torch.float32, device=device
     )
@@ -3341,7 +3339,7 @@ def data_generate_fly_voltage(
                         0  # Am (Other)
                     ]
 
-                    fig, axes = plt.subplots(8, 9, figsize=(36, 32), facecolor='black')
+                    fig, axes = plt.subplots(8, 9, figsize=(18, 16), facecolor='black')
                     axes_flat = axes.flatten()
                     all_voltages = to_numpy(x[:, 3])
                     if it==0:
@@ -3360,7 +3358,7 @@ def data_generate_fly_voltage(
                             stimulus_scatter = ax.scatter(
                                 to_numpy(X1[:n_input_neurons, 0]),
                                 to_numpy(X1[:n_input_neurons, 1]),
-                                s=128,  # increased by 2
+                                s=64,
                                 c=to_numpy(x[:n_input_neurons, 4]),
                                 cmap="viridis",
                                 vmin=0,
@@ -3373,38 +3371,26 @@ def data_generate_fly_voltage(
                             ax.set_title('Input', fontsize=24, color='white', pad=5)
 
                         else:  # Neuron type panel
-                            # Get neurons of this specific type
                             type_mask = neuron_types == type_idx
                             type_count = np.sum(type_mask)
                             total_neurons_plotted += type_count
-
-                            # Get neuron type name
                             type_name = index_to_name.get(type_idx, f'Type_{type_idx}')
 
                             if type_count > 0:
                                 # Use the same hexagonal lattice positions as stimulus (X1)
                                 type_voltages = to_numpy(x[type_mask, 3])
+                                hex_positions_x = to_numpy(X1[:type_count, 0])
+                                hex_positions_y = to_numpy(X1[:type_count, 1])
 
-                                # For neuron types with 217 neurons (one per column), use columnar positions
-                                if type_count == 217:
-                                    # Use first 217 positions from X1 (columnar arrangement)
-                                    hex_positions_x = to_numpy(X1[:type_count, 0])
-                                    hex_positions_y = to_numpy(X1[:type_count, 1])
-                                else:
-                                    # For other counts, use actual positions
-                                    type_positions = to_numpy(x[type_mask, 1:3])
-                                    hex_positions_x = type_positions[:, 0]
-                                    hex_positions_y = type_positions[:, 1]
-
-                                # Plot each neuron as individual hexagon
                                 neural_scatter = ax.scatter(
                                     hex_positions_x,
                                     hex_positions_y,
-                                    s=128,
+                                    s=72,
                                     c=type_voltages,
                                     cmap='viridis',
                                     vmin=vmin,
                                     vmax=vmax,
+                                    marker='h',  # hexagonal markers
                                     alpha=1,
                                     linewidths=0.0,
                                     edgecolors='black'
