@@ -7017,8 +7017,13 @@ def data_flyvis_compare(config_list, varied_parameter):
     from collections import defaultdict
     import numpy as np
     import matplotlib.pyplot as plt
+    from matplotlib import rc
     from ParticleGraph.config import ParticleGraphConfig
     from ParticleGraph.models.utils import add_pre_folder
+
+    # Set latex fonts
+    plt.rcParams['text.usetex'] = True
+    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
     results = []
 
@@ -7230,13 +7235,13 @@ def data_flyvis_compare(config_list, varied_parameter):
         best_r2_x = param_values_str[best_r2_idx]
         best_r2_y = r2_means[best_r2_idx]
         ax1.text(best_r2_x, best_r2_y + r2_errors[best_r2_idx] + 0.05, f"{best_r2_result['r2_mean']:.3f}",
-                 ha='center', va='bottom', fontsize=10, weight='bold')
+                 ha='center', va='bottom', fontsize=10)
 
         # Accuracy panel annotation on top of best point
         best_acc_x = param_values_str[best_acc_idx]
         best_acc_y = acc_means_pct[best_acc_idx]
         ax2.text(best_acc_x, best_acc_y + acc_errors_pct[best_acc_idx] + 3, f"{best_acc_result['acc_mean'] * 100:.1f}%",
-                 ha='center', va='bottom', fontsize=10, weight='bold')
+                 ha='center', va='bottom', fontsize=10)
 
     # Save figure
     plot_filename = f'parameter_comparison_{param_display_name}.png'
