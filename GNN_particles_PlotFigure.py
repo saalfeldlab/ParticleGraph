@@ -7013,8 +7013,33 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
             # print (f'grad_msg shape: {grad_msg.shape}')
             # print (f'model.W: {model.W.shape}')
 
+            # plt.figure(figsize=(12, 6))
+            # plt.plot(to_numpy(grad_msg[0:n_neurons]), c=mc, linewidth=1)
+            # plt.xlabel('neuron index')
+            # plt.ylabel('gradient')
+            # plt.tight_layout()
+            # plt.savefig(f'{log_dir}/results/msg_gradients_{epoch}.png', dpi=300)
+            # plt.close()
+
             plt.figure(figsize=(12, 6))
-            plt.plot(to_numpy(grad_msg[0:n_neurons]), c=mc, linewidth=1)
+            grad_values = to_numpy(grad_msg[0:n_neurons]).squeeze()  # Flatten to 1D
+            neuron_indices = np.arange(n_neurons)
+
+            # Create scatter plot colored by neuron type
+            for n in range(n_types):
+                type_mask = (to_numpy(type_list).squeeze() == n)  # Flatten to 1D
+                if np.any(type_mask):
+                    plt.scatter(neuron_indices[type_mask], grad_values[type_mask],
+                                c=colors_65[n], s=1, alpha=0.8)
+
+                    # Add text label for each neuron type
+                    if np.sum(type_mask) > 0:
+                        mean_x = np.mean(neuron_indices[type_mask])
+                        mean_y = np.mean(grad_values[type_mask])
+                        plt.text(mean_x, mean_y, index_to_name.get(n, f'T{n}'),
+                                 fontsize=6, ha='center', va='center',
+                                 bbox=dict(boxstyle='round,pad=0.2', facecolor='white', alpha=0.7, edgecolor='none'))
+
             plt.xlabel('neuron index')
             plt.ylabel('gradient')
             plt.tight_layout()

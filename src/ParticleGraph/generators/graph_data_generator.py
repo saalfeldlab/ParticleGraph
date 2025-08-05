@@ -3101,10 +3101,11 @@ def data_generate_fly_voltage(
     connectivity[edge_index[1], edge_index[0]] = p["w"]
     mask = (connectivity != 0).float()
 
-    torch.save(mask, f"./graphs_data/{dataset_name}/mask.pt")
-    torch.save(connectivity, f"./graphs_data/{dataset_name}/connectivity.pt")
-    torch.save(p["w"], f"./graphs_data/{dataset_name}/weights.pt")
-    torch.save(edge_index, f"graphs_data/{dataset_name}/edge_index.pt")
+    if bSave:
+        torch.save(mask, f"./graphs_data/{dataset_name}/mask.pt")
+        torch.save(connectivity, f"./graphs_data/{dataset_name}/connectivity.pt")
+        torch.save(p["w"], f"./graphs_data/{dataset_name}/weights.pt")
+        torch.save(edge_index, f"graphs_data/{dataset_name}/edge_index.pt")
 
     # plt.figure(figsize=(10, 10))
     # ax = sns.heatmap(to_numpy(connectivity), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},
@@ -3481,23 +3482,23 @@ def data_generate_fly_voltage(
     plt.savefig(f"graphs_data/{dataset_name}/activity.tif", dpi=300)
     plt.close()
 
-
-    if measurement_noise_level > 0:
-        np.save(f"graphs_data/{dataset_name}/raw_x_list_{run}.npy", x_list)
-        np.save(f"graphs_data/{dataset_name}/raw_y_list_{run}.npy", y_list)
-        for k in range(x_list.shape[0]):
-            x_list[k, :, 3] = x_list[k, :, 3] + np.random.normal(
-                0, measurement_noise_level, x_list.shape[1]
-            )
-        for k in range(1, x_list.shape[0] - 1):
-            y_list[k] = (x_list[k + 1, :, 3:4] - x_list[k, :, 3:4]) / delta_t
-        np.save(f"graphs_data/{dataset_name}/x_list_{run}.npy", x_list)
-        np.save(f"graphs_data/{dataset_name}/y_list_{run}.npy", y_list)
-        print("data + noise saved ...")
-    else:
-        np.save(f"graphs_data/{dataset_name}/x_list_{run}.npy", x_list)
-        np.save(f"graphs_data/{dataset_name}/y_list_{run}.npy", y_list)
-        print("data saved ...")
+    if bSave:
+        if measurement_noise_level > 0:
+            np.save(f"graphs_data/{dataset_name}/raw_x_list_{run}.npy", x_list)
+            np.save(f"graphs_data/{dataset_name}/raw_y_list_{run}.npy", y_list)
+            for k in range(x_list.shape[0]):
+                x_list[k, :, 3] = x_list[k, :, 3] + np.random.normal(
+                    0, measurement_noise_level, x_list.shape[1]
+                )
+            for k in range(1, x_list.shape[0] - 1):
+                y_list[k] = (x_list[k + 1, :, 3:4] - x_list[k, :, 3:4]) / delta_t
+            np.save(f"graphs_data/{dataset_name}/x_list_{run}.npy", x_list)
+            np.save(f"graphs_data/{dataset_name}/y_list_{run}.npy", y_list)
+            print("data + noise saved ...")
+        else:
+            np.save(f"graphs_data/{dataset_name}/x_list_{run}.npy", x_list)
+            np.save(f"graphs_data/{dataset_name}/y_list_{run}.npy", y_list)
+            print("data saved ...")
 
 
 def data_generate_synaptic(

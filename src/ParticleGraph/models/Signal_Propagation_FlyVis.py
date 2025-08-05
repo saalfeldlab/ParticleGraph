@@ -74,26 +74,34 @@ class Signal_Propagation_FlyVis(pyg.nn.MessagePassing):
             device=self.device,
         )
 
-        if config.training.init_update_gradient:
-            for i, layer in enumerate(self.lin_phi.layers[:-1]):  # All except final layer
-                nn.init.normal_(layer.weight, mean=0, std=0.01)  # Very small weights
-                nn.init.zeros_(layer.bias)
-
-            # Initialize final layer to achieve desired gradients:
-            # v: -1, embedding: 0, msg: 1, excitation: 1
-            final_layer = self.lin_phi.layers[-1]
+        if model_config.init_update_gradient:
+            # Initialize first layer to encode desired gradient directions
+            first_layer = self.lin_phi.layers[0]  # Maps input_size_update to hidden_dim_update
             with torch.no_grad():
-                # Create a weight vector that approximates desired gradients
-                # This is approximate since we have hidden layers, but should be close
+                # Initialize with small random weights
+                nn.init.normal_(first_layer.weight, mean=0, std=0.02)
+                nn.init.zeros_(first_layer.bias)
+
+                # Set specific weights to approximate desired gradients
                 desired_gradients = torch.tensor([-1.0, 0.0, 0.0, 1.0, 1.0], device=self.device)
 
-                # Initialize final layer weights as a scaled version of desired gradients
-                # Scale by 1/hidden_dim to account for the fact that input gets spread across hidden units
-                scale_factor = 1.0 / self.hidden_dim_update
-                final_layer.weight.data = desired_gradients.unsqueeze(0) * scale_factor
+                # Spread each input's desired gradient across multiple hidden units
+                units_per_input = self.hidden_dim_update // self.input_size_update
+                for i in range(self.input_size_update):  # For each input feature
+                    start_idx = i * units_per_input
+                    end_idx = min((i + 1) * units_per_input, self.hidden_dim_update)
+                    first_layer.weight.data[start_idx:end_idx, i] = desired_gradients[i] * 0.1
 
-                # Initialize final bias to zero
-                final_layer.bias.data.zero_()
+            # Initialize middle hidden layers with small weights
+            for layer_idx in range(1, self.n_layers_update - 1):
+                layer = self.lin_phi.layers[layer_idx]
+                nn.init.normal_(layer.weight, mean=0, std=0.01)
+                nn.init.zeros_(layer.bias)
+
+            # Initialize final layer with small uniform weights
+            final_layer = self.lin_phi.layers[-1]  # Maps hidden_dim_update to output_size
+            nn.init.normal_(final_layer.weight, mean=0, std=0.01)
+            nn.init.zeros_(final_layer.bias)
 
         # embedding
         self.a = nn.Parameter(

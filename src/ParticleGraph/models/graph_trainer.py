@@ -3993,7 +3993,12 @@ def data_train_flyvis(config, erase, best_model, device):
                     else:
                         pred = model(batch, data_id=data_id, mask=mask_batch)
 
-                loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
+                if signal_model_name == 'PDE_N9_D':
+                    eps = 1e-8  # Small epsilon to avoid division by zero
+                    relative_error = (pred[ids_batch] - y_batch[ids_batch]) / (torch.abs(y_batch[ids_batch]) + eps)
+                    loss = loss + relative_error.norm(2)
+                else:
+                    loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
 
                 loss.backward()
                 optimizer.step()
