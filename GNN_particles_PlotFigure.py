@@ -6697,7 +6697,6 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 
-
     print(f'experiment description: {config.description}')
     logger.info(f'experiment description: {config.description}')
 
@@ -6776,7 +6775,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         60: 'TmY18', 61: 'TmY3', 62: 'TmY4', 63: 'TmY5a', 64: 'TmY9'
     }
 
-    activity = torch.tensor(x_list[0][:, :, 3:4],device=device)
+    activity = torch.tensor(x_list[0][:, :, 3:4], device=device)
     activity = activity.squeeze()
     activity = activity.t()
 
@@ -6786,7 +6785,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=1)
     plt.xlabel('time', fontsize=64)
     plt.ylabel('$x_{i}$', fontsize=64)
-    plt.xlim([0, n_frames//200])
+    plt.xlim([0, n_frames // 200])
     plt.xticks(fontsize=28)
     plt.yticks(fontsize=28)
     plt.title(r'$x_i$ samples', fontsize=48)
@@ -6871,9 +6870,8 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         plt.savefig(f"./{log_dir}/results/edge_functions_{epoch}.tif", dpi=300)
         plt.close()
 
-
         # Plot 5: Phi function visualization
-        func_list=[]
+        func_list = []
         fig = plt.figure(figsize=(8, 8))
         for n in range(n_neurons):
             embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
@@ -6890,23 +6888,23 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         plt.savefig(f"./{log_dir}/results/phi_functions_{epoch}.tif", dpi=300)
         plt.close()
 
-        func_list = torch.stack(func_list).squeeze()
-
         if False:
             print('functionnal clustering results')
             logger.info('functionnal results')
+            func_list = torch.stack(func_list).squeeze()
             for eps in [0.05, 0.075, 0.1, 0.2, 0.3]:
-                functional_results = functional_clustering_evaluation(func_list, type_list, eps=eps)  # Current functional result
-                print(f"eps={eps}: {functional_results['n_clusters_found']} clusters, {functional_results['accuracy']:.3f} accuracy")
-                logger.info(f"eps={eps}: {functional_results['n_clusters_found']} clusters, {functional_results['accuracy']:.3f} accuracy")
-
-
+                functional_results = functional_clustering_evaluation(func_list, type_list,
+                                                                      eps=eps)  # Current functional result
+                print(
+                    f"eps={eps}: {functional_results['n_clusters_found']} clusters, {functional_results['accuracy']:.3f} accuracy")
+                logger.info(
+                    f"eps={eps}: {functional_results['n_clusters_found']} clusters, {functional_results['accuracy']:.3f} accuracy")
 
         # Plot 4: Weight comparison using model.W and gt_weights
         fig = plt.figure(figsize=(8, 8))
         learned_weights = to_numpy(model.W.squeeze())
         true_weights = to_numpy(gt_weights)
-        plt.scatter(true_weights, learned_weights, c=mc, s=0.1, alpha=0.01)
+        plt.scatter(true_weights, learned_weights, c=mc, s=0.1, alpha=0.1)
         lin_fit, lin_fitv = curve_fit(linear_model, true_weights, learned_weights)
         residuals = learned_weights - linear_model(true_weights, *lin_fit)
         ss_res = np.sum(residuals ** 2)
@@ -6919,8 +6917,8 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         plt.tight_layout()
         plt.savefig(f'{log_dir}/results/comparison_{epoch}.png', dpi=300)
         plt.close()
-        print(f"weights fit   R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
-        logger.info(f"weights fit   R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
+        print(f"first weights fit   R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
+        logger.info(f"first weights fit   R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
 
         logger.info('weights comparison per type')
         # Plot 4bis: Weight comparison using model.W and gt_weights
@@ -6939,68 +6937,122 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
             r_squared = 1 - (ss_res / ss_tot)
             true_weights_mean = np.mean(true_weights[pos])
             # print(f"{index_to_name[n]} R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}  edges: {len(pos)}  weights mean: {true_weights_mean:.4f}")
-            logger.info(f"{index_to_name[n]} R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}  edges: {len(pos)}  weights mean: {true_weights_mean:.4f}")
+            logger.info(
+                f"{index_to_name[n]} R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}  edges: {len(pos)}  weights mean: {true_weights_mean:.4f}")
         plt.xlabel('true $W_{ij}$')
         plt.ylabel('learned $W_{ij}$')
         plt.tight_layout()
-        plt.savefig(f'{log_dir}/results/comparison_color_{epoch}.png', dpi=300)
+        # plt.savefig(f'{log_dir}/results/comparison_color_{epoch}.png', dpi=300)
         plt.close()
 
+        k_list = [1] # , 2, 3, 4, 5, 6, 7, 8]
+        dataset_batch = []
+        ids_batch = []
+        mask_batch = []
+        ids_index = 0
+        mask_index = 0
+
+        for batch in range(len(k_list)):
+
+                k = k_list[batch]
+                x = torch.tensor(x_list[0][k], dtype=torch.float32, device=device)
+                ids = np.arange(n_neurons)
+
+                if not (torch.isnan(x).any()):
+
+                    mask = torch.arange(edges.shape[1])
+
+                    y = torch.tensor(y_list[run][k], device=device) / ynorm
+
+                    if not (torch.isnan(y).any()):
+
+                        dataset = data.Data(x=x, edge_index=edges)
+                        dataset_batch.append(dataset)
+
+                        if len(dataset_batch) == 1:
+                            data_id = torch.ones((x.shape[0], 1), dtype=torch.int, device=device) * run
+                            x_batch = x[:, 3:4]
+                            y_batch = y
+                            ids_batch = ids
+                            mask_batch = mask
+                        else:
+                            data_id = torch.cat((data_id, torch.ones((x.shape[0], 1), dtype=torch.int, device=device) * run), dim=0)
+                            x_batch = torch.cat((x_batch, x[:, 4:5]), dim=0)
+                            y_batch = torch.cat((y_batch, y), dim=0)
+                            ids_batch = np.concatenate((ids_batch, ids + ids_index), axis=0)
+                            mask_batch = torch.cat((mask_batch, mask + mask_index), dim=0)
+
+                        ids_index += x.shape[0]
+                        mask_index += edges.shape[1]
 
 
-        if False:
-            # Plot 6: Phi / W
-            fig = plt.figure(figsize=(8, 8))
-
-            zeros = torch.zeros((n_neurons, 1), dtype=torch.float32, device=device)
-            ones = torch.ones((n_neurons, 1), dtype=torch.float32, device=device)
-
-            in_features = torch.cat((zeros, model.a, ones , zeros), dim=1)
+        if not (dataset_batch == []):
             with torch.no_grad():
-                coeff1 = model.lin_phi(in_features.float())
-            in_features = torch.cat((zeros, model.a, zeros , zeros), dim=1)
-            with torch.no_grad():
-                coeff = coeff1 - model.lin_phi(in_features.float())
-            plt.plot(to_numpy(coeff), linewidth=1, c=mc, alpha=0.5)
+                batch_loader = DataLoader(dataset_batch, batch_size=len(k_list), shuffle=False)
+                for batch in batch_loader:
+                    pred, in_features = model(batch, data_id=data_id, mask=mask_batch, return_all=True)
+
+            v = in_features[:, 0:1].clone().detach()
+            embedding = in_features[:, 1:3].clone().detach()
+            msg = in_features[:, 3:4].clone().detach()
+            excitation = in_features[:, 4:5].clone().detach()
+
+            msg.requires_grad_(True)
+            # Concatenate input features for the final layer
+            in_features = torch.cat([v, embedding, msg, excitation], dim=1)
+            out = model.lin_phi(in_features)
+
+            grad_msg = torch.autograd.grad(
+                outputs=out,
+                inputs=msg,
+                grad_outputs=torch.ones_like(out),
+                retain_graph=True,
+                create_graph=True  # optional, only if you want to compute higher-order grads later
+            )[0]
+
+            # print (f'grad_msg shape: {grad_msg.shape}')
+            # print (f'model.W: {model.W.shape}')
+
+            plt.figure(figsize=(12, 6))
+            plt.plot(to_numpy(grad_msg[0:n_neurons]), c=mc, linewidth=1)
+            plt.xlabel('neuron index')
+            plt.ylabel('gradient')
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/phi_W_{epoch}.tif", dpi=300)
+            plt.savefig(f'{log_dir}/results/msg_gradients_{epoch}.png', dpi=300)
             plt.close()
-            coeff = coeff / torch.mean(coeff)
-            print(f'phi_W mean: {to_numpy(torch.mean(coeff)):.4f}, std: {to_numpy(torch.std(coeff)):.4f}')
 
+            grad_msg_flat = grad_msg.squeeze()
+            assert grad_msg_flat.shape[0] == n_neurons * len(k_list), "Gradient and neuron count mismatch"
+            target_neuron_ids = edges[1, :] % (model.n_edges + model.n_extra_null_edges)
+            grad_per_edge = grad_msg_flat[target_neuron_ids]
+            grad_per_edge = grad_per_edge.unsqueeze(1)  # [434112, 1]
+            corrected_W = model.W / grad_per_edge
 
-            reconstructed_connectivity = torch.zeros((n_neurons, n_neurons), dtype=torch.float32, device=device)
-            reconstructed_connectivity[edges[0, :], edges[1, :]] = model.W.flatten()
-            reconstructed_connectivity = reconstructed_connectivity / coeff
-            pos = torch.argwhere(coeff == 0)
-            if len(pos) > 0:
-                print(f'Warning: {len(pos)} neurons have zero phi_W coefficient, setting connectivity to zero for these neurons.')
-                reconstructed_connectivity[pos[:, 0], pos[:, 1]] = 0
-            corrected_W = reconstructed_connectivity[edges[0, :], edges[1, :]]
-
-            # Plot 7: Weight comparison using model.W and gt_weights
+            # Plot 6: Weight comparison using model.W and gt_weights
             fig = plt.figure(figsize=(8, 8))
             learned_weights = to_numpy(corrected_W.squeeze())
             true_weights = to_numpy(gt_weights)
-            if len(true_weights) > 0 and len(learned_weights) > 0:
-                plt.scatter(true_weights, learned_weights, c=mc, s=1, alpha=0.5)
-                lin_fit, lin_fitv = curve_fit(linear_model, true_weights, learned_weights)
-                residuals = learned_weights - linear_model(true_weights, *lin_fit)
-                ss_res = np.sum(residuals ** 2)
-                ss_tot = np.sum((learned_weights - np.mean(learned_weights)) ** 2)
-                r_squared = 1 - (ss_res / ss_tot)
-
-                plt.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}',
-                         transform=plt.gca().transAxes, verticalalignment='top', fontsize=12)
+            plt.scatter(true_weights, learned_weights, c=mc, s=0.1, alpha=0.1)
+            lin_fit, lin_fitv = curve_fit(linear_model, true_weights, learned_weights)
+            residuals = learned_weights - linear_model(true_weights, *lin_fit)
+            ss_res = np.sum(residuals ** 2)
+            ss_tot = np.sum((learned_weights - np.mean(learned_weights)) ** 2)
+            r_squared = 1 - (ss_res / ss_tot)
+            plt.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}',
+                     transform=plt.gca().transAxes, verticalalignment='top', fontsize=12)
             plt.xlabel('true $W_{ij}$')
             plt.ylabel('learned $W_{ij}$')
-            plt.ylim([-20,20])
             plt.tight_layout()
-
-            plt.savefig(f'{log_dir}/results/second_comparison_{epoch}.png', dpi=300)
+            plt.savefig(f'{log_dir}/results/corrected_comparison_{epoch}.png', dpi=300)
             plt.close()
+            print(f"second weights fit R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
+            logger.info(f"second weights fit R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
 
-            print(' ')
+
+
+
+
+
 
 
 def data_flyvis_compare(config_list, varied_parameter):
@@ -7059,7 +7111,7 @@ def data_flyvis_compare(config_list, varied_parameter):
                 content = f.read()
 
             # Extract R²
-            r2_match = re.search(r'weights fit\s+R²:\s*([\d.-]+)', content)
+            r2_match = re.search(r'second weights fit\s+R²:\s*([\d.-]+)', content)
             r2 = float(r2_match.group(1)) if r2_match else None
 
             # Extract best clustering accuracy and corresponding eps
@@ -11052,24 +11104,33 @@ if __name__ == '__main__':
     # config_list = config_list = ['signal_CElegans_d2', 'signal_CElegans_d2a', 'signal_CElegans_d3', 'signal_CElegans_d3a', 'signal_CElegans_d3b']
 
     # config_list = ['fly_N9_18_4_0','fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4', 'fly_N9_22_5','fly_N9_18_4_6','fly_N9_18_4_5','fly_N9_18_4_4','fly_N9_18_4_1','fly_N9_18_4_2','fly_N9_18_4_3']
-    config_list = ['fly_N9_18_4_1', 'fly_N9_19_1', 'fly_N9_19_2', 'fly_N9_19_3', 'fly_N9_19_4', 'fly_N9_19_5', 'fly_N9_19_6', 'fly_N9_19_7', 'fly_N9_19_8', 'fly_N9_19_9']
-
-    # for config_file_ in config_list:
-    #     print(' ')
-    #
-    #     config_file, pre_folder = add_pre_folder(config_file_)
-    #     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-    #     config.dataset = pre_folder + config.dataset
-    #     config.config_file = pre_folder + config_file_
-    #
-    #     print(f'config_file  {config.config_file}')
-    #
-    #     folder_name = './log/' + pre_folder + '/tmp_results/'
-    #     os.makedirs(folder_name, exist_ok=True)
-    #     data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
-
     # data_flyvis_compare(config_list, 'training.noise_model_level')
+
+    config_list = ['fly_N9_18_4_1', 'fly_N9_19_1', 'fly_N9_19_2', 'fly_N9_19_3', 'fly_N9_19_4', 'fly_N9_19_5', 'fly_N9_19_6', 'fly_N9_19_7', 'fly_N9_19_8', 'fly_N9_19_9']
+    # data_flyvis_compare(config_list, 'simulation.n_extra_null_edges')
+
+    # config_list = ['fly_N9_18_4_0','fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4', 'fly_N9_22_5', 'fly_N9_20_0', 'fly_N9_20_1', 'fly_N9_20_2', 'fly_N9_20_3', 'fly_N9_20_4', 'fly_N9_20_5', 'fly_N9_20_6']
+    # data_flyvis_compare(config_list, 'simulation.n_extra_null_edges')
+
+    # config_list = ['fly_N9_18_4_1']
+
+    for config_file_ in config_list:
+        print(' ')
+
+        config_file, pre_folder = add_pre_folder(config_file_)
+        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+        config.dataset = pre_folder + config.dataset
+        config.config_file = pre_folder + config_file_
+
+        print(f'config_file  {config.config_file}')
+
+        folder_name = './log/' + pre_folder + '/tmp_results/'
+        os.makedirs(folder_name, exist_ok=True)
+        data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
+
     data_flyvis_compare(config_list, 'simulation.n_extra_null_edges')
+
+
 
     # f_list = ['4']
     # for f in f_list:
