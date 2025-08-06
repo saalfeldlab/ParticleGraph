@@ -6783,14 +6783,112 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
     n = np.random.randint(0, n_neurons, 10)
     for i in range(len(n)):
         plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=1)
-    plt.xlabel('time', fontsize=64)
-    plt.ylabel('$x_{i}$', fontsize=64)
-    plt.xlim([0, n_frames // 200])
-    plt.xticks(fontsize=28)
-    plt.yticks(fontsize=28)
-    plt.title(r'$x_i$ samples', fontsize=48)
+    plt.xlabel('time', fontsize=24)
+    plt.ylabel('$x_{i}$', fontsize=24)
+    plt.xlim([0, n_frames // 400])
+    plt.xticks(fontsize=18)
+    plt.yticks(fontsize=18)
+    plt.ylim([-6, 6])
+    plt.title(r'$x_i$ samples', fontsize=24)
     plt.tight_layout()
     plt.savefig(f'./{log_dir}/results/activity.tif', dpi=300)
+    plt.close()
+
+    # Additional plot for specific neuron type (e.g., 'Am')
+    target_type_name_list = ['R1','R7','Am','L1','L2']
+
+    for target_type_name in target_type_name_list:# Change this to any desired type name
+        target_type_index = None
+        for idx, name in index_to_name.items():
+            if name == target_type_name:
+                target_type_index = idx
+                break
+        if target_type_index is not None:
+            type_mask = (to_numpy(type_list).squeeze() == target_type_index)
+            neurons_of_type = np.where(type_mask)[0]
+            if len(neurons_of_type) > 0:
+                # Select up to 10 neurons of this type
+                n_neurons_to_plot = min(10, len(neurons_of_type))
+                selected_neurons = neurons_of_type[:n_neurons_to_plot]
+
+                plt.figure(figsize=(10, 10))
+                for i, neuron_idx in enumerate(selected_neurons):
+                    plt.plot(to_numpy(activity[neuron_idx, :]), linewidth=1,
+                             label=f'{target_type_name}_{i}' if n_neurons_to_plot <= 5 else None)
+
+                plt.xlabel('time', fontsize=24)
+                plt.ylabel('$x_{i}$', fontsize=24)
+                plt.xlim([0, n_frames // 400])
+                plt.xticks(fontsize=18)
+                plt.yticks(fontsize=18)
+                plt.title(f'$x_i$ samples - {target_type_name} neurons ({n_neurons_to_plot}/{len(neurons_of_type)})',
+                          fontsize=24)
+                if n_neurons_to_plot <= 5:
+                    plt.legend(fontsize=24)
+                plt.ylim([-5,5])
+                plt.tight_layout()
+                plt.savefig(f'./{log_dir}/results/activity_{target_type_name}.tif', dpi=300)
+                plt.close()
+
+                print(f'plotted {n_neurons_to_plot} out of {len(neurons_of_type)} {target_type_name} neurons')
+                logger.info(f'plotted {n_neurons_to_plot} out of {len(neurons_of_type)} {target_type_name} neurons')
+            else:
+                print(f'no neurons found for type {target_type_name}')
+                logger.info(f'no neurons found for type {target_type_name}')
+        else:
+            print(f'type {target_type_name} not found in index_to_name dictionary')
+            logger.info(f'type {target_type_name} not found in index_to_name dictionary')
+
+    # Add this code after the existing activity plotting section
+
+    # Calculate RMS norms for activity and target distributions
+    activity_for_rms = torch.tensor(x_list[0][:, :, 3:4], device=device)
+    activity_for_rms = activity_for_rms.squeeze()
+    mean_squared = torch.mean(activity_for_rms ** 2, dim=0)  # shape (n_neurons,)
+    activity_rms_norm = torch.sqrt(mean_squared)
+
+    target = torch.tensor(y_list[0], device=device)
+    target = target.squeeze()
+    mean_squared = torch.mean(target ** 2, dim=0)  # shape (n_neurons,)
+    target_rms_norm = torch.sqrt(mean_squared)
+
+    # Plot activity and target distributions
+    plt.figure(figsize=(12, 12))
+    plt.subplot(2, 1, 1)
+    activity_values = to_numpy(activity_rms_norm[0:n_neurons]).squeeze()  # Flatten to 1D
+    neuron_indices = np.arange(n_neurons)
+    for n in range(n_types):
+        type_mask = (to_numpy(type_list).squeeze() == n)  # Flatten to 1D
+        if np.any(type_mask):
+            plt.scatter(neuron_indices[type_mask], activity_values[type_mask],
+                        c=colors_65[n], s=1, alpha=0.8)
+            if np.sum(type_mask) > 0:
+                mean_x = np.mean(neuron_indices[type_mask])
+                mean_y = np.mean(activity_values[type_mask])
+                plt.text(mean_x, mean_y, index_to_name.get(n, f'T{n}'),
+                         fontsize=6, ha='center', va='center')
+    plt.xlabel('neuron index', fontsize=18)
+    plt.ylabel('$x_i$ RMS', fontsize=18)
+    plt.title('Activity Distribution', fontsize=16)
+
+    plt.subplot(2, 1, 2)
+    target_values = to_numpy(target_rms_norm[0:n_neurons]).squeeze()  # Flatten to 1D
+    neuron_indices = np.arange(n_neurons)
+    for n in range(n_types):
+        type_mask = (to_numpy(type_list).squeeze() == n)  # Flatten to 1D
+        if np.any(type_mask):
+            plt.scatter(neuron_indices[type_mask], target_values[type_mask],
+                        c=colors_65[n], s=1, alpha=0.8)
+            if np.sum(type_mask) > 0:
+                mean_x = np.mean(neuron_indices[type_mask])
+                mean_y = np.mean(target_values[type_mask])
+                plt.text(mean_x, mean_y, index_to_name.get(n, f'T{n}'),
+                         fontsize=6, ha='center', va='center')
+    plt.xlabel('neuron index', fontsize=18)
+    plt.ylabel('$dx_i/dt$ RMS', fontsize=18)
+    plt.title('Target Distribution', fontsize=16)
+    plt.tight_layout()
+    plt.savefig(f'{log_dir}/results/dataset_distribution.png', dpi=300)
     plt.close()
 
     print(f'number of neurons: {n_neurons}')
@@ -6871,8 +6969,9 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         plt.savefig(f"./{log_dir}/results/edge_functions_{epoch}.tif", dpi=300)
         plt.close()
 
-        # Plot 5: Phi function visualization
+        # Plot 5: Phi function visualization (keep existing code)
         func_list = []
+        slopes_list = []
         fig = plt.figure(figsize=(8, 8))
         for n in range(n_neurons):
             embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
@@ -6880,6 +6979,18 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
             with torch.no_grad():
                 func = model.lin_phi(in_features.float())
             func_list.append(func)
+
+            # Fit linear model to get slope
+            rr_numpy = to_numpy(rr)
+            func_numpy = to_numpy(func.squeeze())
+            try:
+                lin_fit, _ = curve_fit(linear_model, rr_numpy, func_numpy)
+                slope = lin_fit[0]
+            except:
+                # Fallback to simple linear regression if curve_fit fails
+                slope = np.polyfit(rr_numpy, func_numpy, 1)[0]
+            slopes_list.append(slope)
+
             if (n % 20 == 0):
                 plt.plot(to_numpy(rr), to_numpy(func), 2,
                          color=cmap.color(to_numpy(type_list)[n].astype(int)),
@@ -6887,6 +6998,33 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         plt.xlim(config.plotting.xlim)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/phi_functions_{epoch}.tif", dpi=300)
+        plt.close()
+
+        # Plot 5b: Phi function slopes by neuron type
+        plt.figure(figsize=(12, 8))
+        slopes_array = np.array(slopes_list)
+        neuron_indices = np.arange(n_neurons)
+
+        for n in range(n_types):
+            type_mask = (to_numpy(type_list).squeeze() == n)  # Flatten to 1D
+            if np.any(type_mask):
+                plt.scatter(neuron_indices[type_mask], slopes_array[type_mask],
+                            c=colors_65[n], s=2, alpha=0.8)
+
+                # Add text label for each neuron type
+                if np.sum(type_mask) > 0:
+                    mean_x = np.mean(neuron_indices[type_mask])
+                    mean_y = np.mean(slopes_array[type_mask])
+                    plt.text(mean_x, mean_y, index_to_name.get(n, f'T{n}'),
+                             fontsize=8, ha='center', va='center')
+
+        plt.xlabel('neuron index', fontsize=18)
+        plt.ylabel('$\phi$ function slope', fontsize=18)
+        plt.title('Phi Function Slopes by Neuron Type', fontsize=16)
+        plt.xticks(fontsize=12)
+        plt.yticks(fontsize=12)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/phi_slopes_{epoch}.png", dpi=300)
         plt.close()
 
         if False:
@@ -7050,7 +7188,12 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
             target_neuron_ids = edges[1, :] % (model.n_edges + model.n_extra_null_edges)
             grad_per_edge = grad_msg_flat[target_neuron_ids]
             grad_per_edge = grad_per_edge.unsqueeze(1)  # [434112, 1]
-            corrected_W = model.W / grad_per_edge
+
+            slopes_array = torch.tensor(slopes_array, dtype=torch.float32, device=device)
+            slope_per_edge = slopes_array[target_neuron_ids]
+            print(model.W.shape, grad_per_edge.shape, slope_per_edge.shape)
+
+            corrected_W = -model.W / grad_per_edge * slope_per_edge[:,None]
 
             # Plot 6: Weight comparison using model.W and gt_weights
             fig = plt.figure(figsize=(8, 8))
@@ -11136,7 +11279,7 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_18_4_0','fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4', 'fly_N9_22_5', 'fly_N9_20_0', 'fly_N9_20_1', 'fly_N9_20_2', 'fly_N9_20_3', 'fly_N9_20_4', 'fly_N9_20_5', 'fly_N9_20_6']
     # data_flyvis_compare(config_list, 'simulation.n_extra_null_edges')
 
-    config_list = ['fly_N9_27_1']
+    config_list = ['fly_N9_18_4_1']
 
     for config_file_ in config_list:
         print(' ')
