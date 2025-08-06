@@ -6749,6 +6749,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
     connectivity = torch.load(f'./graphs_data/{dataset_name}/connectivity.pt', map_location=device)
     gt_weights = torch.load(f'./graphs_data/{dataset_name}/weights.pt', map_location=device)
     gt_taus = torch.load(f'./graphs_data/{dataset_name}/taus.pt', map_location=device)
+
     edges = torch.load(f'./graphs_data/{dataset_name}/edge_index.pt', map_location=device)
     print(f'{edges.shape[1]} edges')
     logger.info(f'{edges.shape[1]} edges')
@@ -6756,6 +6757,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
     x = x_list[0][n_frames - 10]
     type_list = torch.tensor(x[:, 2 + 2 * dimension:3 + 2 * dimension], device=device)
     n_types = len(np.unique(to_numpy(type_list)))
+    print (f'{n_types} neuron types in datasets')
     region_list = torch.tensor(x[:, 1 + 2 * dimension:2 + 2 * dimension], device=device)
     n_region_types = len(np.unique(to_numpy(region_list)))
     n_neurons = len(type_list)
@@ -7023,6 +7025,8 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         # Plot 5c: Tau comparison (reconstructed vs ground truth)
         # Calculate reconstructed tau as 1/slopes, handle division by zero
         reconstructed_tau = np.where(slopes_array != 0, 1.0 / slopes_array, np.inf)
+
+        print(f'N reconstructed tau: {len(reconstructed_tau)}')
         # Filter out infinite values for fitting
         finite_mask = np.isfinite(reconstructed_tau)
         if np.sum(finite_mask) > 0:
@@ -7084,8 +7088,8 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         plt.tight_layout()
         plt.savefig(f'{log_dir}/results/comparison_{epoch}.png', dpi=300)
         plt.close()
-        print(f"first weights fit   R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
-        logger.info(f"first weights fit   R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
+        print(f"first weights fit R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
+        logger.info(f"first weights fit R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
 
         logger.info('weights comparison per type')
         # Plot 4bis: Weight comparison using model.W and gt_weights
