@@ -3904,11 +3904,7 @@ def data_train_flyvis(config, erase, best_model, device):
                             msg = model.lin_edge(in_features[ids].clone()) ** 2
                         else:
                             msg = model.lin_edge(in_features[ids].clone())
-
-                        if signal_model_name == 'PDE_N9_D':
-                            loss = loss + (msg - 2 * xnorm).norm(2) * coeff_edge_norm
-                        else:
-                            loss = loss + (msg-1).norm(2) * coeff_edge_norm                 # normalization lin_edge(xnorm) = 1 for all embedding values
+                        loss = loss + (msg - 2 * xnorm).norm(2) * coeff_edge_norm
 
                     # # regularisation sign Wij
                     # if (coeff_sign > 0) and (N%4 == 0):
