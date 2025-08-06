@@ -144,7 +144,7 @@ class Signal_Propagation_FlyVis(pyg.nn.MessagePassing):
             pred = self.lin_phi(in_features)
         
         if return_all:
-            return pred, in_features
+            return pred, in_features, msg
         else:
             return pred
 

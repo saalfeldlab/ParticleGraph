@@ -3728,7 +3728,7 @@ def data_train_flyvis(config, erase, best_model, device):
     print(f'N neurons: {n_neurons}')
     logger.info(f'N neurons: {n_neurons}')
     config.simulation.n_neurons =n_neurons
-    type_list = torch.tensor(x[:, 1 + 2 * dimension:2 + 2 * dimension], device=device)
+    type_list = torch.tensor(x[:, 2 + 2 * dimension:3 + 2 * dimension], device=device)
     vnorm = torch.tensor(1.0, device=device)
     ynorm = torch.tensor(1.0, device=device)
     torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
@@ -3960,7 +3960,7 @@ def data_train_flyvis(config, erase, best_model, device):
                 batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
                 for batch in batch_loader:
                     if (coeff_update_msg_diff > 0) | (coeff_update_u_diff > 0) | (coeff_update_msg_sign>0):
-                        pred, in_features = model(batch, data_id=data_id, mask=mask_batch, return_all=True)
+                        pred, in_features,msg = model(batch, data_id=data_id, mask=mask_batch, return_all=True)
                         if coeff_update_msg_diff > 0 :      # Enforces that increasing the message input should increase the output (monotonic increasing)
                             pred_msg = model.lin_phi(in_features.clone().detach())
                             in_features_msg_next = in_features.clone().detach()
@@ -3981,14 +3981,20 @@ def data_train_flyvis(config, erase, best_model, device):
                             loss = loss + (torch.tanh(pred_msg / 0.1) - torch.tanh(msg / 0.1)).norm(2) * coeff_update_msg_sign
 
                     else:
-                        pred = model(batch, data_id=data_id, mask=mask_batch)
+                        pred, in_features, msg = model(batch, data_id=data_id, mask=mask_batch, return_all=True)
 
-                if signal_model_name == 'PDE_N9_D':
-                    eps = 1e-8  # Small epsilon to avoid division by zero
-                    relative_error = (pred[ids_batch] - y_batch[ids_batch]) / (torch.abs(y_batch[ids_batch]) + eps)
-                    loss = loss + relative_error.norm(2)
-                else:
-                    loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
+                loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
+
+                msg.requires_grad_(True)  # Enable tracking on msg
+                pred.retain_grad()
+                # Get Jacobian: ∂pred / ∂msg
+                grad_msg = torch.autograd.grad(
+                    outputs=pred,
+                    inputs=msg,
+                    grad_outputs=torch.ones_like(pred),
+                    retain_graph=True,
+                    create_graph=True
+                )[0]
 
                 loss.backward()
                 optimizer.step()
@@ -4002,7 +4008,7 @@ def data_train_flyvis(config, erase, best_model, device):
 
                 if ((N % plot_frequency == 0) | (N == 0)):
 
-                    plot_training_flyvis(model, config, epoch, N, log_dir, device, cmap, type_list, gt_weights, n_neurons=n_neurons, n_neuron_types=n_neuron_types)
+                    plot_training_flyvis(model, grad_msg, edges, config, epoch, N, log_dir, device, cmap, type_list, gt_weights, n_neurons=n_neurons, n_neuron_types=n_neuron_types)
 
                     if has_neural_field:
                         with torch.no_grad():

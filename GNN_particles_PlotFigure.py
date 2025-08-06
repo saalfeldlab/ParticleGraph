@@ -6991,7 +6991,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
             with torch.no_grad():
                 batch_loader = DataLoader(dataset_batch, batch_size=len(k_list), shuffle=False)
                 for batch in batch_loader:
-                    pred, in_features = model(batch, data_id=data_id, mask=mask_batch, return_all=True)
+                    pred, in_features, msg = model(batch, data_id=data_id, mask=mask_batch, return_all=True)
 
             v = in_features[:, 0:1].clone().detach()
             embedding = in_features[:, 1:3].clone().detach()
@@ -7037,8 +7037,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                         mean_x = np.mean(neuron_indices[type_mask])
                         mean_y = np.mean(grad_values[type_mask])
                         plt.text(mean_x, mean_y, index_to_name.get(n, f'T{n}'),
-                                 fontsize=6, ha='center', va='center',
-                                 bbox=dict(boxstyle='round,pad=0.2', facecolor='white', alpha=0.7, edgecolor='none'))
+                                 fontsize=6, ha='center', va='center')
 
             plt.xlabel('neuron index')
             plt.ylabel('gradient')
