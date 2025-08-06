@@ -3674,7 +3674,6 @@ def data_train_flyvis(config, erase, best_model, device):
     coeff_edge_norm = train_config.coeff_edge_norm
     coeff_update_msg_sign = train_config.coeff_update_msg_sign
     coeff_edge_weight_L1 = train_config.coeff_edge_weight_L1
-    coeff_grad_msg = train_config.coeff_grad_msg
 
     n_edges = simulation_config.n_edges
     n_extra_null_edges = simulation_config.n_extra_null_edges
@@ -3986,20 +3985,6 @@ def data_train_flyvis(config, erase, best_model, device):
 
                 loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
 
-                msg.requires_grad_(True)  # Enable tracking on msg
-                pred.retain_grad()
-                # Get Jacobian: ∂pred / ∂msg
-                grad_msg = torch.autograd.grad(
-                    outputs=pred,
-                    inputs=msg,
-                    grad_outputs=torch.ones_like(pred),
-                    retain_graph=True,
-                    create_graph=True
-                )[0]
-
-                if coeff_grad_msg > 0:
-                    loss = loss + (grad_msg -1).norm(2) * coeff_grad_msg
-
                 loss.backward()
                 optimizer.step()
 
@@ -4012,7 +3997,7 @@ def data_train_flyvis(config, erase, best_model, device):
 
                 if ((N % plot_frequency == 0) | (N == 0)):
 
-                    plot_training_flyvis(model, grad_msg, edges, config, delta_t, epoch, N, log_dir, device, cmap, type_list, gt_weights, n_neurons=n_neurons, n_neuron_types=n_neuron_types)
+                    plot_training_flyvis(model, config, epoch, N, log_dir, device, cmap, type_list, gt_weights, n_neurons=n_neurons, n_neuron_types=n_neuron_types)
 
                     if has_neural_field:
                         with torch.no_grad():

@@ -3194,36 +3194,7 @@ def data_generate_fly_voltage(
 
     dataset = pyg.data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
 
-    # neuron_types = to_numpy(x[:, 6]).astype(int)
-    # print("=== MAPPING INDICES TO NEURON NAMES ===")
-    # # Create a mapping from index to neuron type name
-    # index_to_name = {}
-    # for i in range(len(node_types_str)):
-    #     type_idx = node_types_int[i]
-    #     type_name = node_types_str[i]
-    #     if type_idx not in index_to_name:
-    #         index_to_name[type_idx] = type_name
-    # # Print the mapping sorted by index
-    # print("Index -> Neuron Type Name:")
-    # for idx in sorted(index_to_name.keys()):
-    #     count = np.sum(neuron_types == idx)
-    #     print(f"Index {idx:2d}: {index_to_name[idx]:15s} ({count:3d} neurons)")
-    # # Specifically find R1-R6 indices
-    # print("\n=== FOUND R1-R6 INDICES ===")
-    # r_mapping = {}
-    # for idx, name in index_to_name.items():
-    #     if name in ['R1', 'R2', 'R3', 'R4', 'R5', 'R6']:
-    #         count = np.sum(neuron_types == idx)
-    #         r_mapping[name] = idx
-    #         print(f"{name} -> Index {idx} ({count} neurons)")
-    # # Print the final array you need for your code
-    # if len(r_mapping) == 6:
-    #     r_indices = [r_mapping['R1'], r_mapping['R2'], r_mapping['R3'],
-    #                  r_mapping['R4'], r_mapping['R5'], r_mapping['R6']]
-    #     print(f"\nUse this in your code:")
-    #     print(f"neuron_type_indices = {r_indices}  # [R1, R2, R3, R4, R5, R6]")
-    # else:
-    #     print(f"Warning: Found {len(r_mapping)} R-types instead of 6")
+
 
     if bSave:
         y_list = []

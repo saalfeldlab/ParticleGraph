@@ -231,10 +231,9 @@ def get_in_features(rr=None, embedding=None, model=[], model_name = [], max_radi
     return in_features
 
 
-def plot_training_flyvis(model, grad_msg, edges, config, epoch, N, log_dir, device, cmap, type_list,
+def plot_training_flyvis(model, config, epoch, N, log_dir, device, cmap, type_list,
                          gt_weights, n_neurons=None, n_neuron_types=None):
     signal_model_name = config.graph_model.signal_model_name
-    colors_65 = plt.cm.hsv(np.linspace(0, 0.95, 65))
 
     if n_neurons is None:
         n_neurons = len(type_list)
@@ -252,11 +251,6 @@ def plot_training_flyvis(model, grad_msg, edges, config, epoch, N, log_dir, devi
     plt.savefig(f"./{log_dir}/tmp_training/embedding/{epoch}_{N}.tif", dpi=87)
     plt.close()
 
-
-
-    # Plot 2: Weight comparison scatter plot
-    fig = plt.figure(figsize=(15, 15))
-    plt.subplot(2, 2, 1)
     x_data = to_numpy(gt_weights)
     y_data = to_numpy(model.W.squeeze())
     lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
@@ -264,73 +258,18 @@ def plot_training_flyvis(model, grad_msg, edges, config, epoch, N, log_dir, devi
     ss_res = np.sum(residuals ** 2)
     ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
     r_squared = 1 - (ss_res / ss_tot)
-    plt.scatter(x_data, y_data, s=0.1, c='k', alpha=0.01)
+    # print(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
+
+
+    # Plot 2: Weight comparison scatter plot
+    fig = plt.figure(figsize=(8, 8))
+
+    plt.scatter(to_numpy(gt_weights), to_numpy(model.W.squeeze()), s=0.1, c='k', alpha=0.01)
     plt.xlabel(r'true $W_{ij}$', fontsize=18)
     plt.ylabel(r'learned $W_{ij}$', fontsize=18)
     plt.text(-0.9, 4.5, f'R^2: {np.round(r_squared, 3)}\nslope: {np.round(lin_fit[0], 2)}', fontsize=12)
     plt.xlim([-1, 5])
     plt.ylim([-5, 5])
-
-    plt.subplot(2, 2, 2)
-    grad_msg_flat = grad_msg.squeeze()
-    target_neuron_ids = edges[1, :] % (model.n_edges + model.n_extra_null_edges)
-    grad_per_edge = grad_msg_flat[target_neuron_ids]
-    grad_per_edge = grad_per_edge.unsqueeze(1)  # [434112, 1]
-    corrected_W = model.W / grad_per_edge
-
-    x_data = to_numpy(gt_weights)
-    y_data = to_numpy(corrected_W.squeeze())
-    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-    residuals = y_data - linear_model(x_data, *lin_fit)
-    ss_res = np.sum(residuals ** 2)
-    ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-    r_squared = 1 - (ss_res / ss_tot)
-    plt.scatter(x_data, y_data, s=0.1, c='k', alpha=0.01)
-    plt.xlabel(r'true $W_{ij}$', fontsize=18)
-    plt.ylabel(r'learned corrected $W_{ij}$', fontsize=18)
-    plt.text(-0.9, 4.5, f'R^2: {np.round(r_squared, 3)}\nslope: {np.round(lin_fit[0], 2)}', fontsize=12)
-    plt.xlim([-1, 5])
-    plt.ylim([-5, 5])
-
-    plt.subplot(2, 2, 4)
-    plt.scatter(x_data, y_data, s=0.1, c='k', alpha=0.01)
-    plt.xlabel(r'true $W_{ij}$', fontsize=18)
-    plt.ylabel(r'learned corrected $W_{ij}$', fontsize=18)
-    plt.xlim([-1, 5])
-
-    plt.subplot(2, 2, 3)
-    grad_values = to_numpy(grad_msg[0:n_neurons]).squeeze()  # Flatten to 1D
-    neuron_indices = np.arange(n_neurons)
-    index_to_name = {
-        0: 'Am', 1: 'C2', 2: 'C3', 3: 'CT1(Lo1)', 4: 'CT1(M10)', 5: 'L1', 6: 'L2', 7: 'L3', 8: 'L4',
-        9: 'L5',
-        10: 'Lawf1', 11: 'Lawf2', 12: 'Mi1', 13: 'Mi10', 14: 'Mi11', 15: 'Mi12', 16: 'Mi13', 17: 'Mi14',
-        18: 'Mi15', 19: 'Mi2',
-        20: 'Mi3', 21: 'Mi4', 22: 'Mi9', 23: 'R1', 24: 'R2', 25: 'R3', 26: 'R4', 27: 'R5', 28: 'R6',
-        29: 'R7',
-        30: 'R8', 31: 'T1', 32: 'T2', 33: 'T2a', 34: 'T3', 35: 'T4a', 36: 'T4b', 37: 'T4c', 38: 'T4d',
-        39: 'T5a',
-        40: 'T5b', 41: 'T5c', 42: 'T5d', 43: 'Tm1', 44: 'Tm16', 45: 'Tm2', 46: 'Tm20', 47: 'Tm28',
-        48: 'Tm3', 49: 'Tm30',
-        50: 'Tm4', 51: 'Tm5Y', 52: 'Tm5a', 53: 'Tm5b', 54: 'Tm5c', 55: 'Tm9', 56: 'TmY10', 57: 'TmY13',
-        58: 'TmY14', 59: 'TmY15',
-        60: 'TmY18', 61: 'TmY3', 62: 'TmY4', 63: 'TmY5a', 64: 'TmY9'
-    }
-    for n in range(n_neuron_types):
-        type_mask = (to_numpy(type_list).squeeze() == n)  # Flatten to 1D
-        if np.any(type_mask):
-            plt.scatter(neuron_indices[type_mask], grad_values[type_mask],
-                        c=colors_65[n], s=1, alpha=0.8)
-
-            # Add text label for each neuron type
-            if np.sum(type_mask) > 0:
-                mean_x = np.mean(neuron_indices[type_mask])
-                mean_y = np.mean(grad_values[type_mask])
-                plt.text(mean_x, mean_y, index_to_name.get(n, f'T{n}'),
-                         fontsize=4, ha='center', va='center')
-
-    plt.xlabel('neuron index')
-    plt.ylabel('gradient')
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/matrix/comparison_{epoch}_{N}.tif",
                 dpi=87, bbox_inches='tight', pad_inches=0)
@@ -376,11 +315,6 @@ def plot_training_flyvis(model, grad_msg, edges, config, epoch, N, log_dir, devi
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/function/lin_phi/func_{epoch}_{N}.tif", dpi=87)
     plt.close()
-
-
-# Example usage:
-# plot_training_flyvis(model, config, epoch, N, log_dir, device, cmap,
-#                     type_list, gt_weights, to_numpy, fig_init)
 
 def plot_training_signal(config, model, x, adjacency, log_dir, epoch, N, n_neurons, type_list, cmap, device):
 

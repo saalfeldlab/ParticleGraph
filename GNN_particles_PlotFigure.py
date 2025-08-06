@@ -6795,7 +6795,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
     plt.close()
 
     # Additional plot for specific neuron type (e.g., 'Am')
-    target_type_name_list = ['R1','R7','Am','L1','L2']
+    target_type_name_list = [] # ['R1','R7','Am','L1','L2']
 
     for target_type_name in target_type_name_list:# Change this to any desired type name
         target_type_index = None
@@ -6830,7 +6830,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                 plt.savefig(f'./{log_dir}/results/activity_{target_type_name}.tif', dpi=300)
                 plt.close()
 
-                print(f'plotted {n_neurons_to_plot} out of {len(neurons_of_type)} {target_type_name} neurons')
+                # print(f'plotted {n_neurons_to_plot} out of {len(neurons_of_type)} {target_type_name} neurons')
                 logger.info(f'plotted {n_neurons_to_plot} out of {len(neurons_of_type)} {target_type_name} neurons')
             else:
                 print(f'no neurons found for type {target_type_name}')
@@ -6939,7 +6939,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         plt.savefig(f'{log_dir}/results/embedding_{epoch}.png', dpi=300)
         plt.close()
 
-        if False:
+        if True:
             print('embedding clustering results')
             for eps in [0.005, 0.0075, 0.01, 0.02, 0.05]:
                 results = clustering_evaluation(model, type_list, eps=eps)
@@ -7019,8 +7019,8 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                              fontsize=8, ha='center', va='center')
 
         plt.xlabel('neuron index', fontsize=18)
-        plt.ylabel('$\phi$ function slope', fontsize=18)
-        plt.title('Phi Function Slopes by Neuron Type', fontsize=16)
+        plt.ylabel('phi function slope', fontsize=18)
+        plt.title('phi function slopes by neuron type', fontsize=16)
         plt.xticks(fontsize=12)
         plt.yticks(fontsize=12)
         plt.tight_layout()
@@ -7124,96 +7124,93 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                         ids_index += x.shape[0]
                         mask_index += edges.shape[1]
 
+        with torch.no_grad():
+            batch_loader = DataLoader(dataset_batch, batch_size=len(k_list), shuffle=False)
+            for batch in batch_loader:
+                pred, in_features, msg = model(batch, data_id=data_id, mask=mask_batch, return_all=True)
 
-        if not (dataset_batch == []):
-            with torch.no_grad():
-                batch_loader = DataLoader(dataset_batch, batch_size=len(k_list), shuffle=False)
-                for batch in batch_loader:
-                    pred, in_features, msg = model(batch, data_id=data_id, mask=mask_batch, return_all=True)
+        v = in_features[:, 0:1].clone().detach()
+        embedding = in_features[:, 1:3].clone().detach()
+        msg = in_features[:, 3:4].clone().detach()
+        excitation = in_features[:, 4:5].clone().detach()
 
-            v = in_features[:, 0:1].clone().detach()
-            embedding = in_features[:, 1:3].clone().detach()
-            msg = in_features[:, 3:4].clone().detach()
-            excitation = in_features[:, 4:5].clone().detach()
+        msg.requires_grad_(True)
+        # Concatenate input features for the final layer
+        in_features = torch.cat([v, embedding, msg, excitation], dim=1)
+        out = model.lin_phi(in_features)
 
-            msg.requires_grad_(True)
-            # Concatenate input features for the final layer
-            in_features = torch.cat([v, embedding, msg, excitation], dim=1)
-            out = model.lin_phi(in_features)
+        grad_msg = torch.autograd.grad(
+            outputs=out,
+            inputs=msg,
+            grad_outputs=torch.ones_like(out),
+            retain_graph=True,
+            create_graph=True  # optional, only if you want to compute higher-order grads later
+        )[0]
 
-            grad_msg = torch.autograd.grad(
-                outputs=out,
-                inputs=msg,
-                grad_outputs=torch.ones_like(out),
-                retain_graph=True,
-                create_graph=True  # optional, only if you want to compute higher-order grads later
-            )[0]
+        # print (f'grad_msg shape: {grad_msg.shape}')
+        # print (f'model.W: {model.W.shape}')
 
-            # print (f'grad_msg shape: {grad_msg.shape}')
-            # print (f'model.W: {model.W.shape}')
+        # plt.figure(figsize=(12, 6))
+        # plt.plot(to_numpy(grad_msg[0:n_neurons]), c=mc, linewidth=1)
+        # plt.xlabel('neuron index')
+        # plt.ylabel('gradient')
+        # plt.tight_layout()
+        # plt.savefig(f'{log_dir}/results/msg_gradients_{epoch}.png', dpi=300)
+        # plt.close()
 
-            # plt.figure(figsize=(12, 6))
-            # plt.plot(to_numpy(grad_msg[0:n_neurons]), c=mc, linewidth=1)
-            # plt.xlabel('neuron index')
-            # plt.ylabel('gradient')
-            # plt.tight_layout()
-            # plt.savefig(f'{log_dir}/results/msg_gradients_{epoch}.png', dpi=300)
-            # plt.close()
+        plt.figure(figsize=(12, 6))
+        grad_values = to_numpy(grad_msg[0:n_neurons]).squeeze()  # Flatten to 1D
+        neuron_indices = np.arange(n_neurons)
+        # Create scatter plot colored by neuron type
+        for n in range(n_types):
+            type_mask = (to_numpy(type_list).squeeze() == n)  # Flatten to 1D
+            if np.any(type_mask):
+                plt.scatter(neuron_indices[type_mask], grad_values[type_mask],
+                            c=colors_65[n], s=1, alpha=0.8)
 
-            plt.figure(figsize=(12, 6))
-            grad_values = to_numpy(grad_msg[0:n_neurons]).squeeze()  # Flatten to 1D
-            neuron_indices = np.arange(n_neurons)
-            # Create scatter plot colored by neuron type
-            for n in range(n_types):
-                type_mask = (to_numpy(type_list).squeeze() == n)  # Flatten to 1D
-                if np.any(type_mask):
-                    plt.scatter(neuron_indices[type_mask], grad_values[type_mask],
-                                c=colors_65[n], s=1, alpha=0.8)
+                # Add text label for each neuron type
+                if np.sum(type_mask) > 0:
+                    mean_x = np.mean(neuron_indices[type_mask])
+                    mean_y = np.mean(grad_values[type_mask])
+                    plt.text(mean_x, mean_y, index_to_name.get(n, f'T{n}'),
+                             fontsize=6, ha='center', va='center')
 
-                    # Add text label for each neuron type
-                    if np.sum(type_mask) > 0:
-                        mean_x = np.mean(neuron_indices[type_mask])
-                        mean_y = np.mean(grad_values[type_mask])
-                        plt.text(mean_x, mean_y, index_to_name.get(n, f'T{n}'),
-                                 fontsize=6, ha='center', va='center')
+        plt.xlabel('neuron index')
+        plt.ylabel('gradient')
+        plt.tight_layout()
+        plt.savefig(f'{log_dir}/results/msg_gradients_{epoch}.png', dpi=300)
+        plt.close()
 
-            plt.xlabel('neuron index')
-            plt.ylabel('gradient')
-            plt.tight_layout()
-            plt.savefig(f'{log_dir}/results/msg_gradients_{epoch}.png', dpi=300)
-            plt.close()
+        grad_msg_flat = grad_msg.squeeze()
+        assert grad_msg_flat.shape[0] == n_neurons * len(k_list), "Gradient and neuron count mismatch"
+        target_neuron_ids = edges[1, :] % (model.n_edges + model.n_extra_null_edges)
+        grad_per_edge = grad_msg_flat[target_neuron_ids]
+        grad_per_edge = grad_per_edge.unsqueeze(1)  # [434112, 1]
 
-            grad_msg_flat = grad_msg.squeeze()
-            assert grad_msg_flat.shape[0] == n_neurons * len(k_list), "Gradient and neuron count mismatch"
-            target_neuron_ids = edges[1, :] % (model.n_edges + model.n_extra_null_edges)
-            grad_per_edge = grad_msg_flat[target_neuron_ids]
-            grad_per_edge = grad_per_edge.unsqueeze(1)  # [434112, 1]
+        slopes_array = torch.tensor(slopes_array, dtype=torch.float32, device=device)
+        slope_per_edge = slopes_array[target_neuron_ids]
 
-            slopes_array = torch.tensor(slopes_array, dtype=torch.float32, device=device)
-            slope_per_edge = slopes_array[target_neuron_ids]
-            print(model.W.shape, grad_per_edge.shape, slope_per_edge.shape)
+        corrected_W = -model.W / grad_per_edge * slope_per_edge[:,None] * delta_t
 
-            corrected_W = -model.W / grad_per_edge * slope_per_edge[:,None]
-
-            # Plot 6: Weight comparison using model.W and gt_weights
-            fig = plt.figure(figsize=(8, 8))
-            learned_weights = to_numpy(corrected_W.squeeze())
-            true_weights = to_numpy(gt_weights)
-            plt.scatter(true_weights, learned_weights, c=mc, s=0.1, alpha=0.1)
-            lin_fit, lin_fitv = curve_fit(linear_model, true_weights, learned_weights)
-            residuals = learned_weights - linear_model(true_weights, *lin_fit)
-            ss_res = np.sum(residuals ** 2)
-            ss_tot = np.sum((learned_weights - np.mean(learned_weights)) ** 2)
-            r_squared = 1 - (ss_res / ss_tot)
-            plt.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}',
-                     transform=plt.gca().transAxes, verticalalignment='top', fontsize=12)
-            plt.xlabel('true $W_{ij}$')
-            plt.ylabel('learned $W_{ij}$')
-            plt.tight_layout()
-            plt.savefig(f'{log_dir}/results/corrected_comparison_{epoch}.png', dpi=300)
-            plt.close()
-            print(f"second weights fit R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
-            logger.info(f"second weights fit R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
+        # Plot 6: Weight comparison using model.W and gt_weights
+        fig = plt.figure(figsize=(8, 8))
+        learned_weights = to_numpy(corrected_W.squeeze())
+        true_weights = to_numpy(gt_weights)
+        plt.scatter(true_weights, learned_weights, c=mc, s=0.1, alpha=0.1)
+        lin_fit, lin_fitv = curve_fit(linear_model, true_weights, learned_weights)
+        residuals = learned_weights - linear_model(true_weights, *lin_fit)
+        ss_res = np.sum(residuals ** 2)
+        ss_tot = np.sum((learned_weights - np.mean(learned_weights)) ** 2)
+        r_squared = 1 - (ss_res / ss_tot)
+        plt.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}',
+                 transform=plt.gca().transAxes, verticalalignment='top', fontsize=12)
+        plt.xlabel('true $W_{ij}$')
+        plt.ylabel('learned $W_{ij}$')
+        plt.tight_layout()
+        plt.savefig(f'{log_dir}/results/corrected_comparison_{epoch}.png', dpi=300)
+        plt.close()
+        print(f"second weights fit R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
+        logger.info(f"second weights fit R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
 
 
 
@@ -11270,7 +11267,7 @@ if __name__ == '__main__':
     # config_list = [ 'signal_CElegans_c14_4a', 'signal_CElegans_c14_4b', 'signal_CElegans_c14_4c',  'signal_CElegans_d1', 'signal_CElegans_d2', 'signal_CElegans_d3', ]
     # config_list = config_list = ['signal_CElegans_d2', 'signal_CElegans_d2a', 'signal_CElegans_d3', 'signal_CElegans_d3a', 'signal_CElegans_d3b']
 
-    # config_list = ['fly_N9_18_4_0','fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4', 'fly_N9_22_5','fly_N9_18_4_6','fly_N9_18_4_5','fly_N9_18_4_4','fly_N9_18_4_1','fly_N9_18_4_2','fly_N9_18_4_3']
+    config_list = ['fly_N9_18_4_0','fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4', 'fly_N9_22_5','fly_N9_18_4_6','fly_N9_18_4_5','fly_N9_18_4_4','fly_N9_18_4_1','fly_N9_18_4_2','fly_N9_18_4_3']
     # data_flyvis_compare(config_list, 'training.noise_model_level')
 
     # config_list = ['fly_N9_18_4_1', 'fly_N9_19_1', 'fly_N9_19_2', 'fly_N9_19_3', 'fly_N9_19_4', 'fly_N9_19_5', 'fly_N9_19_6', 'fly_N9_19_7', 'fly_N9_19_8', 'fly_N9_19_9']
@@ -11279,7 +11276,7 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_18_4_0','fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4', 'fly_N9_22_5', 'fly_N9_20_0', 'fly_N9_20_1', 'fly_N9_20_2', 'fly_N9_20_3', 'fly_N9_20_4', 'fly_N9_20_5', 'fly_N9_20_6']
     # data_flyvis_compare(config_list, 'simulation.n_extra_null_edges')
 
-    config_list = ['fly_N9_18_4_1']
+    # config_list = ['fly_N9_18_4_1']
 
     for config_file_ in config_list:
         print(' ')
@@ -11295,7 +11292,7 @@ if __name__ == '__main__':
         os.makedirs(folder_name, exist_ok=True)
         data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
 
-    # data_flyvis_compare(config_list, 'simulation.n_extra_null_edges')
+    data_flyvis_compare(config_list, 'training.noise_model_level')
 
 
 
