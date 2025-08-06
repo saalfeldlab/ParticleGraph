@@ -9,13 +9,13 @@ simulation:
 
     n_neurons: 13741
     n_input_neurons: 1736
-    n_neuron_types: 20
+    n_neuron_types: 65
     n_edges: 434112
     n_frames: 90720
     delta_t: 0.02
     baseline_value: 0
 
-    only_noise_visual_input: 0.01
+    only_noise_visual_input: 0.1
 
 graph_model:
     signal_model_name: 'PDE_N9_A'

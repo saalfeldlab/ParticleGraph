@@ -11298,7 +11298,7 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_18_4_0','fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4', 'fly_N9_22_5', 'fly_N9_20_0', 'fly_N9_20_1', 'fly_N9_20_2', 'fly_N9_20_3', 'fly_N9_20_4', 'fly_N9_20_5', 'fly_N9_20_6']
     # data_flyvis_compare(config_list, 'simulation.n_extra_null_edges')
 
-    config_list = ['fly_N9_18_4_1']
+    config_list = ['fly_N9_27_1','fly_N9_27_2']
 
     for config_file_ in config_list:
         print(' ')

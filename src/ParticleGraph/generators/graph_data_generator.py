@@ -3102,14 +3102,12 @@ def data_generate_fly_voltage(
     connectivity[edge_index[1], edge_index[0]] = p["w"]
     mask = (connectivity != 0).float()
 
-    print(f'p["tau_i"] {p["tau_i"].shape}')
-    torch.save(p["tau_i"], f"./graphs_data/{dataset_name}/taus.pt")
-
     if bSave:
         torch.save(mask, f"./graphs_data/{dataset_name}/mask.pt")
         torch.save(connectivity, f"./graphs_data/{dataset_name}/connectivity.pt")
         torch.save(p["w"], f"./graphs_data/{dataset_name}/weights.pt")
         torch.save(edge_index, f"graphs_data/{dataset_name}/edge_index.pt")
+        torch.save(p["tau_i"], f"./graphs_data/{dataset_name}/taus.pt")
 
     # plt.figure(figsize=(10, 10))
     # ax = sns.heatmap(to_numpy(connectivity), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},
@@ -3240,13 +3238,15 @@ def data_generate_fly_voltage(
             for frame_id in range(sequences.shape[0]):
                 frame = sequences[frame_id][None, None]
                 net.stimulus.add_input(frame)  # (1, 1, n_input_neurons)
+
                 x[:, 4] = net.stimulus().squeeze()
+
                 if noise_visual_input > 0:
                     x[:n_input_neurons, 4:5] = x[:n_input_neurons, 4:5] + torch.randn(
                         (n_input_neurons, 1), dtype=torch.float32, device=device
                     ) * noise_visual_input
-                # elif only_noise_visual_input > 0:
-                #     x[:n_input_neurons, 4:5] = torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * noise_visual_input
+                if only_noise_visual_input > 0:
+                    x[:n_input_neurons, 4:5] = torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * 10
 
                 dataset = pyg.data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
                 y = pde(dataset, has_field=False)

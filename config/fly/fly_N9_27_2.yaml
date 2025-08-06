@@ -9,7 +9,7 @@ simulation:
 
     n_neurons: 13741
     n_input_neurons: 1736
-    n_neuron_types: 20
+    n_neuron_types: 65
     n_edges: 434112
     n_extra_null_edges: 1000
     n_frames: 90720
