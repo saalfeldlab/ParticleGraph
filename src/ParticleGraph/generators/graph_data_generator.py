@@ -2978,6 +2978,7 @@ def data_generate_fly_voltage(
     run = 0
     n_extra_null_edges = simulation_config.n_extra_null_edges
     noise_visual_input = simulation_config.noise_visual_input
+    only_noise_visual_input = simulation_config.only_noise_visual_input
 
     os.makedirs("./graphs_data/fly", exist_ok=True)
     folder = f"./graphs_data/{dataset_name}/"
@@ -3100,6 +3101,9 @@ def data_generate_fly_voltage(
     )
     connectivity[edge_index[1], edge_index[0]] = p["w"]
     mask = (connectivity != 0).float()
+
+    print(f'p["tau_i"] {p["tau_i"].shape}')
+    torch.save(p["tau_i"], f"./graphs_data/{dataset_name}/taus.pt")
 
     if bSave:
         torch.save(mask, f"./graphs_data/{dataset_name}/mask.pt")
@@ -3241,6 +3245,8 @@ def data_generate_fly_voltage(
                     x[:n_input_neurons, 4:5] = x[:n_input_neurons, 4:5] + torch.randn(
                         (n_input_neurons, 1), dtype=torch.float32, device=device
                     ) * noise_visual_input
+                # elif only_noise_visual_input > 0:
+                #     x[:n_input_neurons, 4:5] = torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * noise_visual_input
 
                 dataset = pyg.data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
                 y = pde(dataset, has_field=False)

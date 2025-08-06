@@ -6748,6 +6748,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
     # Load data with new format
     connectivity = torch.load(f'./graphs_data/{dataset_name}/connectivity.pt', map_location=device)
     gt_weights = torch.load(f'./graphs_data/{dataset_name}/weights.pt', map_location=device)
+    gt_taus = torch.load(f'./graphs_data/{dataset_name}/taus.pt', map_location=device)
     edges = torch.load(f'./graphs_data/{dataset_name}/edge_index.pt', map_location=device)
     print(f'{edges.shape[1]} edges')
     logger.info(f'{edges.shape[1]} edges')
@@ -6969,7 +6970,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         plt.savefig(f"./{log_dir}/results/edge_functions_{epoch}.tif", dpi=300)
         plt.close()
 
-        # Plot 5: Phi function visualization (keep existing code)
+        # Plot 5: Phi function visualization
         func_list = []
         slopes_list = []
         fig = plt.figure(figsize=(8, 8))
@@ -6979,18 +6980,14 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
             with torch.no_grad():
                 func = model.lin_phi(in_features.float())
             func_list.append(func)
-
-            # Fit linear model to get slope
             rr_numpy = to_numpy(rr)
             func_numpy = to_numpy(func.squeeze())
             try:
                 lin_fit, _ = curve_fit(linear_model, rr_numpy, func_numpy)
                 slope = lin_fit[0]
             except:
-                # Fallback to simple linear regression if curve_fit fails
                 slope = np.polyfit(rr_numpy, func_numpy, 1)[0]
             slopes_list.append(slope)
-
             if (n % 20 == 0):
                 plt.plot(to_numpy(rr), to_numpy(func), 2,
                          color=cmap.color(to_numpy(type_list)[n].astype(int)),
@@ -7004,28 +7001,59 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         plt.figure(figsize=(12, 8))
         slopes_array = np.array(slopes_list)
         neuron_indices = np.arange(n_neurons)
-
         for n in range(n_types):
             type_mask = (to_numpy(type_list).squeeze() == n)  # Flatten to 1D
             if np.any(type_mask):
                 plt.scatter(neuron_indices[type_mask], slopes_array[type_mask],
                             c=colors_65[n], s=2, alpha=0.8)
-
-                # Add text label for each neuron type
                 if np.sum(type_mask) > 0:
                     mean_x = np.mean(neuron_indices[type_mask])
                     mean_y = np.mean(slopes_array[type_mask])
                     plt.text(mean_x, mean_y, index_to_name.get(n, f'T{n}'),
                              fontsize=8, ha='center', va='center')
-
         plt.xlabel('neuron index', fontsize=18)
-        plt.ylabel('phi function slope', fontsize=18)
+        plt.ylabel(r'phi function slope', fontsize=18)
         plt.title('phi function slopes by neuron type', fontsize=16)
         plt.xticks(fontsize=12)
         plt.yticks(fontsize=12)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/phi_slopes_{epoch}.png", dpi=300)
         plt.close()
+
+        # Plot 5c: Tau comparison (reconstructed vs ground truth)
+        # Calculate reconstructed tau as 1/slopes, handle division by zero
+        reconstructed_tau = np.where(slopes_array != 0, 1.0 / slopes_array, np.inf)
+        # Filter out infinite values for fitting
+        finite_mask = np.isfinite(reconstructed_tau)
+        if np.sum(finite_mask) > 0:
+            fig = plt.figure(figsize=(8, 8))
+            gt_taus_numpy = to_numpy(gt_taus[:n_neurons])
+            reconstructed_tau_filtered = -reconstructed_tau[finite_mask]
+            gt_taus_filtered = gt_taus_numpy[finite_mask]
+
+            plt.scatter(gt_taus_filtered, reconstructed_tau_filtered, c=mc, s=0.5, alpha=0.3)
+
+            # Fit linear model
+            lin_fit, lin_fitv = curve_fit(linear_model, gt_taus_filtered, reconstructed_tau_filtered)
+            residuals = reconstructed_tau_filtered - linear_model(gt_taus_filtered, *lin_fit)
+            ss_res = np.sum(residuals ** 2)
+            ss_tot = np.sum((reconstructed_tau_filtered - np.mean(reconstructed_tau_filtered)) ** 2)
+            r_squared = 1 - (ss_res / ss_tot)
+
+            plt.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}',
+                     transform=plt.gca().transAxes, verticalalignment='top', fontsize=12)
+            plt.xlabel(r'true $\tau_i$', fontsize=18)
+            plt.ylabel(r'reconstructed $\tau_i$', fontsize=18)
+            plt.tight_layout()
+            plt.savefig(f'{log_dir}/results/tau_comparison_{epoch}.png', dpi=300)
+            plt.close()
+
+            print(f"tau reconstruction R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
+            logger.info(f"tau reconstruction R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
+        else:
+            print("Warning: All reconstructed tau values are infinite (slopes are zero)")
+            logger.info("Warning: All reconstructed tau values are infinite (slopes are zero)")
+
 
         if False:
             print('functionnal clustering results')
@@ -7190,7 +7218,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         slopes_array = torch.tensor(slopes_array, dtype=torch.float32, device=device)
         slope_per_edge = slopes_array[target_neuron_ids]
 
-        corrected_W = -model.W / grad_per_edge * slope_per_edge[:,None] * delta_t
+        corrected_W = -model.W / grad_per_edge * slope_per_edge[:,None]
 
         # Plot 6: Weight comparison using model.W and gt_weights
         fig = plt.figure(figsize=(8, 8))
@@ -7211,12 +7239,6 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         plt.close()
         print(f"second weights fit R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
         logger.info(f"second weights fit R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
-
-
-
-
-
-
 
 
 def data_flyvis_compare(config_list, varied_parameter):
@@ -11276,7 +11298,7 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_18_4_0','fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4', 'fly_N9_22_5', 'fly_N9_20_0', 'fly_N9_20_1', 'fly_N9_20_2', 'fly_N9_20_3', 'fly_N9_20_4', 'fly_N9_20_5', 'fly_N9_20_6']
     # data_flyvis_compare(config_list, 'simulation.n_extra_null_edges')
 
-    # config_list = ['fly_N9_18_4_1']
+    config_list = ['fly_N9_18_4_1']
 
     for config_file_ in config_list:
         print(' ')
@@ -11292,7 +11314,7 @@ if __name__ == '__main__':
         os.makedirs(folder_name, exist_ok=True)
         data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
 
-    data_flyvis_compare(config_list, 'training.noise_model_level')
+    # data_flyvis_compare(config_list, 'training.noise_model_level')
 
 
 

@@ -75,7 +75,7 @@ if __name__ == "__main__":
         # config_list = ['signal_CElegans_c14_4']
         # config_list = ['signal_N5_v11_bis']
         # config_list = ['signal_fig_supp6_4']
-        config_list = ['fly_N9_18_4_1']
+        config_list = ['fly_N9_28_1']
         # config_list = ['signal_N5_l4','signal_N5_l5']
 
     for config_file_ in config_list:
@@ -99,7 +99,7 @@ if __name__ == "__main__":
                 style="black color",
                 alpha=1,
                 erase=False,
-                bSave=False,
+                bSave=True,
                 step=5,
                 best_model=None
             )  # config.simulation.n_frames // 100)
