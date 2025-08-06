@@ -7222,7 +7222,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         slopes_array = torch.tensor(slopes_array, dtype=torch.float32, device=device)
         slope_per_edge = slopes_array[target_neuron_ids]
 
-        corrected_W = -model.W / grad_per_edge * slope_per_edge[:,None]
+        corrected_W = -model.W / slope_per_edge[:,None] * grad_per_edge
 
         # Plot 6: Weight comparison using model.W and gt_weights
         fig = plt.figure(figsize=(8, 8))

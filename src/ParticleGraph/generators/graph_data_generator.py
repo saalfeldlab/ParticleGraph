@@ -3108,6 +3108,7 @@ def data_generate_fly_voltage(
         torch.save(p["w"], f"./graphs_data/{dataset_name}/weights.pt")
         torch.save(edge_index, f"graphs_data/{dataset_name}/edge_index.pt")
         torch.save(p["tau_i"], f"./graphs_data/{dataset_name}/taus.pt")
+        torch.save(p["V_i_rest"], f"./graphs_data/{dataset_name}/V_i_rest.pt")
 
     # plt.figure(figsize=(10, 10))
     # ax = sns.heatmap(to_numpy(connectivity), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},
@@ -3246,7 +3247,7 @@ def data_generate_fly_voltage(
                         (n_input_neurons, 1), dtype=torch.float32, device=device
                     ) * noise_visual_input
                 if only_noise_visual_input > 0:
-                    x[:n_input_neurons, 4:5] = torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * 10
+                    x[:n_input_neurons, 4:5] = torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input
 
                 dataset = pyg.data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
                 y = pde(dataset, has_field=False)
