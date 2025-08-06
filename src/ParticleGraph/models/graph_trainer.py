@@ -3979,13 +3979,7 @@ def data_train_flyvis(config, erase, best_model, device):
                             pred_msg = model.lin_phi(in_features_modified)
                             msg = in_features[:,model_config.embedding_dim+1].clone().detach()
                             loss = loss + (torch.tanh(pred_msg / 0.1) - torch.tanh(msg / 0.1)).norm(2) * coeff_update_msg_sign
-                    # Enable gradients for direct derivative computation
-                    # in_features.requires_grad_(True)
-                    # pred = model.lin_phi(in_features)
-                    # grad_u = torch.autograd.grad(pred.sum(), in_features, retain_graph=True)[0][:, 0]
-                    # grad_msg = torch.autograd.grad(pred.sum(), in_features)[0][:, model_config.embedding_dim]
-                    # loss += torch.relu(grad_u[ids_batch]).norm(2) * coeff_update_u_diff
-                    # loss += torch.relu(-grad_msg[ids_batch]).norm(2) * coeff_update_msg_diff
+
                     else:
                         pred = model(batch, data_id=data_id, mask=mask_batch)
 

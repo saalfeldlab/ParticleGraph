@@ -6815,16 +6815,17 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         logger.info(f'net: {net}')
 
         # Plot 1: Loss curve
-        fig = plt.figure(figsize=(8, 6))
-        list_loss = torch.load(os.path.join(log_dir, 'loss.pt'))
-        plt.plot(list_loss, color=mc, linewidth=2)
-        plt.xlim([0, len(list_loss)])
-        plt.ylabel('Loss')
-        plt.xlabel('Epochs')
-        plt.title('Training Loss')
-        plt.tight_layout()
-        plt.savefig(f'{log_dir}/results/loss.tif', dpi=300)
-        plt.close()
+        if os.path.exists(os.path.join(log_dir, 'loss.pt')):
+            fig = plt.figure(figsize=(8, 6))
+            list_loss = torch.load(os.path.join(log_dir, 'loss.pt'))
+            plt.plot(list_loss, color=mc, linewidth=2)
+            plt.xlim([0, len(list_loss)])
+            plt.ylabel('Loss')
+            plt.xlabel('Epochs')
+            plt.title('Training Loss')
+            plt.tight_layout()
+            plt.savefig(f'{log_dir}/results/loss.tif', dpi=300)
+            plt.close()
 
         # Plot 2: Embedding using model.a
         fig = plt.figure(figsize=(8, 8))
@@ -6840,7 +6841,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         plt.savefig(f'{log_dir}/results/embedding_{epoch}.png', dpi=300)
         plt.close()
 
-        if True:
+        if False:
             print('embedding clustering results')
             for eps in [0.005, 0.0075, 0.01, 0.02, 0.05]:
                 results = clustering_evaluation(model, type_list, eps=eps)
@@ -7024,7 +7025,6 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
             plt.figure(figsize=(12, 6))
             grad_values = to_numpy(grad_msg[0:n_neurons]).squeeze()  # Flatten to 1D
             neuron_indices = np.arange(n_neurons)
-
             # Create scatter plot colored by neuron type
             for n in range(n_types):
                 type_mask = (to_numpy(type_list).squeeze() == n)  # Flatten to 1D

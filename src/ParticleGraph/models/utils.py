@@ -263,6 +263,7 @@ def plot_training_flyvis(model, config, epoch, N, log_dir, device, cmap, type_li
 
     # Plot 2: Weight comparison scatter plot
     fig = plt.figure(figsize=(8, 8))
+
     plt.scatter(to_numpy(gt_weights), to_numpy(model.W.squeeze()), s=0.1, c='k', alpha=0.01)
     plt.xlabel(r'true $W_{ij}$', fontsize=18)
     plt.ylabel(r'learned $W_{ij}$', fontsize=18)
