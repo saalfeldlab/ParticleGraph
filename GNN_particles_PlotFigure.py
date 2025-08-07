@@ -7302,6 +7302,8 @@ def data_flyvis_compare(config_list, varied_parameter):
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
+    plt.style.use('ggplot')  # Use ggplot style for better aesthetics
+
     results = []
 
     for config_file_ in config_list:
@@ -7335,9 +7337,17 @@ def data_flyvis_compare(config_list, varied_parameter):
             with open(results_log_path, 'r') as f:
                 content = f.read()
 
-            # Extract R²
+            # Extract R² from second weights fit
             r2_match = re.search(r'second weights fit\s+R²:\s*([\d.-]+)', content)
             r2 = float(r2_match.group(1)) if r2_match else None
+
+            # Extract tau reconstruction R²
+            tau_r2_match = re.search(r'tau reconstruction R²:\s*([\d.-]+)', content)
+            tau_r2 = float(tau_r2_match.group(1)) if tau_r2_match else None
+
+            # Extract V_rest reconstruction R²
+            vrest_r2_match = re.search(r'V_rest reconstruction R²:\s*([\d.-]+)', content)
+            vrest_r2 = float(vrest_r2_match.group(1)) if vrest_r2_match else None
 
             # Extract best clustering accuracy and corresponding eps
             clustering_results = []
@@ -7363,6 +7373,8 @@ def data_flyvis_compare(config_list, varied_parameter):
                 'config': config_file_,
                 'param_value': param_value,
                 'r2': r2,
+                'tau_r2': tau_r2,
+                'vrest_r2': vrest_r2,
                 'best_clustering_acc': best_clustering_acc,
                 'best_eps': best_eps
             })
@@ -7373,13 +7385,18 @@ def data_flyvis_compare(config_list, varied_parameter):
     # Group results by parameter value
     grouped_results = defaultdict(list)
     for r in results:
-        if r['r2'] is not None and r['best_clustering_acc'] is not None and r['best_eps'] is not None:
+        # Only include results with all key metrics available
+        if (r['r2'] is not None and r['tau_r2'] is not None and
+            r['vrest_r2'] is not None and r['best_clustering_acc'] is not None and
+            r['best_eps'] is not None):
             grouped_results[r['param_value']].append(r)
 
     # Calculate statistics for each parameter value
     summary_results = []
     for param_val, group in grouped_results.items():
         r2_values = [r['r2'] for r in group]
+        tau_r2_values = [r['tau_r2'] for r in group]
+        vrest_r2_values = [r['vrest_r2'] for r in group]
         acc_values = [r['best_clustering_acc'] for r in group]
         eps_values = [r['best_eps'] for r in group]
         configs = [r['config'] for r in group]
@@ -7396,20 +7413,32 @@ def data_flyvis_compare(config_list, varied_parameter):
 
         if n_configs == 1:
             r2_str = f"{r2_values[0]:.4f}"
+            tau_r2_str = f"{tau_r2_values[0]:.4f}"
+            vrest_r2_str = f"{vrest_r2_values[0]:.4f}"
             acc_str = f"{acc_values[0]:.3f}"
         else:
             r2_mean, r2_std = np.mean(r2_values), np.std(r2_values)
+            tau_r2_mean, tau_r2_std = np.mean(tau_r2_values), np.std(tau_r2_values)
+            vrest_r2_mean, vrest_r2_std = np.mean(vrest_r2_values), np.std(vrest_r2_values)
             acc_mean, acc_std = np.mean(acc_values), np.std(acc_values)
             r2_str = f"{r2_mean:.4f}±{r2_std:.4f}"
+            tau_r2_str = f"{tau_r2_mean:.4f}±{tau_r2_std:.4f}"
+            vrest_r2_str = f"{vrest_r2_mean:.4f}±{vrest_r2_std:.4f}"
             acc_str = f"{acc_mean:.3f}±{acc_std:.3f}"
 
         summary_results.append({
             'param_value': param_val,
             'r2_values': r2_values,
+            'tau_r2_values': tau_r2_values,
+            'vrest_r2_values': vrest_r2_values,
             'acc_values': acc_values,
             'r2_mean': np.mean(r2_values),
+            'tau_r2_mean': np.mean(tau_r2_values),
+            'vrest_r2_mean': np.mean(vrest_r2_values),
             'acc_mean': np.mean(acc_values),
             'r2_str': r2_str,
+            'tau_r2_str': tau_r2_str,
+            'vrest_r2_str': vrest_r2_str,
             'acc_str': acc_str,
             'eps_str': eps_str,
             'n_configs': n_configs,
@@ -7422,55 +7451,71 @@ def data_flyvis_compare(config_list, varied_parameter):
     # Print comparison summary
     param_display_name = varied_parameter.split('.')[1]  # Show just parameter name in table
     print(f"\n=== parameter comparison: {varied_parameter} ===")
-    print(f"{param_display_name:<15} {'R²':<15} {'clustering acc':<18} {'best eps':<10} {'n_configs':<10}")
-    print("-" * 70)
+    print(f"{param_display_name:<15} {'weights R²':<15} {'tau R²':<15} {'V_rest R²':<15} {'clustering acc':<18} {'best eps':<10} {'n_configs':<10}")
+    print("-" * 100)
 
     for r in summary_results:
-        print(f"{r['param_value']:<15} {r['r2_str']:<15} {r['acc_str']:<18} {r['eps_str']:<10} {r['n_configs']:<10}")
+        print(f"{r['param_value']:<15} {r['r2_str']:<15} {r['tau_r2_str']:<15} {r['vrest_r2_str']:<15} {r['acc_str']:<18} {r['eps_str']:<10} {r['n_configs']:<10}")
 
-    print("-" * 70)
+    print("-" * 100)
 
     # Find and print best results
     if summary_results:
         best_r2_result = max(summary_results, key=lambda x: x['r2_mean'])
+        best_tau_r2_result = max(summary_results, key=lambda x: x['tau_r2_mean'])
+        best_vrest_r2_result = max(summary_results, key=lambda x: x['vrest_r2_mean'])
         best_acc_result = max(summary_results, key=lambda x: x['acc_mean'])
 
-        print(f"\n🏆 best mean R²: {best_r2_result['r2_str']}")
+        print(f"\n🏆 best mean weights R²: {best_r2_result['r2_str']}")
         print(f"   {param_display_name}: {best_r2_result['param_value']}, n={best_r2_result['n_configs']}")
+
+        print(f"\n⚡ best mean tau R²: {best_tau_r2_result['tau_r2_str']}")
+        print(f"   {param_display_name}: {best_tau_r2_result['param_value']}, n={best_tau_r2_result['n_configs']}")
+
+        print(f"\n🔋 best mean V_rest R²: {best_vrest_r2_result['vrest_r2_str']}")
+        print(f"   {param_display_name}: {best_vrest_r2_result['param_value']}, n={best_vrest_r2_result['n_configs']}")
 
         print(f"\n🎯 best mean clustering accuracy: {best_acc_result['acc_str']}")
         print(f"   {param_display_name}: {best_acc_result['param_value']}, n={best_acc_result['n_configs']}")
 
-    print("\n" + "=" * 70)
+    print("\n" + "=" * 100)
 
     param_display_name = varied_parameter.split('.')[1]
 
     # Prepare data for plotting
     param_values_str = [str(r['param_value']) for r in summary_results]
     r2_means = [r['r2_mean'] for r in summary_results]
+    tau_r2_means = [r['tau_r2_mean'] for r in summary_results]
+    vrest_r2_means = [r['vrest_r2_mean'] for r in summary_results]
     acc_means = [r['acc_mean'] for r in summary_results]
 
     # Calculate error bars (std for n>1, None for n=1)
     r2_errors = []
+    tau_r2_errors = []
+    vrest_r2_errors = []
     acc_errors = []
     for r in summary_results:
         if r['n_configs'] > 1:
             r2_errors.append(np.std(r['r2_values']))
+            tau_r2_errors.append(np.std(r['tau_r2_values']))
+            vrest_r2_errors.append(np.std(r['vrest_r2_values']))
             acc_errors.append(np.std(r['acc_values']))
         else:
             r2_errors.append(0)  # No error bar for single values
+            tau_r2_errors.append(0)
+            vrest_r2_errors.append(0)
             acc_errors.append(0)
 
-    # Create figure with two panels
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    # Create figure with four panels (2x2)
+    fig, ((ax1, ax4), (ax2, ax3)) = plt.subplots(2, 2, figsize=(15, 12))
 
-    # R² panel
+    # Weights R² panel
     ax1.errorbar(param_values_str, r2_means, yerr=r2_errors,
-                 fmt='o-', capsize=5, capthick=2, markersize=8, linewidth=2)
+                 fmt='o-', capsize=5, capthick=2, markersize=8, linewidth=2, color='blue')
     ax1.set_xlabel(param_display_name, fontsize=12)
-    ax1.set_ylabel('R²', fontsize=12)
-    ax1.set_title('R² vs ' + param_display_name, fontsize=14)
-    ax1.set_ylim(0, 1.2)
+    ax1.set_ylabel('weights R²', fontsize=12)
+    ax1.set_title('weights R² vs ' + param_display_name, fontsize=14)
+    ax1.set_ylim(0, 1.1)
     ax1.grid(True, alpha=0.3)
 
     # Add sample size annotations
@@ -7478,46 +7523,92 @@ def data_flyvis_compare(config_list, varied_parameter):
         if n > 1:
             ax1.text(x, y + r2_errors[i] + 0.02, f'n={n}', ha='center', va='bottom', fontsize=8)
 
+    # Tau R² panel
+    ax2.errorbar(param_values_str, tau_r2_means, yerr=tau_r2_errors,
+                 fmt='s-', capsize=5, capthick=2, markersize=8, linewidth=2, color='green')
+    ax2.set_xlabel(param_display_name, fontsize=12)
+    ax2.set_ylabel('tau R²', fontsize=12)
+    ax2.set_title('tau R² vs ' + param_display_name, fontsize=14)
+    ax2.set_ylim(0, 1.1)
+    ax2.grid(True, alpha=0.3)
+
+    # Add sample size annotations
+    for i, (x, y, n) in enumerate(zip(param_values_str, tau_r2_means, [r['n_configs'] for r in summary_results])):
+        if n > 1:
+            ax2.text(x, y + tau_r2_errors[i] + 0.02, f'n={n}', ha='center', va='bottom', fontsize=8)
+
+    # V_rest R² panel
+    ax3.errorbar(param_values_str, vrest_r2_means, yerr=vrest_r2_errors,
+                 fmt='^-', capsize=5, capthick=2, markersize=8, linewidth=2, color='red')
+    ax3.set_xlabel(param_display_name, fontsize=12)
+    ax3.set_ylabel('V_rest R²', fontsize=12)
+    ax3.set_title('V_rest R² vs ' + param_display_name, fontsize=14)
+    ax3.set_ylim(0, 1.1)
+    ax3.grid(True, alpha=0.3)
+
+    # Add sample size annotations
+    for i, (x, y, n) in enumerate(zip(param_values_str, vrest_r2_means, [r['n_configs'] for r in summary_results])):
+        if n > 1:
+            ax3.text(x, y + vrest_r2_errors[i] + 0.02, f'n={n}', ha='center', va='bottom', fontsize=8)
+
     # Clustering accuracy panel (convert to percentage)
     acc_means_pct = [acc * 100 for acc in acc_means]
     acc_errors_pct = [err * 100 for err in acc_errors]
 
-    ax2.errorbar(param_values_str, acc_means_pct, yerr=acc_errors_pct,
-                 fmt='s-', capsize=5, capthick=2, markersize=8, linewidth=2, color='orange')
-    ax2.set_xlabel(param_display_name, fontsize=12)
-    ax2.set_ylabel('clustering accuracy (%)', fontsize=12)
-    ax2.set_title('best clustering accuracy vs ' + param_display_name, fontsize=14)
-    ax2.set_ylim(0, 100)
-    ax2.grid(True, alpha=0.3)
+    ax4.errorbar(param_values_str, acc_means_pct, yerr=acc_errors_pct,
+                 fmt='D-', capsize=5, capthick=2, markersize=8, linewidth=2, color='orange')
+    ax4.set_xlabel(param_display_name, fontsize=12)
+    ax4.set_ylabel('clustering accuracy', fontsize=12)
+    ax4.set_title('best clustering accuracy vs ' + param_display_name, fontsize=14)
+    ax4.set_ylim(0, 100)
+    ax4.grid(True, alpha=0.3)
 
     # Add sample size annotations
     for i, (x, y, n) in enumerate(zip(param_values_str, acc_means_pct, [r['n_configs'] for r in summary_results])):
         if n > 1:
-            ax2.text(x, y + acc_errors_pct[i] + 2, f'n={n}', ha='center', va='bottom', fontsize=8)
+            ax4.text(x, y + acc_errors_pct[i] + 2, f'n={n}', ha='center', va='bottom', fontsize=8)
 
     plt.tight_layout()
 
     # Add best results text annotations on top of best points
     if summary_results:
         best_r2_result = max(summary_results, key=lambda x: x['r2_mean'])
+        best_tau_r2_result = max(summary_results, key=lambda x: x['tau_r2_mean'])
+        best_vrest_r2_result = max(summary_results, key=lambda x: x['vrest_r2_mean'])
         best_acc_result = max(summary_results, key=lambda x: x['acc_mean'])
 
         # Find indices of best results
         best_r2_idx = next(
             i for i, r in enumerate(summary_results) if r['param_value'] == best_r2_result['param_value'])
+        best_tau_r2_idx = next(
+            i for i, r in enumerate(summary_results) if r['param_value'] == best_tau_r2_result['param_value'])
+        best_vrest_r2_idx = next(
+            i for i, r in enumerate(summary_results) if r['param_value'] == best_vrest_r2_result['param_value'])
         best_acc_idx = next(
             i for i, r in enumerate(summary_results) if r['param_value'] == best_acc_result['param_value'])
 
-        # R² panel annotation on top of best point
+        # Weights R² panel annotation
         best_r2_x = param_values_str[best_r2_idx]
         best_r2_y = r2_means[best_r2_idx]
         ax1.text(best_r2_x, best_r2_y + r2_errors[best_r2_idx] + 0.05, f"{best_r2_result['r2_mean']:.3f}",
                  ha='center', va='bottom', fontsize=10)
 
-        # Accuracy panel annotation on top of best point
+        # Tau R² panel annotation
+        best_tau_r2_x = param_values_str[best_tau_r2_idx]
+        best_tau_r2_y = tau_r2_means[best_tau_r2_idx]
+        ax2.text(best_tau_r2_x, best_tau_r2_y + tau_r2_errors[best_tau_r2_idx] + 0.05, f"{best_tau_r2_result['tau_r2_mean']:.3f}",
+                 ha='center', va='bottom', fontsize=10)
+
+        # V_rest R² panel annotation
+        best_vrest_r2_x = param_values_str[best_vrest_r2_idx]
+        best_vrest_r2_y = vrest_r2_means[best_vrest_r2_idx]
+        ax3.text(best_vrest_r2_x, best_vrest_r2_y + vrest_r2_errors[best_vrest_r2_idx] + 0.05, f"{best_vrest_r2_result['vrest_r2_mean']:.3f}",
+                 ha='center', va='bottom', fontsize=10)
+
+        # Clustering accuracy panel annotation
         best_acc_x = param_values_str[best_acc_idx]
         best_acc_y = acc_means_pct[best_acc_idx]
-        ax2.text(best_acc_x, best_acc_y + acc_errors_pct[best_acc_idx] + 3, f"{best_acc_result['acc_mean'] * 100:.1f}%",
+        ax4.text(best_acc_x, best_acc_y + acc_errors_pct[best_acc_idx] + 3, f"{best_acc_result['acc_mean'] * 100:.1f}%",
                  ha='center', va='bottom', fontsize=10)
 
     # Save figure
@@ -11337,23 +11428,31 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_18_4_0','fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4', 'fly_N9_22_5', 'fly_N9_20_0', 'fly_N9_20_1', 'fly_N9_20_2', 'fly_N9_20_3', 'fly_N9_20_4', 'fly_N9_20_5', 'fly_N9_20_6']
     # data_flyvis_compare(config_list, 'simulation.n_extra_null_edges')
 
-    config_list = ['fly_N9_28_2','fly_N9_28_3','fly_N9_28_4','fly_N9_28_5', 'fly_N9_28_6', 'fly_N9_28_7', 'fly_N9_28_8', 'fly_N9_28_9', 'fly_N9_28_10', 'fly_N9_28_11']
+    # config_list = ['fly_N9_28_2','fly_N9_28_3','fly_N9_28_4','fly_N9_28_5', 'fly_N9_28_6', 'fly_N9_28_7', 'fly_N9_28_8', 'fly_N9_28_9', 'fly_N9_28_10', 'fly_N9_28_11']
+    # data_flyvis_compare(config_list, 'simulation.only_noise_visual_input')
 
-    # for config_file_ in config_list:
-    #     print(' ')
-    #
-    #     config_file, pre_folder = add_pre_folder(config_file_)
-    #     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-    #     config.dataset = pre_folder + config.dataset
-    #     config.config_file = pre_folder + config_file_
-    #
-    #     print(f'config_file  {config.config_file}')
-    #
-    #     folder_name = './log/' + pre_folder + '/tmp_results/'
-    #     os.makedirs(folder_name, exist_ok=True)
-    #     data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
+    # config_list = ['fly_N9_18_4_7']
+    # config_list = ['fly_N9_18_4_1_alt_prtrnd_model']
+    # config_list = ['fly_N9_29_3']
 
-    data_flyvis_compare(config_list, 'simulation.only_noise_visual_input')
+    config_list = ['fly_N9_24_1', 'fly_N9_24_2', 'fly_N9_24_3', 'fly_N9_24_4']
+
+
+    for config_file_ in config_list:
+        print(' ')
+
+        config_file, pre_folder = add_pre_folder(config_file_)
+        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+        config.dataset = pre_folder + config.dataset
+        config.config_file = pre_folder + config_file_
+
+        print(f'config_file  {config.config_file}')
+
+        folder_name = './log/' + pre_folder + '/tmp_results/'
+        os.makedirs(folder_name, exist_ok=True)
+        data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
+
+    data_flyvis_compare(config_list, 'training.batchsize')
 
 
 
