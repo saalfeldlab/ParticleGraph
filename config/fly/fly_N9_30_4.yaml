@@ -1,4 +1,4 @@
-description: 'small MLP, no extra null edges, noise_model_level: 5E-1 batchsize:16'
+description: 'small MLP, no extra null edges, noise_model_level: 5E-1 hidden_dim_nnr: 128'
 dataset: 'fly_N9_18_4_1'
 
 simulation:
@@ -34,7 +34,7 @@ graph_model:
 
     input_size_nnr: 1
     n_layers_nnr: 5
-    hidden_dim_nnr: 32
+    hidden_dim_nnr: 128
     output_size_nnr: 1736
     outermost_linear_nnr: True
     omega: 30
@@ -55,7 +55,7 @@ training:
     device: 'auto'
 
     recursive_loop: 1
-    batch_size: 16
+    batch_size: 1
     batch_ratio: 1
 
     sparsity: 'none'

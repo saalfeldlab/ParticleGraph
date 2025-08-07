@@ -251,15 +251,13 @@ def plot_training_flyvis(x_list, model, config, epoch, N, log_dir, device, cmap,
         fps = 10  # frames per second for the video
         metadata = dict(title='Field Evolution', artist='Matplotlib', comment='NN Reconstruction over time')
         writer = FFMpegWriter(fps=fps, metadata=metadata)
-
-        from matplotlib.animation import FFMpegWriter
         fig = plt.figure(figsize=(8, 4))
 
         # Start the writer context
-        if os.path.exists(f"./{log_dir}/tmp_training/field_movie_{epoch}_{N}.mp4"):
-            os.remove(f"./{log_dir}/tmp_training/field_movie_{epoch}_{N}.mp4")
-        with writer.saving(fig, f"./{log_dir}/tmp_training/field_movie_{epoch}_{N}.mp4", dpi=100):
-            for k in trange(0, 2000, 10):
+        if os.path.exists(f"./{log_dir}/tmp_training/field/field_movie_{epoch}_{N}.mp4"):
+            os.remove(f"./{log_dir}/tmp_training/field/field_movie_{epoch}_{N}.mp4")
+        with writer.saving(fig, f"./{log_dir}/tmp_training/field/field_movie_{epoch}_{N}.mp4", dpi=100):
+            for k in range(0, 2000, 10):
 
                 # Inference and data extraction
                 reconstructed_field = to_numpy(

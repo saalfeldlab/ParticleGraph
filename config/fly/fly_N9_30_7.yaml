@@ -1,4 +1,4 @@
-description: 'small MLP, no extra null edges, noise_model_level: 5E-1 hidden_dim_nnr: 256'
+description: 'small MLP, no extra null edges, noise_model_level: 5E-1 hidden_dim_nnr: 128 n_layers_nnr: 8'
 dataset: 'fly_N9_18_4_1'
 
 simulation:
@@ -33,8 +33,8 @@ graph_model:
     embedding_dim: 2
 
     input_size_nnr: 1
-    n_layers_nnr: 5
-    hidden_dim_nnr: 256
+    n_layers_nnr: 8
+    hidden_dim_nnr: 128
     output_size_nnr: 1736
     outermost_linear_nnr: True
     omega: 30
