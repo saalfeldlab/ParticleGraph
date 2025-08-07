@@ -3678,8 +3678,6 @@ def data_train_flyvis(config, erase, best_model, device):
     n_edges = simulation_config.n_edges
     n_extra_null_edges = simulation_config.n_extra_null_edges
 
-
-
     if config.training.seed != 42:
         torch.random.fork_rng(devices=device)
         torch.random.manual_seed(config.training.seed)
@@ -3689,6 +3687,8 @@ def data_train_flyvis(config, erase, best_model, device):
     if field_type == 'visual':
         has_visual_field = True
         print('train with visual field NNR')
+    else:
+        has_visual_field = False
 
 
     replace_with_cluster = 'replace' in train_config.sparsity
