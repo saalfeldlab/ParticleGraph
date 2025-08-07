@@ -1,4 +1,4 @@
-description: 'small MLP, no extra null edges, noise_model_level: 0 only_noise_visual_input: 1.0'
+description: 'small MLP, no extra null edges, noise_model_level: 0 only_noise_visual_input: 0.75 seed: 98'
 dataset: 'fly_N9_28_7'
 
 simulation:
@@ -15,9 +15,9 @@ simulation:
     delta_t: 0.02
     baseline_value: 0
 
-    seed: 35
+    only_noise_visual_input: 0.75
 
-    only_noise_visual_input: 1.0
+    seed: 98
 
 graph_model:
     signal_model_name: 'PDE_N9_A'

@@ -3235,7 +3235,10 @@ def data_generate_fly_voltage(
     it = 0
     with torch.no_grad():
         for data in tqdm(stimulus_dataset):
+            # if simulation_config.simulation_initial_state:
             x[:, 3] = initial_state
+            if only_noise_visual_input > 0:
+                x[:n_input_neurons, 4:5] = torch.clamp(torch.relu(0.5 + torch.rand((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input / 2), 0 ,1)
             sequences = data["lum"]
             for frame_id in range(sequences.shape[0]):
                 frame = sequences[frame_id][None, None]
@@ -3243,11 +3246,13 @@ def data_generate_fly_voltage(
 
                 if only_noise_visual_input > 0:
                     if (only_noise_visual_input_type == "") | (it ==0):
-                        x[:n_input_neurons, 4:5] = torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input
+                        x[:n_input_neurons, 4:5] = torch.relu(0.5 + torch.rand((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input / 2)
                     elif only_noise_visual_input_type == "3/4":
-                        x[:n_input_neurons, 4:5] = x[:n_input_neurons, 4:5] * 3/4 + 1/4 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input
+                        x[:n_input_neurons, 4:5] = torch.clamp(x[:n_input_neurons, 4:5] * 3/4 + 1/4 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input, 0 , 1)
                     elif only_noise_visual_input_type == "9/10":
-                        x[:n_input_neurons, 4:5] = x[:n_input_neurons, 4:5] * 9/10 + 1/10 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input
+                        x[:n_input_neurons, 4:5] = torch.clamp(x[:n_input_neurons, 4:5] * 9/10 + 1/10 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input, 0 , 1)
+                    elif only_noise_visual_input_type == "19/20":
+                        x[:n_input_neurons, 4:5] = torch.clamp(x[:n_input_neurons, 4:5] * 19/20 + 1/20 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input, 0 , 1)
                 else:
                     x[:, 4] = net.stimulus().squeeze()
                     if noise_visual_input > 0:
@@ -3282,43 +3287,6 @@ def data_generate_fly_voltage(
 
                     matplotlib.rcParams["savefig.pad_inches"] = 0
                     num = f"{it:06}"
-
-                    plt.figure(figsize=(10, 10))
-                    plt.axis("off")
-                    plt.scatter(
-                        to_numpy(X1[n_input_neurons:, 0]),
-                        to_numpy(X1[n_input_neurons:, 1]),
-                        s=8,
-                        c=to_numpy(x[n_input_neurons:, 3]),
-                        cmap="viridis",
-                        vmin=-2,
-                        vmax=2,
-                    )
-                    # cbar = plt.colorbar()
-                    # cbar.ax.yaxis.set_tick_params(labelsize=8)
-                    plt.xticks([])
-                    plt.yticks([])
-                    ax = plt.subplot(771, frame_on=True)
-                    plt.axis("off")
-                    plt.scatter(
-                        to_numpy(X1[:n_input_neurons, 0]),
-                        to_numpy(X1[:n_input_neurons, 1]),
-                        s=32,
-                        c=to_numpy(x[:n_input_neurons, 4]),
-                        cmap="viridis",
-                        vmin=0,
-                        vmax=1.5,
-                    )
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.tight_layout()
-                    # plt.savefig(
-                    #     f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80
-                    # )
-                    plt.close()
-
-
-
 
                     # Define neuron_types at the beginning for use throughout visualization
                     neuron_types = to_numpy(x[:, 6]).astype(int)  # Individual cell type indices (0-64)
@@ -3376,7 +3344,7 @@ def data_generate_fly_voltage(
                                 c=to_numpy(x[:n_input_neurons, 4]),
                                 cmap="viridis",
                                 vmin=0,
-                                vmax=1.5,
+                                vmax=1.05,
                                 marker='h',  # hexagonal markers
                                 alpha=1.0,
                                 linewidths=0.0,
@@ -3448,7 +3416,6 @@ def data_generate_fly_voltage(
 
                     plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
                     plt.close()
-
 
                 it = it + 1
 

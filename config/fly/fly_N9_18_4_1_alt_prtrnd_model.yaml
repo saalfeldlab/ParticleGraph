@@ -1,4 +1,4 @@
-description: 'with 20 neuron types per function,     noise_model_level: 5E-1    smaller MLP  redo 18_4'
+description: 'with 20 neuron types per function,     noise_model_level: 0    smaller MLP'
 dataset: 'fly_N9_18_4_1_alt_prtrnd_model'
 
 simulation:
@@ -61,7 +61,8 @@ training:
     learning_rate_embedding_start: 5.0E-3
 
     measurement_noise_level: 0
-    noise_model_level: 5.0E-1
+    noise_model_level: 0
+
     coeff_edge_diff: 500
     coeff_update_u_diff: 0
     coeff_update_msg_diff: 0

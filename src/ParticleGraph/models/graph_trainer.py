@@ -3971,10 +3971,6 @@ def data_train_flyvis(config, erase, best_model, device):
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()},
                    os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
-        if has_neural_field:
-            torch.save({'model_state_dict': model_f.state_dict(),
-                        'optimizer_state_dict': optimizer_f.state_dict()},
-                       os.path.join(log_dir, 'models', f'best_model_f_with_{n_runs - 1}_graphs_{epoch}.pt'))
 
         list_loss.append((total_loss-total_loss_regul) / n_neurons)
 

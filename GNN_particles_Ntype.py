@@ -75,7 +75,7 @@ if __name__ == "__main__":
         # config_list = ['signal_CElegans_c14_4']
         # config_list = ['signal_N5_v11_bis']
         # config_list = ['signal_fig_supp6_4']
-        config_list = ['fly_N9_28_9', 'fly_N9_28_10']
+        config_list = ['fly_N9_18_4_1_alt_prtrnd_model']
         # config_list = ['signal_N5_l4','signal_N5_l5']
 
     for config_file_ in config_list:
@@ -100,7 +100,7 @@ if __name__ == "__main__":
                 alpha=1,
                 erase=False,
                 bSave=True,
-                step=2
+                step=20
             )  # config.simulation.n_frames // 100)
             
         if "train" in task:
