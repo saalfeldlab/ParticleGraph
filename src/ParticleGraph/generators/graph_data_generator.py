@@ -2979,6 +2979,7 @@ def data_generate_fly_voltage(
     n_extra_null_edges = simulation_config.n_extra_null_edges
     noise_visual_input = simulation_config.noise_visual_input
     only_noise_visual_input = simulation_config.only_noise_visual_input
+    only_noise_visual_input_type = simulation_config.only_noise_visual_input_type
 
     os.makedirs("./graphs_data/fly", exist_ok=True)
     folder = f"./graphs_data/{dataset_name}/"
@@ -3240,14 +3241,19 @@ def data_generate_fly_voltage(
                 frame = sequences[frame_id][None, None]
                 net.stimulus.add_input(frame)  # (1, 1, n_input_neurons)
 
-                x[:, 4] = net.stimulus().squeeze()
-
-                if noise_visual_input > 0:
-                    x[:n_input_neurons, 4:5] = x[:n_input_neurons, 4:5] + torch.randn(
-                        (n_input_neurons, 1), dtype=torch.float32, device=device
-                    ) * noise_visual_input
                 if only_noise_visual_input > 0:
-                    x[:n_input_neurons, 4:5] = torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input
+                    if (only_noise_visual_input_type == "") | (it ==0):
+                        x[:n_input_neurons, 4:5] = torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input
+                    elif only_noise_visual_input_type == "3/4":
+                        x[:n_input_neurons, 4:5] = x[:n_input_neurons, 4:5] * 3/4 + 1/4 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input
+                    elif only_noise_visual_input_type == "9/10":
+                        x[:n_input_neurons, 4:5] = x[:n_input_neurons, 4:5] * 9/10 + 1/10 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input
+                else:
+                    x[:, 4] = net.stimulus().squeeze()
+                    if noise_visual_input > 0:
+                        x[:n_input_neurons, 4:5] = x[:n_input_neurons, 4:5] + torch.randn(
+                            (n_input_neurons, 1), dtype=torch.float32, device=device
+                        ) * noise_visual_input
 
                 dataset = pyg.data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
                 y = pde(dataset, has_field=False)

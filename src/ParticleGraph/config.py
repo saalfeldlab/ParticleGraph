@@ -56,6 +56,7 @@ class SimulationConfig(BaseModel):
     angular_Bernouilli: list[float] = [-1]
     noise_visual_input: float = 0.0
     only_noise_visual_input: float = 0.0
+    only_noise_visual_input_type: str = ""
 
     n_grid: int = 128
 
