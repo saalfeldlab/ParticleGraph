@@ -1,4 +1,4 @@
-description: 'noise_model_level: 5E-1, small MLP, n_extra_null_edges: 10000'
+description: 'noise_model_level: 5E-1, small MLP, n_extra_null_edges: 10000 n_frames:10000'
 dataset: 'fly_N9_19_2'
 
 simulation:
@@ -12,7 +12,7 @@ simulation:
     n_neuron_types: 65
     n_edges: 434112
     n_extra_null_edges: 10000
-    n_frames: 90720
+    n_frames: 10000
     delta_t: 0.02
     baseline_value: 0
 
@@ -53,7 +53,7 @@ training:
 
     sparsity: 'none'
     rotation_augmentation: False
-    data_augmentation_loop: 25
+    data_augmentation_loop: 225
 
     learning_rate_W_start: 1.0E-3
     learning_rate_start: 5.0E-4

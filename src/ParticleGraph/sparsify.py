@@ -198,7 +198,7 @@ def evaluate_embedding_clustering(model, type_list, n_types=64):
         'mapped_labels': mapped_labels
     }
 
-def clustering_evaluation(model, type_list, eps=0.5):
+def clustering_evaluation(data, type_list, eps=0.5):
     """
     Blind clustering using DBSCAN (doesn't require number of clusters)
     Parameter: eps - maximum distance between points in same cluster
@@ -207,13 +207,11 @@ def clustering_evaluation(model, type_list, eps=0.5):
     from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score, accuracy_score
     from scipy.optimize import linear_sum_assignment
 
-    # Extract embeddings
-    embeddings = to_numpy(model.a)
     true_labels = to_numpy(type_list).flatten()
 
     # Perform DBSCAN clustering (automatically finds number of clusters)
     dbscan = DBSCAN(eps=eps, min_samples=5)
-    cluster_labels = dbscan.fit_predict(embeddings)
+    cluster_labels = dbscan.fit_predict(data)
 
     # Count found clusters (excluding noise points labeled as -1)
     n_clusters_found = len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)
@@ -261,7 +259,7 @@ def clustering_evaluation(model, type_list, eps=0.5):
     # Calculate silhouette score (clustering quality)
     from sklearn.metrics import silhouette_score
     if n_clusters_found > 1:
-        silhouette = silhouette_score(embeddings, cluster_labels_clean)
+        silhouette = silhouette_score(data, cluster_labels_clean)
     else:
         silhouette = 0.0
 
@@ -275,7 +273,7 @@ def clustering_evaluation(model, type_list, eps=0.5):
         'silhouette': silhouette,
         'cluster_labels': cluster_labels,
         'mapped_labels': mapped_labels,
-        'total_points': len(embeddings)
+        'total_points': len(data)
     }
 
 def functional_clustering_evaluation(func_list, type_list, eps=0.5, min_samples=5, normalize=True):
