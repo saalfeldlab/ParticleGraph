@@ -47,7 +47,7 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score, accuracy_score
 from scipy.optimize import linear_sum_assignment
 # from pysr import PySRRegressor
-
+from matplotlib.animation import FFMpegWriter
 
 class Interaction_Particle_extract(MessagePassing):
     """Interaction Network as proposed in this paper:
@@ -6674,11 +6674,13 @@ def plot_synaptic_CElegans(config, epoch_list, log_dir, logger, cc, style, devic
 
 
 def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device):
+
     dataset_name = config.dataset
     model_config = config.graph_model
     n_frames = config.simulation.n_frames
     n_runs = config.training.n_runs
     n_neuron_types = config.simulation.n_neuron_types
+    n_input_neurons = config.simulation.n_input_neurons
     delta_t = config.simulation.delta_t
     cmap = CustomColorMap(config=config)
     colors_65 = plt.cm.hsv(np.linspace(0, 0.95, 65))
@@ -6915,6 +6917,55 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         model.edges = edges
         print(f'net: {net}')
         logger.info(f'net: {net}')
+
+        if config.graph_model.field_type == 'visual':
+            n_frames = config.simulation.n_frames
+            # Setup for saving MP4
+            fps = 10  # frames per second for the video
+            metadata = dict(title='Field Evolution', artist='Matplotlib', comment='NN Reconstruction over time')
+            writer = FFMpegWriter(fps=fps, metadata=metadata)
+            fig = plt.figure(figsize=(8, 4))
+
+            # Start the writer context
+            print("save reconstructed visual input ...")
+            if os.path.exists(f"./{log_dir}/results/field_movie_{epoch}.mp4"):
+                os.remove(f"./{log_dir}/results/field_movie_{epoch}.mp4")
+            with writer.saving(fig, f"./{log_dir}/results/field_movie.mp4", dpi=100):
+                for k in trange(0, 10000, 10):
+                    # Inference and data extraction
+                    reconstructed_field = to_numpy(
+                        model.visual_NNR(torch.tensor([k / n_frames], dtype=torch.float32, device=device)) ** 2)
+                    gt_field = x_list[0][k, :n_input_neurons, 4:5]
+                    X1 = x_list[0][k, :n_input_neurons, 1:3]
+
+                    vmin = reconstructed_field.min()
+                    vmax = reconstructed_field.max()
+                    fig.clf()  # Clear the figure
+
+                    # Inference and data extraction
+                    reconstructed_field = to_numpy(
+                        model.visual_NNR(torch.tensor([k / n_frames], dtype=torch.float32, device=device)) ** 2)
+                    gt_field = x_list[0][k, :n_input_neurons, 4:5]
+                    X1 = x_list[0][k, :n_input_neurons, 1:3]
+
+                    # Ground truth
+                    ax1 = fig.add_subplot(1, 2, 1)
+                    sc1 = ax1.scatter(X1[:, 0], X1[:, 1], s=256, c=gt_field, cmap="viridis", marker='h', vmin=-2,
+                                      vmax=2)
+                    ax1.set_xticks([])
+                    ax1.set_yticks([])
+                    ax1.set_title("Ground Truth")
+
+                    # Reconstructed
+                    ax2 = fig.add_subplot(1, 2, 2)
+                    sc2 = ax2.scatter(X1[:, 0], X1[:, 1], s=256, c=reconstructed_field, cmap="viridis", marker='h',
+                                      vmin=vmin, vmax=vmax)
+                    ax2.set_xticks([])
+                    ax2.set_yticks([])
+                    ax2.set_title("Reconstructed")
+
+                    plt.tight_layout()
+                    writer.grab_frame()
 
         # Plot 1: Loss curve
         if os.path.exists(os.path.join(log_dir, 'loss.pt')):
@@ -11419,25 +11470,25 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_18_4_0','fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4', 'fly_N9_22_5', 'fly_N9_20_0', 'fly_N9_20_1', 'fly_N9_20_2', 'fly_N9_20_3', 'fly_N9_20_4', 'fly_N9_20_5', 'fly_N9_20_6']
     # data_flyvis_compare(config_list, 'simulation.n_extra_null_edges')
 
-    # config_list = ['fly_N9_27_3']
+    config_list = ['fly_N9_30_1', 'fly_N9_30_2', 'fly_N9_30_3', 'fly_N9_30_4', 'fly_N9_30_5', 'fly_N9_30_6']
 
     # config_list = ['fly_N9_23_1', 'fly_N9_23_2', 'fly_N9_23_3', 'fly_N9_23_4']
 
-    # for config_file_ in config_list:
-    #     print(' ')
-    #
-    #     config_file, pre_folder = add_pre_folder(config_file_)
-    #     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-    #     config.dataset = pre_folder + config.dataset
-    #     config.config_file = pre_folder + config_file_
-    #
-    #     print(f'config_file  {config.config_file}')
-    #
-    #     folder_name = './log/' + pre_folder + '/tmp_results/'
-    #     os.makedirs(folder_name, exist_ok=True)
-    #     data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
+    for config_file_ in config_list:
+        print(' ')
 
-    data_flyvis_compare(config_list,  'simulation.n_extra_null_edges')
+        config_file, pre_folder = add_pre_folder(config_file_)
+        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+        config.dataset = pre_folder + config.dataset
+        config.config_file = pre_folder + config_file_
+
+        print(f'config_file  {config.config_file}')
+
+        folder_name = './log/' + pre_folder + '/tmp_results/'
+        os.makedirs(folder_name, exist_ok=True)
+        data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
+
+    # data_flyvis_compare(config_list,  'simulation.n_extra_null_edges')
 
 
 

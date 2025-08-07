@@ -3678,20 +3678,18 @@ def data_train_flyvis(config, erase, best_model, device):
     n_edges = simulation_config.n_edges
     n_extra_null_edges = simulation_config.n_extra_null_edges
 
+
+
     if config.training.seed != 42:
         torch.random.fork_rng(devices=device)
         torch.random.manual_seed(config.training.seed)
 
     cmap = CustomColorMap(config=config)
 
-    if field_type != '':
-        n_nodes = n_input_neurons
-        has_neural_field = True
-    else:
-        n_nodes = n_input_neurons
-        has_neural_field = False
+    if field_type == 'visual':
+        has_visual_field = True
+        print('train with visual field NNR')
 
-    print(f'has_neural_field: {has_neural_field}, has_missing_activity: {has_missing_activity}')
 
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
@@ -3739,40 +3737,6 @@ def data_train_flyvis(config, erase, best_model, device):
 
     print('create models ...')
     model = Signal_Propagation_FlyVis(aggr_type=model_config.aggr_type, config=config, device=device)
-    if has_missing_activity:
-        assert batch_ratio == 1, f"batch_ratio must be 1, got {batch_ratio}"
-        model_missing_activity = nn.ModuleList([
-            Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
-                  hidden_features=model_config.hidden_dim_nnr,
-                  hidden_layers=model_config.n_layers_nnr, first_omega_0=model_config.omega,
-                  hidden_omega_0=model_config.omega,
-                  outermost_linear=model_config.outermost_linear_nnr)
-            for n in range(n_runs)
-        ])
-        model_missing_activity.to(device=device)
-        optimizer_missing_activity = torch.optim.Adam(lr=train_config.learning_rate_missing_activity,
-                                                      params=model_missing_activity.parameters())
-        model_missing_activity.train()
-    if has_neural_field:
-        if ('short_term_plasticity' in field_type) | ('modulation' in field_type):
-            model_f = nn.ModuleList([
-                Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
-                      hidden_features=model_config.hidden_dim_nnr,
-                      hidden_layers=model_config.n_layers_nnr, first_omega_0=model_config.omega,
-                      hidden_omega_0=model_config.omega,
-                      outermost_linear=model_config.outermost_linear_nnr)
-                for n in range(n_runs)
-            ])
-        else:
-            n_nodes_per_axis = int(np.sqrt(n_nodes))
-            model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr,
-                                    out_features=model_config.output_size_nnr,
-                                    hidden_features=model_config.hidden_dim_nnr,
-                                    hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device,
-                                    first_omega_0=model_config.omega, hidden_omega_0=model_config.omega)
-        model_f.to(device=device)
-        optimizer_f = torch.optim.Adam(lr=train_config.learning_rate_NNR, params=model_f.parameters())
-        model_f.train()
 
     if (best_model != None) & (best_model != '') & (best_model != 'None'):
         net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{best_model}.pt"
@@ -3790,6 +3754,7 @@ def data_train_flyvis(config, erase, best_model, device):
     else:
         start_epoch = 0
         list_loss = []
+
     lr = train_config.learning_rate_start
     if train_config.learning_rate_update_start == 0:
         lr_update = train_config.learning_rate_start
@@ -3798,14 +3763,15 @@ def data_train_flyvis(config, erase, best_model, device):
     lr_embedding = train_config.learning_rate_embedding_start
     lr_W = train_config.learning_rate_W_start
     lr_modulation = train_config.learning_rate_modulation_start
+    learning_rate_NNR = train_config.learning_rate_NNR
 
     print(
-        f'learning rates: lr_W {lr_W}, lr {lr}, lr_update {lr_update}, lr_embedding {lr_embedding}, lr_modulation {lr_modulation}')
+        f'learning rates: lr_W {lr_W}, lr {lr}, lr_update {lr_update}, lr_embedding {lr_embedding}, learning_rate_NNR {learning_rate_NNR}')
     logger.info(
-        f'learning rates: lr_W {lr_W}, lr {lr}, lr_update {lr_update}, lr_embedding {lr_embedding}, lr_modulation {lr_modulation}')
+        f'learning rates: lr_W {lr_W}, lr {lr}, lr_update {lr_update}, lr_embedding {lr_embedding}, learning_rate_NNR {learning_rate_NNR}')
 
     optimizer, n_total_params = set_trainable_parameters(model=model, lr_embedding=lr_embedding, lr=lr,
-                                                         lr_update=lr_update, lr_W=lr_W, lr_modulation=lr_modulation)
+                                                         lr_update=lr_update, lr_W=lr_W, learning_rate_NNR=learning_rate_NNR)
     model.train()
 
     net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs.pt"
@@ -3858,10 +3824,6 @@ def data_train_flyvis(config, erase, best_model, device):
 
         for N in trange(Niter):
 
-            if has_missing_activity:
-                optimizer_missing_activity.zero_grad()
-            if has_neural_field:
-                optimizer_f.zero_grad()
             optimizer.zero_grad()
 
             dataset_batch = []
@@ -3878,6 +3840,9 @@ def data_train_flyvis(config, erase, best_model, device):
                 k = np.random.randint(n_frames - 4 - time_step)
                 x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device)
                 ids = np.arange(n_neurons)
+
+                if has_visual_field:
+                    x[:n_input_neurons, 4] = model.visual_NNR(torch.tensor([k / n_frames], dtype=torch.float32, device=device)) ** 2
 
                 if not (torch.isnan(x).any()):
                     # regularisation sparsity on Wij
@@ -3988,36 +3953,12 @@ def data_train_flyvis(config, erase, best_model, device):
                 loss.backward()
                 optimizer.step()
 
-                if has_missing_activity:
-                    optimizer_missing_activity.step()
-                if has_neural_field:
-                    optimizer_f.step()
-
                 total_loss += loss.item()
 
                 if ((N % plot_frequency == 0) | (N == 0)):
 
-                    plot_training_flyvis(model, config, epoch, N, log_dir, device, cmap, type_list, gt_weights, n_neurons=n_neurons, n_neuron_types=n_neuron_types)
+                    plot_training_flyvis(x_list, model, config, epoch, N, log_dir, device, cmap, type_list, gt_weights, n_neurons=n_neurons, n_neuron_types=n_neuron_types)
 
-                    if has_neural_field:
-                        with torch.no_grad():
-                            plot_training_signal_field(x, n_nodes, recursive_loop, k, time_step,
-                                                       x_list, run, model, field_type, model_f,
-                                                       edges, y_list, ynorm, delta_t, n_frames, log_dir, epoch, N,
-                                                       recursive_parameters, modulation, device)
-                        torch.save({'model_state_dict': model_f.state_dict(),
-                                    'optimizer_state_dict': optimizer_f.state_dict()},
-                                   os.path.join(log_dir, 'models',
-                                                f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
-
-                    if has_missing_activity:
-                        with torch.no_grad():
-                            plot_training_signal_missing_activity(n_frames, k, x_list, baseline_value,
-                                                                  model_missing_activity, log_dir, epoch, N, device)
-                        torch.save({'model_state_dict': model_missing_activity.state_dict(),
-                                    'optimizer_state_dict': optimizer_missing_activity.state_dict()},
-                                   os.path.join(log_dir, 'models',
-                                                f'best_model_missing_activity_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
                     torch.save(
                         {'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
                         os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))

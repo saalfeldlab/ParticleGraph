@@ -1,4 +1,4 @@
-description: 'small MLP, no extra null edges, noise_model_level: 5E-1'
+description: 'small MLP, no extra null edges, noise_model_level: 5E-1 batchsize:16'
 dataset: 'fly_N9_18_4_1'
 
 simulation:
@@ -55,7 +55,7 @@ training:
     device: 'auto'
 
     recursive_loop: 1
-    batch_size: 1
+    batch_size: 16
     batch_ratio: 1
 
     sparsity: 'none'

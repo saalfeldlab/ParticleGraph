@@ -21,7 +21,7 @@ import seaborn as sns
 from scipy.optimize import curve_fit
 from ParticleGraph.fitting_models import linear_model
 import json
-
+from matplotlib.animation import FFMpegWriter
 class KoLeoLoss(nn.Module):
     """Kozachenko-Leonenko entropic loss regularizer from Sablayrolles et al. - 2018 - Spreading vectors for similarity search"""
 
@@ -231,12 +231,66 @@ def get_in_features(rr=None, embedding=None, model=[], model_name = [], max_radi
     return in_features
 
 
-def plot_training_flyvis(model, config, epoch, N, log_dir, device, cmap, type_list,
+def plot_training_flyvis(x_list, model, config, epoch, N, log_dir, device, cmap, type_list,
                          gt_weights, n_neurons=None, n_neuron_types=None):
     signal_model_name = config.graph_model.signal_model_name
+    n_input_neurons = config.simulation.n_input_neurons
 
     if n_neurons is None:
         n_neurons = len(type_list)
+
+    if config.graph_model.field_type =='visual':
+        n_frames = config.simulation.n_frames
+        k = 100
+        reconstructed_field = to_numpy(model.visual_NNR(torch.tensor([k / n_frames], dtype=torch.float32, device=device)) ** 2)
+        gt_field = x_list[0][k,:n_input_neurons,4:5]
+
+        X1 = x_list[0][k,:n_input_neurons,1:3]
+
+        # Setup for saving MP4
+        fps = 10  # frames per second for the video
+        metadata = dict(title='Field Evolution', artist='Matplotlib', comment='NN Reconstruction over time')
+        writer = FFMpegWriter(fps=fps, metadata=metadata)
+
+        from matplotlib.animation import FFMpegWriter
+        fig = plt.figure(figsize=(8, 4))
+
+        # Start the writer context
+        if os.path.exists(f"./{log_dir}/tmp_training/field_movie_{epoch}_{N}.mp4"):
+            os.remove(f"./{log_dir}/tmp_training/field_movie_{epoch}_{N}.mp4")
+        with writer.saving(fig, f"./{log_dir}/tmp_training/field_movie_{epoch}_{N}.mp4", dpi=100):
+            for k in trange(0, 2000, 10):
+
+                # Inference and data extraction
+                reconstructed_field = to_numpy(
+                    model.visual_NNR(torch.tensor([k / n_frames], dtype=torch.float32, device=device)) ** 2)
+                gt_field = x_list[0][k, :n_input_neurons, 4:5]
+                X1 = x_list[0][k, :n_input_neurons, 1:3]
+
+
+                vmin = reconstructed_field.min()
+                vmax = reconstructed_field.max()
+                fig.clf()  # Clear the figure
+
+                # Ground truth
+                ax1 = fig.add_subplot(1, 2, 1)
+                sc1 = ax1.scatter(X1[:, 0], X1[:, 1], s=256, c=gt_field, cmap="viridis", marker='h', vmin=-2,
+                                  vmax=2)
+                ax1.set_xticks([])
+                ax1.set_yticks([])
+                ax1.set_title("Ground Truth")
+
+                # Reconstructed
+                ax2 = fig.add_subplot(1, 2, 2)
+                sc2 = ax2.scatter(X1[:, 0], X1[:, 1], s=256, c=reconstructed_field, cmap="viridis", marker='h',
+                                  vmin=vmin, vmax=vmax)
+                ax2.set_xticks([])
+                ax2.set_yticks([])
+                ax2.set_title("Reconstructed")
+
+                plt.tight_layout()
+                writer.grab_frame()
+
 
     # Plot 1: Embedding scatter plot
     fig = plt.figure(figsize=(8, 8))
@@ -1786,7 +1840,7 @@ def increasing_batch_size(batch_size):
 
     return get_batch_size
 
-def set_trainable_parameters(model=[], lr_embedding=[], lr=[],  lr_update=[], lr_W=[], lr_modulation=[]):
+def set_trainable_parameters(model=[], lr_embedding=[], lr=[],  lr_update=[], lr_W=[], lr_modulation=[], learning_rate_NNR=[]):
 
     trainable_params = [param for _, param in model.named_parameters() if param.requires_grad]
     n_total_params = sum(p.numel() for p in trainable_params) + torch.numel(model.a)
@@ -1812,6 +1866,8 @@ def set_trainable_parameters(model=[], lr_embedding=[], lr=[],  lr_update=[], lr
                 # print(f'lr_W: {name} {lr_W}')
             elif 'W' in name:
                 optimizer.add_param_group({'params': parameter, 'lr': lr_W})
+            elif 'NNR' in name:
+                optimizer.add_param_group({'params': parameter, 'lr': learning_rate_NNR})
                 # print(f'lr_W: {name} {lr_W}')
             else:
                 optimizer.add_param_group({'params': parameter, 'lr': lr})

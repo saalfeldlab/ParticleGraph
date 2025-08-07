@@ -4,7 +4,7 @@ import torch_geometric as pyg
 from ParticleGraph.models.MLP import MLP
 from ParticleGraph.utils import to_numpy
 import numpy as np
-
+from ParticleGraph.models.Siren_Network import *
 
 class Signal_Propagation_FlyVis(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
@@ -118,6 +118,15 @@ class Signal_Propagation_FlyVis(pyg.nn.MessagePassing):
                 dtype=torch.float32,
             )[:, None]
         )
+
+        if 'visual' in model_config.field_type:
+            self.visual_NNR = Siren(in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr,
+                  hidden_features=model_config.hidden_dim_nnr,
+                  hidden_layers=model_config.n_layers_nnr, first_omega_0=model_config.omega,
+                  hidden_omega_0=model_config.omega,
+                  outermost_linear=model_config.outermost_linear_nnr)
+            self.visual_NNR.to(self.device)
+
 
     def forward(self, data=[], data_id=[], mask=[], return_all=False):
         self.return_all = return_all
