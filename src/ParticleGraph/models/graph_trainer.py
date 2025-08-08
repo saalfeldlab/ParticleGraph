@@ -3842,7 +3842,10 @@ def data_train_flyvis(config, erase, best_model, device):
                 ids = np.arange(n_neurons)
 
                 if has_visual_field:
-                    x[:n_input_neurons, 4] = model.visual_NNR(torch.tensor([k / n_frames], dtype=torch.float32, device=device)) ** 2
+
+                    t = torch.tensor([k / n_frames], dtype=torch.float32, device=device)
+                    in_features = torch.cat((x[:n_input_neurons, 1:3], t.unsqueeze(0).repeat(n_input_neurons, 1)), dim=1)
+                    x[:n_input_neurons, 4:5] = model.visual_NNR(in_features) ** 2
 
                 if not (torch.isnan(x).any()):
                     # regularisation sparsity on Wij

@@ -2993,12 +2993,11 @@ def data_generate_fly_voltage(
     from flyvis.datasets.sintel import AugmentedSintel
     from flyvis import NetworkView, Network
     from flyvis.utils.config_utils import get_default_config, CONFIG_PATH
-    from flyvis.utils.hex_utils import get_num_hexals
     from ParticleGraph.generators.PDE_N9 import (
         PDE_N9,
         get_photoreceptor_positions_from_net,
         group_by_direction_and_function,
-    )  # plot_stimulus_hex, plot_stimulus_hex_flyvis_coords, plot_flyvis_stimulus_sequence
+    )
 
     plt.style.use("dark_background")
 
@@ -3163,19 +3162,13 @@ def data_generate_fly_voltage(
 
     unique_types, node_types_int = np.unique(node_types, return_inverse=True)
 
-    print(f"number of unique types: {len(unique_types)}")  # Should be 64
-    print(f"node_types_int shape: {node_types_int.shape}")
     print(f"node_types_int range: {node_types_int.min()} to {node_types_int.max()}")
 
-    X1 = torch.tensor(
-        np.stack((x_coords, y_coords), axis=1), dtype=torch.float32, device=device
-    )
+    X1 = torch.tensor(np.stack((x_coords, y_coords), axis=1), dtype=torch.float32, device=device)
 
     # initialize random positions
     xc, yc = get_equidistant_points(n_points=n_neurons - x_coords.shape[0])
-    pos = (
-        torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2
-    )
+    pos = (torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device) / 2)
     X1 = torch.cat((X1, pos[torch.randperm(pos.size(0))]), dim=0)
 
     state = net.steady_state(t_pre=2.0, dt=delta_t, batch_size=1)
@@ -3186,9 +3179,6 @@ def data_generate_fly_voltage(
     x[:, 1:3] = X1
     x[:, 0] = torch.arange(n_neurons, dtype=torch.float32)
     x[:, 3] = initial_state
-    # frame = torch.randn(1, 1, 1, get_num_hexals(config.connectome.extent))
-    # print(frame.shape)
-    # (n_frames, 1, n_receptors)
     sequences = stimulus_dataset[0]["lum"]
     frame = sequences[0][None, None]
     net.stimulus.add_input(frame)
@@ -3196,85 +3186,43 @@ def data_generate_fly_voltage(
     x[:, 5] = torch.tensor(grouped_types, dtype=torch.float32, device=device)
     x[:, 6] = torch.tensor(node_types_int, dtype=torch.float32, device=device)
 
-    dataset = pyg.data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
-
-    # neuron_types = to_numpy(x[:, 6]).astype(int)
-    # print("=== MAPPING INDICES TO NEURON NAMES ===")
-    # # Create a mapping from index to neuron type name
-    # index_to_name = {}
-    # for i in range(len(node_types_str)):
-    #     type_idx = node_types_int[i]
-    #     type_name = node_types_str[i]
-    #     if type_idx not in index_to_name:
-    #         index_to_name[type_idx] = type_name
-    # # Print the mapping sorted by index
-    # print("Index -> Neuron Type Name:")
-    # for idx in sorted(index_to_name.keys()):
-    #     count = np.sum(neuron_types == idx)
-    #     print(f"Index {idx:2d}: {index_to_name[idx]:15s} ({count:3d} neurons)")
-    # # Specifically find R1-R6 indices
-    # print("\n=== FOUND R1-R6 INDICES ===")
-    # r_mapping = {}
-    # for idx, name in index_to_name.items():
-    #     if name in ['R1', 'R2', 'R3', 'R4', 'R5', 'R6']:
-    #         count = np.sum(neuron_types == idx)
-    #         r_mapping[name] = idx
-    #         print(f"{name} -> Index {idx} ({count} neurons)")
-    # # Print the final array you need for your code
-    # if len(r_mapping) == 6:
-    #     r_indices = [r_mapping['R1'], r_mapping['R2'], r_mapping['R3'],
-    #                  r_mapping['R4'], r_mapping['R5'], r_mapping['R6']]
-    #     print(f"\nUse this in your code:")
-    #     print(f"neuron_type_indices = {r_indices}  # [R1, R2, R3, R4, R5, R6]")
-    # else:
-    #     print(f"Warning: Found {len(r_mapping)} R-types instead of 6")
-
 
     y_list = []
     x_list = []
     it = 0
     with torch.no_grad():
         for data in tqdm(stimulus_dataset):
-            if (simulation_config.simulation_initial_state):
+            if simulation_config.simulation_initial_state:
                 x[:, 3] = initial_state
                 if only_noise_visual_input > 0:
                     x[:n_input_neurons, 4:5] = torch.clamp(torch.relu(0.5 + torch.rand((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input / 2), 0 ,1)
-
             sequences = data["lum"]
+
+            if (noise_visual_input_type == "50/50"):
+                if it > n_frames //2:
+                    only_noise_visual_input = simulation_config.only_noise_visual_input
+                else:
+                    only_noise_visual_input = 0
+
             for frame_id in range(sequences.shape[0]):
                 frame = sequences[frame_id][None, None]
                 net.stimulus.add_input(frame)  # (1, 1, n_input_neurons)
 
-                if only_noise_visual_input > 0:
-                    if (noise_visual_input_type == "") | (it ==0):
+                if (only_noise_visual_input > 0):
+                    if (noise_visual_input_type == "") | (it ==0) | (noise_visual_input_type == "50/50"):
                         x[:n_input_neurons, 4:5] = torch.relu(0.5 + torch.rand((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input / 2)
-                    elif "3/4" in noise_visual_input_type:
+                    elif noise_visual_input_type == "3/4":
                         x[:n_input_neurons, 4:5] = torch.clamp(x[:n_input_neurons, 4:5] * 3/4 + 1/4 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input, 0 , 1)
-                    elif "9/10" in noise_visual_input_type:
+                    elif noise_visual_input_type == "9/10":
                         x[:n_input_neurons, 4:5] = torch.clamp(x[:n_input_neurons, 4:5] * 9/10 + 1/10 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input, 0 , 1)
-                    elif "19/20" in noise_visual_input_type:
+                    elif noise_visual_input_type == "19/20":
                         x[:n_input_neurons, 4:5] = torch.clamp(x[:n_input_neurons, 4:5] * 19/20 + 1/20 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input, 0 , 1)
                 else:
-                    stimuli = net.stimulus().squeeze()
-                    if  ("flash" in noise_visual_input_type) & (frame_id > 6):
-                        stimuli = stimuli * 0
-
+                    x[:, 4] = net.stimulus().squeeze()
                     if noise_visual_input > 0:
-                        if (noise_visual_input_type == "") | (it == 0):
-                            input_noise = torch.relu(0.5 + torch.rand((n_input_neurons, 1), dtype=torch.float32, device=device) * noise_visual_input / 2)
-                        elif "3/4" in noise_visual_input_type:
-                            input_noise = torch.clamp(input_noise * 3 / 4 + 1 / 4 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * noise_visual_input,0, 1)
-                        elif "9/10" in noise_visual_input_type:
-                            input_noise = torch.clamp(input_noise * 9 / 10 + 1 / 10 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * noise_visual_input, 0, 1)
-                        elif "19/20" in noise_visual_input_type:
-                            input_noise = torch.clamp(input_noise * 19 / 20 + 1 / 20 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * noise_visual_input, 0, 1)
-
-                        x[:n_input_neurons, 4:5] = torch.clamp(stimuli[:n_input_neurons,None]/2 + input_noise, 0, 1)
-
-                    else:
-
-                        x[:n_input_neurons, 4:5] = stimuli[:n_input_neurons,None]
-
+                        x[:n_input_neurons, 4:5] = x[:n_input_neurons, 4:5] + torch.randn(
+                            (n_input_neurons, 1), dtype=torch.float32, device=device
+                        ) * noise_visual_input
 
                 dataset = pyg.data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
                 y = pde(dataset, has_field=False)
@@ -3295,7 +3243,7 @@ def data_generate_fly_voltage(
                     visualize
                     & (run == run_vizualized)
                     & (it % step == 0)
-                    & (it <= 70 * step)
+                    & ((it <= 200 * step) | ((noise_visual_input_type == "50/50")&(it>50000)&(it<50200))      )
                 ):
                     if "latex" in style:
                         plt.rcParams["text.usetex"] = True
@@ -3340,8 +3288,6 @@ def data_generate_fly_voltage(
                     fig, axes = plt.subplots(8, 9, figsize=(18, 16), facecolor='black')
                     axes_flat = axes.flatten()
                     all_voltages = to_numpy(x[:, 3])
-                    if it==0:
-                        vmin, vmax = np.percentile(all_voltages, [5, 95])
 
                     panel_idx = 0
                     total_neurons_plotted = 0
@@ -3386,8 +3332,8 @@ def data_generate_fly_voltage(
                                     s=72,
                                     c=type_voltages,
                                     cmap='viridis',
-                                    vmin=vmin,
-                                    vmax=vmax,
+                                    vmin=-2,
+                                    vmax=2,
                                     marker='h',  # hexagonal markers
                                     alpha=1,
                                     linewidths=0.0,
@@ -3408,7 +3354,7 @@ def data_generate_fly_voltage(
                                 else:
                                     title_color = 'white'  # Others
 
-                                ax.set_title(f'{type_name}', fontsize=24, color='white', pad=5)
+                                ax.set_title(f'{type_name}', fontsize=18, color='white', pad=5)
 
                             else:
                                 ax.text(0.5, 0.5, f'No {type_name}\nNeurons', transform=ax.transAxes,
@@ -3437,50 +3383,48 @@ def data_generate_fly_voltage(
 
         print(f"generated {len(x_list)} frames")
 
-
-
-    x_list = np.array(x_list)
-    y_list = np.array(y_list)
-
-    activity = torch.tensor(x_list[:, :, 3:4],device=device)
-    activity = activity.squeeze()
-    activity = activity.t()
-    input_visual = torch.tensor(x_list[:, :, 4:5],device=device)
-    input_visual = input_visual.squeeze()
-    input_visual = input_visual.t()
-
-    plt.figure(figsize=(16, 8))
-    plt.subplot(1,2,1)
-    plt.title(f"input to visual neurons", fontsize=24)
-
-
-    # n = np.random.randint(0, n_input_neurons, 10)
-    n = [ 731, 1042, 329, 1110, 1176, 1526, 1350, 90, 813, 1695]
-    for i in range(len(n)):
-        plt.plot(to_numpy(input_visual[n[i], :]), linewidth=1)
-    plt.xlabel('time', fontsize=24)
-    plt.ylabel('$x_{i}$', fontsize=24)
-    plt.xlim([0, n_frames//300])
-    plt.xticks(fontsize=16)
-    plt.yticks(fontsize=16)
-    plt.subplot(1,2,2)
-    plt.title(f"activity of neurons (x10)", fontsize=24)
-    # n = np.random.randint(0, n_neurons - n_input_neurons, 10) + n_input_neurons
-
-    n = [ 2602, 3175, 12915, 10391, 13120, 9939, 12463, 3758, 10341, 4293]
-
-    for i in range(len(n)):
-        plt.plot(to_numpy(activity[n[i], :]), linewidth=1)
-    plt.xlabel('time', fontsize=24)
-    plt.ylabel('$x_{i}$', fontsize=24)
-    plt.xlim([0, n_frames//300])
-    plt.xticks(fontsize=16)
-    plt.yticks(fontsize=16)
-    plt.tight_layout()
-    plt.savefig(f"graphs_data/{dataset_name}/activity.tif", dpi=300)
-    plt.close()
-
     if bSave:
+
+        x_list = np.array(x_list)
+        y_list = np.array(y_list)
+
+        activity = torch.tensor(x_list[:, :, 3:4],device=device)
+        activity = activity.squeeze()
+        activity = activity.t()
+        input_visual = torch.tensor(x_list[:, :, 4:5],device=device)
+        input_visual = input_visual.squeeze()
+        input_visual = input_visual.t()
+
+        plt.figure(figsize=(16, 8))
+        plt.subplot(1,2,1)
+        plt.title(f"input to visual neurons", fontsize=24)
+
+
+        # n = np.random.randint(0, n_input_neurons, 10)
+        n = [ 731, 1042, 329, 1110, 1176, 1526, 1350, 90, 813, 1695]
+        for i in range(len(n)):
+            plt.plot(to_numpy(input_visual[n[i], :]), linewidth=1)
+        plt.xlabel('time', fontsize=24)
+        plt.ylabel('$x_{i}$', fontsize=24)
+        plt.xlim([0, n_frames//300])
+        plt.xticks(fontsize=16)
+        plt.yticks(fontsize=16)
+        plt.subplot(1,2,2)
+        plt.title(f"activity of neurons (x10)", fontsize=24)
+        # n = np.random.randint(0, n_neurons - n_input_neurons, 10) + n_input_neurons
+
+        n = [ 2602, 3175, 12915, 10391, 13120, 9939, 12463, 3758, 10341, 4293]
+
+        for i in range(len(n)):
+            plt.plot(to_numpy(activity[n[i], :]), linewidth=1)
+        plt.xlabel('time', fontsize=24)
+        plt.ylabel('$x_{i}$', fontsize=24)
+        plt.xlim([0, n_frames//300])
+        plt.xticks(fontsize=16)
+        plt.yticks(fontsize=16)
+        plt.tight_layout()
+        plt.savefig(f"graphs_data/{dataset_name}/activity.tif", dpi=300)
+        plt.close()
 
         if measurement_noise_level > 0:
             np.save(f"graphs_data/{dataset_name}/raw_x_list_{run}.npy", x_list)

@@ -6797,7 +6797,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
     plt.close()
 
     # Additional plot for specific neuron type (e.g., 'Am')
-    target_type_name_list = [] # ['R1','R7','Am','L1','L2']
+    target_type_name_list = ['R1','R7','Am','L1','L2']
 
     for target_type_name in target_type_name_list:# Change this to any desired type name
         target_type_index = None
@@ -11431,8 +11431,8 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_28_2','fly_N9_28_3','fly_N9_28_4','fly_N9_28_5', 'fly_N9_28_6', 'fly_N9_28_7', 'fly_N9_28_8', 'fly_N9_28_9', 'fly_N9_28_10', 'fly_N9_28_11']
     # data_flyvis_compare(config_list, 'simulation.only_noise_visual_input')
 
-    # config_list = ['fly_N9_18_4_7']
-    config_list = ['fly_N9_18_4_2_alt_prtrnd_model']
+    config_list = ['fly_N9_28_12']
+    # config_list = ['fly_N9_18_4_2_alt_prtrnd_model']
     # config_list = ['fly_N9_29_3']
     # config_list = ['fly_N9_30_3']
 

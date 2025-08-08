@@ -242,9 +242,6 @@ def plot_training_flyvis(x_list, model, config, epoch, N, log_dir, device, cmap,
     if config.graph_model.field_type =='visual':
         n_frames = config.simulation.n_frames
         k = 100
-        reconstructed_field = to_numpy(model.visual_NNR(torch.tensor([k / n_frames], dtype=torch.float32, device=device)) ** 2)
-        gt_field = x_list[0][k,:n_input_neurons,4:5]
-
         X1 = x_list[0][k,:n_input_neurons,1:3]
 
         # Setup for saving MP4
@@ -253,18 +250,16 @@ def plot_training_flyvis(x_list, model, config, epoch, N, log_dir, device, cmap,
         writer = FFMpegWriter(fps=fps, metadata=metadata)
         fig = plt.figure(figsize=(8, 4))
 
-        # Start the writer context
         if os.path.exists(f"./{log_dir}/tmp_training/field/field_movie_{epoch}_{N}.mp4"):
             os.remove(f"./{log_dir}/tmp_training/field/field_movie_{epoch}_{N}.mp4")
         with writer.saving(fig, f"./{log_dir}/tmp_training/field/field_movie_{epoch}_{N}.mp4", dpi=100):
             for k in range(0, 2000, 10):
 
-                # Inference and data extraction
-                reconstructed_field = to_numpy(
-                    model.visual_NNR(torch.tensor([k / n_frames], dtype=torch.float32, device=device)) ** 2)
+                t = torch.tensor([k / n_frames], dtype=torch.float32, device=device)
+                in_features = torch.cat((torch.tensor(X1, dtype=torch.float32, device=device), t.unsqueeze(0).repeat(n_input_neurons, 1)), dim=1)
+                reconstructed_field = to_numpy(model.visual_NNR(in_features) ** 2)
                 gt_field = x_list[0][k, :n_input_neurons, 4:5]
                 X1 = x_list[0][k, :n_input_neurons, 1:3]
-
 
                 vmin = reconstructed_field.min()
                 vmax = reconstructed_field.max()
