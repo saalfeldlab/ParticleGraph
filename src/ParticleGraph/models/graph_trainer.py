@@ -431,101 +431,100 @@ def data_train_material(config, erase, best_model, device):
 
         plt.style.use('dark_background')
 
-        net = os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt')
-        state_dict = torch.load(net, map_location=device)
-        model.load_state_dict(state_dict['model_state_dict'])
-        print(f'reload best_model: {net}')
-
-
-        for k in trange(0, n_frames-10, n_frames // 50):
-
-            with torch.no_grad():
-                x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
-                x_next = torch.tensor(x_list[run][k+1], dtype=torch.float32, device=device).clone().detach()
-                if 'F' in trainer:
-                    y = x_next[:, 5 + dimension * 2: 9 + dimension * 2].clone().detach()  # F
-                elif trainer == 'S':
-                    y = x[:, 12 + dimension * 2: 16 + dimension * 2].clone().detach()  # S
-                elif 'C' in trainer:
-                    y = x[:, 1 + dimension * 2: 5 + dimension * 2].clone().detach()
-
-                if 'GNN_C' in trainer:
-                    distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                    adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
-                    edges = adj_t.nonzero().t().contiguous()
-                    dataset = data.Data(x=x, edge_index=edges, num_nodes=x.shape[0])
-                    pred = model.GNN_C(dataset, training=False)
-                else:
-                    data_id = torch.ones((n_particles, 1), dtype=torch.float32, device=device) * run
-                    k_list_tensor = torch.ones((n_particles, 1), dtype=torch.int, device=device) * k
-                    dataset = data.Data(x=x, edge_index=[], num_nodes=x.shape[0])
-                    pred = model(dataset, data_id=data_id, k=k_list_tensor, trainer=trainer)
-
-                error = F.mse_loss(pred, y).item()
-
-            fig = plt.figure(figsize=(20, 6))
-            plt.subplot(1, 3, 1)
-            if 'F' in trainer:
-                f_norm = torch.norm(y.view(n_particles, -1), dim=1).cpu().numpy()
-                plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=f_norm, s=1, cmap='coolwarm', vmin=1.44 - 0.2,
-                            vmax=1.44 + 0.2)
-                plt.colorbar(fraction=0.046, pad=0.04)
-            elif trainer == 'S':
-                stress_norm = torch.norm(y.view(n_particles, -1), dim=1)
-                stress_norm = stress_norm[:, None]
-                plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=stress_norm[:, 0].cpu(), s=1, cmap='hot', vmin=0, vmax=6E-3)
-                plt.colorbar(fraction=0.046, pad=0.04)
-            elif 'C' in trainer:
-                c_norm = torch.norm(y.view(n_particles, -1), dim=1)
-                c_norm = c_norm[:, None]
-                c_norm_np = c_norm[:, 0].cpu().numpy()
-                x_cpu = x.cpu()
-                topk_indices = c_norm_np.argsort()[-250:]
-                plt.scatter(x_cpu[:, 1], x_cpu[:, 2], c=c_norm_np, s=1, cmap='viridis', vmin=0, vmax=80)
-                plt.colorbar(fraction=0.046, pad=0.04)
-                plt.scatter(x_cpu[topk_indices, 1], x_cpu[topk_indices, 2], c='red', s=1)
-            plt.xlim([0, 1])
-            plt.ylim([0, 1])
-
-            plt.subplot(1, 3, 2)
-            if 'F' in trainer:
-                f_norm = torch.norm(pred.view(n_particles, -1), dim=1).cpu().numpy()
-                plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=f_norm, s=1, cmap='coolwarm', vmin=1.44 - 0.2,
-                            vmax=1.44 + 0.2)
-                plt.colorbar(fraction=0.046, pad=0.04)
-            elif trainer == 'S':
-                stress_norm = torch.norm(pred.view(n_particles, -1), dim=1)
-                stress_norm = stress_norm[:, None]
-                plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=stress_norm[:, 0].cpu(), s=1, cmap='hot', vmin=0, vmax=6E-3)
-                plt.colorbar(fraction=0.046, pad=0.04)
-            elif 'C' in trainer:
-                c_norm = torch.norm(pred.view(n_particles, -1), dim=1)
-                c_norm = c_norm[:, None]
-                c_norm_np = c_norm[:, 0].cpu().numpy()
-                x_cpu = x.cpu()
-                topk_indices = c_norm_np.argsort()[-250:]
-                plt.scatter(x_cpu[:, 1], x_cpu[:, 2], c=c_norm_np, s=1, cmap='viridis', vmin=0, vmax=80)
-                plt.colorbar(fraction=0.046, pad=0.04)
-                plt.scatter(x_cpu[topk_indices, 1], x_cpu[topk_indices, 2], c='red', s=1)
-
-            plt.xlim([0, 1])
-            plt.ylim([0, 1])
-            plt.text(0.05, 0.95,
-                     f'epoch: {epoch} iteration: {N} error: {error:.2f}', )
-
-            plt.subplot(1, 3, 3)
-            if 'C' in trainer:
-                # c_norm = torch.norm(y.view(n_particles, -1), dim=1)
-                # c_norm_pred = torch.norm(pred.view(n_particles, -1), dim=1)
-                # plt.scatter(c_norm.cpu(), c_norm_pred.cpu(), s=1, c='w', alpha=0.5, edgecolors='none')
-                for m in range(4):
-                    plt.scatter(y[:, m].cpu(), pred[:, m].cpu(), s=1, c='w', alpha=0.5, edgecolors='none')
-                plt.xlim([-200, 200])
-                plt.ylim([-200, 200])
-
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/movie/pred_{k}.tif", dpi=87)
-            plt.close()
+        # net = os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt')
+        # state_dict = torch.load(net, map_location=device)
+        # model.load_state_dict(state_dict['model_state_dict'])
+        # print(f'reload best_model: {net}')
+        #
+        # for k in trange(0, n_frames-10, n_frames // 50):
+        #
+        #     with torch.no_grad():
+        #         x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
+        #         x_next = torch.tensor(x_list[run][k+1], dtype=torch.float32, device=device).clone().detach()
+        #         if 'F' in trainer:
+        #             y = x_next[:, 5 + dimension * 2: 9 + dimension * 2].clone().detach()  # F
+        #         elif trainer == 'S':
+        #             y = x[:, 12 + dimension * 2: 16 + dimension * 2].clone().detach()  # S
+        #         elif 'C' in trainer:
+        #             y = x[:, 1 + dimension * 2: 5 + dimension * 2].clone().detach()
+        #
+        #         if 'GNN_C' in trainer:
+        #             distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+        #             adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
+        #             edges = adj_t.nonzero().t().contiguous()
+        #             dataset = data.Data(x=x, edge_index=edges, num_nodes=x.shape[0])
+        #             pred = model.GNN_C(dataset, training=False)
+        #         else:
+        #             data_id = torch.ones((n_particles, 1), dtype=torch.float32, device=device) * run
+        #             k_list_tensor = torch.ones((n_particles, 1), dtype=torch.int, device=device) * k
+        #             dataset = data.Data(x=x, edge_index=[], num_nodes=x.shape[0])
+        #             pred = model(dataset, data_id=data_id, k=k_list_tensor, trainer=trainer)
+        #
+        #         error = F.mse_loss(pred, y).item()
+        #
+        #     fig = plt.figure(figsize=(20, 6))
+        #     plt.subplot(1, 3, 1)
+        #     if 'F' in trainer:
+        #         f_norm = torch.norm(y.view(n_particles, -1), dim=1).cpu().numpy()
+        #         plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=f_norm, s=1, cmap='coolwarm', vmin=1.44 - 0.2,
+        #                     vmax=1.44 + 0.2)
+        #         plt.colorbar(fraction=0.046, pad=0.04)
+        #     elif trainer == 'S':
+        #         stress_norm = torch.norm(y.view(n_particles, -1), dim=1)
+        #         stress_norm = stress_norm[:, None]
+        #         plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=stress_norm[:, 0].cpu(), s=1, cmap='hot', vmin=0, vmax=6E-3)
+        #         plt.colorbar(fraction=0.046, pad=0.04)
+        #     elif 'C' in trainer:
+        #         c_norm = torch.norm(y.view(n_particles, -1), dim=1)
+        #         c_norm = c_norm[:, None]
+        #         c_norm_np = c_norm[:, 0].cpu().numpy()
+        #         x_cpu = x.cpu()
+        #         topk_indices = c_norm_np.argsort()[-250:]
+        #         plt.scatter(x_cpu[:, 1], x_cpu[:, 2], c=c_norm_np, s=1, cmap='viridis', vmin=0, vmax=80)
+        #         plt.colorbar(fraction=0.046, pad=0.04)
+        #         plt.scatter(x_cpu[topk_indices, 1], x_cpu[topk_indices, 2], c='red', s=1)
+        #     plt.xlim([0, 1])
+        #     plt.ylim([0, 1])
+        #
+        #     plt.subplot(1, 3, 2)
+        #     if 'F' in trainer:
+        #         f_norm = torch.norm(pred.view(n_particles, -1), dim=1).cpu().numpy()
+        #         plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=f_norm, s=1, cmap='coolwarm', vmin=1.44 - 0.2,
+        #                     vmax=1.44 + 0.2)
+        #         plt.colorbar(fraction=0.046, pad=0.04)
+        #     elif trainer == 'S':
+        #         stress_norm = torch.norm(pred.view(n_particles, -1), dim=1)
+        #         stress_norm = stress_norm[:, None]
+        #         plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=stress_norm[:, 0].cpu(), s=1, cmap='hot', vmin=0, vmax=6E-3)
+        #         plt.colorbar(fraction=0.046, pad=0.04)
+        #     elif 'C' in trainer:
+        #         c_norm = torch.norm(pred.view(n_particles, -1), dim=1)
+        #         c_norm = c_norm[:, None]
+        #         c_norm_np = c_norm[:, 0].cpu().numpy()
+        #         x_cpu = x.cpu()
+        #         topk_indices = c_norm_np.argsort()[-250:]
+        #         plt.scatter(x_cpu[:, 1], x_cpu[:, 2], c=c_norm_np, s=1, cmap='viridis', vmin=0, vmax=80)
+        #         plt.colorbar(fraction=0.046, pad=0.04)
+        #         plt.scatter(x_cpu[topk_indices, 1], x_cpu[topk_indices, 2], c='red', s=1)
+        #
+        #     plt.xlim([0, 1])
+        #     plt.ylim([0, 1])
+        #     plt.text(0.05, 0.95,
+        #              f'epoch: {epoch} iteration: {N} error: {error:.2f}', )
+        #
+        #     plt.subplot(1, 3, 3)
+        #     if 'C' in trainer:
+        #         # c_norm = torch.norm(y.view(n_particles, -1), dim=1)
+        #         # c_norm_pred = torch.norm(pred.view(n_particles, -1), dim=1)
+        #         # plt.scatter(c_norm.cpu(), c_norm_pred.cpu(), s=1, c='w', alpha=0.5, edgecolors='none')
+        #         for m in range(4):
+        #             plt.scatter(y[:, m].cpu(), pred[:, m].cpu(), s=1, c='w', alpha=0.5, edgecolors='none')
+        #         plt.xlim([-200, 200])
+        #         plt.ylim([-200, 200])
+        #
+        #     plt.tight_layout()
+        #     plt.savefig(f"./{log_dir}/tmp_training/movie/pred_{k}.tif", dpi=87)
+        #     plt.close()
 
 
 def data_train_particle(config, erase, best_model, device):
