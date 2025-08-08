@@ -249,19 +249,14 @@ def data_train_material(config, erase, best_model, device):
                 k = time_window + np.random.randint(run_lengths[run] - 1 - time_window - time_step - recursive_loop)
                 x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
                 x_next = torch.tensor(x_list[run][k+1], dtype=torch.float32, device=device).clone().detach()
-                if 'F' in trainer:
-                    y = x_next[:, 5 + dimension * 2: 9 + dimension * 2].clone().detach()  # F
-                elif trainer == 'S':
-                    y = x[:, 12 + dimension * 2: 16 + dimension * 2].clone().detach()  # S
-                elif trainer == 'C':
-                    y = x[:, 1 + dimension * 2: 5 + dimension * 2].clone().detach()
-                elif 'k-nearest' in trainer:
+
+                if 'C_F_Jp' in trainer:
                     # For k-nearest, we need positions and velocities for neighbor loss
                     pos = x[:, 1:3].clone().detach()  # positions
                     vel = x[:, 3:5].clone().detach()  # velocities
                     y = None  # No direct target needed
 
-                if 'GNN_C' in trainer:
+                if 'GNN' in trainer:
                     distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
                     adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
                     edges = adj_t.nonzero().t().contiguous()
@@ -274,7 +269,7 @@ def data_train_material(config, erase, best_model, device):
                 if batch == 0:
                     data_id = torch.ones((n_particles, 1), dtype=torch.float32, device=device) * run
                     x_batch = x
-                    if 'k-nearest' in trainer:
+                    if 'C_F_Jp' in trainer:
                         pos_batch = pos
                         vel_batch = vel
                     else:
@@ -285,7 +280,7 @@ def data_train_material(config, erase, best_model, device):
                     data_id = torch.cat(
                         (data_id, torch.ones((n_particles, 1), dtype=torch.float32, device=device) * run), dim=0)
                     x_batch = torch.cat((x_batch, x), dim=0)
-                    if 'k-nearest' in trainer:
+                    if 'C_F_Jp' in trainer:
                         pos_batch = torch.cat((pos_batch, pos), dim=0)
                         vel_batch = torch.cat((vel_batch, vel), dim=0)
                     else:
@@ -299,34 +294,11 @@ def data_train_material(config, erase, best_model, device):
 
             for batch_loader_data in batch_loader:
 
-                if 'GNN_C' in trainer:
-                    pred = model.GNN_C(batch_loader_data, training=True)
-                else:
-                    pred = model(batch_loader_data, data_id=data_id, k=k_batch, trainer=trainer)
+                pred_C, pred_F, pred_Jp = model(batch_loader_data, data_id=data_id, k=k_batch, trainer=trainer)
 
-            if trainer == 'C_k-nearest':
-                pred_C = pred.reshape(-1, 2, 2)
-                for k in range(batch_size):
-                    batch_indices = np.arange(k * n_particles, (k + 1) * n_particles)
-                    positions = to_numpy(dataset_batch[k].x[:, 1:3])
-                    tree = cKDTree(positions)
-                    dists, indices = tree.query(positions, k=2)
-                    nearest_neighbor_indices = indices[:, 1]
-                    # nearest_distances = dists[:, 1]
-                    pos_diff = torch.tensor(positions[nearest_neighbor_indices] - positions, dtype=torch.float32,
-                                            device=device)  # [N, max_neighbors, 2]
-                    d_pos = dataset_batch[k].x[:, 3:5]
-                    v_pred = d_pos.detach() + torch.bmm(pred_C[batch_indices], pos_diff.unsqueeze(-1).detach()).squeeze(
-                        -1)
-                    v_target = d_pos[nearest_neighbor_indices].squeeze(-1).detach()
-
-                    loss = loss + F.mse_loss(v_pred, v_target)
-            elif (trainer == 'C_5-k-nearest') or (trainer == 'C_10-k-nearest') or (trainer == 'GNN_C_5-k-nearest'):
-                if 'C_5-k-nearest' in trainer:
-                    k_neighbors = 5
-                else:
-                    k_neighbors = 10
-                pred_C = pred.reshape(-1, 2, 2)
+            if 'C_F_Jp' in trainer:
+                k_neighbors = 5
+                pred_C = pred_C.reshape(-1, 2, 2)
                 for k in range(batch_size):
                     batch_indices = np.arange(k * n_particles, (k + 1) * n_particles)
                     positions = to_numpy(dataset_batch[k].x[:, 1:3])  # shape: [N, 2]
@@ -344,46 +316,14 @@ def data_train_material(config, erase, best_model, device):
                     vel_diff = torch.tensor(vel_diff_np, dtype=torch.float32, device=device)  # [N, k, 2]
 
                     C = pred_C[batch_indices]  # [N, 2, 2]
-
                     pred_vel_diff = torch.bmm(pos_diff, C.transpose(1, 2))  # [N, k, 2]
-
                     loss = loss + F.mse_loss(pred_vel_diff, vel_diff)
-            elif (trainer == 'C_fr_5-k-nearest') or (trainer == 'C_fr_10-k-nearest'):
-                if trainer == 'C_fr_5-k-nearest':
-                    k_neighbors = 5
-                else:
-                    k_neighbors = 10
-                pred_C = pred.reshape(-1, 2, 2)
-                for k in range(batch_size):
-                    batch_indices = np.arange(k * n_particles, (k + 1) * n_particles)
-                    positions = to_numpy(dataset_batch[k].x[:, 1:3])  # shape: [N, 2]
-                    velocities = to_numpy(dataset_batch[k].x[:, 3:5])  # shape: [N, 2]
 
-                    tree = cKDTree(positions)
-                    dists, indices = tree.query(positions, k=k_neighbors + 1)  # +1 to skip self
-                    neighbor_indices = indices[:, 1:]  # shape: [N, k]
+                pred_F = pred_F.reshape(-1, 2, 2)
+                target = torch.eye(2, device=device).repeat(n_particles*batch_size, 1, 1).detach()  # Identity matrix for force prediction
+                loss = loss + F.mse_loss(pred_F, target)
+                loss = F.mse_loss(pred_Jp, torch.ones_like(pred_Jp).detach())  # Assuming Jp should be close to 1
 
-                    # position and velocity diffs
-                    pos_diff_np = positions[neighbor_indices] - positions[:, None, :]  # [N, k, 2]
-                    vel_diff_np = velocities[neighbor_indices] - velocities[:, None, :]  # [N, k, 2]
-
-                    pos_diff = torch.tensor(pos_diff_np, dtype=torch.float32, device=device)  # [N, k, 2]
-                    vel_diff = torch.tensor(vel_diff_np, dtype=torch.float32, device=device)  # [N, k, 2]
-
-                    C = pred_C[batch_indices]  # [N, 2, 2]
-
-                    pred_vel_diff = torch.bmm(pos_diff, C.transpose(1, 2))  # [N, k, 2]
-
-                    distances = pos_diff.norm(dim=-1)  # [N, k]
-                    weights = 1.0 / (distances + 1E-8)  # [N, k]
-
-                    # Compute weighted squared error
-                    squared_error = (pred_vel_diff - vel_diff) ** 2  # [N, k, 2]
-                    weighted_error = squared_error.sum(dim=-1) * weights  # [N, k]
-
-                    loss = loss + weighted_error.mean()
-            else:
-                loss = F.mse_loss(pred, y_batch)
 
             loss.backward()
             optimizer.step()
@@ -397,74 +337,46 @@ def data_train_material(config, erase, best_model, device):
                 with torch.no_grad():
                     for k in k_list:
                         x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
-                        x_next = torch.tensor(x_list[run][k+1], dtype=torch.float32, device=device).clone().detach()
-                        if 'F' in trainer:
-                            y = x_next[:, 5 + dimension * 2: 9 + dimension * 2].clone().detach()  # F
-                        elif trainer == 'S':
-                            y = x[:, 12 + dimension * 2: 16 + dimension * 2].clone().detach()  # S
-                        elif 'C' in trainer:
-                            y = x[:, 1 + dimension * 2: 5 + dimension * 2].clone().detach()
-                        if 'GNN_C' in trainer:
+                        y = x[:, 1 + dimension * 2: 5 + dimension * 2].clone().detach()
+                        if 'GNN' in trainer:
                             distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
                             adj_t = ((distance < max_radius ** 2) & (distance >=  min_radius ** 2)).float() * 1
                             edges = adj_t.nonzero().t().contiguous()
                             dataset = data.Data(x=x, edge_index=edges, num_nodes=x.shape[0])
-                            pred = model.GNN_C(dataset, training=False)
+                            pred_C, pred_F, pred_Jp = model.GNN_C(dataset, training=False)
                         else:
                             data_id = torch.ones((n_particles, 1), dtype=torch.float32, device=device) * run
                             k_list_tensor = torch.ones((n_particles, 1), dtype=torch.int, device=device) * k
                             dataset = data.Data(x=x, edge_index=[], num_nodes=x.shape[0])
-                            pred = model(dataset, data_id=data_id, k=k_list_tensor, trainer=trainer)
-                        error.append(F.mse_loss(pred, y).item())
+                            pred_C, pred_F, pred_Jp,  = model(dataset, data_id=data_id, k=k_list_tensor, trainer=trainer)
+                        error.append(F.mse_loss(pred_C, y).item())
 
                 plt.style.use('dark_background')
 
                 fig = plt.figure(figsize=(20, 6))
                 plt.subplot(1, 3, 1)
-                if 'F' in trainer:
-                    f_norm = torch.norm(y.view(n_particles, -1), dim=1).cpu().numpy()
-                    plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=f_norm, s=1, cmap='coolwarm', vmin=1.44 - 0.2,
-                                vmax=1.44 + 0.2)
-                    plt.colorbar(fraction=0.046, pad=0.04)
-                elif trainer == 'S':
-                    stress_norm = torch.norm(y.view(n_particles, -1), dim=1)
-                    stress_norm = stress_norm[:, None]
-                    plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=stress_norm[:, 0].cpu(), s=1, cmap='hot', vmin=0,
-                                vmax=6E-3)
-                    plt.colorbar(fraction=0.046, pad=0.04)
-                elif 'C' in trainer:
-                    c_norm = torch.norm(y.view(n_particles, -1), dim=1)
-                    c_norm = c_norm[:, None]
-                    c_norm_np = c_norm[:, 0].cpu().numpy()
-                    x_cpu = x.cpu()
-                    topk_indices = c_norm_np.argsort()[-250:]
-                    plt.scatter(x_cpu[:, 1], x_cpu[:, 2], c=c_norm_np, s=1, cmap='viridis', vmin=0, vmax=80)
-                    plt.colorbar(fraction=0.046, pad=0.04)
-                    plt.scatter(x_cpu[topk_indices, 1], x_cpu[topk_indices, 2], c='red', s=1)
+
+                c_norm = torch.norm(y.view(n_particles, -1), dim=1)
+                c_norm = c_norm[:, None]
+                c_norm_np = c_norm[:, 0].cpu().numpy()
+                x_cpu = x.cpu()
+                topk_indices = c_norm_np.argsort()[-250:]
+                plt.scatter(x_cpu[:, 1], x_cpu[:, 2], c=c_norm_np, s=1, cmap='viridis', vmin=0, vmax=80)
+                plt.colorbar(fraction=0.046, pad=0.04)
+                plt.scatter(x_cpu[topk_indices, 1], x_cpu[topk_indices, 2], c='red', s=1)
 
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
                 plt.subplot(1, 3, 2)
-                if 'F' in trainer:
-                    f_norm = torch.norm(pred.view(n_particles, -1), dim=1).cpu().numpy()
-                    plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=f_norm, s=1, cmap='coolwarm', vmin=1.44 - 0.2,
-                                vmax=1.44 + 0.2)
-                    plt.colorbar(fraction=0.046, pad=0.04)
-                elif trainer == 'S':
-                    stress_norm = torch.norm(pred.view(n_particles, -1), dim=1)
-                    stress_norm = stress_norm[:, None]
-                    plt.scatter(x[:, 1].cpu(), x[:, 2].cpu(), c=stress_norm[:, 0].cpu(), s=1, cmap='hot', vmin=0,
-                                vmax=6E-3)
-                    plt.colorbar(fraction=0.046, pad=0.04)
-                elif 'C' in trainer:
-                    c_norm = torch.norm(pred.view(n_particles, -1), dim=1)
-                    c_norm = c_norm[:, None]
-                    c_norm_np = c_norm[:, 0].cpu().numpy()
-                    x_cpu = x.cpu()
-                    topk_indices = c_norm_np.argsort()[-250:]
-                    plt.scatter(x_cpu[:, 1], x_cpu[:, 2], c=c_norm_np, s=1, cmap='viridis', vmin=0, vmax=80)
-                    plt.colorbar(fraction=0.046, pad=0.04)
-                    plt.scatter(x_cpu[topk_indices, 1], x_cpu[topk_indices, 2], c='red', s=1)
+
+                c_norm = torch.norm(pred_C.view(n_particles, -1), dim=1)
+                c_norm = c_norm[:, None]
+                c_norm_np = c_norm[:, 0].cpu().numpy()
+                x_cpu = x.cpu()
+                topk_indices = c_norm_np.argsort()[-250:]
+                plt.scatter(x_cpu[:, 1], x_cpu[:, 2], c=c_norm_np, s=1, cmap='viridis', vmin=0, vmax=80)
+                plt.colorbar(fraction=0.046, pad=0.04)
+                plt.scatter(x_cpu[topk_indices, 1], x_cpu[topk_indices, 2], c='red', s=1)
 
                 plt.text(0.05, 0.95,
                          f'epoch: {epoch} iteration: {N} error: {np.mean(1000 * error) / len(k_list):.6f}', )
@@ -473,11 +385,8 @@ def data_train_material(config, erase, best_model, device):
 
                 plt.subplot(1, 3, 3)
                 if 'C' in trainer:
-                    # c_norm = torch.norm(y.view(n_particles, -1), dim=1)
-                    # c_norm_pred = torch.norm(pred.view(n_particles, -1), dim=1)
-                    # plt.scatter(c_norm.cpu(), c_norm_pred.cpu(), s=1, c='w', alpha=0.5, edgecolors='none')
                     for m in range(4):
-                        plt.scatter(y[:, m].cpu(), pred[:, m].cpu(), s=1, c='w', alpha=0.5, edgecolors='none')
+                        plt.scatter(y[:, m].cpu(), pred_C[:, m].cpu(), s=1, c='w', alpha=0.5, edgecolors='none')
                 plt.xlim([-200, 200])
                 plt.ylim([-200, 200])
                 plt.tight_layout()

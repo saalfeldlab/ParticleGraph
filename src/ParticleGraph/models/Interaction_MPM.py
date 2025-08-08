@@ -65,7 +65,10 @@ class Interaction_MPM(nn.Module):
 
         self.model_MPM = MPM_P2G(aggr_type='add', device=device)
 
-        self.siren_F_Jp = Siren(in_features=3, out_features=4, hidden_features=self.hidden_dim_nnr,
+        self.siren_F = Siren(in_features=3, out_features=4, hidden_features=self.hidden_dim_nnr,
+                           hidden_layers=self.n_layers_nnr, first_omega_0=self.omega, hidden_omega_0=self.omega, outermost_linear=True).to(device)
+
+        self.siren_Jp = Siren(in_features=3, out_features=1, hidden_features=self.hidden_dim_nnr,
                            hidden_layers=self.n_layers_nnr, first_omega_0=self.omega, hidden_omega_0=self.omega, outermost_linear=True).to(device)
 
         if self.model == 'PDE_MPM_A':
@@ -107,21 +110,20 @@ class Interaction_MPM(nn.Module):
 
         embedding = self.a[self.data_id.detach(), N.long(), :].squeeze()
 
-
         if 'C' in trainer:
             if self.model == 'PDE_MPM_A':
                 features = torch.cat((pos, d_pos, embedding, frame), dim=1).detach()
             else:
                 features = torch.cat((pos, d_pos, frame), dim=1).detach()
-            C_sample = self.siren_C(features).reshape(-1, 2, 2)
-            return C_sample.reshape(-1, 4)
-
-        elif trainer == 'F':
+            C = self.siren_C(features)
+        if 'F' in trainer:
             features = torch.cat((pos, frame), dim=1).detach()
-            F_sample = self.siren_F_Jp(features)[:,0:4]
-            return F_sample.reshape(-1, 4)
+            F = self.siren_F(features)
+        if 'Jp' in trainer:
+            features = torch.cat((pos, frame), dim=1).detach()
+            Jp = self.siren_Jp(features)
 
-        elif trainer == 'next_F':
+        if trainer == 'next_F':
             features = torch.cat((pos, frame), dim=1).detach()
             F_sample = self.siren_F_Jp(features).reshape(-1, 2, 2)
             X_, V_, C_, F_, T_, Jp_, M_, S_, GM_, GV_ = self.MPM_engine(self.model_MPM, pos, d_pos, C, F_sample,
@@ -129,7 +131,9 @@ class Interaction_MPM(nn.Module):
                                                        self.delta_t, self.dx, self.inv_dx, embedding,
                                                        self.offsets, self.particle_offsets, self.grid_coords,
                                                        self.expansion_factor, self.gravity, self.device)
-            return F_
+
+
+        return C,F,Jp
 
 
     def MPM_engine(self, model_MPM, X, V, C, F, T, Jp, M, n_particles,
