@@ -75,7 +75,7 @@ if __name__ == "__main__":
         # config_list = ['signal_CElegans_c14_4']
         # config_list = ['signal_N5_v11_bis']
         # config_list = ['signal_fig_supp6_4']
-        config_list = ['fly_N9_31_1', 'fly_N9_31_2', 'fly_N9_31_3', 'fly_N9_31_4', 'fly_N9_31_5', 'fly_N9_31_6', 'fly_N9_31_7', 'fly_N9_31_8']
+        config_list = ['fly_N9_31_1', 'fly_N9_31_2', 'fly_N9_31_3', 'fly_N9_31_4']
         # config_list = ['signal_N5_l4','signal_N5_l5']
 
     for config_file_ in config_list:
@@ -94,12 +94,12 @@ if __name__ == "__main__":
             data_generate(
                 config,
                 device=device,
-                visualize=False,
+                visualize=True,
                 run_vizualized=0,
                 style="black color",
                 alpha=1,
                 erase=False,
-                bSave=True,
+                bSave=False,
                 step=2
             )  # config.simulation.n_frames // 100)
             

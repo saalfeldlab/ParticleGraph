@@ -3248,11 +3248,11 @@ def data_generate_fly_voltage(
                 if only_noise_visual_input > 0:
                     if (noise_visual_input_type == "") | (it ==0):
                         x[:n_input_neurons, 4:5] = torch.relu(0.5 + torch.rand((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input / 2)
-                    elif noise_visual_input_type == "3/4":
+                    elif "3/4" in noise_visual_input_type:
                         x[:n_input_neurons, 4:5] = torch.clamp(x[:n_input_neurons, 4:5] * 3/4 + 1/4 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input, 0 , 1)
-                    elif noise_visual_input_type == "9/10":
+                    elif "9/10" in noise_visual_input_type:
                         x[:n_input_neurons, 4:5] = torch.clamp(x[:n_input_neurons, 4:5] * 9/10 + 1/10 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input, 0 , 1)
-                    elif noise_visual_input_type == "19/20":
+                    elif "19/20" in noise_visual_input_type:
                         x[:n_input_neurons, 4:5] = torch.clamp(x[:n_input_neurons, 4:5] * 19/20 + 1/20 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input, 0 , 1)
                 else:
                     stimuli = net.stimulus().squeeze()
@@ -3262,11 +3262,11 @@ def data_generate_fly_voltage(
                     if noise_visual_input > 0:
                         if (noise_visual_input_type == "") | (it == 0):
                             input_noise = torch.relu(0.5 + torch.rand((n_input_neurons, 1), dtype=torch.float32, device=device) * noise_visual_input / 2)
-                        elif noise_visual_input_type == "3/4":
+                        elif "3/4" in noise_visual_input_type:
                             input_noise = torch.clamp(input_noise * 3 / 4 + 1 / 4 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * noise_visual_input,0, 1)
-                        elif noise_visual_input_type == "9/10":
+                        elif "9/10" in noise_visual_input_type:
                             input_noise = torch.clamp(input_noise * 9 / 10 + 1 / 10 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * noise_visual_input, 0, 1)
-                        elif noise_visual_input_type == "19/20":
+                        elif "19/20" in noise_visual_input_type:
                             input_noise = torch.clamp(input_noise * 19 / 20 + 1 / 20 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * noise_visual_input, 0, 1)
 
                         x[:n_input_neurons, 4:5] = torch.clamp(stimuli[:n_input_neurons,None]/2 + input_noise, 0, 1)
@@ -3437,48 +3437,50 @@ def data_generate_fly_voltage(
 
         print(f"generated {len(x_list)} frames")
 
+
+
+    x_list = np.array(x_list)
+    y_list = np.array(y_list)
+
+    activity = torch.tensor(x_list[:, :, 3:4],device=device)
+    activity = activity.squeeze()
+    activity = activity.t()
+    input_visual = torch.tensor(x_list[:, :, 4:5],device=device)
+    input_visual = input_visual.squeeze()
+    input_visual = input_visual.t()
+
+    plt.figure(figsize=(16, 8))
+    plt.subplot(1,2,1)
+    plt.title(f"input to visual neurons", fontsize=24)
+
+
+    # n = np.random.randint(0, n_input_neurons, 10)
+    n = [ 731, 1042, 329, 1110, 1176, 1526, 1350, 90, 813, 1695]
+    for i in range(len(n)):
+        plt.plot(to_numpy(input_visual[n[i], :]), linewidth=1)
+    plt.xlabel('time', fontsize=24)
+    plt.ylabel('$x_{i}$', fontsize=24)
+    plt.xlim([0, n_frames//300])
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
+    plt.subplot(1,2,2)
+    plt.title(f"activity of neurons (x10)", fontsize=24)
+    # n = np.random.randint(0, n_neurons - n_input_neurons, 10) + n_input_neurons
+
+    n = [ 2602, 3175, 12915, 10391, 13120, 9939, 12463, 3758, 10341, 4293]
+
+    for i in range(len(n)):
+        plt.plot(to_numpy(activity[n[i], :]), linewidth=1)
+    plt.xlabel('time', fontsize=24)
+    plt.ylabel('$x_{i}$', fontsize=24)
+    plt.xlim([0, n_frames//300])
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
+    plt.tight_layout()
+    plt.savefig(f"graphs_data/{dataset_name}/activity.tif", dpi=300)
+    plt.close()
+
     if bSave:
-
-        x_list = np.array(x_list)
-        y_list = np.array(y_list)
-
-        activity = torch.tensor(x_list[:, :, 3:4],device=device)
-        activity = activity.squeeze()
-        activity = activity.t()
-        input_visual = torch.tensor(x_list[:, :, 4:5],device=device)
-        input_visual = input_visual.squeeze()
-        input_visual = input_visual.t()
-
-        plt.figure(figsize=(16, 8))
-        plt.subplot(1,2,1)
-        plt.title(f"input to visual neurons", fontsize=24)
-
-
-        # n = np.random.randint(0, n_input_neurons, 10)
-        n = [ 731, 1042, 329, 1110, 1176, 1526, 1350, 90, 813, 1695]
-        for i in range(len(n)):
-            plt.plot(to_numpy(input_visual[n[i], :]), linewidth=1)
-        plt.xlabel('time', fontsize=24)
-        plt.ylabel('$x_{i}$', fontsize=24)
-        plt.xlim([0, n_frames//300])
-        plt.xticks(fontsize=16)
-        plt.yticks(fontsize=16)
-        plt.subplot(1,2,2)
-        plt.title(f"activity of neurons (x10)", fontsize=24)
-        # n = np.random.randint(0, n_neurons - n_input_neurons, 10) + n_input_neurons
-
-        n = [ 2602, 3175, 12915, 10391, 13120, 9939, 12463, 3758, 10341, 4293]
-
-        for i in range(len(n)):
-            plt.plot(to_numpy(activity[n[i], :]), linewidth=1)
-        plt.xlabel('time', fontsize=24)
-        plt.ylabel('$x_{i}$', fontsize=24)
-        plt.xlim([0, n_frames//300])
-        plt.xticks(fontsize=16)
-        plt.yticks(fontsize=16)
-        plt.tight_layout()
-        plt.savefig(f"graphs_data/{dataset_name}/activity.tif", dpi=300)
-        plt.close()
 
         if measurement_noise_level > 0:
             np.save(f"graphs_data/{dataset_name}/raw_x_list_{run}.npy", x_list)

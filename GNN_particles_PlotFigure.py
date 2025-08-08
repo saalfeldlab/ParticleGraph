@@ -11428,16 +11428,17 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_18_4_0','fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4', 'fly_N9_22_5', 'fly_N9_20_0', 'fly_N9_20_1', 'fly_N9_20_2', 'fly_N9_20_3', 'fly_N9_20_4', 'fly_N9_20_5', 'fly_N9_20_6']
     # data_flyvis_compare(config_list, 'simulation.n_extra_null_edges')
 
-    config_list = ['fly_N9_28_2','fly_N9_28_3','fly_N9_28_4','fly_N9_28_5', 'fly_N9_28_6', 'fly_N9_28_7', 'fly_N9_28_8', 'fly_N9_28_9', 'fly_N9_28_10', 'fly_N9_28_11']
+    # config_list = ['fly_N9_28_2','fly_N9_28_3','fly_N9_28_4','fly_N9_28_5', 'fly_N9_28_6', 'fly_N9_28_7', 'fly_N9_28_8', 'fly_N9_28_9', 'fly_N9_28_10', 'fly_N9_28_11']
     # data_flyvis_compare(config_list, 'simulation.only_noise_visual_input')
 
     # config_list = ['fly_N9_18_4_7']
-    config_list = ['fly_N9_18_4_1_alt_prtrnd_model']
+    config_list = ['fly_N9_18_4_2_alt_prtrnd_model']
     # config_list = ['fly_N9_29_3']
     # config_list = ['fly_N9_30_3']
 
     # config_list = ['fly_N9_24_1', 'fly_N9_24_2', 'fly_N9_24_3', 'fly_N9_24_4']
     # data_flyvis_compare(config_list, 'training.batch_size')
+    # config_list = ['fly_N9_31_1', 'fly_N9_31_2', 'fly_N9_31_3', 'fly_N9_31_4', 'fly_N9_31_5', 'fly_N9_31_6', 'fly_N9_31_7', 'fly_N9_31_8']
 
 
     for config_file_ in config_list:
