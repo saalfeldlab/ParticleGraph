@@ -2979,7 +2979,7 @@ def data_generate_fly_voltage(
     n_extra_null_edges = simulation_config.n_extra_null_edges
     noise_visual_input = simulation_config.noise_visual_input
     only_noise_visual_input = simulation_config.only_noise_visual_input
-    only_noise_visual_input_type = simulation_config.only_noise_visual_input_type
+    noise_visual_input_type = simulation_config.noise_visual_input_type
 
     os.makedirs("./graphs_data/fly", exist_ok=True)
     folder = f"./graphs_data/{dataset_name}/"
@@ -3235,30 +3235,46 @@ def data_generate_fly_voltage(
     it = 0
     with torch.no_grad():
         for data in tqdm(stimulus_dataset):
-            # if simulation_config.simulation_initial_state:
-            x[:, 3] = initial_state
-            if only_noise_visual_input > 0:
-                x[:n_input_neurons, 4:5] = torch.clamp(torch.relu(0.5 + torch.rand((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input / 2), 0 ,1)
+            if (simulation_config.simulation_initial_state):
+                x[:, 3] = initial_state
+                if only_noise_visual_input > 0:
+                    x[:n_input_neurons, 4:5] = torch.clamp(torch.relu(0.5 + torch.rand((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input / 2), 0 ,1)
+
             sequences = data["lum"]
             for frame_id in range(sequences.shape[0]):
                 frame = sequences[frame_id][None, None]
                 net.stimulus.add_input(frame)  # (1, 1, n_input_neurons)
 
                 if only_noise_visual_input > 0:
-                    if (only_noise_visual_input_type == "") | (it ==0):
+                    if (noise_visual_input_type == "") | (it ==0):
                         x[:n_input_neurons, 4:5] = torch.relu(0.5 + torch.rand((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input / 2)
-                    elif only_noise_visual_input_type == "3/4":
+                    elif noise_visual_input_type == "3/4":
                         x[:n_input_neurons, 4:5] = torch.clamp(x[:n_input_neurons, 4:5] * 3/4 + 1/4 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input, 0 , 1)
-                    elif only_noise_visual_input_type == "9/10":
+                    elif noise_visual_input_type == "9/10":
                         x[:n_input_neurons, 4:5] = torch.clamp(x[:n_input_neurons, 4:5] * 9/10 + 1/10 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input, 0 , 1)
-                    elif only_noise_visual_input_type == "19/20":
+                    elif noise_visual_input_type == "19/20":
                         x[:n_input_neurons, 4:5] = torch.clamp(x[:n_input_neurons, 4:5] * 19/20 + 1/20 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input, 0 , 1)
                 else:
-                    x[:, 4] = net.stimulus().squeeze()
+                    stimuli = net.stimulus().squeeze()
+                    if  ("flash" in noise_visual_input_type) & (frame_id > 6):
+                        stimuli = stimuli * 0
+
                     if noise_visual_input > 0:
-                        x[:n_input_neurons, 4:5] = x[:n_input_neurons, 4:5] + torch.randn(
-                            (n_input_neurons, 1), dtype=torch.float32, device=device
-                        ) * noise_visual_input
+                        if (noise_visual_input_type == "") | (it == 0):
+                            input_noise = torch.relu(0.5 + torch.rand((n_input_neurons, 1), dtype=torch.float32, device=device) * noise_visual_input / 2)
+                        elif noise_visual_input_type == "3/4":
+                            input_noise = torch.clamp(input_noise * 3 / 4 + 1 / 4 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * noise_visual_input,0, 1)
+                        elif noise_visual_input_type == "9/10":
+                            input_noise = torch.clamp(input_noise * 9 / 10 + 1 / 10 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * noise_visual_input, 0, 1)
+                        elif noise_visual_input_type == "19/20":
+                            input_noise = torch.clamp(input_noise * 19 / 20 + 1 / 20 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * noise_visual_input, 0, 1)
+
+                        x[:n_input_neurons, 4:5] = torch.clamp(stimuli[:n_input_neurons,None]/2 + input_noise, 0, 1)
+
+                    else:
+
+                        x[:n_input_neurons, 4:5] = stimuli[:n_input_neurons,None]
+
 
                 dataset = pyg.data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
                 y = pde(dataset, has_field=False)
@@ -3279,7 +3295,7 @@ def data_generate_fly_voltage(
                     visualize
                     & (run == run_vizualized)
                     & (it % step == 0)
-                    & (it <= 200 * step)
+                    & (it <= 70 * step)
                 ):
                     if "latex" in style:
                         plt.rcParams["text.usetex"] = True

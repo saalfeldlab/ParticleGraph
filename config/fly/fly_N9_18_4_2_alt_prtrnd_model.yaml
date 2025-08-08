@@ -1,5 +1,5 @@
-description: 'small MLP, no extra null edges, noise_model_level: 0 only_noise_visual_input: 1.0 noise_visual_input_type: 9/10 simulation_initial_state: True'
-dataset: 'fly_N9_28_10'
+description: 'with 20 neuron types per function,     noise_model_level: 0    smaller MLP update'
+dataset: 'fly_N9_18_4_1_alt_prtrnd_model'
 
 simulation:
     connectivity_file: 'to be specified'
@@ -9,15 +9,14 @@ simulation:
 
     n_neurons: 13741
     n_input_neurons: 1736
-    n_neuron_types: 65
+    n_neuron_types: 20
     n_edges: 434112
     n_frames: 90720
     delta_t: 0.02
     baseline_value: 0
+    model_id: '001'
+    ensemble_id: '0000'
 
-    simulation_initial_state: True
-    only_noise_visual_input: 1.0
-    noise_visual_input_type: "9/10"
 
 graph_model:
     signal_model_name: 'PDE_N9_A'
@@ -30,7 +29,7 @@ graph_model:
 
     input_size_update: 5
     n_layers_update: 3
-    hidden_dim_update: 64
+    hidden_dim_update: 32
     aggr_type: 'add'
     embedding_dim: 2
 
@@ -41,7 +40,7 @@ graph_model:
 plotting:
     colormap: 'tab20'
     arrow_length: 1
-    xlim: [ -2.5,5 ]
+    xlim: [ -2.5,2.5 ]
     ylim: [ -8,8 ]
 
 training:
@@ -63,6 +62,7 @@ training:
 
     measurement_noise_level: 0
     noise_model_level: 0
+
     coeff_edge_diff: 500
     coeff_update_u_diff: 0
     coeff_update_msg_diff: 0

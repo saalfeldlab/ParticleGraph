@@ -9,7 +9,7 @@ from tqdm import trange
 from torch_geometric.utils import dense_to_sparse
 from scipy import stats
 import seaborn as sns
-
+from scipy.spatial import cKDTree
 
 
 def choose_model(config=[], W=[], device=[]):
@@ -728,9 +728,6 @@ def stratified_sphere_points(n_points, radius=1.0, device='cpu'):
     return all_points[:n_points]
 
 
-import numpy as np
-import torch
-
 
 def get_equidistant_3D_points(n_points=1024):
     """
@@ -1135,8 +1132,6 @@ def init_MPM_3D_shapes(
     return N, x, v, C, F, T, Jp, M, S, ID
 
 
-
-
 def init_MPM_3D_cells(
         n_shapes=3,
         seed=42,
@@ -1422,6 +1417,164 @@ def init_MPM_cells(
     ID = id_permutation[ID.squeeze()].unsqueeze(1)
 
     return N, x, v, C, F, T, Jp, M, S, ID
+
+def find_neighbors_with_radius(pos, h, max_neighbors=32):
+    """Find neighbors within radius h using scipy KDTree"""
+    device = pos.device
+    n_particles = pos.shape[0]
+
+    # Convert to numpy for scipy
+    pos_np = pos.cpu().numpy()
+
+    # Build KDTree
+    tree = cKDTree(pos_np)
+
+    # Find neighbors for each particle
+    neighbor_lists = []
+    for i in range(n_particles):
+        # Query ball returns indices within radius
+        neighbors = tree.query_ball_point(pos_np[i], r=h)
+        # Remove self and limit to max_neighbors
+        neighbors = [n for n in neighbors if n != i]
+        if len(neighbors) > max_neighbors:
+            # Keep closest neighbors
+            dists = np.linalg.norm(pos_np[neighbors] - pos_np[i], axis=1)
+            sorted_idx = np.argsort(dists)[:max_neighbors]
+            neighbors = [neighbors[idx] for idx in sorted_idx]
+        neighbor_lists.append(neighbors)
+
+    return neighbor_lists
+
+
+def MLS_gradient_velocity(query_pos, neighbor_pos, neighbor_vel, h):
+    """
+    MLS reconstruction following Müller 2004
+    Returns velocity and velocity gradient (C matrix) at query position
+    """
+    device = query_pos.device
+    n_neighbors = neighbor_pos.shape[0]
+
+    if n_neighbors < 4:
+        # Insufficient neighbors - return zero gradient
+        return torch.zeros(2, device=device), torch.zeros(2, 2, device=device)
+
+    # Relative positions
+    dx = neighbor_pos - query_pos.unsqueeze(0)  # [n_neighbors, 2]
+    r = torch.norm(dx, dim=1)  # [n_neighbors]
+
+    # Müller 2004 kernel weights
+    h_sq = h * h
+    r_sq = r * r
+    valid = r < h
+    weights = torch.zeros_like(r)
+    weights[valid] = (315.0 / (64.0 * np.pi * h ** 9)) * (h_sq - r_sq[valid]) ** 3
+
+    if torch.sum(valid) < 4:
+        return torch.zeros(2, device=device), torch.zeros(2, 2, device=device)
+
+    # Polynomial basis P(x) = [1, x, y] for linear MLS
+    P = torch.cat([
+        torch.ones(n_neighbors, 1, device=device),  # 1
+        dx  # [x, y]
+    ], dim=1)  # [n_neighbors, 3]
+
+    # Weight matrix Ξ
+    Xi = torch.diag(weights)  # [n_neighbors, n_neighbors]
+
+    # Moment matrix M = P^T Ξ P
+    M = P.T @ Xi @ P  # [3, 3]
+
+    # Check conditioning and use SVD if needed
+    try:
+        cond_num = torch.linalg.cond(M)
+        if cond_num > 1e12 or torch.isnan(cond_num):
+            # Use SVD for robust inversion
+            U, S, Vh = torch.linalg.svd(M)
+            S_inv = torch.where(S > 1e-15, 1.0 / S, 0.0)
+            M_inv = (Vh.T * S_inv.unsqueeze(0)) @ Vh
+        else:
+            M_inv = torch.linalg.inv(M)
+    except:
+        # Fallback to SVD
+        U, S, Vh = torch.linalg.svd(M)
+        S_inv = torch.where(S > 1e-15, 1.0 / S, 0.0)
+        M_inv = (Vh.T * S_inv.unsqueeze(0)) @ Vh
+
+    # Reconstruct velocity components
+    vel_x = neighbor_vel[:, 0]  # [n_neighbors]
+    vel_y = neighbor_vel[:, 1]  # [n_neighbors]
+
+    # MLS coefficients: c = M^(-1) P^T Ξ u
+    coeffs_x = M_inv @ P.T @ Xi @ vel_x  # [3]
+    coeffs_y = M_inv @ P.T @ Xi @ vel_y  # [3]
+
+    # Reconstructed velocity at query point: [c0, c1, c2] for v = c0 + c1*x + c2*y
+    # At query point (x=0, y=0 in local coords), velocity = c0
+    velocity = torch.stack([coeffs_x[0], coeffs_y[0]])  # [2]
+
+    # Velocity gradient (C matrix): ∂v/∂x = [c1_x, c2_x; c1_y, c2_y]
+    C_matrix = torch.stack([
+        torch.stack([coeffs_x[1], coeffs_x[2]]),  # [∂vx/∂x, ∂vx/∂y]
+        torch.stack([coeffs_y[1], coeffs_y[2]])  # [∂vy/∂x, ∂vy/∂y]
+    ])  # [2, 2]
+
+    return velocity, C_matrix
+
+
+def MLS_C(features, h=0.0125, max_neighbors=32):
+    """
+    Main MLS function compatible with SIREN interface
+    Input: features = torch.cat((pos, velocity, frame), dim=1)
+    Output: C_mls.reshape(-1, 2, 2)
+    """
+    device = features.device
+    n_particles = features.shape[0]
+
+    pos = features[:, :2]  # [n_particles, 2]
+    velocity = features[:, 2:4]  # [n_particles, 2]
+    neighbor_lists = find_neighbors_with_radius(pos, h, max_neighbors)
+
+    # Initialize output
+    C_mls = torch.zeros(n_particles, 2, 2, device=device)
+
+    # Statistics tracking
+    neighbor_counts = torch.tensor([len(neighbors) + 1 for neighbors in neighbor_lists])  # +1 for self
+    svd_count = 0
+    insufficient_count = 0
+
+    # Process each particle
+    for i in range(n_particles):
+        # Get neighbors (including self)
+        neighbor_indices = neighbor_lists[i] + [i]  # Add self to neighbors
+
+        if len(neighbor_indices) < 4:
+            insufficient_count += 1
+            continue
+
+        # Convert to tensor
+        neighbor_idx_tensor = torch.tensor(neighbor_indices, device=device)
+        neighbor_pos = pos[neighbor_idx_tensor]
+        neighbor_vel = velocity[neighbor_idx_tensor]
+
+        # MLS reconstruction
+        _, C_matrix = MLS_gradient_velocity(
+            pos[i], neighbor_pos, neighbor_vel, h
+        )
+        C_mls[i] = C_matrix
+
+    # Print statistics
+    # print(f"MLS Statistics (h={h:.4f}):")
+    print(f"  Neighbors: min={neighbor_counts.min()}, max={neighbor_counts.max()}, "
+          f"mean={neighbor_counts.float().mean():.1f}, std={neighbor_counts.float().std():.1f}")
+    # print(f"  <4 neighbors: {insufficient_count}/{n_particles} "
+    #       f"({100 * insufficient_count / n_particles:.1f}%)")
+    # print(f"  4-15 neighbors: {torch.sum((neighbor_counts >= 4) & (neighbor_counts <= 15)).item()}/{n_particles} "
+    #       f"({100 * torch.sum((neighbor_counts >= 4) & (neighbor_counts <= 15)) / n_particles:.1f}%)")
+    # print(f"  >20 neighbors: {torch.sum(neighbor_counts > 20).item()}/{n_particles} "
+    #       f"({100 * torch.sum(neighbor_counts > 20) / n_particles:.1f}%)")
+
+    return C_mls.reshape(-1, 2, 2)
+
 
 
 def get_index(n_particles, n_particle_types):

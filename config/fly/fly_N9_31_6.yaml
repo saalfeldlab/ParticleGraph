@@ -1,11 +1,13 @@
-description: 'small MLP, no extra null edges, noise_model_level: 0 only_noise_visual_input: 1.0 noise_visual_input_type: 9/10 simulation_initial_state: True'
-dataset: 'fly_N9_28_10'
+description: 'small MLP, no extra null edges, noise_model_level: 0 noise_visual_input: 1.0 noise_visual_input_type: 19/20 simulation_initial_state: False seed: 13'
+dataset: 'fly_N9_31_6'
 
 simulation:
     connectivity_file: 'to be specified'
     adjacency_matrix: ''
 
     params: [[1.0,1.0,1.0,1.0]]
+
+    seed: 13
 
     n_neurons: 13741
     n_input_neurons: 1736
@@ -15,9 +17,9 @@ simulation:
     delta_t: 0.02
     baseline_value: 0
 
-    simulation_initial_state: True
-    only_noise_visual_input: 1.0
-    noise_visual_input_type: "9/10"
+    simulation_initial_state: False
+    noise_visual_input: 1.0
+    noise_visual_input_type: "19/20"
 
 graph_model:
     signal_model_name: 'PDE_N9_A'

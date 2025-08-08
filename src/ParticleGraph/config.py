@@ -57,8 +57,8 @@ class SimulationConfig(BaseModel):
 
     noise_visual_input: float = 0.0
     only_noise_visual_input: float = 0.0
-    only_noise_visual_input_type: str = ""
-    simulation_initial_state: bool = True
+    noise_visual_input_type: str = ""
+    simulation_initial_state: bool = False
 
     n_grid: int = 128
 

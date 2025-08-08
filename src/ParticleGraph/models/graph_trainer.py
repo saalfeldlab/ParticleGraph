@@ -5863,6 +5863,7 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
     for f in files:
         os.remove(f)
 
+    print('load data ...')
     x_list = []
     y_list = []
     x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
@@ -5896,13 +5897,13 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
 
     error_pos_list=[]
     error_dpos_list=[]
-    recursive_loop = 1
+    recursive_loop = 5
 
     x = torch.tensor(x_list[run][0], dtype=torch.float32, device=device).clone().detach()
 
-    for it in trange(n_frames - recursive_loop -5):
+    for it in range(n_frames - recursive_loop -5):
 
-        x_ = torch.tensor(x_list[run][it], dtype=torch.float32, device=device).clone().detach()
+        x = torch.tensor(x_list[run][it], dtype=torch.float32, device=device).clone().detach()
 
         X = x[:, 1:3].detach()  # pos is the absolute position
         V = x[:, 3:5].detach()  # d_pos is the velocity
@@ -5917,7 +5918,10 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
 
             frame = torch.ones((X.shape[0], 1), dtype=torch.int, device=device) * it / n_frames
             features = torch.cat((X, V, frame), dim=1).detach()
-            if 'GNN_C' in trainer:
+
+            if 'MLS' in trainer:
+                C = MLS_C(features, h=0.025, max_neighbors=32)
+            elif 'GNN_C' in trainer:
                 distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
                 adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
                 edges = adj_t.nonzero().t().contiguous()
@@ -5948,6 +5952,8 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
             error_pos_list.append(to_numpy(error_pos))
             error_dpos = (x[:, 3:5] - x_next[:, 3:5]).norm(2)
             error_dpos_list.append(to_numpy(error_dpos))
+
+            # print(f'it: {it}, error_pos: {np.mean(error_pos_list[-1]):.3e} +/- {np.std(error_pos_list):.3e}')
 
         # output plots
         if (it % step == 0) & (it >= 0):
