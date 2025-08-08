@@ -322,7 +322,7 @@ def data_train_material(config, erase, best_model, device):
                 pred_F = pred_F.reshape(-1, 2, 2)
                 target = torch.eye(2, device=device).repeat(n_particles*batch_size, 1, 1).detach()  # Identity matrix for force prediction
                 loss = loss + F.mse_loss(pred_F, target)
-                loss = F.mse_loss(pred_Jp, torch.ones_like(pred_Jp).detach())  # Assuming Jp should be close to 1
+                loss = loss + F.mse_loss(pred_Jp, torch.ones_like(pred_Jp).detach())  # Assuming Jp should be close to 1
 
 
             loss.backward()
