@@ -1271,7 +1271,7 @@ def data_generate_MPM(
             x = torch.cat((N.clone().detach(), X.clone().detach(), V.clone().detach(),
                            C.reshape(n_particles, 4).clone().detach(),
                            F.reshape(n_particles, 4).clone().detach(),
-                           T.clone().detach(), Jp.clone().detach(), M.clone().detach(),
+                           Jp.clone().detach(), T.clone().detach(), M.clone().detach(),
                            S.reshape(n_particles, 4).clone().detach(),ID.clone().detach()), 1)
             if (it >= 0):
                 x_list.append(x.clone().detach())
@@ -3378,7 +3378,7 @@ def data_generate_fly_voltage(
                     plt.tight_layout()
                     plt.subplots_adjust(top=0.95, bottom=0.05)
 
-                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.png", dpi=80)
                     plt.close()
 
                 it = it + 1
@@ -3387,6 +3387,11 @@ def data_generate_fly_voltage(
 
     print('generating lossless video ...')
     generate_lossless_video_ffv1(output_dir=f"./graphs_data/{dataset_name}", run=run)
+    generate_lossless_video_libx264(output_dir=f"./graphs_data/{dataset_name}", run=run)
+
+    files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
+    for f in files:
+        os.remove(f)
 
 
     if bSave:

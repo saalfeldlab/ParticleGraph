@@ -1954,23 +1954,20 @@ def init_connectivity(connectivity_file, connectivity_distribution, connectivity
 
     return edge_index, adjacency, mask
 
-
-
 import subprocess
 
-def generate_lossless_video_ffv1(output_dir, run=0, framerate=10, output_name="output_video.mkv"):
+def generate_lossless_video_ffv1(output_dir, run=0, framerate=10, output_name="output_video_ffv1.mkv"):
     """
     Generate a truly lossless compressed video using ffmpeg's FFV1 codec.
 
     Parameters:
-        output_dir (str): Path to directory containing Fig/Fig_*.tif.
+        output_dir (str): Path to directory containing Fig/Fig_*.png.
         run (int): Run index to use in filename pattern.
         framerate (int): Desired video framerate.
         output_name (str): Name of output .mkv file.
     """
-    import subprocess
     fig_dir = os.path.join(output_dir, "Fig")
-    input_pattern = os.path.join(fig_dir, f"Fig_{run}_%06d.tif")
+    input_pattern = os.path.join(fig_dir, f"Fig_{run}_%06d.png")
     output_path = os.path.join(output_dir, output_name)
 
     ffmpeg_cmd = [
@@ -1984,7 +1981,38 @@ def generate_lossless_video_ffv1(output_dir, run=0, framerate=10, output_name="o
         output_path,
     ]
 
-    print(f"Generating lossless video: {' '.join(ffmpeg_cmd)}")
+    print(f"Generating lossless video (FFV1): {' '.join(ffmpeg_cmd)}")
     subprocess.run(ffmpeg_cmd, check=True)
-    print(f"Lossless video saved to: {output_path}")
+    print(f"Lossless video (FFV1) saved to: {output_path}")
+
+
+def generate_lossless_video_libx264(output_dir, run=0, framerate=10, output_name="output_video_libx264.mkv"):
+    """
+    Generate a lossless H.264 video using libx264 from a sequence of PNG images.
+
+    Parameters:
+        output_dir (str): Path to directory containing Fig/Fig_*.png.
+        run (int): Run index to use in filename pattern.
+        framerate (int): Desired video framerate.
+        output_name (str): Output video file name (.mkv recommended).
+    """
+    fig_dir = os.path.join(output_dir, "Fig")
+    input_pattern = os.path.join(fig_dir, f"Fig_{run}_%06d.png")
+    output_path = os.path.join(output_dir, output_name)
+
+    command = [
+        "ffmpeg",
+        "-y",
+        "-framerate", str(framerate),
+        "-i", input_pattern,
+        "-c:v", "libx264",
+        "-preset", "veryslow",
+        "-crf", "0",  # lossless mode
+        "-pix_fmt", "yuv444p",  # preserve full chroma info
+        output_path
+    ]
+
+    print(f"Generating lossless video (libx264): {' '.join(command)}")
+    subprocess.run(command, check=True)
+    print(f"Lossless video (libx264) saved to: {output_path}")
 

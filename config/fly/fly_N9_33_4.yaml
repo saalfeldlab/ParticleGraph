@@ -1,5 +1,5 @@
-description: 'small MLP, no extra null edges, noise_model_level: 0 only_noise_visual_input: 0.0001 seed: 13'
-dataset: 'fly_N9_32_0'
+description: 'small MLP, no extra null edges, noise_model_level: 0.5 only_noise_visual_input: 1.0 seed: 42'
+dataset: 'fly_N9_33_4'
 
 simulation:
     connectivity_file: 'to be specified'
@@ -15,11 +15,11 @@ simulation:
     delta_t: 0.02
     baseline_value: 0
 
-    seed: 13
+    seed: 42
 
 
     noise_visual_input_type: "50/50"
-    only_noise_visual_input: 0.0001
+    only_noise_visual_input: 1.0
 
 graph_model:
     signal_model_name: 'PDE_N9_A'
@@ -64,7 +64,8 @@ training:
     learning_rate_embedding_start: 5.0E-3
 
     measurement_noise_level: 0
-    noise_model_level: 0
+    noise_model_level: 0.5
+
     coeff_edge_diff: 500
     coeff_update_u_diff: 0
     coeff_update_msg_diff: 0

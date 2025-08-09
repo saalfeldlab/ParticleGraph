@@ -231,6 +231,224 @@ def get_in_features(rr=None, embedding=None, model=[], model_name = [], max_radi
     return in_features
 
 
+def plot_training_C(x_list, run, device, dimension, trainer, model, max_radius, min_radius, n_particles, n_particle_types, epoch, N,
+                    log_dir):
+    """Plot training results for C prediction only"""
+    k_list = [250, 340, 680, 930]
+    error = list([])
+
+    with torch.no_grad():
+        for k in k_list:
+            x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
+            y = x[:, 1 + dimension * 2: 5 + dimension * 2].clone().detach()
+
+            if 'GNN' in trainer:
+                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
+                edges = adj_t.nonzero().t().contiguous()
+                dataset = data.Data(x=x, edge_index=edges, num_nodes=x.shape[0])
+                pred_C, pred_F, pred_Jp = model.GNN_C(dataset, training=False)
+            else:
+                data_id = torch.ones((n_particles, 1), dtype=torch.float32, device=device) * run
+                k_list_tensor = torch.ones((n_particles, 1), dtype=torch.int, device=device) * k
+                dataset = data.Data(x=x, edge_index=[], num_nodes=x.shape[0])
+                pred_C, pred_F, pred_Jp, = model(dataset, data_id=data_id, k=k_list_tensor, trainer=trainer)
+
+            y = x[:, 1 + dimension * 2: 5 + dimension * 2].clone().detach()
+            error.append(F.mse_loss(pred_C, y).item())
+
+    plt.style.use('dark_background')
+
+    fig = plt.figure(figsize=(20, 6))
+    plt.subplot(1, 3, 1)
+
+    c_norm = torch.norm(y.view(n_particles, -1), dim=1)
+    c_norm = c_norm[:, None]
+    c_norm_np = c_norm[:, 0].cpu().numpy()
+    x_cpu = x.cpu()
+    topk_indices = c_norm_np.argsort()[-250:]
+    plt.scatter(x_cpu[:, 1], x_cpu[:, 2], c=c_norm_np, s=1, cmap='viridis', vmin=0, vmax=80)
+    plt.colorbar(fraction=0.046, pad=0.04)
+    plt.scatter(x_cpu[topk_indices, 1], x_cpu[topk_indices, 2], c='red', s=1)
+
+    plt.xlim([0, 1])
+    plt.ylim([0, 1])
+    plt.subplot(1, 3, 2)
+
+    c_norm = torch.norm(pred_C.view(n_particles, -1), dim=1)
+    c_norm = c_norm[:, None]
+    c_norm_np = c_norm[:, 0].cpu().numpy()
+    x_cpu = x.cpu()
+    topk_indices = c_norm_np.argsort()[-250:]
+    plt.scatter(x_cpu[:, 1], x_cpu[:, 2], c=c_norm_np, s=1, cmap='viridis', vmin=0, vmax=80)
+    plt.colorbar(fraction=0.046, pad=0.04)
+    plt.scatter(x_cpu[topk_indices, 1], x_cpu[topk_indices, 2], c='red', s=1)
+
+    plt.text(0.05, 0.95,
+             f'epoch: {epoch} iteration: {N} error: {np.mean(1000 * error) / len(k_list):.6f}', )
+    plt.xlim([0, 1])
+    plt.ylim([0, 1])
+
+    plt.subplot(1, 3, 3)
+    if 'C' in trainer:
+        for m in range(4):
+            plt.scatter(y[:, m].cpu(), pred_C[:, m].cpu(), s=1, c='w', alpha=0.5, edgecolors='none')
+    plt.xlim([-200, 200])
+    plt.ylim([-200, 200])
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/field/{epoch}_{N}.tif", dpi=87)
+    plt.close()
+
+
+def plot_training_C_F_Jp(x_list, run, device, dimension, trainer, model, max_radius, min_radius, n_particles, n_particle_types, x_next,
+                         epoch, N, log_dir, cmap):
+
+    """Plot training results for C, F, and Jp prediction"""
+    k_list = [250, 340, 680, 930]
+    error = list([])
+
+    with torch.no_grad():
+        for k in k_list:
+            x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
+
+            if 'GNN' in trainer:
+                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
+                edges = adj_t.nonzero().t().contiguous()
+                dataset = data.Data(x=x, edge_index=edges, num_nodes=x.shape[0])
+                pred_C, pred_F, pred_Jp = model.GNN_C(dataset, training=False)
+            else:
+                data_id = torch.ones((n_particles, 1), dtype=torch.float32, device=device) * run
+                k_list_tensor = torch.ones((n_particles, 1), dtype=torch.int, device=device) * k
+                dataset = data.Data(x=x, edge_index=[], num_nodes=x.shape[0])
+                pred_C, pred_F, pred_Jp, = model(dataset, data_id=data_id, k=k_list_tensor, trainer=trainer)
+
+            x_next = torch.tensor(x_list[run][k+1], dtype=torch.float32, device=device).clone().detach()
+            y = x_next[:, 1 + dimension * 2: 10 + dimension * 2].clone().detach()
+            error.append(
+                F.mse_loss(torch.cat((pred_C.reshape(-1, 4), pred_F.reshape(-1, 4), pred_Jp), dim=1), y).item())
+
+    pred_C = pred_C.reshape(-1, 4)
+    pred_F = pred_F.reshape(-1, 4)
+
+    plt.style.use('dark_background')
+
+    embedding = to_numpy(model.a[0])
+    type_list = to_numpy(x[:, 14])
+    for n in range(n_particle_types):
+        plt.scatter(embedding[type_list == n, 0], embedding[type_list == n, 1], s=1,
+                    c=cmap.color(n), label=f'type {n}', alpha=0.5)
+
+    plt.savefig(f"./{log_dir}/tmp_training/embedding/{epoch}_{N}.tif", dpi=87)
+    plt.close()
+
+
+    fig = plt.figure(figsize=(20, 18))
+    plt.subplot(3, 3, 1)
+
+    c_norm = torch.norm(y.view(n_particles, -1), dim=1)
+    c_norm = c_norm[:, None]
+    c_norm_np = c_norm[:, 0].cpu().numpy()
+    x_cpu = x.cpu()
+    topk_indices = c_norm_np.argsort()[-250:]
+    plt.scatter(x_cpu[:, 1], x_cpu[:, 2], c=c_norm_np, s=1, cmap='viridis', vmin=0, vmax=80)
+    plt.colorbar(fraction=0.046, pad=0.04)
+    plt.scatter(x_cpu[topk_indices, 1], x_cpu[topk_indices, 2], c='red', s=1)
+    plt.xlim([0, 1])
+    plt.ylim([0, 1])
+
+    plt.subplot(3, 3, 2)
+
+    c_norm = torch.norm(pred_C.view(n_particles, -1), dim=1)
+    c_norm = c_norm[:, None]
+    c_norm_np = c_norm[:, 0].cpu().numpy()
+    x_cpu = x.cpu()
+    topk_indices = c_norm_np.argsort()[-250:]
+    plt.scatter(x_cpu[:, 1], x_cpu[:, 2], c=c_norm_np, s=1, cmap='viridis', vmin=0, vmax=80)
+    plt.colorbar(fraction=0.046, pad=0.04)
+    plt.scatter(x_cpu[topk_indices, 1], x_cpu[topk_indices, 2], c='red', s=1)
+
+    plt.text(0.05, 0.95,
+             f'epoch: {epoch} iteration: {N} error: {np.mean(1000 * error) / len(k_list):.6f}', )
+    plt.xlim([0, 1])
+    plt.ylim([0, 1])
+
+    plt.subplot(3, 3, 3)
+    if 'C' in trainer:
+        for m in range(4):
+            plt.scatter(y[:, m].cpu(), pred_C[:, m].cpu(), s=1, c='w', alpha=0.5, edgecolors='none')
+    plt.xlim([-200, 200])
+    plt.ylim([-200, 200])
+    plt.title('C prediction')
+
+    # Second row - F plots
+    plt.subplot(3, 3, 5)
+    f_norm = torch.norm(pred_F.view(n_particles, -1), dim=1)
+    f_norm = f_norm[:, None]
+    f_norm_np = f_norm[:, 0].cpu().numpy()
+    topk_indices = f_norm_np.argsort()[-250:]
+    plt.scatter(x_cpu[:, 1], x_cpu[:, 2], c=f_norm_np, s=1, cmap='coolwarm', vmin=1.44-0.1, vmax=1.44+0.1)
+    plt.colorbar(fraction=0.046, pad=0.04)
+    plt.scatter(x_cpu[topk_indices, 1], x_cpu[topk_indices, 2], c='red', s=1)
+    plt.xlim([0, 1])
+    plt.ylim([0, 1])
+    plt.title('F actual')
+
+    plt.subplot(3, 3, 4)
+    f_actual_norm = torch.norm(y[:, 4:8].view(n_particles, -1), dim=1)
+    f_actual_norm = f_actual_norm[:, None]
+    f_actual_norm_np = f_actual_norm[:, 0].cpu().numpy()
+    topk_indices = f_actual_norm_np.argsort()[-250:]
+    plt.scatter(x_cpu[:, 1], x_cpu[:, 2], c=f_actual_norm_np, s=1, cmap='coolwarm', vmin=1.44-0.1, vmax=1.44+0.1)
+    plt.colorbar(fraction=0.046, pad=0.04)
+    plt.scatter(x_cpu[topk_indices, 1], x_cpu[topk_indices, 2], c='red', s=1)
+    plt.xlim([0, 1])
+    plt.ylim([0, 1])
+    plt.title('F predicted')
+
+    plt.subplot(3, 3, 6)
+    for m in range(4):
+        plt.scatter(y[:, 4 + m].cpu(), pred_F[:, m].cpu(), s=1, c='w', alpha=0.5, edgecolors='none')
+    plt.title('F prediction')
+
+    # Third row - Jp plots
+    plt.subplot(3, 3, 8)
+    jp_norm = torch.norm(pred_Jp.view(n_particles, -1), dim=1)
+    jp_norm = jp_norm[:, None]
+    jp_norm_np = jp_norm[:, 0].cpu().numpy()
+    topk_indices = jp_norm_np.argsort()[-250:]
+    plt.scatter(x_cpu[:, 1], x_cpu[:, 2], c=jp_norm_np, s=1, cmap='viridis', vmin=0.75, vmax=1.25)
+    plt.colorbar(fraction=0.046, pad=0.04)
+    plt.scatter(x_cpu[topk_indices, 1], x_cpu[topk_indices, 2], c='red', s=1)
+    plt.xlim([0, 1])
+    plt.ylim([0, 1])
+    plt.title('Jp actual')
+
+    plt.subplot(3, 3, 7)
+    jp_actual_norm = torch.norm(y[:, 8:].view(n_particles, -1), dim=1)
+    jp_actual_norm = jp_actual_norm[:, None]
+    jp_actual_norm_np = jp_actual_norm[:, 0].cpu().numpy()
+    topk_indices = jp_actual_norm_np.argsort()[-250:]
+    plt.scatter(x_cpu[:, 1], x_cpu[:, 2], c=jp_actual_norm_np, s=1, cmap='viridis', vmin=0.75, vmax=1.25)
+    plt.colorbar(fraction=0.046, pad=0.04)
+    plt.scatter(x_cpu[topk_indices, 1], x_cpu[topk_indices, 2], c='red', s=1)
+    plt.xlim([0, 1])
+    plt.ylim([0, 1])
+    plt.title('Jp predicted')
+
+    plt.subplot(3, 3, 9)
+    jp_components = pred_Jp.shape[1] if len(pred_Jp.shape) > 1 else 1
+    for m in range(jp_components):
+        if jp_components > 1:
+            plt.scatter(y[:, 8 + m].cpu(), pred_Jp[:, m].cpu(), s=1, c='w', alpha=0.5, edgecolors='none')
+        else:
+            plt.scatter(y[:, 8].cpu(), pred_Jp.cpu(), s=1, c='w', alpha=0.5, edgecolors='none')
+    plt.title('Jp prediction')
+
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/field/{epoch}_{N}.tif", dpi=87)
+    plt.close()
+
 def plot_training_flyvis(x_list, model, config, epoch, N, log_dir, device, cmap, type_list,
                          gt_weights, n_neurons=None, n_neuron_types=None):
     signal_model_name = config.graph_model.signal_model_name

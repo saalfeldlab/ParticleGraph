@@ -250,7 +250,9 @@ def data_train_material(config, erase, best_model, device):
                 x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
                 x_next = torch.tensor(x_list[run][k+1], dtype=torch.float32, device=device).clone().detach()
 
-                if 'C_F_Jp' in trainer:
+                if 'next_C_F_Jp' in trainer:
+                    y = x_next[:, 1 + dimension * 2: 10 + dimension * 2].clone().detach()  # C
+                elif 'C_F_Jp' in trainer:
                     # For k-nearest, we need positions and velocities for neighbor loss
                     pos = x[:, 1:3].clone().detach()  # positions
                     vel = x[:, 3:5].clone().detach()  # velocities
@@ -269,7 +271,9 @@ def data_train_material(config, erase, best_model, device):
                 if batch == 0:
                     data_id = torch.ones((n_particles, 1), dtype=torch.float32, device=device) * run
                     x_batch = x
-                    if 'C_F_Jp' in trainer:
+                    if 'next_C_F_Jp' in trainer:
+                        y_batch = y
+                    elif 'C_F_Jp' in trainer:
                         pos_batch = pos
                         vel_batch = vel
                     else:
@@ -280,7 +284,9 @@ def data_train_material(config, erase, best_model, device):
                     data_id = torch.cat(
                         (data_id, torch.ones((n_particles, 1), dtype=torch.float32, device=device) * run), dim=0)
                     x_batch = torch.cat((x_batch, x), dim=0)
-                    if 'C_F_Jp' in trainer:
+                    if 'next_C_F_Jp' in trainer:
+                        y_batch = torch.cat((y_batch, y), dim=0)
+                    elif 'C_F_Jp' in trainer:
                         pos_batch = torch.cat((pos_batch, pos), dim=0)
                         vel_batch = torch.cat((vel_batch, vel), dim=0)
                     else:
@@ -296,7 +302,9 @@ def data_train_material(config, erase, best_model, device):
 
                 pred_C, pred_F, pred_Jp = model(batch_loader_data, data_id=data_id, k=k_batch, trainer=trainer)
 
-            if 'C_F_Jp' in trainer:
+            if 'next_C_F_Jp' in trainer:
+                loss = F.mse_loss(torch.cat((pred_C.reshape(-1,4), pred_F.reshape(-1,4), pred_Jp), dim=1), y_batch)
+            elif 'C_F_Jp' in trainer:
                 k_neighbors = 5
                 pred_C = pred_C.reshape(-1, 2, 2)
                 for k in range(batch_size):
@@ -324,7 +332,6 @@ def data_train_material(config, erase, best_model, device):
                 loss = loss + F.mse_loss(pred_F, target)
                 loss = loss + F.mse_loss(pred_Jp, torch.ones_like(pred_Jp).detach())  # Assuming Jp should be close to 1
 
-
             loss.backward()
             optimizer.step()
 
@@ -332,66 +339,11 @@ def data_train_material(config, erase, best_model, device):
 
             if ((epoch < 30) & (N % plot_frequency == 0)) | (N == 0):
 
-                k_list = [250, 340, 680, 930]
-                error = list([])
-                with torch.no_grad():
-                    for k in k_list:
-                        x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
-                        y = x[:, 1 + dimension * 2: 5 + dimension * 2].clone().detach()
-                        if 'GNN' in trainer:
-                            distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                            adj_t = ((distance < max_radius ** 2) & (distance >=  min_radius ** 2)).float() * 1
-                            edges = adj_t.nonzero().t().contiguous()
-                            dataset = data.Data(x=x, edge_index=edges, num_nodes=x.shape[0])
-                            pred_C, pred_F, pred_Jp = model.GNN_C(dataset, training=False)
-                        else:
-                            data_id = torch.ones((n_particles, 1), dtype=torch.float32, device=device) * run
-                            k_list_tensor = torch.ones((n_particles, 1), dtype=torch.int, device=device) * k
-                            dataset = data.Data(x=x, edge_index=[], num_nodes=x.shape[0])
-                            pred_C, pred_F, pred_Jp,  = model(dataset, data_id=data_id, k=k_list_tensor, trainer=trainer)
-                        error.append(F.mse_loss(pred_C, y).item())
+                if 'next_C_F_Jp' in trainer:
+                    plot_training_C_F_Jp(x_list, run, device, dimension, trainer, model, max_radius, min_radius, n_particles, n_particle_types, x_next, epoch, N, log_dir, cmap)
 
-                plt.style.use('dark_background')
-
-                fig = plt.figure(figsize=(20, 6))
-                plt.subplot(1, 3, 1)
-
-                c_norm = torch.norm(y.view(n_particles, -1), dim=1)
-                c_norm = c_norm[:, None]
-                c_norm_np = c_norm[:, 0].cpu().numpy()
-                x_cpu = x.cpu()
-                topk_indices = c_norm_np.argsort()[-250:]
-                plt.scatter(x_cpu[:, 1], x_cpu[:, 2], c=c_norm_np, s=1, cmap='viridis', vmin=0, vmax=80)
-                plt.colorbar(fraction=0.046, pad=0.04)
-                plt.scatter(x_cpu[topk_indices, 1], x_cpu[topk_indices, 2], c='red', s=1)
-
-                plt.xlim([0, 1])
-                plt.ylim([0, 1])
-                plt.subplot(1, 3, 2)
-
-                c_norm = torch.norm(pred_C.view(n_particles, -1), dim=1)
-                c_norm = c_norm[:, None]
-                c_norm_np = c_norm[:, 0].cpu().numpy()
-                x_cpu = x.cpu()
-                topk_indices = c_norm_np.argsort()[-250:]
-                plt.scatter(x_cpu[:, 1], x_cpu[:, 2], c=c_norm_np, s=1, cmap='viridis', vmin=0, vmax=80)
-                plt.colorbar(fraction=0.046, pad=0.04)
-                plt.scatter(x_cpu[topk_indices, 1], x_cpu[topk_indices, 2], c='red', s=1)
-
-                plt.text(0.05, 0.95,
-                         f'epoch: {epoch} iteration: {N} error: {np.mean(1000 * error) / len(k_list):.6f}', )
-                plt.xlim([0, 1])
-                plt.ylim([0, 1])
-
-                plt.subplot(1, 3, 3)
-                if 'C' in trainer:
-                    for m in range(4):
-                        plt.scatter(y[:, m].cpu(), pred_C[:, m].cpu(), s=1, c='w', alpha=0.5, edgecolors='none')
-                plt.xlim([-200, 200])
-                plt.ylim([-200, 200])
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/field/{epoch}_{N}.tif", dpi=87)
-                plt.close()
+                elif 'C_F_Jp' in trainer:
+                    plot_training_C(x_list, run, device, dimension, trainer, model, max_radius, min_radius, n_particles, n_particle_types, epoch, N, log_dir)
 
                 torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
                            os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
@@ -421,7 +373,7 @@ def data_train_material(config, erase, best_model, device):
             embedding = to_numpy(model.GNN_C.a)
         else:
             embedding = to_numpy(model.a[0])
-        type_list = to_numpy(x[:, 13])
+        type_list = to_numpy(x[:, 14])
         for n in range(n_particle_types):
             plt.scatter(embedding[type_list == n, 0], embedding[type_list == n, 1], s=1,
                         c=cmap.color(n), label=f'type {n}', alpha=0.5)
@@ -5808,11 +5760,11 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
 
     error_pos_list=[]
     error_dpos_list=[]
-    recursive_loop = 5
+    recursive_loop = 1
 
     x = torch.tensor(x_list[run][0], dtype=torch.float32, device=device).clone().detach()
 
-    for it in range(n_frames - recursive_loop -5):
+    for it in trange(n_frames - recursive_loop -5):
 
         x = torch.tensor(x_list[run][it], dtype=torch.float32, device=device).clone().detach()
 
@@ -5820,8 +5772,8 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
         V = x[:, 3:5].detach()  # d_pos is the velocity
         C = x[:, 5:9].reshape(-1, 2, 2).detach()  # C is the affine deformation gradient
         F = x[:, 9:13].reshape(-1, 2, 2) .detach() # F is the deformation gradient
-        T = x[:, 13:14].long().detach() # T is the type of particle
-        Jp = x[:, 14:15].detach() # Jp is the Jacobian of the deformation gradient
+        Jp = x[:, 13:14].detach() # Jp is the Jacobian of the deformation gradient
+        T = x[:, 14:15].long().detach() # T is the type of particle
         M = x[:, 15:16].detach() # M is the mass of the particle
         S = x[:, 16:20].reshape(-1, 2, 2)
 
@@ -5830,21 +5782,21 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
             frame = torch.ones((X.shape[0], 1), dtype=torch.int, device=device) * it / n_frames
             features = torch.cat((X, V, frame), dim=1).detach()
 
-            if 'MLS' in trainer:
-                C = MLS_C(features, h=0.025, max_neighbors=32)
-            elif 'GNN_C' in trainer:
-                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
-                edges = adj_t.nonzero().t().contiguous()
-                dataset = data.Data(x=x, edge_index=edges, num_nodes=x.shape[0])
-                C = model.GNN_C(dataset, training=False)
-                C = C.reshape(-1, 2, 2)
-            else:
-                if 'PDE_MPM_A' in model_config.particle_model_name:
-                    embedding = model.a[0]
-                    features = torch.cat((X, V, embedding, frame), dim=1).detach()
-                C = model.siren_C(features)
-                C = C.reshape(-1, 2, 2)
+            # if 'MLS' in trainer:
+            #     C = MLS_C(features, h=0.025, max_neighbors=32)
+            # elif 'GNN_C' in trainer:
+            #     distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+            #     adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
+            #     edges = adj_t.nonzero().t().contiguous()
+            #     dataset = data.Data(x=x, edge_index=edges, num_nodes=x.shape[0])
+            #     C = model.GNN_C(dataset, training=False)
+            #     C = C.reshape(-1, 2, 2)
+            # else:
+            #     if 'PDE_MPM_A' in model_config.particle_model_name:
+            #         embedding = model.a[0]
+            #         features = torch.cat((X, V, embedding, frame), dim=1).detach()
+            #     C = model.siren_C(features)
+            #     C = C.reshape(-1, 2, 2)
 
             for n in range(recursive_loop):
                 X, V, C, F, T, Jp, M, S, GM, GV = MPM_step(model_MPM, X, V, C, F, T, Jp, M, n_particles, n_grid,
@@ -5855,8 +5807,10 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
             x = torch.cat((N.clone().detach(), X.clone().detach(), V.clone().detach(),
                            C.reshape(n_particles, 4).clone().detach(),
                            F.reshape(n_particles, 4).clone().detach(),
-                           T.clone().detach(), Jp.clone().detach(), M.clone().detach(),
+                           Jp.clone().detach(),
+                           T.clone().detach(), M.clone().detach(),
                            S.reshape(n_particles, 4).clone().detach(),ID.clone().detach()), 1)
+
             x_next = torch.tensor(x_list[run][it+recursive_loop], dtype=torch.float32, device=device).clone().detach()
 
             error_pos = (x[:, 1:3] - x_next[:, 1:3]).norm(2)
