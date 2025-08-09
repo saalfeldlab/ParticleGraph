@@ -2984,9 +2984,9 @@ def data_generate_fly_voltage(
     folder = f"./graphs_data/{dataset_name}/"
     os.makedirs(folder, exist_ok=True)
     os.makedirs(f"./graphs_data/{dataset_name}/Fig/", exist_ok=True)
-    # files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
-    # for f in files:
-    #     os.remove(f)
+    files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
+    for f in files:
+        os.remove(f)
 
     from datamate import Namespace
     from flyvis.datasets.sintel import AugmentedSintel
@@ -3186,9 +3186,11 @@ def data_generate_fly_voltage(
     x[:, 6] = torch.tensor(node_types_int, dtype=torch.float32, device=device)
 
 
+
     y_list = []
     x_list = []
     it = 0
+    id_fig = 0
     with torch.no_grad():
         for data in tqdm(stimulus_dataset):
             if simulation_config.simulation_initial_state:
@@ -3249,7 +3251,8 @@ def data_generate_fly_voltage(
                         rc("font", **{"family": "serif", "serif": ["Palatino"]})
 
                     matplotlib.rcParams["savefig.pad_inches"] = 0
-                    num = f"{it:06}"
+                    num = f"{id_fig:06}"
+                    id_fig += 1
 
                     # Define neuron_types at the beginning for use throughout visualization
                     neuron_types = to_numpy(x[:, 6]).astype(int)  # Individual cell type indices (0-64)
@@ -3382,14 +3385,12 @@ def data_generate_fly_voltage(
 
         print(f"generated {len(x_list)} frames")
 
-    compression_results = analyze_neural_information_content(dataset_name, run)
-    with open(f"graphs_data/{dataset_name}/compression_analysis_run{run}.json", "w") as f:
-        json.dump(compression_results, f, indent=2)
-
-
+    print('generating lossless video ...')
+    generate_lossless_video_ffv1(output_dir=f"./graphs_data/{dataset_name}", run=run)
 
 
     if bSave:
+        print('save data ...')
 
         x_list = np.array(x_list)
         y_list = np.array(y_list)
