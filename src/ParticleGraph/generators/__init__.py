@@ -24,8 +24,8 @@ from .RD_FitzHugh_Nagumo import RD_FitzHugh_Nagumo
 from .RD_Gray_Scott import RD_Gray_Scott
 from .RD_RPS import RD_RPS
 from .graph_data_generator import *
-from .utils import choose_model, choose_mesh_model, init_particles, init_mesh, init_MPM_3D_shapes, init_MPM_shapes, find_neighbors_with_radius, MLS_gradient_velocity, MLS_C,
-from .utils import utils generate_video_from_tiffs, analyze_information_content_via_compression, analyze_neural_information_content, analyze_raw_data_compression
+from .utils import choose_model, choose_mesh_model, init_particles, init_mesh, init_MPM_3D_shapes, init_MPM_shapes, find_neighbors_with_radius, MLS_gradient_velocity, MLS_C
+from .utils import generate_video_from_tiffs, analyze_information_content_via_compression, analyze_neural_information_content, analyze_raw_data_compression
 from .cell_utils import *
 
 __all__ = [utils, cell_utils, graph_data_generator, PDE_Laplacian, PDE_A, PDE_B, PDE_E, PDE_F, PDE_G, PDE_K,

@@ -24,7 +24,6 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 # import xarray as xr
 import pandas as pd
 import tables
-import json
 import torch_geometric.utils as pyg_utils
 from scipy.ndimage import zoom
 import re
@@ -32,7 +31,7 @@ import imageio
 from ParticleGraph.generators.utils import *
 import taichi as ti
 import random
-
+import json
 
 def data_generate(
     config,
@@ -3243,7 +3242,7 @@ def data_generate_fly_voltage(
                     visualize
                     & (run == run_vizualized)
                     & (it % step == 0)
-                    & ((it <= 200 * step) | ((noise_visual_input_type == "50/50")&(it>50000)&(it<50200))      )
+                    & ((it <= 200 * step) | ((noise_visual_input_type == "50/50")&(it>50000)&(it<50400))      )
                 ):
                     if "latex" in style:
                         plt.rcParams["text.usetex"] = True
@@ -3382,6 +3381,13 @@ def data_generate_fly_voltage(
                 it = it + 1
 
         print(f"generated {len(x_list)} frames")
+
+    compression_results = analyze_neural_information_content(dataset_name, run)
+    with open(f"graphs_data/{dataset_name}/compression_analysis_run{run}.json", "w") as f:
+        json.dump(compression_results, f, indent=2)
+
+
+
 
     if bSave:
 
