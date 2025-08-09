@@ -79,9 +79,9 @@ class Interaction_MPM(nn.Module):
                                hidden_layers=self.n_layers_nnr, first_omega_0=self.omega, hidden_omega_0=self.omega, outermost_linear=True).to(device)
 
         self.MLP_mu_lambda = MLP(input_size=self.embedding_dim + 1, output_size=2, nlayers=3, hidden_size=32, device=device)
-        self.MLP_sig_plastic_ratio = MLP(input_size=self.embedding_dim + 6, output_size=3, nlayers=5, hidden_size=128, device=device)
+        self.MLP_sig = MLP(input_size=self.embedding_dim + 2, output_size=2, nlayers=5, hidden_size=32, device=device)
         self.MLP_F = MLP(input_size=self.embedding_dim + 13, output_size=4, nlayers=5, hidden_size=128, device=device)
-        self.MLP_stress = MLP(input_size=self.embedding_dim + 13, output_size=4, nlayers=5, hidden_size=128, device=device)
+        self.MLP_stress = MLP(input_size=self.embedding_dim + 15, output_size=4, nlayers=5, hidden_size=128, device=device)
 
         self.a = nn.Parameter(
             torch.tensor(np.ones((self.n_dataset, int(self.n_particles) , self.embedding_dim)),
@@ -89,7 +89,6 @@ class Interaction_MPM(nn.Module):
                          requires_grad=True, dtype=torch.float32))
 
         self.GNN_C = Affine_Particle(aggr_type='mean', config=config, device=device, bc_dpos=bc_dpos, dimension=dimension)
-
 
 
 
@@ -161,6 +160,8 @@ class Interaction_MPM(nn.Module):
 
         original_sig = sig.clone()
 
+        sig = self.MLP_sig(torch.cat((embedding, sig), dim=1))**2
+
         # sig_plastic_ratio = self.MLP_sig_plastic_ratio(
         #     torch.cat((embedding, sig, det_U[:,None], det_Vh[:,None], mu, lambda_), dim=1))
         #
@@ -173,7 +174,7 @@ class Interaction_MPM(nn.Module):
 
         F = self.MLP_F(torch.cat((embedding, J[:,None], sig_diag.reshape(-1, 4), U.reshape(-1, 4), Vh.reshape(-1, 4)), dim=1))
 
-        S = self.MLP_stress(torch.cat((embedding, J[:,None], F.reshape(-1, 4), U.reshape(-1, 4), Vh.reshape(-1, 4)), dim=1))
+        S = self.MLP_stress(torch.cat((embedding, mu, lambda_, J[:,None], F.reshape(-1, 4), U.reshape(-1, 4), Vh.reshape(-1, 4)), dim=1))
 
         return C, F, Jp, S
 

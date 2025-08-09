@@ -1,4 +1,4 @@
-description: 'training next C F Jp  LR:1E-5 LR_embedding:1E-2  redo 1_27 with LR_embedding going down to 1E-4'
+description: 'training next C F Jp  LR:1E-5 LR_embedding:1E-2 next_S'
 dataset: 'multimaterial_1'
 
 simulation:
@@ -65,7 +65,7 @@ training:
   learning_rate_start: 1E-5
   learning_rate_embedding_start: 1E-2
 
-  MPM_trainer : 'next_C_F_Jp'
+  MPM_trainer : 'next_S'
 
 
 

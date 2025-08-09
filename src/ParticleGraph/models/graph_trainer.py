@@ -223,9 +223,9 @@ def data_train_material(config, erase, best_model, device):
         batch_size = int(get_batch_size(epoch))
         logger.info(f'batch_size: {batch_size}')
 
-        if (epoch == 1):
-            lr_embedding = 1E-4
-            optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+        # if (epoch == 1):
+        #     lr_embedding = 1E-4
+        #     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
 
         if batch_ratio < 1:
             Niter = int(n_frames * data_augmentation_loop // batch_size / batch_ratio)

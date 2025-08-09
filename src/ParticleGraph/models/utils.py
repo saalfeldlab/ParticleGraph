@@ -335,6 +335,8 @@ def plot_training_C_F_Jp(x_list, run, device, dimension, trainer, model, max_rad
 
     embedding = to_numpy(model.a[0])
     type_list = to_numpy(x[:, 14])
+
+    fig = plt.figure(figsize=(10, 10))
     for n in range(n_particle_types):
         plt.scatter(embedding[type_list == n, 0], embedding[type_list == n, 1], s=1,
                     c=cmap.color(n), label=f'type {n}', alpha=0.5)
@@ -374,9 +376,8 @@ def plot_training_C_F_Jp(x_list, run, device, dimension, trainer, model, max_rad
     plt.ylim([0, 1])
 
     plt.subplot(3, 3, 3)
-    if 'C' in trainer:
-        for m in range(4):
-            plt.scatter(y[:, m].cpu(), pred_C[:, m].cpu(), s=1, c='w', alpha=0.5, edgecolors='none')
+    for m in range(4):
+        plt.scatter(y[:, m].cpu(), pred_C[:, m].cpu(), s=1, c='w', alpha=0.5, edgecolors='none')
     plt.xlim([-200, 200])
     plt.ylim([-200, 200])
     plt.title('C prediction')
