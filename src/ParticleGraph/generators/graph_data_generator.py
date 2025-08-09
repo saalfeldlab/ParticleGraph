@@ -1276,7 +1276,7 @@ def data_generate_MPM(
             if (it >= 0):
                 x_list.append(x.clone().detach())
 
-            X, V, C, F, T, Jp, M, S, GM, GV = MPM_step(model_MPM, X, V, C, F, T, Jp, M, n_particles, n_grid,
+            X, V, C, F, Jp, T, M, S, GM, GV = MPM_step(model_MPM, X, V, C, F, Jp, T, M, n_particles, n_grid,
                                                        delta_t, dx, inv_dx, mu_0, lambda_0, p_vol, offsets, particle_offsets,
                                                        expansion_factor, gravity, friction, it, device)
 

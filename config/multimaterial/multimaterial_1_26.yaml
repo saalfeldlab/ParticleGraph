@@ -1,4 +1,4 @@
-description: 'training next C F Jp  LR:1E-5 LR_embedding:1E-3'
+description: 'training next C F Jp  LR:1E-4 LR_embedding:1E-3'
 dataset: 'multimaterial_1'
 
 simulation:
@@ -62,7 +62,7 @@ training:
   fix_cluster_embedding: True
   device: 'auto'
 
-  learning_rate_start: 1E-5
+  learning_rate_start: 1E-4
   learning_rate_embedding_start: 1E-3
 
   MPM_trainer : 'next_C_F_Jp'

@@ -9,8 +9,8 @@ def MPM_step(
         V,
         C,
         F,
-        T,
         Jp,
+        T,
         M,
         n_particles,
         n_grid,
@@ -266,4 +266,4 @@ def MPM_step(
     # Particle advection
     X = X + dt * V
 
-    return X, V, C, F, T, Jp, M, stress, grid_m, grid_v
+    return X, V, C, F, Jp, T, M, stress, grid_m, grid_v

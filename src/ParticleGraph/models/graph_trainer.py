@@ -5799,7 +5799,7 @@ def data_test_MPM(config=None, config_file=None, visualize=False, style='color f
             #     C = C.reshape(-1, 2, 2)
 
             for n in range(recursive_loop):
-                X, V, C, F, T, Jp, M, S, GM, GV = MPM_step(model_MPM, X, V, C, F, T, Jp, M, n_particles, n_grid,
+                X, V, C, F, Jp, T, M, S, GM, GV = MPM_step(model_MPM, X, V, C, F, Jp, T, M, n_particles, n_grid,
                                                            delta_t, dx, inv_dx, mu_0, lambda_0, p_vol, offsets, particle_offsets,
                                                            expansion_factor, gravity, friction, it, device)
 
