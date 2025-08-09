@@ -10,7 +10,9 @@ from torch_geometric.utils import dense_to_sparse
 from scipy import stats
 import seaborn as sns
 from scipy.spatial import cKDTree
-
+import subprocess
+import os
+import glob
 
 def choose_model(config=[], W=[], device=[]):
     particle_model_name = config.graph_model.particle_model_name
@@ -1954,3 +1956,313 @@ def init_connectivity(connectivity_file, connectivity_distribution, connectivity
 
 
 
+
+
+def generate_video_from_tiffs(dataset_name, run=0, fps=30, codec='hevc_lossless', output_format='mkv'):
+    """
+    Generate a maximally compressed lossless video from TIFF files using FFMPEG.
+    Optimized for information content analysis via compression size.
+
+    Parameters:
+    -----------
+    dataset_name : str
+        Name of the dataset (used for folder path)
+    run : int, default=0
+        Run number (used in filename pattern)
+    fps : int, default=30
+        Frames per second for output video
+    codec : str, default='hevc_lossless'
+        Video codec to use. Options (ordered by compression efficiency):
+        - 'av1_lossless': AV1 lossless (best compression, slowest)
+        - 'hevc_lossless': H.265/HEVC lossless (excellent compression)
+        - 'libx264_lossless': H.264 lossless (good compression, fast)
+        - 'ffv1_max': FFV1 with maximum compression settings
+    output_format : str, default='mkv'
+        Output container format ('mkv', 'mp4', 'webm')
+
+    Returns:
+    --------
+    str : Path to generated video file
+    """
+
+    # Define paths
+    input_folder = f"./graphs_data/{dataset_name}/Fig/"
+    input_pattern = f"Fig_{run}_%06d.tif"
+    output_path = f"./graphs_data/{dataset_name}/video_{dataset_name}_run{run}_{codec}.{output_format}"
+
+    # Check if input folder exists
+    if not os.path.exists(input_folder):
+        raise FileNotFoundError(f"Input folder not found: {input_folder}")
+
+    # Check if TIFF files exist
+    tiff_files = glob.glob(os.path.join(input_folder, f"Fig_{run}_*.tif"))
+    if not tiff_files:
+        raise FileNotFoundError(f"No TIFF files found matching pattern Fig_{run}_*.tif in {input_folder}")
+
+    print(f"Found {len(tiff_files)} TIFF files")
+    print(f"Generating video: {output_path}")
+
+    # Define codec-specific options for maximum lossless compression
+    codec_options = {
+        'av1_lossless': [
+            '-c:v', 'libaom-av1',
+            '-crf', '0',  # Lossless
+            '-cpu-used', '0',  # Slowest/best compression
+            '-row-mt', '1',  # Enable row-based multithreading
+            '-tiles', '2x2'  # Tile encoding for parallelization
+        ],
+        'hevc_lossless': [
+            '-c:v', 'libx265',
+            '-preset', 'veryslow',  # Maximum compression preset
+            '-crf', '0',  # Lossless
+            '-x265-params', 'lossless=1:log-level=error'
+        ],
+        'libx264_lossless': [
+            '-c:v', 'libx264',
+            '-preset', 'veryslow',  # Slowest preset for best compression
+            '-crf', '0',  # Lossless
+            '-tune', 'stillimage'  # Optimize for low motion content
+        ],
+        'ffv1_max': [
+            '-c:v', 'ffv1',
+            '-level', '3',  # FFV1 version 3
+            '-coder', '2',  # Range coder (best compression)
+            '-context', '1',  # Large context
+            '-g', '1',  # GOP size 1 for better compression
+            '-slices', '4'  # Multiple slices for parallelization
+        ]
+    }
+
+    if codec not in codec_options:
+        raise ValueError(f"Unsupported codec: {codec}. Choose from {list(codec_options.keys())}")
+
+    # Build FFMPEG command
+    cmd = [
+        'ffmpeg',
+        '-y',  # Overwrite output file
+        '-framerate', str(fps),  # Input framerate
+        '-i', os.path.join(input_folder, input_pattern),  # Input pattern
+        '-pix_fmt', 'yuv420p',  # Pixel format for compatibility
+        *codec_options[codec],  # Codec-specific options
+        '-r', str(fps),  # Output framerate
+        output_path
+    ]
+
+    try:
+        # Run FFMPEG
+        print("Running FFMPEG command:")
+        print(" ".join(cmd))
+
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+
+        print(f"Video successfully generated: {output_path}")
+
+        # Print file size
+        if os.path.exists(output_path):
+            file_size = os.path.getsize(output_path) / (1024 * 1024)  # MB
+            print(f"Video file size: {file_size:.2f} MB")
+
+        return output_path
+
+    except subprocess.CalledProcessError as e:
+        print(f"FFMPEG error: {e}")
+        print(f"STDERR: {e.stderr}")
+        raise
+    except FileNotFoundError:
+        print("FFMPEG not found. Please install FFMPEG and ensure it's in your PATH.")
+        raise
+
+
+def analyze_information_content_via_compression(dataset_name, run=0, fps=30):
+    """
+    Generate videos with different lossless codecs to analyze information content
+    via compression ratios. Returns compression statistics.
+
+    Parameters:
+    -----------
+    dataset_name : str
+        Name of the dataset
+    run : int, default=0
+        Run number
+    fps : int, default=30
+        Frames per second
+
+    Returns:
+    --------
+    dict : Compression analysis results with file sizes and ratios
+    """
+
+    # Order codecs by expected compression efficiency
+    codecs = ['hevc_lossless', 'libx264_lossless', 'ffv1_max']
+    results = {}
+
+    # Calculate original TIFF files size for comparison
+    input_folder = f"./graphs_data/{dataset_name}/Fig/"
+    tiff_files = glob.glob(os.path.join(input_folder, f"Fig_{run}_*.tif"))
+
+    if tiff_files:
+        total_tiff_size = sum(os.path.getsize(f) for f in tiff_files)
+        total_tiff_size_mb = total_tiff_size / (1024 * 1024)
+        print(f"Original TIFF files total size: {total_tiff_size_mb:.2f} MB")
+        results['original_size_mb'] = total_tiff_size_mb
+    else:
+        results['original_size_mb'] = None
+        print("No TIFF files found for size comparison")
+
+    print("\nGenerating lossless videos for compression analysis...")
+    print("-" * 60)
+
+    for codec in codecs:
+        try:
+            print(f"Processing with {codec}...")
+            video_path = generate_video_from_tiffs(dataset_name, run, fps, codec)
+
+            if os.path.exists(video_path):
+                file_size = os.path.getsize(video_path)
+                file_size_mb = file_size / (1024 * 1024)
+
+                # Calculate compression ratio
+                if results['original_size_mb']:
+                    compression_ratio = results['original_size_mb'] / file_size_mb
+                else:
+                    compression_ratio = None
+
+                results[codec] = {
+                    'path': video_path,
+                    'size_mb': file_size_mb,
+                    'size_bytes': file_size,
+                    'compression_ratio': compression_ratio
+                }
+
+                print(f"  ✓ {codec}: {file_size_mb:.2f} MB", end="")
+                if compression_ratio:
+                    print(f" (compression ratio: {compression_ratio:.2f}x)")
+                else:
+                    print()
+            else:
+                results[codec] = None
+                print(f"  ✗ {codec}: Failed to generate")
+
+        except Exception as e:
+            print(f"  ✗ {codec}: Error - {e}")
+            results[codec] = None
+
+    # Print summary
+    print("\n" + "=" * 60)
+    print("COMPRESSION ANALYSIS SUMMARY")
+    print("=" * 60)
+
+    successful_codecs = [k for k, v in results.items()
+                         if k != 'original_size_mb' and v is not None]
+
+    if successful_codecs:
+        # Sort by file size (smaller = better compression)
+        sorted_codecs = sorted(successful_codecs,
+                               key=lambda x: results[x]['size_mb'])
+
+        print("Ranking by compression efficiency (smaller = more compressed):")
+        for i, codec in enumerate(sorted_codecs, 1):
+            data = results[codec]
+            print(f"{i}. {codec}: {data['size_mb']:.2f} MB", end="")
+            if data['compression_ratio']:
+                print(f" ({data['compression_ratio']:.2f}x compression)")
+            else:
+                print()
+
+        # Calculate information content estimate
+        best_compression = results[sorted_codecs[0]]['size_mb']
+        print(f"\nEstimated minimum information content: {best_compression:.2f} MB")
+        print("(This represents the most compressed lossless representation)")
+
+    return results
+
+
+def analyze_neural_information_content(dataset_name, run=0):
+    """
+    Generate maximally compressed lossless videos to estimate information content
+    of neural activity patterns. Call this at the end of your simulation.
+    """
+
+    print("\n" + "=" * 70)
+    print("ANALYZING NEURAL ACTIVITY INFORMATION CONTENT VIA COMPRESSION")
+    print("=" * 70)
+
+    try:
+        # Run compression analysis with multiple codecs
+        compression_results = analyze_information_content_via_compression(
+            dataset_name=dataset_name,
+            run=run,
+            fps=30  # Adjust based on your simulation frame rate
+        )
+
+        # Also generate raw data compression for comparison
+        raw_info = analyze_raw_data_compression(dataset_name, run)
+
+        print("\n" + "=" * 70)
+        print("INFORMATION CONTENT INTERPRETATION")
+        print("=" * 70)
+        print("• Smaller compressed size = more predictable/redundant patterns")
+        print("• Larger compressed size = more complex/chaotic activity")
+        print("• Compare across different conditions/parameters")
+        print("• Use the best (smallest) lossless compression as information estimate")
+
+        return compression_results
+
+    except Exception as e:
+        print(f"✗ Information content analysis failed: {e}")
+        print("Make sure FFMPEG is installed with H.265 and AV1 support.")
+        return None
+
+
+def analyze_raw_data_compression(dataset_name, run=0):
+    """
+    Analyze compression of raw neural activity data arrays for comparison.
+    """
+
+    print(f"\nAnalyzing raw data compression...")
+
+    try:
+        import lzma
+        import gzip
+
+        # Load raw activity data
+        x_file = f"graphs_data/{dataset_name}/x_list_{run}.npy"
+        y_file = f"graphs_data/{dataset_name}/y_list_{run}.npy"
+
+        results = {}
+
+        for filename, label in [(x_file, "activity_states"), (y_file, "derivatives")]:
+            if os.path.exists(filename):
+                # Original file size
+                original_size = os.path.getsize(filename)
+
+                # Read and compress with different algorithms
+                with open(filename, 'rb') as f:
+                    data = f.read()
+
+                # LZMA compression (best ratio)
+                compressed_lzma = lzma.compress(data, preset=9)
+                lzma_ratio = original_size / len(compressed_lzma)
+
+                # Gzip compression (faster)
+                compressed_gzip = gzip.compress(data, compresslevel=9)
+                gzip_ratio = original_size / len(compressed_gzip)
+
+                results[label] = {
+                    'original_mb': original_size / (1024 * 1024),
+                    'lzma_mb': len(compressed_lzma) / (1024 * 1024),
+                    'lzma_ratio': lzma_ratio,
+                    'gzip_mb': len(compressed_gzip) / (1024 * 1024),
+                    'gzip_ratio': gzip_ratio
+                }
+
+                print(f"  {label}:")
+                print(f"    Original: {original_size / (1024 * 1024):.2f} MB")
+                print(f"    LZMA:     {len(compressed_lzma) / (1024 * 1024):.2f} MB ({lzma_ratio:.2f}x)")
+                print(f"    Gzip:     {len(compressed_gzip) / (1024 * 1024):.2f} MB ({gzip_ratio:.2f}x)")
+
+        return results
+
+    except Exception as e:
+        print(f"  Raw data compression analysis failed: {e}")
+        return None
