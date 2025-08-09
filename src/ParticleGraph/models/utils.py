@@ -252,7 +252,7 @@ def plot_training_C(x_list, run, device, dimension, trainer, model, max_radius, 
                 data_id = torch.ones((n_particles, 1), dtype=torch.float32, device=device) * run
                 k_list_tensor = torch.ones((n_particles, 1), dtype=torch.int, device=device) * k
                 dataset = data.Data(x=x, edge_index=[], num_nodes=x.shape[0])
-                pred_C, pred_F, pred_Jp, = model(dataset, data_id=data_id, k=k_list_tensor, trainer=trainer)
+                pred_C, pred_F, pred_Jp, pred_S = model(dataset, data_id=data_id, k=k_list_tensor, trainer=trainer)
 
             y = x[:, 1 + dimension * 2: 5 + dimension * 2].clone().detach()
             error.append(F.mse_loss(pred_C, y).item())
@@ -321,7 +321,7 @@ def plot_training_C_F_Jp(x_list, run, device, dimension, trainer, model, max_rad
                 data_id = torch.ones((n_particles, 1), dtype=torch.float32, device=device) * run
                 k_list_tensor = torch.ones((n_particles, 1), dtype=torch.int, device=device) * k
                 dataset = data.Data(x=x, edge_index=[], num_nodes=x.shape[0])
-                pred_C, pred_F, pred_Jp, = model(dataset, data_id=data_id, k=k_list_tensor, trainer=trainer)
+                pred_C, pred_F, pred_Jp, pred_S = model(dataset, data_id=data_id, k=k_list_tensor, trainer=trainer)
 
             x_next = torch.tensor(x_list[run][k+1], dtype=torch.float32, device=device).clone().detach()
             y = x_next[:, 1 + dimension * 2: 10 + dimension * 2].clone().detach()

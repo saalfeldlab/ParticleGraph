@@ -62,7 +62,7 @@ if __name__ == "__main__":
         # config_list = ['multimaterial_1_2', 'multimaterial_1_3', 'multimaterial_1_4', 'multimaterial_1_5', 'multimaterial_1_6', 'multimaterial_1_7', 'multimaterial_1_8']
         # config_list = ['multimaterial_1_C']
         # config_list = ['multimaterial_1_12']
-        config_list = ['multimaterial_1_25']
+        config_list = ['multimaterial_1_28']
         # config_list = ['fluids_m19']
         # config_list = ['falling_water_ramp_x6_11_1']
         # config_list = ['arbitrary_3']

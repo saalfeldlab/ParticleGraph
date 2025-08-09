@@ -223,6 +223,10 @@ def data_train_material(config, erase, best_model, device):
         batch_size = int(get_batch_size(epoch))
         logger.info(f'batch_size: {batch_size}')
 
+        if (epoch == 1):
+            lr_embedding = 1E-4
+            optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+
         if batch_ratio < 1:
             Niter = int(n_frames * data_augmentation_loop // batch_size / batch_ratio)
         else:
@@ -250,7 +254,9 @@ def data_train_material(config, erase, best_model, device):
                 x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device).clone().detach()
                 x_next = torch.tensor(x_list[run][k+1], dtype=torch.float32, device=device).clone().detach()
 
-                if 'next_C_F_Jp' in trainer:
+                if 'next_S' in trainer:
+                    y = x_next[:, 12 + dimension * 2: 16 + dimension * 2].clone().detach()
+                elif 'next_C_F_Jp' in trainer:
                     y = x_next[:, 1 + dimension * 2: 10 + dimension * 2].clone().detach()  # C
                 elif 'C_F_Jp' in trainer:
                     # For k-nearest, we need positions and velocities for neighbor loss
@@ -271,9 +277,7 @@ def data_train_material(config, erase, best_model, device):
                 if batch == 0:
                     data_id = torch.ones((n_particles, 1), dtype=torch.float32, device=device) * run
                     x_batch = x
-                    if 'next_C_F_Jp' in trainer:
-                        y_batch = y
-                    elif 'C_F_Jp' in trainer:
+                    if trainer == 'C_F_Jp':
                         pos_batch = pos
                         vel_batch = vel
                     else:
@@ -284,9 +288,7 @@ def data_train_material(config, erase, best_model, device):
                     data_id = torch.cat(
                         (data_id, torch.ones((n_particles, 1), dtype=torch.float32, device=device) * run), dim=0)
                     x_batch = torch.cat((x_batch, x), dim=0)
-                    if 'next_C_F_Jp' in trainer:
-                        y_batch = torch.cat((y_batch, y), dim=0)
-                    elif 'C_F_Jp' in trainer:
+                    if trainer == 'C_F_Jp':
                         pos_batch = torch.cat((pos_batch, pos), dim=0)
                         vel_batch = torch.cat((vel_batch, vel), dim=0)
                     else:
@@ -300,9 +302,11 @@ def data_train_material(config, erase, best_model, device):
 
             for batch_loader_data in batch_loader:
 
-                pred_C, pred_F, pred_Jp = model(batch_loader_data, data_id=data_id, k=k_batch, trainer=trainer)
+                pred_C, pred_F, pred_Jp, pred_S = model(batch_loader_data, data_id=data_id, k=k_batch, trainer=trainer)
 
-            if 'next_C_F_Jp' in trainer:
+            if 'next_S' in trainer:
+                loss = F.mse_loss(pred_S.reshape(-1, 4), y_batch)
+            elif 'next_C_F_Jp' in trainer:
                 loss = F.mse_loss(torch.cat((pred_C.reshape(-1,4), pred_F.reshape(-1,4), pred_Jp), dim=1), y_batch)
             elif 'C_F_Jp' in trainer:
                 k_neighbors = 5
@@ -339,7 +343,7 @@ def data_train_material(config, erase, best_model, device):
 
             if ((epoch < 30) & (N % plot_frequency == 0)) | (N == 0):
 
-                if 'next_C_F_Jp' in trainer:
+                if ('next_C_F_Jp' in trainer) | ('next_S' in trainer):
                     plot_training_C_F_Jp(x_list, run, device, dimension, trainer, model, max_radius, min_radius, n_particles, n_particle_types, x_next, epoch, N, log_dir, cmap)
 
                 elif 'C_F_Jp' in trainer:

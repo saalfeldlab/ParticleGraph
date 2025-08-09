@@ -81,6 +81,7 @@ class Interaction_MPM(nn.Module):
         self.MLP_mu_lambda = MLP(input_size=self.embedding_dim + 1, output_size=2, nlayers=3, hidden_size=32, device=device)
         self.MLP_sig_plastic_ratio = MLP(input_size=self.embedding_dim + 6, output_size=3, nlayers=5, hidden_size=128, device=device)
         self.MLP_F = MLP(input_size=self.embedding_dim + 13, output_size=4, nlayers=5, hidden_size=128, device=device)
+        self.MLP_stress = MLP(input_size=self.embedding_dim + 13, output_size=4, nlayers=5, hidden_size=128, device=device)
 
         self.a = nn.Parameter(
             torch.tensor(np.ones((self.n_dataset, int(self.n_particles) , self.embedding_dim)),
@@ -111,7 +112,7 @@ class Interaction_MPM(nn.Module):
         embedding = self.a[self.data_id.detach(), N.long(), :].squeeze()
 
         if 'next' in trainer:
-            C, F, Jp = self.MPM_engine(self.model_MPM_P2G, pos, d_pos, C, F,
+            C, F, Jp, S = self.MPM_engine(self.model_MPM_P2G, pos, d_pos, C, F,
                                                         T, Jp, M, self.n_particles, self.n_grid,
                                                        self.delta_t, self.dx, self.inv_dx, embedding,
                                                        self.offsets, self.particle_offsets, self.grid_coords,
@@ -130,7 +131,7 @@ class Interaction_MPM(nn.Module):
                 features = torch.cat((pos, frame), dim=1).detach()
                 Jp = self.siren_Jp(features)
 
-        return C,F,Jp
+        return C,F,Jp,S
 
 
     def MPM_engine(self, model_MPM_P2G, X, V, C, F, T, Jp, M, n_particles,
@@ -172,7 +173,9 @@ class Interaction_MPM(nn.Module):
 
         F = self.MLP_F(torch.cat((embedding, J[:,None], sig_diag.reshape(-1, 4), U.reshape(-1, 4), Vh.reshape(-1, 4)), dim=1))
 
-        return C, F, Jp
+        S = self.MLP_stress(torch.cat((embedding, J[:,None], F.reshape(-1, 4), U.reshape(-1, 4), Vh.reshape(-1, 4)), dim=1))
+
+        return C, F, Jp, S
 
 
 
