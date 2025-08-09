@@ -161,10 +161,10 @@ class Interaction_MPM(nn.Module):
 
         original_sig = sig.clone()
 
-        sig_plastic_ratio = self.MLP_sig_plastic_ratio(
-            torch.cat((embedding, sig, det_U[:,None], det_Vh[:,None], mu, lambda_), dim=1))
-
-        sig, plastic_ratio = sig_plastic_ratio[:, 0:2]**2, sig_plastic_ratio[:, 2:3]**2
+        # sig_plastic_ratio = self.MLP_sig_plastic_ratio(
+        #     torch.cat((embedding, sig, det_U[:,None], det_Vh[:,None], mu, lambda_), dim=1))
+        #
+        # sig, plastic_ratio = sig_plastic_ratio[:, 0:2]**2, sig_plastic_ratio[:, 2:3]**2
 
         plastic_ratio = torch.prod(original_sig / sig, dim=1, keepdim=True)
         Jp = Jp * plastic_ratio
