@@ -62,8 +62,8 @@ training:
   fix_cluster_embedding: True
   device: 'auto'
 
-  learning_rate_start: 5E-5
-  learning_rate_embedding_start: 5E-5
+  learning_rate_start: 1E-5
+  learning_rate_embedding_start: 1E-3
 
   MPM_trainer : 'next_C_F_Jp'
 
