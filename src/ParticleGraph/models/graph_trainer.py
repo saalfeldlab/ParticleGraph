@@ -338,6 +338,8 @@ def data_train_material(config, erase, best_model, device):
 
             if (epoch < 1) & (N < Niter // 25) & (trainer != 'C_F_Jp'):
                 loss = loss + F.mse_loss(pred_Jp, torch.ones_like(pred_Jp).detach())
+                F_norm = torch.norm(pred_F.view(-1, 4), dim=1)
+                loss = loss + 0.1 * F.mse_loss(F_norm, torch.ones_like(F_norm).detach() * 1.4141)
 
             loss.backward()
             optimizer.step()
@@ -347,7 +349,7 @@ def data_train_material(config, erase, best_model, device):
             if ((epoch < 30) & (N % plot_frequency == 0)) | (N == 0):
 
                 if ('next_C_F_Jp' in trainer) | ('next_S' in trainer):
-                    plot_training_C_F_Jp(x_list, run, device, dimension, trainer, model, max_radius, min_radius, n_particles, n_particle_types, x_next, epoch, N, log_dir, cmap)
+                    plot_training_C_F_Jp_S(x_list, run, device, dimension, trainer, model, max_radius, min_radius, n_particles, n_particle_types, x_next, epoch, N, log_dir, cmap)
 
                 elif 'C_F_Jp' in trainer:
                     plot_training_C(x_list, run, device, dimension, trainer, model, max_radius, min_radius, n_particles, n_particle_types, epoch, N, log_dir)

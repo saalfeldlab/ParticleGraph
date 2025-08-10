@@ -138,7 +138,25 @@ class GraphModelConfig(BaseModel):
     hidden_dim_decoder: int = 1
     n_layers_decoder: int = 1
 
-    multi_mlp_params: List[List[Union[int, int, int, int, str]]] = None
+    # UPDATED: MLP configuration through multi_mlp_params
+    # Format: [input_size, output_size, n_layers, hidden_size, initialisation]
+    # Order: [mu_lambda, sig, F, stress]
+    multi_mlp_params: Optional[List[List[Union[int, str]]]] = [
+        [3, 2, 3, 32, "normal"],      # MLP_mu_lambda [0]
+        [4, 2, 5, 32, "ones"],        # MLP_sig [1]
+        [15, 4, 5, 128, "normal"],    # MLP_F [2]
+        [11, 4, 5, 128, "normal"]     # MLP_stress [3]
+    ]
+
+    # UPDATED: Siren configuration through multi_siren_params
+    # Format: [in_features, out_features, hidden_features, hidden_layers, first_omega_0, hidden_omega_0, outermost_linear]
+    # Order: [F, Jp, C_normal, C_PDE_MPM_A]
+    multi_siren_params: Optional[List[List[Union[int, float, bool]]]] = [
+        [3, 4, 128, 5, 80.0, 80.0, True],    # siren_F [0]
+        [3, 1, 128, 5, 80.0, 80.0, True],    # siren_Jp [1]
+        [5, 4, 128, 5, 80.0, 80.0, True],    # siren_C normal [2]
+        [7, 4, 128, 5, 80.0, 80.0, True]     # siren_C PDE_MPM_A [3]
+    ]
 
     lin_edge_positive: bool = False
 

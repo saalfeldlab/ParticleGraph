@@ -39,6 +39,22 @@ graph_model:
   outermost_linear_nnr: True
   omega: 30.0
 
+  # MLP parametrization: [input_size, output_size, n_layers, hidden_size, initialisation]
+  # Order: [mu_lambda, sig, F, stress]
+  multi_mlp_params:
+    - [3, 2, 3, 32, "normal"]      # MLP_mu_lambda
+    - [4, 2, 5, 32, "ones"]        # MLP_sig
+    - [15, 4, 5, 128, "normal"]    # MLP_F
+    - [11, 4, 5, 128, "normal"]    # MLP_stress
+
+  # Siren parametrization: [in_features, out_features, hidden_features, hidden_layers, first_omega_0, hidden_omega_0, outermost_linear]
+  # Order: [F, Jp, C_normal, C_PDE_MPM_A]
+  multi_siren_params:
+    - [3, 4, 512, 5, 30.0, 30.0, true]    # siren_F
+    - [3, 1, 512, 5, 30.0, 30.0, true]    # siren_Jp
+    - [5, 4, 512, 5, 30.0, 30.0, true]    # siren_C normal
+    - [7, 4, 512, 5, 30.0, 30.0, true]    # siren_C PDE_MPM_A
+
 plotting:
   colormap: 'tab10'
   arrow_length: 2
@@ -66,10 +82,3 @@ training:
   learning_rate_embedding_start: 1E-2
 
   MPM_trainer : 'next_S'
-
-
-
-
-
-
-

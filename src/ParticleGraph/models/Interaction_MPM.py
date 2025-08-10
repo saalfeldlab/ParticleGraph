@@ -11,6 +11,7 @@ import torch_geometric.data as data
 
 from ParticleGraph.models.Affine_Particle import Affine_Particle
 
+
 class Interaction_MPM(nn.Module):
 
     def __init__(self, config, device, aggr_type=None, bc_dpos=None, dimension=2):
@@ -34,7 +35,7 @@ class Interaction_MPM(nn.Module):
         self.hidden_dim_nnr = model_config.hidden_dim_nnr
         self.output_size_nnr = model_config.output_size_nnr
         self.outermost_linear_nnr = model_config.outermost_linear_nnr
-        self.omega= model_config.omega
+        self.omega = model_config.omega
 
         self.n_particle_types = simulation_config.n_particle_types
         self.n_particles = simulation_config.n_particles
@@ -58,64 +59,141 @@ class Interaction_MPM(nn.Module):
         self.mu_0, self.lambda_0 = E / (2 * (1 + nu)), E * nu / ((1 + nu) * (1 - 2 * nu))  # Lame parameters
 
         self.offsets = torch.tensor([[i, j] for i in range(3) for j in range(3)],
-                               device=device, dtype=torch.float32)  # [9, 2]
+                                    device=device, dtype=torch.float32)  # [9, 2]
         self.particle_offsets = self.offsets.unsqueeze(0).expand(self.n_particles, -1, -1)
         self.expansion_factor = simulation_config.MPM_expansion_factor
         self.gravity = simulation_config.MPM_gravity
 
         self.model_MPM_P2G = MPM_P2G(aggr_type='add', device=device)
 
-        self.siren_F = Siren(in_features=3, out_features=4, hidden_features=self.hidden_dim_nnr,
-                           hidden_layers=self.n_layers_nnr, first_omega_0=self.omega, hidden_omega_0=self.omega, outermost_linear=True).to(device)
+        siren_params = model_config.multi_siren_params
 
-        self.siren_Jp = Siren(in_features=3, out_features=1, hidden_features=self.hidden_dim_nnr,
-                           hidden_layers=self.n_layers_nnr, first_omega_0=self.omega, hidden_omega_0=self.omega, outermost_linear=True).to(device)
+        # Extract parameters for each Siren
+        F_siren_params = siren_params[0]  # [in_features, out_features, hidden_features, hidden_layers, first_omega_0, hidden_omega_0, outermost_linear]
+        Jp_siren_params = siren_params[1]
+        C_normal_siren_params = siren_params[2]
+        C_PDE_MPM_A_siren_params = siren_params[3]
+
+        # Create Siren networks using config parameters
+        self.siren_F = Siren(
+            in_features=F_siren_params[0],
+            out_features=F_siren_params[1],
+            hidden_features=F_siren_params[2],
+            hidden_layers=F_siren_params[3],
+            first_omega_0=F_siren_params[4],
+            hidden_omega_0=F_siren_params[5],
+            outermost_linear=F_siren_params[6]
+        ).to(device)
+
+        self.siren_Jp = Siren(
+            in_features=Jp_siren_params[0],
+            out_features=Jp_siren_params[1],
+            hidden_features=Jp_siren_params[2],
+            hidden_layers=Jp_siren_params[3],
+            first_omega_0=Jp_siren_params[4],
+            hidden_omega_0=Jp_siren_params[5],
+            outermost_linear=Jp_siren_params[6]
+        ).to(device)
 
         if self.model == 'PDE_MPM_A':
-            self.siren_C = Siren(in_features=7, out_features=4, hidden_features=self.hidden_dim_nnr,
-                               hidden_layers=self.n_layers_nnr, first_omega_0=self.omega, hidden_omega_0=self.omega, outermost_linear=True).to(device)
+            self.siren_C = Siren(
+                in_features=C_PDE_MPM_A_siren_params[0],
+                out_features=C_PDE_MPM_A_siren_params[1],
+                hidden_features=C_PDE_MPM_A_siren_params[2],
+                hidden_layers=C_PDE_MPM_A_siren_params[3],
+                first_omega_0=C_PDE_MPM_A_siren_params[4],
+                hidden_omega_0=C_PDE_MPM_A_siren_params[5],
+                outermost_linear=C_PDE_MPM_A_siren_params[6]
+            ).to(device)
         else:
-            self.siren_C = Siren(in_features=5, out_features=4, hidden_features=self.hidden_dim_nnr,
-                               hidden_layers=self.n_layers_nnr, first_omega_0=self.omega, hidden_omega_0=self.omega, outermost_linear=True).to(device)
+            self.siren_C = Siren(
+                in_features=C_normal_siren_params[0],
+                out_features=C_normal_siren_params[1],
+                hidden_features=C_normal_siren_params[2],
+                hidden_layers=C_normal_siren_params[3],
+                first_omega_0=C_normal_siren_params[4],
+                hidden_omega_0=C_normal_siren_params[5],
+                outermost_linear=C_normal_siren_params[6]
+            ).to(device)
 
-        self.MLP_mu_lambda = MLP(input_size=self.embedding_dim + 1, output_size=2, nlayers=3, hidden_size=32, device=device)
-        self.MLP_sig = MLP(input_size=self.embedding_dim + 2, output_size=2, nlayers=5, hidden_size=32, device=device, initialisation='ones')
-        self.MLP_F = MLP(input_size=self.embedding_dim + 13, output_size=4, nlayers=5, hidden_size=128, device=device)
-        self.MLP_stress = MLP(input_size=11, output_size=4, nlayers=5, hidden_size=128, device=device)
+
+        mlp_params = model_config.multi_mlp_params
+
+        # Extract parameters for each MLP
+        mu_lambda_params = mlp_params[0]  # [input_size, output_size, n_layers, hidden_size, initialisation]
+        sig_params = mlp_params[1]
+        F_params = mlp_params[2]
+        stress_params = mlp_params[3]
+
+        # Create MLPs using config parameters
+        self.MLP_mu_lambda = MLP(
+            input_size=mu_lambda_params[0],
+            output_size=mu_lambda_params[1],
+            nlayers=mu_lambda_params[2],
+            hidden_size=mu_lambda_params[3],
+            device=device,
+            initialisation=mu_lambda_params[4] if len(mu_lambda_params) > 4 else "normal"
+        )
+
+        self.MLP_sig = MLP(
+            input_size=sig_params[0],
+            output_size=sig_params[1],
+            nlayers=sig_params[2],
+            hidden_size=sig_params[3],
+            device=device,
+            initialisation=sig_params[4] if len(sig_params) > 4 else "ones"
+        )
+
+        self.MLP_F = MLP(
+            input_size=F_params[0],
+            output_size=F_params[1],
+            nlayers=F_params[2],
+            hidden_size=F_params[3],
+            device=device,
+            initialisation=F_params[4] if len(F_params) > 4 else "normal"
+        )
+
+        self.MLP_stress = MLP(
+            input_size=stress_params[0],
+            output_size=stress_params[1],
+            nlayers=stress_params[2],
+            hidden_size=stress_params[3],
+            device=device,
+            initialisation=stress_params[4] if len(stress_params) > 4 else "normal"
+        )
 
         self.a = nn.Parameter(
-            torch.tensor(np.ones((self.n_dataset, int(self.n_particles) , self.embedding_dim)),
+            torch.tensor(np.ones((self.n_dataset, int(self.n_particles), self.embedding_dim)),
                          device=self.device,
                          requires_grad=True, dtype=torch.float32))
 
-        self.GNN_C = Affine_Particle(aggr_type='mean', config=config, device=device, bc_dpos=bc_dpos, dimension=dimension)
-
-
+        self.GNN_C = Affine_Particle(aggr_type='mean', config=config, device=device, bc_dpos=bc_dpos,
+                                     dimension=dimension)
 
     def forward(self, data=[], data_id=[], k=[], trainer=[], training=True):
 
         x, edge_index = data.x, data.edge_index
         self.data_id = data_id.long()
 
-        N = x[:,0:1]
-        pos = x[:,1:3]  # pos is the absolute position
-        d_pos = x[:,3:5]  # d_pos is the velocity
-        C = x[:,5:9].reshape(-1, 2, 2)  # C is the affine deformation gradient
-        F = x[:,9:13].reshape(-1, 2, 2) # F is the deformation gradient
-        Jp = x[:,13:14] # Jp is the Jacobian of the deformation gradient
-        T = x[:,14:15].long() # T is the type of particle
-        M = x[:,15:16]  # M is the mass of the particle
-        S = x[:,16:20].reshape(-1, 2, 2)
+        N = x[:, 0:1]
+        pos = x[:, 1:3]  # pos is the absolute position
+        d_pos = x[:, 3:5]  # d_pos is the velocity
+        C = x[:, 5:9].reshape(-1, 2, 2)  # C is the affine deformation gradient
+        F = x[:, 9:13].reshape(-1, 2, 2)  # F is the deformation gradient
+        Jp = x[:, 13:14]  # Jp is the Jacobian of the deformation gradient
+        T = x[:, 14:15].long()  # T is the type of particle
+        M = x[:, 15:16]  # M is the mass of the particle
+        S = x[:, 16:20].reshape(-1, 2, 2)
         frame = k / self.n_frames
 
         embedding = self.a[self.data_id.detach(), N.long(), :].squeeze()
 
         if 'next' in trainer:
             C, F, Jp, S = self.MPM_engine(self.model_MPM_P2G, pos, d_pos, C, F,
-                                                        T, Jp, M, self.n_particles, self.n_grid,
-                                                       self.delta_t, self.dx, self.inv_dx, embedding,
-                                                       self.offsets, self.particle_offsets, self.grid_coords,
-                                                       self.expansion_factor, self.gravity, self.device)
+                                          T, Jp, M, self.n_particles, self.n_grid,
+                                          self.delta_t, self.dx, self.inv_dx, embedding,
+                                          self.offsets, self.particle_offsets, self.grid_coords,
+                                          self.expansion_factor, self.gravity, self.device)
         else:
             if 'C' in trainer:
                 if self.model == 'PDE_MPM_A':
@@ -130,13 +208,12 @@ class Interaction_MPM(nn.Module):
                 features = torch.cat((pos, frame), dim=1).detach()
                 Jp = self.siren_Jp(features)
 
-        return C,F,Jp,S
-
+        return C, F, Jp, S
 
     def MPM_engine(self, model_MPM_P2G, X, V, C, F, T, Jp, M, n_particles,
-                       n_grid, dt, dx, inv_dx, embedding,
-                       offsets, particle_offsets, grid_coords, expansion_factor,
-                        gravity, device):
+                   n_grid, dt, dx, inv_dx, embedding,
+                   offsets, particle_offsets, grid_coords, expansion_factor,
+                   gravity, device):
         """
         MPM substep implementation
         """
@@ -149,7 +226,7 @@ class Interaction_MPM(nn.Module):
 
         h = torch.exp(10 * (1.0 - Jp.squeeze()))
 
-        mu_lambda = self.MLP_mu_lambda(torch.cat((embedding, h[:,None]), dim=1))
+        mu_lambda = self.MLP_mu_lambda(torch.cat((embedding, h[:, None]), dim=1))
         mu, lambda_ = mu_lambda[:, 0:1], mu_lambda[:, 1:2]
 
         U, sig, Vh = torch.linalg.svd(F, driver='gesvdj')
@@ -160,7 +237,7 @@ class Interaction_MPM(nn.Module):
 
         original_sig = sig.clone()
 
-        sig = self.MLP_sig(torch.cat((embedding, sig), dim=1))**2
+        sig = self.MLP_sig(torch.cat((embedding, sig), dim=1)) ** 2
 
         # sig_plastic_ratio = self.MLP_sig_plastic_ratio(
         #     torch.cat((embedding, sig, det_U[:,None], det_Vh[:,None], mu, lambda_), dim=1))
@@ -172,7 +249,8 @@ class Interaction_MPM(nn.Module):
         J = torch.prod(sig, dim=1)
         sig_diag = torch.diag_embed(sig)
 
-        F = self.MLP_F(torch.cat((embedding, J[:,None], sig_diag.reshape(-1, 4), U.reshape(-1, 4), Vh.reshape(-1, 4)), dim=1))
+        F = self.MLP_F(
+            torch.cat((embedding, J[:, None], sig_diag.reshape(-1, 4), U.reshape(-1, 4), Vh.reshape(-1, 4)), dim=1))
 
         F = F.reshape(-1, 2, 2)
         R = U @ Vh
@@ -180,18 +258,14 @@ class Interaction_MPM(nn.Module):
 
         # S = self.MLP_stress(torch.cat((mu, lambda_, J[:,None], F.reshape(-1, 4), R.reshape(-1, 4)), dim=1))
 
-        S = (2 * mu.unsqueeze(-1) * F_minus_R @ F.transpose(-2, -1) + identity * (lambda_.squeeze() * J * (J - 1)).unsqueeze(-1).unsqueeze(-1))
+        S = (2 * mu.unsqueeze(-1) * F_minus_R @ F.transpose(-2, -1) + identity * (
+                    lambda_.squeeze() * J * (J - 1)).unsqueeze(-1).unsqueeze(-1))
         S = (-dt * self.p_vol * 4 * self.inv_dx * self.inv_dx) * S
-
 
         F = F.reshape(-1, 4)
         S = S.reshape(-1, 4)
 
-
         return C, F, Jp, S
-
-
-
 
     def correct_SVD(self, U, sig, Vh, det_U, det_Vh):
         """
@@ -234,6 +308,3 @@ class Interaction_MPM(nn.Module):
         )
 
         return U, sig, Vh
-
-
-
