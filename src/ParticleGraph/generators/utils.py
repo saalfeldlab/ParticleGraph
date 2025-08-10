@@ -730,7 +730,6 @@ def stratified_sphere_points(n_points, radius=1.0, device='cpu'):
     return all_points[:n_points]
 
 
-
 def get_equidistant_3D_points(n_points=1024):
     """
     Generate equidistant points within a unit sphere using improved 3D distribution.

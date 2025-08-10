@@ -341,6 +341,9 @@ class TrainingConfig(BaseModel):
     coeff_edge_norm: float = 0
     coeff_edge_weight_L1: float = 0
 
+    coeff_Jp_norm: float = 0
+    coeff_F_norm: float = 0
+
     diff_update_regul: str = "none"
 
     coeff_model_a: float = 0

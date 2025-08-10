@@ -135,6 +135,9 @@ def data_train_material(config, erase, best_model, device):
     embedding_cluster = EmbeddingCluster(config)
     n_runs = train_config.n_runs
 
+    coeff_Jp_norm = train_config.coeff_Jp_norm
+    coeff_F_norm = train_config.coeff_F_norm
+
     log_dir, logger = create_log_dir(config, erase)
     print(f'graph files N: {n_runs}')
     logger.info(f'graph files N: {n_runs}')
@@ -331,15 +334,12 @@ def data_train_material(config, erase, best_model, device):
                     pred_vel_diff = torch.bmm(pos_diff, C.transpose(1, 2))  # [N, k, 2]
                     loss = loss + F.mse_loss(pred_vel_diff, vel_diff)
 
-                pred_F = pred_F.reshape(-1, 2, 2)
-                target = torch.eye(2, device=device).repeat(n_particles*batch_size, 1, 1).detach()  # Identity matrix for force prediction
-                loss = loss + F.mse_loss(pred_F, target)
-                loss = loss + F.mse_loss(pred_Jp, torch.ones_like(pred_Jp).detach())  # Assuming Jp should be close to 1
-
-            if (epoch < 1) & (N < Niter // 25) & (trainer != 'C_F_Jp'):
-                loss = loss + F.mse_loss(pred_Jp, torch.ones_like(pred_Jp).detach())
+            # if (epoch < 1) & (N < Niter // 25) & (trainer != 'C_F_Jp'):
+            if coeff_Jp_norm >0 :
+                loss = loss + coeff_Jp_norm * F.mse_loss(pred_Jp, torch.ones_like(pred_Jp).detach())
+            if coeff_F_norm >0 :
                 F_norm = torch.norm(pred_F.view(-1, 4), dim=1)
-                loss = loss + 0.1 * F.mse_loss(F_norm, torch.ones_like(F_norm).detach() * 1.4141)
+                loss = loss + coeff_F_norm * F.mse_loss(F_norm, torch.ones_like(F_norm).detach() * 1.4141)
 
             loss.backward()
             optimizer.step()

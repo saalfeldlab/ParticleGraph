@@ -1,4 +1,4 @@
-description: 'training next C F Jp  LR:1E-5 LR_embedding:1E-2 next_S'
+description: 'training C F Jp  LR:1E-5 LR_embedding:1E-2 next_S larger MLP_F'
 dataset: 'multimaterial_1'
 
 simulation:
@@ -52,7 +52,7 @@ graph_model:
   multi_mlp_params:
     - [3, 2, 3, 32, "normal"]      # MLP_mu_lambda
     - [4, 2, 5, 32, "ones"]        # MLP_sig
-    - [15, 4, 5, 128, "normal"]    # MLP_F
+    - [15, 4, 5, 256, "normal"]    # MLP_F
     - [11, 4, 5, 128, "normal"]    # MLP_stress
 
 plotting:
