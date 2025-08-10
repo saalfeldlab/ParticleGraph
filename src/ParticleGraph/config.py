@@ -343,6 +343,7 @@ class TrainingConfig(BaseModel):
 
     coeff_Jp_norm: float = 0
     coeff_F_norm: float = 0
+    coeff_det_F: float = 0
 
     diff_update_regul: str = "none"
 

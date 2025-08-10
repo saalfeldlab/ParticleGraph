@@ -137,6 +137,7 @@ def data_train_material(config, erase, best_model, device):
 
     coeff_Jp_norm = train_config.coeff_Jp_norm
     coeff_F_norm = train_config.coeff_F_norm
+    coeff_det_F = train_config.coeff_det_F
 
     log_dir, logger = create_log_dir(config, erase)
     print(f'graph files N: {n_runs}')
@@ -340,6 +341,9 @@ def data_train_material(config, erase, best_model, device):
             if coeff_F_norm >0 :
                 F_norm = torch.norm(pred_F.view(-1, 4), dim=1)
                 loss = loss + coeff_F_norm * F.mse_loss(F_norm, torch.ones_like(F_norm).detach() * 1.4141)
+            if coeff_det_F > 0:
+                det_F = torch.det(pred_F.view(-1, 2, 2))
+                loss = loss + coeff_det_F * F.mse_loss(det_F, torch.ones_like(det_F))
 
             loss.backward()
             optimizer.step()
