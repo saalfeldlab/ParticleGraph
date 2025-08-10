@@ -81,7 +81,7 @@ class Interaction_MPM(nn.Module):
         self.MLP_mu_lambda = MLP(input_size=self.embedding_dim + 1, output_size=2, nlayers=3, hidden_size=32, device=device)
         self.MLP_sig = MLP(input_size=self.embedding_dim + 2, output_size=2, nlayers=5, hidden_size=32, device=device, initialisation='ones')
         self.MLP_F = MLP(input_size=self.embedding_dim + 13, output_size=4, nlayers=5, hidden_size=128, device=device)
-        self.MLP_stress = MLP(input_size=self.embedding_dim + 15, output_size=4, nlayers=5, hidden_size=128, device=device)
+        self.MLP_stress = MLP(input_size=15, output_size=4, nlayers=5, hidden_size=32, device=device)
 
         self.a = nn.Parameter(
             torch.tensor(np.ones((self.n_dataset, int(self.n_particles) , self.embedding_dim)),
@@ -174,7 +174,7 @@ class Interaction_MPM(nn.Module):
 
         F = self.MLP_F(torch.cat((embedding, J[:,None], sig_diag.reshape(-1, 4), U.reshape(-1, 4), Vh.reshape(-1, 4)), dim=1))
 
-        S = self.MLP_stress(torch.cat((embedding, mu, lambda_, J[:,None], F.reshape(-1, 4), U.reshape(-1, 4), Vh.reshape(-1, 4)), dim=1))
+        S = self.MLP_stress(torch.cat((mu, lambda_, J[:,None], F.reshape(-1, 4), U.reshape(-1, 4), Vh.reshape(-1, 4)), dim=1))
 
         return C, F, Jp, S
 

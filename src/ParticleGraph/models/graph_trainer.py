@@ -338,9 +338,6 @@ def data_train_material(config, erase, best_model, device):
 
             if (epoch < 1) & (N < Niter // 25) & (trainer != 'C_F_Jp'):
                 loss = loss + F.mse_loss(pred_Jp, torch.ones_like(pred_Jp).detach())
-                loss = loss + F.mse_loss(pred_F.reshape(-1, 2, 2),
-                                         torch.eye(2, device=device).repeat(pred_F.shape[0], 1, 1).detach())
-
 
             loss.backward()
             optimizer.step()

@@ -1,4 +1,4 @@
-description: 'training next C F Jp  LR:1E-5 LR_embedding:1E-2 next_S'
+description: 'training next C F Jp  LR:1E-5 LR_embedding:1E-2 next_S batch_size:4'
 dataset: 'multimaterial_1'
 
 simulation:
@@ -46,7 +46,7 @@ plotting:
 
 training:
   n_epochs: 6
-  batch_size: 1
+  batch_size: 4
   small_init_batch_size: False
   n_runs: 1
 
