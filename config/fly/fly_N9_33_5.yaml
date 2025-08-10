@@ -1,5 +1,6 @@
-description: 'small MLP, no extra null edges, noise_model_level: 0.05 only_noise_visual_input: 1.0 seed: 42   follow-up 31_5'
-dataset: 'fly_N9_33_1'
+
+description: 'small MLP, no extra null edges, noise_model_level: 0.025 only_noise_visual_input: 1.0 seed: 42   follow-up 31_5'
+dataset: 'fly_N9_33_5'
 
 simulation:
     connectivity_file: 'to be specified'
@@ -64,7 +65,7 @@ training:
     learning_rate_embedding_start: 5.0E-3
 
     measurement_noise_level: 0
-    noise_model_level: 0.05
+    noise_model_level: 0.025
 
     coeff_edge_diff: 500
     coeff_update_u_diff: 0

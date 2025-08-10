@@ -62,7 +62,7 @@ if __name__ == "__main__":
         # config_list = ['multimaterial_1_2', 'multimaterial_1_3', 'multimaterial_1_4', 'multimaterial_1_5', 'multimaterial_1_6', 'multimaterial_1_7', 'multimaterial_1_8']
         # config_list = ['multimaterial_1_C']
         # config_list = ['multimaterial_1_12']
-        config_list = ['multimaterial_1_28']
+        config_list = ['multimaterial_2_3']
         # config_list = ['fluids_m19']
         # config_list = ['falling_water_ramp_x6_11_1']
         # config_list = ['arbitrary_3']
@@ -75,7 +75,7 @@ if __name__ == "__main__":
         # config_list = ['signal_CElegans_c14_4']
         # config_list = ['signal_N5_v11_bis']
         # config_list = ['signal_fig_supp6_4']
-        # config_list = ['fly_N9_33_1', 'fly_N9_33_2','fly_N9_33_3', 'fly_N9_33_4','fly_N9_32_0', 'fly_N9_32_2']
+        # config_list = ['fly_N9_33_5', 'fly_N9_33_5_1'] #, 'fly_N9_33_2','fly_N9_33_3', 'fly_N9_33_4','fly_N9_32_0', 'fly_N9_32_2']
         # config_list = ['signal_N5_l4','signal_N5_l5']
 
     for config_file_ in config_list:
@@ -100,7 +100,7 @@ if __name__ == "__main__":
                 alpha=1,
                 erase=False,
                 bSave=True,
-                step=20
+                step=2
             )  # config.simulation.n_frames // 100)
             
         if "train" in task:

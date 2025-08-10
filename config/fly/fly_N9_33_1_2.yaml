@@ -1,5 +1,5 @@
-description: 'small MLP, no extra null edges, noise_model_level: 0.05 only_noise_visual_input: 1.0 seed: 42   follow-up 31_5'
-dataset: 'fly_N9_33_1'
+description: 'small MLP, no extra null edges, noise_model_level: 0.05 only_noise_visual_input: 1.0 seed: 99'
+dataset: 'fly_N9_33_1_2'
 
 simulation:
     connectivity_file: 'to be specified'
@@ -15,7 +15,7 @@ simulation:
     delta_t: 0.02
     baseline_value: 0
 
-    seed: 42
+    seed: 99
 
 
     noise_visual_input_type: "50/50"

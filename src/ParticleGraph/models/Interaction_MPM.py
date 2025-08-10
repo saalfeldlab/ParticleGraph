@@ -81,7 +81,7 @@ class Interaction_MPM(nn.Module):
         self.MLP_mu_lambda = MLP(input_size=self.embedding_dim + 1, output_size=2, nlayers=3, hidden_size=32, device=device)
         self.MLP_sig = MLP(input_size=self.embedding_dim + 2, output_size=2, nlayers=5, hidden_size=32, device=device, initialisation='ones')
         self.MLP_F = MLP(input_size=self.embedding_dim + 13, output_size=4, nlayers=5, hidden_size=128, device=device)
-        self.MLP_stress = MLP(input_size=15, output_size=4, nlayers=5, hidden_size=32, device=device)
+        self.MLP_stress = MLP(input_size=11, output_size=4, nlayers=5, hidden_size=128, device=device)
 
         self.a = nn.Parameter(
             torch.tensor(np.ones((self.n_dataset, int(self.n_particles) , self.embedding_dim)),
@@ -174,7 +174,19 @@ class Interaction_MPM(nn.Module):
 
         F = self.MLP_F(torch.cat((embedding, J[:,None], sig_diag.reshape(-1, 4), U.reshape(-1, 4), Vh.reshape(-1, 4)), dim=1))
 
-        S = self.MLP_stress(torch.cat((mu, lambda_, J[:,None], F.reshape(-1, 4), U.reshape(-1, 4), Vh.reshape(-1, 4)), dim=1))
+        F = F.reshape(-1, 2, 2)
+        R = U @ Vh
+        F_minus_R = F - R
+
+        # S = self.MLP_stress(torch.cat((mu, lambda_, J[:,None], F.reshape(-1, 4), R.reshape(-1, 4)), dim=1))
+
+        S = (2 * mu.unsqueeze(-1) * F_minus_R @ F.transpose(-2, -1) + identity * (lambda_.squeeze() * J * (J - 1)).unsqueeze(-1).unsqueeze(-1))
+        S = (-dt * self.p_vol * 4 * self.inv_dx * self.inv_dx) * S
+
+
+        F = F.reshape(-1, 4)
+        S = S.reshape(-1, 4)
+
 
         return C, F, Jp, S
 

@@ -1,4 +1,4 @@
-description: 'training next C F Jp  LR:1E-5 LR_embedding:1E-2 next_S'
+description: 'training next C F Jp  LR:1E-4 LR_embedding:1E-3 batchsize:4'
 dataset: 'multimaterial_1'
 
 simulation:
@@ -45,8 +45,8 @@ plotting:
   ylim: [-0.001, 0]
 
 training:
-  n_epochs: 6
-  batch_size: 1
+  n_epochs: 5
+  batch_size: 4
   small_init_batch_size: False
   n_runs: 1
 
@@ -62,10 +62,10 @@ training:
   fix_cluster_embedding: True
   device: 'auto'
 
-  learning_rate_start: 1E-5
-  learning_rate_embedding_start: 1E-2
+  learning_rate_start: 1E-4
+  learning_rate_embedding_start: 1E-3
 
-  MPM_trainer : 'next_S'
+  MPM_trainer : 'next_C_F_Jp'
 
 
 

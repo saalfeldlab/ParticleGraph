@@ -6786,20 +6786,20 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
     for i in range(len(n)):
         plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=1)
     plt.xlabel('time', fontsize=24)
-    plt.ylabel('$x_{i}$', fontsize=24)
+    plt.ylabel('x_i', fontsize=24)
     plt.xlim([0, n_frames // 400])
     plt.xticks(fontsize=18)
     plt.yticks(fontsize=18)
     plt.ylim([-6, 6])
-    plt.title(r'$x_i$ samples', fontsize=24)
+    plt.title('x_i samples', fontsize=24)
     plt.tight_layout()
     plt.savefig(f'./{log_dir}/results/activity.tif', dpi=300)
     plt.close()
 
     # Additional plot for specific neuron type (e.g., 'Am')
-    target_type_name_list = ['R1','R7','Am','L1','L2']
+    target_type_name_list = ['R1', 'R7', 'Am', 'L1', 'L2']
 
-    for target_type_name in target_type_name_list:# Change this to any desired type name
+    for target_type_name in target_type_name_list:  # Change this to any desired type name
         target_type_index = None
         for idx, name in index_to_name.items():
             if name == target_type_name:
@@ -6819,15 +6819,15 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                              label=f'{target_type_name}_{i}' if n_neurons_to_plot <= 5 else None)
 
                 plt.xlabel('time', fontsize=24)
-                plt.ylabel('$x_{i}$', fontsize=24)
+                plt.ylabel('x_i', fontsize=24)
                 plt.xlim([0, n_frames // 400])
                 plt.xticks(fontsize=18)
                 plt.yticks(fontsize=18)
-                plt.title(f'$x_i$ samples - {target_type_name} neurons ({n_neurons_to_plot}/{len(neurons_of_type)})',
+                plt.title(f'x_i samples - {target_type_name} neurons ({n_neurons_to_plot}/{len(neurons_of_type)})',
                           fontsize=24)
                 if n_neurons_to_plot <= 5:
                     plt.legend(fontsize=24)
-                plt.ylim([-5,5])
+                plt.ylim([-5, 5])
                 plt.tight_layout()
                 plt.savefig(f'./{log_dir}/results/activity_{target_type_name}.tif', dpi=300)
                 plt.close()
@@ -6870,7 +6870,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                 plt.text(mean_x, mean_y, index_to_name.get(n, f'T{n}'),
                          fontsize=6, ha='center', va='center')
     plt.xlabel('neuron index', fontsize=18)
-    plt.ylabel('$x_i$ RMS', fontsize=18)
+    plt.ylabel('x_i RMS', fontsize=18)
     plt.title('Activity Distribution', fontsize=16)
 
     plt.subplot(2, 1, 2)
@@ -6887,7 +6887,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                 plt.text(mean_x, mean_y, index_to_name.get(n, f'T{n}'),
                          fontsize=6, ha='center', va='center')
     plt.xlabel('neuron index', fontsize=18)
-    plt.ylabel('$dx_i/dt$ RMS', fontsize=18)
+    plt.ylabel('dx_i/dt RMS', fontsize=18)
     plt.title('Target Distribution', fontsize=16)
     plt.tight_layout()
     plt.savefig(f'{log_dir}/results/dataset_distribution.png', dpi=300)
@@ -6954,7 +6954,8 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
         for n in range(n_neurons):
             embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-            if ('PDE_N9_A' in config.graph_model.signal_model_name) | ('PDE_N9_D' in config.graph_model.signal_model_name):
+            if ('PDE_N9_A' in config.graph_model.signal_model_name) | (
+                    'PDE_N9_D' in config.graph_model.signal_model_name):
                 in_features = torch.cat((rr[:, None], embedding_,), dim=1)
             elif ('PDE_N9_B' in config.graph_model.signal_model_name):
                 in_features = torch.cat((rr[:, None] * 0, rr[:, None], embedding_, embedding_), dim=1)
@@ -7019,12 +7020,12 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                     plt.text(mean_x, mean_y, index_to_name.get(n, f'T{n}'),
                              fontsize=8, ha='center', va='center')
         plt.xlabel('neuron index', fontsize=18)
-        plt.ylabel(r'phi function slope', fontsize=18)
+        plt.ylabel('phi function slope', fontsize=18)
         plt.title('phi function slopes by neuron type', fontsize=16)
         plt.xticks(fontsize=12)
         plt.yticks(fontsize=12)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/phi_slopes_{epoch}.png", dpi=300)
+        # plt.savefig(f"./{log_dir}/results/phi_slopes_{epoch}.png", dpi=300)
         plt.close()
 
         # Plot 5c: Tau comparison (reconstructed vs ground truth)
@@ -7047,8 +7048,8 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         r_squared = 1 - (ss_res / ss_tot)
         plt.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}',
                  transform=plt.gca().transAxes, verticalalignment='top', fontsize=12)
-        plt.xlabel(r'true $\tau_i$', fontsize=18)
-        plt.ylabel(r'reconstructed $\tau_i$', fontsize=18)
+        plt.xlabel('true tau_i', fontsize=18)
+        plt.ylabel('reconstructed tau_i', fontsize=18)
         plt.tight_layout()
         plt.savefig(f'{log_dir}/results/tau_comparison_{epoch}.png', dpi=300)
         plt.close()
@@ -7075,8 +7076,8 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         r_squared = 1 - (ss_res / ss_tot)
         plt.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}',
                  transform=plt.gca().transAxes, verticalalignment='top', fontsize=12)
-        plt.xlabel(r'true $V_{rest}', fontsize=18)
-        plt.ylabel(r'reconstructed $V_{rest}$', fontsize=18)
+        plt.xlabel('true V_rest', fontsize=18)
+        plt.ylabel('reconstructed V_rest', fontsize=18)
         plt.tight_layout()
         plt.savefig(f'{log_dir}/results/V_rest_comparison_{epoch}.png', dpi=300)
         plt.close()
@@ -7087,7 +7088,6 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         if False:
             print('linear fit clustering results')
             for eps in [0.005, 0.0075, 0.01, 0.02, 0.05]:
-                
                 results = clustering_evaluation(to_numpy(model.a), type_list, eps=eps)
                 print(f"eps={eps}: {results['n_clusters_found']} clusters, "
                       f"accuracy={results['accuracy']:.3f}")
@@ -7116,8 +7116,8 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         r_squared = 1 - (ss_res / ss_tot)
         plt.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}',
                  transform=plt.gca().transAxes, verticalalignment='top', fontsize=12)
-        plt.xlabel('true $W_{ij}$')
-        plt.ylabel('learned $W_{ij}$')
+        plt.xlabel('true W_ij')
+        plt.ylabel('learned W_ij')
         plt.tight_layout()
         plt.savefig(f'{log_dir}/results/comparison_{epoch}.png', dpi=300)
         plt.close()
@@ -7143,13 +7143,13 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
             # print(f"{index_to_name[n]} R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}  edges: {len(pos)}  weights mean: {true_weights_mean:.4f}")
             logger.info(
                 f"{index_to_name[n]} R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}  edges: {len(pos)}  weights mean: {true_weights_mean:.4f}")
-        plt.xlabel('true $W_{ij}$', fontsize=18)
-        plt.ylabel('learned $W_{ij}$', fontsize=18)
+        plt.xlabel('true W_ij', fontsize=18)
+        plt.ylabel('learned W_ij', fontsize=18)
         plt.tight_layout()
         # plt.savefig(f'{log_dir}/results/comparison_color_{epoch}.png', dpi=300)
         plt.close()
 
-        k_list = [1] # , 2, 3, 4, 5, 6, 7, 8]
+        k_list = [1]  # , 2, 3, 4, 5, 6, 7, 8]
         dataset_batch = []
         ids_batch = []
         mask_batch = []
@@ -7158,36 +7158,37 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
 
         for batch in range(len(k_list)):
 
-                k = k_list[batch]
-                x = torch.tensor(x_list[0][k], dtype=torch.float32, device=device)
-                ids = np.arange(n_neurons)
+            k = k_list[batch]
+            x = torch.tensor(x_list[0][k], dtype=torch.float32, device=device)
+            ids = np.arange(n_neurons)
 
-                if not (torch.isnan(x).any()):
+            if not (torch.isnan(x).any()):
 
-                    mask = torch.arange(edges.shape[1])
+                mask = torch.arange(edges.shape[1])
 
-                    y = torch.tensor(y_list[run][k], device=device) / ynorm
+                y = torch.tensor(y_list[run][k], device=device) / ynorm
 
-                    if not (torch.isnan(y).any()):
+                if not (torch.isnan(y).any()):
 
-                        dataset = data.Data(x=x, edge_index=edges)
-                        dataset_batch.append(dataset)
+                    dataset = data.Data(x=x, edge_index=edges)
+                    dataset_batch.append(dataset)
 
-                        if len(dataset_batch) == 1:
-                            data_id = torch.ones((x.shape[0], 1), dtype=torch.int, device=device) * run
-                            x_batch = x[:, 3:4]
-                            y_batch = y
-                            ids_batch = ids
-                            mask_batch = mask
-                        else:
-                            data_id = torch.cat((data_id, torch.ones((x.shape[0], 1), dtype=torch.int, device=device) * run), dim=0)
-                            x_batch = torch.cat((x_batch, x[:, 4:5]), dim=0)
-                            y_batch = torch.cat((y_batch, y), dim=0)
-                            ids_batch = np.concatenate((ids_batch, ids + ids_index), axis=0)
-                            mask_batch = torch.cat((mask_batch, mask + mask_index), dim=0)
+                    if len(dataset_batch) == 1:
+                        data_id = torch.ones((x.shape[0], 1), dtype=torch.int, device=device) * run
+                        x_batch = x[:, 3:4]
+                        y_batch = y
+                        ids_batch = ids
+                        mask_batch = mask
+                    else:
+                        data_id = torch.cat(
+                            (data_id, torch.ones((x.shape[0], 1), dtype=torch.int, device=device) * run), dim=0)
+                        x_batch = torch.cat((x_batch, x[:, 4:5]), dim=0)
+                        y_batch = torch.cat((y_batch, y), dim=0)
+                        ids_batch = np.concatenate((ids_batch, ids + ids_index), axis=0)
+                        mask_batch = torch.cat((mask_batch, mask + mask_index), dim=0)
 
-                        ids_index += x.shape[0]
-                        mask_index += edges.shape[1]
+                    ids_index += x.shape[0]
+                    mask_index += edges.shape[1]
 
         with torch.no_grad():
             batch_loader = DataLoader(dataset_batch, batch_size=len(k_list), shuffle=False)
@@ -7243,7 +7244,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         plt.xlabel('neuron index')
         plt.ylabel('gradient')
         plt.tight_layout()
-        plt.savefig(f'{log_dir}/results/msg_gradients_{epoch}.png', dpi=300)
+        # plt.savefig(f'{log_dir}/results/msg_gradients_{epoch}.png', dpi=300)
         plt.close()
 
         grad_msg_flat = grad_msg.squeeze()
@@ -7255,7 +7256,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         slopes_array = torch.tensor(slopes_array, dtype=torch.float32, device=device)
         slope_per_edge = slopes_array[target_neuron_ids]
 
-        corrected_W = -model.W / slope_per_edge[:,None] * grad_per_edge
+        corrected_W = -model.W / slope_per_edge[:, None] * grad_per_edge
 
         # Plot 6: Weight comparison using model.W and gt_weights
         fig = plt.figure(figsize=(8, 8))
@@ -7269,8 +7270,8 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         r_squared = 1 - (ss_res / ss_tot)
         plt.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}',
                  transform=plt.gca().transAxes, verticalalignment='top', fontsize=12)
-        plt.xlabel('true $W_{ij}$', fontsize=18)
-        plt.ylabel('learned $W_{ij}$', fontsize=18)
+        plt.xlabel('true W_ij', fontsize=18)
+        plt.ylabel('learned W_ij', fontsize=18)
         plt.tight_layout()
         plt.savefig(f'{log_dir}/results/corrected_comparison_{epoch}.png', dpi=300)
         plt.close()
@@ -7294,13 +7295,12 @@ def data_flyvis_compare(config_list, varied_parameter):
     from collections import defaultdict
     import numpy as np
     import matplotlib.pyplot as plt
-    from matplotlib import rc
+    # Disable LaTeX usage completely
+    plt.rcParams['text.usetex'] = False
+    # Use default matplotlib fonts instead of LaTeX fonts
+    plt.rc('font', family='sans-serif')
     from ParticleGraph.config import ParticleGraphConfig
     from ParticleGraph.models.utils import add_pre_folder
-
-    # Set latex fonts
-    plt.rcParams['text.usetex'] = True
-    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
     plt.style.use('ggplot')  # Use ggplot style for better aesthetics
 
@@ -7387,8 +7387,8 @@ def data_flyvis_compare(config_list, varied_parameter):
     for r in results:
         # Only include results with all key metrics available
         if (r['r2'] is not None and r['tau_r2'] is not None and
-            r['vrest_r2'] is not None and r['best_clustering_acc'] is not None and
-            r['best_eps'] is not None):
+                r['vrest_r2'] is not None and r['best_clustering_acc'] is not None and
+                r['best_eps'] is not None):
             grouped_results[r['param_value']].append(r)
 
     # Calculate statistics for each parameter value
@@ -7451,11 +7451,13 @@ def data_flyvis_compare(config_list, varied_parameter):
     # Print comparison summary
     param_display_name = varied_parameter.split('.')[1]  # Show just parameter name in table
     print(f"\n=== parameter comparison: {varied_parameter} ===")
-    print(f"{param_display_name:<15} {'weights R²':<15} {'tau R²':<15} {'V_rest R²':<15} {'clustering acc':<18} {'best eps':<10} {'n_configs':<10}")
+    print(
+        f"{param_display_name:<15} {'weights R²':<15} {'tau R²':<15} {'V_rest R²':<15} {'clustering acc':<18} {'best eps':<10} {'n_configs':<10}")
     print("-" * 100)
 
     for r in summary_results:
-        print(f"{r['param_value']:<15} {r['r2_str']:<15} {r['tau_r2_str']:<15} {r['vrest_r2_str']:<15} {r['acc_str']:<18} {r['eps_str']:<10} {r['n_configs']:<10}")
+        print(
+            f"{r['param_value']:<15} {r['r2_str']:<15} {r['tau_r2_str']:<15} {r['vrest_r2_str']:<15} {r['acc_str']:<18} {r['eps_str']:<10} {r['n_configs']:<10}")
 
     print("-" * 100)
 
@@ -7517,6 +7519,7 @@ def data_flyvis_compare(config_list, varied_parameter):
     ax1.set_title('weights R² vs ' + param_display_name, fontsize=14)
     ax1.set_ylim(0, 1.1)
     ax1.grid(True, alpha=0.3)
+
 
     # Add sample size annotations
     for i, (x, y, n) in enumerate(zip(param_values_str, r2_means, [r['n_configs'] for r in summary_results])):
@@ -7596,13 +7599,15 @@ def data_flyvis_compare(config_list, varied_parameter):
         # Tau R² panel annotation
         best_tau_r2_x = param_values_str[best_tau_r2_idx]
         best_tau_r2_y = tau_r2_means[best_tau_r2_idx]
-        ax2.text(best_tau_r2_x, best_tau_r2_y + tau_r2_errors[best_tau_r2_idx] + 0.05, f"{best_tau_r2_result['tau_r2_mean']:.3f}",
+        ax2.text(best_tau_r2_x, best_tau_r2_y + tau_r2_errors[best_tau_r2_idx] + 0.05,
+                 f"{best_tau_r2_result['tau_r2_mean']:.3f}",
                  ha='center', va='bottom', fontsize=10)
 
         # V_rest R² panel annotation
         best_vrest_r2_x = param_values_str[best_vrest_r2_idx]
         best_vrest_r2_y = vrest_r2_means[best_vrest_r2_idx]
-        ax3.text(best_vrest_r2_x, best_vrest_r2_y + vrest_r2_errors[best_vrest_r2_idx] + 0.05, f"{best_vrest_r2_result['vrest_r2_mean']:.3f}",
+        ax3.text(best_vrest_r2_x, best_vrest_r2_y + vrest_r2_errors[best_vrest_r2_idx] + 0.05,
+                 f"{best_vrest_r2_result['vrest_r2_mean']:.3f}",
                  ha='center', va='bottom', fontsize=10)
 
         # Clustering accuracy panel annotation
@@ -11420,7 +11425,7 @@ if __name__ == '__main__':
     # config_list = config_list = ['signal_CElegans_d2', 'signal_CElegans_d2a', 'signal_CElegans_d3', 'signal_CElegans_d3a', 'signal_CElegans_d3b']
 
     # config_list = ['fly_N9_18_4_0','fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4', 'fly_N9_22_5','fly_N9_18_4_6','fly_N9_18_4_5','fly_N9_18_4_4','fly_N9_18_4_1','fly_N9_18_4_2','fly_N9_18_4_3']
-    # data_flyvis_compare(config_list, 'training.noise_model_level')
+
 
     # config_list = ['fly_N9_18_4_1', 'fly_N9_19_1', 'fly_N9_19_2', 'fly_N9_19_3', 'fly_N9_19_4', 'fly_N9_19_5', 'fly_N9_19_6', 'fly_N9_19_7', 'fly_N9_19_8', 'fly_N9_19_9']
     # data_flyvis_compare(config_list, 'simulation.n_extra_null_edges')
@@ -11438,8 +11443,8 @@ if __name__ == '__main__':
 
     # config_list = ['fly_N9_24_1', 'fly_N9_24_2', 'fly_N9_24_3', 'fly_N9_24_4']
     # data_flyvis_compare(config_list, 'training.batch_size')
-    config_list = ['fly_N9_31_5', 'fly_N9_31_6', 'fly_N9_31_7']
 
+    config_list = ['fly_N9_33_1', 'fly_N9_33_2', 'fly_N9_33_3', 'fly_N9_33_4']
 
     for config_file_ in config_list:
         print(' ')
@@ -11455,7 +11460,7 @@ if __name__ == '__main__':
         os.makedirs(folder_name, exist_ok=True)
         data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
 
-    # data_flyvis_compare(config_list, 'simulation.only_noise_visual_input')
+    data_flyvis_compare(config_list, 'training.noise_model_level')
 
 
 
