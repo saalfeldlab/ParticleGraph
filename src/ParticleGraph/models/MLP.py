@@ -22,6 +22,9 @@ class MLP(nn.Module):
         if initialisation == 'zeros':
             nn.init.zeros_(layer.weight)
             nn.init.zeros_(layer.bias)
+        elif initialisation == 'ones':
+            nn.init.ones_(layer.weight)
+            nn.init.zeros_(layer.bias)
         else :
             nn.init.normal_(layer.weight, std=0.1)
             nn.init.zeros_(layer.bias)

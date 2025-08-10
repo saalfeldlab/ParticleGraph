@@ -79,7 +79,7 @@ class Interaction_MPM(nn.Module):
                                hidden_layers=self.n_layers_nnr, first_omega_0=self.omega, hidden_omega_0=self.omega, outermost_linear=True).to(device)
 
         self.MLP_mu_lambda = MLP(input_size=self.embedding_dim + 1, output_size=2, nlayers=3, hidden_size=32, device=device)
-        self.MLP_sig = MLP(input_size=self.embedding_dim + 2, output_size=2, nlayers=5, hidden_size=32, device=device)
+        self.MLP_sig = MLP(input_size=self.embedding_dim + 2, output_size=2, nlayers=5, hidden_size=32, device=device, initialisation='ones')
         self.MLP_F = MLP(input_size=self.embedding_dim + 13, output_size=4, nlayers=5, hidden_size=128, device=device)
         self.MLP_stress = MLP(input_size=self.embedding_dim + 15, output_size=4, nlayers=5, hidden_size=128, device=device)
 
@@ -142,7 +142,7 @@ class Interaction_MPM(nn.Module):
         """
 
         p_mass = M.squeeze(-1)
-        identity = torch.eye(2, device=device).unsqueeze(0).expand(n_particles, -1, -1)
+        identity = torch.eye(2, device=device).unsqueeze(0).expand(F.shape[0], -1, -1)
 
         # Update deformation gradient: F = (I + dt * C) * F_old
         F = (identity + dt * C) @ F
