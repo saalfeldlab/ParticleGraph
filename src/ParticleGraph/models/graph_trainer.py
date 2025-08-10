@@ -343,7 +343,7 @@ def data_train_material(config, erase, best_model, device):
                 loss = loss + coeff_F_norm * F.mse_loss(F_norm, torch.ones_like(F_norm).detach() * 1.4141)
             if coeff_det_F > 0:
                 det_F = torch.det(pred_F.view(-1, 2, 2))
-                loss = loss + coeff_det_F * F.mse_loss(det_F, torch.ones_like(det_F))
+                loss = loss + coeff_det * F.relu(-det_F + 0.1).mean()
 
             loss.backward()
             optimizer.step()
