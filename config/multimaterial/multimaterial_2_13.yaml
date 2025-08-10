@@ -1,4 +1,4 @@
-description: 'training C F Jp  LR:1E-5 LR_embedding:1E-2 next_S larger MLP_F   coeff_F_norm: 5E-5'
+description: 'training C F Jp  LR:1E-5 LR_embedding:1E-2 next_S larger MLP_F   coeff_F_norm: 5E-3'
 dataset: 'multimaterial_1'
 
 simulation:
@@ -84,4 +84,4 @@ training:
   MPM_trainer : 'next_S'
 
   coeff_Jp_norm: 5E-2
-  coeff_F_norm: 5E-5
+  coeff_F_norm: 5E-3

@@ -3287,7 +3287,7 @@ def data_generate_fly_voltage(
                         0  # Am (Other)
                     ]
 
-                    fig, axes = plt.subplots(8, 9, figsize=(18, 16), facecolor='black')
+                    fig, axes = plt.subplots(8, 9, figsize=(18.04, 16.23), facecolor='black')
                     axes_flat = axes.flatten()
                     all_voltages = to_numpy(x[:, 3])
 
@@ -3388,6 +3388,7 @@ def data_generate_fly_voltage(
     print('generating lossless video ...')
     generate_lossless_video_ffv1(output_dir=f"./graphs_data/{dataset_name}", run=run)
     generate_lossless_video_libx264(output_dir=f"./graphs_data/{dataset_name}", run=run)
+    generate_compressed_video_mp4(output_dir=f"./graphs_data/{dataset_name}", run=run)
 
     files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
     for f in files:

@@ -7369,6 +7369,25 @@ def data_flyvis_compare(config_list, varied_parameter):
                 best_clustering_acc = None
                 best_eps = None
 
+            # Check for video files and get their sizes
+            video_dir = f'./graphs_data/{config_file}'
+            ffv1_path = os.path.join(video_dir, 'output_video_ffv1.mkv')
+            libx264_path = os.path.join(video_dir, 'output_video_libx264.mkv')
+
+            ffv1_size_mb = None
+            libx264_size_mb = None
+            compression_ratio = None
+
+            if os.path.exists(ffv1_path):
+                ffv1_size_mb = os.path.getsize(ffv1_path) / (1024 * 1024)  # Convert to MB
+
+            if os.path.exists(libx264_path):
+                libx264_size_mb = os.path.getsize(libx264_path) / (1024 * 1024)  # Convert to MB
+
+            # Calculate compression ratio (ffv1 / libx264) if both files exist
+            if ffv1_size_mb is not None and libx264_size_mb is not None and libx264_size_mb > 0:
+                compression_ratio = ffv1_size_mb / libx264_size_mb
+
             results.append({
                 'config': config_file_,
                 'param_value': param_value,
@@ -7376,7 +7395,10 @@ def data_flyvis_compare(config_list, varied_parameter):
                 'tau_r2': tau_r2,
                 'vrest_r2': vrest_r2,
                 'best_clustering_acc': best_clustering_acc,
-                'best_eps': best_eps
+                'best_eps': best_eps,
+                'ffv1_size_mb': ffv1_size_mb,
+                'libx264_size_mb': libx264_size_mb,
+                'compression_ratio': compression_ratio
             })
 
         except Exception as e:
@@ -7399,8 +7421,13 @@ def data_flyvis_compare(config_list, varied_parameter):
         vrest_r2_values = [r['vrest_r2'] for r in group]
         acc_values = [r['best_clustering_acc'] for r in group]
         eps_values = [r['best_eps'] for r in group]
-        configs = [r['config'] for r in group]
 
+        # Video file size handling
+        ffv1_sizes = [r['ffv1_size_mb'] for r in group if r['ffv1_size_mb'] is not None]
+        libx264_sizes = [r['libx264_size_mb'] for r in group if r['libx264_size_mb'] is not None]
+        compression_ratios = [r['compression_ratio'] for r in group if r['compression_ratio'] is not None]
+
+        configs = [r['config'] for r in group]
         n_configs = len(group)
 
         # Handle eps display
@@ -7408,7 +7435,6 @@ def data_flyvis_compare(config_list, varied_parameter):
         if len(unique_eps) == 1:
             eps_str = f"{unique_eps[0]}"
         else:
-            # Show range if multiple different eps values
             eps_str = f"{min(unique_eps)}-{max(unique_eps)}"
 
         if n_configs == 1:
@@ -7432,10 +7458,16 @@ def data_flyvis_compare(config_list, varied_parameter):
             'tau_r2_values': tau_r2_values,
             'vrest_r2_values': vrest_r2_values,
             'acc_values': acc_values,
+            'ffv1_sizes': ffv1_sizes,
+            'libx264_sizes': libx264_sizes,
+            'compression_ratios': compression_ratios,
             'r2_mean': np.mean(r2_values),
             'tau_r2_mean': np.mean(tau_r2_values),
             'vrest_r2_mean': np.mean(vrest_r2_values),
             'acc_mean': np.mean(acc_values),
+            'ffv1_mean': np.mean(ffv1_sizes) if ffv1_sizes else None,
+            'libx264_mean': np.mean(libx264_sizes) if libx264_sizes else None,
+            'compression_mean': np.mean(compression_ratios) if compression_ratios else None,
             'r2_str': r2_str,
             'tau_r2_str': tau_r2_str,
             'vrest_r2_str': vrest_r2_str,
@@ -7508,8 +7540,31 @@ def data_flyvis_compare(config_list, varied_parameter):
             vrest_r2_errors.append(0)
             acc_errors.append(0)
 
-    # Create figure with four panels (2x2)
-    fig, ((ax1, ax4), (ax2, ax3)) = plt.subplots(2, 2, figsize=(15, 12))
+    # Prepare video file size data for plotting
+    ffv1_means = []
+    libx264_means = []
+    compression_means = []
+    ffv1_errors = []
+    libx264_errors = []
+    compression_errors = []
+
+    for r in summary_results:
+        ffv1_means.append(r['ffv1_mean'] if r['ffv1_mean'] is not None else 0)
+        libx264_means.append(r['libx264_mean'] if r['libx264_mean'] is not None else 0)
+        compression_means.append(r['compression_mean'] if r['compression_mean'] is not None else 0)
+
+        if r['n_configs'] > 1:
+            ffv1_errors.append(np.std(r['ffv1_sizes']) if r['ffv1_sizes'] else 0)
+            libx264_errors.append(np.std(r['libx264_sizes']) if r['libx264_sizes'] else 0)
+            compression_errors.append(np.std(r['compression_ratios']) if r['compression_ratios'] else 0)
+        else:
+            ffv1_errors.append(0)
+            libx264_errors.append(0)
+            compression_errors.append(0)
+
+    # Create figure with five panels (2x3 layout)
+    fig, ((ax1, ax4, ax5), (ax2, ax3, ax_empty)) = plt.subplots(2, 3, figsize=(20, 12))
+    ax_empty.set_visible(False)  # Hide the unused 6th subplot
 
     # Weights R² panel
     ax1.errorbar(param_values_str, r2_means, yerr=r2_errors,
@@ -7519,7 +7574,6 @@ def data_flyvis_compare(config_list, varied_parameter):
     ax1.set_title('weights R² vs ' + param_display_name, fontsize=14)
     ax1.set_ylim(0, 1.1)
     ax1.grid(True, alpha=0.3)
-
 
     # Add sample size annotations
     for i, (x, y, n) in enumerate(zip(param_values_str, r2_means, [r['n_configs'] for r in summary_results])):
@@ -7561,7 +7615,7 @@ def data_flyvis_compare(config_list, varied_parameter):
     ax4.errorbar(param_values_str, acc_means_pct, yerr=acc_errors_pct,
                  fmt='D-', capsize=5, capthick=2, markersize=8, linewidth=2, color='orange')
     ax4.set_xlabel(param_display_name, fontsize=12)
-    ax4.set_ylabel('clustering accuracy', fontsize=12)
+    ax4.set_ylabel('clustering accuracy (%)', fontsize=12)
     ax4.set_title('best clustering accuracy vs ' + param_display_name, fontsize=14)
     ax4.set_ylim(0, 100)
     ax4.grid(True, alpha=0.3)
@@ -7570,6 +7624,46 @@ def data_flyvis_compare(config_list, varied_parameter):
     for i, (x, y, n) in enumerate(zip(param_values_str, acc_means_pct, [r['n_configs'] for r in summary_results])):
         if n > 1:
             ax4.text(x, y + acc_errors_pct[i] + 2, f'n={n}', ha='center', va='bottom', fontsize=8)
+
+    # Video file sizes panel
+    x_pos = np.arange(len(param_values_str))
+    width = 0.35
+
+    # Only plot data points where we have valid file sizes
+    valid_ffv1 = [size if size > 0 else None for size in ffv1_means]
+    valid_libx264 = [size if size > 0 else None for size in libx264_means]
+    valid_ffv1_errors = [err if valid_ffv1[i] is not None else 0 for i, err in enumerate(ffv1_errors)]
+    valid_libx264_errors = [err if valid_libx264[i] is not None else 0 for i, err in enumerate(libx264_errors)]
+
+    # Plot bars for file sizes
+    ffv1_bars = ax5.bar([x - width / 2 for x in x_pos],
+                        [size if size is not None else 0 for size in valid_ffv1],
+                        width, yerr=valid_ffv1_errors, capsize=3,
+                        label='FFV1 (lossless)', color='lightblue', alpha=0.8)
+
+    libx264_bars = ax5.bar([x + width / 2 for x in x_pos],
+                           [size if size is not None else 0 for size in valid_libx264],
+                           width, yerr=valid_libx264_errors, capsize=3,
+                           label='libx264 (lossy)', color='salmon', alpha=0.8)
+
+    ax5.set_xlabel(param_display_name, fontsize=12)
+    ax5.set_ylabel('file size (MB)', fontsize=12)
+    ax5.set_title('video file sizes vs ' + param_display_name, fontsize=14)
+    ax5.set_xticks(x_pos)
+    ax5.set_xticklabels(param_values_str)
+    ax5.legend(fontsize=10)
+    ax5.grid(True, alpha=0.3)
+
+    # Add sample size annotations for video files
+    for i, (n, ffv1_size, libx264_size) in enumerate(
+            zip([r['n_configs'] for r in summary_results], valid_ffv1, valid_libx264)):
+        if n > 1:
+            if ffv1_size is not None and ffv1_size > 0:
+                ax5.text(i - width / 2, ffv1_size + valid_ffv1_errors[i] + max(ffv1_means) * 0.02, f'n={n}',
+                         ha='center', va='bottom', fontsize=8)
+            elif libx264_size is not None and libx264_size > 0:
+                ax5.text(i + width / 2, libx264_size + valid_libx264_errors[i] + max(libx264_means) * 0.02, f'n={n}',
+                         ha='center', va='bottom', fontsize=8)
 
     plt.tight_layout()
 
@@ -7594,27 +7688,27 @@ def data_flyvis_compare(config_list, varied_parameter):
         best_r2_x = param_values_str[best_r2_idx]
         best_r2_y = r2_means[best_r2_idx]
         ax1.text(best_r2_x, best_r2_y + r2_errors[best_r2_idx] + 0.05, f"{best_r2_result['r2_mean']:.3f}",
-                 ha='center', va='bottom', fontsize=10)
+                 ha='center', va='bottom', fontsize=10, color='black')
 
         # Tau R² panel annotation
         best_tau_r2_x = param_values_str[best_tau_r2_idx]
         best_tau_r2_y = tau_r2_means[best_tau_r2_idx]
         ax2.text(best_tau_r2_x, best_tau_r2_y + tau_r2_errors[best_tau_r2_idx] + 0.05,
                  f"{best_tau_r2_result['tau_r2_mean']:.3f}",
-                 ha='center', va='bottom', fontsize=10)
+                 ha='center', va='bottom', fontsize=10, color='black')
 
         # V_rest R² panel annotation
         best_vrest_r2_x = param_values_str[best_vrest_r2_idx]
         best_vrest_r2_y = vrest_r2_means[best_vrest_r2_idx]
         ax3.text(best_vrest_r2_x, best_vrest_r2_y + vrest_r2_errors[best_vrest_r2_idx] + 0.05,
                  f"{best_vrest_r2_result['vrest_r2_mean']:.3f}",
-                 ha='center', va='bottom', fontsize=10)
+                 ha='center', va='bottom', fontsize=10, color='black')
 
         # Clustering accuracy panel annotation
         best_acc_x = param_values_str[best_acc_idx]
         best_acc_y = acc_means_pct[best_acc_idx]
         ax4.text(best_acc_x, best_acc_y + acc_errors_pct[best_acc_idx] + 3, f"{best_acc_result['acc_mean'] * 100:.1f}%",
-                 ha='center', va='bottom', fontsize=10)
+                 ha='center', va='bottom', fontsize=10, color='black')
 
     # Save figure
     plot_filename = f'parameter_comparison_{param_display_name}.png'
@@ -11444,21 +11538,21 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_24_1', 'fly_N9_24_2', 'fly_N9_24_3', 'fly_N9_24_4']
     # data_flyvis_compare(config_list, 'training.batch_size')
 
-    config_list = ['fly_N9_33_1', 'fly_N9_33_2', 'fly_N9_33_3', 'fly_N9_33_4']
+    config_list = ['fly_N9_33_1', 'fly_N9_33_1_1', 'fly_N9_33_1_2', 'fly_N9_33_1_3', 'fly_N9_33_5', 'fly_N9_33_5_1']
 
-    for config_file_ in config_list:
-        print(' ')
-
-        config_file, pre_folder = add_pre_folder(config_file_)
-        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        config.dataset = pre_folder + config.dataset
-        config.config_file = pre_folder + config_file_
-
-        print(f'config_file  {config.config_file}')
-
-        folder_name = './log/' + pre_folder + '/tmp_results/'
-        os.makedirs(folder_name, exist_ok=True)
-        data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
+    # for config_file_ in config_list:
+    #     print(' ')
+    #
+    #     config_file, pre_folder = add_pre_folder(config_file_)
+    #     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+    #     config.dataset = pre_folder + config.dataset
+    #     config.config_file = pre_folder + config_file_
+    #
+    #     print(f'config_file  {config.config_file}')
+    #
+    #     folder_name = './log/' + pre_folder + '/tmp_results/'
+    #     os.makedirs(folder_name, exist_ok=True)
+    #     data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
 
     data_flyvis_compare(config_list, 'training.noise_model_level')
 

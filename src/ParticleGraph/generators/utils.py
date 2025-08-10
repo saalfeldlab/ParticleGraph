@@ -2015,3 +2015,38 @@ def generate_lossless_video_libx264(output_dir, run=0, framerate=10, output_name
     subprocess.run(command, check=True)
     print(f"Lossless video (libx264) saved to: {output_path}")
 
+
+def generate_compressed_video_mp4(output_dir, run=0, framerate=10, output_name="output_video_libx264.mp4", crf=23):
+    """
+    Generate a compressed video using ffmpeg's libx264 codec in MP4 format.
+
+    Parameters:
+        output_dir (str): Path to directory containing Fig/Fig_*.png.
+        run (int): Run index to use in filename pattern.
+        framerate (int): Desired video framerate.
+        output_name (str): Name of output .mp4 file.
+        crf (int): Constant Rate Factor for quality (0-51, lower = better quality, 23 is default).
+    """
+    import os
+    import subprocess
+
+    fig_dir = os.path.join(output_dir, "Fig")
+    input_pattern = os.path.join(fig_dir, f"Fig_{run}_%06d.png")
+    output_path = os.path.join(output_dir, output_name)
+
+    ffmpeg_cmd = [
+        "ffmpeg",
+        "-y",
+        "-framerate", str(framerate),
+        "-i", input_pattern,
+        "-c:v", "libx264",
+        "-crf", str(crf),
+        "-preset", "medium",  # Encoding speed/compression efficiency tradeoff
+        "-pix_fmt", "yuv420p",  # Ensures compatibility with most players
+        output_path,
+    ]
+
+    print(f"Generating compressed video (libx264): {' '.join(ffmpeg_cmd)}")
+    subprocess.run(ffmpeg_cmd, check=True)
+    print(f"Compressed video (libx264) saved to: {output_path}")
+
