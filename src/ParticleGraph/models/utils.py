@@ -506,6 +506,9 @@ def plot_training_flyvis(x_list, model, config, epoch, N, log_dir, device, cmap,
     if config.graph_model.field_type =='visual':
         n_frames = config.simulation.n_frames
         k = 100
+        reconstructed_field = to_numpy(model.visual_NNR(torch.tensor([k / n_frames], dtype=torch.float32, device=device)) ** 2)
+        gt_field = x_list[0][k,:n_input_neurons,4:5]
+
         X1 = x_list[0][k,:n_input_neurons,1:3]
 
         # Setup for saving MP4
@@ -514,22 +517,18 @@ def plot_training_flyvis(x_list, model, config, epoch, N, log_dir, device, cmap,
         writer = FFMpegWriter(fps=fps, metadata=metadata)
         fig = plt.figure(figsize=(8, 4))
 
+        # Start the writer context
         if os.path.exists(f"./{log_dir}/tmp_training/field/field_movie_{epoch}_{N}.mp4"):
             os.remove(f"./{log_dir}/tmp_training/field/field_movie_{epoch}_{N}.mp4")
         with writer.saving(fig, f"./{log_dir}/tmp_training/field/field_movie_{epoch}_{N}.mp4", dpi=100):
             for k in range(0, 2000, 10):
 
-                if config.graph_model.input_size_nnr == 1:
-                    in_features = torch.tensor([k / n_frames], dtype=torch.float32, device=device) ** 2
-                    reconstructed_field = to_numpy(model.visual_NNR(in_features) ** 2)
-                    reconstructed_field = reconstructed_field[:,None]
-                else:
-                    t = torch.tensor([k / n_frames], dtype=torch.float32, device=device)
-                    in_features = torch.cat((x[:n_input_neurons, 1:3], t.unsqueeze(0).repeat(n_input_neurons, 1)),dim=1)
-                    reconstructed_field = to_numpy(model.visual_NNR(in_features) ** 2)
-
+                # Inference and data extraction
+                reconstructed_field = to_numpy(
+                    model.visual_NNR(torch.tensor([k / n_frames], dtype=torch.float32, device=device)) ** 2)
                 gt_field = x_list[0][k, :n_input_neurons, 4:5]
                 X1 = x_list[0][k, :n_input_neurons, 1:3]
+
 
                 vmin = reconstructed_field.min()
                 vmax = reconstructed_field.max()
@@ -554,6 +553,58 @@ def plot_training_flyvis(x_list, model, config, epoch, N, log_dir, device, cmap,
                 plt.tight_layout()
                 writer.grab_frame()
 
+
+    # if config.graph_model.field_type =='visual':
+    #     n_frames = config.simulation.n_frames
+    #     k = 100
+    #     X1 = x_list[0][k,:n_input_neurons,1:3]
+    #
+    #     # Setup for saving MP4
+    #     fps = 10  # frames per second for the video
+    #     metadata = dict(title='Field Evolution', artist='Matplotlib', comment='NN Reconstruction over time')
+    #     writer = FFMpegWriter(fps=fps, metadata=metadata)
+    #     fig = plt.figure(figsize=(8, 4))
+    #
+    #     if os.path.exists(f"./{log_dir}/tmp_training/field/field_movie_{epoch}_{N}.mp4"):
+    #         os.remove(f"./{log_dir}/tmp_training/field/field_movie_{epoch}_{N}.mp4")
+    #     with writer.saving(fig, f"./{log_dir}/tmp_training/field/field_movie_{epoch}_{N}.mp4", dpi=100):
+    #         for k in range(0, 2000, 10):
+    #
+    #             if config.graph_model.input_size_nnr == 1:
+    #                 in_features = torch.tensor([k / n_frames], dtype=torch.float32, device=device) ** 2
+    #                 reconstructed_field = to_numpy(model.visual_NNR(in_features) ** 2)
+    #                 reconstructed_field = reconstructed_field[:,None]
+    #             else:
+    #                 t = torch.tensor([k / n_frames], dtype=torch.float32, device=device)
+    #                 in_features = torch.cat((x[:n_input_neurons, 1:3], t.unsqueeze(0).repeat(n_input_neurons, 1)),dim=1)
+    #                 reconstructed_field = to_numpy(model.visual_NNR(in_features) ** 2)
+    #
+    #             gt_field = x_list[0][k, :n_input_neurons, 4:5]
+    #             X1 = x_list[0][k, :n_input_neurons, 1:3]
+    #
+    #             vmin = reconstructed_field.min()
+    #             vmax = reconstructed_field.max()
+    #             fig.clf()  # Clear the figure
+    #
+    #             # Ground truth
+    #             ax1 = fig.add_subplot(1, 2, 1)
+    #             sc1 = ax1.scatter(X1[:, 0], X1[:, 1], s=256, c=gt_field, cmap="viridis", marker='h', vmin=-2,
+    #                               vmax=2)
+    #             ax1.set_xticks([])
+    #             ax1.set_yticks([])
+    #             ax1.set_title("Ground Truth")
+    #
+    #             # Reconstructed
+    #             ax2 = fig.add_subplot(1, 2, 2)
+    #             sc2 = ax2.scatter(X1[:, 0], X1[:, 1], s=256, c=reconstructed_field, cmap="viridis", marker='h',
+    #                               vmin=vmin, vmax=vmax)
+    #             ax2.set_xticks([])
+    #             ax2.set_yticks([])
+    #             ax2.set_title("Reconstructed")
+    #
+    #             plt.tight_layout()
+    #             writer.grab_frame()
+    #
 
     # Plot 1: Embedding scatter plot
     fig = plt.figure(figsize=(8, 8))
