@@ -7370,7 +7370,7 @@ def data_flyvis_compare(config_list, varied_parameter):
                 best_eps = None
 
             # Check for video files and get their sizes
-            video_dir = f'./graphs_data/{config_file}'
+            video_dir = f'./graphs_data/fly/{config.dataset}'
             ffv1_path = os.path.join(video_dir, 'output_video_ffv1.mkv')
             libx264_path = os.path.join(video_dir, 'output_video_libx264.mkv')
 
@@ -11561,11 +11561,11 @@ if __name__ == '__main__':
 
 
     # plot no noise at all
-    config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0', 'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4']
-    data_flyvis_compare(config_list, 'training.seed')
+    # config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0', 'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4']
+    # data_flyvis_compare(config_list, 'training.seed')
 
 
-    # plot noise on video input
+    # # plot noise on video input
     # config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0',  'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4',
     #                'fly_N9_23_1', 'fly_N9_23_2', 'fly_N9_23_3', 'fly_N9_23_4', 'fly_N9_23_5']
     # data_flyvis_compare(config_list, 'simulation.noise_visual_input')
@@ -11574,35 +11574,14 @@ if __name__ == '__main__':
     # plot noise on video input 50/50
     # config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0',  'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4',
     #                'fly_N9_33_1', 'fly_N9_33_1_1', 'fly_N9_33_1_2', 'fly_N9_33_1_3', 'fly_N9_33_3', 'fly_N9_33_4', 'fly_N9_33_5', 'fly_N9_33_5_1']
-    # data_flyvis_compare(config_list, 'simulation.only_noise_visual_input')
+    # data_flyvis_compare(config_list, 'training.noise_model_level')
 
 
-    # config_list = ['fly_N9_18_4_0','fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4', 'fly_N9_22_5','fly_N9_18_4_6','fly_N9_18_4_5','fly_N9_18_4_4','fly_N9_18_4_1','fly_N9_18_4_2','fly_N9_18_4_3']
+    # plot noise on video input 50/50
+    config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0',  'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4',
+                   'fly_N9_31_1', 'fly_N9_31_2', 'fly_N9_31_3', 'fly_N9_31_4', 'fly_N9_31_5','fly_N9_31_6', 'fly_N9_31_7']
+    data_flyvis_compare(config_list, 'simulation.only_noise_visual_input')
 
-
-    # config_list = ['fly_N9_18_4_1', 'fly_N9_19_1', 'fly_N9_19_2', 'fly_N9_19_3', 'fly_N9_19_4', 'fly_N9_19_5', 'fly_N9_19_6', 'fly_N9_19_7', 'fly_N9_19_8', 'fly_N9_19_9']
-    # data_flyvis_compare(config_list, 'simulation.n_extra_null_edges')
-
-
-    #,'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4', 'fly_N9_22_5', 'fly_N9_20_0', 'fly_N9_20_1', 'fly_N9_20_2', 'fly_N9_20_3', 'fly_N9_20_4', 'fly_N9_20_5', 'fly_N9_20_6']
-    # data_flyvis_compare(config_list, 'simulation.n_extra_null_edges')
-
-    # config_list = ['fly_N9_28_2','fly_N9_28_3','fly_N9_28_4','fly_N9_28_5', 'fly_N9_28_6', 'fly_N9_28_7', 'fly_N9_28_8', 'fly_N9_28_9', 'fly_N9_28_10', 'fly_N9_28_11']
-    # data_flyvis_compare(config_list, 'simulation.only_noise_visual_input')
-
-    # config_list = ['fly_N9_28_12']
-    # config_list = ['fly_N9_18_4_2_alt_prtrnd_model']
-    # config_list = ['fly_N9_29_3']
-    # config_list = ['fly_N9_30_3']
-
-    # config_list = ['fly_N9_24_1', 'fly_N9_24_2', 'fly_N9_24_3', 'fly_N9_24_4']
-    # data_flyvis_compare(config_list, 'training.batch_size')
-
-    # config_list = ['fly_N9_33_1', 'fly_N9_33_1_1', 'fly_N9_33_1_2', 'fly_N9_33_1_3', 'fly_N9_33_5', 'fly_N9_33_5_1']
-    # data_flyvis_compare(config_list, 'simulation.noise_model_level')
-
-    # config_list = ['fly_N9_30_1', 'fly_N9_30_2', 'fly_N9_30_3', 'fly_N9_30_4', 'fly_N9_30_5', 'fly_N9_30_6']
-    # data_flyvis_compare(config_list, 'simulation.only_noise_visual_input')
 
     # for config_file_ in config_list:
     #     print(' ')
@@ -11617,15 +11596,6 @@ if __name__ == '__main__':
     #     folder_name = './log/' + pre_folder + '/tmp_results/'
     #     os.makedirs(folder_name, exist_ok=True)
     #     data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
-
-
-
-
-
-    # f_list = ['4']
-    # for f in f_list:
-    #     config_list,epoch_list = get_figures(f)
-
 
 
 
