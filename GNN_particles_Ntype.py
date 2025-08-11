@@ -76,7 +76,7 @@ if __name__ == "__main__":
         # config_list = ['signal_N5_v11_bis']
         # config_list = ['signal_fig_supp6_4']
         # config_list = ['fly_N9_33_5', 'fly_N9_33_5_1'] #, 'fly_N9_33_2','fly_N9_33_3', 'fly_N9_33_4','fly_N9_32_0', 'fly_N9_32_2']
-        config_list = ['fly_N9_18_4_0', 'fly_N9_23_1', 'fly_N9_23_2', 'fly_N9_23_3', 'fly_N9_23_4', 'fly_N9_23_5']
+        config_list = ['fly_N9_20_0']
         # config_list = ['signal_N5_l4','signal_N5_l5']
 
     for config_file_ in config_list:

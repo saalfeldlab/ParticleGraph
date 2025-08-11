@@ -11561,18 +11561,18 @@ if __name__ == '__main__':
 
 
     # plot no noise at all
-    # config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4']
-    # data_flyvis_compare(config_list, 'simulation.seed')
+    config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0', 'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4']
+    data_flyvis_compare(config_list, 'training.seed')
 
 
     # plot noise on video input
-    config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4',
-                   'fly_N9_23_1', 'fly_N9_23_2', 'fly_N9_23_3', 'fly_N9_23_4', 'fly_N9_23_5']
-    data_flyvis_compare(config_list, 'simulation.noise_visual_input')
+    # config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0',  'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4',
+    #                'fly_N9_23_1', 'fly_N9_23_2', 'fly_N9_23_3', 'fly_N9_23_4', 'fly_N9_23_5']
+    # data_flyvis_compare(config_list, 'simulation.noise_visual_input')
 
 
     # plot noise on video input 50/50
-    # config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4',
+    # config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0',  'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4',
     #                'fly_N9_33_1', 'fly_N9_33_1_1', 'fly_N9_33_1_2', 'fly_N9_33_1_3', 'fly_N9_33_3', 'fly_N9_33_4', 'fly_N9_33_5', 'fly_N9_33_5_1']
     # data_flyvis_compare(config_list, 'simulation.only_noise_visual_input')
 

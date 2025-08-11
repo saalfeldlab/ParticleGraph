@@ -14,6 +14,7 @@ simulation:
     n_frames: 90720
     delta_t: 0.02
     baseline_value: 0
+    seed: 42
 
 graph_model:
     signal_model_name: 'PDE_N9_A'
@@ -48,6 +49,8 @@ training:
     recursive_loop: 1
     batch_size: 1
     batch_ratio: 1
+
+    seed: 42
 
     sparsity: 'none'
     rotation_augmentation: False
