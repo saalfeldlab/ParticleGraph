@@ -519,9 +519,15 @@ def plot_training_flyvis(x_list, model, config, epoch, N, log_dir, device, cmap,
         with writer.saving(fig, f"./{log_dir}/tmp_training/field/field_movie_{epoch}_{N}.mp4", dpi=100):
             for k in range(0, 2000, 10):
 
-                t = torch.tensor([k / n_frames], dtype=torch.float32, device=device)
-                in_features = torch.cat((torch.tensor(X1, dtype=torch.float32, device=device), t.unsqueeze(0).repeat(n_input_neurons, 1)), dim=1)
-                reconstructed_field = to_numpy(model.visual_NNR(in_features) ** 2)
+                if config.graph_model.input_size_nnr == 1:
+                    in_features = torch.tensor([k / n_frames], dtype=torch.float32, device=device) ** 2
+                    reconstructed_field = to_numpy(model.visual_NNR(in_features) ** 2)
+                    reconstructed_field = reconstructed_field[:,None]
+                else:
+                    t = torch.tensor([k / n_frames], dtype=torch.float32, device=device)
+                    in_features = torch.cat((x[:n_input_neurons, 1:3], t.unsqueeze(0).repeat(n_input_neurons, 1)),dim=1)
+                    reconstructed_field = to_numpy(model.visual_NNR(in_features) ** 2)
+
                 gt_field = x_list[0][k, :n_input_neurons, 4:5]
                 X1 = x_list[0][k, :n_input_neurons, 1:3]
 

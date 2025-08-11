@@ -47,7 +47,7 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score, accuracy_score
 from scipy.optimize import linear_sum_assignment
 # from pysr import PySRRegressor
-
+from datetime import datetime
 
 class Interaction_Particle_extract(MessagePassing):
     """Interaction Network as proposed in this paper:
@@ -7490,10 +7490,7 @@ def data_flyvis_compare(config_list, varied_parameter):
     for r in summary_results:
         print(
             f"{r['param_value']:<15} {r['r2_str']:<15} {r['tau_r2_str']:<15} {r['vrest_r2_str']:<15} {r['acc_str']:<18} {r['eps_str']:<10} {r['n_configs']:<10}")
-
     print("-" * 100)
-
-    # Find and print best results
     if summary_results:
         best_r2_result = max(summary_results, key=lambda x: x['r2_mean'])
         best_tau_r2_result = max(summary_results, key=lambda x: x['tau_r2_mean'])
@@ -7511,11 +7508,9 @@ def data_flyvis_compare(config_list, varied_parameter):
 
         print(f"\n🎯 best mean clustering accuracy: {best_acc_result['acc_str']}")
         print(f"   {param_display_name}: {best_acc_result['param_value']}, n={best_acc_result['n_configs']}")
-
     print("\n" + "=" * 100)
 
     param_display_name = varied_parameter.split('.')[1]
-
     # Prepare data for plotting
     param_values_str = [str(r['param_value']) for r in summary_results]
     r2_means = [r['r2_mean'] for r in summary_results]
@@ -7562,9 +7557,8 @@ def data_flyvis_compare(config_list, varied_parameter):
             libx264_errors.append(0)
             compression_errors.append(0)
 
-    # Create figure with five panels (2x3 layout)
-    fig, ((ax1, ax4, ax5), (ax2, ax3, ax_empty)) = plt.subplots(2, 3, figsize=(20, 12))
-    ax_empty.set_visible(False)  # Hide the unused 6th subplot
+    # Create figure with six panels (2x3 layout)
+    fig, ((ax1, ax4, ax5), (ax2, ax3, ax6)) = plt.subplots(2, 3, figsize=(20, 12))
 
     # Weights R² panel
     ax1.errorbar(param_values_str, r2_means, yerr=r2_errors,
@@ -7625,45 +7619,88 @@ def data_flyvis_compare(config_list, varied_parameter):
         if n > 1:
             ax4.text(x, y + acc_errors_pct[i] + 2, f'n={n}', ha='center', va='bottom', fontsize=8)
 
-    # Video file sizes panel
-    x_pos = np.arange(len(param_values_str))
-    width = 0.35
+    # Video file sizes panel - using line plots
+    # Prepare data for line plotting
+    ffv1_x = []
+    ffv1_y = []
+    ffv1_err = []
+    libx264_x = []
+    libx264_y = []
+    libx264_err = []
 
-    # Only plot data points where we have valid file sizes
-    valid_ffv1 = [size if size > 0 else None for size in ffv1_means]
-    valid_libx264 = [size if size > 0 else None for size in libx264_means]
-    valid_ffv1_errors = [err if valid_ffv1[i] is not None else 0 for i, err in enumerate(ffv1_errors)]
-    valid_libx264_errors = [err if valid_libx264[i] is not None else 0 for i, err in enumerate(libx264_errors)]
+    # Separate data points for each codec (only where files exist)
+    for i, (param_str, ffv1_size, libx264_size, ffv1_error, libx264_error) in enumerate(
+            zip(param_values_str, ffv1_means, libx264_means, ffv1_errors, libx264_errors)):
+        if ffv1_size > 0:
+            ffv1_x.append(param_str)
+            ffv1_y.append(ffv1_size)
+            ffv1_err.append(ffv1_error if ffv1_error > 0 else 0)
 
-    # Plot bars for file sizes
-    ffv1_bars = ax5.bar([x - width / 2 for x in x_pos],
-                        [size if size is not None else 0 for size in valid_ffv1],
-                        width, yerr=valid_ffv1_errors, capsize=3,
-                        label='FFV1 (lossless)', color='lightblue', alpha=0.8)
+        if libx264_size > 0:
+            libx264_x.append(param_str)
+            libx264_y.append(libx264_size)
+            libx264_err.append(libx264_error if libx264_error > 0 else 0)
 
-    libx264_bars = ax5.bar([x + width / 2 for x in x_pos],
-                           [size if size is not None else 0 for size in valid_libx264],
-                           width, yerr=valid_libx264_errors, capsize=3,
-                           label='libx264 (lossy)', color='salmon', alpha=0.8)
+    # Plot lines for file sizes
+    if ffv1_x:  # Only plot if we have FFV1 data
+        ax5.errorbar(ffv1_x, ffv1_y, yerr=ffv1_err,
+                     fmt='o-', capsize=3, markersize=8, linewidth=2,
+                     color='lightblue', markerfacecolor='lightblue', markeredgecolor='blue',
+                     label='FFV1 (lossless)')
+    if libx264_x:  # Only plot if we have libx264 data
+        ax5.errorbar(libx264_x, libx264_y, yerr=libx264_err,
+                     fmt='s-', capsize=3, markersize=8, linewidth=2,
+                     color='salmon', markerfacecolor='salmon', markeredgecolor='red',
+                     label='libx264 (lossy)')
 
     ax5.set_xlabel(param_display_name, fontsize=12)
     ax5.set_ylabel('file size (MB)', fontsize=12)
     ax5.set_title('video file sizes vs ' + param_display_name, fontsize=14)
-    ax5.set_xticks(x_pos)
-    ax5.set_xticklabels(param_values_str)
     ax5.legend(fontsize=10)
     ax5.grid(True, alpha=0.3)
+    ax5.set_ylim(0, 400)
 
     # Add sample size annotations for video files
     for i, (n, ffv1_size, libx264_size) in enumerate(
-            zip([r['n_configs'] for r in summary_results], valid_ffv1, valid_libx264)):
+            zip([r['n_configs'] for r in summary_results], ffv1_means, libx264_means)):
         if n > 1:
-            if ffv1_size is not None and ffv1_size > 0:
-                ax5.text(i - width / 2, ffv1_size + valid_ffv1_errors[i] + max(ffv1_means) * 0.02, f'n={n}',
-                         ha='center', va='bottom', fontsize=8)
-            elif libx264_size is not None and libx264_size > 0:
-                ax5.text(i + width / 2, libx264_size + valid_libx264_errors[i] + max(libx264_means) * 0.02, f'n={n}',
-                         ha='center', va='bottom', fontsize=8)
+            max_size = max([s for s in ffv1_means + libx264_means if s > 0]) if any(
+                s > 0 for s in ffv1_means + libx264_means) else 1
+            if ffv1_size > 0:
+                ax5.text(param_values_str[i], ffv1_size + ffv1_errors[i] + max_size * 0.02,
+                         f'n={n}', ha='center', va='bottom', fontsize=8)
+            elif libx264_size > 0:
+                ax5.text(param_values_str[i], libx264_size + libx264_errors[i] + max_size * 0.02,
+                         f'n={n}', ha='center', va='bottom', fontsize=8)
+
+    # Experiment listing panel (ax6)
+    ax6.axis('off')  # Turn off axis for text display
+    ax6.set_title('Experiment Summary', fontsize=14, pad=20)
+
+    # Create text content for experiment listing
+    text_content = []
+    text_content.append(f"Parameter: {varied_parameter}")
+    text_content.append("")  # Empty line
+
+    for r in summary_results:
+        param_val = r['param_value']
+        n_configs = r['n_configs']
+        configs = r['configs']
+
+        # Header for parameter value
+        text_content.append(f"{param_display_name} = {param_val} (n={n_configs}):")
+
+        # List configs for this parameter value
+        for config in configs:
+            text_content.append(f"  • {config}")
+        text_content.append("")  # Empty line between groups
+
+    # Join all text and display
+    full_text = "\n".join(text_content)
+    ax6.text(0.05, 0.95, full_text, transform=ax6.transAxes, fontsize=10,
+             verticalalignment='top', horizontalalignment='left',
+             fontfamily='monospace', bbox=dict(boxstyle='round,pad=0.5',
+                                               facecolor='lightgray', alpha=0.8))
 
     plt.tight_layout()
 
@@ -7707,11 +7744,13 @@ def data_flyvis_compare(config_list, varied_parameter):
         # Clustering accuracy panel annotation
         best_acc_x = param_values_str[best_acc_idx]
         best_acc_y = acc_means_pct[best_acc_idx]
-        ax4.text(best_acc_x, best_acc_y + acc_errors_pct[best_acc_idx] + 3, f"{best_acc_result['acc_mean'] * 100:.1f}%",
+        ax4.text(best_acc_x, best_acc_y + acc_errors_pct[best_acc_idx] + 5, f"{best_acc_result['acc_mean'] * 100:.1f}%",
                  ha='center', va='bottom', fontsize=10, color='black')
 
+
     # Save figure
-    plot_filename = f'parameter_comparison_{param_display_name}.png'
+    datum = datetime.now().strftime('%m%d_%H')
+    plot_filename = f'parameter_comparison_{param_display_name}_{datum}.png'
     plt.savefig(plot_filename, dpi=300, bbox_inches='tight')
     print(f"\nplot saved as: {plot_filename}")
     plt.close()
@@ -11518,13 +11557,34 @@ if __name__ == '__main__':
     # config_list = [ 'signal_CElegans_c14_4a', 'signal_CElegans_c14_4b', 'signal_CElegans_c14_4c',  'signal_CElegans_d1', 'signal_CElegans_d2', 'signal_CElegans_d3', ]
     # config_list = config_list = ['signal_CElegans_d2', 'signal_CElegans_d2a', 'signal_CElegans_d3', 'signal_CElegans_d3a', 'signal_CElegans_d3b']
 
+
+
+
+    # plot no noise at all
+    # config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4']
+    # data_flyvis_compare(config_list, 'simulation.seed')
+
+
+    # plot noise on video input
+    config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4',
+                   'fly_N9_23_1', 'fly_N9_23_2', 'fly_N9_23_3', 'fly_N9_23_4', 'fly_N9_23_5']
+    data_flyvis_compare(config_list, 'simulation.noise_visual_input')
+
+
+    # plot noise on video input 50/50
+    # config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4',
+    #                'fly_N9_33_1', 'fly_N9_33_1_1', 'fly_N9_33_1_2', 'fly_N9_33_1_3', 'fly_N9_33_3', 'fly_N9_33_4', 'fly_N9_33_5', 'fly_N9_33_5_1']
+    # data_flyvis_compare(config_list, 'simulation.only_noise_visual_input')
+
+
     # config_list = ['fly_N9_18_4_0','fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4', 'fly_N9_22_5','fly_N9_18_4_6','fly_N9_18_4_5','fly_N9_18_4_4','fly_N9_18_4_1','fly_N9_18_4_2','fly_N9_18_4_3']
 
 
     # config_list = ['fly_N9_18_4_1', 'fly_N9_19_1', 'fly_N9_19_2', 'fly_N9_19_3', 'fly_N9_19_4', 'fly_N9_19_5', 'fly_N9_19_6', 'fly_N9_19_7', 'fly_N9_19_8', 'fly_N9_19_9']
     # data_flyvis_compare(config_list, 'simulation.n_extra_null_edges')
 
-    # config_list = ['fly_N9_18_4_0','fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4', 'fly_N9_22_5', 'fly_N9_20_0', 'fly_N9_20_1', 'fly_N9_20_2', 'fly_N9_20_3', 'fly_N9_20_4', 'fly_N9_20_5', 'fly_N9_20_6']
+
+    #,'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4', 'fly_N9_22_5', 'fly_N9_20_0', 'fly_N9_20_1', 'fly_N9_20_2', 'fly_N9_20_3', 'fly_N9_20_4', 'fly_N9_20_5', 'fly_N9_20_6']
     # data_flyvis_compare(config_list, 'simulation.n_extra_null_edges')
 
     # config_list = ['fly_N9_28_2','fly_N9_28_3','fly_N9_28_4','fly_N9_28_5', 'fly_N9_28_6', 'fly_N9_28_7', 'fly_N9_28_8', 'fly_N9_28_9', 'fly_N9_28_10', 'fly_N9_28_11']
@@ -11538,7 +11598,11 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_24_1', 'fly_N9_24_2', 'fly_N9_24_3', 'fly_N9_24_4']
     # data_flyvis_compare(config_list, 'training.batch_size')
 
-    config_list = ['fly_N9_33_1', 'fly_N9_33_1_1', 'fly_N9_33_1_2', 'fly_N9_33_1_3', 'fly_N9_33_5', 'fly_N9_33_5_1']
+    # config_list = ['fly_N9_33_1', 'fly_N9_33_1_1', 'fly_N9_33_1_2', 'fly_N9_33_1_3', 'fly_N9_33_5', 'fly_N9_33_5_1']
+    # data_flyvis_compare(config_list, 'simulation.noise_model_level')
+
+    # config_list = ['fly_N9_30_1', 'fly_N9_30_2', 'fly_N9_30_3', 'fly_N9_30_4', 'fly_N9_30_5', 'fly_N9_30_6']
+    # data_flyvis_compare(config_list, 'simulation.only_noise_visual_input')
 
     # for config_file_ in config_list:
     #     print(' ')
@@ -11554,7 +11618,6 @@ if __name__ == '__main__':
     #     os.makedirs(folder_name, exist_ok=True)
     #     data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
 
-    data_flyvis_compare(config_list, 'training.noise_model_level')
 
 
 

@@ -1984,7 +1984,6 @@ def generate_lossless_video_ffv1(output_dir, run=0, framerate=10, output_name="o
     subprocess.run(ffmpeg_cmd, check=True)
     print(f"Lossless video (FFV1) saved to: {output_path}")
 
-
 def generate_lossless_video_libx264(output_dir, run=0, framerate=10, output_name="output_video_libx264.mkv"):
     """
     Generate a lossless H.264 video using libx264 from a sequence of PNG images.
@@ -2015,10 +2014,10 @@ def generate_lossless_video_libx264(output_dir, run=0, framerate=10, output_name
     subprocess.run(command, check=True)
     print(f"Lossless video (libx264) saved to: {output_path}")
 
-
 def generate_compressed_video_mp4(output_dir, run=0, framerate=10, output_name="output_video_libx264.mp4", crf=23):
     """
     Generate a compressed video using ffmpeg's libx264 codec in MP4 format.
+    Automatically handles odd dimensions by scaling to even dimensions.
 
     Parameters:
         output_dir (str): Path to directory containing Fig/Fig_*.png.
@@ -2034,11 +2033,16 @@ def generate_compressed_video_mp4(output_dir, run=0, framerate=10, output_name="
     input_pattern = os.path.join(fig_dir, f"Fig_{run}_%06d.png")
     output_path = os.path.join(output_dir, output_name)
 
+    # Video filter to ensure even dimensions (required for yuv420p)
+    # This scales the video so both width and height are divisible by 2
+    video_filter = "scale=trunc(iw/2)*2:trunc(ih/2)*2"
+
     ffmpeg_cmd = [
         "ffmpeg",
         "-y",
         "-framerate", str(framerate),
         "-i", input_pattern,
+        "-vf", video_filter,  # Apply video filter for even dimensions
         "-c:v", "libx264",
         "-crf", str(crf),
         "-preset", "medium",  # Encoding speed/compression efficiency tradeoff
@@ -2049,4 +2053,5 @@ def generate_compressed_video_mp4(output_dir, run=0, framerate=10, output_name="
     print(f"Generating compressed video (libx264): {' '.join(ffmpeg_cmd)}")
     subprocess.run(ffmpeg_cmd, check=True)
     print(f"Compressed video (libx264) saved to: {output_path}")
+
 
