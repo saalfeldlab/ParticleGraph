@@ -3581,7 +3581,10 @@ def data_train_flyvis(config, erase, best_model, device):
         y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
         x_list.append(x)
         y_list.append(y)
+    print(f'loaded dataset with {len(x_list)} runs, each with {len(x_list[0])} frames')
     x = x_list[0][n_frames - 10]
+    # print the length of loaded dataset
+
 
     activity = torch.tensor(x_list[0][:, :, 3:4], device=device)
     activity = activity.squeeze()

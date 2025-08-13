@@ -1,5 +1,5 @@
-description: 'small MLP, no extra null edges, noise_model_level: 0 DAVIS'
-dataset: 'fly_N9_35_1'
+description: 'small MLP, no extra null edges, noise_model_level: 0 only_noise_visual_input: 1.0 50/50 DAVIS'
+dataset: 'fly_N9_35_2'
 
 simulation:
     connectivity_file: 'to be specified'
@@ -15,7 +15,8 @@ simulation:
     delta_t: 0.02
     baseline_value: 0
 
-    noise_visual_input_type: "DAVIS"
+    noise_visual_input_type: "50/50 DAVIS"
+    only_noise_visual_input: 1.0
 
 graph_model:
     signal_model_name: 'PDE_N9_A'

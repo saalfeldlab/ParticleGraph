@@ -17,6 +17,8 @@ from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 import tifffile
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+from pathlib import Path
+import os
 
 # from fa2_modified import ForceAtlas2
 # import h5py as h5
@@ -3005,37 +3007,47 @@ def data_generate_fly_voltage(
 
     # Initialize input stimulus data
 
-    # config = Namespace(
-    #     n_frames=19,
-    #     flip_axes=[0, 1],
-    #     n_rotations=[0, 1, 2, 3, 4, 5],
-    #     temporal_split=True,
-    #     dt=delta_t,
-    #     interpolate=True,
-    #     boxfilter=dict(extent=extent, kernel_size=13),
-    #     vertical_splits=3,
-    #     center_crop_fraction=0.7,
-    # )
-    #
-    # stimulus_dataset = AugmentedSintel(**config)
+    if "DAVIS" in noise_visual_input_type:
+        datavis_root = "/groups/saalfeld/home/allierc/signaling/DATAVIS/JPEGImages/480p"
 
-    datavis_root = "/groups/saalfeld/home/allierc/signaling/DATAVIS/JPEGImages/480p"
+        config = Namespace(
+            root_dir=datavis_root,
+            n_frames=35,
+            flip_axes=[0, 1],
+            n_rotations=[0, 90, 180, 270],
+            temporal_split=True,
+            dt=delta_t,
+            interpolate=True,
+            boxfilter=dict(extent=extent, kernel_size=13),
+            vertical_splits=3,
+            center_crop_fraction=0.7,
+            augment=False,  # No augmentation to fix translation issue
 
-    config = Namespace(
-        root_dir=datavis_root,  # required for AugmentedDatavis
-        n_frames=35,
-        flip_axes=[0, 1],  # horizontal and vertical flips
-        n_rotations=[0, 90, 180, 270],  # degrees, adapted to your new class
-        temporal_split=True,
-        dt=delta_t,
-        interpolate=True,
-        boxfilter=dict(extent=extent, kernel_size=13),
-        vertical_splits=3,
-        center_crop_fraction=0.7,
-        augment=True,  # enable augmentation if desired
-    )
+            # IMPORTANT: Make sure we use ALL sequences
+            unittest=False,  # Must be False to use all sequences
+            # indices=None,           # Don't specify indices to use all
+            # _init_cache=True,       # Cache for faster subsequent loads
+        )
 
-    stimulus_dataset = AugmentedDavis(**config)
+        stimulus_dataset = AugmentedDavis(**config)
+
+    else:
+
+        config = Namespace(
+            n_frames=19,
+            flip_axes=[0, 1],
+            n_rotations=[0, 1, 2, 3, 4, 5],
+            temporal_split=True,
+            dt=delta_t,
+            interpolate=True,
+            boxfilter=dict(extent=extent, kernel_size=13),
+            vertical_splits=3,
+            center_crop_fraction=0.7,
+        )
+
+        stimulus_dataset = AugmentedSintel(**config)
+
+
 
     # Initialize a model with a connectome/eye of less extent to save memory
     # Fine with this connectome version, because inputs don't span more than 8 hexals
@@ -3210,210 +3222,227 @@ def data_generate_fly_voltage(
     x[:, 5] = torch.tensor(grouped_types, dtype=torch.float32, device=device)
     x[:, 6] = torch.tensor(node_types_int, dtype=torch.float32, device=device)
 
+    # Set target number of frames
+    target_frames = n_frames  # Or whatever you want
+    dataset_length = len(stimulus_dataset)
+    frames_per_sequence = 35
+
+    total_frames_per_pass = dataset_length * frames_per_sequence
+    num_passes_needed = (target_frames // total_frames_per_pass) + 1
+
+    print(f"📊 frame generation plan:")
+    print(f"   - dataset samples: {dataset_length}")
+    print(f"   - frames per sample: {frames_per_sequence}")
+    print(f"   - grames per full pass: {total_frames_per_pass}")
+    print(f"   - target frames: {target_frames}")
+    print(f"   - passes needed: {num_passes_needed}")
+
 
     y_list = []
     x_list = []
     it = 0
     id_fig = 0
     with torch.no_grad():
-        for data in tqdm(stimulus_dataset):
-            if simulation_config.simulation_initial_state:
-                x[:, 3] = initial_state
-                if only_noise_visual_input > 0:
-                    x[:n_input_neurons, 4:5] = torch.clamp(torch.relu(0.5 + torch.rand((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input / 2), 0 ,1)
-            sequences = data["lum"]
-            if (noise_visual_input_type == "50/50"):
-                if it > n_frames //2:
-                    only_noise_visual_input = simulation_config.only_noise_visual_input
-                else:
-                    only_noise_visual_input = 0
-            elif (noise_visual_input_type == "30/30/30"):
-                if it > n_frames // 3 * 2:
-                    only_noise_visual_input = simulation_config.only_noise_visual_input
-                elif it == n_frames // 3:
-                    only_noise_visual_input = 0
-                else:
-                    only_noise_visual_input = 0
+        for pass_num in range(num_passes_needed):
+            print(f"\n🔄 Starting pass {pass_num + 1}/{num_passes_needed}")
 
-            for frame_id in range(sequences.shape[0]):
-                frame = sequences[frame_id][None, None]
-                net.stimulus.add_input(frame)  # (1, 1, n_input_neurons)
+            for data_idx, data in enumerate(tqdm(stimulus_dataset, desc=f"Pass {pass_num + 1}")):
+                if simulation_config.simulation_initial_state:
+                    x[:, 3] = initial_state
+                    if only_noise_visual_input > 0:
+                        x[:n_input_neurons, 4:5] = torch.clamp(torch.relu(0.5 + torch.rand((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input / 2), 0 ,1)
+                sequences = data["lum"]
+                if ("50/50" in noise_visual_input_type):
+                    if it > n_frames //2:
+                        only_noise_visual_input = simulation_config.only_noise_visual_input
+                    else:
+                        only_noise_visual_input = 0
 
-                if (only_noise_visual_input > 0):
-                    if (noise_visual_input_type == "") | (it ==0) | (noise_visual_input_type == "50/50"):
-                        x[:n_input_neurons, 4:5] = torch.relu(0.5 + torch.rand((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input / 2)
-                    elif noise_visual_input_type == "3/4":
-                        x[:n_input_neurons, 4:5] = torch.clamp(x[:n_input_neurons, 4:5] * 3/4 + 1/4 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input, 0 , 1)
-                    elif noise_visual_input_type == "9/10":
-                        x[:n_input_neurons, 4:5] = torch.clamp(x[:n_input_neurons, 4:5] * 9/10 + 1/10 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input, 0 , 1)
-                    elif noise_visual_input_type == "19/20":
-                        x[:n_input_neurons, 4:5] = torch.clamp(x[:n_input_neurons, 4:5] * 19/20 + 1/20 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input, 0 , 1)
-                else:
-                    x[:, 4] = net.stimulus().squeeze()
-                    if noise_visual_input > 0:
-                        x[:n_input_neurons, 4:5] = x[:n_input_neurons, 4:5] + torch.randn(
-                            (n_input_neurons, 1), dtype=torch.float32, device=device
-                        ) * noise_visual_input
+                for frame_id in range(sequences.shape[0]):
+                    frame = sequences[frame_id][None, None]
+                    net.stimulus.add_input(frame)  # (1, 1, n_input_neurons)
 
-                dataset = pyg.data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
-                y = pde(dataset, has_field=False)
-                y_list.append(to_numpy(y.clone().detach()))
-                x_list.append(to_numpy(x.clone().detach()))
-                if noise_model_level > 0:
-                    x[:, 3:4] = (
-                        x[:, 3:4]
-                        + delta_t * y
-                        + torch.randn(
-                            (n_neurons, 1), dtype=torch.float32, device=device
-                        )
-                        * noise_model_level
-                    )
-                else:
-                    x[:, 3:4] = x[:, 3:4] + delta_t * y
-                if (
-                    visualize
-                    & (run == run_vizualized)
-                    & (it % step == 0)
-                    & ((it <= 200 * step) | ((noise_visual_input_type == "50/50")&(it>50000)&(it<50400))      )
-                ):
-                    if "latex" in style:
-                        plt.rcParams["text.usetex"] = True
-                        rc("font", **{"family": "serif", "serif": ["Palatino"]})
+                    if (only_noise_visual_input > 0):
+                        if (noise_visual_input_type == "") | (it ==0) | ("50/50" in noise_visual_input_type):
+                            x[:n_input_neurons, 4:5] = torch.relu(0.5 + torch.rand((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input / 2)
+                        elif noise_visual_input_type == "3/4":
+                            x[:n_input_neurons, 4:5] = torch.clamp(x[:n_input_neurons, 4:5] * 3/4 + 1/4 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input, 0 , 1)
+                        elif noise_visual_input_type == "9/10":
+                            x[:n_input_neurons, 4:5] = torch.clamp(x[:n_input_neurons, 4:5] * 9/10 + 1/10 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input, 0 , 1)
+                        elif noise_visual_input_type == "19/20":
+                            x[:n_input_neurons, 4:5] = torch.clamp(x[:n_input_neurons, 4:5] * 19/20 + 1/20 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input, 0 , 1)
+                    else:
+                        x[:, 4] = net.stimulus().squeeze()
+                        if noise_visual_input > 0:
+                            x[:n_input_neurons, 4:5] = x[:n_input_neurons, 4:5] + torch.randn(
+                                (n_input_neurons, 1), dtype=torch.float32, device=device
+                            ) * noise_visual_input
 
-                    matplotlib.rcParams["savefig.pad_inches"] = 0
-                    num = f"{id_fig:06}"
-                    id_fig += 1
-
-                    # Define neuron_types at the beginning for use throughout visualization
-                    neuron_types = to_numpy(x[:, 6]).astype(int)  # Individual cell type indices (0-64)
-                    # Create mapping from index to neuron type name
-                    index_to_name = {
-                        0: 'Am', 1: 'C2', 2: 'C3', 3: 'CT1(Lo1)', 4: 'CT1(M10)', 5: 'L1', 6: 'L2', 7: 'L3', 8: 'L4',
-                        9: 'L5',
-                        10: 'Lawf1', 11: 'Lawf2', 12: 'Mi1', 13: 'Mi10', 14: 'Mi11', 15: 'Mi12', 16: 'Mi13', 17: 'Mi14',
-                        18: 'Mi15', 19: 'Mi2',
-                        20: 'Mi3', 21: 'Mi4', 22: 'Mi9', 23: 'R1', 24: 'R2', 25: 'R3', 26: 'R4', 27: 'R5', 28: 'R6',
-                        29: 'R7',
-                        30: 'R8', 31: 'T1', 32: 'T2', 33: 'T2a', 34: 'T3', 35: 'T4a', 36: 'T4b', 37: 'T4c', 38: 'T4d',
-                        39: 'T5a',
-                        40: 'T5b', 41: 'T5c', 42: 'T5d', 43: 'Tm1', 44: 'Tm16', 45: 'Tm2', 46: 'Tm20', 47: 'Tm28',
-                        48: 'Tm3', 49: 'Tm30',
-                        50: 'Tm4', 51: 'Tm5Y', 52: 'Tm5a', 53: 'Tm5b', 54: 'Tm5c', 55: 'Tm9', 56: 'TmY10', 57: 'TmY13',
-                        58: 'TmY14', 59: 'TmY15',
-                        60: 'TmY18', 61: 'TmY3', 62: 'TmY4', 63: 'TmY5a', 64: 'TmY9'
-                    }
-
-                    # Define anatomical order for panels (stimulus first, then anatomical progression)
-                    anatomical_order = [
-                        None,  # Stimulus
-                        23, 24, 25, 26, 27, 28, 29, 30,  # R1-R8 (Retina)
-                        5, 6, 7, 8, 9, 10, 11,  # L1-L5, Lawf1, Lawf2 (Lamina)
-                        12, 19, 20, 21, 22, 13, 14, 15, 16, 17, 18,  # Mi1, Mi2, Mi3, Mi4, Mi9, Mi10-Mi15 (Medulla Mi)
-                        43, 45, 48, 50, 44, 46, 47, 49, 51, 52, 53, 54, 55,
-                        # Tm1, Tm2, Tm3, Tm4, Tm16, Tm20, Tm28, Tm30, Tm5Y, Tm5a-c, Tm9
-                        61, 62, 63, 56, 57, 58, 59, 60, 64,  # TmY3, TmY4, TmY5a, TmY10, TmY13-15, TmY18, TmY9
-                        1, 2, 4, 3,  # C2, C3, CT1(M10), CT1(Lo1)
-                        31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42,  # T1, T2, T2a, T3, T4a-d, T5a-d (Motion)
-                        0  # Am (Other)
-                    ]
-
-                    fig, axes = plt.subplots(8, 9, figsize=(18.04, 16.23), facecolor='black')
-                    axes_flat = axes.flatten()
-                    all_voltages = to_numpy(x[:, 3])
-
-                    panel_idx = 0
-                    total_neurons_plotted = 0
-
-                    for type_idx in anatomical_order:
-                        if panel_idx >= len(axes_flat):
-                            break
-
-                        ax = axes_flat[panel_idx]
-
-                        if type_idx is None:  # Stimulus panel
-                            stimulus_scatter = ax.scatter(
-                                to_numpy(X1[:n_input_neurons, 0]),
-                                to_numpy(X1[:n_input_neurons, 1]),
-                                s=64,
-                                c=to_numpy(x[:n_input_neurons, 4]),
-                                cmap="viridis",
-                                vmin=0,
-                                vmax=1.05,
-                                marker='h',  # hexagonal markers
-                                alpha=1.0,
-                                linewidths=0.0,
-                                edgecolors='black'
+                    dataset = pyg.data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
+                    y = pde(dataset, has_field=False)
+                    y_list.append(to_numpy(y.clone().detach()))
+                    x_list.append(to_numpy(x.clone().detach()))
+                    if noise_model_level > 0:
+                        x[:, 3:4] = (
+                            x[:, 3:4]
+                            + delta_t * y
+                            + torch.randn(
+                                (n_neurons, 1), dtype=torch.float32, device=device
                             )
-                            ax.set_title('Input', fontsize=24, color='white', pad=5)
+                            * noise_model_level
+                        )
+                    else:
+                        x[:, 3:4] = x[:, 3:4] + delta_t * y
+                    if (
+                        visualize
+                        & (run == run_vizualized)
+                        & (it % step == 0)
+                        & ((it <= 200 * step) | ((it>50000)&(it<50000+200 * step)))
+                    ):
+                        if "latex" in style:
+                            plt.rcParams["text.usetex"] = True
+                            rc("font", **{"family": "serif", "serif": ["Palatino"]})
 
-                        else:  # Neuron type panel
-                            type_mask = neuron_types == type_idx
-                            type_count = np.sum(type_mask)
-                            total_neurons_plotted += type_count
-                            type_name = index_to_name.get(type_idx, f'Type_{type_idx}')
+                        matplotlib.rcParams["savefig.pad_inches"] = 0
+                        num = f"{id_fig:06}"
+                        id_fig += 1
 
-                            if type_count > 0:
-                                # Use the same hexagonal lattice positions as stimulus (X1)
-                                type_voltages = to_numpy(x[type_mask, 3])
-                                hex_positions_x = to_numpy(X1[:type_count, 0])
-                                hex_positions_y = to_numpy(X1[:type_count, 1])
+                        # Define neuron_types at the beginning for use throughout visualization
+                        neuron_types = to_numpy(x[:, 6]).astype(int)  # Individual cell type indices (0-64)
+                        # Create mapping from index to neuron type name
+                        index_to_name = {
+                            0: 'Am', 1: 'C2', 2: 'C3', 3: 'CT1(Lo1)', 4: 'CT1(M10)', 5: 'L1', 6: 'L2', 7: 'L3', 8: 'L4',
+                            9: 'L5',
+                            10: 'Lawf1', 11: 'Lawf2', 12: 'Mi1', 13: 'Mi10', 14: 'Mi11', 15: 'Mi12', 16: 'Mi13', 17: 'Mi14',
+                            18: 'Mi15', 19: 'Mi2',
+                            20: 'Mi3', 21: 'Mi4', 22: 'Mi9', 23: 'R1', 24: 'R2', 25: 'R3', 26: 'R4', 27: 'R5', 28: 'R6',
+                            29: 'R7',
+                            30: 'R8', 31: 'T1', 32: 'T2', 33: 'T2a', 34: 'T3', 35: 'T4a', 36: 'T4b', 37: 'T4c', 38: 'T4d',
+                            39: 'T5a',
+                            40: 'T5b', 41: 'T5c', 42: 'T5d', 43: 'Tm1', 44: 'Tm16', 45: 'Tm2', 46: 'Tm20', 47: 'Tm28',
+                            48: 'Tm3', 49: 'Tm30',
+                            50: 'Tm4', 51: 'Tm5Y', 52: 'Tm5a', 53: 'Tm5b', 54: 'Tm5c', 55: 'Tm9', 56: 'TmY10', 57: 'TmY13',
+                            58: 'TmY14', 59: 'TmY15',
+                            60: 'TmY18', 61: 'TmY3', 62: 'TmY4', 63: 'TmY5a', 64: 'TmY9'
+                        }
 
-                                neural_scatter = ax.scatter(
-                                    hex_positions_x,
-                                    hex_positions_y,
-                                    s=72,
-                                    c=type_voltages,
-                                    cmap='viridis',
-                                    vmin=-2,
-                                    vmax=2,
+                        # Define anatomical order for panels (stimulus first, then anatomical progression)
+                        anatomical_order = [
+                            None,  # Stimulus
+                            23, 24, 25, 26, 27, 28, 29, 30,  # R1-R8 (Retina)
+                            5, 6, 7, 8, 9, 10, 11,  # L1-L5, Lawf1, Lawf2 (Lamina)
+                            12, 19, 20, 21, 22, 13, 14, 15, 16, 17, 18,  # Mi1, Mi2, Mi3, Mi4, Mi9, Mi10-Mi15 (Medulla Mi)
+                            43, 45, 48, 50, 44, 46, 47, 49, 51, 52, 53, 54, 55,
+                            # Tm1, Tm2, Tm3, Tm4, Tm16, Tm20, Tm28, Tm30, Tm5Y, Tm5a-c, Tm9
+                            61, 62, 63, 56, 57, 58, 59, 60, 64,  # TmY3, TmY4, TmY5a, TmY10, TmY13-15, TmY18, TmY9
+                            1, 2, 4, 3,  # C2, C3, CT1(M10), CT1(Lo1)
+                            31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42,  # T1, T2, T2a, T3, T4a-d, T5a-d (Motion)
+                            0  # Am (Other)
+                        ]
+
+                        fig, axes = plt.subplots(8, 9, figsize=(18.04, 16.23), facecolor='black')
+                        axes_flat = axes.flatten()
+                        all_voltages = to_numpy(x[:, 3])
+
+                        panel_idx = 0
+                        total_neurons_plotted = 0
+
+                        for type_idx in anatomical_order:
+                            if panel_idx >= len(axes_flat):
+                                break
+
+                            ax = axes_flat[panel_idx]
+
+                            if type_idx is None:  # Stimulus panel
+                                stimulus_scatter = ax.scatter(
+                                    to_numpy(X1[:n_input_neurons, 0]),
+                                    to_numpy(X1[:n_input_neurons, 1]),
+                                    s=64,
+                                    c=to_numpy(x[:n_input_neurons, 4]),
+                                    cmap="viridis",
+                                    vmin=0,
+                                    vmax=1.05,
                                     marker='h',  # hexagonal markers
-                                    alpha=1,
+                                    alpha=1.0,
                                     linewidths=0.0,
                                     edgecolors='black'
                                 )
+                                ax.set_title('Input', fontsize=24, color='white', pad=5)
 
-                                # Color-code title based on neuron type category
-                                if type_name.startswith('R'):
-                                    title_color = 'yellow'  # Photoreceptors
-                                elif type_name.startswith(('L', 'Lawf')):
-                                    title_color = 'cyan'  # Lamina
-                                elif type_name.startswith(('Mi', 'Tm', 'TmY')):
-                                    title_color = 'orange'  # Medulla
-                                elif type_name.startswith('T'):
-                                    title_color = 'red'  # T-cells
-                                elif type_name.startswith('C'):
-                                    title_color = 'magenta'  # C-cells
+                            else:  # Neuron type panel
+                                type_mask = neuron_types == type_idx
+                                type_count = np.sum(type_mask)
+                                total_neurons_plotted += type_count
+                                type_name = index_to_name.get(type_idx, f'Type_{type_idx}')
+
+                                if type_count > 0:
+                                    # Use the same hexagonal lattice positions as stimulus (X1)
+                                    type_voltages = to_numpy(x[type_mask, 3])
+                                    hex_positions_x = to_numpy(X1[:type_count, 0])
+                                    hex_positions_y = to_numpy(X1[:type_count, 1])
+
+                                    neural_scatter = ax.scatter(
+                                        hex_positions_x,
+                                        hex_positions_y,
+                                        s=72,
+                                        c=type_voltages,
+                                        cmap='viridis',
+                                        vmin=-2,
+                                        vmax=2,
+                                        marker='h',  # hexagonal markers
+                                        alpha=1,
+                                        linewidths=0.0,
+                                        edgecolors='black'
+                                    )
+
+                                    # Color-code title based on neuron type category
+                                    if type_name.startswith('R'):
+                                        title_color = 'yellow'  # Photoreceptors
+                                    elif type_name.startswith(('L', 'Lawf')):
+                                        title_color = 'cyan'  # Lamina
+                                    elif type_name.startswith(('Mi', 'Tm', 'TmY')):
+                                        title_color = 'orange'  # Medulla
+                                    elif type_name.startswith('T'):
+                                        title_color = 'red'  # T-cells
+                                    elif type_name.startswith('C'):
+                                        title_color = 'magenta'  # C-cells
+                                    else:
+                                        title_color = 'white'  # Others
+
+                                    ax.set_title(f'{type_name}', fontsize=18, color='white', pad=5)
+
                                 else:
-                                    title_color = 'white'  # Others
+                                    ax.text(0.5, 0.5, f'No {type_name}\nNeurons', transform=ax.transAxes,
+                                            ha='center', va='center', color='red', fontsize=8)
+                                    ax.set_title(f'{type_name}\n(0)', fontsize=10, color='gray', pad=5)
 
-                                ax.set_title(f'{type_name}', fontsize=18, color='white', pad=5)
+                            ax.set_facecolor('black')
+                            ax.set_xticks([])
+                            ax.set_yticks([])
+                            ax.set_aspect('equal')
+                            for spine in ax.spines.values():
+                                spine.set_visible(False)
 
-                            else:
-                                ax.text(0.5, 0.5, f'No {type_name}\nNeurons', transform=ax.transAxes,
-                                        ha='center', va='center', color='red', fontsize=8)
-                                ax.set_title(f'{type_name}\n(0)', fontsize=10, color='gray', pad=5)
+                            panel_idx += 1
 
-                        ax.set_facecolor('black')
-                        ax.set_xticks([])
-                        ax.set_yticks([])
-                        ax.set_aspect('equal')
-                        for spine in ax.spines.values():
-                            spine.set_visible(False)
+                        for i in range(panel_idx, len(axes_flat)):
+                            axes_flat[i].set_visible(False)
 
-                        panel_idx += 1
+                        plt.tight_layout()
+                        plt.subplots_adjust(top=0.95, bottom=0.05)
 
-                    for i in range(panel_idx, len(axes_flat)):
-                        axes_flat[i].set_visible(False)
+                        plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.png", dpi=80)
+                        plt.close()
 
-                    plt.tight_layout()
-                    plt.subplots_adjust(top=0.95, bottom=0.05)
+                    it = it + 1
 
-                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.png", dpi=80)
-                    plt.close()
+                if it >= target_frames:
+                    break
 
-                it = it + 1
+            if it >= target_frames:
+                break
 
-        print(f"generated {len(x_list)} frames")
+    print(f"🎯 Generated {len(x_list)} frames total")
 
     if visualize & (run == run_vizualized):
         print('generating lossless video ...')

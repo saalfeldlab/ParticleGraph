@@ -37,6 +37,7 @@ __all__ = ["RenderedDavis", "MultiTaskDavis", "AugmentedDavis"]
 
 # ============================================================================
 # DAVIS Utility Functions (equivalent to sintel_utils)
+# FROM WEBSITE # https://davischallenge.org/
 # ============================================================================
 
 def load_image_sequence(sequence_dir: Path, start_frame: int = 0, end_frame: Optional[int] = None) -> np.ndarray:
