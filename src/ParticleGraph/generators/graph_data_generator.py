@@ -29,6 +29,7 @@ from scipy.ndimage import zoom
 import re
 import imageio
 from ParticleGraph.generators.utils import *
+from ParticleGraph.generators.davis import *
 import taichi as ti
 import random
 import json
@@ -3003,21 +3004,42 @@ def data_generate_fly_voltage(
     extent = 8
 
     # Initialize input stimulus data
+
+    # config = Namespace(
+    #     n_frames=19,
+    #     flip_axes=[0, 1],
+    #     n_rotations=[0, 1, 2, 3, 4, 5],
+    #     temporal_split=True,
+    #     dt=delta_t,
+    #     interpolate=True,
+    #     boxfilter=dict(extent=extent, kernel_size=13),
+    #     vertical_splits=3,
+    #     center_crop_fraction=0.7,
+    # )
+    #
+    # stimulus_dataset = AugmentedSintel(**config)
+
+    datavis_root = "/groups/saalfeld/home/allierc/signaling/DATAVIS/JPEGImages/480p"
+
     config = Namespace(
-        n_frames=19,
-        flip_axes=[0, 1],
-        n_rotations=[0, 1, 2, 3, 4, 5],
+        root_dir=datavis_root,  # required for AugmentedDatavis
+        n_frames=35,
+        flip_axes=[0, 1],  # horizontal and vertical flips
+        n_rotations=[0, 90, 180, 270],  # degrees, adapted to your new class
         temporal_split=True,
         dt=delta_t,
         interpolate=True,
         boxfilter=dict(extent=extent, kernel_size=13),
         vertical_splits=3,
         center_crop_fraction=0.7,
+        augment=True,  # enable augmentation if desired
     )
 
-    stimulus_dataset = AugmentedSintel(**config)
+    stimulus_dataset = AugmentedDavis(**config)
+
     # Initialize a model with a connectome/eye of less extent to save memory
     # Fine with this connectome version, because inputs don't span more than 8 hexals
+
     config = get_default_config(
         overrides=[], path=f"{CONFIG_PATH}/network/network.yaml"
     )
@@ -3174,17 +3196,19 @@ def data_generate_fly_voltage(
     initial_state = state.nodes.activity.squeeze()
     n_neurons = len(initial_state)
     n_edges = len(edge_index[0])
+
+
+    sequences = stimulus_dataset[0]["lum"]
+    frame = sequences[0][None, None]
+    net.stimulus.add_input(frame)
+
     x = torch.zeros(n_neurons, 7)
     x[:, 1:3] = X1
     x[:, 0] = torch.arange(n_neurons, dtype=torch.float32)
     x[:, 3] = initial_state
-    sequences = stimulus_dataset[0]["lum"]
-    frame = sequences[0][None, None]
-    net.stimulus.add_input(frame)
     x[:, 4] = net.stimulus().squeeze()
     x[:, 5] = torch.tensor(grouped_types, dtype=torch.float32, device=device)
     x[:, 6] = torch.tensor(node_types_int, dtype=torch.float32, device=device)
-
 
 
     y_list = []
@@ -3198,10 +3222,16 @@ def data_generate_fly_voltage(
                 if only_noise_visual_input > 0:
                     x[:n_input_neurons, 4:5] = torch.clamp(torch.relu(0.5 + torch.rand((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input / 2), 0 ,1)
             sequences = data["lum"]
-
             if (noise_visual_input_type == "50/50"):
                 if it > n_frames //2:
                     only_noise_visual_input = simulation_config.only_noise_visual_input
+                else:
+                    only_noise_visual_input = 0
+            elif (noise_visual_input_type == "30/30/30"):
+                if it > n_frames // 3 * 2:
+                    only_noise_visual_input = simulation_config.only_noise_visual_input
+                elif it == n_frames // 3:
+                    only_noise_visual_input = 0
                 else:
                     only_noise_visual_input = 0
 
@@ -3385,15 +3415,15 @@ def data_generate_fly_voltage(
 
         print(f"generated {len(x_list)} frames")
 
-    print('generating lossless video ...')
-    generate_lossless_video_ffv1(output_dir=f"./graphs_data/{dataset_name}", run=run)
-    generate_lossless_video_libx264(output_dir=f"./graphs_data/{dataset_name}", run=run)
-    generate_compressed_video_mp4(output_dir=f"./graphs_data/{dataset_name}", run=run)
+    if visualize & (run == run_vizualized):
+        print('generating lossless video ...')
+        generate_lossless_video_ffv1(output_dir=f"./graphs_data/{dataset_name}", run=run)
+        generate_lossless_video_libx264(output_dir=f"./graphs_data/{dataset_name}", run=run)
+        generate_compressed_video_mp4(output_dir=f"./graphs_data/{dataset_name}", run=run)
 
-    files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
-    for f in files:
-        os.remove(f)
-
+        files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
+        for f in files:
+            os.remove(f)
 
     if bSave:
         print('save data ...')

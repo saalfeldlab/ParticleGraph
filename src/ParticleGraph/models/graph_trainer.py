@@ -3572,6 +3572,8 @@ def data_train_flyvis(config, erase, best_model, device):
     print(f'loading graph files N: {n_runs} ...')
     logger.info(f'Graph files N: {n_runs}')
 
+    model = Signal_Propagation_FlyVis(aggr_type=model_config.aggr_type, config=config, device=device)
+
     x_list = []
     y_list = []
     for run in trange(0,n_runs):
