@@ -320,10 +320,6 @@ CONVERGENCE:
     print(f"Saved comprehensive analysis plot: {analysis_plot_path}")
     plt.show()
 
-
-    # Print detailed convergence analysis
-    print_convergence_analysis(convergence_results, loss_data)
-
     # Create summary report
     create_experiment_summary(convergence_results, statistics, folders)
 
@@ -381,8 +377,8 @@ FOLDER STRUCTURE:
     with open(summary_path, 'w') as f:
         f.write(summary_text)
 
-    print(f"Saved experiment summary: {summary_path}")
-    print("\n" + summary_text)
+    # print(f"Saved experiment summary: {summary_path}")
+    # print("\n" + summary_text)
 
 
 def get_best_run(convergence_results: List[Dict]) -> int:
@@ -415,45 +411,6 @@ def calculate_statistics(convergence_results: List[Dict]) -> Dict:
     }
 
     return stats
-
-
-def print_convergence_analysis(convergence_results: List[Dict], loss_data: Dict = None):
-    """Print detailed convergence analysis"""
-    print("\n" + "=" * 80)
-    print("DETAILED CONVERGENCE ANALYSIS")
-    print("=" * 80)
-
-    # Sort runs by total MSE for ranking
-    sorted_runs = sorted(convergence_results, key=lambda x: x['total_mse'])
-
-    print(f"{'Rank':<6} {'Run':<6} {'Total MSE':<12} {'V MSE':<12} {'W MSE':<12} {'Loss':<12}")
-    print("-" * 80)
-
-    for rank, run_data in enumerate(sorted_runs, 1):
-        status = " (BEST)" if rank == 1 else ""
-        print(f"{rank:<6} {run_data['run']:<6} {run_data['total_mse']:<12.6f} "
-              f"{run_data['v_mse']:<12.6f} {run_data['w_mse']:<12.6f} "
-              f"{run_data['loss']:<12.6f}{status}")
-
-    if loss_data:
-        print("\nCONVERGENCE TIMING ANALYSIS:")
-        print("-" * 40)
-
-        for run_id, data in loss_data.items():
-            # Find approximate convergence point (where loss drops below 1.0)
-            iterations = data['iterations']
-            losses = data['losses']
-
-            convergence_iter = None
-            for i, loss in enumerate(losses):
-                if loss < 1.0:
-                    convergence_iter = iterations[i]
-                    break
-
-            if convergence_iter:
-                print(f"Run {run_id}: Converged around iteration {convergence_iter}")
-            else:
-                print(f"Run {run_id}: No clear convergence point detected")
 
 
 def create_loss_data_from_experiment():

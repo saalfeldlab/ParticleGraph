@@ -477,7 +477,7 @@ if __name__ == '__main__':
                     'total_mse': total_mse
                 })
 
-                print(f"Rollout with SIREN:  V MSE: {v_mse:.6f}, W MSE: {w_mse:.6f}, Total MSE: {total_mse:.6f}")
+                print(f"rollout with SIREN:  V MSE: {v_mse:.6f}, W MSE: {w_mse:.6f}, Total MSE: {total_mse:.6f}")
 
                 # Save results for this run in organized folders
                 fig = plt.figure(figsize=(16, 12))
@@ -617,7 +617,7 @@ if __name__ == '__main__':
             print("training Loss - No valid results")
 
         valid_runs = len([r for r in convergence_results if not np.isnan(r['total_mse'])])
-        print(f"convergence Rate: {valid_runs}/{test_runs} runs completed successfully")
+        # print(f"convergence Rate: {valid_runs}/{test_runs} runs completed successfully")
 
         # ===============================================================
         # BEST MODEL DERIVATIVE ANALYSIS
@@ -625,7 +625,7 @@ if __name__ == '__main__':
 
         # Find best model based on lowest total MSE
         valid_results = [r for r in convergence_results if not np.isnan(r['total_mse'])]
-        if valid_results:
+        if False: # valid_results:
             best_result = min(valid_results, key=lambda x: x['total_mse'])
             print(f"\nBEST MODEL:")
             print(
@@ -725,15 +725,6 @@ if __name__ == '__main__':
             print(f"derivative analysis saved to {derivative_analysis_path}")
             print(f"{sparsity_ratio:.1%} of MLP1 weights are effectively zero")
 
-        else:
-            print("No valid models found for analysis.")
 
-        # ===============================================================
-        # EXPERIMENT COMPLETION SUMMARY
-        # ===============================================================
-        print("experiment completed successfully!")
-        print(f"results saved in: {folders['base']}")
-        print(f"comprehensive analysis: {folders['analysis']}/comprehensive_training_analysis.png")
-        print(f"training plots: {folders['training_plots']}/")
-        print(f"model checkpoints: {folders['models']}/")
-        print(f"experiment summary: {folders['base']}/EXPERIMENT_SUMMARY.txt")
+        print("")
+        print("")
