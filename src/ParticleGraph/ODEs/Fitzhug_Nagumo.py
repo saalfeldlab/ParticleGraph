@@ -343,7 +343,7 @@ if __name__ == '__main__':
             Time.sleep(1)
             # rollout analysis
             with torch.no_grad():
-                t_full = torch.linspace(0, 0.5, n_steps//2, device=device).unsqueeze(1)
+                t_full = torch.linspace(0, 1, n_steps, device=device).unsqueeze(1)
                 w_pred = model(t_full)
 
                 v = v_true[0:1].clone().detach()
@@ -353,9 +353,9 @@ if __name__ == '__main__':
                 v_list.append(v.clone().detach())
                 w_list.append(w.clone().detach())
 
-                for step in range(1, n_steps-1):
+                for step in range(1, n_steps):
                     with torch.no_grad():
-                        w = model.siren(t_full[step])
+                        # w = model.siren(t_full[step])
 
                         dv_pred = model.mlp0(torch.cat((v[:, None], w[:, None], I_ext[step:step + 1, None]), dim=1))
                         dw_pred = model.mlp1(torch.cat((v[:, None], w[:, None]), dim=1))
