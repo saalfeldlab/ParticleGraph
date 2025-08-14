@@ -2,24 +2,27 @@
 FITZHUGH-NAGUMO EXPERIMENT SUMMARY
 ==================================================
 
-Experiment Timestamp: 2025-08-14 14:37:01
-Total Training Runs: 2
+Experiment Timestamp: 2025-08-14 14:49:07
+Total Training Runs: 5
 
 BEST MODEL PERFORMANCE:
-- Run: 1
-- Total MSE: 0.342859
-- V MSE: 0.024705
-- W MSE: 0.318154
+- Run: 5
+- Total MSE: 0.136197
+- V MSE: 0.002507
+- W MSE: 0.133690
 
 OVERALL STATISTICS:
-- Mean Total MSE: 0.466229 ± 0.123370
-- Coefficient of Variation: 26.5%
-- Success Rate: 2/2
-- Improvement over Mean: 26.5%
+- Mean Total MSE: 0.690121 ± 0.528205
+- Coefficient of Variation: 76.5%
+- Success Rate: 5/5
+- Improvement over Mean: 80.3%
 
 CONVERGENCE RANKING:
- 1. Run 1: Total MSE = 0.342859 ⭐ BEST
- 2. Run 2: Total MSE = 0.589600
+ 1. Run 5: Total MSE = 0.136197 ⭐ BEST
+ 2. Run 3: Total MSE = 0.230655
+ 3. Run 1: Total MSE = 0.684374
+ 4. Run 4: Total MSE = 0.776778
+ 5. Run 2: Total MSE = 1.622601
 
 EXPERIMENT FILES:
 - Training Results: data/training_results.json

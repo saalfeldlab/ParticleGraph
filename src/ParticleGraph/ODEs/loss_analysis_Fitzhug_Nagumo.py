@@ -173,7 +173,7 @@ def analyze_training_results(convergence_results: List[Dict], loss_data: Dict = 
 
         ax1.set_xlabel('Iteration', fontsize=12, color='white')
         ax1.set_ylabel('Training Loss', fontsize=12, color='white')
-        ax1.set_title('Training Loss Progression (All Runs)', fontsize=14, color='cyan')
+        ax1.set_title('Training Loss Progression (All Runs)', fontsize=14, color='white')
         ax1.grid(True, alpha=0.3)
         ax1.legend(fontsize=10)
         ax1.tick_params(colors='white')
@@ -196,7 +196,7 @@ def analyze_training_results(convergence_results: List[Dict], loss_data: Dict = 
 
             plt.xlabel('Iteration', fontsize=14, color='white')
             plt.ylabel('Training Loss', fontsize=14, color='white')
-            plt.title('FitzHugh-Nagumo Training Loss Progression', fontsize=16, color='cyan')
+            plt.title('FitzHugh-Nagumo Training Loss Progression', fontsize=16, color='white')
             plt.grid(True, alpha=0.3)
             plt.legend(fontsize=12)
             plt.tick_params(colors='white')
@@ -226,7 +226,7 @@ def analyze_training_results(convergence_results: List[Dict], loss_data: Dict = 
 
     ax2.set_xlabel('Run Number', fontsize=12, color='white')
     ax2.set_ylabel('MSE', fontsize=12, color='white')
-    ax2.set_title('MSE Component Analysis', fontsize=14, color='orange')
+    ax2.set_title('MSE Component Analysis', fontsize=14, color='white')
     ax2.set_xticks(runs)
     ax2.grid(True, alpha=0.3)
     ax2.legend(fontsize=10)
@@ -251,7 +251,7 @@ def analyze_training_results(convergence_results: List[Dict], loss_data: Dict = 
 
     ax3.set_xlabel('Run', fontsize=12, color='white')
     ax3.set_ylabel('Total MSE', fontsize=12, color='white')
-    ax3.set_title('Total MSE by Run', fontsize=14, color='lightgreen')
+    ax3.set_title('Total MSE by Run', fontsize=14, color='white')
     ax3.set_xticks(x_pos)
     ax3.set_xticklabels([f'Run {run}' for run in runs], rotation=45)
     ax3.grid(True, alpha=0.3, axis='y')
@@ -274,7 +274,7 @@ def analyze_training_results(convergence_results: List[Dict], loss_data: Dict = 
 
     ax4.set_xlabel('Run', fontsize=12, color='white')
     ax4.set_ylabel('MSE', fontsize=12, color='white')
-    ax4.set_title('V vs W MSE Components', fontsize=14, color='purple')
+    ax4.set_title('V vs W MSE Components', fontsize=14, color='white')
     ax4.set_xticks(x_pos)
     ax4.set_xticklabels([f'Run {run}' for run in runs])
     ax4.legend()

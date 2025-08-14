@@ -1,0 +1,39 @@
+
+FITZHUGH-NAGUMO EXPERIMENT SUMMARY
+==================================================
+
+Experiment Timestamp: 2025-08-14 15:13:45
+Total Training Runs: 5
+
+BEST MODEL PERFORMANCE:
+- Run: 2
+- Total MSE: 0.165425
+- V MSE: 0.018897
+- W MSE: 0.146528
+
+OVERALL STATISTICS:
+- Mean Total MSE: 0.416173 ± 0.170170
+- Coefficient of Variation: 40.9%
+- Success Rate: 5/5
+- Improvement over Mean: 60.3%
+
+CONVERGENCE RANKING:
+ 1. Run 2: Total MSE = 0.165425 ⭐ BEST
+ 2. Run 1: Total MSE = 0.275901
+ 3. Run 3: Total MSE = 0.499442
+ 4. Run 4: Total MSE = 0.507009
+ 5. Run 5: Total MSE = 0.633091
+
+EXPERIMENT FILES:
+- Training Results: data/training_results.json
+- Comprehensive Analysis: analysis/comprehensive_training_analysis.png
+- Loss Progression: plots/training/loss_progression.png
+- MSE Analysis: analysis/mse_component_analysis.png
+- Experiment Metadata: data/experiment_metadata.json
+
+FOLDER STRUCTURE:
+- Base Directory: ./logs/fitzhugh_nagumo_noise_5
+- Plots: ./logs/fitzhugh_nagumo_noise_5/plots
+- Analysis: ./logs/fitzhugh_nagumo_noise_5/analysis
+- Data: ./logs/fitzhugh_nagumo_noise_5/data
+- Models: ./logs/fitzhugh_nagumo_noise_5/models

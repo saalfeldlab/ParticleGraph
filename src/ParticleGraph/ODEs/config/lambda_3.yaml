@@ -1,4 +1,4 @@
-description: 'FitzHugh-Nagumo Neural Dynamics - noise_level 0'
+description: 'FitzHugh-Nagumo Neural Dynamics -   lambda_jac: 0.01'
 
 system:
   a: 0.7
@@ -13,7 +13,7 @@ simulation:
   pulse_interval: 80.0
   pulse_duration: 1.0
   pulse_amplitude: 0.8
-  noise_level: 0
+  noise_level: 1.0e-3
 
 model:
   siren_in_features: 1
@@ -41,3 +41,5 @@ training:
   recursive_loop: 3
   n_init_steps: 1000
   use_siren_init: false
+
+  lambda_jac: 0.01

@@ -215,7 +215,10 @@ if __name__ == '__main__':
     config_root = "./config"
     config_file = "default"
 
-    for config_file in ['noise_1', 'noise_2', 'noise_3', 'noise_4', 'noise_5']:
+    # config_file_list = ['noise_1', 'noise_2', 'noise_3', 'noise_4', 'noise_5']
+    config_file_list = ['lambda_1', 'lambda_2', 'lambda_3', 'lambda_4']
+
+    for config_file in config_file_list:
 
 
         config = FitzhughNagumoConfig.from_yaml(f"{config_root}/{config_file}.yaml")
@@ -242,6 +245,8 @@ if __name__ == '__main__':
         l1_lambda = config.training.l1_lambda
         weight_decay = config.training.weight_decay
         recursive_loop = config.training.recursive_loop
+        lambda_jac = config.training.lambda_jac
+        lambda_ratio = config.training.lambda_ratio
 
         print(f"loaded config: {config.description}")
         print(f"system parameters: a={a}, b={b}, epsilon={epsilon}")
@@ -352,14 +357,16 @@ if __name__ == '__main__':
             Time.sleep(1)
             loss_list = []
 
-            for iter in range(n_iter):
+            for iter in trange(n_iter):
                 idx = torch.randint(1, n_steps - 8, (batch_size,))
                 idx = torch.unique(idx)
                 t_batch = t_full[idx]
                 idx = to_numpy(idx)
 
+                # Initial states
                 w = model.siren(t_batch)
-                v = v_true[idx, None].clone().detach()
+                v0 = v_true[idx, None].clone().requires_grad_(True)  # persistent reference for Jacobian
+                v = v0
                 optimizer.zero_grad()
 
                 recursive_loop = 3
@@ -371,23 +378,42 @@ if __name__ == '__main__':
                     dv_pred = model.mlp0(torch.cat((v, w, I_ext[idx, None].clone().detach()), dim=1))
                     dw_pred = model.mlp1(torch.cat((v, w), dim=1))
 
+                    if lambda_jac > 0:
+                        # Jacobian regularizer w.r.t. initial v0
+                        gv = torch.autograd.grad(dv_pred.sum(), v0, create_graph=True, retain_graph=True, allow_unused=True)[0]
+                        gv_norm = torch.tensor(0.0, device=v.device) if gv is None else gv.norm(p=2, dim=1).mean()
+                        tau = 0.10
+                        R_jac = torch.relu(tau - gv_norm) ** 2
+                    else:
+                        R_jac = torch.tensor(0.0, device=device)
+
+                    # Update states
                     v = v + dt * dv_pred
                     w = w + dt * dw_pred
 
-                    # Compute loss for this step directly
+                    # Compute loss for this step
                     step_idx = idx + loop + 1
                     v_target = v_true[step_idx, None]
                     w_target_siren = model.siren(t_full[step_idx])
 
-                    # Calculate losses for this step
                     v_step_loss = (v - v_target).norm(2)
                     w_step_loss = (w - w_target_siren).norm(2)
 
-                    # Weight losses by step (later steps get higher weight)
+                    # Weight losses by step
                     step_weight = (loop + 1) / recursive_loop
                     step_loss = step_weight * (v_step_loss + w_step_loss)
 
-                    accumulated_loss += step_loss
+                    accumulated_loss = accumulated_loss + step_loss + lambda_jac * R_jac
+
+                    # with torch.no_grad():
+                    #     delta = 0.05 * v.std(dim=0, keepdim=True).clamp_min(1e-6) * torch.randn_like(v)
+                    # f_v = model.mlp0(torch.cat((v, w, I_ext[idx, None].detach()), dim=1))
+                    # f_vp = model.mlp0(torch.cat((v + delta, w, I_ext[idx, None].detach()), dim=1))
+                    # gw = torch.autograd.grad(f_v.sum(), w, create_graph=True, retain_graph=True)[0]
+                    # gv = torch.autograd.grad(f_v.sum(), v, create_graph=True, retain_graph=True)[0]
+                    # ratio = gw.norm(p=2) / (gv.norm(p=2) + 1e-8)
+                    # rho = 2.0  # allow some W influence, but not dominance
+                    # R_ratio = torch.relu(ratio - rho) ** 2
 
                 # Add regularization penalties
                 l1_penalty = 0.0
@@ -478,6 +504,7 @@ if __name__ == '__main__':
                 })
 
                 print(f"rollout with SIREN:  V MSE: {v_mse:.6f}, W MSE: {w_mse:.6f}, Total MSE: {total_mse:.6f}")
+                print(f"rollout           :  V MSE: {vRollout_mse:.6f}, W MSE: {wRollout_mse:.6f}, Total MSE: {total_mse_Rollout:.6f}")
 
                 # Save results for this run in organized folders
                 fig = plt.figure(figsize=(16, 12))

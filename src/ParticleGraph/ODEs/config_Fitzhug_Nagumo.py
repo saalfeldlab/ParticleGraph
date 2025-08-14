@@ -47,6 +47,8 @@ class TrainingConfig(BaseModel):
     recursive_loop: int = 3
     n_init_steps: int = 1000
     use_siren_init: bool = False
+    lambda_jac: float = 0
+    lambda_ratio: float = 0
 
 class FitzhughNagumoConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
