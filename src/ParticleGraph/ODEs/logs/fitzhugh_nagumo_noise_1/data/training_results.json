@@ -1,0 +1,94 @@
+{
+    "training_results": {
+        "convergence_summary": [
+            {
+                "run": 1,
+                "iteration": 4999,
+                "loss": 0.4855714440345764,
+                "v_mse": 0.0015035393880680203,
+                "w_mse": 1.126937985420227,
+                "total_mse": 1.128441524808295
+            },
+            {
+                "run": 2,
+                "iteration": 4999,
+                "loss": 3.749455213546753,
+                "v_mse": 1.0714856386184692,
+                "w_mse": 0.20224399864673615,
+                "total_mse": 1.2737296372652054
+            },
+            {
+                "run": 3,
+                "iteration": 4999,
+                "loss": 0.4709118902683258,
+                "v_mse": 0.0030295748729258776,
+                "w_mse": 0.28512662649154663,
+                "total_mse": 0.2881562013644725
+            },
+            {
+                "run": 4,
+                "iteration": 4999,
+                "loss": 0.28672727942466736,
+                "v_mse": 0.0029268369544297457,
+                "w_mse": 0.9668527841567993,
+                "total_mse": 0.9697796211112291
+            },
+            {
+                "run": 5,
+                "iteration": 4999,
+                "loss": 0.4172690212726593,
+                "v_mse": 0.0011523972498252988,
+                "w_mse": 1.323189377784729,
+                "total_mse": 1.3243417750345543
+            }
+        ],
+        "loss_progression": {
+            "1": {
+                "iterations": [],
+                "losses": []
+            },
+            "2": {
+                "iterations": [],
+                "losses": []
+            },
+            "3": {
+                "iterations": [],
+                "losses": []
+            },
+            "4": {
+                "iterations": [],
+                "losses": []
+            },
+            "5": {
+                "iterations": [],
+                "losses": []
+            }
+        },
+        "statistics": {
+            "total_mse_mean": 0.9968897519167512,
+            "total_mse_std": 0.37528901486329913,
+            "total_mse_cv": 37.64598985411568,
+            "loss_mean": 1.0819869697093965,
+            "loss_std": 1.3355747069951827,
+            "loss_cv": 123.43722654570375,
+            "best_run": 3,
+            "best_total_mse": 0.2881562013644725,
+            "best_v_mse": 0.0030295748729258776,
+            "best_w_mse": 0.28512662649154663,
+            "success_rate": "5/5",
+            "improvement": 71.09447651453678
+        },
+        "best_model": {
+            "run": 3,
+            "total_mse": 0.2881562013644725,
+            "v_mse": 0.0030295748729258776,
+            "w_mse": 0.28512662649154663
+        }
+    },
+    "analysis_info": {
+        "total_runs": 5,
+        "success_rate": "5/5",
+        "improvement_over_mean": "71.1%",
+        "stability_cv": "37.6%"
+    }
+}

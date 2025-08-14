@@ -2,6 +2,7 @@ import os
 
 # Configure matplotlib to use headless backend before importing pyplot
 import matplotlib
+
 matplotlib.use('Agg')  # Use non-interactive backend
 
 import numpy as np
@@ -22,6 +23,15 @@ import skimage
 from torchvision.transforms import Resize, Compose, ToTensor, Normalize
 import torch.optim as optim
 import time as Time
+
+from config_Fitzhug_Nagumo import FitzhughNagumoConfig
+from loss_analysis_Fitzhug_Nagumo import *
+
+# Import the training analysis functions
+from loss_analysis_Fitzhug_Nagumo import (
+    setup_experiment_folders, save_experiment_metadata,
+    analyze_training_results, run_training_analysis
+)
 
 
 # ----------------- SIREN Layer -----------------
@@ -45,7 +55,6 @@ class SineLayer(nn.Module):
 
     def forward(self, x):
         return torch.sin(self.omega_0 * self.linear(x))
-
 
 
 class Siren(nn.Module):
@@ -83,7 +92,8 @@ class Siren(nn.Module):
 
 class MLP(nn.Module):
 
-    def __init__(self, input_size=None, output_size=None, nlayers=None, hidden_size=None, device=None, activation=None, initialisation=None):
+    def __init__(self, input_size=None, output_size=None, nlayers=None, hidden_size=None, device=None, activation=None,
+                 initialisation=None):
 
         super(MLP, self).__init__()
         self.layers = nn.ModuleList()
@@ -99,13 +109,13 @@ class MLP(nn.Module):
         if initialisation == 'zeros':
             nn.init.zeros_(layer.weight)
             nn.init.zeros_(layer.bias)
-        else :
+        else:
             nn.init.normal_(layer.weight, std=0.01)
             nn.init.zeros_(layer.bias)
 
         self.layers.append(layer)
 
-        if activation=='tanh':
+        if activation == 'tanh':
             self.activation = F.tanh
         else:
             self.activation = F.relu
@@ -121,15 +131,14 @@ class MLP(nn.Module):
 class model_duo(nn.Module):
 
     def __init__(self, device=None):
-
         super(model_duo, self).__init__()
 
-        self.siren = Siren(in_features=1, out_features=1, hidden_features=128, hidden_layers=3, outermost_linear=True).to(device)
+        self.siren = Siren(in_features=1, out_features=1, hidden_features=128, hidden_layers=3,
+                           outermost_linear=True).to(device)
         self.mlp0 = MLP(input_size=3, output_size=1, nlayers=5, hidden_size=128, device=device)
         self.mlp1 = MLP(input_size=2, output_size=1, nlayers=2, hidden_size=4, device=device)
 
     def forward(self, x):
-
         return self.siren(x)
 
 
@@ -182,7 +191,7 @@ def initialize_siren_with_v(model, v_true, t_full, device, n_init_steps=1000):
     return model
 
 
-def plot_siren_v_init(model, v_true, t_full):
+def plot_siren_v_init(model, v_true, t_full, save_path):
     """Plot SIREN vs v after initialization"""
     with torch.no_grad():
         v_siren = model.siren(t_full).squeeze()
@@ -194,7 +203,7 @@ def plot_siren_v_init(model, v_true, t_full):
     plt.title(f'SIREN vs V after initialization (MSE: {mse:.6f})')
     plt.legend()
     plt.grid(True, alpha=0.3)
-    plt.savefig('./tmp/siren_v_init_comparison.png', dpi=200, bbox_inches='tight')
+    plt.savefig(save_path, dpi=200, bbox_inches='tight')
     plt.close()
 
 
@@ -203,24 +212,84 @@ if __name__ == '__main__':
     device = set_device('auto')
     print(f'device  {device}')
 
-    noise_level_list =  [1.0E-3]  # Only test noise level 0.001 for gradient accumulation experiment
+    config_root = "./config"
+    config_file = "default"
 
-    for noise_level in noise_level_list:
-
-        print(f" ")
-        print(f"running simulation with noise level: {noise_level}")
+    for config_file in ['noise_1', 'noise_2', 'noise_3', 'noise_4', 'noise_5']:
 
 
-        # Parameters
-        a = 0.7
-        b = 0.8
-        epsilon = 0.18
+        config = FitzhughNagumoConfig.from_yaml(f"{config_root}/{config_file}.yaml")
 
-        # Simulation settings
-        T = 1000       # total time
-        dt = 0.1      # time step
+        device = config.training.device
+        a = config.system.a
+        b = config.system.b
+        epsilon = config.system.epsilon
+        T = config.simulation.T
+        dt = config.simulation.dt
         n_steps = int(T / dt)
         time = np.linspace(0, T, n_steps)
+
+        v_init = config.simulation.v_init
+        w_init = config.simulation.w_init
+        pulse_interval = config.simulation.pulse_interval
+        pulse_duration = config.simulation.pulse_duration
+        pulse_amplitude = config.simulation.pulse_amplitude
+        noise_level = config.simulation.noise_level
+        n_iter = config.training.n_iter
+        batch_ratio = config.training.batch_ratio
+        test_runs = config.training.test_runs
+        learning_rate = config.training.learning_rate
+        l1_lambda = config.training.l1_lambda
+        weight_decay = config.training.weight_decay
+        recursive_loop = config.training.recursive_loop
+
+        print(f"loaded config: {config.description}")
+        print(f"system parameters: a={a}, b={b}, epsilon={epsilon}")
+        print(f"simulation: T={T}, dt={dt}, n_steps={n_steps}")
+        print(f"training: n_iter={n_iter}, lr={learning_rate}, test_runs={test_runs}")
+
+        # ===============================================================
+        # SETUP EXPERIMENT FOLDERS AND METADATA
+        # ===============================================================
+        print("setting up experiment folders...")
+
+        # Setup organized folder structure
+        experiment_name = f"fitzhugh_nagumo_{config_file}"
+        folders = setup_experiment_folders(experiment_name=experiment_name)
+
+        # Collect system and training parameters for metadata
+        system_params = {
+            'a': a,
+            'b': b,
+            'epsilon': epsilon,
+            'T': T,
+            'dt': dt,
+            'n_steps': n_steps,
+            'v_init': v_init,
+            'w_init': w_init,
+            'pulse_interval': pulse_interval,
+            'pulse_duration': pulse_duration,
+            'pulse_amplitude': pulse_amplitude,
+            'noise_level': noise_level
+        }
+
+        training_params = {
+            'n_iter': n_iter,
+            'learning_rate': learning_rate,
+            'test_runs': test_runs,
+            'batch_ratio': batch_ratio,
+            'l1_lambda': l1_lambda,
+            'weight_decay': weight_decay,
+            'recursive_loop': recursive_loop
+        }
+
+        # Save experiment metadata
+        save_experiment_metadata(folders, system_params, training_params)
+
+        # ===============================================================
+        # GENERATE TRAINING DATA
+        # ===============================================================
+        print("generating fitzhugh-nagumo data...")
 
         # Initialize variables
         v = np.zeros(n_steps)
@@ -228,13 +297,8 @@ if __name__ == '__main__':
         I_ext = np.zeros(n_steps)
 
         # Initial conditions
-        v[0] = -1.0
-        w[0] = 1.0
-
-        # External excitation: periodic pulse every 30s lasting 1s
-        pulse_interval = 80.0  # seconds
-        pulse_duration = 1.0   # seconds
-        pulse_amplitude = 0.8  # strength of excitation
+        v[0] = v_init
+        w[0] = w_init
 
         for i, t in enumerate(time):
             if (t % pulse_interval) < pulse_duration:
@@ -242,10 +306,10 @@ if __name__ == '__main__':
 
         # Rollout using Euler method
         for i in range(n_steps - 1):
-            dv = v[i] - (v[i]**3)/3 - w[i] + I_ext[i]
+            dv = v[i] - (v[i] ** 3) / 3 - w[i] + I_ext[i]
             dw = epsilon * (v[i] + a - b * w[i])
-            v[i+1] = v[i] + dt * dv + noise_level * np.random.randn()
-            w[i+1] = w[i] + dt * dw + noise_level * np.random.randn()
+            v[i + 1] = v[i] + dt * dv + noise_level * np.random.randn()
+            w[i + 1] = w[i] + dt * dw + noise_level * np.random.randn()
 
         plt.style.use('dark_background')
 
@@ -257,31 +321,39 @@ if __name__ == '__main__':
         t_full = torch.linspace(0, 1, n_steps, device=device).unsqueeze(1)  # shape (10000, 1)
         w_true = torch.tensor(w_true, dtype=torch.float32, device=device)  # shape (10000,)
 
-
-        n_iter = 5000
         batch_size = n_steps // 5
 
-        # Test convergence over multiple runs
-        test_runs = 5
+        # ===============================================================
+        # TRAINING LOOP WITH DATA COLLECTION
+        # ===============================================================
+        print("starting training runs...")
+
+        # Initialize data collection
         convergence_results = []
-
-        print(f" ")
-
+        loss_progression_data = {}
 
         for run in range(test_runs):
-            print(f"training run {run+1}/{test_runs}")
+            print(f"\ntraining run {run + 1}/{test_runs}")
+
+            # Initialize loss tracking for this run
+            loss_progression_data[run + 1] = {
+                'iterations': [],
+                'losses': []
+            }
 
             model = model_duo(device=device)  # Siren(in_features=1, out_features=1).to(device)
             optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 
-            # Initialize SIREN with v values
+            # Initialize SIREN with v values (optional)
             # model = initialize_siren_with_v(model, v_true, t_full, device, n_init_steps=1000)
-            # plot_siren_v_init(model, v_true, t_full)
+            # siren_init_path = os.path.join(folders['plots'], f'siren_v_init_comparison_run_{run+1}.png')
+            # plot_siren_v_init(model, v_true, t_full, siren_init_path)
 
             Time.sleep(1)
             loss_list = []
+
             for iter in range(n_iter):
-                idx = torch.randint(1, n_steps-8, (batch_size,))
+                idx = torch.randint(1, n_steps - 8, (batch_size,))
                 idx = torch.unique(idx)
                 t_batch = t_full[idx]
                 idx = to_numpy(idx)
@@ -296,7 +368,6 @@ if __name__ == '__main__':
                 accumulated_loss = 0.0
 
                 for loop in range(recursive_loop):
-
                     dv_pred = model.mlp0(torch.cat((v, w, I_ext[idx, None].clone().detach()), dim=1))
                     dw_pred = model.mlp1(torch.cat((v, w), dim=1))
 
@@ -319,12 +390,10 @@ if __name__ == '__main__':
                     accumulated_loss += step_loss
 
                 # Add regularization penalties
-                l1_lambda = 1.0E-3
                 l1_penalty = 0.0
                 for param in model.mlp1.parameters():
                     l1_penalty += torch.sum(torch.abs(param))
 
-                weight_decay = 1e-6
                 l2_penalty = 0.0
                 for param in model.parameters():
                     l2_penalty += torch.sum(param ** 2)
@@ -338,10 +407,16 @@ if __name__ == '__main__':
                 loss_list.append(loss.item())
 
                 if iter % 250 == 0:
-                    print(f"iteration {iter+1}/{n_iter}, loss: {loss.item():.6f}")
+                    loss_progression_data[run + 1]['iterations'].append(iter + 1)
+                    loss_progression_data[run + 1]['losses'].append(loss.item())
+
+            print(f"iteration {iter + 1}/{n_iter}, loss: {loss.item():.6f}")
 
             Time.sleep(1)
-            # rollout analysis
+
+            # ===============================================================
+            # ROLLOUT ANALYSIS
+            # ===============================================================
             with torch.no_grad():
                 t_full = torch.linspace(0, 1, n_steps, device=device).unsqueeze(1)
                 w_pred = model(t_full)
@@ -353,9 +428,16 @@ if __name__ == '__main__':
                 v_list.append(v.clone().detach())
                 w_list.append(w.clone().detach())
 
+                vRollout = v_true[0:1].clone().detach()
+                wRollout = w_true[0:1].clone().detach()
+                vRollout_list = []
+                wRollout_list = []
+                vRollout_list.append(v.clone().detach())
+                wRollout_list.append(w.clone().detach())
+
                 for step in range(1, n_steps):
                     with torch.no_grad():
-                        # w = model.siren(t_full[step])
+                        w = model.siren(t_full[step])
 
                         dv_pred = model.mlp0(torch.cat((v[:, None], w[:, None], I_ext[step:step + 1, None]), dim=1))
                         dw_pred = model.mlp1(torch.cat((v[:, None], w[:, None]), dim=1))
@@ -363,18 +445,31 @@ if __name__ == '__main__':
                         v += dt * dv_pred.squeeze()
                         w += dt * dw_pred.squeeze()
 
+                        dvRollout_pred = model.mlp0(torch.cat((vRollout[:, None], wRollout[:, None], I_ext[step:step + 1, None]), dim=1))
+                        dwRollout_pred = model.mlp1(torch.cat((vRollout[:, None], wRollout[:, None]), dim=1))
+
+                        vRollout += dt * dvRollout_pred.squeeze()
+                        wRollout += dt * dwRollout_pred.squeeze()
+
                     v_list.append(v.clone().detach())
                     w_list.append(w.clone().detach())
+                    vRollout_list.append(vRollout.clone().detach())
+                    wRollout_list.append(wRollout.clone().detach())
 
                 v_list = torch.stack(v_list, dim=0)
                 w_list = torch.stack(w_list, dim=0)
+                vRollout_list = torch.stack(vRollout_list, dim=0)
+                wRollout_list = torch.stack(wRollout_list, dim=0)
 
                 v_mse = F.mse_loss(v_list[500:].squeeze(), v_true[500:]).item()
                 w_mse = F.mse_loss(w_list[500:].squeeze(), w_true[500:]).item()
                 total_mse = v_mse + w_mse
+                vRollout_mse = F.mse_loss(vRollout_list[500:].squeeze(), v_true[500:]).item()
+                wRollout_mse = F.mse_loss(wRollout_list[500:].squeeze(), w_true[500:]).item()
+                total_mse_Rollout = vRollout_mse + wRollout_mse
 
                 convergence_results.append({
-                    'run': run+1,
+                    'run': run + 1,
                     'iteration': iter,
                     'loss': loss.item(),
                     'v_mse': v_mse,
@@ -382,83 +477,123 @@ if __name__ == '__main__':
                     'total_mse': total_mse
                 })
 
-                print(f"V MSE: {v_mse:.6f}, W MSE: {w_mse:.6f}, Total MSE: {total_mse:.6f}")
+                print(f"Rollout with SIREN:  V MSE: {v_mse:.6f}, W MSE: {w_mse:.6f}, Total MSE: {total_mse:.6f}")
 
-                # Save results for this run
+                # Save results for this run in organized folders
                 fig = plt.figure(figsize=(16, 12))
 
                 # Panel 1: External input only
                 plt.subplot(2, 2, 1)
-                plt.plot(I_ext.cpu().numpy(), label='I_ext (external input)', linewidth=2, alpha=0.7, c='red')
-                plt.xlim([0, n_steps//2.5])
-                plt.xlabel('Time steps')
-                plt.ylabel('External input')
-                plt.legend(loc='upper left')
-                plt.title('External Input Current')
-                plt.grid(True, alpha=0.3)
+                # plt.plot(I_ext.cpu().numpy(), label='I_ext (external input)', linewidth=2, alpha=0.7, c='red')
+                # plt.xlim([0, n_steps // 2.5])
+                # plt.xlabel('Time steps')
+                # plt.ylabel('External input')
+                # plt.legend(loc='upper left')
+                # plt.title('External Input Current')
+                # plt.grid(True, alpha=0.3)
 
-                # Panel 2: True vs reconstructed membrane potential
-                plt.subplot(2, 2, 2)
+                # Panel 1: True vs reconstructed membrane potential
+                plt.subplot(2, 2, 1)
                 plt.plot(v_true.cpu().numpy(), label='true v (membrane potential)', linewidth=3, alpha=0.7, c='white')
-                plt.plot(v_list.cpu().numpy(), label='rollout v', linewidth=2, alpha=1, c='green')
-                plt.xlim([0, n_steps//2.5])
+                plt.plot(v_list.cpu().numpy(), label='rollout v (with SIREN)', linewidth=2, alpha=1, c='green')
+                plt.xlim([0, n_steps // 2.5])
                 plt.xlabel('Time steps')
                 plt.ylabel('Membrane potential v')
                 plt.legend(loc='upper left')
-                plt.title(f'Run {run+1}: Membrane Potential (MSE: {v_mse:.4f})')
+                plt.title(f'Run {run + 1}: Membrane Potential (MSE: {v_mse:.4f})')
                 plt.grid(True, alpha=0.3)
 
-                # Panel 3: True vs reconstructed recovery variable
-                plt.subplot(2, 2, 3)
+                # Panel 2: True vs reconstructed recovery variable
+                plt.subplot(2, 2, 2)
                 plt.plot(w_true.cpu().numpy(), label='true w (recovery variable)', linewidth=3, alpha=0.7, c='white')
-                plt.plot(w_list.cpu().numpy(), label='rollout w', linewidth=2, alpha=1, c='cyan')
+                # plt.plot(w_list.cpu().numpy(), label='rollout w', linewidth=2, alpha=1, c='cyan')
                 plt.plot(w_pred.cpu().numpy(), label='SIREN w', linewidth=2, alpha=0.7, c='cyan')
-                plt.xlim([0, n_steps//2.5])
+                plt.xlim([0, n_steps // 2.5])
                 plt.xlabel('Time steps')
                 plt.ylabel('Recovery variable w')
                 plt.legend(loc='upper left')
-                plt.title(f'Run {run+1}: Recovery Variable (MSE: {w_mse:.4f})')
+                plt.title(f'Run {run + 1}: Recovery Variable (MSE: {w_mse:.4f})')
                 plt.grid(True, alpha=0.3)
 
-                # Panel 4: Phase portrait
-                plt.subplot(2, 2, 4)
-                plt.plot(v_true.cpu().numpy(), w_true.cpu().numpy(), label='true trajectory', linewidth=3, alpha=0.7, c='white')
-                plt.plot(v_list.cpu().numpy(), w_list.cpu().numpy(), label='rollout trajectory', linewidth=2, alpha=1, c='magenta')
-                plt.xlabel('Membrane potential v')
-                plt.ylabel('Recovery variable w')
-                plt.legend(loc='upper right')
-                plt.title(f'Run {run+1}: Phase Portrait')
+                # Panel 1: True vs reconstructed membrane potential
+                plt.subplot(2, 2, 3)
+                plt.plot(v_true.cpu().numpy(), label='true v (membrane potential)', linewidth=3, alpha=0.7, c='white')
+                plt.plot(vRollout_list.cpu().numpy(), label='rollout v', linewidth=2, alpha=1, c='green')
+                plt.xlim([0, n_steps // 2.5])
+                plt.xlabel('Time steps')
+                plt.ylabel('Membrane potential v')
+                plt.legend(loc='upper left')
+                plt.title(f'Run {run + 1}: Membrane Potential (MSE: {v_mse:.4f})')
                 plt.grid(True, alpha=0.3)
+
+                # Panel 2: True vs reconstructed recovery variable
+                plt.subplot(2, 2, 4)
+                plt.plot(w_true.cpu().numpy(), label='true w (recovery variable)', linewidth=3, alpha=0.7, c='white')
+                # plt.plot(w_list.cpu().numpy(), label='rollout w', linewidth=2, alpha=1, c='cyan')
+                plt.plot(wRollout_list.cpu().numpy(), label='rollout w', linewidth=2, alpha=0.7, c='cyan')
+                plt.xlim([0, n_steps // 2.5])
+                plt.xlabel('Time steps')
+                plt.ylabel('Recovery variable w')
+                plt.legend(loc='upper left')
+                plt.title(f'Run {run + 1}: Recovery Variable (MSE: {w_mse:.4f})')
+                plt.grid(True, alpha=0.3)
+
+                # # Panel 4: Phase portrait
+                # plt.subplot(2, 2, 4)
+                # plt.plot(v_true.cpu().numpy(), w_true.cpu().numpy(), label='true trajectory', linewidth=3, alpha=0.7,
+                #          c='white')
+                # plt.plot(v_list.cpu().numpy(), w_list.cpu().numpy(), label='rollout trajectory', linewidth=2, alpha=1,
+                #          c='magenta')
+                # plt.xlabel('Membrane potential v')
+                # plt.ylabel('Recovery variable w')
+                # plt.legend(loc='upper right')
+                # plt.title(f'Run {run + 1}: Phase Portrait')
+                # plt.grid(True, alpha=0.3)
 
                 plt.tight_layout()
-                plt.savefig(f'./tmp/nagumo_training_run_{run+1}_noise_{noise_level}_iter_{iter+1}.png', dpi=170)
+
+                # Save in organized training plots folder
+                training_plot_path = os.path.join(folders['training_plots'], f'nagumo_training_run_{run + 1}_noise_{noise_level}_iter_{iter + 1}.png')
+                plt.savefig(training_plot_path, dpi=170, facecolor='black')
                 plt.close()
 
-                # Save model state for each run
+                # Save model state for each run in models folder
+                model_path = os.path.join(folders['models'], f'model_run_{run + 1}.pt')
                 torch.save({
                     'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict(),
-                    'run': run+1,
+                    'run': run + 1,
                     'iteration': iter,
                     'loss': loss.item(),
                     'v_mse': v_mse,
                     'w_mse': w_mse,
                     'total_mse': total_mse
-                }, f'./tmp/model_run_{run+1}.pt')
+                }, model_path)
 
+            # Save individual loss plot for this run
             fig = plt.figure(figsize=(10, 5))
             plt.plot(loss_list, label='Training Loss', color='cyan', linewidth=1, alpha=0.8)
             plt.xlabel('iteration')
             plt.ylabel('loss')
             plt.title(f'Training Loss over {n_iter} iterations (Noise Level: {noise_level})')
             plt.grid(True, alpha=0.3)
-            plt.savefig(f'./tmp/nagumo_loss_run_{run+1}_noise_{noise_level}_iter_{iter+1}.png', dpi=200, bbox_inches='tight')
+
+            # Save in training plots folder
+            loss_plot_path = os.path.join(folders['training_plots'],
+                                          f'nagumo_loss_run_{run + 1}_noise_{noise_level}_iter_{iter + 1}.png')
+            plt.savefig(loss_plot_path, dpi=200, bbox_inches='tight', facecolor='black')
             plt.close()
 
-        # Print convergence summary
-        print(f" ")
-        print("convergence summary")
+        # ===============================================================
+        # COMPREHENSIVE TRAINING ANALYSIS
+        # ===============================================================
+        print("running comprehensive training analysis...")
 
+        # Run comprehensive analysis with all collected data
+        analyze_training_results(convergence_results, loss_progression_data, folders)
+
+        # Print convergence summary
+        print(f"\nCONVERGENCE SUMMARY")
         print(f"{'run':<4} {'Loss':<12} {'V MSE':<12} {'W MSE':<12} {'Total MSE':<12}")
         print(f"{'-' * 60}")
 
@@ -484,19 +619,23 @@ if __name__ == '__main__':
         valid_runs = len([r for r in convergence_results if not np.isnan(r['total_mse'])])
         print(f"convergence Rate: {valid_runs}/{test_runs} runs completed successfully")
 
+        # ===============================================================
+        # BEST MODEL DERIVATIVE ANALYSIS
+        # ===============================================================
+
         # Find best model based on lowest total MSE
         valid_results = [r for r in convergence_results if not np.isnan(r['total_mse'])]
         if valid_results:
             best_result = min(valid_results, key=lambda x: x['total_mse'])
             print(f"\nBEST MODEL:")
-            print(f"Run {best_result['run']}: V MSE = {best_result['v_mse']:.6f}, W MSE = {best_result['w_mse']:.6f}, Total MSE = {best_result['total_mse']:.6f}")
+            print(
+                f"Run {best_result['run']}: V MSE = {best_result['v_mse']:.6f}, W MSE = {best_result['w_mse']:.6f}, Total MSE = {best_result['total_mse']:.6f}")
 
             # Load the best model instead of retraining
             print(f"loading best model (Run {best_result['run']}) for derivative analysis...")
 
             model = model_duo(device=device)
-            best_model_path = f'./tmp/model_run_{best_result["run"]}.pt'
-
+            best_model_path = os.path.join(folders['models'], f'model_run_{best_result["run"]}.pt')
 
             print("Performing derivative analysis on best model...")
 
@@ -573,15 +712,28 @@ if __name__ == '__main__':
             total_weights = len(mlp1_weights)
             sparsity_ratio = zero_weights / total_weights
             plt.text(0.02, 0.98, f'Sparsity: {sparsity_ratio:.1%}\n({zero_weights}/{total_weights} weights ≈ 0)',
-                    transform=ax.transAxes, fontsize=10, verticalalignment='top', color='white',
-                    bbox=dict(boxstyle='round', facecolor='black', alpha=0.8))
+                     transform=ax.transAxes, fontsize=10, verticalalignment='top', color='white',
+                     bbox=dict(boxstyle='round', facecolor='black', alpha=0.8))
 
             plt.tight_layout()
-            plt.savefig('./tmp/best_model_derivative_analysis.png', dpi=200, bbox_inches='tight')
+
+            # Save derivative analysis in dedicated folder
+            derivative_analysis_path = os.path.join(folders['training_plots'], 'best_model_derivative_analysis.png')
+            plt.savefig(derivative_analysis_path, dpi=200, bbox_inches='tight', facecolor='black')
             plt.close()
 
-            print(f"derivative analysis saved to ./tmp/best_model_derivative_analysis.png")
-            print(f"best model sparsity: {sparsity_ratio:.1%} of MLP1 weights are effectively zero")
+            print(f"derivative analysis saved to {derivative_analysis_path}")
+            print(f"{sparsity_ratio:.1%} of MLP1 weights are effectively zero")
 
         else:
             print("No valid models found for analysis.")
+
+        # ===============================================================
+        # EXPERIMENT COMPLETION SUMMARY
+        # ===============================================================
+        print("experiment completed successfully!")
+        print(f"results saved in: {folders['base']}")
+        print(f"comprehensive analysis: {folders['analysis']}/comprehensive_training_analysis.png")
+        print(f"training plots: {folders['training_plots']}/")
+        print(f"model checkpoints: {folders['models']}/")
+        print(f"experiment summary: {folders['base']}/EXPERIMENT_SUMMARY.txt")
