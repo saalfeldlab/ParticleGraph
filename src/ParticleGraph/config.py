@@ -361,6 +361,8 @@ class TrainingConfig(BaseModel):
     velocity_augmentation: bool = False
     data_augmentation_loop: int = 40
 
+    recursive_training: bool = False
+    recursive_training_start_epoch: int = 0
     recursive_loop: int = 0
     time_step: int = 1
     recursive_sequence: str = ""

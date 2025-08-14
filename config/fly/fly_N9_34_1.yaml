@@ -1,4 +1,4 @@
-description: 'small MLP, no extra null edges, noise_model_level: 0 only_noise_visual_input: 1.0  n_extra_null_edges: 10000'
+description: 'small MLP, noise_model_level: 0 only_noise_visual_input: 1.0  n_extra_null_edges: 10000'
 dataset: 'fly_N9_34_1'
 
 simulation:

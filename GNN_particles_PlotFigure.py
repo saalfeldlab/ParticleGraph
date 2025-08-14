@@ -11578,11 +11578,18 @@ if __name__ == '__main__':
 
 
     # plot noise on video input 50/50
-    config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0',  'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4',
-                   'fly_N9_31_1', 'fly_N9_31_2', 'fly_N9_31_3', 'fly_N9_31_4', 'fly_N9_31_5','fly_N9_31_6', 'fly_N9_31_7']
-    data_flyvis_compare(config_list, 'simulation.only_noise_visual_input')
+    # config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0',  'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4',
+    #                'fly_N9_31_1', 'fly_N9_31_2', 'fly_N9_31_3', 'fly_N9_31_4', 'fly_N9_31_5','fly_N9_31_6', 'fly_N9_31_7']
+    # data_flyvis_compare(config_list, 'simulation.only_noise_visual_input')
 
+    # config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0',  'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4',
+    #                'fly_N9_34_1', 'fly_N9_34_2', 'fly_N9_34_3'] #, 'fly_N9_35_1', 'fly_N9_35_2']
+    # data_flyvis_compare(config_list, 'simulation.n_extra_null_edges')
 
+    config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0',  'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4',  'fly_N9_35_1', 'fly_N9_35_2']
+    data_flyvis_compare(config_list, 'simulation.noise_visual_input_type')
+
+    #
     # for config_file_ in config_list:
     #     print(' ')
     #
@@ -11596,8 +11603,8 @@ if __name__ == '__main__':
     #     folder_name = './log/' + pre_folder + '/tmp_results/'
     #     os.makedirs(folder_name, exist_ok=True)
     #     data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
-
-
+    #
+    #
 
 
 

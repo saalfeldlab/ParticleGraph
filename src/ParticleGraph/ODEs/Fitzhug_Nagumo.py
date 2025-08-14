@@ -353,7 +353,7 @@ if __name__ == '__main__':
                 v_list.append(v.clone().detach())
                 w_list.append(w.clone().detach())
 
-                for step in range(1, n_steps):
+                for step in range(1, n_steps-1):
                     with torch.no_grad():
                         w = model.siren(t_full[step])
 

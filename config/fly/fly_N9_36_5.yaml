@@ -1,5 +1,5 @@
-description: 'small MLP, noise_model_level: 0 only_noise_visual_input: 1.0  n_extra_null_edges: 100000'
-dataset: 'fly_N9_34_2'
+description: 'small MLP, no extra null edges, noise_model_level: 0 only_noise_visual_input: 1.0 recursive_loop:2 start with 35_1'
+dataset: 'fly_N9_31_5'
 
 simulation:
     connectivity_file: 'to be specified'
@@ -14,7 +14,9 @@ simulation:
     n_frames: 90720
     delta_t: 0.02
     baseline_value: 0
-    n_extra_null_edges: 100000
+
+    seed: 42
+
 
     noise_visual_input_type: "50/50"
     only_noise_visual_input: 1.0
@@ -45,11 +47,14 @@ plotting:
     ylim: [ -8,8 ]
 
 training:
-    n_epochs: 10
+    n_epochs: 15
     n_runs: 1
     device: 'auto'
 
+    recursive_training: True
+    recursive_training_start_epoch: 0
     recursive_loop: 1
+
     batch_size: 1
     batch_ratio: 1
 

@@ -3531,6 +3531,7 @@ def data_train_flyvis(config, erase, best_model, device):
     n_frames = simulation_config.n_frames
 
     data_augmentation_loop = train_config.data_augmentation_loop
+    recursive_training = train_config.recursive_training
     recursive_loop = train_config.recursive_loop
     batch_size = train_config.batch_size
     batch_ratio = train_config.batch_ratio
@@ -3616,7 +3617,7 @@ def data_train_flyvis(config, erase, best_model, device):
     print('create models ...')
     model = Signal_Propagation_FlyVis(aggr_type=model_config.aggr_type, config=config, device=device)
 
-    if (best_model != None) & (best_model != '') & (best_model != 'None'):
+    if (best_model != None) & (best_model != ''):
         net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{best_model}.pt"
         print(f'load {net} ...')
         state_dict = torch.load(net, map_location=device)
@@ -3624,11 +3625,7 @@ def data_train_flyvis(config, erase, best_model, device):
         start_epoch = int(best_model.split('_')[0])
         print(f'best_model: {best_model}  start_epoch: {start_epoch}')
         logger.info(f'best_model: {best_model}  start_epoch: {start_epoch}')
-        if has_neural_field:
-            net = f'{log_dir}/models/best_model_f_with_{n_runs - 1}_graphs_{best_model}.pt'
-            state_dict = torch.load(net, map_location=device)
-            model_f.load_state_dict(state_dict['model_state_dict'])
-        list_loss = torch.load(os.path.join(log_dir, 'loss.pt'))
+        # list_loss = torch.load(os.path.join(log_dir, 'loss.pt'))
     else:
         start_epoch = 0
         list_loss = []
@@ -3707,6 +3704,7 @@ def data_train_flyvis(config, erase, best_model, device):
             dataset_batch = []
             ids_batch = []
             mask_batch = []
+            k_batch = []
             ids_index = 0
             mask_index = 0
 
@@ -3770,7 +3768,6 @@ def data_train_flyvis(config, erase, best_model, device):
                     #             loss_contribs.append(std)
                     #     if loss_contribs:
                     #         loss = loss + torch.stack(loss_contribs).norm(2) * coeff_sign
-
                     if batch_ratio < 1:
                         ids_ = np.random.permutation(ids.shape[0])[:int(ids.shape[0] * batch_ratio)]
                         ids = np.sort(ids_)
@@ -3795,12 +3792,14 @@ def data_train_flyvis(config, erase, best_model, device):
                             y_batch = y
                             ids_batch = ids
                             mask_batch = mask
+                            k_batch = torch.ones((x.shape[0], 1), dtype=torch.int, device=device) * k
                         else:
                             data_id = torch.cat((data_id, torch.ones((x.shape[0], 1), dtype=torch.int, device=device) * run), dim=0)
                             x_batch = torch.cat((x_batch, x[:, 4:5]), dim=0)
                             y_batch = torch.cat((y_batch, y), dim=0)
                             ids_batch = np.concatenate((ids_batch, ids + ids_index), axis=0)
                             mask_batch = torch.cat((mask_batch, mask + mask_index), dim=0)
+                            k_batch = torch.cat((k_batch, torch.ones((x.shape[0], 1), dtype=torch.int, device=device) * k), dim=0)
 
                         ids_index += x.shape[0]
                         mask_index += edges_all.shape[1]
@@ -3836,6 +3835,30 @@ def data_train_flyvis(config, erase, best_model, device):
                         pred, in_features, msg = model(batch, data_id=data_id, mask=mask_batch, return_all=True)
 
                 loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
+
+                if recursive_training:
+                    for n_loop in range(recursive_loop):
+                        for batch in range(batch_size):
+                            dataset_batch[batch].x[:, 3:4] = dataset_batch[batch].x[:, 3:4] + delta_t * pred[0+batch*x.shape[0]:x.shape[0]+batch*x.shape[0]]
+                        batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
+                        for batch in batch_loader:
+                            pred = model(batch, data_id=data_id, mask=mask_batch, return_all=False)
+                        for batch in range(batch_size):
+                            k = k_batch[batch*x.shape[0]]
+                            y = torch.tensor(y_list[run][k.item()], device=device) / ynorm
+                            if batch == 0:
+                                    y_batch = y
+                            else:
+                                    y_batch = torch.cat((y_batch, y), dim=0)
+
+                        loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
+
+
+
+
+
+
+
 
                 loss.backward()
                 optimizer.step()
