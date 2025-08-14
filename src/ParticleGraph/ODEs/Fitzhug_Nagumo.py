@@ -216,7 +216,7 @@ if __name__ == '__main__':
     config_file = "default"
 
     # config_file_list = ['noise_1', 'noise_2', 'noise_3', 'noise_4', 'noise_5']
-    config_file_list = ['lambda_1', 'lambda_2', 'lambda_3', 'lambda_4']
+    config_file_list = ['lambda_2', 'lambda_3', 'lambda_4']
 
     for config_file in config_file_list:
 
@@ -366,6 +366,7 @@ if __name__ == '__main__':
                 # Initial states
                 w = model.siren(t_batch)
                 v0 = v_true[idx, None].clone().requires_grad_(True)  # persistent reference for Jacobian
+                w0 = model.siren(t_batch).clone().requires_grad_(True) # persistent reference for Jacobian
                 v = v0
                 optimizer.zero_grad()
 
@@ -387,6 +388,18 @@ if __name__ == '__main__':
                     else:
                         R_jac = torch.tensor(0.0, device=device)
 
+                    if lambda_ratio > 0:
+                        with torch.no_grad():
+                            delta = 0.05 * v0.std(dim=0, keepdim=True).clamp_min(1e-6) * torch.randn_like(v0)
+                        f_v = model.mlp0(torch.cat((v0, w0, I_ext[idx, None].detach()), dim=1))
+                        gw = torch.autograd.grad(f_v.sum(), w0, create_graph=True, retain_graph=True)[0]
+                        gv = torch.autograd.grad(f_v.sum(), v0, create_graph=True, retain_graph=True)[0]
+                        ratio = gw.norm(p=2) / (gv.norm(p=2) + 1e-8)
+                        rho = 2.0
+                        R_ratio = torch.relu(ratio - rho) ** 2
+                    else:
+                        R_ratio = torch.tensor(0.0, device=device)
+
                     # Update states
                     v = v + dt * dv_pred
                     w = w + dt * dw_pred
@@ -403,17 +416,7 @@ if __name__ == '__main__':
                     step_weight = (loop + 1) / recursive_loop
                     step_loss = step_weight * (v_step_loss + w_step_loss)
 
-                    accumulated_loss = accumulated_loss + step_loss + lambda_jac * R_jac
-
-                    # with torch.no_grad():
-                    #     delta = 0.05 * v.std(dim=0, keepdim=True).clamp_min(1e-6) * torch.randn_like(v)
-                    # f_v = model.mlp0(torch.cat((v, w, I_ext[idx, None].detach()), dim=1))
-                    # f_vp = model.mlp0(torch.cat((v + delta, w, I_ext[idx, None].detach()), dim=1))
-                    # gw = torch.autograd.grad(f_v.sum(), w, create_graph=True, retain_graph=True)[0]
-                    # gv = torch.autograd.grad(f_v.sum(), v, create_graph=True, retain_graph=True)[0]
-                    # ratio = gw.norm(p=2) / (gv.norm(p=2) + 1e-8)
-                    # rho = 2.0  # allow some W influence, but not dominance
-                    # R_ratio = torch.relu(ratio - rho) ** 2
+                    accumulated_loss = accumulated_loss + step_loss + lambda_jac * R_jac + lambda_ratio * R_ratio
 
                 # Add regularization penalties
                 l1_penalty = 0.0

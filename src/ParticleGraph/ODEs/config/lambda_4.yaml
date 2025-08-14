@@ -1,4 +1,4 @@
-description: 'FitzHugh-Nagumo Neural Dynamics -   lambda_jac: 0.001'
+description: 'FitzHugh-Nagumo Neural Dynamics -   lambda_jac: 0.01'
 
 system:
   a: 0.7
@@ -42,4 +42,4 @@ training:
   n_init_steps: 1000
   use_siren_init: false
 
-  lambda_jac: 0.001
+  lambda_jac: 0.01
