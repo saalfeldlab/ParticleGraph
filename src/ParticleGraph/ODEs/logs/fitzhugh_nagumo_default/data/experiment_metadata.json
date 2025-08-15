@@ -1,0 +1,38 @@
+{
+    "experiment_info": {
+        "timestamp": "2025-08-15T09:27:45.385475",
+        "experiment_type": "FitzHugh-Nagumo Neural Dynamics",
+        "description": "Hybrid neural ODE training with derivative analysis"
+    },
+    "system_parameters": {
+        "a": 0.7,
+        "b": 0.8,
+        "epsilon": 0.18,
+        "T": 1000.0,
+        "dt": 0.1,
+        "n_steps": 10000,
+        "v_init": -1.0,
+        "w_init": 1.0,
+        "pulse_interval": 80.0,
+        "pulse_duration": 1.0,
+        "pulse_amplitude": 0.8,
+        "noise_level": 0.001
+    },
+    "training_parameters": {
+        "n_iter": 5000,
+        "learning_rate": 0.0001,
+        "test_runs": 10,
+        "batch_ratio": 0.2,
+        "l1_lambda": 0.001,
+        "weight_decay": 1e-06,
+        "recursive_loop": 3
+    },
+    "folder_structure": {
+        "base": "./logs/fitzhugh_nagumo_default",
+        "plots": "./logs/fitzhugh_nagumo_default/plots",
+        "analysis": "./logs/fitzhugh_nagumo_default/analysis",
+        "data": "./logs/fitzhugh_nagumo_default/data",
+        "models": "./logs/fitzhugh_nagumo_default/models",
+        "training_plots": "./logs/fitzhugh_nagumo_default/training"
+    }
+}

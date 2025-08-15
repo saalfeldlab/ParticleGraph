@@ -318,8 +318,11 @@ class TrainingConfig(BaseModel):
     learning_rate_modulation_end: float = 0.0001
     Learning_rate_W_end: float = 0.0001
 
-    learning_rate_NNR: float = 0.0001
+
     learning_rate_missing_activity: float = 0.0001
+    learning_rate_NNR: float = 0.0001
+    training_NNR_start_epoch: int = 0
+
 
     coeff_L1: float = 0.0
     coeff_anneal_L1: float = 0
@@ -364,6 +367,7 @@ class TrainingConfig(BaseModel):
     recursive_training: bool = False
     recursive_training_start_epoch: int = 0
     recursive_loop: int = 0
+    coeff_loop: list[float] = [2, 4, 8, 16, 32, 64]
     time_step: int = 1
     recursive_sequence: str = ""
     recursive_parameters: list[float] = [0, 0]

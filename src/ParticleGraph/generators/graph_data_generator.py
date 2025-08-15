@@ -32,7 +32,7 @@ import re
 import imageio
 from ParticleGraph.generators.utils import *
 from ParticleGraph.generators.davis import *
-import taichi as ti
+# import taichi as ti
 import random
 import json
 

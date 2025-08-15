@@ -6720,6 +6720,34 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
     else:
         mc = 'k'
 
+    if os.path.exists(f'./{log_dir}/results/single_activity.pt'):
+        xnt = to_numpy(torch.load(f'./{log_dir}/results/single_activity.pt', map_location=device))
+
+    # xnt = y_ns[None]
+    ynt = None
+    fs = 1 / delta_t
+    window = "hann"
+    nperseg = int(fs * 4)
+    noverlap = None
+    nfft = None
+    detrend = "constant"
+    return_onesided = True
+    scaling = "spectrum"
+    abs = True
+    return_coefs = True
+
+    from ParticleGraph.spectral_utils.myspectral_funcs import estimate_spectrum, compute_spectral_coefs
+
+    pxy, freqs, coefs_xnkf = estimate_spectrum(xnt[0:3000], ynt=ynt, fs=fs, window=window, nperseg=nperseg,
+                                                                noverlap=noverlap, nfft=nfft, detrend=detrend,
+                                                                return_onesided=return_onesided, scaling=scaling,
+                                                                abs=abs, return_coefs=return_coefs)
+    coefs_xnkf = coefs_xnkf.compute()
+    pxy = pxy.compute()
+
+
+
+
     x_list = []
     y_list = []
     time.sleep(0.5)
@@ -11586,25 +11614,29 @@ if __name__ == '__main__':
     #                'fly_N9_34_1', 'fly_N9_34_2', 'fly_N9_34_3'] #, 'fly_N9_35_1', 'fly_N9_35_2']
     # data_flyvis_compare(config_list, 'simulation.n_extra_null_edges')
 
-    config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0',  'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4',  'fly_N9_35_1', 'fly_N9_35_2']
-    data_flyvis_compare(config_list, 'simulation.noise_visual_input_type')
+    # config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0',  'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4',  'fly_N9_35_1', 'fly_N9_35_2']
+    # data_flyvis_compare(config_list, 'simulation.noise_visual_input_type')
 
-    #
-    # for config_file_ in config_list:
-    #     print(' ')
-    #
-    #     config_file, pre_folder = add_pre_folder(config_file_)
-    #     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-    #     config.dataset = pre_folder + config.dataset
-    #     config.config_file = pre_folder + config_file_
-    #
-    #     print(f'config_file  {config.config_file}')
-    #
-    #     folder_name = './log/' + pre_folder + '/tmp_results/'
-    #     os.makedirs(folder_name, exist_ok=True)
-    #     data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
-    #
-    #
+    # config_list = ['fly_N9_36_1', 'fly_N9_36_2', 'fly_N9_36_3'] #, 'fly_N9_36_4', 'fly_N9_36_5', 'fly_N9_36_6']
+    # data_flyvis_compare(config_list, 'training.recursive_loop')
+
+    config_list = ['fly_N9_18_4_0']
+
+    for config_file_ in config_list:
+        print(' ')
+
+        config_file, pre_folder = add_pre_folder(config_file_)
+        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+        config.dataset = pre_folder + config.dataset
+        config.config_file = pre_folder + config_file_
+
+        print(f'config_file  {config.config_file}')
+
+        folder_name = './log/' + pre_folder + '/tmp_results/'
+        os.makedirs(folder_name, exist_ok=True)
+        data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
+
+
 
 
 

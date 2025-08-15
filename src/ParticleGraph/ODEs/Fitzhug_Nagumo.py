@@ -216,7 +216,8 @@ if __name__ == '__main__':
     config_file = "default"
 
     # config_file_list = ['noise_1', 'noise_2', 'noise_3', 'noise_4', 'noise_5']
-    config_file_list = ['lambda_2', 'lambda_3', 'lambda_4']
+    # config_file_list = ['lambda_2', 'lambda_3', 'lambda_4']
+    config_file_list = ['recur_1', 'recur_2', 'recur_3', 'recur_4', 'recur_5']
 
     for config_file in config_file_list:
 
@@ -435,7 +436,7 @@ if __name__ == '__main__':
 
                 loss_list.append(loss.item())
 
-                if iter % 250 == 0:
+                if iter % 50 == 0:
                     loss_progression_data[run + 1]['iterations'].append(iter + 1)
                     loss_progression_data[run + 1]['losses'].append(loss.item())
 
@@ -497,13 +498,21 @@ if __name__ == '__main__':
                 wRollout_mse = F.mse_loss(wRollout_list[500:].squeeze(), w_true[500:]).item()
                 total_mse_Rollout = vRollout_mse + wRollout_mse
 
+                # convergence_results.append({
+                #     'run': run + 1,
+                #     'iteration': iter,
+                #     'loss': loss.item(),
+                #     'v_mse': v_mse,
+                #     'w_mse': w_mse,
+                #     'total_mse': total_mse
+                # })
                 convergence_results.append({
                     'run': run + 1,
                     'iteration': iter,
                     'loss': loss.item(),
-                    'v_mse': v_mse,
-                    'w_mse': w_mse,
-                    'total_mse': total_mse
+                    'v_mse': vRollout_mse,
+                    'w_mse': wRollout_mse,
+                    'total_mse': total_mse_Rollout
                 })
 
                 print(f"rollout with SIREN:  V MSE: {v_mse:.6f}, W MSE: {w_mse:.6f}, Total MSE: {total_mse:.6f}")
@@ -605,6 +614,7 @@ if __name__ == '__main__':
             plt.plot(loss_list, label='Training Loss', color='cyan', linewidth=1, alpha=0.8)
             plt.xlabel('iteration')
             plt.ylabel('loss')
+            plt.ylim([0, 6])
             plt.title(f'Training Loss over {n_iter} iterations (Noise Level: {noise_level})')
             plt.grid(True, alpha=0.3)
 

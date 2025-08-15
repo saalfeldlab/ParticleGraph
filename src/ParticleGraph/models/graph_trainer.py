@@ -3535,6 +3535,7 @@ def data_train_flyvis(config, erase, best_model, device):
     recursive_loop = train_config.recursive_loop
     batch_size = train_config.batch_size
     batch_ratio = train_config.batch_ratio
+    training_NNR_start_epoch = train_config.training_NNR_start_epoch
 
     field_type = model_config.field_type
     time_step = train_config.time_step
@@ -3717,7 +3718,7 @@ def data_train_flyvis(config, erase, best_model, device):
                 x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device)
                 ids = np.arange(n_neurons)
 
-                if has_visual_field:
+                if (has_visual_field) & (epoch >= training_NNR_start_epoch):
                     if model_config.input_size_nnr == 1:
                         x[:n_input_neurons, 4] = model.visual_NNR(torch.tensor([k / n_frames], dtype=torch.float32, device=device)) ** 2
 
@@ -3837,6 +3838,7 @@ def data_train_flyvis(config, erase, best_model, device):
                 loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
 
                 if recursive_training:
+                    coeff_loop = 2.0 + 1.5 * torch.arange(recursive_loop, device=device)  # [2.0,3.5,5.0]
                     for n_loop in range(recursive_loop):
                         for batch in range(batch_size):
                             dataset_batch[batch].x[:, 3:4] = dataset_batch[batch].x[:, 3:4] + delta_t * pred[0+batch*x.shape[0]:x.shape[0]+batch*x.shape[0]]
@@ -3851,7 +3853,7 @@ def data_train_flyvis(config, erase, best_model, device):
                             else:
                                     y_batch = torch.cat((y_batch, y), dim=0)
 
-                        loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
+                        loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2) / coeff_loop[batch]
 
 
 

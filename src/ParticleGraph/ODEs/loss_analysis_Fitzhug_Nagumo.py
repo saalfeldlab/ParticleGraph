@@ -141,7 +141,9 @@ def analyze_training_results(convergence_results: List[Dict], loss_data: Dict = 
     total_mses = [r['total_mse'] for r in convergence_results]
 
     # Define consistent colors for each run
-    colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6']
+    colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6',
+              '#06B6D4', '#EC4899', '#84CC16', '#F97316', '#6366F1',
+              '#14B8A6', '#F59E0B', '#8B5A2B', '#22D3EE', '#A855F7']
     run_colors = {run: colors[i] for i, run in enumerate(runs)}
 
     # Calculate statistics
@@ -173,6 +175,7 @@ def analyze_training_results(convergence_results: List[Dict], loss_data: Dict = 
 
         ax1.set_xlabel('Iteration', fontsize=12, color='white')
         ax1.set_ylabel('Training Loss', fontsize=12, color='white')
+        ax1.set_ylim([0, 6])
         ax1.set_title('Training Loss Progression (All Runs)', fontsize=14, color='white')
         ax1.grid(True, alpha=0.3)
         ax1.legend(fontsize=10)
@@ -196,6 +199,7 @@ def analyze_training_results(convergence_results: List[Dict], loss_data: Dict = 
 
             plt.xlabel('Iteration', fontsize=14, color='white')
             plt.ylabel('Training Loss', fontsize=14, color='white')
+            plt.ylim([0, 6])
             plt.title('FitzHugh-Nagumo Training Loss Progression', fontsize=16, color='white')
             plt.grid(True, alpha=0.3)
             plt.legend(fontsize=12)

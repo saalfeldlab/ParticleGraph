@@ -27,7 +27,7 @@ import networkx as nx
 from torch_geometric.utils.convert import to_networkx
 # from cellpose import models
 from ParticleGraph.generators.cell_utils import *
-from cellpose import models, core, utils, io, models, metrics, denoise
+# from cellpose import models, core, utils, io, models, metrics, denoise
 import scipy.io as sio
 import seaborn as sns
 from torch_geometric.utils import dense_to_sparse
