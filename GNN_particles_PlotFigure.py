@@ -48,6 +48,7 @@ from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score, a
 from scipy.optimize import linear_sum_assignment
 # from pysr import PySRRegressor
 from datetime import datetime
+from ParticleGraph.spectral_utils.myspectral_funcs import estimate_spectrum, compute_spectral_coefs
 
 class Interaction_Particle_extract(MessagePassing):
     """Interaction Network as proposed in this paper:
@@ -6680,7 +6681,6 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
     n_runs = config.training.n_runs
     n_neuron_types = config.simulation.n_neuron_types
     delta_t = config.simulation.delta_t
-    cmap = CustomColorMap(config=config)
     colors_65 = plt.cm.hsv(np.linspace(0, 0.95, 65))
 
     max_radius = config.simulation.max_radius if hasattr(config.simulation, 'max_radius') else 2.5
@@ -6714,39 +6714,12 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         'T5_Motion': ['T5_OFF'],
         'Other': ['Tangential', 'Wide_Field', 'Other']
     }
+    cmap = CustomColorMap(config=config)
 
     if 'black' in style:
         mc = 'w'
     else:
         mc = 'k'
-
-    if os.path.exists(f'./{log_dir}/results/single_activity.pt'):
-        xnt = to_numpy(torch.load(f'./{log_dir}/results/single_activity.pt', map_location=device))
-
-    # xnt = y_ns[None]
-    ynt = None
-    fs = 1 / delta_t
-    window = "hann"
-    nperseg = int(fs * 4)
-    noverlap = None
-    nfft = None
-    detrend = "constant"
-    return_onesided = True
-    scaling = "spectrum"
-    abs = True
-    return_coefs = True
-
-    from ParticleGraph.spectral_utils.myspectral_funcs import estimate_spectrum, compute_spectral_coefs
-
-    pxy, freqs, coefs_xnkf = estimate_spectrum(xnt[0:3000], ynt=ynt, fs=fs, window=window, nperseg=nperseg,
-                                                                noverlap=noverlap, nfft=nfft, detrend=detrend,
-                                                                return_onesided=return_onesided, scaling=scaling,
-                                                                abs=abs, return_coefs=return_coefs)
-    coefs_xnkf = coefs_xnkf.compute()
-    pxy = pxy.compute()
-
-
-
 
     x_list = []
     y_list = []
@@ -6825,7 +6798,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
     plt.close()
 
     # Additional plot for specific neuron type (e.g., 'Am')
-    target_type_name_list = ['R1', 'R7', 'Am', 'L1', 'L2']
+    target_type_name_list = ['R1', 'R7', 'Am', 'L1', 'L2', 'TmY4', 'TmY5a', 'TmY9', 'T4a', 'T4b', 'T4c', 'T4d']
 
     for target_type_name in target_type_name_list:  # Change this to any desired type name
         target_type_index = None
@@ -6860,6 +6833,62 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                 plt.savefig(f'./{log_dir}/results/activity_{target_type_name}.tif', dpi=300)
                 plt.close()
 
+
+                N_samples = 1000
+
+                xnt = to_numpy(activity[neuron_idx, :])
+                ynt = None
+                fs = 1 / delta_t
+                window = "hann"
+                nperseg = int(fs * 0.8)
+
+                # print (f'test: {N_samples / nperseg}')
+
+                noverlap = None
+                nfft = None
+                detrend = "constant"
+                return_onesided = True
+                scaling = "spectrum"
+                abs = True
+                return_coefs = True
+
+                num_levels = 10
+                reps = 2
+
+                xnt = xnt[0:N_samples]
+                pxy, freqs, coefs_xnkf = estimate_spectrum(xnt, ynt =ynt, fs=fs, window=window, nperseg=nperseg, noverlap=noverlap, nfft=nfft, detrend=detrend, return_onesided=return_onesided, scaling=scaling, abs=abs, return_coefs=return_coefs)
+
+
+                # coefs_xnkfs, freqs = myspectral_funcs.compute_multiscale_spectral_coefs(xnt=y_ns[None], fs=fps,
+                #                                                                          window="hann", noverlap=None,
+                #                                                                          detrend="constant",
+                #                                                                          return_onesided=True,
+                #                                                                          scaling="spectrum", axis=0,
+                #                                                                          num_levels=num_levels,
+                #                                                                          reps=reps)
+
+                coefs_xnkf = coefs_xnkf.compute()
+                pxy = pxy.compute()
+                min_freq = freqs[0]
+                max_freq = freqs[-1]
+                spectrogram = np.abs(coefs_xnkf[0]).T[::-1]
+
+                fig, axs = plt.subplots(2, 1, figsize=(12, 6))
+                cm = plt.get_cmap("coolwarm")
+                xax = np.linspace(0, xnt.shape[0] * delta_t, spectrogram.shape[1])
+                im = axs[0].matshow(spectrogram, extent=[xax[0], xax[-1], min_freq, max_freq],
+                                    cmap=cm, aspect="auto", origin="lower")
+                axs[0].set_xlabel("Time (s)")
+                axs[0].set_ylabel("Frequency (Hz)")
+                # fig.colorbar(im, ax=axs[0])
+                xax = np.arange(0, xnt.shape[0]) * delta_t
+                axs[1].plot(xax, xnt, color=mc, linewidth=0.5)
+                axs[1].set_xlabel("Time (s)")
+                axs[1].set_xlim([0, xax[-1]])
+                fig.tight_layout()
+                plt.savefig(f'./{log_dir}/results/spectrogram_{target_type_name}.tif', dpi=300)
+                plt.close(fig)
+                # print(f'./{log_dir}/results/spectrogram_{target_type_name}.tif')
                 # print(f'plotted {n_neurons_to_plot} out of {len(neurons_of_type)} {target_type_name} neurons')
                 logger.info(f'plotted {n_neurons_to_plot} out of {len(neurons_of_type)} {target_type_name} neurons')
             else:
@@ -6868,8 +6897,6 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         else:
             print(f'type {target_type_name} not found in index_to_name dictionary')
             logger.info(f'type {target_type_name} not found in index_to_name dictionary')
-
-    # Add this code after the existing activity plotting section
 
     # Calculate RMS norms for activity and target distributions
     activity_for_rms = torch.tensor(x_list[0][:, :, 3:4], device=device)
@@ -11617,10 +11644,11 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0',  'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4',  'fly_N9_35_1', 'fly_N9_35_2']
     # data_flyvis_compare(config_list, 'simulation.noise_visual_input_type')
 
-    # config_list = ['fly_N9_36_1', 'fly_N9_36_2', 'fly_N9_36_3'] #, 'fly_N9_36_4', 'fly_N9_36_5', 'fly_N9_36_6']
+    config_list = ['fly_N9_31_5'] #, 'fly_N9_36_4', 'fly_N9_36_5', 'fly_N9_36_6', 'fly_N9_36_7']
     # data_flyvis_compare(config_list, 'training.recursive_loop')
 
-    config_list = ['fly_N9_18_4_0']
+    # config_list = ['fly_N9_18_4_0', 'fly_N9_18_4_1']
+    # config_list = ['fly_N9_33_5']
 
     for config_file_ in config_list:
         print(' ')

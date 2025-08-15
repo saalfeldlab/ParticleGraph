@@ -1,4 +1,4 @@
-description: 'small MLP, no extra null edges, noise_model_level: 5E-1 hidden_dim_nnr: 64     learning_rate_NNR: 1.0E-4'
+description: 'small MLP, no extra null edges, noise_model_level: 5E-1 hidden_dim_nnr: 64     learning_rate_NNR: 1.0E-6'
 dataset: 'fly_N9_18_4_1'
 
 simulation:
@@ -66,7 +66,7 @@ training:
     learning_rate_start: 5.0E-4
     learning_rate_embedding_start: 5.0E-3
 
-    learning_rate_NNR: 1.0E-4
+    learning_rate_NNR: 1.0E-6
 
     measurement_noise_level: 0
     noise_model_level: 5.0E-1

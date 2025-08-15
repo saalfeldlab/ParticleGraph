@@ -3568,13 +3568,11 @@ def data_train_flyvis(config, erase, best_model, device):
 
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
-    recursive_parameters = train_config.recursive_parameters.copy()
+    coeff_loop = torch.tensor(train_config.coeff_loop, device = device)
 
     log_dir, logger = create_log_dir(config, erase)
     print(f'loading graph files N: {n_runs} ...')
     logger.info(f'Graph files N: {n_runs}')
-
-    model = Signal_Propagation_FlyVis(aggr_type=model_config.aggr_type, config=config, device=device)
 
     x_list = []
     y_list = []
@@ -3585,8 +3583,6 @@ def data_train_flyvis(config, erase, best_model, device):
         y_list.append(y)
     print(f'loaded dataset with {len(x_list)} runs, each with {len(x_list[0])} frames')
     x = x_list[0][n_frames - 10]
-    # print the length of loaded dataset
-
 
     activity = torch.tensor(x_list[0][:, :, 3:4], device=device)
     activity = activity.squeeze()
@@ -3837,30 +3833,23 @@ def data_train_flyvis(config, erase, best_model, device):
 
                 loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
 
-                if recursive_training:
-                    coeff_loop = 2.0 + 1.5 * torch.arange(recursive_loop, device=device)  # [2.0,3.5,5.0]
+                if recursive_training: # [2.0,3.5,5.0]
                     for n_loop in range(recursive_loop):
                         for batch in range(batch_size):
-                            dataset_batch[batch].x[:, 3:4] = dataset_batch[batch].x[:, 3:4] + delta_t * pred[0+batch*x.shape[0]:x.shape[0]+batch*x.shape[0]]
+                            k = k_batch[batch * x.shape[0]] + n_loop + 1
+                            dataset_batch[batch].x[:, 3:4] = dataset_batch[batch].x[:, 3:4] + delta_t * pred[0+batch*x.shape[0]:x.shape[0]+batch*x.shape[0]] * ynorm
+                            dataset_batch[batch].x[:, 4:5] = torch.tensor(x_list[run][k.item(),:,4:5], device=device)
                         batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
                         for batch in batch_loader:
                             pred = model(batch, data_id=data_id, mask=mask_batch, return_all=False)
                         for batch in range(batch_size):
-                            k = k_batch[batch*x.shape[0]]
+                            k = k_batch[batch*x.shape[0]] + n_loop + 1
                             y = torch.tensor(y_list[run][k.item()], device=device) / ynorm
                             if batch == 0:
                                     y_batch = y
                             else:
                                     y_batch = torch.cat((y_batch, y), dim=0)
-
                         loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2) / coeff_loop[batch]
-
-
-
-
-
-
-
 
                 loss.backward()
                 optimizer.step()
@@ -3879,7 +3868,6 @@ def data_train_flyvis(config, erase, best_model, device):
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / n_neurons))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / n_neurons))
-        logger.info(f'recursive_parameters: {recursive_parameters[0]:.2f}')
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()},
                    os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))

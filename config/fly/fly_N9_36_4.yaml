@@ -1,4 +1,4 @@
-description: 'small MLP, no extra null edges, noise_model_level: 0 only_noise_visual_input: 1.0 recursive_loop:1 coeff 1.0 start with 35_1'
+description: 'small MLP, no extra null edges, noise_model_level: 0 only_noise_visual_input: 1.0 recursive_loop:1 coeff 4.0 start with 35_1'
 dataset: 'fly_N9_31_5'
 
 simulation:
@@ -55,7 +55,7 @@ training:
     recursive_training_start_epoch: 0
 
     recursive_loop: 1
-    coeff_loop: [ 1.0, 1.0, 1.0, 1.0 ]
+    coeff_loop: [ 4.0, 4.0, 4.0, 4.0 ]
 
     batch_size: 1
     batch_ratio: 1
