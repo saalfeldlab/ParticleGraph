@@ -576,6 +576,18 @@ if __name__ == '__main__':
                 w_mse = F.mse_loss(w_list[500:].squeeze(), w_true[500:]).item()
                 total_mse = v_mse + w_mse
 
+                # --- Compute affine-corrected W ---
+                w_pred = w_list.cpu().numpy().squeeze()
+                w_target = w_true.cpu().numpy().squeeze()
+                A = np.vstack([w_pred, np.ones_like(w_pred)]).T
+                a, b = np.linalg.lstsq(A, w_target, rcond=None)[0]
+                w_corr = a * w_pred + b
+
+                # MSE after affine correction
+                w_mse = np.mean((w_corr[500:] - w_target[500:]) ** 2)
+                total_mse = np.mean(
+                    (v_list[500:].cpu().numpy().squeeze() - v_true[500:].cpu().numpy().squeeze()) ** 2) + w_mse
+
                 convergence_results.append({
                     'run': run + 1,
                     'iteration': iter,
@@ -585,9 +597,7 @@ if __name__ == '__main__':
                     'total_mse': total_mse
                 })
 
-                print(f"rollout with bootstrap SIREN:  V MSE: {v_mse:.6f}, W MSE: {w_mse:.6f}, Total MSE: {total_mse:.6f}")
-
-                import numpy as np
+                print(f"rollout with bootstrap SIREN:  V MSE: {v_mse:.6f}, W corr MSE: {w_mse:.6f}, total MSE: {total_mse:.6f}")
 
                 fig = plt.figure(figsize=(16, 8))
                 plt.subplot(2, 1, 1)
@@ -597,36 +607,22 @@ if __name__ == '__main__':
                 plt.xlim([0, n_steps // 2.5])
                 plt.xlabel('time')
                 plt.ylabel('v')
-                plt.legend(loc='upper left')
+                plt.ylim([-2.5,2.5])
+                plt.legend(loc='upper left', fontsize=12)
                 plt.title(f'v (MSE: {v_mse:.4f})')
                 plt.grid(True, alpha=0.3)
-
-                # plt.subplot(2, 1, 2)
-                # plt.plot(w_true.cpu().numpy(), label='true w', linewidth=3, alpha=0.7, c='white')
-                # plt.plot(w_list.cpu().numpy(), label='rollout w', linewidth=2, alpha=0.7, c='cyan')
-                # plt.xlim([0, n_steps // 2.5])
-                # plt.xlabel('time')
-                # plt.ylabel('w')
-                # plt.legend(loc='upper left')
-                # plt.title(f'w latent variable (MSE: {w_mse:.4f})')
-                # plt.grid(True, alpha=0.3)
-
-                w_pred = w_list.cpu().numpy().squeeze()
-                w_target = w_true.cpu().numpy().squeeze()
-                A = np.vstack([w_pred, np.ones_like(w_pred)]).T  # shape [n_steps, 2]
-                a, b = np.linalg.lstsq(A, w_target, rcond=None)[0]
-                w_corr = a * w_pred + b
 
                 # --- Plot corrected w ---
                 plt.subplot(2, 1, 2)
                 plt.plot(w_true.cpu().numpy(), label='true w', linewidth=3, alpha=0.7, c='white')
                 plt.plot(w_list.cpu().numpy(), label='rollout w', linewidth=2, alpha=0.7, c='cyan')
-                plt.plot(w_corr, label='corrected w (affine)', linewidth=2, alpha=0.8, c='blue')
+                plt.plot(w_corr, label='corrected w (affine)', linewidth=2, alpha=0.8, c='orange')
                 plt.xlim([0, n_steps // 2.5])
                 plt.xlabel('time')
                 plt.ylabel('w')
-                plt.legend(loc='upper left')
-                plt.title(f'w latent variable (MSE: {w_mse:.4f})')
+                plt.ylim([-1,2.5])
+                plt.legend(loc='upper left', fontsize=12)
+                plt.title(f'w latent variable (MSE: {w_mse:.4f}, w_corr = {a:.3f} * w_pred + {b:.3f})')
                 plt.grid(True, alpha=0.3)
 
 
@@ -676,14 +672,14 @@ if __name__ == '__main__':
 
             # Weight norms
             axs[2, 0].plot(iters, data['mlp0_weight_norm'], label='MLP0 weight', color='tab:blue')
-            axs[2, 0].plot(iters, data['mlp1_weight_norm'], label='MLP1 weight', color='tab:orange')
+            axs[2, 0].plot(iters, data['mlp1_weight_norm']*10, label='MLP1 weight x10', color='tab:orange')
             axs[2, 0].set_ylabel('weight norms')
             axs[2, 0].set_ylim([0, 15])
             axs[2, 0].legend()
 
             # Gradient norms of weights
             axs[2, 1].plot(iters, data['mlp0_grad_norm'], label='MLP0 grad', color='tab:blue')
-            axs[2, 1].plot(iters, data['mlp1_grad_norm'], label='MLP1 grad', color='tab:orange')
+            axs[2, 1].plot(iters, data['mlp1_grad_norm']*10, label='MLP1 grad x10', color='tab:orange')
             axs[2, 1].set_ylabel('weight gradient norms')
             axs[2, 1].set_ylim([0, 200])
             axs[2, 1].legend()
