@@ -44,35 +44,6 @@ def setup_experiment_folders(base_path: str = './logs', experiment_name: str = N
     return folders
 
 
-def save_experiment_metadata(folders: Dict[str, str], system_params: Dict, training_params: Dict):
-    """
-    Save experiment configuration and metadata
-
-    Args:
-        folders: Dictionary with folder paths
-        system_params: FitzHugh-Nagumo system parameters
-        training_params: Training configuration parameters
-    """
-
-    metadata = {
-        'experiment_info': {
-            'timestamp': datetime.datetime.now().isoformat(),
-            'experiment_type': 'FitzHugh-Nagumo Neural Dynamics',
-            'description': 'Hybrid neural ODE training with derivative analysis'
-        },
-        'system_parameters': system_params,
-        'training_parameters': training_params,
-        'folder_structure': folders
-    }
-
-    metadata_path = os.path.join(folders['data'], 'experiment_metadata.json')
-    with open(metadata_path, 'w') as f:
-        json.dump(metadata, f, indent=4)
-
-    print(f"saved experiment metadata to: {metadata_path}")
-    return metadata_path
-
-
 def save_results_to_json(convergence_results: List[Dict], loss_data: Dict,
                          statistics: Dict, folders: Dict[str, str]) -> str:
     """

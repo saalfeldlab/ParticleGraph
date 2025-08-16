@@ -2,11 +2,13 @@ from typing import Optional, List
 import yaml
 from pydantic import BaseModel, ConfigDict
 
+
 class SystemConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     a: float = 0.7
     b: float = 0.8
     epsilon: float = 0.18
+
 
 class SimulationConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -18,6 +20,7 @@ class SimulationConfig(BaseModel):
     pulse_duration: float = 1.0
     pulse_amplitude: float = 0.8
     noise_level: float = 1E-3
+
 
 class ModelConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -35,6 +38,7 @@ class ModelConfig(BaseModel):
     mlp1_nlayers: int = 2
     mlp1_hidden_size: int = 4
 
+
 class TrainingConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     device: str = "auto"
@@ -50,6 +54,13 @@ class TrainingConfig(BaseModel):
     lambda_jac: float = 0
     lambda_ratio: float = 0
     lambda_amp: float = 0
+
+    # Jacobian sensitivity thresholds
+    tau_vv: float = 0.10  # Threshold for ∂dv/∂v sensitivity
+    tau_vw: float = 0.10  # Threshold for ∂dv/∂w sensitivity
+    tau_wv: float = 0.10  # Threshold for ∂dw/∂v sensitivity
+    tau_ww: float = 0.05  # Threshold for ∂dw/∂w sensitivity (weaker)
+
 
 class FitzhughNagumoConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")

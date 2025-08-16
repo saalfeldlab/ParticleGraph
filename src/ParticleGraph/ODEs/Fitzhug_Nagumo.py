@@ -25,7 +25,7 @@ import torch.optim as optim
 import time as Time
 
 from config_Fitzhug_Nagumo import FitzhughNagumoConfig
-from utils import setup_experiment_folders, save_experiment_metadata
+from utils import setup_experiment_folders
 
 # ----------------- SIREN Layer -----------------
 class SineLayer(nn.Module):
@@ -242,11 +242,17 @@ if __name__ == '__main__':
         lambda_jac = config.training.lambda_jac
         lambda_ratio = config.training.lambda_ratio
         lambda_amp = config.training.lambda_amp
+        tau_vv = config.training.tau_vv
+        tau_vw = config.training.tau_vw
+        tau_wv = config.training.tau_wv
+        tau_ww = config.training.tau_ww
 
         print(f"loaded config: {config.description}")
         print(f"system parameters: a={a}, b={b}, epsilon={epsilon}")
         print(f"simulation: T={T}, dt={dt}, n_steps={n_steps}")
         print(f"training: n_iter={n_iter}, lr={learning_rate}, test_runs={test_runs}")
+        print(f"jacobian regularization: lambda_jac={lambda_jac}, lambda_ratio={lambda_ratio}")
+        print(f"tau thresholds: vv={tau_vv}, vw={tau_vw}, wv={tau_wv}, ww={tau_ww}")
 
         # ===============================================================
         # SETUP EXPERIMENT FOLDERS AND METADATA
@@ -263,34 +269,6 @@ if __name__ == '__main__':
             if os.path.isfile(file_path):
                 os.remove(file_path)
 
-        # Collect system and training parameters for metadata
-        system_params = {
-            'a': a,
-            'b': b,
-            'epsilon': epsilon,
-            'T': T,
-            'dt': dt,
-            'n_steps': n_steps,
-            'v_init': v_init,
-            'w_init': w_init,
-            'pulse_interval': pulse_interval,
-            'pulse_duration': pulse_duration,
-            'pulse_amplitude': pulse_amplitude,
-            'noise_level': noise_level
-        }
-
-        training_params = {
-            'n_iter': n_iter,
-            'learning_rate': learning_rate,
-            'test_runs': test_runs,
-            'batch_ratio': batch_ratio,
-            'l1_lambda': l1_lambda,
-            'weight_decay': weight_decay,
-            'recursive_loop': recursive_loop
-        }
-
-        # Save experiment metadata
-        save_experiment_metadata(folders, system_params, training_params)
 
         # ===============================================================
         # GENERATE TRAINING DATA
@@ -433,10 +411,10 @@ if __name__ == '__main__':
                     # ∂(dw/dt)/∂v → keep dw sensitive to v (voltage drives recovery)
                     # ∂(dw/dt)/∂w → optionally enforce weak sensitivity or suppression (w leak term)
                     if lambda_jac > 0:
-                        R_jac_vv = jacobian_reg(dv_pred, v0, tau=0.10, device=v.device)  # ∂dv/∂v
-                        R_jac_vw = jacobian_reg(dv_pred, w0, tau=0.10, device=v.device)  # ∂dv/∂w
-                        R_jac_wv = jacobian_reg(dw_pred, v0, tau=0.10, device=v.device)  # ∂dw/∂v
-                        R_jac_ww = jacobian_reg(dw_pred, w0, tau=0.05, device=v.device)  # ∂dw/∂w (weaker)
+                        R_jac_vv = jacobian_reg(dv_pred, v0, tau=tau_vv, device=v.device)  # ∂dv/∂v
+                        R_jac_vw = jacobian_reg(dv_pred, w0, tau=tau_vw, device=v.device)  # ∂dv/∂w
+                        R_jac_wv = jacobian_reg(dw_pred, v0, tau=tau_wv, device=v.device)  # ∂dw/∂v
+                        R_jac_ww = jacobian_reg(dw_pred, w0, tau=tau_ww, device=v.device)  # ∂dw/∂w
                     else:
                         R_jac_vv = R_jac_vw = R_jac_wv = R_jac_ww = torch.tensor(0.0, device=v.device)
 
@@ -579,8 +557,12 @@ if __name__ == '__main__':
                 # --- Compute affine-corrected W ---
                 w_pred = w_list.cpu().numpy().squeeze()
                 w_target = w_true.cpu().numpy().squeeze()
-                A = np.vstack([w_pred, np.ones_like(w_pred)]).T
-                a, b = np.linalg.lstsq(A, w_target, rcond=None)[0]
+                if np.var(w_pred) < 1e-12:  # avoid divide by zero
+                    a, b = 1.0, 0.0
+                else:
+                    a = np.cov(w_pred, w_target, bias=True)[0, 1] / np.var(w_pred)
+                    b = np.mean(w_target) - a * np.mean(w_pred)
+
                 w_corr = a * w_pred + b
 
                 # MSE after affine correction
