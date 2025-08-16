@@ -49,6 +49,7 @@ class TrainingConfig(BaseModel):
     use_siren_init: bool = False
     lambda_jac: float = 0
     lambda_ratio: float = 0
+    lambda_amp: float = 0
 
 class FitzhughNagumoConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")

@@ -58,6 +58,7 @@ if __name__ == "__main__":
         else:
             best_model = None
     else:
+        best_model = None
         task = 'train'  # 'generate', 'v', 'test'
         # config_list = ['multimaterial_1_2', 'multimaterial_1_3', 'multimaterial_1_4', 'multimaterial_1_5', 'multimaterial_1_6', 'multimaterial_1_7', 'multimaterial_1_8']
         # config_list = ['multimaterial_1_C']
@@ -75,8 +76,7 @@ if __name__ == "__main__":
         # config_list = ['signal_CElegans_c14_4']
         # config_list = ['signal_N5_v11_bis']
         # config_list = ['signal_fig_supp6_4']
-        best_model = '10_0'
-        config_list = ['fly_N9_36_5']
+        config_list = ['fly_N9_36_3']
         # config_list = ['fly_N9_34_1', 'fly_N9_34_2', 'fly_N9_34_3', 'fly_N9_34_4']
         # config_list = ['signal_N5_l4','signal_N5_l5']
 

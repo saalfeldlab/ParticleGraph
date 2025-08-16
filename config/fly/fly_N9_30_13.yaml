@@ -1,5 +1,5 @@
 description: 'small MLP, no extra null edges, noise_model_level: 0.025 only_noise_visual_input: 1.0 hidden_dim_nnr: 64 training_NNR_start_epoch:1'
-dataset: 'fly_N9_18_4_1'
+dataset: 'fly_N9_33_5'
 
 simulation:
     connectivity_file: 'to be specified'

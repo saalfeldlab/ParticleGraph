@@ -1,0 +1,44 @@
+
+FITZHUGH-NAGUMO EXPERIMENT SUMMARY
+==================================================
+
+Experiment Timestamp: 2025-08-15 17:54:08
+Total Training Runs: 10
+
+BEST MODEL PERFORMANCE:
+- Run: 9
+- Total MSE: 0.480359
+- V MSE: 0.000880
+- W MSE: 0.479478
+
+OVERALL STATISTICS:
+- Mean Total MSE: 1.067972 ± 0.443710
+- Coefficient of Variation: 41.5%
+- Success Rate: 10/10
+- Improvement over Mean: 55.0%
+
+CONVERGENCE RANKING:
+ 1. Run 9: Total MSE = 0.480359 ⭐ BEST
+ 2. Run 2: Total MSE = 0.517492
+ 3. Run 4: Total MSE = 0.769308
+ 4. Run 8: Total MSE = 0.775681
+ 5. Run 10: Total MSE = 0.915645
+ 6. Run 6: Total MSE = 1.004505
+ 7. Run 1: Total MSE = 1.347459
+ 8. Run 3: Total MSE = 1.351527
+ 9. Run 7: Total MSE = 1.706898
+10. Run 5: Total MSE = 1.810847
+
+EXPERIMENT FILES:
+- Training Results: data/training_results.json
+- Comprehensive Analysis: analysis/comprehensive_training_analysis.png
+- Loss Progression: plots/training/loss_progression.png
+- MSE Analysis: analysis/mse_component_analysis.png
+- Experiment Metadata: data/experiment_metadata.json
+
+FOLDER STRUCTURE:
+- Base Directory: ./logs/fitzhugh_nagumo_recur_5_sin
+- Plots: ./logs/fitzhugh_nagumo_recur_5_sin/plots
+- Analysis: ./logs/fitzhugh_nagumo_recur_5_sin/analysis
+- Data: ./logs/fitzhugh_nagumo_recur_5_sin/data
+- Models: ./logs/fitzhugh_nagumo_recur_5_sin/models

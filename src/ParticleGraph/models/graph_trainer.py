@@ -3559,7 +3559,7 @@ def data_train_flyvis(config, erase, best_model, device):
 
     cmap = CustomColorMap(config=config)
 
-    if field_type == 'visual':
+    if 'visual' in field_type:
         has_visual_field = True
         print('train with visual field NNR')
     else:
@@ -3833,7 +3833,7 @@ def data_train_flyvis(config, erase, best_model, device):
 
                 loss = loss + (pred[ids_batch] - y_batch[ids_batch]).norm(2)
 
-                if recursive_training: # [2.0,3.5,5.0]
+                if recursive_training:
                     for n_loop in range(recursive_loop):
                         for batch in range(batch_size):
                             k = k_batch[batch * x.shape[0]] + n_loop + 1

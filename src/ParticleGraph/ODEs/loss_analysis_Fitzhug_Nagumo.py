@@ -117,15 +117,9 @@ def save_results_to_json(convergence_results: List[Dict], loss_data: Dict,
 
 
 def analyze_training_results(convergence_results: List[Dict], loss_data: Dict = None,
-                             folders: Dict[str, str] = None, save_individual_plots: bool = True):
+                                    folders: Dict[str, str] = None):
     """
-    Comprehensive analysis of FitzHugh-Nagumo training results
-
-    Args:
-        convergence_results: List of dictionaries containing run results
-        loss_data: Optional dictionary with iteration-wise loss data for each run
-        folders: Dictionary with organized folder paths
-        save_individual_plots: Whether to save individual component plots
+    Simple 2-panel training analysis: Loss + V Rollout RMSE
     """
 
     if folders is None:
@@ -133,199 +127,58 @@ def analyze_training_results(convergence_results: List[Dict], loss_data: Dict = 
 
     plt.style.use('dark_background')
 
-    # Extract data from convergence results
     runs = [r['run'] for r in convergence_results]
-    losses = [r['loss'] for r in convergence_results]
     v_mses = [r['v_mse'] for r in convergence_results]
-    w_mses = [r['w_mse'] for r in convergence_results]
-    total_mses = [r['total_mse'] for r in convergence_results]
 
-    # Define consistent colors for each run
-    colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6',
-              '#06B6D4', '#EC4899', '#84CC16', '#F97316', '#6366F1',
-              '#14B8A6', '#F59E0B', '#8B5A2B', '#22D3EE', '#A855F7']
-    run_colors = {run: colors[i] for i, run in enumerate(runs)}
+    colors = [
+        "#1f77b4",  # blue
+        "#ff7f0e",  # orange
+        "#2ca02c",  # green
+        "#d62728",  # red
+        "#9467bd",  # purple
+        "#8c564b",  # brown
+        "#e377c2",  # pink
+        "#7f7f7f",  # gray
+        "#bcbd22",  # olive
+        "#17becf",  # cyan
+    ]
 
-    # Calculate statistics
-    statistics = calculate_statistics(convergence_results)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    fig.suptitle('FitzHugh-Nagumo Training Analysis', fontsize=16, color='white')
 
-    # Save results to JSON
-    save_results_to_json(convergence_results, loss_data, statistics, folders)
-
-    # Create comprehensive analysis figure
-    fig = plt.figure(figsize=(20, 12))
-    fig.suptitle('FitzHugh-Nagumo Training Analysis', fontsize=20, color='white', y=0.98)
-
-    # 1. Loss Progression Plot (if loss_data provided)
     if loss_data:
-        ax1 = plt.subplot(2, 3, (1, 2))
-
-        for run_id, loss_progression in loss_data.items():
+        for i, (run_id, loss_progression) in enumerate(loss_data.items()):
             iterations = loss_progression['iterations']
-            losses_iter = loss_progression['losses']
-            label = f"Run {run_id}"
-            if run_id == get_best_run(convergence_results):
-                label += " (Best)"
-                linewidth = 3
-            else:
-                linewidth = 2
-
-            ax1.plot(iterations, losses_iter, color=run_colors[run_id],
-                     linewidth=linewidth, label=label, alpha=0.8)
+            losses = loss_progression['losses']
+            color = colors[i % len(colors)]
+            ax1.plot(iterations, losses, color=color, linewidth=1,
+                     label=f"Run {run_id}", alpha=0.8)
 
         ax1.set_xlabel('Iteration', fontsize=12, color='white')
         ax1.set_ylabel('Training Loss', fontsize=12, color='white')
+        ax1.set_title('Training Loss Progression', fontsize=14, color='white')
         ax1.set_ylim([0, 6])
-        ax1.set_title('Training Loss Progression (All Runs)', fontsize=14, color='white')
         ax1.grid(True, alpha=0.3)
         ax1.legend(fontsize=10)
         ax1.tick_params(colors='white')
 
-        # Save individual loss progression plot
-        if save_individual_plots:
-            fig_loss = plt.figure(figsize=(12, 8))
-            for run_id, loss_progression in loss_data.items():
-                iterations = loss_progression['iterations']
-                losses_iter = loss_progression['losses']
-                label = f"Run {run_id}"
-                if run_id == get_best_run(convergence_results):
-                    label += " (Best)"
-                    linewidth = 3
-                else:
-                    linewidth = 2
-
-                plt.plot(iterations, losses_iter, color=run_colors[run_id],
-                         linewidth=linewidth, label=label, alpha=0.8)
-
-            plt.xlabel('Iteration', fontsize=14, color='white')
-            plt.ylabel('Training Loss', fontsize=14, color='white')
-            plt.ylim([0, 6])
-            plt.title('FitzHugh-Nagumo Training Loss Progression', fontsize=16, color='white')
-            plt.grid(True, alpha=0.3)
-            plt.legend(fontsize=12)
-            plt.tick_params(colors='white')
-
-            loss_plot_path = os.path.join(folders['training_plots'], 'loss_progression.png')
-            plt.savefig(loss_plot_path, dpi=200, bbox_inches='tight', facecolor='black')
-            plt.close(fig_loss)
-            print(f"Saved loss progression plot: {loss_plot_path}")
-
-    # 2. MSE Component Analysis (Run numbers on x-axis)
-    ax2 = plt.subplot(2, 3, 3)
-
-    # Plot V MSE, W MSE, and Total MSE for each run
-    ax2.scatter(runs, v_mses, c='#3B82F6', s=100, alpha=0.8, label='V MSE', edgecolors='white', linewidth=1)
-    ax2.scatter(runs, w_mses, c='#EF4444', s=100, alpha=0.8, label='W MSE', edgecolors='white', linewidth=1)
-    ax2.scatter(runs, total_mses, c='#10B981', s=150, alpha=0.8, label='Total MSE', edgecolors='white', linewidth=2)
-
-    # Highlight best run
-    best_run = get_best_run(convergence_results)
-    best_idx = runs.index(best_run)
-    ax2.scatter(best_run, v_mses[best_idx], c='#3B82F6', s=200, alpha=1.0,
-                edgecolors='yellow', linewidth=3, marker='s')
-    ax2.scatter(best_run, w_mses[best_idx], c='#EF4444', s=200, alpha=1.0,
-                edgecolors='yellow', linewidth=3, marker='s')
-    ax2.scatter(best_run, total_mses[best_idx], c='#10B981', s=250, alpha=1.0,
-                edgecolors='yellow', linewidth=3, marker='s')
+    v_rmse = [np.sqrt(mse) for mse in v_mses]  # Convert MSE to RMSE
+    bars = ax2.bar(runs, v_rmse, color=[colors[i % len(colors)] for i in range(len(runs))],
+                   alpha=0.8, edgecolor='white', linewidth=1)
 
     ax2.set_xlabel('Run Number', fontsize=12, color='white')
-    ax2.set_ylabel('MSE', fontsize=12, color='white')
-    ax2.set_title('MSE Component Analysis', fontsize=14, color='white')
-    ax2.set_xticks(runs)
-    ax2.grid(True, alpha=0.3)
-    ax2.legend(fontsize=10)
+    ax2.set_ylabel('V Rollout RMSE', fontsize=12, color='white')
+    ax2.set_title('V Rollout RMSE by Run', fontsize=14, color='white')
+    ax2.grid(True, alpha=0.3, axis='y')
     ax2.tick_params(colors='white')
-
-    # Add text annotations for best run
-    ax2.annotate(f'Best Run ({best_run})', xy=(best_run, total_mses[best_idx]),
-                 xytext=(best_run + 0.3, total_mses[best_idx] + 0.05),
-                 arrowprops=dict(arrowstyle='->', color='yellow', lw=2),
-                 fontsize=10, color='yellow', weight='bold')
-
-    # 3. Performance Summary Bar Chart
-    ax3 = plt.subplot(2, 3, 4)
-
-    x_pos = np.arange(len(runs))
-    bars = ax3.bar(x_pos, total_mses, color=[run_colors[run] for run in runs], alpha=0.8)
-
-    # Highlight best run
-    best_run_idx = np.argmin(total_mses)
-    bars[best_run_idx].set_edgecolor('yellow')
-    bars[best_run_idx].set_linewidth(3)
-
-    ax3.set_xlabel('Run', fontsize=12, color='white')
-    ax3.set_ylabel('Total MSE', fontsize=12, color='white')
-    ax3.set_title('Total MSE by Run', fontsize=14, color='white')
-    ax3.set_xticks(x_pos)
-    ax3.set_xticklabels([f'Run {run}' for run in runs], rotation=45)
-    ax3.grid(True, alpha=0.3, axis='y')
-    ax3.tick_params(colors='white')
-
-    # Add value labels on bars
-    for bar, mse in zip(bars, total_mses):
-        height = bar.get_height()
-        ax3.text(bar.get_x() + bar.get_width() / 2., height,
-                 f'{mse:.3f}', ha='center', va='bottom', color='white', fontsize=9)
-
-    # 4. V vs W MSE Breakdown
-    ax4 = plt.subplot(2, 3, 5)
-
-    x_pos = np.arange(len(runs))
-    width = 0.35
-
-    bars1 = ax4.bar(x_pos - width / 2, v_mses, width, label='V MSE', color='#3B82F6', alpha=0.8)
-    bars2 = ax4.bar(x_pos + width / 2, w_mses, width, label='W MSE', color='#EF4444', alpha=0.8)
-
-    ax4.set_xlabel('Run', fontsize=12, color='white')
-    ax4.set_ylabel('MSE', fontsize=12, color='white')
-    ax4.set_title('V vs W MSE Components', fontsize=14, color='white')
-    ax4.set_xticks(x_pos)
-    ax4.set_xticklabels([f'Run {run}' for run in runs])
-    ax4.legend()
-    ax4.grid(True, alpha=0.3, axis='y')
-    ax4.tick_params(colors='white')
-
-    # 5. Statistics Summary
-    ax5 = plt.subplot(2, 3, 6)
-    ax5.axis('off')
-
-    stats_text = f"""
-TRAINING STATISTICS
-
-Total MSE:
-  Mean: {statistics['total_mse_mean']:.6f}
-  Std:  {statistics['total_mse_std']:.6f}
-  CV:   {statistics['total_mse_cv']:.1f}%
-
-Training Loss:
-  Mean: {statistics['loss_mean']:.6f}
-  Std:  {statistics['loss_std']:.6f}
-  CV:   {statistics['loss_cv']:.1f}%
-
-BEST MODEL (Run {statistics['best_run']}):
-  Total MSE: {statistics['best_total_mse']:.6f}
-  V MSE:     {statistics['best_v_mse']:.6f}
-  W MSE:     {statistics['best_w_mse']:.6f}
-
-CONVERGENCE:
-  Success Rate: {statistics['success_rate']}
-  Improvement: {statistics['improvement']:.1f}%
-    """
-
-    ax5.text(0.05, 0.95, stats_text, transform=ax5.transAxes, fontsize=11,
-             verticalalignment='top', color='white', fontfamily='monospace',
-             bbox=dict(boxstyle='round,pad=0.5', facecolor='black', alpha=0.8))
+    ax2.set_ylim([0,0.1])
 
     plt.tight_layout()
 
-    # Save comprehensive analysis plot
     analysis_plot_path = os.path.join(folders['analysis'], 'comprehensive_training_analysis.png')
-    plt.savefig(analysis_plot_path, dpi=200, bbox_inches='tight', facecolor='black')
-    print(f"Saved comprehensive analysis plot: {analysis_plot_path}")
+    plt.savefig(analysis_plot_path, dpi=150, bbox_inches='tight', facecolor='black')
+    print(f"Saved analysis plot: {analysis_plot_path}")
     plt.show()
-
-    # Create summary report
-    create_experiment_summary(convergence_results, statistics, folders)
 
     return folders
 
@@ -385,38 +238,6 @@ FOLDER STRUCTURE:
     # print("\n" + summary_text)
 
 
-def get_best_run(convergence_results: List[Dict]) -> int:
-    """Find the run with the lowest total MSE"""
-    best_idx = np.argmin([r['total_mse'] for r in convergence_results])
-    return convergence_results[best_idx]['run']
-
-
-def calculate_statistics(convergence_results: List[Dict]) -> Dict:
-    """Calculate comprehensive statistics from convergence results"""
-    total_mses = [r['total_mse'] for r in convergence_results]
-    losses = [r['loss'] for r in convergence_results]
-
-    best_run_idx = np.argmin(total_mses)
-    best_run = convergence_results[best_run_idx]
-
-    stats = {
-        'total_mse_mean': np.mean(total_mses),
-        'total_mse_std': np.std(total_mses),
-        'total_mse_cv': (np.std(total_mses) / np.mean(total_mses)) * 100,
-        'loss_mean': np.mean(losses),
-        'loss_std': np.std(losses),
-        'loss_cv': (np.std(losses) / np.mean(losses)) * 100,
-        'best_run': best_run['run'],
-        'best_total_mse': best_run['total_mse'],
-        'best_v_mse': best_run['v_mse'],
-        'best_w_mse': best_run['w_mse'],
-        'success_rate': f"{len(convergence_results)}/{len(convergence_results)}",
-        'improvement': ((np.mean(total_mses) - best_run['total_mse']) / np.mean(total_mses)) * 100
-    }
-
-    return stats
-
-
 def create_loss_data_from_experiment():
     """
     Create loss progression data structure from your experimental output
@@ -465,7 +286,6 @@ def create_loss_data_from_experiment():
     return loss_data
 
 
-# Example usage function to add to your main training script
 def run_training_analysis(convergence_results: List[Dict], loss_progression_data: Dict = None,
                           experiment_name: str = None, system_params: Dict = None,
                           training_params: Dict = None):
@@ -515,128 +335,3 @@ def run_training_analysis(convergence_results: List[Dict], loss_progression_data
     analyze_training_results(convergence_results, loss_progression_data, folders)
 
     return folders
-
-
-# Modified integration example for your main training script
-def integrate_with_training_script():
-    """
-    Example showing how to integrate the analysis into your main training script
-    Add this to your Fitzhug_Nagumo.py file
-    """
-
-    # This goes in your main training section
-    example_integration = '''
-
-# Add this at the beginning of your script after imports
-from training_analysis import (
-    setup_experiment_folders, save_experiment_metadata, 
-    analyze_training_results, run_training_analysis
-)
-
-# Modify your training loop to collect loss data
-def main_training_with_analysis():
-
-    device = set_device('auto')
-    print(f'device  {device}')
-
-    # System parameters
-    system_params = {
-        'a': 0.7,
-        'b': 0.8,
-        'epsilon': 0.18,
-        'T': 1000.0,
-        'dt': 0.1,
-        'n_steps': 10000
-    }
-
-    # Training parameters
-    training_params = {
-        'n_iter': 5000,
-        'lr': 1e-4,
-        'test_runs': 5,
-        'l1_lambda': 1.0E-3,
-        'weight_decay': 1e-6,
-        'recursive_loop': 3
-    }
-
-    # Set up experiment folders
-    folders = setup_experiment_folders(experiment_name="fitzhugh_nagumo_experiment")
-    save_experiment_metadata(folders, system_params, training_params)
-
-    # Initialize data collection
-    convergence_results = []
-    loss_progression_data = {}
-
-    # Training loop
-    for run in range(training_params['test_runs']):
-        print(f"training run {run+1}/{training_params['test_runs']}")
-
-        # Initialize loss tracking for this run
-        loss_progression_data[run+1] = {
-            'iterations': [],
-            'losses': []
-        }
-
-        model = model_duo(device=device)
-        optimizer = torch.optim.Adam(model.parameters(), lr=training_params['lr'])
-
-        loss_list = []
-
-        for iter in range(training_params['n_iter']):
-            # ... your existing training code ...
-
-            # Collect loss data every 250 iterations
-            if iter % 250 == 0:
-                loss_progression_data[run+1]['iterations'].append(iter+1)
-                loss_progression_data[run+1]['losses'].append(loss.item())
-                print(f"iteration {iter+1}/{training_params['n_iter']}, loss: {loss.item():.6f}")
-
-            # Your training step code here...
-
-        # After training completion for this run
-        # Calculate final MSEs and add to convergence_results
-        # ... your existing rollout analysis code ...
-
-        convergence_results.append({
-            'run': run+1,
-            'iteration': iter,
-            'loss': loss.item(),
-            'v_mse': v_mse,
-            'w_mse': w_mse,
-            'total_mse': total_mse
-        })
-
-        # Save individual training run plots
-        # Save model checkpoint
-        model_path = os.path.join(folders['models'], f'model_run_{run+1}.pt')
-        torch.save({
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
-            'run': run+1,
-            'iteration': iter,
-            'loss': loss.item(),
-            'v_mse': v_mse,
-            'w_mse': w_mse,
-            'total_mse': total_mse
-        }, model_path)
-        print(f"Saved model: {model_path}")
-
-    # Run comprehensive analysis at the end
-    print("\\n" + "="*60)
-    print("RUNNING COMPREHENSIVE TRAINING ANALYSIS")
-    print("="*60)
-
-    final_folders = analyze_training_results(convergence_results, loss_progression_data, folders)
-
-    # Print final summary
-    print(f"\\nExperiment completed successfully!")
-    print(f"Results saved in: {final_folders['base']}")
-    print(f"View comprehensive analysis: {final_folders['analysis']}/comprehensive_training_analysis.png")
-
-    return final_folders, convergence_results
-
-if __name__ == '__main__':
-    folders, results = main_training_with_analysis()
-    '''
-
-    return example_integration
