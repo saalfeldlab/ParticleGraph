@@ -177,7 +177,7 @@ def analyze_training_results(convergence_results: List[Dict], loss_data: Dict = 
 
     analysis_plot_path = os.path.join(folders['analysis'], 'comprehensive_training_analysis.png')
     plt.savefig(analysis_plot_path, dpi=150, bbox_inches='tight', facecolor='black')
-    print(f"Saved analysis plot: {analysis_plot_path}")
+    print(f"saved analysis plot: {analysis_plot_path}")
     plt.show()
 
     return folders

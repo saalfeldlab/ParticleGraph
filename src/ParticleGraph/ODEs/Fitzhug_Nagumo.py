@@ -359,6 +359,22 @@ if __name__ == '__main__':
         convergence_results = []
         loss_progression_data = {}
 
+        log_every = 50  # adjust as needed
+        log_data = {run + 1: {
+            'iterations': [],
+            'losses': [],
+            'spectral_radius': [],
+            'grad_dv_w_norm': [],
+            'grad_dv_v_norm': [],
+            'grad_dw_v_norm': [],
+            'grad_dw_w_norm': [],
+            'mlp0_weight_norm': [],
+            'mlp1_weight_norm': [],
+            'mlp0_grad_norm': [],
+            'mlp1_grad_norm': [],
+        } for run in range(test_runs)}
+
+
         for run in range(test_runs):
             print(f"\ntraining run {run + 1}/{test_runs}")
 
@@ -430,6 +446,8 @@ if __name__ == '__main__':
                     else:
                         R_jac_vv = R_jac_vw = R_jac_wv = R_jac_ww = torch.tensor(0.0, device=v.device)
 
+
+
                     # Euler update
                     v = v + dt * dv_pred
                     w = w + dt * dw_pred
@@ -457,37 +475,67 @@ if __name__ == '__main__':
                 optimizer.step()
                 loss_list.append(loss.item())
 
-                if iter % 50 == 0:
-                    loss_progression_data[run + 1]['iterations'].append(iter + 1)
-                    loss_progression_data[run + 1]['losses'].append(loss.item())
+                if iter % log_every == 0:
+                    log_data[run + 1]['iterations'].append(iter + 1)
+                    log_data[run + 1]['losses'].append(loss.item())
 
-                    # Fresh copies with grad enabled
+                    # Enable grad for input states
                     w0 = model.siren(t_batch).detach().clone().requires_grad_(True)
                     v0 = v_true[idx, None].detach().clone().requires_grad_(True)
 
                     dv_pred = model.mlp0(torch.cat((v0, w0, I_ext[idx, None].detach()), dim=1))
                     dw_pred = model.mlp1(torch.cat((v0, w0), dim=1))
 
-                    grad_dv_w = torch.autograd.grad(dv_pred.sum(), w0, create_graph=False, retain_graph=True, allow_unused=True)[0]
-                    grad_dv_v = torch.autograd.grad(dv_pred.sum(), v0, create_graph=False, retain_graph=True, allow_unused=True)[0]
+                    # Jacobian gradients
+                    grad_dv_w = \
+                    torch.autograd.grad(dv_pred.sum(), w0, create_graph=False, retain_graph=True, allow_unused=True)[0]
+                    grad_dv_v = \
+                    torch.autograd.grad(dv_pred.sum(), v0, create_graph=False, retain_graph=True, allow_unused=True)[0]
+                    grad_dw_v = \
+                    torch.autograd.grad(dw_pred.sum(), v0, create_graph=False, retain_graph=True, allow_unused=True)[0]
+                    grad_dw_w = \
+                    torch.autograd.grad(dw_pred.sum(), w0, create_graph=False, retain_graph=True, allow_unused=True)[0]
 
-                    grad_dw_v = torch.autograd.grad(dw_pred.sum(), v0, create_graph=False, retain_graph=True, allow_unused=True)[0]
-                    grad_dw_w = torch.autograd.grad(dw_pred.sum(), w0, create_graph=False, retain_graph=True, allow_unused=True)[0]
+                    # Convert to scalar norms
+                    log_data[run + 1]['grad_dv_w_norm'].append(
+                        0.0 if grad_dv_w is None else grad_dv_w.norm(p=2, dim=1).mean().item())
+                    log_data[run + 1]['grad_dv_v_norm'].append(
+                        0.0 if grad_dv_v is None else grad_dv_v.norm(p=2, dim=1).mean().item())
+                    log_data[run + 1]['grad_dw_v_norm'].append(
+                        0.0 if grad_dw_v is None else grad_dw_v.norm(p=2, dim=1).mean().item())
+                    log_data[run + 1]['grad_dw_w_norm'].append(
+                        0.0 if grad_dw_w is None else grad_dw_w.norm(p=2, dim=1).mean().item())
 
-                    # Convert to scalars (safe if None)
-                    grad_dv_w_norm = 0.0 if grad_dv_w is None else grad_dv_w.norm(p=2, dim=1).mean().item()
-                    grad_dv_v_norm = 0.0 if grad_dv_v is None else grad_dv_v.norm(p=2, dim=1).mean().item()
-                    grad_dw_v_norm = 0.0 if grad_dw_v is None else grad_dw_v.norm(p=2, dim=1).mean().item()
-                    grad_dw_w_norm = 0.0 if grad_dw_w is None else grad_dw_w.norm(p=2, dim=1).mean().item()
+                    # Jacobian spectral radius
+                    J_v = torch.autograd.grad(dv_pred.sum(), v0, retain_graph=True, create_graph=False)[0]
+                    J_w = torch.autograd.grad(dv_pred.sum(), w0, retain_graph=True, create_graph=False)[0]
+                    K_v = torch.autograd.grad(dw_pred.sum(), v0, retain_graph=True, create_graph=False)[0]
+                    K_w = torch.autograd.grad(dw_pred.sum(), w0, retain_graph=True, create_graph=False)[0]
+                    if all(x is not None for x in [J_v, J_w, K_v, K_w]):
+                        Jmat = torch.stack([
+                            torch.stack([J_v.mean(), J_w.mean()]),
+                            torch.stack([K_v.mean(), K_w.mean()])
+                        ])
+                        eigvals = torch.linalg.eigvals(Jmat)
+                        spectral_radius = eigvals.abs().max().item()
+                        log_data[run + 1]['spectral_radius'].append(spectral_radius)
 
-                    # print(f"gradient of dv_pred wrt w: {grad_dv_w_norm:.4e}")
-                    # print(f"gradient of dv_pred wrt v: {grad_dv_v_norm:.4e}")
-                    # print(f"gradient of dw_pred wrt v: {grad_dw_v_norm:.4e}")
-                    # print(f"gradient of dw_pred wrt w: {grad_dw_w_norm:.4e}")
+                    # MLP weight and gradient norms
+                    mlp0_weights = torch.cat([p.flatten() for p in model.mlp0.parameters()])
+                    mlp1_weights = torch.cat([p.flatten() for p in model.mlp1.parameters()])
+                    mlp0_grads = torch.cat([p.grad.flatten() for p in model.mlp0.parameters() if p.grad is not None])
+                    mlp1_grads = torch.cat([p.grad.flatten() for p in model.mlp1.parameters() if p.grad is not None])
 
-                    grad_list.append((grad_dv_w_norm, grad_dv_v_norm, grad_dw_v_norm, grad_dw_w_norm))
+                    log_data[run + 1]['mlp0_weight_norm'].append(mlp0_weights.norm().item())
+                    log_data[run + 1]['mlp1_weight_norm'].append(mlp1_weights.norm().item())
+                    log_data[run + 1]['mlp0_grad_norm'].append(
+                        mlp0_grads.norm().item() if mlp0_grads.numel() > 0 else 0.0)
+                    log_data[run + 1]['mlp1_grad_norm'].append(
+                        mlp1_grads.norm().item() if mlp1_grads.numel() > 0 else 0.0)
 
-            print(f"iteration {iter + 1}/{n_iter}, loss: {loss.item():.6f}")
+                    # grad_list.append((grad_dv_w_norm, grad_dv_v_norm, grad_dw_v_norm, grad_dw_w_norm, spectral_radius))
+
+            print(f"iteration {iter + 1}/{n_iter}, loss: {loss.item():.6f}, spectral radius ≈ {spectral_radius:.3f}")
 
             Time.sleep(1)
             # ===============================================================
@@ -548,74 +596,69 @@ if __name__ == '__main__':
                 import numpy as np
 
                 fig = plt.figure(figsize=(16, 8))
-
-                v_array = torch.stack(v_list_ensemble, dim=0).cpu().numpy()  # shape [ensemble_size, n_steps]
-                w_array = torch.stack(w_list_ensemble, dim=0).cpu().numpy()
-                v_mean = v_array.mean(axis=0)
-                v_std = v_array.std(axis=0)
-                w_mean = w_array.mean(axis=0)
-                w_std = w_array.std(axis=0)
-
-                # ----------------------------
-                # Membrane potential v
-                # ----------------------------
                 plt.subplot(2, 1, 1)
                 plt.plot(v_true.cpu().numpy(), label='true v', linewidth=3, alpha=0.7, c='white')
-                plt.plot(v_mean, label='rollout v (ensemble mean)', linewidth=2, alpha=1, c='green')
-                plt.fill_between(np.arange(n_steps), v_mean - v_std, v_mean + v_std, color='green', alpha=0.2,
-                                 label='rollout ±1 std')
+                plt.plot(v_list.cpu().numpy(), label='rollout v', linewidth=2, alpha=1, c='green')
                 plt.plot(I_ext.cpu().numpy(), label='I_ext', linewidth=2, alpha=0.5, c='red')
                 plt.xlim([0, n_steps // 2.5])
-                plt.xlabel('Time steps')
-                plt.ylabel('Membrane potential v')
+                plt.xlabel('time')
+                plt.ylabel('v')
                 plt.legend(loc='upper left')
-                plt.title(f'Run {run + 1}: Membrane Potential (MSE: {v_mse:.4f})')
+                plt.title(f'v (MSE: {v_mse:.4f})')
                 plt.grid(True, alpha=0.3)
-
-                # ----------------------------
-                # Recovery variable w
-                # ----------------------------
                 plt.subplot(2, 1, 2)
                 plt.plot(w_true.cpu().numpy(), label='true w', linewidth=3, alpha=0.7, c='white')
-                plt.plot(w_mean, label='rollout w (ensemble mean)', linewidth=2, alpha=1, c='cyan')
-                plt.fill_between(np.arange(n_steps), w_mean - w_std, w_mean + w_std, color='cyan', alpha=0.2,
-                                 label='rollout ±1 std')
-                plt.plot(w_pred.cpu().numpy(), label='SIREN w', linewidth=2, alpha=0.7, c='magenta')
+                plt.plot(w_list.cpu().numpy(), label='rollout w', linewidth=2, alpha=0.7, c='cyan')
                 plt.xlim([0, n_steps // 2.5])
-                plt.xlabel('Time steps')
-                plt.ylabel('Recovery variable w')
+                plt.xlabel('time')
+                plt.ylabel('w')
                 plt.legend(loc='upper left')
-                plt.title(f'Run {run + 1}: Recovery Variable (MSE: {w_mse:.4f})')
+                plt.title(f'w latent variable (MSE: {w_mse:.4f})')
                 plt.grid(True, alpha=0.3)
-
                 plt.tight_layout()
                 plt.show()
-
                 training_plot_path = os.path.join(folders['training_plots'], f'nagumo_training_run_{run + 1}_iter_{iter + 1}.png')
                 plt.savefig(training_plot_path, dpi=170, facecolor='black')
                 plt.close()
+                #
+                # grad_dv_w_vals, grad_dv_v_vals, grad_dw_v_vals, grad_dw_w_vals, spectral_radius_vals = zip(*grad_list)
+                #
+                # # --- plot Jacobian ---
+                # fig = plt.figure(figsize=(10, 6))
+                # plt.plot(grad_dv_w_vals, label='∂dv/∂w', color='tab:blue', linewidth=2)
+                # plt.plot(grad_dv_v_vals, label='∂dv/∂v', color='tab:orange', linewidth=2)
+                # plt.plot(grad_dw_v_vals, label='∂dw/∂v', color='tab:green', linewidth=2)
+                # plt.plot(grad_dw_w_vals, label='∂dw/∂w', color='tab:red', linewidth=2)
+                # plt.xlabel('iter x50')
+                # plt.ylabel('gradient Norm')
+                # plt.legend()
+                # plt.grid(alpha=0.3)
+                # plt.tight_layout()
+                # training_plot_path = os.path.join(
+                #     folders['training_plots'],
+                #     f'nagumo_grad_run_{run + 1}_iter_{iter + 1}.png'
+                # )
+                # plt.savefig(training_plot_path, dpi=170, facecolor='black')
+                # plt.close(fig)
+                #
+                # # --- plot spectral radius ---
+                # # spectral radius < 1 → locally stable dynamics (perturbations decay).
+                # # spectral radius > 1 → locally unstable dynamics (perturbations grow).
+                # fig, ax = plt.subplots(figsize=(10, 5))
+                # ax.plot(spectral_radius_vals, label='Spectral Radius of Jacobian', color='tab:purple', linewidth=2)
+                # ax.set_xlabel('iters x50')
+                # ax.set_ylabel('spectral radius')
+                # ax.set_ylim([0, 1.5])
+                # ax.legend()
+                # ax.grid(alpha=0.3)
+                # plt.tight_layout()
+                # training_plot_path = os.path.join(
+                #     folders['training_plots'],
+                #     f'nagumo_spectral_radius_run_{run + 1}_iter_{iter + 1}.png'
+                # )
+                # plt.savefig(training_plot_path, dpi=170, facecolor='black')
+                # plt.close(fig)
 
-                grad_dv_w_vals, grad_dv_v_vals, grad_dw_v_vals, grad_dw_w_vals = zip(*grad_list)
-
-                fig = plt.figure(figsize=(10, 6))
-                plt.plot(grad_dv_w_vals, label='∂dv/∂w', color='tab:blue', linewidth=2)
-                plt.plot(grad_dv_v_vals, label='∂dv/∂v', color='tab:orange', linewidth=2)
-                plt.plot(grad_dw_v_vals, label='∂dw/∂v', color='tab:green', linewidth=2)
-                plt.plot(grad_dw_w_vals, label='∂dw/∂w', color='tab:red', linewidth=2)
-
-                plt.xlabel('Training Checkpoint (every 50 iters)')
-                plt.ylabel('Gradient Norm')
-                plt.title(f'Jacobian Gradient Norms — Run {run + 1}', fontsize=14)
-                plt.legend()
-                plt.grid(alpha=0.3)
-                plt.tight_layout()
-
-                training_plot_path = os.path.join(
-                    folders['training_plots'],
-                    f'nagumo_grad_run_{run + 1}_iter_{iter + 1}.png'
-                )
-                plt.savefig(training_plot_path, dpi=170, facecolor='black')
-                plt.close(fig)
 
                 model_path = os.path.join(folders['models'], f'model_run_{run + 1}.pt')
                 torch.save({
@@ -637,10 +680,60 @@ if __name__ == '__main__':
             plt.title(f'Training Loss over {n_iter} iterations (Noise Level: {noise_level})')
             plt.grid(True, alpha=0.3)
 
-            loss_plot_path = os.path.join(folders['training_plots'],
-                                          f'nagumo_loss_run_{run + 1}_iter_{iter + 1}.png')
+            loss_plot_path = os.path.join(folders['training_plots'], f'nagumo_loss_run_{run + 1}_iter_{iter + 1}.png')
             plt.savefig(loss_plot_path, dpi=200, bbox_inches='tight', facecolor='black')
             plt.close()
+
+        for run, data in log_data.items():
+            fig, axs = plt.subplots(3, 2, figsize=(14, 12))
+            iters = data['iterations']
+
+            # Loss
+            axs[0, 0].plot(iters, data['losses'], label='Loss', color='tab:blue')
+            axs[0, 0].set_ylabel('Loss')
+            axs[0, 0].grid(True)
+
+            # Spectral radius
+            axs[0, 1].plot(iters, data['spectral_radius'], label='Spectral radius', color='tab:orange')
+            axs[0, 1].set_ylabel('Spectral radius')
+            axs[0, 1].grid(True)
+
+            # Gradient norms
+            axs[1, 0].plot(iters, data['grad_dv_w_norm'], label='∂dv/∂w', color='tab:blue')
+            axs[1, 0].plot(iters, data['grad_dv_v_norm'], label='∂dv/∂v', color='tab:orange')
+            axs[1, 0].plot(iters, data['grad_dw_v_norm'], label='∂dw/∂v', color='tab:green')
+            axs[1, 0].plot(iters, data['grad_dw_w_norm'], label='∂dw/∂w', color='tab:red')
+            axs[1, 0].set_ylabel('Gradient norms')
+            axs[1, 0].legend()
+            axs[1, 0].grid(True)
+
+            # Weight norms
+            axs[1, 1].plot(iters, data['mlp0_weight_norm'], label='MLP0 weight', color='tab:blue')
+            axs[1, 1].plot(iters, data['mlp1_weight_norm'], label='MLP1 weight', color='tab:orange')
+            axs[1, 1].set_ylabel('Weight norms')
+            axs[1, 1].legend()
+            axs[1, 1].grid(True)
+
+            # Gradient norms of weights
+            axs[2, 0].plot(iters, data['mlp0_grad_norm'], label='MLP0 grad', color='tab:blue')
+            axs[2, 0].plot(iters, data['mlp1_grad_norm'], label='MLP1 grad', color='tab:orange')
+            axs[2, 0].set_ylabel('Weight gradient norms')
+            axs[2, 0].legend()
+            axs[2, 0].grid(True)
+
+            axs[2, 1].axis('off')  # empty
+
+            for ax in axs.flat:
+                ax.set_xlabel('Iteration')
+
+            plt.suptitle(f'Training Run {run+1} Trajectory Analysis')
+            training_plot_path = os.path.join(
+                folders['training_plots'],
+                f'nagumo_trajectory_analysis_{run+1}.png'
+            )
+            plt.tight_layout()
+            plt.savefig(training_plot_path, dpi=200, bbox_inches='tight', facecolor='black')
+            plt.close(fig)
 
         print("running comprehensive training analysis...")
         analyze_training_results(convergence_results, loss_progression_data, folders)

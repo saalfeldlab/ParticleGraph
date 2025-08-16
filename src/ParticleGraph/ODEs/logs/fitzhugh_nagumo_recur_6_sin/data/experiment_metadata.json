@@ -1,6 +1,6 @@
 {
     "experiment_info": {
-        "timestamp": "2025-08-15T22:07:20.536740",
+        "timestamp": "2025-08-16T10:24:38.344114",
         "experiment_type": "FitzHugh-Nagumo Neural Dynamics",
         "description": "Hybrid neural ODE training with derivative analysis"
     },
@@ -21,7 +21,7 @@
     "training_parameters": {
         "n_iter": 5000,
         "learning_rate": 0.0001,
-        "test_runs": 10,
+        "test_runs": 5,
         "batch_ratio": 0.2,
         "l1_lambda": 0.001,
         "weight_decay": 1e-06,
