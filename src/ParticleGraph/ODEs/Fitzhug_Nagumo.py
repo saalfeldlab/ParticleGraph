@@ -25,13 +25,6 @@ import torch.optim as optim
 import time as Time
 
 from config_Fitzhug_Nagumo import FitzhughNagumoConfig
-from loss_analysis_Fitzhug_Nagumo import *
-
-# Import the training analysis functions
-from loss_analysis_Fitzhug_Nagumo import (
-    setup_experiment_folders, save_experiment_metadata,
-    analyze_training_results, run_training_analysis
-)
 
 # ----------------- SIREN Layer -----------------
 class SineLayer(nn.Module):
@@ -620,45 +613,6 @@ if __name__ == '__main__':
                 training_plot_path = os.path.join(folders['training_plots'], f'nagumo_training_run_{run + 1}_iter_{iter + 1}.png')
                 plt.savefig(training_plot_path, dpi=170, facecolor='black')
                 plt.close()
-                #
-                # grad_dv_w_vals, grad_dv_v_vals, grad_dw_v_vals, grad_dw_w_vals, spectral_radius_vals = zip(*grad_list)
-                #
-                # # --- plot Jacobian ---
-                # fig = plt.figure(figsize=(10, 6))
-                # plt.plot(grad_dv_w_vals, label='∂dv/∂w', color='tab:blue', linewidth=2)
-                # plt.plot(grad_dv_v_vals, label='∂dv/∂v', color='tab:orange', linewidth=2)
-                # plt.plot(grad_dw_v_vals, label='∂dw/∂v', color='tab:green', linewidth=2)
-                # plt.plot(grad_dw_w_vals, label='∂dw/∂w', color='tab:red', linewidth=2)
-                # plt.xlabel('iter x50')
-                # plt.ylabel('gradient Norm')
-                # plt.legend()
-                # plt.grid(alpha=0.3)
-                # plt.tight_layout()
-                # training_plot_path = os.path.join(
-                #     folders['training_plots'],
-                #     f'nagumo_grad_run_{run + 1}_iter_{iter + 1}.png'
-                # )
-                # plt.savefig(training_plot_path, dpi=170, facecolor='black')
-                # plt.close(fig)
-                #
-                # # --- plot spectral radius ---
-                # # spectral radius < 1 → locally stable dynamics (perturbations decay).
-                # # spectral radius > 1 → locally unstable dynamics (perturbations grow).
-                # fig, ax = plt.subplots(figsize=(10, 5))
-                # ax.plot(spectral_radius_vals, label='Spectral Radius of Jacobian', color='tab:purple', linewidth=2)
-                # ax.set_xlabel('iters x50')
-                # ax.set_ylabel('spectral radius')
-                # ax.set_ylim([0, 1.5])
-                # ax.legend()
-                # ax.grid(alpha=0.3)
-                # plt.tight_layout()
-                # training_plot_path = os.path.join(
-                #     folders['training_plots'],
-                #     f'nagumo_spectral_radius_run_{run + 1}_iter_{iter + 1}.png'
-                # )
-                # plt.savefig(training_plot_path, dpi=170, facecolor='black')
-                # plt.close(fig)
-
 
                 model_path = os.path.join(folders['models'], f'model_run_{run + 1}.pt')
                 torch.save({
@@ -672,56 +626,45 @@ if __name__ == '__main__':
                     'total_mse': total_mse
                 }, model_path)
 
-            fig = plt.figure(figsize=(10, 5))
-            plt.plot(loss_list, label='Training Loss', color='cyan', linewidth=1, alpha=0.8)
-            plt.xlabel('iteration')
-            plt.ylabel('loss')
-            plt.ylim([0, 6])
-            plt.title(f'Training Loss over {n_iter} iterations (Noise Level: {noise_level})')
-            plt.grid(True, alpha=0.3)
-
-            loss_plot_path = os.path.join(folders['training_plots'], f'nagumo_loss_run_{run + 1}_iter_{iter + 1}.png')
-            plt.savefig(loss_plot_path, dpi=200, bbox_inches='tight', facecolor='black')
-            plt.close()
-
         for run, data in log_data.items():
             fig, axs = plt.subplots(3, 2, figsize=(14, 12))
             iters = data['iterations']
 
             # Loss
             axs[0, 0].plot(iters, data['losses'], label='Loss', color='tab:blue')
-            axs[0, 0].set_ylabel('Loss')
-            axs[0, 0].grid(True)
+            axs[0, 0].set_ylabel('loss')
+            axs[0, 0].set_ylim([0, 6])
 
             # Spectral radius
             axs[0, 1].plot(iters, data['spectral_radius'], label='Spectral radius', color='tab:orange')
-            axs[0, 1].set_ylabel('Spectral radius')
-            axs[0, 1].grid(True)
+            axs[0, 1].set_ylabel('spectral radius')
 
             # Gradient norms
             axs[1, 0].plot(iters, data['grad_dv_w_norm'], label='∂dv/∂w', color='tab:blue')
             axs[1, 0].plot(iters, data['grad_dv_v_norm'], label='∂dv/∂v', color='tab:orange')
-            axs[1, 0].plot(iters, data['grad_dw_v_norm'], label='∂dw/∂v', color='tab:green')
-            axs[1, 0].plot(iters, data['grad_dw_w_norm'], label='∂dw/∂w', color='tab:red')
-            axs[1, 0].set_ylabel('Gradient norms')
+            axs[1, 0].set_ylabel('gradient norms')
+            axs[1, 0].set_ylim([0, 6])
             axs[1, 0].legend()
-            axs[1, 0].grid(True)
+            # Gradient norms
+            axs[1, 1].plot(iters, data['grad_dw_v_norm'], label='∂dw/∂v', color='tab:green')
+            axs[1, 1].plot(iters, data['grad_dw_w_norm'], label='∂dw/∂w', color='tab:red')
+            axs[1, 1].set_ylabel('gradient norms')
+            axs[1, 1].set_ylim([0, 0.1])
+            axs[1, 1].legend()
 
             # Weight norms
-            axs[1, 1].plot(iters, data['mlp0_weight_norm'], label='MLP0 weight', color='tab:blue')
-            axs[1, 1].plot(iters, data['mlp1_weight_norm'], label='MLP1 weight', color='tab:orange')
-            axs[1, 1].set_ylabel('Weight norms')
-            axs[1, 1].legend()
-            axs[1, 1].grid(True)
+            axs[2, 0].plot(iters, data['mlp0_weight_norm'], label='MLP0 weight', color='tab:blue')
+            axs[2, 0].plot(iters, data['mlp1_weight_norm'], label='MLP1 weight', color='tab:orange')
+            axs[2, 0].set_ylabel('weight norms')
+            axs[2, 0].set_ylim([0, 15])
+            axs[2, 0].legend()
 
             # Gradient norms of weights
-            axs[2, 0].plot(iters, data['mlp0_grad_norm'], label='MLP0 grad', color='tab:blue')
-            axs[2, 0].plot(iters, data['mlp1_grad_norm'], label='MLP1 grad', color='tab:orange')
-            axs[2, 0].set_ylabel('Weight gradient norms')
-            axs[2, 0].legend()
-            axs[2, 0].grid(True)
-
-            axs[2, 1].axis('off')  # empty
+            axs[2, 1].plot(iters, data['mlp0_grad_norm'], label='MLP0 grad', color='tab:blue')
+            axs[2, 1].plot(iters, data['mlp1_grad_norm'], label='MLP1 grad', color='tab:orange')
+            axs[2, 1].set_ylabel('weight gradient norms')
+            axs[2, 1].set_ylim([0, 200])
+            axs[2, 1].legend()
 
             for ax in axs.flat:
                 ax.set_xlabel('Iteration')
@@ -734,9 +677,6 @@ if __name__ == '__main__':
             plt.tight_layout()
             plt.savefig(training_plot_path, dpi=200, bbox_inches='tight', facecolor='black')
             plt.close(fig)
-
-        print("running comprehensive training analysis...")
-        analyze_training_results(convergence_results, loss_progression_data, folders)
 
         print(f"\nCONVERGENCE SUMMARY")
         print(f"{'run':<4} {'Loss':<12} {'V MSE':<12} {'W MSE':<12} {'Total MSE':<12}")
