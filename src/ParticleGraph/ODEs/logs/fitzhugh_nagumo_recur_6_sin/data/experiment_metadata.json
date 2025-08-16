@@ -1,6 +1,6 @@
 {
     "experiment_info": {
-        "timestamp": "2025-08-16T10:46:39.454322",
+        "timestamp": "2025-08-16T11:29:52.528048",
         "experiment_type": "FitzHugh-Nagumo Neural Dynamics",
         "description": "Hybrid neural ODE training with derivative analysis"
     },

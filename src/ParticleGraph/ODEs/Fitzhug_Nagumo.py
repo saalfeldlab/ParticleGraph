@@ -25,6 +25,7 @@ import torch.optim as optim
 import time as Time
 
 from config_Fitzhug_Nagumo import FitzhughNagumoConfig
+from utils import setup_experiment_folders, save_experiment_metadata
 
 # ----------------- SIREN Layer -----------------
 class SineLayer(nn.Module):
@@ -599,15 +600,36 @@ if __name__ == '__main__':
                 plt.legend(loc='upper left')
                 plt.title(f'v (MSE: {v_mse:.4f})')
                 plt.grid(True, alpha=0.3)
+
+                # plt.subplot(2, 1, 2)
+                # plt.plot(w_true.cpu().numpy(), label='true w', linewidth=3, alpha=0.7, c='white')
+                # plt.plot(w_list.cpu().numpy(), label='rollout w', linewidth=2, alpha=0.7, c='cyan')
+                # plt.xlim([0, n_steps // 2.5])
+                # plt.xlabel('time')
+                # plt.ylabel('w')
+                # plt.legend(loc='upper left')
+                # plt.title(f'w latent variable (MSE: {w_mse:.4f})')
+                # plt.grid(True, alpha=0.3)
+
+                w_pred = w_list.cpu().numpy().squeeze()
+                w_target = w_true.cpu().numpy().squeeze()
+                A = np.vstack([w_pred, np.ones_like(w_pred)]).T  # shape [n_steps, 2]
+                a, b = np.linalg.lstsq(A, w_target, rcond=None)[0]
+                w_corr = a * w_pred + b
+
+                # --- Plot corrected w ---
                 plt.subplot(2, 1, 2)
                 plt.plot(w_true.cpu().numpy(), label='true w', linewidth=3, alpha=0.7, c='white')
                 plt.plot(w_list.cpu().numpy(), label='rollout w', linewidth=2, alpha=0.7, c='cyan')
+                plt.plot(w_corr, label='corrected w (affine)', linewidth=2, alpha=0.8, c='blue')
                 plt.xlim([0, n_steps // 2.5])
                 plt.xlabel('time')
                 plt.ylabel('w')
                 plt.legend(loc='upper left')
                 plt.title(f'w latent variable (MSE: {w_mse:.4f})')
                 plt.grid(True, alpha=0.3)
+
+
                 plt.tight_layout()
                 plt.show()
                 training_plot_path = os.path.join(folders['training_plots'], f'nagumo_training_run_{run + 1}_iter_{iter + 1}.png')
