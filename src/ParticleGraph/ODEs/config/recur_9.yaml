@@ -1,0 +1,54 @@
+# ========================================
+# VARIANT 3: Weak Jacobian Regularization
+# File: recur_6_sin_weak_jac.yaml  
+# ========================================
+description: 'FitzHugh-Nagumo Neural Dynamics - recursive_loop: 5 - WEAK JACOBIAN'
+
+system:
+  a: 0.7
+  b: 0.8
+  epsilon: 0.18
+
+simulation:
+  T: 1000.0
+  dt: 0.1
+  v_init: -1.0
+  w_init: 1.0
+  pulse_interval: 80.0
+  pulse_duration: 4.0
+  pulse_amplitude: 0.8
+  noise_level: 1.0e-3
+
+model:
+  siren_in_features: 1
+  siren_out_features: 1
+  siren_hidden_features: 128
+  siren_hidden_layers: 3
+  siren_outermost_linear: true
+  mlp0_input_size: 3
+  mlp0_output_size: 1
+  mlp0_nlayers: 5
+  mlp0_hidden_size: 128
+  mlp1_input_size: 2
+  mlp1_output_size: 1
+  mlp1_nlayers: 2
+  mlp1_hidden_size: 4
+
+training:
+  device: 'cuda:1'
+  n_iter: 5000
+  batch_ratio: 0.2
+  test_runs: 20
+  learning_rate: 1.0e-4
+  l1_lambda: 1.0e-3
+  weight_decay: 1.0e-6
+  recursive_loop: 5
+  n_init_steps: 1000
+  use_siren_init: false
+  lambda_amp: 0
+  lambda_jac: 1.0e-3   # 10x WEAKER JACOBIAN
+  lambda_ratio: 0.0
+  tau_vv: 0.10
+  tau_vw: 0.10
+  tau_wv: 0.10
+  tau_ww: 0.05

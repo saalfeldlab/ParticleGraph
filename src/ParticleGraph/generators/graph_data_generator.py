@@ -3012,18 +3012,16 @@ def data_generate_fly_voltage(
 
         config = Namespace(
             root_dir=datavis_root,
-            n_frames=35,
+            n_frames=34,
             flip_axes=[0, 1],
             n_rotations=[0, 90, 180, 270],
             temporal_split=True,
             dt=delta_t,
             interpolate=True,
             boxfilter=dict(extent=extent, kernel_size=13),
-            vertical_splits=3,
-            center_crop_fraction=0.7,
+            vertical_splits= 9,
+            center_crop_fraction=0.6,
             augment=False,  # No augmentation to fix translation issue
-
-            # IMPORTANT: Make sure we use ALL sequences
             unittest=False,  # Must be False to use all sequences
             # indices=None,           # Don't specify indices to use all
             # _init_cache=True,       # Cache for faster subsequent loads

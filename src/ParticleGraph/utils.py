@@ -583,7 +583,7 @@ def create_log_dir(config=[], erase=True):
                         filemode='w')
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
-    logger.info(config)
+    # logger.info(config)
 
     return log_dir, logger
 

@@ -1,4 +1,4 @@
-description: 'FitzHugh-Nagumo Neural Dynamics -   recursive_loop: 5 sin Exc'
+description: 'FitzHugh-Nagumo Neural Dynamics - recursive_loop: 5 sin Exc'
 
 system:
   a: 0.7
@@ -31,23 +31,24 @@ model:
   mlp1_hidden_size: 4
 
 training:
-  device: 'cuda:1'
+  device: 'cuda:0'
   n_iter: 5000
   batch_ratio: 0.2
   test_runs: 20
-
   learning_rate: 1.0e-4
   l1_lambda: 1.0e-3
   weight_decay: 1.0e-6
-
   recursive_loop: 5
-
   n_init_steps: 1000
   use_siren_init: false
-
   lambda_amp: 0
 
-  tau_vv: 0.10
-  tau_vw: 0.10
-  tau_wv: 0.10
-  tau_ww: 0.05
+  # Jacobian regularization parameters
+  lambda_jac: 1.0e-2  # Weight for Jacobian regularization that produced excellent results
+  lambda_ratio: 0.0   # Weight for ratio regularization (if used)
+
+  # Jacobian sensitivity thresholds (values that worked well)
+  tau_vv: 0.10  # Threshold for ∂dv/∂v sensitivity
+  tau_vw: 0.10  # Threshold for ∂dv/∂w sensitivity
+  tau_wv: 0.10  # Threshold for ∂dw/∂v sensitivity
+  tau_ww: 0.05  # Threshold for ∂dw/∂w sensitivity (weaker)

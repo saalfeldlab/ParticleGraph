@@ -6728,7 +6728,8 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
     x_list = []
     y_list = []
     time.sleep(0.5)
-    for run in trange(0, n_runs):
+    print('load data ...')
+    for run in range(0, n_runs):
         if os.path.exists(f'graphs_data/{dataset_name}/x_list_{run}.pt'):
             x = torch.load(f'graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device)
             y = torch.load(f'graphs_data/{dataset_name}/y_list_{run}.pt', map_location=device)
@@ -7009,6 +7010,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                 logger.info(f"eps={eps}: {results['n_clusters_found']} clusters, "f"accuracy={results['accuracy']:.3f}")
 
         # Plot 3: Edge function visualization
+        slopes_lin_edge_list = []
         fig = plt.figure(figsize=(8, 8))
         rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
         for n in range(n_neurons):
@@ -7022,6 +7024,18 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                 func = model.lin_edge(in_features.float())
             if config.graph_model.lin_edge_positive:
                 func = func ** 2
+            rr_numpy = to_numpy(rr[rr.shape[0]//2+1:])
+            func_numpy = to_numpy(func[rr.shape[0]//2+1:].squeeze())
+            try:
+                lin_fit, _ = curve_fit(linear_model, rr_numpy, func_numpy)
+                slope = lin_fit[0]
+                offset = lin_fit[1]
+            except:
+                coeffs = np.polyfit(rr_numpy, func_numpy, 1)
+                slope = coeffs[0]
+                offset = coeffs[1]
+            slopes_lin_edge_list.append(slope)
+
             if (n % 20 == 0):
                 plt.plot(to_numpy(rr), to_numpy(func), 2,
                          color=cmap.color(to_numpy(type_list)[n].astype(int)),
@@ -7033,7 +7047,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
 
         # Plot 5: Phi function visualization
         func_list = []
-        slopes_list = []
+        slopes_lin_phi_list = []
         offsets_list = []
         fig = plt.figure(figsize=(8, 8))
         for n in range(n_neurons):
@@ -7052,7 +7066,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                 coeffs = np.polyfit(rr_numpy, func_numpy, 1)
                 slope = coeffs[0]
                 offset = coeffs[1]
-            slopes_list.append(slope)
+            slopes_lin_phi_list.append(slope)
             offsets_list.append(offset)
             if (n % 20 == 0):
                 plt.plot(to_numpy(rr), to_numpy(func), 2,
@@ -7063,19 +7077,19 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         plt.savefig(f"./{log_dir}/results/phi_functions_{epoch}.tif", dpi=300)
         plt.close()
 
-        # Plot 5b: Phi function slopes by neuron type
+        # Plot 5b: Phi function slopes_lin_phi by neuron type
         plt.figure(figsize=(12, 8))
-        slopes_array = np.array(slopes_list)
+        slopes_lin_phi_array = np.array(slopes_lin_phi_list)
         offsets_array = np.array(offsets_list)
         neuron_indices = np.arange(n_neurons)
         for n in range(n_types):
             type_mask = (to_numpy(type_list).squeeze() == n)  # Flatten to 1D
             if np.any(type_mask):
-                plt.scatter(neuron_indices[type_mask], slopes_array[type_mask],
+                plt.scatter(neuron_indices[type_mask], slopes_lin_phi_array[type_mask],
                             c=colors_65[n], s=2, alpha=0.8)
                 if np.sum(type_mask) > 0:
                     mean_x = np.mean(neuron_indices[type_mask])
-                    mean_y = np.mean(slopes_array[type_mask])
+                    mean_y = np.mean(slopes_lin_phi_array[type_mask])
                     plt.text(mean_x, mean_y, index_to_name.get(n, f'T{n}'),
                              fontsize=8, ha='center', va='center')
         plt.xlabel('neuron index', fontsize=18)
@@ -7088,11 +7102,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         plt.close()
 
         # Plot 5c: Tau comparison (reconstructed vs ground truth)
-        # Calculate reconstructed tau as 1/slopes, handle division by zero
-        # Plot 5c: Tau comparison (reconstructed vs ground truth)
-        reconstructed_tau = np.where(slopes_array != 0, 1.0 / slopes_array, np.inf)
-        # print(f'N reconstructed tau: {len(reconstructed_tau)}')
-        # Filter out infinite values for fitting
+        reconstructed_tau = np.where(slopes_lin_phi_array != 0, 1.0 / slopes_lin_phi_array, np.inf)
         finite_mask = np.isfinite(reconstructed_tau)
 
         fig = plt.figure(figsize=(8, 8))
@@ -7119,7 +7129,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
 
         # Plot 5d: V_rest comparison (reconstructed vs ground truth)
         # Calculate reconstructed V_rest as offset/slope, handle division by zero
-        reconstructed_V_rest = np.where(slopes_array != 0, -offsets_array / slopes_array, np.inf)
+        reconstructed_V_rest = np.where(slopes_lin_phi_array != 0, -offsets_array / slopes_lin_phi_array, np.inf)
         # Filter out infinite values for fitting
         finite_mask = np.isfinite(reconstructed_V_rest)
 
@@ -7299,7 +7309,6 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                     mean_y = np.mean(grad_values[type_mask])
                     plt.text(mean_x, mean_y, index_to_name.get(n, f'T{n}'),
                              fontsize=6, ha='center', va='center')
-
         plt.xlabel('neuron index')
         plt.ylabel('gradient')
         plt.tight_layout()
@@ -7309,13 +7318,17 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         grad_msg_flat = grad_msg.squeeze()
         assert grad_msg_flat.shape[0] == n_neurons * len(k_list), "Gradient and neuron count mismatch"
         target_neuron_ids = edges[1, :] % (model.n_edges + model.n_extra_null_edges)
-        grad_per_edge = grad_msg_flat[target_neuron_ids]
-        grad_per_edge = grad_per_edge.unsqueeze(1)  # [434112, 1]
+        grad_msg_per_edge = grad_msg_flat[target_neuron_ids]
+        grad_msg_per_edge = grad_msg_per_edge.unsqueeze(1)  # [434112, 1]
 
-        slopes_array = torch.tensor(slopes_array, dtype=torch.float32, device=device)
-        slope_per_edge = slopes_array[target_neuron_ids]
+        slopes_lin_phi_array = torch.tensor(slopes_lin_phi_array, dtype=torch.float32, device=device)
+        slopes_lin_phi_per_edge = slopes_lin_phi_array[target_neuron_ids]
 
-        corrected_W = -model.W / slope_per_edge[:, None] * grad_per_edge
+        slopes_lin_edge_array = np.array(slopes_lin_edge_list)
+        slopes_lin_edge_array = torch.tensor(slopes_lin_edge_array, dtype=torch.float32, device=device)
+        slopes_lin_edge_per_edge = slopes_lin_edge_array[target_neuron_ids]
+
+        corrected_W = -model.W / slopes_lin_phi_per_edge[:, None] * grad_msg_per_edge * slopes_lin_edge_per_edge[:,None]
 
         # Plot 6: Weight comparison using model.W and gt_weights
         fig = plt.figure(figsize=(8, 8))
@@ -7402,6 +7415,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
             print(f"visual field R²: {np.mean(r_squared_list):.3f}  std: {np.std(r_squared_list):.3f}  slope: {np.mean(slope_list):.3f}")
             logger.info(f"visual field R²: {np.mean(r_squared_list):.3f}  std: {np.std(r_squared_list):.3f}  slope: {np.mean(slope_list):.3f}")
         print(" ")
+
 
 def data_flyvis_compare(config_list, varied_parameter):
     """
@@ -11698,7 +11712,6 @@ if __name__ == '__main__':
     #                'fly_N9_33_1', 'fly_N9_33_1_1', 'fly_N9_33_1_2', 'fly_N9_33_1_3', 'fly_N9_33_3', 'fly_N9_33_4', 'fly_N9_33_5', 'fly_N9_33_5_1']
     # data_flyvis_compare(config_list, 'training.noise_model_level')
 
-
     # plot noise on video input 50/50
     # config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0',  'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4',
     #                'fly_N9_31_1', 'fly_N9_31_2', 'fly_N9_31_3', 'fly_N9_31_4', 'fly_N9_31_5','fly_N9_31_6', 'fly_N9_31_7']
@@ -11711,10 +11724,19 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0',  'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4',  'fly_N9_35_1', 'fly_N9_35_2']
     # data_flyvis_compare(config_list, 'simulation.noise_visual_input_type')
 
-    config_list = ['fly_N9_31_1', 'fly_N9_36_2', 'fly_N9_36_3', 'fly_N9_36_4', 'fly_N9_36_5', 'fly_N9_31_6', 'fly_N9_36_7']
+    # config_list = ['fly_N9_31_1', 'fly_N9_36_2', 'fly_N9_36_3', 'fly_N9_36_4', 'fly_N9_36_5', 'fly_N9_31_6', 'fly_N9_36_7']
     # data_flyvis_compare(config_list, 'training.recursive_loop')
 
     # config_list = ['fly_N9_18_4_0', 'fly_N9_18_4_1']
+
+    # config_list = ['fly_N9_30_10', 'fly_N9_30_11', 'fly_N9_30_12', 'fly_N9_30_13', 'fly_N9_30_14', 'fly_N9_30_15']
+
+    # config_list = ['fly_N9_31_5', 'fly_N9_36_1', 'fly_N9_36_2', 'fly_N9_36_3', 'fly_N9_36_4', 'fly_N9_36_5', 'fly_N9_31_6', 'fly_N9_36_7']
+    # data_flyvis_compare(config_list, 'training.recursive_loop')
+
+    # config_list = ['fly_N9_37_1', 'fly_N9_37_2', 'fly_N9_37_3', 'fly_N9_37_4', 'fly_N9_37_5', 'fly_N9_37_6']
+
+    config_list = ['fly_N9_18_4_8', 'fly_N9_18_4_9']
 
 
     for config_file_ in config_list:

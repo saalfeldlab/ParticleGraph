@@ -131,6 +131,21 @@ class model_duo(nn.Module):
         self.mlp0 = MLP(input_size=3, output_size=1, nlayers=5, hidden_size=128, device=device)
         self.mlp1 = MLP(input_size=2, output_size=1, nlayers=2, hidden_size=4, device=device)
 
+        # # Count parameters for each component
+        # siren_params = sum(p.numel() for p in self.siren.parameters())
+        # mlp0_params = sum(p.numel() for p in self.mlp0.parameters())
+        # mlp1_params = sum(p.numel() for p in self.mlp1.parameters())
+        # total_params = siren_params + mlp0_params + mlp1_params
+        #
+        # print(f"Model Parameter Count:")
+        # print(f"  SIREN:     {siren_params:,} parameters")
+        # print(f"  MLP0:      {mlp0_params:,} parameters")
+        # print(f"  MLP1:      {mlp1_params:,} parameters")
+        # print(f"  total:     {total_params:,} parameters")
+        # print(f"  model size: ~{total_params * 4 / 1024 / 1024:.2f} MB (float32)")
+
+
+
     def forward(self, x):
         return self.siren(x)
 
@@ -210,7 +225,7 @@ if __name__ == '__main__':
 
     # config_file_list = ['noise_1', 'noise_2', 'noise_3', 'noise_4', 'noise_5']
     # config_file_list = ['lambda_2', 'lambda_3', 'lambda_4']
-    config_file_list = ['recur_6_sin']
+    config_file_list = ['recur_7_3', 'recur_7_4', 'recur_7_5']
 
     for config_file in config_file_list:
 
@@ -346,9 +361,8 @@ if __name__ == '__main__':
             'mlp1_grad_norm': [],
         } for run in range(test_runs)}
 
-
         for run in range(test_runs):
-            print(f"\ntraining run {run + 1}/{test_runs}")
+            # print(f"\ntraining run {run + 1}/{test_runs}")
 
             # Initialize loss tracking for this run
             loss_progression_data[run + 1] = {
@@ -371,7 +385,7 @@ if __name__ == '__main__':
             lambda_jac_max = 1.0  # max weight for Jacobian penalty
             warmup_iters = int(0.15 * n_iter)  # 15% of total iterations for warm-up
 
-            for iter in trange(n_iter):
+            for iter in range(n_iter):
                 idx = torch.randint(1, n_steps - 8, (batch_size,))
                 idx = torch.unique(idx)
                 t_batch = t_full[idx]
@@ -417,8 +431,6 @@ if __name__ == '__main__':
                         R_jac_ww = jacobian_reg(dw_pred, w0, tau=tau_ww, device=v.device)  # ∂dw/∂w
                     else:
                         R_jac_vv = R_jac_vw = R_jac_wv = R_jac_ww = torch.tensor(0.0, device=v.device)
-
-
 
                     # Euler update
                     v = v + dt * dv_pred
@@ -490,7 +502,10 @@ if __name__ == '__main__':
                         ])
                         eigvals = torch.linalg.eigvals(Jmat)
                         spectral_radius = eigvals.abs().max().item()
-                        log_data[run + 1]['spectral_radius'].append(spectral_radius)
+                    else:
+                        spectral_radius = 0.0  # Default value when gradients fail
+
+                    log_data[run + 1]['spectral_radius'].append(spectral_radius)
 
                     # MLP weight and gradient norms
                     mlp0_weights = torch.cat([p.flatten() for p in model.mlp0.parameters()])
@@ -507,7 +522,7 @@ if __name__ == '__main__':
 
                     # grad_list.append((grad_dv_w_norm, grad_dv_v_norm, grad_dw_v_norm, grad_dw_w_norm, spectral_radius))
 
-            print(f"iteration {iter + 1}/{n_iter}, loss: {loss.item():.6f}, spectral radius ≈ {spectral_radius:.3f}")
+            # print(f"iteration {iter + 1}/{n_iter}, loss: {loss.item():.6f}, spectral radius ≈ {spectral_radius:.3f}")
 
             Time.sleep(1)
             # ===============================================================
@@ -579,7 +594,7 @@ if __name__ == '__main__':
                     'total_mse': total_mse
                 })
 
-                print(f"rollout with bootstrap SIREN:  V MSE: {v_mse:.6f}, W corr MSE: {w_mse:.6f}, total MSE: {total_mse:.6f}")
+                # print(f"rollout with bootstrap SIREN:  V MSE: {v_mse:.6f}, W corr MSE: {w_mse:.6f}, total MSE: {total_mse:.6f}")
 
                 fig = plt.figure(figsize=(16, 8))
                 plt.subplot(2, 1, 1)
@@ -630,38 +645,52 @@ if __name__ == '__main__':
             fig, axs = plt.subplots(3, 2, figsize=(14, 12))
             iters = data['iterations']
 
-            # Loss
-            axs[0, 0].plot(iters, data['losses'], label='Loss', color='tab:blue')
+            # Ensure all data arrays have the same length
+            min_length = min(len(values) for values in data.values() if isinstance(values, list))
+
+            # Truncate all arrays to the same length
+            plot_data = {}
+            for key, values in data.items():
+                if isinstance(values, list):
+                    plot_data[key] = values[:min_length]
+
+            plot_iters = plot_data['iterations']
+
+            # Loss - USE PROPER X-AXIS
+            axs[0, 0].plot(plot_iters, plot_data['losses'], label='Loss', color='tab:blue')
             axs[0, 0].set_ylabel('loss')
             axs[0, 0].set_ylim([0, 6])
 
-            # Spectral radius
-            axs[0, 1].plot(iters, data['spectral_radius'], label='Spectral radius', color='tab:orange')
+            # Spectral radius - USE PROPER X-AXIS
+            axs[0, 1].plot(plot_iters, plot_data['spectral_radius'], label='Spectral radius', color='tab:orange')
             axs[0, 1].set_ylabel('spectral radius')
 
-            # Gradient norms
-            axs[1, 0].plot(iters, data['grad_dv_w_norm'], label='∂dv/∂w', color='tab:blue')
-            axs[1, 0].plot(iters, data['grad_dv_v_norm'], label='∂dv/∂v', color='tab:orange')
+            # Gradient norms - USE PROPER X-AXIS
+            axs[1, 0].plot(plot_iters, plot_data['grad_dv_w_norm'], label='∂dv/∂w', color='tab:blue')
+            axs[1, 0].plot(plot_iters, plot_data['grad_dv_v_norm'], label='∂dv/∂v', color='tab:orange')
             axs[1, 0].set_ylabel('gradient norms')
             axs[1, 0].set_ylim([0, 6])
             axs[1, 0].legend()
-            # Gradient norms
-            axs[1, 1].plot(iters, data['grad_dw_v_norm'], label='∂dw/∂v', color='tab:green')
-            axs[1, 1].plot(iters, data['grad_dw_w_norm'], label='∂dw/∂w', color='tab:red')
+
+            # Gradient norms - USE PROPER X-AXIS
+            axs[1, 1].plot(plot_iters, plot_data['grad_dw_v_norm'], label='∂dw/∂v', color='tab:green')
+            axs[1, 1].plot(plot_iters, plot_data['grad_dw_w_norm'], label='∂dw/∂w', color='tab:red')
             axs[1, 1].set_ylabel('gradient norms')
             axs[1, 1].set_ylim([0, 0.1])
             axs[1, 1].legend()
 
-            # Weight norms
-            axs[2, 0].plot(iters, data['mlp0_weight_norm'], label='MLP0 weight', color='tab:blue')
-            axs[2, 0].plot(iters, data['mlp1_weight_norm']*10, label='MLP1 weight x10', color='tab:orange')
+            # Weight norms - USE PROPER X-AXIS
+            axs[2, 0].plot(plot_iters, plot_data['mlp0_weight_norm'], label='MLP0 weight', color='tab:blue')
+            axs[2, 0].plot(plot_iters, [x * 10 for x in plot_data['mlp1_weight_norm']], label='MLP1 weight x10',
+                           color='tab:orange')
             axs[2, 0].set_ylabel('weight norms')
-            axs[2, 0].set_ylim([0, 15])
+            axs[2, 0].set_ylim([0, 25])
             axs[2, 0].legend()
 
-            # Gradient norms of weights
-            axs[2, 1].plot(iters, data['mlp0_grad_norm'], label='MLP0 grad', color='tab:blue')
-            axs[2, 1].plot(iters, data['mlp1_grad_norm']*10, label='MLP1 grad x10', color='tab:orange')
+            # Gradient norms of weights - USE PROPER X-AXIS
+            axs[2, 1].plot(plot_iters, plot_data['mlp0_grad_norm'], label='MLP0 grad', color='tab:blue')
+            axs[2, 1].plot(plot_iters, [x * 10 for x in plot_data['mlp1_grad_norm']], label='MLP1 grad x10',
+                           color='tab:orange')
             axs[2, 1].set_ylabel('weight gradient norms')
             axs[2, 1].set_ylim([0, 200])
             axs[2, 1].legend()
@@ -669,10 +698,10 @@ if __name__ == '__main__':
             for ax in axs.flat:
                 ax.set_xlabel('Iteration')
 
-            plt.suptitle(f'Training Run {run+1} Trajectory Analysis')
+            plt.suptitle(f'Training Run {run} Trajectory Analysis')
             training_plot_path = os.path.join(
                 folders['training_plots'],
-                f'nagumo_trajectory_analysis_{run+1}.png'
+                f'nagumo_trajectory_analysis_{run}.png'
             )
             plt.tight_layout()
             plt.savefig(training_plot_path, dpi=200, bbox_inches='tight', facecolor='black')
