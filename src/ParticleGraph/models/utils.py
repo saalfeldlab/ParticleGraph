@@ -610,7 +610,7 @@ def plot_training_flyvis(x_list, model, config, epoch, N, log_dir, device, cmap,
     fig = plt.figure(figsize=(8, 8))
     for n in range(n_neuron_types):
         pos = torch.argwhere(type_list == n)
-        plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=5, color=cmap.color(n), alpha=0.1, edgecolors='none')
+        plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=5, color=cmap.color(n), alpha=0.7, edgecolors='none')
     plt.xlabel('embedding 0', fontsize=18)
     plt.ylabel('embedding 1', fontsize=18)
     plt.xticks([])

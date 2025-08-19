@@ -3550,6 +3550,8 @@ def data_train_flyvis(config, erase, best_model, device):
     coeff_update_msg_sign = train_config.coeff_update_msg_sign
     coeff_edge_weight_L1 = train_config.coeff_edge_weight_L1
 
+    pre_trained_W = train_config.pre_trained_W
+
     n_edges = simulation_config.n_edges
     n_extra_null_edges = simulation_config.n_extra_null_edges
 
@@ -3627,6 +3629,13 @@ def data_train_flyvis(config, erase, best_model, device):
         start_epoch = 0
         list_loss = []
 
+    if pre_trained_W != '':
+        print(f'load pre-trained W: {pre_trained_W}')
+        logger.info(f'load pre-trained W: {pre_trained_W}')
+        W_ = np.load(pre_trained_W)
+        with torch.no_grad():
+            model.W = nn.Parameter(torch.tensor(W_[:,None], dtype=torch.float32, device=device), requires_grad=False)
+
     lr = train_config.learning_rate_start
     if train_config.learning_rate_update_start == 0:
         lr_update = train_config.learning_rate_start
@@ -3684,6 +3693,12 @@ def data_train_flyvis(config, erase, best_model, device):
             Niter = int(n_frames * data_augmentation_loop // batch_size / batch_ratio * 0.2)
         else:
             Niter = int(n_frames * data_augmentation_loop // batch_size * 0.2 // max(recursive_loop, 1))
+
+        if (pre_trained_W != '') & (epoch == 1):
+            model.W.requires_grad = True
+            optimizer, n_total_params = set_trainable_parameters(model=model, lr_embedding=lr_embedding, lr=lr,
+                                                                 lr_update=lr_update, lr_W=lr_W,
+                                                                 learning_rate_NNR=learning_rate_NNR)
 
         plot_frequency = int(Niter // 20)
         print(f'{Niter} iterations per epoch')

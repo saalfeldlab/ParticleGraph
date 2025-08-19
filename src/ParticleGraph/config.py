@@ -256,6 +256,8 @@ class TrainingConfig(BaseModel):
     embedding_trial: bool = False
     remove_self: bool = True
 
+    pre_trained_W: str = ""
+
     multi_connectivity: bool = False
     with_connectivity_mask: bool = False
     has_missing_activity: bool = False
@@ -317,7 +319,6 @@ class TrainingConfig(BaseModel):
     learning_rate_embedding_end: float = 0.0001
     learning_rate_modulation_end: float = 0.0001
     Learning_rate_W_end: float = 0.0001
-
 
     learning_rate_missing_activity: float = 0.0001
     learning_rate_NNR: float = 0.0001

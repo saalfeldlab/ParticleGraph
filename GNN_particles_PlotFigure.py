@@ -8257,11 +8257,13 @@ def data_flyvis_compare(config_list, varied_parameter):
         ax1.set_title(f'All Weights (n={len(all_corrected_weights)} exp)', fontsize=16, color='white')
         ax1.set_xlim([-2, 4.5])
         ax1.set_ylim([-2, 4.5])
-        ax1.plot([-2, 4.5], [-2, 4.5], 'w--', alpha=0.5)
+        ax1.grid(False)
         ax1.tick_params(colors='white')
 
         # Panel 2: Median weights vs true
         ax2.scatter(true_weights, median_weights, c='lightgreen', s=1, alpha=0.7)
+
+        np.save('median_weights_1.npy', median_weights)
 
         if len(true_weights) > 0:
             lin_fit, _ = curve_fit(linear_model, true_weights, median_weights)
@@ -8282,8 +8284,10 @@ def data_flyvis_compare(config_list, varied_parameter):
         ax2.set_title('Median Weights', fontsize=16, color='white')
         ax2.set_xlim([-2, 4.5])
         ax2.set_ylim([-2, 4.5])
-        ax2.plot([-2, 4.5], [-2, 4.5], 'w--', alpha=0.5)
+        ax2.grid(False)
         ax2.tick_params(colors='white')
+
+
 
         # Panel 3: Mean weights vs true
         ax3.scatter(true_weights, mean_weights, c='lightcoral', s=1, alpha=0.7)
@@ -8307,10 +8311,11 @@ def data_flyvis_compare(config_list, varied_parameter):
         ax3.set_title('Mean Weights', fontsize=16, color='white')
         ax3.set_xlim([-2, 4.5])
         ax3.set_ylim([-2, 4.5])
-        ax3.plot([-2, 4.5], [-2, 4.5], 'w--', alpha=0.5)
+        ax3.grid(False)
         ax3.tick_params(colors='white')
 
         plt.tight_layout()
+        plt.close()
 
         # Save corrected weights comparison figure
         weights_plot_filename = f'corrected_weights_comparison_{param_display_name}.png'
@@ -8328,8 +8333,6 @@ def data_flyvis_compare(config_list, varied_parameter):
         mean_corr = np.corrcoef(true_weights, mean_weights)[0, 1]
 
         print(f"Correlations - All: {all_corr:.4f}, Median: {median_corr:.4f}, Mean: {mean_corr:.4f}")
-
-        plt.show()
 
     else:
         print("No corrected_W.pt files found for comparison")
@@ -12140,8 +12143,8 @@ if __name__ == '__main__':
 
 
     # plot no noise at all
-    config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0', 'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4']
-    data_flyvis_compare(config_list, 'training.seed')
+    # config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0', 'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4']
+    # data_flyvis_compare(config_list, 'training.seed')
 
     # # plot noise on video input
     # config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0',  'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4',
@@ -12178,21 +12181,21 @@ if __name__ == '__main__':
 
     # config_list = ['fly_N9_37_1', 'fly_N9_37_2', 'fly_N9_37_3', 'fly_N9_37_4', 'fly_N9_37_5', 'fly_N9_37_6']
 
-    # config_list = ['fly_N9_18_33_5', 'fly_N9_18_4_8', 'fly_N9_18_4_9', 'fly_N9_37_2', 'fly_N9_37_4']
+    config_list = ['fly_N9_33_5', 'fly_N9_18_4_8', 'fly_N9_18_4_9', 'fly_N9_37_2', 'fly_N9_37_4']
 
-    # for config_file_ in config_list:
-    #     print(' ')
-    #
-    #     config_file, pre_folder = add_pre_folder(config_file_)
-    #     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-    #     config.dataset = pre_folder + config.dataset
-    #     config.config_file = pre_folder + config_file_
-    #
-    #     print(f'config_file  {config.config_file}')
-    #
-    #     folder_name = './log/' + pre_folder + '/tmp_results/'
-    #     os.makedirs(folder_name, exist_ok=True)
-    #     data_plot(config=config, config_file=config_file, epoch_list=['all'], style='black color', device=device)
+    for config_file_ in config_list:
+        print(' ')
+
+        config_file, pre_folder = add_pre_folder(config_file_)
+        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+        config.dataset = pre_folder + config.dataset
+        config.config_file = pre_folder + config_file_
+
+        print(f'config_file  {config.config_file}')
+
+        folder_name = './log/' + pre_folder + '/tmp_results/'
+        os.makedirs(folder_name, exist_ok=True)
+        data_plot(config=config, config_file=config_file, epoch_list=['all'], style='black color', device=device)
 
 
 
