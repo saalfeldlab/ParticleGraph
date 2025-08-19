@@ -8315,11 +8315,12 @@ def data_flyvis_compare(config_list, varied_parameter):
         ax3.tick_params(colors='white')
 
         plt.tight_layout()
-        plt.close()
+
 
         # Save corrected weights comparison figure
         weights_plot_filename = f'corrected_weights_comparison_{param_display_name}.png'
         plt.savefig(weights_plot_filename, dpi=300, bbox_inches='tight')
+        plt.close()
         print(f"Corrected weights plot saved as: {weights_plot_filename}")
 
         # Print summary statistics
@@ -12172,7 +12173,7 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_31_1', 'fly_N9_36_2', 'fly_N9_36_3', 'fly_N9_36_4', 'fly_N9_36_5', 'fly_N9_31_6', 'fly_N9_36_7']
     # data_flyvis_compare(config_list, 'training.recursive_loop')
 
-    # config_list = ['fly_N9_18_4_0', 'fly_N9_18_4_1']
+    # config_list = ['fly_N9_18_4_10', 'fly_N9_18_4_11', 'fly_N9_18_4_12', 'fly_N9_18_4_13', 'fly_N9_18_4_14']
 
     # config_list = ['fly_N9_30_10', 'fly_N9_30_11', 'fly_N9_30_12', 'fly_N9_30_13', 'fly_N9_30_14', 'fly_N9_30_15']
 
@@ -12181,7 +12182,7 @@ if __name__ == '__main__':
 
     # config_list = ['fly_N9_37_1', 'fly_N9_37_2', 'fly_N9_37_3', 'fly_N9_37_4', 'fly_N9_37_5', 'fly_N9_37_6']
 
-    config_list = ['fly_N9_33_5', 'fly_N9_18_4_8', 'fly_N9_18_4_9', 'fly_N9_37_2', 'fly_N9_37_4']
+    config_list = ['fly_N9_18_4_0']
 
     for config_file_ in config_list:
         print(' ')

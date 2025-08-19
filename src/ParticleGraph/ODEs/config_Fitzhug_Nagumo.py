@@ -49,6 +49,7 @@ class TrainingConfig(BaseModel):
     l1_lambda: float = 1.0e-3
     weight_decay: float = 1e-6
     recursive_loop: int = 3
+    recursive_weight: list = [0.33, 0.66, 1.0, 1.33, 1.66]  # Weights for recursive updates
     n_init_steps: int = 1000
     use_siren_init: bool = False
     lambda_jac: float = 0
