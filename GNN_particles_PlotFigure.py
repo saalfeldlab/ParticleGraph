@@ -7001,7 +7001,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         plt.savefig(f'{log_dir}/results/embedding_{epoch}.png', dpi=300)
         plt.close()
 
-        if True:
+        if False:
             print('embedding clustering results')
             for eps in [0.0075, 0.01, 0.02, 0.05]:
                 results = clustering_evaluation(to_numpy(model.a), type_list, eps=eps)
@@ -7326,9 +7326,11 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
 
         slopes_lin_edge_array = np.array(slopes_lin_edge_list)
         slopes_lin_edge_array = torch.tensor(slopes_lin_edge_array, dtype=torch.float32, device=device)
-        slopes_lin_edge_per_edge = slopes_lin_edge_array[target_neuron_ids]
+        prior_neuron_ids = edges[0, :] % (model.n_edges + model.n_extra_null_edges)  # j
+        slopes_lin_edge_per_edge = slopes_lin_edge_array[prior_neuron_ids]
 
-        corrected_W = -model.W / slopes_lin_phi_per_edge[:, None] * grad_msg_per_edge * slopes_lin_edge_per_edge[:,None]
+        corrected_W = -model.W / slopes_lin_phi_per_edge[:, None] * grad_msg_per_edge * slopes_lin_edge_per_edge.unsqueeze(1)
+
 
         # Plot 6: Weight comparison using model.W and gt_weights
         fig = plt.figure(figsize=(8, 8))
