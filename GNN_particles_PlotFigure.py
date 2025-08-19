@@ -6684,8 +6684,9 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
     n_input_neurons = config.simulation.n_input_neurons
     field_type = model_config.field_type
     delta_t = config.simulation.delta_t
-    colors_65 = plt.cm.hsv(np.linspace(0, 0.95, 65))
 
+    colors_65 = sns.color_palette("Set3", 12) * 6  # pastel, repeat until 65
+    colors_65 = colors_65[:65]
 
     max_radius = config.simulation.max_radius if hasattr(config.simulation, 'max_radius') else 2.5
     dimension = config.simulation.dimension
@@ -6979,7 +6980,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         fig = plt.figure(figsize=(16, 18))  # Taller figure for 3x2 layout
 
         # Remove existing MP4 if it exists
-        mp4_path = f'{log_dir}/results/evolution_{config_indices}.mp4'
+        mp4_path = f'{log_dir}/results/training_{config_indices}.mp4'
         if os.path.exists(mp4_path):
             os.remove(mp4_path)
 
@@ -7028,7 +7029,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                     ax4.set_xlim(config.plotting.xlim)
                     ax4.set_ylim([-150, 150])
                     ax4.set_xlabel('$v$', fontsize=23)
-                    ax4.set_ylabel('$MLP_0(a_i, v)$', fontsize=23)
+                    ax4.set_ylabel('$learned MLP_0(a_i, v)$', fontsize=23)
                     ax4.tick_params(axis='both', which='major', labelsize=15)
 
                     # Plot 3: Lin_edge functions (middle right) and calculate slopes
@@ -7060,7 +7061,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                     ax3.set_xlim(config.plotting.xlim)
                     ax3.set_ylim([0, 2])
                     ax3.set_xlabel('$v$', fontsize=23)
-                    ax3.set_ylabel('$MLP_1(a_j, v)$', fontsize=23)
+                    ax3.set_ylabel('$learned MLP_1(a_j, v)$', fontsize=23)
                     ax3.tick_params(axis='both', which='major', labelsize=15)
 
                 # Calculate corrected_W using proper data construction
@@ -7226,8 +7227,8 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
 
                 # Save 3x2 panels as PNG only for first frame
                 if file_id_ == 0:
-                    plt.savefig(f'{log_dir}/results/evolution_{config_indices}.png', dpi=300, bbox_inches='tight')
-
+                    plt.savefig(f'{log_dir}/results/training_{config_indices}.png', dpi=300, bbox_inches='tight')
+                    print(f"first frame saved")
                 writer.grab_frame()
 
         print(f"MP4 saved as: {mp4_path}")
@@ -7599,7 +7600,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
             slopes_lin_edge_per_edge = slopes_lin_edge_array[prior_neuron_ids]
 
             corrected_W = -model.W / slopes_lin_phi_per_edge[:, None] * grad_msg_per_edge * slopes_lin_edge_per_edge.unsqueeze(1)
-
+            torch.save(corrected_W, f'{log_dir}/results/corrected_W.pt')
 
             # Plot 6: Weight comparison using model.W and gt_weights
             fig = plt.figure(figsize=(8, 8))
@@ -7709,7 +7710,16 @@ def data_flyvis_compare(config_list, varied_parameter):
     from ParticleGraph.config import ParticleGraphConfig
     from ParticleGraph.models.utils import add_pre_folder
 
-    plt.style.use('ggplot')  # Use ggplot style for better aesthetics
+    plt.style.use('ggplot')
+
+    plt.rcParams['axes.facecolor'] = 'black'
+    plt.rcParams['figure.facecolor'] = 'black'
+    plt.rcParams['axes.edgecolor'] = 'white'
+    plt.rcParams['axes.labelcolor'] = 'white'
+    plt.rcParams['xtick.color'] = 'white'
+    plt.rcParams['ytick.color'] = 'white'
+    plt.rcParams['grid.color'] = 'gray'
+    plt.rcParams['text.color'] = 'white'
 
     results = []
 
@@ -7969,45 +7979,48 @@ def data_flyvis_compare(config_list, varied_parameter):
 
     # Weights R² panel
     ax1.errorbar(param_values_str, r2_means, yerr=r2_errors,
-                 fmt='o-', capsize=5, capthick=2, markersize=8, linewidth=2, color='blue')
-    ax1.set_xlabel(param_display_name, fontsize=12)
-    ax1.set_ylabel('weights R²', fontsize=12)
-    ax1.set_title('weights R² vs ' + param_display_name, fontsize=14)
+                 fmt='o-', capsize=5, capthick=2, markersize=8, linewidth=2, color='lightblue')
+    ax1.set_xlabel(param_display_name, fontsize=12, color='white')
+    ax1.set_ylabel('weights R²', fontsize=12, color='white')
+    ax1.set_title('weights R² vs ' + param_display_name, fontsize=14, color='white')
     ax1.set_ylim(0, 1.1)
     ax1.grid(True, alpha=0.3)
+    ax1.tick_params(colors='white')
 
     # Add sample size annotations
     for i, (x, y, n) in enumerate(zip(param_values_str, r2_means, [r['n_configs'] for r in summary_results])):
         if n > 1:
-            ax1.text(x, y + r2_errors[i] + 0.02, f'n={n}', ha='center', va='bottom', fontsize=8)
+            ax1.text(x, y + r2_errors[i] + 0.02, f'n={n}', ha='center', va='bottom', fontsize=8, color='white')
 
     # Tau R² panel
     ax2.errorbar(param_values_str, tau_r2_means, yerr=tau_r2_errors,
-                 fmt='s-', capsize=5, capthick=2, markersize=8, linewidth=2, color='green')
-    ax2.set_xlabel(param_display_name, fontsize=12)
-    ax2.set_ylabel('tau R²', fontsize=12)
-    ax2.set_title('tau R² vs ' + param_display_name, fontsize=14)
+                 fmt='s-', capsize=5, capthick=2, markersize=8, linewidth=2, color='lightgreen')
+    ax2.set_xlabel(param_display_name, fontsize=12, color='white')
+    ax2.set_ylabel('tau R²', fontsize=12, color='white')
+    ax2.set_title('tau R² vs ' + param_display_name, fontsize=14, color='white')
     ax2.set_ylim(0, 1.1)
     ax2.grid(True, alpha=0.3)
+    ax2.tick_params(colors='white')
 
     # Add sample size annotations
     for i, (x, y, n) in enumerate(zip(param_values_str, tau_r2_means, [r['n_configs'] for r in summary_results])):
         if n > 1:
-            ax2.text(x, y + tau_r2_errors[i] + 0.02, f'n={n}', ha='center', va='bottom', fontsize=8)
+            ax2.text(x, y + tau_r2_errors[i] + 0.02, f'n={n}', ha='center', va='bottom', fontsize=8, color='white')
 
     # V_rest R² panel
     ax3.errorbar(param_values_str, vrest_r2_means, yerr=vrest_r2_errors,
-                 fmt='^-', capsize=5, capthick=2, markersize=8, linewidth=2, color='red')
-    ax3.set_xlabel(param_display_name, fontsize=12)
-    ax3.set_ylabel('V_rest R²', fontsize=12)
-    ax3.set_title('V_rest R² vs ' + param_display_name, fontsize=14)
+                 fmt='^-', capsize=5, capthick=2, markersize=8, linewidth=2, color='lightcoral')
+    ax3.set_xlabel(param_display_name, fontsize=12, color='white')
+    ax3.set_ylabel('V_rest R²', fontsize=12, color='white')
+    ax3.set_title('V_rest R² vs ' + param_display_name, fontsize=14, color='white')
     ax3.set_ylim(0, 1.1)
     ax3.grid(True, alpha=0.3)
+    ax3.tick_params(colors='white')
 
     # Add sample size annotations
     for i, (x, y, n) in enumerate(zip(param_values_str, vrest_r2_means, [r['n_configs'] for r in summary_results])):
         if n > 1:
-            ax3.text(x, y + vrest_r2_errors[i] + 0.02, f'n={n}', ha='center', va='bottom', fontsize=8)
+            ax3.text(x, y + vrest_r2_errors[i] + 0.02, f'n={n}', ha='center', va='bottom', fontsize=8, color='white')
 
     # Clustering accuracy panel (convert to percentage)
     acc_means_pct = [acc * 100 for acc in acc_means]
@@ -8015,16 +8028,17 @@ def data_flyvis_compare(config_list, varied_parameter):
 
     ax4.errorbar(param_values_str, acc_means_pct, yerr=acc_errors_pct,
                  fmt='D-', capsize=5, capthick=2, markersize=8, linewidth=2, color='orange')
-    ax4.set_xlabel(param_display_name, fontsize=12)
-    ax4.set_ylabel('clustering accuracy (%)', fontsize=12)
-    ax4.set_title('best clustering accuracy vs ' + param_display_name, fontsize=14)
+    ax4.set_xlabel(param_display_name, fontsize=12, color='white')
+    ax4.set_ylabel('clustering accuracy (%)', fontsize=12, color='white')
+    ax4.set_title('best clustering accuracy vs ' + param_display_name, fontsize=14, color='white')
     ax4.set_ylim(0, 100)
     ax4.grid(True, alpha=0.3)
+    ax4.tick_params(colors='white')
 
     # Add sample size annotations
     for i, (x, y, n) in enumerate(zip(param_values_str, acc_means_pct, [r['n_configs'] for r in summary_results])):
         if n > 1:
-            ax4.text(x, y + acc_errors_pct[i] + 2, f'n={n}', ha='center', va='bottom', fontsize=8)
+            ax4.text(x, y + acc_errors_pct[i] + 2, f'n={n}', ha='center', va='bottom', fontsize=8, color='white')
 
     # Video file sizes panel - using line plots
     # Prepare data for line plotting
@@ -8060,12 +8074,16 @@ def data_flyvis_compare(config_list, varied_parameter):
                      color='salmon', markerfacecolor='salmon', markeredgecolor='red',
                      label='libx264 (lossy)')
 
-    ax5.set_xlabel(param_display_name, fontsize=12)
-    ax5.set_ylabel('file size (MB)', fontsize=12)
-    ax5.set_title('video file sizes vs ' + param_display_name, fontsize=14)
-    ax5.legend(fontsize=10)
+    ax5.set_xlabel(param_display_name, fontsize=12, color='white')
+    ax5.set_ylabel('file size (MB)', fontsize=12, color='white')
+    ax5.set_title('video file sizes vs ' + param_display_name, fontsize=14, color='white')
+    legend = ax5.legend(fontsize=10)
+    legend.get_frame().set_facecolor('black')
+    for text in legend.get_texts():
+        text.set_color('white')
     ax5.grid(True, alpha=0.3)
     ax5.set_ylim(0, 400)
+    ax5.tick_params(colors='white')
 
     # Add sample size annotations for video files
     for i, (n, ffv1_size, libx264_size) in enumerate(
@@ -8075,14 +8093,14 @@ def data_flyvis_compare(config_list, varied_parameter):
                 s > 0 for s in ffv1_means + libx264_means) else 1
             if ffv1_size > 0:
                 ax5.text(param_values_str[i], ffv1_size + ffv1_errors[i] + max_size * 0.02,
-                         f'n={n}', ha='center', va='bottom', fontsize=8)
+                         f'n={n}', ha='center', va='bottom', fontsize=8, color='white')
             elif libx264_size > 0:
                 ax5.text(param_values_str[i], libx264_size + libx264_errors[i] + max_size * 0.02,
-                         f'n={n}', ha='center', va='bottom', fontsize=8)
+                         f'n={n}', ha='center', va='bottom', fontsize=8, color='white')
 
     # Experiment listing panel (ax6)
     ax6.axis('off')  # Turn off axis for text display
-    ax6.set_title('Experiment Summary', fontsize=14, pad=20)
+    ax6.set_title('Experiment Summary', fontsize=14, pad=20, color='white')
 
     # Create text content for experiment listing
     text_content = []
@@ -8107,7 +8125,8 @@ def data_flyvis_compare(config_list, varied_parameter):
     ax6.text(0.05, 0.95, full_text, transform=ax6.transAxes, fontsize=10,
              verticalalignment='top', horizontalalignment='left',
              fontfamily='monospace', bbox=dict(boxstyle='round,pad=0.5',
-                                               facecolor='lightgray', alpha=0.8))
+                                               facecolor='gray', alpha=0.8),
+             color='white')
 
     plt.tight_layout()
 
@@ -8132,35 +8151,188 @@ def data_flyvis_compare(config_list, varied_parameter):
         best_r2_x = param_values_str[best_r2_idx]
         best_r2_y = r2_means[best_r2_idx]
         ax1.text(best_r2_x, best_r2_y + r2_errors[best_r2_idx] + 0.05, f"{best_r2_result['r2_mean']:.3f}",
-                 ha='center', va='bottom', fontsize=10, color='black')
+                 ha='center', va='bottom', fontsize=10, color='white')
 
         # Tau R² panel annotation
         best_tau_r2_x = param_values_str[best_tau_r2_idx]
         best_tau_r2_y = tau_r2_means[best_tau_r2_idx]
         ax2.text(best_tau_r2_x, best_tau_r2_y + tau_r2_errors[best_tau_r2_idx] + 0.05,
                  f"{best_tau_r2_result['tau_r2_mean']:.3f}",
-                 ha='center', va='bottom', fontsize=10, color='black')
+                 ha='center', va='bottom', fontsize=10, color='white')
 
         # V_rest R² panel annotation
         best_vrest_r2_x = param_values_str[best_vrest_r2_idx]
         best_vrest_r2_y = vrest_r2_means[best_vrest_r2_idx]
         ax3.text(best_vrest_r2_x, best_vrest_r2_y + vrest_r2_errors[best_vrest_r2_idx] + 0.05,
                  f"{best_vrest_r2_result['vrest_r2_mean']:.3f}",
-                 ha='center', va='bottom', fontsize=10, color='black')
+                 ha='center', va='bottom', fontsize=10, color='white')
 
         # Clustering accuracy panel annotation
         best_acc_x = param_values_str[best_acc_idx]
         best_acc_y = acc_means_pct[best_acc_idx]
         ax4.text(best_acc_x, best_acc_y + acc_errors_pct[best_acc_idx] + 5, f"{best_acc_result['acc_mean'] * 100:.1f}%",
-                 ha='center', va='bottom', fontsize=10, color='black')
-
+                 ha='center', va='bottom', fontsize=10, color='white')
 
     # Save figure
-    datum = datetime.now().strftime('%m%d_%H')
-    plot_filename = f'parameter_comparison_{param_display_name}_{datum}.png'
+    plot_filename = f'parameter_comparison_{param_display_name}.png'
     plt.savefig(plot_filename, dpi=300, bbox_inches='tight')
     print(f"\nplot saved as: {plot_filename}")
     plt.close()
+
+    # Add corrected weights comparison at the end of data_flyvis_compare
+    print("\n" + "=" * 50)
+    print("CORRECTED WEIGHTS COMPARISON")
+    print("=" * 50)
+
+    # Read all corrected_W.pt files
+    all_corrected_weights = []
+    all_true_weights = []
+
+    for config_file_ in config_list:
+        try:
+            # Load config
+            config_file, pre_folder = add_pre_folder(config_file_)
+            config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+
+            # Get log directory
+            log_dir = f'./log/{config_file}'
+            corrected_W_path = os.path.join(log_dir, 'results', 'corrected_W.pt')
+
+            if not os.path.exists(corrected_W_path):
+                continue
+
+            # Load corrected weights
+            import torch
+            from ParticleGraph.utils import to_numpy
+            corrected_W = torch.load(corrected_W_path, map_location='cpu')
+            corrected_weights = to_numpy(corrected_W.squeeze())
+            all_corrected_weights.append(corrected_weights)
+
+        except Exception as e:
+            print(f"Warning: Could not load corrected weights for {config_file_}: {e}")
+
+    if all_corrected_weights:
+        # Load true weights from dataset (using first config for dataset name)
+        config_file, pre_folder = add_pre_folder(config_list[0])
+        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+        dataset_name = config.dataset
+        gt_weights = torch.load(f'./graphs_data/fly/{dataset_name}/weights.pt', map_location='cpu')
+        true_weights = to_numpy(gt_weights)
+
+        corrected_weights_stack = np.stack(all_corrected_weights, axis=0)
+
+        median_weights = np.median(corrected_weights_stack, axis=0)
+        mean_weights = np.mean(corrected_weights_stack, axis=0)
+
+        # Flatten all weights for the "all" plot
+        all_corrected_flat = corrected_weights_stack.flatten()
+        all_true_flat = np.tile(true_weights, len(all_corrected_weights))
+
+        def linear_model(x, a, b):
+            return a * x + b
+
+        # Create three-panel plot
+        fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 6))
+
+        # Panel 1: All learned weights vs true
+        ax1.scatter(all_true_flat, all_corrected_flat, c='lightblue', s=0.5, alpha=0.3)
+
+        if len(all_true_flat) > 0:
+            from scipy.optimize import curve_fit
+            lin_fit, _ = curve_fit(linear_model, all_true_flat, all_corrected_flat)
+            residuals = all_corrected_flat - linear_model(all_true_flat, *lin_fit)
+            ss_res = np.sum(residuals ** 2)
+            ss_tot = np.sum((all_corrected_flat - np.mean(all_corrected_flat)) ** 2)
+            r_squared = 1 - (ss_res / ss_tot)
+
+            ax1.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}\nN: {len(all_true_flat)}',
+                     transform=ax1.transAxes, verticalalignment='top', fontsize=12, color='white')
+
+            x_line = np.linspace(all_true_flat.min(), all_true_flat.max(), 100)
+            y_line = linear_model(x_line, *lin_fit)
+            ax1.plot(x_line, y_line, 'r-', linewidth=2)
+
+        ax1.set_xlabel('true $W_{ij}$', fontsize=14, color='white')
+        ax1.set_ylabel('learned $W_{ij}$ (all)', fontsize=14, color='white')
+        ax1.set_title(f'All Weights (n={len(all_corrected_weights)} exp)', fontsize=16, color='white')
+        ax1.set_xlim([-2, 4.5])
+        ax1.set_ylim([-2, 4.5])
+        ax1.plot([-2, 4.5], [-2, 4.5], 'w--', alpha=0.5)
+        ax1.tick_params(colors='white')
+
+        # Panel 2: Median weights vs true
+        ax2.scatter(true_weights, median_weights, c='lightgreen', s=1, alpha=0.7)
+
+        if len(true_weights) > 0:
+            lin_fit, _ = curve_fit(linear_model, true_weights, median_weights)
+            residuals = median_weights - linear_model(true_weights, *lin_fit)
+            ss_res = np.sum(residuals ** 2)
+            ss_tot = np.sum((median_weights - np.mean(median_weights)) ** 2)
+            r_squared = 1 - (ss_res / ss_tot)
+
+            ax2.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}\nN: {len(true_weights)}',
+                     transform=ax2.transAxes, verticalalignment='top', fontsize=12, color='white')
+
+            x_line = np.linspace(true_weights.min(), true_weights.max(), 100)
+            y_line = linear_model(x_line, *lin_fit)
+            ax2.plot(x_line, y_line, 'r-', linewidth=2)
+
+        ax2.set_xlabel('true $W_{ij}$', fontsize=14, color='white')
+        ax2.set_ylabel('median $W_{ij}$', fontsize=14, color='white')
+        ax2.set_title('Median Weights', fontsize=16, color='white')
+        ax2.set_xlim([-2, 4.5])
+        ax2.set_ylim([-2, 4.5])
+        ax2.plot([-2, 4.5], [-2, 4.5], 'w--', alpha=0.5)
+        ax2.tick_params(colors='white')
+
+        # Panel 3: Mean weights vs true
+        ax3.scatter(true_weights, mean_weights, c='lightcoral', s=1, alpha=0.7)
+
+        if len(true_weights) > 0:
+            lin_fit, _ = curve_fit(linear_model, true_weights, mean_weights)
+            residuals = mean_weights - linear_model(true_weights, *lin_fit)
+            ss_res = np.sum(residuals ** 2)
+            ss_tot = np.sum((mean_weights - np.mean(mean_weights)) ** 2)
+            r_squared = 1 - (ss_res / ss_tot)
+
+            ax3.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}\nN: {len(true_weights)}',
+                     transform=ax3.transAxes, verticalalignment='top', fontsize=12, color='white')
+
+            x_line = np.linspace(true_weights.min(), true_weights.max(), 100)
+            y_line = linear_model(x_line, *lin_fit)
+            ax3.plot(x_line, y_line, 'r-', linewidth=2)
+
+        ax3.set_xlabel('true $W_{ij}$', fontsize=14, color='white')
+        ax3.set_ylabel('mean $W_{ij}$', fontsize=14, color='white')
+        ax3.set_title('Mean Weights', fontsize=16, color='white')
+        ax3.set_xlim([-2, 4.5])
+        ax3.set_ylim([-2, 4.5])
+        ax3.plot([-2, 4.5], [-2, 4.5], 'w--', alpha=0.5)
+        ax3.tick_params(colors='white')
+
+        plt.tight_layout()
+
+        # Save corrected weights comparison figure
+        weights_plot_filename = f'corrected_weights_comparison_{param_display_name}.png'
+        plt.savefig(weights_plot_filename, dpi=300, bbox_inches='tight')
+        print(f"Corrected weights plot saved as: {weights_plot_filename}")
+
+        # Print summary statistics
+        print(f"\nCorrected Weights Summary:")
+        print(f"Experiments processed: {len(all_corrected_weights)}")
+        print(f"Weights per experiment: {len(true_weights)}")
+
+        # Calculate correlation coefficients
+        all_corr = np.corrcoef(all_true_flat, all_corrected_flat)[0, 1]
+        median_corr = np.corrcoef(true_weights, median_weights)[0, 1]
+        mean_corr = np.corrcoef(true_weights, mean_weights)[0, 1]
+
+        print(f"Correlations - All: {all_corr:.4f}, Median: {median_corr:.4f}, Mean: {mean_corr:.4f}")
+
+        plt.show()
+
+    else:
+        print("No corrected_W.pt files found for comparison")
 
     return summary_results
 
@@ -11968,9 +12140,8 @@ if __name__ == '__main__':
 
 
     # plot no noise at all
-    # config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0', 'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4']
-    # data_flyvis_compare(config_list, 'training.seed')
-
+    config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0', 'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4']
+    data_flyvis_compare(config_list, 'training.seed')
 
     # # plot noise on video input
     # config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0',  'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4',
@@ -12007,22 +12178,23 @@ if __name__ == '__main__':
 
     # config_list = ['fly_N9_37_1', 'fly_N9_37_2', 'fly_N9_37_3', 'fly_N9_37_4', 'fly_N9_37_5', 'fly_N9_37_6']
 
-    config_list = ['fly_N9_18_4_8', 'fly_N9_18_4_9']
+    # config_list = ['fly_N9_18_33_5', 'fly_N9_18_4_8', 'fly_N9_18_4_9', 'fly_N9_37_2', 'fly_N9_37_4']
+
+    # for config_file_ in config_list:
+    #     print(' ')
+    #
+    #     config_file, pre_folder = add_pre_folder(config_file_)
+    #     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+    #     config.dataset = pre_folder + config.dataset
+    #     config.config_file = pre_folder + config_file_
+    #
+    #     print(f'config_file  {config.config_file}')
+    #
+    #     folder_name = './log/' + pre_folder + '/tmp_results/'
+    #     os.makedirs(folder_name, exist_ok=True)
+    #     data_plot(config=config, config_file=config_file, epoch_list=['all'], style='black color', device=device)
 
 
-    for config_file_ in config_list:
-        print(' ')
-
-        config_file, pre_folder = add_pre_folder(config_file_)
-        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        config.dataset = pre_folder + config.dataset
-        config.config_file = pre_folder + config_file_
-
-        print(f'config_file  {config.config_file}')
-
-        folder_name = './log/' + pre_folder + '/tmp_results/'
-        os.makedirs(folder_name, exist_ok=True)
-        data_plot(config=config, config_file=config_file, epoch_list=['all'], style='black color', device=device)
 
 
 
