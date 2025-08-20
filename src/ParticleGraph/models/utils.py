@@ -156,7 +156,7 @@ def get_in_features_lin_edge(x, model, model_config, xnorm, n_neurons, device):
         else:
             in_features = torch.cat((x[:n_neurons, 6:7], model.a[:n_neurons], model.a[:n_neurons]), dim=1)
             in_features_next = torch.cat((x[:n_neurons, 6:7] + xnorm / 150, model.a[:n_neurons], model.a[:n_neurons]), dim=1)
-    elif (signal_model_name == 'PDE_N9_A') | (signal_model_name == 'PDE_N9_C') | (signal_model_name == 'PDE_N9_D') :
+    elif ('PDE_N9_A' in signal_model_name) | (signal_model_name == 'PDE_N9_C') | (signal_model_name == 'PDE_N9_D') :
         in_features = torch.cat((x[:, 3:4], model.a), dim=1)
         in_features_next = torch.cat((x[:,3:4] * 1.05, model.a), dim=1)
     elif signal_model_name == 'PDE_N9_B':
