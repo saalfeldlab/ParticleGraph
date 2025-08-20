@@ -7028,8 +7028,8 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                                      color=colors_65[int(type_list[n])], linewidth=1, alpha=0.3)
                     ax4.set_xlim(config.plotting.xlim)
                     ax4.set_ylim([-150, 150])
-                    ax4.set_xlabel('$v$', fontsize=23)
-                    ax4.set_ylabel('$learned MLP_0(a_i, v)$', fontsize=23)
+                    ax4.set_xlabel('$x_i$', fontsize=23)
+                    ax4.set_ylabel('$learned MLP_0(a_i, x_i)$', fontsize=23)
                     ax4.tick_params(axis='both', which='major', labelsize=15)
 
                     # Plot 3: Lin_edge functions (middle right) and calculate slopes
@@ -7060,8 +7060,8 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                                      color=colors_65[int(type_list[n])], linewidth=1, alpha=0.3)
                     ax3.set_xlim(config.plotting.xlim)
                     ax3.set_ylim([0, 2])
-                    ax3.set_xlabel('$v$', fontsize=23)
-                    ax3.set_ylabel('$learned MLP_1(a_j, v)$', fontsize=23)
+                    ax3.set_xlabel('$x_i$', fontsize=23)
+                    ax3.set_ylabel('$learned MLP_1(a_j, x_i)$', fontsize=23)
                     ax3.tick_params(axis='both', which='major', labelsize=15)
 
                 # Calculate corrected_W using proper data construction
