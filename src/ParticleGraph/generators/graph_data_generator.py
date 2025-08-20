@@ -3010,7 +3010,7 @@ def data_generate_fly_voltage(
     if "DAVIS" in noise_visual_input_type:
         datavis_root = "/groups/saalfeld/home/allierc/signaling/DATAVIS/JPEGImages/480p"
 
-        config = Namespace(
+        config_flyvis = Namespace(
             root_dir=datavis_root,
             n_frames=34,
             flip_axes=[0, 1],
@@ -3027,7 +3027,7 @@ def data_generate_fly_voltage(
             # _init_cache=True,       # Cache for faster subsequent loads
         )
 
-        stimulus_dataset = AugmentedDavis(**config)
+        stimulus_dataset = AugmentedDavis(**config_flyvis)
 
     else:
 
@@ -3044,8 +3044,6 @@ def data_generate_fly_voltage(
         )
 
         stimulus_dataset = AugmentedSintel(**config)
-
-
 
     # Initialize a model with a connectome/eye of less extent to save memory
     # Fine with this connectome version, because inputs don't span more than 8 hexals
@@ -3153,7 +3151,7 @@ def data_generate_fly_voltage(
     # plt.savefig(f'graphs_data/{dataset_name}/connectivity.png', dpi=300)
     # plt.close()
 
-    pde = PDE_N9(p=p, f=torch.nn.functional.relu, device=device)
+    pde = PDE_N9(p=p, f=torch.nn.functional.relu, params = simulation_config.params, model_type = model_config.signal_model_name, device=device)
 
     x_coords, y_coords, u_coords, v_coords = get_photoreceptor_positions_from_net(net)
 
@@ -3206,7 +3204,6 @@ def data_generate_fly_voltage(
     initial_state = state.nodes.activity.squeeze()
     n_neurons = len(initial_state)
     n_edges = len(edge_index[0])
-
 
     sequences = stimulus_dataset[0]["lum"]
     frame = sequences[0][None, None]

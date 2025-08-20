@@ -25,12 +25,14 @@ class PDE_N9(pyg.nn.MessagePassing):
         
     """
 
-    def __init__(self, aggr_type="add", p=[], f=torch.nn.functional.relu, device=None):
+    def __init__(self, aggr_type="add", p=[], params=[], f=torch.nn.functional.relu, model_type=None, device=None):
         super(PDE_N9, self).__init__(aggr=aggr_type)
 
         self.p = p
         self.f = f
+        self.model_type = model_type
         self.device = device
+        self.params = torch.tensor(params, dtype=torch.float32, device=device).squeeze()
 
 
     def forward(self, data=[], has_field=False):
@@ -40,7 +42,14 @@ class PDE_N9(pyg.nn.MessagePassing):
         e = x[:, 4:5]
         msg = self.propagate(edge_index, v=v)
         tau = self.p["tau_i"][:, None]
-        dv = (-v + msg + e + v_rest) / tau
+
+
+        if 'tanh'in self.model_type:
+            s = self.params
+            dv = (-v + msg + e + v_rest + s * torch.tanh(v) ) / tau
+        else:
+            dv = (-v + msg + e + v_rest) / tau
+
         return dv
 
     def message(self, v_j):

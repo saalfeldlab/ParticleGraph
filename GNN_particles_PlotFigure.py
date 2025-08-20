@@ -6974,7 +6974,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         files, file_id_list = get_training_files(log_dir, n_runs)
 
         # Setup MP4 parameters
-        fps = 5  # frames per second for the video
+        fps = 10  # frames per second for the video
         metadata = dict(title='Model Evolution', artist='Matplotlib', comment='Model evolution over epochs')
         writer = FFMpegWriter(fps=fps, metadata=metadata)
         fig = plt.figure(figsize=(16, 18))  # Taller figure for 3x2 layout
@@ -7697,6 +7697,7 @@ def data_flyvis_compare(config_list, varied_parameter):
     Args:
         config_list: List of config file names (e.g., ['fly_N9_18_4_0', 'fly_N9_18_4_1'])
         varied_parameter: Parameter path in section.parameter format (e.g., 'training.noise_model_level')
+                         or None to use last two indices from config file names
     """
     import yaml
     import re
@@ -7730,19 +7731,29 @@ def data_flyvis_compare(config_list, varied_parameter):
             config_file, pre_folder = add_pre_folder(config_file_)
             config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
 
-            # Get parameter value from config using section.parameter format
-            if '.' not in varied_parameter:
-                raise ValueError(f"parameter must be in 'section.parameter' format, got: {varied_parameter}")
+            # Get parameter value from config using section.parameter format OR config file indices
+            if varied_parameter is None:
+                # Extract last two indices from config file name
+                # e.g., 'fly_N9_18_4_10' -> '4_10'
+                parts = config_file_.split('_')
+                if len(parts) >= 2:
+                    param_value = f"{parts[-2]}_{parts[-1]}"
+                else:
+                    print(f"warning: cannot extract indices from config name '{config_file_}'")
+                    continue
+            else:
+                if '.' not in varied_parameter:
+                    raise ValueError(f"parameter must be in 'section.parameter' format, got: {varied_parameter}")
 
-            section_name, param_name = varied_parameter.split('.', 1)
-            section = getattr(config, section_name, None)
-            if section is None:
-                raise ValueError(f"config section '{section_name}' not found")
+                section_name, param_name = varied_parameter.split('.', 1)
+                section = getattr(config, section_name, None)
+                if section is None:
+                    raise ValueError(f"config section '{section_name}' not found")
 
-            param_value = getattr(section, param_name, None)
-            if param_value is None:
-                print(f"warning: parameter '{param_name}' not found in section '{section_name}' for {config_file_}")
-                continue
+                param_value = getattr(section, param_name, None)
+                if param_value is None:
+                    print(f"warning: parameter '{param_name}' not found in section '{section_name}' for {config_file_}")
+                    continue
 
             # Get log directory
             results_log_path = os.path.join('./log', config_file, 'results.log')
@@ -7896,11 +7907,26 @@ def data_flyvis_compare(config_list, varied_parameter):
         })
 
     # Sort by parameter value
-    summary_results.sort(key=lambda x: x['param_value'])
+    # For config indices, try to sort numerically if possible
+    if varied_parameter is None:
+        try:
+            # Try to sort by the numerical values of the indices
+            summary_results.sort(key=lambda x: [int(part) for part in x['param_value'].split('_')])
+        except ValueError:
+            # Fall back to string sorting if conversion fails
+            summary_results.sort(key=lambda x: x['param_value'])
+    else:
+        summary_results.sort(key=lambda x: x['param_value'])
 
     # Print comparison summary
-    param_display_name = varied_parameter.split('.')[1]  # Show just parameter name in table
-    print(f"\n=== parameter comparison: {varied_parameter} ===")
+    if varied_parameter is None:
+        param_display_name = "config_indices"
+        parameter_name = "config file indices"
+    else:
+        param_display_name = varied_parameter.split('.')[1]  # Show just parameter name in table
+        parameter_name = varied_parameter
+
+    print(f"\n=== parameter comparison: {parameter_name} ===")
     print(
         f"{param_display_name:<15} {'weights R²':<15} {'tau R²':<15} {'V_rest R²':<15} {'clustering acc':<18} {'best eps':<10} {'n_configs':<10}")
     print("-" * 100)
@@ -7928,7 +7954,6 @@ def data_flyvis_compare(config_list, varied_parameter):
         print(f"   {param_display_name}: {best_acc_result['param_value']}, n={best_acc_result['n_configs']}")
     print("\n" + "=" * 100)
 
-    param_display_name = varied_parameter.split('.')[1]
     # Prepare data for plotting
     param_values_str = [str(r['param_value']) for r in summary_results]
     r2_means = [r['r2_mean'] for r in summary_results]
@@ -7976,7 +8001,7 @@ def data_flyvis_compare(config_list, varied_parameter):
             compression_errors.append(0)
 
     # Create figure with six panels (2x3 layout)
-    fig, ((ax1, ax4, ax5), (ax2, ax3, ax6)) = plt.subplots(2, 3, figsize=(20, 12))
+    fig, ((ax1, ax4, ax6), (ax2, ax3, ax5)) = plt.subplots(2, 3, figsize=(20, 12))
 
     # Weights R² panel
     ax1.errorbar(param_values_str, r2_means, yerr=r2_errors,
@@ -8083,7 +8108,7 @@ def data_flyvis_compare(config_list, varied_parameter):
     for text in legend.get_texts():
         text.set_color('white')
     ax5.grid(True, alpha=0.3)
-    ax5.set_ylim(0, 400)
+    ax5.set_ylim(0, 500)
     ax5.tick_params(colors='white')
 
     # Add sample size annotations for video files
@@ -8099,35 +8124,85 @@ def data_flyvis_compare(config_list, varied_parameter):
                 ax5.text(param_values_str[i], libx264_size + libx264_errors[i] + max_size * 0.02,
                          f'n={n}', ha='center', va='bottom', fontsize=8, color='white')
 
-    # Experiment listing panel (ax6)
-    ax6.axis('off')  # Turn off axis for text display
-    ax6.set_title('Experiment Summary', fontsize=14, pad=20, color='white')
+    # Loss curves panel (ax6)
+    ax6.set_title('loss curves comparison', fontsize=14, color='white')
+    ax6.set_xlabel('epochs', fontsize=12, color='white')
+    ax6.set_ylabel('loss', fontsize=12, color='white')
+    ax6.tick_params(colors='white')
+    ax6.grid(True, alpha=0.3)
 
-    # Create text content for experiment listing
+    # Generate distinct colors for different configs
+    import matplotlib.cm as cm
+    colors = cm.tab10(np.linspace(0, 1, len(config_list)))
+
+    legend_info = []
+
+    for i, config_file_ in enumerate(config_list):
+        try:
+            config_file, pre_folder = add_pre_folder(config_file_)
+            loss_path = os.path.join('./log', config_file, 'loss.pt')
+
+            if os.path.exists(loss_path):
+                import torch
+                loss_values = torch.load(loss_path, map_location='cpu')
+                loss_values = np.array(loss_values)
+
+                epochs = np.arange(len(loss_values))
+                ax6.plot(epochs, loss_values, color=colors[i], linewidth=2, alpha=0.8)
+
+                # Get parameter value for this config
+                if varied_parameter is None:
+                    parts = config_file_.split('_')
+                    if len(parts) >= 2:
+                        param_val = f"{parts[-2]}_{parts[-1]}"
+                    else:
+                        param_val = config_file_
+                else:
+                    try:
+                        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+                        section_name, param_name = varied_parameter.split('.', 1)
+                        section = getattr(config, section_name, None)
+                        if section is not None:
+                            param_val = getattr(section, param_name, config_file_)
+                        else:
+                            param_val = config_file_
+                    except:
+                        param_val = config_file_
+
+                legend_info.append(f"{param_val}")
+
+        except Exception as e:
+            print(f"Warning: Could not load loss for {config_file_}: {e}")
+
+    # Add legend with parameter values and colors
+    if legend_info:
+        ax6.legend(legend_info, fontsize=10, loc='upper right')
+        legend = ax6.get_legend()
+        legend.get_frame().set_facecolor('black')
+        legend.get_frame().set_alpha(0.8)
+        for text in legend.get_texts():
+            text.set_color('white')
+
+    # Add text info without box
     text_content = []
-    text_content.append(f"Parameter: {varied_parameter}")
-    text_content.append("")  # Empty line
+    text_content.append(f"Parameter: {parameter_name}")
+    text_content.append(f"Configs: {len(config_list)}")
 
+    # Group configs by parameter value
+    param_groups = {}
     for r in summary_results:
         param_val = r['param_value']
         n_configs = r['n_configs']
-        configs = r['configs']
+        if param_val not in param_groups:
+            param_groups[param_val] = n_configs
 
-        # Header for parameter value
-        text_content.append(f"{param_display_name} = {param_val} (n={n_configs}):")
+    for param_val, n_configs in param_groups.items():
+        text_content.append(f"{param_display_name}={param_val}: n={n_configs}")
 
-        # List configs for this parameter value
-        for config in configs:
-            text_content.append(f"  • {config}")
-        text_content.append("")  # Empty line between groups
-
-    # Join all text and display
     full_text = "\n".join(text_content)
-    ax6.text(0.05, 0.95, full_text, transform=ax6.transAxes, fontsize=10,
+    ax6.text(0.02, 0.98, full_text, transform=ax6.transAxes, fontsize=9,
              verticalalignment='top', horizontalalignment='left',
-             fontfamily='monospace', bbox=dict(boxstyle='round,pad=0.5',
-                                               facecolor='gray', alpha=0.8),
-             color='white')
+             fontfamily='monospace', color='white')
 
     plt.tight_layout()
 
@@ -8233,7 +8308,7 @@ def data_flyvis_compare(config_list, varied_parameter):
             return a * x + b
 
         # Create three-panel plot
-        fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 6))
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
 
         # Panel 1: All learned weights vs true
         ax1.scatter(all_true_flat, all_corrected_flat, c='lightblue', s=0.5, alpha=0.3)
@@ -8288,35 +8363,7 @@ def data_flyvis_compare(config_list, varied_parameter):
         ax2.grid(False)
         ax2.tick_params(colors='white')
 
-
-
-        # Panel 3: Mean weights vs true
-        ax3.scatter(true_weights, mean_weights, c='lightcoral', s=1, alpha=0.7)
-
-        if len(true_weights) > 0:
-            lin_fit, _ = curve_fit(linear_model, true_weights, mean_weights)
-            residuals = mean_weights - linear_model(true_weights, *lin_fit)
-            ss_res = np.sum(residuals ** 2)
-            ss_tot = np.sum((mean_weights - np.mean(mean_weights)) ** 2)
-            r_squared = 1 - (ss_res / ss_tot)
-
-            ax3.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}\nN: {len(true_weights)}',
-                     transform=ax3.transAxes, verticalalignment='top', fontsize=12, color='white')
-
-            x_line = np.linspace(true_weights.min(), true_weights.max(), 100)
-            y_line = linear_model(x_line, *lin_fit)
-            ax3.plot(x_line, y_line, 'r-', linewidth=2)
-
-        ax3.set_xlabel('true $W_{ij}$', fontsize=14, color='white')
-        ax3.set_ylabel('mean $W_{ij}$', fontsize=14, color='white')
-        ax3.set_title('Mean Weights', fontsize=16, color='white')
-        ax3.set_xlim([-2, 4.5])
-        ax3.set_ylim([-2, 4.5])
-        ax3.grid(False)
-        ax3.tick_params(colors='white')
-
         plt.tight_layout()
-
 
         # Save corrected weights comparison figure
         weights_plot_filename = f'corrected_weights_comparison_{param_display_name}.png'
@@ -12181,25 +12228,27 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_31_5', 'fly_N9_36_1', 'fly_N9_36_2', 'fly_N9_36_3', 'fly_N9_36_4', 'fly_N9_36_5', 'fly_N9_31_6', 'fly_N9_36_7']
     # data_flyvis_compare(config_list, 'training.recursive_loop')
 
-    # config_list = ['fly_N9_37_1', 'fly_N9_37_2', 'fly_N9_37_3', 'fly_N9_37_4', 'fly_N9_37_5', 'fly_N9_37_6']
+    config_list = ['fly_N9_37_1', 'fly_N9_37_2', 'fly_N9_37_3', 'fly_N9_37_4', 'fly_N9_37_5', 'fly_N9_37_6']
+    data_flyvis_compare(config_list, None)
 
-    config_list = ['fly_N9_18_4_0', 'fly_N9_33_5', 'fly_N9_18_4_1', 'fly_N9_33_5_1']
+    # config_list = ['fly_N9_18_4_0', 'fly_N9_33_5', 'fly_N9_18_4_1', 'fly_N9_33_5_1']
+    # config_list = ['fly_N9_18_4_14', 'fly_N9_31_5']
 
-    for config_file_ in config_list:
-        print(' ')
-
-        config_file, pre_folder = add_pre_folder(config_file_)
-        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        config.dataset = pre_folder + config.dataset
-        config.config_file = pre_folder + config_file_
-
-        print(f'config_file  {config.config_file}')
-
-        folder_name = './log/' + pre_folder + '/tmp_results/'
-        os.makedirs(folder_name, exist_ok=True)
-        data_plot(config=config, config_file=config_file, epoch_list=['all'], style='black color', device=device)
-
-
+    # for config_file_ in config_list:
+    #     print(' ')
+    #
+    #     config_file, pre_folder = add_pre_folder(config_file_)
+    #     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+    #     config.dataset = pre_folder + config.dataset
+    #     config.config_file = pre_folder + config_file_
+    #
+    #     print(f'config_file  {config.config_file}')
+    #
+    #     folder_name = './log/' + pre_folder + '/tmp_results/'
+    #     os.makedirs(folder_name, exist_ok=True)
+    #     data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
+    #
+    #
 
 
 
