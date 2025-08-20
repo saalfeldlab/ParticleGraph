@@ -392,8 +392,10 @@ if __name__ == '__main__':
                 idx = to_numpy(idx)
 
                 # Initial states
-                v = v_true[idx, None].clone().requires_grad_(True)
-                w = model.siren(t_batch).clone().requires_grad_(True)
+                w = model.siren(t_batch)
+                v0 = v_true[idx, None].clone().requires_grad_(True)
+                w0 = model.siren(t_batch).clone().requires_grad_(True)
+                v = v0
                 optimizer.zero_grad()
 
                 recursive_loop = 3
@@ -406,10 +408,8 @@ if __name__ == '__main__':
                     lambda_jac = 0.0
 
                 for loop in range(recursive_loop):
-                    # Forward dynamics
                     dv_pred = model.mlp0(torch.cat((v, w, I_ext[idx, None].clone().detach()), dim=1))
                     dw_pred = model.mlp1(torch.cat((v, w), dim=1))
-
 
                     def jacobian_reg(output, wrt, tau, device):
                         g = torch.autograd.grad(
@@ -419,19 +419,22 @@ if __name__ == '__main__':
                         g_norm = torch.tensor(0.0, device=device) if g is None else g.norm(p=2, dim=1).mean()
                         return torch.relu(tau - g_norm) ** 2
 
-
                     # Enforce Jacobian regularization for all four derivatives:
+                    # ∂(dv/dt)/∂v → keep dv sensitive to v (self-excitation)
+                    # ∂(dv/dt)/∂w → keep dv sensitive to w (recovery inhibition)
+                    # ∂(dw/dt)/∂v → keep dw sensitive to v (voltage drives recovery)
+                    # ∂(dw/dt)/∂w → optionally enforce weak sensitivity or suppression (w leak term)
                     if lambda_jac > 0:
-                        R_jac_vv = jacobian_reg(dv_pred, v, tau=tau_vv, device=v.device)  # ∂dv/∂v
-                        R_jac_vw = jacobian_reg(dv_pred, w, tau=tau_vw, device=v.device)  # ∂dv/∂w
-                        R_jac_wv = jacobian_reg(dw_pred, v, tau=tau_wv, device=v.device)  # ∂dw/∂v
-                        R_jac_ww = jacobian_reg(dw_pred, w, tau=tau_ww, device=v.device)  # ∂dw/∂w
+                        R_jac_vv = jacobian_reg(dv_pred, v0, tau=tau_vv, device=v.device)  # ∂dv/∂v
+                        R_jac_vw = jacobian_reg(dv_pred, w0, tau=tau_vw, device=v.device)  # ∂dv/∂w
+                        R_jac_wv = jacobian_reg(dw_pred, v0, tau=tau_wv, device=v.device)  # ∂dw/∂v
+                        R_jac_ww = jacobian_reg(dw_pred, w0, tau=tau_ww, device=v.device)  # ∂dw/∂w
                     else:
                         R_jac_vv = R_jac_vw = R_jac_wv = R_jac_ww = torch.tensor(0.0, device=v.device)
 
-                    # Euler update — re-wrap with requires_grad so Jacobian stays trackable in next loop
-                    v = (v + dt * dv_pred).clone().detach().requires_grad_(True)
-                    w = (w + dt * dw_pred).clone().detach().requires_grad_(True)
+                    # Euler update
+                    v = v + dt * dv_pred
+                    w = w + dt * dw_pred
 
                     # Loss against ground truth
                     step_idx = idx + loop + 1
@@ -441,12 +444,7 @@ if __name__ == '__main__':
                     v_step_loss = (v - v_target).norm(2)
                     w_step_loss = (w - w_target_siren).norm(2)
 
-                    step_weight = (
-                        config.training.recursive_weight[loop]
-                        if loop < len(config.training.recursive_weight)
-                        else 1.0
-                    )
-
+                    step_weight = (loop + 1) / recursive_loop
                     step_loss = step_weight * (v_step_loss + w_step_loss)
 
                     # add both Jacobian penalties
