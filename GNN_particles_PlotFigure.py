@@ -7184,12 +7184,12 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                 reconstructed_tau_filtered = -reconstructed_tau[finite_mask]
                 gt_taus_filtered = gt_taus_numpy[finite_mask]
                 if len(gt_taus_filtered) > 0 and len(reconstructed_tau_filtered) > 0:
-                    ax5.scatter(gt_taus_filtered, reconstructed_tau_filtered, c=mc, s=1, alpha=0.5)
                     lin_fit, lin_fitv = curve_fit(linear_model, gt_taus_filtered, reconstructed_tau_filtered)
                     residuals = reconstructed_tau_filtered - linear_model(gt_taus_filtered, *lin_fit)
                     ss_res = np.sum(residuals ** 2)
                     ss_tot = np.sum((reconstructed_tau_filtered - np.mean(reconstructed_tau_filtered)) ** 2)
                     r_squared = 1 - (ss_res / ss_tot)
+                    ax5.scatter(gt_taus_filtered , reconstructed_tau_filtered / (lin_fit[0] + 1E-8), c=mc, s=1, alpha=0.5)
                     ax5.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}\nN: {len(gt_taus_filtered)}',
                              transform=ax5.transAxes, verticalalignment='top', fontsize=18)
                 ax5.set_xlabel('true $\\tau$', fontsize=23)
@@ -7209,12 +7209,13 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                 reconstructed_V_rest_filtered = reconstructed_V_rest[finite_mask_vrest]
                 gt_V_rest_filtered = gt_V_rest_numpy[finite_mask_vrest]
                 if len(gt_V_rest_filtered) > 0 and len(reconstructed_V_rest_filtered) > 0:
-                    ax6.scatter(gt_V_rest_filtered, reconstructed_V_rest_filtered, c=mc, s=1, alpha=0.5)
+
                     lin_fit, lin_fitv = curve_fit(linear_model, gt_V_rest_filtered, reconstructed_V_rest_filtered)
                     residuals = reconstructed_V_rest_filtered - linear_model(gt_V_rest_filtered, *lin_fit)
                     ss_res = np.sum(residuals ** 2)
                     ss_tot = np.sum((reconstructed_V_rest_filtered - np.mean(reconstructed_V_rest_filtered)) ** 2)
                     r_squared = 1 - (ss_res / ss_tot)
+                    ax6.scatter(gt_V_rest_filtered, reconstructed_V_rest_filtered / (lin_fit[0] + 1E-8), c=mc, s=1, alpha=0.5)
                     ax6.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}\nN: {len(gt_V_rest_filtered)}',
                              transform=ax6.transAxes, verticalalignment='top', fontsize=18)
                 ax6.set_xlabel('true $V_{rest}$', fontsize=23)
@@ -12182,7 +12183,7 @@ if __name__ == '__main__':
 
     # config_list = ['fly_N9_37_1', 'fly_N9_37_2', 'fly_N9_37_3', 'fly_N9_37_4', 'fly_N9_37_5', 'fly_N9_37_6']
 
-    config_list = ['fly_N9_18_4_0']
+    config_list = ['fly_N9_18_4_0', 'fly_N9_33_5', 'fly_N9_18_4_1', 'fly_N9_33_5_1']
 
     for config_file_ in config_list:
         print(' ')
