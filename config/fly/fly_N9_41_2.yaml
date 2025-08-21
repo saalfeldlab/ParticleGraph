@@ -1,5 +1,5 @@
-description: 'small MLP, no extra null edges, noise_model_level: 0 mixed'
-dataset: 'fly_N9_41_1'
+description: 'small MLP, no extra null edges, noise_model_level: 0 mixed noise_model_level: 0.025'
+dataset: 'fly_N9_41_2'
 
 simulation:
     connectivity_file: 'to be specified'
@@ -45,7 +45,7 @@ plotting:
     ylim: [ -8,8 ]
 
 training:
-    n_epochs: 10
+    n_epochs: 20
     n_runs: 1
     device: 'auto'
 
@@ -62,7 +62,7 @@ training:
     learning_rate_embedding_start: 5.0E-3
 
     measurement_noise_level: 0
-    noise_model_level: 0
+    noise_model_level: 0.025
     coeff_edge_diff: 500
     coeff_update_u_diff: 0
     coeff_update_msg_diff: 0

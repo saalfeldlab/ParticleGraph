@@ -3066,6 +3066,16 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
 
     pde = PDE_N9(p=p, f=torch.nn.functional.relu, params=simulation_config.params,
                  model_type=model_config.signal_model_name, n_neuron_types=n_neuron_types, device=device)
+
+    if bSave:
+        # torch.save(mask, f"./graphs_data/{dataset_name}/mask.pt")
+        # torch.save(connectivity, f"./graphs_data/{dataset_name}/connectivity.pt")
+        torch.save(p["w"], f"./graphs_data/{dataset_name}/weights.pt")
+        torch.save(edge_index, f"graphs_data/{dataset_name}/edge_index.pt")
+        torch.save(p["tau_i"], f"./graphs_data/{dataset_name}/taus.pt")
+        torch.save(p["V_i_rest"], f"./graphs_data/{dataset_name}/V_i_rest.pt")
+
+
     x_coords, y_coords, u_coords, v_coords = get_photoreceptor_positions_from_net(net)
 
     node_types = np.array(net.connectome.nodes["type"])
@@ -3099,9 +3109,10 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
     # Mixed sequence setup
     if "mixed" in visual_input_type:
         mixed_types = ["sintel", "davis", "blank", "noise"]
-        mixed_cycle_length = getattr(simulation_config, 'mixed_cycle_length', 100)
+        mixed_cycle_lengths = [60, 60, 30, 60]  # Different lengths for each type
         mixed_current_type = 0
         mixed_frame_count = 0
+        current_cycle_length = mixed_cycle_lengths[mixed_current_type]
         if not davis_dataset:
             sintel_config_mixed = {
                 "n_frames": 19,
@@ -3146,9 +3157,10 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
                 sequences = data["lum"]
 
                 if "mixed" in visual_input_type:
-                    if mixed_frame_count >= mixed_cycle_length:
+                    if mixed_frame_count >= current_cycle_length:
                         mixed_current_type = (mixed_current_type + 1) % 4
                         mixed_frame_count = 0
+                        current_cycle_length = mixed_cycle_lengths[mixed_current_type]
                     current_type = mixed_types[mixed_current_type]
 
                     if current_type == "sintel":
@@ -3176,7 +3188,7 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
                     else:
                         start_frame = 0
 
-                for frame_id in trange(sequences.shape[0]):
+                for frame_id in range(sequences.shape[0]):
                     if "mixed" in visual_input_type:
                         current_type = mixed_types[mixed_current_type]
 
@@ -3256,6 +3268,7 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
                                             37, 38, 39, 40, 41, 42, 0]
 
                         fig, axes = plt.subplots(8, 9, figsize=(18.04, 16.23), facecolor='black')
+                        plt.subplots_adjust(top=1.2, bottom=0.05, hspace=1.2)
                         axes_flat = axes.flatten()
                         all_voltages = to_numpy(x[:, 3])
 
@@ -3271,7 +3284,7 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
                                                               c=to_numpy(x[:n_input_neurons, 4]), cmap="viridis",
                                                               vmin=0, vmax=1.05, marker='h', alpha=1.0, linewidths=0.0,
                                                               edgecolors='black')
-                                ax.set_title('Input', fontsize=24, color='white', pad=5)
+                                ax.set_title('stimuli', fontsize=18, color='white', pad=8, y=0.95)
                             else:
                                 type_mask = neuron_types == type_idx
                                 type_count = np.sum(type_mask)
@@ -3295,11 +3308,11 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
                                         title_color = 'magenta'
                                     else:
                                         title_color = 'white'
-                                    ax.set_title(f'{type_name}', fontsize=18, color='white', pad=5)
+                                    ax.set_title(f'{type_name}', fontsize=18, color='white', pad=8, y=0.95)
                                 else:
                                     ax.text(0.5, 0.5, f'No {type_name}\nNeurons', transform=ax.transAxes, ha='center',
                                             va='center', color='red', fontsize=8)
-                                    ax.set_title(f'{type_name}\n(0)', fontsize=10, color='gray', pad=5)
+                                    ax.set_title(f'{type_name}\n(0)', fontsize=10, color='gray', pad=8, y=0.95)
 
                             ax.set_facecolor('black')
                             ax.set_xticks([])
@@ -3336,11 +3349,11 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
         with open(src, "rb") as fsrc, open(dst, "wb") as fdst:
             fdst.write(fsrc.read())
 
-        generate_lossless_video_ffv1(output_dir=f"./graphs_data/{dataset_name}", run=run, config_indices=config_indices)
+        generate_lossless_video_ffv1(output_dir=f"./graphs_data/{dataset_name}", run=run, config_indices=config_indices,framerate=20)
         generate_lossless_video_libx264(output_dir=f"./graphs_data/{dataset_name}", run=run,
-                                        config_indices=config_indices)
+                                        config_indices=config_indices,framerate=20)
         generate_compressed_video_mp4(output_dir=f"./graphs_data/{dataset_name}", run=run,
-                                      config_indices=config_indices)
+                                      config_indices=config_indices,framerate=20)
 
         files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
         for f in files:

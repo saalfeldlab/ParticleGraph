@@ -2390,9 +2390,13 @@ def plot_odor_heatmaps(odor_responses):
 
 
 
+import numpy as np
+from tqdm import trange
+
 def sparse_ising_fit(x, voltage_col=3, top_k=50):
     """
-    Fit a sparse Ising model from neuron voltages using pseudolikelihood.
+    Fit a sparse Ising model from neuron voltages using correlation-based approximation.
+    Much faster than full pseudolikelihood logistic regression.
 
     Parameters
     ----------
@@ -2408,38 +2412,168 @@ def sparse_ising_fit(x, voltage_col=3, top_k=50):
     s : np.ndarray
         Binary states [-1,+1], shape [n_frames, n_neurons]
     h : np.ndarray
-        Bias terms, shape [n_neurons]
+        Bias terms (mean-field approx), shape [n_neurons]
     J : list of dict
         Sparse couplings: for neuron i, J[i] = {j: value, ...} for top_k couplings
     """
     n_frames, n_neurons, _ = x.shape
     voltage = x[:, :, voltage_col]
 
-    # Binarize at mean
+    # Binarize at mean per neuron
     mean_v = voltage.mean(axis=0)
-    s = np.where(voltage > mean_v, 1, -1)
+    s = np.where(voltage > mean_v, 1, -1).astype(np.int8)  # [n_frames, n_neurons]
 
-    h = np.zeros(n_neurons)
+    # Mean magnetization
+    m = s.mean(axis=0)
+    # Avoid inf when m ~ +/-1
+    m = np.clip(m, -0.999, 0.999)
+    h = np.arctanh(m)  # mean-field bias approximation
+
+    # Correlation matrix (normalized)
+    C = (s.T @ s) / n_frames
+    np.fill_diagonal(C, 0.0)
+
+    # Sparse coupling dictionary
     J = [{} for _ in range(n_neurons)]
-
-    # Fit neuron i as logistic regression against all others
-    for i in range(n_neurons):
-        y = (s[:, i] + 1) // 2  # convert to {0,1} for logistic regression
-        X = s[:, np.arange(n_neurons) != i]
-        lr = LogisticRegression(penalty='l1', solver='saga', max_iter=500)
-        lr.fit(X, y)
-
-        coef = lr.coef_[0]
-        intercept = lr.intercept_[0]
-        h[i] = intercept / 2  # scale back to Ising convention
-        # insert top_k largest magnitude couplings
-        idx_other = np.arange(n_neurons) != i
-        top_idx = np.argsort(np.abs(coef))[-top_k:]
-        for j_idx in top_idx:
-            j = idx_other[j_idx]
-            J[i][j] = coef[j_idx] / 2  # scale to Ising
+    for i in trange(n_neurons):
+        top_idx = np.argsort(np.abs(C[i]))[-top_k:]
+        for j in top_idx:
+            J[i][j] = C[i, j]
 
     return s, h, J
+
+
+def sparse_ising_fit_fast(x, voltage_col=3, top_k=50, block_size=2000, dtype=np.float32, energy_stride=10):
+    """
+    Fast, blockwise sparse Ising approximation (correlation-based).
+    Also computes Ising energy for every `energy_stride` frames.
+
+    Returns
+    -------
+    s : np.ndarray (int8)
+        binarized states {-1,+1}, shape [n_frames, n_neurons]
+    h : np.ndarray (float32)
+        bias terms (mean-field approx), shape [n_neurons]
+    J : list of dict
+        sparse couplings: J[i] is dict {j: value, ...} (top_k entries)
+    E : np.ndarray (float32)
+        energy per frame (subsampled), shape [n_frames//energy_stride]
+    """
+    n_frames, n_neurons, _ = x.shape
+    voltage = x[:, :, voltage_col]
+
+    # 1) Binarize at per-neuron mean -> {-1,+1}
+    mean_v = voltage.mean(axis=0)
+    s = np.where(voltage > mean_v, 1, -1).astype(np.int8)
+
+    # 2) mean magnetization and biases
+    m = s.mean(axis=0).astype(dtype)
+    m = np.clip(m, -0.999, 0.999)
+    h = np.arctanh(m).astype(dtype)
+
+    # 3) Blockwise correlation scan, keeping top_k couplings
+    J = [dict() for _ in range(n_neurons)]
+    blocks = list(range(0, n_neurons, block_size))
+    topk_vals = np.full((n_neurons, top_k), -np.inf, dtype=dtype)
+    topk_idx  = np.zeros((n_neurons, top_k), dtype=np.int32)
+
+    for bj in trange(len(blocks), desc="blocks (j)"):
+        j0, j1 = blocks[bj], min(n_neurons, blocks[bj] + block_size)
+        sj = s[:, j0:j1].astype(dtype)
+        for bi in range(0, n_neurons, block_size):
+            i0, i1 = bi, min(n_neurons, bi + block_size)
+            si = s[:, i0:i1].astype(dtype)
+            C_block = (si.T @ sj) / n_frames
+            for local_i in range(i1 - i0):
+                global_i = i0 + local_i
+                vals = C_block[local_i]
+                cur_vals = topk_vals[global_i]
+                cur_idx  = topk_idx[global_i]
+                new_vals = np.concatenate([cur_vals, vals.astype(dtype)])
+                new_idx  = np.concatenate([cur_idx, np.arange(j0, j1, dtype=np.int32)])
+                order = np.argsort(np.abs(new_vals))[-top_k:]
+                topk_vals[global_i] = new_vals[order]
+                topk_idx[global_i]  = new_idx[order]
+
+    for i in trange(n_neurons, desc="fill J"):
+        vals, idxs = topk_vals[i], topk_idx[i]
+        for v, j in zip(vals, idxs):
+            if j != i and np.isfinite(v):
+                J[i][int(j)] = float(v)
+
+    # 4) Energy for every `energy_stride` frames
+    E = np.zeros(n_frames // energy_stride, dtype=np.float32)
+    for k, t in enumerate(trange(0, n_frames, energy_stride, desc="energy")):
+        st = s[t]
+        E_t = -np.dot(h, st)
+        for i, Ji in enumerate(J):
+            si = st[i]
+            for j, Jij in Ji.items():
+                if j > i:  # avoid double counting
+                    E_t -= Jij * si * st[j]
+        E[k] = E_t
+
+    # 5) Energy averaged `energy_stride` frames
+    # E = []
+    # for t0 in trange(0, n_frames, energy_stride):
+    #     t1 = min(t0 + energy_stride, n_frames)
+    #     s_block = s[t0:t1]  # shape [≤energy_stride, n_neurons]
+    #
+    #     # average over the block
+    #     E_block = (
+    #             - (h @ s_block.T)
+    #             - sum(s_block[:, i] * sum(J[i][j] * s_block[:, j] for j in J[i])
+    #                   for i in range(len(J)))
+    #     ).mean()
+    #
+    #     E.append(E_block)
+    #
+    # E = np.array(E, dtype=np.float32)
+
+    return s, h, J, E
+
+
+
+def compute_frame_probs_from_sparse_J(s, h, J, normalize=True):
+    """
+    Compute approximate model probability per frame using sparse J.
+    Energy: E(s) = - sum_i h_i s_i - 0.5 * sum_i sum_j J[i][j] s_i s_j
+    Returns P_model(t) ∝ exp(-E(s(t))). If normalize=True, returns normalized probabilities.
+    """
+    n_frames, n_neurons = s.shape
+    s_float = s.astype(np.int8)
+
+    # compute linear term: - sum_i h_i s_i  -> shape (n_frames,)
+    lin = -(s_float @ h)
+
+    # compute quadratic term using sparse J (we accumulate and multiply by -0.5)
+    quad = np.zeros(n_frames, dtype=np.float32)
+    for i, row in enumerate(J):
+        if not row:
+            continue
+        si = s_float[:, i].astype(np.int8)  # (n_frames,)
+        # accumulate si * sum_j J_ij * s_j
+        # build arrays of js and values
+        js = np.fromiter(row.keys(), dtype=np.int32)
+        vals = np.fromiter(row.values(), dtype=np.float32)
+        if js.size == 0:
+            continue
+        # s[:, js] -> (n_frames, len(js)); dot with vals -> (n_frames,)
+        quad += si * (s_float[:, js].astype(np.int8) @ vals)
+
+    energy = lin - 0.5 * quad   # shape (n_frames,)
+    # negative because P ∝ exp(-E). Here "energy" is E(s) as defined; we use -E for logits
+    logp = -energy.astype(np.float64)
+    # numeric stabilize
+    logp = logp - logp.max()
+    p_un = np.exp(logp)
+    if normalize:
+        p = p_un / (p_un.sum() + 1e-20)
+        return p.astype(np.float32)
+    else:
+        return p_un.astype(np.float32)
+
+
 
 
 

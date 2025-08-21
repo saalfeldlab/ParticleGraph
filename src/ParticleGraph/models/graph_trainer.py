@@ -3583,8 +3583,40 @@ def data_train_flyvis(config, erase, best_model, device):
         y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
         x_list.append(x)
         y_list.append(y)
-    print(f'loaded dataset with {len(x_list)} runs, each with {len(x_list[0])} frames')
+    print(f'dataset: {len(x_list)} run, {len(x_list[0])} frames')
     x = x_list[0][n_frames - 10]
+
+    # s, h, J = sparse_ising_fit(x=x_list[0], voltage_col=3, top_k=50)
+
+    # x is your x_list[0] with shape (90720, 13741, 7)
+    energy_stride = 8
+    s, h, J, E = sparse_ising_fit_fast(x=x_list[0], voltage_col=3, top_k=50, block_size=2000, energy_stride=energy_stride)
+
+    fig, axes = plt.subplots(2, 1, figsize=(12, 10))
+
+    # Top panel: Energy vs frame
+    axes[0].plot(np.arange(0, len(E) * energy_stride, energy_stride), E, lw=0.5)
+    axes[0].set_xlabel("Frame")
+    axes[0].set_ylabel("Energy")
+    axes[0].set_title("Ising energy over frames")
+
+    # Bottom panel: Histogram of energies
+    axes[1].hist(E, bins=200, density=True)
+    axes[1].set_xlabel("Energy")
+    axes[1].set_ylabel("Density")
+    axes[1].set_title("Energy distribution")
+
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/E_panels.png", dpi=150)
+    plt.close(fig)
+
+    # check shapes
+    print("s.shape:", s.shape, "h.shape:", h.shape, "len(J):", len(J), "E.shape:", E.shape)
+    # compute approximate per-frame model probabilities (normalized)
+    # P_model = compute_frame_probs_from_sparse_J(s, h, J)
+    # print("P_model sum:", P_model.sum(), "min/max:", P_model.min(), P_model.max())
+
+
 
     activity = torch.tensor(x_list[0][:, :, 3:4], device=device)
     activity = activity.squeeze()
@@ -3597,7 +3629,6 @@ def data_train_flyvis(config, erase, best_model, device):
         xnorm = torch.tensor(1.0, device=device)
     torch.save(xnorm, os.path.join(log_dir, 'xnorm.pt'))
     print(f'xnorm: {to_numpy(xnorm)}')
-
     logger.info(f'xnorm: {to_numpy(xnorm)}')
 
     n_neurons = x.shape[0]
@@ -3631,6 +3662,7 @@ def data_train_flyvis(config, erase, best_model, device):
         model.load_state_dict(state_dict['model_state_dict'])
         logger.info(f'pretrained: {net}')
         start_epoch = 0
+        list_loss = []
     else:
         start_epoch = 0
         list_loss = []
@@ -3668,7 +3700,7 @@ def data_train_flyvis(config, erase, best_model, device):
     logger.info(f'N epochs: {n_epochs}')
     logger.info(f'initial batch_size: {batch_size}')
 
-    connectivity = torch.load(f'./graphs_data/{dataset_name}/connectivity.pt', map_location=device)
+    # connectivity = torch.load(f'./graphs_data/{dataset_name}/connectivity.pt', map_location=device)
     gt_weights = torch.load(f'./graphs_data/{dataset_name}/weights.pt', map_location=device)
     edges = torch.load(f'./graphs_data/{dataset_name}/edge_index.pt', map_location=device)
     edges_all = edges.clone().detach()

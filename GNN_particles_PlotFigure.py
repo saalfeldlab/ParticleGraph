@@ -6753,7 +6753,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
     logger.info(f'xnorm: {to_numpy(xnorm)}, vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
 
     # Load data with new format
-    connectivity = torch.load(f'./graphs_data/{dataset_name}/connectivity.pt', map_location=device)
+    # connectivity = torch.load(f'./graphs_data/{dataset_name}/connectivity.pt', map_location=device)
     gt_weights = torch.load(f'./graphs_data/{dataset_name}/weights.pt', map_location=device)
     gt_taus = torch.load(f'./graphs_data/{dataset_name}/taus.pt', map_location=device)
     gt_V_Rest = torch.load(f'./graphs_data/{dataset_name}/V_i_rest.pt', map_location=device)
@@ -12234,7 +12234,7 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_18_4_0', 'fly_N9_33_5', 'fly_N9_18_4_1', 'fly_N9_33_5_1']
     # config_list = ['fly_N9_18_4_14', 'fly_N9_31_5']
 
-    config_list = ['fly_N9_40_1', 'fly_N9_40_2', 'fly_N9_40_5', 'fly_N9_40_6', 'fly_N9_40_7', 'fly_N9_40_8', 'fly_N9_40_9','fly_N9_40_10','fly_N9_40_12']
+    config_list = ['fly_N9_40_1', 'fly_N9_40_2', 'fly_N9_40_3', 'fly_N9_40_5', 'fly_N9_40_6', 'fly_N9_40_7', 'fly_N9_40_8', 'fly_N9_40_9','fly_N9_40_10','fly_N9_40_10', 'fly_N9_40_12', 'fly_N9_41_1', 'fly_N9_41_2']
 
     for config_file_ in config_list:
         print(' ')
