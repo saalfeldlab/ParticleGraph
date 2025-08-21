@@ -17,7 +17,7 @@ simulation:
     model_id: '001'
     ensemble_id: '0000'
 
-    visual_input_type: "DAVIS_UNZOOMED"
+    visual_input_type: "DAVIS"
 
 graph_model:
     signal_model_name: 'PDE_N9_A'

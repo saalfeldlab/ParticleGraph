@@ -58,6 +58,7 @@ class SimulationConfig(BaseModel):
     noise_visual_input: float = 0.0
     only_noise_visual_input: float = 0.0
     visual_input_type: str = ""
+    blank_freq: int = 2  # Frequency of blank frames in visual input
     simulation_initial_state: bool = False
 
     n_grid: int = 128
@@ -256,6 +257,7 @@ class TrainingConfig(BaseModel):
     embedding_trial: bool = False
     remove_self: bool = True
 
+    pretrained_model: str = ""
     pre_trained_W: str = ""
 
     multi_connectivity: bool = False

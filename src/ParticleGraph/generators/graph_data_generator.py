@@ -3261,14 +3261,14 @@ def data_generate_fly_voltage(
                     if (only_noise_visual_input > 0):
                         if (visual_input_type == "") | (it ==0) | ("50/50" in visual_input_type):
                             x[:n_input_neurons, 4:5] = torch.relu(0.5 + torch.rand((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input / 2)
-                        elif visual_input_type == "3/4":
-                            x[:n_input_neurons, 4:5] = torch.clamp(x[:n_input_neurons, 4:5] * 3/4 + 1/4 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input, 0 , 1)
-                        elif visual_input_type == "9/10":
-                            x[:n_input_neurons, 4:5] = torch.clamp(x[:n_input_neurons, 4:5] * 9/10 + 1/10 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input, 0 , 1)
-                        elif visual_input_type == "19/20":
-                            x[:n_input_neurons, 4:5] = torch.clamp(x[:n_input_neurons, 4:5] * 19/20 + 1/20 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input, 0 , 1)
                     else:
-                        x[:, 4] = net.stimulus().squeeze()
+                        if 'blank' in visual_input_type:
+                            if data_idx % simulation_config.blank_freq == 0:
+                                x[:, 4] = net.stimulus().squeeze()
+                            else:
+                                x[:, 4] = 0
+                        else:
+                            x[:, 4] = net.stimulus().squeeze()
                         if noise_visual_input > 0:
                             x[:n_input_neurons, 4:5] = x[:n_input_neurons, 4:5] + torch.randn(
                                 (n_input_neurons, 1), dtype=torch.float32, device=device
