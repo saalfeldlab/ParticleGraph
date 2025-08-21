@@ -67,6 +67,8 @@ class PDE_N9(pyg.nn.MessagePassing):
     def message(self, v_j, particle_type_j):
         if 'multiple_ReLU' in self.model_type:
             return self.p["w"][:, None] * self.f(v_j) * self.params[particle_type_j.squeeze()]
+        elif 'NULL' in self.model_type:
+            return 0 * self.f(v_j)
         else:
             return self.p["w"][:, None] * self.f(v_j)
 

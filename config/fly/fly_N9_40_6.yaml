@@ -53,7 +53,7 @@ training:
     batch_size: 8
     batch_ratio: 1
 
-    pretrained_model: "/groups/saalfeld/home/allierc/Py/ParticleGraph/log/fly/fly_N9_37_2/models/best_model_with_0_graphs_10_430920.pt"
+#    pretrained_model: "/groups/saalfeld/home/allierc/Py/ParticleGraph/log/fly/fly_N9_37_2/models/best_model_with_0_graphs_10_430920.pt"
 
     sparsity: 'none'
     rotation_augmentation: False
