@@ -1,4 +1,4 @@
-description: 'small MLP, no extra null edges, noise_model_level: 0 DAVIS'
+description: 'small MLP, no extra null edges, noise_model_level: 0 DAVIS blank'
 dataset: 'fly_N9_40_1'
 
 simulation:

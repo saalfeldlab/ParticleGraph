@@ -3229,7 +3229,7 @@ def data_generate_fly_voltage(
     print(f"📊 frame generation plan:")
     print(f"   - dataset samples: {dataset_length}")
     print(f"   - frames per sample: {frames_per_sequence}")
-    print(f"   - grames per full pass: {total_frames_per_pass}")
+    print(f"   - frames per full pass: {total_frames_per_pass}")
     print(f"   - target frames: {target_frames}")
     print(f"   - passes needed: {num_passes_needed}")
 
@@ -3263,7 +3263,7 @@ def data_generate_fly_voltage(
                             x[:n_input_neurons, 4:5] = torch.relu(0.5 + torch.rand((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input / 2)
                     else:
                         if 'blank' in visual_input_type:
-                            if data_idx % simulation_config.blank_freq == 0:
+                            if (data_idx % simulation_config.blank_freq == 0):
                                 x[:, 4] = net.stimulus().squeeze()
                             else:
                                 x[:, 4] = 0
@@ -3442,9 +3442,16 @@ def data_generate_fly_voltage(
 
     if visualize & (run == run_vizualized):
         print('generating lossless video ...')
-        generate_lossless_video_ffv1(output_dir=f"./graphs_data/{dataset_name}", run=run)
-        generate_lossless_video_libx264(output_dir=f"./graphs_data/{dataset_name}", run=run)
-        generate_compressed_video_mp4(output_dir=f"./graphs_data/{dataset_name}", run=run)
+
+        config_indices = dataset_name.split('fly_N9_')[1] if 'fly_N9_' in dataset_name else 'no_id'
+        src = f"./graphs_data/{dataset_name}/Fig/Fig_0_000000.png"
+        dst = f"./graphs_data/{dataset_name}/input_{config_indices}.png"
+        with open(src, "rb") as fsrc, open(dst, "wb") as fdst:
+            fdst.write(fsrc.read())
+
+        generate_lossless_video_ffv1(output_dir=f"./graphs_data/{dataset_name}", run=run, config_indices=config_indices)
+        generate_lossless_video_libx264(output_dir=f"./graphs_data/{dataset_name}", run=run, config_indices=config_indices)
+        generate_compressed_video_mp4(output_dir=f"./graphs_data/{dataset_name}", run=run, config_indices=config_indices)
 
         files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
         for f in files:

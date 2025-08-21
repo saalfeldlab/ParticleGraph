@@ -1,4 +1,4 @@
-description: 'small MLP, no extra null edges, noise_model_level: 0 DAVIS pre_trained model + train MLPs batchsize 4'
+description: 'small MLP, no extra null edges, noise_model_level: 0 DAVIS blank pre_trained model + train MLPs batchsize 4'
 dataset: 'fly_N9_40_1'
 
 simulation:

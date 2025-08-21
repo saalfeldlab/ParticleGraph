@@ -1,5 +1,5 @@
-description: 'small MLP, no extra null edges, noise_model_level: 0 DAVIS blank pre_trained model'
-dataset: 'fly_N9_40_1'
+description: 'small MLP, no extra null edges, noise_model_level: 0 DAVIS blank freq 3'
+dataset: 'fly_N9_40_9'
 
 simulation:
     connectivity_file: 'to be specified'
@@ -16,7 +16,7 @@ simulation:
     baseline_value: 0
 
     visual_input_type: "DAVIS_blank"
-    blank_freq: 2
+    blank_freq: 3
 
 
 graph_model:
@@ -52,8 +52,6 @@ training:
     recursive_loop: 1
     batch_size: 1
     batch_ratio: 1
-
-    pretrained_model: "/groups/saalfeld/home/allierc/Py/ParticleGraph/log/fly/fly_N9_37_2/models/best_model_with_0_graphs_10_430920.pt"
 
     sparsity: 'none'
     rotation_augmentation: False

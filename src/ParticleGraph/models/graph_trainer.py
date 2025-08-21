@@ -3624,15 +3624,13 @@ def data_train_flyvis(config, erase, best_model, device):
         start_epoch = int(best_model.split('_')[0])
         print(f'best_model: {best_model}  start_epoch: {start_epoch}')
         logger.info(f'best_model: {best_model}  start_epoch: {start_epoch}')
-        # list_loss = torch.load(os.path.join(log_dir, 'loss.pt'))
-    elif  train_config.pretrained_model !=''
+    elif  train_config.pretrained_model !='':
         net = train_config.pretrained_model
         print(f'load pretrained {net} ...')
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
         logger.info(f'pretrained: {net}')
-        # list_loss = torch.load(os.path.join(log_dir, 'loss.pt'))
-
+        start_epoch = 0
     else:
         start_epoch = 0
         list_loss = []

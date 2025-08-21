@@ -1955,7 +1955,7 @@ def init_connectivity(connectivity_file, connectivity_distribution, connectivity
 
 import subprocess
 
-def generate_lossless_video_ffv1(output_dir, run=0, framerate=10, output_name="output_video_ffv1.mkv"):
+def generate_lossless_video_ffv1(output_dir, run=0, framerate=10, output_name="_ffv1.mkv", config_indices=None):
     """
     Generate a truly lossless compressed video using ffmpeg's FFV1 codec.
 
@@ -1967,7 +1967,7 @@ def generate_lossless_video_ffv1(output_dir, run=0, framerate=10, output_name="o
     """
     fig_dir = os.path.join(output_dir, "Fig")
     input_pattern = os.path.join(fig_dir, f"Fig_{run}_%06d.png")
-    output_path = os.path.join(output_dir, output_name)
+    output_path = os.path.join(output_dir, f"input_{config_indices}{output_name}")
 
     ffmpeg_cmd = [
         "ffmpeg",
@@ -1984,7 +1984,7 @@ def generate_lossless_video_ffv1(output_dir, run=0, framerate=10, output_name="o
     subprocess.run(ffmpeg_cmd, check=True)
     print(f"Lossless video (FFV1) saved to: {output_path}")
 
-def generate_lossless_video_libx264(output_dir, run=0, framerate=10, output_name="output_video_libx264.mkv"):
+def generate_lossless_video_libx264(output_dir, run=0, framerate=10, output_name="_libx264.mkv", config_indices=None):
     """
     Generate a lossless H.264 video using libx264 from a sequence of PNG images.
 
@@ -1996,7 +1996,7 @@ def generate_lossless_video_libx264(output_dir, run=0, framerate=10, output_name
     """
     fig_dir = os.path.join(output_dir, "Fig")
     input_pattern = os.path.join(fig_dir, f"Fig_{run}_%06d.png")
-    output_path = os.path.join(output_dir, output_name)
+    output_path = os.path.join(output_dir, f"input_{config_indices}{output_name}")
 
     command = [
         "ffmpeg",
@@ -2014,7 +2014,7 @@ def generate_lossless_video_libx264(output_dir, run=0, framerate=10, output_name
     subprocess.run(command, check=True)
     print(f"Lossless video (libx264) saved to: {output_path}")
 
-def generate_compressed_video_mp4(output_dir, run=0, framerate=10, output_name="output_video_libx264.mp4", crf=23):
+def generate_compressed_video_mp4(output_dir, run=0, framerate=10, output_name=".mp4", config_indices=None, crf=23):
     """
     Generate a compressed video using ffmpeg's libx264 codec in MP4 format.
     Automatically handles odd dimensions by scaling to even dimensions.
@@ -2031,7 +2031,7 @@ def generate_compressed_video_mp4(output_dir, run=0, framerate=10, output_name="
 
     fig_dir = os.path.join(output_dir, "Fig")
     input_pattern = os.path.join(fig_dir, f"Fig_{run}_%06d.png")
-    output_path = os.path.join(output_dir, output_name)
+    output_path = os.path.join(output_dir, f"input_{config_indices}{output_name}")
 
     # Video filter to ensure even dimensions (required for yuv420p)
     # This scales the video so both width and height are divisible by 2
