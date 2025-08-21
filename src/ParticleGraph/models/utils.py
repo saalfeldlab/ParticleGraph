@@ -19,6 +19,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import seaborn as sns
 from scipy.optimize import curve_fit
+from sklearn.linear_model import LogisticRegression
 from ParticleGraph.fitting_models import linear_model
 import json
 from matplotlib.animation import FFMpegWriter
@@ -2384,6 +2385,61 @@ def plot_odor_heatmaps(odor_responses):
 
     plt.tight_layout()
     return fig
+
+
+
+
+
+def sparse_ising_fit(x, voltage_col=3, top_k=50):
+    """
+    Fit a sparse Ising model from neuron voltages using pseudolikelihood.
+
+    Parameters
+    ----------
+    x : np.ndarray
+        [n_frames, n_neurons, n_features], voltage in voltage_col
+    voltage_col : int
+        Index of voltage column
+    top_k : int
+        Number of strongest couplings to keep per neuron
+
+    Returns
+    -------
+    s : np.ndarray
+        Binary states [-1,+1], shape [n_frames, n_neurons]
+    h : np.ndarray
+        Bias terms, shape [n_neurons]
+    J : list of dict
+        Sparse couplings: for neuron i, J[i] = {j: value, ...} for top_k couplings
+    """
+    n_frames, n_neurons, _ = x.shape
+    voltage = x[:, :, voltage_col]
+
+    # Binarize at mean
+    mean_v = voltage.mean(axis=0)
+    s = np.where(voltage > mean_v, 1, -1)
+
+    h = np.zeros(n_neurons)
+    J = [{} for _ in range(n_neurons)]
+
+    # Fit neuron i as logistic regression against all others
+    for i in range(n_neurons):
+        y = (s[:, i] + 1) // 2  # convert to {0,1} for logistic regression
+        X = s[:, np.arange(n_neurons) != i]
+        lr = LogisticRegression(penalty='l1', solver='saga', max_iter=500)
+        lr.fit(X, y)
+
+        coef = lr.coef_[0]
+        intercept = lr.intercept_[0]
+        h[i] = intercept / 2  # scale back to Ising convention
+        # insert top_k largest magnitude couplings
+        idx_other = np.arange(n_neurons) != i
+        top_idx = np.argsort(np.abs(coef))[-top_k:]
+        for j_idx in top_idx:
+            j = idx_other[j_idx]
+            J[i][j] = coef[j_idx] / 2  # scale to Ising
+
+    return s, h, J
 
 
 

@@ -12228,27 +12228,29 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_31_5', 'fly_N9_36_1', 'fly_N9_36_2', 'fly_N9_36_3', 'fly_N9_36_4', 'fly_N9_36_5', 'fly_N9_31_6', 'fly_N9_36_7']
     # data_flyvis_compare(config_list, 'training.recursive_loop')
 
-    config_list = ['fly_N9_37_1', 'fly_N9_37_2', 'fly_N9_37_3', 'fly_N9_37_4', 'fly_N9_37_5', 'fly_N9_37_6']
-    data_flyvis_compare(config_list, None)
+    # config_list = ['fly_N9_18_4_15', 'fly_N9_18_4_16', 'fly_N9_18_4_17', 'fly_N9_18_4_18', 'fly_N9_38_1', 'fly_N9_38_2', 'fly_N9_38_3', 'fly_N9_38_4', 'fly_N9_39_0', 'fly_N9_39_1', 'fly_N9_39_2', 'fly_N9_39_3']
+    # data_flyvis_compare(config_list, None)
 
     # config_list = ['fly_N9_18_4_0', 'fly_N9_33_5', 'fly_N9_18_4_1', 'fly_N9_33_5_1']
     # config_list = ['fly_N9_18_4_14', 'fly_N9_31_5']
 
-    # for config_file_ in config_list:
-    #     print(' ')
-    #
-    #     config_file, pre_folder = add_pre_folder(config_file_)
-    #     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-    #     config.dataset = pre_folder + config.dataset
-    #     config.config_file = pre_folder + config_file_
-    #
-    #     print(f'config_file  {config.config_file}')
-    #
-    #     folder_name = './log/' + pre_folder + '/tmp_results/'
-    #     os.makedirs(folder_name, exist_ok=True)
-    #     data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
-    #
-    #
+    config_list = ['fly_N9_40_1', 'fly_N9_40_2', 'fly_N9_40_3', 'fly_N9_40_4', 'fly_N9_40_5', 'fly_N9_40_6', 'fly_N9_40_7', 'fly_N9_40_8', 'fly_N9_40_9','fly_N9_40_10','fly_N9_40_12']
+
+    for config_file_ in config_list:
+        print(' ')
+
+        config_file, pre_folder = add_pre_folder(config_file_)
+        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+        config.dataset = pre_folder + config.dataset
+        config.config_file = pre_folder + config_file_
+
+        print(f'config_file  {config.config_file}')
+
+        folder_name = './log/' + pre_folder + '/tmp_results/'
+        os.makedirs(folder_name, exist_ok=True)
+        data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
+
+
 
 
 

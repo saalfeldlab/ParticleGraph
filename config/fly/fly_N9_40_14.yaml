@@ -1,5 +1,5 @@
-description: 'small MLP, no extra null edges, noise_model_level: 0 DAVIS blank freq 3'
-dataset: 'fly_N9_40_9'
+description: 'small MLP, no extra null edges, noise_model_level: 0 DAVIS blank'
+dataset: 'fly_N9_40_14'
 
 simulation:
     connectivity_file: 'to be specified'
@@ -12,11 +12,11 @@ simulation:
     n_neuron_types: 65
     n_edges: 434112
     n_frames: 90720
-    delta_t: 0.02
+    delta_t: 0.05
     baseline_value: 0
 
     visual_input_type: "DAVIS_blank"
-    blank_freq: 4
+    blank_freq: 2
 
 
 graph_model:

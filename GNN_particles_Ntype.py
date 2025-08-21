@@ -69,14 +69,14 @@ if __name__ == "__main__":
         # config_list = ['arbitrary_3']
         # config_list = ['cell_cardio_2_4']
         # config_list = ['RD_RPS_5']
-        # config_list = ['cell_U2OS_9_2']a
+        # config_list = ['cell_U2OS_9_2']
         # config_list = ['springs_matrix_N5_3']
         # config_list = ['cell_MDCK_16']
         # config_list = ['signal_CElegans_d2', 'signal_CElegans_d2a', 'signal_CElegans_d3', 'signal_CElegans_d3a', 'signal_CElegans_d3b']
         # config_list = ['signal_CElegans_c14_4']
         # config_list = ['signal_N5_v11_bis']
         # config_list = ['signal_fig_supp6_4']
-        config_list = ['fly_N9_40_1']
+        config_list = ['fly_N9_40_13', 'fly_N9_40_14']
         # config_list = ['fly_N9_34_1', 'fly_N9_34_2', 'fly_N9_34_3', 'fly_N9_34_4']
         # config_list = ['signal_N5_l4','signal_N5_l5']
 

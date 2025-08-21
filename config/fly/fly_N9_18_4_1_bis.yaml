@@ -1,5 +1,5 @@
-description: 'small MLP, no extra null edges, noise_model_level: 0 DAVIS blank freq 3'
-dataset: 'fly_N9_40_9'
+description: 'small MLP, no extra null edges, noise_model_level: 5E-1'
+dataset: 'fly_N9_18_4_1_bis'
 
 simulation:
     connectivity_file: 'to be specified'
@@ -14,9 +14,6 @@ simulation:
     n_frames: 90720
     delta_t: 0.02
     baseline_value: 0
-
-    visual_input_type: "DAVIS_blank"
-    blank_freq: 4
 
 
 graph_model:
@@ -41,7 +38,7 @@ graph_model:
 plotting:
     colormap: 'tab20'
     arrow_length: 1
-    xlim: [ -2.5,5 ]
+    xlim: [ -2.5,2.5 ]
     ylim: [ -8,8 ]
 
 training:
@@ -62,8 +59,8 @@ training:
     learning_rate_embedding_start: 5.0E-3
 
     measurement_noise_level: 0
-    noise_model_level: 0
+    noise_model_level: 5.0E-1
     coeff_edge_diff: 500
     coeff_update_u_diff: 0
     coeff_update_msg_diff: 0
-    coeff_edge_norm: 0
+    coeff_edge_norm: 1000.0

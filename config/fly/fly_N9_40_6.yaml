@@ -68,4 +68,4 @@ training:
     coeff_edge_diff: 500
     coeff_update_u_diff: 0
     coeff_update_msg_diff: 0
-    coeff_edge_norm: 1000.0
+    coeff_edge_norm: 0

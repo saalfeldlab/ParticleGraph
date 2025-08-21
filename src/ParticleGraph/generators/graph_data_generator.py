@@ -3263,7 +3263,7 @@ def data_generate_fly_voltage(
                             x[:n_input_neurons, 4:5] = torch.relu(0.5 + torch.rand((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input / 2)
                     else:
                         if 'blank' in visual_input_type:
-                            if (data_idx % simulation_config.blank_freq == 0):
+                            if (data_idx % simulation_config.blank_freq > 0):
                                 x[:, 4] = net.stimulus().squeeze()
                             else:
                                 x[:, 4] = 0

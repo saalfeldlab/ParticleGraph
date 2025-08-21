@@ -1,5 +1,5 @@
-description: 'small MLP, no extra null edges, noise_model_level: 0 DAVIS blank freq 3'
-dataset: 'fly_N9_40_9'
+description: 'small MLP, no extra null edges, noise_model_level: 0 DAVIS blank recursive_loop:2'
+dataset: 'fly_N9_40_1'
 
 simulation:
     connectivity_file: 'to be specified'
@@ -16,7 +16,7 @@ simulation:
     baseline_value: 0
 
     visual_input_type: "DAVIS_blank"
-    blank_freq: 4
+    blank_freq: 2
 
 
 graph_model:
@@ -49,13 +49,16 @@ training:
     n_runs: 1
     device: 'auto'
 
-    recursive_loop: 1
+    recursive_training: True
+    recursive_loop: 2
+    coeff_loop: [1.0,2.0,2.0,2.0]
+
     batch_size: 1
     batch_ratio: 1
 
     sparsity: 'none'
     rotation_augmentation: False
-    data_augmentation_loop: 25
+    data_augmentation_loop: 10
 
     learning_rate_W_start: 1.0E-3
     learning_rate_start: 5.0E-4
