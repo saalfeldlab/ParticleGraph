@@ -15,7 +15,7 @@ simulation:
     delta_t: 0.02
     baseline_value: 0
 
-    noise_visual_input_type: "DAVIS"
+    visual_input_type: "DAVIS"
 
 graph_model:
     signal_model_name: 'PDE_N9_A'

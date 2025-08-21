@@ -1,11 +1,11 @@
-description: 'small MLP, no extra null edges, noise_model_level: 0 DAVIS alt_prtrnd_model'
-dataset: 'fly_N9_37_5'
+description: 'small MLP, no extra null edges, noise_model_level: 0 only_noise_visual_input: 1.0 seed: 42  + 1.0 * tanh'
+dataset: 'fly_N9_39_2'
 
 simulation:
     connectivity_file: 'to be specified'
     adjacency_matrix: ''
 
-    params: [[1.0,1.0,1.0,1.0]]
+    params: [[1.4]]
 
     n_neurons: 13741
     n_input_neurons: 1736
@@ -14,13 +14,13 @@ simulation:
     n_frames: 90720
     delta_t: 0.02
     baseline_value: 0
-    model_id: '001'
-    ensemble_id: '0000'
 
-    visual_input_type: "DAVIS_UNZOOMED"
+    seed: 42
+
+    visual_input_type: "DAVIS"
 
 graph_model:
-    signal_model_name: 'PDE_N9_A'
+    signal_model_name: 'PDE_N9_A_multiple_ReLU'
     prediction: 'first_derivative'
 
     input_size: 3
@@ -49,7 +49,7 @@ training:
     n_runs: 1
     device: 'auto'
 
-    recursive_loop: 1
+    recursive_loop: 0
     batch_size: 1
     batch_ratio: 1
 

@@ -214,17 +214,18 @@ class RenderedDavis(Directory):
     """Rendering and referencing rendered DAVIS data.
 
     Args:
-        root_dir: Directory containing video files (.mp4, .avi, etc.)
         tasks: List of tasks to include in the rendering. Only 'lum' supported for videos.
         boxfilter: Key word arguments for the BoxEye filter.
         vertical_splits: Number of vertical splits of each frame.
-        n_frames: Number of frames to render for each sequence.
+        n_frames: Minimum number of frames required for a sequence to be used.
+        max_frames: Maximum number of frames to render per sequence. If None, use all available frames.
         center_crop_fraction: Fraction of the image to keep after cropping.
         unittest: If True, only renders a single sequence.
+        davis_path: Path to the directory containing DAVIS video sequence folders (each folder = one sequence).
 
     Attributes:
         config: Configuration parameters used for rendering.
-        video_<id>_<name>_split_<j>/lum (ArrayFile):
+        sequence_<id>_<name>_split_<j>/lum (ArrayFile):
             Rendered luminance data (frames, 1, hexals).
     """
 
@@ -234,6 +235,7 @@ class RenderedDavis(Directory):
             boxfilter: Dict[str, int] = dict(extent=15, kernel_size=13),
             vertical_splits: int = 3,
             n_frames: int = 19,
+            max_frames: Optional[int] = None,
             center_crop_fraction: float = 0.7,
             unittest: bool = False,
             davis_path: Optional[Union[str, Path]] = None,
@@ -262,16 +264,21 @@ class RenderedDavis(Directory):
 
         for i, seq_dir in enumerate(tqdm(sequence_dirs, desc="Rendering sequences")):
             try:
-                # Load image sequence from directory of JPEGs
-                frames = load_image_sequence(seq_dir, end_frame=n_frames + 10)  # Extra frames for safety
+                # Load full image sequence
+                frames = load_image_sequence(seq_dir, end_frame=None)
 
+                # Skip if sequence too short
                 if len(frames) < n_frames:
                     logger.warning(f"Sequence {seq_dir.name} has only {len(frames)} frames, skipping")
                     continue
 
+                # Apply max_frames cap if requested
+                if max_frames is not None and len(frames) > max_frames:
+                    frames = frames[:max_frames]
+
                 # Convert to grayscale luminance
                 lum_frames = []
-                for frame in frames[:n_frames]:  # Take only n_frames
+                for frame in frames:
                     gray = sample_lum_from_frame(frame)
                     gray = np.rot90(gray, k=-1)
                     lum_frames.append(gray)
@@ -279,7 +286,6 @@ class RenderedDavis(Directory):
                 lum = np.array(lum_frames)  # (frames, height, width)
 
                 # Apply spatial splitting and hexagonal sampling
-                # (splits, frames, height, width)
                 lum_split = split(
                     lum,
                     boxfilter.min_frame_size[1] + 2 * boxfilter.kernel_size,
@@ -292,7 +298,7 @@ class RenderedDavis(Directory):
 
                 # Store each split
                 for j in range(lum_hex.shape[0]):
-                    sequence_name = seq_dir.name  # directory name (e.g., "swing", "bear")
+                    sequence_name = seq_dir.name
                     path = f"sequence_{i:02d}_{sequence_name}_split_{j:02d}"
                     self[f"{path}/lum"] = lum_hex[j]
 
@@ -312,9 +318,9 @@ class RenderedDavis(Directory):
         Returns:
             Dictionary containing the rendered data for the specified sequence.
         """
-        # Load all stored h5 files into memory
         data = self[sorted(self)[seq_id]]
         return {key: data[key][:] for key in sorted(data)}
+
 
 
 class MultiTaskDavis(MultiTaskDataset):

@@ -1,4 +1,4 @@
-description: 'small MLP, no extra null edges, noise_model_level: 0 only_noise_visual_input: 1.0 noise_visual_input_type: 19/20 simulation_initial_state: True'
+description: 'small MLP, no extra null edges, noise_model_level: 0 only_noise_visual_input: 1.0 visual_input_type: 19/20 simulation_initial_state: True'
 dataset: 'fly_N9_28_11'
 
 simulation:
@@ -17,7 +17,7 @@ simulation:
 
     simulation_initial_state: True
     only_noise_visual_input: 1.0
-    noise_visual_input_type: "19/20"
+    visual_input_type: "19/20"
 
 graph_model:
     signal_model_name: 'PDE_N9_A'

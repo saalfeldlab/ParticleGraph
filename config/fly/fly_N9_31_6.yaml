@@ -18,7 +18,7 @@ simulation:
     seed: 42
 
 
-    noise_visual_input_type: "50/50"
+    visual_input_type: "50/50"
     only_noise_visual_input: 2.0
 
 graph_model:

@@ -12216,7 +12216,7 @@ if __name__ == '__main__':
     # data_flyvis_compare(config_list, 'simulation.n_extra_null_edges')
 
     # config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0',  'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4',  'fly_N9_35_1', 'fly_N9_35_2']
-    # data_flyvis_compare(config_list, 'simulation.noise_visual_input_type')
+    # data_flyvis_compare(config_list, 'simulation.visual_input_type')
 
     # config_list = ['fly_N9_31_1', 'fly_N9_36_2', 'fly_N9_36_3', 'fly_N9_36_4', 'fly_N9_36_5', 'fly_N9_31_6', 'fly_N9_36_7']
     # data_flyvis_compare(config_list, 'training.recursive_loop')

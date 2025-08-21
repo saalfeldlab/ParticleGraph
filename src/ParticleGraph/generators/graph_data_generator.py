@@ -2981,7 +2981,7 @@ def data_generate_fly_voltage(
     n_extra_null_edges = simulation_config.n_extra_null_edges
     noise_visual_input = simulation_config.noise_visual_input
     only_noise_visual_input = simulation_config.only_noise_visual_input
-    noise_visual_input_type = simulation_config.noise_visual_input_type
+    visual_input_type = simulation_config.visual_input_type
 
     os.makedirs("./graphs_data/fly", exist_ok=True)
     folder = f"./graphs_data/{dataset_name}/"
@@ -3007,32 +3007,30 @@ def data_generate_fly_voltage(
 
     # Initialize input stimulus data
 
-    if "DAVIS" in noise_visual_input_type:
+    if "DAVIS" in visual_input_type:
         datavis_root = "/groups/saalfeld/home/allierc/signaling/DATAVIS/JPEGImages/480p"
-
-        config_flyvis = Namespace(
+        config = Namespace(
             root_dir=datavis_root,
-            n_frames=34,
+            n_frames=50,
+            max_frames=80,
             flip_axes=[0, 1],
             n_rotations=[0, 90, 180, 270],
             temporal_split=True,
             dt=delta_t,
             interpolate=True,
             boxfilter=dict(extent=extent, kernel_size=13),
-            vertical_splits= 9,
+            vertical_splits= 1,
             center_crop_fraction=0.6,
             augment=False,  # No augmentation to fix translation issue
             unittest=False,  # Must be False to use all sequences
             # indices=None,           # Don't specify indices to use all
             # _init_cache=True,       # Cache for faster subsequent loads
         )
-
-        stimulus_dataset = AugmentedDavis(**config_flyvis)
+        stimulus_dataset = AugmentedDavis(**config)
 
     else:
-
         config = Namespace(
-            n_frames=19,
+            n_frames = 19,
             flip_axes=[0, 1],
             n_rotations=[0, 1, 2, 3, 4, 5],
             temporal_split=True,
@@ -3151,7 +3149,10 @@ def data_generate_fly_voltage(
     # plt.savefig(f'graphs_data/{dataset_name}/connectivity.png', dpi=300)
     # plt.close()
 
-    pde = PDE_N9(p=p, f=torch.nn.functional.relu, params = simulation_config.params, model_type = model_config.signal_model_name, device=device)
+    pde = PDE_N9(p=p, f=torch.nn.functional.relu, params = simulation_config.params, model_type = model_config.signal_model_name, n_neuron_types=n_neuron_types, device=device)
+    if 'multiple_ReLU' in model_config.signal_model_name:
+        torch.save(pde.params, f"./graphs_data/{dataset_name}/ReLU_params.pt")
+
 
     x_coords, y_coords, u_coords, v_coords = get_photoreceptor_positions_from_net(net)
 
@@ -3247,7 +3248,7 @@ def data_generate_fly_voltage(
                     if only_noise_visual_input > 0:
                         x[:n_input_neurons, 4:5] = torch.clamp(torch.relu(0.5 + torch.rand((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input / 2), 0 ,1)
                 sequences = data["lum"]
-                if ("50/50" in noise_visual_input_type):
+                if ("50/50" in visual_input_type):
                     if it > n_frames //2:
                         only_noise_visual_input = simulation_config.only_noise_visual_input
                     else:
@@ -3258,13 +3259,13 @@ def data_generate_fly_voltage(
                     net.stimulus.add_input(frame)  # (1, 1, n_input_neurons)
 
                     if (only_noise_visual_input > 0):
-                        if (noise_visual_input_type == "") | (it ==0) | ("50/50" in noise_visual_input_type):
+                        if (visual_input_type == "") | (it ==0) | ("50/50" in visual_input_type):
                             x[:n_input_neurons, 4:5] = torch.relu(0.5 + torch.rand((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input / 2)
-                        elif noise_visual_input_type == "3/4":
+                        elif visual_input_type == "3/4":
                             x[:n_input_neurons, 4:5] = torch.clamp(x[:n_input_neurons, 4:5] * 3/4 + 1/4 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input, 0 , 1)
-                        elif noise_visual_input_type == "9/10":
+                        elif visual_input_type == "9/10":
                             x[:n_input_neurons, 4:5] = torch.clamp(x[:n_input_neurons, 4:5] * 9/10 + 1/10 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input, 0 , 1)
-                        elif noise_visual_input_type == "19/20":
+                        elif visual_input_type == "19/20":
                             x[:n_input_neurons, 4:5] = torch.clamp(x[:n_input_neurons, 4:5] * 19/20 + 1/20 * torch.randn((n_input_neurons, 1), dtype=torch.float32, device=device) * only_noise_visual_input, 0 , 1)
                     else:
                         x[:, 4] = net.stimulus().squeeze()

@@ -25,14 +25,24 @@ class PDE_N9(pyg.nn.MessagePassing):
         
     """
 
-    def __init__(self, aggr_type="add", p=[], params=[], f=torch.nn.functional.relu, model_type=None, device=None):
+    def __init__(self, aggr_type="add", p=[], params=[], f=torch.nn.functional.relu, model_type=None, n_neuron_types=None, device=None):
         super(PDE_N9, self).__init__(aggr=aggr_type)
 
         self.p = p
         self.f = f
         self.model_type = model_type
         self.device = device
-        self.params = torch.tensor(params, dtype=torch.float32, device=device).squeeze()
+
+        if 'multiple_ReLU' in self.model_type:
+
+            if n_neuron_types is None:
+                raise ValueError("n_neuron_types must be provided for multiple_ReLU model type")
+            if params[0][0]>0:
+                self.params = torch.tensor(params[0], dtype=torch.float32, device=device).expand((n_neuron_types, 1))
+            else:
+                self.params = torch.abs(1 + 0.5 * torch.randn((n_neuron_types, 1), dtype=torch.float32, device=device))
+        else:
+            self.params = torch.tensor(params, dtype=torch.float32, device=device).squeeze()
 
 
     def forward(self, data=[], has_field=False):
@@ -40,9 +50,11 @@ class PDE_N9(pyg.nn.MessagePassing):
         v = x[:, 3:4]
         v_rest = self.p["V_i_rest"][:, None]
         e = x[:, 4:5]
-        msg = self.propagate(edge_index, v=v)
-        tau = self.p["tau_i"][:, None]
+        particle_type = x[:, 6: 7].long()
 
+
+        msg = self.propagate(edge_index, v=v, particle_type=particle_type)
+        tau = self.p["tau_i"][:, None]
 
         if 'tanh'in self.model_type:
             s = self.params
@@ -52,8 +64,11 @@ class PDE_N9(pyg.nn.MessagePassing):
 
         return dv
 
-    def message(self, v_j):
-        return self.p["w"][:, None] * self.f(v_j)
+    def message(self, v_j, particle_type_j):
+        if 'multiple_ReLU' in self.model_type:
+            return self.p["w"][:, None] * self.f(v_j) * self.params[particle_type_j.squeeze()]
+        else:
+            return self.p["w"][:, None] * self.f(v_j)
 
 def group_by_direction_and_function(neuron_type):
     if neuron_type in ['R1', 'R2', 'R3', 'R4', 'R5', 'R6']:
