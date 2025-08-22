@@ -3539,9 +3539,7 @@ def data_train_flyvis(config, erase, best_model, device):
 
     field_type = model_config.field_type
     time_step = train_config.time_step
-    has_missing_activity = train_config.has_missing_activity
-    multi_connectivity = config.training.multi_connectivity
-    baseline_value = simulation_config.baseline_value
+    Ising_filter = train_config.Ising_filter
 
     coeff_sign = train_config.coeff_sign
     coeff_update_msg_diff = train_config.coeff_update_msg_diff
@@ -3551,6 +3549,7 @@ def data_train_flyvis(config, erase, best_model, device):
     coeff_edge_weight_L1 = train_config.coeff_edge_weight_L1
 
     pre_trained_W = train_config.pre_trained_W
+    noise_level = train_config.noise_level
 
     n_edges = simulation_config.n_edges
     n_extra_null_edges = simulation_config.n_extra_null_edges
@@ -3726,6 +3725,9 @@ def data_train_flyvis(config, erase, best_model, device):
     list_loss_regul = []
     time.sleep(0.2)
 
+    if Ising_filter > 0:
+        idxs = np.where(np.abs(E - np.median(E)) <= Ising_filter)[0]
+
     for epoch in range(start_epoch, n_epochs + 1):
 
         if batch_ratio < 1:
@@ -3764,7 +3766,11 @@ def data_train_flyvis(config, erase, best_model, device):
 
             for batch in range(batch_size):
 
-                k = np.random.randint(n_frames - 4 - time_step)
+                if Ising_filter>0:
+                    k = np.random.choice(idxs)
+                    k = min(k, n_frames - 4 - time_step)
+                else:
+                    k = np.random.randint(n_frames - 4 - time_step)
                 x = torch.tensor(x_list[run][k], dtype=torch.float32, device=device)
                 ids = np.arange(n_neurons)
 
@@ -3831,6 +3837,8 @@ def data_train_flyvis(config, erase, best_model, device):
                         mask = torch.arange(edges_all.shape[1])
 
                     y = torch.tensor(y_list[run][k], device=device) / ynorm
+                    if noise_level>0:
+                        y = y + torch.randn(y.shape, device=device) * noise_level
 
                     if not (torch.isnan(y).any()):
 
