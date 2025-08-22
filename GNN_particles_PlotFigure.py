@@ -6749,6 +6749,46 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
     else:
         xnorm = torch.tensor([5], device=device)
 
+    # x is your x_list[0] with shape (90720, 13741, 7)
+    energy_stride = 1
+    s, h, J, E = sparse_ising_fit_fast(x=x_list[0], voltage_col=3, top_k=50, block_size=2000,
+                                       energy_stride=energy_stride)
+
+    fig, axes = plt.subplots(2, 2, figsize=(12, 10))  # Changed to 2x2 grid
+
+    plt.subplot(2, 1, 1)
+    plt.plot(np.arange(0, len(E) * energy_stride, energy_stride), E, lw=0.5)
+    plt.xlabel("Frame", fontsize=18)
+    plt.ylabel("Energy", fontsize=18)
+    plt.title("Ising Energy Over Frames", fontsize=18)
+    plt.xlim(0, 600)
+    plt.tick_params(axis='both', which='major', labelsize=18)
+
+    plt.subplot(2, 2, 3)
+    plt.hist(E, bins=200, density=True)
+    plt.xlabel("Energy", fontsize=18)
+    plt.ylabel("Density", fontsize=18)
+    plt.title("Energy Distribution (full range)", fontsize=18)
+    plt.tick_params(axis='both', which='major', labelsize=18)
+
+    plt.subplot(2, 2, 4)
+    plt.hist(E, bins=200, density=True)
+    plt.xlabel("Energy", fontsize=18)
+    plt.ylabel("Density", fontsize=18)
+    plt.xlim([-1000, 1000])
+    plt.title("Energy Distribution (fixed range)", fontsize=18)
+    plt.tick_params(axis='both', which='major', labelsize=18)
+
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/results/E_panels.png", dpi=150)
+    plt.close(fig)
+
+    np.save(f"./{log_dir}/results/E.npy", E)
+    np.save(f"./{log_dir}/results/s.npy", s)
+    np.save(f"./{log_dir}/results/h.npy", h)
+    np.save(f"./{log_dir}/results/J.npy", J)
+
+
     print(f'xnorm: {to_numpy(xnorm)}, vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
     logger.info(f'xnorm: {to_numpy(xnorm)}, vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
 
@@ -12257,16 +12297,15 @@ if __name__ == '__main__':
     # config_list = [ 'signal_CElegans_c14_4a', 'signal_CElegans_c14_4b', 'signal_CElegans_c14_4c',  'signal_CElegans_d1', 'signal_CElegans_d2', 'signal_CElegans_d3', ]
     # config_list = config_list = ['signal_CElegans_d2', 'signal_CElegans_d2a', 'signal_CElegans_d3', 'signal_CElegans_d3a', 'signal_CElegans_d3b']
 
-
-
+    config_list = ['fly_N9_18_4_1', 'fly_N9_18_4_0', 'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4', 'fly_N9_23_1', 'fly_N9_23_2', 'fly_N9_23_3', 'fly_N9_23_4', 'fly_N9_23_5', 'fly_N9_18_4_2', 'fly_N9_18_4_3', 'fly_N9_18_4_4', 'fly_N9_18_4_5', 'fly_N9_18_4_6']
 
     # plot no noise at all
-    config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0', 'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4']
-    data_flyvis_compare(config_list, 'training.seed')
+    # config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0', 'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4']
+    # data_flyvis_compare(config_list, 'training.seed')
 
     # # plot noise on video input
     # config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0',  'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4',
-    #                'fly_N9_23_1', 'fly_N9_23_2', 'fly_N9_23_3', 'fly_N9_23_4', 'fly_N9_23_5']
+    # config_list = ['fly_N9_23_1', 'fly_N9_23_2', 'fly_N9_23_3', 'fly_N9_23_4', 'fly_N9_23_5']
     # data_flyvis_compare(config_list, 'simulation.noise_visual_input')
 
 
@@ -12306,19 +12345,19 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_40_1', 'fly_N9_40_2', 'fly_N9_40_3', 'fly_N9_40_5', 'fly_N9_40_6', 'fly_N9_40_7', 'fly_N9_40_8', 'fly_N9_40_9','fly_N9_40_10','fly_N9_40_10', 'fly_N9_40_12'] #, 'fly_N9_41_1', 'fly_N9_41_2']
     # data_flyvis_compare(config_list, None)
 
-    # for config_file_ in config_list:
-    #     print(' ')
-    #
-    #     config_file, pre_folder = add_pre_folder(config_file_)
-    #     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-    #     config.dataset = pre_folder + config.dataset
-    #     config.config_file = pre_folder + config_file_
-    #
-    #     print(f'config_file  {config.config_file}')
-    #
-    #     folder_name = './log/' + pre_folder + '/tmp_results/'
-    #     os.makedirs(folder_name, exist_ok=True)
-    #     data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
+    for config_file_ in config_list:
+        print(' ')
+
+        config_file, pre_folder = add_pre_folder(config_file_)
+        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+        config.dataset = pre_folder + config.dataset
+        config.config_file = pre_folder + config_file_
+
+        print(f'config_file  {config.config_file}')
+
+        folder_name = './log/' + pre_folder + '/tmp_results/'
+        os.makedirs(folder_name, exist_ok=True)
+        data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
 
 
 
