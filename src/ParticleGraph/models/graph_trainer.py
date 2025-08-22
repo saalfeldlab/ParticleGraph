@@ -3934,6 +3934,9 @@ def data_train_flyvis(config, erase, best_model, device):
                     'optimizer_state_dict': optimizer.state_dict()},
                    os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
 
+        # anneal noise during training
+        noise_level = train_config.noise_level * (0.95 ** epoch)
+
         list_loss.append((total_loss-total_loss_regul) / n_neurons)
 
         list_loss_regul.append(total_loss_regul / n_neurons)
