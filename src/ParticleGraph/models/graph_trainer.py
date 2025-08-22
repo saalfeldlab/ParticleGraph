@@ -3589,7 +3589,7 @@ def data_train_flyvis(config, erase, best_model, device):
     # s, h, J = sparse_ising_fit(x=x_list[0], voltage_col=3, top_k=50)
 
     # x is your x_list[0] with shape (90720, 13741, 7)
-    energy_stride = 8
+    energy_stride = 1
     s, h, J, E = sparse_ising_fit_fast(x=x_list[0], voltage_col=3, top_k=50, block_size=2000, energy_stride=energy_stride)
 
     fig, axes = plt.subplots(2, 1, figsize=(12, 10))
@@ -3599,6 +3599,7 @@ def data_train_flyvis(config, erase, best_model, device):
     axes[0].set_xlabel("Frame")
     axes[0].set_ylabel("Energy")
     axes[0].set_title("Ising energy over frames")
+    axes[0].set_xlim(0, 400)
 
     # Bottom panel: Histogram of energies
     axes[1].hist(E, bins=200, density=True)

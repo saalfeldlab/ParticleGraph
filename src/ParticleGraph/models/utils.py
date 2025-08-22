@@ -2502,7 +2502,7 @@ def sparse_ising_fit_fast(x, voltage_col=3, top_k=50, block_size=2000, dtype=np.
                 J[i][int(j)] = float(v)
 
     # 4) Energy for every `energy_stride` frames
-    E = np.zeros(n_frames // energy_stride, dtype=np.float32)
+    E = []
     for k, t in enumerate(trange(0, n_frames, energy_stride, desc="energy")):
         st = s[t]
         E_t = -np.dot(h, st)
@@ -2511,7 +2511,8 @@ def sparse_ising_fit_fast(x, voltage_col=3, top_k=50, block_size=2000, dtype=np.
             for j, Jij in Ji.items():
                 if j > i:  # avoid double counting
                     E_t -= Jij * si * st[j]
-        E[k] = E_t
+        E.append(E_t)
+    E = np.array(E, dtype=np.float32)
 
     # 5) Energy averaged `energy_stride` frames
     # E = []

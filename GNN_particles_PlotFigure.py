@@ -7374,19 +7374,18 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
 
             # Plot 5c: Tau comparison (reconstructed vs ground truth)
             reconstructed_tau = np.where(slopes_lin_phi_array != 0, 1.0 / slopes_lin_phi_array, np.inf)
-            finite_mask = np.isfinite(reconstructed_tau)
+            # finite_mask = np.isfinite(reconstructed_tau)
 
             fig = plt.figure(figsize=(8, 8))
-            gt_taus_numpy = to_numpy(gt_taus[:n_neurons])
-            reconstructed_tau_filtered = -reconstructed_tau[finite_mask]
-            gt_taus_filtered = gt_taus_numpy[finite_mask]
-            plt.scatter(gt_taus_filtered, reconstructed_tau_filtered, c=mc, s=0.5, alpha=0.3)
-            lin_fit, lin_fitv = curve_fit(linear_model, gt_taus_filtered, reconstructed_tau_filtered)
-            residuals = reconstructed_tau_filtered - linear_model(gt_taus_filtered, *lin_fit)
+            gt_taus = to_numpy(gt_taus[:n_neurons])
+            reconstructed_tau = -reconstructed_tau[:n_neurons]
+            plt.scatter(gt_taus, reconstructed_tau, c=mc, s=0.5, alpha=0.3)
+            lin_fit, lin_fitv = curve_fit(linear_model, gt_taus, reconstructed_tau)
+            residuals = reconstructed_tau - linear_model(gt_taus, *lin_fit)
             ss_res = np.sum(residuals ** 2)
-            ss_tot = np.sum((reconstructed_tau_filtered - np.mean(reconstructed_tau_filtered)) ** 2)
+            ss_tot = np.sum((reconstructed_tau - np.mean(reconstructed_tau)) ** 2)
             r_squared = 1 - (ss_res / ss_tot)
-            plt.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}\nN: {len(gt_taus_filtered)}',
+            plt.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}\nN: {len(gt_taus)}',
                      transform=plt.gca().transAxes, verticalalignment='top', fontsize=16)
             plt.xlabel('true tau_i', fontsize=18)
             plt.ylabel('reconstructed tau_i', fontsize=18)
@@ -7397,6 +7396,8 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
             print(" ")
             print(f"tau reconstruction R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
             logger.info(f"tau reconstruction R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
+
+            torch.save(torch.tensor(reconstructed_tau, dtype=torch.float32, device=device), f'{log_dir}/results/tau.pt')
 
             # Plot 5d: V_rest comparison (reconstructed vs ground truth)
             # Calculate reconstructed V_rest as offset/slope, handle division by zero
@@ -7424,6 +7425,8 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
 
             print(f"V_rest reconstruction R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
             logger.info(f"V_rest reconstruction R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
+
+            torch.save(torch.tensor(reconstructed_V_rest, dtype=torch.float32, device=device), f'{log_dir}/results/V_rest.pt')
 
             if False:
                 print('linear fit clustering results')
@@ -7601,6 +7604,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
             slopes_lin_edge_per_edge = slopes_lin_edge_array[prior_neuron_ids]
 
             corrected_W = -model.W / slopes_lin_phi_per_edge[:, None] * grad_msg_per_edge * slopes_lin_edge_per_edge.unsqueeze(1)
+
             torch.save(corrected_W, f'{log_dir}/results/corrected_W.pt')
 
             # Plot 6: Weight comparison using model.W and gt_weights
@@ -7800,8 +7804,9 @@ def data_flyvis_compare(config_list, varied_parameter):
 
             # Check for video files and get their sizes
             video_dir = f'./graphs_data/fly/{config.dataset}'
-            ffv1_path = os.path.join(video_dir, 'output_video_ffv1.mkv')
-            libx264_path = os.path.join(video_dir, 'output_video_libx264.mkv')
+            config_indices = config.dataset.split('fly_N9_')[1] if 'fly_N9_' in config.dataset else 'no_id'
+            ffv1_path = os.path.join(video_dir, f'input_{config_indices}_ffv1.mkv')
+            libx264_path = os.path.join(video_dir, f'input_{config_indices}_libx264.mkv')
 
             ffv1_size_mb = None
             libx264_size_mb = None
@@ -8108,7 +8113,7 @@ def data_flyvis_compare(config_list, varied_parameter):
     for text in legend.get_texts():
         text.set_color('white')
     ax5.grid(True, alpha=0.3)
-    ax5.set_ylim(0, 500)
+    # ax5.set_ylim(0, 500)
     ax5.tick_params(colors='white')
 
     # Add sample size annotations for video files
@@ -8185,8 +8190,8 @@ def data_flyvis_compare(config_list, varied_parameter):
 
     # Add text info without box
     text_content = []
-    text_content.append(f"Parameter: {parameter_name}")
-    text_content.append(f"Configs: {len(config_list)}")
+    text_content.append(f"parameter: {parameter_name}")
+    text_content.append(f"config: {len(config_list)}")
 
     # Group configs by parameter value
     param_groups = {}
@@ -8255,136 +8260,200 @@ def data_flyvis_compare(config_list, varied_parameter):
     print(f"\nplot saved as: {plot_filename}")
     plt.close()
 
-    # Add corrected weights comparison at the end of data_flyvis_compare
-    print("\n" + "=" * 50)
-    print("CORRECTED WEIGHTS COMPARISON")
-    print("=" * 50)
+    print("")
+    print("aggregation of fits ...")
 
     # Read all corrected_W.pt files
     all_corrected_weights = []
-    all_true_weights = []
+    all_tau = []
+    all_V_rest = []
 
     for config_file_ in config_list:
         try:
-            # Load config
             config_file, pre_folder = add_pre_folder(config_file_)
-            config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-
-            # Get log directory
             log_dir = f'./log/{config_file}'
-            corrected_W_path = os.path.join(log_dir, 'results', 'corrected_W.pt')
 
-            if not os.path.exists(corrected_W_path):
-                continue
-
-            # Load corrected weights
-            import torch
-            from ParticleGraph.utils import to_numpy
-            corrected_W = torch.load(corrected_W_path, map_location='cpu')
+            corrected_W = torch.load(os.path.join(log_dir, 'results', 'corrected_W.pt'), map_location='cpu')
             corrected_weights = to_numpy(corrected_W.squeeze())
             all_corrected_weights.append(corrected_weights)
 
+            tau = torch.load(os.path.join(log_dir, 'results', 'tau.pt'), map_location='cpu')
+            all_tau.append(to_numpy(tau.squeeze()))
+            V_rest = torch.load(os.path.join(log_dir, 'results', 'V_rest.pt'), map_location='cpu')
+            all_V_rest.append(to_numpy(V_rest.squeeze()))
+
         except Exception as e:
-            print(f"Warning: Could not load corrected weights for {config_file_}: {e}")
+            print(f"warning: Could not load data for {config_file_}: {e}")
 
-    if all_corrected_weights:
-        # Load true weights from dataset (using first config for dataset name)
-        config_file, pre_folder = add_pre_folder(config_list[0])
-        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        dataset_name = config.dataset
-        gt_weights = torch.load(f'./graphs_data/fly/{dataset_name}/weights.pt', map_location='cpu')
-        true_weights = to_numpy(gt_weights)
+    config_file, pre_folder = add_pre_folder(config_list[0])
+    config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+    dataset_name = config.dataset
 
-        corrected_weights_stack = np.stack(all_corrected_weights, axis=0)
+    gt_weights = torch.load(f'./graphs_data/fly/{dataset_name}/weights.pt', map_location='cpu')
+    true_weights = to_numpy(gt_weights)
+    gt_taus = torch.load(f'./graphs_data/fly/{dataset_name}/taus.pt', map_location='cpu')
+    true_taus = to_numpy(gt_taus)
+    gt_V_rest = torch.load(f'./graphs_data/fly/{dataset_name}/V_i_rest.pt', map_location='cpu')
+    true_V_rest = to_numpy(gt_V_rest)
 
-        median_weights = np.median(corrected_weights_stack, axis=0)
-        mean_weights = np.mean(corrected_weights_stack, axis=0)
+    corrected_weights_stack = np.stack(all_corrected_weights, axis=0)
+    tau_stack = np.stack(all_tau, axis=0)
+    V_rest_stack = np.stack(all_V_rest, axis=0)
 
-        # Flatten all weights for the "all" plot
-        all_corrected_flat = corrected_weights_stack.flatten()
-        all_true_flat = np.tile(true_weights, len(all_corrected_weights))
+    median_weights = np.median(corrected_weights_stack, axis=0)
+    mean_weights = np.mean(corrected_weights_stack, axis=0)
 
-        def linear_model(x, a, b):
-            return a * x + b
+    median_tau = np.median(tau_stack, axis=0)
+    mean_tau = np.mean(tau_stack, axis=0)
+    median_V_rest = np.median(V_rest_stack, axis=0)
+    mean_V_rest = np.mean(V_rest_stack, axis=0)
 
-        # Create three-panel plot
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
+    all_corrected_flat = corrected_weights_stack.flatten()
+    all_true_flat = np.tile(true_weights, len(all_corrected_weights))
+    all_tau_flat = tau_stack.flatten()
+    all_true_tau_flat = np.tile(true_taus, len(all_tau))
+    all_V_rest_flat = V_rest_stack.flatten()
+    all_true_V_rest_flat = np.tile(true_V_rest, len(all_V_rest))
 
-        # Panel 1: All learned weights vs true
-        ax1.scatter(all_true_flat, all_corrected_flat, c='lightblue', s=0.5, alpha=0.3)
+    # Verify consistent experiment counts
+    assert len(all_corrected_weights) == len(all_tau) == len(all_V_rest), \
+        f"inconsistent experiment counts: weights={len(all_corrected_weights)}, tau={len(all_tau)}, V_rest={len(all_V_rest)}"
+    n_experiments = len(all_corrected_weights)
+    weights_shape = corrected_weights_stack.shape
+    tau_shape = tau_stack.shape
+    vrest_shape = V_rest_stack.shape
 
-        if len(all_true_flat) > 0:
-            from scipy.optimize import curve_fit
-            lin_fit, _ = curve_fit(linear_model, all_true_flat, all_corrected_flat)
-            residuals = all_corrected_flat - linear_model(all_true_flat, *lin_fit)
-            ss_res = np.sum(residuals ** 2)
-            ss_tot = np.sum((all_corrected_flat - np.mean(all_corrected_flat)) ** 2)
-            r_squared = 1 - (ss_res / ss_tot)
+    assert weights_shape[0] == tau_shape[0] == vrest_shape[0] == n_experiments, \
+        f"inconsistent batch dimensions: weights={weights_shape[0]}, tau={tau_shape[0]}, V_rest={vrest_shape[0]}"
+    print(f"✓ Successfully loaded {n_experiments} experiments")
 
-            ax1.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}\nN: {len(all_true_flat)}',
-                     transform=ax1.transAxes, verticalalignment='top', fontsize=12, color='white')
+    print(f"✓ Weights shape: {weights_shape}")
+    print(f"✓ Tau shape: {tau_shape}")
+    print(f"✓ V_rest shape: {vrest_shape}")
 
-            x_line = np.linspace(all_true_flat.min(), all_true_flat.max(), 100)
-            y_line = linear_model(x_line, *lin_fit)
-            ax1.plot(x_line, y_line, 'r-', linewidth=2)
+    # Create six-panel plot (2x3: rows for weights/tau/V_rest, columns for all/median)
+    fig, ((ax1, ax2), (ax3, ax4), (ax5, ax6)) = plt.subplots(3, 2, figsize=(12, 18))
 
-        ax1.set_xlabel('true $W_{ij}$', fontsize=14, color='white')
-        ax1.set_ylabel('learned $W_{ij}$ (all)', fontsize=14, color='white')
-        ax1.set_title(f'All Weights (n={len(all_corrected_weights)} exp)', fontsize=16, color='white')
-        ax1.set_xlim([-2, 4.5])
-        ax1.set_ylim([-2, 4.5])
-        ax1.grid(False)
-        ax1.tick_params(colors='white')
+    def linear_model(x, a, b):
+        return a * x + b
 
-        # Panel 2: Median weights vs true
-        ax2.scatter(true_weights, median_weights, c='lightgreen', s=1, alpha=0.7)
+    ax1.scatter(all_true_flat, all_corrected_flat, c='lightblue', s=0.5, alpha=0.3)
 
-        np.save('median_weights_1.npy', median_weights)
+    lin_fit, _ = curve_fit(linear_model, all_true_flat, all_corrected_flat)
+    residuals = all_corrected_flat - linear_model(all_true_flat, *lin_fit)
+    ss_res = np.sum(residuals ** 2)
+    ss_tot = np.sum((all_corrected_flat - np.mean(all_corrected_flat)) ** 2)
+    r_squared_all_weights = 1 - (ss_res / ss_tot)
+    ax1.text(0.05, 0.95, f'R²: {r_squared_all_weights:.3f}\nslope: {lin_fit[0]:.2f}\nN: {len(all_true_flat)}',
+             transform=ax1.transAxes, verticalalignment='top', fontsize=12, color='white')
+    x_line = np.linspace(all_true_flat.min(), all_true_flat.max(), 100)
+    y_line = linear_model(x_line, *lin_fit)
+    ax1.plot(x_line, y_line, 'r-', linewidth=2)
+    print(f"all weights R²: {r_squared_all_weights:.4f}, slope: {lin_fit[0]:.4f}")
+    ax1.set_xlabel('true $W_{ij}$', fontsize=14, color='white')
+    ax1.set_ylabel('learned $W_{ij}$ (all)', fontsize=14, color='white')
+    ax1.set_xlim([-2, 4.5])
+    ax1.set_ylim([-2, 4.5])
+    ax1.grid(False)
+    ax1.tick_params(colors='white')
 
-        if len(true_weights) > 0:
-            lin_fit, _ = curve_fit(linear_model, true_weights, median_weights)
-            residuals = median_weights - linear_model(true_weights, *lin_fit)
-            ss_res = np.sum(residuals ** 2)
-            ss_tot = np.sum((median_weights - np.mean(median_weights)) ** 2)
-            r_squared = 1 - (ss_res / ss_tot)
+    ax2.scatter(true_weights, median_weights, c='lightgreen', s=1, alpha=0.7)
+    lin_fit_w, _ = curve_fit(linear_model, true_weights, median_weights)
+    residuals = median_weights - linear_model(true_weights, *lin_fit_w)
+    ss_res = np.sum(residuals ** 2)
+    ss_tot = np.sum((median_weights - np.mean(median_weights)) ** 2)
+    r2_median_weights = 1 - (ss_res / ss_tot)
+    ax2.text(0.05, 0.95, f'R²: {r2_median_weights:.3f}\nslope: {lin_fit_w[0]:.2f}\nN: {len(true_weights)}',
+             transform=ax2.transAxes, verticalalignment='top', fontsize=12, color='white')
+    x_line = np.linspace(true_weights.min(), true_weights.max(), 100)
+    y_line = linear_model(x_line, *lin_fit_w)
+    ax2.plot(x_line, y_line, 'r-', linewidth=2)
+    print(f"median weights R²: {r2_median_weights:.4f}, slope: {lin_fit_w[0]:.4f}")
+    ax2.set_xlabel('true $W_{ij}$', fontsize=14, color='white')
+    ax2.set_ylabel('median $W_{ij}$', fontsize=14, color='white')
+    ax2.set_xlim([-2, 4.5])
+    ax2.set_ylim([-2, 4.5])
+    ax2.grid(False)
+    ax2.tick_params(colors='white')
 
-            ax2.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}\nN: {len(true_weights)}',
-                     transform=ax2.transAxes, verticalalignment='top', fontsize=12, color='white')
+    ax3.scatter(all_true_tau_flat, all_tau_flat, c='orange', s=0.5, alpha=0.3)
+    lin_fit, _ = curve_fit(linear_model, all_true_tau_flat, all_tau_flat)
+    residuals = all_tau_flat - linear_model(all_true_tau_flat, *lin_fit)
+    ss_res = np.sum(residuals ** 2)
+    ss_tot = np.sum((all_tau_flat - np.mean(all_tau_flat)) ** 2)
+    r_squared_all_tau = 1 - (ss_res / ss_tot)
+    ax3.text(0.05, 0.95, f'R²: {r_squared_all_tau:.3f}\nslope: {lin_fit[0]:.2f}\nN: {len(all_true_tau_flat)}',
+             transform=ax3.transAxes, verticalalignment='top', fontsize=12, color='white')
+    x_line = np.linspace(all_true_tau_flat.min(), all_true_tau_flat.max(), 100)
+    y_line = linear_model(x_line, *lin_fit)
+    ax3.plot(x_line, y_line, 'r-', linewidth=2)
+    print(f"all tau R²: {r_squared_all_tau:.4f}, slope: {lin_fit[0]:.4f}")
+    ax3.set_xlabel(r'true $\tau$', fontsize=14, color='white')
+    ax3.set_ylabel(r'learned $\tau$ (all)', fontsize=14, color='white')
+    ax3.set_xlim([0, 0.35])
+    ax3.set_ylim([0, 0.35])
+    ax3.grid(False)
+    ax3.tick_params(colors='white')
 
-            x_line = np.linspace(true_weights.min(), true_weights.max(), 100)
-            y_line = linear_model(x_line, *lin_fit)
-            ax2.plot(x_line, y_line, 'r-', linewidth=2)
+    min_len_tau = min(len(true_taus), len(median_tau))
+    ax4.scatter(true_taus[:min_len_tau], median_tau[:min_len_tau], c='yellow', s=1, alpha=0.7)
+    lin_fit_t, _ = curve_fit(linear_model, true_taus[:min_len_tau], median_tau[:min_len_tau])
+    residuals = median_tau[:min_len_tau] - linear_model(true_taus[:min_len_tau], *lin_fit_t)
+    ss_res = np.sum(residuals ** 2)
+    ss_tot = np.sum((median_tau[:min_len_tau] - np.mean(median_tau[:min_len_tau])) ** 2)
+    r2_median_tau = 1 - (ss_res / ss_tot)
+    ax4.text(0.05, 0.95, f'R²: {r2_median_tau:.3f}\nslope: {lin_fit_t[0]:.2f}\nN: {min_len_tau}',
+             transform=ax4.transAxes, verticalalignment='top', fontsize=12, color='white')
+    x_line = np.linspace(true_taus[:min_len_tau].min(), true_taus[:min_len_tau].max(), 100)
+    y_line = linear_model(x_line, *lin_fit_t)
+    ax4.plot(x_line, y_line, 'r-', linewidth=2)
+    print(f"median tau R²: {r2_median_tau:.4f}, slope: {lin_fit_t[0]:.4f}")
+    ax4.set_xlabel(r'true $\tau$', fontsize=14, color='white')
+    ax4.set_ylabel(r'median $\tau$', fontsize=14, color='white')
+    ax4.set_xlim([0, 0.35])
+    ax4.set_ylim([0, 0.35])
+    ax4.grid(False)
+    ax4.tick_params(colors='white')
 
-        ax2.set_xlabel('true $W_{ij}$', fontsize=14, color='white')
-        ax2.set_ylabel('median $W_{ij}$', fontsize=14, color='white')
-        ax2.set_title('Median Weights', fontsize=16, color='white')
-        ax2.set_xlim([-2, 4.5])
-        ax2.set_ylim([-2, 4.5])
-        ax2.grid(False)
-        ax2.tick_params(colors='white')
+    ax5.scatter(all_true_V_rest_flat, all_V_rest_flat, c='lightcoral', s=0.5, alpha=0.3)
+    lin_fit, _ = curve_fit(linear_model, all_true_V_rest_flat, all_V_rest_flat)
+    residuals = all_V_rest_flat - linear_model(all_true_V_rest_flat, *lin_fit)
+    ss_res = np.sum(residuals ** 2)
+    ss_tot = np.sum((all_V_rest_flat - np.mean(all_V_rest_flat)) ** 2)
+    r_squared_all_vrest = 1 - (ss_res / ss_tot)
+    ax5.text(0.05, 0.95, f'R²: {r_squared_all_vrest:.3f}\nslope: {lin_fit[0]:.2f}\nN: {len(all_true_V_rest_flat)}',
+             transform=ax5.transAxes, verticalalignment='top', fontsize=12, color='white')
+    x_line = np.linspace(all_true_V_rest_flat.min(), all_true_V_rest_flat.max(), 100)
+    y_line = linear_model(x_line, *lin_fit)
+    ax5.plot(x_line, y_line, 'r-', linewidth=2)
+    print(f"all V_rest R²: {r_squared_all_vrest:.4f}, slope: {lin_fit[0]:.4f}")
+    ax5.set_xlabel('true $V_{rest}$', fontsize=14, color='white')
+    ax5.set_ylabel('learned $V_{rest}$ (all)', fontsize=14, color='white')
+    ax5.grid(False)
+    ax5.tick_params(colors='white')
 
-        plt.tight_layout()
+    min_len_vrest = min(len(true_V_rest), len(median_V_rest))
+    ax6.scatter(true_V_rest[:min_len_vrest], median_V_rest[:min_len_vrest], c='pink', s=1, alpha=0.7)
+    lin_fit_v, _ = curve_fit(linear_model, true_V_rest[:min_len_vrest], median_V_rest[:min_len_vrest])
+    residuals = median_V_rest[:min_len_vrest] - linear_model(true_V_rest[:min_len_vrest], *lin_fit_v)
+    ss_res = np.sum(residuals ** 2)
+    ss_tot = np.sum((median_V_rest[:min_len_vrest] - np.mean(median_V_rest[:min_len_vrest])) ** 2)
+    r2_median_V_rest = 1 - (ss_res / ss_tot)
+    ax6.text(0.05, 0.95, f'R²: {r2_median_V_rest:.3f}\nslope: {lin_fit_v[0]:.2f}\nN: {min_len_vrest}',
+             transform=ax6.transAxes, verticalalignment='top', fontsize=12, color='white')
+    x_line = np.linspace(true_V_rest[:min_len_vrest].min(), true_V_rest[:min_len_vrest].max(), 100)
+    y_line = linear_model(x_line, *lin_fit_v)
+    ax6.plot(x_line, y_line, 'r-', linewidth=2)
+    print(f"median V_rest R²: {r2_median_V_rest:.4f}, slope: {lin_fit_v[0]:.4f}")
+    ax6.set_xlabel('true $V_{rest}$', fontsize=14, color='white')
+    ax6.set_ylabel('median $V_{rest}$', fontsize=14, color='white')
+    ax6.grid(False)
+    ax6.tick_params(colors='white')
+    plt.tight_layout()
 
-        # Save corrected weights comparison figure
-        weights_plot_filename = f'corrected_weights_comparison_{param_display_name}.png'
-        plt.savefig(weights_plot_filename, dpi=300, bbox_inches='tight')
-        plt.close()
-        print(f"Corrected weights plot saved as: {weights_plot_filename}")
-
-        # Print summary statistics
-        print(f"\nCorrected Weights Summary:")
-        print(f"Experiments processed: {len(all_corrected_weights)}")
-        print(f"Weights per experiment: {len(true_weights)}")
-
-        # Calculate correlation coefficients
-        all_corr = np.corrcoef(all_true_flat, all_corrected_flat)[0, 1]
-        median_corr = np.corrcoef(true_weights, median_weights)[0, 1]
-        mean_corr = np.corrcoef(true_weights, mean_weights)[0, 1]
-
-        print(f"Correlations - All: {all_corr:.4f}, Median: {median_corr:.4f}, Mean: {mean_corr:.4f}")
-
-    else:
-        print("No corrected_W.pt files found for comparison")
+    aggregated_plot_filename = f'aggregated_parameters_comparison_{param_display_name}.png'
+    plt.savefig(aggregated_plot_filename, dpi=300, bbox_inches='tight')
+    plt.close()
 
     return summary_results
 
@@ -12192,8 +12261,8 @@ if __name__ == '__main__':
 
 
     # plot no noise at all
-    # config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0', 'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4']
-    # data_flyvis_compare(config_list, 'training.seed')
+    config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0', 'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4']
+    data_flyvis_compare(config_list, 'training.seed')
 
     # # plot noise on video input
     # config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0',  'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4',
@@ -12234,21 +12303,22 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_18_4_0', 'fly_N9_33_5', 'fly_N9_18_4_1', 'fly_N9_33_5_1']
     # config_list = ['fly_N9_18_4_14', 'fly_N9_31_5']
 
-    config_list = ['fly_N9_40_1', 'fly_N9_40_2', 'fly_N9_40_3', 'fly_N9_40_5', 'fly_N9_40_6', 'fly_N9_40_7', 'fly_N9_40_8', 'fly_N9_40_9','fly_N9_40_10','fly_N9_40_10', 'fly_N9_40_12', 'fly_N9_41_1', 'fly_N9_41_2']
+    # config_list = ['fly_N9_40_1', 'fly_N9_40_2', 'fly_N9_40_3', 'fly_N9_40_5', 'fly_N9_40_6', 'fly_N9_40_7', 'fly_N9_40_8', 'fly_N9_40_9','fly_N9_40_10','fly_N9_40_10', 'fly_N9_40_12'] #, 'fly_N9_41_1', 'fly_N9_41_2']
+    # data_flyvis_compare(config_list, None)
 
-    for config_file_ in config_list:
-        print(' ')
-
-        config_file, pre_folder = add_pre_folder(config_file_)
-        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        config.dataset = pre_folder + config.dataset
-        config.config_file = pre_folder + config_file_
-
-        print(f'config_file  {config.config_file}')
-
-        folder_name = './log/' + pre_folder + '/tmp_results/'
-        os.makedirs(folder_name, exist_ok=True)
-        data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
+    # for config_file_ in config_list:
+    #     print(' ')
+    #
+    #     config_file, pre_folder = add_pre_folder(config_file_)
+    #     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+    #     config.dataset = pre_folder + config.dataset
+    #     config.config_file = pre_folder + config_file_
+    #
+    #     print(f'config_file  {config.config_file}')
+    #
+    #     folder_name = './log/' + pre_folder + '/tmp_results/'
+    #     os.makedirs(folder_name, exist_ok=True)
+    #     data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
 
 
 
