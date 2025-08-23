@@ -8068,7 +8068,7 @@ def data_flyvis_compare(config_list, varied_parameter):
     ax1.tick_params(colors='white', labelsize=14)
     for i, (x, y, n) in enumerate(zip(param_values_str, r2_means, [r['n_configs'] for r in summary_results])):
         if n > 1:
-            ax1.text(x, y + r2_errors[i] + 0.02, f'n={n}', ha='center', va='bottom', fontsize=8, color='white')
+            ax1.text(x, y + r2_errors[i] + 0.02, f'n={n}', ha='center', va='bottom', fontsize=12, color='white')
 
     # Tau R² panel
     ax2.errorbar(param_values_str, tau_r2_means, yerr=tau_r2_errors,
@@ -8081,7 +8081,7 @@ def data_flyvis_compare(config_list, varied_parameter):
     ax2.tick_params(colors='white', labelsize=14)
     for i, (x, y, n) in enumerate(zip(param_values_str, tau_r2_means, [r['n_configs'] for r in summary_results])):
         if n > 1:
-            ax2.text(x, y + tau_r2_errors[i] + 0.02, f'n={n}', ha='center', va='bottom', fontsize=8, color='white')
+            ax2.text(x, y + tau_r2_errors[i] + 0.02, f'n={n}', ha='center', va='bottom', fontsize=12, color='white')
 
     # V_rest R² panel
     ax3.errorbar(param_values_str, vrest_r2_means, yerr=vrest_r2_errors,
@@ -8094,7 +8094,7 @@ def data_flyvis_compare(config_list, varied_parameter):
     ax3.tick_params(colors='white', labelsize=14)
     for i, (x, y, n) in enumerate(zip(param_values_str, vrest_r2_means, [r['n_configs'] for r in summary_results])):
         if n > 1:
-            ax3.text(x, y + vrest_r2_errors[i] + 0.02, f'n={n}', ha='center', va='bottom', fontsize=8, color='white')
+            ax3.text(x, y + vrest_r2_errors[i] + 0.02, f'n={n}', ha='center', va='bottom', fontsize=12, color='white')
 
     # Clustering accuracy panel (convert to percentage)
     acc_means_pct = [acc * 100 for acc in acc_means]
@@ -8110,7 +8110,7 @@ def data_flyvis_compare(config_list, varied_parameter):
     ax4.tick_params(colors='white', labelsize=14)
     for i, (x, y, n) in enumerate(zip(param_values_str, acc_means_pct, [r['n_configs'] for r in summary_results])):
         if n > 1:
-            ax4.text(x, y + acc_errors_pct[i] + 2, f'n={n}', ha='center', va='bottom', fontsize=8, color='white')
+            ax4.text(x, y + acc_errors_pct[i] + 2, f'n={n}', ha='center', va='bottom', fontsize=12, color='white')
 
     # Video file sizes panel - using line plots
     ffv1_x = []
