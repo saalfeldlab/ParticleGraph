@@ -6680,6 +6680,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
 
     n_frames = config.simulation.n_frames
     n_runs = config.training.n_runs
+    n_neurons = config.simulation.n_neurons
     n_neuron_types = config.simulation.n_neuron_types
     n_input_neurons = config.simulation.n_input_neurons
     field_type = model_config.field_type
@@ -6749,46 +6750,6 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
     else:
         xnorm = torch.tensor([5], device=device)
 
-    # x is your x_list[0] with shape (90720, 13741, 7)
-    energy_stride = 1
-    s, h, J, E = sparse_ising_fit_fast(x=x_list[0], voltage_col=3, top_k=50, block_size=2000,
-                                       energy_stride=energy_stride)
-
-    fig, axes = plt.subplots(2, 2, figsize=(12, 10))  # Changed to 2x2 grid
-
-    plt.subplot(2, 1, 1)
-    plt.plot(np.arange(0, len(E) * energy_stride, energy_stride), E, lw=0.5)
-    plt.xlabel("Frame", fontsize=18)
-    plt.ylabel("Energy", fontsize=18)
-    plt.title("Ising Energy Over Frames", fontsize=18)
-    plt.xlim(0, 600)
-    plt.tick_params(axis='both', which='major', labelsize=18)
-
-    plt.subplot(2, 2, 3)
-    plt.hist(E, bins=200, density=True)
-    plt.xlabel("Energy", fontsize=18)
-    plt.ylabel("Density", fontsize=18)
-    plt.title("Energy Distribution (full range)", fontsize=18)
-    plt.tick_params(axis='both', which='major', labelsize=18)
-
-    plt.subplot(2, 2, 4)
-    plt.hist(E, bins=200, density=True)
-    plt.xlabel("Energy", fontsize=18)
-    plt.ylabel("Density", fontsize=18)
-    plt.xlim([-1000, 1000])
-    plt.title("Energy Distribution (fixed range)", fontsize=18)
-    plt.tick_params(axis='both', which='major', labelsize=18)
-
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/E_panels.png", dpi=150)
-    plt.close(fig)
-
-    np.save(f"./{log_dir}/results/E.npy", E)
-    np.save(f"./{log_dir}/results/s.npy", s)
-    np.save(f"./{log_dir}/results/h.npy", h)
-    np.save(f"./{log_dir}/results/J.npy", J)
-
-
     print(f'xnorm: {to_numpy(xnorm)}, vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
     logger.info(f'xnorm: {to_numpy(xnorm)}, vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
 
@@ -6799,6 +6760,49 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
     gt_V_Rest = torch.load(f'./graphs_data/{dataset_name}/V_i_rest.pt', map_location=device)
 
     edges = torch.load(f'./graphs_data/{dataset_name}/edge_index.pt', map_location=device)
+    true_weights = torch.zeros((n_neurons, n_neurons), dtype=torch.float32, device=edges.device)
+    true_weights[edges[1], edges[0]] = gt_weights
+
+    if False:
+        energy_stride = 1
+        s, h, J, E = sparse_ising_fit_fast(x=x_list[0], voltage_col=3, top_k=50, block_size=2000,
+                                           energy_stride=energy_stride)
+
+        fig = plt.figure(figsize=(12, 10))
+        plt.subplot(2, 2, (1,2) )
+        plt.plot(np.arange(0, len(E) * energy_stride, energy_stride), E, lw=0.5)
+        plt.xlabel("Frame", fontsize=18)
+        plt.ylabel("Energy", fontsize=18)
+        plt.title("Ising Energy Over Frames", fontsize=18)
+        plt.xlim(0, 600)
+        plt.xticks(np.arange(0, 601, 100), fontsize=12)  # Only show every 100 frames
+        plt.yticks(fontsize=12)
+
+        plt.subplot(2, 2, 3)
+        plt.hist(E, bins=200, density=True)
+        plt.xlabel("Energy", fontsize=18)
+        plt.ylabel("Density", fontsize=18)
+        plt.title("Energy Distribution (full range)", fontsize=18)
+        plt.xticks(fontsize=12)
+        plt.yticks(fontsize=12)
+
+        plt.subplot(2, 2, 4)
+        plt.hist(E, bins=200, density=True)
+        plt.xlabel("Energy", fontsize=18)
+        plt.ylabel("Density", fontsize=18)
+        plt.xlim([-1000, 1000])
+        plt.title("Energy Distribution (fixed range)", fontsize=18)
+        plt.xticks(np.arange(-1000, 1001, 500), fontsize=12)  # -1000, -500, 0, 500, 1000
+        plt.yticks(fontsize=12)
+
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/E_panels.png", dpi=150)
+        plt.close(fig)
+
+        np.save(f"./{log_dir}/results/E.npy", E)
+        np.save(f"./{log_dir}/results/s.npy", s)
+        np.save(f"./{log_dir}/results/h.npy", h)
+        np.save(f"./{log_dir}/results/J.npy", J)
 
     x = x_list[0][n_frames - 10]
     type_list = torch.tensor(x[:, 2 + 2 * dimension:3 + 2 * dimension], device=device)
@@ -7099,7 +7103,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                             ax3.plot(to_numpy(rr), to_numpy(func),
                                      color=colors_65[int(type_list[n])], linewidth=1, alpha=0.3)
                     ax3.set_xlim(config.plotting.xlim)
-                    ax3.set_ylim([0, 2])
+                    ax3.set_ylim([0, 5])
                     ax3.set_xlabel('$x_i$', fontsize=23)
                     ax3.set_ylabel('$learned MLP_1(a_j, x_i)$', fontsize=23)
                     ax3.tick_params(axis='both', which='major', labelsize=15)
@@ -7235,7 +7239,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                 ax5.set_xlabel('true $\\tau$', fontsize=23)
                 ax5.set_ylabel('learned $\\tau$', fontsize=23)
                 ax5.set_xlim([0, 0.35])
-                ax5.set_ylim([0, 0.35])
+                ax5.set_ylim([0, 3])
                 ax5.tick_params(axis='both', which='major', labelsize=15)
 
                 # Plot 6: V_rest comparison (bottom right)
@@ -7314,7 +7318,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
 
             if True:
                 print('embedding clustering results')
-                for eps in [0.0075, 0.01, 0.02, 0.05]:
+                for eps in [0.005, 0.0075, 0.01, 0.02, 0.05]:
                     results = clustering_evaluation(to_numpy(model.a), type_list, eps=eps)
                     print(f"eps={eps}: {results['n_clusters_found']} clusters, "
                           f"accuracy={results['accuracy']:.3f}")
@@ -8045,20 +8049,23 @@ def data_flyvis_compare(config_list, varied_parameter):
             libx264_errors.append(0)
             compression_errors.append(0)
 
+
+
+
+
     # Create figure with six panels (2x3 layout)
     fig, ((ax1, ax4, ax6), (ax2, ax3, ax5)) = plt.subplots(2, 3, figsize=(20, 12))
+    plt.subplots_adjust(hspace=3.0)
 
     # Weights R² panel
     ax1.errorbar(param_values_str, r2_means, yerr=r2_errors,
                  fmt='o-', capsize=5, capthick=2, markersize=8, linewidth=2, color='lightblue')
-    ax1.set_xlabel(param_display_name, fontsize=12, color='white')
-    ax1.set_ylabel('weights R²', fontsize=12, color='white')
-    ax1.set_title('weights R² vs ' + param_display_name, fontsize=14, color='white')
+    ax1.set_xlabel(param_display_name, fontsize=18, color='white')
+    ax1.set_ylabel('weights R²', fontsize=18, color='white')
+    ax1.set_title('weights R² vs ' + param_display_name, fontsize=18, color='white')
     ax1.set_ylim(0, 1.1)
     ax1.grid(True, alpha=0.3)
-    ax1.tick_params(colors='white')
-
-    # Add sample size annotations
+    ax1.tick_params(colors='white', labelsize=14)
     for i, (x, y, n) in enumerate(zip(param_values_str, r2_means, [r['n_configs'] for r in summary_results])):
         if n > 1:
             ax1.text(x, y + r2_errors[i] + 0.02, f'n={n}', ha='center', va='bottom', fontsize=8, color='white')
@@ -8066,14 +8073,12 @@ def data_flyvis_compare(config_list, varied_parameter):
     # Tau R² panel
     ax2.errorbar(param_values_str, tau_r2_means, yerr=tau_r2_errors,
                  fmt='s-', capsize=5, capthick=2, markersize=8, linewidth=2, color='lightgreen')
-    ax2.set_xlabel(param_display_name, fontsize=12, color='white')
-    ax2.set_ylabel('tau R²', fontsize=12, color='white')
-    ax2.set_title('tau R² vs ' + param_display_name, fontsize=14, color='white')
+    ax2.set_xlabel(param_display_name, fontsize=18, color='white')
+    ax2.set_ylabel('tau R²', fontsize=18, color='white')
+    ax2.set_title('tau R² vs ' + param_display_name, fontsize=18, color='white')
     ax2.set_ylim(0, 1.1)
     ax2.grid(True, alpha=0.3)
-    ax2.tick_params(colors='white')
-
-    # Add sample size annotations
+    ax2.tick_params(colors='white', labelsize=14)
     for i, (x, y, n) in enumerate(zip(param_values_str, tau_r2_means, [r['n_configs'] for r in summary_results])):
         if n > 1:
             ax2.text(x, y + tau_r2_errors[i] + 0.02, f'n={n}', ha='center', va='bottom', fontsize=8, color='white')
@@ -8081,14 +8086,12 @@ def data_flyvis_compare(config_list, varied_parameter):
     # V_rest R² panel
     ax3.errorbar(param_values_str, vrest_r2_means, yerr=vrest_r2_errors,
                  fmt='^-', capsize=5, capthick=2, markersize=8, linewidth=2, color='lightcoral')
-    ax3.set_xlabel(param_display_name, fontsize=12, color='white')
-    ax3.set_ylabel('V_rest R²', fontsize=12, color='white')
-    ax3.set_title('V_rest R² vs ' + param_display_name, fontsize=14, color='white')
+    ax3.set_xlabel(param_display_name, fontsize=18, color='white')
+    ax3.set_ylabel('V_rest R²', fontsize=18, color='white')
+    ax3.set_title('V_rest R² vs ' + param_display_name, fontsize=18, color='white')
     ax3.set_ylim(0, 1.1)
     ax3.grid(True, alpha=0.3)
-    ax3.tick_params(colors='white')
-
-    # Add sample size annotations
+    ax3.tick_params(colors='white', labelsize=14)
     for i, (x, y, n) in enumerate(zip(param_values_str, vrest_r2_means, [r['n_configs'] for r in summary_results])):
         if n > 1:
             ax3.text(x, y + vrest_r2_errors[i] + 0.02, f'n={n}', ha='center', va='bottom', fontsize=8, color='white')
@@ -8099,28 +8102,23 @@ def data_flyvis_compare(config_list, varied_parameter):
 
     ax4.errorbar(param_values_str, acc_means_pct, yerr=acc_errors_pct,
                  fmt='D-', capsize=5, capthick=2, markersize=8, linewidth=2, color='orange')
-    ax4.set_xlabel(param_display_name, fontsize=12, color='white')
-    ax4.set_ylabel('clustering accuracy (%)', fontsize=12, color='white')
-    ax4.set_title('best clustering accuracy vs ' + param_display_name, fontsize=14, color='white')
+    ax4.set_xlabel(param_display_name, fontsize=18, color='white')
+    ax4.set_ylabel('clustering accuracy (%)', fontsize=18, color='white')
+    ax4.set_title('clustering accuracy vs ' + param_display_name, fontsize=18, color='white')
     ax4.set_ylim(0, 100)
     ax4.grid(True, alpha=0.3)
-    ax4.tick_params(colors='white')
-
-    # Add sample size annotations
+    ax4.tick_params(colors='white', labelsize=14)
     for i, (x, y, n) in enumerate(zip(param_values_str, acc_means_pct, [r['n_configs'] for r in summary_results])):
         if n > 1:
             ax4.text(x, y + acc_errors_pct[i] + 2, f'n={n}', ha='center', va='bottom', fontsize=8, color='white')
 
     # Video file sizes panel - using line plots
-    # Prepare data for line plotting
     ffv1_x = []
     ffv1_y = []
     ffv1_err = []
     libx264_x = []
     libx264_y = []
     libx264_err = []
-
-    # Separate data points for each codec (only where files exist)
     for i, (param_str, ffv1_size, libx264_size, ffv1_error, libx264_error) in enumerate(
             zip(param_values_str, ffv1_means, libx264_means, ffv1_errors, libx264_errors)):
         if ffv1_size > 0:
@@ -8132,8 +8130,6 @@ def data_flyvis_compare(config_list, varied_parameter):
             libx264_x.append(param_str)
             libx264_y.append(libx264_size)
             libx264_err.append(libx264_error if libx264_error > 0 else 0)
-
-    # Plot lines for file sizes
     if ffv1_x:  # Only plot if we have FFV1 data
         ax5.errorbar(ffv1_x, ffv1_y, yerr=ffv1_err,
                      fmt='o-', capsize=3, markersize=8, linewidth=2,
@@ -8145,18 +8141,16 @@ def data_flyvis_compare(config_list, varied_parameter):
                      color='salmon', markerfacecolor='salmon', markeredgecolor='red',
                      label='libx264 (lossy)')
 
-    ax5.set_xlabel(param_display_name, fontsize=12, color='white')
-    ax5.set_ylabel('file size (MB)', fontsize=12, color='white')
-    ax5.set_title('video file sizes vs ' + param_display_name, fontsize=14, color='white')
+    ax5.set_xlabel(param_display_name, fontsize=18, color='white')
+    ax5.set_ylabel('file size (MB)', fontsize=18, color='white')
+    ax5.set_title('video file sizes vs ' + param_display_name, fontsize=18, color='white')
     legend = ax5.legend(fontsize=10)
     legend.get_frame().set_facecolor('black')
     for text in legend.get_texts():
         text.set_color('white')
     ax5.grid(True, alpha=0.3)
     # ax5.set_ylim(0, 500)
-    ax5.tick_params(colors='white')
-
-    # Add sample size annotations for video files
+    ax5.tick_params(colors='white', labelsize=14)
     for i, (n, ffv1_size, libx264_size) in enumerate(
             zip([r['n_configs'] for r in summary_results], ffv1_means, libx264_means)):
         if n > 1:
@@ -8170,10 +8164,11 @@ def data_flyvis_compare(config_list, varied_parameter):
                          f'n={n}', ha='center', va='bottom', fontsize=8, color='white')
 
     # Loss curves panel (ax6)
-    ax6.set_title('loss curves comparison', fontsize=14, color='white')
-    ax6.set_xlabel('epochs', fontsize=12, color='white')
-    ax6.set_ylabel('loss', fontsize=12, color='white')
-    ax6.tick_params(colors='white')
+    ax6.set_title('loss curves comparison', fontsize=18, color='white')
+    ax6.set_xlabel('epochs', fontsize=18, color='white')
+    ax6.set_ylabel('loss', fontsize=18, color='white')
+    ax6.tick_params(colors='white', labelsize=14)
+    ax6.set_ylim(0, 4000)
     ax6.grid(True, alpha=0.3)
 
     # Generate distinct colors for different configs
@@ -8249,8 +8244,6 @@ def data_flyvis_compare(config_list, varied_parameter):
              verticalalignment='top', horizontalalignment='left',
              fontfamily='monospace', color='white')
 
-    plt.tight_layout()
-
     # Add best results text annotations on top of best points
     if summary_results:
         best_r2_result = max(summary_results, key=lambda x: x['r2_mean'])
@@ -8272,33 +8265,48 @@ def data_flyvis_compare(config_list, varied_parameter):
         best_r2_x = param_values_str[best_r2_idx]
         best_r2_y = r2_means[best_r2_idx]
         ax1.text(best_r2_x, best_r2_y + r2_errors[best_r2_idx] + 0.05, f"{best_r2_result['r2_mean']:.3f}",
-                 ha='center', va='bottom', fontsize=10, color='white')
+                 ha='center', va='bottom', fontsize=14, color='white')
 
         # Tau R² panel annotation
         best_tau_r2_x = param_values_str[best_tau_r2_idx]
         best_tau_r2_y = tau_r2_means[best_tau_r2_idx]
         ax2.text(best_tau_r2_x, best_tau_r2_y + tau_r2_errors[best_tau_r2_idx] + 0.05,
                  f"{best_tau_r2_result['tau_r2_mean']:.3f}",
-                 ha='center', va='bottom', fontsize=10, color='white')
+                 ha='center', va='bottom', fontsize=14, color='white')
 
         # V_rest R² panel annotation
         best_vrest_r2_x = param_values_str[best_vrest_r2_idx]
         best_vrest_r2_y = vrest_r2_means[best_vrest_r2_idx]
         ax3.text(best_vrest_r2_x, best_vrest_r2_y + vrest_r2_errors[best_vrest_r2_idx] + 0.05,
                  f"{best_vrest_r2_result['vrest_r2_mean']:.3f}",
-                 ha='center', va='bottom', fontsize=10, color='white')
+                 ha='center', va='bottom', fontsize=14, color='white')
 
         # Clustering accuracy panel annotation
         best_acc_x = param_values_str[best_acc_idx]
         best_acc_y = acc_means_pct[best_acc_idx]
         ax4.text(best_acc_x, best_acc_y + acc_errors_pct[best_acc_idx] + 5, f"{best_acc_result['acc_mean'] * 100:.1f}%",
-                 ha='center', va='bottom', fontsize=10, color='white')
+                 ha='center', va='bottom', fontsize=14, color='white')
 
-    # Save figure
+    plt.subplots_adjust(hspace=0.3)
+    plt.tight_layout()
+    plt.subplots_adjust(hspace=0.3)
+
     plot_filename = f'parameter_comparison_{param_display_name}.png'
     plt.savefig(plot_filename, dpi=300, bbox_inches='tight')
     print(f"\nplot saved as: {plot_filename}")
     plt.close()
+
+    # Additional changes you need to make in your plotting code:
+
+    # 1. For ALL axis labels, change fontsize to 20:
+    # ax.set_xlabel('your_label', fontsize=20, color='white')
+    # ax.set_ylabel('your_label', fontsize=20, color='white')
+
+    # 2. For ALL tick parameters, add labelsize=14:
+    # ax.tick_params(colors='white', labelsize=14)
+
+    # 3. For loss curve plot, add log scale:
+    # ax.set_yscale('log')  # Add this line before plotting loss curves
 
     print("")
     print("aggregation of fits ...")
@@ -8489,7 +8497,10 @@ def data_flyvis_compare(config_list, varied_parameter):
     ax6.set_ylabel('median $V_{rest}$', fontsize=14, color='white')
     ax6.grid(False)
     ax6.tick_params(colors='white')
+
+    plt.subplots_adjust(hspace=3.0)
     plt.tight_layout()
+    plt.subplots_adjust(hspace=3.0)
 
     aggregated_plot_filename = f'aggregated_parameters_comparison_{param_display_name}.png'
     plt.savefig(aggregated_plot_filename, dpi=300, bbox_inches='tight')
@@ -12297,15 +12308,14 @@ if __name__ == '__main__':
     # config_list = [ 'signal_CElegans_c14_4a', 'signal_CElegans_c14_4b', 'signal_CElegans_c14_4c',  'signal_CElegans_d1', 'signal_CElegans_d2', 'signal_CElegans_d3', ]
     # config_list = config_list = ['signal_CElegans_d2', 'signal_CElegans_d2a', 'signal_CElegans_d3', 'signal_CElegans_d3a', 'signal_CElegans_d3b']
 
-    config_list = ['fly_N9_18_4_1', 'fly_N9_18_4_0', 'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4', 'fly_N9_23_1', 'fly_N9_23_2', 'fly_N9_23_3', 'fly_N9_23_4', 'fly_N9_23_5', 'fly_N9_18_4_2', 'fly_N9_18_4_3', 'fly_N9_18_4_4', 'fly_N9_18_4_5', 'fly_N9_18_4_6']
+    # config_list = ['fly_N9_18_4_1', 'fly_N9_18_4_0', 'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4', 'fly_N9_23_1', 'fly_N9_23_2', 'fly_N9_23_3', 'fly_N9_23_4', 'fly_N9_23_5', 'fly_N9_18_4_2', 'fly_N9_18_4_3', 'fly_N9_18_4_4', 'fly_N9_18_4_5', 'fly_N9_18_4_6']
 
     # plot no noise at all
     # config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0', 'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4']
     # data_flyvis_compare(config_list, 'training.seed')
 
     # # plot noise on video input
-    # config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0',  'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4',
-    # config_list = ['fly_N9_23_1', 'fly_N9_23_2', 'fly_N9_23_3', 'fly_N9_23_4', 'fly_N9_23_5']
+    # config_list = ['fly_N9_18_4_0_bis', 'fly_N9_18_4_0',  'fly_N9_20_0', 'fly_N9_22_1', 'fly_N9_22_2', 'fly_N9_22_3', 'fly_N9_22_4', 'fly_N9_23_1', 'fly_N9_23_2', 'fly_N9_23_3', 'fly_N9_23_4', 'fly_N9_23_5']
     # data_flyvis_compare(config_list, 'simulation.noise_visual_input')
 
 
@@ -12345,20 +12355,32 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_40_1', 'fly_N9_40_2', 'fly_N9_40_3', 'fly_N9_40_5', 'fly_N9_40_6', 'fly_N9_40_7', 'fly_N9_40_8', 'fly_N9_40_9','fly_N9_40_10','fly_N9_40_10', 'fly_N9_40_12'] #, 'fly_N9_41_1', 'fly_N9_41_2']
     # data_flyvis_compare(config_list, None)
 
-    for config_file_ in config_list:
-        print(' ')
+    # config_list = ['fly_N9_37_2_1', 'fly_N9_37_2_2', 'fly_N9_37_2_3', 'fly_N9_37_2_4', 'fly_N9_37_2_5']
+    # data_flyvis_compare(config_list, 'training.learning_rate_embedding_start')
 
-        config_file, pre_folder = add_pre_folder(config_file_)
-        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        config.dataset = pre_folder + config.dataset
-        config.config_file = pre_folder + config_file_
+    config_list = ['fly_N9_43_1', 'fly_N9_43_2', 'fly_N9_43_3', 'fly_N9_43_4', 'fly_N9_43_5']
+    data_flyvis_compare(config_list, 'training.noise_level')
 
-        print(f'config_file  {config.config_file}')
+    # config_list = ['fly_N9_44_1', 'fly_N9_44_2', 'fly_N9_44_3', 'fly_N9_44_4', 'fly_N9_44_5', 'fly_N9_44_6', 'fly_N9_44_7', 'fly_N9_44_8']
+    # data_flyvis_compare(config_list, 'training.noise_model_level')
 
-        folder_name = './log/' + pre_folder + '/tmp_results/'
-        os.makedirs(folder_name, exist_ok=True)
-        data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
+    # config_list = ['fly_N9_42_1', 'fly_N9_42_2', 'fly_N9_42_3', 'fly_N9_42_4']
+    # data_flyvis_compare(config_list, 'training.Ising_filter')
 
+    # for config_file_ in config_list:
+    #     print(' ')
+    #
+    #     config_file, pre_folder = add_pre_folder(config_file_)
+    #     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+    #     config.dataset = pre_folder + config.dataset
+    #     config.config_file = pre_folder + config_file_
+    #
+    #     print(f'config_file  {config.config_file}')
+    #
+    #     folder_name = './log/' + pre_folder + '/tmp_results/'
+    #     os.makedirs(folder_name, exist_ok=True)
+    #     data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
+    #
 
 
 

@@ -3359,10 +3359,47 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
         for f in files:
             os.remove(f)
 
+    print('Ising analysis ...')
+    x_list = np.array(x_list)
+    y_list = np.array(y_list)
+
+    energy_stride = 1
+    s, h, J, E = sparse_ising_fit_fast(x=x_list, voltage_col=3, top_k=50, block_size=2000,
+                                       energy_stride=energy_stride)
+
+    fig = plt.figure(figsize=(12, 10))
+    plt.subplot(2, 2, (1,2))
+    plt.plot(np.arange(0, len(E) * energy_stride, energy_stride), E, lw=0.5)
+    plt.xlabel("Frame", fontsize=18)
+    plt.ylabel("Energy", fontsize=18)
+    plt.title("Ising Energy Over Frames", fontsize=18)
+    plt.xlim(0, 600)
+    plt.xticks(np.arange(0, 601, 100), fontsize=12)  # Only show every 100 frames
+    plt.yticks(fontsize=12)
+
+    plt.subplot(2, 2, 3)
+    plt.hist(E, bins=200, density=True)
+    plt.xlabel("Energy", fontsize=18)
+    plt.ylabel("Density", fontsize=18)
+    plt.title("Energy Distribution (full range)", fontsize=18)
+    plt.xticks(fontsize=12)
+    plt.yticks(fontsize=12)
+
+    plt.subplot(2, 2, 4)
+    plt.hist(E, bins=200, density=True)
+    plt.xlabel("Energy", fontsize=18)
+    plt.ylabel("Density", fontsize=18)
+    plt.xlim([-1000, 1000])
+    plt.title("Energy Distribution (fixed range)", fontsize=18)
+    plt.xticks(np.arange(-1000, 1001, 500), fontsize=12)  # -1000, -500, 0, 500, 1000
+    plt.yticks(fontsize=12)
+
+    plt.tight_layout()
+    plt.savefig(f"graphs_data/{dataset_name}/E_panels.png", dpi=150)
+    plt.close(fig)
+
     if bSave:
         print('save data ...')
-        x_list = np.array(x_list)
-        y_list = np.array(y_list)
 
         activity = torch.tensor(x_list[:, :, 3:4], device=device).squeeze().t()
         input_visual = torch.tensor(x_list[:, :, 4:5], device=device).squeeze().t()

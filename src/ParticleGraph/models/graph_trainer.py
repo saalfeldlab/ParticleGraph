@@ -3726,7 +3726,7 @@ def data_train_flyvis(config, erase, best_model, device):
     time.sleep(0.2)
 
     if Ising_filter > 0:
-        idxs = np.where(np.abs(E - np.median(E)) <= Ising_filter)[0]
+        idxs = np.where(np.abs(E - 0*np.median(E)) <= Ising_filter)[0]
 
     for epoch in range(start_epoch, n_epochs + 1):
 

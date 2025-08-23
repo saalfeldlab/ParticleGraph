@@ -1,4 +1,4 @@
-description: 'small MLP, no extra null edges, noise_model_level: 0 DAVIS  noise_level: 10.0'
+description: 'small MLP, no extra null edges, noise_model_level: 0 DAVIS  noise_level: 0.5'
 dataset: 'fly_N9_37_2'
 
 simulation:
@@ -43,7 +43,7 @@ plotting:
     ylim: [ -8,8 ]
 
 training:
-    n_epochs: 10
+    n_epochs: 30
     n_runs: 1
     device: 'auto'
 
@@ -51,7 +51,7 @@ training:
     batch_size: 1
     batch_ratio: 1
 
-    noise_level: 10.0
+    noise_level: 0.5
 
     sparsity: 'none'
     rotation_augmentation: False
