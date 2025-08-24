@@ -1,5 +1,5 @@
 description: 'small MLP, no extra null edges, noise_model_level: 0 FLASH learning_rate_embedding_start: 1.0E-3'
-dataset: 'fly_N9_45_1'
+dataset: 'fly_N9_45_2'
 
 simulation:
     connectivity_file: 'to be specified'

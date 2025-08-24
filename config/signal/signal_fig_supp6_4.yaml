@@ -71,5 +71,5 @@ training:
 
     learning_rate_start: 1.0E-4
     learning_rate_embedding_start: 1.0E-4
-    coeff_L1: 1.0E-5
+    coeff_W_L1: 1.0E-5
     noise_model_level: 1

@@ -1,4 +1,4 @@
-description: 'with 20 neuron types per function,  coeff_L1: 1.0E-3'
+description: 'with 20 neuron types per function,  coeff_W_L1: 1.0E-3'
 dataset: 'fly_N9_13'
 
 simulation:
@@ -64,4 +64,4 @@ training:
     coeff_update_u_diff: 0
     coeff_update_msg_diff: 0
     coeff_edge_norm: 1000.0
-    coeff_L1: 1.0E-3
+    coeff_W_L1: 1.0E-3

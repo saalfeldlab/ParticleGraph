@@ -1,4 +1,4 @@
-description: 'small MLP, no extra null edges, noise_model_level: 0 DAVIS  loss_noise_level: 5.0'
+description: 'small MLP, no extra null edges, noise_model_level: 0 DAVIS     Ising_filter: 100.0 loss_noise_level: 0.25 learning_rate_embedding_start: 1.0E-3 '
 dataset: 'fly_N9_37_2'
 
 simulation:
@@ -43,15 +43,15 @@ plotting:
     ylim: [ -8,8 ]
 
 training:
-    n_epochs: 30
+    n_epochs: 20
     n_runs: 1
     device: 'auto'
+
+    seed: 2
 
     recursive_loop: 1
     batch_size: 1
     batch_ratio: 1
-
-    loss_noise_level: 5.0
 
     sparsity: 'none'
     rotation_augmentation: False
@@ -59,7 +59,10 @@ training:
 
     learning_rate_W_start: 1.0E-3
     learning_rate_start: 5.0E-4
-    learning_rate_embedding_start: 5.0E-3
+    learning_rate_embedding_start: 1.0E-3
+
+    loss_noise_level: 0.25
+    Ising_filter: 100.0
 
     measurement_noise_level: 0
     noise_model_level: 0

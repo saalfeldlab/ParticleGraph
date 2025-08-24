@@ -1,4 +1,4 @@
-description: 'small MLP, no extra null edges, noise_model_level: 0 DAVIS learning_rate_embedding_start: 2.5E-4'
+description: 'small MLP, no extra null edges, noise_model_level: 0 DAVIS learning_rate_embedding_start: 5E-4'
 dataset: 'fly_N9_37_2'
 
 simulation:

@@ -59,8 +59,8 @@ training:
     sparsity: 'replace_embedding_function'
     sparsity_freq: 4
 
-    first_coeff_L1: 5.0E-5
-    coeff_L1: 0
+    first_coeff_W_L1: 5.0E-5
+    coeff_W_L1: 0
 
     learning_rate_W_start: 1.0E-4
     learning_rate_start: 5.0E-5

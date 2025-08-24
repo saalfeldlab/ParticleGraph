@@ -1,5 +1,5 @@
-description: 'small MLP, no extra null edges, noise_model_level: 0 DAVIS learning_rate_embedding_start: 1.0E-3'
-dataset: 'fly_N9_37_2'
+description: 'small MLP, no extra null edges, noise_model_level: 0 FLASH learning_rate_embedding_start: 1.0E-3'
+dataset: 'fly_N9_45_1'
 
 simulation:
     connectivity_file: 'to be specified'
@@ -15,7 +15,7 @@ simulation:
     delta_t: 0.02
     baseline_value: 0
 
-    visual_input_type: "DAVIS"
+    visual_input_type: "flash"
 
 graph_model:
     signal_model_name: 'PDE_N9_A'

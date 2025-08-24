@@ -56,4 +56,4 @@ training:
     fix_cluster_embedding: True
     device: 'auto'
     seed: 42
-    coeff_L1: 1.0E-5
+    coeff_W_L1: 1.0E-5

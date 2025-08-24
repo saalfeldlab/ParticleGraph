@@ -328,7 +328,7 @@ class TrainingConfig(BaseModel):
     learning_rate_NNR: float = 0.0001
     training_NNR_start_epoch: int = 0
 
-    coeff_L1: float = 0.0
+    coeff_W_L1: float = 0.0
     coeff_anneal_L1: float = 0
     coeff_entropy_loss: float = 0
     coeff_loss1: float = 1
@@ -341,12 +341,13 @@ class TrainingConfig(BaseModel):
     coeff_update_u_diff: float = 0
     coeff_sign: float = 0
     coeff_permutation: float = 100
-    coeff_L1_ghost: float = 0
+    coeff_W_L1_ghost: float = 0
     coeff_sign: float = 0
     coeff_TV_norm: float = 0
     coeff_missing_activity: float = 0
     coeff_edge_norm: float = 0
     coeff_edge_weight_L1: float = 0
+    coeff_phi_weight_L1: float = 0
 
     coeff_Jp_norm: float = 0
     coeff_F_norm: float = 0
@@ -362,6 +363,9 @@ class TrainingConfig(BaseModel):
     noise_level: float = 0
     measurement_noise_level: float = 0
     noise_model_level: float = 0
+    loss_noise_level: float = 0.0
+
+
     rotation_augmentation: bool = False
     translation_augmentation: bool = False
     reflection_augmentation: bool = False

@@ -1,4 +1,4 @@
-description: 'small MLP, no extra null edges, noise_model_level: 0 DAVIS  noise_level: 1.0 learning_rate_embedding_start: 5.0E-4'
+description: 'small MLP, no extra null edges, noise_model_level: 0 DAVIS  loss_noise_level: 1.0 learning_rate_embedding_start: 5.0E-4'
 dataset: 'fly_N9_37_2'
 
 simulation:
@@ -51,7 +51,7 @@ training:
     batch_size: 1
     batch_ratio: 1
 
-    noise_level: 1.0
+    loss_noise_level: 1.0
 
     sparsity: 'none'
     rotation_augmentation: False

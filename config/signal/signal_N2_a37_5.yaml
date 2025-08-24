@@ -71,7 +71,7 @@ training:
     cluster_distance_threshold: 0.1
     fix_cluster_embedding: True
 
-    coeff_L1: 0
+    coeff_W_L1: 0
     coeff_edge_diff: 10
 
     learning_rate_W_start: 1.0E-3

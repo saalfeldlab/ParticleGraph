@@ -6693,6 +6693,8 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
     dimension = config.simulation.dimension
 
     log_file = os.path.join(log_dir, 'results.log')
+    if os.path.exists(log_file):
+        os.remove(log_file)
     for handler in logging.root.handlers[:]:
         logging.root.removeHandler(handler)
     logging.basicConfig(
@@ -7241,7 +7243,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                 ax5.set_xlabel('true $\\tau$', fontsize=23)
                 ax5.set_ylabel('learned $\\tau$', fontsize=23)
                 ax5.set_xlim([0, 0.35])
-                ax5.set_ylim([0, 3])
+                ax5.set_ylim([0, 0.1])
                 ax5.tick_params(axis='both', which='major', labelsize=15)
 
                 # Plot 6: V_rest comparison (bottom right)
@@ -7783,8 +7785,6 @@ def data_flyvis_compare(config_list, varied_parameter):
 
             # Get parameter value from config using section.parameter format OR config file indices
             if varied_parameter is None:
-                # Extract last two indices from config file name
-                # e.g., 'fly_N9_18_4_10' -> '4_10'
                 parts = config_file_.split('_')
                 if len(parts) >= 2:
                     param_value = f"{parts[-2]}_{parts[-1]}"
@@ -7974,7 +7974,10 @@ def data_flyvis_compare(config_list, varied_parameter):
         param_display_name = "config_indices"
         parameter_name = "config file indices"
     else:
-        param_display_name = varied_parameter.split('.')[1]  # Show just parameter name in table
+        full_param_name = varied_parameter.split('.')[1]
+        # Extract first two words from parameter name for display
+        parts = full_param_name.split('_')
+        param_display_name = '_'.join(parts[:2]) if len(parts) >= 2 else parts[0]
         parameter_name = varied_parameter
 
     print(f"\n=== parameter comparison: {parameter_name} ===")
@@ -8052,9 +8055,6 @@ def data_flyvis_compare(config_list, varied_parameter):
             compression_errors.append(0)
 
 
-
-
-
     # Create figure with six panels (2x3 layout)
     fig, ((ax1, ax4, ax6), (ax2, ax3, ax5)) = plt.subplots(2, 3, figsize=(20, 12))
     plt.subplots_adjust(hspace=3.0)
@@ -8127,7 +8127,6 @@ def data_flyvis_compare(config_list, varied_parameter):
             ffv1_x.append(param_str)
             ffv1_y.append(ffv1_size)
             ffv1_err.append(ffv1_error if ffv1_error > 0 else 0)
-
         if libx264_size > 0:
             libx264_x.append(param_str)
             libx264_y.append(libx264_size)
@@ -8151,7 +8150,7 @@ def data_flyvis_compare(config_list, varied_parameter):
     for text in legend.get_texts():
         text.set_color('white')
     ax5.grid(True, alpha=0.3)
-    # ax5.set_ylim(0, 500)
+    ax5.set_ylim(0, 600)
     ax5.tick_params(colors='white', labelsize=14)
     for i, (n, ffv1_size, libx264_size) in enumerate(
             zip([r['n_configs'] for r in summary_results], ffv1_means, libx264_means)):
@@ -8160,10 +8159,10 @@ def data_flyvis_compare(config_list, varied_parameter):
                 s > 0 for s in ffv1_means + libx264_means) else 1
             if ffv1_size > 0:
                 ax5.text(param_values_str[i], ffv1_size + ffv1_errors[i] + max_size * 0.02,
-                         f'n={n}', ha='center', va='bottom', fontsize=8, color='white')
+                         f'n={n}', ha='center', va='bottom', fontsize=12, color='white')
             elif libx264_size > 0:
                 ax5.text(param_values_str[i], libx264_size + libx264_errors[i] + max_size * 0.02,
-                         f'n={n}', ha='center', va='bottom', fontsize=8, color='white')
+                         f'n={n}', ha='center', va='bottom', fontsize=12, color='white')
 
     # Loss curves panel (ax6)
     ax6.set_title('loss curves comparison', fontsize=18, color='white')
@@ -8383,6 +8382,7 @@ def data_flyvis_compare(config_list, varied_parameter):
 
     # Create six-panel plot (2x3: rows for weights/tau/V_rest, columns for all/median)
     fig, ((ax1, ax2), (ax3, ax4), (ax5, ax6)) = plt.subplots(3, 2, figsize=(12, 18))
+    plt.subplots_adjust(hspace=0.3)
 
     def linear_model(x, a, b):
         return a * x + b
@@ -8499,11 +8499,7 @@ def data_flyvis_compare(config_list, varied_parameter):
     ax6.set_ylabel('median $V_{rest}$', fontsize=14, color='white')
     ax6.grid(False)
     ax6.tick_params(colors='white')
-
-    plt.subplots_adjust(hspace=3.0)
     plt.tight_layout()
-    plt.subplots_adjust(hspace=3.0)
-
     aggregated_plot_filename = f'aggregated_parameters_comparison_{param_display_name}.png'
     plt.savefig(aggregated_plot_filename, dpi=300, bbox_inches='tight')
     plt.close()
@@ -12357,11 +12353,11 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_40_1', 'fly_N9_40_2', 'fly_N9_40_3', 'fly_N9_40_5', 'fly_N9_40_6', 'fly_N9_40_7', 'fly_N9_40_8', 'fly_N9_40_9','fly_N9_40_10','fly_N9_40_10', 'fly_N9_40_12'] #, 'fly_N9_41_1', 'fly_N9_41_2']
     # data_flyvis_compare(config_list, None)
 
-    # config_list = ['fly_N9_37_2_1', 'fly_N9_37_2_2', 'fly_N9_37_2_3', 'fly_N9_37_2_4', 'fly_N9_37_2_5']
+    # config_list = ['fly_N9_37_2', 'fly_N9_37_2_1', 'fly_N9_37_2_2', 'fly_N9_37_2_3', 'fly_N9_37_2_4', 'fly_N9_37_2_5']
     # data_flyvis_compare(config_list, 'training.learning_rate_embedding_start')
 
-    config_list = ['fly_N9_43_1', 'fly_N9_43_2', 'fly_N9_43_3', 'fly_N9_43_4', 'fly_N9_43_5']
-    data_flyvis_compare(config_list, 'training.noise_level')
+    # config_list = ['fly_N9_43_1', 'fly_N9_43_2', 'fly_N9_43_3', 'fly_N9_43_4', 'fly_N9_43_5']
+    # data_flyvis_compare(config_list, 'training.noise_level')
 
     # config_list = ['fly_N9_44_1', 'fly_N9_44_2', 'fly_N9_44_3', 'fly_N9_44_4', 'fly_N9_44_5', 'fly_N9_44_6', 'fly_N9_44_7', 'fly_N9_44_8']
     # data_flyvis_compare(config_list, 'training.noise_model_level')
@@ -12369,20 +12365,22 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_42_1', 'fly_N9_42_2', 'fly_N9_42_3', 'fly_N9_42_4']
     # data_flyvis_compare(config_list, 'training.Ising_filter')
 
-    # for config_file_ in config_list:
-    #     print(' ')
-    #
-    #     config_file, pre_folder = add_pre_folder(config_file_)
-    #     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-    #     config.dataset = pre_folder + config.dataset
-    #     config.config_file = pre_folder + config_file_
-    #
-    #     print(f'config_file  {config.config_file}')
-    #
-    #     folder_name = './log/' + pre_folder + '/tmp_results/'
-    #     os.makedirs(folder_name, exist_ok=True)
-    #     data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
-    #
+    config_list = ['fly_N9_46_1', 'fly_N9_46_2', 'fly_N9_46_3', 'fly_N9_46_4', 'fly_N9_46_5', 'fly_N9_46_6']
+
+    for config_file_ in config_list:
+        print(' ')
+
+        config_file, pre_folder = add_pre_folder(config_file_)
+        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+        config.dataset = pre_folder + config.dataset
+        config.config_file = pre_folder + config_file_
+
+        print(f'config_file  {config.config_file}')
+
+        folder_name = './log/' + pre_folder + '/tmp_results/'
+        os.makedirs(folder_name, exist_ok=True)
+        data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
+
 
 
 

@@ -3042,11 +3042,11 @@ def data_train_synaptic2(config, erase, best_model, device):
         pos = torch.argwhere(ind_a % 100 != 99).squeeze()
         ind_a = ind_a[pos]
 
-    coeff_L1 = train_config.coeff_L1
+    coeff_W_L1 = train_config.coeff_W_L1
     coeff_edge_diff = train_config.coeff_edge_diff
     coeff_update_diff = train_config.coeff_update_diff
-    logger.info(f'coeff_L1: {coeff_L1} coeff_edge_diff: {coeff_edge_diff} coeff_update_diff: {coeff_update_diff}')
-    print(f'coeff_L1: {coeff_L1} coeff_edge_diff: {coeff_edge_diff} coeff_update_diff: {coeff_update_diff}')
+    logger.info(f'coeff_W_L1: {coeff_W_L1} coeff_edge_diff: {coeff_edge_diff} coeff_update_diff: {coeff_update_diff}')
+    print(f'coeff_W_L1: {coeff_W_L1} coeff_edge_diff: {coeff_edge_diff} coeff_update_diff: {coeff_update_diff}')
 
     print("start training ...")
 
@@ -3067,8 +3067,8 @@ def data_train_synaptic2(config, erase, best_model, device):
         if epoch == train_config.n_epochs_init:
             coeff_edge_diff = coeff_update_diff / 100
             coeff_update_diff = coeff_update_diff / 100
-            logger.info(f'coeff_L1: {coeff_L1} coeff_edge_diff: {coeff_edge_diff} coeff_update_diff: {coeff_update_diff}')
-            print(f'coeff_L1: {coeff_L1} coeff_edge_diff: {coeff_edge_diff} coeff_update_diff: {coeff_update_diff}')
+            logger.info(f'coeff_W_L1: {coeff_W_L1} coeff_edge_diff: {coeff_edge_diff} coeff_update_diff: {coeff_update_diff}')
+            print(f'coeff_W_L1: {coeff_W_L1} coeff_edge_diff: {coeff_edge_diff} coeff_update_diff: {coeff_update_diff}')
 
         batch_size = get_batch_size(epoch)
         logger.info(f'batch_size: {batch_size}')
@@ -3154,7 +3154,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                     func_phi = model.lin_phi(in_features[ids].float())
                     loss = loss + func_phi.norm(2)
                     # regularisation sparsity on Wij
-                    loss = loss + model_W[:n_neurons, :n_neurons].norm(1) * coeff_L1
+                    loss = loss + model_W[:n_neurons, :n_neurons].norm(1) * coeff_W_L1
                     # regularisation lin_edge
                     in_features, in_features_next = get_in_features_lin_edge(x, model, model_config, xnorm, n_neurons,device)
                     if coeff_edge_diff > 0:
@@ -3508,8 +3508,8 @@ def data_train_synaptic2(config, erase, best_model, device):
                 logger.info( f'learning rates: lr_W {lr_W}, lr {lr}, lr_embedding {lr_embedding}, lr_modulation {lr_modulation}')
 
             if (epoch == 20) & (train_config.coeff_anneal_L1 > 0):
-                coeff_L1 = train_config.coeff_anneal_L1
-                logger.info(f'coeff_L1: {coeff_L1}')
+                coeff_W_L1 = train_config.coeff_anneal_L1
+                logger.info(f'coeff_W_L1: {coeff_W_L1}')
 
 
 def data_train_flyvis(config, erase, best_model, device):
@@ -3547,9 +3547,10 @@ def data_train_flyvis(config, erase, best_model, device):
     coeff_edge_norm = train_config.coeff_edge_norm
     coeff_update_msg_sign = train_config.coeff_update_msg_sign
     coeff_edge_weight_L1 = train_config.coeff_edge_weight_L1
+    coeff_lin_weight_L1 = train_config.coeff_lin_weight_L1
 
     pre_trained_W = train_config.pre_trained_W
-    noise_level = train_config.noise_level
+    loss_noise_level = train_config.loss_noise_level
 
     n_edges = simulation_config.n_edges
     n_extra_null_edges = simulation_config.n_extra_null_edges
@@ -3585,7 +3586,7 @@ def data_train_flyvis(config, erase, best_model, device):
     print(f'dataset: {len(x_list)} run, {len(x_list[0])} frames')
     x = x_list[0][n_frames - 10]
 
-    if os.path.exists(f"./{log_dir}/tmp_training/E_panels.png"):
+    if (os.path.exists(f"./{log_dir}/tmp_training/E_panels.png")) & (Ising_filter==0):
         print (f'energy plot already exist, skipping computation')
     else:
         energy_stride = 1
@@ -3707,11 +3708,11 @@ def data_train_flyvis(config, erase, best_model, device):
         for i in range(n_neurons):
             index_weight.append(torch.argwhere(model.mask[:, i] > 0).squeeze())
 
-    coeff_L1 = train_config.coeff_L1
+    coeff_W_L1 = train_config.coeff_W_L1
     coeff_edge_diff = train_config.coeff_edge_diff
     coeff_update_diff = train_config.coeff_update_diff
-    logger.info(f'coeff_L1: {coeff_L1} coeff_edge_diff: {coeff_edge_diff} coeff_update_diff: {coeff_update_diff}')
-    print(f'coeff_L1: {coeff_L1} coeff_edge_diff: {coeff_edge_diff} coeff_update_diff: {coeff_update_diff}')
+    logger.info(f'coeff_W_L1: {coeff_W_L1} coeff_edge_diff: {coeff_edge_diff} coeff_update_diff: {coeff_update_diff}')
+    print(f'coeff_W_L1: {coeff_W_L1} coeff_edge_diff: {coeff_edge_diff} coeff_update_diff: {coeff_update_diff}')
 
     print("start training ...")
 
@@ -3784,11 +3785,14 @@ def data_train_flyvis(config, erase, best_model, device):
 
                 if not (torch.isnan(x).any()):
                     # regularisation sparsity on Wij
-                    if coeff_L1>0:
-                        loss = loss + model.W.norm(1) * coeff_L1
+                    if coeff_W_L1>0:
+                        loss = loss + model.W.norm(1) * coeff_W_L1
                     # regularisation sparsity on weights of model.lin_edge
                     if coeff_edge_weight_L1>0:
                         for param in model.lin_edge.parameters():
+                            loss = loss + torch.sum(torch.abs(param)) * coeff_edge_weight_L1
+                    if coeff_lin_weight_L1>0:
+                        for param in model.lin_phi.parameters():
                             loss = loss + torch.sum(torch.abs(param)) * coeff_edge_weight_L1
 
                     # regularisation lin_edge
@@ -3833,8 +3837,8 @@ def data_train_flyvis(config, erase, best_model, device):
                         mask = torch.arange(edges_all.shape[1])
 
                     y = torch.tensor(y_list[run][k], device=device) / ynorm
-                    if noise_level>0:
-                        y = y + torch.randn(y.shape, device=device) * noise_level
+                    if loss_noise_level>0:
+                        y = y + torch.randn(y.shape, device=device) * loss_noise_level
 
                     if not (torch.isnan(y).any()):
 
@@ -3931,7 +3935,7 @@ def data_train_flyvis(config, erase, best_model, device):
                    os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
 
         # anneal noise during training
-        noise_level = train_config.noise_level * (0.95 ** epoch)
+        loss_noise_level = train_config.loss_noise_level * (0.95 ** epoch)
 
         list_loss.append((total_loss-total_loss_regul) / n_neurons)
 

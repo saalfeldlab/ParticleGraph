@@ -3156,6 +3156,16 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
 
                 sequences = data["lum"]
 
+                # Sample flash parameters for each subsequence if flash stimulus is requested
+                if "flash" in visual_input_type:
+                    # Sample flash duration from specific values: 1, 2, 5, 10, 20 frames
+                    flash_duration_options = [1, 2, 5] #, 10, 20]
+                    flash_cycle_frames = flash_duration_options[
+                        torch.randint(0, len(flash_duration_options), (1,), device=device).item()
+                    ]
+
+                    flash_intensity = torch.abs(torch.rand(n_input_neurons, device=device) * 0.5 + 0.5)
+
                 if "mixed" in visual_input_type:
                     if mixed_frame_count >= current_cycle_length:
                         mixed_current_type = (mixed_current_type + 1) % 4
@@ -3188,8 +3198,21 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
                     else:
                         start_frame = 0
 
-                for frame_id in range(sequences.shape[0]):
-                    if "mixed" in visual_input_type:
+                # Determine sequence length based on stimulus type
+                if "flash" in visual_input_type:
+                    sequence_length = 60  # Fixed 60 frames for flash sequences
+                else:
+                    sequence_length = sequences.shape[0]
+
+                for frame_id in range(sequence_length):
+                    if "flash" in visual_input_type:
+                        # Generate repeating flash stimulus
+                        current_flash_frame = frame_id % (flash_cycle_frames * 2)  # Create on/off cycle
+                        x[:, 4] = 0
+                        if current_flash_frame < flash_cycle_frames:
+                            x[:n_input_neurons, 4] = flash_intensity
+
+                    elif "mixed" in visual_input_type:
                         current_type = mixed_types[mixed_current_type]
 
                         if current_type == "blank":
@@ -3241,7 +3264,7 @@ def data_generate_fly_voltage(config, visualize=True, run_vizualized=0, style="c
                     else:
                         x[:, 3:4] = x[:, 3:4] + delta_t * y
 
-                    if (visualize & (run == run_vizualized) & (it % step == 0) & (it <= 400 * step) ):
+                    if (visualize & (run == run_vizualized) & (it % step == 0) & (it <= 400 * step)):
                         if "latex" in style:
                             plt.rcParams["text.usetex"] = True
                             rc("font", **{"family": "serif", "serif": ["Palatino"]})
