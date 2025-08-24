@@ -6763,7 +6763,9 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
     true_weights = torch.zeros((n_neurons, n_neurons), dtype=torch.float32, device=edges.device)
     true_weights[edges[1], edges[0]] = gt_weights
 
-    if False:
+    if os.path.exists(f"./{log_dir}/results/E_panels.png"):
+        print (f'energy plot already exist, skipping computation')
+    else:
         energy_stride = 1
         s, h, J, E = sparse_ising_fit_fast(x=x_list[0], voltage_col=3, top_k=50, block_size=2000,
                                            energy_stride=energy_stride)

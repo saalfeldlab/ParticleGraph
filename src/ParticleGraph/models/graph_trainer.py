@@ -3585,38 +3585,36 @@ def data_train_flyvis(config, erase, best_model, device):
     print(f'dataset: {len(x_list)} run, {len(x_list[0])} frames')
     x = x_list[0][n_frames - 10]
 
-    # s, h, J = sparse_ising_fit(x=x_list[0], voltage_col=3, top_k=50)
+    if os.path.exists(f"./{log_dir}/tmp_training/E_panels.png"):
+        print (f'energy plot already exist, skipping computation')
+    else:
+        energy_stride = 1
+        s, h, J, E = sparse_ising_fit_fast(x=x_list[0], voltage_col=3, top_k=50, block_size=2000, energy_stride=energy_stride)
 
-    # x is your x_list[0] with shape (90720, 13741, 7)
-    energy_stride = 1
-    s, h, J, E = sparse_ising_fit_fast(x=x_list[0], voltage_col=3, top_k=50, block_size=2000, energy_stride=energy_stride)
+        fig, axes = plt.subplots(2, 1, figsize=(12, 10))
 
-    fig, axes = plt.subplots(2, 1, figsize=(12, 10))
+        # Top panel: Energy vs frame
+        axes[0].plot(np.arange(0, len(E) * energy_stride, energy_stride), E, lw=0.5)
+        axes[0].set_xlabel("Frame")
+        axes[0].set_ylabel("Energy")
+        axes[0].set_title("Ising energy over frames")
+        axes[0].set_xlim(0, 400)
 
-    # Top panel: Energy vs frame
-    axes[0].plot(np.arange(0, len(E) * energy_stride, energy_stride), E, lw=0.5)
-    axes[0].set_xlabel("Frame")
-    axes[0].set_ylabel("Energy")
-    axes[0].set_title("Ising energy over frames")
-    axes[0].set_xlim(0, 400)
+        # Bottom panel: Histogram of energies
+        axes[1].hist(E, bins=200, density=True)
+        axes[1].set_xlabel("Energy")
+        axes[1].set_ylabel("Density")
+        axes[1].set_title("Energy distribution")
 
-    # Bottom panel: Histogram of energies
-    axes[1].hist(E, bins=200, density=True)
-    axes[1].set_xlabel("Energy")
-    axes[1].set_ylabel("Density")
-    axes[1].set_title("Energy distribution")
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/E_panels.png", dpi=150)
+        plt.close(fig)
 
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/E_panels.png", dpi=150)
-    plt.close(fig)
-
-    # check shapes
-    print("s.shape:", s.shape, "h.shape:", h.shape, "len(J):", len(J), "E.shape:", E.shape)
-    # compute approximate per-frame model probabilities (normalized)
-    # P_model = compute_frame_probs_from_sparse_J(s, h, J)
-    # print("P_model sum:", P_model.sum(), "min/max:", P_model.min(), P_model.max())
-
-
+        # check shapes
+        print("s.shape:", s.shape, "h.shape:", h.shape, "len(J):", len(J), "E.shape:", E.shape)
+        # compute approximate per-frame model probabilities (normalized)
+        # P_model = compute_frame_probs_from_sparse_J(s, h, J)
+        # print("P_model sum:", P_model.sum(), "min/max:", P_model.min(), P_model.max())
 
     activity = torch.tensor(x_list[0][:, :, 3:4], device=device)
     activity = activity.squeeze()
@@ -3647,6 +3645,8 @@ def data_train_flyvis(config, erase, best_model, device):
     print('create models ...')
     model = Signal_Propagation_FlyVis(aggr_type=model_config.aggr_type, config=config, device=device)
 
+    start_epoch = 0
+    list_loss = []
     if (best_model != None) & (best_model != ''):
         net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{best_model}.pt"
         print(f'load {net} ...')
@@ -3655,17 +3655,13 @@ def data_train_flyvis(config, erase, best_model, device):
         start_epoch = int(best_model.split('_')[0])
         print(f'best_model: {best_model}  start_epoch: {start_epoch}')
         logger.info(f'best_model: {best_model}  start_epoch: {start_epoch}')
+        list_loss = torch.load(f"{log_dir}/loss.pt")
     elif  train_config.pretrained_model !='':
         net = train_config.pretrained_model
         print(f'load pretrained {net} ...')
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
         logger.info(f'pretrained: {net}')
-        start_epoch = 0
-        list_loss = []
-    else:
-        start_epoch = 0
-        list_loss = []
 
     if pre_trained_W != '':
         print(f'load pre-trained W: {pre_trained_W}')
