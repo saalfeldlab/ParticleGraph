@@ -2803,7 +2803,7 @@ def data_train_synaptic2(config, erase, best_model, device):
     field_type = model_config.field_type
     coeff_lin_modulation = train_config.coeff_lin_modulation
     coeff_model_b = train_config.coeff_model_b
-    coeff_sign = train_config.coeff_sign
+    coeff_W_sign = train_config.coeff_W_sign
     coeff_update_msg_diff = train_config.coeff_update_msg_diff
     coeff_update_u_diff = train_config.coeff_update_u_diff
     coeff_edge_norm = train_config.coeff_edge_norm
@@ -3030,7 +3030,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         edges = torch.load(f'./graphs_data/{dataset_name}/edge_index.pt', map_location=device)
         edges_all = edges.clone().detach()
 
-    if coeff_sign > 0:
+    if coeff_W_sign > 0:
         index_weight = []
         for i in range(n_neurons):
             index_weight.append(torch.argwhere(model.mask[:, i] > 0).squeeze())
@@ -3173,7 +3173,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                             msg = model.lin_edge(in_features[ids].clone().detach())
                         loss = loss + (msg-1).norm(2) * coeff_edge_norm                 # normalization lin_edge(xnorm) = 1 for all embedding values
                     # regularisation sign Wij
-                    if (coeff_sign > 0) and (N%4 == 0):
+                    if (coeff_W_sign > 0) and (N%4 == 0):
                         W_sign = torch.tanh(5 * model_W)
                         loss_contribs = []
                         for i in range(n_neurons):
@@ -3183,7 +3183,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                                 std = torch.std(values, unbiased=False)
                                 loss_contribs.append(std)
                         if loss_contribs:
-                            loss = loss + torch.stack(loss_contribs).norm(2) * coeff_sign
+                            loss = loss + torch.stack(loss_contribs).norm(2) * coeff_W_sign
                     # miscalleneous regularisations
                     if (model.update_type == 'generic') & (coeff_update_diff > 0):
                         in_feature_update = torch.cat((torch.zeros((n_neurons, 1), device=device),
@@ -3541,7 +3541,7 @@ def data_train_flyvis(config, erase, best_model, device):
     time_step = train_config.time_step
     Ising_filter = train_config.Ising_filter
 
-    coeff_sign = train_config.coeff_sign
+    coeff_W_sign = train_config.coeff_W_sign
     coeff_update_msg_diff = train_config.coeff_update_msg_diff
     coeff_update_u_diff = train_config.coeff_update_u_diff
     coeff_edge_norm = train_config.coeff_edge_norm
@@ -3703,7 +3703,7 @@ def data_train_flyvis(config, erase, best_model, device):
     edges_all = edges.clone().detach()
     print(f'{edges.shape[1]} edges')
 
-    if coeff_sign > 0:
+    if coeff_W_sign > 0:
         index_weight = []
         for i in range(n_neurons):
             index_weight.append(torch.argwhere(model.mask[:, i] > 0).squeeze())
@@ -3814,7 +3814,7 @@ def data_train_flyvis(config, erase, best_model, device):
                         loss = loss + (msg - 2 * xnorm).norm(2) * coeff_edge_norm
 
                     # # regularisation sign Wij
-                    # if (coeff_sign > 0) and (N%4 == 0):
+                    # if (coeff_W_sign > 0) and (N%4 == 0):
                     #     W_sign = torch.tanh(5 * model_W)
                     #     loss_contribs = []
                     #     for i in range(n_neurons):
@@ -3824,7 +3824,7 @@ def data_train_flyvis(config, erase, best_model, device):
                     #             std = torch.std(values, unbiased=False)
                     #             loss_contribs.append(std)
                     #     if loss_contribs:
-                    #         loss = loss + torch.stack(loss_contribs).norm(2) * coeff_sign
+                    #         loss = loss + torch.stack(loss_contribs).norm(2) * coeff_W_sign
                     if batch_ratio < 1:
                         ids_ = np.random.permutation(ids.shape[0])[:int(ids.shape[0] * batch_ratio)]
                         ids = np.sort(ids_)

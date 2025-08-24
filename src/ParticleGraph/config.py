@@ -329,7 +329,9 @@ class TrainingConfig(BaseModel):
     training_NNR_start_epoch: int = 0
 
     coeff_W_L1: float = 0.0
-    coeff_anneal_L1: float = 0
+    coeff_W_L1_ghost: float = 0
+    coeff_W_sign: float = 0
+
     coeff_entropy_loss: float = 0
     coeff_loss1: float = 1
     coeff_loss2: float = 1
@@ -339,10 +341,10 @@ class TrainingConfig(BaseModel):
     coeff_update_msg_diff: float = 0
     coeff_update_msg_sign: float = 0
     coeff_update_u_diff: float = 0
-    coeff_sign: float = 0
+
     coeff_permutation: float = 100
-    coeff_W_L1_ghost: float = 0
-    coeff_sign: float = 0
+
+    coeff_W_sign: float = 0
     coeff_TV_norm: float = 0
     coeff_missing_activity: float = 0
     coeff_edge_norm: float = 0

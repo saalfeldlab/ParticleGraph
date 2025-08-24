@@ -90,5 +90,5 @@ training:
     learning_rate_missing_activity: 1.0E-4
 
     coeff_edge_diff: 100
-    coeff_sign : 0
+    coeff_W_sign : 0
     coeff_missing_activity: 1

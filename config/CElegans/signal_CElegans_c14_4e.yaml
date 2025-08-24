@@ -92,7 +92,7 @@ training:
     learning_rate_missing_activity: 1.0E-4
 
     coeff_edge_diff: 1
-    coeff_sign : 0
+    coeff_W_sign : 0
     coeff_missing_activity: 1.E-2
     coeff_update_msg_diff: 1
     coeff_update_u_diff: 0.1

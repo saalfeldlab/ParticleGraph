@@ -82,7 +82,7 @@ if __name__ == '__main__':
         field_type = model_config.field_type
         coeff_lin_modulation = train_config.coeff_lin_modulation
         coeff_model_b = train_config.coeff_model_b
-        coeff_sign = train_config.coeff_sign
+        coeff_W_sign = train_config.coeff_W_sign
         time_step = train_config.time_step
         has_missing_activity = train_config.has_missing_activity
         multi_connectivity = config.training.multi_connectivity
