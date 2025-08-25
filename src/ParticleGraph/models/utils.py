@@ -2537,46 +2537,6 @@ def sparse_ising_fit_fast(x, voltage_col=3, top_k=50, block_size=2000, dtype=np.
     return s, h, J, E
 
 
-def compute_frame_probs_from_sparse_J(s, h, J, normalize=True):
-    """
-    Compute approximate model probability per frame using sparse J.
-    Energy: E(s) = - sum_i h_i s_i - 0.5 * sum_i sum_j J[i][j] s_i s_j
-    Returns P_model(t) ∝ exp(-E(s(t))). If normalize=True, returns normalized probabilities.
-    """
-    n_frames, n_neurons = s.shape
-    s_float = s.astype(np.int8)
-
-    # compute linear term: - sum_i h_i s_i  -> shape (n_frames,)
-    lin = -(s_float @ h)
-
-    # compute quadratic term using sparse J (we accumulate and multiply by -0.5)
-    quad = np.zeros(n_frames, dtype=np.float32)
-    for i, row in enumerate(J):
-        if not row:
-            continue
-        si = s_float[:, i].astype(np.int8)  # (n_frames,)
-        # accumulate si * sum_j J_ij * s_j
-        # build arrays of js and values
-        js = np.fromiter(row.keys(), dtype=np.int32)
-        vals = np.fromiter(row.values(), dtype=np.float32)
-        if js.size == 0:
-            continue
-        # s[:, js] -> (n_frames, len(js)); dot with vals -> (n_frames,)
-        quad += si * (s_float[:, js].astype(np.int8) @ vals)
-
-    energy = lin - 0.5 * quad   # shape (n_frames,)
-    # negative because P ∝ exp(-E). Here "energy" is E(s) as defined; we use -E for logits
-    logp = -energy.astype(np.float64)
-    # numeric stabilize
-    logp = logp - logp.max()
-    p_un = np.exp(logp)
-    if normalize:
-        p = p_un / (p_un.sum() + 1e-20)
-        return p.astype(np.float32)
-    else:
-        return p_un.astype(np.float32)
-
-
 def select_frames_by_energy(E, strategy='critical', Ising_filter=None):
     """
     Select optimal frames for GNN training based on energy analysis.

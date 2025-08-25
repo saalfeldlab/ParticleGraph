@@ -7069,7 +7069,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                         offsets_list.append(offset)
 
                     ax4.set_xlim(config.plotting.xlim)
-                    ax4.set_ylim([-150, 150])
+                    ax4.set_ylim([-100, 100])
                     ax4.set_xlabel('$x_i$', fontsize=23)
                     ax4.set_ylabel('$learned MLP_0(a_i, x_i)$', fontsize=23)
                     ax4.tick_params(axis='both', which='major', labelsize=15)
@@ -7101,7 +7101,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                             ax3.plot(to_numpy(rr), to_numpy(func),
                                      color=colors_65[int(type_list[n])], linewidth=1, alpha=0.3)
                     ax3.set_xlim(config.plotting.xlim)
-                    ax3.set_ylim([0, 5])
+                    ax3.set_ylim([0, config.plotting.xlim[1]*2])
                     ax3.set_xlabel('$x_i$', fontsize=23)
                     ax3.set_ylabel('$learned MLP_1(a_j, x_i)$', fontsize=23)
                     ax3.tick_params(axis='both', which='major', labelsize=15)
@@ -7434,6 +7434,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                              color=cmap.color(to_numpy(type_list)[n].astype(int)),
                              linewidth=1, alpha=0.1)
             plt.xlim(config.plotting.xlim)
+            plt.ylim([0, config.plotting.xlim[1]*2])
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/edge_functions_{epoch}.tif", dpi=300)
             plt.close()
@@ -12459,8 +12460,7 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_47_1', 'fly_N9_47_2', 'fly_N9_47_3', 'fly_N9_47_4', 'fly_N9_47_5','fly_N9_47_6']
     # data_flyvis_compare(config_list, 'training.coeff_edge_weight_L2')
 
-    config_list = ['fly_N9_47_1', 'fly_N9_47_2', 'fly_N9_47_3', 'fly_N9_47_4', 'fly_N9_47_5', 'fly_N9_47_6',
-                   'fly_N9_48_1', 'fly_N9_48_2', 'fly_N9_48_3', 'fly_N9_48_4', 'fly_N9_48_5', 'fly_N9_48_6',
+    config_list = ['fly_N9_48_1', 'fly_N9_48_2', 'fly_N9_48_3', 'fly_N9_48_4', 'fly_N9_48_5', 'fly_N9_48_6',
                    'fly_N9_49_1', 'fly_N9_49_2', 'fly_N9_49_3', 'fly_N9_49_4', 'fly_N9_49_5','fly_N9_49_6',
                    'fly_N9_50_1', 'fly_N9_50_2', 'fly_N9_50_3', 'fly_N9_50_4', 'fly_N9_50_5','fly_N9_50_6','fly_N9_50_7']
 
@@ -12477,6 +12477,7 @@ if __name__ == '__main__':
         folder_name = './log/' + pre_folder + '/tmp_results/'
         os.makedirs(folder_name, exist_ok=True)
         data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
+
     #
     #
 

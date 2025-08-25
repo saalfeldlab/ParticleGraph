@@ -16,7 +16,7 @@ from .Mesh import Mesh
 from .Mesh_Laplacian import Mesh_Laplacian
 from .Ghost_Particles import Ghost_Particles
 from .graph_trainer import *
-from .utils import KoLeoLoss, get_embedding, get_embedding_time_series, choose_training_model, constant_batch_size, increasing_batch_size, set_trainable_parameters, set_trainable_division_parameters, plot_training, sparse_ising_fit, sparse_ising_fit_fast, compute_frame_probs_from_sparse_J, select_frames_by_energy
+from .utils import KoLeoLoss, get_embedding, get_embedding_time_series, choose_training_model, constant_batch_size, increasing_batch_size, set_trainable_parameters, set_trainable_division_parameters, plot_training, sparse_ising_fit, sparse_ising_fit_fast, select_frames_by_energy
 from .Gumbel import sample_gumbel, gumbel_softmax_sample, gumbel_softmax
 from .WBI_Communication import WBI_Communication
 from .plot_utils import analyze_embedding_space
@@ -25,4 +25,4 @@ __all__ = [graph_trainer, Interaction_Agent, Interaction_Particle, Interaction_M
            Affine_Particle, Interaction_Cell, Cell_Area, Interaction_Particle_Field, Interaction_Mouse, Siren_Network, Siren,
            Signal_Propagation2, Mesh, Mesh_Laplacian, Ghost_Particles, KoLeoLoss, get_embedding, get_embedding_time_series,
            choose_training_model, constant_batch_size, increasing_batch_size, set_trainable_parameters, set_trainable_division_parameters,
-           plot_training, sample_gumbel, gumbel_softmax_sample, gumbel_softmax, WBI_Communication, plot_utils, sparse_ising_fit, sparse_ising_fit_fast, compute_frame_probs_from_sparse_J,select_frames_by_energy]
+           plot_training, sample_gumbel, gumbel_softmax_sample, gumbel_softmax, WBI_Communication, plot_utils, sparse_ising_fit, sparse_ising_fit_fast,select_frames_by_energy]
