@@ -3588,7 +3588,7 @@ def data_train_flyvis(config, erase, best_model, device):
     print(f'dataset: {len(x_list)} run, {len(x_list[0])} frames')
     x = x_list[0][n_frames - 10]
 
-    if (os.path.exists(f"./{log_dir}/tmp_training/E_panels.png")) & (Ising_filter==0):
+    if (os.path.exists(f"./{log_dir}/tmp_training/E_panels.png")) & (Ising_filter== "none"):
         print (f'energy plot already exist, skipping computation')
     else:
         energy_stride = 1
@@ -3724,8 +3724,9 @@ def data_train_flyvis(config, erase, best_model, device):
     list_loss_regul = []
     time.sleep(0.2)
 
-    if Ising_filter > 0:
-        idxs = np.where(np.abs(E - 0*np.median(E)) <= Ising_filter)[0]
+    if Ising_filter != "none":
+        idxs = select_frames_by_energy(E, strategy=Ising_filter)
+        print (f'Ising_filter: {Ising_filter}, selected {len(idxs)} frames among {n_frames}')
 
     for epoch in range(start_epoch, n_epochs + 1):
 
@@ -3765,7 +3766,7 @@ def data_train_flyvis(config, erase, best_model, device):
 
             for batch in range(batch_size):
 
-                if Ising_filter>0:
+                if Ising_filter!="none":
                     k = np.random.choice(idxs)
                     k = min(k, n_frames - 4 - time_step)
                 else:

@@ -23,6 +23,9 @@ from sklearn.linear_model import LogisticRegression
 from ParticleGraph.fitting_models import linear_model
 import json
 from matplotlib.animation import FFMpegWriter
+from scipy.signal import find_peaks
+
+
 class KoLeoLoss(nn.Module):
     """Kozachenko-Leonenko entropic loss regularizer from Sablayrolles et al. - 2018 - Spreading vectors for similarity search"""
 
@@ -2534,7 +2537,6 @@ def sparse_ising_fit_fast(x, voltage_col=3, top_k=50, block_size=2000, dtype=np.
     return s, h, J, E
 
 
-
 def compute_frame_probs_from_sparse_J(s, h, J, normalize=True):
     """
     Compute approximate model probability per frame using sparse J.
@@ -2575,6 +2577,106 @@ def compute_frame_probs_from_sparse_J(s, h, J, normalize=True):
         return p_un.astype(np.float32)
 
 
+def select_frames_by_energy(E, strategy='critical', Ising_filter=None):
+    """
+    Select optimal frames for GNN training based on energy analysis.
+
+    Parameters:
+    -----------
+    E : np.ndarray
+        Energy values for each frame
+    strategy : str
+        Selection strategy: 'critical', 'stable', 'transition',
+                            'uniform', 'gaussian', 'original',
+                            'rare', 'modes', 'decorrelated'
+    Ising_filter : float, optional
+        Tolerance for 'original' method
+
+    Returns:
+    --------
+    selected_frames : np.ndarray
+        Frame indices selected for training
+    """
+    n_frames = len(E)
+    min_frames = n_frames // 10  # Minimum 10% of frames
+
+    if strategy == 'critical':
+        critical_energy = -100
+        tolerance = 75
+        mask = np.abs(E - critical_energy) < tolerance
+        selected = np.where(mask)[0]
+
+    elif strategy == 'stable':
+        threshold = np.percentile(E, 30)
+        selected = np.where(E < threshold)[0]
+
+    elif strategy == 'transition':
+        dE_dt = np.abs(np.diff(np.pad(E, 1, mode='edge')))
+        threshold = np.percentile(dE_dt, 80)
+        selected = np.where(dE_dt > threshold)[0]
+
+    elif strategy == 'gaussian':
+        target_energy = -100
+        sigma = 50
+        weights = np.exp(-0.5 * ((E - target_energy) / sigma) ** 2)
+        weights /= np.sum(weights)
+        n_select = max(min_frames, n_frames // 3)
+        selected = np.random.choice(n_frames, size=n_select, p=weights, replace=False)
+
+    elif strategy == 'original':
+        if Ising_filter is None:
+            raise ValueError("Ising_filter must be specified for 'original' strategy")
+        target_energy = np.median(E)
+        selected = np.where(np.abs(E - target_energy) <= Ising_filter)[0]
+
+    elif strategy == 'uniform':
+        n_select = max(min_frames, n_frames // 3)
+        selected = np.random.choice(n_frames, size=n_select, replace=False)
+
+    # -------- NEW STRATEGIES --------
+    elif strategy == 'rare':
+        # Oversample rare energies (inverse histogram density)
+        hist, bin_edges = np.histogram(E, bins=50, density=True)
+        bin_idx = np.digitize(E, bin_edges[:-1])
+        p = hist[bin_idx - 1] + 1e-8
+        weights = 1.0 / p
+        weights /= np.sum(weights)
+        n_select = max(min_frames, n_frames // 3)
+        selected = np.random.choice(n_frames, size=n_select, p=weights, replace=False)
+
+    elif strategy == 'modes':
+        # Identify energy modes (peaks in histogram)
+        hist, bin_edges = np.histogram(E, bins=50)
+        peaks, _ = find_peaks(hist)
+        if len(peaks) == 0:  # fallback to uniform
+            selected = np.random.choice(n_frames, size=n_frames // 3, replace=False)
+        else:
+            selected = []
+            for peak in peaks:
+                low = bin_edges[peak]
+                high = bin_edges[peak+1]
+                mask = (E >= low) & (E < high)
+                idxs = np.where(mask)[0]
+                if len(idxs) > 0:
+                    n_pick = max(1, len(idxs) // len(peaks))
+                    selected.extend(np.random.choice(idxs, size=n_pick, replace=False))
+            selected = np.array(selected)
+
+    elif strategy == 'decorrelated':
+        # Subsample frames spaced by autocorrelation time
+        ac = np.correlate(E - np.mean(E), E - np.mean(E), mode='full')
+        ac = ac[ac.size // 2:]
+        ac /= ac[0]
+        try:
+            corr_time = np.where(ac < 0.1)[0][0]
+        except IndexError:
+            corr_time = 10
+        selected = np.arange(0, n_frames, corr_time)
+
+    else:
+        raise ValueError(f"Unknown strategy: {strategy}")
+
+    return np.sort(np.unique(selected))
 
 
 

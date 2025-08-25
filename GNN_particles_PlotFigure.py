@@ -338,10 +338,11 @@ def get_training_files(log_dir, n_runs):
 
     # Select the files using the generated indices
     selected_files_with_0 = [files_with_0[i] for i in indices_with_0]
-    selected_files_without_0 = [files_without_0[i] for i in indices_without_0]
-
-    # Combine the selected files into one list
-    selected_files = selected_files_with_0 + selected_files_without_0
+    if len(files_without_0) > 0:
+        selected_files_without_0 = [files_without_0[i] for i in indices_without_0]
+        selected_files = selected_files_with_0 + selected_files_without_0
+    else:
+        selected_files = selected_files_with_0
 
     return selected_files, np.arange(0, len(selected_files), 1)
 
@@ -6765,7 +6766,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
     true_weights = torch.zeros((n_neurons, n_neurons), dtype=torch.float32, device=edges.device)
     true_weights[edges[1], edges[0]] = gt_weights
 
-    if True: # os.path.exists(f"./{log_dir}/results/E_panels.png"):
+    if os.path.exists(f"./{log_dir}/results/E_panels.png"):
         print (f'skipping computation of energy plot ...')
     else:
         energy_stride = 1
@@ -7031,6 +7032,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
 
                 fig.clf()  # Clear the figure
                 rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
+                rr_short = torch.linspace(-1, 1, 1000, device=device)
 
                 # Plot 4: Lin_phi functions (middle left) and calculate slopes + offsets
                 with torch.no_grad():
@@ -7041,9 +7043,19 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                         embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
                         in_features = torch.cat(
                             (rr[:, None], embedding_, rr[:, None] * 0, torch.zeros_like(rr[:, None])), dim=1)
-                        func = model.lin_phi(in_features.float())
+                        with torch.no_grad():
+                            func = model.lin_phi(in_features.float())
+                        if (n % 20 == 0):  # Sample every 20th neuron for plotting
+                            ax4.plot(to_numpy(rr), to_numpy(func),
+                                     color=colors_65[int(type_list[n])], linewidth=1, alpha=0.3)
 
-                        rr_numpy = to_numpy(rr)
+                        in_features = torch.cat(
+                            (rr_short[:, None], embedding_, rr_short[:, None] * 0, torch.zeros_like(rr_short[:, None])),
+                            dim=1)
+                        with torch.no_grad():
+                            func = model.lin_phi(in_features.float())
+                        func_list.append(func)
+                        rr_numpy = to_numpy(rr_short)
                         func_numpy = to_numpy(func.squeeze())
                         try:
                             lin_fit, _ = curve_fit(linear_model, rr_numpy, func_numpy)
@@ -7056,9 +7068,6 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                         slopes_lin_phi_list.append(slope)
                         offsets_list.append(offset)
 
-                        if (n % 20 == 0):  # Sample every 20th neuron for plotting
-                            ax4.plot(to_numpy(rr), to_numpy(func),
-                                     color=colors_65[int(type_list[n])], linewidth=1, alpha=0.3)
                     ax4.set_xlim(config.plotting.xlim)
                     ax4.set_ylim([-150, 150])
                     ax4.set_xlabel('$x_i$', fontsize=23)
@@ -7228,7 +7237,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                 ax5.set_xlabel('true $\\tau$', fontsize=23)
                 ax5.set_ylabel('learned $\\tau$', fontsize=23)
                 ax5.set_xlim([0, 0.35])
-                ax5.set_ylim([0, 0.1])
+                ax5.set_ylim([0, 0.35])
                 ax5.tick_params(axis='both', which='major', labelsize=15)
 
                 # Plot 6: V_rest comparison (bottom right)
@@ -7273,7 +7282,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         fps = 10  # frames per second for the video
         metadata = dict(title='Model evolution', artist='Matplotlib', comment='Model evolution over epochs')
         writer_0 = FFMpegWriter(fps=fps, metadata=metadata)
-        fig = plt.figure(figsize=(12, 12))
+        fig = plt.figure(figsize=(8, 16))
         mp4_path = f'{log_dir}/results/MLP_weights_{config_indices}.mp4'
         if os.path.exists(mp4_path):
             os.remove(mp4_path)
@@ -7387,7 +7396,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
 
             if True:
                 print('embedding clustering results')
-                for eps in [0.005, 0.0075, 0.01, 0.02, 0.05]:
+                for eps in [0.001, 0.0025, 0.005, 0.0075, 0.01, 0.02, 0.05]:
                     results = clustering_evaluation(to_numpy(model.a), type_list, eps=eps)
                     print(f"eps={eps}: {results['n_clusters_found']} clusters, "
                           f"accuracy={results['accuracy']:.3f}")
@@ -7430,6 +7439,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
             plt.close()
 
             # Plot 5: Phi function visualization
+            rr_short = torch.linspace(-1, 1, 1000, device=device)
             func_list = []
             slopes_lin_phi_list = []
             offsets_list = []
@@ -7439,8 +7449,16 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                 in_features = torch.cat((rr[:, None], embedding_, rr[:, None] * 0, torch.zeros_like(rr[:, None])), dim=1)
                 with torch.no_grad():
                     func = model.lin_phi(in_features.float())
+                if (n % 20 == 0):
+                    plt.plot(to_numpy(rr), to_numpy(func), 2,
+                             color=cmap.color(to_numpy(type_list)[n].astype(int)),
+                             linewidth=1, alpha=0.1)
+
+                in_features = torch.cat((rr_short[:, None], embedding_, rr_short[:, None] * 0, torch.zeros_like(rr_short[:, None])), dim=1)
+                with torch.no_grad():
+                    func = model.lin_phi(in_features.float())
                 func_list.append(func)
-                rr_numpy = to_numpy(rr)
+                rr_numpy = to_numpy(rr_short)
                 func_numpy = to_numpy(func.squeeze())
                 try:
                     lin_fit, _ = curve_fit(linear_model, rr_numpy, func_numpy)
@@ -7452,10 +7470,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                     offset = coeffs[1]
                 slopes_lin_phi_list.append(slope)
                 offsets_list.append(offset)
-                if (n % 20 == 0):
-                    plt.plot(to_numpy(rr), to_numpy(func), 2,
-                             color=cmap.color(to_numpy(type_list)[n].astype(int)),
-                             linewidth=1, alpha=0.1)
+
             plt.xlim(config.plotting.xlim)
             plt.ylim(config.plotting.ylim)
             plt.xlabel('$x_i$', fontsize=18)
@@ -7507,6 +7522,8 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                      transform=plt.gca().transAxes, verticalalignment='top', fontsize=16)
             plt.xlabel('true tau_i', fontsize=18)
             plt.ylabel('reconstructed tau_i', fontsize=18)
+            plt.xticks(fontsize=12)
+            plt.yticks(fontsize=12)
             plt.tight_layout()
             plt.savefig(f'{log_dir}/results/tau_comparison_{epoch}.png', dpi=300)
             plt.close()
@@ -7537,6 +7554,8 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                      transform=plt.gca().transAxes, verticalalignment='top', fontsize=16)
             plt.xlabel('true V_rest', fontsize=18)
             plt.ylabel('reconstructed V_rest', fontsize=18)
+            plt.xticks(fontsize=12)
+            plt.yticks(fontsize=12)
             plt.tight_layout()
             plt.savefig(f'{log_dir}/results/V_rest_comparison_{epoch}.png', dpi=300)
             plt.close()
@@ -12440,8 +12459,10 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_47_1', 'fly_N9_47_2', 'fly_N9_47_3', 'fly_N9_47_4', 'fly_N9_47_5','fly_N9_47_6']
     # data_flyvis_compare(config_list, 'training.coeff_edge_weight_L2')
 
-    config_list = ['fly_N9_44_1', 'fly_N9_44_2', 'fly_N9_44_3', 'fly_N9_44_4', 'fly_N9_44_5', 'fly_N9_44_6', 'fly_N9_44_7', 'fly_N9_44_8',
-                   'fly_N9_47_1', 'fly_N9_47_2', 'fly_N9_47_3', 'fly_N9_47_4', 'fly_N9_47_5','fly_N9_47_6']
+    config_list = ['fly_N9_47_1', 'fly_N9_47_2', 'fly_N9_47_3', 'fly_N9_47_4', 'fly_N9_47_5', 'fly_N9_47_6',
+                   'fly_N9_48_1', 'fly_N9_48_2', 'fly_N9_48_3', 'fly_N9_48_4', 'fly_N9_48_5', 'fly_N9_48_6',
+                   'fly_N9_49_1', 'fly_N9_49_2', 'fly_N9_49_3', 'fly_N9_49_4', 'fly_N9_49_5','fly_N9_49_6',
+                   'fly_N9_50_1', 'fly_N9_50_2', 'fly_N9_50_3', 'fly_N9_50_4', 'fly_N9_50_5','fly_N9_50_6','fly_N9_50_7']
 
     for config_file_ in config_list:
         print(' ')

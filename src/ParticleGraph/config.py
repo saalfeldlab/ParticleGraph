@@ -311,7 +311,7 @@ class TrainingConfig(BaseModel):
     cluster_distance_threshold: float = 0.01
     cluster_connectivity: Literal["single", "average"] = "single"
 
-    Ising_filter: float = 0.0
+    Ising_filter: str = "none"
 
     learning_rate_start: float = 0.001
     learning_rate_embedding_start: float = 0.001

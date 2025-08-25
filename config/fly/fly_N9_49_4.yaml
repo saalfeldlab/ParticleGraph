@@ -1,5 +1,5 @@
-description: 'small MLP, no extra null edges, noise_model_level: 0.25'
-dataset: 'fly_N9_44_5'
+description: 'small MLP, no extra null edges, noise_model_level: 0 DAVIS weight_L1: 0.05'
+dataset: 'fly_N9_37_2'
 
 simulation:
     connectivity_file: 'to be specified'
@@ -15,14 +15,16 @@ simulation:
     delta_t: 0.02
     baseline_value: 0
 
+    visual_input_type: "DAVIS"
+
 graph_model:
     signal_model_name: 'PDE_N9_A'
     prediction: 'first_derivative'
 
     input_size: 3
+    n_layers: 3
+    hidden_dim: 64
     output_size: 1
-    hidden_dim: 32
-    n_layers: 2
 
     input_size_update: 5
     n_layers_update: 3
@@ -45,7 +47,7 @@ training:
     n_runs: 1
     device: 'auto'
 
-    recursive_loop: 0
+    recursive_loop: 1
     batch_size: 1
     batch_ratio: 1
 
@@ -55,11 +57,16 @@ training:
 
     learning_rate_W_start: 1.0E-3
     learning_rate_start: 5.0E-4
-    learning_rate_embedding_start: 5.0E-3
+    learning_rate_embedding_start: 1.0E-3
 
     measurement_noise_level: 0
-    noise_model_level: 0.25
+    noise_model_level: 0
     coeff_edge_diff: 500
     coeff_update_u_diff: 0
     coeff_update_msg_diff: 0
     coeff_edge_norm: 1000.0
+
+    coeff_edge_weight_L1: 0.05
+    coeff_phi_weight_L1: 0.05
+    coeff_edge_weight_L2: 0
+    coeff_phi_weight_L2: 0
