@@ -6765,8 +6765,8 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
     true_weights = torch.zeros((n_neurons, n_neurons), dtype=torch.float32, device=edges.device)
     true_weights[edges[1], edges[0]] = gt_weights
 
-    if os.path.exists(f"./{log_dir}/results/E_panels.png"):
-        print (f'energy plot already exist, skipping computation')
+    if True: # os.path.exists(f"./{log_dir}/results/E_panels.png"):
+        print (f'skipping computation of energy plot ...')
     else:
         energy_stride = 1
         s, h, J, E = sparse_ising_fit_fast(x=x_list[0], voltage_col=3, top_k=50, block_size=2000,
@@ -7392,6 +7392,11 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                              color=cmap.color(to_numpy(type_list)[n].astype(int)),
                              linewidth=1, alpha=0.1)
             plt.xlim(config.plotting.xlim)
+            plt.ylim(config.plotting.ylim)
+            plt.xlabel('$x_i$', fontsize=18)
+            plt.ylabel('$MLP_0(a_i, x_i)$', fontsize=18)
+            plt.xticks(fontsize=12)
+            plt.yticks(fontsize=12)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/phi_functions_{epoch}.tif", dpi=300)
             plt.close()
@@ -8374,11 +8379,7 @@ def data_flyvis_compare(config_list, varied_parameter):
 
     assert weights_shape[0] == tau_shape[0] == vrest_shape[0] == n_experiments, \
         f"inconsistent batch dimensions: weights={weights_shape[0]}, tau={tau_shape[0]}, V_rest={vrest_shape[0]}"
-    print(f"✓ Successfully loaded {n_experiments} experiments")
 
-    print(f"✓ Weights shape: {weights_shape}")
-    print(f"✓ Tau shape: {tau_shape}")
-    print(f"✓ V_rest shape: {vrest_shape}")
 
     # Create six-panel plot (2x3: rows for weights/tau/V_rest, columns for all/median)
     fig, ((ax1, ax2), (ax3, ax4), (ax5, ax6)) = plt.subplots(3, 2, figsize=(12, 18))
@@ -8399,7 +8400,7 @@ def data_flyvis_compare(config_list, varied_parameter):
     x_line = np.linspace(all_true_flat.min(), all_true_flat.max(), 100)
     y_line = linear_model(x_line, *lin_fit)
     ax1.plot(x_line, y_line, 'r-', linewidth=2)
-    print(f"all weights R²: {r_squared_all_weights:.4f}, slope: {lin_fit[0]:.4f}")
+    # print(f"all weights R²: {r_squared_all_weights:.4f}, slope: {lin_fit[0]:.4f}")
     ax1.set_xlabel('true $W_{ij}$', fontsize=14, color='white')
     ax1.set_ylabel('learned $W_{ij}$ (all)', fontsize=14, color='white')
     ax1.set_xlim([-2, 4.5])
@@ -8437,7 +8438,7 @@ def data_flyvis_compare(config_list, varied_parameter):
     x_line = np.linspace(all_true_tau_flat.min(), all_true_tau_flat.max(), 100)
     y_line = linear_model(x_line, *lin_fit)
     ax3.plot(x_line, y_line, 'r-', linewidth=2)
-    print(f"all tau R²: {r_squared_all_tau:.4f}, slope: {lin_fit[0]:.4f}")
+    # print(f"all tau R²: {r_squared_all_tau:.4f}, slope: {lin_fit[0]:.4f}")
     ax3.set_xlabel(r'true $\tau$', fontsize=14, color='white')
     ax3.set_ylabel(r'learned $\tau$ (all)', fontsize=14, color='white')
     ax3.set_xlim([0, 0.35])
@@ -8476,7 +8477,7 @@ def data_flyvis_compare(config_list, varied_parameter):
     x_line = np.linspace(all_true_V_rest_flat.min(), all_true_V_rest_flat.max(), 100)
     y_line = linear_model(x_line, *lin_fit)
     ax5.plot(x_line, y_line, 'r-', linewidth=2)
-    print(f"all V_rest R²: {r_squared_all_vrest:.4f}, slope: {lin_fit[0]:.4f}")
+    # print(f"all V_rest R²: {r_squared_all_vrest:.4f}, slope: {lin_fit[0]:.4f}")
     ax5.set_xlabel('true $V_{rest}$', fontsize=14, color='white')
     ax5.set_ylabel('learned $V_{rest}$ (all)', fontsize=14, color='white')
     ax5.grid(False)
@@ -8502,6 +8503,7 @@ def data_flyvis_compare(config_list, varied_parameter):
     plt.tight_layout()
     aggregated_plot_filename = f'aggregated_parameters_comparison_{param_display_name}.png'
     plt.savefig(aggregated_plot_filename, dpi=300, bbox_inches='tight')
+    print(f"aggregated plot saved as: {aggregated_plot_filename}")
     plt.close()
 
     return summary_results
@@ -12357,7 +12359,7 @@ if __name__ == '__main__':
     # data_flyvis_compare(config_list, 'training.learning_rate_embedding_start')
 
     # config_list = ['fly_N9_43_1', 'fly_N9_43_2', 'fly_N9_43_3', 'fly_N9_43_4', 'fly_N9_43_5']
-    # data_flyvis_compare(config_list, 'training.noise_level')
+    # data_flyvis_compare(config_list, 'training.loss_noise_level')
 
     # config_list = ['fly_N9_44_1', 'fly_N9_44_2', 'fly_N9_44_3', 'fly_N9_44_4', 'fly_N9_44_5', 'fly_N9_44_6', 'fly_N9_44_7', 'fly_N9_44_8']
     # data_flyvis_compare(config_list, 'training.noise_model_level')
@@ -12365,7 +12367,15 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_42_1', 'fly_N9_42_2', 'fly_N9_42_3', 'fly_N9_42_4']
     # data_flyvis_compare(config_list, 'training.Ising_filter')
 
-    config_list = ['fly_N9_46_1', 'fly_N9_46_2', 'fly_N9_46_3', 'fly_N9_46_4', 'fly_N9_46_5', 'fly_N9_46_6']
+    # config_list = ['fly_N9_45_1', 'fly_N9_45_2']
+
+    # config_list = ['fly_N9_46_1', 'fly_N9_46_2', 'fly_N9_46_3', 'fly_N9_46_4', 'fly_N9_46_5', 'fly_N9_46_6']
+    # data_flyvis_compare(config_list, None)
+
+    # config_list = ['fly_N9_47_1', 'fly_N9_47_2', 'fly_N9_47_3', 'fly_N9_47_4', 'fly_N9_47_5','fly_N9_47_6']
+    # data_flyvis_compare(config_list, 'training.coeff_edge_weight_L2')
+
+    config_list = ['fly_N9_18_4_1']
 
     for config_file_ in config_list:
         print(' ')
@@ -12380,8 +12390,8 @@ if __name__ == '__main__':
         folder_name = './log/' + pre_folder + '/tmp_results/'
         os.makedirs(folder_name, exist_ok=True)
         data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
-
-
+    #
+    #
 
 
 

@@ -344,12 +344,11 @@ class TrainingConfig(BaseModel):
 
     coeff_permutation: float = 100
 
-    coeff_W_sign: float = 0
     coeff_TV_norm: float = 0
     coeff_missing_activity: float = 0
     coeff_edge_norm: float = 0
-    coeff_edge_weight_L1: float = 0
-    coeff_phi_weight_L1: float = 0
+    coeff_edge_weight_L2: float = 0
+    coeff_phi_weight_L2: float = 0
 
     coeff_Jp_norm: float = 0
     coeff_F_norm: float = 0

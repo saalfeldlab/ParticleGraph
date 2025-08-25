@@ -1,4 +1,4 @@
-description: 'small MLP, no extra null edges, noise_model_level: 0 DAVIS weight_L1: 1.0'
+description: 'small MLP, no extra null edges, noise_model_level: 0 DAVIS  loss_noise_level: 0.1'
 dataset: 'fly_N9_37_2'
 
 simulation:
@@ -22,9 +22,9 @@ graph_model:
     prediction: 'first_derivative'
 
     input_size: 3
-    n_layers: 3
-    hidden_dim: 64
     output_size: 1
+    hidden_dim: 32
+    n_layers: 2
 
     input_size_update: 5
     n_layers_update: 3
@@ -40,10 +40,10 @@ plotting:
     colormap: 'tab20'
     arrow_length: 1
     xlim: [ -2.5,5 ]
-    ylim: [ -150,200 ]
+    ylim: [ -8,8 ]
 
 training:
-    n_epochs: 10
+    n_epochs: 20
     n_runs: 1
     device: 'auto'
 
@@ -51,13 +51,15 @@ training:
     batch_size: 1
     batch_ratio: 1
 
+    loss_noise_level: 0.1
+
     sparsity: 'none'
     rotation_augmentation: False
     data_augmentation_loop: 25
 
     learning_rate_W_start: 1.0E-3
     learning_rate_start: 5.0E-4
-    learning_rate_embedding_start: 1.0E-3
+    learning_rate_embedding_start: 5.0E-3
 
     measurement_noise_level: 0
     noise_model_level: 0
@@ -65,6 +67,3 @@ training:
     coeff_update_u_diff: 0
     coeff_update_msg_diff: 0
     coeff_edge_norm: 1000.0
-
-    coeff_edge_weight_L2: 1.0
-    coeff_phi_weight_L2: 1.0

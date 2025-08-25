@@ -3546,8 +3546,8 @@ def data_train_flyvis(config, erase, best_model, device):
     coeff_update_u_diff = train_config.coeff_update_u_diff
     coeff_edge_norm = train_config.coeff_edge_norm
     coeff_update_msg_sign = train_config.coeff_update_msg_sign
-    coeff_edge_weight_L1 = train_config.coeff_edge_weight_L1
-    coeff_lin_weight_L1 = train_config.coeff_lin_weight_L1
+    coeff_edge_weight_L2 = train_config.coeff_edge_weight_L2
+    coeff_phi_weight_L2 = train_config.coeff_phi_weight_L2
 
     pre_trained_W = train_config.pre_trained_W
     loss_noise_level = train_config.loss_noise_level
@@ -3788,12 +3788,12 @@ def data_train_flyvis(config, erase, best_model, device):
                     if coeff_W_L1>0:
                         loss = loss + model.W.norm(1) * coeff_W_L1
                     # regularisation sparsity on weights of model.lin_edge
-                    if coeff_edge_weight_L1>0:
+                    if coeff_edge_weight_L2>0:
                         for param in model.lin_edge.parameters():
-                            loss = loss + torch.sum(torch.abs(param)) * coeff_edge_weight_L1
-                    if coeff_lin_weight_L1>0:
+                            loss = loss + param.norm(2) * coeff_edge_weight_L2
+                    if coeff_phi_weight_L2>0:
                         for param in model.lin_phi.parameters():
-                            loss = loss + torch.sum(torch.abs(param)) * coeff_edge_weight_L1
+                            loss = loss + param.norm(2) * coeff_phi_weight_L2
 
                     # regularisation lin_edge
                     in_features, in_features_next = get_in_features_lin_edge(x, model, model_config, xnorm, n_neurons,device)
@@ -3934,11 +3934,14 @@ def data_train_flyvis(config, erase, best_model, device):
                     'optimizer_state_dict': optimizer.state_dict()},
                    os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
 
-        # anneal noise during training
+        # anneal coeff decrease with epoch
         loss_noise_level = train_config.loss_noise_level * (0.95 ** epoch)
+        # anneal coeff increase with epoch
+        coeff_edge_weight_L2 = train_config.coeff_edge_weight_L2 * (1 - np.exp(-0.5*epoch))
+        coeff_phi_weight_L2 = train_config.coeff_phi_weight_L2 * (1 - np.exp(-0.5*epoch))
+
 
         list_loss.append((total_loss-total_loss_regul) / n_neurons)
-
         list_loss_regul.append(total_loss_regul / n_neurons)
 
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
