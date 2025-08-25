@@ -7015,28 +7015,13 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
 
     if epoch_list[0] == 'all':
 
-        # Extract config indices from filename for MP4 naming
         config_indices = config.dataset.split('fly_N9_')[1] if 'fly_N9_' in config.dataset else 'evolution'
-
-        # Get training files
         files, file_id_list = get_training_files(log_dir, n_runs)
 
-        # Setup MP4 parameters
-        fps = 10  # frames per second for the video
-        metadata = dict(title='Model Evolution', artist='Matplotlib', comment='Model evolution over epochs')
-        writer = FFMpegWriter(fps=fps, metadata=metadata)
-        fig = plt.figure(figsize=(16, 18))  # Taller figure for 3x2 layout
-
-        # Remove existing MP4 if it exists
-        mp4_path = f'{log_dir}/results/training_{config_indices}.mp4'
-        if os.path.exists(mp4_path):
-            os.remove(mp4_path)
-
-        with writer.saving(fig, mp4_path, dpi=80):
+        with writer_1.saving(fig, mp4_path, dpi=80):
             for file_id_ in trange(len(file_id_list)):
                 epoch = files[file_id_].split('graphs')[1][1:-3]
 
-                # Load model for this epoch
                 net = f'{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt'
                 model = Signal_Propagation_FlyVis(aggr_type=model_config.aggr_type, config=config, device=device)
                 state_dict = torch.load(net, map_location=device)
@@ -7277,12 +7262,92 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                 # Save 3x2 panels as PNG only for first frame
                 if file_id_ == 0:
                     plt.savefig(f'{log_dir}/results/training_{config_indices}.png', dpi=300, bbox_inches='tight')
-                    print(f"first frame saved")
-                writer.grab_frame()
+                writer_1.grab_frame()
 
         print(f"MP4 saved as: {mp4_path}")
 
     else:
+        config_indices = config.dataset.split('fly_N9_')[1] if 'fly_N9_' in config.dataset else 'evolution'
+        files, file_id_list = get_training_files(log_dir, n_runs)
+
+        fps = 10  # frames per second for the video
+        metadata = dict(title='Model evolution', artist='Matplotlib', comment='Model evolution over epochs')
+        writer_0 = FFMpegWriter(fps=fps, metadata=metadata)
+        fig = plt.figure(figsize=(12, 12))
+        mp4_path = f'{log_dir}/results/MLP_weights_{config_indices}.mp4'
+        if os.path.exists(mp4_path):
+            os.remove(mp4_path)
+        with writer_0.saving(fig, mp4_path, dpi=80):
+            for file_id_ in trange(len(file_id_list)):
+                epoch = files[file_id_].split('graphs')[1][1:-3]
+
+                # Load model for this epoch
+                net = f'{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt'
+                model = Signal_Propagation_FlyVis(
+                    aggr_type=model_config.aggr_type,
+                    config=config,
+                    device=device
+                )
+                state_dict = torch.load(net, map_location=device)
+                model.load_state_dict(state_dict['model_state_dict'])
+                logger.info(f'net: {net}')
+
+                # --- Extract weights and biases separately ---
+                weights, biases = [], []
+                for name, param in model.lin_phi.named_parameters():
+                    if "weight" in name:
+                        weights.append(param.flatten())
+                    elif "bias" in name:
+                        biases.append(param.flatten())
+
+                weight_vec = torch.cat(weights).detach().cpu()
+                bias_vec = torch.cat(biases).detach().cpu()
+
+                # --- Helper: reshape to nearest square with padding ---
+                def to_square(vec):
+                    n_side = int(round(vec.numel() ** 0.5))
+                    n_total = n_side * n_side
+                    if vec.numel() < n_total:
+                        pad_size = n_total - vec.numel()
+                        vec = torch.cat([vec, torch.zeros(pad_size, device=vec.device)])
+                    elif vec.numel() > n_total:
+                        vec = vec[:n_total]
+                    return vec.view(n_side, n_side)
+
+                weight_grid = to_square(weight_vec)
+                bias_grid = to_square(bias_vec)
+
+                # --- Plot with 2 subplots ---
+                fig.clf()
+                ax1, ax2 = fig.subplots(2, 1)
+
+                weight_grid = to_numpy(weight_grid)
+                vmin_ = np.mean(weight_grid) - 3 * np.std(weight_grid)
+                vmax_ = np.mean(weight_grid) + 3 * np.std(weight_grid)
+
+                im1 = ax1.imshow(weight_grid, cmap="seismic", aspect="equal", vmin=vmin_, vmax=vmax_)
+                cbar = fig.colorbar(im1, ax=ax1, fraction=0.046, pad=0.04)
+                cbar.set_label("weight value", fontsize=24)
+                cbar.ax.tick_params(labelsize=16)
+                ax1.set_title(f"MLP weights", fontsize=24)
+                ax1.axis('off')
+
+                im2 = ax2.imshow(bias_grid, cmap="seismic", aspect="equal")
+                cbar = fig.colorbar(im2, ax=ax2, fraction=0.046, pad=0.04)
+                cbar.set_label("bias value", fontsize=24)
+                cbar.ax.tick_params(labelsize=16)
+                ax2.set_title(f"MLP bias", fontsize=24)
+                ax2.axis('off')
+
+                # Save first frame as PNG
+                if file_id_ == 0:
+                    plt.savefig(f'{log_dir}/results/MLP_weights_{config_indices}.png',
+                                dpi=300, bbox_inches='tight')
+
+                writer_0.grab_frame()
+        print(f"MP4 saved as: {mp4_path}")
+
+
         for epoch in epoch_list:
 
             net = f'{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt'
@@ -12375,7 +12440,8 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_47_1', 'fly_N9_47_2', 'fly_N9_47_3', 'fly_N9_47_4', 'fly_N9_47_5','fly_N9_47_6']
     # data_flyvis_compare(config_list, 'training.coeff_edge_weight_L2')
 
-    config_list = ['fly_N9_18_4_1']
+    config_list = ['fly_N9_44_1', 'fly_N9_44_2', 'fly_N9_44_3', 'fly_N9_44_4', 'fly_N9_44_5', 'fly_N9_44_6', 'fly_N9_44_7', 'fly_N9_44_8',
+                   'fly_N9_47_1', 'fly_N9_47_2', 'fly_N9_47_3', 'fly_N9_47_4', 'fly_N9_47_5','fly_N9_47_6']
 
     for config_file_ in config_list:
         print(' ')
