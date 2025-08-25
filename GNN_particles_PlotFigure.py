@@ -7339,8 +7339,8 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                 ax2.set_title(f"MLP bias", fontsize=24)
                 ax2.axis('off')
 
-                # Save first frame as PNG
-                if file_id_ == 0:
+                # Save last frame as PNG
+                if file_id_ == len(file_id_list) - 1:
                     plt.savefig(f'{log_dir}/results/MLP_weights_{config_indices}.png',
                                 dpi=300, bbox_inches='tight')
 
