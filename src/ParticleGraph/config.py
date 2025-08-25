@@ -347,6 +347,8 @@ class TrainingConfig(BaseModel):
     coeff_TV_norm: float = 0
     coeff_missing_activity: float = 0
     coeff_edge_norm: float = 0
+    coeff_edge_weight_L1: float = 0
+    coeff_phi_weight_L1: float = 0
     coeff_edge_weight_L2: float = 0
     coeff_phi_weight_L2: float = 0
 

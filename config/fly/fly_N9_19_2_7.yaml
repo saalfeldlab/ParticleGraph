@@ -1,5 +1,5 @@
 
-description: 'with 20 neuron types per function,     noise_model_level: 5E-1    smaller MLP    n_extra_null_edges: 10000  coeff_edge_weight_L1:100'
+description: 'with 20 neuron types per function,     noise_model_level: 5E-1    smaller MLP    n_extra_null_edges: 10000  coeff_edge_weight_L2:100'
 dataset: 'fly_N9_19_2'
 
 simulation:
@@ -66,4 +66,4 @@ training:
     coeff_update_u_diff: 0
     coeff_update_msg_diff: 0
     coeff_edge_norm: 1000.0
-    coeff_edge_weight_L1: 100.0
+    coeff_edge_weight_L2: 100.0
