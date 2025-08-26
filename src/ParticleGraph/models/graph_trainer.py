@@ -3632,14 +3632,6 @@ def data_train_flyvis(config, erase, best_model, device):
         axs[1, 0].set_title("Sparse Couplings Histogram", fontsize=14)
         axs[1, 0].tick_params(axis='both', which='major', labelsize=12)
 
-        # # Panel 4: LOG scale probability histogram
-        # axs[1, 1].hist(P_s, bins=100, color='lightgreen', edgecolor='k', density=True)
-        # axs[1, 1].set_xlabel("P(s)", fontsize=14)
-        # axs[1, 1].set_ylabel("Density", fontsize=14)
-        # axs[1, 1].set_title("State Probabilities (log scale)", fontsize=14)
-        # axs[1, 1].set_yscale('log')  # LOG SCALE
-        # axs[1, 1].tick_params(axis='both', which='major', labelsize=12)
-
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/E_panels.png", dpi=150)
         plt.close(fig)
@@ -3781,6 +3773,12 @@ def data_train_flyvis(config, erase, best_model, device):
         total_loss_regul = 0
         k = 0
 
+        # anneal loss_noise_level, decrease with epoch
+        loss_noise_level = train_config.loss_noise_level * (0.95 ** epoch)
+        # anneal weight_L1, increase with epoch
+        coeff_edge_weight_L1= train_config.coeff_edge_weight_L1 * (1 - np.exp(-0.5*epoch))
+        coeff_phi_weight_L1 = train_config.coeff_phi_weight_L1 * (1 - np.exp(-0.5*epoch))
+
         for N in trange(Niter):
 
             optimizer.zero_grad()
@@ -3859,6 +3857,7 @@ def data_train_flyvis(config, erase, best_model, device):
                     #             loss_contribs.append(std)
                     #     if loss_contribs:
                     #         loss = loss + torch.stack(loss_contribs).norm(2) * coeff_W_sign
+
                     if batch_ratio < 1:
                         ids_ = np.random.permutation(ids.shape[0])[:int(ids.shape[0] * batch_ratio)]
                         ids = np.sort(ids_)
@@ -3967,13 +3966,6 @@ def data_train_flyvis(config, erase, best_model, device):
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()},
                    os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
-
-        # anneal loss_noise_level, decrease with epoch
-        loss_noise_level = train_config.loss_noise_level * (0.95 ** epoch)
-        # anneal weight_L1, increase with epoch
-        coeff_edge_weight_L1= train_config.coeff_edge_weight_L1 * (1 - np.exp(-0.5*epoch))
-        coeff_phi_weight_L1 = train_config.coeff_phi_weight_L1 * (1 - np.exp(-0.5*epoch))
-
 
         list_loss.append((total_loss-total_loss_regul) / n_neurons)
         list_loss_regul.append(total_loss_regul / n_neurons)
