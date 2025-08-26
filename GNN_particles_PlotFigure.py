@@ -7023,78 +7023,110 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                 logger.info(f'net: {net}')
 
                 fig.clf()  # Clear the figure
-                rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
-                rr_short = torch.linspace(-1, 1, 1000, device=device)
-                # Plot 4: Lin_phi functions (middle left) and calculate slopes + offsets
-                with torch.no_grad():
-                    ax4 = fig.add_subplot(3, 2, 3)
-                    slopes_lin_phi_list = []
-                    offsets_list = []
-                    for n in range(n_neurons):
+
+                ax4 = fig.add_subplot(3, 2, 3)
+                slopes_lin_phi_list = []
+                offsets_list = []
+                func_list = []
+
+                for n in range(n_neurons):
+                    if (n % 20 == 0):
+                        rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
                         embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
                         in_features = torch.cat(
                             (rr[:, None], embedding_, rr[:, None] * 0, torch.zeros_like(rr[:, None])), dim=1)
                         with torch.no_grad():
                             func = model.lin_phi(in_features.float())
-                        if (n % 20 == 0):  # Sample every 20th neuron for plotting
-                            ax4.plot(to_numpy(rr), to_numpy(func),
-                                     color=colors_65[int(type_list[n])], linewidth=1, alpha=0.3)
+                            ax4.plot(to_numpy(rr), to_numpy(func), 2,
+                                     color=cmap.color(to_numpy(type_list)[n].astype(int)),
+                                     linewidth=1, alpha=0.025)
 
-                        in_features = torch.cat(
-                            (rr_short[:, None], embedding_, rr_short[:, None] * 0, torch.zeros_like(rr_short[:, None])),
-                            dim=1)
-                        with torch.no_grad():
-                            func = model.lin_phi(in_features.float())
-                        rr_numpy = to_numpy(rr_short)
-                        func_numpy = to_numpy(func.squeeze())
-                        try:
-                            lin_fit, _ = curve_fit(linear_model, rr_numpy, func_numpy)
-                            slope = lin_fit[0]
-                            offset = lin_fit[1]
-                        except:
-                            coeffs = np.polyfit(rr_numpy, func_numpy, 1)
-                            slope = coeffs[0]
-                            offset = coeffs[1]
-                        slopes_lin_phi_list.append(slope)
-                        offsets_list.append(offset)
+                    rr = torch.linspace(mu_activity[n] - 2 * sigma_activity[n], mu_activity[n] + 2 * sigma_activity[n],
+                                        1000, device=device)
+                    embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                    in_features = torch.cat((rr[:, None], embedding_, rr[:, None] * 0, torch.zeros_like(rr[:, None])),
+                                            dim=1)
+                    with torch.no_grad():
+                        func = model.lin_phi(in_features.float())
+                    if (n % 20 == 0):
+                        ax4.plot(to_numpy(rr), to_numpy(func), 2,
+                                 color=cmap.color(to_numpy(type_list)[n].astype(int)),
+                                 linewidth=1, alpha=0.2)
+                    func_list.append(func)
+                    rr_numpy = to_numpy(rr)
+                    func_numpy = to_numpy(func.squeeze())
+                    try:
+                        lin_fit, _ = curve_fit(linear_model, rr_numpy, func_numpy)
+                        slope = lin_fit[0]
+                        offset = lin_fit[1]
+                    except:
+                        coeffs = np.polyfit(rr_numpy, func_numpy, 1)
+                        slope = coeffs[0]
+                        offset = coeffs[1]
+                    slopes_lin_phi_list.append(slope)
+                    offsets_list.append(offset)
 
-                    ax4.set_xlim(config.plotting.xlim)
-                    ax4.set_ylim([-100, 100])
-                    ax4.set_xlabel('$x_i$', fontsize=23)
-                    ax4.set_ylabel('$learned MLP_0(a_i, x_i)$', fontsize=23)
-                    ax4.tick_params(axis='both', which='major', labelsize=15)
+                ax4.set_xlim(config.plotting.xlim)
+                ax4.set_ylim(config.plotting.ylim)
+                ax4.set_xlabel('$x_i$', fontsize=23)
+                ax4.set_ylabel('$learned MLP_0(a_i, x_i)$', fontsize=23)
+                ax4.tick_params(axis='both', which='major', labelsize=15)
 
-                    # Plot 3: Lin_edge functions (middle right) and calculate slopes
-                    ax3 = fig.add_subplot(3, 2, 4)
-                    slopes_lin_edge_list = []
-                    for n in range(n_neurons):
+                # Plot 3: Lin_edge functions (middle right) and calculate slopes
+                ax3 = fig.add_subplot(3, 2, 4)
+                slopes_lin_edge_list = []
+
+                for n in range(n_neurons):
+                    if (n % 20 == 0):
+                        rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
                         embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-                        if ('PDE_N9_A' in config.graph_model.signal_model_name):
+                        if ('PDE_N9_A' in config.graph_model.signal_model_name) | (
+                                'PDE_N9_D' in config.graph_model.signal_model_name):
                             in_features = torch.cat((rr[:, None], embedding_,), dim=1)
                         elif ('PDE_N9_B' in config.graph_model.signal_model_name):
                             in_features = torch.cat((rr[:, None] * 0, rr[:, None], embedding_, embedding_), dim=1)
+                        with torch.no_grad():
+                            func = model.lin_edge(in_features.float())
+                            if config.graph_model.lin_edge_positive:
+                                func = func ** 2
+                        ax3.plot(to_numpy(rr), to_numpy(func), 2,
+                                 color=cmap.color(to_numpy(type_list)[n].astype(int)),
+                                 linewidth=1, alpha=0.05)
+
+                    rr = torch.linspace(mu_activity[n] - 2 * sigma_activity[n], mu_activity[n] + 2 * sigma_activity[n],
+                                        1000, device=device)
+                    embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+
+                    if ('PDE_N9_A' in config.graph_model.signal_model_name) | (
+                            'PDE_N9_D' in config.graph_model.signal_model_name):
+                        in_features = torch.cat((rr[:, None], embedding_,), dim=1)
+                    elif ('PDE_N9_B' in config.graph_model.signal_model_name):
+                        in_features = torch.cat((rr[:, None] * 0, rr[:, None], embedding_, embedding_), dim=1)
+                    with torch.no_grad():
                         func = model.lin_edge(in_features.float())
                         if config.graph_model.lin_edge_positive:
                             func = func ** 2
+                    ax3.plot(to_numpy(rr), to_numpy(func), 2,
+                             color=cmap.color(to_numpy(type_list)[n].astype(int)),
+                             linewidth=1, alpha=0.2)
 
-                        rr_numpy = to_numpy(rr[rr.shape[0] // 2 + 1:])
-                        func_numpy = to_numpy(func[rr.shape[0] // 2 + 1:].squeeze())
-                        try:
-                            lin_fit, _ = curve_fit(linear_model, rr_numpy, func_numpy)
-                            slope = lin_fit[0]
-                        except:
-                            coeffs = np.polyfit(rr_numpy, func_numpy, 1)
-                            slope = coeffs[0]
-                        slopes_lin_edge_list.append(slope)
+                    rr_numpy = to_numpy(rr[rr.shape[0] // 2 + 1:])
+                    func_numpy = to_numpy(func[rr.shape[0] // 2 + 1:].squeeze())
+                    try:
+                        lin_fit, _ = curve_fit(linear_model, rr_numpy, func_numpy)
+                        slope = lin_fit[0]
+                        offset = lin_fit[1]
+                    except:
+                        coeffs = np.polyfit(rr_numpy, func_numpy, 1)
+                        slope = coeffs[0]
+                        offset = coeffs[1]
+                    slopes_lin_edge_list.append(slope)
 
-                        if (n % 20 == 0):  # Sample every 20th neuron for plotting
-                            ax3.plot(to_numpy(rr), to_numpy(func),
-                                     color=colors_65[int(type_list[n])], linewidth=1, alpha=0.3)
-                    ax3.set_xlim(config.plotting.xlim)
-                    ax3.set_ylim([0, config.plotting.xlim[1]*2])
-                    ax3.set_xlabel('$x_i$', fontsize=23)
-                    ax3.set_ylabel('$learned MLP_1(a_j, x_i)$', fontsize=23)
-                    ax3.tick_params(axis='both', which='major', labelsize=15)
+                ax3.set_xlim(config.plotting.xlim)
+                ax3.set_ylim([-config.plotting.xlim[1] / 10, config.plotting.xlim[1] * 2])
+                ax3.set_xlabel('$x_i$', fontsize=23)
+                ax3.set_ylabel('$learned MLP_1(a_j, x_i)$', fontsize=23)
+                ax3.tick_params(axis='both', which='major', labelsize=15)
 
                 # Calculate corrected_W using proper data construction
                 k_list = [1]
@@ -7395,7 +7427,6 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
             # Plot 3: Edge function visualization
             slopes_lin_edge_list = []
             fig = plt.figure(figsize=(8, 8))
-
             for n in range(n_neurons):
                 if (n % 20 == 0):
                     rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
@@ -7475,12 +7506,6 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                     plt.plot(to_numpy(rr), to_numpy(func), 2,
                              color=cmap.color(to_numpy(type_list)[n].astype(int)),
                              linewidth=1, alpha=0.2)
-                # rr_short = torch.linspace(mu_activity[n] - 2 * sigma_activity[n], mu_activity[n] + 2 * sigma_activity[n], 1000, device=device)
-                # rr_short = torch.linspace(mu_activity[n:None] - xnorm, mu_activity[n:None] + xnorm, 1000, device=device)
-
-                # in_features = torch.cat((rr_short[:, None], embedding_, rr_short[:, None] * 0, torch.zeros_like(rr_short[:, None])), dim=1)
-                # with torch.no_grad():
-                #     func = model.lin_phi(in_features.float())
                 func_list.append(func)
                 rr_numpy = to_numpy(rr)
                 func_numpy = to_numpy(func.squeeze())
@@ -7554,8 +7579,8 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
             r_squared = 1 - (ss_res / ss_tot)
             plt.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}\nN: {len(gt_V_rest_filtered)}',
                      transform=plt.gca().transAxes, verticalalignment='top', fontsize=16)
-            plt.xlabel(r'true $V_rest$', fontsize=24)
-            plt.ylabel(r'reconstructed $V_rest$', fontsize=24)
+            plt.xlabel(r'true $V_{rest}$', fontsize=24)
+            plt.ylabel(r'reconstructed $V_{rest}$', fontsize=24)
             plt.xticks(fontsize=12)
             plt.yticks(fontsize=12)
             plt.tight_layout()
@@ -12461,15 +12486,14 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_47_1', 'fly_N9_47_2', 'fly_N9_47_3', 'fly_N9_47_4', 'fly_N9_47_5','fly_N9_47_6']
     # data_flyvis_compare(config_list, 'training.coeff_edge_weight_L2')
 
-    # config_list = ['fly_N9_49_1', 'fly_N9_49_2', 'fly_N9_49_3', 'fly_N9_49_4', 'fly_N9_49_5','fly_N9_49_6',
-    #                'fly_N9_48_1', 'fly_N9_48_2', 'fly_N9_48_3', 'fly_N9_48_4', 'fly_N9_48_5', 'fly_N9_48_6',
-    #                'fly_N9_50_1', 'fly_N9_50_2', 'fly_N9_50_3', 'fly_N9_50_4', 'fly_N9_50_5','fly_N9_50_6',
-    #                'fly_N9_50_7']
+    config_list = ['fly_N9_49_1', 'fly_N9_49_2', 'fly_N9_49_3', 'fly_N9_49_4', 'fly_N9_49_5','fly_N9_49_6',
+                   'fly_N9_48_1', 'fly_N9_48_2', 'fly_N9_48_3', 'fly_N9_48_4', 'fly_N9_48_5', 'fly_N9_48_6',
+                   'fly_N9_50_1', 'fly_N9_50_2', 'fly_N9_50_3', 'fly_N9_50_4', 'fly_N9_50_5','fly_N9_50_6', 'fly_N9_50_7']
 
     # config_list = ['fly_N9_48_1', 'fly_N9_48_2', 'fly_N9_48_3', 'fly_N9_48_4', 'fly_N9_48_5', 'fly_N9_48_6']
     # data_flyvis_compare(config_list, 'training.coeff_edge_weight_L2')
 
-    config_list = [ 'fly_N9_44_6', 'fly_N9_49_1', 'fly_N9_49_2', 'fly_N9_49_3', 'fly_N9_49_4', 'fly_N9_49_5','fly_N9_49_6']
+    # config_list = ['fly_N9_49_1', 'fly_N9_49_2', 'fly_N9_49_3', 'fly_N9_49_4', 'fly_N9_49_5','fly_N9_49_6']
     # data_flyvis_compare(config_list, 'training.coeff_edge_weight_L1')
 
     for config_file_ in config_list:
