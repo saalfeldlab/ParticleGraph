@@ -32,6 +32,7 @@ from tifffile import imwrite, imread
 from matplotlib.colors import LinearSegmentedColormap
 from scipy.spatial import cKDTree
 from ParticleGraph.generators.utils import *
+from scipy.special import logsumexp
 
 def data_train(config=None, erase=False, best_model=None, device=None):
     # plt.rcParams['text.usetex'] = True
@@ -3594,23 +3595,53 @@ def data_train_flyvis(config, erase, best_model, device):
         energy_stride = 1
         s, h, J, E = sparse_ising_fit_fast(x=x_list[0], voltage_col=3, top_k=50, block_size=2000, energy_stride=energy_stride)
 
-        fig, axes = plt.subplots(2, 1, figsize=(12, 10))
+        # Panel 4: Compute approximate probabilities for observed states
+        # P(s) ~ exp(-E(s)/T), approximate T=1 for simplicity
+        T = 1.0
+        logP = -E / T
+        logP -= logsumexp(logP)  # normalize in log space
+        P_s = np.exp(logP) # normalize to get a probability distribution
 
-        # Top panel: Energy vs frame
-        axes[0].plot(np.arange(0, len(E) * energy_stride, energy_stride), E, lw=0.5)
-        axes[0].set_xlabel("Frame")
-        axes[0].set_ylabel("Energy")
-        axes[0].set_title("Ising energy over frames")
-        axes[0].set_xlim(0, 400)
+        # Flatten all non-zero couplings for histogram
+        J_vals = [v for Ji in J for v in Ji.values()]
+        J_vals = np.array(J_vals, dtype=np.float32)
 
-        # Bottom panel: Histogram of energies
-        axes[1].hist(E, bins=200, density=True)
-        axes[1].set_xlabel("Energy")
-        axes[1].set_ylabel("Density")
-        axes[1].set_title("Energy distribution")
+        # Create 2x2 figure
+        fig, axs = plt.subplots(2, 2, figsize=(12, 10))
+
+        # Panel 1: Energy over time
+        axs[0, 0].plot(np.arange(0, len(E) * energy_stride, energy_stride), E, lw=1.0, color='blue')
+        axs[0, 0].set_xlabel("Frame", fontsize=14)
+        axs[0, 0].set_ylabel("Energy", fontsize=14)
+        axs[0, 0].set_title("Ising Energy Over Frames", fontsize=14)
+        axs[0, 0].set_xlim(0, 600)
+        axs[0, 0].tick_params(axis='both', which='major', labelsize=12)
+
+        # Panel 2: Energy histogram
+        axs[0, 0].plot(np.arange(0, len(E) * energy_stride, energy_stride), E, lw=1.0, color='k')
+        axs[0, 0].set_xlabel("Frame", fontsize=14)
+        axs[0, 0].set_ylabel("Energy", fontsize=14)
+        axs[0, 0].set_title("Ising Energy Over Frames", fontsize=14)
+        axs[0, 0].set_xlim(0, 600)
+        axs[0, 0].tick_params(axis='both', which='major', labelsize=12)
+
+        # Panel 3: Couplings histogram
+        axs[1, 0].hist(J_vals, bins=100, color='skyblue', edgecolor='k', density=True)
+        axs[1, 0].set_xlabel("Coupling strength J_ij", fontsize=14)
+        axs[1, 0].set_ylabel("Density", fontsize=14)
+        axs[1, 0].set_title("Sparse Couplings Histogram", fontsize=14)
+        axs[1, 0].tick_params(axis='both', which='major', labelsize=12)
+
+        # # Panel 4: LOG scale probability histogram
+        # axs[1, 1].hist(P_s, bins=100, color='lightgreen', edgecolor='k', density=True)
+        # axs[1, 1].set_xlabel("P(s)", fontsize=14)
+        # axs[1, 1].set_ylabel("Density", fontsize=14)
+        # axs[1, 1].set_title("State Probabilities (log scale)", fontsize=14)
+        # axs[1, 1].set_yscale('log')  # LOG SCALE
+        # axs[1, 1].tick_params(axis='both', which='major', labelsize=12)
 
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/E_panels.png", dpi=150)
+        plt.savefig(f"./{log_dir}/results/E_panels.png", dpi=150)
         plt.close(fig)
 
         # check shapes

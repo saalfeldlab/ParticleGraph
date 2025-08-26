@@ -2474,65 +2474,85 @@ def sparse_ising_fit_fast(x, voltage_col=3, top_k=50, block_size=2000, dtype=np.
     m = np.clip(m, -0.999, 0.999)
     h = np.arctanh(m).astype(dtype)
 
-    # 3) Blockwise correlation scan, keeping top_k couplings
+    # 3) Blockwise correlation scan, keeping top_k couplings safely
     J = [dict() for _ in range(n_neurons)]
     blocks = list(range(0, n_neurons, block_size))
+
+    # Temporary storage for top-k values and indices
     topk_vals = np.full((n_neurons, top_k), -np.inf, dtype=dtype)
-    topk_idx  = np.zeros((n_neurons, top_k), dtype=np.int32)
+    topk_idx = np.full((n_neurons, top_k), -1, dtype=np.int32)
 
     for bj in trange(len(blocks), desc="blocks (j)"):
         j0, j1 = blocks[bj], min(n_neurons, blocks[bj] + block_size)
         sj = s[:, j0:j1].astype(dtype)
+
         for bi in range(0, n_neurons, block_size):
             i0, i1 = bi, min(n_neurons, bi + block_size)
             si = s[:, i0:i1].astype(dtype)
+
+            # compute block correlation
             C_block = (si.T @ sj) / n_frames
+
             for local_i in range(i1 - i0):
                 global_i = i0 + local_i
-                vals = C_block[local_i]
+                vals = np.ascontiguousarray(C_block[local_i]).ravel()  # flatten safely
                 cur_vals = topk_vals[global_i]
-                cur_idx  = topk_idx[global_i]
-                new_vals = np.concatenate([cur_vals, vals.astype(dtype)])
-                new_idx  = np.concatenate([cur_idx, np.arange(j0, j1, dtype=np.int32)])
-                order = np.argsort(np.abs(new_vals))[-top_k:]
-                topk_vals[global_i] = new_vals[order]
-                topk_idx[global_i]  = new_idx[order]
+                cur_idx = topk_idx[global_i]
 
+                # concatenate previous top-k and current block
+                new_vals = np.concatenate([cur_vals, vals])
+                new_idx = np.concatenate([cur_idx, np.arange(j0, j1, dtype=np.int32)])
+
+                # filter out non-finite values before selecting top-k
+                mask = np.isfinite(new_vals)
+                filtered_vals = new_vals[mask]
+                filtered_idx = new_idx[mask]
+
+                # select top-k by absolute value
+                if len(filtered_vals) > 0:
+                    order = np.argsort(np.abs(filtered_vals))[-top_k:]
+                    topk_vals[global_i] = filtered_vals[order]
+                    topk_idx[global_i] = filtered_idx[order]
+
+    # fill sparse coupling dictionaries
     for i in trange(n_neurons, desc="fill J"):
         vals, idxs = topk_vals[i], topk_idx[i]
         for v, j in zip(vals, idxs):
             if j != i and np.isfinite(v):
                 J[i][int(j)] = float(v)
 
-    # 4) Energy for every `energy_stride` frames
-    E = []
-    for k, t in enumerate(trange(0, n_frames, energy_stride, desc="energy")):
-        st = s[t]
-        E_t = -np.dot(h, st)
-        for i, Ji in enumerate(J):
-            si = st[i]
-            for j, Jij in Ji.items():
-                if j > i:  # avoid double counting
-                    E_t -= Jij * si * st[j]
-        E.append(E_t)
-    E = np.array(E, dtype=np.float32)
+    # Convert J to edge list (upper triangle only)
+    rows, cols, vals = [], [], []
+    for i, Ji in enumerate(J):
+        for j, Jij in Ji.items():
+            if j > i:
+                rows.append(i)
+                cols.append(j)
+                vals.append(Jij)
 
-    # 5) Energy averaged `energy_stride` frames
-    # E = []
-    # for t0 in trange(0, n_frames, energy_stride):
-    #     t1 = min(t0 + energy_stride, n_frames)
-    #     s_block = s[t0:t1]  # shape [≤energy_stride, n_neurons]
-    #
-    #     # average over the block
-    #     E_block = (
-    #             - (h @ s_block.T)
-    #             - sum(s_block[:, i] * sum(J[i][j] * s_block[:, j] for j in J[i])
-    #                   for i in range(len(J)))
-    #     ).mean()
-    #
-    #     E.append(E_block)
-    #
-    # E = np.array(E, dtype=np.float32)
+    rows = np.array(rows, dtype=np.int32)
+    cols = np.array(cols, dtype=np.int32)
+    vals = np.array(vals, dtype=np.float32)
+
+    # Parameters
+    chunk_size = 5000  # adjust based on RAM
+    n_frames = s.shape[0]
+    E = np.zeros(n_frames, dtype=np.float32)
+
+    # Vectorized energy calculation in chunks with tqdm
+    for start in trange(0, n_frames, chunk_size, desc="Energy chunks"):
+        end = min(start + chunk_size, n_frames)
+        s_chunk = s[start:end].astype(np.float32)  # shape (chunk_size, n_neurons)
+
+        # Field term
+        field_E = -(s_chunk @ h)
+
+        # Coupling term (vectorized over chunk)
+        coupling_E = -0.5 * np.sum(vals[None, :] * s_chunk[:, rows] * s_chunk[:, cols], axis=1)
+
+        E[start:end] = field_E + coupling_E
+
+    E = E / 1000 # arbitrary
 
     return s, h, J, E
 
@@ -2561,8 +2581,8 @@ def select_frames_by_energy(E, strategy='critical', Ising_filter=None):
     min_frames = n_frames // 10  # Minimum 10% of frames
 
     if strategy == 'critical':
-        critical_energy = -100
-        tolerance = 75
+        critical_energy = np.median(E)
+        tolerance = np.std(E) * 0.5
         mask = np.abs(E - critical_energy) < tolerance
         selected = np.where(mask)[0]
 
@@ -2576,8 +2596,8 @@ def select_frames_by_energy(E, strategy='critical', Ising_filter=None):
         selected = np.where(dE_dt > threshold)[0]
 
     elif strategy == 'gaussian':
-        target_energy = -100
-        sigma = 50
+        target_energy = np.mean(E)
+        sigma = np.std(E) * 0.5
         weights = np.exp(-0.5 * ((E - target_energy) / sigma) ** 2)
         weights /= np.sum(weights)
         n_select = max(min_frames, n_frames // 3)
