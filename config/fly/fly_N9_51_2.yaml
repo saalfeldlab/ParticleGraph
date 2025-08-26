@@ -1,4 +1,4 @@
-description: 'small MLP, no extra null edges, noise_model_level: 0 DAVIS weight_L1: 1.0'
+description: 'small MLP, no extra null edges, noise_model_level: 0 DAVIS weight_L1: 1.0  L2:1E-3   coeff_W_L1: 5E-5'
 dataset: 'fly_N9_37_2'
 
 simulation:
@@ -71,4 +71,7 @@ training:
     coeff_phi_weight_L1_rate: 0.5
 
     coeff_edge_weight_L2: 0
-    coeff_phi_weight_L2: 0
+    coeff_phi_weight_L2: 0.001
+
+    coeff_W_L1: 5.0E-5
+    coeff_W_L1_rate: 0.5

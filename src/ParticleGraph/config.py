@@ -329,6 +329,7 @@ class TrainingConfig(BaseModel):
     training_NNR_start_epoch: int = 0
 
     coeff_W_L1: float = 0.0
+    coeff_W_L1_rate: float = 0.5
     coeff_W_L1_ghost: float = 0
     coeff_W_sign: float = 0
 
@@ -347,8 +348,12 @@ class TrainingConfig(BaseModel):
     coeff_TV_norm: float = 0
     coeff_missing_activity: float = 0
     coeff_edge_norm: float = 0
+
     coeff_edge_weight_L1: float = 0
+    coeff_edge_weight_L1_rate: float = 0.5
     coeff_phi_weight_L1: float = 0
+    coeff_phi_weight_L1_rate: float = 0.5
+
     coeff_edge_weight_L2: float = 0
     coeff_phi_weight_L2: float = 0
 

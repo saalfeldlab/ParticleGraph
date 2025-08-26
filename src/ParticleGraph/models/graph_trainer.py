@@ -3776,8 +3776,9 @@ def data_train_flyvis(config, erase, best_model, device):
         # anneal loss_noise_level, decrease with epoch
         loss_noise_level = train_config.loss_noise_level * (0.95 ** epoch)
         # anneal weight_L1, increase with epoch
-        coeff_edge_weight_L1= train_config.coeff_edge_weight_L1 * (1 - np.exp(-0.5*epoch))
-        coeff_phi_weight_L1 = train_config.coeff_phi_weight_L1 * (1 - np.exp(-0.5*epoch))
+        coeff_edge_weight_L1= train_config.coeff_edge_weight_L1 * (1 - np.exp(-train_config.coeff_edge_weight_L1_rate**epoch))
+        coeff_phi_weight_L1 = train_config.coeff_phi_weight_L1 * (1 - np.exp(-train_config.coeff_phi_weight_L1_rate*epoch))
+        coeff_W_L1 = train_config.coeff_W_L1 * (1 - np.exp(-train_config.coeff_W_L1_rate * epoch))
 
         for N in trange(Niter):
 
