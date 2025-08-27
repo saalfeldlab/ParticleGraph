@@ -7229,7 +7229,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                 # Plot 5: Tau comparison (bottom left)
                 ax5 = fig.add_subplot(3, 2, 5)
                 slopes_lin_phi_array_np = np.array(slopes_lin_phi_list)
-                reconstructed_tau = np.where(slopes_lin_phi_array_np != 0, 1.0 / slopes_lin_phi_array_np, np.inf)
+                reconstructed_tau = np.where(slopes_lin_phi_array_np != 0, 1.0 / slopes_lin_phi_array_np, 1)
                 finite_mask = np.isfinite(reconstructed_tau)
 
                 gt_taus_numpy = to_numpy(gt_taus[:n_neurons])
@@ -7253,8 +7253,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                 # Plot 6: V_rest comparison (bottom right)
                 ax6 = fig.add_subplot(3, 2, 6)
                 offsets_array = np.array(offsets_list)
-                reconstructed_V_rest = np.where(slopes_lin_phi_array_np != 0, -offsets_array / slopes_lin_phi_array_np,
-                                                np.inf)
+                reconstructed_V_rest = np.where(slopes_lin_phi_array_np != 0, -offsets_array / slopes_lin_phi_array_np, 1)
                 finite_mask_vrest = np.isfinite(reconstructed_V_rest)
 
                 gt_V_rest_numpy = to_numpy(gt_V_Rest[:n_neurons])
@@ -7513,19 +7512,14 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
             slopes_lin_phi_array = np.array(slopes_lin_phi_list)
             offsets_array = np.array(offsets_list)
 
-            # Plot 5c: Tau comparison (reconstructed vs ground truth)
-            reconstructed_tau = np.where(slopes_lin_phi_array != 0, 1.0 / slopes_lin_phi_array, np.inf)
+            # Tau comparison (reconstructed vs ground truth)
+            reconstructed_tau = np.where(slopes_lin_phi_array != 0, 1.0 / slopes_lin_phi_array, 1)
 
-            fig = plt.figure(figsize=(8, 8))
             gt_taus = to_numpy(gt_taus[:n_neurons])
             reconstructed_tau = -reconstructed_tau[:n_neurons]
 
-            # filter reconstructed_tau < 1
-            filter = (reconstructed_tau < 1)
-            reconstructed_tau = reconstructed_tau[filter]
-            gt_taus = gt_taus[filter]
 
-
+            fig = plt.figure(figsize=(8, 8))
             plt.scatter(gt_taus, reconstructed_tau, c=mc, s=0.5, alpha=0.3)
             lin_fit, lin_fitv = curve_fit(linear_model, gt_taus, reconstructed_tau)
             residuals = reconstructed_tau - linear_model(gt_taus, *lin_fit)
@@ -7535,7 +7529,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
             plt.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}\nN: {len(gt_taus)}',
                      transform=plt.gca().transAxes, verticalalignment='top', fontsize=16)
             plt.xlabel(r'true $\tau$', fontsize=24)
-            plt.ylabel(r'reconstructed $\tau$', fontsize=24)
+            plt.ylabel(r'learned $\tau$', fontsize=24)
             plt.xticks(fontsize=12)
             plt.yticks(fontsize=12)
             plt.xlim([0, 0.35])
@@ -7552,7 +7546,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
 
             # Plot 5d: V_rest comparison (reconstructed vs ground truth)
             # Calculate reconstructed V_rest as offset/slope, handle division by zero
-            reconstructed_V_rest = np.where(slopes_lin_phi_array != 0, -offsets_array / slopes_lin_phi_array, np.inf)
+            reconstructed_V_rest = np.where(slopes_lin_phi_array != 0, -offsets_array / slopes_lin_phi_array, 1)
             # Filter out infinite values for fitting
             finite_mask = np.isfinite(reconstructed_V_rest)
 
@@ -7569,7 +7563,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
             plt.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}\nN: {len(gt_V_rest_filtered)}',
                      transform=plt.gca().transAxes, verticalalignment='top', fontsize=16)
             plt.xlabel(r'true $V_{rest}$', fontsize=24)
-            plt.ylabel(r'reconstructed $V_{rest}$', fontsize=24)
+            plt.ylabel(r'learned $V_{rest}$', fontsize=24)
             plt.xticks(fontsize=12)
             plt.yticks(fontsize=12)
             plt.tight_layout()
