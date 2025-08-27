@@ -13,7 +13,7 @@ from ParticleGraph.models.Siren_Network import *
 from ParticleGraph.models.Signal_Propagation_FlyVis import *
 from ParticleGraph.models.Ghost_Particles import *
 from geomloss import SamplesLoss
-from ParticleGraph.sparsify import EmbeddingCluster, sparsify_cluster
+from ParticleGraph.sparsify import EmbeddingCluster, sparsify_cluster, clustering_evaluation
 from sklearn.neighbors import NearestNeighbors
 from scipy.optimize import curve_fit
 
@@ -926,6 +926,7 @@ def data_train_particle(config, erase, best_model, device):
                 'PDE_MLPs' not in model_config.particle_model_name) & (
                 'PDE_F' not in model_config.particle_model_name) & ('PDE_M' not in model_config.particle_model_name) & (
                 has_bounding_box == False):
+
             ax = fig.add_subplot(1, 5, 2)
             embedding = get_embedding(model.a, 1)
             for n in range(n_particle_types):
@@ -3547,13 +3548,13 @@ def data_train_flyvis(config, erase, best_model, device):
     coeff_update_u_diff = train_config.coeff_update_u_diff
     coeff_edge_norm = train_config.coeff_edge_norm
     coeff_update_msg_sign = train_config.coeff_update_msg_sign
-    coeff_edge_weight_L1 = train_config.coeff_edge_weight_L1
-    coeff_phi_weight_L1 = train_config.coeff_phi_weight_L1
     coeff_edge_weight_L2 = train_config.coeff_edge_weight_L2
     coeff_phi_weight_L2 = train_config.coeff_phi_weight_L2
 
     pre_trained_W = train_config.pre_trained_W
-    loss_noise_level = train_config.loss_noise_level
+
+    replace_with_cluster = 'replace' in train_config.sparsity
+    sparsity_freq = train_config.sparsity_freq
 
     n_edges = simulation_config.n_edges
     n_extra_null_edges = simulation_config.n_extra_null_edges
@@ -3570,9 +3571,6 @@ def data_train_flyvis(config, erase, best_model, device):
     else:
         has_visual_field = False
 
-
-    replace_with_cluster = 'replace' in train_config.sparsity
-    sparsity_freq = train_config.sparsity_freq
     coeff_loop = torch.tensor(train_config.coeff_loop, device = device)
 
     log_dir, logger = create_log_dir(config, erase)
@@ -3589,7 +3587,7 @@ def data_train_flyvis(config, erase, best_model, device):
     print(f'dataset: {len(x_list)} run, {len(x_list[0])} frames')
     x = x_list[0][n_frames - 10]
 
-    if (os.path.exists(f"./{log_dir}/tmp_training/E_panels.png")) & (Ising_filter== "none"):
+    if (os.path.exists(f"./{log_dir}/results/E_panels.png")) & (Ising_filter== "none"):
         print (f'energy plot already exist, skipping computation')
     else:
         energy_stride = 1
@@ -3610,37 +3608,34 @@ def data_train_flyvis(config, erase, best_model, device):
         fig, axs = plt.subplots(2, 2, figsize=(12, 10))
 
         # Panel 1: Energy over time
-        axs[0, 0].plot(np.arange(0, len(E) * energy_stride, energy_stride), E, lw=1.0, color='blue')
+        axs[0, 0].plot(np.arange(0, len(E) * energy_stride, energy_stride), E, lw=1.0, color='k')
         axs[0, 0].set_xlabel("Frame", fontsize=14)
         axs[0, 0].set_ylabel("Energy", fontsize=14)
-        axs[0, 0].set_title("Ising Energy Over Frames", fontsize=14)
+        axs[0, 0].set_title("Ising energy over frames", fontsize=14)
         axs[0, 0].set_xlim(0, 600)
         axs[0, 0].tick_params(axis='both', which='major', labelsize=12)
 
         # Panel 2: Energy histogram
-        axs[0, 0].plot(np.arange(0, len(E) * energy_stride, energy_stride), E, lw=1.0, color='k')
-        axs[0, 0].set_xlabel("Frame", fontsize=14)
-        axs[0, 0].set_ylabel("Energy", fontsize=14)
-        axs[0, 0].set_title("Ising Energy Over Frames", fontsize=14)
-        axs[0, 0].set_xlim(0, 600)
-        axs[0, 0].tick_params(axis='both', which='major', labelsize=12)
+        axs[0, 1].hist(E, bins=100, color='salmon', edgecolor='k', density=True)
+        axs[0, 1].set_xlabel("Energy", fontsize=14)
+        axs[0, 1].set_ylabel("Density", fontsize=14)
+        axs[0, 1].set_title("Ising energy distribution", fontsize=14)
+        axs[0, 1].tick_params(axis='both', which='major', labelsize=12)
 
         # Panel 3: Couplings histogram
         axs[1, 0].hist(J_vals, bins=100, color='skyblue', edgecolor='k', density=True)
-        axs[1, 0].set_xlabel("Coupling strength J_ij", fontsize=14)
+        axs[1, 0].set_xlabel(r"Coupling strength $J_{ij}$", fontsize=14)
         axs[1, 0].set_ylabel("Density", fontsize=14)
         axs[1, 0].set_title("Sparse Couplings Histogram", fontsize=14)
         axs[1, 0].tick_params(axis='both', which='major', labelsize=12)
+
+        axs[1, 1].axis('off')  # Empty panel
 
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/E_panels.png", dpi=150)
         plt.close(fig)
 
-        # check shapes
         print("s.shape:", s.shape, "h.shape:", h.shape, "len(J):", len(J), "E.shape:", E.shape)
-        # compute approximate per-frame model probabilities (normalized)
-        # P_model = compute_frame_probs_from_sparse_J(s, h, J)
-        # print("P_model sum:", P_model.sum(), "min/max:", P_model.min(), P_model.max())
 
     activity = torch.tensor(x_list[0][:, :, 3:4], device=device)
     activity = activity.squeeze()
@@ -4019,6 +4014,51 @@ def data_train_flyvis(config, erase, best_model, device):
             plt.imshow(img)
             plt.axis('off')
             plt.title('Phi Function', fontsize=12)
+
+        if replace_with_cluster:
+
+            if (epoch % sparsity_freq == sparsity_freq - 1) & (epoch < n_epochs - sparsity_freq):
+                print('replace embedding with clusters ...')
+                eps = train_config.cluster_distance_threshold
+                results = clustering_evaluation(to_numpy(model.a), type_list, eps=eps)
+                print(f"eps={eps}: {results['n_clusters_found']} clusters, "
+                      f"accuracy={results['accuracy']:.3f}")
+
+                labels = results['cluster_labels']
+                
+                for n in np.unique(labels):
+                    # if n == -1:
+                    #     continue
+                    indices = np.where(labels == n)[0]
+                    if len(indices) > 1:
+                        with torch.no_grad():
+                            model.a[indices, :] = torch.mean(model.a[indices, :], dim=0, keepdim=True)
+
+                ax = fig.add_subplot(2, 3, 6)
+                for n in range(n_neuron_types):
+                    pos = torch.argwhere(type_list == n)
+                    plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=5, color=cmap.color(n),
+                                alpha=0.7, edgecolors='none')
+                plt.xlabel('embedding 0', fontsize=18)
+                plt.ylabel('embedding 1', fontsize=18)
+                plt.xticks([])
+                plt.yticks([])
+                plt.text(0.5, 0.9, f"eps={eps}: {results['n_clusters_found']} clusters, accuracy={results['accuracy']:.3f}")
+
+                if train_config.fix_cluster_embedding:
+                    lr_embedding = 1.0E-10
+                    # the embedding is fixed for 1 epoch
+
+            else:
+                lr = train_config.learning_rate_start
+                lr_embedding = train_config.learning_rate_embedding_start
+                lr_W = train_config.learning_rate_W_start
+                learning_rate_NNR = train_config.learning_rate_NNR
+
+            logger.info(f'learning rates: lr_W {lr_W}, lr {lr}, lr_update {lr_update}, lr_embedding {lr_embedding}, learning_rate_NNR {learning_rate_NNR}')
+            optimizer, n_total_params = set_trainable_parameters(model=model, lr_embedding=lr_embedding, lr=lr,
+                                                                 lr_update=lr_update, lr_W=lr_W,
+                                                                 learning_rate_NNR=learning_rate_NNR)
 
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/epoch_{epoch}.tif")

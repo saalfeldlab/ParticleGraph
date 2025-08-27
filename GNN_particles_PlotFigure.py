@@ -6783,7 +6783,6 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         # Flatten all non-zero couplings for histogram
         J_vals = [v for Ji in J for v in Ji.values()]
         J_vals = np.array(J_vals, dtype=np.float32)
-
         # Create 2x2 figure
         fig, axs = plt.subplots(2, 2, figsize=(12, 10))
 
@@ -6791,35 +6790,25 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         axs[0, 0].plot(np.arange(0, len(E) * energy_stride, energy_stride), E, lw=1.0, color=mc)
         axs[0, 0].set_xlabel("Frame", fontsize=14)
         axs[0, 0].set_ylabel("Energy", fontsize=14)
-        axs[0, 0].set_title("Ising Energy Over Frames", fontsize=14)
+        axs[0, 0].set_title("Ising energy over frames", fontsize=14)
         axs[0, 0].set_xlim(0, 600)
         axs[0, 0].tick_params(axis='both', which='major', labelsize=12)
 
         # Panel 2: Energy histogram
-        axs[0, 1].hist(E, bins=100, color='salmon', edgecolor='k', density=True)
+        axs[0, 1].hist(E, bins=100, color='salmon', edgecolor=mc, density=True)
         axs[0, 1].set_xlabel("Energy", fontsize=14)
         axs[0, 1].set_ylabel("Density", fontsize=14)
-        axs[0, 1].set_title("Energy Distribution", fontsize=14)
+        axs[0, 1].set_title("Ising energy distribution", fontsize=14)
         axs[0, 1].tick_params(axis='both', which='major', labelsize=12)
 
         # Panel 3: Couplings histogram
-        axs[1, 0].hist(J_vals, bins=100, color='skyblue', edgecolor='k', density=True)
-        axs[1, 0].set_xlabel("Coupling strength J_ij", fontsize=14)
+        axs[1, 0].hist(J_vals, bins=100, color='skyblue', edgecolor=mc, density=True)
+        axs[1, 0].set_xlabel(r"Coupling strength $J_{ij}$", fontsize=14)
         axs[1, 0].set_ylabel("Density", fontsize=14)
         axs[1, 0].set_title("Sparse Couplings Histogram", fontsize=14)
         axs[1, 0].tick_params(axis='both', which='major', labelsize=12)
 
-        # # Panel 4: LOG scale probability histogram
-        # axs[1, 1].hist(P_s, bins=100, color='lightgreen', edgecolor='k', density=True)
-        # axs[1, 1].set_yscale('log')  # Log y-axis
-        # axs[1, 1].set_xlabel("P(s)", fontsize=14)
-        # axs[1, 1].set_ylabel("Density (log)", fontsize=14)
-        # print(f"Min E: {E.min()}")
-        # print(f"Max E: {E.max()}")
-        # print(f"Temperature T: {T}")
-        # print(f"Min P_s before norm: {np.exp(-E.max() / T)}")
-        # print(f"Min P_s after norm: {P_s.min()}")
-        # axs[1, 1].tick_params(axis='both', which='major', labelsize=12)
+        axs[1, 1].axis('off')  # Empty panel
 
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/E_panels.png", dpi=150)
@@ -6872,7 +6861,6 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
     plt.tight_layout()
     plt.savefig(f'./{log_dir}/results/activity_mu_sigma.tif', dpi=300)
     plt.close()
-
 
     plt.figure(figsize=(10, 10))
     n = np.random.randint(0, n_neurons, 10)
@@ -7210,7 +7198,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                 learned_weights = to_numpy(corrected_W.squeeze())
                 true_weights = to_numpy(gt_weights)
                 if len(true_weights) > 0 and len(learned_weights) > 0:
-                    ax1.scatter(true_weights, learned_weights, c=mc, s=1, alpha=0.5)
+                    ax1.scatter(true_weights, learned_weights, c=mc, s=1, alpha=0.05)
                     lin_fit, lin_fitv = curve_fit(linear_model, true_weights, learned_weights)
                     residuals = learned_weights - linear_model(true_weights, *lin_fit)
                     ss_res = np.sum(residuals ** 2)
@@ -7232,7 +7220,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                         type_mask = (to_numpy(type_list).squeeze() == n)
                         if np.any(type_mask):
                             ax2.scatter(embedding_plot[type_mask, 0], embedding_plot[type_mask, 1],
-                                        c=colors_65[n], s=6, alpha=0.5)
+                                        c=colors_65[n], s=6, alpha=0.25, edgecolors='none')
                     ax2.set_xlabel('$a_0$', fontsize=23)
                     ax2.set_ylabel('$a_1$', fontsize=23)
                     ax2.set_xticks([])
@@ -7253,7 +7241,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                     ss_res = np.sum(residuals ** 2)
                     ss_tot = np.sum((reconstructed_tau_filtered - np.mean(reconstructed_tau_filtered)) ** 2)
                     r_squared = 1 - (ss_res / ss_tot)
-                    ax5.scatter(gt_taus_filtered , reconstructed_tau_filtered / (lin_fit[0] + 1E-8), c=mc, s=1, alpha=0.5)
+                    ax5.scatter(gt_taus_filtered , reconstructed_tau_filtered / (lin_fit[0] + 1E-8), c=mc, s=1, alpha=0.25)
                     ax5.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}\nN: {len(gt_taus_filtered)}',
                              transform=ax5.transAxes, verticalalignment='top', fontsize=18)
                 ax5.set_xlabel('true $\\tau$', fontsize=23)
@@ -7279,7 +7267,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                     ss_res = np.sum(residuals ** 2)
                     ss_tot = np.sum((reconstructed_V_rest_filtered - np.mean(reconstructed_V_rest_filtered)) ** 2)
                     r_squared = 1 - (ss_res / ss_tot)
-                    ax6.scatter(gt_V_rest_filtered, reconstructed_V_rest_filtered / (lin_fit[0] + 1E-8), c=mc, s=1, alpha=0.5)
+                    ax6.scatter(gt_V_rest_filtered, reconstructed_V_rest_filtered / (lin_fit[0] + 1E-8), c=mc, s=1, alpha=0.25)
                     ax6.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}\nN: {len(gt_V_rest_filtered)}',
                              transform=ax6.transAxes, verticalalignment='top', fontsize=18)
                 ax6.set_xlabel('true $V_{rest}$', fontsize=23)
@@ -7301,83 +7289,76 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
         config_indices = config.dataset.split('fly_N9_')[1] if 'fly_N9_' in config.dataset else 'evolution'
         files, file_id_list = get_training_files(log_dir, n_runs)
 
-        fps = 10  # frames per second for the video
-        metadata = dict(title='Model evolution', artist='Matplotlib', comment='Model evolution over epochs')
-        writer = FFMpegWriter(fps=fps, metadata=metadata)
-        fig = plt.figure(figsize=(8, 16))
-        mp4_path = f'{log_dir}/results/MLP_weights_{config_indices}.mp4'
-        if os.path.exists(mp4_path):
-            os.remove(mp4_path)
-        with writer.saving(fig, mp4_path, dpi=80):
-            for file_id_ in trange(len(file_id_list)):
-                epoch = files[file_id_].split('graphs')[1][1:-3]
+        if False:
+            fps = 10
+            metadata = dict(title='Model evolution', artist='Matplotlib', comment='Model evolution over epochs')
+            writer = FFMpegWriter(fps=fps, metadata=metadata)
+            fig = plt.figure(figsize=(16, 8))
+            mp4_path = f'{log_dir}/results/MLP_weights_{config_indices}.mp4'
+            if os.path.exists(mp4_path):
+                os.remove(mp4_path)
+            with writer.saving(fig, mp4_path, dpi=80):
+                for file_id_ in trange(len(file_id_list)):
+                    epoch = files[file_id_].split('graphs')[1][1:-3]
 
-                # Load model for this epoch
-                net = f'{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt'
-                model = Signal_Propagation_FlyVis(
-                    aggr_type=model_config.aggr_type,
-                    config=config,
-                    device=device
-                )
-                state_dict = torch.load(net, map_location=device)
-                model.load_state_dict(state_dict['model_state_dict'])
-                logger.info(f'net: {net}')
+                    net = f'{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt'
+                    model = Signal_Propagation_FlyVis(
+                        aggr_type=model_config.aggr_type,
+                        config=config,
+                        device=device
+                    )
+                    state_dict = torch.load(net, map_location=device)
+                    model.load_state_dict(state_dict['model_state_dict'])
+                    logger.info(f'net: {net}')
 
-                # --- Extract weights and biases separately ---
-                weights, biases = [], []
-                for name, param in model.lin_phi.named_parameters():
-                    if "weight" in name:
-                        weights.append(param.flatten())
-                    elif "bias" in name:
-                        biases.append(param.flatten())
+                    # Extract layer-wise parameters from lin_phi
+                    layer_weights, layer_biases = [], []
+                    layer_names = []
 
-                weight_vec = torch.cat(weights).detach().cpu()
-                bias_vec = torch.cat(biases).detach().cpu()
+                    for name, param in model.lin_phi.named_parameters():
+                        if "weight" in name:
+                            layer_weights.append(param.detach().cpu())
+                            layer_names.append(name)
+                        elif "bias" in name:
+                            layer_biases.append(param.detach().cpu())
 
-                # --- Helper: reshape to nearest square with padding ---
-                def to_square(vec):
-                    n_side = int(round(vec.numel() ** 0.5))
-                    n_total = n_side * n_side
-                    if vec.numel() < n_total:
-                        pad_size = n_total - vec.numel()
-                        vec = torch.cat([vec, torch.zeros(pad_size, device=vec.device)])
-                    elif vec.numel() > n_total:
-                        vec = vec[:n_total]
-                    return vec.view(n_side, n_side)
+                    n_layers = len(layer_weights)
 
-                weight_grid = to_square(weight_vec)
-                bias_grid = to_square(bias_vec)
+                    fig.clf()
+                    fig.set_size_inches(4 * n_layers, 8)
+                    axes = fig.subplots(2, n_layers)
+                    if n_layers == 1:
+                        axes = axes.reshape(-1, 1)
 
-                # --- Plot with 2 subplots ---
-                fig.clf()
-                ax1, ax2 = fig.subplots(2, 1)
+                    for layer_idx in range(n_layers):
+                        w = layer_weights[layer_idx]
+                        b = layer_biases[layer_idx]
 
-                weight_grid = to_numpy(weight_grid)
-                vmin_ = np.mean(weight_grid) - 3 * np.std(weight_grid)
-                vmax_ = np.mean(weight_grid) + 3 * np.std(weight_grid)
+                        # Plot weights
+                        ax_w = axes[0, layer_idx]
+                        im_w = ax_w.imshow(w, cmap="seismic", aspect="equal", vmin=-10,vmax=10)
+                        # cbar_w = fig.colorbar(im_w, ax=ax_w, fraction=0.046, pad=0.04)
+                        # cbar_w.ax.tick_params(labelsize=12)
+                        ax_w.set_title(f"Layer {layer_idx + 1} Weights ({w.shape[0]}x{w.shape[1]})", fontsize=14)
+                        ax_w.axis('off')
 
-                im1 = ax1.imshow(weight_grid, cmap="seismic", aspect="equal", vmin=vmin_, vmax=vmax_)
-                cbar = fig.colorbar(im1, ax=ax1, fraction=0.046, pad=0.04)
-                cbar.set_label("weight value", fontsize=24)
-                cbar.ax.tick_params(labelsize=16)
-                ax1.set_title(f"MLP weights", fontsize=24)
-                ax1.axis('off')
+                        # Plot biases as row vector
+                        ax_b = axes[1, layer_idx]
+                        b_2d = b.unsqueeze(0) if b.dim() == 1 else b
+                        im_b = ax_b.imshow(b_2d, cmap="seismic", aspect="equal", vmin=-1,vmax=1)
+                        # cbar_b = fig.colorbar(im_b, ax=ax_b, fraction=0.046, pad=0.04)
+                        # cbar_b.ax.tick_params(labelsize=12)
+                        ax_b.set_title(f"Layer {layer_idx + 1} Biases ({len(b)})", fontsize=14)
+                        ax_b.axis('off')
 
-                im2 = ax2.imshow(bias_grid, cmap="seismic", aspect="equal")
-                cbar = fig.colorbar(im2, ax=ax2, fraction=0.046, pad=0.04)
-                cbar.set_label("bias value", fontsize=24)
-                cbar.ax.tick_params(labelsize=16)
-                ax2.set_title(f"MLP bias", fontsize=24)
-                ax2.axis('off')
+                    plt.tight_layout()
 
-                # Save last frame as PNG
-                if file_id_ == len(file_id_list) - 1:
-                    plt.savefig(f'{log_dir}/results/MLP_weights_{config_indices}.png',
-                                dpi=300, bbox_inches='tight')
+                    if (file_id_ == len(file_id_list) - 1) | (file_id_ == 0):
+                        plt.savefig(f'{log_dir}/results/MLP_weights_{config_indices}.png',
+                                    dpi=300, bbox_inches='tight')
 
-                writer.grab_frame()
-        print(f"MP4 saved as: {mp4_path}")
-
+                    writer.grab_frame()
+            print(f"MP4 saved as: {mp4_path}")
 
         for epoch in epoch_list:
 
@@ -7496,7 +7477,6 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                         plt.plot(to_numpy(rr), to_numpy(func), 2,
                                  color=cmap.color(to_numpy(type_list)[n].astype(int)),
                                  linewidth=1, alpha=0.025)
-
                 rr = torch.linspace(mu_activity[n] - 2 * sigma_activity[n], mu_activity[n] + 2 * sigma_activity[n], 1000, device=device)
                 embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
                 in_features = torch.cat((rr[:, None], embedding_, rr[:, None] * 0, torch.zeros_like(rr[:, None])), dim=1)
@@ -7539,6 +7519,13 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
             fig = plt.figure(figsize=(8, 8))
             gt_taus = to_numpy(gt_taus[:n_neurons])
             reconstructed_tau = -reconstructed_tau[:n_neurons]
+
+            # filter reconstructed_tau < 1
+            filter = (reconstructed_tau < 1)
+            reconstructed_tau = reconstructed_tau[filter]
+            gt_taus = gt_taus[filter]
+
+
             plt.scatter(gt_taus, reconstructed_tau, c=mc, s=0.5, alpha=0.3)
             lin_fit, lin_fitv = curve_fit(linear_model, gt_taus, reconstructed_tau)
             residuals = reconstructed_tau - linear_model(gt_taus, *lin_fit)
@@ -7551,6 +7538,8 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
             plt.ylabel(r'reconstructed $\tau$', fontsize=24)
             plt.xticks(fontsize=12)
             plt.yticks(fontsize=12)
+            plt.xlim([0, 0.35])
+            plt.ylim([0, 0.35])
             plt.tight_layout()
             plt.savefig(f'{log_dir}/results/tau_comparison_{epoch}.png', dpi=300)
             plt.close()
@@ -12472,7 +12461,7 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_43_1', 'fly_N9_43_2', 'fly_N9_43_3', 'fly_N9_43_4', 'fly_N9_43_5']
     # data_flyvis_compare(config_list, 'training.loss_noise_level')
 
-    # config_list = ['fly_N9_44_1', 'fly_N9_44_2', 'fly_N9_44_3', 'fly_N9_44_4', 'fly_N9_44_5', 'fly_N9_44_6', 'fly_N9_44_7', 'fly_N9_44_8']
+    # config_list = ['fly_N9_44_6', 'fly_N9_44_1', 'fly_N9_44_2', 'fly_N9_44_3', 'fly_N9_44_4', 'fly_N9_44_5', 'fly_N9_44_7', 'fly_N9_44_8']
     # data_flyvis_compare(config_list, 'training.noise_model_level')
 
     # config_list = ['fly_N9_42_1', 'fly_N9_42_2', 'fly_N9_42_3', 'fly_N9_42_4']
@@ -12490,8 +12479,8 @@ if __name__ == '__main__':
     #                'fly_N9_48_1', 'fly_N9_48_2', 'fly_N9_48_3', 'fly_N9_48_4', 'fly_N9_48_5', 'fly_N9_48_6',
     #                'fly_N9_50_1', 'fly_N9_50_2', 'fly_N9_50_3', 'fly_N9_50_4', 'fly_N9_50_5','fly_N9_50_6', 'fly_N9_50_7']
 
-    config_list = ['fly_N9_48_1', 'fly_N9_48_2', 'fly_N9_48_3', 'fly_N9_48_4', 'fly_N9_48_5', 'fly_N9_48_6']
-    data_flyvis_compare(config_list, 'training.coeff_edge_weight_L2')
+    # config_list = ['fly_N9_48_1', 'fly_N9_48_2', 'fly_N9_48_3', 'fly_N9_48_4', 'fly_N9_48_5', 'fly_N9_48_6']
+    # data_flyvis_compare(config_list, 'training.coeff_edge_weight_L2')
 
     # config_list = ['fly_N9_49_1', 'fly_N9_49_2', 'fly_N9_49_3', 'fly_N9_49_4', 'fly_N9_49_5','fly_N9_49_6']
     # data_flyvis_compare(config_list, 'training.coeff_edge_weight_L1')
@@ -12499,22 +12488,23 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_50_1', 'fly_N9_50_2', 'fly_N9_50_3', 'fly_N9_50_4', 'fly_N9_50_5', 'fly_N9_50_6', 'fly_N9_50_7']
     # data_flyvis_compare(config_list, 'training.Ising_filter')
 
-    # for config_file_ in config_list:
-    #     print(' ')
-    #
-    #     config_file, pre_folder = add_pre_folder(config_file_)
-    #     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-    #     config.dataset = pre_folder + config.dataset
-    #     config.config_file = pre_folder + config_file_
-    #
-    #     print(f'config_file  {config.config_file}')
-    #
-    #     folder_name = './log/' + pre_folder + '/tmp_results/'
-    #     os.makedirs(folder_name, exist_ok=True)
-    #     data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
+    config_list = ['fly_N9_49_7', 'fly_N9_49_8', 'fly_N9_49_9', 'fly_N9_49_10', 'fly_N9_49_11','fly_N9_49_12','fly_N9_49_13'
+                   'fly_N9_51_1', 'fly_N9_51_2', 'fly_N9_51_3', 'fly_N9_50_1', 'fly_N9_50_2', 'fly_N9_50_3', 'fly_N9_50_4', 'fly_N9_50_5','fly_N9_50_6', 'fly_N9_50_7']
 
-    #
-    #
+    for config_file_ in config_list:
+        print(' ')
+
+        config_file, pre_folder = add_pre_folder(config_file_)
+        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+        config.dataset = pre_folder + config.dataset
+        config.config_file = pre_folder + config_file_
+
+        print(f'config_file  {config.config_file}')
+
+        folder_name = './log/' + pre_folder + '/tmp_results/'
+        os.makedirs(folder_name, exist_ok=True)
+        data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
+
 
 
 

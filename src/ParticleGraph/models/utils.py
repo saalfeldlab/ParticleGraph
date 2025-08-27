@@ -2391,11 +2391,6 @@ def plot_odor_heatmaps(odor_responses):
 
 
 
-
-
-import numpy as np
-from tqdm import trange
-
 def sparse_ising_fit(x, voltage_col=3, top_k=50):
     """
     Fit a sparse Ising model from neuron voltages using correlation-based approximation.
