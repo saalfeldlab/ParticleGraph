@@ -2816,6 +2816,11 @@ def data_train_synaptic2(config, erase, best_model, device):
     multi_connectivity = config.training.multi_connectivity
     baseline_value = simulation_config.baseline_value
 
+    if config.training.seed != 42:
+        torch.random.fork_rng(devices=device)
+        torch.random.manual_seed(config.training.seed)
+        np.random.seed(config.training.seed)
+
     if field_type != '':
         n_nodes = simulation_config.n_nodes
         has_neural_field = True
@@ -3080,7 +3085,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         else:
             Niter = int(n_frames * data_augmentation_loop // batch_size * 0.2 // max(recursive_loop, 1))
 
-        plot_frequency = int(Niter // 20)
+        plot_frequency = int(Niter // 200)
         print(f'{Niter} iterations per epoch')
         logger.info(f'{Niter} iterations per epoch')
         print(f'plot every {plot_frequency} iterations')
@@ -3562,6 +3567,7 @@ def data_train_flyvis(config, erase, best_model, device):
     if config.training.seed != 42:
         torch.random.fork_rng(devices=device)
         torch.random.manual_seed(config.training.seed)
+        np.random.seed(config.training.seed)
 
     cmap = CustomColorMap(config=config)
 

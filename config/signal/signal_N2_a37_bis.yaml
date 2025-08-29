@@ -1,5 +1,5 @@
-description: 'synaptic network 100.000 points'
-dataset: 'signal_N2_a37'
+description: 'synaptic network 100.000 points  1000 000 iterations per epoch batchsize 1'
+dataset: 'signal_N2_a37_bis'
 
 simulation:
     connectivity_file: 'random'
@@ -42,27 +42,30 @@ graph_model:
 plotting:
     colormap: 'tab10'
     arrow_length: 1
-    xlim: [-4,4]
-    ylim: [-0.5,0.5]
-
+    xlim: [-5,5]
+    ylim: [-8,8]
 
 training:
     n_epochs: 20
+    n_runs: 2
+    device: 'auto'
+
     recursive_loop: 1
     batch_size: 1
     small_init_batch_size: False
-    n_runs: 2
+
+    seed: 24
     
     sparsity: 'none'
     rotation_augmentation: False
     data_augmentation_loop: 50
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
-    device: 'auto'
+
     sparsity: 'replace_embedding_function'
     sparsity_freq: 4
 
-    learning_rate_W_start: 1.0E-4
-    learning_rate_start: 5.0E-5
-    learning_rate_embedding_start: 5.0E-4
+    learning_rate_W_start: 1.0E-3
+    learning_rate_start: 5.0E-4
+    learning_rate_embedding_start: 5.0E-3
 

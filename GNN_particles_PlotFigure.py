@@ -7229,21 +7229,18 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                 # Plot 5: Tau comparison (bottom left)
                 ax5 = fig.add_subplot(3, 2, 5)
                 slopes_lin_phi_array_np = np.array(slopes_lin_phi_list)
-                reconstructed_tau = np.where(slopes_lin_phi_array_np != 0, 1.0 / slopes_lin_phi_array_np, 1)
-                finite_mask = np.isfinite(reconstructed_tau)
-
+                reconstructed_tau = np.where(slopes_lin_phi_array_np != 0, 1.0 / -slopes_lin_phi_array_np, 1)
+                reconstructed_tau = reconstructed_tau[:n_neurons]
+                reconstructed_tau = np.clip(reconstructed_tau, 0, 1)
                 gt_taus_numpy = to_numpy(gt_taus[:n_neurons])
-                reconstructed_tau_filtered = -reconstructed_tau[finite_mask]
-                gt_taus_filtered = gt_taus_numpy[finite_mask]
-                if len(gt_taus_filtered) > 0 and len(reconstructed_tau_filtered) > 0:
-                    lin_fit, lin_fitv = curve_fit(linear_model, gt_taus_filtered, reconstructed_tau_filtered)
-                    residuals = reconstructed_tau_filtered - linear_model(gt_taus_filtered, *lin_fit)
-                    ss_res = np.sum(residuals ** 2)
-                    ss_tot = np.sum((reconstructed_tau_filtered - np.mean(reconstructed_tau_filtered)) ** 2)
-                    r_squared = 1 - (ss_res / ss_tot)
-                    ax5.scatter(gt_taus_filtered , reconstructed_tau_filtered / (lin_fit[0] + 1E-8), c=mc, s=1, alpha=0.25)
-                    ax5.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}\nN: {len(gt_taus_filtered)}',
-                             transform=ax5.transAxes, verticalalignment='top', fontsize=18)
+                lin_fit, lin_fitv = curve_fit(linear_model, gt_taus_numpy, reconstructed_tau)
+                residuals = reconstructed_tau - linear_model(gt_taus_numpy, *lin_fit)
+                ss_res = np.sum(residuals ** 2)
+                ss_tot = np.sum((reconstructed_tau - np.mean(reconstructed_tau)) ** 2)
+                r_squared = 1 - (ss_res / ss_tot)
+                ax5.scatter(gt_taus_numpy , reconstructed_tau, c=mc, s=1, alpha=0.25)
+                ax5.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}\nN: {len(gt_taus)}',
+                         transform=ax5.transAxes, verticalalignment='top', fontsize=18)
                 ax5.set_xlabel('true $\\tau$', fontsize=23)
                 ax5.set_ylabel('learned $\\tau$', fontsize=23)
                 ax5.set_xlim([0, 0.35])
@@ -7254,21 +7251,16 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                 ax6 = fig.add_subplot(3, 2, 6)
                 offsets_array = np.array(offsets_list)
                 reconstructed_V_rest = np.where(slopes_lin_phi_array_np != 0, -offsets_array / slopes_lin_phi_array_np, 1)
-                finite_mask_vrest = np.isfinite(reconstructed_V_rest)
 
                 gt_V_rest_numpy = to_numpy(gt_V_Rest[:n_neurons])
-                reconstructed_V_rest_filtered = reconstructed_V_rest[finite_mask_vrest]
-                gt_V_rest_filtered = gt_V_rest_numpy[finite_mask_vrest]
-                if len(gt_V_rest_filtered) > 0 and len(reconstructed_V_rest_filtered) > 0:
-
-                    lin_fit, lin_fitv = curve_fit(linear_model, gt_V_rest_filtered, reconstructed_V_rest_filtered)
-                    residuals = reconstructed_V_rest_filtered - linear_model(gt_V_rest_filtered, *lin_fit)
-                    ss_res = np.sum(residuals ** 2)
-                    ss_tot = np.sum((reconstructed_V_rest_filtered - np.mean(reconstructed_V_rest_filtered)) ** 2)
-                    r_squared = 1 - (ss_res / ss_tot)
-                    ax6.scatter(gt_V_rest_filtered, reconstructed_V_rest_filtered / (lin_fit[0] + 1E-8), c=mc, s=1, alpha=0.25)
-                    ax6.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}\nN: {len(gt_V_rest_filtered)}',
-                             transform=ax6.transAxes, verticalalignment='top', fontsize=18)
+                lin_fit, lin_fitv = curve_fit(linear_model, gt_V_rest_numpy, reconstructed_V_rest)
+                residuals = reconstructed_V_rest - linear_model(gt_V_rest_numpy, *lin_fit)
+                ss_res = np.sum(residuals ** 2)
+                ss_tot = np.sum((reconstructed_V_rest - np.mean(reconstructed_V_rest)) ** 2)
+                r_squared = 1 - (ss_res / ss_tot)
+                ax6.scatter(gt_V_rest_numpy, reconstructed_V_rest, c=mc, s=1, alpha=0.25)
+                ax6.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}\nN: {len(gt_V_rest_numpy)}',
+                         transform=ax6.transAxes, verticalalignment='top', fontsize=18)
                 ax6.set_xlabel('true $V_{rest}$', fontsize=23)
                 ax6.set_ylabel('learned $V_{rest}$', fontsize=23)
                 ax6.set_xlim([-0.05, 0.9])
@@ -7278,7 +7270,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                 plt.tight_layout()
 
                 # Save 3x2 panels as PNG only for first frame
-                if file_id_ == 0:
+                if file_id_ % 10 == 0:
                     plt.savefig(f'{log_dir}/results/training_{config_indices}.png', dpi=300, bbox_inches='tight')
                 writer.grab_frame()
 
@@ -7403,11 +7395,12 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                     print(f"eps={eps}: {results['n_clusters_found']} clusters, "
                           f"accuracy={results['accuracy']:.3f}")
                     logger.info(f"eps={eps}: {results['n_clusters_found']} clusters, "f"accuracy={results['accuracy']:.3f}")
+                time.sleep(1)
 
             # Plot 3: Edge function visualization
             slopes_lin_edge_list = []
             fig = plt.figure(figsize=(8, 8))
-            for n in range(n_neurons):
+            for n in trange(n_neurons):
                 if (n % 20 == 0):
                     rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
                     embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
@@ -7449,7 +7442,6 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
                     slope = coeffs[0]
                     offset = coeffs[1]
                 slopes_lin_edge_list.append(slope)
-
             plt.xlabel('$x_i$', fontsize=24)
             plt.ylabel('$MLP_1(a_i, x_i)$', fontsize=24)
             plt.xticks(fontsize=12)
@@ -7466,7 +7458,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
             slopes_lin_phi_list = []
             offsets_list = []
             fig = plt.figure(figsize=(8, 8))
-            for n in range(n_neurons):
+            for n in trange(n_neurons):
                 if (n % 20 == 0):
                     rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
                     embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
@@ -7511,13 +7503,10 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
 
             slopes_lin_phi_array = np.array(slopes_lin_phi_list)
             offsets_array = np.array(offsets_list)
-
-            # Tau comparison (reconstructed vs ground truth)
-            reconstructed_tau = np.where(slopes_lin_phi_array != 0, 1.0 / slopes_lin_phi_array, 1)
-
             gt_taus = to_numpy(gt_taus[:n_neurons])
-            reconstructed_tau = -reconstructed_tau[:n_neurons]
-
+            reconstructed_tau = np.where(slopes_lin_phi_array != 0, 1.0 / -slopes_lin_phi_array, 1)
+            reconstructed_tau = reconstructed_tau[:n_neurons]
+            reconstructed_tau = np.clip(reconstructed_tau, 0, 1)
 
             fig = plt.figure(figsize=(8, 8))
             plt.scatter(gt_taus, reconstructed_tau, c=mc, s=0.5, alpha=0.3)
@@ -7533,7 +7522,7 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
             plt.xticks(fontsize=12)
             plt.yticks(fontsize=12)
             plt.xlim([0, 0.35])
-            plt.ylim([0, 0.35])
+            # plt.ylim([0, 0.35])
             plt.tight_layout()
             plt.savefig(f'{log_dir}/results/tau_comparison_{epoch}.png', dpi=300)
             plt.close()
@@ -7541,26 +7530,20 @@ def plot_synaptic_flyvis(config, epoch_list, log_dir, logger, cc, style, device)
             print(" ")
             print(f"tau reconstruction R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
             logger.info(f"tau reconstruction R²: {r_squared:.4f}  slope: {np.round(lin_fit[0], 4)}")
-
             torch.save(torch.tensor(reconstructed_tau, dtype=torch.float32, device=device), f'{log_dir}/results/tau.pt')
 
-            # Plot 5d: V_rest comparison (reconstructed vs ground truth)
-            # Calculate reconstructed V_rest as offset/slope, handle division by zero
+            # V_rest comparison (reconstructed vs ground truth)
             reconstructed_V_rest = np.where(slopes_lin_phi_array != 0, -offsets_array / slopes_lin_phi_array, 1)
-            # Filter out infinite values for fitting
-            finite_mask = np.isfinite(reconstructed_V_rest)
-
+            reconstructed_V_rest = reconstructed_V_rest[:n_neurons]
+            gt_V_rest = to_numpy(gt_V_Rest[:n_neurons])
             fig = plt.figure(figsize=(8, 8))
-            gt_V_rest_numpy = to_numpy(gt_V_Rest[:n_neurons])
-            reconstructed_V_rest_filtered = reconstructed_V_rest[finite_mask]
-            gt_V_rest_filtered = gt_V_rest_numpy[finite_mask]
-            plt.scatter(gt_V_rest_filtered, reconstructed_V_rest_filtered, c=mc, s=0.5, alpha=0.3)
-            lin_fit, lin_fitv = curve_fit(linear_model, gt_V_rest_filtered, reconstructed_V_rest_filtered)
-            residuals = reconstructed_V_rest_filtered - linear_model(gt_V_rest_filtered, *lin_fit)
+            plt.scatter(gt_V_rest, reconstructed_V_rest, c=mc, s=0.5, alpha=0.3)
+            lin_fit, lin_fitv = curve_fit(linear_model, gt_V_rest, reconstructed_V_rest)
+            residuals = reconstructed_V_rest - linear_model(gt_V_rest, *lin_fit)
             ss_res = np.sum(residuals ** 2)
-            ss_tot = np.sum((reconstructed_V_rest_filtered - np.mean(reconstructed_V_rest_filtered)) ** 2)
+            ss_tot = np.sum((reconstructed_V_rest - np.mean(reconstructed_V_rest)) ** 2)
             r_squared = 1 - (ss_res / ss_tot)
-            plt.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}\nN: {len(gt_V_rest_filtered)}',
+            plt.text(0.05, 0.95, f'R²: {r_squared:.3f}\nslope: {lin_fit[0]:.2f}\nN: {len(gt_V_rest)}',
                      transform=plt.gca().transAxes, verticalalignment='top', fontsize=16)
             plt.xlabel(r'true $V_{rest}$', fontsize=24)
             plt.ylabel(r'learned $V_{rest}$', fontsize=24)
@@ -12455,7 +12438,7 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_43_1', 'fly_N9_43_2', 'fly_N9_43_3', 'fly_N9_43_4', 'fly_N9_43_5']
     # data_flyvis_compare(config_list, 'training.loss_noise_level')
 
-    # config_list = ['fly_N9_44_6', 'fly_N9_44_1', 'fly_N9_44_2', 'fly_N9_44_3', 'fly_N9_44_4', 'fly_N9_44_5', 'fly_N9_44_7', 'fly_N9_44_8']
+    # config_list = ['fly_N9_441_6', 'fly_N9_44_1', 'fly_N9_44_2', 'fly_N9_44_3', 'fly_N9_44_4', 'fly_N9_44_5', 'fly_N9_44_7', 'fly_N9_44_8']
     # data_flyvis_compare(config_list, 'training.noise_model_level')
 
     # config_list = ['fly_N9_42_1', 'fly_N9_42_2', 'fly_N9_42_3', 'fly_N9_42_4']
@@ -12482,8 +12465,7 @@ if __name__ == '__main__':
     # config_list = ['fly_N9_50_1', 'fly_N9_50_2', 'fly_N9_50_3', 'fly_N9_50_4', 'fly_N9_50_5', 'fly_N9_50_6', 'fly_N9_50_7']
     # data_flyvis_compare(config_list, 'training.Ising_filter')
 
-    config_list = ['fly_N9_49_7', 'fly_N9_49_8', 'fly_N9_49_9', 'fly_N9_49_10', 'fly_N9_49_11','fly_N9_49_12','fly_N9_49_13'
-                   'fly_N9_51_1', 'fly_N9_51_2', 'fly_N9_51_3', 'fly_N9_50_1', 'fly_N9_50_2', 'fly_N9_50_3', 'fly_N9_50_4', 'fly_N9_50_5','fly_N9_50_6', 'fly_N9_50_7']
+    config_list = ['fly_N9_43_6']
 
     for config_file_ in config_list:
         print(' ')
@@ -12497,7 +12479,7 @@ if __name__ == '__main__':
 
         folder_name = './log/' + pre_folder + '/tmp_results/'
         os.makedirs(folder_name, exist_ok=True)
-        data_plot(config=config, config_file=config_file, epoch_list=['best'], style='black color', device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['all'], style='black color', device=device)
 
 
 
