@@ -59,13 +59,13 @@ if __name__ == "__main__":
             best_model = None
     else:
         best_model = None
-        task = 'generate'  # 'generate', 'train', 'test'
+        task = 'test'  # 'generate', 'train', 'test'
         # config_list = ['multimaterial_1_2', 'multimaterial_1_3', 'multimaterial_1_4', 'multimaterial_1_5', 'multimaterial_1_6', 'multimaterial_1_7', 'multimaterial_1_8']
         # config_list = ['multimaterial_1_C']
         # config_list = ['multimaterial_1_12']
-        config_list = ['multimaterial_4_0']
+        # config_list = ['multimaterial_4_0']
 
-        # config_list = ['signal_N2_a37_bis']
+        config_list = ['signal_N2_a37_1']
 
         # config_list = ['fluids_m19']
         # config_list = ['falling_water_ramp_x6_11_1']
