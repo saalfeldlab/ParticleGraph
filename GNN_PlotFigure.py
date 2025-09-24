@@ -15,7 +15,7 @@ from scipy.ndimage import median_filter
 
 # from data_loaders import *
 
-from GNN_particles_Ntype import *
+from GNN_Main import *
 
 from ParticleGraph.fitting_models import *
 from ParticleGraph.sparsify import *

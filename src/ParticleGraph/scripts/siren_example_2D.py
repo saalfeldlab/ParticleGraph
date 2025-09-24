@@ -22,7 +22,7 @@ from PIL import Image
 import skimage
 from torchvision.transforms import Resize, Compose, ToTensor, Normalize
 
-from GNN_particles_Ntype import *
+from GNN_Main import *
 from ParticleGraph.models.utils import *
 from ParticleGraph.utils import *
 from ParticleGraph.models.Siren_Network import *

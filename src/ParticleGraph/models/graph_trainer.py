@@ -6,7 +6,7 @@ import torch
 import torch.nn.functional as F
 import random
 
-from GNN_particles_Ntype import *
+from GNN_Main import *
 from ParticleGraph.models.utils import *
 from ParticleGraph.utils import *
 from ParticleGraph.models.Siren_Network import *
@@ -3454,7 +3454,16 @@ def data_train_synaptic2(config, erase, best_model, device):
                                                                      type_list=to_numpy(x[:, 1 + 2 * dimension]),
                                                                      cmap=cmap, update_type=update_type, device=device)
 
+                labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding, train_config.cluster_distance_threshold, type_list, n_neuron_types, embedding_cluster)
 
+                model_a_ = model.a.clone().detach()
+                for n in range(n_clusters):
+                    pos = np.argwhere(labels == n).squeeze().astype(int)
+                    pos = np.array(pos)
+                    if pos.size > 0:
+                        median_center = model_a_[pos, :]
+                        median_center = torch.median(median_center, dim=0).values
+                        model_a_[pos, :] = median_center
 
                 # Constrain embedding domain
                 with torch.no_grad():
@@ -5858,277 +5867,5 @@ def data_test_particle(config=None, config_file=None, visualize=False, style='co
         plt.xlim([-90, 90])
         plt.savefig(f"./{log_dir}/results/angle.tif", dpi=170.7)
         plt.close
-
-
-def data_test_MPM(config=None, config_file=None, visualize=False, style='color frame', verbose=True, best_model=20, step=15,
-              ratio=1, run=1, test_mode='', sample_embedding=False, particle_of_interest=1, device=[]):
-
-    dataset_name = config.dataset
-    simulation_config = config.simulation
-    training_config = config.training
-    model_config = config.graph_model
-
-    trainer = training_config.MPM_trainer
-
-    print(f'testing ... {model_config.particle_model_name} {model_config.mesh_model_name}')
-
-    dimension = simulation_config.dimension
-    max_radius = simulation_config.max_radius
-    min_radius = simulation_config.min_radius
-    n_particle_types = simulation_config.n_particle_types
-    n_particles = simulation_config.n_particles
-    n_grid = simulation_config.n_grid
-    group_size = n_particles // n_particle_types
-    MPM_n_objects = simulation_config.MPM_n_objects
-    MPM_object_type = simulation_config.MPM_object_type
-    gravity = simulation_config.MPM_gravity
-    friction = simulation_config.MPM_friction
-
-    delta_t = simulation_config.delta_t
-    n_frames = simulation_config.n_frames
-    dx, inv_dx = 1 / n_grid, float(n_grid)
-
-    p_vol = (dx * 0.5) ** 2
-    rho_list = simulation_config.MPM_rho_list
-    young_coeff = simulation_config.MPM_young_coeff
-
-    E, nu = 0.1e4 / young_coeff, 0.2  # Young's modulus and Poisson's ratio
-    mu_0, lambda_0 = E / (2 * (1 + nu)), E * nu / ((1 + nu) * (1 - 2 * nu))  # Lame parameters
-    offsets = torch.tensor([[i, j] for i in range(3) for j in range(3)],
-                           device=device, dtype=torch.float32)  # [9, 2]
-    particle_offsets = offsets.unsqueeze(0).expand(n_particles, -1, -1)
-    expansion_factor = simulation_config.MPM_expansion_factor
-
-    log_dir = 'log/' + config.config_file
-    files = glob.glob(f"./{log_dir}/tmp_recons/*")
-    for f in files:
-        os.remove(f)
-
-    print('load data ...')
-    x_list = []
-    y_list = []
-    x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
-    # y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
-    if np.isnan(x).any():
-        print('Pb isnan')
-    x_list.append(x)
-    # y_list.append(y)
-
-    if best_model == 'best':
-        files = glob.glob(f"{log_dir}/models/*")
-        files.sort(key=sort_key)
-        filename = files[-1]
-        filename = filename.split('/')[-1]
-        filename = filename.split('graphs')[-1][1:-3]
-        best_model = filename
-        print(f'best model: {best_model}')
-    net = f"{log_dir}/models/best_model_with_0_graphs_{best_model}.pt"
-    print('create trained models ...')
-    model, bc_pos, bc_dpos = choose_training_model(config, device)
-    state_dict = torch.load(net, map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
-    print(f'best_model: {best_model}')
-
-    n_frames = simulation_config.n_frames
-    cmap = CustomColorMap(config=config)
-
-    model_MPM = MPM_P2G(aggr_type='add', device=device)
-    N, X, V, C, F, T, Jp, M, S, ID = init_MPM_shapes(geometry=MPM_object_type, n_shapes=MPM_n_objects, seed=42, n_particles=n_particles,
-                                                 n_particle_types=n_particle_types, n_grid=n_grid, dx=dx, rho_list=rho_list, device=device)
-
-    error_pos_list=[]
-    error_dpos_list=[]
-    recursive_loop = 1
-
-    x = torch.tensor(x_list[run][0], dtype=torch.float32, device=device).clone().detach()
-
-    for it in trange(n_frames - recursive_loop -5):
-
-        x = torch.tensor(x_list[run][it], dtype=torch.float32, device=device).clone().detach()
-
-        X = x[:, 1:3].detach()  # pos is the absolute position
-        V = x[:, 3:5].detach()  # d_pos is the velocity
-        C = x[:, 5:9].reshape(-1, 2, 2).detach()  # C is the affine deformation gradient
-        F = x[:, 9:13].reshape(-1, 2, 2) .detach() # F is the deformation gradient
-        Jp = x[:, 13:14].detach() # Jp is the Jacobian of the deformation gradient
-        T = x[:, 14:15].long().detach() # T is the type of particle
-        M = x[:, 15:16].detach() # M is the mass of the particle
-        S = x[:, 16:20].reshape(-1, 2, 2)
-
-        with torch.no_grad():
-
-            frame = torch.ones((X.shape[0], 1), dtype=torch.int, device=device) * it / n_frames
-            features = torch.cat((X, V, frame), dim=1).detach()
-
-            # if 'MLS' in trainer:
-            #     C = MLS_C(features, h=0.025, max_neighbors=32)
-            # elif 'GNN_C' in trainer:
-            #     distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-            #     adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
-            #     edges = adj_t.nonzero().t().contiguous()
-            #     dataset = data.Data(x=x, edge_index=edges, num_nodes=x.shape[0])
-            #     C = model.GNN_C(dataset, training=False)
-            #     C = C.reshape(-1, 2, 2)
-            # else:
-            #     if 'PDE_MPM_A' in model_config.particle_model_name:
-            #         embedding = model.a[0]
-            #         features = torch.cat((X, V, embedding, frame), dim=1).detach()
-            #     C = model.siren_C(features)
-            #     C = C.reshape(-1, 2, 2)
-
-            for n in range(recursive_loop):
-                X, V, C, F, Jp, T, M, S, GM, GV = MPM_step(model_MPM, X, V, C, F, Jp, T, M, n_particles, n_grid,
-                                                           delta_t, dx, inv_dx, mu_0, lambda_0, p_vol, offsets, particle_offsets,
-                                                           expansion_factor, gravity, friction, it, device)
-
-
-            x = torch.cat((N.clone().detach(), X.clone().detach(), V.clone().detach(),
-                           C.reshape(n_particles, 4).clone().detach(),
-                           F.reshape(n_particles, 4).clone().detach(),
-                           Jp.clone().detach(),
-                           T.clone().detach(), M.clone().detach(),
-                           S.reshape(n_particles, 4).clone().detach(),ID.clone().detach()), 1)
-
-            x_next = torch.tensor(x_list[run][it+recursive_loop], dtype=torch.float32, device=device).clone().detach()
-
-            error_pos = (x[:, 1:3] - x_next[:, 1:3]).norm(2)
-            error_pos_list.append(to_numpy(error_pos))
-            error_dpos = (x[:, 3:5] - x_next[:, 3:5]).norm(2)
-            error_dpos_list.append(to_numpy(error_dpos))
-
-            # print(f'it: {it}, error_pos: {np.mean(error_pos_list[-1]):.3e} +/- {np.std(error_pos_list):.3e}')
-
-        # output plots
-        if (it % step == 0) & (it >= 0):
-
-            if 'black' in style:
-                plt.style.use('dark_background')
-
-            if 'latex' in style:
-                plt.rcParams['text.usetex'] = True
-                rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-
-            if 'color' in style:
-
-                fig, ax = fig_init(formatx="%.1f", formaty="%.1f")
-                for n in range(3):
-                    pos = torch.argwhere(T == n)[:,0]
-                    plt.scatter(to_numpy(x[pos, 1]), to_numpy(x[pos, 2]), s=1, color=cmap.color(n))
-                plt.xlim([0, 1])
-                plt.ylim([0, 1])
-                plt.xticks([])
-                plt.yticks([])
-                plt.tight_layout()
-                num = f"{it:06}"
-                plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80)
-                plt.close()
-
-                plt.figure(figsize=(15, 10))
-
-                # 1. V particle level
-                plt.subplot(2, 3, 1)
-                # v_norm = torch.norm(V, dim=1).cpu().numpy()
-                # plt.scatter(X[:, 0].cpu(), X[:, 1].cpu(), c=v_norm, s=1, cmap='viridis', vmin=0, vmax=6)
-                # plt.colorbar(fraction=0.046, pad=0.04)
-                plt.title('objects')
-
-                for n in range(3):
-                    pos = torch.argwhere(T == n)[:,0]
-                    plt.scatter(to_numpy(x[pos, 1]), to_numpy(x[pos, 2]), s=1, color=cmap.color(n))
-
-                # Overlay transparent color based on object ID
-                # plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), c='w', s=2, edgecolors = 'none')
-                # plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), c=to_numpy(ID.squeeze()), s=2, alpha=0.3,
-                #             cmap='nipy_spectral', edgecolors = 'none')
-
-                plt.xlim([0, 1])
-                plt.ylim([0, 1])
-                plt.tight_layout()
-                plt.xlim([0, 1])
-                plt.ylim([0, 1])
-                plt.gca().set_aspect('equal')
-
-                plt.subplot(2, 3, 4)
-                plt.title('Jp (volume deformation)')
-                plt.scatter(X[:, 0].cpu(), X[:, 1].cpu(), c=Jp.cpu(), s=1, cmap='viridis', vmin=0.75, vmax=1.25)
-                plt.colorbar(fraction=0.046, pad=0.04)
-                plt.xlim([0, 1])
-                plt.ylim([0, 1])
-                plt.gca().set_aspect('equal')
-
-                # 2. C particle level
-                plt.subplot(2, 3, 2)
-                c_norm = torch.norm(C.view(n_particles, -1), dim=1).cpu().numpy()
-                plt.scatter(X[:, 0].cpu(), X[:, 1].cpu(), c=c_norm, s=1, cmap='viridis', vmin=0, vmax=80)
-                plt.colorbar(fraction=0.046, pad=0.04)
-                plt.title('C (Jacobian of velocity)')
-                plt.xlim([0, 1])
-                plt.ylim([0, 1])
-                plt.gca().set_aspect('equal')
-
-                # 3. F particle level
-                plt.subplot(2, 3, 3)
-                f_norm = torch.norm(F.view(n_particles, -1), dim=1).cpu().numpy()
-                plt.scatter(X[:, 0].cpu(), X[:, 1].cpu(), c=f_norm, s=1, cmap='coolwarm', vmin=1.44-0.2, vmax=1.44+0.2)
-                plt.colorbar(fraction=0.046, pad=0.04)
-                # print(
-                #     f"F min: {np.min(f_norm):.6f}, max: {np.max(f_norm):.6f}, mean: {np.mean(f_norm):.6f}, std: {np.std(f_norm):.6f}")
-                plt.title('F (deformation)')
-                plt.xlim([0, 1])
-                plt.ylim([0, 1])
-                plt.gca().set_aspect('equal')
-
-                # 4. Stress particle level
-                plt.subplot(2, 3, 5)
-                stress_norm = torch.norm(S.view(n_particles, -1), dim=1)
-                stress_norm = stress_norm[:,None]
-                plt.scatter(X[:, 0].cpu(), X[:, 1].cpu(), c=stress_norm[:, 0].cpu(), s=1, cmap='hot', vmin=0, vmax=6E-3)
-                plt.colorbar(fraction=0.046, pad=0.04)
-                plt.title('stress')
-                plt.xlim([0, 1])
-                plt.ylim([0, 1])
-                plt.gca().set_aspect('equal')
-
-                # 5. M grid level - scatter plot (every 2nd point)
-                # plt.subplot(2, 3, 5)
-                grid_x, grid_y = torch.meshgrid(torch.linspace(0, 1, n_grid), torch.linspace(0, 1, n_grid),
-                                                indexing='ij')
-                # Take every 2nd row and column
-                grid_x_sub = grid_x[::2, ::2]
-                grid_y_sub = grid_y[::2, ::2]
-                gm_sub = GM[::2, ::2].cpu()
-                grid_x_flat = grid_x_sub.flatten()
-                grid_y_flat = grid_y_sub.flatten()
-                gm_flat = gm_sub.cpu().flatten()
-                # plt.scatter(grid_x_flat, grid_y_flat, c=gm_flat, s=4, cmap='viridis', vmin=0, vmax=1E-4)
-                # plt.colorbar(fraction=0.046, pad=0.04)
-                # plt.title('grid mass')
-                # plt.xlim([0, 1])
-                # plt.ylim([0, 1])
-                # plt.gca().set_aspect('equal')
-
-                # 6. Momentum grid level - scatter plot (every 2nd point)
-                plt.subplot(2, 3, 6)
-                GP = torch.norm(GV, dim=2)
-                gp_sub = GP[::2, ::2]
-                gp_flat = gp_sub.cpu().flatten()
-                plt.scatter(grid_x_flat, grid_y_flat, c=gp_flat, s=4, cmap='viridis', vmin=0, vmax=6)
-                plt.colorbar(fraction=0.046, pad=0.04)
-                plt.title('grid momentum')
-                plt.xlim([0, 1])
-                plt.ylim([0, 1])
-                plt.gca().set_aspect('equal')
-
-                plt.tight_layout()
-
-                num = f"{it:06}"
-                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{run}_{num}.tif", dpi=100)
-                plt.close()
-
-        # plot results saved in error_pos_list and error_dpos_list
-
-    print(f'average error pos: {np.mean(error_pos_list):.3e} +/- {np.std(error_pos_list):.3e}')
-    print(f'average error dpos: {np.mean(error_dpos_list):.3e} +/- {np.std(error_dpos_list):.3e}')
-
 
 

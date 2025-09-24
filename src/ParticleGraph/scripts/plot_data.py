@@ -14,7 +14,7 @@ os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
 # from data_loaders import *
 
-from GNN_particles_Ntype import *
+from GNN_Main import *
 from ParticleGraph.sparsify import *
 from ParticleGraph.models.utils import *
 from ParticleGraph.models.MLP import *

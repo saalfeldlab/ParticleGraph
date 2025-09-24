@@ -5,7 +5,7 @@ from matplotlib.ticker import FormatStrFormatter
 from ParticleGraph.models import *
 from ParticleGraph.utils import *
 
-from GNN_particles_Ntype import *
+from GNN_Main import *
 import matplotlib as mpl
 import networkx as nx
 from torch_geometric.utils.convert import to_networkx

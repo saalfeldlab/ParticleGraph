@@ -1,5 +1,4 @@
 from .Interaction_Particle import Interaction_Particle
-from .Interaction_MPM import Interaction_MPM
 from .Interaction_Smooth_Particle import Interaction_Smooth_Particle
 from .Interaction_PDE_Particle import Interaction_PDE_Particle
 from .Interaction_Particle2 import Interaction_Particle2
@@ -21,7 +20,8 @@ from .Gumbel import sample_gumbel, gumbel_softmax_sample, gumbel_softmax
 from .WBI_Communication import WBI_Communication
 from .plot_utils import analyze_embedding_space
 
-__all__ = [graph_trainer, Interaction_Agent, Interaction_Particle, Interaction_MPM, Interaction_Smooth_Particle, Interaction_PDE_Particle, Interaction_Particle2, Interaction_Particle3,
+
+__all__ = [graph_trainer, Interaction_Agent, Interaction_Particle, Interaction_Smooth_Particle, Interaction_PDE_Particle, Interaction_Particle2, Interaction_Particle3,
            Affine_Particle, Interaction_Cell, Cell_Area, Interaction_Particle_Field, Interaction_Mouse, Siren_Network, Siren,
            Signal_Propagation2, Mesh, Mesh_Laplacian, Ghost_Particles, KoLeoLoss, get_embedding, get_embedding_time_series,
            choose_training_model, constant_batch_size, increasing_batch_size, set_trainable_parameters, set_trainable_division_parameters,

@@ -6,7 +6,7 @@ from ParticleGraph.generators.utils import *
 from ParticleGraph.models.utils import *
 from ParticleGraph.data_loaders import *
 
-from GNN_particles_Ntype import *
+from GNN_Main import *
 from ParticleGraph.utils import set_size
 from ParticleGraph.generators.cell_utils import *
 from sklearn.linear_model import LinearRegression
