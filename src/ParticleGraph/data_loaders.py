@@ -803,7 +803,6 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
         )
 
 
-
 def load_3Dfluo_data_with_Cellpose(config, device, visualize):
 
 
@@ -2395,6 +2394,128 @@ def ensure_local_path_exists(path):
 
     os.makedirs(path, exist_ok=True)
     return os.path.join(os.getcwd(), path)
+
+
+def load_fly_data(config, device, visualize, step):
+
+    dataset_folder_name = config.data_folder_name
+    data_path = ensure_local_path_exists(f'graphs_data/{dataset_folder_name}')
+
+    dataset_name = config.dataset
+    os.makedirs(f'graphs_data/{dataset_name}', exist_ok=True)
+    os.makedirs(f"./graphs_data/{dataset_name}/Fig/", exist_ok=True)
+    files = glob.glob(f"./graphs_data/{dataset_name}/Fig/*")
+    for f in files:
+        os.remove(f)
+
+
+    delta_t = config.simulation.delta_t
+    n_runs = config.training.n_runs
+
+    data = np.load(dataset_folder_name, allow_pickle=True)
+
+    x_y_theta = data['x_y_theta']
+    video_ids = data['video_ids']
+
+    print(f"x_y_theta shape: {x_y_theta.shape}")
+    print(f"video_ids shape: {video_ids.shape}")
+
+    n_runs = len(np.unique(video_ids))
+    print(f"n_runs: {n_runs}")
+
+    n_flies = config.simulation.n_particles
+
+    x_y_theta = x_y_theta[:,:,0:n_flies]
+
+    run_id = 0
+
+    for run in trange(n_runs):
+        
+        x_list = []
+        y_list = []
+
+        idx = np.where(video_ids == run)[0]
+        x_y_theta_run = x_y_theta[:, idx, :]
+        print (f'video {run} shape: {x_y_theta_run.shape}')
+
+        n_frames = x_y_theta_run.shape[1]
+
+        for it in range(0, n_frames - 2):
+            x = np.zeros((n_flies, 7))
+            x[:, 0] = np.arange(0, n_flies).reshape(1, -1)  # fly index
+            x[:, 1] = x_y_theta_run[0, it, :]  # x
+            x[:, 2] = x_y_theta_run[1, it, :]  # y
+            x[:, 3] = x_y_theta_run[2, it, :]  # theta
+            if it > 0:
+                x[:, 4] = (x_y_theta_run[0, it, :] - x_y_theta_run[0, it - 1, :]) / delta_t  # vx
+                x[:, 5] = (x_y_theta_run[1, it, :] - x_y_theta_run[1, it - 1, :]) / delta_t  # vy
+                x[:, 6] = (x_y_theta_run[2, it, :] - x_y_theta_run[2, it - 1, :]) / delta_t  # vtheta
+            x_list.append(x.copy())
+
+            if (run ==4) & (it <500) & visualize : # (it % step ==0) : 
+                plt.style.use('dark_background')
+
+                plt.figure(figsize=(10, 10))
+                plt.axis('off')
+
+                plt.scatter(x[:, 1], x[:, 2], s=700, c='cyan')
+
+                for i in range(n_flies):
+                    plt.arrow(x[i, 1], x[i, 2], 2 * np.cos(x[i, 3]+np.pi/2), 2 * np.sin(x[i, 3]+np.pi/2),
+                              head_width=0.05, head_length=0.1, fc='yellow', ec='yellow')
+
+                plt.xlim(-25, 25)
+                plt.ylim(-25, 25)
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+                plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{it:03d}.tif", dpi=80)
+                plt.close()
+
+        # compute velocity target
+
+        x_list = np.array(x_list)
+
+
+        # check Nan in x_list
+        if np.isnan(x_list).any():
+            print(f"Warning: NaN values found in x_list")
+        else:
+            # Compute difference for features 1 and 2 as usual
+            y_list = (x_list[1:, :, 1:3] - x_list[:-1, :, 1:3]) / delta_t
+            # For the angle (feature 3, index 3), use np.angle to handle wrapping
+            angle_diff = np.angle(np.exp(1j * (x_list[1:, :, 3] - x_list[:-1, :, 3]))) / delta_t
+            y_list = np.concatenate([y_list, angle_diff[..., np.newaxis]], axis=-1)
+
+
+            # print dimension of arena look at x y range
+            x_min = np.min(x_list[:, :, 1])
+            x_max = np.max(x_list[:, :, 1])
+            y_min = np.min(x_list[:, :, 2])
+            y_max = np.max(x_list[:, :, 2])
+            theta_min = np.min(x_list[:, :, 3])
+            theta_max = np.max(x_list[:, :, 3])
+            print(f"arena x range: {x_min:.3f} to {x_max:.3f}")
+            print(f"arena y range: {y_min:.3f} to {y_max:.3f}")
+            print(f"theta range: {theta_min:.3f} to {theta_max:.3f}")
+            # print target range
+            y_dx_min = np.min(y_list[:, :, 0])
+            y_dx_max = np.max(y_list[:, :, 0])
+            y_dy_min = np.min(y_list[:, :, 1])
+            y_dy_max = np.max(y_list[:, :, 1])
+            y_dtheta_min = np.min(y_list[:, :, 2])
+            y_dtheta_max = np.max(y_list[:, :, 2])
+            print(f"target x range: {y_dx_min:.3f} to {y_dx_max:.3f}")
+            print(f"target y range: {y_dy_min:.3f} to {y_dy_max:.3f}")
+            print(f"target theta range: {y_dtheta_min:.3f} to {y_dtheta_max:.3f}")
+
+            np.save(f"graphs_data/{dataset_name}/x_list_{run_id}.npy", x_list)
+            np.save(f"graphs_data/{dataset_name}/y_list_{run_id}.npy", y_list)
+
+            run_id += 1
+
+            
+    print (f'save {run_id-1} videos')
 
 
 @dataclass

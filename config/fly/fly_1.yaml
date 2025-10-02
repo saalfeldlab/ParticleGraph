@@ -1,16 +1,17 @@
-description: 'attraction-repulsion with 3 types particles   CTRL'
-dataset: 'arbitrary_3'
+description: 'fly arena dataset'
+dataset: 'fly_1'
+data_folder_name: '/groups/saalfeld/home/allierc/signaling/fly/flydata.npz'
 
 simulation:
   params: [[1.6233, 1.0413, 1.6012, 1.5615], [1.7667, 1.8308, 1.0855, 1.9055],  [1.7226, 1.7850, 1.0584, 1.8579]]
   func_params: [['arbitrary', 0, 0], ['arbitrary', 1, 1], ['arbitrary', 2, 2]]
   min_radius: 0
-  max_radius: 0.075
-  n_particles: 4800
-  n_particle_types: 3
-  n_frames: 250
+  max_radius: 50
+  n_particles: 10
+  n_particle_types: 1
+  n_frames: 58642
   sigma: 0.005
-  delta_t: 0.1
+  delta_t: 1
   dpos_init: 0
   boundary: 'periodic'
 
@@ -19,7 +20,7 @@ graph_model:
   mesh_model_name: ''
   prediction: 'first_derivative'
   input_size: 5
-  output_size: 2
+  output_size: 3
   hidden_dim: 128
   n_layers: 5
   aggr_type: 'mean'
@@ -33,16 +34,15 @@ plotting:
 
 training:
 
-  n_runs: 2
+  n_runs: 23
   device: 'auto'
   n_epochs: 20
-  batch_size: 8
+  batch_size: 128
 
   small_init_batch_size: False
-  sparsity: 'replace_embedding_function'
-  cluster_method: 'distance_plot'
+  sparsity: 'none'
   rotation_augmentation: True
-  data_augmentation_loop: 100
+  data_augmentation_loop: 10
   fix_cluster_embedding: True
 
 

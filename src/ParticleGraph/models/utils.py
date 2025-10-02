@@ -1195,6 +1195,11 @@ def plot_training(config, pred, gt, log_dir, epoch, N, x, index_particles, n_par
         plt.scatter(embedding[:, 0], embedding[:, 1], s=5, alpha=0.5)
         embedding = get_embedding(model.a, 2)
         plt.scatter(embedding[:, 0], embedding[:, 1], s=5, alpha=0)
+    elif n_runs >10:
+        fig = plt.figure(figsize=(8, 8))
+        for n in range(n_runs):
+            embedding = get_embedding(model.a, n)
+            plt.scatter(embedding[:, 0], embedding[:, 1], s=10, alpha=0.5)
     else:
         fig = plt.figure(figsize=(8, 8))
         if do_tracking:

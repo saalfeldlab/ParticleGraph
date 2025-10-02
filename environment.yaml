@@ -25,6 +25,8 @@ dependencies:
   - pysr
   - shapely
   - seaborn
+  - opencv-python
+  - datamate
   - pip:
     - geomloss
     - torch_geometric
