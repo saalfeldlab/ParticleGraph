@@ -198,6 +198,8 @@ def get_in_features(rr=None, embedding=None, model=[], model_name = [], max_radi
         case 'PDE_A_bis':
             in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                      rr[:, None] / max_radius, embedding, embedding), dim=1)
+        case 'PDE_A_fly':
+            in_features = torch.cat((rr[:, None], 0 * rr[:, None], 0 * rr[:, None], embedding, embedding), dim=1)
         case 'PDE_B' | 'PDE_Cell_B':
             in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                      torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None], 0 * rr[:, None],
@@ -1197,9 +1199,9 @@ def plot_training(config, pred, gt, log_dir, epoch, N, x, index_particles, n_par
         plt.scatter(embedding[:, 0], embedding[:, 1], s=5, alpha=0)
     elif n_runs >10:
         fig = plt.figure(figsize=(8, 8))
-        for n in range(n_runs):
-            embedding = get_embedding(model.a, n)
-            plt.scatter(embedding[:, 0], embedding[:, 1], s=10, alpha=0.5)
+        for m in range(1, n_runs):
+            embedding = get_embedding(model.a, m)
+            plt.scatter(embedding[:, 0], embedding[:, 1], s=20, alpha=1)
     else:
         fig = plt.figure(figsize=(8, 8))
         if do_tracking:
@@ -1229,164 +1231,219 @@ def plot_training(config, pred, gt, log_dir, epoch, N, x, index_particles, n_par
     plt.savefig(f"./{log_dir}/tmp_training/prediction/{epoch}_{N}.tif", dpi=87)
     plt.close()
 
-    match model_config.particle_model_name:
-
-        case 'PDE_A' | 'PDE_A_bis' | 'PDE_ParticleField_A' | 'PDE_E' | 'PDE_G':
-            fig = plt.figure(figsize=(12, 12))
-            if axis:
-                ax = fig.add_subplot(1, 1, 1)
-                ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-                ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-                plt.xticks(fontsize=32)
-                plt.yticks(fontsize=32)
-                plt.xlim([0, simulation_config.max_radius])
-                plt.tight_layout()
+    if n_runs > 10:
+        fig = plt.figure(figsize=(8, 8))
+        for m in range(1, n_runs):
             rr = torch.tensor(np.linspace(0, simulation_config.max_radius, 1000)).to(device)
             for n in range(n_particles):
-                if do_tracking:
-                    embedding_ = model.a[n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
-                else:
-                    embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
-
-                in_features = get_in_features(rr=rr, embedding=embedding_, model=model, model_name=config.graph_model.particle_model_name,
-                                              max_radius=simulation_config.max_radius)
-                with torch.no_grad():
-                    func = model.lin_edge(in_features.float())
-                func = func[:, 0]
-                if (n % 5 == 0):
+                for k in range(n_particles):
+                    embedding_n = model.a[m, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
+                    embedding_k = model.a[m, k, :] * torch.ones((1000, model_config.embedding_dim), device=device)
+                    in_features = torch.cat((rr[:, None], 0 * rr[:, None], 0 * rr[:, None], embedding_n, embedding_k), dim=1)
+                    with torch.no_grad():
+                        func = model.lin_edge(in_features.float())
+                    func = func[:, 0]
                     plt.plot(to_numpy(rr),
-                             to_numpy(func * ynorm),
-                             linewidth=2,
-                             color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
-            # plt.ylim(config.plotting.ylim)
-            if (model_config.particle_model_name == 'PDE_G') | (model_config.particle_model_name == 'PDE_E'):
-                plt.xlim([0, 0.02])
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/function_{epoch}_{N}.tif", dpi=87)
-            plt.close()
+                            to_numpy(func * ynorm),
+                            linewidth=2,
+                            color='b', alpha=0.1)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/function_{epoch}_{N}.tif", dpi=87)
+        plt.close()
+    else:
+        match model_config.particle_model_name:
 
-        case 'PDE_B' | 'PDE_ParticleField_B':
-            max_radius = 0.04
-            fig = plt.figure(figsize=(12, 12))
-            # plt.rcParams['text.usetex'] = True
-            # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-            ax = fig.add_subplot(1,1,1)
-            rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
-            func_list = []
-            for n in range(n_particles):
-                if do_tracking:
-                    embedding_ = model.a[n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
-                else:
-                    embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
-                in_features = get_in_features(rr, embedding_, config.graph_model.particle_model_name, max_radius)
-                # in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                #                          torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None], 0 * rr[:, None],
-                #                          0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-                with torch.no_grad():
-                    func = model.lin_edge(in_features.float())
-                func = func[:, 0]
-                func_list.append(func)
-                if n % 5 == 0:
-                    plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
-                             color=cmap.color(int(n // (n_particles / n_particle_types))), linewidth=2)
-            if not(do_tracking):
-                plt.ylim(config.plotting.ylim)
-            # plt.xlabel(r'$x_j-x_i$', fontsize=64)
-            # plt.ylabel(r'$f_{ij}$', fontsize=64)
-            ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-            ax.yaxis.set_major_locator(plt.MaxNLocator(5))
-            ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-            fmt = lambda x, pos: '{:.1f}e-5'.format((x) * 1e5, pos)
-            ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-            plt.xticks(fontsize=32.0)
-            plt.yticks(fontsize=32.0)
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/function_{epoch}_{N}.tif",dpi=170.7)
-            plt.close()
+            case 'PDE_A' | 'PDE_A_bis' | 'PDE_ParticleField_A' | 'PDE_E' | 'PDE_G':
+                fig = plt.figure(figsize=(12, 12))
+                if axis:
+                    ax = fig.add_subplot(1, 1, 1)
+                    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+                    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+                    plt.xticks(fontsize=32)
+                    plt.yticks(fontsize=32)
+                    plt.xlim([0, simulation_config.max_radius])
+                    plt.tight_layout()
+                rr = torch.tensor(np.linspace(0, simulation_config.max_radius, 1000)).to(device)
+                for n in range(n_particles):
+                    if do_tracking:
+                        embedding_ = model.a[n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
+                    else:
+                        embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
 
-        case 'PDE_GS':
-            fig = plt.figure(figsize=(8, 4))
-            ax = fig.add_subplot(1, 2, 1)
-            rr = torch.tensor(np.logspace(7, 9, 1000)).to(device)
-            for n in range(n_particles):
-                embedding_ = model.mass[n] * torch.ones((1000, model_config.embedding_dim), device=device)
-                in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                         rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
-                with torch.no_grad():
-                    func = model.lin_edge(in_features.float())
-                func = func[:, 0]
-                plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
-                         color=cmap.color(to_numpy(x[n, 5]).astype(int)), linewidth=1)
-            plt.xlabel('Distance [a.u]', fontsize=14)
-            plt.ylabel('MLP [a.u]', fontsize=14)
-            plt.xscale('log')
-            plt.yscale('log')
-            plt.tight_layout()
-            ax = fig.add_subplot(1, 2, 2)
-            plt.scatter(np.log(np.abs(to_numpy(y_batch[:, 0]))), np.log(np.abs(to_numpy(pred[:, 0]))), c='k', s=1,
-                        alpha=0.15)
-            plt.scatter(np.log(np.abs(to_numpy(y_batch[:, 1]))), np.log(np.abs(to_numpy(pred[:, 1]))), c='k', s=1,
-                        alpha=0.15)
-            # plt.xlim([-10, 4])
-            # plt.ylim([-10, 4])
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/func_{epoch}_{N}.tif", dpi=87)
-            plt.close()
-
-        case 'PDE_K':
-            fig = plt.figure(figsize=(12, 12))
-            if axis:
-                ax = fig.add_subplot(1, 1, 1)
-                ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-                ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-                plt.xticks(fontsize=32)
-                plt.yticks(fontsize=32)
-                plt.xlim([0, simulation_config.max_radius])
+                    in_features = get_in_features(rr=rr, embedding=embedding_, model=model, model_name=config.graph_model.particle_model_name,
+                                                max_radius=simulation_config.max_radius)
+                    with torch.no_grad():
+                        func = model.lin_edge(in_features.float())
+                    func = func[:, 0]
+                    if (n % 5 == 0) | (n_runs > 5):
+                        plt.plot(to_numpy(rr),
+                                to_numpy(func * ynorm),
+                                linewidth=2,
+                                color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
+                # plt.ylim(config.plotting.ylim)
+                if (model_config.particle_model_name == 'PDE_G') | (model_config.particle_model_name == 'PDE_E'):
+                    plt.xlim([0, 0.02])
                 plt.tight_layout()
-            rr = torch.tensor(np.linspace(-1, 1, 200)).to(device)
-            for n in range(n_particles):
-                if do_tracking:
-                    embedding_ = model.a[n, :] * torch.ones((200, model_config.embedding_dim), device=device)
+                plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/function_{epoch}_{N}.tif", dpi=87)
+                plt.close()
+
+            case 'PDE_B' | 'PDE_ParticleField_B':
+                max_radius = 0.04
+                fig = plt.figure(figsize=(12, 12))
+                # plt.rcParams['text.usetex'] = True
+                # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+                ax = fig.add_subplot(1,1,1)
+                rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
+                func_list = []
+                for n in range(n_particles):
+                    if do_tracking:
+                        embedding_ = model.a[n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
+                    else:
+                        embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
+                    in_features = get_in_features(rr, embedding_, config.graph_model.particle_model_name, max_radius)
+                    # in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                    #                          torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                    #                          0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                    with torch.no_grad():
+                        func = model.lin_edge(in_features.float())
+                    func = func[:, 0]
+                    func_list.append(func)
+                    if n % 5 == 0:
+                        plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
+                                color=cmap.color(int(n // (n_particles / n_particle_types))), linewidth=2)
+                if not(do_tracking):
+                    plt.ylim(config.plotting.ylim)
+                # plt.xlabel(r'$x_j-x_i$', fontsize=64)
+                # plt.ylabel(r'$f_{ij}$', fontsize=64)
+                ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+                ax.yaxis.set_major_locator(plt.MaxNLocator(5))
+                ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+                fmt = lambda x, pos: '{:.1f}e-5'.format((x) * 1e5, pos)
+                ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+                plt.xticks(fontsize=32.0)
+                plt.yticks(fontsize=32.0)
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/function_{epoch}_{N}.tif",dpi=170.7)
+                plt.close()
+
+            case 'PDE_GS':
+                fig = plt.figure(figsize=(8, 4))
+                ax = fig.add_subplot(1, 2, 1)
+                rr = torch.tensor(np.logspace(7, 9, 1000)).to(device)
+                for n in range(n_particles):
+                    embedding_ = model.mass[n] * torch.ones((1000, model_config.embedding_dim), device=device)
+                    in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                            rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
+                    with torch.no_grad():
+                        func = model.lin_edge(in_features.float())
+                    func = func[:, 0]
+                    plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
+                            color=cmap.color(to_numpy(x[n, 5]).astype(int)), linewidth=1)
+                plt.xlabel('Distance [a.u]', fontsize=14)
+                plt.ylabel('MLP [a.u]', fontsize=14)
+                plt.xscale('log')
+                plt.yscale('log')
+                plt.tight_layout()
+                ax = fig.add_subplot(1, 2, 2)
+                plt.scatter(np.log(np.abs(to_numpy(y_batch[:, 0]))), np.log(np.abs(to_numpy(pred[:, 0]))), c='k', s=1,
+                            alpha=0.15)
+                plt.scatter(np.log(np.abs(to_numpy(y_batch[:, 1]))), np.log(np.abs(to_numpy(pred[:, 1]))), c='k', s=1,
+                            alpha=0.15)
+                # plt.xlim([-10, 4])
+                # plt.ylim([-10, 4])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/func_{epoch}_{N}.tif", dpi=87)
+                plt.close()
+
+            case 'PDE_K':
+                fig = plt.figure(figsize=(12, 12))
+                if axis:
+                    ax = fig.add_subplot(1, 1, 1)
+                    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+                    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+                    plt.xticks(fontsize=32)
+                    plt.yticks(fontsize=32)
+                    plt.xlim([0, simulation_config.max_radius])
+                    plt.tight_layout()
+                rr = torch.tensor(np.linspace(-1, 1, 200)).to(device)
+                for n in range(n_particles):
+                    if do_tracking:
+                        embedding_ = model.a[n, :] * torch.ones((200, model_config.embedding_dim), device=device)
+                    else:
+                        embedding_ = model.a[1, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
+                    in_features = get_in_features(rr=rr, embedding=embedding_, model=model, model_name=config.graph_model.particle_model_name,
+                                                max_radius=simulation_config.max_radius)
+                    with torch.no_grad():
+                        func = model.lin_edge(in_features.float())
+                    func = func[:, 0]
+                    if (n % 5 == 0) :
+                        plt.plot(to_numpy(rr),
+                                to_numpy(func*ynorm),
+                                linewidth=2,
+                                color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
+                # if not (do_tracking):
+                #     plt.ylim(config.plotting.ylim)
+                plt.ylim(config.plotting.ylim)
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/function_{epoch}_{N}.tif", dpi=87)
+                plt.close()
+
+                if len(model.connection_matrix)>5:
+                    i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+                    fig = plt.figure(figsize=(9, 15))
+                    for n in range(5):
+
+                        A = torch.zeros(n_particles, n_particles, device=device, requires_grad=False, dtype=torch.float32)
+                        A[i, j] = model.vals[n+1] ** 2
+                        A.T[i, j] = model.vals[n+1] ** 2
+                        A[i, i] = 0
+                        ax = plt.subplot(5, 3, 1+n*3)
+                        ax = sns.heatmap(to_numpy(model.connection_matrix[n+1]), center=0, square=True, cmap='bwr',
+                                        cbar_kws={'fraction': 0.046})
+                        ax = plt.subplot(5, 3, 2+n*3)
+                        ax = sns.heatmap(to_numpy(A), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
+                        plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+                        plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+
+                        ax = plt.subplot(5, 3, 3+n*3)
+                        gt_weight = to_numpy(model.connection_matrix[n+1])
+                        pred_weight = to_numpy(A)
+                        plt.scatter(gt_weight, pred_weight, s=40, c='k', alpha=0.1)
+                        plt.xlabel(r'true $W_{ij}$', fontsize=12)
+                        plt.ylabel(r'learned $W_{ij}$', fontsize=12)
+
+                        x_data = np.reshape(gt_weight, (n_particles * n_particles))
+                        y_data = np.reshape(pred_weight, (n_particles * n_particles))
+                        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+                        residuals = y_data - linear_model(x_data, *lin_fit)
+                        ss_res = np.sum(residuals ** 2)
+                        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+                        r_squared = 1 - (ss_res / ss_tot)
+                        plt.text(0.1, 0.1, f'R2: {r_squared:0.4f}', fontsize=8, alpha=0.5)
+                        plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/tmp_training/matrix/M_{epoch}_{N}.tif", dpi=87)
+                    plt.close()
+
                 else:
-                    embedding_ = model.a[1, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
-                in_features = get_in_features(rr=rr, embedding=embedding_, model=model, model_name=config.graph_model.particle_model_name,
-                                              max_radius=simulation_config.max_radius)
-                with torch.no_grad():
-                    func = model.lin_edge(in_features.float())
-                func = func[:, 0]
-                if (n % 5 == 0) :
-                    plt.plot(to_numpy(rr),
-                             to_numpy(func*ynorm),
-                             linewidth=2,
-                             color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
-            # if not (do_tracking):
-            #     plt.ylim(config.plotting.ylim)
-            plt.ylim(config.plotting.ylim)
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/function_{epoch}_{N}.tif", dpi=87)
-            plt.close()
 
-            if len(model.connection_matrix)>5:
-                i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
-                fig = plt.figure(figsize=(9, 15))
-                for n in range(5):
-
+                    i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
                     A = torch.zeros(n_particles, n_particles, device=device, requires_grad=False, dtype=torch.float32)
-                    A[i, j] = model.vals[n+1] ** 2
-                    A.T[i, j] = model.vals[n+1] ** 2
+                    A[i, j] = model.vals[1]**2
+                    A.T[i, j] = model.vals[1]**2
                     A[i, i] = 0
-                    ax = plt.subplot(5, 3, 1+n*3)
-                    ax = sns.heatmap(to_numpy(model.connection_matrix[n+1]), center=0, square=True, cmap='bwr',
-                                     cbar_kws={'fraction': 0.046})
-                    ax = plt.subplot(5, 3, 2+n*3)
+
+                    fig = plt.figure(figsize=(15, 5))
+                    ax = plt.subplot(1, 3, 1)
+                    ax = sns.heatmap(to_numpy(model.connection_matrix[1]), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
+                    ax = plt.subplot(1, 3, 2)
                     ax = sns.heatmap(to_numpy(A), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
                     plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
                     plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
 
-                    ax = plt.subplot(5, 3, 3+n*3)
-                    gt_weight = to_numpy(model.connection_matrix[n+1])
+                    ax = plt.subplot(1, 3, 3)
+                    gt_weight = to_numpy(model.connection_matrix[1])
                     pred_weight = to_numpy(A)
-                    plt.scatter(gt_weight, pred_weight, s=40, c='k', alpha=0.1)
+                    plt.scatter(gt_weight, pred_weight , s=40, c='k', alpha=0.1)
                     plt.xlabel(r'true $W_{ij}$', fontsize=12)
                     plt.ylabel(r'learned $W_{ij}$', fontsize=12)
 
@@ -1399,44 +1456,9 @@ def plot_training(config, pred, gt, log_dir, epoch, N, x, index_particles, n_par
                     r_squared = 1 - (ss_res / ss_tot)
                     plt.text(0.1, 0.1, f'R2: {r_squared:0.4f}', fontsize=8, alpha=0.5)
                     plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/matrix/M_{epoch}_{N}.tif", dpi=87)
-                plt.close()
 
-            else:
-
-                i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
-                A = torch.zeros(n_particles, n_particles, device=device, requires_grad=False, dtype=torch.float32)
-                A[i, j] = model.vals[1]**2
-                A.T[i, j] = model.vals[1]**2
-                A[i, i] = 0
-
-                fig = plt.figure(figsize=(15, 5))
-                ax = plt.subplot(1, 3, 1)
-                ax = sns.heatmap(to_numpy(model.connection_matrix[1]), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
-                ax = plt.subplot(1, 3, 2)
-                ax = sns.heatmap(to_numpy(A), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
-                plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
-                plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
-
-                ax = plt.subplot(1, 3, 3)
-                gt_weight = to_numpy(model.connection_matrix[1])
-                pred_weight = to_numpy(A)
-                plt.scatter(gt_weight, pred_weight , s=40, c='k', alpha=0.1)
-                plt.xlabel(r'true $W_{ij}$', fontsize=12)
-                plt.ylabel(r'learned $W_{ij}$', fontsize=12)
-
-                x_data = np.reshape(gt_weight, (n_particles * n_particles))
-                y_data = np.reshape(pred_weight, (n_particles * n_particles))
-                lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-                residuals = y_data - linear_model(x_data, *lin_fit)
-                ss_res = np.sum(residuals ** 2)
-                ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-                r_squared = 1 - (ss_res / ss_tot)
-                plt.text(0.1, 0.1, f'R2: {r_squared:0.4f}', fontsize=8, alpha=0.5)
-                plt.tight_layout()
-
-                plt.savefig(f"./{log_dir}/tmp_training/matrix/M_{epoch}_{N}.tif", dpi=87)
-                plt.close()
+                    plt.savefig(f"./{log_dir}/tmp_training/matrix/M_{epoch}_{N}.tif", dpi=87)
+                    plt.close()
 
 def plot_training_mesh(config, pred, has_field, field, gt, log_dir, epoch, N, x, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
 
@@ -2084,7 +2106,7 @@ def choose_training_model(model_config=None, device=None, projections=None):
             model.edges = []
         case 'PDE_Agents' | 'PDE_Agents_A' | 'PDE_Agents_B' | 'PDE_Agents_C':
             model = Interaction_Agent(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
-        case 'PDE_A' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_mass' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G' | 'PDE_K' | 'PDE_T':
+        case 'PDE_A' | 'PDE_A_fly' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_mass' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G' | 'PDE_K' | 'PDE_T':
             model = Interaction_Particle(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             model.edges = []
             if 'PDE_K' in model_name:
@@ -2214,10 +2236,7 @@ def set_trainable_division_parameters(model, lr):
 def get_index_particles(x, n_particle_types, dimension):
     index_particles = []
     for n in range(n_particle_types):
-        if dimension == 2:
-            index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
-        elif dimension == 3:
-            index = np.argwhere(x[:, 7].detach().cpu().numpy() == n)
+        index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
         index_particles.append(index.squeeze())
     return index_particles
 

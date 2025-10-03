@@ -179,6 +179,8 @@ class Interaction_Particle(pyg.nn.MessagePassing):
                 in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
             case 'PDE_A_bis':
                 in_features = torch.cat((delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
+            case 'PDE_A_fly':
+                in_features = torch.cat((pos_j[:,:2]-pos_i[:,:2], pos_i[:,2:3], embedding_i, embedding_j), dim=-1)
             case 'PDE_B' | 'PDE_F':
                 in_features = torch.cat((delta_pos, r[:, None], d_pos_i, d_pos_j, embedding_i), dim=-1)
             case 'PDE_G':

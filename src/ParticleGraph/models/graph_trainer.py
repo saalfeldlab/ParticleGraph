@@ -933,7 +933,7 @@ def data_train_particle(config, erase, best_model, device):
         if ('PDE_T' not in model_config.particle_model_name) & ('PDE_K' not in model_config.particle_model_name) & (
                 'PDE_MLPs' not in model_config.particle_model_name) & (
                 'PDE_F' not in model_config.particle_model_name) & ('PDE_M' not in model_config.particle_model_name) & (
-                has_bounding_box == False):
+                has_bounding_box == False) & (has_fly == False):
 
             ax = fig.add_subplot(1, 5, 2)
             embedding = get_embedding(model.a, 1)
@@ -3963,21 +3963,7 @@ def data_train_WBI(config, erase, best_model, device):
         plt.xlabel('Epochs', fontsize=12)
 
 
-def data_test(config=None, config_file=None, visualize=False, style='color frame', verbose=True, best_model=20, step=15,
-              ratio=1, run=1, test_mode='', sample_embedding=False, particle_of_interest=1, device=[]):
-
-    if 'MPM' in config.graph_model.particle_model_name:
-        data_test_MPM(config=config, config_file=config_file, visualize=visualize, style=style, verbose=verbose, best_model=best_model,
-                  step=step, ratio=ratio, run=run, test_mode=test_mode, sample_embedding=sample_embedding,
-                      particle_of_interest=particle_of_interest, device=device)
-    else:
-        data_test(config=config, config_file=config_file, visualize=visualize, style=style, verbose=verbose, best_model=best_model,
-                  step=step, ratio=ratio, run=0, test_mode=test_mode, sample_embedding=sample_embedding,
-                      particle_of_interest=particle_of_interest, device=device)
-
-
-def data_test_particle(config=None, config_file=None, visualize=False, style='color frame', verbose=True, best_model=20, step=15,
-              ratio=1, run=1, test_mode='', sample_embedding=False, particle_of_interest=1, device=[]):
+def data_test(config=None, config_file=None, visualize=False, style='color frame', verbose=True, best_model=20, step=15, ratio=1, run=1, test_mode='', sample_embedding=False, particle_of_interest=1, device=[]):
     dataset_name = config.dataset
     simulation_config = config.simulation
     model_config = config.graph_model
@@ -4003,6 +3989,7 @@ def data_test_particle(config=None, config_file=None, visualize=False, style='co
     bounce_coeff = simulation_config.bounce_coeff
     cmap = CustomColorMap(config=config)
     dimension = simulation_config.dimension
+    has_fly = 'fly' in config.dataset
     has_particle_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
     has_mesh_field = (model_config.field_type != '') & ('RD_Mesh' in model_config.mesh_model_name)
     has_field = (model_config.field_type != '') & (has_mesh_field == False) & (has_particle_field == False)
@@ -4634,7 +4621,7 @@ def data_test_particle(config=None, config_file=None, visualize=False, style='co
                         x[:, dimension + 1:2 * dimension + 1] = pred.clone().detach() / (delta_t * time_step)
 
                 else:
-                    pred_err_list.append(to_numpy(torch.sqrt(loss)))
+                    # pred_err_list.append(to_numpy(torch.sqrt(loss)))
                     if model_config.prediction == '2nd_derivative':
                         y = y * ynorm * delta_t
                         x[:n_particles, dimension + 1:2 * dimension + 1] = x[:n_particles, dimension + 1:2 * dimension + 1] + y[:n_particles]  # speed update
@@ -4655,30 +4642,6 @@ def data_test_particle(config=None, config_file=None, visualize=False, style='co
                     # plt.savefig(f'pred_{it}.png')
                     # plt.close()
 
-                if 'bounce_all_v0' in test_mode:
-                    gap = 0.005
-                    bouncing_pos = torch.argwhere((x[:, 1] <= 0.1 - gap) | (x[:, 1] >= 0.9 + gap)).squeeze()
-                    if bouncing_pos.numel() > 0:
-                        x[bouncing_pos, 3] = - 0.7 * x[bouncing_pos, 3]
-                        x[bouncing_pos, 1] += x[bouncing_pos, 3] * delta_t
-                    bouncing_pos = torch.argwhere((x[:, 2] <= 0.1 - gap) | (x[:, 2] >= 0.9 + gap)).squeeze()
-                    if bouncing_pos.numel() > 0:
-                        x[bouncing_pos, 4] = - 0.7 * x[bouncing_pos, 4]
-                        x[bouncing_pos, 2] += x[bouncing_pos, 4] * delta_t
-                if 'bounce_all' in test_mode:
-                    gap = 0.005
-                    bouncing_pos = torch.argwhere((x[:, 1] <= 0.1 + gap) | (x[:, 1] >= 0.9 - gap)).squeeze()
-                    if bouncing_pos.numel() > 0:
-                        x[bouncing_pos, 3] = - 0.7 * bounce_coeff * x[bouncing_pos, 3]
-                        x[bouncing_pos, 1] += x[bouncing_pos, 3] * delta_t * 10
-                    bouncing_pos = torch.argwhere((x[:, 2] <= 0.1 + gap) | (x[:, 2] >= 0.9 - gap)).squeeze()
-                    if bouncing_pos.numel() > 0:
-                        x[bouncing_pos, 4] = - 0.7 * bounce_coeff * x[bouncing_pos, 4]
-                        x[bouncing_pos, 2] += x[bouncing_pos, 4] * delta_t * 10
-                if 'fixed' in test_mode:
-                    fixed_pos = torch.argwhere(x[:, 5] == 0)
-                    x[fixed_pos.squeeze(), 1:2 * dimension + 1] = x_list[0][it + 1, fixed_pos.squeeze(),
-                                                                  1:2 * dimension + 1].clone().detach()
                 if 'inference' in test_mode:
                     x_inference_list.append(x)
 
@@ -5019,11 +4982,9 @@ def data_test_particle(config=None, config_file=None, visualize=False, style='co
                 plt.xticks(fontsize=24)
                 plt.yticks(fontsize=24)
 
-            # save figure
-            if not ('PDE_N' in model_config.signal_model_name):
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{run}_{num}.tif", dpi=100)
-                plt.close()
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{run}_{num}.tif", dpi=100)
+            plt.close()
 
             if ('RD_Mesh' in model_config.mesh_model_name) & (it % 40 == 0) & (it > 0):
 
@@ -5215,113 +5176,13 @@ def data_test_particle(config=None, config_file=None, visualize=False, style='co
 
 
 
-    if 'inference' in test_mode:
-        torch.save(x_inference_list, f"./{log_dir}/x_inference_list_{run}.pt")
+    # if 'inference' in test_mode:
+    #     torch.save(x_inference_list, f"./{log_dir}/x_inference_list_{run}.pt")
 
-    print('prediction error {:.3e}+/-{:.3e}'.format(np.mean(pred_err_list), np.std(pred_err_list)))
-    print('average rollout RMSE {:.3e}+/-{:.3e}'.format(np.mean(rmserr_list), np.std(rmserr_list)))
+    # print('prediction error {:.3e}+/-{:.3e}'.format(np.mean(pred_err_list), np.std(pred_err_list)))
+    # print('average rollout RMSE {:.3e}+/-{:.3e}'.format(np.mean(rmserr_list), np.std(rmserr_list)))
 
-    # if has_mesh:
-    #     h = x_mesh_list[0][0][:, 6:7]
-    #     for k in range(n_frames):
-    #         h = torch.cat((h, x_mesh_list[0][k][:, 6:7]), 0)
-    #     h = to_numpy(h)
-    #     print(h.shape)
-    #     print('average u {:.3e}+/-{:.3e}'.format(np.mean(h), np.std(h)))
 
-    if 'PDE_N' in model_config.signal_model_name:
 
-        torch.save(neuron_gt_list, f"./{log_dir}/neuron_gt_list.pt")
-        torch.save(neuron_pred_list, f"./{log_dir}/neuron_pred_list.pt")
-
-    else:
-        if False:
-            # geomloss_list == []:
-            geomloss_list = [0, 0]
-            r = [np.mean(rmserr_list), np.std(rmserr_list), np.mean(geomloss_list), np.std(geomloss_list)]
-            print('average rollout Sinkhorn div. {:.3e}+/-{:.3e}'.format(np.mean(geomloss_list), np.std(geomloss_list)))
-            np.save(f"./{log_dir}/rmserr_geomloss_{config_file}.npy", r)
-
-        if False:
-            rmserr_list = np.array(rmserr_list)
-            fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
-            x_ = np.arange(len(rmserr_list))
-            y_ = rmserr_list
-            plt.scatter(x_, y_, c=mc)
-            plt.xticks(fontsize=48)
-            plt.yticks(fontsize=48)
-            plt.xlabel(r'$Epochs$', fontsize=78)
-            plt.ylabel(r'$RMSE$', fontsize=78)
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/rmserr_{config_file}_plot.tif", dpi=170.7)
-
-        if False:
-            x0_next = x_list[0][it].clone().detach()
-            fig = plt.figure(figsize=(12, 12))
-            ax = fig.add_subplot(1, 1, 1)
-            temp1 = torch.cat((x, x0_next), 0)
-            temp2 = torch.tensor(np.arange(n_particles), device=device)
-            temp3 = torch.tensor(np.arange(n_particles) + n_particles, device=device)
-            temp4 = torch.concatenate((temp2[:, None], temp3[:, None]), 1)
-            temp4 = torch.t(temp4)
-            distance4 = torch.sqrt(torch.sum((x[:, 1:3] - x0_next[:, 1:3]) ** 2, 1))
-            p = torch.argwhere(distance4 < 0.3)
-
-            temp1_ = temp1[:, [2, 1]].clone().detach()
-            pos = dict(enumerate(np.array((temp1_).detach().cpu()), 0))
-            dataset = data.Data(x=temp1_, edge_index=torch.squeeze(temp4[:, p]))
-            vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-            nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False, ax=ax, edge_color='r', width=4)
-            for n in range(n_particle_types):
-                plt.scatter(x[index_particles[n], 2].detach().cpu().numpy(),
-                            x[index_particles[n], 1].detach().cpu().numpy(), s=100, color=cmap.color(n))
-            plt.xlim([0, 1])
-            plt.ylim([0, 1])
-            plt.xlabel(r'$x$', fontsize=78)
-            plt.ylabel(r'$y$', fontsize=78)
-            formatx = '%.1f'
-            formaty = '%.1f'
-            ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True, axis='both', which='major', pad=15)
-            ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-            ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-            ax.xaxis.set_major_formatter(FormatStrFormatter(formatx))
-            ax.yaxis.set_major_formatter(FormatStrFormatter(formaty))
-            plt.xticks(fontsize=48.0)
-            plt.yticks(fontsize=48.0)
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/rmserr_{config_file}_{it}.tif", dpi=170.7)
-            plt.close()
-
-            fig = plt.figure(figsize=(12, 12))
-            for n in range(n_particle_types):
-                plt.scatter(x0_next[index_particles[n], 2].detach().cpu().numpy(),
-                            x0_next[index_particles[n], 1].detach().cpu().numpy(), s=50, color=cmap.color(n))
-            plt.xlim([0, 1])
-            plt.ylim([0, 1])
-            plt.xlabel(r'$x$', fontsize=78)
-            plt.ylabel(r'$y$', fontsize=78)
-            formatx = '%.2f'
-            formaty = '%.2f'
-            ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-            ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-            ax.xaxis.set_major_formatter(FormatStrFormatter(formatx))
-            ax.yaxis.set_major_formatter(FormatStrFormatter(formaty))
-            plt.xticks(fontsize=48.0)
-            plt.yticks(fontsize=48.0)
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/GT_{config_file}_{it}.tif", dpi=170.7)
-            plt.close()
-
-    if len(angle_list) > 0:
-        angle = torch.stack(angle_list)
-        fig = plt.figure(figsize=(12, 12))
-        plt.hist(to_numpy(angle), bins=1000, color='w')
-        plt.xlabel('angle', fontsize=48)
-        plt.ylabel('count', fontsize=48)
-        plt.xticks(fontsize=24)
-        plt.yticks(fontsize=24)
-        plt.xlim([-90, 90])
-        plt.savefig(f"./{log_dir}/results/angle.tif", dpi=170.7)
-        plt.close
 
 
