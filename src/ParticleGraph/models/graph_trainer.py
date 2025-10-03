@@ -4720,74 +4720,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
                     # plt.figure()
                     # plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=8, c=to_numpy(pred[:, 0] * delta_t * hnorm), cmap='viridis', vmin=0, vmax=5)
-            elif ('visual' in field_type) & ('PDE_N' in model_config.signal_model_name):
-                if 'plot_data' in test_mode:
 
-                    plt.close()
-
-                    im_ = im[int(it / n_frames * 256)].squeeze()
-                    im_ = np.rot90(im_, 3)
-                    im_ = np.reshape(im_, (n_nodes_per_axis * n_nodes_per_axis))
-                    if ('modulation' in field_type):
-                        A1[:, 0:1] = torch.tensor(im_[:, None], dtype=torch.float32, device=device)
-                    if ('visual' in field_type):
-                        A1[:n_nodes, 0:1] = torch.tensor(im_[:, None], dtype=torch.float32, device=device)
-                        A1[n_nodes:n_particles, 0:1] = 1
-
-                fig = plt.figure(figsize=(8, 12))
-                plt.subplot(211)
-                plt.title(r'$b_i$', fontsize=48)
-                plt.scatter(to_numpy(x0[:, 2]), to_numpy(x0[:, 1]), s=8, c=to_numpy(A1[:, 0]), cmap='viridis', vmin=0,
-                            vmax=2)
-                plt.xticks([])
-                plt.yticks([])
-                plt.subplot(212)
-                plt.title(r'$x_i$', fontsize=48)
-                plt.scatter(to_numpy(x0[:, 2]), to_numpy(x0[:, 1]), s=8, c=to_numpy(x[:, 6:7]), cmap='viridis',
-                            vmin=-10,
-                            vmax=10)
-                plt.xticks([])
-                plt.yticks([])
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{num}.tif", dpi=80)
-                plt.close()
-            elif 'PDE_N' in model_config.signal_model_name:
-                plt.close()
-                matplotlib.rcParams['savefig.pad_inches'] = 0
-
-                black_to_green = LinearSegmentedColormap.from_list('black_green', ['black', 'green'])
-                black_to_yellow = LinearSegmentedColormap.from_list('black_yellow', ['black', 'yellow'])
-
-                plt.figure(figsize=(10, 10))
-                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=700, c=to_numpy(x[:, 6]), alpha=1, edgecolors='none', vmin =2 , vmax=8, cmap=black_to_green)
-
-                if 'excitation' in model.update_type:
-                    plt.scatter(-0.45, 0.5, s=700, c=to_numpy(x[0, 10]) + 0.25, cmap=black_to_yellow, vmin=0, vmax=1)
-                    plt.scatter(-0.4, 0.5, s=700, c=to_numpy(x[0, 11]) + 0.25, cmap=black_to_yellow, vmin=0, vmax=1)
-                    plt.scatter(-0.35, 0.5, s=700, c=to_numpy(x[0, 12]) + 0.25, cmap=black_to_yellow, vmin=0, vmax=1)
-
-                plt.axis('off')
-                plt.xticks([])
-                plt.yticks([])
-                plt.xlim([-0.6, 0.6])
-                plt.ylim([-0.6, 0.6])
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=80)
-                plt.close()
-
-                # im = imread(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif")
-                # plt.figure(figsize=(10, 10))
-                # plt.imshow(im)
-                # plt.axis('off')
-                # plt.xticks([])
-                # plt.yticks([])
-                # plt.subplot(3, 3, 1)
-                # plt.imshow(im[800:1000, 800:1000, :])
-                # plt.xticks([])
-                # plt.yticks([])
-                # plt.tight_layout()
-                # plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=80)
-                # plt.close()
 
             elif 'PDE_K' in model_config.particle_model_name:
 
@@ -4802,6 +4735,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
                 plt.xlim([-3, 3])
                 plt.ylim([-3, 3])
+
             elif do_tracking:
 
                 # plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, c='w', alpha=0.25)
@@ -4825,6 +4759,24 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     plt.xlim([0, 700])
                     plt.ylim([0, 700])
                 plt.tight_layout()
+
+            elif has_fly:
+
+                plt.style.use('dark_background')
+
+                plt.axis('off')
+
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=700, c='cyan')
+
+                for i in range(len(x)):
+                    plt.arrow(to_numpy(x[i, 1]), to_numpy(x[i, 2]), 2 * np.cos(to_numpy(x[i, 3])+np.pi/2), 2 * np.sin(to_numpy(x[i, 3])+np.pi/2),
+                              head_width=0.05, head_length=0.1, fc='yellow', ec='yellow')
+
+                plt.xlim(-25, 25)
+                plt.ylim(-25, 25)
+                plt.xticks([])
+                plt.yticks([])
+
             else:
                 s_p = 10
                 index_particles = get_index_particles(x, n_particle_types, dimension)
