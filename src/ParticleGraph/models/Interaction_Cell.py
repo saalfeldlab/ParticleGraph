@@ -33,10 +33,9 @@ class Interaction_Cell(pyg.nn.MessagePassing):
         train_config = config.training
 
         self.device = device
-        self.input_size = model_config.input_size
-        self.output_size = model_config.output_size
-        self.hidden_dim = model_config.hidden_dim
-        self.n_layers = model_config.n_layers
+
+
+
         self.n_particles = simulation_config.n_particles
         self.max_radius = simulation_config.max_radius
         self.rotation_augmentation = train_config.rotation_augmentation
@@ -45,24 +44,32 @@ class Interaction_Cell(pyg.nn.MessagePassing):
         self.n_dataset = train_config.n_runs
         self.prediction = model_config.prediction
         self.n_particles_max = simulation_config.n_particles_max
-        self.update_type = model_config.update_type
-        self.n_layers_update = model_config.n_layers_update
-        self.hidden_dim_update = model_config.hidden_dim_update
 
         self.model = model_config.particle_model_name
         self.bc_dpos = bc_dpos
         self.dimension = dimension
-        self.has_state = config.simulation.state_type != 'discrete'
         self.n_frames = simulation_config.n_frames
-        self.do_tracking = train_config.do_tracking
+    
+
+        self.input_size = model_config.input_size
+        self.output_size = model_config.output_size
+        self.hidden_dim = model_config.hidden_dim
+        self.n_layers = model_config.n_layers
+
+        self.input_size_update = model_config.input_size_update
+        self.hidden_dim_update = model_config.hidden_dim_update
+        self.n_layers_update = model_config.n_layers_update
+        self.output_size_update = model_config.output_size_update
+
+
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device, initialisation='std')
+        
+        self.lin_phi = MLP(input_size=self.input_size_update, output_size=self.output_size_update, nlayers=self.n_layers_update,
+                           hidden_size=self.hidden_dim_update, device=self.device, initialisation='std')
 
-        if self.do_tracking | self.has_state:
-            self.a = nn.Parameter(torch.tensor(np.ones((self.n_particles_max, self.embedding_dim)), device=self.device, requires_grad=True, dtype=torch.float32))
-        else:
-            self.a = nn.Parameter(torch.tensor(np.ones((self.n_dataset, self.n_particles_max, 2)), device=self.device, requires_grad=True, dtype=torch.float32))
+        self.a = nn.Parameter(torch.tensor(np.ones((self.n_particles_max, 2)), device=self.device, requires_grad=True, dtype=torch.float32))
 
 
 
@@ -77,26 +84,24 @@ class Interaction_Cell(pyg.nn.MessagePassing):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
-        if has_field:
-            field = x[:,6:7]
-        else:
-            field = torch.ones_like(x[:,6:7])
+        field = x[:,6:7]    # e.g. GCamp signal
+
         pos = x[:, 1:self.dimension+1]
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
-        features = x[:, 10:-1]
-        particle_id = x[:, -1].long()
+        particle_id = x[:, 0].long()
 
-        if self.do_tracking | self.has_state:
-            embedding = self.a[particle_id, :].squeeze()
-        else:
-            embedding = self.a[self.data_id, particle_id, :].squeeze()
+        embedding = self.a[particle_id, :].squeeze()
 
-        pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding, field=field, features=features)
+        msg = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
+
+
+        in_features = torch.cat([field, embedding, msg], dim=1)
+
+        pred = self.lin_phi(in_features)
 
         return pred
 
-    def message(self, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j, field_j, features_i, features_j):
-        # distance normalized by the max radius
+    def message(self, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j, field_j):
         r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
         delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
         dpos_x_i = d_pos_i[:, 0] / self.vnorm
@@ -129,11 +134,10 @@ class Interaction_Cell(pyg.nn.MessagePassing):
                 in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
             case 'PDE_Cell_area':
                 in_features = torch.cat((delta_pos, r[:, None], features_i[:,0:1] /100, features_j[:,0:1]  /100, embedding_i), dim=-1)
+            case 'PDE_Cell_Gcamp':
+                in_features = torch.cat((delta_pos, r[:, None], embedding_j, field_j), dim=-1)  
 
-        out = self.lin_edge(in_features) * field_j
-
-        self.pos = pos_i
-        self.msg = out
+        out = self.lin_edge(in_features)
 
         return out
 

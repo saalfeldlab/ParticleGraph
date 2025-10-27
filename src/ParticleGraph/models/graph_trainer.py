@@ -29,10 +29,13 @@ from scipy.spatial import KDTree
 from sklearn import neighbors, metrics
 from scipy.ndimage import median_filter
 from tifffile import imwrite, imread
+import tifffile
 from matplotlib.colors import LinearSegmentedColormap
 from scipy.spatial import cKDTree
 from ParticleGraph.generators.utils import *
 from scipy.special import logsumexp
+from tqdm import trange
+
 
 def data_train(config=None, erase=False, best_model=None, device=None):
     # plt.rcParams['text.usetex'] = True
@@ -90,6 +93,8 @@ def data_train(config=None, erase=False, best_model=None, device=None):
         data_solar_system(config, erase, best_model, device)
     elif has_material:
         data_train_material(config, erase, best_model, device)
+    elif 'Gcamp' in config.data_folder_name:
+        data_train_cell_activity(config, erase, best_model, device)
     else:
         data_train_particle(config, erase, best_model, device)
 
@@ -1249,6 +1254,347 @@ def data_solar_system(config, erase, best_model, device):
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{epoch}.tif")
         plt.close()
+
+
+
+
+def data_train_cell_activity(config, erase, best_model, device):
+    simulation_config = config.simulation
+    train_config = config.training
+    model_config = config.graph_model
+
+    print(f'training cell activity data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+
+    dimension = simulation_config.dimension
+    n_epochs = train_config.n_epochs
+    delta_t = simulation_config.delta_t
+    noise_level = train_config.noise_level
+    dataset_name = config.dataset
+    n_frames = simulation_config.n_frames
+    rotation_augmentation = train_config.rotation_augmentation
+    data_augmentation_loop = train_config.data_augmentation_loop
+    target_batch_size = train_config.batch_size
+    if train_config.small_init_batch_size:
+        get_batch_size = increasing_batch_size(target_batch_size)
+    else:
+        get_batch_size = constant_batch_size(target_batch_size)
+    batch_size = get_batch_size(0)
+    n_runs = train_config.n_runs
+    max_radius = simulation_config.max_radius
+    min_radius = simulation_config.min_radius
+
+    data_folder_name = config.data_folder_name
+    dataset_name = config.dataset
+    files = os.listdir(data_folder_name)
+    files = [f for f in files if f.endswith('.tif')]
+    files = sorted(files, key=lambda x: int(re.search(r'\d+', x).group()))
+
+    has_field = True    # Gcamp activity is considered as a field
+
+
+    log_dir, logger = create_log_dir(config, erase)
+    print(f'graph files N: {n_runs}')
+    logger.info(f'graph files N: {n_runs}')
+    time.sleep(0.5)
+
+    x_list = []
+    y_list = []
+    edge_p_p_list = []
+
+    print('load data ...')
+
+    x = np.load(f'graphs_data/{dataset_name}/x_list_0.npz')
+    x_list.append(x)
+
+
+    vnorm = torch.tensor([1.0], dtype=torch.float32, device=device)
+    ynorm = torch.tensor([1.0], dtype=torch.float32, device=device)
+
+                
+    n_frames = len(x_list[0].keys())
+    # Find max track_id across all frames
+    max_track_id = 0
+    for it in range(n_frames):
+        x_temp = torch.tensor(x_list[0][f'arr_{it}'], dtype=torch.float32, device=device)
+        max_track_id = max(max_track_id, int(x_temp[:, 0].max().item()))
+
+    print(f'max track_id: {max_track_id + 1}')
+    config.simulation.n_particles_max = max_track_id +1
+
+    # Check if saved files exist
+    mask_y_path = f'{log_dir}/mask_y_data.pt'
+    fluo_traces_path = f'{log_dir}/fluo_traces.npz'
+
+    if os.path.exists(mask_y_path) and os.path.exists(fluo_traces_path):
+        data_ = torch.load(mask_y_path)
+        mask_list = data_['mask_list']
+        y_list = data_['y_list']
+        neighbors_list = data_['neighbors_list']
+        track_id_list = data_['track_id_list']
+        fluo_traces_data = np.load(fluo_traces_path)
+        fluo_traces = {int(k): fluo_traces_data[k] for k in fluo_traces_data.files}
+    else:
+        print('computing data...')
+        mask_list = []
+        y_list = []
+        neighbors_list = []
+        track_id_list = []
+
+        # Initialize fluo traces
+        fluo_traces = {tid: [] for tid in range(max_track_id + 1)}
+
+        for it in trange(n_frames - 1, ncols=150):
+            x = torch.tensor(x_list[0][f'arr_{it}'], dtype=torch.float32, device=device).clone().detach()
+            x_next = torch.tensor(x_list[0][f'arr_{it + 1}'], dtype=torch.float32, device=device).clone().detach()
+            
+            # Collect track_id and fluo for this frame
+            track_id_list.append(x[:, 0].clone().detach())
+            for i, tid in enumerate(x[:, 0]):
+                tid_int = int(tid.item())
+                fluo_traces[tid_int].append((it, x[i, 6].item()))
+            
+            # Mask: True if valid (NOT near border AND track_id present in next frame)
+            border_mask = ((x[:, 1] < max_radius) | (x[:, 1] > 3226 - max_radius) |
+                        (x[:, 2] < max_radius) | (x[:, 2] > 3226 - max_radius))
+            track_ids_next = set(to_numpy(x_next[:, 0]))
+            disappear_mask = torch.tensor([tid.item() not in track_ids_next for tid in x[:, 0]],
+                                        device=device)
+            mask = ~(border_mask | disappear_mask)
+            
+            # Compute dF/dt
+            y = torch.zeros_like(x[:, 6])
+            track_id_to_idx_next = {tid.item(): i for i, tid in enumerate(x_next[:, 0])}
+            
+            for i, tid in enumerate(x[:, 0]):
+                if mask[i] and tid.item() in track_id_to_idx_next:
+                    j = track_id_to_idx_next[tid.item()]
+                    y[i] = (x_next[j, 6] - x[i, 6]) / delta_t
+            
+            y_list.append(y.clone().detach())
+            mask_list.append(mask.clone().detach())
+            
+            distance = torch.sum((x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+            adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+            edges = adj_t.nonzero().t().contiguous()
+            
+            # Count neighbors per cell
+            n_neighbors = adj_t.sum(dim=1)
+            neighbors_list.append(n_neighbors.clone().detach())
+            
+            black_to_green = LinearSegmentedColormap.from_list('black_green', ['black', 'green'])
+            im_fluo = tifffile.imread(data_folder_name + files[it])
+            im_fluo = np.array(im_fluo).astype('float32') / 256
+            im3 = im_fluo[:,:, 1]
+            
+            if it == 1000:
+                fig = plt.figure(figsize=(20, 10))
+                
+                # Panel 1: Image
+                ax = fig.add_subplot(121)
+                plt.imshow(im3, vmin=0, vmax=5, cmap=black_to_green)
+                plt.axis('off')
+                plt.text(10, 20, f' Gcamp frame {it}', color='white', fontsize=20, ha='left', va='top')
+                
+                # Panel 2: Graph with edges
+                ax = fig.add_subplot(122)
+                plt.axis('off')
+                plt.imshow(np.flipud(im3), vmin=0, vmax=10, cmap=black_to_green)
+                pos = to_numpy(x[:, 1:3])
+                for i in range(edges.shape[1]):
+                    src, dst = edges[0, i], edges[1, i]
+                    plt.plot([pos[src, 1], pos[dst, 1]], [pos[src, 0], pos[dst, 0]],
+                            'w-', alpha=0.3, linewidth=0.5)
+                mask_np = to_numpy(mask)
+                plt.scatter(pos[~mask_np, 1], pos[~mask_np, 0], s=25, c='red', alpha=0.8)
+                plt.scatter(pos[mask_np, 1], pos[mask_np, 0], s=25, c=to_numpy(x[mask_np, 6]),
+                            cmap=black_to_green, vmin=0, vmax=0.5)
+                plt.xlim([0, im3.shape[0]])
+                plt.ylim([0, im3.shape[1]])
+                
+                plt.tight_layout()
+                plt.savefig(f"{log_dir}/tmp_recons/{it:06}.tif", dpi=80)
+                plt.close()
+
+        # Save
+        torch.save({'mask_list': mask_list, 'y_list': y_list, 'neighbors_list': neighbors_list, 
+                    'track_id_list': track_id_list}, mask_y_path)
+        np.savez(fluo_traces_path, **{str(k): np.array(v) for k, v in fluo_traces.items() if len(v) > 0})
+        print(f'Saved to {mask_y_path} and {fluo_traces_path}')
+
+    # statistics
+    total_cells = sum([len(m) for m in mask_list])
+    valid_cells = sum([m.sum().item() for m in mask_list])
+    valid_ratio = valid_cells / total_cells if total_cells > 0 else 0
+
+    y_all = torch.cat(y_list)
+    y_valid = torch.cat([y[m] for y, m in zip(y_list, mask_list)])
+
+    neighbors_all = torch.cat(neighbors_list)
+    neighbors_valid = torch.cat([n[m] for n, m in zip(neighbors_list, mask_list)])
+
+    # track statistics (exclude zero fluo values)
+    track_lengths = [len(v) for v in fluo_traces.values() if len(v) > 0]
+    all_fluo_nonzero = [f for v in fluo_traces.values() for (t, f) in v if f > 0]
+
+    print(f'total frames: {n_frames - 1}')
+    print(f'total cells: {total_cells}')
+    print(f'valid cells: {valid_cells} ({valid_ratio*100:.1f}%)')
+    print(f'track lengths: mean={np.mean(track_lengths):.1f}, std={np.std(track_lengths):.1f}, min={np.min(track_lengths)}, max={np.max(track_lengths)}')
+    print(f'fluo (nonzero): mean={np.mean(all_fluo_nonzero):.4f}, std={np.std(all_fluo_nonzero):.4f}, min={np.min(all_fluo_nonzero):.4f}, max={np.max(all_fluo_nonzero):.4f}')
+    print(f'dF/dt: mean={y_valid.mean():.4f}, std={y_valid.std():.4f}, min={y_valid.min():.4f}, max={y_valid.max():.4f}')
+    print(f'neighbors: mean={neighbors_valid.float().mean():.2f}, std={neighbors_valid.float().std():.2f}, min={neighbors_valid.min()}, max={neighbors_valid.max()}')
+
+
+    print('create models ...')
+    model, bc_pos, bc_dpos = choose_training_model(config, device)
+    model.ynorm = ynorm
+    model.vnorm = vnorm
+    if best_model != None:
+        net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{best_model}.pt"
+        state_dict = torch.load(net, map_location=device)
+        model.load_state_dict(state_dict['model_state_dict'])
+        start_epoch = int(best_model.split('_')[0])
+        print(f'best_model: {best_model}  start_epoch: {start_epoch}')
+        logger.info(f'best_model: {best_model}  start_epoch: {start_epoch}')
+    else:
+        start_epoch = 0
+        net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs.pt"
+
+    lr = train_config.learning_rate_start
+    lr_embedding = train_config.learning_rate_embedding_start
+    optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+    logger.info(f"Total Trainable Params: {n_total_params}")
+    logger.info(f'Learning rates: {lr}, {lr_embedding}')
+    model.train()
+
+    print(f'network: {net}')
+    print(f'initial batch_size: {batch_size}')
+    print('')
+    logger.info(f'network: {net}')
+    logger.info(f'N epochs: {n_epochs}')
+    logger.info(f'initial batch_size: {batch_size}')
+
+
+    print("start training ...")
+    check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
+
+    list_loss = []
+    time.sleep(1)
+    for epoch in range(start_epoch, n_epochs + 1):
+
+        batch_size = get_batch_size(epoch)
+        logger.info(f'batch_size: {batch_size}')
+
+        total_loss = 0
+        Niter = n_frames * data_augmentation_loop // batch_size
+
+        if epoch==0:
+            plot_frequency = int(Niter // 50)
+            print(f'{Niter} iterations per epoch')
+            logger.info(f'{Niter} iterations per epoch')
+            print(f'plot every {plot_frequency} iterations')
+
+        for N in trange(Niter):
+
+            phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
+            dataset_batch = []
+            y_batch_list = []
+            mask_batch_list = []
+            
+            for batch in range(batch_size):
+                k = np.random.randint(n_frames - 2)
+                x = torch.tensor(x_list[0][f'arr_{k}'], dtype=torch.float32, device=device).clone().detach()
+                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                edges = adj_t.nonzero().t().contiguous()
+
+                dataset = data.Data(x=x[:, :], edge_index=edges)
+                dataset_batch.append(dataset)
+                
+                y = y_list[k].clone().detach()
+                mask = mask_list[k].clone().detach()
+                
+                if noise_level > 0:
+                    y = y * (1 + torch.randn_like(y) * noise_level)
+                
+                y_batch_list.append(y)
+                mask_batch_list.append(mask)
+            
+            y_batch = torch.cat(y_batch_list, dim=0)
+            mask_batch = torch.cat(mask_batch_list, dim=0)
+            
+            batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
+            optimizer.zero_grad()
+
+
+            
+            for i, batch in enumerate(batch_loader):
+                pred = model(batch, data_id=0, training=True, phi=phi, has_field=True)
+            
+
+            loss = (pred.squeeze()[mask_batch] - y_batch[mask_batch]).norm(2)
+
+            loss.backward()
+            optimizer.step()
+
+
+            total_loss += loss.item()
+
+
+            if ((N % plot_frequency == 0) & (N > 0)):
+
+                fig, ax = fig_init(fontsize=24)
+                plt.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), s=0.1, color='k', alpha=0.1, edgecolor='none')
+                plt.xlabel(r'$a_{i0}$', fontsize=48)
+                plt.ylabel(r'$a_{i1}$', fontsize=48)
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_training/embedding/{epoch}_{N}.tif", dpi=87)
+                plt.close()
+
+
+                torch.save({'model_state_dict': model.state_dict(),
+                            'optimizer_state_dict': optimizer.state_dict()},
+                           os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+                
+                # check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 20, memory_percentage_threshold=0.6)
+
+
+
+        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss  / n_particles / batch_size))
+        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss  / n_particles / batch_size))
+        torch.save({'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict()},
+                   os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
+        list_loss.append(total_loss / batch_size)
+        torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
+
+        fig = plt.figure(figsize=(15, 10))
+
+        # Plot 1: Loss
+        ax = fig.add_subplot(2, 3, 1)
+        plt.plot(list_loss, color='k', linewidth=1)
+        plt.xlim([0, n_epochs])
+        plt.ylabel('loss', fontsize=12)
+        plt.xlabel('epochs', fontsize=12)
+        embedding_files = glob.glob(f"./{log_dir}/tmp_training/embedding/*.tif")
+        if len(embedding_files) > 0:
+            
+            last_file = max(embedding_files, key=os.path.getctime)  # or use os.path.getmtime for modification time
+            filename = os.path.basename(last_file)
+            last_epoch, last_N = filename.replace('.tif', '').split('_')
+            # Plot 2: Last embedding
+            ax = fig.add_subplot(2, 3, 2)
+            img = imread(f"./{log_dir}/tmp_training/embedding/{last_epoch}_{last_N}.tif")
+            plt.imshow(img)
+            plt.axis('off')
+            plt.title('Embedding', fontsize=12)
+        
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/epoch_{epoch}.tif")
+        plt.close()
+
+
+
 
 
 def data_train_cell(config, erase, best_model, device):

@@ -5,6 +5,7 @@ import os
 import re
 from dataclasses import dataclass
 from typing import Dict, Tuple, Literal
+from pathlib import Path
 
 import astropy.units as u
 import matplotlib.pyplot as plt
@@ -25,9 +26,9 @@ import tifffile
 import torch_geometric.data as data
 import networkx as nx
 from torch_geometric.utils.convert import to_networkx
-# from cellpose import models
+from cellpose import models, denoise
 from ParticleGraph.generators.cell_utils import *
-# from cellpose import models, core, utils, io, models, metrics, denoise
+
 import scipy.io as sio
 import seaborn as sns
 from torch_geometric.utils import dense_to_sparse
@@ -327,6 +328,34 @@ def load_LG_ODE(config, device=None, visualize=False, step=1000):
 
 def load_2Dfluo_data_with_Cellpose(config, device, visualize):
 
+    """
+    Pipeline for extracting calcium traces from 2D fluorescence microscopy of MDCK cells.
+
+    Three-step process:
+    1. Cellpose Segmentation (auto):
+    - Segments cells using Cellpose (GPU-accelerated)
+    - Creates: SEG/*.tif (masks), DN/*.tif (denoised), TRK/*.tif (downsampled blobs)
+    - Stops when: TRK/_spots.csv exists
+
+    2. TrackMate Tracking (manual):
+    - User runs TrackMate in Fiji/ImageJ on TRK/*.tif
+    - Settings: diameter=5, gap closing=6-6-3, min track length=20
+    - Export: TRK/_spots.csv (track IDs, positions, frames)
+
+    3. Fluorescence Extraction (auto):
+    - Matches TrackMate tracks to segmented objects (<20px threshold)
+    - Extracts fluorescence from specified channel
+    - Creates: graphs_data/{dataset_name}/x_list_0.npz (trajectories + fluorescence)
+
+    Output data structure (x_list):
+    Each frame: [n_cells, 13] array
+    - [0]: Track ID
+    - [1:3]: y, x positions  
+    - [3:5]: velocity (placeholder)
+    - [5]: frame number
+    - [6:9]: fluorescence [R, G, B]
+    """
+
     plt.style.use('dark_background')
 
     data_folder_name = config.data_folder_name
@@ -342,6 +371,7 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
     n_frames = simulation_config.n_frames
     offset_channel = image_data.offset_channel
     delta_t = simulation_config.delta_t
+    crop_region = image_data.crop_region
     run = 0
 
     bc_pos, bc_dpos = choose_boundary_values('no')
@@ -365,6 +395,15 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
     files = sorted(files, key=lambda x: int(re.search(r'\d+', x).group()))
 
     im = tifffile.imread(data_folder_name + files[0])
+    # crop image according to crop_region: [origin_y, origin_x, size_y, size_x]
+    if crop_region != [0,0,0,0]:
+        im = im[crop_region[1]:crop_region[1]+crop_region[3], crop_region[0]:crop_region[0]+crop_region[2], :]
+    
+        # fig = plt.figure(figsize=(13, 13))
+        # plt.imshow(im/5000)
+        # plt.savefig('cropped_image.png')
+        # plt.close()
+
     print(f'image size {im.shape}, frames {len(files)}')
 
     os.makedirs(f"{data_folder_name}/SEG", exist_ok=True)
@@ -380,38 +419,57 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
     trackmate_frame_step = image_data.trackmate_frame_step
     measure_diameter = image_data.measure_diameter
 
-    if 'models' in cellpose_model_path:
-        model_cellpose = models.CellposeModel(gpu=True, pretrained_model=cellpose_model_path)
-    elif 'cyto3' in cellpose_model_path:
-        model_cellpose = models.CellposeModel(gpu=True, model_type='cyto3', nchan=2)
-    elif 'cyto2' in cellpose_model_path:
-        model_cellpose = models.CellposeModel(gpu=True, model_type='cyto2', nchan=2)
-    elif 'cyto2_cp3' in cellpose_model_path:
-        model_cellpose = models.CellposeModel(gpu=True, model_type='cyto2_cp3', nchan=2)
+    # For v4.0.1+, specify pretrained_model directly
+    model_path = Path.home() / ".cellpose" / "models" / cellpose_model_path
+    model_cellpose = models.CellposeModel(gpu=True, pretrained_model=str(model_path))
 
-    if cellpose_denoise_model == 'cyto3':
-        model_denoise = denoise.CellposeDenoiseModel(gpu=True, model_type="cyto3", restore_type="denoise_cyto3")
 
+
+
+    # model_dir = os.path.expanduser("~/.cellpose/models")
+    # print("Models in directory:", os.listdir(model_dir))
+    # # Check what model names are recognized
+    # print("Built-in model names:", models.MODEL_NAMES if hasattr(models, 'MODEL_NAMES') else "Not accessible")
+    # # Try downloading specific models manually
+    # from cellpose import utils
+    # # Download cyto3 if it exists
+    # try:
+    #     model_url = "https://www.cellpose.org/models/cyto3"
+    #     model_path = os.path.join(model_dir, "cyto2_cp3")
+    #     utils.download_url_to_file(model_url, model_path)
+    #     print(f"Downloaded cyto2_cp3 to {cyto2_cp3}")
+    # except:
+    #     print("Could not download cyto3")
+
+    import warnings
+
+
+    warnings.filterwarnings("ignore", message="Resizing is deprecated")
 
     # step 1
     if not os.path.exists(f"{data_folder_name}/TRK/_spots.csv"):
 
         print('generate segmentation masks with Cellpose ...')
-        for it in trange(0, len(files)):
+        for it in trange(0, len(files), ncols=80):
             im = tifffile.imread(data_folder_name + files[it])
+            if crop_region != [0,0,0,0]:
+                im = im[crop_region[1]:crop_region[1]+crop_region[3], crop_region[0]:crop_region[0]+crop_region[2], :]
+    
             im = np.array(im).astype('float32')
 
             if cellpose_denoise_model != '':
                 for i in cellpose_channels:
                     masks, flows, styles, imgs_dn = model_denoise.eval(im[:,:,i-1], diameter=cellpose_diameter, channels=[0,0])
                     im[:,:,i-1:i] = imgs_dn.copy()
-                tifffile.imsave(data_folder_name + 'DN/' + files[it], im[:,:,0])
+                tifffile.imwrite(data_folder_name + 'DN/' + files[it], im[:,:,0])
 
-            masks, flows, styles = model_cellpose.eval(im[:,:,:], diameter=cellpose_diameter, flow_threshold=0.0, invert=False, normalize=True, channels=cellpose_channels)
-            # fig = plt.figure(figsize=(12, 12))
-            # plt.imshow(masks)
+            masks, flows, styles = model_cellpose.eval(im[:,:,:], 
+                                           diameter=cellpose_diameter, 
+                                           flow_threshold=0.0, 
+                                           invert=False, 
+                                           normalize=True)
 
-            tifffile.imsave(data_folder_name + 'SEG/' + files[it], masks)
+            tifffile.imwrite(data_folder_name + 'SEG/' + files[it], masks)
 
             object_properties = extract_object_properties(masks, im[:, :, cellpose_channels[0]], radius=cellpose_diameter)
             image = im[:,:,0] * 0
@@ -422,7 +480,7 @@ def load_2Dfluo_data_with_Cellpose(config, device, visualize):
                 rr, cc = disk((pos_x, pos_y), 8, shape=image.shape)
                 image[rr, cc] = 255  # White blob
             image = resize(image,(image.shape[0] // trackmate_size_ratio, image.shape[1] // trackmate_size_ratio), anti_aliasing=True)
-            tifffile.imsave(f'{data_folder_name}/TRK/{it:06}.tif', image.astype('uint8'))
+            tifffile.imwrite(f'{data_folder_name}/TRK/{it:06}.tif', image.astype('uint8'))
 
             # setp 2 trackmate
             # trackmate settings
@@ -2394,128 +2452,6 @@ def ensure_local_path_exists(path):
 
     os.makedirs(path, exist_ok=True)
     return os.path.join(os.getcwd(), path)
-
-
-def load_fly_data(config, device, visualize, step):
-
-    dataset_folder_name = config.data_folder_name
-    data_path = ensure_local_path_exists(f'graphs_data/{dataset_folder_name}')
-
-    dataset_name = config.dataset
-    os.makedirs(f'graphs_data/{dataset_name}', exist_ok=True)
-    os.makedirs(f"./graphs_data/{dataset_name}/Fig/", exist_ok=True)
-    files = glob.glob(f"./graphs_data/{dataset_name}/Fig/*")
-    for f in files:
-        os.remove(f)
-
-
-    delta_t = config.simulation.delta_t
-    n_runs = config.training.n_runs
-
-    data = np.load(dataset_folder_name, allow_pickle=True)
-
-    x_y_theta = data['x_y_theta']
-    video_ids = data['video_ids']
-
-    print(f"x_y_theta shape: {x_y_theta.shape}")
-    print(f"video_ids shape: {video_ids.shape}")
-
-    n_runs = len(np.unique(video_ids))
-    print(f"n_runs: {n_runs}")
-
-    n_flies = config.simulation.n_particles
-
-    x_y_theta = x_y_theta[:,:,0:n_flies]
-
-    run_id = 0
-
-    for run in trange(n_runs):
-        
-        x_list = []
-        y_list = []
-
-        idx = np.where(video_ids == run)[0]
-        x_y_theta_run = x_y_theta[:, idx, :]
-        print (f'video {run} shape: {x_y_theta_run.shape}')
-
-        n_frames = x_y_theta_run.shape[1]
-
-        for it in range(0, n_frames - 2):
-            x = np.zeros((n_flies, 7))
-            x[:, 0] = np.arange(0, n_flies).reshape(1, -1)  # fly index
-            x[:, 1] = x_y_theta_run[0, it, :]  # x
-            x[:, 2] = x_y_theta_run[1, it, :]  # y
-            x[:, 3] = x_y_theta_run[2, it, :]  # theta
-            if it > 0:
-                x[:, 4] = (x_y_theta_run[0, it, :] - x_y_theta_run[0, it - 1, :]) / delta_t  # vx
-                x[:, 5] = (x_y_theta_run[1, it, :] - x_y_theta_run[1, it - 1, :]) / delta_t  # vy
-                x[:, 6] = (x_y_theta_run[2, it, :] - x_y_theta_run[2, it - 1, :]) / delta_t  # vtheta
-            x_list.append(x.copy())
-
-            if (run ==4) & (it <500) & visualize : # (it % step ==0) : 
-                plt.style.use('dark_background')
-
-                plt.figure(figsize=(10, 10))
-                plt.axis('off')
-
-                plt.scatter(x[:, 1], x[:, 2], s=700, c='cyan')
-
-                for i in range(n_flies):
-                    plt.arrow(x[i, 1], x[i, 2], 2 * np.cos(x[i, 3]+np.pi/2), 2 * np.sin(x[i, 3]+np.pi/2),
-                              head_width=0.05, head_length=0.1, fc='yellow', ec='yellow')
-
-                plt.xlim(-25, 25)
-                plt.ylim(-25, 25)
-                plt.xticks([])
-                plt.yticks([])
-                plt.tight_layout()
-                plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{it:03d}.tif", dpi=80)
-                plt.close()
-
-        # compute velocity target
-
-        x_list = np.array(x_list)
-
-
-        # check Nan in x_list
-        if np.isnan(x_list).any():
-            print(f"Warning: NaN values found in x_list")
-        else:
-            # Compute difference for features 1 and 2 as usual
-            y_list = (x_list[1:, :, 1:3] - x_list[:-1, :, 1:3]) / delta_t
-            # For the angle (feature 3, index 3), use np.angle to handle wrapping
-            angle_diff = np.angle(np.exp(1j * (x_list[1:, :, 3] - x_list[:-1, :, 3]))) / delta_t
-            y_list = np.concatenate([y_list, angle_diff[..., np.newaxis]], axis=-1)
-
-
-            # print dimension of arena look at x y range
-            x_min = np.min(x_list[:, :, 1])
-            x_max = np.max(x_list[:, :, 1])
-            y_min = np.min(x_list[:, :, 2])
-            y_max = np.max(x_list[:, :, 2])
-            theta_min = np.min(x_list[:, :, 3])
-            theta_max = np.max(x_list[:, :, 3])
-            print(f"arena x range: {x_min:.3f} to {x_max:.3f}")
-            print(f"arena y range: {y_min:.3f} to {y_max:.3f}")
-            print(f"theta range: {theta_min:.3f} to {theta_max:.3f}")
-            # print target range
-            y_dx_min = np.min(y_list[:, :, 0])
-            y_dx_max = np.max(y_list[:, :, 0])
-            y_dy_min = np.min(y_list[:, :, 1])
-            y_dy_max = np.max(y_list[:, :, 1])
-            y_dtheta_min = np.min(y_list[:, :, 2])
-            y_dtheta_max = np.max(y_list[:, :, 2])
-            print(f"target x range: {y_dx_min:.3f} to {y_dx_max:.3f}")
-            print(f"target y range: {y_dy_min:.3f} to {y_dy_max:.3f}")
-            print(f"target theta range: {y_dtheta_min:.3f} to {y_dtheta_max:.3f}")
-
-            np.save(f"graphs_data/{dataset_name}/x_list_{run_id}.npy", x_list)
-            np.save(f"graphs_data/{dataset_name}/y_list_{run_id}.npy", y_list)
-
-            run_id += 1
-
-            
-    print (f'save {run_id-1} videos')
 
 
 @dataclass
