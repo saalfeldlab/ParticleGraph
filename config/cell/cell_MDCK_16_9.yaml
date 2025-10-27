@@ -29,13 +29,13 @@ graph_model:
 
   input_size: 6
   output_size: 16
-  hidden_dim: 128
-  n_layers: 5
+  hidden_dim: 32
+  n_layers: 2
 
   input_size_update: 19
   output_size_update: 1
-  hidden_dim_update: 64
-  n_layers_update: 3
+  hidden_dim_update: 16
+  n_layers_update: 1
 
   aggr_type: 'add'
   embedding_dim: 2
@@ -76,11 +76,8 @@ training:
 
   sparsity: 'none'
 
-  rotation_augmentation: True
-  data_augmentation_loop: 50
+  rotation_augmentation: False
+  data_augmentation_loop: 500
 
-  learning_rate_start: 1.0E-4
-  learning_rate_embedding_start: 1.0E-4
-
-
-
+  learning_rate_start: 1.0E-3
+  learning_rate_embedding_start: 1.0E-2

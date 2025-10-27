@@ -7,7 +7,7 @@ from typing import List, Union
 
 
 class SimulationConfig(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", protected_namespaces=())
 
     dimension: int = 2
     n_frames: int = 1000
@@ -113,7 +113,7 @@ class SimulationConfig(BaseModel):
 
 
 class GraphModelConfig(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", protected_namespaces=())
     particle_model_name: str = ""
     cell_model_name: str = ""
     mesh_model_name: str = ""
@@ -209,7 +209,7 @@ class GraphModelConfig(BaseModel):
 
 
 class PlottingConfig(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", protected_namespaces=())
 
     colormap: str = "tab10"
     arrow_length: int = 10
@@ -225,7 +225,7 @@ class PlottingConfig(BaseModel):
 
 
 class ImageData(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", protected_namespaces=())
 
     file_type: str = "none"
     cellpose_model: str = "cyto3"
@@ -243,7 +243,7 @@ class ImageData(BaseModel):
 
 
 class TrainingConfig(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", protected_namespaces=())
     device: Annotated[str, Field(pattern=r"^(auto|cpu|cuda:\d+)$")] = "auto"
 
     n_epochs: int = 20
@@ -400,7 +400,7 @@ class TrainingConfig(BaseModel):
 
 
 class ParticleGraphConfig(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", protected_namespaces=())
 
     description: Optional[str] = "ParticleGraph"
     dataset: str

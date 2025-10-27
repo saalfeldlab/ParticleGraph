@@ -1322,8 +1322,8 @@ def data_train_cell_activity(config, erase, best_model, device):
     config.simulation.n_particles_max = max_track_id +1
 
     # Check if saved files exist
-    mask_y_path = f'{log_dir}/mask_y_data.pt'
-    fluo_traces_path = f'{log_dir}/fluo_traces.npz'
+    mask_y_path = f'graphs_data/{dataset_name}/mask_y_data.pt'
+    fluo_traces_path = f'graphs_data/{dataset_name}/fluo_traces.npz'
 
     if os.path.exists(mask_y_path) and os.path.exists(fluo_traces_path):
         data_ = torch.load(mask_y_path)
@@ -1490,7 +1490,7 @@ def data_train_cell_activity(config, erase, best_model, device):
 
         if epoch==0:
             plot_frequency = int(Niter // 50)
-            print(f'{Niter} iterations per epoch')
+            print(f'{Niter} iterations per epoch, augmentation x{data_augmentation_loop}')
             logger.info(f'{Niter} iterations per epoch')
             print(f'plot every {plot_frequency} iterations')
 
@@ -1542,26 +1542,41 @@ def data_train_cell_activity(config, erase, best_model, device):
 
 
             if ((N % plot_frequency == 0) & (N > 0)):
-
                 fig, ax = fig_init(fontsize=24)
-                plt.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), s=0.1, color='k', alpha=0.1, edgecolor='none')
+                plt.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), s=10, color='k', alpha=0.5, edgecolor='none')
                 plt.xlabel(r'$a_{i0}$', fontsize=48)
                 plt.ylabel(r'$a_{i1}$', fontsize=48)
+                
+                stats_text = f'$\mu$={model.a.mean():.3f}\n$\sigma$={model.a.std():.3f}\n$\|grad\|$={model.a.grad.norm():.3f}'
+                plt.text(0.02, 0.98, stats_text, transform=ax.transAxes, 
+                        fontsize=24, verticalalignment='top')
+                
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_training/embedding/{epoch}_{N}.tif", dpi=87)
                 plt.close()
 
 
-                torch.save({'model_state_dict': model.state_dict(),
-                            'optimizer_state_dict': optimizer.state_dict()},
-                           os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+                fig = plt.figure(figsize=(8, 8))
+                gt_valid = y_batch[mask_batch]
+                pred_valid = pred.squeeze()[mask_batch]
+                plt.scatter(to_numpy(gt_valid), to_numpy(pred_valid), c='k', s=10, alpha=0.5, edgecolor='none')
+                plt.xlabel('true $dF/dt$', fontsize=14)
+                plt.ylabel('pred $dF/dt$', fontsize=14)
+                
+                # Add diagonal line
+                lim = [gt_valid.min().item(), gt_valid.max().item()]
+                plt.plot(lim, lim, 'r--', linewidth=2)
+                
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_training/prediction/{epoch}_{N}.tif", dpi=87)
+                plt.close()
                 
                 # check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 20, memory_percentage_threshold=0.6)
 
 
 
-        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss  / n_particles / batch_size))
-        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss  / n_particles / batch_size))
+        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / batch_size))
+        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / batch_size))
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()},
                    os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
