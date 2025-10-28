@@ -2098,7 +2098,7 @@ def choose_training_model(model_config=None, device=None, projections=None):
         case 'PDE_MPM' | 'PDE_MPM_A':
             model = Interaction_MPM(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos,
                                     dimension=dimension)
-        case  'PDE_Cell' | 'PDE_Cell_area' | 'PDE_Cell_Gcamp' | 'PDE_Cell_Gcamp_scalar' :  
+        case  'PDE_Cell' | 'PDE_Cell_area' | 'PDE_Cell_Gcamp' | 'PDE_Cell_Gcamp_edges_embedding' :  
             model = Interaction_Cell(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             model.edges = []
         case 'PDE_ParticleField_A' | 'PDE_ParticleField_B':
@@ -2185,7 +2185,7 @@ def increasing_batch_size(batch_size):
 
     return get_batch_size
 
-def set_trainable_parameters(model=[], lr_embedding=[], lr=[],  lr_update=[], lr_W=[], lr_modulation=[], learning_rate_NNR=[], learning_rate_edges_scalar=[]):
+def set_trainable_parameters(model=[], lr_embedding=[], lr=[],  lr_update=[], lr_W=[], lr_modulation=[], learning_rate_NNR=[], learning_rate_edge_embedding=[]):
 
     trainable_params = [param for _, param in model.named_parameters() if param.requires_grad]
     n_total_params = sum(p.numel() for p in trainable_params) + torch.numel(model.a)
@@ -2214,9 +2214,9 @@ def set_trainable_parameters(model=[], lr_embedding=[], lr=[],  lr_update=[], lr
             elif 'NNR' in name:
                 optimizer.add_param_group({'params': parameter, 'lr': learning_rate_NNR})
                 # print(f'lr_W: {name} {lr_W}')
-            elif 'edges_scalar' in name:
-                optimizer.add_param_group({'params': parameter, 'lr': learning_rate_edges_scalar})
-                # print(f'lr_edges_scalar: {name} {learning_rate_edges_scalar}')
+            elif 'edges_embedding' in name:
+                optimizer.add_param_group({'params': parameter, 'lr': learning_rate_edge_embedding})
+                # print(f'lr_edges_embedding: {name} {learning_rate_edges_embedding}')
             else:
                 optimizer.add_param_group({'params': parameter, 'lr': lr})
                 # print(f'lr: {name} {lr}')

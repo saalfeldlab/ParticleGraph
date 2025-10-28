@@ -72,7 +72,7 @@ class Interaction_Cell(pyg.nn.MessagePassing):
 
         self.a = nn.Parameter(torch.tensor(np.ones((self.n_particles_max, 2)), device=self.device, requires_grad=True, dtype=torch.float32))
 
-        self.edges_scalar = nn.Parameter(torch.tensor(np.ones((self.len_directed_edges, 1)), device=self.device, requires_grad=True, dtype=torch.float32))
+        self.edges_embedding = nn.Parameter(torch.tensor(np.ones((self.len_directed_edges, 2)), device=self.device, requires_grad=True, dtype=torch.float32))
 
 
 
@@ -84,7 +84,7 @@ class Interaction_Cell(pyg.nn.MessagePassing):
         self.training = training
         self.has_field = has_field
 
-        if 'scalar' in self.model:
+        if 'edges_embedding' in self.model:
             self.edge_pointers = edge_pointers
 
         x, edge_index = data.x, data.edge_index
@@ -107,7 +107,7 @@ class Interaction_Cell(pyg.nn.MessagePassing):
 
         return pred
 
-    def message(self, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j, field_j):
+    def message(self, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j, field_i, field_j):
         r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
         delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
         dpos_x_i = d_pos_i[:, 0] / self.vnorm
@@ -142,14 +142,10 @@ class Interaction_Cell(pyg.nn.MessagePassing):
                 in_features = torch.cat((delta_pos, r[:, None], features_i[:,0:1] /100, features_j[:,0:1]  /100, embedding_i), dim=-1)
             case 'PDE_Cell_Gcamp':
                 in_features = torch.cat((delta_pos, r[:, None], embedding_j, field_j), dim=-1)  
+            case 'PDE_Cell_Gcamp_edges_embedding':
+                in_features = torch.cat((delta_pos, r[:, None], self.edges_embedding[self.edge_pointers], field_i, field_j), dim=-1)
 
         out = self.lin_edge(in_features)
-
-        if 'scalar' in self.model:
-            out = self.lin_edge(in_features) ** 2   # [n_edges, 1]
-            out = out * self.edges_scalar[self.edge_pointers]
-        else:
-            out = self.lin_edge(in_features)
 
         
 

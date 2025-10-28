@@ -1353,7 +1353,7 @@ def data_train_cell_activity(config, erase, best_model, device):
         fluo_traces_data = np.load(fluo_traces_path)
         fluo_traces = {int(k): fluo_traces_data[k] for k in fluo_traces_data.files}
         
-        print(f'Loaded {n_unique_edges} unique directed edges')
+        print(f'loaded {n_unique_edges} unique directed edges')
         config.simulation.len_directed_edges = n_unique_edges
     else:
         print('computing data...')
@@ -1480,7 +1480,7 @@ def data_train_cell_activity(config, erase, best_model, device):
         config.simulation.len_directed_edges = edge_counter
         
         np.savez(fluo_traces_path, **{str(k): np.array(v) for k, v in fluo_traces.items() if len(v) > 0})
-        print(f'Saved to {edge_y_path} and {fluo_traces_path}')
+        print(f'saved to {edge_y_path} and {fluo_traces_path}')
 
     # statistics
     total_cells = sum([len(m) for m in mask_list])
@@ -1523,8 +1523,8 @@ def data_train_cell_activity(config, erase, best_model, device):
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
-    learning_rate_edges_scalar = train_config.learning_rate_edges_scalar
-    optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr, learning_rate_edges_scalar)
+    learning_rate_edge_embedding = train_config.learning_rate_edge_embedding
+    optimizer, n_total_params = set_trainable_parameters(model=model, lr_embedding=lr_embedding, lr=lr, learning_rate_edge_embedding=learning_rate_edge_embedding)
     logger.info(f"Total Trainable Params: {n_total_params}")
     logger.info(f'Learning rates: {lr}, {lr_embedding}')
     model.train()
@@ -1567,7 +1567,7 @@ def data_train_cell_activity(config, erase, best_model, device):
                 k = np.random.randint(n_frames - 2)
                 x = torch.tensor(x_list[0][f'arr_{k}'], dtype=torch.float32, device=device).clone().detach()
                 
-                edges = torch.tensor(edges_list[f'arr_{k}'], dtype=torch.long, device=device)
+                edges = torch.tensor(edges_list[k], dtype=torch.long, device=device)
                 
                 dataset = data.Data(x=x[:, :], edge_index=edges)
                 dataset_batch.append(dataset)
@@ -1581,7 +1581,7 @@ def data_train_cell_activity(config, erase, best_model, device):
                 y_batch_list.append(y)
                 mask_batch_list.append(mask)
                 
-                if 'scalar' in model_config.particle_model_name:
+                if 'edges_embedding' in model_config.particle_model_name:
                     edge_pointers = torch.tensor(edge_pointers_list[k], dtype=torch.long, device=device)
                     edge_pointers_batch.append(edge_pointers)
             
@@ -1589,7 +1589,7 @@ def data_train_cell_activity(config, erase, best_model, device):
             mask_batch = torch.cat(mask_batch_list, dim=0)
             
             # Concatenate edge pointers across batch
-            if 'scalar' in model_config.particle_model_name:
+            if 'edges_embedding' in model_config.particle_model_name:
                 edge_pointers_all = torch.cat(edge_pointers_batch, dim=0)
             else:
                 edge_pointers_all = None
@@ -1637,64 +1637,20 @@ def data_train_cell_activity(config, erase, best_model, device):
                 plt.savefig(f"./{log_dir}/tmp_training/prediction/{epoch}_{N}.tif", dpi=87)
                 plt.close()
 
-
-                if 'scalar' in model_config.particle_model_name:
-                    k = 1000
-                    x = torch.tensor(x_list[0][f'arr_{k}'], dtype=torch.float32, device=device)
-                    edges = torch.tensor(edges_list[f'arr_{k}'], dtype=torch.long, device=device)
-                    edge_pointers = torch.tensor(edge_pointers_list[f'arr_{k}'], dtype=torch.long, device=device)
-                    
-                    # Get edge scalar values
-                    edge_scalars = to_numpy(model.edges_scalar[edge_pointers].squeeze())
-                    
-                    # Load image
-                    black_to_green = LinearSegmentedColormap.from_list('black_green', ['black', 'green'])
-                    im_fluo = tifffile.imread(data_folder_name + files[k])
-                    im_fluo = np.array(im_fluo).astype('float32') / 256
-                    im3 = im_fluo[:, :, 1]
-                    
-                    fig = plt.figure(figsize=(12, 10))
-                    ax = fig.add_subplot(111)
-                    plt.imshow(np.flipud(im3), vmin=0, vmax=10, cmap=black_to_green)
-                    plt.axis('off')
-                    
-                    pos = to_numpy(x[:, 1:3])
-                    
-                    # Draw edges with white lines
-                    for i in range(edges.shape[1]):
-                        src, dst = edges[0, i], edges[1, i]
-                        plt.plot([pos[src, 1], pos[dst, 1]], [pos[src, 0], pos[dst, 0]],
-                                'w-', alpha=0.5, linewidth=0.5)
-                    
-                    # Draw cells as small white dots
-                    plt.scatter(pos[:, 1], pos[:, 0], s=5, c='white', alpha=0.8, edgecolor='none')
-                    
-                    # Draw edge scalars as colored dots at edge midpoints
-                    for i in range(edges.shape[1]):
-                        src, dst = edges[0, i], edges[1, i]
-                        mid_x = (pos[src, 1] + pos[dst, 1]) / 2
-                        mid_y = (pos[src, 0] + pos[dst, 0]) / 2
-                        plt.scatter(mid_x, mid_y, s=20, c=edge_scalars[i], 
-                                cmap='coolwarm', vmin=edge_scalars.min(), vmax=edge_scalars.max(),
-                                alpha=0.8, edgecolor='none')
-                    
-                    plt.colorbar(label='Edge scalar weight', ax=ax, fraction=0.046, pad=0.04)
-                    
-                    # Add histogram in corner
-                    ax_hist = fig.add_axes([0.15, 0.75, 0.2, 0.15])
-                    ax_hist.hist(edge_scalars, bins=50, color='cyan', alpha=0.7, edgecolor='black')
-                    ax_hist.set_xlabel('Edge scalar', fontsize=8)
-                    ax_hist.set_ylabel('Count', fontsize=8)
-                    ax_hist.tick_params(labelsize=7)
-                    stats_text = f'μ={edge_scalars.mean():.3f}\nσ={edge_scalars.std():.3f}'
-                    ax_hist.text(0.95, 0.95, stats_text, transform=ax_hist.transAxes,
-                                fontsize=8, verticalalignment='top', horizontalalignment='right',
-                                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
-                    
-                    plt.xlim([0, im3.shape[0]])
-                    plt.ylim([0, im3.shape[1]])
-                    plt.savefig(f"./{log_dir}/tmp_training/edge_scalars/{epoch}_{N}.tif", dpi=87)
+                if 'edges_embedding' in model_config.particle_model_name:
+                    fig, ax = fig_init(fontsize=24)
+                    plt.scatter(to_numpy(model.edges_embedding[:, 0]), to_numpy(model.edges_embedding[:, 1]), s=10, color='r', alpha=0.5, edgecolor='none')
+                    plt.xlabel(r'$e_{ij,0}$', fontsize=48)
+                    plt.ylabel(r'$e_{ij,1}$', fontsize=48)
+                    stats_text = f'$\mu$={model.edges_embedding.mean():.3f}\n$\sigma$={model.edges_embedding.std():.3f}\n$\|grad\|$={model.edges_embedding.grad.norm():.3f}'
+                    plt.text(0.02, 0.98, stats_text, transform=ax.transAxes, 
+                            fontsize=24, verticalalignment='top')
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/tmp_training/edges_embedding/{epoch}_{N}.tif", dpi=87)
                     plt.close()
+
+
+
                 
                 # check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 20, memory_percentage_threshold=0.6)
 
@@ -1705,7 +1661,7 @@ def data_train_cell_activity(config, erase, best_model, device):
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()},
                    os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
-        list_loss.append(total_loss / batch_size)
+        list_loss.append(total_loss / batch_size / 10000)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
         fig = plt.figure(figsize=(15, 10))
@@ -1728,6 +1684,18 @@ def data_train_cell_activity(config, erase, best_model, device):
             plt.imshow(img)
             plt.axis('off')
             plt.title('Embedding', fontsize=12)
+            if 'edges_embedding' in model_config.particle_model_name:
+                edge_embedding_files = glob.glob(f"./{log_dir}/tmp_training/edges_embedding/*.tif")
+                if len(edge_embedding_files) > 0:
+                    last_edge_file = max(edge_embedding_files, key=os.path.getctime)
+                    edge_filename = os.path.basename(last_edge_file)
+                    edge_last_epoch, edge_last_N = edge_filename.replace('.tif', '').split('_')
+                    # Plot 3: Last edge embedding
+                    ax = fig.add_subplot(2, 3, 3)
+                    img = imread(f"./{log_dir}/tmp_training/edges_embedding/{edge_last_epoch}_{edge_last_N}.tif")
+                    plt.imshow(img)
+                    plt.axis('off')
+                    plt.title('Edge Embedding', fontsize=12)
         
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/epoch_{epoch}.tif")

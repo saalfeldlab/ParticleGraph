@@ -330,7 +330,7 @@ class TrainingConfig(BaseModel):
     learning_rate_NNR: float = 0.0001
     training_NNR_start_epoch: int = 0
 
-    learning_rate_edges_scalar: float = 0.0001
+    learning_rate_edge_embedding: float = 0.0001
 
     coeff_W_L1: float = 0.0
     coeff_W_L1_rate: float = 0.5
