@@ -1425,7 +1425,7 @@ def data_train_cell_activity(config, erase, best_model, device):
             neighbors_list.append(n_neighbors.clone().detach())
         
             
-            if it % 5:
+            if it % 100 == 0:
 
                 black_to_green = LinearSegmentedColormap.from_list('black_green', ['black', 'green'])
                 im_fluo = tifffile.imread(data_folder_name + files[it])
@@ -1437,7 +1437,7 @@ def data_train_cell_activity(config, erase, best_model, device):
                 
                 # Panel 1: Image
                 ax = fig.add_subplot(121)
-                plt.imshow(im3, vmin=0, vmax=5, cmap=black_to_green)
+                plt.imshow(im3, vmin=0, vmax=10, cmap=black_to_green)
                 plt.axis('off')
                 plt.text(10, 20, f' Gcamp frame {it}', color='white', fontsize=20, ha='left', va='top')
                 

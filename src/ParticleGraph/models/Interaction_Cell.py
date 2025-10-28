@@ -146,9 +146,8 @@ class Interaction_Cell(pyg.nn.MessagePassing):
         out = self.lin_edge(in_features)
 
         if 'scalar' in self.model:
-            out = self.lin_edge(in_features) ** 2
-            edge_weights = self.edges_scalar[self.edge_pointers]  # [n_edges, 1]
-            out = out * edge_weights
+            out = self.lin_edge(in_features) ** 2   # [n_edges, 1]
+            out = out * self.edges_scalar[self.edge_pointers]
         else:
             out = self.lin_edge(in_features)
 
