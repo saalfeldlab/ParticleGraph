@@ -1,0 +1,86 @@
+description: 'Cells are MDCKs epithelial cells and surface is coated with fibronectin (FN)'
+dataset: 'cell_MDCK_16'
+data_folder_name: '/groups/saalfeld/home/allierc/signaling/MDCK/jGcamp7b-mdcks-h42 11sec interval 5hrs/merged/'
+
+
+
+simulation:
+  params: [[-1]]
+  min_radius: 0
+  max_radius: 100
+  n_particles: 96
+  has_cell_division: False
+  has_cell_death: False
+  n_particles_max: 14794
+  n_particle_types: 1
+  n_frames: 1423
+  delta_t: 1
+  boundary: 'no'
+  start_frame: 0
+
+
+
+graph_model:
+  particle_model_name: 'PDE_Cell_Gcamp_scalar'
+  mesh_model_name: ''
+  prediction: 'first_derivative'
+
+  field_type: 'Gcamp'
+
+  input_size: 6
+  output_size: 16
+  hidden_dim: 128
+  n_layers: 5
+
+  input_size_update: 19
+  output_size_update: 1
+  hidden_dim_update: 64
+  n_layers_update: 3
+
+  aggr_type: 'add'
+  embedding_dim: 2
+
+
+
+
+image_data:
+    file_type: '2D fluo Cellpose'
+    cellpose_channel: 0
+    cellpose_diameter: 70
+    cellpose_model: 'cyto2_cp3'
+    cellpose_denoise_model: ''
+    cellpose_channel: [2, 3]
+    trackmate_size_ratio: 4.0
+    trackmate_frame_step: 4
+    offset_channel: [15, 0]
+    measure_diameter: 0
+
+
+
+plotting:
+  colormap: 'tab20'
+  arrow_length: 5
+  marker_size: 10
+  ylim: [-1.0E-4,1.0E-4]
+
+training:
+
+  device: 'auto'
+  n_runs: 1
+  n_epochs: 10
+
+  seed: 14
+
+  batch_size: 1
+  small_init_batch_size: False
+
+  sparsity: 'none'
+
+  rotation_augmentation: True
+  data_augmentation_loop: 500
+
+  learning_rate_start: 1.0E-4
+  learning_rate_embedding_start: 1.0E-3
+
+
+

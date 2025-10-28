@@ -550,6 +550,7 @@ def create_log_dir(config=[], erase=True):
     os.makedirs(os.path.join(log_dir, 'tmp_training/function/lin_phi'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'tmp_training/function/lin_edge'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'tmp_training/embedding'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'tmp_training/edge_scalars'), exist_ok=True)
     if config.training.n_ghosts > 0:
         os.makedirs(os.path.join(log_dir, 'tmp_training/ghost'), exist_ok=True)
 

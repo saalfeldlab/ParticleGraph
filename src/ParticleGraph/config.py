@@ -41,6 +41,7 @@ class SimulationConfig(BaseModel):
     shuffle_particle_types: bool = False
     pos_init: str = "uniform"
     dpos_init: float = 0
+    len_directed_edges: int = 1
 
     MPM_expansion_factor: float = 1.0
     MPM_n_objects: int = 9
@@ -328,6 +329,8 @@ class TrainingConfig(BaseModel):
     learning_rate_missing_activity: float = 0.0001
     learning_rate_NNR: float = 0.0001
     training_NNR_start_epoch: int = 0
+
+    learning_rate_edges_scalar: float = 0.0001
 
     coeff_W_L1: float = 0.0
     coeff_W_L1_rate: float = 0.5

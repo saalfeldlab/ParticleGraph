@@ -72,7 +72,7 @@ if __name__ == "__main__":
         # config_list = ['signal_N5_v11_bis']
         # config_list = ['signal_fig_supp6_4']
 
-        config_list = ['cell_MDCK_16_1']
+        config_list = ['cell_MDCK_16_13']
 
     for config_file_ in config_list:
         print(" ")

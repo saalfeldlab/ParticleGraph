@@ -44,6 +44,7 @@ class Interaction_Cell(pyg.nn.MessagePassing):
         self.n_dataset = train_config.n_runs
         self.prediction = model_config.prediction
         self.n_particles_max = simulation_config.n_particles_max
+        self.len_directed_edges = simulation_config.len_directed_edges
 
         self.model = model_config.particle_model_name
         self.bc_dpos = bc_dpos
@@ -71,15 +72,20 @@ class Interaction_Cell(pyg.nn.MessagePassing):
 
         self.a = nn.Parameter(torch.tensor(np.ones((self.n_particles_max, 2)), device=self.device, requires_grad=True, dtype=torch.float32))
 
+        self.edges_scalar = nn.Parameter(torch.tensor(np.ones((self.len_directed_edges, 1)), device=self.device, requires_grad=True, dtype=torch.float32))
 
 
-    def forward(self, data=[], data_id=[], training=[], phi=[], has_field=False):
+
+    def forward(self, data=[], data_id=[], training=[], phi=[], has_field=False, edge_pointers=None):
 
         self.data_id = data_id
         self.cos_phi = torch.cos(phi)
         self.sin_phi = torch.sin(phi)
         self.training = training
         self.has_field = has_field
+
+        if 'scalar' in self.model:
+            self.edge_pointers = edge_pointers
 
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
@@ -138,6 +144,15 @@ class Interaction_Cell(pyg.nn.MessagePassing):
                 in_features = torch.cat((delta_pos, r[:, None], embedding_j, field_j), dim=-1)  
 
         out = self.lin_edge(in_features)
+
+        if 'scalar' in self.model:
+            out = self.lin_edge(in_features) ** 2
+            edge_weights = self.edges_scalar[self.edge_pointers]  # [n_edges, 1]
+            out = out * edge_weights
+        else:
+            out = self.lin_edge(in_features)
+
+        
 
         return out
 
