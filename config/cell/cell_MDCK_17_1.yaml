@@ -1,5 +1,5 @@
-description: 'Cells are MDCKs epithelial cells and surface is coated with fibronectin (FN)'
-dataset: 'cell_MDCK_16'
+description: ' max_radius: 60    edge_embedding only'
+dataset: 'cell_MDCK_17'
 data_folder_name: '/groups/saalfeld/home/allierc/signaling/MDCK/jGcamp7b-mdcks-h42 11sec interval 5hrs/merged/'
 
 
@@ -7,7 +7,7 @@ data_folder_name: '/groups/saalfeld/home/allierc/signaling/MDCK/jGcamp7b-mdcks-h
 simulation:
   params: [[-1]]
   min_radius: 0
-  max_radius: 100
+  max_radius: 75
   n_particles: 96
   has_cell_division: False
   has_cell_death: False
@@ -27,7 +27,7 @@ graph_model:
 
   field_type: 'Gcamp'
 
-  input_size: 7
+  input_size: 6
   output_size: 16
   hidden_dim: 128
   n_layers: 5
@@ -71,16 +71,16 @@ training:
 
   seed: 14
 
-  batch_size: 1
+  batch_size: 8
   small_init_batch_size: False
 
   sparsity: 'none'
 
   rotation_augmentation: True
-  data_augmentation_loop: 200
+  data_augmentation_loop: 500
 
   learning_rate_start: 1.0E-4
-  learning_rate_embedding_start: 1.0E-5
+  learning_rate_embedding_start: 1.0E-15
   learning_rate_edge_embedding: 1.0E-5
 
 

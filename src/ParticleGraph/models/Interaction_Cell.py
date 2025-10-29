@@ -135,15 +135,15 @@ class Interaction_Cell(pyg.nn.MessagePassing):
 
         match self.model:
             case 'PDE_Cell_A':
-                in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
+                in_features = torch.cat((delta_pos, embedding_i), dim=-1)
             case 'PDE_Cell':
-                in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
+                in_features = torch.cat((delta_pos, embedding_i), dim=-1)
             case 'PDE_Cell_area':
-                in_features = torch.cat((delta_pos, r[:, None], features_i[:,0:1] /100, features_j[:,0:1]  /100, embedding_i), dim=-1)
+                in_features = torch.cat((delta_pos, features_i[:,0:1] /100, features_j[:,0:1]  /100, embedding_i), dim=-1)
             case 'PDE_Cell_Gcamp':
-                in_features = torch.cat((delta_pos, r[:, None], embedding_j, field_j), dim=-1)  
+                in_features = torch.cat((delta_pos, embedding_j, field_j), dim=-1)  
             case 'PDE_Cell_Gcamp_edges_embedding':
-                in_features = torch.cat((delta_pos, r[:, None], self.edges_embedding[self.edge_pointers], field_i, field_j), dim=-1)
+                in_features = torch.cat((delta_pos, self.edges_embedding[self.edge_pointers], field_i, field_j), dim=-1)
 
         out = self.lin_edge(in_features)
 

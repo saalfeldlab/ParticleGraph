@@ -29,13 +29,13 @@ graph_model:
 
   input_size: 6
   output_size: 16
-  hidden_dim: 64
-  n_layers: 3
+  hidden_dim: 128
+  n_layers: 5
 
   input_size_update: 19
   output_size_update: 1
-  hidden_dim_update: 32
-  n_layers_update: 2
+  hidden_dim_update: 64
+  n_layers_update: 3
 
   aggr_type: 'add'
   embedding_dim: 2
@@ -67,17 +67,17 @@ training:
 
   device: 'auto'
   n_runs: 1
-  n_epochs: 10
+  n_epochs: 20
 
   seed: 14
 
-  batch_size: 1
+  batch_size: 8
   small_init_batch_size: False
 
   sparsity: 'none'
 
-  rotation_augmentation: False
+  rotation_augmentation: True
   data_augmentation_loop: 500
 
   learning_rate_start: 1.0E-4
-  learning_rate_embedding_start: 1.0E-3
+  learning_rate_embedding_start: 5.0E-5
