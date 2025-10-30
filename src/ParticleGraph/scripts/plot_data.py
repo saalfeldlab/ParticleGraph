@@ -80,101 +80,6 @@ def plot_gland(config, config_file, device):
     first_ten_frames = time_series[:10]
     last_ten_frames_reversed = time_series[-1:-11:-1]
 
-def plot_celegans(config, config_file, device):
-
-    simulation_config = config.simulation
-    train_config = config.training
-    model_config = config.graph_model
-
-    print(f'Plot data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
-
-    dimension = simulation_config.dimension
-    delta_t = simulation_config.delta_t
-    dataset_name = config.dataset
-    n_frames = simulation_config.n_frames
-    n_runs = train_config.n_runs
-    dimension = 3
-
-    l_dir = get_log_dir(config)
-    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file.split('/')[-1]))
-
-    os.makedirs(os.path.join(log_dir, 'generated_bw'), exist_ok=True)
-    os.makedirs(os.path.join(log_dir, 'generated_voronoi'), exist_ok=True)
-
-
-    files = glob.glob(f"./{log_dir}/generated_bw/*")
-    for f in files:
-        os.remove(f)
-    files = glob.glob(f"./{log_dir}/generated_voronoi/*")
-    for f in files:
-        os.remove(f)
-
-    model, bc_pos, bc_dpos = choose_training_model(config, device)
-
-    print('Load data ...')
-
-    time_series, cell_info = load_celegans_gene_data(dataset_name, device=device)
-
-    # The info about the cells is stored in a pandas DataFrame
-    print(f"Number of cells: {len(cell_info)}")
-    print(cell_info.describe())
-
-    cell_name = cell_info.index[5]
-    cell_type = cell_info['type'].iloc[5]
-    print(f"First few gene names: {cell_info.index[:6]}")
-    print(f"Cell type for {cell_name}: {cell_type}")
-
-    # Since the location and gene data are acquired at different time intervals, the time series only contains
-    # the time in which both data are available (gene data is linearly interpolated)
-    print(f"Number of time points: {len(time_series)}")
-    print(f"Time points: {time_series.time}")
-
-    # The data objects contain the fields 'pos' and 'gene_cpm' and their derivatives ('velocity' and 'd_gene_cpm')
-    time_point = time_series[0]
-    print(f"Time point fields: {time_point.node_attrs()}")
-    print(f"Number of cells in time point 0: {time_point.num_nodes}")
-
-    print(f"Position shape: {time_point.pos.shape}")
-    print(f"Velocity shape: {time_point.velocity.shape}")
-    print(f"Gene expression shape: {time_point.gene_cpm.shape}")
-    print(f"Gene expression derivative shape: {time_point.d_gene_cpm.shape}")
-
-    data = time_series[50]
-    x = bundle_fields(data, "pos").clone().detach()
-
-
-    n_backgrounds = 1000
-    count = 1
-    intermediate_count = 0
-    distance_threshold = 50
-    while count < n_backgrounds+1:
-
-        new_pos = torch.rand(1, dimension, device=device)
-        new_pos[:, 0] = new_pos[:, 0] * 20 - 10
-        new_pos[:, 1] = new_pos[:, 1] * 20 - 10
-        new_pos[:, 2] *= 175
-
-        distance = torch.sum((x[:, None, 0:3] - new_pos[None, :, :]) ** 2, dim=2)
-        if torch.all(distance > distance_threshold ** 2):
-            x = torch.cat((x, new_pos), 0)
-            count += 1
-        intermediate_count += 1
-        if intermediate_count > 100:
-            distance_threshold = distance_threshold * 0.99
-            intermediate_count = 0
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d', box_aspect=[1, 1, 1])
-    ax.scatter(to_numpy(x[-1000:, 0]), to_numpy(x[-1000:, 1]), to_numpy(x[-1000:, 2]), c="r", marker="o", s=1)
-    ax.scatter(to_numpy(x[:321, 0]), to_numpy(x[:321, 1]), to_numpy(x[:321, 2]), c="k", marker="o", s=10)
-    ax.set_xlim(-10, 10)
-    ax.set_ylim(-10, 10)
-    ax.set_zlim(0, 175)
-
-    fig = plt.figure()
-    plt.scatter(to_numpy(x[-1000:, 0]), to_numpy(x[-1000:, 1]), c="r", marker="o")
-    ax.scatter(to_numpy(x[:321, 0]), to_numpy(x[:321, 1]), to_numpy(x[:321, 2]), c="k", marker="o")
-
 def plot_generated_agents(config, config_file, device):
 
     simulation_config = config.simulation
@@ -596,10 +501,7 @@ if __name__ == '__main__':
 
     matplotlib.use("Qt5Agg")
 
-    # config_file = "celegans"
     # config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-    # plot_celegans(config, config_file, device)
-
 
     # config_file = "agents"
     # config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')

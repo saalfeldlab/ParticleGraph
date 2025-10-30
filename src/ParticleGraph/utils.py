@@ -461,9 +461,6 @@ def add_pre_folder(config_file_):
     elif 'springs' in config_file_:
         config_file = os.path.join('springs', config_file_)
         pre_folder = 'springs/'
-    elif 'CElegans' in config_file_:
-        config_file = os.path.join('CElegans', config_file_)
-        pre_folder = 'CElegans/'
     elif 'signal' in config_file_:
         config_file = os.path.join('signal', config_file_)
         pre_folder = 'signal/'
@@ -522,8 +519,6 @@ def get_log_dir(config=[]):
         l_dir = os.path.join('./log/mouse/')
     elif 'rat' in config.dataset:
         l_dir = os.path.join('./log/rat/')
-    elif 'celegans' in config.dataset:
-        l_dir = os.path.join('./log/celegans/')
 
     return l_dir
 

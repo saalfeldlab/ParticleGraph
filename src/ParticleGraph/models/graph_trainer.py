@@ -4833,8 +4833,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     y = pred
             # signal update
             x[:n_particles, 6:7] = x[:n_particles, 6:7] + y[:n_particles] * delta_t
-            # if 'CElegans' in dataset_name:
-            #     x[:n_particles, 6:7] = torch.clamp(x[:n_particles, 6:7], min=0, max=10)
         else:
             with torch.no_grad():
                 if has_ghost:
@@ -5256,10 +5254,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.close()
 
             if ('PDE_N' in model_config.signal_model_name) & (it % 200 == 0) & (it > 0):
-                if 'CElegans' in dataset_name:
-                    n = [20, 30, 40, 50, 60, 70, 80, 90, 100, 110]
-                else:
-                    n = [20, 30, 100, 150, 260, 270, 520, 620, 720, 820]
+                n = [20, 30, 100, 150, 260, 270, 520, 620, 720, 820]
 
                 neuron_gt_list_ = torch.cat(neuron_gt_list, 0)
                 neuron_pred_list_ = torch.cat(neuron_pred_list, 0)

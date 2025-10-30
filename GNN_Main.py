@@ -67,8 +67,6 @@ if __name__ == "__main__":
         # config_list = ['RD_RPS_5']
         # config_list = ['cell_U2OS_9_2']
         # config_list = ['springs_matrix_N5_3']
-        # config_list = ['signal_CElegans_d2', 'signal_CElegans_d2a', 'signal_CElegans_d3', 'signal_CElegans_d3a', 'signal_CElegans_d3b']
-        # config_list = ['signal_CElegans_c14_4']
         # config_list = ['signal_N5_v11_bis']
         # config_list = ['signal_fig_supp6_4']
 
