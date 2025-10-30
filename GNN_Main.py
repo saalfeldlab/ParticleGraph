@@ -58,8 +58,8 @@ if __name__ == "__main__":
         else:
             best_model = None
     else:
-        best_model = None
-        task = 'train'  # 'generate', 'train', 'test'
+        best_model = '15'
+        task = 'test'  # 'generate', 'train', 'test'
 
 
         # config_list = ['arbitrary_3']
@@ -72,7 +72,7 @@ if __name__ == "__main__":
         # config_list = ['signal_N5_v11_bis']
         # config_list = ['signal_fig_supp6_4']
 
-        config_list = ['cell_MDCK_17_1']
+        config_list = ['cell_MDCK_17_2']
 
     for config_file_ in config_list:
         print(" ")
@@ -107,12 +107,13 @@ if __name__ == "__main__":
             # data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best',
             #           run=run_, test_mode='fixed_bounce_all', sample_embedding=False, step=4,
             #           device=device)  # particle_of_interest=100, 'fixed_bounce_all'
+            
             data_test(
                 config=config,
                 visualize=True,
                 style="black color name",
                 verbose=False,
-                best_model='best',
+                best_model=best_model,
                 run=1,
                 test_mode="",
                 sample_embedding=False,

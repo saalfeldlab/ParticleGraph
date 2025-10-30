@@ -10,7 +10,6 @@ from GNN_Main import *
 from ParticleGraph.models.utils import *
 from ParticleGraph.utils import *
 from ParticleGraph.models.Siren_Network import *
-from ParticleGraph.models.Signal_Propagation_FlyVis import *
 from ParticleGraph.models.Ghost_Particles import *
 from geomloss import SamplesLoss
 from ParticleGraph.sparsify import EmbeddingCluster, sparsify_cluster, clustering_evaluation
@@ -81,8 +80,6 @@ def data_train(config=None, erase=False, best_model=None, device=None):
         data_train_particle_field(config, erase, best_model, device)
     elif has_mesh:
         data_train_mesh(config, erase, best_model, device)
-    elif 'fly' in config.dataset:
-        data_train_particle(config, erase, best_model, device)
     elif has_signal:
         data_train_synaptic2(config, erase, best_model, device)
     elif do_tracking & has_cell_division:
@@ -99,8 +96,6 @@ def data_train(config=None, erase=False, best_model=None, device=None):
         data_train_cell_activity(config, erase, best_model, device)
     else:
         data_train_particle(config, erase, best_model, device)
-
-
 
 
 def data_train_particle(config, erase, best_model, device):
@@ -135,7 +130,6 @@ def data_train_particle(config, erase, best_model, device):
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
     has_ghost = train_config.n_ghosts > 0
-    has_fly = 'fly' in config.dataset
     has_bounding_box = 'PDE_F' in model_config.particle_model_name
     n_ghosts = train_config.n_ghosts
     if train_config.small_init_batch_size:
@@ -179,25 +173,19 @@ def data_train_particle(config, erase, best_model, device):
     x = torch.tensor(x_list[0][0], dtype=torch.float32, device=device)
     y = torch.tensor(y_list[0][0], dtype=torch.float32, device=device)
     time.sleep(0.5)
-
-
-    if has_fly:
-        vnorm = torch.tensor(1, device=device)
-        ynorm = torch.tensor(1, device=device)
-    else:
-        for run in trange(0, n_runs, max(n_runs // 10, 1)):
-            for k in range(run_lengths[run] - 5):
-                if (k % 10 == 0) | (n_frames < 1000):
-                    try:
-                        x = torch.cat((x, torch.tensor(x_list[run][k], dtype=torch.float32, device=device)), 0)
-                    except:
-                        print(f'Error in run {run} frame {k}')
-                    y = torch.cat((y, torch.tensor(y_list[run][k], dtype=torch.float32, device=device)), 0)
-            time.sleep(0.5)
-        if torch.isnan(x).any() | torch.isnan(y).any():
-            print('Pb isnan')
-        vnorm = norm_velocity(x, dimension, device)
-        ynorm = norm_acceleration(y, device)
+    for run in trange(0, n_runs, max(n_runs // 10, 1)):
+        for k in range(run_lengths[run] - 5):
+            if (k % 10 == 0) | (n_frames < 1000):
+                try:
+                    x = torch.cat((x, torch.tensor(x_list[run][k], dtype=torch.float32, device=device)), 0)
+                except:
+                    print(f'Error in run {run} frame {k}')
+                y = torch.cat((y, torch.tensor(y_list[run][k], dtype=torch.float32, device=device)), 0)
+        time.sleep(0.5)
+    if torch.isnan(x).any() | torch.isnan(y).any():
+        print('Pb isnan')
+    vnorm = norm_velocity(x, dimension, device)
+    ynorm = norm_acceleration(y, device)
 
     torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
     torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
@@ -543,7 +531,7 @@ def data_train_particle(config, erase, best_model, device):
         if ('PDE_T' not in model_config.particle_model_name) & ('PDE_K' not in model_config.particle_model_name) & (
                 'PDE_MLPs' not in model_config.particle_model_name) & (
                 'PDE_F' not in model_config.particle_model_name) & ('PDE_M' not in model_config.particle_model_name) & (
-                has_bounding_box == False) & (has_fly == False):
+                has_bounding_box == False):
 
             ax = fig.add_subplot(1, 5, 2)
             embedding = get_embedding(model.a, 1)
@@ -861,8 +849,6 @@ def data_solar_system(config, erase, best_model, device):
         plt.close()
 
 
-
-
 def data_train_cell_activity(config, erase, best_model, device):
     simulation_config = config.simulation
     train_config = config.training
@@ -1156,59 +1142,72 @@ def data_train_cell_activity(config, erase, best_model, device):
             plt.close()
 
 
+        min_length = 1000
+        long_tracks = [tid for tid in fluo_traces.keys() if len(fluo_traces[tid]) >= min_length]
+        sampled_tracks = np.random.choice(long_tracks, size=min(1000, len(long_tracks)), replace=False)
 
-    id_list = [3366, 2483, 3363, 2550, 3373, 3372]
-    delta_offset = 0.25
+        kymograph = np.zeros((len(sampled_tracks), 1400))
+        for i, track_id in enumerate(sampled_tracks):
+            trace = fluo_traces[track_id]
+            frames = trace[:, 0].astype(int)
+            frames = frames[frames < 1400]
+            fluo = trace[:len(frames), 1]
+            kymograph[i, frames] = fluo
 
-    fig = plt.figure(figsize=(10, 8))
-    for idx, track_ID in enumerate(id_list):
-        fluo_trace = fluo_traces[track_ID]
-        frames = fluo_trace[:,0].astype(int)
-        fluo_values = fluo_trace[:,1]
-        
-        first_frame = None
-        first_pos = None
-        for n in frames:
-            x = torch.tensor(x_list[0][f'arr_{n}'], dtype=torch.float32, device=device).clone().detach()
-            pos = torch.argwhere(x[:,0] == track_ID).squeeze()
-            if pos.numel() > 0:
-                first_frame = n
-                first_pos = pos
-                reconstructed_fluo = x[pos, 6].clone()
-                break
-        
-        if first_frame is None:
-            continue
-        
-        reconstructed_fluo_list = [to_numpy(reconstructed_fluo)]
-        valid_frames = [first_frame]
-        
-        prev_pos = first_pos
-        for i, n in enumerate(frames[frames > first_frame]):
-            x = torch.tensor(x_list[0][f'arr_{n}'], dtype=torch.float32, device=device).clone().detach()
-            pos = torch.argwhere(x[:,0] == track_ID).squeeze()
-            if pos.numel() > 0:
-                prev_frame = frames[frames < n][-1]
-                x_prev = torch.tensor(x_list[0][f'arr_{prev_frame}'], dtype=torch.float32, device=device).clone().detach()
-                prev_pos = torch.argwhere(x_prev[:,0] == track_ID).squeeze()
-                
-                reconstructed_fluo = reconstructed_fluo + y_list[prev_frame][prev_pos] * delta_t
-                reconstructed_fluo_list.append(to_numpy(reconstructed_fluo))
-                valid_frames.append(n)
-        
-        reconstructed_fluo_arr = np.array(reconstructed_fluo_list).squeeze()
-        offset = idx * delta_offset
+        peak_times = np.argmax(kymograph, axis=1)
+        sorted_idx = np.argsort(peak_times)
+        kymograph_sorted = kymograph[sorted_idx]
 
-        baseline = np.median(fluo_values)
-        plt.plot(frames, fluo_values - baseline + offset, color='green', linewidth=4, alpha=0.6)
-        plt.plot(valid_frames, reconstructed_fluo_arr - baseline + offset , color='black', linewidth=1, alpha=0.8)
-        plt.text(frames[-1], fluo_values[-1] - baseline + offset, f'{track_ID}', fontsize=10, va='center')
+        tifffile.imwrite(f"{log_dir}/fluo_kymograph.tif", kymograph_sorted.astype(np.float32))
 
-    plt.xlabel('frames', fontsize=12)
-    plt.ylabel('fluorescence intensity', fontsize=12)
-    plt.tight_layout()
-    plt.savefig(f"{log_dir}/fluo_traces_stacked.png", dpi=80)
-    plt.close()
+
+        id_list = [3366, 2483, 3363, 2550, 4711, 3372]
+
+        delta_offset = 0.4
+        fig = plt.figure(figsize=(10, 8))
+        for idx, track_ID in enumerate(id_list):
+            fluo_trace = fluo_traces[track_ID]
+            frames = fluo_trace[:,0].astype(int)
+            fluo_values = fluo_trace[:,1]
+            first_frame = None
+            first_pos = None
+            for n in frames:
+                x = torch.tensor(x_list[0][f'arr_{n}'], dtype=torch.float32, device=device).clone().detach()
+                pos = torch.argwhere(x[:,0] == track_ID).squeeze()
+                if pos.numel() > 0:
+                    first_frame = n
+                    first_pos = pos
+                    reconstructed_fluo = x[pos, 6].clone()
+                    break
+            if first_frame is None:
+                continue
+            reconstructed_fluo_list = [to_numpy(reconstructed_fluo)]
+            valid_frames = [first_frame]
+            prev_pos = first_pos
+            for i, n in enumerate(frames[frames > first_frame]):
+                x = torch.tensor(x_list[0][f'arr_{n}'], dtype=torch.float32, device=device).clone().detach()
+                pos = torch.argwhere(x[:,0] == track_ID).squeeze()
+                if pos.numel() > 0:
+                    prev_frame = frames[frames < n][-1]
+                    x_prev = torch.tensor(x_list[0][f'arr_{prev_frame}'], dtype=torch.float32, device=device).clone().detach()
+                    prev_pos = torch.argwhere(x_prev[:,0] == track_ID).squeeze()
+                    dy = y_list[prev_frame][prev_pos].item()
+                    reconstructed_fluo = reconstructed_fluo + y_list[prev_frame][prev_pos] * delta_t
+                    reconstructed_fluo_list.append(to_numpy(reconstructed_fluo))
+                    valid_frames.append(n)
+            reconstructed_fluo_arr = np.array(reconstructed_fluo_list).squeeze()
+            offset = idx * delta_offset
+            baseline = np.median(fluo_values)
+            plt.plot(frames, fluo_values - baseline + offset, color='green', linewidth=4, alpha=0.6)
+            baseline = np.median(reconstructed_fluo_arr)
+            plt.plot(valid_frames, reconstructed_fluo_arr - baseline + offset, color='black', linewidth=1, alpha=0.8)
+            plt.text(frames[-1], fluo_values[-1] - baseline + offset, f'{track_ID}', fontsize=10, va='center')
+        plt.xlabel('frames', fontsize=18)
+        plt.ylabel('fluorescence intensity', fontsize=18)
+        plt.tick_params(axis='both', labelsize=16)
+        plt.tight_layout()
+        plt.savefig(f"{log_dir}/fluo_traces_stacked.png", dpi=80)
+        plt.close()
 
 
 
@@ -1256,11 +1255,10 @@ def data_train_cell_activity(config, erase, best_model, device):
         total_loss = 0
         Niter = n_frames * data_augmentation_loop // batch_size
 
-        if epoch==0:
-            plot_frequency = int(Niter // 20)
-            print(f'{Niter} iterations per epoch, augmentation x{data_augmentation_loop}')
-            logger.info(f'{Niter} iterations per epoch')
-            print(f'plot every {plot_frequency} iterations')
+        plot_frequency = int(Niter // 20)
+        print(f'{Niter} iterations per epoch, augmentation x{data_augmentation_loop}')
+        logger.info(f'{Niter} iterations per epoch')
+        print(f'plot every {plot_frequency} iterations')
 
         for N in trange(Niter):
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
@@ -1313,7 +1311,7 @@ def data_train_cell_activity(config, erase, best_model, device):
             total_loss += loss.item()
 
 
-            if ((N % plot_frequency == 0) & (N > 0)):
+            if ((N % plot_frequency == 0) & (N > -1)):
                 fig, ax = fig_init(fontsize=24)
                 plt.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), s=10, color='k', alpha=0.5, edgecolor='none')
                 plt.xlabel(r'$a_{i0}$', fontsize=48)
@@ -1343,18 +1341,92 @@ def data_train_cell_activity(config, erase, best_model, device):
                 plt.savefig(f"./{log_dir}/tmp_training/prediction/{epoch}_{N}.tif", dpi=87)
                 plt.close()
 
-                if 'edges_embedding' in model_config.particle_model_name:
 
-                    fig, ax = fig_init(fontsize=24)
-                    plt.scatter(to_numpy(model.edges_embedding[:, 0]), to_numpy(model.edges_embedding[:, 1]), s=10, color='r', alpha=0.05, edgecolor='none')
-                    plt.xlabel(r'$e_{ij,0}$', fontsize=48)
-                    plt.ylabel(r'$e_{ij,1}$', fontsize=48)
-                    stats_text = f'$\mu$={model.edges_embedding.mean():.3f}\n$\sigma$={model.edges_embedding.std():.3f}\n$\|grad\|$={model.edges_embedding.grad.norm():.3f}'
-                    plt.text(0.02, 0.98, stats_text, transform=ax.transAxes, 
-                            fontsize=24, verticalalignment='top')
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_training/edges_embedding/{epoch}_{N}.tif", dpi=87)
-                    plt.close()
+
+
+                fig, ax = fig_init(fontsize=24)
+                plt.scatter(to_numpy(model.edges_embedding[:, 0]), to_numpy(model.edges_embedding[:, 1]), s=10, color='r', alpha=0.05, edgecolor='none')
+                plt.xlabel(r'$e_{ij,0}$', fontsize=48)
+                plt.ylabel(r'$e_{ij,1}$', fontsize=48)
+                stats_text = f'$\mu$={model.edges_embedding.mean():.3f}\n$\sigma$={model.edges_embedding.std():.3f}\n$\|grad\|$={model.edges_embedding.grad.norm():.3f}'
+                plt.text(0.02, 0.98, stats_text, transform=ax.transAxes, 
+                        fontsize=24, verticalalignment='top')
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_training/edges_embedding/{epoch}_{N}.tif", dpi=87)
+                plt.close()
+
+
+
+                fig, ax = fig_init(fontsize=24)
+                # Sample 200 edge embeddings
+                e_indices = torch.randint(0, model.edges_embedding.shape[0], (1000,), device=device)
+                e_samples = model.edges_embedding[e_indices]
+
+                # Fixed inputs
+                delta_x = torch.tensor([max_radius/2, 0], device=device)
+                F_i = torch.full((200, 1), 0.1667, device=device)
+                F_j_sweep = torch.linspace(0, 0.3334, 100, device=device)
+
+                for i in range(200):  # Changed from 500 to 200 to match e_samples and F_i size
+                    outs = []
+                    for F_j_val in F_j_sweep:
+                        F_j = torch.full((1, 1), F_j_val, device=device)
+                        in_features = torch.cat([delta_x.unsqueeze(0), e_samples[i:i+1], F_i[i:i+1], F_j], dim=1)
+                        with torch.no_grad():
+                            out = model.lin_edge(in_features)
+                        outs.append(out[0, 0])  # Extract scalar value
+                    plt.plot(to_numpy(F_j_sweep), to_numpy(torch.stack(outs)), alpha=0.75, linewidth=1)
+
+                plt.axvline(0.1667, color='r', linestyle='--', alpha=0.5, linewidth=2)
+                plt.xlabel(r'$F_j$', fontsize=48)
+                plt.ylabel(r'$\psi$', fontsize=48)
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/{epoch}_{N}.tif", dpi=87)
+                plt.close()
+
+
+                a_indices = torch.randint(0, model.a.shape[0], (1000,), device=device)
+                a_samples = model.a[a_indices]
+
+                F_sweep = torch.linspace(0, 0.3334, 100, device=device)
+                msg_fixed = torch.zeros(1, device=device)
+                in_features_orig = torch.cat([F_sweep[0].unsqueeze(0), a_samples[0], msg_fixed], dim=0).unsqueeze(0)
+
+                fig = plt.figure(figsize=(16, 8))
+
+                # Panel 1: Phi vs F_i
+                ax = plt.subplot(1, 2, 1)
+                for i in range(200):
+                    outs = []
+                    for F_val in F_sweep:
+                        in_features = torch.cat([F_val.unsqueeze(0), a_samples[i], msg_fixed], dim=0).unsqueeze(0)
+                        with torch.no_grad():
+                            out = model.lin_phi(in_features)
+                        outs.append(out.flatten()[0])  # Use flatten() to handle any shape
+                    plt.plot(to_numpy(F_sweep), to_numpy(torch.stack(outs)), alpha=0.75, linewidth=1)
+
+                plt.axvline(0.1667, color='r', linestyle='--', alpha=0.5, linewidth=2)
+                plt.xlabel(r'$F_i$', fontsize=48)
+                plt.ylabel(r'$\Phi$', fontsize=48)
+
+                # Panel 2: Phi vs message
+                ax = plt.subplot(1, 2, 2)
+                msg_sweep = torch.linspace(-2.0, 2.0, 100, device=device)
+                F_fixed = torch.tensor([0.1667], device=device)
+                for i in range(200):
+                    outs = []
+                    for msg_val in msg_sweep:
+                        in_features = torch.cat([F_fixed, a_samples[i], msg_val.unsqueeze(0)], dim=0).unsqueeze(0)
+                        with torch.no_grad():
+                            out = model.lin_phi(in_features)
+                        outs.append(out.flatten()[0])  # Use flatten() to handle any shape
+                    plt.plot(to_numpy(msg_sweep), to_numpy(torch.stack(outs)), alpha=0.75, linewidth=1)
+
+                plt.xlabel(r'$\sum_j m_{ij}$', fontsize=48)
+                plt.ylabel(r'$\Phi$', fontsize=48)
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_training/function/lin_phi/{epoch}_{N}.tif", dpi=87)
+                plt.close()
 
 
 
@@ -1371,42 +1443,87 @@ def data_train_cell_activity(config, erase, best_model, device):
         list_loss.append(total_loss / batch_size / 10000)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
-        fig = plt.figure(figsize=(15, 10))
+
+
+
+
+        fig = plt.figure(figsize=(20, 10))
 
         # Plot 1: Loss
-        ax = fig.add_subplot(2, 3, 1)
+        ax = fig.add_subplot(2, 4, 1)
         plt.plot(list_loss, color='k', linewidth=1)
         plt.xlim([0, n_epochs])
         plt.ylabel('loss', fontsize=12)
         plt.xlabel('epochs', fontsize=12)
+
+        # Plot 2: Node embedding
         embedding_files = glob.glob(f"./{log_dir}/tmp_training/embedding/*.tif")
         if len(embedding_files) > 0:
-            
-            last_file = max(embedding_files, key=os.path.getctime)  # or use os.path.getmtime for modification time
+            last_file = max(embedding_files, key=os.path.getctime)
             filename = os.path.basename(last_file)
             last_epoch, last_N = filename.replace('.tif', '').split('_')
-            # Plot 2: Last embedding
-            ax = fig.add_subplot(2, 3, 2)
+            ax = fig.add_subplot(2, 4, 2)
             img = imread(f"./{log_dir}/tmp_training/embedding/{last_epoch}_{last_N}.tif")
             plt.imshow(img)
             plt.axis('off')
-            plt.title('Embedding', fontsize=12)
-            if 'edges_embedding' in model_config.particle_model_name:
-                edge_embedding_files = glob.glob(f"./{log_dir}/tmp_training/edges_embedding/*.tif")
-                if len(edge_embedding_files) > 0:
-                    last_edge_file = max(edge_embedding_files, key=os.path.getctime)
-                    edge_filename = os.path.basename(last_edge_file)
-                    edge_last_epoch, edge_last_N = edge_filename.replace('.tif', '').split('_')
-                    # Plot 3: Last edge embedding
-                    ax = fig.add_subplot(2, 3, 3)
-                    img = imread(f"./{log_dir}/tmp_training/edges_embedding/{edge_last_epoch}_{edge_last_N}.tif")
-                    plt.imshow(img)
-                    plt.axis('off')
-                    plt.title('Edge Embedding', fontsize=12)
-        
+            plt.title('Node Embedding', fontsize=12)
+
+        # Plot 3: Edge embedding
+        edge_embedding_files = glob.glob(f"./{log_dir}/tmp_training/edges_embedding/*.tif")
+        if len(edge_embedding_files) > 0:
+            last_edge_file = max(edge_embedding_files, key=os.path.getctime)
+            edge_filename = os.path.basename(last_edge_file)
+            edge_last_epoch, edge_last_N = edge_filename.replace('.tif', '').split('_')
+            ax = fig.add_subplot(2, 4, 3)
+            img = imread(f"./{log_dir}/tmp_training/edges_embedding/{edge_last_epoch}_{edge_last_N}.tif")
+            plt.imshow(img)
+            plt.axis('off')
+            plt.title('Edge Embedding', fontsize=12)
+
+        # Plot 4: Prediction
+        prediction_files = glob.glob(f"./{log_dir}/tmp_training/prediction/*.tif")
+        if len(prediction_files) > 0:
+            last_pred_file = max(prediction_files, key=os.path.getctime)
+            pred_filename = os.path.basename(last_pred_file)
+            pred_last_epoch, pred_last_N = pred_filename.replace('.tif', '').split('_')
+            ax = fig.add_subplot(2, 4, 4)
+            img = imread(f"./{log_dir}/tmp_training/prediction/{pred_last_epoch}_{pred_last_N}.tif")
+            plt.imshow(img)
+            plt.axis('off')
+            plt.title('Prediction', fontsize=12)
+
+        # Plot 5: lin_edge function
+        lin_edge_files = glob.glob(f"./{log_dir}/tmp_training/function/lin_edge/*.tif")
+        if len(lin_edge_files) > 0:
+            last_lin_edge = max(lin_edge_files, key=os.path.getctime)
+            ax = fig.add_subplot(2, 4, 5)
+            img = imread(last_lin_edge)
+            plt.imshow(img)
+            plt.axis('off')
+            plt.title('Edge Function', fontsize=12)
+
+        # Plot 6-7: lin_phi function (two panels)
+        lin_phi_files = glob.glob(f"./{log_dir}/tmp_training/function/lin_phi/*.tif")
+        if len(lin_phi_files) > 0:
+            last_lin_phi = max(lin_phi_files, key=os.path.getctime)
+            img = imread(last_lin_phi)
+            h, w = img.shape[:2]
+            
+            ax = fig.add_subplot(2, 4, 6)
+            plt.imshow(img[:, :w//2])
+            plt.axis('off')
+            plt.title('Update Function', fontsize=12)
+            
+            ax = fig.add_subplot(2, 4, 7)
+            plt.imshow(img[:, w//2:])
+            plt.axis('off')
+
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/epoch_{epoch}.tif")
         plt.close()
+
+
+
 
 
 
@@ -4124,6 +4241,7 @@ def data_train_WBI(config, erase, best_model, device):
         plt.xlabel('Epochs', fontsize=12)
 
 
+
 def data_test(config=None, config_file=None, visualize=False, style='color frame', verbose=True, best_model=20, step=15, ratio=1, run=1, test_mode='', sample_embedding=False, particle_of_interest=1, device=[]):
     dataset_name = config.dataset
     simulation_config = config.simulation
@@ -4150,7 +4268,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     bounce_coeff = simulation_config.bounce_coeff
     cmap = CustomColorMap(config=config)
     dimension = simulation_config.dimension
-    has_fly = 'fly' in config.dataset
     has_particle_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
     has_mesh_field = (model_config.field_type != '') & ('RD_Mesh' in model_config.mesh_model_name)
     has_field = (model_config.field_type != '') & (has_mesh_field == False) & (has_particle_field == False)
@@ -4921,22 +5038,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     plt.ylim([0, 700])
                 plt.tight_layout()
 
-            elif has_fly:
-
-                plt.style.use('dark_background')
-
-                plt.axis('off')
-
-                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=700, c='cyan')
-
-                for i in range(len(x)):
-                    plt.arrow(to_numpy(x[i, 1]), to_numpy(x[i, 2]), 2 * np.cos(to_numpy(x[i, 3])+np.pi/2), 2 * np.sin(to_numpy(x[i, 3])+np.pi/2),
-                              head_width=0.05, head_length=0.1, fc='yellow', ec='yellow')
-
-                plt.xlim(-25, 25)
-                plt.ylim(-25, 25)
-                plt.xticks([])
-                plt.yticks([])
 
             else:
                 s_p = 10

@@ -56,7 +56,6 @@ def data_generate(
     has_mesh = config.graph_model.mesh_model_name != ""
     has_cell_division = config.simulation.has_cell_division
     has_WBI = "WBI" in config.dataset
-    has_fly = "fly" in config.dataset
     has_city = ("mouse_city" in config.dataset) | ("rat_city" in config.dataset)
     has_MPM = "MPM" in config.graph_model.particle_model_name
     dataset_name = config.dataset
@@ -139,17 +138,6 @@ def data_generate(
             alpha=0.2,
             ratio=ratio,
             scenario=scenario,
-            device=device,
-            bSave=bSave,
-        )
-    elif has_fly:
-        data_generate_fly_voltage(
-            config,
-            visualize=visualize,
-            run_vizualized=run_vizualized,
-            style=style,
-            erase=erase,
-            step=step,
             device=device,
             bSave=bSave,
         )
@@ -239,8 +227,6 @@ def generate_from_data(config, device, visualize=True, step=None, cmap=None):
         load_2Dfluo_data_on_mesh(config, device, visualize, step)
     elif "cardio" in data_folder_name:
         load_2Dgrid_data(config, device, visualize, step)
-    elif "fly" in data_folder_name:
-        load_fly_data(config, device, visualize, step)
     elif image_data.file_type != "none":
         if image_data.file_type == "3D fluo Cellpose":
             load_3Dfluo_data_with_Cellpose(config, device, visualize)

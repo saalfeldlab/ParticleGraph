@@ -1,4 +1,4 @@
-description: ' max_radius: 60'
+description: ' max_radius: 60     learning_rate_start: 1.0E-5'
 dataset: 'cell_MDCK_17'
 data_folder_name: '/groups/saalfeld/home/allierc/signaling/MDCK/jGcamp7b-mdcks-h42 11sec interval 5hrs/merged/'
 
@@ -79,7 +79,7 @@ training:
   rotation_augmentation: True
   data_augmentation_loop: 1000
 
-  learning_rate_start: 1.0E-4
+  learning_rate_start: 1.0E-5
   learning_rate_embedding_start: 1.0E-6
   learning_rate_edge_embedding: 1.0E-5
 

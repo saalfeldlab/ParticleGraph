@@ -464,9 +464,6 @@ def add_pre_folder(config_file_):
     elif 'CElegans' in config_file_:
         config_file = os.path.join('CElegans', config_file_)
         pre_folder = 'CElegans/'
-    elif 'fly' in config_file_:
-        config_file = os.path.join('fly', config_file_)
-        pre_folder = 'fly/'
     elif 'signal' in config_file_:
         config_file = os.path.join('signal', config_file_)
         pre_folder = 'signal/'
@@ -491,9 +488,6 @@ def add_pre_folder(config_file_):
     elif 'rat' in config_file_:
         config_file = os.path.join('rat_city', config_file_)
         pre_folder = 'rat_city/'
-    elif 'fly' in config_file_:
-        config_file = os.path.join('fly', config_file_)
-        pre_folder = 'fly/'
 
     return config_file, pre_folder
 

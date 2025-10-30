@@ -198,8 +198,6 @@ def get_in_features(rr=None, embedding=None, model=[], model_name = [], max_radi
         case 'PDE_A_bis':
             in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                      rr[:, None] / max_radius, embedding, embedding), dim=1)
-        case 'PDE_A_fly':
-            in_features = torch.cat((rr[:, None], 0 * rr[:, None], 0 * rr[:, None], embedding, embedding), dim=1)
         case 'PDE_B' | 'PDE_Cell_B':
             in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                      torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None], 0 * rr[:, None],
@@ -499,195 +497,6 @@ def plot_training_C_F_Jp_S(x_list, run, device, dimension, trainer, model, max_r
 
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/field/{epoch}_{N}.tif", dpi=87)
-    plt.close()
-
-def plot_training_flyvis(x_list, model, config, epoch, N, log_dir, device, cmap, type_list,
-                         gt_weights, n_neurons=None, n_neuron_types=None):
-    signal_model_name = config.graph_model.signal_model_name
-    n_input_neurons = config.simulation.n_input_neurons
-
-    if n_neurons is None:
-        n_neurons = len(type_list)
-
-    if config.graph_model.field_type =='visual':
-        n_frames = config.simulation.n_frames
-        k = 100
-        reconstructed_field = to_numpy(model.visual_NNR(torch.tensor([k / n_frames], dtype=torch.float32, device=device)) ** 2)
-        gt_field = x_list[0][k,:n_input_neurons,4:5]
-
-        X1 = x_list[0][k,:n_input_neurons,1:3]
-
-        # Setup for saving MP4
-        fps = 10  # frames per second for the video
-        metadata = dict(title='Field Evolution', artist='Matplotlib', comment='NN Reconstruction over time')
-        writer = FFMpegWriter(fps=fps, metadata=metadata)
-        fig = plt.figure(figsize=(8, 4))
-
-        # Start the writer context
-        if os.path.exists(f"./{log_dir}/tmp_training/field/field_movie_{epoch}_{N}.mp4"):
-            os.remove(f"./{log_dir}/tmp_training/field/field_movie_{epoch}_{N}.mp4")
-        with writer.saving(fig, f"./{log_dir}/tmp_training/field/field_movie_{epoch}_{N}.mp4", dpi=100):
-            for k in range(0, 2000, 10):
-
-                # Inference and data extraction
-                reconstructed_field = to_numpy(
-                    model.visual_NNR(torch.tensor([k / n_frames], dtype=torch.float32, device=device)) ** 2)
-                gt_field = x_list[0][k, :n_input_neurons, 4:5]
-                X1 = x_list[0][k, :n_input_neurons, 1:3]
-
-
-                vmin = reconstructed_field.min()
-                vmax = reconstructed_field.max()
-                fig.clf()  # Clear the figure
-
-                # Ground truth
-                ax1 = fig.add_subplot(1, 2, 1)
-                sc1 = ax1.scatter(X1[:, 0], X1[:, 1], s=256, c=gt_field, cmap="viridis", marker='h', vmin=-2,
-                                  vmax=2)
-                ax1.set_xticks([])
-                ax1.set_yticks([])
-                ax1.set_title("Ground Truth")
-
-                # Reconstructed
-                ax2 = fig.add_subplot(1, 2, 2)
-                sc2 = ax2.scatter(X1[:, 0], X1[:, 1], s=256, c=reconstructed_field, cmap="viridis", marker='h',
-                                  vmin=vmin, vmax=vmax)
-                ax2.set_xticks([])
-                ax2.set_yticks([])
-                ax2.set_title("Reconstructed")
-
-                plt.tight_layout()
-                writer.grab_frame()
-
-
-    # if config.graph_model.field_type =='visual':
-    #     n_frames = config.simulation.n_frames
-    #     k = 100
-    #     X1 = x_list[0][k,:n_input_neurons,1:3]
-    #
-    #     # Setup for saving MP4
-    #     fps = 10  # frames per second for the video
-    #     metadata = dict(title='Field Evolution', artist='Matplotlib', comment='NN Reconstruction over time')
-    #     writer = FFMpegWriter(fps=fps, metadata=metadata)
-    #     fig = plt.figure(figsize=(8, 4))
-    #
-    #     if os.path.exists(f"./{log_dir}/tmp_training/field/field_movie_{epoch}_{N}.mp4"):
-    #         os.remove(f"./{log_dir}/tmp_training/field/field_movie_{epoch}_{N}.mp4")
-    #     with writer.saving(fig, f"./{log_dir}/tmp_training/field/field_movie_{epoch}_{N}.mp4", dpi=100):
-    #         for k in range(0, 2000, 10):
-    #
-    #             if config.graph_model.input_size_nnr == 1:
-    #                 in_features = torch.tensor([k / n_frames], dtype=torch.float32, device=device) ** 2
-    #                 reconstructed_field = to_numpy(model.visual_NNR(in_features) ** 2)
-    #                 reconstructed_field = reconstructed_field[:,None]
-    #             else:
-    #                 t = torch.tensor([k / n_frames], dtype=torch.float32, device=device)
-    #                 in_features = torch.cat((x[:n_input_neurons, 1:3], t.unsqueeze(0).repeat(n_input_neurons, 1)),dim=1)
-    #                 reconstructed_field = to_numpy(model.visual_NNR(in_features) ** 2)
-    #
-    #             gt_field = x_list[0][k, :n_input_neurons, 4:5]
-    #             X1 = x_list[0][k, :n_input_neurons, 1:3]
-    #
-    #             vmin = reconstructed_field.min()
-    #             vmax = reconstructed_field.max()
-    #             fig.clf()  # Clear the figure
-    #
-    #             # Ground truth
-    #             ax1 = fig.add_subplot(1, 2, 1)
-    #             sc1 = ax1.scatter(X1[:, 0], X1[:, 1], s=256, c=gt_field, cmap="viridis", marker='h', vmin=-2,
-    #                               vmax=2)
-    #             ax1.set_xticks([])
-    #             ax1.set_yticks([])
-    #             ax1.set_title("Ground Truth")
-    #
-    #             # Reconstructed
-    #             ax2 = fig.add_subplot(1, 2, 2)
-    #             sc2 = ax2.scatter(X1[:, 0], X1[:, 1], s=256, c=reconstructed_field, cmap="viridis", marker='h',
-    #                               vmin=vmin, vmax=vmax)
-    #             ax2.set_xticks([])
-    #             ax2.set_yticks([])
-    #             ax2.set_title("Reconstructed")
-    #
-    #             plt.tight_layout()
-    #             writer.grab_frame()
-    #
-
-    # Plot 1: Embedding scatter plot
-    fig = plt.figure(figsize=(8, 8))
-    for n in range(n_neuron_types):
-        pos = torch.argwhere(type_list == n)
-        plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=5, color=cmap.color(n), alpha=0.7, edgecolors='none')
-    plt.xlabel('embedding 0', fontsize=18)
-    plt.ylabel('embedding 1', fontsize=18)
-    plt.xticks([])
-    plt.yticks([])
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/embedding/{epoch}_{N}.tif", dpi=87)
-    plt.close()
-
-    x_data = to_numpy(gt_weights)
-    y_data = to_numpy(model.W.squeeze())
-    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-    residuals = y_data - linear_model(x_data, *lin_fit)
-    ss_res = np.sum(residuals ** 2)
-    ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-    r_squared = 1 - (ss_res / ss_tot)
-    # print(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
-
-
-    # Plot 2: Weight comparison scatter plot
-    fig = plt.figure(figsize=(8, 8))
-
-    plt.scatter(to_numpy(gt_weights), to_numpy(model.W.squeeze()), s=0.1, c='k', alpha=0.01)
-    plt.xlabel(r'true $W_{ij}$', fontsize=18)
-    plt.ylabel(r'learned $W_{ij}$', fontsize=18)
-    plt.text(-0.9, 4.5, f'R^2: {np.round(r_squared, 3)}\nslope: {np.round(lin_fit[0], 2)}', fontsize=12)
-    plt.xlim([-1, 5])
-    plt.ylim([-5, 5])
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/matrix/comparison_{epoch}_{N}.tif",
-                dpi=87, bbox_inches='tight', pad_inches=0)
-    plt.close()
-
-    # Plot 3: Edge function visualization
-    fig = plt.figure(figsize=(8, 8))
-    rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
-    for n in range(n_neurons):
-        embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-        if ('PDE_N9_A' in signal_model_name) | ('PDE_N9_C' in signal_model_name) | ('PDE_N9_D' in signal_model_name):
-            in_features = torch.cat((rr[:, None], embedding_,), dim=1)
-        elif ('PDE_N9_B' in signal_model_name):
-            in_features = torch.cat((rr[:, None] * 0, rr[:, None], embedding_, embedding_), dim=1)
-        with torch.no_grad():
-            func = model.lin_edge(in_features.float())
-        if config.graph_model.lin_edge_positive:
-            func = func ** 2
-        if (n % 20 == 0):
-            plt.plot(to_numpy(rr), to_numpy(func), 2,
-                     color=cmap.color(to_numpy(type_list)[n].astype(int)),
-                     linewidth=1, alpha=0.1)
-    plt.xlim(config.plotting.xlim)
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/func_{epoch}_{N}.tif", dpi=87)
-    plt.close()
-
-    # Plot 4: Phi function visualization
-    fig = plt.figure(figsize=(8, 8))
-    for n in range(n_neurons):
-        embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-        if ('PDE_N9_C' in signal_model_name):
-            in_features = torch.cat((rr[:, None], embedding_, torch.zeros_like(rr[:, None])), dim=1)
-        else:
-            in_features = torch.cat((rr[:, None], embedding_, rr[:, None] * 0, torch.zeros_like(rr[:, None])), dim=1)
-        with torch.no_grad():
-            func = model.lin_phi(in_features.float())
-        if (n % 20 == 0):
-            plt.plot(to_numpy(rr), to_numpy(func), 2,
-                     color=cmap.color(to_numpy(type_list)[n].astype(int)),
-                     linewidth=1, alpha=0.1)
-    plt.xlim(config.plotting.xlim)
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/function/lin_phi/func_{epoch}_{N}.tif", dpi=87)
     plt.close()
 
 def plot_training_signal(config, model, x, adjacency, log_dir, epoch, N, n_neurons, type_list, cmap, device):
@@ -2106,7 +1915,7 @@ def choose_training_model(model_config=None, device=None, projections=None):
             model.edges = []
         case 'PDE_Agents' | 'PDE_Agents_A' | 'PDE_Agents_B' | 'PDE_Agents_C':
             model = Interaction_Agent(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
-        case 'PDE_A' | 'PDE_A_fly' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_mass' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G' | 'PDE_K' | 'PDE_T':
+        case 'PDE_A' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_mass' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G' | 'PDE_K' | 'PDE_T':
             model = Interaction_Particle(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             model.edges = []
             if 'PDE_K' in model_name:
