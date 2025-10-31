@@ -263,9 +263,10 @@ def data_train_particle(config, erase, best_model, device):
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
 
     list_loss = []
-    time.sleep(1)
 
     # torch.autograd.set_detect_anomaly(True)
+    torch.autocast(device_type="cuda", dtype=torch.float16)
+    time.sleep(1)
     for epoch in range(start_epoch, n_epochs + 1):
 
         logger.info(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
@@ -497,7 +498,7 @@ def data_train_particle(config, erase, best_model, device):
                                 'optimizer_state_dict': optimizer_f.state_dict()}, os.path.join(log_dir,
                                                                                                 'models',
                                                                                                 f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
-
+                print(f'Epoch {epoch}  Iteration {N}/{Niter}  Loss: {loss.item() / n_particles:.6f}')
                 check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 50,
                                        memory_percentage_threshold=0.6)
 
@@ -5302,7 +5303,7 @@ def data_test_cell_activity(config=None, config_file=None, visualize=False, styl
 
     time.sleep(1)
 
-    for it in trange(n_frames - 4):  # start_it + min(9600+start_it,stop_it-time_step)): #  start_it+200): # min(9600+start_it,stop_it-time_step)):
+    for it in trange(n_frames - 4, ncols=150):  # start_it + min(9600+start_it,stop_it-time_step)): #  start_it+200): # min(9600+start_it,stop_it-time_step)):
 
 
         x0 = torch.tensor(x_list[0][f'arr_{it}'], dtype=torch.float32, device=device).clone().detach()
@@ -5320,7 +5321,7 @@ def data_test_cell_activity(config=None, config_file=None, visualize=False, styl
         mask = mask_list[it].clone().detach()
 
         with torch.no_grad():
-            pred, msg = model(batch, data_id=0, training=False, phi=torch.zeros(1, device=device), 
+            pred, msg = model(dataset, data_id=0, training=False, phi=torch.zeros(1, device=device), 
                         has_field=True, edge_pointers=edge_pointers, return_all=True)
 
 
