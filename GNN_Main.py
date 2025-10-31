@@ -36,15 +36,9 @@ warnings.filterwarnings("ignore", message="pkg_resources is deprecated as an API
 
 if __name__ == "__main__":
     warnings.filterwarnings("ignore", category=FutureWarning)
-    # try:
-    #     matplotlib.use("Qt5Agg")
-    # except:
-    #     pass
 
     parser = argparse.ArgumentParser(description="ParticleGraph")
-    parser.add_argument(
-        "-o", "--option", nargs="+", help="Option that takes multiple values"
-    )
+    parser.add_argument("-o", "--option", nargs="+", help="Option that takes multiple values")
 
     args = parser.parse_args()
 
@@ -67,8 +61,6 @@ if __name__ == "__main__":
         # config_list = ['RD_RPS_5']
         # config_list = ['cell_U2OS_9_2']
         # config_list = ['springs_matrix_N5_3']
-        # config_list = ['signal_N5_v11_bis']
-        # config_list = ['signal_fig_supp6_4']
 
         config_list = ['cell_MDCK_17_2']
 
@@ -101,10 +93,6 @@ if __name__ == "__main__":
             data_train(config=config, erase=False, best_model=best_model, device=device)
             
         if "test" in task:
-            # for run_ in range(2,10):
-            # data_test(config=config, visualize=True, style='black color name', verbose=False, best_model='best',
-            #           run=run_, test_mode='fixed_bounce_all', sample_embedding=False, step=4,
-            #           device=device)  # particle_of_interest=100, 'fixed_bounce_all'
             
             data_test(
                 config=config,
@@ -112,13 +100,11 @@ if __name__ == "__main__":
                 style="black color name",
                 verbose=False,
                 best_model=best_model,
-                run=1,
+                run=0,
                 test_mode="",
                 sample_embedding=False,
                 step=5,
                 device=device,
                 particle_of_interest=0,
-            )  # particle_of_interest=100,  'fixed_bounce_all'
+            )  
 
-
-# bsub -n 4 -gpu "num=1" -q gpu_h100 -Is "python GNN_particles_Ntype.py"
