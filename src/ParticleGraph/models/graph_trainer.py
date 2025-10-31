@@ -5299,32 +5299,186 @@ def data_test_cell_activity(config=None, config_file=None, visualize=False, styl
     model.load_state_dict(state_dict['model_state_dict'])
     model.eval()
 
-    rmserr_list = []
-    pred_err_list = []
-
-    time.sleep(1)
-
-    for it in trange(n_frames - 4, ncols=150):  # start_it + min(9600+start_it,stop_it-time_step)): #  start_it+200): # min(9600+start_it,stop_it-time_step)):
 
 
-        x0 = torch.tensor(x_list[0][f'arr_{it}'], dtype=torch.float32, device=device).clone().detach()
-        x0_next = torch.tensor(x_list[0][f'arr_{it + time_step}'], dtype=torch.float32, device=device).clone().detach()
 
-        data_id = torch.ones((n_particles, 1), dtype=torch.int, device=device) * run
 
-        # update calculations
-        x = x0.clone().detach()
-        edges = torch.tensor(edges_list[it], dtype=torch.long, device=device)                
-        dataset = data.Data(x=x[:, :], edge_index=edges)
+
+    fig = plt.figure(figsize=(20, 12))
+
+    F_sweep = torch.linspace(0, 0.3334, 100, device=device)
+    msg_fixed = torch.zeros(1, device=device)
+
+    valid_track_ids = [tid for tid in fluo_traces.keys() if len(fluo_traces[tid]) > 0]
+    a_indices = [tid for tid in valid_track_ids if tid < model.a.shape[0]]
+    a_samples = model.a[a_indices]
+
+    slopes = []
+    offsets = []
+    F_zeros = []
+    mean_fluos = []
+    colors = plt.cm.viridis(np.linspace(0, 1, len(a_indices)))
+
+    ax = plt.subplot(2, 3, 1)
+    for i, tid in enumerate(tqdm(a_indices, desc="Processing tracks", ncols=150)):
+        outs = []
+        for F_val in F_sweep:
+            in_features = torch.cat([F_val.unsqueeze(0), a_samples[i], msg_fixed], dim=0).unsqueeze(0)
+            with torch.no_grad():
+                out = model.lin_phi(in_features)
+            outs.append(out.flatten()[0])
+        
+        outs_np = to_numpy(torch.stack(outs))
+        F_sweep_np = to_numpy(F_sweep)
+        
+        fit = np.polyfit(F_sweep_np, outs_np, 1)
+        slope = fit[0]
+        offset = fit[1]
+        F_zero = -offset / slope if abs(slope) > 1e-6 else np.nan
+        
+        slopes.append(slope)
+        offsets.append(offset)
+        F_zeros.append(F_zero)
+        mean_fluos.append(np.mean(fluo_traces[tid][:, 1]))
+        
+        plt.plot(F_sweep_np, outs_np, alpha=0.3, linewidth=1, color=colors[i])
+
+    plt.axvline(0.1667, color='r', linestyle='--', alpha=0.5, linewidth=2)
+    plt.xlabel(r'$F_i$', fontsize=20)
+    plt.ylabel(r'$\Phi(F_i, a_i, 0)$', fontsize=20)
+    plt.tick_params(axis='both', labelsize=16)
+    plt.text(-0.15, 1.05, 'a', transform=ax.transAxes, fontsize=22, va='top', fontweight='bold')
+
+    ax_inset = fig.add_axes([0.23, 0.78, 0.08, 0.15])
+    a_np = to_numpy(a_samples)
+    ax_inset.scatter(a_np[:, 0], a_np[:, 1], s=0.5, alpha=0.5, c=colors, edgecolors='None')
+    ax_inset.tick_params(labelsize=10)
+    ax_inset.set_xlabel(r'$a_0$', fontsize=12)
+    ax_inset.set_ylabel(r'$a_1$', fontsize=12)
+
+    ax = plt.subplot(2, 3, 2)
+    plt.hist(slopes, bins=50, color='k', alpha=0.7)
+    plt.xlabel('slope', fontsize=20)
+    plt.ylabel('count', fontsize=20)
+    plt.tick_params(axis='both', labelsize=16)
+    plt.text(-0.15, 1.05, 'b', transform=ax.transAxes, fontsize=22, va='top', fontweight='bold')
+
+    ax = plt.subplot(2, 3, 3)
+    plt.hist(offsets, bins=50, color='k', alpha=0.7)
+    plt.xlabel('offset', fontsize=20)
+    plt.ylabel('count', fontsize=20)
+    plt.tick_params(axis='both', labelsize=16)
+    plt.text(-0.15, 1.05, 'c', transform=ax.transAxes, fontsize=22, va='top', fontweight='bold')
+
+    ax = plt.subplot(2, 3, 4)
+    valid_mask = ~np.isnan(F_zeros)
+    plt.scatter(np.array(mean_fluos)[valid_mask], np.array(F_zeros)[valid_mask], s=1, alpha=0.5, color='k', edgecolors='None')
+    plt.xlabel(r'$\langle F_i \rangle$ (observed)', fontsize=20)
+    plt.ylabel(r'$F_i^*$ ($dF/dt=0$)', fontsize=20)
+    plt.plot([0, 0.5], [0, 0.5], 'b--', alpha=0.3, linewidth=2)
+    plt.xlim(0, 0.5)
+    plt.ylim(0, 0.5)
+    plt.tick_params(axis='both', labelsize=16)
+    plt.text(-0.15, 1.05, 'd', transform=ax.transAxes, fontsize=22, va='top', fontweight='bold')
+
+    ax = plt.subplot(2, 3, 5)
+    plt.hist(np.array(F_zeros)[valid_mask], bins=50, color='b', alpha=0.5, label=r'$F_i^*$')
+    plt.hist(mean_fluos, bins=50, color='g', alpha=0.5, label=r'$\langle F_i \rangle$')
+    plt.xlabel('fluorescence', fontsize=20)
+    plt.ylabel('count', fontsize=20)
+    plt.xlim(0, 0.6)
+    plt.legend(fontsize=16)
+    plt.tick_params(axis='both', labelsize=16)
+    plt.text(-0.15, 1.05, 'e', transform=ax.transAxes, fontsize=22, va='top', fontweight='bold')
+
+    ax = plt.subplot(2, 3, 6)
+    diff = np.array(F_zeros)[valid_mask] - np.array(mean_fluos)[valid_mask]
+    n_inhibited = np.sum(diff > 0)
+    n_excited = np.sum(diff < 0)
+    pct_inhibited = 100 * n_inhibited / len(diff)
+    pct_excited = 100 * n_excited / len(diff)
+    plt.hist(diff, bins=50, color='k', alpha=0.7)
+    plt.axvline(0, color='r', linestyle='--', linewidth=2)
+    plt.xlabel(r'$F_i^* - \langle F_i \rangle$', fontsize=20)
+    plt.ylabel('count', fontsize=20)
+    plt.tick_params(axis='both', labelsize=16)
+    plt.text(-0.15, 1.05, 'f', transform=ax.transAxes, fontsize=22, va='top', fontweight='bold')
+    plt.text(0.02, 0.95, f'inhibited: {pct_inhibited:.1f}%\nexcited: {pct_excited:.1f}%', 
+            transform=ax.transAxes, fontsize=14, va='top', ha='left')
+
+    plt.tight_layout()
+    plt.savefig(f"{log_dir}/results/phi_analysis_per_cell.png", dpi=150)
+    plt.close()
+
+    print(f'slopes: mean={np.mean(slopes):.4f}, std={np.std(slopes):.4f}')
+    print(f'offsets: mean={np.mean(offsets):.4f}, std={np.std(offsets):.4f}')
+    print(f'F_zeros: mean={np.nanmean(F_zeros):.4f}, std={np.nanstd(F_zeros):.4f}')
+    print(f'mean fluos: mean={np.mean(mean_fluos):.4f}, std={np.std(mean_fluos):.4f}')
+    print(f'delta: mean={np.nanmean(diff):.4f}, std={np.nanstd(diff):.4f}')
+    print(f'correlation(mean_fluo, F_zero): {np.corrcoef(np.array(mean_fluos)[valid_mask], np.array(F_zeros)[valid_mask])[0,1]:.4f}')
+
+
+
+
+
+            
+    msg_sum_per_cell = {}
+    neighbor_fluo_per_cell = {}
+
+    for it in trange(n_frames - 4, ncols=150):
+        x = torch.tensor(x_list[0][f'arr_{it}'], dtype=torch.float32, device=device)
+        edges = torch.tensor(edges_list[it], dtype=torch.long, device=device)
         edge_pointers = torch.tensor(edge_pointers_list[it], dtype=torch.long, device=device)
-                
-        y = y_list[it].clone().detach()
-        mask = mask_list[it].clone().detach()
-
+        mask = mask_list[it]
+        
+        dataset = data.Data(x=x[:, :], edge_index=edges)
+        
         with torch.no_grad():
-            pred, msg = model(dataset, data_id=0, training=False, phi=torch.zeros(1, device=device), 
-                        has_field=True, edge_pointers=edge_pointers, return_all=True)
+            pred, msg = model(dataset, data_id=0, training=False, phi=torch.zeros(1, device=device),
+                            has_field=True, edge_pointers=edge_pointers, return_all=True)
+        
+        track_ids = x[:, 0].cpu().numpy()
+        field = x[:, 6]
+        
+        neighbor_fluo_mean = torch.zeros(x.shape[0], device=device)
+        for i in range(x.shape[0]):
+            neighbors_j = edges[1, edges[0] == i]
+            if len(neighbors_j) > 0:
+                neighbor_fluo_mean[i] = field[neighbors_j].mean()
+        
+        for i in range(len(track_ids)):
+            if mask[i]:
+                tid = int(track_ids[i])
+                if tid not in msg_sum_per_cell:
+                    msg_sum_per_cell[tid] = []
+                    neighbor_fluo_per_cell[tid] = []
+                msg_sum_per_cell[tid].append(msg[i].item())
+                neighbor_fluo_per_cell[tid].append(neighbor_fluo_mean[i].item())
 
+    all_msg_sums = []
+    all_neighbor_fluo = []
+    for tid in msg_sum_per_cell.keys():
+        for m, f in zip(msg_sum_per_cell[tid], neighbor_fluo_per_cell[tid]):
+            if abs(m) > 1e-6 and f > 1e-6:
+                all_msg_sums.append(m)
+                all_neighbor_fluo.append(f)
 
+    print(f'Message sum: mean={np.mean(all_msg_sums):.4f}, std={np.std(all_msg_sums):.4f}')
+    print(f'Neighbor fluo: mean={np.mean(all_neighbor_fluo):.4f}, std={np.std(all_neighbor_fluo):.4f}')
+    print(f'Correlation: {np.corrcoef(all_msg_sums, all_neighbor_fluo)[0,1]:.4f}')
 
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+    ax1.hist(all_msg_sums, bins=100, color='k', alpha=0.7)
+    ax1.axvline(0, color='r', linestyle='--', linewidth=2)
+    ax1.set_xlabel(r'$\sum_j m_{ij}$', fontsize=18)
+    ax1.set_ylabel('count', fontsize=18)
+    ax1.tick_params(axis='both', labelsize=16)
 
+    ax2.scatter(all_neighbor_fluo, all_msg_sums, s=1, alpha=0.3, color='k')
+    ax2.set_xlabel(r'$\langle F_j \rangle_{neighbors}$', fontsize=18)
+    ax2.set_ylabel(r'$\sum_j m_{ij}$', fontsize=18)
+    ax2.tick_params(axis='both', labelsize=16)
+
+    plt.tight_layout()
+    plt.savefig(f"{log_dir}/results/msg_analysis.png", dpi=80)
+    plt.close()

@@ -53,14 +53,14 @@ if __name__ == "__main__":
             best_model = None
     else:
         best_model = None
-        task = 'train'  # 'generate', 'train', 'test'
+        task = 'test'  # 'generate', 'train', 'test'
 
-        config_list = ['arbitrary_3']
+        # config_list = ['arbitrary_3']
         # config_list = ['cell_cardio_2_4']
         # config_list = ['RD_RPS_5']
         # config_list = ['cell_U2OS_9_2']
         # config_list = ['springs_matrix_N5_3']
-        # config_list = ['cell_MDCK_17_2']
+        config_list = ['cell_MDCK_17_2']
 
     for config_file_ in config_list:
         print(" ")
@@ -97,7 +97,7 @@ if __name__ == "__main__":
                 visualize=True,
                 style="black color name",
                 verbose=False,
-                best_model=best_model,
+                best_model='best',
                 run=0,
                 test_mode="",
                 sample_embedding=False,
