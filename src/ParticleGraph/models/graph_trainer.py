@@ -265,7 +265,8 @@ def data_train_particle(config, erase, best_model, device):
     list_loss = []
 
     # torch.autograd.set_detect_anomaly(True)
-    torch.autocast(device_type="cuda", dtype=torch.float16)
+    # torch.autocast(device_type="cuda", dtype=torch.float16)
+    
     time.sleep(1)
     for epoch in range(start_epoch, n_epochs + 1):
 
@@ -498,7 +499,7 @@ def data_train_particle(config, erase, best_model, device):
                                 'optimizer_state_dict': optimizer_f.state_dict()}, os.path.join(log_dir,
                                                                                                 'models',
                                                                                                 f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
-                print(f'Epoch {epoch}  Iteration {N}/{Niter}  Loss: {loss.item() / n_particles:.6f}')
+
                 check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 50,
                                        memory_percentage_threshold=0.6)
 

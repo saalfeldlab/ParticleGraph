@@ -70,9 +70,9 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         self.n_ghosts = int(train_config.n_ghosts)
 
 
-        self.lin_edge = FusedMLP(in_dim=self.input_size, hidden_dim=self.hidden_dim, out_dim=self.output_size, n_hidden=self.n_layers, activation='ReLU', output_activation=None, device=self.device)
+        # self.lin_edge = FusedMLP(in_dim=self.input_size, hidden_dim=self.hidden_dim, out_dim=self.output_size, n_hidden=self.n_layers, activation='ReLU', output_activation=None, device=self.device)
 
-        # self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers, hidden_size=self.hidden_dim, device=self.device)
+        self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers, hidden_size=self.hidden_dim, device=self.device)
 
         if self.update_type == 'mlp':
             self.lin_phi = MLP(input_size=self.input_size_update, output_size=self.output_size_update,
@@ -133,15 +133,6 @@ class Interaction_Particle(pyg.nn.MessagePassing):
             for n in range(derivatives.shape[1]//2):
                 derivatives[:, n*2:n*2+2] = derivatives[:, n*2:n*2+2] @ self.rotation_matrix
 
-        # if self.reflection_augmentation & self.training == True:
-        #     group = np.random.randint(0, 3)
-        #     if group in [0, 1]:
-        #         pos[:, group] = 1 - pos[:, group]
-        #         d_pos[:, group] = -d_pos[:, group]
-        #     else:
-        #         pos = 1 - pos
-        #         d_pos[:, 1] = -d_pos[:, 1]
-
         if self.state == 'sequence':
             particle_id = x[:, 0:1].long()
             embedding = self.get_interp_a(k, particle_id, self.data_id)
@@ -159,7 +150,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         if self.rotation_augmentation & self.training:
             self.rotation_inv_matrix = torch.stack([torch.stack([torch.cos(self.phi), -torch.sin(self.phi)]),torch.stack([torch.sin(self.phi), torch.cos(self.phi)])])
             self.rotation_inv_matrix = self.rotation_inv_matrix.permute(*torch.arange(self.rotation_inv_matrix.ndim - 1, -1, -1)).squeeze()
-            out[:, :2] = out[:, :2] @ self.rotation_inv_matrix.to(out.dtype)
+            out[:, :2] = out[:, :2] @ self.rotation_inv_matrix
 
         if self.reflection_augmentation & self.training:
             if group in [0, 1]:
