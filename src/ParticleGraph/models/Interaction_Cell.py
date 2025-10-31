@@ -76,7 +76,7 @@ class Interaction_Cell(pyg.nn.MessagePassing):
 
 
 
-    def forward(self, data=[], data_id=[], training=[], phi=[], has_field=False, edge_pointers=None):
+    def forward(self, data=[], data_id=[], training=[], phi=[], has_field=False, edge_pointers=None, return_all=False):
 
         self.data_id = data_id
         self.cos_phi = torch.cos(phi)
@@ -105,7 +105,10 @@ class Interaction_Cell(pyg.nn.MessagePassing):
 
         pred = self.lin_phi(in_features)
 
-        return pred
+        if return_all:
+            return pred, msg
+        else:
+            return pred
 
     def message(self, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j, field_i, field_j):
         r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
