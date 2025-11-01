@@ -148,15 +148,12 @@ def data_train_particle(config, erase, best_model, device):
     print('load data ...')
     x_list = []
     y_list = []
-    edge_p_p_list = []
-    # edge_saved = os.path.exists(f'graphs_data/{dataset_name}/edge_p_p_list_0.npz')
-    edge_saved = False
 
     run_lengths = list()
     time.sleep(0.5)
     n_particles_max = 0
 
-    for run in trange(n_runs):
+    for run in trange(n_runs, ncols=80):
         x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
         y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
         if np.isnan(x).any() | np.isnan(y).any():
@@ -165,9 +162,6 @@ def data_train_particle(config, erase, best_model, device):
             n_particles_max = x[0].shape[0]
         x_list.append(x)
         y_list.append(y)
-        if edge_saved:
-            edge_p_p = np.load(f'graphs_data/{dataset_name}/edge_p_p_list_{run}.npz')
-            edge_p_p_list.append(edge_p_p)
         run_lengths.append(len(x))
     x = torch.tensor(x_list[0][0], dtype=torch.float32, device=device)
     y = torch.tensor(y_list[0][0], dtype=torch.float32, device=device)
@@ -328,13 +322,10 @@ def data_train_particle(config, erase, best_model, device):
                         model.a[run, n_particles:n_particles + n_ghosts] = model.a[
                             run, ghosts_particles.embedding_index].clone().detach()  # sample ghost embedding
 
-                if edge_saved:
-                    edges = edge_p_p_list[run][f'arr_{k}']
-                    edges = torch.tensor(edges, dtype=torch.int64, device=device)
-                else:
-                    distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                    adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
-                    edges = adj_t.nonzero().t().contiguous()
+
+                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
+                edges = adj_t.nonzero().t().contiguous()
 
                 if batch_ratio < 1:
                     ids = np.random.permutation(x.shape[0])[:int(x.shape[0] * batch_ratio)]
@@ -891,7 +882,6 @@ def data_train_cell_activity(config, erase, best_model, device):
 
     x_list = []
     y_list = []
-    edge_p_p_list = []
 
     print('load data ...')
 
@@ -1560,10 +1550,6 @@ def data_train_cell(config, erase, best_model, device):
 
     x_list = []
     y_list = []
-    edge_p_p_list = []
-    vertices_pos_list = []
-    # edge_saved = os.path.exists(f'graphs_data/{dataset_name}/edge_p_p_list_0.npz')
-    edge_saved = False
 
     print('load data ...')
     for run in trange(n_runs):
@@ -1573,9 +1559,6 @@ def data_train_cell(config, erase, best_model, device):
         y = torch.tensor(y, dtype=torch.float32, device=device)
         x_list.append(x)
         y_list.append(y)
-        if edge_saved:
-            edge_p_p = np.load(f'graphs_data/{dataset_name}/edge_p_p_list_{run}.npz')
-            edge_p_p_list.append(edge_p_p)
 
     x = x_list[0][0].clone().detach()
     y = y_list[0][0].clone().detach()
@@ -1695,12 +1678,9 @@ def data_train_cell(config, erase, best_model, device):
 
                 x = x_list[run][k].clone().detach()
 
-                if edge_saved:
-                    edges = edge_p_p_list[run][f'arr_{k}']
-                else:
-                    distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                    adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                    edges = adj_t.nonzero().t().contiguous()
+                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                edges = adj_t.nonzero().t().contiguous()
 
                 dataset = data.Data(x=x[:, :], edge_index=edges)
                 dataset_batch.append(dataset)
@@ -5416,6 +5396,12 @@ def data_test_cell_activity(config=None, config_file=None, visualize=False, styl
     print(f'mean fluos: mean={np.mean(mean_fluos):.4f}, std={np.std(mean_fluos):.4f}')
     print(f'delta: mean={np.nanmean(diff):.4f}, std={np.nanstd(diff):.4f}')
     print(f'correlation(mean_fluo, F_zero): {np.corrcoef(np.array(mean_fluos)[valid_mask], np.array(F_zeros)[valid_mask])[0,1]:.4f}')
+
+
+
+
+
+
 
 
 
