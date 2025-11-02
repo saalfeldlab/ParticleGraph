@@ -144,7 +144,7 @@ if __name__ == "__main__":
 
 	xy = torch.stack((yv.flatten(), xv.flatten())).t()
 
-	path = f"reference.jpg"
+	path = f"reference.png"
 	print(f"Writing '{path}'... ", end="")
 	write_image(path, image(xy).reshape(img_shape).detach().cpu().numpy())
 	print("done.")
@@ -216,7 +216,7 @@ if __name__ == "__main__":
 	i = 0
 	
 	# Save initial state (t=0)
-	path = f"instantngp_outputs/time_000_000ms.jpg"
+	path = f"instantngp_outputs/time_000_000ms.png"
 	print(f"Writing '{path}'... ", end="")
 	with torch.no_grad():
 		write_image(path, model(xy).reshape(img_shape).clamp(0.0, 1.0).detach().cpu().numpy())
@@ -251,7 +251,7 @@ if __name__ == "__main__":
 			print(f"Iteration {i}: Expected {expected_ms}ms, Training time: {total_training_time:.3f}s, loss={loss.item():.6f}")
 			
 			# Save image
-			path = f"instantngp_outputs/time_{save_counter:03d}_{expected_ms:04d}ms.jpg"
+			path = f"instantngp_outputs/time_{save_counter:03d}_{expected_ms:04d}ms.png"
 			print(f"Writing '{path}'... ", end="")
 			with torch.no_grad():
 				write_image(path, model(xy).reshape(img_shape).clamp(0.0, 1.0).detach().cpu().numpy())
