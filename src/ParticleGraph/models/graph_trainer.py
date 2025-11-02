@@ -124,11 +124,10 @@ def data_train_particle(config, erase, best_model, device):
     data_augmentation_loop = train_config.data_augmentation_loop
     recursive_loop = train_config.recursive_loop
     coeff_continuous = train_config.coeff_continuous
-    coeff_permutation = train_config.coeff_permutation
     target_batch_size = train_config.batch_size
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
-    has_ghost = train_config.n_ghosts > 0
+    has_ghost_particles = train_config.n_ghosts > 0
     has_bounding_box = 'PDE_F' in model_config.particle_model_name
     n_ghosts = train_config.n_ghosts
     if train_config.small_init_batch_size:
@@ -153,7 +152,7 @@ def data_train_particle(config, erase, best_model, device):
     time.sleep(0.5)
     n_particles_max = 0
 
-    for run in trange(n_runs, ncols=80):
+    for run in trange(n_runs, ncols=150):
         x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
         y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
         if np.isnan(x).any() | np.isnan(y).any():
@@ -166,7 +165,7 @@ def data_train_particle(config, erase, best_model, device):
     x = torch.tensor(x_list[0][0], dtype=torch.float32, device=device)
     y = torch.tensor(y_list[0][0], dtype=torch.float32, device=device)
     time.sleep(0.5)
-    for run in trange(0, n_runs, max(n_runs // 10, 1)):
+    for run in trange(0, n_runs, max(n_runs // 10, 1), ncols=150):
         for k in range(run_lengths[run] - 5):
             if (k % 10 == 0) | (n_frames < 1000):
                 try:
@@ -227,7 +226,7 @@ def data_train_particle(config, erase, best_model, device):
     print(f'N particles: {n_particles} {len(torch.unique(type_list))} types')
     logger.info(f'N particles:  {n_particles} {len(torch.unique(type_list))} types')
 
-    if has_ghost:
+    if has_ghost_particles:
         ghosts_particles = Ghost_Particles(config, n_particles, vnorm, device)
         optimizer_ghost_particles = torch.optim.Adam([ghosts_particles.ghost_pos], lr=1E-4)
         mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
@@ -270,7 +269,7 @@ def data_train_particle(config, erase, best_model, device):
         batch_size = int(get_batch_size(epoch))
         logger.info(f'batch_size: {batch_size}')
 
-        if (epoch == 1) & (has_ghost):
+        if (epoch == 1) & (has_ghost_particles):
             mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
             mask_ghost = np.tile(mask_ghost, batch_size)
             mask_ghost = np.argwhere(mask_ghost == 1)
@@ -289,9 +288,8 @@ def data_train_particle(config, erase, best_model, device):
 
         time.sleep(1)
         total_loss = 0
-        # start = time.time()
 
-        for N in trange(Niter):
+        for N in trange(Niter, ncols=150):
 
             if has_field:
                 optimizer_f.zero_grad()
@@ -309,7 +307,7 @@ def data_train_particle(config, erase, best_model, device):
                     field = model_f(time=k / n_frames) ** 2
                     x[:, 6:7] = field
 
-                if has_ghost:
+                if has_ghost_particles:
                     x_ghost = ghosts_particles.get_pos(dataset_id=run, frame=k, bc_pos=bc_pos)
                     if ghosts_particles.boids:
                         distance = torch.sum(
@@ -381,7 +379,7 @@ def data_train_particle(config, erase, best_model, device):
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
 
-            if has_ghost:
+            if has_ghost_particles:
                 optimizer_ghost_particles.zero_grad()
 
             for batch in batch_loader:
@@ -409,7 +407,7 @@ def data_train_particle(config, erase, best_model, device):
                     for batch in batch_loader:
                         pred = model(batch, data_id=data_id, training=True, k=k_batch)
 
-            if has_ghost:
+            if has_ghost_particles:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
             if simulation_config.state_type == 'sequence':
                 loss = (pred - y_batch).norm(2)
@@ -462,7 +460,7 @@ def data_train_particle(config, erase, best_model, device):
             if has_field:
                 optimizer_f.step()
 
-            if has_ghost:
+            if has_ghost_particles:
                 optimizer_ghost_particles.step()
 
                 # if False:
@@ -507,7 +505,7 @@ def data_train_particle(config, erase, best_model, device):
         print(f'Epoch {epoch + 1}, Learning Rate: {scheduler.get_last_lr()[0]}')
         logger.info(f'Epoch {epoch + 1}, Learning Rate: {scheduler.get_last_lr()[0]}')
 
-        if has_ghost:
+        if has_ghost_particles:
             torch.save({'model_state_dict': ghosts_particles.state_dict(),
                         'optimizer_state_dict': optimizer_ghost_particles.state_dict()},
                        os.path.join(log_dir, 'models', f'best_ghost_particles_with_{n_runs - 1}_graphs_{epoch}.pt'))
@@ -699,7 +697,7 @@ def data_solar_system(config, erase, best_model, device):
 
     x_list = []
     y_list = []
-    for run in trange(n_runs):
+    for run in trange(n_runs, ncols=150):
         x = torch.load(f'graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device)
         y = torch.load(f'graphs_data/{dataset_name}/y_list_{run}.pt', map_location=device)
         x_list.append(x)
@@ -1250,7 +1248,7 @@ def data_train_cell_activity(config, erase, best_model, device):
         logger.info(f'{Niter} iterations per epoch')
         print(f'plot every {plot_frequency} iterations')
 
-        for N in trange(Niter):
+        for N in trange(Niter, ncols=150):
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             dataset_batch = []
             y_batch_list = []
@@ -1552,7 +1550,7 @@ def data_train_cell(config, erase, best_model, device):
     y_list = []
 
     print('load data ...')
-    for run in trange(n_runs):
+    for run in trange(n_runs, ncols=150):
         x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
         y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
         x = torch.tensor(x, dtype=torch.float32, device=device)
@@ -1564,7 +1562,7 @@ def data_train_cell(config, erase, best_model, device):
     y = y_list[0][0].clone().detach()
 
     for run in range(n_runs):
-        for k in trange(n_frames):
+        for k in trange(n_frames, ncols=150):
             if (k % 10 == 0) | (n_frames < 1000):
                 x = torch.cat((x, x_list[run][k].clone().detach()), 0)
                 y = torch.cat((y, y_list[run][k].clone().detach()), 0)
@@ -1662,7 +1660,7 @@ def data_train_cell(config, erase, best_model, device):
 
         Niter = 2
 
-        for N in trange(Niter):
+        for N in trange(Niter, ncols=150):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -1919,7 +1917,7 @@ def data_train_rat_city(config, erase, best_model, device):
 
         Niter = 2
 
-        for N in trange(Niter):
+        for N in trange(Niter, ncols=150):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -2067,14 +2065,14 @@ def data_train_mesh(config, erase, best_model, device):
     x_mesh_list = []
     y_mesh_list = []
     time.sleep(0.5)
-    for run in trange(n_runs):
+    for run in trange(n_runs, ncols=150):
         x_mesh = torch.load(f'graphs_data/{dataset_name}/x_mesh_list_{run}.pt', map_location=device)
         x_mesh_list.append(x_mesh)
         h = torch.load(f'graphs_data/{dataset_name}/y_mesh_list_{run}.pt', map_location=device)
         y_mesh_list.append(h)
     h = y_mesh_list[0][0].clone().detach()
     for run in range(n_runs):
-        for k in trange(n_frames - 5):
+        for k in trange(n_frames - 5, ncols=150):
             h = torch.cat((h, y_mesh_list[run][k].clone().detach()), 0)
     hnorm = torch.std(h)
     torch.save(hnorm, os.path.join(log_dir, 'hnorm.pt'))
@@ -2176,7 +2174,7 @@ def data_train_mesh(config, erase, best_model, device):
         total_loss = 0
         Niter = n_frames * data_augmentation_loop // batch_size
 
-        for N in trange(Niter):
+        for N in trange(Niter, ncols=150):
 
             if has_field:
                 optimizer_f.zero_grad()
@@ -2534,7 +2532,7 @@ def data_train_particle_field(config, erase, best_model, device):
     data_augmentation_loop = train_config.data_augmentation_loop
     target_batch_size = train_config.batch_size
     replace_with_cluster = 'replace' in train_config.sparsity
-    has_ghost = train_config.n_ghosts > 0
+    has_ghost_particles = train_config.n_ghosts > 0
     n_ghosts = train_config.n_ghosts
 
     if train_config.small_init_batch_size:
@@ -2558,7 +2556,7 @@ def data_train_particle_field(config, erase, best_model, device):
     edge_f_p_list = []
 
     n_particles_max = 0
-    for run in trange(n_runs):
+    for run in trange(n_runs, ncols=150):
         x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
         y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
         if np.isnan(x).any() | np.isnan(y).any():
@@ -2578,7 +2576,7 @@ def data_train_particle_field(config, erase, best_model, device):
     x = torch.tensor(x_list[0][0], dtype=torch.float32, device=device)
     y = torch.tensor(y_list[0][0], dtype=torch.float32, device=device)
     time.sleep(0.5)
-    for run in trange(0, n_runs, max(n_runs // 10, 1)):
+    for run in trange(0, n_runs, max(n_runs // 10, 1), ncols=150):
         for k in range(n_frames - 5):
             if (k % 10 == 0) | (n_frames < 1000):
                 try:
@@ -2676,7 +2674,7 @@ def data_train_particle_field(config, erase, best_model, device):
         model_f.train()
         optimizer_f = torch.optim.Adam(lr=1e-5, params=model_f.parameters())
 
-    if has_ghost:
+    if has_ghost_particles:
         ghosts_particles = Ghost_Particles(config, n_particles, vnorm, device)
         optimizer_ghost_particles = torch.optim.Adam(lr=1e-4, params=ghosts_particles.parameters())
 
@@ -2713,7 +2711,7 @@ def data_train_particle_field(config, erase, best_model, device):
         f_p_mask = f_p_mask[:, 0]
 
         logger.info(f'batch_size: {batch_size}')
-        if (epoch == 1) & (has_ghost):
+        if (epoch == 1) & (has_ghost_particles):
             mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
             mask_ghost = np.tile(mask_ghost, batch_size)
             mask_ghost = np.argwhere(mask_ghost == 1)
@@ -2755,7 +2753,7 @@ def data_train_particle_field(config, erase, best_model, device):
                         x_mesh[:, 6:7] = model_f(time=k / n_frames) ** 2
                 x_particle_field = torch.concatenate((x_mesh, x), dim=0)
 
-                if has_ghost:
+                if has_ghost_particles:
                     x_ghost = ghosts_particles.get_pos(dataset_id=run, frame=k, bc_pos=bc_pos)
                     if ghosts_particles.boids:
                         distance = torch.sum(
@@ -2791,7 +2789,7 @@ def data_train_particle_field(config, erase, best_model, device):
                 else:
                     y_batch = torch.cat((y_batch, y[:, 0:2]), dim=0)
 
-                if has_ghost:
+                if has_ghost_particles:
                     if batch == 0:
                         var_batch = torch.mean(ghosts_particles.var[run, k], dim=0)
                         var_batch = var_batch[:, None]
@@ -2806,7 +2804,7 @@ def data_train_particle_field(config, erase, best_model, device):
 
             if has_siren:
                 optimizer_f.zero_grad()
-            if has_ghost:
+            if has_ghost_particles:
                 optimizer_ghost_particles.zero_grad()
 
             for batch in batch_loader_f_p:
@@ -2816,7 +2814,7 @@ def data_train_particle_field(config, erase, best_model, device):
 
             pred_f_p = pred_f_p[f_p_mask]
 
-            if has_ghost:
+            if has_ghost_particles:
                 loss = ((pred_p_p[mask_ghost] + 0 * pred_f_p - y_batch)).norm(2) + var_batch.mean() + model.field.norm(
                     2)
             else:
@@ -2826,7 +2824,7 @@ def data_train_particle_field(config, erase, best_model, device):
             optimizer.step()
             if has_siren:
                 optimizer_f.step()
-            if has_ghost:
+            if has_ghost_particles:
                 optimizer_ghost_particles.step()
 
             total_loss += loss.item()
@@ -2868,7 +2866,7 @@ def data_train_particle_field(config, erase, best_model, device):
         list_loss.append(total_loss / n_particles)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
-        if has_ghost:
+        if has_ghost_particles:
             torch.save({'model_state_dict': ghosts_particles.state_dict(),
                         'optimizer_state_dict': optimizer_ghost_particles.state_dict()},
                        os.path.join(log_dir, 'models', f'best_ghost_particles_with_{n_runs - 1}_graphs_{epoch}.pt'))
@@ -3802,7 +3800,7 @@ def data_train_agents(config, erase, best_model, device):
     target_batch_size = train_config.batch_size
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
-    has_ghost = train_config.n_ghosts > 0
+    has_ghost_particles = train_config.n_ghosts > 0
     if train_config.small_init_batch_size:
         get_batch_size = increasing_batch_size(target_batch_size)
     else:
@@ -3965,7 +3963,7 @@ def data_train_agents(config, erase, best_model, device):
 
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
-            if has_ghost:
+            if has_ghost_particles:
                 optimizer_ghost_particles.zero_grad()
 
             for batch in batch_loader:
@@ -4232,7 +4230,7 @@ def data_test_particles(config=None, config_file=None, visualize=False, style='c
 
     has_mesh = (config.graph_model.mesh_model_name != '')
     only_mesh = (config.graph_model.particle_model_name == '') & has_mesh
-    has_ghost = config.training.n_ghosts > 0
+    has_ghost_particles = config.training.n_ghosts > 0
     max_radius = simulation_config.max_radius
     min_radius = simulation_config.min_radius
     n_particle_types = simulation_config.n_particle_types
@@ -4246,12 +4244,9 @@ def data_test_particles(config=None, config_file=None, visualize=False, style='c
     sub_sampling = simulation_config.sub_sampling
     cmap = CustomColorMap(config=config)
     dimension = simulation_config.dimension
-    has_particle_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
-    has_mesh_field = (model_config.field_type != '') & ('RD_Mesh' in model_config.mesh_model_name)
     field_type = model_config.field_type
-    has_field = (field_type != '') & (has_mesh_field == False) & (has_particle_field == False)    
+    has_field = (field_type != '')
     has_excitation = ('excitation' in model_config.update_type)
-    baseline_value = simulation_config.baseline_value
     omega = model_config.omega
 
     do_tracking = training_config.do_tracking
@@ -4383,7 +4378,7 @@ def data_test_particles(config=None, config_file=None, visualize=False, style='c
         with torch.no_grad():
             for n in range(model.a.shape[0]):
                 model.a[n] = model_a_
-    if has_ghost:
+    if has_ghost_particles:
         model_ghost = Ghost_Particles(config, n_particles, vnorm, device)
         net = f"{log_dir}/models/best_ghost_particles_with_{n_runs - 1}_graphs_20.pt"
         state_dict = torch.load(net, map_location=device)
@@ -4689,7 +4684,7 @@ def data_test_particles(config=None, config_file=None, visualize=False, style='c
             x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t)
         else:
             with torch.no_grad():
-                if has_ghost:
+                if has_ghost_particles:
                     x_ = x
                     x_ghost = model_ghost.get_pos(dataset_id=run, frame=it, bc_pos=bc_pos)
                     x_ = torch.cat((x_, x_ghost), 0)
@@ -4719,7 +4714,7 @@ def data_test_particles(config=None, config_file=None, visualize=False, style='c
                     pred = model(dataset, data_id=data_id, training=False, has_field=has_field, k=it)
                     y = pred
 
-                if has_ghost:
+                if has_ghost_particles:
                     y = y[mask_ghost]
 
                 if sub_sampling > 1:

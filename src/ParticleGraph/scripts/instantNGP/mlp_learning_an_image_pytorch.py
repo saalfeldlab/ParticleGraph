@@ -46,13 +46,19 @@ except ImportError:
 	print("============================================================")
 	sys.exit()
 
-SCRIPTS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "scripts")
-sys.path.insert(0, SCRIPTS_DIR)
+from PIL import Image as PILImage
+import numpy as np
 
-from common import read_image, write_image, ROOT_DIR
+def read_image(filename):
+    """Read image and convert to numpy array with values in [0,1]"""
+    img = PILImage.open(filename).convert('RGB')
+    return np.array(img).astype(np.float32) / 255.0
 
-DATA_DIR = os.path.join(ROOT_DIR, "data")
-IMAGES_DIR = os.path.join(DATA_DIR, "images")
+def write_image(filename, img_array):
+    """Write numpy array to image file"""
+    img_array = np.clip(img_array * 255.0, 0, 255).astype(np.uint8)
+    img = PILImage.fromarray(img_array)
+    img.save(filename)
 
 class Image(torch.nn.Module):
 	def __init__(self, filename, device):
@@ -105,20 +111,21 @@ if __name__ == "__main__":
 	device = torch.device("cuda")
 	args = get_args()
 
-	with open(args.config) as config_file:
+	# Get script directory and construct paths
+	script_dir = os.path.dirname(os.path.abspath(__file__))
+	config_path = os.path.join(script_dir, args.config)
+	image_path = os.path.join(script_dir, args.image)
+
+	with open(config_path) as config_file:
 		config = json.load(config_file)
 
-	image = Image(args.image, device)
+	image = Image(image_path, device)
 	n_channels = image.data.shape[2]
 
 	model = tcnn.NetworkWithInputEncoding(n_input_dims=2, n_output_dims=n_channels, encoding_config=config["encoding"], network_config=config["network"]).to(device)
-	model.jit_fusion = tcnn.supports_jit_fusion()
+	
 	print(model)
-
-	if model.jit_fusion:
-		print("JIT fusion is enabled.")
-	else:
-		print("JIT fusion is unavailable. Must use CUDA 11.8 and a GPU with compute capability 75 or higher.")
+	print("Using modern tiny-cuda-nn with automatic kernel optimization.")
 
 	#===================================================================================================
 	# The following is equivalent to the above, but slower. Only use "naked" tcnn.Encoding and
@@ -150,10 +157,11 @@ if __name__ == "__main__":
 
 	prev_time = time.perf_counter()
 
-	batch_size = 2**18
+	batch_size = 2**22  # 4,194,304 - Optimized for RTX A6000 (47.4 GB VRAM)
 	interval = 10
 
 	print(f"Beginning optimization with {args.n_steps} training steps.")
+	print(f"Using optimized batch size: {batch_size:,} samples")
 
 	try:
 		batch = torch.rand([batch_size, 2], device=device, dtype=torch.float32)
