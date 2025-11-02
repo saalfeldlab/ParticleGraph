@@ -152,7 +152,7 @@ def data_train_particle(config, erase, best_model, device):
     time.sleep(0.5)
     n_particles_max = 0
 
-    for run in trange(n_runs, ncols=150):
+    for run in trange(n_runs, ncols=80):
         x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
         y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
         if np.isnan(x).any() | np.isnan(y).any():
@@ -165,7 +165,7 @@ def data_train_particle(config, erase, best_model, device):
     x = torch.tensor(x_list[0][0], dtype=torch.float32, device=device)
     y = torch.tensor(y_list[0][0], dtype=torch.float32, device=device)
     time.sleep(0.5)
-    for run in trange(0, n_runs, max(n_runs // 10, 1), ncols=150):
+    for run in trange(0, n_runs, max(n_runs // 10, 1), ncols=80):
         for k in range(run_lengths[run] - 5):
             if (k % 10 == 0) | (n_frames < 1000):
                 try:
@@ -291,7 +291,7 @@ def data_train_particle(config, erase, best_model, device):
         time.sleep(1)
         total_loss = 0
 
-        for N in trange(Niter, ncols=150):
+        for N in trange(Niter, ncols=80):
 
             if has_field:
                 optimizer_f.zero_grad()
@@ -686,7 +686,7 @@ def data_solar_system(config, erase, best_model, device):
 
     x_list = []
     y_list = []
-    for run in trange(n_runs, ncols=150):
+    for run in trange(n_runs, ncols=80):
         x = torch.load(f'graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device)
         y = torch.load(f'graphs_data/{dataset_name}/y_list_{run}.pt', map_location=device)
         x_list.append(x)
@@ -937,7 +937,7 @@ def data_train_cell_activity(config, erase, best_model, device):
         edge_pointers_list = []  # per frame: list of edge IDs
         edges_list = [] 
 
-        for it in trange(n_frames - 1, ncols=150):
+        for it in trange(n_frames - 1, ncols=80):
             x = torch.tensor(x_list[0][f'arr_{it}'], dtype=torch.float32, device=device).clone().detach()
             x_next = torch.tensor(x_list[0][f'arr_{it + 1}'], dtype=torch.float32, device=device).clone().detach()
             
@@ -1081,7 +1081,7 @@ def data_train_cell_activity(config, erase, best_model, device):
         dpi = 80
         pixel_size = int(fig_size_inches * dpi)
 
-        for it in trange(n_frames, ncols=150):
+        for it in trange(n_frames, ncols=80):
             black_to_green = LinearSegmentedColormap.from_list('black_green', ['black', 'green'])
             im_fluo = tifffile.imread(data_folder_name + files[it])
             im3 = (im_fluo[:,:,1].astype('float32') / 256)
@@ -1237,7 +1237,7 @@ def data_train_cell_activity(config, erase, best_model, device):
         logger.info(f'{Niter} iterations per epoch')
         print(f'plot every {plot_frequency} iterations')
 
-        for N in trange(Niter, ncols=150):
+        for N in trange(Niter, ncols=80):
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             dataset_batch = []
             y_batch_list = []
@@ -1539,7 +1539,7 @@ def data_train_cell(config, erase, best_model, device):
     y_list = []
 
     print('load data ...')
-    for run in trange(n_runs, ncols=150):
+    for run in trange(n_runs, ncols=80):
         x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
         y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
         x = torch.tensor(x, dtype=torch.float32, device=device)
@@ -1551,7 +1551,7 @@ def data_train_cell(config, erase, best_model, device):
     y = y_list[0][0].clone().detach()
 
     for run in range(n_runs):
-        for k in trange(n_frames, ncols=150):
+        for k in trange(n_frames, ncols=80):
             if (k % 10 == 0) | (n_frames < 1000):
                 x = torch.cat((x, x_list[run][k].clone().detach()), 0)
                 y = torch.cat((y, y_list[run][k].clone().detach()), 0)
@@ -1649,7 +1649,7 @@ def data_train_cell(config, erase, best_model, device):
 
         Niter = 2
 
-        for N in trange(Niter, ncols=150):
+        for N in trange(Niter, ncols=80):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -1906,7 +1906,7 @@ def data_train_rat_city(config, erase, best_model, device):
 
         Niter = 2
 
-        for N in trange(Niter, ncols=150):
+        for N in trange(Niter, ncols=80):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -2054,14 +2054,14 @@ def data_train_mesh(config, erase, best_model, device):
     x_mesh_list = []
     y_mesh_list = []
     time.sleep(0.5)
-    for run in trange(n_runs, ncols=150):
+    for run in trange(n_runs, ncols=80):
         x_mesh = torch.load(f'graphs_data/{dataset_name}/x_mesh_list_{run}.pt', map_location=device)
         x_mesh_list.append(x_mesh)
         h = torch.load(f'graphs_data/{dataset_name}/y_mesh_list_{run}.pt', map_location=device)
         y_mesh_list.append(h)
     h = y_mesh_list[0][0].clone().detach()
     for run in range(n_runs):
-        for k in trange(n_frames - 5, ncols=150):
+        for k in trange(n_frames - 5, ncols=80):
             h = torch.cat((h, y_mesh_list[run][k].clone().detach()), 0)
     hnorm = torch.std(h)
     torch.save(hnorm, os.path.join(log_dir, 'hnorm.pt'))
@@ -2163,7 +2163,7 @@ def data_train_mesh(config, erase, best_model, device):
         total_loss = 0
         Niter = n_frames * data_augmentation_loop // batch_size
 
-        for N in trange(Niter, ncols=150):
+        for N in trange(Niter, ncols=80):
 
             if has_field:
                 optimizer_f.zero_grad()
@@ -2545,7 +2545,7 @@ def data_train_particle_field(config, erase, best_model, device):
     edge_f_p_list = []
 
     n_particles_max = 0
-    for run in trange(n_runs, ncols=150):
+    for run in trange(n_runs, ncols=80):
         x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
         y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
         if np.isnan(x).any() | np.isnan(y).any():
@@ -2565,7 +2565,7 @@ def data_train_particle_field(config, erase, best_model, device):
     x = torch.tensor(x_list[0][0], dtype=torch.float32, device=device)
     y = torch.tensor(y_list[0][0], dtype=torch.float32, device=device)
     time.sleep(0.5)
-    for run in trange(0, n_runs, max(n_runs // 10, 1), ncols=150):
+    for run in trange(0, n_runs, max(n_runs // 10, 1), ncols=80):
         for k in range(n_frames - 5):
             if (k % 10 == 0) | (n_frames < 1000):
                 try:
@@ -5283,7 +5283,7 @@ def data_test_cell_activity(config=None, config_file=None, visualize=False, styl
     colors = plt.cm.viridis(np.linspace(0, 1, len(a_indices)))
 
     ax = plt.subplot(2, 3, 1)
-    for i, tid in enumerate(tqdm(a_indices, desc="Processing tracks", ncols=150)):
+    for i, tid in enumerate(tqdm(a_indices, desc="Processing tracks", ncols=80)):
         outs = []
         for F_val in F_sweep:
             in_features = torch.cat([F_val.unsqueeze(0), a_samples[i], msg_fixed], dim=0).unsqueeze(0)
@@ -5394,7 +5394,7 @@ def data_test_cell_activity(config=None, config_file=None, visualize=False, styl
     msg_sum_per_cell = {}
     neighbor_fluo_per_cell = {}
 
-    for it in trange(n_frames - 4, ncols=150):
+    for it in trange(n_frames - 4, ncols=80):
         x = torch.tensor(x_list[0][f'arr_{it}'], dtype=torch.float32, device=device)
         edges = torch.tensor(edges_list[it], dtype=torch.long, device=device)
         edge_pointers = torch.tensor(edge_pointers_list[it], dtype=torch.long, device=device)

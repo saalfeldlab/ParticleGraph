@@ -193,7 +193,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
             A[i, j] = self.vals[self.data_id[0]]**2
             A.T[i, j] = self.vals[self.data_id[0]]**2
             A[i,i] = 0
-            out = A[edge_index_i, edge_index_j].repeat(2, 1).t() * self.lin_edge(in_features)
+            out = A[edge_index_i%self.n_particles, edge_index_j%self.n_particles].repeat(2, 1).t() * self.lin_edge(in_features)
         else:
             out = self.lin_edge(in_features)
 
