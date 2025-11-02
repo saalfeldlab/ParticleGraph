@@ -28,7 +28,7 @@
 #         using tiny-cuda-nn's PyTorch extension. Runs ~2x slower than native.
 
 import argparse
-import commentjson as json
+import json
 import numpy as np
 import os
 import sys
@@ -57,8 +57,22 @@ def read_image(filename):
 
 def write_image(filename, img_array):
     """Write numpy array to image file"""
+    print(f"  DEBUG write_image: Input array shape={img_array.shape}, dtype={img_array.dtype}")
+    print(f"  DEBUG write_image: Input range: min={img_array.min():.3f}, max={img_array.max():.3f}")
+    
+    # Sample a few values to see what they are
+    sample_values = img_array[100:103, 100:103]
+    print(f"  DEBUG write_image: Sample values:")
+    for i in range(sample_values.shape[0]):
+        for j in range(sample_values.shape[1]):
+            r_val, g_val, b_val = sample_values[i, j]
+            print(f"    [{i},{j}]: R={r_val:.3f}, G={g_val:.3f}, B={b_val:.3f}")
+    
     img_array = np.clip(img_array * 255.0, 0, 255).astype(np.uint8)
-    img = PILImage.fromarray(img_array)
+    print(f"  DEBUG write_image: After scaling - range: min={img_array.min()}, max={img_array.max()}")
+    
+    img = PILImage.fromarray(img_array, mode='RGB')  # Explicitly specify RGB mode
+    print(f"  DEBUG write_image: PIL image mode: {img.mode}")
     img.save(filename)
 
 class Image(torch.nn.Module):
@@ -103,8 +117,8 @@ def get_args():
 
 if __name__ == "__main__":
 	print("================================================================")
-	print("This script replicates the behavior of the native CUDA example  ")
-	print("mlp_learning_an_image.cu using tiny-cuda-nn's PyTorch extension.")
+	print("InstantNGP RGB Debug - Girl with a Pearl Earring")
+	print("Investigating RGB vs Grayscale issue")
 	print("================================================================")
 
 	print(f"Using PyTorch version {torch.__version__} with CUDA {torch.version.cuda}")
@@ -120,21 +134,17 @@ if __name__ == "__main__":
 	with open(config_path) as config_file:
 		config = json.load(config_file)
 
+	# Load image with resizing for fair comparison
+	print(f"Loading image: {image_path}")
 	image = Image(image_path, device)
 	n_channels = image.data.shape[2]
+	
+	print(f"DEBUG: Image loaded with shape {image.data.shape} and {n_channels} channels")
 
 	model = tcnn.NetworkWithInputEncoding(n_input_dims=2, n_output_dims=n_channels, encoding_config=config["encoding"], network_config=config["network"]).to(device)
 	
 	print(model)
 	print("Using modern tiny-cuda-nn with automatic kernel optimization.")
-
-	#===================================================================================================
-	# The following is equivalent to the above, but slower. Only use "naked" tcnn.Encoding and
-	# tcnn.Network when you don't want to combine them. Otherwise, use tcnn.NetworkWithInputEncoding.
-	#===================================================================================================
-	# encoding = tcnn.Encoding(n_input_dims=2, encoding_config=config["encoding"])
-	# network = tcnn.Network(n_input_dims=encoding.n_output_dims, n_output_dims=n_channels, network_config=config["network"])
-	# model = torch.nn.Sequential(encoding, network)
 
 	optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 
@@ -152,14 +162,11 @@ if __name__ == "__main__":
 	xy = torch.stack((yv.flatten(), xv.flatten())).t()
 
 	path = f"reference.jpg"
-	print(f"Writing '{path}'... ", end="")
+	print(f"Writing '{path}'... ")
 	write_image(path, image(xy).reshape(img_shape).detach().cpu().numpy())
 	print("done.")
 
-	prev_time = time.perf_counter()
-
 	batch_size = 2**22  # 4,194,304 - Optimized for RTX A6000 (47.4 GB VRAM)
-	interval = 100  # Print every 100 iterations
 
 	print(f"Beginning optimization with {args.n_steps} training steps.")
 	print(f"Using optimized batch size: {batch_size:,} samples")
@@ -173,11 +180,26 @@ if __name__ == "__main__":
 		print(f"WARNING: PyTorch JIT trace failed. Performance will be slightly worse than regular.")
 		traced_image = image
 
-	# Override for testing
-	args.n_steps = 1000
-
-
-	for i in trange(args.n_steps, ncols=80):
+	# Create output directory and clear it
+	import shutil
+	if os.path.exists("instantngp_outputs"):
+		shutil.rmtree("instantngp_outputs")
+	os.makedirs("instantngp_outputs", exist_ok=True)
+	print("Cleared and created output directory: instantngp_outputs/")
+	
+	print("Starting short test (saving after 100 iterations)...")
+	
+	# Save initial state (t=0)
+	path = f"instantngp_outputs/initial.jpg"
+	print(f"Writing '{path}'... ")
+	with torch.no_grad():
+		model_output = model(xy).reshape(img_shape).clamp(0.0, 1.0).detach().cpu().numpy()
+		print(f"DEBUG: Initial model output shape: {model_output.shape}")
+		write_image(path, model_output)
+	print("done.")
+	
+	# Train for 100 iterations
+	for i in range(100):
 		batch = torch.rand([batch_size, 2], device=device, dtype=torch.float32)
 		targets = traced_image(batch)
 		output = model(batch)
@@ -189,27 +211,78 @@ if __name__ == "__main__":
 		loss.backward()
 		optimizer.step()
 
-	loss_val = loss.item()
-	torch.cuda.synchronize()
-	elapsed_time = time.perf_counter() - prev_time
-	print(f"Step#{i}: loss={loss_val} time={int(elapsed_time*1000)}[ms]")
-
-	path = f"tmp/{i}.jpg"
-	print(f"Writing '{path}'... ", end="")
+	# Save after training
+	path = f"instantngp_outputs/after_100_iterations.jpg"
+	print(f"Writing '{path}'... ")
 	with torch.no_grad():
-		write_image(path, model(xy).reshape(img_shape).clamp(0.0, 1.0).detach().cpu().numpy())
+		model_output = model(xy).reshape(img_shape).clamp(0.0, 1.0).detach().cpu().numpy()
+		print(f"DEBUG: After training model output shape: {model_output.shape}")
+		write_image(path, model_output)
 	print("done.")
 
-	# # Ignore the time spent saving the image
-	# prev_time = time.perf_counter()
-
-	# if i > 65 and interval < 1000:
-	# 	interval *= 10
-
-	if args.result_filename:
-		print(f"Writing '{args.result_filename}'... ", end="")
-		with torch.no_grad():
-			write_image(args.result_filename, model(xy).reshape(img_shape).clamp(0.0, 1.0).detach().cpu().numpy())
-		print("done.")
+	print("Training completed. Now testing images...")
+	
+	# Test if images are RGB or grayscale
+	print("\n" + "="*60)
+	print("RGB vs Grayscale Test Results:")
+	print("="*60)
+	
+	def test_image_is_rgb(filename):
+		"""Test if an image is RGB (color) or grayscale with detailed analysis"""
+		try:
+			img = PILImage.open(filename)
+			img_array = np.array(img)
+			
+			print(f"\n{filename}:")
+			print(f"  PIL mode: {img.mode}")
+			print(f"  Array shape: {img_array.shape}")
+			print(f"  Array dtype: {img_array.dtype}")
+			
+			if len(img_array.shape) == 3 and img_array.shape[2] == 3:
+				# Check if all channels are different (RGB) or same (grayscale)
+				r, g, b = img_array[:,:,0], img_array[:,:,1], img_array[:,:,2]
+				
+				# Calculate variance between channels
+				rg_diff = np.abs(r.astype(float) - g.astype(float)).mean()
+				rb_diff = np.abs(r.astype(float) - b.astype(float)).mean()
+				gb_diff = np.abs(g.astype(float) - b.astype(float)).mean()
+				
+				avg_channel_diff = (rg_diff + rb_diff + gb_diff) / 3
+				
+				# Sample a few pixel values to see what they look like
+				sample_pixels = img_array[100:103, 100:103]  # 3x3 sample
+				print(f"  Sample RGB values at (100-103,100-103):")
+				for i in range(sample_pixels.shape[0]):
+					for j in range(sample_pixels.shape[1]):
+						r_val, g_val, b_val = sample_pixels[i, j]
+						print(f"    [{i},{j}]: R={r_val}, G={g_val}, B={b_val}")
+				
+				# Overall statistics
+				print(f"  Channel means: R={r.mean():.1f}, G={g.mean():.1f}, B={b.mean():.1f}")
+				print(f"  Channel stds: R={r.std():.1f}, G={g.std():.1f}, B={b.std():.1f}")
+				print(f"  Channel diffs: RG={rg_diff:.2f}, RB={rb_diff:.2f}, GB={gb_diff:.2f}")
+				
+				is_rgb = avg_channel_diff > 1.0  # Threshold for color vs grayscale
+				
+				print(f"  Result: {'RGB' if is_rgb else 'GRAYSCALE'} (avg channel diff: {avg_channel_diff:.2f})")
+				return is_rgb
+			else:
+				print(f"  Result: GRAYSCALE (single channel or wrong shape)")
+				return False
+		except Exception as e:
+			print(f"  ERROR: {e}")
+			return False
+	
+	# Test original image
+	test_image_is_rgb("Girl_with_a_Pearl_Earring.jpg")
+	
+	# Test reference image  
+	test_image_is_rgb("reference.jpg")
+	
+	# Test generated images
+	test_image_is_rgb("instantngp_outputs/initial.jpg")
+	test_image_is_rgb("instantngp_outputs/after_100_iterations.jpg")
+	
+	print("="*60)
 
 	tcnn.free_temporary_memory()

@@ -22,13 +22,12 @@
 # STRICT LIABILITY, OR TOR (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# @file   mlp_learning_an_image_pytorch.py
-# @author Thomas Müller, NVIDIA
-# @brief  Replicates the behavior of the CUDA mlp_learning_an_image.cu sample
-#         using tiny-cuda-nn's PyTorch extension. Runs ~2x slower than native.
+# @file   instantngp_girl_timed.py
+# @author Based on Thomas Müller's mlp_learning_an_image_pytorch.py
+# @brief  Time-based image reconstruction for performance comparison
 
 import argparse
-import commentjson as json
+import json
 import numpy as np
 import os
 import sys
@@ -56,9 +55,9 @@ def read_image(filename):
     return np.array(img).astype(np.float32) / 255.0
 
 def write_image(filename, img_array):
-    """Write numpy array to image file"""
+    """Write numpy array to image file with explicit RGB mode"""
     img_array = np.clip(img_array * 255.0, 0, 255).astype(np.uint8)
-    img = PILImage.fromarray(img_array)
+    img = PILImage.fromarray(img_array, mode='RGB')
     img.save(filename)
 
 class Image(torch.nn.Module):
@@ -103,8 +102,8 @@ def get_args():
 
 if __name__ == "__main__":
 	print("================================================================")
-	print("This script replicates the behavior of the native CUDA example  ")
-	print("mlp_learning_an_image.cu using tiny-cuda-nn's PyTorch extension.")
+	print("InstantNGP Performance Test - Girl with a Pearl Earring")
+	print("Time-based Image Reconstruction (250ms intervals)")
 	print("================================================================")
 
 	print(f"Using PyTorch version {torch.__version__} with CUDA {torch.version.cuda}")
@@ -120,6 +119,8 @@ if __name__ == "__main__":
 	with open(config_path) as config_file:
 		config = json.load(config_file)
 
+	# Load image
+	print(f"Loading image: {image_path}")
 	image = Image(image_path, device)
 	n_channels = image.data.shape[2]
 
@@ -127,14 +128,6 @@ if __name__ == "__main__":
 	
 	print(model)
 	print("Using modern tiny-cuda-nn with automatic kernel optimization.")
-
-	#===================================================================================================
-	# The following is equivalent to the above, but slower. Only use "naked" tcnn.Encoding and
-	# tcnn.Network when you don't want to combine them. Otherwise, use tcnn.NetworkWithInputEncoding.
-	#===================================================================================================
-	# encoding = tcnn.Encoding(n_input_dims=2, encoding_config=config["encoding"])
-	# network = tcnn.Network(n_input_dims=encoding.n_output_dims, n_output_dims=n_channels, network_config=config["network"])
-	# model = torch.nn.Sequential(encoding, network)
 
 	optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 
@@ -156,10 +149,7 @@ if __name__ == "__main__":
 	write_image(path, image(xy).reshape(img_shape).detach().cpu().numpy())
 	print("done.")
 
-	prev_time = time.perf_counter()
-
 	batch_size = 2**22  # 4,194,304 - Optimized for RTX A6000 (47.4 GB VRAM)
-	interval = 100  # Print every 100 iterations
 
 	print(f"Beginning optimization with {args.n_steps} training steps.")
 	print(f"Using optimized batch size: {batch_size:,} samples")
@@ -173,11 +163,22 @@ if __name__ == "__main__":
 		print(f"WARNING: PyTorch JIT trace failed. Performance will be slightly worse than regular.")
 		traced_image = image
 
-	# Override for testing
-	args.n_steps = 1000
-
-
-	for i in trange(args.n_steps, ncols=80):
+	# Create output directory and clear it
+	import shutil
+	if os.path.exists("instantngp_outputs"):
+		shutil.rmtree("instantngp_outputs")
+	os.makedirs("instantngp_outputs", exist_ok=True)
+	print("Cleared and created output directory: instantngp_outputs/")
+	
+	print("PHASE 1: Calibration - measuring iterations per 250ms without I/O...")
+	
+	# Calibration phase - pure training for 10 seconds to measure iteration rate
+	calibration_start = time.perf_counter()
+	calibration_iterations = []
+	calibration_times = []
+	i = 0
+	
+	while time.perf_counter() - calibration_start < 10.0:
 		batch = torch.rand([batch_size, 2], device=device, dtype=torch.float32)
 		targets = traced_image(batch)
 		output = model(batch)
@@ -188,23 +189,89 @@ if __name__ == "__main__":
 		optimizer.zero_grad()
 		loss.backward()
 		optimizer.step()
-
-	loss_val = loss.item()
-	torch.cuda.synchronize()
-	elapsed_time = time.perf_counter() - prev_time
-	print(f"Step#{i}: loss={loss_val} time={int(elapsed_time*1000)}[ms]")
-
-	path = f"tmp/{i}.jpg"
+		
+		current_time = time.perf_counter()
+		elapsed_time = current_time - calibration_start
+		
+		# Record every 250ms
+		if len(calibration_times) == 0 or elapsed_time >= (len(calibration_times) * 0.25):
+			calibration_iterations.append(i)
+			calibration_times.append(elapsed_time)
+			print(f"Calibration: {elapsed_time:.3f}s = iteration {i}")
+		
+		i += 1
+	
+	print(f"Calibration completed: {i} iterations in 10 seconds")
+	print(f"Save points (250ms intervals): {calibration_iterations}")
+	
+	print("\nPHASE 2: Training with iteration-based saving...")
+	
+	# Reset model for actual training
+	model = tcnn.NetworkWithInputEncoding(n_input_dims=2, n_output_dims=n_channels, encoding_config=config["encoding"], network_config=config["network"]).to(device)
+	optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+	
+	start_time = time.perf_counter()
+	total_training_time = 0.0
+	save_counter = 0
+	i = 0
+	
+	# Save initial state (t=0)
+	path = f"instantngp_outputs/time_000_000ms.jpg"
 	print(f"Writing '{path}'... ", end="")
 	with torch.no_grad():
 		write_image(path, model(xy).reshape(img_shape).clamp(0.0, 1.0).detach().cpu().numpy())
 	print("done.")
+	save_counter += 1
+	
+	# Training loop with iteration-based saving
+	max_iterations = calibration_iterations[-1] if calibration_iterations else 1000
+	
+	while i <= max_iterations:
+		# Pure training step
+		train_start = time.perf_counter()
+		
+		batch = torch.rand([batch_size, 2], device=device, dtype=torch.float32)
+		targets = traced_image(batch)
+		output = model(batch)
 
-	# # Ignore the time spent saving the image
-	# prev_time = time.perf_counter()
+		relative_l2_error = (output - targets.to(output.dtype))**2 / (output.detach()**2 + 0.01)
+		loss = relative_l2_error.mean()
 
-	# if i > 65 and interval < 1000:
-	# 	interval *= 10
+		optimizer.zero_grad()
+		loss.backward()
+		optimizer.step()
+		
+		total_training_time += time.perf_counter() - train_start
+		
+		# Check if we hit a save point
+		if save_counter < len(calibration_iterations) and i == calibration_iterations[save_counter]:
+			wall_time = time.perf_counter() - start_time
+			expected_ms = save_counter * 250
+			
+			print(f"Iteration {i}: Expected {expected_ms}ms, Training time: {total_training_time:.3f}s, loss={loss.item():.6f}")
+			
+			# Save image
+			path = f"instantngp_outputs/time_{save_counter:03d}_{expected_ms:04d}ms.jpg"
+			print(f"Writing '{path}'... ", end="")
+			with torch.no_grad():
+				write_image(path, model(xy).reshape(img_shape).clamp(0.0, 1.0).detach().cpu().numpy())
+			print("done.")
+			
+			save_counter += 1
+		
+		i += 1
+
+	total_wall_time = time.perf_counter() - start_time
+	print(f"\n================================================================")
+	print(f"TRAINING COMPLETED")
+	print(f"================================================================")
+	print(f"Wall time: {total_wall_time:.3f}s")
+	print(f"Pure training time: {total_training_time:.3f}s") 
+	print(f"Total iterations: {i}")
+	print(f"Training efficiency: {total_training_time/total_wall_time*100:.1f}% (rest is I/O overhead)")
+	print(f"Images saved: {save_counter} (every 250ms from 0ms to {int((save_counter-1)*250)}ms)")
+	print(f"Output directory: instantngp_outputs/")
+	print(f"================================================================")
 
 	if args.result_filename:
 		print(f"Writing '{args.result_filename}'... ", end="")
