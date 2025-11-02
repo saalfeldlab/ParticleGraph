@@ -204,6 +204,8 @@ def data_train_particle(config, erase, best_model, device):
     else:
         start_epoch = 0
         net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs.pt"
+    if 'PDE_K' in model_config.particle_model_name:
+        model.connection_matrix = torch.load(f'graphs_data/{dataset_name}/connection_matrix_list.pt', map_location=device)
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -450,9 +452,6 @@ def data_train_particle(config, erase, best_model, device):
                 else:
                     loss = loss + (x_pos_pred - y_batch).norm(2)
 
-            # matplotlib.use("Qt5Agg")
-            # fig = plt.figure()
-            # plt.scatter(to_numpy(y_batch), to_numpy(pred), s=1, c='k',alpha=0.1)
 
             loss.backward()
             optimizer.step()
@@ -462,16 +461,6 @@ def data_train_particle(config, erase, best_model, device):
 
             if has_ghost_particles:
                 optimizer_ghost_particles.step()
-
-                # if False:
-                for name, param in model.lin_edge.named_parameters():
-                    if param.requires_grad:
-                        print(f"Gradient of {name}: {param.grad}")
-            #     for name, param in model.lin_edge.named_parameters():
-            #         if param.requires_grad:
-            #             print(f"{name}: {param.data}")
-            # end = time.time()
-            # print(f"iter time: {end - start:.4f} seconds")
 
             total_loss += loss.item()
 
@@ -4463,8 +4452,7 @@ def data_test_particles(config=None, config_file=None, visualize=False, style='c
         model.eval()
         mesh_model = None
         if 'PDE_K' in model_config.particle_model_name:
-            model.connection_matrix = torch.load(f'graphs_data/{dataset_name}/connection_matrix_list.pt',
-                                                 map_location=device)
+            model.connection_matrix = torch.load(f'graphs_data/{dataset_name}/connection_matrix_list.pt', map_location=device)
             timeit = np.load(f'graphs_data/{dataset_name}/times_train_springs_example.npy',
                              allow_pickle=True)
             timeit = timeit[run][0]
