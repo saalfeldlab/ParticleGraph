@@ -704,7 +704,6 @@ def data_generate_particle(
     #     logger.removeHandler(handler)
 
 
-
 def data_generate_particle_field(
     config,
     visualize=True,
@@ -776,8 +775,12 @@ def data_generate_particle_field(
         os.remove(f)
     copyfile(os.path.realpath(__file__), os.path.join(folder, "generation_code.py"))
 
-    if "calculus" in model_config.field_type:
-        model, bc_pos, bc_dpos = choose_model(config=config, device=device)
+
+    if "diffusiophoretics" in model_config.field_type:
+        model_p_p, bc_pos, bc_dpos = choose_model(config=config, device=device)
+        model_f_f = choose_mesh_model(config, device=device)
+
+        
     else:
         model_p_p, bc_pos, bc_dpos = choose_model(config=config, device=device)
         model_f_p = model_p_p
@@ -881,14 +884,8 @@ def data_generate_particle_field(
             x_particle_field = torch.concatenate((x_mesh, x), dim=0)
 
             # model prediction
-            if "calculus" in model_config.field_type:
-                distance = torch.sum(
-                    bc_dpos(
-                        x[:, None, 1 : dimension + 1] - x[None, :, 1 : dimension + 1]
-                    )
-                    ** 2,
-                    dim=2,
-                )
+            if "diffusiophoretic" in model_config.field_type:       #
+                distance = torch.sum(bc_dpos(x[:, None, 1 : dimension + 1] - x[None, :, 1 : dimension + 1])** 2,dim=2)
                 adj_t = ((distance < max_radius**2) & (distance >= 0)).float() * 1
                 edge_index = adj_t.nonzero().t().contiguous()
                 # pos = torch.argwhere(edge_index[0, :] > 2000)
@@ -899,21 +896,13 @@ def data_generate_particle_field(
                 # y = y + torch.randn(y.shape, device=device) * 0.001
                 y0 = y.clone().detach()
                 y1 = y.clone().detach()
-
                 if bounce:
                     V1[0 : n_particles // n_particle_types] = 0
                     y[0 : n_particles // n_particle_types] = 0
-
                 density = model.density
 
             else:
-                distance = torch.sum(
-                    bc_dpos(
-                        x[:, None, 1 : dimension + 1] - x[None, :, 1 : dimension + 1]
-                    )
-                    ** 2,
-                    dim=2,
-                )
+                distance = torch.sum(bc_dpos(x[:, None, 1 : dimension + 1] - x[None, :, 1 : dimension + 1])** 2,dim=2)
                 adj_t = (
                     (distance < max_radius**2) & (distance > min_radius**2)
                 ).float() * 1
@@ -1009,6 +998,7 @@ def data_generate_particle_field(
                     V1 += y * delta_t
                 else:
                     V1 = y
+
                 if bounce:
                     # V1 = V1 * 0.999
                     X1 = X1 + V1 * delta_t
@@ -1030,8 +1020,7 @@ def data_generate_particle_field(
                 A1 = A1 + 1
 
             # Mesh update
-
-            if "calculus" not in model_config.field_type:
+            if "diffusiophoretic" in model_config.field_type:
                 x_mesh_list.append(x_mesh.clone().detach())
                 pred = x_mesh[:, 6:7]
                 y_mesh_list.append(pred)
