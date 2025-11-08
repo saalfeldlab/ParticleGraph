@@ -59,6 +59,8 @@ def choose_model(config=[], W=[], device=[]):
             model = PDE_B_mass(aggr_type=aggr_type, p=p, final_mass = final_cell_mass, bc_dpos=bc_dpos)
         case 'PDE_B_bis':
             model = PDE_B_bis(aggr_type=aggr_type, p=p, bc_dpos=bc_dpos)
+        case 'PDE_D' | 'PDE_ParticleField_D' | 'PDE_Cell_D' :
+            model = PDE_D(aggr_type=aggr_type, p=p, bc_dpos=bc_dpos, dimension=dimension)
         case 'PDE_G':
             if params[0] == [-1]:
                 p = np.linspace(0.5, 5, n_particle_types)
