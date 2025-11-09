@@ -15,26 +15,27 @@ class PDE_D(pyg.nn.MessagePassing):
         self.bc_dpos = bc_dpos
         self.dimension = dimension
         
-        if p is not None:
-            # Diffusiophoretic parameters
-            self.M1 = p[0, 5]       # Mobility coefficient for C₁
-            self.M2 = p[1, 1]       # Mobility coefficient for C₂
-            
-            # Particle effects on fields
-            self.consumption_rate = p[2, 1]
-            self.production_rate = p[2, 2]
-            self.influence_radius = p[2, 3]
-            
-            # Péclet number
-            self.Pe = p[2, 0]
-            
-            # Particle-particle repulsion parameters
-            self.repulsion_strength = 0.005
-            self.repulsion_range = 0.025
-            
-            print(f"Initialized PDE_D with parameters:")
-            print(f"Mobility: M₁={self.M1.item()}, M₂={self.M2.item()}")
-            print(f"Pe={self.Pe.item()}")
+
+        # Diffusiophoretic parameters
+        self.M1 = p[0, 5]       # Mobility coefficient for C₁
+        self.M2 = p[1, 1]       # Mobility coefficient for C₂
+        
+        # Particle effects on fields
+        self.consumption_rate = p[2, 1]
+        self.production_rate = p[2, 2]
+        self.influence_radius = p[2, 3]
+        
+        # Péclet number
+        self.Pe = p[2, 0]
+        
+        # Particle-particle repulsion parameters
+        self.repulsion_strength = 0.005
+        self.repulsion_range = 0.025
+        
+        print(f"Initialized PDE_D with parameters:")
+        print(f"Mobility: M₁={self.M1.item()}, M₂={self.M2.item()}")
+        print(f"Pe={self.Pe.item()}")
+        print(f"Particle→Field: consumption={self.consumption_rate.item()}, production={self.production_rate.item()}, influence_radius={self.influence_radius.item()}")
     
     def forward(self, data, direction='fp'):
         """

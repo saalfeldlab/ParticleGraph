@@ -827,6 +827,8 @@ def data_generate_particle_field(
             C2 = C2_0 + noise_amplitude * (2*torch.rand(n_nodes, 1, device=device) - 1) * C2_0
             H1_mesh[:, 0:1] = C1
             H1_mesh[:, 1:2] = C2
+            H1_mesh[mask_mesh == 0.0,0:1] = C1_0
+            H1_mesh[mask_mesh == 0.0,1:2] = C2_0
 
         H1_mesh = torch.clamp(H1_mesh, min=0.0)
         torch.save(mesh_data, f"graphs_data/{dataset_name}/mesh_data_{run}.pt")
@@ -948,27 +950,29 @@ def data_generate_particle_field(
                     device=device,
                 )
                 
-            with torch.no_grad():
-                # Calculate particle-particle repulsion
-                y0 = model_p_f(dataset_p_p, direction='pp')
-                
-                # Calculate diffusiophoretic velocities  
-                y1 = model_p_f(dataset_f_p, direction='fp')[n_nodes:]
-                
-                # Start with just diffusiophoresis to test
-                y = y0 * 0.1 + y1  # Small repulsion, full diffusiophoresis
-                
-                # Add small Brownian noise
-                Pe = model_p_f.Pe
-                diffusion_noise = 0.01 * torch.randn_like(y) * torch.sqrt(torch.tensor(delta_t, device=device)) / torch.sqrt(Pe)
-                y = y + diffusion_noise
-                
-                # Field updates with particle feedback
-                y2 = model_f_f(dataset_mesh)
-                y3 = model_p_f(dataset_p_f, direction='pf')[:n_nodes]
-                y_mesh = y2 + y3 * 0.1  # Start with weak particle→field coupling
+                with torch.no_grad():
+                    # Calculate particle-particle repulsion
+                    y0 = model_p_f(dataset_p_p, direction='pp')
+                    
+                    # Calculate diffusiophoretic velocities  
+                    y1 = model_p_f(dataset_f_p, direction='fp')[n_nodes:]
+                    
+                    # Start with just diffusiophoresis to test
+                    y = y0 + y1  # Small repulsion, full diffusiophoresis
+                    
+                    # Add small Brownian noise
+                    Pe = model_p_f.Pe
+                    diffusion_noise = 0.01 * torch.randn_like(y) * torch.sqrt(torch.tensor(delta_t, device=device)) / torch.sqrt(Pe)
+                    y = y + diffusion_noise
+                    
+                    # Field updates with particle feedback
+                    y2 = model_f_f(dataset_mesh)
+                    y3 = model_p_f(dataset_p_f, direction='pf')[:n_nodes]
+                    y_mesh = y2 + y3  # Start with weak particle→field coupling
+
 
             else:
+
                 distance = torch.sum(bc_dpos(x[:, None, 1 : dimension + 1] - x[None, :, 1 : dimension + 1])** 2,dim=2)
                 adj_t = (
                     (distance < max_radius**2) & (distance > min_radius**2)
@@ -1105,7 +1109,7 @@ def data_generate_particle_field(
 
 
             if "diffusiophoresis" in model_config.field_type:
-                    if (it % 100 == 0) or (it < 10):
+                    if (it % 100 == 0) or (it < 500):
                         
                         # Field metrics
                         C1_mean, C1_std = x_mesh[:, 6].mean().item(), x_mesh[:, 6].std().item()
@@ -1125,14 +1129,14 @@ def data_generate_particle_field(
                         
                         # Field gradients at particle locations
                         grad_C2 = torch.zeros_like(particle_pos)
-                        if 'y1' in locals():
-                            diffusio_mag = torch.norm(y1, dim=1).mean().item()
-                        else:
-                            diffusio_mag = 0
+
+                        diffusio_mag1 = torch.norm(y2, dim=1).mean().item()
+                        diffusio_mag2 = torch.norm(y3, dim=1).mean().item()
+
                             
                         print(f"\n[It {it:4d}] FIELDS: C₂ μ={C2_mean:.3f}±{C2_std:.3f} | Pattern: {pattern_growth:.1f}x")
                         print(f"         PARTICLES: vel={vel_mean:.6f} (max={vel_max:.4f}) | clustering={clustering:.3f}")
-                        print(f"         FORCES: diffusio={diffusio_mag:.6f} | repulsion={y0.norm(dim=1).mean().item() if 'y0' in locals() else 0:.6f}")
+                        print(f"         DIFFUSION: {diffusio_mag1:.6f} (field) + {diffusio_mag2:.6f} (particles)")
                         
                         # Check if particles are moving toward high C2 regions
                         if it > 0 and it % 500 == 0:
@@ -1367,8 +1371,8 @@ def data_generate_particle_field(
                         ax4.arrow(
                             x=to_numpy(x[n, 1]),  # x position
                             y=to_numpy(x[n, 2]),  # y position
-                            dx=to_numpy(V1_[n, 0]),  # x component of velocity
-                            dy=to_numpy(V1_[n, 1]),  # y component of velocity
+                            dx=to_numpy(V1_[n, 0]* delta_t),  # x component of velocity
+                            dy=to_numpy(V1_[n, 1]* delta_t),  # y component of velocity
                             color=cmap.color(type_list[n].astype(int)),
                             head_width=0.01,
                             length_includes_head=True,
