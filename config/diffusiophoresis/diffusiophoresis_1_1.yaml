@@ -3,22 +3,33 @@ dataset: 'diffusiophoresis_1'
 
 simulation:
   params: [[1.6233, 1.0413, 1.6012, 1.5615], [1.7667, 1.8308, 1.0855, 1.9055],  [1.7226, 1.7850, 1.0584, 1.8579]]
+
+  params_mesh: [
+    [0.01, 0.5, 2.0, 2.0, 0.04, -0.1],  # D1, Da_c(↓), A(↑), B(↓), mu, M1 
+    [0.001, 0.1, 0.0, 0.0, 0.0, 0.0],   # D2, M2, (padding with zeros)
+    [10.0, 0.05, 0.05, 1.5, 0.0, 0.0]   # Pe, consumption_rate, production_rate, influence_radius(↓), (padding with zeros)
+  ]
   min_radius: 0
   max_radius: 0.075
-  n_particles: 4800
-  n_particle_types: 3
-  n_frames: 1000
+  n_particles: 9600
+  n_particle_types: 1
+  n_frames: 10000
+  n_nodes: 10000
+  n_node_types:  1
   sigma: 0.005
-  delta_t: 0.1
+  delta_t: 0.01
   dpos_init: 0
   boundary: 'periodic'
 
+  node_value_map: 'input_data/pattern_Null.tif'
+  node_coeff_map: ''
+
 graph_model:
 
-  field_type: 'voronoi'
+  field_type: 'diffusiophoresis'
 
   particle_model_name: 'PDE_ParticleField_D'
-  mesh_model_name: 'RDMesh'
+  mesh_model_name: 'Diffusiophoresis_Mesh'
 
   prediction: 'first_derivative'
   input_size: 5

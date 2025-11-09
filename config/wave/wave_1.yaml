@@ -8,7 +8,7 @@ simulation:
   diffusion_coefficients: [[0],[0.6],[0.8],[1],[0.4]]
   n_particles: 10000
   n_particle_types: 5
-  n_interactions: 5
+
   n_nodes: 10000
   n_node_types:  5
   n_frames: 8000
@@ -21,9 +21,6 @@ simulation:
   start_frame: 0
 
 graph_model:
-
-  field_type: 'voronoi'
-
   particle_model_name: ''
   mesh_model_name: 'WaveMesh'
   prediction: '2nd_derivative'

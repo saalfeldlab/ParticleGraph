@@ -43,14 +43,6 @@ class SimulationConfig(BaseModel):
     dpos_init: float = 0
     len_directed_edges: int = 1
 
-    MPM_expansion_factor: float = 1.0
-    MPM_n_objects: int = 9
-    MPM_object_type: Literal['cubes', 'discs', 'spheres', 'stars', 'letters'] = 'cubes'
-    MPM_gravity: float = -50
-    MPM_rho_list: list[float] = [1.0, 1.0, 1.0]
-    MPM_friction: float = 0.0
-    MPM_young_coeff : float = 1.0
-
     diffusion_coefficients: list[list[float]] = None
 
     angular_sigma: float = 0
@@ -85,7 +77,8 @@ class SimulationConfig(BaseModel):
     excitation_value_map: Optional[str] = None
     excitation: str = "none"
 
-    params: list[list[float]]
+    params: list[list[float]] = None
+    params_mesh: list[list[float]] = None
     func_params: list[tuple] = None
 
     phi: str = "tanh"

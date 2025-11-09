@@ -63,6 +63,7 @@ if __name__ == "__main__":
         # config_list = ['cell_MDCK_17_2']
         # config_list = ['rat_city_1']
         config_list = ['diffusiophoresis_1_1']
+        # config_list = ['arbitrary_3_field_triangles']
 
     for config_file_ in config_list:
         print(" ")
@@ -86,7 +87,7 @@ if __name__ == "__main__":
                 alpha=1,
                 erase=False,
                 bSave=True,
-                step=50
+                step=5
             )  # config.simulation.n_frames // 100)
             
         if "train" in task:

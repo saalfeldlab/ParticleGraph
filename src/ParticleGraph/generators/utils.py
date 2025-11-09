@@ -1,4 +1,3 @@
-
 from ParticleGraph.generators import *
 from ParticleGraph.utils import *
 from time import sleep
@@ -13,6 +12,7 @@ from scipy.spatial import cKDTree
 import subprocess
 import os
 import glob
+from ParticleGraph.models import PDE_Diffusiophoresis
 
 def choose_model(config=[], W=[], device=[]):
     particle_model_name = config.graph_model.particle_model_name
@@ -60,6 +60,8 @@ def choose_model(config=[], W=[], device=[]):
         case 'PDE_B_bis':
             model = PDE_B_bis(aggr_type=aggr_type, p=p, bc_dpos=bc_dpos)
         case 'PDE_D' | 'PDE_ParticleField_D' | 'PDE_Cell_D' :
+            params_mesh = config.simulation.params_mesh
+            p = torch.tensor(params_mesh, dtype=torch.float32, device=device).squeeze()
             model = PDE_D(aggr_type=aggr_type, p=p, bc_dpos=bc_dpos, dimension=dimension)
         case 'PDE_G':
             if params[0] == [-1]:
@@ -147,13 +149,12 @@ def choose_mesh_model(config, X1_mesh, device):
 
         if config.simulation.node_coeff_map !='' :
             i0 = imread(f'graphs_data/{config.simulation.node_coeff_map}')
+            i0 = np.flipud(i0)
+            values = i0[(to_numpy(X1_mesh[:, 1]) * 255).astype(int), (to_numpy(X1_mesh[:, 0]) * 255).astype(int)]
+            values = np.reshape(values,len(X1_mesh))
+            values = torch.tensor(values, device=device, dtype=torch.float32)[:, None]
         else:
-            i0 = imread(f'graphs_data/pattern_Null.tif')
-        i0 = np.flipud(i0)
-        values = i0[(to_numpy(X1_mesh[:, 1]) * 255).astype(int), (to_numpy(X1_mesh[:, 0]) * 255).astype(int)]
-        values = values
-        values = np.reshape(values,len(X1_mesh))
-        values = torch.tensor(values, device=device, dtype=torch.float32)[:, None]
+            values = torch.ones((X1_mesh.shape[0],1), device=device)
 
 
         match mesh_model_name:
@@ -163,6 +164,10 @@ def choose_mesh_model(config, X1_mesh, device):
                 mesh_model = RD_FitzHugh_Nagumo(aggr_type=aggr_type, c=torch.squeeze(c), bc_dpos=bc_dpos)
             case 'RD_Mesh':
                 mesh_model = RD_RPS(aggr_type=aggr_type, bc_dpos=bc_dpos, coeff=values)
+            case 'Diffusiophoresis_Mesh':
+                params_mesh = config.simulation.params_mesh
+                p = torch.tensor(params_mesh, dtype=torch.float32, device=device).squeeze()
+                mesh_model = PDE_Diffusiophoresis(aggr_type=aggr_type, bc_dpos=bc_dpos, p=p)
             case 'DiffMesh' | 'WaveMesh':
                 mesh_model = PDE_Laplacian(aggr_type=aggr_type, bc_dpos=bc_dpos, coeff=values)
             case 'WaveSmoothParticle':
@@ -442,659 +447,6 @@ def get_equidistant_3D_points(n_points=1024):
     return x, y, z
 
 
-def init_MPM_3D_shapes(
-        geometry='cubes',  # 'cubes', 'spheres', or 'stars'
-        n_shapes=3,
-        seed=42,
-        n_particles=[],
-        n_particle_types=[],
-        n_grid=[],
-        dx=[],
-        rho_list=[],
-        device='cpu'
-):
-    torch.manual_seed(seed)
-
-    # 3D volume instead of 2D area
-    p_vol = (dx * 0.5) ** 3
-
-    N = torch.arange(n_particles, dtype=torch.float32, device=device)[:, None]
-    x = torch.zeros((n_particles, 3), dtype=torch.float32, device=device)  # 3D positions
-    v = torch.zeros((n_particles, 3), dtype=torch.float32, device=device)  # 3D velocities (will be set to random)
-    C = torch.zeros((n_particles, 3, 3), dtype=torch.float32, device=device)  # 3x3 affine matrix
-    F = torch.eye(3, dtype=torch.float32, device=device).unsqueeze(0).expand(n_particles, -1,
-                                                                             -1)  # 3x3 deformation gradient
-    T = torch.ones((n_particles, 1), dtype=torch.int32, device=device)
-    Jp = torch.ones((n_particles, 1), dtype=torch.float32, device=device)
-    S = torch.zeros((n_particles, 3, 3), dtype=torch.float32, device=device)  # 3x3 stress tensor
-
-    group_size = n_particles // n_shapes
-    group_indices = torch.arange(n_particles, device=device) // group_size
-
-    # Generate random rotations for each shape (3D Euler angles)
-    shape_rotations_x = torch.rand(n_shapes, device=device) * 2 * torch.pi  # Roll
-    shape_rotations_y = torch.rand(n_shapes, device=device) * 2 * torch.pi  # Pitch
-    shape_rotations_z = torch.rand(n_shapes, device=device) * 2 * torch.pi  # Yaw
-
-    # Determine 3D grid layout and spacing
-    if n_shapes == 8:
-        # 2x2x2 cube
-        shape_depth = group_indices // 4
-        temp = group_indices % 4
-        shape_row = temp // 2
-        shape_col = temp % 2
-        size = 0.15
-        spacing_x = spacing_y = spacing_z = 0.4
-        start_x = start_y = start_z = 0.2
-    elif n_shapes == 27:
-        # 3x3x3 cube
-        shape_depth = group_indices // 9
-        temp = group_indices % 9
-        shape_row = temp // 3
-        shape_col = temp % 3
-        size = 0.08
-        spacing_x = spacing_y = spacing_z = 0.25
-        start_x = start_y = start_z = 0.15
-    else:
-        # General case: try to make a cubic grid
-        grid_size = int(round(n_shapes ** (1 / 3)))
-        if grid_size ** 3 < n_shapes:
-            grid_size += 1
-
-        shape_depth = group_indices // (grid_size * grid_size)
-        temp = group_indices % (grid_size * grid_size)
-        shape_row = temp // grid_size
-        shape_col = temp % grid_size
-
-        size = 0.3 / (grid_size + 1)
-        spacing_x = spacing_y = spacing_z = 0.6 / grid_size
-        start_x = start_y = start_z = 0.2
-
-    # Calculate center positions for each shape
-    center_x = start_x + shape_col.float() * spacing_x
-    center_y = start_y + shape_row.float() * spacing_y
-    center_z = start_z + shape_depth.float() * spacing_z
-
-    # Create 3D rotation matrices for each shape
-    def create_rotation_matrix(roll, pitch, yaw):
-        """Create 3D rotation matrix from Euler angles"""
-        cos_r, sin_r = torch.cos(roll), torch.sin(roll)
-        cos_p, sin_p = torch.cos(pitch), torch.sin(pitch)
-        cos_y, sin_y = torch.cos(yaw), torch.sin(yaw)
-
-        # Rotation matrices for each axis
-        R_x = torch.stack([
-            torch.stack([torch.ones_like(roll), torch.zeros_like(roll), torch.zeros_like(roll)]),
-            torch.stack([torch.zeros_like(roll), cos_r, -sin_r]),
-            torch.stack([torch.zeros_like(roll), sin_r, cos_r])
-        ])
-
-        R_y = torch.stack([
-            torch.stack([cos_p, torch.zeros_like(pitch), sin_p]),
-            torch.stack([torch.zeros_like(pitch), torch.ones_like(pitch), torch.zeros_like(pitch)]),
-            torch.stack([-sin_p, torch.zeros_like(pitch), cos_p])
-        ])
-
-        R_z = torch.stack([
-            torch.stack([cos_y, -sin_y, torch.zeros_like(yaw)]),
-            torch.stack([sin_y, cos_y, torch.zeros_like(yaw)]),
-            torch.stack([torch.zeros_like(yaw), torch.zeros_like(yaw), torch.ones_like(yaw)])
-        ])
-
-        # Combined rotation: R = R_z @ R_y @ R_x
-        R = torch.matmul(torch.matmul(R_z.permute(2, 0, 1), R_y.permute(2, 0, 1)), R_x.permute(2, 0, 1))
-        return R
-
-    rotation_matrices = create_rotation_matrix(shape_rotations_x, shape_rotations_y, shape_rotations_z)
-
-    # Generate particles within each shape
-    if geometry == 'cubes':
-        # Generate particles in cubic volumes with rotation
-        particles_per_dim = int(round((group_size) ** (1 / 3)))
-        if particles_per_dim ** 3 < group_size:
-            particles_per_dim += 1
-
-        for shape_idx in range(n_shapes):
-            start_idx = shape_idx * group_size
-            end_idx = min(start_idx + group_size, n_particles)
-            actual_particles = end_idx - start_idx
-
-            # Generate relative positions in cube
-            rel_positions = torch.zeros((actual_particles, 3), device=device)
-            for i in range(actual_particles):
-                # 3D indexing within cube
-                z_idx = i // (particles_per_dim * particles_per_dim)
-                temp = i % (particles_per_dim * particles_per_dim)
-                y_idx = temp // particles_per_dim
-                x_idx = temp % particles_per_dim
-
-                # Normalize to [-0.5, 0.5] range then scale
-                local_x = (x_idx / max(particles_per_dim - 1, 1) - 0.5) * size
-                local_y = (y_idx / max(particles_per_dim - 1, 1) - 0.5) * size
-                local_z = (z_idx / max(particles_per_dim - 1, 1) - 0.5) * size
-
-                rel_positions[i] = torch.tensor([local_x, local_y, local_z], device=device)
-
-            # Apply 3D rotation
-            rotated_positions = torch.matmul(rel_positions, rotation_matrices[shape_idx].T)
-
-            # Add center position
-            x[start_idx:end_idx, 0] = center_x[start_idx] + rotated_positions[:, 0]
-            x[start_idx:end_idx, 1] = center_y[start_idx] + rotated_positions[:, 1]
-            x[start_idx:end_idx, 2] = center_z[start_idx] + rotated_positions[:, 2]
-
-    elif geometry == 'spheres':
-        # Generate particles in spherical volumes using equidistant distribution
-        for shape_idx in range(n_shapes):
-            start_idx = shape_idx * group_size
-            end_idx = min(start_idx + group_size, n_particles)
-            actual_particles = end_idx - start_idx
-
-            # Get equidistant points in unit sphere
-            sphere_x, sphere_y, sphere_z = get_equidistant_3D_points(actual_particles)
-
-            # Convert to torch tensors and move to device
-            sphere_points = torch.stack([
-                torch.from_numpy(sphere_x).float(),
-                torch.from_numpy(sphere_y).float(),
-                torch.from_numpy(sphere_z).float()
-            ], dim=1).to(device)
-
-            # Apply 3D rotation
-            rotated_positions = torch.matmul(sphere_points, rotation_matrices[shape_idx].T)
-
-            # Scale by size and translate to shape center
-            shape_center = torch.tensor([center_x[start_idx], center_y[start_idx], center_z[start_idx]], device=device)
-            x[start_idx:end_idx] = shape_center + rotated_positions * size * 0.75
-
-    elif geometry == 'stars':
-        # Generate 3D stars
-        outer_radius = size
-        inner_radius = outer_radius * 0.4
-        n_points = 5  # 5-pointed stars
-
-        for shape_idx in range(n_shapes):
-            start_idx = shape_idx * group_size
-            end_idx = min(start_idx + group_size, n_particles)
-            actual_particles = end_idx - start_idx
-
-            # Adaptive layers based on particle count for this shape
-            n_layers = min(10, max(3, actual_particles // 50))
-
-            shape_center = torch.tensor([center_x[start_idx], center_y[start_idx], center_z[start_idx]], device=device)
-
-            # Ensure we have enough particles per layer
-            particles_per_layer = max(1, actual_particles // n_layers)
-            star_particles = []
-
-            for layer_idx in range(n_layers):
-                # Z position for this layer - make stars flatter by reducing z-extent
-                z_progress = layer_idx / max(n_layers - 1, 1)  # 0 to 1
-                local_z = (z_progress - 0.5) * size * 0.3  # Reduced from size to size * 0.3 for flatter stars
-
-                # Vary radius to create 3D star shape (double cone/spindle)
-                # Maximum radius at center, tapering to points at ends
-                layer_radius_scale = 1.0 - 2 * abs(z_progress - 0.5)  # Diamond profile
-                layer_radius_scale = max(layer_radius_scale, 0.1)  # Minimum scale
-
-                layer_outer_radius = outer_radius * layer_radius_scale
-                layer_inner_radius = inner_radius * layer_radius_scale
-
-                # Create 5-pointed star vertices for this layer
-                star_angles = torch.linspace(0, 2 * torch.pi, n_points * 2 + 1, device=device)[:-1]
-                star_radii = torch.zeros_like(star_angles)
-                star_radii[::2] = layer_outer_radius  # Outer points
-                star_radii[1::2] = layer_inner_radius  # Inner points
-
-                # Create star vertices for this layer
-                star_x = star_radii * torch.cos(star_angles)
-                star_y = star_radii * torch.sin(star_angles)
-
-                # Calculate particles for this layer
-                if layer_idx == n_layers - 1:
-                    # Last layer gets remaining particles
-                    layer_particles = actual_particles - len(star_particles)
-                else:
-                    layer_particles = particles_per_layer
-
-                # Ensure we have at least some particles per triangle
-                particles_per_triangle = max(1,
-                                             layer_particles // (n_points * 2))  # Split between two triangles per point
-
-                particles_added_this_layer = 0
-
-                for i in range(n_points):
-                    if particles_added_this_layer >= layer_particles:
-                        break
-
-                    # Each star triangle: center -> outer point -> inner point -> next outer point
-                    p1_x, p1_y, p1_z = 0.0, 0.0, local_z  # Center of this layer
-                    p2_x, p2_y, p2_z = star_x[i * 2].item(), star_y[i * 2].item(), local_z  # Outer point
-                    p3_x, p3_y, p3_z = star_x[(i * 2 + 1) % (n_points * 2)].item(), star_y[
-                        (i * 2 + 1) % (n_points * 2)].item(), local_z  # Inner point
-                    p4_x, p4_y, p4_z = star_x[(i * 2 + 2) % (n_points * 2)].item(), star_y[
-                        (i * 2 + 2) % (n_points * 2)].item(), local_z  # Next outer point
-
-                    # Fill triangle (center, outer, inner)
-                    triangle_particles = min(particles_per_triangle, layer_particles - particles_added_this_layer)
-                    for _ in range(triangle_particles):
-                        r1, r2 = torch.rand(2, device=device)
-                        if r1 + r2 > 1:
-                            r1, r2 = 1 - r1, 1 - r2
-
-                        px = p1_x + r1.item() * (p2_x - p1_x) + r2.item() * (p3_x - p1_x)
-                        py = p1_y + r1.item() * (p2_y - p1_y) + r2.item() * (p3_y - p1_y)
-                        pz = p1_z
-
-                        star_particles.append([float(px), float(py), float(pz)])
-                        particles_added_this_layer += 1
-
-                        if particles_added_this_layer >= layer_particles:
-                            break
-
-                    if particles_added_this_layer >= layer_particles:
-                        break
-
-                    # Fill triangle (center, inner, next outer)
-                    triangle_particles = min(particles_per_triangle, layer_particles - particles_added_this_layer)
-                    for _ in range(triangle_particles):
-                        r1, r2 = torch.rand(2, device=device)
-                        if r1 + r2 > 1:
-                            r1, r2 = 1 - r1, 1 - r2
-
-                        px = p1_x + r1.item() * (p3_x - p1_x) + r2.item() * (p4_x - p1_x)
-                        py = p1_y + r1.item() * (p3_y - p1_y) + r2.item() * (p4_y - p1_y)
-                        pz = p1_z
-
-                        star_particles.append([float(px), float(py), float(pz)])
-                        particles_added_this_layer += 1
-
-                        if particles_added_this_layer >= layer_particles:
-                            break
-
-            # Fill any remaining particles with random points in inner region
-            while len(star_particles) < actual_particles:
-                # Random layer
-                layer_idx = torch.randint(0, n_layers, (1,)).item()
-                z_progress = layer_idx / max(n_layers - 1, 1)
-                local_z = (z_progress - 0.5) * size * 0.3  # Flatter profile
-                layer_radius_scale = max(1.0 - 2 * abs(z_progress - 0.5), 0.1)
-
-                r_fill = torch.rand(1, device=device).sqrt().item() * inner_radius * layer_radius_scale * 0.5
-                theta_fill = torch.rand(1, device=device).item() * 2 * torch.pi
-                px = r_fill * np.cos(theta_fill)
-                py = r_fill * np.sin(theta_fill)
-                pz = local_z
-
-                star_particles.append([float(px), float(py), float(pz)])
-
-            # Convert to tensor and apply 3D rotation
-            if len(star_particles) > 0:
-                star_positions = torch.tensor(star_particles[:actual_particles], device=device)
-                rotated_positions = torch.matmul(star_positions, rotation_matrices[shape_idx].T)
-
-                # Translate to shape center
-                x[start_idx:end_idx] = shape_center + rotated_positions
-            else:
-                # Fallback: create a simple star shape
-                print(f"Warning: Star generation failed for shape {shape_idx}, using fallback")
-                # Create a simple cross pattern as fallback
-                for i in range(actual_particles):
-                    angle = (i / actual_particles) * 2 * torch.pi
-                    radius = outer_radius * (0.5 + 0.5 * torch.cos(5 * angle))
-                    px = radius * torch.cos(angle)
-                    py = radius * torch.sin(angle)
-                    pz = (torch.rand(1) - 0.5) * size * 0.3  # Flatter profile
-
-                    rel_pos = torch.tensor([px, py, pz], device=device)
-                    rotated_pos = torch.matmul(rel_pos, rotation_matrices[shape_idx].T)
-                    x[start_idx + i] = shape_center + rotated_pos
-
-    else:  # Default to cubes
-        # Same as cubes case
-        particles_per_dim = int(round((group_size) ** (1 / 3)))
-        if particles_per_dim ** 3 < group_size:
-            particles_per_dim += 1
-
-        for shape_idx in range(n_shapes):
-            start_idx = shape_idx * group_size
-            end_idx = min(start_idx + group_size, n_particles)
-            actual_particles = end_idx - start_idx
-
-            rel_positions = torch.zeros((actual_particles, 3), device=device)
-            for i in range(actual_particles):
-                z_idx = i // (particles_per_dim * particles_per_dim)
-                temp = i % (particles_per_dim * particles_per_dim)
-                y_idx = temp // particles_per_dim
-                x_idx = temp % particles_per_dim
-
-                local_x = (x_idx / max(particles_per_dim - 1, 1) - 0.5) * size
-                local_y = (y_idx / max(particles_per_dim - 1, 1) - 0.5) * size
-                local_z = (z_idx / max(particles_per_dim - 1, 1) - 0.5) * size
-
-                rel_positions[i] = torch.tensor([local_x, local_y, local_z], device=device)
-
-            # Apply rotation
-            rotated_positions = torch.matmul(rel_positions, rotation_matrices[shape_idx].T)
-
-            x[start_idx:end_idx, 0] = center_x[start_idx] + rotated_positions[:, 0]
-            x[start_idx:end_idx, 1] = center_y[start_idx] + rotated_positions[:, 1]
-            x[start_idx:end_idx, 2] = center_z[start_idx] + rotated_positions[:, 2]
-
-    # Random materials for each shape
-    if n_particle_types > 1:
-        shape_materials = torch.randperm(n_shapes, device=device) % n_particle_types
-        T = shape_materials[group_indices].unsqueeze(1).int()
-    else:
-        T = torch.ones((n_particles, 1), dtype=torch.int32, device=device)
-
-    # Calculate mass based on material type and density
-    material_densities = torch.tensor(rho_list, device=device)
-    if len(rho_list) > 0:
-        particle_densities = material_densities[T.squeeze().clamp(0, len(rho_list) - 1)]
-        M = torch.full((n_particles, 1), p_vol, dtype=torch.float32, device=device) * particle_densities.unsqueeze(1)
-    else:
-        M = torch.full((n_particles, 1), p_vol, dtype=torch.float32, device=device)
-
-    # Random velocity per shape (3D)
-    shape_velocities = (torch.rand(n_shapes, 3, device=device) - 0.5) * 4.0  # Random 3D velocities
-    v = shape_velocities[group_indices]
-
-    # Object ID for each particle with random permutation
-    ID = group_indices.unsqueeze(1).int()
-    if n_shapes > 1:
-        id_permutation = torch.randperm(n_shapes, device=device)
-        ID = id_permutation[ID.squeeze()].unsqueeze(1)
-
-    return N, x, v, C, F, T, Jp, M, S, ID
-
-
-def init_MPM_3D_cells(
-        n_shapes=3,
-        seed=42,
-        n_particles=[],
-        n_grid=[],
-        dx=[],
-        rho_list=[],
-        nucleus_ratio=0.6,  # nucleus radius / total radius
-        device='cpu'
-):
-    torch.manual_seed(seed)
-
-    # 3D volume instead of 2D area
-    p_vol = (dx * 0.5) ** 3
-
-    N = torch.arange(n_particles, dtype=torch.float32, device=device)[:, None]
-    x = torch.zeros((n_particles, 3), dtype=torch.float32, device=device)  # 3D positions
-    v = torch.zeros((n_particles, 3), dtype=torch.float32, device=device)  # 3D velocities
-    C = torch.zeros((n_particles, 3, 3), dtype=torch.float32, device=device)  # 3x3 affine matrix
-    F = torch.eye(3, dtype=torch.float32, device=device).unsqueeze(0).expand(n_particles, -1,
-                                                                             -1)  # 3x3 deformation gradient
-    T = torch.zeros((n_particles, 1), dtype=torch.int32, device=device)
-    Jp = torch.ones((n_particles, 1), dtype=torch.float32, device=device)
-    S = torch.zeros((n_particles, 3, 3), dtype=torch.float32, device=device)  # 3x3 stress tensor
-
-    group_size = n_particles // n_shapes
-    group_indices = torch.arange(n_particles, device=device) // group_size
-
-    # Determine 3D grid layout and spacing
-    if n_shapes == 27:
-        # 3x3x3 grid
-        grid_size = 3
-        shape_depth = group_indices // (grid_size * grid_size)
-        temp = group_indices % (grid_size * grid_size)
-        shape_row = temp // grid_size
-        shape_col = temp % grid_size
-        size, spacing, start_x, start_y, start_z = 0.08, 0.25, 0.2, 0.2, 0.2
-    else:
-        # General case: try to make a cubic grid
-        grid_size = int(round(n_shapes ** (1 / 3)))
-        if grid_size ** 3 < n_shapes:
-            grid_size += 1
-
-        shape_depth = group_indices // (grid_size * grid_size)
-        temp = group_indices % (grid_size * grid_size)
-        shape_row = temp // grid_size
-        shape_col = temp % grid_size
-
-        size = 0.3 / (grid_size + 1)
-        spacing = 0.6 / grid_size
-        start_x = start_y = start_z = 0.2
-
-    center_x = start_x + spacing * shape_col.float()
-    center_y = start_y + spacing * shape_row.float()
-    center_z = start_z + spacing * shape_depth.float()
-
-    # Generate 3D cell particles (spheres with nucleus and membrane)
-    outer_radius = size
-    nucleus_radius = outer_radius * nucleus_ratio
-
-    particles_per_shape = group_size
-    valid_particles = []
-    particle_materials = []
-
-    # Calculate particles distribution: nucleus volume vs membrane volume
-    nucleus_volume = (4 / 3) * torch.pi * nucleus_radius ** 3
-    membrane_volume = (4 / 3) * torch.pi * (outer_radius ** 3 - nucleus_radius ** 3)
-    total_volume = nucleus_volume + membrane_volume
-
-    particles_nucleus = int(particles_per_shape * nucleus_volume / total_volume)
-    particles_membrane = particles_per_shape - particles_nucleus
-
-    for shape_idx in range(n_shapes):
-        shape_particles = []
-        shape_materials = []
-
-        shape_center_x = center_x[shape_idx * group_size]
-        shape_center_y = center_y[shape_idx * group_size]
-        shape_center_z = center_z[shape_idx * group_size]
-
-        # Generate nucleus particles (material 0 - liquid)
-        for _ in range(particles_nucleus):
-            # Generate random point in sphere using rejection sampling
-            while True:
-                rand_pos = torch.rand(3, device=device) * 2 - 1  # [-1, 1]³
-                if torch.sum(rand_pos ** 2) <= 1.0:
-                    break
-
-            # Scale by nucleus radius and translate to center
-            px = shape_center_x + rand_pos[0] * nucleus_radius
-            py = shape_center_y + rand_pos[1] * nucleus_radius
-            pz = shape_center_z + rand_pos[2] * nucleus_radius
-
-            shape_particles.append([px.item(), py.item(), pz.item()])
-            shape_materials.append(0)  # Material 0 for nucleus
-
-        # Generate membrane particles (material 1 - jelly)
-        for _ in range(particles_membrane):
-            # Generate random point on unit sphere
-            while True:
-                rand_pos = torch.rand(3, device=device) * 2 - 1  # [-1, 1]³
-                r_sq = torch.sum(rand_pos ** 2)
-                if r_sq <= 1.0 and r_sq > 0:
-                    break
-
-            # Normalize to unit sphere
-            rand_pos = rand_pos / torch.sqrt(r_sq)
-
-            # Generate radius with proper volume weighting for spherical shell
-            u = torch.rand(1, device=device)
-            r_cubed = u * (outer_radius ** 3 - nucleus_radius ** 3) + nucleus_radius ** 3
-            r = r_cubed ** (1 / 3)
-
-            # Scale and translate to center
-            px = shape_center_x + rand_pos[0] * r
-            py = shape_center_y + rand_pos[1] * r
-            pz = shape_center_z + rand_pos[2] * r
-
-            shape_particles.append([px.item(), py.item(), pz.item()])
-            shape_materials.append(1)  # Material 1 for membrane
-
-        valid_particles.extend(shape_particles)
-        particle_materials.extend(shape_materials)
-
-    cell_positions = torch.tensor(valid_particles[:n_particles], device=device)
-    x[:, 0] = cell_positions[:, 0]
-    x[:, 1] = cell_positions[:, 1]
-    x[:, 2] = cell_positions[:, 2]
-
-    # Set materials based on nucleus/membrane assignment
-    T = torch.tensor(particle_materials[:n_particles], device=device).unsqueeze(1).int()
-
-    # Calculate mass based on material type
-    material_densities = torch.tensor(rho_list, device=device)
-    if len(rho_list) > 0:
-        particle_densities = material_densities[T.squeeze().clamp(0, len(rho_list) - 1)]
-        M = torch.full((n_particles, 1), p_vol, dtype=torch.float32, device=device) * particle_densities.unsqueeze(1)
-    else:
-        M = torch.full((n_particles, 1), p_vol, dtype=torch.float32, device=device)
-
-    # Random velocity per shape (3D)
-    shape_velocities = (torch.rand(n_shapes, 3, device=device) - 0.5) * 4.0
-    v = shape_velocities[group_indices]
-
-    # Object ID for each particle
-    ID = group_indices.unsqueeze(1).int()
-    if n_shapes > 1:
-        id_permutation = torch.randperm(n_shapes, device=device)
-        ID = id_permutation[ID.squeeze()].unsqueeze(1)
-
-    return N, x, v, C, F, T, Jp, M, S, ID
-
-def init_MPM_cells(
-        n_shapes=3,
-        seed=42,
-        n_particles=[],
-        n_grid=[],
-        dx=[],
-        rho_list=[],
-        nucleus_ratio=0.6,  # nucleus radius / total radius
-        device='cpu'
-):
-    torch.manual_seed(seed)
-
-    p_vol = (dx * 0.5) ** 2
-
-    N = torch.arange(n_particles, dtype=torch.float32, device=device)[:, None]
-    x = torch.zeros((n_particles, 2), dtype=torch.float32, device=device)
-    v = torch.zeros((n_particles, 2), dtype=torch.float32, device=device)
-    C = torch.zeros((n_particles, 2, 2), dtype=torch.float32, device=device)
-    F = torch.eye(2, dtype=torch.float32, device=device).unsqueeze(0).expand(n_particles, -1, -1)
-    T = torch.ones((n_particles, 1), dtype=torch.int32, device=device)
-    Jp = torch.ones((n_particles, 1), dtype=torch.float32, device=device)
-    S = torch.zeros((n_particles, 2, 2), dtype=torch.float32, device=device)
-    GM = torch.zeros((n_grid, n_grid), dtype=torch.float32, device=device)
-    GP = torch.zeros((n_grid, n_grid), dtype=torch.float32, device=device)
-
-    group_size = n_particles // n_shapes
-    group_indices = torch.arange(n_particles, device=device) // group_size
-
-    # Determine grid layout and spacing
-    if n_shapes == 3:
-        shape_row = group_indices
-        shape_col = torch.zeros_like(group_indices)
-        size, spacing, start_x, start_y = 0.1, 0.32, 0.3, 0.15
-    elif n_shapes == 9:
-        shape_row = group_indices // 3
-        shape_col = group_indices % 3
-        size, spacing, start_x, start_y = 0.075, 0.25, 0.2, 0.375
-    elif n_shapes == 16:
-        shape_row = group_indices // 4
-        shape_col = group_indices % 4
-        size, spacing, start_x, start_y = 0.04, 0.2, 0.2, 0.2
-    elif n_shapes == 25:
-        shape_row = group_indices // 5
-        shape_col = group_indices % 5
-        size, spacing, start_x, start_y = 0.035, 0.16, 0.15, 0.2
-    elif n_shapes == 36:
-        shape_row = group_indices // 6
-        shape_col = group_indices % 6
-        size, spacing, start_x, start_y = 0.035, 0.13, 0.1, 0.14
-    else:
-        # General case: try to make a square grid
-        grid_size = int(n_shapes ** 0.5)
-        shape_row = group_indices // grid_size
-        shape_col = group_indices % grid_size
-        size, spacing = 0.4 / grid_size, 0.8 / grid_size
-        start_x, start_y = 0.1 + size, 0.1 + size
-
-    center_x = start_x + spacing * shape_col.float()
-    center_y = start_y + spacing * shape_row.float()
-
-    # Generate cell particles (discs with nucleus and membrane)
-    outer_radius = size
-    nucleus_radius = outer_radius * nucleus_ratio
-
-    particles_per_shape = group_size
-    valid_particles = []
-    particle_materials = []
-
-    # Calculate particles distribution: nucleus area vs membrane area
-    nucleus_area = torch.pi * nucleus_radius ** 2
-    membrane_area = torch.pi * (outer_radius ** 2 - nucleus_radius ** 2)
-    total_area = nucleus_area + membrane_area
-
-    particles_nucleus = int(particles_per_shape * nucleus_area / total_area)
-    particles_membrane = particles_per_shape - particles_nucleus
-
-    for shape_idx in range(n_shapes):
-        shape_particles = []
-        shape_materials = []
-
-        shape_center_x = center_x[shape_idx * group_size]
-        shape_center_y = center_y[shape_idx * group_size]
-
-        # Generate nucleus particles (material 0 - liquid)
-        for _ in range(particles_nucleus):
-            r_test = torch.rand(1, device=device).sqrt() * nucleus_radius
-            theta_test = torch.rand(1, device=device) * 2 * torch.pi
-
-            px = shape_center_x + r_test * torch.cos(theta_test)
-            py = shape_center_y + r_test * torch.sin(theta_test)
-            shape_particles.append([px.item(), py.item()])
-            shape_materials.append(0)  # Material 0 for nucleus
-
-        # Generate membrane particles (material 1 - jelly)
-        for _ in range(particles_membrane):
-            # Sample in annular region between nucleus_radius and outer_radius
-            r_min_sq = nucleus_radius ** 2
-            r_max_sq = outer_radius ** 2
-            r_test = torch.sqrt(torch.rand(1, device=device) * (r_max_sq - r_min_sq) + r_min_sq)
-            theta_test = torch.rand(1, device=device) * 2 * torch.pi
-
-            px = shape_center_x + r_test * torch.cos(theta_test)
-            py = shape_center_y + r_test * torch.sin(theta_test)
-            shape_particles.append([px.item(), py.item()])
-            shape_materials.append(1)  # Material 1 for membrane
-
-        valid_particles.extend(shape_particles)
-        particle_materials.extend(shape_materials)
-
-    cell_positions = torch.tensor(valid_particles[:n_particles], device=device)
-    x[:, 0] = cell_positions[:, 0]
-    x[:, 1] = cell_positions[:, 1]
-
-    # Set materials based on nucleus/membrane assignment
-    T = torch.tensor(particle_materials[:n_particles], device=device).unsqueeze(1).int()
-
-    # Calculate mass based on material type
-    # Material 0: liquid (nucleus)
-    # Material 1: jelly (membrane)
-    material_densities = torch.tensor(rho_list, device=device)
-    particle_densities = material_densities[T.squeeze()]
-    M = torch.full((n_particles, 1), p_vol, dtype=torch.float32, device=device) * particle_densities.unsqueeze(1)
-
-    # Random velocity per shape
-    shape_velocities = (torch.rand(n_shapes, 2, device=device) - 0.5) * 4.0
-    v = shape_velocities[group_indices]
-
-    # Object ID for each particle
-    ID = group_indices.unsqueeze(1).int()
-    id_permutation = torch.randperm(n_shapes, device=device)
-    ID = id_permutation[ID.squeeze()].unsqueeze(1)
-
-    return N, x, v, C, F, T, Jp, M, S, ID
-
 def find_neighbors_with_radius(pos, h, max_neighbors=32):
     """Find neighbors within radius h using scipy KDTree"""
     device = pos.device
@@ -1341,6 +693,11 @@ def init_mesh(config, device):
             s = torch.sum(node_value, dim=1)
             for k in range(3):
                 node_value[:, k] = node_value[:, k] / s
+        case 'Diffusiophoresis_Mesh':
+            node_value = torch.rand((n_nodes, 2), device=device)
+            s = torch.sum(node_value, dim=1)
+            for k in range(2):
+                node_value[:, k] = node_value[:, k] / s
         case 'DiffMesh' | 'WaveMesh' | 'Particle_Mesh_A' | 'Particle_Mesh_B' | 'WaveSmoothParticle':
             node_value = torch.zeros((n_nodes, 2), device=device)
             node_value[:, 0] = torch.tensor(values / 255 * 5000, device=device)
@@ -1379,7 +736,7 @@ def init_mesh(config, device):
 
     print('removal of skinny faces ...')
     sleep(0.5)
-    for k in trange(face.shape[0]):
+    for k in trange(face.shape[0], ncols=80):
         # compute edge distances
         x1 = pos[face[k, 0], :]
         x2 = pos[face[k, 1], :]
@@ -1409,12 +766,6 @@ def init_mesh(config, device):
 
     a_mesh = torch.zeros_like(type_mesh)
     type_mesh = type_mesh.to(dtype=torch.float32)
-
-    if 'Smooth' in config.graph_model.mesh_model_name:
-        distance = torch.sum((pos_mesh[:, None, :] - pos_mesh[None, :, :]) ** 2, dim=2)
-        adj_t = ((distance < max_radius ** 2) & (distance >= 0)).float() * 1
-        mesh_data['edge_index'] = adj_t.nonzero().t().contiguous()
-
 
     return pos_mesh, dpos_mesh, type_mesh, node_value, a_mesh, node_id_mesh, mesh_data
 
