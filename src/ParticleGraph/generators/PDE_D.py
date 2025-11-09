@@ -29,7 +29,7 @@ class PDE_D(pyg.nn.MessagePassing):
         self.Pe = p[2, 0]
         
         # Particle-particle repulsion parameters
-        self.repulsion_strength = 0.005
+        self.repulsion_strength = 50
         self.repulsion_range = 0.025
         
         print(f"Initialized PDE_D with parameters:")

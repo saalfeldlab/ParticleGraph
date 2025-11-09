@@ -1117,9 +1117,13 @@ def data_generate_particle_field(
                         pattern_growth = C2_std / 0.005
                         
                         # Particle metrics
-                        particle_vel = torch.norm(y, dim=1) if 'y' in locals() else torch.zeros(1)
-                        vel_mean = particle_vel.mean().item()
-                        vel_max = particle_vel.max().item()
+                        particle_vel0 = torch.norm(y0, dim=1)
+                        vel_mean0 = particle_vel0.mean().item()
+                        vel_max0 = particle_vel0.max().item()
+                        particle_vel1 = torch.norm(y1, dim=1)
+                        vel_mean1 = particle_vel1.mean().item()
+                        vel_max1 = particle_vel1.max().item()
+
                         
                         # Check particle clustering
                         particle_pos = x[:n_particles, 1:3]
@@ -1135,7 +1139,8 @@ def data_generate_particle_field(
 
                             
                         print(f"\n[It {it:4d}] FIELDS: C₂ μ={C2_mean:.3f}±{C2_std:.3f} | Pattern: {pattern_growth:.1f}x")
-                        print(f"         PARTICLES: vel={vel_mean:.6f} (max={vel_max:.4f}) | clustering={clustering:.3f}")
+                        print(f"         PARTICLES: vel={vel_mean1:.6f} (max={vel_max1:.4f}) | clustering={clustering:.3f}")
+                        print(f"         REPULSION: vel={vel_mean0:.6f} (max={vel_max0:.4f})")
                         print(f"         DIFFUSION: {diffusio_mag1:.6f} (field) + {diffusio_mag2:.6f} (particles)")
                         
                         # Check if particles are moving toward high C2 regions
@@ -1303,7 +1308,7 @@ def data_generate_particle_field(
 
                 if "diffusiophoresis" in model_config.field_type:
                     # Create a figure with 4 subplots
-                    fig = plt.figure(figsize=(20, 16))
+                    fig = plt.figure(figsize=(16, 16))
                     
                     # 1. C₁ field visualization (top left)
                     ax1 = fig.add_subplot(2, 2, 1)
@@ -1311,17 +1316,19 @@ def data_generate_particle_field(
                     grid_size = int(np.sqrt(n_nodes))
                     C1_field = to_numpy(x_mesh[:, 6].reshape(grid_size, grid_size))
                     im1 = ax1.imshow(C1_field, cmap='viridis', origin='lower', extent=[0, 1, 0, 1], vmin=3.5, vmax=5.5)
-                    ax1.set_title("C₁ Field", fontsize=20)
-                    plt.colorbar(im1, ax=ax1)
+                    ax1.set_axis_off()
+                    ax1.set_title("C₁ field", fontsize=20)
+                    # plt.colorbar(im1, ax=ax1)
                     ax1.set_xticks([])
                     ax1.set_yticks([])
                     
                     # 2. C₂ field visualization (top right)
                     ax2 = fig.add_subplot(2, 2, 2)
                     C2_field = to_numpy(x_mesh[:, 7].reshape(grid_size, grid_size))
-                    im2 = ax2.imshow(C2_field, cmap='plasma', origin='lower', extent=[0, 1, 0, 1], vmin=0, vmax=2)
-                    ax2.set_title("C₂ Field", fontsize=20)
-                    plt.colorbar(im2, ax=ax2)
+                    im2 = ax2.imshow(C2_field, cmap='plasma', origin='lower', extent=[0, 1, 0, 1], vmin=1, vmax=3)
+                    ax2.set_axis_off()
+                    ax2.set_title("C₂ field", fontsize=20)
+                    # plt.colorbar(im2, ax=ax2)
                     ax2.set_xticks([])
                     ax2.set_yticks([])
                     
@@ -1329,8 +1336,8 @@ def data_generate_particle_field(
                     ax3 = fig.add_subplot(2, 2, 3)
                     # Plot field as background (combining both fields)
                     combined_field = C1_field - C2_field  # Different fields usually have opposite effects
-                    im3 = ax3.imshow(combined_field*0, cmap='coolwarm', origin='lower', 
-                                    extent=[0, 1, 0, 1], alpha=0.7)
+                    im3 = ax3.imshow(combined_field*0, cmap='bone', origin='lower', 
+                                    extent=[0, 1, 0, 1], vmin=0, vmax=1)
                     
                     # Overlay particles
                     for n in range(n_particle_types):
@@ -1339,10 +1346,12 @@ def data_generate_particle_field(
                             to_numpy(x[index_particles[n], 2]),  # y coordinate
                             s=5,
                             color=cmap.color(n),
-                            alpha=0.9
+                            alpha=0.9,
+                            edgecolors='none'
                         )
-                    ax3.set_title("Particles and Field", fontsize=20)
-                    plt.colorbar(im3, ax=ax3)
+                    ax3.set_title("particles", fontsize=20)
+                    # plt.colorbar(im3, ax=ax3)
+                    ax3.set_axis_off()
                     ax3.set_xlim([0, 1])
                     ax3.set_ylim([0, 1])
                     ax3.set_xticks([])
@@ -1354,9 +1363,9 @@ def data_generate_particle_field(
                     grad_x = np.gradient(combined_field, axis=1)
                     grad_y = np.gradient(combined_field, axis=0)
                     grad_mag = np.sqrt(grad_x**2 + grad_y**2)
-                    im4 = ax4.imshow(grad_mag*0, cmap='inferno', origin='lower', 
-                                    extent=[0, 1, 0, 1], alpha=0.6)
-                    
+                    im4 = ax4.imshow(grad_mag*0, cmap='bone', origin='lower', 
+                                    extent=[0, 1, 0, 1], vmin=0, vmax=1)
+                    ax4.set_axis_off()
                     # Process velocities for arrow plot
                     if model_config.prediction == "2nd_derivative":
                         V1_ = y1 * delta_t
@@ -1374,12 +1383,12 @@ def data_generate_particle_field(
                             dx=to_numpy(V1_[n, 0]* delta_t),  # x component of velocity
                             dy=to_numpy(V1_[n, 1]* delta_t),  # y component of velocity
                             color=cmap.color(type_list[n].astype(int)),
-                            head_width=0.01,
+                            head_width=0.005,
                             length_includes_head=True,
                         )
                     
                     ax4.set_title("diffusiophoresis velocities", fontsize=20)
-                    plt.colorbar(im4, ax=ax4)
+                    # plt.colorbar(im4, ax=ax4)
                     ax4.set_xlim([0, 1])
                     ax4.set_ylim([0, 1])
                     ax4.set_xticks([])

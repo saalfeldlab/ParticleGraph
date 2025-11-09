@@ -62,7 +62,7 @@ if __name__ == "__main__":
         # config_list = ['springs_matrix_N5_3']
         # config_list = ['cell_MDCK_17_2']
         # config_list = ['rat_city_1']
-        config_list = ['diffusiophoresis_1_1']
+        config_list = ['diffusiophoresis_1_1', 'diffusiophoresis_1_2', 'diffusiophoresis_1_3', 'diffusiophoresis_1_4']
         # config_list = ['arbitrary_3_field_triangles']
 
     for config_file_ in config_list:
