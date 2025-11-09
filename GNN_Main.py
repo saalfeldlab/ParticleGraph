@@ -85,7 +85,7 @@ if __name__ == "__main__":
                 run_vizualized=0,
                 style="black color",
                 alpha=1,
-                erase=False,
+                erase=True,
                 bSave=True,
                 step=5
             )  # config.simulation.n_frames // 100)

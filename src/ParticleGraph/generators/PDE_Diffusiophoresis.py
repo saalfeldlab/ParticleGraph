@@ -43,8 +43,8 @@ class PDE_Diffusiophoresis(pyg.nn.MessagePassing):
         
         # Print initialized parameters for verification
         print(f"Initialized PDE_Diffusiophoresis with parameters:")
-        print(f"C₁: D={self.D1.item()}, Da_c={self.Da_c.item()}, A={self.A.item()}, B={self.B.item()}, μ={self.mu.item()}")
-        print(f"C₂: D={self.D2.item()}")
+        print(f"C₁: D={self.D1.item():.3f}, Da_c={self.Da_c.item():.3f}, A={self.A.item():.3f}, B={self.B.item():.3f}, μ={self.mu.item():.3f}")
+        print(f"C₂: D={self.D2.item():.3f}")
     
     def forward(self, data):
         """
@@ -87,15 +87,26 @@ class PDE_Diffusiophoresis(pyg.nn.MessagePassing):
         R2 = self.Da_c * (self.B*C1 - C1*C1*C2)
         
         # Combine diffusion and reaction terms
-        dC1 = diff_C1 + R1
-        dC2 = diff_C2 + R2
+        # dC1 = diff_C1 + R1
+        # dC2 = diff_C2 + R2
+
+        damping = damping = 0.005
+        dC1 = diff_C1 + R1 - damping * (C1 - self.A)
+        dC2 = diff_C2 + R2 - damping * (C2 - self.B/self.A)
         
         # Combine derivatives
         d_C = torch.cat([dC1, dC2], dim=1)
         
         return d_C
     
+
     def message(self, u_j, edge_attr):
 
+        
         L = edge_attr[:, None] * u_j
         return L
+    
+    # def message(self, u_i, u_j, edge_attr):
+
+    #     L = edge_attr[:, None] * (u_j - u_i)
+    #     return L

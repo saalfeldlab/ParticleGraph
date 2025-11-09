@@ -198,6 +198,7 @@ def initialize_random_values(n, device):
 
 def init_particles(config=[], scenario='none', ratio=1, device=[]):
     simulation_config = config.simulation
+    model_config = config.graph_model
     n_frames = config.simulation.n_frames
     n_particles = simulation_config.n_particles * ratio
     n_particle_types = simulation_config.n_particle_types
@@ -223,6 +224,8 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
                 pos = pos * 0.2 + 0.4
         elif n_particles<=500:
             pos = pos * 0.5 + 0.25
+    elif "diffusiophoresis" in model_config.field_type:
+        pos = torch.rand(n_particles, dimension, device=device) * 1.0
     else:
         pos = torch.randn(n_particles, dimension, device=device) * 0.5
     dpos = dpos_init * torch.randn((n_particles, dimension), device=device)
@@ -445,6 +448,131 @@ def get_equidistant_3D_points(n_points=1024):
     z = radius_xy * np.sin(theta) * r
 
     return x, y, z
+
+
+def handle_collisions(positions, velocities, min_distance=0.01):
+    """
+    Prevent particle overlap by implementing soft repulsion
+    
+    Parameters
+    ----------
+    positions : torch.Tensor
+        Particle positions [n_particles, dimension]
+    velocities : torch.Tensor
+        Particle velocities [n_particles, dimension]
+    min_distance : float
+        Minimum allowed distance between particles
+        
+    Returns
+    -------
+    torch.Tensor
+        Adjusted positions
+    torch.Tensor
+        Adjusted velocities
+    """
+    n_particles = positions.shape[0]
+    device = positions.device
+    dimension = positions.shape[1]
+    
+    # Use a grid-based approach for efficiency with many particles
+    # For 9600 particles, checking all pairs would be very slow
+    
+    # Compute grid cell size based on min_distance
+    cell_size = min_distance * 2
+    grid_size = int(1.0 / cell_size) + 1
+    
+    # Initialize grid
+    grid = {}
+    
+    # Assign particles to grid cells
+    for i in range(n_particles):
+        # Get grid indices for this particle
+        cell_x = int(positions[i, 0] / cell_size)
+        cell_y = int(positions[i, 1] / cell_size)
+        
+        # Periodic boundary for cells
+        cell_x = cell_x % grid_size
+        cell_y = cell_y % grid_size
+        
+        # Add particle to grid
+        cell_idx = (cell_x, cell_y)
+        if cell_idx not in grid:
+            grid[cell_idx] = []
+        grid[cell_idx].append(i)
+    
+    # Check collisions only with neighboring cells
+    displacements = torch.zeros_like(positions)
+    
+    for cell_idx, particles in grid.items():
+        cell_x, cell_y = cell_idx
+        
+        # Check neighboring cells (including self)
+        for dx in [-1, 0, 1]:
+            for dy in [-1, 0, 1]:
+                # Get neighboring cell with periodic boundary
+                neighbor_x = (cell_x + dx) % grid_size
+                neighbor_y = (cell_y + dy) % grid_size
+                
+                neighbor_idx = (neighbor_x, neighbor_y)
+                if neighbor_idx in grid:
+                    # Check collisions with particles in this neighboring cell
+                    for i in particles:
+                        for j in grid[neighbor_idx]:
+                            if i != j:  # Don't check against self
+                                # Compute displacement with periodic boundary
+                                d_pos = positions[j] - positions[i]
+                                
+                                # Apply periodic boundary conditions
+                                for d in range(dimension):
+                                    if d_pos[d] > 0.5:
+                                        d_pos[d] -= 1.0
+                                    elif d_pos[d] < -0.5:
+                                        d_pos[d] += 1.0
+                                
+                                # Compute squared distance
+                                dist_sq = torch.sum(d_pos**2)
+                                
+                                # Check if particles are too close
+                                if dist_sq < min_distance**2:
+                                    # Compute actual distance
+                                    dist = torch.sqrt(dist_sq)
+                                    
+                                    # Compute normalized direction
+                                    if dist > 1e-6:  # Avoid division by zero
+                                        d_pos_norm = d_pos / dist
+                                    else:
+                                        # If particles are exactly overlapping, use a random direction
+                                        d_pos_norm = torch.randn(dimension, device=device)
+                                        d_pos_norm = d_pos_norm / torch.norm(d_pos_norm)
+                                    
+                                    # Compute overlap
+                                    overlap = min_distance - dist
+                                    
+                                    # Compute displacement to resolve collision
+                                    # Each particle moves half the overlap distance
+                                    displacement = 0.5 * overlap * d_pos_norm
+                                    
+                                    # Accumulate displacements
+                                    displacements[i] -= displacement
+                                    displacements[j] += displacement
+    
+    # Apply accumulated displacements
+    positions += displacements
+    
+    # Adjust velocities based on collisions
+    # Particles moving toward each other should slow down
+    for i in range(n_particles):
+        if torch.norm(displacements[i]) > 1e-6:
+            v_parallel = torch.dot(velocities[i], displacements[i]) / torch.norm(displacements[i])
+            if v_parallel < 0:  # Moving toward collision
+                # Reduce component of velocity in collision direction
+                v_dir = displacements[i] / torch.norm(displacements[i])
+                velocities[i] -= 0.5 * v_parallel * v_dir
+    
+    # Ensure positions stay within bounds [0, 1]
+    positions = torch.clamp(positions, min=0.0, max=1.0)
+    
+    return positions, velocities
 
 
 def find_neighbors_with_radius(pos, h, max_neighbors=32):
@@ -681,6 +809,9 @@ def init_mesh(config, device):
         else:
             pos_mesh = pos_mesh + torch.randn(n_nodes, 2, device=device) * mesh_size / 8
 
+    if "diffusiophoresis" in model_config.field_type:
+        pos_mesh = pos_mesh * 1.0
+
     match config.graph_model.mesh_model_name:
         case 'RD_Gray_Scott_Mesh':
             node_value = torch.zeros((n_nodes, 2), device=device)
@@ -734,9 +865,9 @@ def init_mesh(config, device):
     face = torch.from_numpy(tri.simplices)
     face_longest_edge = np.zeros((face.shape[0], 1))
 
-    print('removal of skinny faces ...')
+    # removal of skinny faces
     sleep(0.5)
-    for k in trange(face.shape[0], ncols=80):
+    for k in range(face.shape[0]):
         # compute edge distances
         x1 = pos[face[k, 0], :]
         x2 = pos[face[k, 1], :]

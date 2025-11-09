@@ -758,7 +758,7 @@ def data_generate_particle_field(
 
     folder = f"./graphs_data/{dataset_name}/"
     if erase:
-        files = glob.glob(f"{folder}/*")
+        files = glob.glob(f"{folder}/Fig/*")
         for f in files:
             if (
                 (f[-14:] != "generated_data")
@@ -814,7 +814,21 @@ def data_generate_particle_field(
 
         # initialize particle and mesh states
         X1, V1, T1, H1, _, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
-        _, _, _, H1_mesh, _, _, _ = init_mesh(config, device=device)
+        X1_mesh, _, _, H1_mesh, _, _, _ = init_mesh(config, device=device)
+        H1_mesh[mask_mesh == 0.0] = 0.0
+
+
+        if "diffusiophoresis" in model_config.field_type:
+            C1_0 = model_f_f.A  # 4.5
+            C2_0 = model_f_f.B / model_f_f.A  # 2.44/4.5 ≈ 0.54
+            # Add small random perturbations (±1% noise)
+            noise_amplitude = 0.10
+            C1 = C1_0 + noise_amplitude * (2*torch.rand(n_nodes, 1, device=device) - 1) * C1_0
+            C2 = C2_0 + noise_amplitude * (2*torch.rand(n_nodes, 1, device=device) - 1) * C2_0
+            H1_mesh[:, 0:1] = C1
+            H1_mesh[:, 1:2] = C2
+
+        H1_mesh = torch.clamp(H1_mesh, min=0.0)
         torch.save(mesh_data, f"graphs_data/{dataset_name}/mesh_data_{run}.pt")
 
         check_and_clear_memory(
@@ -825,7 +839,7 @@ def data_generate_particle_field(
         )
         time.sleep(1)
         
-        for it in trange(simulation_config.start_frame, n_frames + 1, ncols=120):
+        for it in range(simulation_config.start_frame, n_frames + 1):
             if ("siren" in model_config.field_type) & (it >= 0):   # evolving field
                 im = imread(
                     f"graphs_data/{simulation_config.node_value_map}"
@@ -861,77 +875,98 @@ def data_generate_particle_field(
 
             x_particle_field = torch.concatenate((x_mesh, x), dim=0)
 
-            # model prediction
-            if "diffusiophoresis" in model_config.field_type:       #
+
+
+
+
+            if "diffusiophoresis" in model_config.field_type:
+
+                # Particle-particle edges
+                distance_pp = torch.sum(
+                    bc_dpos(x[:, None, 1:dimension+1] - x[None, :, 1:dimension+1])**2, 
+                    dim=2
+                )
+                adj_t_pp = ((distance_pp < max_radius**2) & (distance_pp > min_radius**2)).float()
+                edge_index_pp = adj_t_pp.nonzero().t().contiguous()
+                dataset_p_p = data.Data(x=x, edge_index=edge_index_pp)
                 
-
-                # particle-particle
-                distance = torch.sum(bc_dpos(x[:, None, 1 : dimension + 1] - x[None, :, 1 : dimension + 1])** 2,dim=2)
-                adj_t = (
-                    (distance < max_radius**2) & (distance > min_radius**2)
-                ).float() * 1
-                edge_index = adj_t.nonzero().t().contiguous()
-                dataset_p_p = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
-
+                x_particle_field = torch.cat((x_mesh, x), dim=0)
+                
+                # Compute distances for field-particle interactions
                 distance = torch.sum(
                     bc_dpos(
-                        x_particle_field[:, None, 1 : dimension + 1]
-                        - x_particle_field[None, :, 1 : dimension + 1]
-                    )
-                    ** 2,
-                    dim=2,
+                        x_particle_field[:, None, 1:dimension+1] - 
+                        x_particle_field[None, :, 1:dimension+1]
+                    )**2, dim=2
                 )
-
-
-                # field-particle
-                adj_t = (
-                    (distance < (max_radius / 2) ** 2) & (distance > min_radius**2)
-                ).float() * 1
+                
+                # Field→particle edges for interpolation
+                adj_t = ((distance < (max_radius/2)**2) & (distance > min_radius**2)).float()
                 edge_index = adj_t.nonzero().t().contiguous()
+                
+                # Filter for mesh→particle edges
                 pos_fp = torch.argwhere(
-                    (edge_index[1, :] >= n_nodes) & (edge_index[0, :] < n_nodes)
+                    (edge_index[0, :] < n_nodes) &  # sender: mesh
+                    (edge_index[1, :] >= n_nodes)   # receiver: particle
                 )
-                pos_fp = to_numpy(pos_fp[:, 0])
-                edge_index = edge_index[:, pos_fp]
+                edge_index_fp = edge_index[:, pos_fp[:, 0]]
+                
+                # Interpolate fields to particles
+                dataset_interp = data.Data(
+                    x=x_particle_field,
+                    edge_index=edge_index_fp
+                )
+                interpolated_fields = model_p_f(dataset_interp, direction='interpolate')
+                
+                # Update particle fields
+                x[:, 6:8] = interpolated_fields[n_nodes:,:]
+                x_particle_field = torch.cat((x_mesh, x), dim=0)
+                
+                # Create dataset for diffusiophoretic velocities
                 dataset_f_p = data.Data(
                     x=x_particle_field,
-                    pos=x_particle_field[:, 1:3],
-                    edge_index=edge_index,
+                    edge_index=edge_index_fp
                 )
-
-                # field-field
+                
+                # Particle→field edges  
+                pos_pf = torch.argwhere(
+                    (edge_index[0, :] >= n_nodes) &  # sender: particle
+                    (edge_index[1, :] < n_nodes)     # receiver: mesh
+                )
+                edge_index_pf = edge_index[:, pos_pf[:, 0]]
+                
+                dataset_p_f = data.Data(
+                    x=x_particle_field,
+                    edge_index=edge_index_pf
+                )
+                
+                # Field-field dataset
                 dataset_mesh = data.Data(
                     x=x_mesh,
                     edge_index=mesh_data["edge_index"],
                     edge_attr=mesh_data["edge_weight"],
                     device=device,
                 )
-
-
-                # particle-field
-                pos_pf = torch.argwhere(
-                    (edge_index[1, :] <= n_nodes) & (edge_index[0, :] < n_nodes)
-                )
-                pos_pf = to_numpy(pos_pf[:, 0])
-                edge_index = edge_index[:, pos_pf]
-                dataset_p_f = data.Data(
-                    x=x_particle_field,
-                    pos=x_particle_field[:, 1:3],
-                    edge_index=edge_index,
-                )
-
-
-                with torch.no_grad():
-                    # y0 = model_p_p(dataset_p_p, has_field=False)
-                    y1 = model_p_f(dataset_f_p, direction='fp')[n_nodes:]
-
-                    # y = y0 + y1
-                    y = y1
-
-                    y2 = model_f_f(dataset_mesh)
-                    y3 = model_p_f(dataset_p_f, direction='pf')[:n_nodes]
-
-                    y_mesh = y2 + y3
+                
+            with torch.no_grad():
+                # Calculate particle-particle repulsion
+                y0 = model_p_f(dataset_p_p, direction='pp')
+                
+                # Calculate diffusiophoretic velocities  
+                y1 = model_p_f(dataset_f_p, direction='fp')[n_nodes:]
+                
+                # Start with just diffusiophoresis to test
+                y = y0 * 0.1 + y1  # Small repulsion, full diffusiophoresis
+                
+                # Add small Brownian noise
+                Pe = model_p_f.Pe
+                diffusion_noise = 0.01 * torch.randn_like(y) * torch.sqrt(torch.tensor(delta_t, device=device)) / torch.sqrt(Pe)
+                y = y + diffusion_noise
+                
+                # Field updates with particle feedback
+                y2 = model_f_f(dataset_mesh)
+                y3 = model_p_f(dataset_p_f, direction='pf')[:n_nodes]
+                y_mesh = y2 + y3 * 0.1  # Start with weak particle→field coupling
 
             else:
                 distance = torch.sum(bc_dpos(x[:, None, 1 : dimension + 1] - x[None, :, 1 : dimension + 1])** 2,dim=2)
@@ -1034,11 +1069,11 @@ def data_generate_particle_field(
                 if "diffusiophoresis" in model_config.field_type:
                     # Mesh update
                     H1_mesh[mask_mesh, :] += y_mesh[mask_mesh, :] * delta_t
-                    H1_mesh[:, 0:2] = torch.clamp(H1_mesh[:, 0:2], min=0.0)
 
-                    field_sum = torch.sum(H1_mesh[:, 0:2], dim=1, keepdim=True)
-                    field_sum = torch.clamp(field_sum, min=1e-6)  
-                    H1_mesh[:, 0:2] = H1_mesh[:, 0:2] / field_sum    
+                    # H1_mesh = torch.clamp(H1_mesh, min=0.0)
+                    # field_sum = torch.sum(H1_mesh[:, 0:2], dim=1, keepdim=True)
+                    # field_sum = torch.clamp(field_sum, min=1e-6)  
+                    # H1_mesh[:, 0:2] = H1_mesh[:, 0:2] / field_sum    
 
                 if model_config.prediction == "2nd_derivative":
                     V1 += y * delta_t
@@ -1065,11 +1100,55 @@ def data_generate_particle_field(
                     X1 = bc_pos(X1 + V1 * delta_t)
 
 
+                #     X1, V1 = handle_collisions(X1, V1, min_distance=0.01)
 
-            # output plots
+
+
+            if "diffusiophoresis" in model_config.field_type:
+                    if (it % 100 == 0) or (it < 10):
+                        
+                        # Field metrics
+                        C1_mean, C1_std = x_mesh[:, 6].mean().item(), x_mesh[:, 6].std().item()
+                        C2_mean, C2_std = x_mesh[:, 7].mean().item(), x_mesh[:, 7].std().item()
+                        pattern_growth = C2_std / 0.005
+                        
+                        # Particle metrics
+                        particle_vel = torch.norm(y, dim=1) if 'y' in locals() else torch.zeros(1)
+                        vel_mean = particle_vel.mean().item()
+                        vel_max = particle_vel.max().item()
+                        
+                        # Check particle clustering
+                        particle_pos = x[:n_particles, 1:3]
+                        pos_std_x = particle_pos[:, 0].std().item()
+                        pos_std_y = particle_pos[:, 1].std().item()
+                        clustering = (0.289 - pos_std_x) / 0.289  # 0.289 is std for uniform distribution
+                        
+                        # Field gradients at particle locations
+                        grad_C2 = torch.zeros_like(particle_pos)
+                        if 'y1' in locals():
+                            diffusio_mag = torch.norm(y1, dim=1).mean().item()
+                        else:
+                            diffusio_mag = 0
+                            
+                        print(f"\n[It {it:4d}] FIELDS: C₂ μ={C2_mean:.3f}±{C2_std:.3f} | Pattern: {pattern_growth:.1f}x")
+                        print(f"         PARTICLES: vel={vel_mean:.6f} (max={vel_max:.4f}) | clustering={clustering:.3f}")
+                        print(f"         FORCES: diffusio={diffusio_mag:.6f} | repulsion={y0.norm(dim=1).mean().item() if 'y0' in locals() else 0:.6f}")
+                        
+                        # Check if particles are moving toward high C2 regions
+                        if it > 0 and it % 500 == 0:
+                            # Sample a few particles and check their C2 values
+                            sample_idx = torch.randperm(n_particles)[:10]
+                            sample_C2 = x[sample_idx, 7]
+                            print(f"         Sample particle C₂ values: mean={sample_C2.mean():.3f} (field mean={C2_mean:.3f})")
+                            if sample_C2.mean() > C2_mean * 1.1:
+                                print("         ✓ Particles aggregating at C₂ peaks!")
+                            # output plots
+            
+            
+            
+            
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
-                # plt.style.use('dark_background')
-                # matplotlib.use("Qt5Agg")
+
 
                 if "black" in style:
                     plt.style.use("dark_background")
@@ -1227,7 +1306,7 @@ def data_generate_particle_field(
                     # Reshape field to grid for visualization (assuming square grid)
                     grid_size = int(np.sqrt(n_nodes))
                     C1_field = to_numpy(x_mesh[:, 6].reshape(grid_size, grid_size))
-                    im1 = ax1.imshow(C1_field, cmap='viridis', origin='lower', extent=[0, 1, 0, 1])
+                    im1 = ax1.imshow(C1_field, cmap='viridis', origin='lower', extent=[0, 1, 0, 1], vmin=3.5, vmax=5.5)
                     ax1.set_title("C₁ Field", fontsize=20)
                     plt.colorbar(im1, ax=ax1)
                     ax1.set_xticks([])
@@ -1236,7 +1315,7 @@ def data_generate_particle_field(
                     # 2. C₂ field visualization (top right)
                     ax2 = fig.add_subplot(2, 2, 2)
                     C2_field = to_numpy(x_mesh[:, 7].reshape(grid_size, grid_size))
-                    im2 = ax2.imshow(C2_field, cmap='plasma', origin='lower', extent=[0, 1, 0, 1])
+                    im2 = ax2.imshow(C2_field, cmap='plasma', origin='lower', extent=[0, 1, 0, 1], vmin=0, vmax=2)
                     ax2.set_title("C₂ Field", fontsize=20)
                     plt.colorbar(im2, ax=ax2)
                     ax2.set_xticks([])
@@ -1254,7 +1333,7 @@ def data_generate_particle_field(
                         ax3.scatter(
                             to_numpy(x[index_particles[n], 1]),  # x coordinate
                             to_numpy(x[index_particles[n], 2]),  # y coordinate
-                            s=10,
+                            s=5,
                             color=cmap.color(n),
                             alpha=0.9
                         )
