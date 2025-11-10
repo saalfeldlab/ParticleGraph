@@ -47,7 +47,7 @@ plotting:
 
 training:
 
-  n_runs: 2
+  n_runs: 1
   device: 'auto'
   n_epochs: 20
   batch_size: 8

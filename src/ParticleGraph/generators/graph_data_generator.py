@@ -1398,7 +1398,7 @@ def data_generate_particle_field(
                     ax4.set_yticks([])
                     
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Diffusiophoresis_{run}_{num}.jpg", dpi=200)
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.png", dpi=200)
                     plt.close()
 
 
@@ -1508,7 +1508,7 @@ def data_generate_particle_field(
                         plt.yticks([])
                     plt.tight_layout()
                     plt.savefig(
-                        f"graphs_data/{dataset_name}/Fig/Arrow_{run}_{num}.jpg",
+                        f"graphs_data/{dataset_name}/Fig/Arrow_{run}_{num}.png",
                         dpi=170.7,
                     )
                     plt.close()
@@ -1545,7 +1545,7 @@ def data_generate_particle_field(
             # torch.save(model_p_p.p, f'graphs_data/{dataset_name}/model_p.pt')
 
         if run ==0:
-            generate_compressed_video_mp4(output_dir=f"./graphs_data/{dataset_name}", run=run, config_indices=None, framerate=20)
+            generate_compressed_video_mp4(output_dir=f"./graphs_data/{dataset_name}", run=run, config_indices=dataset_name, framerate=20)
 
         files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
         for f in files:
