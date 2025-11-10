@@ -1110,7 +1110,7 @@ def data_generate_particle_field(
 
 
             if "diffusiophoresis" in model_config.field_type:
-                    if (it % 100 == 0) or (it < 500):
+                    if (it % 100 == 0) or (it < 100):
                         
                         # Field metrics
                         C1_mean, C1_std = x_mesh[:, 6].mean().item(), x_mesh[:, 6].std().item()
@@ -1139,10 +1139,10 @@ def data_generate_particle_field(
                         diffusio_mag2 = torch.norm(y3, dim=1).mean().item()
 
                             
-                        print(f"\n[It {it:4d}] FIELDS: C₂ μ={C2_mean:.3f}±{C2_std:.3f} | Pattern: {pattern_growth:.1f}x")
-                        print(f"         PARTICLES: vel={vel_mean1:.6f} (max={vel_max1:.4f}) | clustering={clustering:.3f}")
-                        print(f"         REPULSION: vel={vel_mean0:.6f} (max={vel_max0:.4f})")
-                        print(f"         DIFFUSION: {diffusio_mag1:.6f} (field) + {diffusio_mag2:.6f} (particles)")
+                        print(f"\n[It {it:3d}] fields: C1 μ={C1_mean:.3f}±{C1_std:.3f} | C2 μ={C2_mean:.3f}±{C2_std:.3f} | pattern: {pattern_growth:.1f}x")
+                        print(f"         particles: vel={vel_mean1:.6f} (max={vel_max1:.4f}) | clustering={clustering:.3f}")
+                        print(f"         repulsion: vel={vel_mean0:.6f} (max={vel_max0:.4f})")
+                        print(f"         diffusion: {diffusio_mag1:.6f} (field) + {diffusio_mag2:.6f} (particles)")
                         
                         # Check if particles are moving toward high C2 regions
                         if it > 0 and it % 500 == 0:
@@ -1545,11 +1545,13 @@ def data_generate_particle_field(
             # torch.save(model_p_p.p, f'graphs_data/{dataset_name}/model_p.pt')
 
         if run ==0:
-            generate_compressed_video_mp4(output_dir=f"./graphs_data/{dataset_name}", run=run, config_indices=dataset_name, framerate=20)
+            dataset_name_ = dataset_name.split('/')[-1]
+            generate_compressed_video_mp4(output_dir=f"./graphs_data/{dataset_name}", run=run, config_indices=dataset_name_, framerate=20)
 
         files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
         for f in files:
             os.remove(f)
+
 
 def data_generate_cell(
     config,

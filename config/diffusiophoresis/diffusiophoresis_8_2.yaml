@@ -1,13 +1,13 @@
-description: 'diffusiophoresis with 1 type particles   Pe=10.0  Dac 20.0'
-dataset: 'diffusiophoresis_3_2'
+description: 'diffusiophoresis with 1 type particles   Pe=10.0    imbalance 1000 '
+dataset: 'diffusiophoresis_8_2'
 
 simulation:
   params: [[1.6233, 1.0413, 1.6012, 1.5615], [1.7667, 1.8308, 1.0855, 1.9055],  [1.7226, 1.7850, 1.0584, 1.8579]]
 
   params_mesh:
-    - [0.1, 20.0, 4.5, 6.5, 0.04, -16]    
+    - [0.1, 10.0, 4.5, 6.5, 0.04, -16]    
     - [0.8, 16, 0.0, 0.0, 0.0, 0.0]        
-    - [10.0, 250, 250, 0.05, 0.0, 0.0]     
+    - [10.0, 250, 1000, 0.05, 0.0, 0.0]     
       
   min_radius: 0
   max_radius: 0.2

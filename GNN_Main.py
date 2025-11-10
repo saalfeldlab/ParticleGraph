@@ -62,9 +62,12 @@ if __name__ == "__main__":
         # config_list = ['springs_matrix_N5_3']
         # config_list = ['cell_MDCK_17_2']
         # config_list = ['rat_city_1']
-        config_list = ['diffusiophoresis_1_1', 'diffusiophoresis_1_2', 'diffusiophoresis_1_3', 'diffusiophoresis_1_4', 'diffusiophoresis_2_1',
-                       'diffusiophoresis_2_3', 'diffusiophoresis_2_3', 'diffusiophoresis_3_1', 'diffusiophoresis_3_2',
-                       'diffusiophoresis_3_3', 'diffusiophoresis_4_1', 'diffusiophoresis_4_2']
+
+
+        config_list = ['diffusiophoresis_3_6','diffusiophoresis_4_3', 'diffusiophoresis_4_4', 'diffusiophoresis_4_5',
+                        'diffusiophoresis_6_1', 'diffusiophoresis_6_1', 'diffusiophoresis_6_2', 'diffusiophoresis_6_3',
+                       'diffusiophoresis_7_1', 'diffusiophoresis_7_2', 'diffusiophoresis_7_3',
+                       'diffusiophoresis_8_1', 'diffusiophoresis_8_2', 'diffusiophoresis_8_3']
         # config_list = ['arbitrary_3_field_triangles']
 
     for config_file_ in config_list:
@@ -78,6 +81,8 @@ if __name__ == "__main__":
 
         print(f"config_file  {config.config_file}")
         print(f"\033[92mdevice  {device}\033[0m")
+
+
 
         if "generate" in task:
             data_generate(
