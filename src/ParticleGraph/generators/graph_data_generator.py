@@ -811,6 +811,7 @@ def data_generate_particle_field(
         y_mesh_list = []
         edge_p_p_list = []
         edge_f_p_list = []
+        id_fig = 0
 
         # initialize particle and mesh states
         X1, V1, T1, H1, _, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
@@ -1158,6 +1159,8 @@ def data_generate_particle_field(
             
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
 
+                num = f"{id_fig:06}"
+                id_fig += 1
 
                 if "black" in style:
                     plt.style.use("dark_background")
@@ -1395,7 +1398,7 @@ def data_generate_particle_field(
                     ax4.set_yticks([])
                     
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Diffusiophoresis_{run}_{it}.jpg", dpi=200)
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Diffusiophoresis_{run}_{num}.jpg", dpi=200)
                     plt.close()
 
 
@@ -1505,7 +1508,7 @@ def data_generate_particle_field(
                         plt.yticks([])
                     plt.tight_layout()
                     plt.savefig(
-                        f"graphs_data/{dataset_name}/Fig/Arrow_{run}_{it}.jpg",
+                        f"graphs_data/{dataset_name}/Fig/Arrow_{run}_{num}.jpg",
                         dpi=170.7,
                     )
                     plt.close()
@@ -1541,6 +1544,12 @@ def data_generate_particle_field(
 
             # torch.save(model_p_p.p, f'graphs_data/{dataset_name}/model_p.pt')
 
+        if run ==0:
+            generate_compressed_video_mp4(output_dir=f"./graphs_data/{dataset_name}", run=run, config_indices=None, framerate=20)
+
+        files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
+        for f in files:
+            os.remove(f)
 
 def data_generate_cell(
     config,

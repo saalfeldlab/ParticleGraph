@@ -1,0 +1,66 @@
+description: 'diffusiophoresis with 1 type particles   Pe=10.0   diffx2'
+dataset: 'diffusiophoresis_2_1'
+
+simulation:
+  params: [[1.6233, 1.0413, 1.6012, 1.5615], [1.7667, 1.8308, 1.0855, 1.9055],  [1.7226, 1.7850, 1.0584, 1.8579]]
+
+  params_mesh:
+    - [0.2, 10.0, 4.5, 6.5, 0.04, -16]    
+    - [1.6, 16, 0.0, 0.0, 0.0, 0.0]        
+    - [10.0, 250, 250, 0.05, 0.0, 0.0]     
+      
+  min_radius: 0
+  max_radius: 0.2
+  n_particles: 9600
+  n_particle_types: 1
+  n_frames: 1000
+  n_nodes: 10000
+  n_node_types:  1
+  sigma: 0.005
+  delta_t: 5.0E-4
+  dpos_init: 0
+  boundary: 'periodic'
+
+  node_value_map: 'input_data/pattern_Null.tif'
+  node_coeff_map: ''
+
+graph_model:
+
+  field_type: 'diffusiophoresis'
+
+  particle_model_name: 'PDE_ParticleField_D'
+  mesh_model_name: 'Diffusiophoresis_Mesh'
+
+  prediction: 'first_derivative'
+  input_size: 5
+  output_size: 2
+  hidden_dim: 128
+  n_layers: 5
+  aggr_type: 'mean'
+  embedding_dim: 2
+  update_type: 'none'
+
+plotting:
+  colormap: 'tab10'
+  arrow_length: 2
+  ylim: [-0.04, 0.03]
+
+training:
+
+  n_runs: 2
+  device: 'auto'
+  n_epochs: 20
+  batch_size: 8
+
+  small_init_batch_size: False
+  sparsity: 'replace_embedding_function'
+  cluster_method: 'distance_plot'
+  rotation_augmentation: True
+  data_augmentation_loop: 100
+  fix_cluster_embedding: True
+
+
+
+
+
+
