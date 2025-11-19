@@ -1,7 +1,7 @@
 import torch_geometric as pyg
 import torch_geometric.utils as pyg_utils
 from ParticleGraph.models.MLP import MLP
-from ParticleGraph.models.Fused_MLP import FusedMLP
+# from ParticleGraph.models.Fused_MLP import FusedMLP
 from ParticleGraph.utils import to_numpy, reparameterize
 from ParticleGraph.models.Siren_Network import *
 from ParticleGraph.models.Gumbel import gumbel_softmax_sample, gumbel_softmax

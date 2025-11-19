@@ -1,4 +1,4 @@
-description: 'synaptic network 100.000 points  125000 iterations per epoch batchsize 8'
+description: 'synaptic network 100.000 points   4000000 iterations per epoch  batchsize 8 batch_ratio 0.25 time_step 8'
 dataset: 'signal_N2_a37'
 
 simulation:
@@ -46,20 +46,33 @@ plotting:
     ylim: [-8,8]
 
 training:
+
     n_epochs: 2
+    n_runs: 2
+    device: 'auto'
+
     recursive_loop: 1
     batch_size: 8
+    batch_ratio: 0.25
     small_init_batch_size: False
-    n_runs: 2
-    
-    sparsity: 'none'
+
+    time_step: 8
+
+    epoch_reset: -1
+    epoch_reset_freq: 999
+    n_epochs_init: 2
+
     rotation_augmentation: False
     data_augmentation_loop: 50
-    cluster_method: 'distance_plot'
-    fix_cluster_embedding: True
-    device: 'auto'
-    sparsity: 'replace_embedding_function'
+
+    sparsity: 'none'
     sparsity_freq: 4
+    cluster_method: 'distance_plot'
+    cluster_distance_threshold: 0.1
+    fix_cluster_embedding: True
+
+    coeff_W_L1: 0
+    coeff_edge_diff: 10
 
     learning_rate_W_start: 1.0E-3
     learning_rate_start: 5.0E-4

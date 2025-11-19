@@ -3083,7 +3083,7 @@ def data_train_synaptic2(config, erase, best_model, device):
 
     x_list = []
     y_list = []
-    for run in trange(0,n_runs):
+    for run in trange(0,n_runs,ncols=100):
         x = np.load(f'graphs_data/{dataset_name}/x_list_{run}.npy')
         y = np.load(f'graphs_data/{dataset_name}/y_list_{run}.npy')
         x_list.append(x)

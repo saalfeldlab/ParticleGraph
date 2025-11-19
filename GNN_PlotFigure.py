@@ -48,7 +48,7 @@ from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score, a
 from scipy.optimize import linear_sum_assignment
 # from pysr import PySRRegressor
 from datetime import datetime
-from ParticleGraph.spectral_utils.myspectral_funcs import estimate_spectrum, compute_spectral_coefs
+# from ParticleGraph.spectral_utils.myspectral_funcs import estimate_spectrum, compute_spectral_coefs
 from scipy.special import logsumexp
 
 class Interaction_Particle_extract(MessagePassing):
@@ -4829,7 +4829,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
     x_list = []
     y_list = []
-    for run in trange(1,2):
+    for run in trange(1,2, ncols=100):
         if os.path.exists(f'graphs_data/{dataset_name}/x_list_{run}.pt'):
             x = torch.load(f'graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device)
             y = torch.load(f'graphs_data/{dataset_name}/y_list_{run}.pt', map_location=device)
@@ -4854,8 +4854,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
     print('update variables ...')
     x = x_list[0][n_frames - 5]
     n_neurons = x.shape[0]
-    print(f'N neurons: {n_neurons}')
-    logger.info(f'N neurons: {n_neurons}')
+    print(f'n_neurons: {n_neurons}')
+    logger.info(f'n_neurons: {n_neurons}')
     config.simulation.n_neurons = n_neurons
     type_list = torch.tensor(x[:, 1 + 2 * dimension:2 + 2 * dimension], device=device)
 
@@ -5529,7 +5529,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.savefig(f'./{log_dir}/results/activity_comparison.tif', dpi=80)
             plt.close()
 
-        adjacency = torch.load(f'./graphs_data/{dataset_name}/adjacency.pt', map_location=device)
+        adjacency = torch.load(f'./graphs_data/{dataset_name}/connectivity.pt', map_location=device)
         adjacency_ = adjacency.t().clone().detach()
         adj_t = torch.abs(adjacency_) > 0
         edge_index = adj_t.nonzero().t().contiguous()
@@ -5556,23 +5556,24 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
         plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=48)
         plt.yticks([0, n_neurons - 1], [1, n_neurons], fontsize=48)
         plt.xticks(rotation=0)
-        # plt.subplot(2, 2, 1)
-        # ax = sns.heatmap(to_numpy(adjacency[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
-        # plt.xticks([])
-        # plt.yticks([])
+        plt.subplot(2, 2, 1)
+        ax = sns.heatmap(to_numpy(adjacency[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
+        plt.xticks([])
+        plt.yticks([])
         plt.tight_layout()
         plt.savefig(f'./{log_dir}/results/true connectivity.tif', dpi=300)
         plt.close()
 
         plt.figure(figsize=(10, 10))
-        if True: # config.graph_model.signal_model_name == 'PDE_N8':
-            with open(f'graphs_data/{dataset_name}/larynx_neuron_list.json', 'r') as file:
-                larynx_neuron_list = json.load(file)
-            with open(f'graphs_data/{dataset_name}/all_neuron_list.json', 'r') as file:
-                activity_neuron_list = json.load(file)
-            map_larynx_matrix, n = map_matrix(larynx_neuron_list, all_neuron_list, adjacency)
-        else:
-            n = np.random.randint(0, n_neurons, 50)
+        # if True: # config.graph_model.signal_model_name == 'PDE_N8':
+        #     with open(f'graphs_data/{dataset_name}/larynx_neuron_list.json', 'r') as file:
+        #         larynx_neuron_list = json.load(file)
+        #     with open(f'graphs_data/{dataset_name}/all_neuron_list.json', 'r') as file:
+        #         activity_neuron_list = json.load(file)
+        #     map_larynx_matrix, n = map_matrix(larynx_neuron_list, all_neuron_list, adjacency)
+        # else:
+
+        n = np.random.randint(0, n_neurons, 50)
         for i in range(len(n)):
             plt.plot(to_numpy(activity[n[i].astype(int), :]), linewidth=1)
         plt.xlabel('time', fontsize=64)
@@ -5729,7 +5730,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             fig, ax = fig_init()
             rr = torch.linspace(-xnorm.squeeze() * 2 , xnorm.squeeze() * 2 , 1000).to(device)
             func_list = []
-            for n in trange(0,n_neurons,n_neurons//100):
+            for n in trange(0,n_neurons,ncols=100):
                 if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
                     embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
                     in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
@@ -5773,11 +5774,11 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=48)
             plt.yticks([0, n_neurons - 1], [1, n_neurons], fontsize=48)
             plt.xticks(rotation=0)
-            # plt.subplot(2, 2, 1)
-            # ax = sns.heatmap(to_numpy(A[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
-            # plt.xticks(rotation=0)
-            # plt.xticks([])
-            # plt.yticks([])
+            plt.subplot(2, 2, 1)
+            ax = sns.heatmap(to_numpy(A[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
+            plt.xticks(rotation=0)
+            plt.xticks([])
+            plt.yticks([])
             plt.tight_layout()
             plt.savefig(f'./{log_dir}/results/corrected learned connectivity.tif', dpi=300)
             plt.close()
@@ -5859,7 +5860,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     true_func = true_model.func(rr, 0, 'phi')
                     plt.plot(to_numpy(rr), to_numpy(true_func), c = mc, linewidth = 16, label = 'original', alpha = 0.21)
 
-                for n in trange(0,n_neurons):
+                for n in trange(0,n_neurons,ncols=100):
                     if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
                         embedding_ = model.a[n, :] * torch.ones((1500, config.graph_model.embedding_dim), device=device)
                         in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
@@ -5896,17 +5897,16 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             print('interaction functions ...')
 
             fig, ax = fig_init()
-            for n in trange(n_neuron_types):
+            for n in range(n_neuron_types):
                 if model_config.signal_model_name == 'PDE_N5':
                     true_func = true_model.func(rr, n, n, 'update')
                 else:
                     true_func = true_model.func(rr, n, 'update')
                 plt.plot(to_numpy(rr), to_numpy(true_func), c=mc, linewidth=16, label='original', alpha=0.21)
             phi_list = []
-            for n in trange(n_neurons):
+            for n in trange(n_neurons,ncols=100):
                 embedding_ = model.a[n, :] * torch.ones((1500, config.graph_model.embedding_dim), device=device)
-                # in_features = torch.cat((rr[:, None], embedding_), dim=1)
-                in_features = get_in_features_update(rr[:, None], n_neurons, embedding_, model.update_type, device)
+                in_features = get_in_features_update(rr[:, None], model, embedding_, device)
                 with torch.no_grad():
                     func = model.lin_phi(in_features.float())
                 func = func[:, 0]
@@ -5932,7 +5932,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
             proj_interaction = (proj_interaction - np.min(proj_interaction)) / (np.max(proj_interaction) - np.min(proj_interaction) + 1e-10)
             fig, ax = fig_init()
-            for n in trange(n_neuron_types):
+            for n in trange(n_neuron_types, ncols=100):
                 pos = torch.argwhere(type_list == n)
                 pos = to_numpy(pos)
                 if len(pos) > 0:
@@ -6061,9 +6061,6 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/results/learned_activity/learned_activity_{n}.tif", dpi=80)
                     plt.close()
-
-
-
 
             if has_field:
 
@@ -8302,11 +8299,13 @@ def get_figures(index):
                                   sample_embedding=False, device=device)
                 print(' ')
                 print(' ')
+
         case 'synaptic_supp1' | 'synaptic_supp6':
             for config_file in config_list:
                 config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
                 data_plot(config=config, config_file=config_file, epoch_list=['best'], device=device, style=True)
                 data_plot(config=config, config_file=config_file, epoch_list=['all'], device=device, style=True)
+
         case 'synaptic_supp2':
             plt.rcParams['text.usetex'] = True
             rc('font', **{'family': 'serif', 'serif': ['Palatino']})
@@ -8588,6 +8587,8 @@ if __name__ == '__main__':
     # config_list = ['RD_RPS']
     # config_list = ['cell_U2OS_8_12']
 
+    config_list = ['signal_N2_a37_5']
+
     for config_file_ in config_list:
         print(' ')
 
@@ -8600,7 +8601,7 @@ if __name__ == '__main__':
 
         folder_name = './log/' + pre_folder + '/tmp_results/'
         os.makedirs(folder_name, exist_ok=True)
-        data_plot(config=config, config_file=config_file, epoch_list=['all'], style='black color', device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['best'], style='latex color', device=device)
 
 
 
