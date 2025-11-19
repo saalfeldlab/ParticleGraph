@@ -185,8 +185,8 @@ def get_in_features_lin_edge(x, model, model_config, xnorm, n_neurons, device):
 
 def get_in_features(rr=None, embedding=None, model=[], model_name = [], max_radius=[]):
 
-    if model.embedding_trial:
-        embedding = torch.cat((embedding, model.b[0].repeat(embedding.shape[0], 1)), dim=1)
+    # if model.embedding_trial:
+    #     embedding = torch.cat((embedding, model.b[0].repeat(embedding.shape[0], 1)), dim=1)
 
     match model_name:
         case 'PDE_A' | 'PDE_Cell_A':

@@ -361,7 +361,7 @@ def load_training_data(dataset_name, n_runs, log_dir, device):
     y_list = []
     print('load data ...')
     time.sleep(0.5)
-    for run in trange(n_runs):
+    for run in trange(n_runs, ncols=100):
         # check if path exists
         if os.path.exists(f'graphs_data/{dataset_name}/x_list_{run}.pt'):
             x = torch.load(f'graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device)
@@ -406,7 +406,7 @@ def plot_embedding_func_cluster_tracking(model, config, embedding_cluster, cmap,
         plt.close()
     else:
         fig, ax = fig_init()
-        for k in trange(0, config.simulation.n_frames - 2):
+        for k in trange(0, config.simulation.n_frames - 2, ncols=100):
             embedding = to_numpy(model.a[k * n_particles:(k + 1) * n_particles, :].clone().detach())
             for n in range(n_particle_types):
                 plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=1,
@@ -5475,7 +5475,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
             r_squared_list = []
             slope_list = []
-            for i in trange(0,1500,10):
+            for i in trange(0,1500,10, ncols=100):
                 plt.figure(figsize=(20, 10))
                 ax = plt.subplot(121)
                 plt.plot(neuron_gt_list[:, n[0]].detach().cpu().numpy(), c='w', linewidth=8, label='true', alpha=0.25)
@@ -6113,7 +6113,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
 
                 if ('short_term_plasticity' in field_type) | ('modulation_permutation' in field_type):
 
-                    for frame in trange(0, n_frames, n_frames // 100):
+                    for frame in trange(0, n_frames, n_frames // 100, ncols=100):
                         t = torch.tensor([frame/ n_frames], dtype=torch.float32, device=device)
                         if (model_config.update_type == '2steps'):
                                 m_ = model_f(t) ** 2
@@ -6230,7 +6230,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     im_list = list([])
                     pred_list = list([])
 
-                    for frame in trange(0, n_frames, n_frames // 100):
+                    for frame in trange(0, n_frames, n_frames // 100, ncols=100):
 
                         fig, ax = fig_init()
                         im_ = np.zeros((44, 44))
@@ -6368,7 +6368,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 plt.savefig(f"./{log_dir}/results/pic_comparison {epoch}.tif", dpi=80)
                 plt.close()
 
-                for frame in trange(0, modulation.shape[1], modulation.shape[1] // 257):
+                for frame in trange(0, modulation.shape[1], modulation.shape[1] // 257, ncols=100):
                     im = modulation[:, frame]
                     im = np.reshape(im, (32, 32))
                     plt.figure(figsize=(8, 8))
@@ -6658,7 +6658,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
 
     x_list = []
     y_list = []
-    for run in trange(1):
+    for run in trange(1, ncols=100):
         if os.path.exists(f'graphs_data/{dataset_name}/x_list_{run}.pt'):
             x = torch.load(f'graphs_data/{dataset_name}/x_list_{run}.pt', map_location=device)
             y = torch.load(f'graphs_data/{dataset_name}/y_list_{run}.pt', map_location=device)
@@ -6676,8 +6676,8 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
     print('update variables ...')
     x = x_list[0][n_frames - 1]
     n_neurons = x.shape[0]
-    print(f'N neurons: {n_neurons}')
-    logger.info(f'N neurons: {n_neurons}')
+    print(f'n_neurons: {n_neurons}')
+    logger.info(f'n_neurons: {n_neurons}')
     config.simulation.n_neurons = n_neurons
     type_list = torch.tensor(x[:, 1 + 2 * dimension:2 + 2 * dimension], device=device)
 
@@ -6738,7 +6738,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
         slope_list = []
 
         with torch.no_grad():
-            for file_id_ in trange(0, 100):
+            for file_id_ in trange(0, 100, ncols=100):
                 file_id = file_id_list[file_id_]
 
                 epoch = files[file_id].split('graphs')[1][1:-3]
@@ -6830,7 +6830,9 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                     c_list = np.linspace(c1, c2, 100)
                     for n in range(k * 100, (k + 1) * 100):
                         embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-                        in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
+                        in_features = get_in_features_update(rr, embedding_, model, model_config.signal_model_name, max_radius)
+                        # get_in_features(rr=None, embedding=None, model=[], model_name = [], max_radius=[])
+
                         with torch.no_grad():
                             func = model.lin_phi(in_features.float())
                         func_list.append(func)
@@ -6965,7 +6967,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
         adjacency = torch.load(f'./graphs_data/{dataset_name}/adjacency.pt', map_location=device)
         true_model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, device=device)
 
-        for n in trange(100):
+        for n in trange(100, ncols=100):
 
             indices = np.arange(n_neurons)*100+n
 
@@ -7088,7 +7090,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
         plt.savefig(f'./{log_dir}/results/firing rate.tif', dpi=300)
         plt.close()
 
-        adjacency = torch.load(f'./graphs_data/{dataset_name}/adjacency.pt', map_location=device)
+        adjacency = torch.load(f'./graphs_data/{dataset_name}/connectivity.pt', map_location=device)
         adjacency_ = adjacency.t().clone().detach()
         adj_t = torch.abs(adjacency_) > 0
         edge_index = adj_t.nonzero().t().contiguous()
@@ -7149,7 +7151,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                 im_list=list([])
                 pred_list=list([])
 
-                for frame in trange(0, n_frames, n_frames//100):
+                for frame in trange(0, n_frames, n_frames//100, ncols=100):
 
                     fig, ax = fig_init()
                     im_ = np.zeros((44,44))
@@ -7325,9 +7327,9 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                 c2 = cmap.color((it + 1) % 4)
                 c_list = np.linspace(c1, c2, 100)
                 fig, ax = fig_init()
-                for n in trange(k*100,(k+1)*100):
+                for n in trange(k*100,(k+1)*100, ncols=100):
                     embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-                    in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
+                    in_features = get_in_features_update(rr[:,None], model, embedding_, device)
                     with torch.no_grad():
                         func = model.lin_phi(in_features.float())
                     func_list.append(func)
@@ -7349,7 +7351,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
             fig, ax = fig_init()
             rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
             func_list = []
-            for n in trange(0,n_neurons,n_neurons):
+            for n in trange(0,n_neurons,n_neurons, ncols=100):
                 if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
                     embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
                     in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
@@ -7387,7 +7389,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                 true_func = true_model.func(rr, 0, 'phi')
                 plt.plot(to_numpy(rr), to_numpy(true_func), c = 'k', linewidth = 16, label = 'original', alpha = 0.21)
 
-            for n in trange(0,n_neurons):
+            for n in trange(0,n_neurons, ncols=100):
                 in_features = rr[:, None]
                 with torch.no_grad():
                     func = model.lin_edge(in_features.float()) * correction
@@ -7518,21 +7520,21 @@ def plot_agents(config, epoch_list, log_dir, logger, style, device):
     else:
         print('Create list of edges index ...')
         edge_p_p_list = []
-        for k in trange(n_frames):
-            time_point = time_series[k]
-            x = bundle_fields(time_point, "pos", "velocity", "internal", "state", "reversal_timer").clone().detach()
-            x = torch.column_stack((torch.arange(0, n_particles, device=device), x))
+    for k in trange(n_frames, ncols=100):
+        time_point = time_series[k]
+        x = bundle_fields(time_point, "pos", "velocity", "internal", "state", "reversal_timer").clone().detach()
+        x = torch.column_stack((torch.arange(0, n_particles, device=device), x))
 
-            nbrs = NearestNeighbors(n_neighbors=simulation_config.n_neighbors, algorithm='auto').fit(to_numpy(x[:, 1:dimension + 1]))
-            distances, indices = nbrs.kneighbors(to_numpy(x[:, 1:dimension + 1]))
-            edge_index = []
-            for i in range(indices.shape[0]):
-                for j in range(1, indices.shape[1]):  # Start from 1 to avoid self-loop
-                    edge_index.append((i, indices[i, j]))
-            edge_index = np.array(edge_index)
-            edge_index = torch.tensor(edge_index, device=device).t().contiguous()
-            edge_p_p_list.append(to_numpy(edge_index))
-        np.savez(f'{log_dir}/edge_p_p_list', *edge_p_p_list)
+        nbrs = NearestNeighbors(n_neighbors=simulation_config.n_neighbors, algorithm='auto').fit(to_numpy(x[:, 1:dimension + 1]))
+        distances, indices = nbrs.kneighbors(to_numpy(x[:, 1:dimension + 1]))
+        edge_index = []
+        for i in range(indices.shape[0]):
+            for j in range(1, indices.shape[1]):  # Start from 1 to avoid self-loop
+                edge_index.append((i, indices[i, j]))
+        edge_index = np.array(edge_index)
+        edge_index = torch.tensor(edge_index, device=device).t().contiguous()
+        edge_p_p_list.append(to_numpy(edge_index))
+    np.savez(f'{log_dir}/edge_p_p_list', *edge_p_p_list)
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
@@ -7545,37 +7547,36 @@ def plot_agents(config, epoch_list, log_dir, logger, style, device):
         model.eval()
 
 
-        for k in trange(2, n_frames-2,10):
+    for k in trange(2, n_frames-2,10, ncols=100):
+        time_point = time_series[k]
+        x = bundle_fields(time_point, "pos", "velocity", "internal", "state", "reversal_timer").clone().detach()
+        x = torch.column_stack((torch.arange(0, n_particles, device=device), x))
+        x[:, 1:5] = x[:, 1:5] / 1000
 
-            time_point = time_series[k]
-            x = bundle_fields(time_point, "pos", "velocity", "internal", "state", "reversal_timer").clone().detach()
-            x = torch.column_stack((torch.arange(0, n_particles, device=device), x))
-            x[:, 1:5] = x[:, 1:5] / 1000
+        edges = edge_p_p_list[f'arr_{k}']
+        edges = torch.tensor(edges, dtype=torch.int64, device=device)
+        dataset = data.Data(x=x[:, :], edge_index=edges)
 
-            edges = edge_p_p_list[f'arr_{k}']
-            edges = torch.tensor(edges, dtype=torch.int64, device=device)
-            dataset = data.Data(x=x[:, :], edge_index=edges)
+        if model_config.prediction == 'first_derivative':
+            time_point = time_series[k + 1]
+            y = bc_dpos(time_point.velocity.clone().detach() / 1000)
+        else:
+            time_point = time_series[k + 1]
+            v_prev = bc_dpos(time_point.velocity.clone().detach() / 1000)
+            time_point = time_series[k - 1]
+            v_next = bc_dpos(time_point.velocity.clone().detach() / 1000)
+            y = (v_next - v_prev)
 
-            if model_config.prediction == 'first_derivative':
-                time_point = time_series[k + 1]
-                y = bc_dpos(time_point.velocity.clone().detach() / 1000)
-            else:
-                time_point = time_series[k + 1]
-                v_prev = bc_dpos(time_point.velocity.clone().detach() / 1000)
-                time_point = time_series[k - 1]
-                v_next = bc_dpos(time_point.velocity.clone().detach() / 1000)
-                y = (v_next - v_prev)
+        embedding = to_numpy(model.a[0][k].squeeze())
 
-            embedding = to_numpy(model.a[0][k].squeeze())
+        ax, fig = fig_init()
+        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), c = embedding,  s=0.1, alpha=1)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_recons/Fig_{k}.tif", dpi=87)
+        plt.close()
 
-            ax, fig = fig_init()
-            plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), c = embedding,  s=0.1, alpha=1)
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_recons/Fig_{k}.tif", dpi=87)
-            plt.close()
-
-            # in_features = torch.cat((torch.zeros((300000,7),device=device), embedding), dim=-1)
-            # out = model.lin_edge(in_features.float())
+        # in_features = torch.cat((torch.zeros((300000,7),device=device), embedding), dim=-1)
+        # out = model.lin_edge(in_features.float())
 
         for x_ in [0,1]:
             for y_ in [0,1]:
@@ -7714,7 +7715,7 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
         files.sort(key=sort_key)
         entropy_list=[]
 
-        for file_id in trange(0,len(files),2):
+    for file_id in trange(0,len(files),2, ncols=100):
             # print(files[file_id], sort_key(files[file_id]), (sort_key(files[file_id]) % 1E7 != 0))
 
             if (sort_key(files[file_id]) % 1E7 != 0):
@@ -7814,19 +7815,17 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
                     plt.savefig(f"./{log_dir}/results/all/clustered_functions_{epoch}.tif", dpi=80)
                     plt.close()
 
-        entropy_list = torch.stack(entropy_list)
-        entropy_list = to_numpy(entropy_list)
-        fig = plt.figure(figsize=(10, 10))
-        plt.plot(entropy_list, linewidth=1, color='w')
-        plt.xlabel('iteration', fontsize=48)
-        plt.ylabel('entropy', fontsize=48)
-        plt.ylim([0,7])
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/entropy.tif", dpi=80)
-
+                entropy_list = torch.stack(entropy_list)
+                entropy_list = to_numpy(entropy_list)
+                fig = plt.figure(figsize=(10, 10))
+                plt.plot(entropy_list, linewidth=1, color='w')
+                plt.xlabel('iteration', fontsize=48)
+                plt.ylabel('entropy', fontsize=48)
+                plt.ylim([0,7])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/entropy.tif", dpi=80)
 
     else:
-
         net = f"{log_dir}/models/best_model_with_{n_runs - 1}_graphs_{epoch_list[0]}.pt"
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
@@ -7852,7 +7851,7 @@ def plot_mouse(config, epoch_list, log_dir, logger, style, device):
         cbm = LinearSegmentedColormap.from_list(cmap_name, colors, N=n_bins)
 
         next_id = max(x_list[0][0][:, -1]) + 1
-        for k in trange(0, 6000): #n_frames-1):
+        for k in trange(0, 6000, ncols=100): #n_frames-1):
             x = x_list[0][k]
             edges = edge_p_p_list[0][f'arr_{k}']
             edges = torch.tensor(edges, dtype=torch.int64, device=device)
@@ -8587,7 +8586,8 @@ if __name__ == '__main__':
     # config_list = ['RD_RPS']
     # config_list = ['cell_U2OS_8_12']
 
-    config_list = ['signal_N2_a37_5']
+    # config_list = ['signal_N2_a37_5']
+    config_list = ['signal_N3_c16', 'signal_N3_c4', 'signal_N3_c11']
 
     for config_file_ in config_list:
         print(' ')
