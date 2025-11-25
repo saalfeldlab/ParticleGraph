@@ -502,6 +502,7 @@ def plot_embedding_func_cluster_state(model, config,embedding_cluster, cmap, typ
     plt.ylabel(r'UMAP 1', fontsize=68)
     plt.xlim([-0.2, 1.2])
     plt.ylim([-0.2, 1.2])
+    plt.yticks([-1, -0.5, 0, 0.5, 1], ['-1', '-0.5', '0', '0.5', '1'])
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/UMAP_{epoch}.tif", dpi=170.7)
     plt.close()
@@ -5733,7 +5734,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             for n in trange(0,n_neurons,ncols=100):
                 if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
                     embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-                    in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
+                    in_features = get_in_features(rr, embedding_, model, model_config.signal_model_name, max_radius)
                 else:
                     in_features = rr[:,None]
                 with torch.no_grad():
@@ -5863,7 +5864,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                 for n in trange(0,n_neurons,ncols=100):
                     if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
                         embedding_ = model.a[n, :] * torch.ones((1500, config.graph_model.embedding_dim), device=device)
-                        in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
+                        in_features = get_in_features(rr, embedding_, model, model_config.signal_model_name, max_radius)
                     else:
                         in_features = rr[:, None]
                     with torch.no_grad():
@@ -5877,6 +5878,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     else:
                         plt.plot(to_numpy(rr), to_numpy(func), 2, color=mc, linewidth=2, alpha=0.25)
 
+                plt.xlim([-5,5])
+                plt.xticks([-5, 0, 5], ['-5.00', '0', '5.00'])
                 plt.xlabel(r'$x_i$', fontsize=68)
                 if (model_config.signal_model_name == 'PDE_N4'):
                     plt.ylabel(r'learned $\psi^*(a_i, x_i)$', fontsize=68)
@@ -5888,6 +5891,8 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
                     plt.ylim([-0.2, 1.2])
                 else:
                     plt.ylim([-1.6, 1.6])
+                plt.ylim([-1.2, 1.2])
+                plt.yticks([-1, 0, 1], ['-1.00', '0.00', '1.00'])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/learned_psi.tif", dpi=170.7)
                 plt.close()
@@ -5917,8 +5922,11 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
             func_list_ = to_numpy(phi_list)
             plt.xlabel(r'$x_i$', fontsize=68)
             plt.ylabel(r'learned $\phi^*(a_i, x_i)$', fontsize=68)
+            plt.ylabel(r'learned $\psi^*(a_i, a_j, x_i)$', fontsize=68)
             plt.tight_layout()
-            # plt.xlim([-to_numpy(xnorm), to_numpy(xnorm)])
+
+            plt.xlim([-5,5])
+            plt.yticks([-5, 0, 5], ['-5.00', '0', '5.00'])
             plt.ylim(config.plotting.ylim)
             plt.savefig(f'./{log_dir}/results/learned phi.tif', dpi=300)
             plt.close()
@@ -7008,7 +7016,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                 plt.xticks([])
                 plt.yticks([])
                 embedding_ = model.a[k, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-                in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
+                in_features = get_in_features(rr, embedding_, model, model_config.signal_model_name, max_radius)
                 with torch.no_grad():
                     func = model.lin_phi(in_features.float())
                     plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(it//250), alpha=0.5)
@@ -7329,7 +7337,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
                 fig, ax = fig_init()
                 for n in trange(k*100,(k+1)*100, ncols=100):
                     embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-                    in_features = get_in_features_update(rr[:,None], model, embedding_, device)
+                    in_features = get_in_features_update(rr[:,None], model, model_config.signal_model_name, embedding_, device)
                     with torch.no_grad():
                         func = model.lin_phi(in_features.float())
                     func_list.append(func)
@@ -7354,7 +7362,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
             for n in trange(0,n_neurons,n_neurons, ncols=100):
                 if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
                     embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-                    in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
+                    in_features = get_in_features(rr, embedding_, model, model_config.signal_model_name, max_radius)
                 else:
                     in_features = rr[:, None]
                 with torch.no_grad():
@@ -8565,29 +8573,16 @@ if __name__ == '__main__':
     # except:
     #     pass
 
-    # config_list = ['signal_N6_a29_12']
-    # config_list = ['signal_N2_a43_10']
-    # config_list = ['signal_N4_m13_shuffle_ter']
     # config_list = ['boids_16_256']
-    #config_list = ['signal_N5_v6','signal_N5_v6_0','signal_N5_v6_1','signal_N5_v6_2', 'signal_N5_v6_3', 'signal_N5_v7_1','signal_N5_v7_2','signal_N5_v7_3', 'signal_N5_v8','signal_N5_v9','signal_N5_v10',
-    #                'signal_N5_v11','signal_N5_v12','signal_N5_v13','signal_N5_v14','signal_N5_v15']
-    # config_list = ['signal_N4_a3','signal_N4_a4']
-    # config_list = ['signal_N2_a43_3_1_t8','signal_N2_a43_3_5_t8','signal_N2_a43_3_10_t8','signal_N2_a43_3_20_t8','signal_N2_a43_3_1_t16','signal_N2_a43_3_5_t16',
-    #                'signal_N2_a43_3_10_t16','signal_N2_a43_3_20_t16','signal_N2_a43_3_20_t20','signal_N2_a43_3_20_t24','signal_N2_a43_3_20_t28']
     # config_list = ['gravity_16_1']
     # config_list = ['wave_slit_bis']
-    # config_list = [f"multimaterial_9_{i}" for i in range(25, 33)]
-    # config_list = [f"multimaterial_10_{i}" for i in range(1, 5)]
-
-
-    # config_list = ['multimaterial_13_1', 'multimaterial_13_2']
-    # config_list = ['falling_water_ramp_x6_13']
     # config_list = ['arbitrary_3_field_video_bison_test']
     # config_list = ['RD_RPS']
     # config_list = ['cell_U2OS_8_12']
 
-    # config_list = ['signal_N2_a37_5']
-    config_list = ['signal_N3_c16', 'signal_N3_c4', 'signal_N3_c11']
+    # config_list = ['signal_N2_a37_1', 'signal_N2_a31', 'signal_N2_e4', 'signal_N2_a1_SNR7','signal_N2_d3', 'signal_N2_b2', 'signal_N5_l3']  
+    config_list = ['signal_N2_a1_SNR7']
+    # config_list = ['signal_N3_c16', 'signal_N3_c4', 'signal_N3_c11']
 
     for config_file_ in config_list:
         print(' ')

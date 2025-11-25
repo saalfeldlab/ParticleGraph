@@ -1,12 +1,12 @@
 {
-    "python.defaultInterpreterPath": "/home/allierc@hhmi.org/miniforge3/bin/python",
-    "python.terminal.activateEnvironment": true,
-    "python.linting.enabled": true,
-    "python.linting.pylintEnabled": true,
-    "files.autoSave": "afterDelay",
-    "files.autoSaveDelay": 500,
-    "python.debugging.console": "integratedTerminal",
-    "python-envs.defaultEnvManager": "ms-python.python:conda",
-    "python-envs.defaultPackageManager": "ms-python.python:conda",
-    "python-envs.pythonProjects": []
+  "python.defaultInterpreterPath": "/workspace/.conda_envs/particle-graph/bin/python",
+  "python.terminal.activateEnvironment": true,
+  "python.linting.enabled": true,
+  "python.linting.pylintEnabled": true,
+  "files.autoSave": "afterDelay",
+  "files.autoSaveDelay": 500,
+  "python.debugging.console": "integratedTerminal",
+  "python-envs.defaultEnvManager": "ms-python.python:conda",
+  "python-envs.defaultPackageManager": "ms-python.python:conda",
+  "python-envs.pythonProjects": []
 }

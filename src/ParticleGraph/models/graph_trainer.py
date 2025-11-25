@@ -3338,7 +3338,7 @@ def data_train_synaptic2(config, erase, best_model, device):
         k = 0
 
         time.sleep(1.0)
-        for N in trange(Niter):
+        for N in trange(Niter,ncols=100):
 
             if has_missing_activity:
                 optimizer_missing_activity.zero_grad()
@@ -3689,7 +3689,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                 model_MLP = model.lin_phi
                 update_type = model.update_type
 
-                func_list, proj_interaction_ = analyze_edge_function(rr=torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device),
+                func_list, proj_interaction = analyze_edge_function(rr=torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device),
                                                                      vizualize=True, config=config,
                                                                      model_MLP=model_MLP, model=model,
                                                                      n_nodes=0,
@@ -3736,8 +3736,8 @@ def data_train_synaptic2(config, erase, best_model, device):
                     optimizer, n_total_params = set_trainable_parameters(model=model, lr_embedding=lr_embedding, lr=lr,
                                                                          lr_update=lr_update, lr_W=lr_W,
                                                                          lr_modulation=lr_modulation)
-                    for sub_epochs in trange(20):
-                        rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
+                    for sub_epochs in trange(20,ncols=100):
+                        rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
                         pred = []
                         optimizer.zero_grad()
                         for n in range(n_neurons):
@@ -3750,6 +3750,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                         logger.info(f'    loss: {np.round(loss.item() / n_neurons, 3)}')
                         loss.backward()
                         optimizer.step()
+
                 if train_config.fix_cluster_embedding:
                     lr = 1E-12
                     lr_embedding = 1E-12
@@ -3766,9 +3767,6 @@ def data_train_synaptic2(config, erase, best_model, device):
                                                                      lr_modulation=lr_modulation)
                 logger.info( f'learning rates: lr_W {lr_W}, lr {lr}, lr_embedding {lr_embedding}, lr_modulation {lr_modulation}')
 
-            if (epoch == 20) & (train_config.coeff_anneal_L1 > 0):
-                coeff_W_L1 = train_config.coeff_anneal_L1
-                logger.info(f'coeff_W_L1: {coeff_W_L1}')
 
 
 def data_train_agents(config, erase, best_model, device):

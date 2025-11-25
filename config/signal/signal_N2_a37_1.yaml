@@ -38,41 +38,28 @@ graph_model:
     embedding_dim: 2
     update_type: 'none'
 
-
 plotting:
     colormap: 'tab10'
     arrow_length: 1
-    xlim: [-5,5]
+    xlim: [-4,4]
     ylim: [-8,8]
 
 training:
 
-    n_epochs: 2
+    n_epochs: 20
     n_runs: 2
     device: 'auto'
 
     recursive_loop: 1
-    batch_size: 8
-    batch_ratio: 0.25
+    batch_size: 1
     small_init_batch_size: False
 
-    time_step: 8
-
-    epoch_reset: -1
-    epoch_reset_freq: 999
-    n_epochs_init: 2
-
+    sparsity: 'replace_embedding_function'
+    sparsity_freq: 4
     rotation_augmentation: False
     data_augmentation_loop: 50
-
-    sparsity: 'none'
-    sparsity_freq: 4
     cluster_method: 'distance_plot'
-    cluster_distance_threshold: 0.1
     fix_cluster_embedding: True
-
-    coeff_W_L1: 0
-    coeff_edge_diff: 10
 
     learning_rate_W_start: 1.0E-3
     learning_rate_start: 5.0E-4

@@ -52,8 +52,8 @@ if __name__ == "__main__":
         else:
             best_model = None
     else:
-        best_model = None
-        task = 'generate'  # 'generate', 'train', 'test'
+        best_model = '3_49500'
+        task = 'train'  # 'generate', 'train', 'test'
 
         # config_list = ['arbitrary_3']
         # config_list = ['cell_cardio_2_4']
@@ -62,14 +62,9 @@ if __name__ == "__main__":
         # config_list = ['springs_matrix_N5_3']
         # config_list = ['cell_MDCK_17_2']
         # config_list = ['rat_city_1']
+        config_list = ['signal_N2_a37_1']
 
-
-        # config_list = ['diffusiophoresis_3_6','diffusiophoresis_4_3', 'diffusiophoresis_4_4', 'diffusiophoresis_4_5',
-        #                 'diffusiophoresis_6_1', 'diffusiophoresis_6_1', 'diffusiophoresis_6_2', 'diffusiophoresis_6_3',
-        #                'diffusiophoresis_7_1', 'diffusiophoresis_7_2', 'diffusiophoresis_7_3',
-        #                'diffusiophoresis_8_1', 'diffusiophoresis_8_2', 'diffusiophoresis_8_3']
-
-        config_list = ['diffusiophoresis_8_1', 'diffusiophoresis_8_2', 'diffusiophoresis_8_3']
+        # config_list = ['diffusiophoresis_8_1', 'diffusiophoresis_8_2', 'diffusiophoresis_8_3']
         # config_list = ['arbitrary_3_field_triangles']
 
     for config_file_ in config_list:

@@ -25,14 +25,13 @@ dependencies:
   - pysr
   - shapely
   - seaborn
-  - opencv-python
-  - datamate
+  - opencv
   - cellpose
   - pip:
-    - geomloss
-    - torch_geometric
-    - PyQt5
-    - tables
-    - vedo
-    - joblib
-    - taichi
+      - geomloss
+      - torch_geometric
+      - PyQt5
+      - tables
+      - vedo
+      - joblib
+      - taichi

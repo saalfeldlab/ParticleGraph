@@ -11,9 +11,8 @@ simulation:
     tau: 1.0
     min_radius: 1.0
     max_radius: 1.0E6
-    n_particles: 1000
-    n_particle_types: 4
-    n_interactions: 4
+    n_neurons: 1000
+    n_neuron_types: 4
     n_frames: 100000
     delta_t: 0.01
     dpos_init:  0
@@ -25,13 +24,16 @@ graph_model:
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
+    
     input_size: 1
     output_size: 1
     hidden_dim: 64
-    n_mp_layers: 3
+    n_layers: 3
+    
     input_size_update: 3
     n_layers_update: 3
     hidden_dim_update: 64
+    
     aggr_type: 'add'
     embedding_dim: 2
     update_type: 'none'
@@ -43,22 +45,24 @@ plotting:
     ylim: [-8,8]
 
 training:
+
     n_epochs: 20
+    n_runs: 2
+    device: 'auto'
+    
     recursive_loop: 1
     batch_size: 1
     small_init_batch_size: False
-    n_runs: 2
-    sparsity: 'none'
+
+    sparsity: 'replace_embedding_function'
+    sparsity_freq: 4
     rotation_augmentation: False
     data_augmentation_loop: 50
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
-    device: 'auto'
-    sparsity: 'replace_embedding_function'
-    sparsity_freq: 4
 
     learning_rate_W_start: 1.0E-4
     learning_rate_start: 5.0E-5
     learning_rate_embedding_start: 5.0E-4
-    noise_level: 7.2
+    noise_model_level: 7.2
 
