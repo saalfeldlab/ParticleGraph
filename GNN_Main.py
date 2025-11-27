@@ -52,8 +52,8 @@ if __name__ == "__main__":
         else:
             best_model = None
     else:
-        best_model = '3_49500'
-        task = 'train'  # 'generate', 'train', 'test'
+        best_model = None
+        task = 'generate'  # 'generate', 'train', 'test'
 
         # config_list = ['arbitrary_3']
         # config_list = ['cell_cardio_2_4']
