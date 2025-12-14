@@ -29,7 +29,6 @@ class SimulationConfig(BaseModel):
     n_particles: int = 1000
     n_neurons: int = 1000
     n_input_neurons: int = 0
-    n_excitatory_neurons: int = 0
     n_particles_max: int = 20000
     n_edges: int = 0
     max_edges: float = 1.0e6

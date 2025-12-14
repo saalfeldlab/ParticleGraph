@@ -8,7 +8,7 @@ import os
 
 # Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print("Using device:", device)
+print("using device:", device)
 
 # FitzHugh–Nagumo parameters
 a = 0.7

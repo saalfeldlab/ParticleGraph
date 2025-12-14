@@ -53,7 +53,7 @@ if __name__ == "__main__":
             best_model = None
     else:
         best_model = None
-        task = 'generate'  # 'generate', 'train', 'test'
+        task = 'train'  # 'generate', 'train', 'test'
 
         # config_list = ['arbitrary_3']
         # config_list = ['cell_cardio_2_4']
@@ -62,7 +62,7 @@ if __name__ == "__main__":
         # config_list = ['springs_matrix_N5_3']
         # config_list = ['cell_MDCK_17_2']
         # config_list = ['rat_city_1']
-        config_list = ['signal_N2_a37_1']
+        config_list = ['signal_N5_v11_0']
 
         # config_list = ['diffusiophoresis_8_1', 'diffusiophoresis_8_2', 'diffusiophoresis_8_3']
         # config_list = ['arbitrary_3_field_triangles']

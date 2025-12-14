@@ -722,7 +722,7 @@ def data_solar_system(config, erase, best_model, device):
     logger.info(f'N epochs: {n_epochs}')
     logger.info(f'initial batch_size: {batch_size}')
 
-    print('Update variables ...')
+    
     x = x_list[1][0].clone().detach()
     n_particles = x.shape[0]
     config.simulation.n_particles = n_particles
@@ -1354,7 +1354,7 @@ def data_train_cell_activity(config, erase, best_model, device):
                 plt.xlabel(r'$F_j$', fontsize=48)
                 plt.ylabel(r'$\psi$', fontsize=48)
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/{epoch}_{N}.tif", dpi=87)
+                plt.savefig(f"./{log_dir}/tmp_training/function/MLP1/{epoch}_{N}.tif", dpi=87)
                 plt.close()
 
 
@@ -1398,7 +1398,7 @@ def data_train_cell_activity(config, erase, best_model, device):
                 plt.xlabel(r'$\sum_j m_{ij}$', fontsize=48)
                 plt.ylabel(r'$\Phi$', fontsize=48)
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/function/lin_phi/{epoch}_{N}.tif", dpi=87)
+                plt.savefig(f"./{log_dir}/tmp_training/function/MLP0/{epoch}_{N}.tif", dpi=87)
                 plt.close()
 
 
@@ -1466,7 +1466,7 @@ def data_train_cell_activity(config, erase, best_model, device):
             plt.title('Prediction', fontsize=12)
 
         # Plot 5: lin_edge function
-        lin_edge_files = glob.glob(f"./{log_dir}/tmp_training/function/lin_edge/*.tif")
+        lin_edge_files = glob.glob(f"./{log_dir}/tmp_training/function/MLP1/*.tif")
         if len(lin_edge_files) > 0:
             last_lin_edge = max(lin_edge_files, key=os.path.getctime)
             ax = fig.add_subplot(2, 4, 5)
@@ -1476,7 +1476,7 @@ def data_train_cell_activity(config, erase, best_model, device):
             plt.title('Edge Function', fontsize=12)
 
         # Plot 6-7: lin_phi function (two panels)
-        lin_phi_files = glob.glob(f"./{log_dir}/tmp_training/function/lin_phi/*.tif")
+        lin_phi_files = glob.glob(f"./{log_dir}/tmp_training/function/MLP0/*.tif")
         if len(lin_phi_files) > 0:
             last_lin_phi = max(lin_phi_files, key=os.path.getctime)
             img = imread(last_lin_phi)
@@ -2115,7 +2115,7 @@ def data_train_mesh(config, erase, best_model, device):
     logger.info(f'N epochs: {n_epochs}')
     logger.info(f'initial batch_size: {batch_size}')
 
-    print('update variables ...')
+    
     # update variable if particle_dropout, cell_division, etc ...
     x_mesh = x_mesh_list[1][n_frames - 5].clone().detach()
     type_list = x_mesh[:, 5:6].clone().detach()
@@ -2278,7 +2278,7 @@ def data_train_mesh(config, erase, best_model, device):
                     kernel = model.siren(grid)
                     fig = plt.figure(figsize=(5, 5))
                     plt.imshow(to_numpy(kernel[:, :, 0]), cmap='viridis')
-                    plt.savefig(f"./{log_dir}/tmp_training/field/kernel_{epoch}_{N}.tif", dpi=87)
+                    plt.savefig(f"./{log_dir}/tmp_training/external_input/kernel_{epoch}_{N}.tif", dpi=87)
                     plt.close()
 
 
@@ -2642,7 +2642,7 @@ def data_train_particle_field(config, erase, best_model, device):
     logger.info(f'N epochs: {n_epochs}')
     logger.info(f'initial batch_size: {batch_size}')
 
-    print('update variables ...')
+    
     # update variable if particle_dropout, cell_division, etc ...
     x = torch.tensor(x_list[1][n_frames - 5], dtype=torch.float32, device=device)
     n_particles = x.shape[0]
@@ -3665,14 +3665,14 @@ def data_train_synaptic2(config, erase, best_model, device):
 
             # Plot 4: Last edge function
             ax = fig.add_subplot(2, 3, 4)
-            img = imread(f"./{log_dir}/tmp_training/function/lin_edge/func_{last_epoch}_{last_N}.tif")
+            img = imread(f"./{log_dir}/tmp_training/function/MLP1/func_{last_epoch}_{last_N}.tif")
             plt.imshow(img)
             plt.axis('off')
             plt.title('Edge Function', fontsize=12)
 
             # Plot 5: Last phi function
             ax = fig.add_subplot(2, 3, 5)
-            img = imread(f"./{log_dir}/tmp_training/function/lin_phi/func_{last_epoch}_{last_N}.tif")
+            img = imread(f"./{log_dir}/tmp_training/function/MLP0/func_{last_epoch}_{last_N}.tif")
             plt.imshow(img)
             plt.axis('off')
             plt.title('Phi Function', fontsize=12)
@@ -4088,7 +4088,7 @@ def data_train_WBI(config, erase, best_model, device):
     logger.info(f'N epochs: {n_epochs}')
     logger.info(f'initial batch_size: {batch_size}')
 
-    print('Update variables ...')
+    
     x = x_list[0][0].clone().detach()
     n_particles = x.shape[0]
     config.simulation.n_particles = n_particles

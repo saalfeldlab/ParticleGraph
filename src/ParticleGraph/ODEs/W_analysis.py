@@ -97,7 +97,7 @@ class model_duo(nn.Module):
 
 if __name__ == '__main__':
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    print(f'Using device: {device}')
+    print(f'using device: {device}')
 
     config_root = "./config"
     # config_file_list = ['recur_6', 'recur_7', 'recur_8', 'recur_9', 'recur_10', 'recur_11', 'recur_12']

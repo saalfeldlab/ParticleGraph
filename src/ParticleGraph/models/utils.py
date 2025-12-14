@@ -350,13 +350,14 @@ def plot_training_signal(config, model, x, adjacency, log_dir, epoch, N, n_neuro
         # plt.ylabel(r'learned $\psi^*(a_i, x_i)$', fontsize=68)
         plt.ylabel(r'$MLP_1(a_i, a_j, x_i, x_j)$', fontsize=18)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/func_{epoch}_{N}.tif", dpi=87)
+        plt.savefig(f"./{log_dir}/tmp_training/function/MLP1/func_{epoch}_{N}.tif", dpi=87)
         plt.close()
 
     else:
 
         fig = plt.figure(figsize=(8, 8))
         rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
+        func_list = []
         for n in range(n_neurons):
             if ('PDE_N4' in config.graph_model.signal_model_name) | ('PDE_N7' in config.graph_model.signal_model_name):
                 embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
@@ -384,17 +385,20 @@ def plot_training_signal(config, model, x, adjacency, log_dir, epoch, N, n_neuro
                 func = model.lin_edge(in_features.float())
             if config.graph_model.lin_edge_positive:
                 func = func ** 2
+            func_list.append(to_numpy(func))
             if (n % 2 == 0):
                 plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)),
                          linewidth=2, alpha=0.25)
         plt.xlim(config.plotting.xlim)
-        plt.ylim(config.plotting.ylim)
+        all_func = np.concatenate(func_list)
+        plt.ylim([np.min(all_func), np.max(all_func)])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/func_{epoch}_{N}.tif", dpi=87)
+        plt.savefig(f"./{log_dir}/tmp_training/function/MLP1/func_{epoch}_{N}.tif", dpi=87)
         plt.close()
 
     rr = torch.linspace(config.plotting.xlim[0], config.plotting.xlim[1], 1000, device=device)
     fig = plt.figure(figsize=(8, 8))
+    func_list = []
     for n in range(n_neurons):
         embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
         if 'generic' in config.graph_model.update_type:
@@ -403,13 +407,16 @@ def plot_training_signal(config, model, x, adjacency, log_dir, epoch, N, n_neuro
             in_features = torch.cat((rr[:, None], embedding_), dim=1)
         with torch.no_grad():
             func = model.lin_phi(in_features.float())
+        func_list.append(to_numpy(func))
         if (n % 2 == 0):
             plt.plot(to_numpy(rr), to_numpy(func), 2,
                      color=cmap.color(to_numpy(type_list)[n].astype(int)),
                      linewidth=1, alpha=0.1)
     plt.xlim(config.plotting.xlim)
+    all_func = np.concatenate(func_list)
+    plt.ylim([np.min(all_func), np.max(all_func)])
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/function/lin_phi/func_{epoch}_{N}.tif", dpi=87)
+    plt.savefig(f"./{log_dir}/tmp_training/function/MLP0/func_{epoch}_{N}.tif", dpi=87)
     plt.close()
 
 def plot_training_signal_field(x, n_nodes, recursive_loop, kk, time_step, x_list, run, model, field_type, model_f, edges, y_list, ynorm, delta_t, n_frames, log_dir, epoch, N, recursive_parameters, modulation, device):
@@ -457,7 +464,7 @@ def plot_training_signal_field(x, n_nodes, recursive_loop, kk, time_step, x_list
             for ind in ind_list:
                 plt.plot(ids, true_modulation_list[ind, :], c='k', alpha=0.5, linewidth=8)
                 plt.plot(ids, to_numpy(pred_modulation_list[ind, :]))
-        plt.savefig(f"./{log_dir}/tmp_training/field/Field_{epoch}_{N}.tif")
+        plt.savefig(f"./{log_dir}/tmp_training/external_input/Field_{epoch}_{N}.tif")
         plt.close()
 
     if 'learnable_short_term_plasticity' in field_type:
@@ -489,7 +496,7 @@ def plot_training_signal_field(x, n_nodes, recursive_loop, kk, time_step, x_list
         for ind in ind_list:
             plt.plot(to_numpy(model.b[ind, :] ** 2))
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
+        plt.savefig(f"./{log_dir}/tmp_training/external_input/field_{epoch}_{N}.tif", dpi=80)
         plt.close()
 
     elif ('short_term_plasticity' in field_type) | ('modulation' in field_type):
@@ -527,7 +534,7 @@ def plot_training_signal_field(x, n_nodes, recursive_loop, kk, time_step, x_list
         # for ind in ind_list:
         #     plt.plot(to_numpy(prediction[ind, :]))
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
+        plt.savefig(f"./{log_dir}/tmp_training/external_input/field_{epoch}_{N}.tif", dpi=80)
         plt.close()
 
     else:
@@ -543,7 +550,7 @@ def plot_training_signal_field(x, n_nodes, recursive_loop, kk, time_step, x_list
         plt.xticks([])
         plt.yticks([])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
+        plt.savefig(f"./{log_dir}/tmp_training/external_input/field_{epoch}_{N}.tif", dpi=80)
         plt.close()
 
 def plot_training_signal_missing_activity(n_frames, k, x_list, baseline_value, model_missing_activity, log_dir, epoch, N, device):
@@ -578,7 +585,7 @@ def plot_training_signal_missing_activity(n_frames, k, x_list, baseline_value, m
         prediction_[pos[:,0]]=0
         plt.imshow(to_numpy(prediction_), aspect='auto', cmap='viridis')
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/field/missing_activity_{epoch}_{N}.tif", dpi=80)
+        plt.savefig(f"./{log_dir}/tmp_training/external_input/missing_activity_{epoch}_{N}.tif", dpi=80)
         plt.close()
 
 def plot_training_particle_field(config, has_siren, has_siren_time, model_f,  n_frames, model_name, log_dir, epoch, N, x, x_mesh, index_particles, n_neurons, n_neuron_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
@@ -663,7 +670,7 @@ def plot_training_particle_field(config, has_siren, has_siren_time, model_f,  n_
     #         plt.ylim([-1E-4, 1E-4])
 
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/{model_name}_function_{epoch}_{N}.tif", dpi=170.7)
+    plt.savefig(f"./{log_dir}/tmp_training/function/MLP1/{model_name}_function_{epoch}_{N}.tif", dpi=170.7)
     plt.close()
 
     if has_siren:
@@ -692,7 +699,7 @@ def plot_training_particle_field(config, has_siren, has_siren_time, model_f,  n_
             plt.xticks([])
             plt.yticks([])
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/field/{model_name}_{epoch}_{N}_{frame}.tif", dpi=80)
+            plt.savefig(f"./{log_dir}/tmp_training/external_input/{model_name}_{epoch}_{N}_{frame}.tif", dpi=80)
             plt.close()
 
     # else:
@@ -701,11 +708,11 @@ def plot_training_particle_field(config, has_siren, has_siren_time, model_f,  n_
     #     plt.imshow(im)
     #     plt.gca().invert_yaxis()
     #     plt.tight_layout()
-    #     plt.savefig(f"./{log_dir}/tmp_training/field/{model_name}_field_{epoch}_{N}.tif", dpi=87)
+    #     plt.savefig(f"./{log_dir}/tmp_training/external_input/{model_name}_field_{epoch}_{N}.tif", dpi=87)
     #     plt.close()
 
     # im = np.flipud(im)
-    # io.imsave(f"./{log_dir}/tmp_training/field_pic_{epoch}_{N}.tif", im)
+    # io.imsave(f"./{log_dir}/tmp_training/external_input_pic_{epoch}_{N}.tif", im)
 
 def plot_training(config, pred, gt, log_dir, epoch, N, x, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
 
@@ -792,7 +799,7 @@ def plot_training(config, pred, gt, log_dir, epoch, N, x, index_particles, n_par
                             linewidth=2,
                             color='b', alpha=0.1)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/function_{epoch}_{N}.tif", dpi=87)
+        plt.savefig(f"./{log_dir}/tmp_training/function/MLP1/function_{epoch}_{N}.tif", dpi=87)
         plt.close()
     else:
         match model_config.particle_model_name:
@@ -828,7 +835,7 @@ def plot_training(config, pred, gt, log_dir, epoch, N, x, index_particles, n_par
                 if (model_config.particle_model_name == 'PDE_G') | (model_config.particle_model_name == 'PDE_E'):
                     plt.xlim([0, 0.02])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/function_{epoch}_{N}.tif", dpi=87)
+                plt.savefig(f"./{log_dir}/tmp_training/function/MLP1/function_{epoch}_{N}.tif", dpi=87)
                 plt.close()
 
             case 'PDE_B' | 'PDE_ParticleField_B':
@@ -867,7 +874,7 @@ def plot_training(config, pred, gt, log_dir, epoch, N, x, index_particles, n_par
                 plt.xticks(fontsize=32.0)
                 plt.yticks(fontsize=32.0)
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/function_{epoch}_{N}.tif",dpi=170.7)
+                plt.savefig(f"./{log_dir}/tmp_training/function/MLP1/function_{epoch}_{N}.tif",dpi=170.7)
                 plt.close()
 
             case 'PDE_GS':
@@ -896,7 +903,7 @@ def plot_training(config, pred, gt, log_dir, epoch, N, x, index_particles, n_par
                 # plt.xlim([-10, 4])
                 # plt.ylim([-10, 4])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/func_{epoch}_{N}.tif", dpi=87)
+                plt.savefig(f"./{log_dir}/tmp_training/function/MLP1/func_{epoch}_{N}.tif", dpi=87)
                 plt.close()
 
             case 'PDE_K':
@@ -929,7 +936,7 @@ def plot_training(config, pred, gt, log_dir, epoch, N, x, index_particles, n_par
                 #     plt.ylim(config.plotting.ylim)
                 plt.ylim(config.plotting.ylim)
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/function_{epoch}_{N}.tif", dpi=87)
+                plt.savefig(f"./{log_dir}/tmp_training/function/MLP1/function_{epoch}_{N}.tif", dpi=87)
                 plt.close()
 
                 if len(model.connection_matrix)>5:
@@ -1044,7 +1051,7 @@ def plot_training_mesh(config, pred, has_field, field, gt, log_dir, epoch, N, x,
                 plt.imshow(np.reshape(to_numpy(field), (n_nodes_per_axis, n_nodes_per_axis)))
                 plt.colorbar()
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/field/{epoch}_{N}.tif", dpi=87)
+                plt.savefig(f"./{log_dir}/tmp_training/external_input/{epoch}_{N}.tif", dpi=87)
                 plt.close()
 
             if False:
@@ -1069,7 +1076,7 @@ def plot_training_mesh(config, pred, has_field, field, gt, log_dir, epoch, N, x,
                 plt.xticks([])
                 plt.yticks([])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/field/mesh_map_LR_{epoch}_{N}.tif",dpi=87)
+                plt.savefig(f"./{log_dir}/tmp_training/external_input/mesh_map_LR_{epoch}_{N}.tif",dpi=87)
                 plt.close()
 
                 rr = torch.tensor(np.linspace(-1, 1, 200)).to(device)
@@ -1093,7 +1100,7 @@ def plot_training_mesh(config, pred, has_field, field, gt, log_dir, epoch, N, x,
                 plt.xticks([])
                 plt.yticks([])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/field/mesh_map_uR_{epoch}_{N}.tif",dpi=87)
+                plt.savefig(f"./{log_dir}/tmp_training/external_input/mesh_map_uR_{epoch}_{N}.tif",dpi=87)
                 plt.close()
 
                 rr = torch.tensor(np.linspace(-1, 1, 200)).to(device)
@@ -1117,7 +1124,7 @@ def plot_training_mesh(config, pred, has_field, field, gt, log_dir, epoch, N, x,
                 plt.xticks([])
                 plt.yticks([])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/field/mesh_map_LG_{epoch}_{N}.tif",dpi=87)
+                plt.savefig(f"./{log_dir}/tmp_training/external_input/mesh_map_LG_{epoch}_{N}.tif",dpi=87)
                 plt.close()
 
 
@@ -1142,7 +1149,7 @@ def plot_training_mesh(config, pred, has_field, field, gt, log_dir, epoch, N, x,
                 plt.xticks([])
                 plt.yticks([])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/field/mesh_map_vG_{epoch}_{N}.tif",dpi=87)
+                plt.savefig(f"./{log_dir}/tmp_training/external_input/mesh_map_vG_{epoch}_{N}.tif",dpi=87)
                 plt.close()
 
         case 'WaveMesh' | 'WaveMeshSmooth':
@@ -1191,7 +1198,7 @@ def plot_training_mesh(config, pred, has_field, field, gt, log_dir, epoch, N, x,
             plt.xticks([])
             plt.yticks([])
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/field/mesh_map_R_{epoch}_{N}.tif",dpi=87)
+            plt.savefig(f"./{log_dir}/tmp_training/external_input/mesh_map_R_{epoch}_{N}.tif",dpi=87)
             plt.close()
 
             fig = plt.figure(figsize=(8, 8))
@@ -1210,7 +1217,7 @@ def plot_training_mesh(config, pred, has_field, field, gt, log_dir, epoch, N, x,
             plt.xticks([])
             plt.yticks([])
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/field/mesh_map_{epoch}_{N}.tif",
+            plt.savefig(f"./{log_dir}/tmp_training/external_input/mesh_map_{epoch}_{N}.tif",
                         dpi=87)
             plt.close()
 
@@ -1313,7 +1320,7 @@ def plot_training_state(config, id_list,  log_dir, epoch, N, model, n_particle_t
     plt.xticks(fontsize=32.0)
     plt.yticks(fontsize=32.0)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/{epoch}_{N}.tif",dpi=87)
+    plt.savefig(f"./{log_dir}/tmp_training/function/MLP1/{epoch}_{N}.tif",dpi=87)
     plt.close()
 
 def plot_training_cell(config,  log_dir, epoch, N, model, n_particle_types, type_list, ynorm, cmap, device):
@@ -1381,7 +1388,7 @@ def plot_training_cell(config,  log_dir, epoch, N, model, n_particle_types, type
     plt.xticks(fontsize=32.0)
     plt.yticks(fontsize=32.0)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/{epoch}_{N}.tif",dpi=87)
+    plt.savefig(f"./{log_dir}/tmp_training/function/MLP1/{epoch}_{N}.tif",dpi=87)
     plt.close()
 
 def analyze_edge_function_tracking(rr=[], vizualize=False, config=None, model_MLP=[], model_a=None, n_particles=None, ynorm=None, indexes=None, type_list=None, cmap=None, dimension=2, embedding_type=0, device=None):

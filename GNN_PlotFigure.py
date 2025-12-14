@@ -4852,7 +4852,7 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
         xnorm = torch.tensor([5], device=device)
     print(f'xnorm: {to_numpy(xnorm)}, vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
 
-    print('update variables ...')
+    
     x = x_list[0][n_frames - 5]
     n_neurons = x.shape[0]
     print(f'n_neurons: {n_neurons}')
@@ -6681,7 +6681,7 @@ def plot_synaptic3(config, epoch_list, log_dir, logger, cc, style, device):
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'))
     print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
 
-    print('update variables ...')
+    
     x = x_list[0][n_frames - 1]
     n_neurons = x.shape[0]
     print(f'n_neurons: {n_neurons}')

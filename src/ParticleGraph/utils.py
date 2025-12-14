@@ -80,7 +80,7 @@ def set_device(device: str = 'auto'):
                 if num_gpus != len(free_mem_list):
                     print(f"Mismatch in GPU count between PyTorch ({num_gpus}) and nvidia-smi ({len(free_mem_list)})")
                     device = 'cpu'
-                    print(f"Using device: {device}")
+                    print(f"using device: {device}")
                 else:
                     # Find the GPU with the most free memory
                     max_free_memory = -1
@@ -97,18 +97,18 @@ def set_device(device: str = 'auto'):
                     total_memory_gb = torch.cuda.get_device_properties(best_device_id).total_memory / 1024 ** 3
                     free_memory_gb = max_free_memory / 1024 ** 3
                     print(
-                        f"Using device: {device}, name: {torch.cuda.get_device_name(best_device_id)}, "
+                        f"using device: {device}, name: {torch.cuda.get_device_name(best_device_id)}, "
                         f"total memory: {total_memory_gb:.2f} GB, free memory: {free_memory_gb:.2f} GB")
             except Exception as e:
                 print(f"Failed to get GPU information: {e}")
                 device = 'cpu'
-                print(f"Using device: {device}")
+                print(f"using device: {device}")
         elif torch.backends.mps.is_available():
             device = 'mps'
-            print(f"Using device: {device}")
+            print(f"using device: {device}")
         else:
             device = 'cpu'
-            print(f"Using device: {device}")
+            print(f"using device: {device}")
     return device
 
 
@@ -535,12 +535,12 @@ def create_log_dir(config=[], erase=True):
     os.makedirs(os.path.join(log_dir, 'models'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'results'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'tmp_training/particle'), exist_ok=True)
-    os.makedirs(os.path.join(log_dir, 'tmp_training/field'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'tmp_training/external_input'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'tmp_training/matrix'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'tmp_training/prediction'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'tmp_training/function'), exist_ok=True)
-    os.makedirs(os.path.join(log_dir, 'tmp_training/function/lin_phi'), exist_ok=True)
-    os.makedirs(os.path.join(log_dir, 'tmp_training/function/lin_edge'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'tmp_training/function/MLP0'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'tmp_training/function/MLP1'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'tmp_training/embedding'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'tmp_training/edges_embedding'), exist_ok=True)
     if config.training.n_ghosts > 0:
@@ -554,16 +554,16 @@ def create_log_dir(config=[], erase=True):
         files = glob.glob(f"{log_dir}/tmp_training/particle/*")
         for f in files:
             os.remove(f)
-        files = glob.glob(f"{log_dir}/tmp_training/field/*")
+        files = glob.glob(f"{log_dir}/tmp_training/external_input/*")
         for f in files:
             os.remove(f)
         files = glob.glob(f"{log_dir}/tmp_training/matrix/*")
         for f in files:
             os.remove(f)
-        files = glob.glob(f"{log_dir}/tmp_training/function/lin_edge/*")
+        files = glob.glob(f"{log_dir}/tmp_training/function/MLP1/*")
         for f in files:
             os.remove(f)
-        files = glob.glob(f"{log_dir}/tmp_training/function/lin_phis/*")
+        files = glob.glob(f"{log_dir}/tmp_training/function/MLP0s/*")
         for f in files:
             os.remove(f)
         files = glob.glob(f"{log_dir}/tmp_training/embedding/*")
