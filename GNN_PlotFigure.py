@@ -5445,19 +5445,19 @@ def plot_synaptic2(config, epoch_list, log_dir, logger, cc, style, device):
         # print(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
         # logger.info(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
         #
-        # plt.figure(figsize=(15, 10))
-        # ax = sns.heatmap(to_numpy(activity), center=0, cmap='viridis', cbar_kws={'fraction': 0.046})
-        # cbar = ax.collections[0].colorbar
-        # cbar.ax.tick_params(labelsize=32)
-        # ax.invert_yaxis()
-        # plt.ylabel('neurons', fontsize=64)
-        # plt.xlabel('time', fontsize=64)
-        # plt.xticks([10000, 99000], [10000, 100000], fontsize=48)
-        # plt.yticks([0, 999], [1, 1000], fontsize=48)
-        # plt.xticks(rotation=0)
-        # plt.tight_layout()
-        # plt.savefig(f'./{log_dir}/results/kinograph.tif', dpi=300)
-        # plt.close()
+        plt.figure(figsize=(15, 10))
+        ax = sns.heatmap(to_numpy(activity), center=0, cmap='viridis', cbar_kws={'fraction': 0.046})
+        cbar = ax.collections[0].colorbar
+        cbar.ax.tick_params(labelsize=32)
+        ax.invert_yaxis()
+        plt.ylabel('neurons', fontsize=64)
+        plt.xlabel('time', fontsize=64)
+        plt.xticks([0, 100000], [0, 100000], fontsize=48)
+        plt.yticks([0, 999], [1, 1000], fontsize=48)
+        plt.xticks(rotation=0)
+        plt.tight_layout()
+        plt.savefig(f'./{log_dir}/results/kinograph.tif', dpi=300)
+        plt.close()
 
 
         if False: #os.path.exists(f"./{log_dir}/neuron_gt_list.pt"):
@@ -8573,16 +8573,7 @@ if __name__ == '__main__':
     # except:
     #     pass
 
-    # config_list = ['boids_16_256']
-    # config_list = ['gravity_16_1']
-    # config_list = ['wave_slit_bis']
-    # config_list = ['arbitrary_3_field_video_bison_test']
-    # config_list = ['RD_RPS']
-    # config_list = ['cell_U2OS_8_12']
-
-    # config_list = ['signal_N2_a37_1', 'signal_N2_a31', 'signal_N2_e4', 'signal_N2_a1_SNR7','signal_N2_d3', 'signal_N2_b2', 'signal_N5_l3']  
-    config_list = ['signal_N2_a1_SNR7']
-    # config_list = ['signal_N3_c16', 'signal_N3_c4', 'signal_N3_c11']
+    config_list = ['signal_N2_a37_1']
 
     for config_file_ in config_list:
         print(' ')

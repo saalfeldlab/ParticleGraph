@@ -53,19 +53,9 @@ if __name__ == "__main__":
             best_model = None
     else:
         best_model = None
-        task = 'train'  # 'generate', 'train', 'test'
+        task = 'generate_train_test'  # 'generate', 'train', 'test'
 
-        # config_list = ['arbitrary_3']
-        # config_list = ['cell_cardio_2_4']
-        # config_list = ['RD_RPS_5']
-        # config_list = ['cell_U2OS_9_2']
-        # config_list = ['springs_matrix_N5_3']
-        # config_list = ['cell_MDCK_17_2']
-        # config_list = ['rat_city_1']
-        config_list = ['signal_N5_v11_0']
-
-        # config_list = ['diffusiophoresis_8_1', 'diffusiophoresis_8_2', 'diffusiophoresis_8_3']
-        # config_list = ['arbitrary_3_field_triangles']
+        config_list = ['signal_N2_a37_1']
 
     for config_file_ in config_list:
         print(" ")
@@ -92,10 +82,14 @@ if __name__ == "__main__":
                 erase=True,
                 bSave=True,
                 step=20
-            )  # config.simulation.n_frames // 100)
+            )  
+
+        # data and figures are generated into "ParticleGraph/graphs_data/signal/signal_N2_a37"
             
         if "train" in task:
             data_train(config=config, erase=False, best_model=best_model, device=device)
+
+        # temporary results are saved into "ParticleGraph/log/signal/signal_N2_a37_1"
             
         if "test" in task:
             
@@ -112,4 +106,6 @@ if __name__ == "__main__":
                 device=device,
                 particle_of_interest=0,
             )  
+
+        #  rollout inference results are save into "ParticleGraph/log/signal/signal_N2_a37_1/tmp_recons"
 

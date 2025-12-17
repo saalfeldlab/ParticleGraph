@@ -1,5 +1,5 @@
 description: "synaptic network 100.000 points   4000000 iterations per epoch  batchsize 8 batch_ratio 0.25 time_step 8"
-dataset: "signal_N2_a37"
+dataset: "signal_N2_a37_1"
 
 simulation:
   connectivity_file: "random"
