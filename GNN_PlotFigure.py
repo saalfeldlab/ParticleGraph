@@ -8589,7 +8589,7 @@ if __name__ == '__main__':
         os.makedirs(folder_name, exist_ok=True)
         data_plot(config=config, config_file=config_file, epoch_list=['best'], style='latex color', device=device)
 
-
+    #  figures used for the paper are saved into "ParticleGraph/log/signal/signal_N2_a37_1/results"
 
 
 
