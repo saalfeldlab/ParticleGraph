@@ -2624,7 +2624,7 @@ def data_generate_synaptic(
         )
 
         time.sleep(0.5)
-        for it in trange(simulation_config.start_frame, n_frames + 1):
+        for it in trange(simulation_config.start_frame, n_frames + 1, ncols=100):
             # calculate type change
             with torch.no_grad():
                 if simulation_config.state_type == "sequence":
