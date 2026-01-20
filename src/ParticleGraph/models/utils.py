@@ -179,11 +179,56 @@ def plot_training_signal(config, dataset_name, model, type_stack, adjacency, yno
 
     fig = plt.figure(figsize=(8, 8))
     ax = sns.heatmap(to_numpy(A),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046}, vmin=-1, vmax=1)
-    plt.title('Random connectivity matrix',fontsize=12);
+    plt.title('learned connectivity matrix',fontsize=12);
     plt.xticks([0,n_particles-1],[1,n_particles],fontsize=8)
     plt.yticks([0,n_particles-1],[1,n_particles],fontsize=8)
     plt.savefig(f"./{log_dir}/tmp_training/matrix/{dataset_name}_{epoch}_{N}.tif", dpi=87)
     plt.close()
+
+    # Plot: true vs learned connectivity scatter plot with R² and slope
+    if adjacency is not None:
+        gt_weight = to_numpy(adjacency[:n_particles, :n_particles])
+        pred_weight = to_numpy(A)
+        np.fill_diagonal(pred_weight, 0)
+        np.fill_diagonal(gt_weight, 0)
+
+        fig, ax = plt.subplots(figsize=(8, 8))
+        if n_particles < 1000:
+            ax.scatter(gt_weight.flatten(), pred_weight.flatten(), s=1.0, c='k', alpha=0.5)
+        else:
+            ax.scatter(gt_weight.flatten(), pred_weight.flatten(), s=0.1, c='k', alpha=0.1)
+        ax.set_xlabel(r'true $W_{ij}$', fontsize=18)
+        ax.set_ylabel(r'learned $W_{ij}$', fontsize=18)
+
+        # Compute R² and slope
+        x_data = gt_weight.flatten()
+        y_data = pred_weight.flatten()
+        try:
+            lin_fit, _ = curve_fit(linear_model, x_data, y_data)
+            residuals = y_data - linear_model(x_data, *lin_fit)
+            ss_res = np.sum(residuals ** 2)
+            ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+            r_squared = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0.0
+
+            ax.text(0.05, 0.95, f'$R^2$: {r_squared:.3f}', transform=ax.transAxes,
+                    fontsize=14, verticalalignment='top', fontweight='bold')
+            ax.text(0.05, 0.88, f'slope: {lin_fit[0]:.3f}', transform=ax.transAxes,
+                    fontsize=14, verticalalignment='top', fontweight='bold')
+        except:
+            pass
+
+        # Set symmetric axis limits
+        max_val = max(np.abs(gt_weight).max(), np.abs(pred_weight).max())
+        ax.set_xlim([-max_val * 1.1, max_val * 1.1])
+        ax.set_ylim([-max_val * 1.1, max_val * 1.1])
+
+        # Add diagonal line
+        lims = [ax.get_xlim()[0], ax.get_xlim()[1]]
+        ax.plot(lims, lims, 'r--', alpha=0.5, linewidth=1)
+
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/matrix/comparison_{epoch}_{N}.tif", dpi=87)
+        plt.close()
 
 def plot_training_particle_field(config, has_siren, has_siren_time, model_f, dataset_name, n_frames, model_name, log_dir, epoch, N, x, x_mesh, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
 

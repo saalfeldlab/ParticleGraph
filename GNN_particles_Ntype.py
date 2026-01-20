@@ -89,3 +89,4 @@ if __name__ == '__main__':
 
 # bsub -n 4 -gpu "num=1" -q gpu_h100 -Is "python GNN_particles_Ntype.py"
 
+
