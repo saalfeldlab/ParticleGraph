@@ -90,3 +90,4 @@ if __name__ == '__main__':
 # bsub -n 4 -gpu "num=1" -q gpu_h100 -Is "python GNN_particles_Ntype.py"
 
 
+# bsub -n 8 -gpu "num=1" -q gpu_h100 -W 6000 "python GNN_particles_Ntype.py -o generate_train signal/signal_N2_e1_test"
