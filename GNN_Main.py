@@ -53,9 +53,9 @@ if __name__ == "__main__":
             best_model = None
     else:
         best_model = None
-        task = 'generate_train_test'  # 'generate', 'train', 'test'
+        task = 'train_test'  # 'generate', 'train', 'test'
 
-        config_list = ['signal_N2_a37_1']
+        config_list = ['signal_N2_e4_bis']
 
     for config_file_ in config_list:
         print(" ")

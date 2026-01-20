@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch_geometric as pyg
 from ParticleGraph.models.MLP import MLP
-from ParticleGraph.utils import to_numpy
 import numpy as np
 
 class Signal_Propagation2(pyg.nn.MessagePassing):

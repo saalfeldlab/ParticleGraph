@@ -3399,6 +3399,7 @@ def data_train_synaptic2(config, erase, best_model, device):
                     else:
                         model_W = model.W
 
+
                     # regularisation lin_phi(0)=0
                     in_features = get_in_features_update(rr=None, model=model, device=device)
                     func_phi = model.lin_phi(in_features[ids].float())
@@ -3552,8 +3553,8 @@ def data_train_synaptic2(config, erase, best_model, device):
                 total_loss += loss.item()
 
                 if ((N % plot_frequency == 0) | (N == 0)):
-                    plot_training_signal(config, model, x, connectivity, log_dir, epoch, N, n_neurons, type_list, cmap,
-                                         device)
+                    plot_training_signal(config, model, x, connectivity, log_dir, epoch, N, n_neurons, type_list, cmap, device)
+                    
                     if time_step > 1:
                         fig = plt.figure(figsize=(10, 10))
                         plt.scatter(to_numpy(y_batch), to_numpy(x_batch + pred * delta_t * time_step), s=10, color='k')

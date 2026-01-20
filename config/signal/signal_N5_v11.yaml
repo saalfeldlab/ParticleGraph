@@ -5,7 +5,7 @@ simulation:
   connectivity_file: "random"
   adjacency_matrix: ""
   connectivity_init: [0, 0.1]
-  connectivity_distribution: "Lorentz_structured_0.40_0.05"
+  connectivity_distribution: "Lorentz"
   # params: [[10.0,1.0,1.0,1.0,-4.0],[10.0,2.0,1.0,1.2,-2.0],[10.0,1.0,2.0,1.4,0.0],[10.0,2.0,2.0,1.6,2.0]]
   params:
     [
@@ -14,7 +14,7 @@ simulation:
       [10.0, 1.0, 2.0, 4.0],
       [10.0, 2.0, 2.0, 8.0],
     ]
-  phi: "sigmoid"
+  phi: "tanh"
 
   tau: 1.0
   min_radius: 1.0
@@ -42,9 +42,9 @@ graph_model:
   hidden_dim: 64
   n_layers: 5
 
-  input_size_update: 5
-  n_layers_update: 5
-  hidden_dim_update: 256
+  input_size_update: 3
+  n_layers_update: 3
+  hidden_dim_update: 64
 
   input_size_nnr: 3
   n_layers_nnr: 5
@@ -55,7 +55,7 @@ graph_model:
 
   aggr_type: "add"
   embedding_dim: 2
-  update_type: "generic"
+  update_type: "none"
 
   lin_edge_positive: True
 
@@ -67,7 +67,7 @@ plotting:
 
 training:
   n_epochs: 20
-  n_runs: 2
+  n_runs: 1
   device: "auto"
 
   recursive_loop: 1
@@ -87,16 +87,14 @@ training:
   cluster_distance_threshold: 0.1
   fix_cluster_embedding: True
 
-  coeff_W_L1: 1.0E-5
+  coeff_W_L1: 1.0E-6
   coeff_edge_diff: 10
   coeff_update_diff: 5
-  diff_update_regul: "TV"
 
-  learning_rate_W_start: 1.0E-3
+  learning_rate_W_start: 2.0E-3
   learning_rate_start: 5.0E-4
   learning_rate_embedding_start: 5.0E-3
-  learning_rate_modulation_start: 1.0E-4
 
-  learning_rate_NNR: 1.0E-5
+  learning_rate_NNR: 1.0E-6
 
   noise_model_level: 1

@@ -1,5 +1,5 @@
 description: 'test sparsity   synaptic network 100.000 points'
-dataset: 'signal_N2_e4'
+dataset: 'signal_N2_e4_bis'
 
 simulation:
     connectivity_file: 'random'
@@ -49,12 +49,15 @@ training:
     batch_size: 1
     small_init_batch_size: False
     n_runs: 2
+    sparsity: 'none'
+    rotation_augmentation: False
     data_augmentation_loop: 100
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     device: 'auto'
     sparsity: 'replace_embedding_function'
     sparsity_freq: 4
+    
     learning_rate_start: 1.0E-4
     learning_rate_embedding_start: 1.0E-4
     coeff_W_L1: 1.0E-5
