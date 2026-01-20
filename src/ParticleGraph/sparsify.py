@@ -11,7 +11,7 @@ import time
 
 class EmbeddingCluster:
     def __init__(self, config):
-        self.n_interactions = config.simulation.n_interactions
+        self.n_interactions = 4
         self.cluster_connectivity = config.training.cluster_connectivity    # 'single' (default) or 'average'
 
     def get(self, data, method, thresh=2.5):
