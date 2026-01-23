@@ -53,9 +53,9 @@ if __name__ == "__main__":
             best_model = None
     else:
         best_model = None
-        task = 'train_test'  # 'generate', 'train', 'test'
+        task = 'generate'  # 'generate', 'train', 'test'
 
-        config_list = ['signal_N2_e4_bis']
+        config_list = ['diffusiophoresis_1_5']
 
     for config_file_ in config_list:
         print(" ")
@@ -75,13 +75,13 @@ if __name__ == "__main__":
             data_generate(
                 config,
                 device=device,
-                visualize=False,
+                visualize=True,
                 run_vizualized=0,
                 style="black color",
                 alpha=1,
                 erase=True,
                 bSave=True,
-                step=20
+                step=100
             )  
 
         # data and figures are generated into "ParticleGraph/graphs_data/signal/signal_N2_a37"

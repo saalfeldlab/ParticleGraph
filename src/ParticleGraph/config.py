@@ -235,6 +235,20 @@ class ImageData(BaseModel):
     measure_diameter: float = 40.0
 
 
+class ClaudeConfig(BaseModel):
+    """Configuration for LLM-guided exploration loop.
+
+    Philosophy: The LLM explores simulation/code space to find configurations
+    that produce biologically interesting patterns. The experiment generates
+    a movie (simulation), and the LLM scores it 0-10 based on visual pattern
+    complexity and emergent behavior.
+    """
+    model_config = ConfigDict(extra="forbid", protected_namespaces=())
+
+    n_iter_block: int = 8  # iterations per exploration block
+    ucb_c: float = 1.414  # UCB exploration constant (sqrt(2) default)
+
+
 class TrainingConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", protected_namespaces=())
     device: Annotated[str, Field(pattern=r"^(auto|cpu|cuda:\d+)$")] = "auto"
@@ -408,6 +422,7 @@ class ParticleGraphConfig(BaseModel):
     plotting: PlottingConfig
     training: TrainingConfig
     image_data: Optional[ImageData] = None
+    claude: Optional[ClaudeConfig] = None
 
     @staticmethod
     def from_yaml(file_name: str):

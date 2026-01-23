@@ -716,6 +716,7 @@ def data_generate_particle_field(
     scenario="none",
     device=None,
     bSave=True,
+    log_file=None,
 ):
 
     simulation_config = config.simulation
@@ -1548,9 +1549,48 @@ def data_generate_particle_field(
             dataset_name_ = dataset_name.split('/')[-1]
             generate_compressed_video_mp4(output_dir=f"./graphs_data/{dataset_name}", run=run, config_indices=dataset_name_, framerate=20)
 
-        files = glob.glob(f'./graphs_data/{dataset_name}/Fig/*')
-        for f in files:
-            os.remove(f)
+        # Write metrics to log file (use provided or create local)
+        if run == 0:
+            # Compute final metrics from last frame
+            if len(x_mesh_list) > 0:
+                final_x_mesh = x_mesh_list[-1]
+                C1_mean = final_x_mesh[:, 6].mean().item()
+                C1_std = final_x_mesh[:, 6].std().item()
+                C2_mean = final_x_mesh[:, 7].mean().item()
+                C2_std = final_x_mesh[:, 7].std().item()
+                pattern_growth = C2_std / 0.005 if C2_std > 0 else 0
+
+                # Particle metrics from last frame
+                if len(x_list) > 0:
+                    final_x = x_list[-1]
+                    particle_pos = final_x[:, 1:3]
+                    pos_std_x = particle_pos[:, 0].std().item()
+                    pos_std_y = particle_pos[:, 1].std().item()
+                    clustering = (0.289 - pos_std_x) / 0.289
+
+                    # Write to log file or create local analysis.log
+                    local_log_file = log_file is None
+                    if local_log_file:
+                        log_file = open(f"./graphs_data/{dataset_name}/analysis.log", 'w')
+
+                    n_saved_frames = (n_frames - simulation_config.start_frame) // step + 1
+                    log_file.write(f"n_frames: {n_frames}\n")
+                    log_file.write(f"n_saved_frames: {n_saved_frames}\n")
+                    log_file.write(f"step: {step}\n")
+                    log_file.write(f"n_particles: {n_particles}\n")
+                    log_file.write(f"delta_t: {delta_t}\n")
+                    log_file.write(f"C1_mean: {C1_mean:.4f}\n")
+                    log_file.write(f"C1_std: {C1_std:.4f}\n")
+                    log_file.write(f"C2_mean: {C2_mean:.4f}\n")
+                    log_file.write(f"C2_std: {C2_std:.4f}\n")
+                    log_file.write(f"pattern_growth: {pattern_growth:.2f}\n")
+                    log_file.write(f"clustering: {clustering:.4f}\n")
+                    log_file.write(f"pos_std_x: {pos_std_x:.4f}\n")
+                    log_file.write(f"pos_std_y: {pos_std_y:.4f}\n")
+                    log_file.flush()
+
+                    if local_log_file:
+                        log_file.close()
 
 
 def data_generate_cell(
