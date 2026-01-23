@@ -219,8 +219,8 @@ def plot_training_signal(config, dataset_name, model, type_stack, adjacency, yno
 
         # Set symmetric axis limits
         max_val = max(np.abs(gt_weight).max(), np.abs(pred_weight).max())
-        ax.set_xlim([-max_val * 1.1, max_val * 1.1])
-        ax.set_ylim([-max_val * 1.1, max_val * 1.1])
+        ax.set_xlim([-0.2,0.2])
+        # ax.set_ylim([-max_val * 1.1, max_val * 1.1])
 
         # Add diagonal line
         lims = [ax.get_xlim()[0], ax.get_xlim()[1]]
