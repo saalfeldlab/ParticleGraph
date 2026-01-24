@@ -61,8 +61,15 @@ def choose_model(config=[], W=[], device=[]):
             model = PDE_B_bis(aggr_type=aggr_type, p=p, bc_dpos=bc_dpos)
         case 'PDE_D' | 'PDE_ParticleField_D' | 'PDE_Cell_D' :
             params_mesh = config.simulation.params_mesh
-            p = torch.tensor(params_mesh, dtype=torch.float32, device=device).squeeze()
-            model = PDE_D(aggr_type=aggr_type, p=p, bc_dpos=bc_dpos, dimension=dimension)
+            p_mesh = torch.tensor(params_mesh, dtype=torch.float32, device=device).squeeze()
+            # Per-type particle params from simulation.params (like PDE_A)
+            # Layout: [M1, M2, consumption, production, repulsion_strength, repulsion_range]
+            if n_particle_types > 1 and params is not None and params[0] != [-1]:
+                particle_params = torch.tensor(params, dtype=torch.float32, device=device)
+            else:
+                particle_params = None
+            model = PDE_D(aggr_type=aggr_type, p=p_mesh, particle_params=particle_params,
+                          bc_dpos=bc_dpos, dimension=dimension)
         case 'PDE_G':
             if params[0] == [-1]:
                 p = np.linspace(0.5, 5, n_particle_types)
@@ -1198,6 +1205,7 @@ def generate_compressed_video_mp4(output_dir, run=0, framerate=10, output_name="
     ffmpeg_cmd = [
         "ffmpeg",
         "-y",
+        "-loglevel", "error",  # Suppress verbose output
         "-framerate", str(framerate),
         "-i", input_pattern,
         "-vf", video_filter,  # Apply video filter for even dimensions
@@ -1208,8 +1216,7 @@ def generate_compressed_video_mp4(output_dir, run=0, framerate=10, output_name="
         output_path,
     ]
 
-    print(f"Generating compressed video (libx264): {' '.join(ffmpeg_cmd)}")
     subprocess.run(ffmpeg_cmd, check=True)
-    print(f"Compressed video (libx264) saved to: {output_path}")
+    print(f"Video saved: {output_path}")
 
 
