@@ -1105,57 +1105,7 @@ def data_generate_particle_field(
                     X1 = bc_pos(X1 + V1 * delta_t)
 
 
-                #     X1, V1 = handle_collisions(X1, V1, min_distance=0.01)
-
-
-
-            if False : #"diffusiophoresis" in model_config.field_type:
-                    if (it % 100 == 0) or (it < 100):
-                        
-                        # Field metrics
-                        C1_mean, C1_std = x_mesh[:, 6].mean().item(), x_mesh[:, 6].std().item()
-                        C2_mean, C2_std = x_mesh[:, 7].mean().item(), x_mesh[:, 7].std().item()
-                        pattern_growth = C2_std / 0.005
-                        
-                        # Particle metrics
-                        particle_vel0 = torch.norm(y0, dim=1)
-                        vel_mean0 = particle_vel0.mean().item()
-                        vel_max0 = particle_vel0.max().item()
-                        particle_vel1 = torch.norm(y1, dim=1)
-                        vel_mean1 = particle_vel1.mean().item()
-                        vel_max1 = particle_vel1.max().item()
-
-                        
-                        # Check particle clustering
-                        particle_pos = x[:n_particles, 1:3]
-                        pos_std_x = particle_pos[:, 0].std().item()
-                        pos_std_y = particle_pos[:, 1].std().item()
-                        clustering = (0.289 - pos_std_x) / 0.289  # 0.289 is std for uniform distribution
-                        
-                        # Field gradients at particle locations
-                        grad_C2 = torch.zeros_like(particle_pos)
-
-                        diffusio_mag1 = torch.norm(y2, dim=1).mean().item()
-                        diffusio_mag2 = torch.norm(y3, dim=1).mean().item()
-
-                            
-                        print(f"\n[It {it:3d}] fields: C1 μ={C1_mean:.3f}±{C1_std:.3f} | C2 μ={C2_mean:.3f}±{C2_std:.3f} | pattern: {pattern_growth:.1f}x")
-                        print(f"         particles: vel={vel_mean1:.6f} (max={vel_max1:.4f}) | clustering={clustering:.3f}")
-                        print(f"         repulsion: vel={vel_mean0:.6f} (max={vel_max0:.4f})")
-                        print(f"         diffusion: {diffusio_mag1:.6f} (field) + {diffusio_mag2:.6f} (particles)")
-                        
-                        # Check if particles are moving toward high C2 regions
-                        if it > 0 and it % 500 == 0:
-                            # Sample a few particles and check their C2 values
-                            sample_idx = torch.randperm(n_particles)[:10]
-                            sample_C2 = x[sample_idx, 7]
-                            print(f"         Sample particle C₂ values: mean={sample_C2.mean():.3f} (field mean={C2_mean:.3f})")
-                            if sample_C2.mean() > C2_mean * 1.1:
-                                print("         ✓ Particles aggregating at C₂ peaks!")
-                            # output plots
-            
-            
-            
+                #     X1, V1 = handle_collisions(X1, V1, min_distance=0.01)            
             
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
 
@@ -1318,17 +1268,23 @@ def data_generate_particle_field(
                     # Reshape field to grid for visualization (assuming square grid)
                     grid_size = int(np.sqrt(n_nodes))
                     C1_field = to_numpy(x_mesh[:, 6].reshape(grid_size, grid_size))
-                    im1 = ax1.imshow(C1_field, cmap='viridis', origin='lower', extent=[0, 1, 0, 1], vmin=3.5, vmax=5.5)
+                    # Use 2nd-98th percentile to avoid hot pixel distortion
+                    C1_vmin, C1_vmax = np.percentile(C1_field, [2, 98])
+                    im1 = ax1.imshow(C1_field, cmap='viridis', origin='lower', extent=[0, 1, 0, 1],
+                                    vmin=C1_vmin, vmax=C1_vmax)
                     ax1.set_axis_off()
                     ax1.set_title("C₁ field", fontsize=20)
                     # plt.colorbar(im1, ax=ax1)
                     ax1.set_xticks([])
                     ax1.set_yticks([])
-                    
+
                     # 2. C₂ field visualization (top right)
                     ax2 = fig.add_subplot(2, 2, 2)
                     C2_field = to_numpy(x_mesh[:, 7].reshape(grid_size, grid_size))
-                    im2 = ax2.imshow(C2_field, cmap='plasma', origin='lower', extent=[0, 1, 0, 1], vmin=1, vmax=3)
+                    # Use 2nd-98th percentile to avoid hot pixel distortion
+                    C2_vmin, C2_vmax = np.percentile(C2_field, [2, 98])
+                    im2 = ax2.imshow(C2_field, cmap='plasma', origin='lower', extent=[0, 1, 0, 1],
+                                    vmin=C2_vmin, vmax=C2_vmax)
                     ax2.set_axis_off()
                     ax2.set_title("C₂ field", fontsize=20)
                     # plt.colorbar(im2, ax=ax2)
@@ -1360,42 +1316,70 @@ def data_generate_particle_field(
                     ax3.set_xticks([])
                     ax3.set_yticks([])
                     
-                    # 4. diffusiophoresis velocities (bottom right)
+                    # 4. Metrics panel (bottom right)
                     ax4 = fig.add_subplot(2, 2, 4)
-                    # Background showing field gradient magnitude
-                    grad_x = np.gradient(combined_field, axis=1)
-                    grad_y = np.gradient(combined_field, axis=0)
-                    grad_mag = np.sqrt(grad_x**2 + grad_y**2)
-                    im4 = ax4.imshow(grad_mag*0, cmap='bone', origin='lower', 
-                                    extent=[0, 1, 0, 1], vmin=0, vmax=1)
                     ax4.set_axis_off()
-                    # Process velocities for arrow plot
-                    if model_config.prediction == "2nd_derivative":
-                        V1_ = y1 * delta_t
-                    else:
-                        V1_ = y1
-                    
-                    type_list = to_numpy(get_type_list(x, dimension))
-                    
-                    # Plot arrows showing diffusiophoresis velocities
-                
-                    for n in range(0, n_particles, 4):
-                        ax4.arrow(
-                            x=to_numpy(x[n, 1]),  # x position
-                            y=to_numpy(x[n, 2]),  # y position
-                            dx=to_numpy(V1_[n, 0]* delta_t),  # x component of velocity
-                            dy=to_numpy(V1_[n, 1]* delta_t),  # y component of velocity
-                            color=cmap.color(type_list[n].astype(int)),
-                            head_width=0.005,
-                            length_includes_head=True,
-                        )
-                    
-                    ax4.set_title("diffusiophoresis velocities", fontsize=20)
-                    # plt.colorbar(im4, ax=ax4)
-                    ax4.set_xlim([0, 1])
-                    ax4.set_ylim([0, 1])
-                    ax4.set_xticks([])
-                    ax4.set_yticks([])
+
+                    # Field metrics
+                    C1_mean = x_mesh[:, 6].mean().item()
+                    C1_std = x_mesh[:, 6].std().item()
+                    C2_mean = x_mesh[:, 7].mean().item()
+                    C2_std = x_mesh[:, 7].std().item()
+                    pattern_growth = C2_std / 0.005 if C2_std > 0 else 0
+
+                    # Particle velocity metrics
+                    particle_vel0 = torch.norm(y0, dim=1)
+                    vel_mean0 = particle_vel0.mean().item()
+                    vel_max0 = particle_vel0.max().item()
+                    particle_vel1 = torch.norm(y1, dim=1)
+                    vel_mean1 = particle_vel1.mean().item()
+                    vel_max1 = particle_vel1.max().item()
+
+                    # Particle clustering
+                    particle_pos = x[:n_particles, 1:3]
+                    pos_std_x = particle_pos[:, 0].std().item()
+                    pos_std_y = particle_pos[:, 1].std().item()
+                    clustering = (0.289 - pos_std_x) / 0.289  # 0.289 is std for uniform distribution
+
+                    # Diffusiophoresis magnitudes
+                    diffusio_mag1 = torch.norm(y2, dim=1).mean().item()
+                    diffusio_mag2 = torch.norm(y3, dim=1).mean().item()
+
+                    # Display metrics as text (matching original print format)
+                    metrics_text = (
+                        f"C1 μ={C1_mean:.3f}±{C1_std:.3f}\n"
+                        f"C2 μ={C2_mean:.3f}±{C2_std:.3f}\n"
+                        f"pattern: {pattern_growth:.1f}x\n\n"
+                        f"particles: vel={vel_mean1:.4f}\n"
+                        f"  (max={vel_max1:.4f})\n"
+                        f"clustering={clustering:.3f}\n\n"
+                        f"repulsion: vel={vel_mean0:.4f}\n"
+                        f"  (max={vel_max0:.4f})\n\n"
+                        f"diffusio: {diffusio_mag1:.4f}\n"
+                        f"  + {diffusio_mag2:.4f}"
+                    )
+                    ax4.text(0.02, 0.95, metrics_text, fontsize=10, verticalalignment='top',
+                            fontfamily='monospace', transform=ax4.transAxes)
+                    ax4.set_title("metrics", fontsize=20)
+
+                    # # Original velocity arrows code (commented out):
+                    # grad_x = np.gradient(combined_field, axis=1)
+                    # grad_y = np.gradient(combined_field, axis=0)
+                    # grad_mag = np.sqrt(grad_x**2 + grad_y**2)
+                    # im4 = ax4.imshow(grad_mag*0, cmap='bone', origin='lower',
+                    #                 extent=[0, 1, 0, 1], vmin=0, vmax=1)
+                    # if model_config.prediction == "2nd_derivative":
+                    #     V1_ = y1 * delta_t
+                    # else:
+                    #     V1_ = y1
+                    # type_list = to_numpy(get_type_list(x, dimension))
+                    # for n in range(0, n_particles, 4):
+                    #     ax4.arrow(
+                    #         x=to_numpy(x[n, 1]), y=to_numpy(x[n, 2]),
+                    #         dx=to_numpy(V1_[n, 0]* delta_t), dy=to_numpy(V1_[n, 1]* delta_t),
+                    #         color=cmap.color(type_list[n].astype(int)),
+                    #         head_width=0.005, length_includes_head=True,
+                    #     )
                     
                     plt.tight_layout()
                     plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.png", dpi=200)
