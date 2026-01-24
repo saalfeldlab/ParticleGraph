@@ -170,8 +170,12 @@ simulation:
   n_frames: 4000          # simulation length (1000-10000)
   delta_t: 5.0E-4         # time step (1E-5 to 1E-3)
   n_particles: 9600       # particle count
-  n_nodes: 10000          # mesh resolution
+  n_nodes: 10000          # mesh resolution - MUST BE PERFECT SQUARE
 ```
+
+**IMPORTANT: n_nodes must be a perfect square** (the mesh is n×n grid).
+Use only these values: `10000` (100×100), `22500` (150×150), `40000` (200×200), `62500` (250×250).
+Do NOT use values like 25000, 30000, etc. - simulation will crash.
 
 **Key Brusselator parameters (row 0 of params_mesh):**
 - `D1`: Diffusion coefficient for C1 (0.01-1.0)

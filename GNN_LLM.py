@@ -345,11 +345,14 @@ def compute_ucb_scores(analysis_path: str, ucb_path: str, c: float = 1.414,
     return True
 
 
-def run_simulation(config_path: str, root_dir: str, config_name: str) -> bool:
+def run_simulation(config_path: str, root_dir: str, config_name: str) -> tuple:
     """Run the diffusiophoresis simulation using dedicated subprocess script.
 
     Uses generate_subprocess.py to ensure code modifications are properly reloaded
     for each iteration (similar to NeuralGraph's train_signal_subprocess.py).
+
+    Returns:
+        tuple: (success: bool, error_traceback: str or None)
     """
     print("\033[93mRunning simulation...\033[0m")
 
@@ -368,18 +371,30 @@ def run_simulation(config_path: str, root_dir: str, config_name: str) -> bool:
     print(f"\033[90mcommand: {' '.join(cmd)}\033[0m")
     print(f"\033[90mconfig: {config_path}\033[0m")
 
-    # Stream output with unbuffered environment (matches NeuralGraph pattern)
+    # Stream output while capturing for error analysis
     env = os.environ.copy()
     env['PYTHONUNBUFFERED'] = '1'
 
-    result = subprocess.run(cmd, cwd=root_dir, text=True, env=env)
+    output_lines = []
+    process = subprocess.Popen(
+        cmd, cwd=root_dir, text=True, env=env,
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        bufsize=1
+    )
 
-    if result.returncode != 0:
-        print(f"\033[91mSimulation failed with return code {result.returncode}\033[0m")
-        return False
+    for line in process.stdout:
+        print(line, end='', flush=True)
+        output_lines.append(line)
+
+    process.wait()
+    full_output = ''.join(output_lines)
+
+    if process.returncode != 0:
+        print(f"\033[91mSimulation failed with return code {process.returncode}\033[0m")
+        return False, full_output
 
     print("\033[92mSimulation completed\033[0m")
-    return True
+    return True, None
 
 
 def generate_mp4_video(fig_dir: str, output_path: str, framerate: int = 30) -> bool:
@@ -772,11 +787,99 @@ if __name__ == "__main__":
         # GNN_Main.py adds prefix folder to dataset path (e.g., "diffusiophoresis/diffusiophoresis_Claude")
         dataset_name = f"{base_config_name}/{config.dataset}"
 
-        # 1. Run simulation
-        success = run_simulation(target_config, root_dir, llm_task_name)
+        # 1. Run simulation with error recovery
+        max_repair_attempts = 10
+        success = False
+        error_traceback = None
+
+        for attempt in range(max_repair_attempts + 1):
+            success, error_traceback = run_simulation(target_config, root_dir, llm_task_name)
+
+            if success:
+                break
+
+            if attempt == 0:
+                print(f"\033[91mSimulation failed at iteration {iteration}\033[0m")
+                if error_traceback:
+                    print(f"\033[91mError:\n{error_traceback[-2000:]}\033[0m")  # Last 2000 chars
+
+            # Check if code was modified (only attempt repair for code errors)
+            code_files = [
+                'src/ParticleGraph/generators/PDE_Diffusiophoresis.py',
+                'src/ParticleGraph/generators/PDE_D.py',
+                'src/ParticleGraph/generators/graph_data_generator.py',
+            ]
+            modified_code = get_modified_code_files(root_dir, code_files) if is_git_repo(root_dir) else []
+
+            if not modified_code and attempt == 0:
+                print(f"\033[93mNo code modifications detected - skipping repair attempts\033[0m")
+                break
+
+            # Attempt repair only if code was modified
+            if attempt < max_repair_attempts and modified_code:
+                print(f"\033[93mAttempt {attempt + 1}/{max_repair_attempts}: Asking Claude to fix the code error...\033[0m")
+
+                repair_prompt = f"""SIMULATION CRASHED - Please fix the code error.
+
+Attempt {attempt + 1}/{max_repair_attempts}
+
+Error traceback:
+```
+{error_traceback[-3000:] if error_traceback else 'No traceback available'}
+```
+
+Modified code files that may contain the bug:
+{chr(10).join(f'- {root_dir}/{f}' for f in modified_code)}
+
+Instructions:
+1. Read the error traceback carefully
+2. Identify the bug in the modified code
+3. Fix the bug using the Edit tool
+4. Do NOT make other changes, only fix the crash
+
+If you cannot fix it, say "CANNOT_FIX" and explain why."""
+
+                repair_cmd = [
+                    'claude',
+                    '-p', repair_prompt,
+                    '--output-format', 'text',
+                    '--max-turns', '10',
+                    '--allowedTools', 'Read', 'Edit'
+                ]
+
+                repair_result = subprocess.run(repair_cmd, cwd=root_dir, capture_output=True, text=True)
+                repair_output = repair_result.stdout
+
+                if 'CANNOT_FIX' in repair_output:
+                    print(f"\033[91mClaude cannot fix the error\033[0m")
+                    break
+
+                print(f"\033[92mRepair attempt {attempt + 1} complete, retrying simulation...\033[0m")
+
+        # If still failing after all attempts, rollback and log
         if not success:
-            print(f"\033[91mSimulation failed at iteration {iteration}\033[0m")
-            continue
+            print(f"\033[91mAll repair attempts failed - rolling back code changes\033[0m")
+
+            # Rollback modified files using git
+            if is_git_repo(root_dir):
+                for file_path in ['src/ParticleGraph/generators/PDE_Diffusiophoresis.py',
+                                  'src/ParticleGraph/generators/PDE_D.py',
+                                  'src/ParticleGraph/generators/graph_data_generator.py']:
+                    try:
+                        subprocess.run(['git', 'checkout', 'HEAD', '--', file_path],
+                                      cwd=root_dir, capture_output=True, timeout=10)
+                    except:
+                        pass
+                print(f"\033[93mRolled back code to last working state\033[0m")
+
+            # Log failed modification to memory
+            if os.path.exists(memory_path):
+                with open(memory_path, 'a') as f:
+                    f.write(f"\n### Failed Code Modification (Iter {iteration})\n")
+                    f.write(f"Error: {error_traceback[-500:] if error_traceback else 'Unknown'}\n")
+                    f.write(f"**DO NOT retry this modification**\n\n")
+
+            continue  # Skip to next iteration
 
         # 2. Create frame montage
         fig_dir = f"{root_dir}/graphs_data/{dataset_name}/Fig"
