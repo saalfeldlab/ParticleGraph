@@ -1790,7 +1790,7 @@ def set_trainable_division_parameters(model, lr):
 def get_index_particles(x, n_particle_types, dimension):
     index_particles = []
     for n in range(n_particle_types):
-        index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
+        index = np.argwhere(x[:, 1+2*dimension].detach().cpu().numpy() == n)
         index_particles.append(index.squeeze())
     return index_particles
 

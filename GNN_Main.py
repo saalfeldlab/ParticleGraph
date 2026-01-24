@@ -55,7 +55,7 @@ if __name__ == "__main__":
         best_model = None
         task = 'generate'  # 'generate', 'train', 'test'
 
-        config_list = ['diffusiophoresis_1_5']
+        config_list = ['arbitrary_3_3D']
 
     for config_file_ in config_list:
         print(" ")
@@ -77,7 +77,7 @@ if __name__ == "__main__":
                 device=device,
                 visualize=True,
                 run_vizualized=0,
-                style="black color",
+                style="color",
                 alpha=1,
                 erase=True,
                 bSave=True,

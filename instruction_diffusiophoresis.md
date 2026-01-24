@@ -382,6 +382,7 @@ f = ar_p1 * exp(-d^(2*ar_p2) / (2σ²)) - ar_p3 * exp(-d^(2*ar_p4) / (2σ²))
 1. Set `n_particle_types: N` in config
 2. Add N entries to `params:` list (one per type)
 3. Set `sigma:` for the interaction kernel width
+4. **Keep total particle count constant**: When changing `n_particle_types`, particles are distributed equally among types. The total `n_particles` should remain ~9600 to maintain simulation density. Example: 1 type = 9600 particles, 2 types = 9600 total (4800 each), 3 types = 9600 total (3200 each).
 
 **Backward compatibility:**
 - With `n_particle_types: 1` or without per-type params, falls back to global parameters from `params_mesh`

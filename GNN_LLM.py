@@ -699,10 +699,13 @@ if __name__ == "__main__":
         print(f"\033[91mInstruction file not found: {instruction_path}\033[0m")
         sys.exit(1)
 
-    # Initialize at iteration 1
-    start_iteration = 1
+    # Resume support: start_iteration parameter (default 1)
+    start_iteration = task_params.get('start', 1)
 
-    # Copy base config to Claude config
+    if start_iteration > 1:
+        print(f"\033[93mResuming from iteration {start_iteration}\033[0m")
+
+    # Copy base config to Claude config (only on fresh start)
     if start_iteration == 1:
         if os.path.exists(source_config):
             shutil.copy2(source_config, target_config)
@@ -752,6 +755,12 @@ if __name__ == "__main__":
             f.write("### Hypothesis\n\n")
             f.write("### Iterations This Block\n\n")
             f.write("### Emerging Observations\n\n")
+    else:
+        # Resuming - preserve existing files
+        print(f"\033[93mPreserving {target_config} (resuming)\033[0m")
+        print(f"\033[93mPreserving {analysis_path} (resuming)\033[0m")
+        print(f"\033[93mPreserving {memory_path} (resuming)\033[0m")
+        print(f"\033[93mPreserving {ucb_path} (resuming)\033[0m")
 
     # Load config to get n_iter_block
     config = ParticleGraphConfig.from_yaml(target_config)
@@ -981,9 +990,12 @@ Code files you can modify (BLOCK END only - for next block):
                     else:
                         print(f"\033[93mGit: {message}\033[0m")
 
-        # 7. Generate video
+        # 7. Rename input video to iteration-specific name
+        # The simulation already generates input_{dataset}.mp4 at framerate=8
+        input_video = f"{root_dir}/graphs_data/{dataset_name}/input_{config.dataset}.mp4"
         video_path = f"{root_dir}/graphs_data/{dataset_name}/video_iter_{iteration:03d}.mp4"
-        generate_mp4_video(fig_dir, video_path)
+        if os.path.exists(input_video):
+            shutil.move(input_video, video_path)
 
         # 8. Save exploration artifacts
         save_exploration_artifacts(

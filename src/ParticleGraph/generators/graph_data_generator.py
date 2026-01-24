@@ -339,7 +339,7 @@ def data_generate_particle(
         )
 
         time.sleep(0.5)
-        for it in trange(simulation_config.start_frame, n_frames + 1):
+        for it in trange(simulation_config.start_frame, n_frames + 1, ncols=150):
             # calculate type change
             if simulation_config.state_type == "sequence":
                 sample = torch.rand((len(T1), 1), device=device)
@@ -582,20 +582,51 @@ def data_generate_particle(
                         plt.close()
 
                     elif (model_config.particle_model_name == "PDE_A") & (dimension == 3):
-                        fig = plt.figure(figsize=(12, 12))
-                        ax = fig.add_subplot(111, projection="3d")
+                        fig = plt.figure(figsize=(20, 10))
+
+                        # Left panel: 3D view
+                        ax1 = fig.add_subplot(121, projection="3d")
                         for n in range(n_particle_types):
-                            ax.scatter(
-                                to_numpy(x[index_particles[n], 2]),
+                            ax1.scatter(
                                 to_numpy(x[index_particles[n], 1]),
+                                to_numpy(x[index_particles[n], 2]),
                                 to_numpy(x[index_particles[n], 3]),
-                                s=50,
+                                s=10,
                                 color=cmap.color(n),
+                                alpha=0.5,
+                                edgecolors='none'
                             )
-                        ax.set_xlim([0, 1])
-                        ax.set_ylim([0, 1])
-                        ax.set_zlim([0, 1])
-                        pl.savefig(
+                        ax1.set_xlim([0, 1])
+                        ax1.set_ylim([0, 1])
+                        ax1.set_zlim([0, 1])
+                        ax1.set_xlabel('X')
+                        ax1.set_ylabel('Y')
+                        ax1.set_zlabel('Z')
+
+                        # Right panel: 2D cross-section (z slice at middle)
+                        ax2 = fig.add_subplot(122)
+                        z_center = 0.5
+                        z_thickness = 0.1
+                        for n in range(n_particle_types):
+                            z_vals = to_numpy(x[index_particles[n], 3])
+                            mask = np.abs(z_vals - z_center) < z_thickness
+                            ax2.scatter(
+                                to_numpy(x[index_particles[n], 1])[mask],
+                                to_numpy(x[index_particles[n], 2])[mask],
+                                s=15,
+                                color=cmap.color(n),
+                                alpha=0.7,
+                                edgecolors='none'
+                            )
+                        ax2.set_xlim([0, 1])
+                        ax2.set_ylim([0, 1])
+                        ax2.set_xlabel('X')
+                        ax2.set_ylabel('Y')
+                        ax2.set_title(f'Z cross-section ({z_center-z_thickness:.1f} < z < {z_center+z_thickness:.1f})')
+                        ax2.set_aspect('equal')
+
+                        plt.tight_layout()
+                        plt.savefig(
                             f"graphs_data/{dataset_name}/Fig/Fig_{run}_{it}.jpg",
                             dpi=170.7,
                         )
@@ -1529,7 +1560,7 @@ def data_generate_particle_field(
 
         if run ==0:
             dataset_name_ = dataset_name.split('/')[-1]
-            generate_compressed_video_mp4(output_dir=f"./graphs_data/{dataset_name}", run=run, config_indices=dataset_name_, framerate=8)
+            generate_compressed_video_mp4(output_dir=f"./graphs_data/{dataset_name}", run=run, config_indices=dataset_name_, framerate=6)
 
         # Write metrics to log file (use provided or create local)
         if run == 0:
