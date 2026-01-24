@@ -11,11 +11,11 @@ simulation:
     ]
   func_params: [["arbitrary", 0, 0], ["arbitrary", 1, 1], ["arbitrary", 2, 2]]
   min_radius: 0
-  max_radius: 0.075
-  n_particles: 4800
+  max_radius: 0.175
+  n_particles: 14400
   n_particle_types: 3
   n_frames: 4000
-  sigma: 0.05
+  sigma: 0.01
   delta_t: 0.1
   dpos_init: 0
   boundary: "periodic"
