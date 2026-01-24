@@ -403,6 +403,7 @@ def generate_mp4_video(fig_dir: str, output_path: str, framerate: int = 30) -> b
 
     cmd = [
         "ffmpeg", "-y",
+        "-loglevel", "error",  # Suppress verbose output
         "-framerate", str(framerate),
         "-i", input_pattern,
         "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",
