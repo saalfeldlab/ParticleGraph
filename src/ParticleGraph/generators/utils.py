@@ -60,9 +60,11 @@ def choose_model(config=[], W=[], device=[]):
         case 'PDE_B_bis':
             model = PDE_B_bis(aggr_type=aggr_type, p=p, bc_dpos=bc_dpos)
         case 'PDE_D' | 'PDE_ParticleField_D' | 'PDE_Cell_D' :
-            params_mesh = config.simulation.params_mesh
-            p = torch.tensor(params_mesh, dtype=torch.float32, device=device).squeeze()
-            model = PDE_D(aggr_type=aggr_type, p=p, bc_dpos=bc_dpos, dimension=dimension)
+            # Per-type parameters: [M_magnitude, consumption, production, interaction_strength]
+            p = torch.tensor(params, dtype=torch.float32, device=device)
+            # Global mesh parameters (Brusselator, diffusion, etc.)
+            p_mesh = torch.tensor(config.simulation.params_mesh, dtype=torch.float32, device=device)
+            model = PDE_D(aggr_type=aggr_type, p=p, p_mesh=p_mesh, bc_dpos=bc_dpos, dimension=dimension)
         case 'PDE_G':
             if params[0] == [-1]:
                 p = np.linspace(0.5, 5, n_particle_types)

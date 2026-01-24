@@ -1,18 +1,20 @@
-description: "diffusiophoresis with 1 type particles   Pe=0.1"
-dataset: "diffusiophoresis_1_5"
+description: "LLM-guided pattern exploration"
+dataset: "diffusiophoresis_Claude"
 
 simulation:
+  # Per-type parameters: [M_magnitude, consumption, production, interaction_strength]
+  # SANITY CHECK: Reproduce original config with new multi-type code
+  # Original: M=150, consumption=150, production=-150
   params:
     [
-      [1.6233, 1.0413, 1.6012, 1.5615],
-      [1.7667, 1.8308, 1.0855, 1.9055],
-      [1.7226, 1.7850, 1.0584, 1.8579],
+      [150, 150, -150, 50],    # Type 0: M=±150, consume=150, produce=-150, repel=50
     ]
 
+  # Global mesh parameters - EXACT ORIGINAL VALUES
   params_mesh:
-    - [0.1, 10.0, 4.5, 6.5, 0.04, -16]
-    - [0.8, 16, 0.0, 0.0, 0.0, 0.0]
-    - [0.1, 250, 250, 0.05, 0.0, 0.0]
+    - [0.1, 10.0, 4.5, 6.5, 0.04, 0]     # D1=0.1, Da_c=10, A=4.5, B=6.5, mu, (legacy)
+    - [0.8, 0, 0.0, 0.0, 0.0, 0.0]        # D2=0.8, (legacy), ...
+    - [1.0, 0, 0, 0.05, 0.0, 0.0]         # Pe=1.0, (legacy), influence_radius=0.05
 
   min_radius: 0
   max_radius: 0.2
