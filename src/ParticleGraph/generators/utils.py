@@ -63,13 +63,14 @@ def choose_model(config=[], W=[], device=[]):
             params_mesh = config.simulation.params_mesh
             p_mesh = torch.tensor(params_mesh, dtype=torch.float32, device=device).squeeze()
             # Per-type particle params from simulation.params (like PDE_A)
-            # Layout: [M1, M2, consumption, production, repulsion_strength, repulsion_range]
+            # Layout: [M1, M2, consumption, production, ar_p1, ar_p2, ar_p3, ar_p4]
             if n_particle_types > 1 and params is not None and params[0] != [-1]:
                 particle_params = torch.tensor(params, dtype=torch.float32, device=device)
             else:
                 particle_params = None
+            sigma = config.simulation.sigma
             model = PDE_D(aggr_type=aggr_type, p=p_mesh, particle_params=particle_params,
-                          bc_dpos=bc_dpos, dimension=dimension)
+                          bc_dpos=bc_dpos, dimension=dimension, sigma=sigma)
         case 'PDE_G':
             if params[0] == [-1]:
                 p = np.linspace(0.5, 5, n_particle_types)

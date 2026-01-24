@@ -1529,7 +1529,7 @@ def data_generate_particle_field(
 
         if run ==0:
             dataset_name_ = dataset_name.split('/')[-1]
-            generate_compressed_video_mp4(output_dir=f"./graphs_data/{dataset_name}", run=run, config_indices=dataset_name_, framerate=20)
+            generate_compressed_video_mp4(output_dir=f"./graphs_data/{dataset_name}", run=run, config_indices=dataset_name_, framerate=8)
 
         # Write metrics to log file (use provided or create local)
         if run == 0:

@@ -6,19 +6,24 @@ from ParticleGraph.utils import to_numpy
 class PDE_D(pyg.nn.MessagePassing):
     """
     Computes interactions between particles and fields, and between particles.
-    Implements diffusiophoresis with short-range repulsion.
+    Implements diffusiophoresis with PDE_A-style attraction-repulsion.
 
     Supports multiple particle types when particle_params is provided.
-    Per-type params layout: [M1, M2, consumption, production, repulsion_strength, repulsion_range]
+    Per-type params layout: [M1, M2, consumption, production, ar_p1, ar_p2, ar_p3, ar_p4]
+      - M1, M2: Mobility coefficients for diffusiophoresis
+      - consumption, production: Particle effects on fields
+      - ar_p1, ar_p2: Attraction term parameters (p1*exp(-d^(2*p2)/(2σ²)))
+      - ar_p3, ar_p4: Repulsion term parameters (p3*exp(-d^(2*p4)/(2σ²)))
     """
 
-    def __init__(self, aggr_type='mean', p=None, particle_params=None, bc_dpos=None, dimension=2):
+    def __init__(self, aggr_type='mean', p=None, particle_params=None, bc_dpos=None, dimension=2, sigma=0.005):
         super(PDE_D, self).__init__(aggr=aggr_type)
 
         self.p = p  # Mesh params (shared across all types)
         self.particle_params = particle_params  # Per-type particle params (optional)
         self.bc_dpos = bc_dpos
         self.dimension = dimension
+        self.sigma = sigma  # For attraction-repulsion kernel
 
         # Global parameters from mesh (used as fallback when particle_params=None)
         # Diffusiophoretic parameters
@@ -41,10 +46,11 @@ class PDE_D(pyg.nn.MessagePassing):
         # Report configuration
         print(f"Initialized PDE_D with parameters:")
         print(f"Mobility: M₁={self.M1.item()}, M₂={self.M2.item()}")
-        print(f"Pe={self.Pe.item():.3f}")
+        print(f"Pe={self.Pe.item():.3f}, sigma={self.sigma}")
         print(f"Particle→Field: consumption={self.consumption_rate.item()}, production={self.production_rate.item()}, influence_radius={self.influence_radius.item():.3f}")
         if particle_params is not None:
             print(f"Multi-type support: {particle_params.shape[0]} particle types")
+            print(f"Per-type params: [M1, M2, consumption, production, ar_p1, ar_p2, ar_p3, ar_p4]")
     
     def forward(self, data, direction='fp'):
         """
@@ -162,40 +168,32 @@ class PDE_D(pyg.nn.MessagePassing):
             return field_updates
 
         else:  # mode == 'pp'
-            # Particle → Particle: Short-range repulsion
+            # Particle → Particle: PDE_A-style attraction-repulsion
+            # Formula: f = (p1 * exp(-d^(2*p2) / (2σ²)) - p3 * exp(-d^(2*p4) / (2σ²))) * direction
 
-            # Get repulsion parameters (per-type or global)
             if parameters_i is not None:
-                repulsion_strength = parameters_i[:, 4]
-                repulsion_range = parameters_i[:, 5]
-                # Use max repulsion range for cutoff (conservative)
-                range_cutoff = repulsion_range.max().item()
+                # Per-type attraction-repulsion parameters
+                p1 = parameters_i[:, 4]  # ar_p1: attraction strength
+                p2 = parameters_i[:, 5]  # ar_p2: attraction exponent
+                p3 = parameters_i[:, 6]  # ar_p3: repulsion strength
+                p4 = parameters_i[:, 7]  # ar_p4: repulsion exponent
+
+                # PDE_A formula: attraction - repulsion
+                f = (p1 * torch.exp(-dist ** (2 * p2) / (2 * self.sigma ** 2))
+                     - p3 * torch.exp(-dist ** (2 * p4) / (2 * self.sigma ** 2)))
+
+                # Apply force in direction of neighbor (attraction positive, repulsion negative)
+                forces = f[:, None] * d_pos / dist_safe.unsqueeze(1)
             else:
-                repulsion_strength = self.repulsion_strength
-                repulsion_range = self.repulsion_range
-                range_cutoff = self.repulsion_range
-
-            forces = torch.zeros_like(pos_i)
-
-            # Apply force only for particles within range
-            in_range = dist < range_cutoff
-            if in_range.any():
-                # Direction vectors
-                dir_norm = d_pos / dist_safe.unsqueeze(1)
-
-                # Repulsion magnitude (exponential decay)
-                if parameters_i is not None:
-                    # Per-type repulsion
-                    repulsion_mag = repulsion_strength[in_range] * torch.exp(
-                        -5.0 * dist[in_range] / repulsion_range[in_range]
+                # Fallback: simple exponential repulsion (backward compatible)
+                forces = torch.zeros_like(pos_i)
+                in_range = dist < self.repulsion_range
+                if in_range.any():
+                    dir_norm = d_pos / dist_safe.unsqueeze(1)
+                    repulsion_mag = self.repulsion_strength * torch.exp(
+                        -5.0 * dist[in_range] / self.repulsion_range
                     )
-                else:
-                    repulsion_mag = repulsion_strength * torch.exp(
-                        -5.0 * dist[in_range] / repulsion_range
-                    )
-
-                # Apply repulsive forces
-                forces[in_range] = -dir_norm[in_range] * repulsion_mag.unsqueeze(1)
+                    forces[in_range] = -dir_norm[in_range] * repulsion_mag.unsqueeze(1)
 
             return forces
     

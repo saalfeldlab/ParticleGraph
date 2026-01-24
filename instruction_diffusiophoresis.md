@@ -31,6 +31,38 @@ Boring patterns:
 
 ---
 
+## State of the Art Reasoning
+
+**Ground your reasoning in scientific literature.** Include a brief "Literature:" line in log entries.
+
+### Top 10 Target Patterns (by complexity)
+
+| Rank | Pattern | Topology | Dynamics | How to achieve |
+|------|---------|----------|----------|----------------|
+| 10 | Spirals | Rotating arms | Traveling waves | FitzHugh-Nagumo excitable; high Da_c |
+| 9 | Labyrinthine | Connected maze | Slow coarsening | B near transition; D₂/D₁ ~ 10 |
+| 8 | Mitosis/splitting | Spots divide | Self-replication | Gray-Scott regime; strong coupling |
+| 7 | Traveling waves | Propagating fronts | Periodic motion | Excitable + advection; high Pe |
+| 6 | Type segregation | Phase-separated | Demixing | Multi-type with asymmetric attraction |
+| 5 | Rings around spots | Particle halos | Steady state | Opposite M1/M2 signs; consumption |
+| 4 | Stripes | Parallel bands | Static/slow | B > 1+A²; elongated domain effect |
+| 3 | Spot arrays | Hexagonal lattice | Static | Classic Turing; D₂ >> D₁ |
+| 2 | Clustering | Dense aggregates | MIPS-like | Strong attraction; slow in dense |
+| 1 | Uniform | Homogeneous | None | Below Turing threshold (avoid) |
+
+### Key References
+- Turing: D_inhibitor >> D_activator; B > 1+A² for instability
+- Pearson (1993): Gray-Scott phase diagram for pattern selection
+- Cates & Tailleur (2015): MIPS from speed-density coupling
+
+### Example Log Entry
+```
+Literature: Gray-Scott mitosis regime (Pearson 1993)
+Hypothesis: Increase B toward stripe-spot transition
+```
+
+---
+
 ## Iteration Loop Structure
 
 Each block = `n_iter_block` iterations (default: 8) exploring one configuration space.
@@ -310,16 +342,49 @@ Key differences:
 - **PDE_A** (arbitrary): distance-dependent attraction/repulsion forces
 - **PDE_B** (boids): alignment, cohesion, separation behaviors per type
 
-**Note**: The current `PDE_D.py` (diffusiophoresis) does NOT support multiple particle types - it uses single values (M1, M2, consumption_rate) for all particles. To add type-specific behavior, you would need to modify at a BLOCK END:
+### Multi-Type Particle Support in PDE_D
 
-1. **`PDE_D.py`**:
-   - Read particle type from `x[:, 5]` (type index)
-   - Use type-specific parameters from `params` array
-   - Apply different mobility/consumption/production per type
+`PDE_D.py` now supports multiple particle types with per-type parameters for diffusiophoresis and PDE_A-style attraction-repulsion.
 
-2. **`src/ParticleGraph/models/utils.py`** (function around line 1643):
-   - Add `PDE_ParticleField_D` to the model initialization match statement
-   - See how `PDE_A` and `PDE_B` handle multiple types via `Interaction_Particle`
+**Per-type params layout (8 parameters per type):**
+```yaml
+simulation:
+  # [M1, M2, consumption, production, ar_p1, ar_p2, ar_p3, ar_p4]
+  params:
+    - [-16, 16, 180, -180, 1.6, 1.0, 1.6, 1.5]   # Type 0
+    - [-8, 8, 90, -90, 1.8, 1.8, 1.1, 1.9]       # Type 1
+    - [-4, 4, 45, -45, 1.7, 1.8, 1.1, 1.9]       # Type 2
+  n_particle_types: 3
+  sigma: 0.005  # Used for attraction-repulsion kernel
+```
+
+**Parameter meanings:**
+| Parameter | Description |
+|-----------|-------------|
+| M1 | Mobility coefficient for C1 gradient (diffusiophoresis) |
+| M2 | Mobility coefficient for C2 gradient (diffusiophoresis) |
+| consumption | Rate at which particles consume C1 field |
+| production | Rate at which particles produce C2 field |
+| ar_p1 | Attraction strength (PDE_A formula) |
+| ar_p2 | Attraction exponent (PDE_A formula) |
+| ar_p3 | Repulsion strength (PDE_A formula) |
+| ar_p4 | Repulsion exponent (PDE_A formula) |
+
+**Attraction-repulsion formula (from PDE_A):**
+```
+f = ar_p1 * exp(-d^(2*ar_p2) / (2σ²)) - ar_p3 * exp(-d^(2*ar_p4) / (2σ²))
+```
+- First term: attraction (positive ar_p1 pulls particles together)
+- Second term: repulsion (ar_p3 pushes particles apart at short range)
+- Different types can have different interaction strengths
+
+**To enable multi-type:**
+1. Set `n_particle_types: N` in config
+2. Add N entries to `params:` list (one per type)
+3. Set `sigma:` for the interaction kernel width
+
+**Backward compatibility:**
+- With `n_particle_types: 1` or without per-type params, falls back to global parameters from `params_mesh`
 
 **Safety rules:**
 

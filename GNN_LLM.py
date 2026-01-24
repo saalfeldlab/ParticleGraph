@@ -365,7 +365,7 @@ def run_simulation(config_path: str, root_dir: str, config_name: str) -> tuple:
         '--config', config_path,
         '--device', 'auto',
         '--erase',
-        '--step', '100'
+        '--step', '50'
     ]
 
     print(f"\033[90mcommand: {' '.join(cmd)}\033[0m")
