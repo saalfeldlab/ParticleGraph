@@ -1273,7 +1273,7 @@ def data_generate_particle_field(
                     im1 = ax1.imshow(C1_field, cmap='viridis', origin='lower', extent=[0, 1, 0, 1],
                                     vmin=C1_vmin, vmax=C1_vmax)
                     ax1.set_axis_off()
-                    ax1.set_title("C₁ field", fontsize=20)
+                    ax1.set_title("C₁ field", fontsize=10)
                     # plt.colorbar(im1, ax=ax1)
                     ax1.set_xticks([])
                     ax1.set_yticks([])
@@ -1286,7 +1286,7 @@ def data_generate_particle_field(
                     im2 = ax2.imshow(C2_field, cmap='plasma', origin='lower', extent=[0, 1, 0, 1],
                                     vmin=C2_vmin, vmax=C2_vmax)
                     ax2.set_axis_off()
-                    ax2.set_title("C₂ field", fontsize=20)
+                    ax2.set_title("C₂ field", fontsize=10)
                     # plt.colorbar(im2, ax=ax2)
                     ax2.set_xticks([])
                     ax2.set_yticks([])
@@ -1308,7 +1308,7 @@ def data_generate_particle_field(
                             alpha=0.9,
                             edgecolors='none'
                         )
-                    ax3.set_title("particles", fontsize=20)
+                    ax3.set_title(f"particles (n_types={n_particle_types})", fontsize=10)
                     # plt.colorbar(im3, ax=ax3)
                     ax3.set_axis_off()
                     ax3.set_xlim([0, 1])
@@ -1355,12 +1355,11 @@ def data_generate_particle_field(
                         f"clustering={clustering:.3f}\n\n"
                         f"repulsion: vel={vel_mean0:.4f}\n"
                         f"  (max={vel_max0:.4f})\n\n"
-                        f"diffusio: {diffusio_mag1:.4f}\n"
-                        f"  + {diffusio_mag2:.4f}"
+                        f"diffusion: {diffusio_mag1:.4f} + {diffusio_mag2:.4f}"
                     )
                     ax4.text(0.02, 0.95, metrics_text, fontsize=10, verticalalignment='top',
                             fontfamily='monospace', transform=ax4.transAxes)
-                    ax4.set_title("metrics", fontsize=20)
+                    ax4.set_title("metrics", fontsize=10)
 
                     # # Original velocity arrows code (commented out):
                     # grad_x = np.gradient(combined_field, axis=1)
@@ -1571,6 +1570,7 @@ def data_generate_particle_field(
 
 
         print('data generated...')
+
 
 def data_generate_cell(
     config,
