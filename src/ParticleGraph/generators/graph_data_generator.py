@@ -716,7 +716,6 @@ def data_generate_particle_field(
     scenario="none",
     device=None,
     bSave=True,
-    log_file=None,
 ):
 
     simulation_config = config.simulation
@@ -1110,7 +1109,7 @@ def data_generate_particle_field(
 
 
 
-            if "diffusiophoresis" in model_config.field_type:
+            if False : #"diffusiophoresis" in model_config.field_type:
                     if (it % 100 == 0) or (it < 100):
                         
                         # Field metrics
@@ -1568,30 +1567,26 @@ def data_generate_particle_field(
                     pos_std_y = particle_pos[:, 1].std().item()
                     clustering = (0.289 - pos_std_x) / 0.289
 
-                    # Write to log file or create local analysis.log
-                    local_log_file = log_file is None
-                    if local_log_file:
-                        log_file = open(f"./graphs_data/{dataset_name}/analysis.log", 'w')
-
+                    # Write analysis.log with simulation metrics
                     n_saved_frames = (n_frames - simulation_config.start_frame) // step + 1
-                    log_file.write(f"n_frames: {n_frames}\n")
-                    log_file.write(f"n_saved_frames: {n_saved_frames}\n")
-                    log_file.write(f"step: {step}\n")
-                    log_file.write(f"n_particles: {n_particles}\n")
-                    log_file.write(f"delta_t: {delta_t}\n")
-                    log_file.write(f"C1_mean: {C1_mean:.4f}\n")
-                    log_file.write(f"C1_std: {C1_std:.4f}\n")
-                    log_file.write(f"C2_mean: {C2_mean:.4f}\n")
-                    log_file.write(f"C2_std: {C2_std:.4f}\n")
-                    log_file.write(f"pattern_growth: {pattern_growth:.2f}\n")
-                    log_file.write(f"clustering: {clustering:.4f}\n")
-                    log_file.write(f"pos_std_x: {pos_std_x:.4f}\n")
-                    log_file.write(f"pos_std_y: {pos_std_y:.4f}\n")
-                    log_file.flush()
+                    analysis_log_path = f"./graphs_data/{dataset_name}/analysis.log"
+                    with open(analysis_log_path, 'w') as analysis_file:
+                        analysis_file.write(f"n_frames: {n_frames}\n")
+                        analysis_file.write(f"n_saved_frames: {n_saved_frames}\n")
+                        analysis_file.write(f"step: {step}\n")
+                        analysis_file.write(f"n_particles: {n_particles}\n")
+                        analysis_file.write(f"delta_t: {delta_t}\n")
+                        analysis_file.write(f"C1_mean: {C1_mean:.4f}\n")
+                        analysis_file.write(f"C1_std: {C1_std:.4f}\n")
+                        analysis_file.write(f"C2_mean: {C2_mean:.4f}\n")
+                        analysis_file.write(f"C2_std: {C2_std:.4f}\n")
+                        analysis_file.write(f"pattern_growth: {pattern_growth:.2f}\n")
+                        analysis_file.write(f"clustering: {clustering:.4f}\n")
+                        analysis_file.write(f"pos_std_x: {pos_std_x:.4f}\n")
+                        analysis_file.write(f"pos_std_y: {pos_std_y:.4f}\n")
 
-                    if local_log_file:
-                        log_file.close()
 
+        print('data generated...')
 
 def data_generate_cell(
     config,

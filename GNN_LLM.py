@@ -37,6 +37,7 @@ import matplotlib.patches as mpatches
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
 from ParticleGraph.config import ParticleGraphConfig
+# Note: data_generate is called via generate_subprocess.py for clean code reloading
 
 
 def is_git_repo(root_dir: str) -> bool:
@@ -345,28 +346,36 @@ def compute_ucb_scores(analysis_path: str, ucb_path: str, c: float = 1.414,
 
 
 def run_simulation(config_path: str, root_dir: str, config_name: str) -> bool:
-    """Run the diffusiophoresis simulation."""
+    """Run the diffusiophoresis simulation using dedicated subprocess script.
+
+    Uses generate_subprocess.py to ensure code modifications are properly reloaded
+    for each iteration (similar to NeuralGraph's train_signal_subprocess.py).
+    """
     print("\033[93mRunning simulation...\033[0m")
 
-    # Just the base name of the config file (without folder prefix and extension)
-    # add_pre_folder in GNN_Main.py will add the folder prefix based on the config name
-    rel_config = os.path.basename(config_path).replace('.yaml', '')
-
+    # Use the dedicated subprocess script for clean code reloading
+    generate_script = os.path.join(root_dir, 'generate_subprocess.py')
     cmd = [
         sys.executable,
-        'GNN_Main.py',
-        '-o', 'generate', rel_config
+        '-u',  # Force unbuffered output for real-time streaming
+        generate_script,
+        '--config', config_path,
+        '--device', 'auto',
+        '--erase',
+        '--step', '100'
     ]
 
-    print(f"\033[90mCommand: {' '.join(cmd)}\033[0m")
-    print(f"\033[90mConfig: {rel_config}\033[0m")
+    print(f"\033[90mcommand: {' '.join(cmd)}\033[0m")
+    print(f"\033[90mconfig: {config_path}\033[0m")
 
-    result = subprocess.run(cmd, cwd=root_dir, capture_output=True, text=True)
+    # Stream output with unbuffered environment (matches NeuralGraph pattern)
+    env = os.environ.copy()
+    env['PYTHONUNBUFFERED'] = '1'
+
+    result = subprocess.run(cmd, cwd=root_dir, text=True, env=env)
 
     if result.returncode != 0:
-        print(f"\033[91mSimulation failed:\033[0m")
-        print(f"\033[91mstdout: {result.stdout}\033[0m")
-        print(f"\033[91mstderr: {result.stderr}\033[0m")
+        print(f"\033[91mSimulation failed with return code {result.returncode}\033[0m")
         return False
 
     print("\033[92mSimulation completed\033[0m")
@@ -760,7 +769,8 @@ if __name__ == "__main__":
 
         # Reload config
         config = ParticleGraphConfig.from_yaml(target_config)
-        dataset_name = config.dataset
+        # GNN_Main.py adds prefix folder to dataset path (e.g., "diffusiophoresis/diffusiophoresis_Claude")
+        dataset_name = f"{base_config_name}/{config.dataset}"
 
         # 1. Run simulation
         success = run_simulation(target_config, root_dir, llm_task_name)

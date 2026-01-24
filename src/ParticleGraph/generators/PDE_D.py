@@ -32,10 +32,10 @@ class PDE_D(pyg.nn.MessagePassing):
         self.repulsion_strength = 50
         self.repulsion_range = 0.025
         
-        print(f"Initialized PDE_D with parameters:")
-        print(f"Mobility: M₁={self.M1.item()}, M₂={self.M2.item()}")
+        print(f"initialized PDE_D with parameters:")
+        print(f"mobility: M₁={self.M1.item()}, M₂={self.M2.item()}")
         print(f"Pe={self.Pe.item()}")
-        print(f"Particle→Field: consumption={self.consumption_rate.item()}, production={self.production_rate.item()}, influence_radius={self.influence_radius.item()}")
+        print(f"particle→field: consumption={self.consumption_rate.item()}, production={self.production_rate.item()}, influence_radius={self.influence_radius.item():.3f}")
     
     def forward(self, data, direction='fp'):
         """

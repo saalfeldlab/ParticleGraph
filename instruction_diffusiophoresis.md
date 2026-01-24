@@ -86,12 +86,24 @@ Examine the montage image showing 10 frames from the simulation.
 
 The montage shows 10 evenly-spaced frames (2 rows × 5 columns) from early to late simulation time.
 
-**What to look for:**
-- Pattern formation over time (early → late frames)
-- Spatial structure (spots, stripes, waves, clusters)
-- Particle organization and movement
-- Field gradients and their effects on particles
-- Dynamic vs static behavior
+**2x2 Figure Layout (each frame):**
+- **Top row**: Field concentrations C1 (left) and C2 (right) - Turing patterns
+- **Bottom left**: Particle spatial organization - **PRIMARY FOCUS**
+- **Bottom right**: Velocity arrows - not important, can ignore
+
+**What to look for (in priority order):**
+
+1. **Particle spatial organization (bottom left)** - PRIMARY
+   - Clustering, aggregation, self-organization
+   - Correlation with field patterns
+   - Dynamic reorganization over time
+   - Multi-scale structures
+
+2. **Field patterns C1/C2 (top row)** - SECONDARY
+   - Turing patterns (spots, stripes, labyrinthine)
+   - Pattern wavelength and regularity
+   - Traveling waves, spirals
+   - Dynamic vs static behavior
 
 **Score the pattern 0-10:**
 
@@ -266,10 +278,16 @@ Key differences:
 - **PDE_A** (arbitrary): distance-dependent attraction/repulsion forces
 - **PDE_B** (boids): alignment, cohesion, separation behaviors per type
 
-**Note**: The current `PDE_D.py` (diffusiophoresis) does NOT support multiple particle types - it uses single values (M1, M2, consumption_rate) for all particles. To add type-specific behavior, you would need to modify `PDE_D.py` at a BLOCK END to:
-1. Read particle type from `x[:, 5]` (type index)
-2. Use type-specific parameters from `params` array
-3. Apply different mobility/consumption/production per type
+**Note**: The current `PDE_D.py` (diffusiophoresis) does NOT support multiple particle types - it uses single values (M1, M2, consumption_rate) for all particles. To add type-specific behavior, you would need to modify at a BLOCK END:
+
+1. **`PDE_D.py`**:
+   - Read particle type from `x[:, 5]` (type index)
+   - Use type-specific parameters from `params` array
+   - Apply different mobility/consumption/production per type
+
+2. **`src/ParticleGraph/models/utils.py`** (function around line 1643):
+   - Add `PDE_ParticleField_D` to the model initialization match statement
+   - See how `PDE_A` and `PDE_B` handle multiple types via `Interaction_Particle`
 
 **Safety rules:**
 - Make ONE change at a time
