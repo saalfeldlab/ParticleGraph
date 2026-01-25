@@ -64,7 +64,9 @@ def choose_model(config=[], W=[], device=[]):
             p_mesh = torch.tensor(params_mesh, dtype=torch.float32, device=device).squeeze()
             # Per-type particle params from simulation.params (like PDE_A)
             # Layout: [M1, M2, consumption, production, ar_p1, ar_p2, ar_p3, ar_p4]
-            if n_particle_types > 1 and params is not None and params[0] != [-1]:
+            # Block 4 code change: Enable attraction-repulsion even with n_particle_types=1
+            # Previously required n_particle_types > 1, now any valid params activates it
+            if params is not None and params[0] != [-1] and len(params[0]) >= 8:
                 particle_params = torch.tensor(params, dtype=torch.float32, device=device)
             else:
                 particle_params = None

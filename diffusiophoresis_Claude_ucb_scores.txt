@@ -1,4 +1,3 @@
-=== UCB Scores (Block 0, iters 1-8, N=2, c=1.414) ===
+=== UCB Scores (Block 6, iters 49-56, N=1, c=1.414) ===
 
-Node 2: UCB=1.700, parent=1, visits=1, Score=7/10, Mutation=A: 4.5 → 1.5, B: 6.5 → 3.5
-Node 1: UCB=1.167, parent=root, visits=2, Score=5/10, Mutation=None (baseline)
+Node 49: UCB=1.207, parent=root, visits=1, Score=5/10, Mutation=M: ±16→±20, consumption: 180→220 (from iter 48 baseline)

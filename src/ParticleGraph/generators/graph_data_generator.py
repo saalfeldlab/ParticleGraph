@@ -925,25 +925,24 @@ def data_generate_particle_field(
                 dataset_p_p = data.Data(x=x, edge_index=edge_index_pp)
                 
                 x_particle_field = torch.cat((x_mesh, x), dim=0)
-                
-                # Compute distances for field-particle interactions
-                distance = torch.sum(
+
+                # Compute mesh→particle distances (only cross-terms to save memory)
+                # Shape: [n_nodes, n_particles]
+                distance_mp = torch.sum(
                     bc_dpos(
-                        x_particle_field[:, None, 1:dimension+1] - 
-                        x_particle_field[None, :, 1:dimension+1]
+                        x_mesh[:, None, 1:dimension+1] -
+                        x[None, :, 1:dimension+1]
                     )**2, dim=2
                 )
-                
-                # Field→particle edges for interpolation
-                adj_t = ((distance < (max_radius/2)**2) & (distance > min_radius**2)).float()
-                edge_index = adj_t.nonzero().t().contiguous()
-                
-                # Filter for mesh→particle edges
-                pos_fp = torch.argwhere(
-                    (edge_index[0, :] < n_nodes) &  # sender: mesh
-                    (edge_index[1, :] >= n_nodes)   # receiver: particle
-                )
-                edge_index_fp = edge_index[:, pos_fp[:, 0]]
+
+                # Field→particle edges for interpolation (mesh nodes → particles)
+                adj_t_fp = ((distance_mp < (max_radius/2)**2) & (distance_mp > min_radius**2)).float()
+                edge_index_fp_local = adj_t_fp.nonzero().t().contiguous()
+                # Offset particle indices by n_nodes to match x_particle_field indexing
+                edge_index_fp = torch.stack([
+                    edge_index_fp_local[0],           # mesh indices stay the same
+                    edge_index_fp_local[1] + n_nodes  # particle indices offset by n_nodes
+                ], dim=0)
                 
                 # Interpolate fields to particles
                 dataset_interp = data.Data(
@@ -962,12 +961,15 @@ def data_generate_particle_field(
                     edge_index=edge_index_fp
                 )
                 
-                # Particle→field edges  
-                pos_pf = torch.argwhere(
-                    (edge_index[0, :] >= n_nodes) &  # sender: particle
-                    (edge_index[1, :] < n_nodes)     # receiver: mesh
-                )
-                edge_index_pf = edge_index[:, pos_pf[:, 0]]
+                # Particle→field edges (particles → mesh nodes)
+                # Reuse the same distance matrix (transposed logic)
+                adj_t_pf = ((distance_mp.T < (max_radius/2)**2) & (distance_mp.T > min_radius**2)).float()
+                edge_index_pf_local = adj_t_pf.nonzero().t().contiguous()
+                # Offset particle indices by n_nodes to match x_particle_field indexing
+                edge_index_pf = torch.stack([
+                    edge_index_pf_local[0] + n_nodes,  # particle indices offset by n_nodes
+                    edge_index_pf_local[1]             # mesh indices stay the same
+                ], dim=0)
                 
                 dataset_p_f = data.Data(
                     x=x_particle_field,

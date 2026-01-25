@@ -10,30 +10,14 @@ simulation:
     - 1.0
     - 1.6
     - 1.5
-  - - -8
-    - 8
-    - 90
-    - -90
-    - 1.8
-    - 1.8
-    - 1.1
-    - 1.9
-  - - -4
-    - 4
-    - 45
-    - -45
-    - 1.7
-    - 1.8
-    - 1.1
-    - 1.9
   params_mesh:
-  - - 0.05
-    - 15.0
+  - - 0.015
+    - 25.0
     - 1.5
-    - 4.0
+    - 7.0
     - 0.04
-    - -16
-  - - 0.8
+    - 0.0
+  - - 0.2
     - 16
     - 0.0
     - 0.0
@@ -49,11 +33,11 @@ simulation:
   max_radius: 0.2
   n_particles: 9600
   n_particle_types: 1
-  n_frames: 2000
+  n_frames: 4000
   n_nodes: 10000
   n_node_types: 1
   sigma: 0.005
-  delta_t: 0.0005
+  delta_t: 5.0E-4
   dpos_init: 0
   boundary: periodic
   node_value_map: input_data/pattern_Null.tif
