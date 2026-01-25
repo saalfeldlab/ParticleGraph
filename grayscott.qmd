@@ -1,0 +1,101 @@
+---
+title: "Gray-Scott Model"
+subtitle: "Block 9+: Exploring richer pattern dynamics"
+---
+
+## Field Dynamics
+
+The Gray-Scott model uses autocatalytic reaction with feed/kill dynamics:
+
+$$
+\frac{\partial U}{\partial t} = D_u \nabla^2 U - UV^2 + F(1-U)
+$$
+
+$$
+\frac{\partial V}{\partial t} = D_v \nabla^2 V + UV^2 - (F+k)V
+$$
+
+where:
+
+- $U$ is the "feed" species (replenished at rate $F$)
+- $V$ is the "autocatalyst" (self-replicating via $UV^2$)
+- $F$ is the feed rate
+- $k$ is the kill rate
+
+### Pattern Regimes (Pearson 1993)
+
+| Regime | F | k | Pattern |
+|--------|---|---|---------|
+| α (alpha) | 0.010 | 0.047 | Spots |
+| β (beta) | 0.026 | 0.052 | Replicating spots |
+| γ (gamma) | 0.035 | 0.060 | Worms/labyrinths |
+| δ (delta) | 0.028 | 0.053 | Mitosis |
+| ε (epsilon) | 0.018 | 0.055 | Chaotic |
+| λ (lambda) | 0.040 | 0.065 | Stripes |
+
+### Parameters
+
+| Symbol | Description | Current | Range |
+|--------|-------------|---------|-------|
+| $D_u$ | U diffusion | 0.20 | 0.1–0.5 |
+| $D_v$ | V diffusion | 0.10 | 0.05–0.2 |
+| $F$ | Feed rate | 0.035 | 0.01–0.06 |
+| $k$ | Kill rate | 0.060 | 0.04–0.07 |
+| time_scale | Dynamics speed | 5.0 | 1–10 |
+
+---
+
+## Particle Coupling
+
+Same diffusiophoretic dynamics as Brusselator, but with U and V fields:
+
+$$
+\mathbf{v}_i = M_1 \nabla U\big|_{\mathbf{x}_i} + M_2 \nabla V\big|_{\mathbf{x}_i} + \sqrt{\frac{2}{\text{Pe}}} \boldsymbol{\eta}(t)
+$$
+
+::: {.callout-warning}
+## Coupling Challenge
+Gray-Scott's $UV^2$ production is slow compared to particle consumption rates tuned for Brusselator. V field goes negative, causing anti-clustering and eventual NaN.
+
+**Solutions being tested:**
+- V-clamping (concentration ≥ 0)
+- Inverted coupling (consume U instead of V)
+- Reduced consumption rates
+:::
+
+---
+
+## Current Status
+
+Block 9 showed Gray-Scott produces **excellent** U-field patterns (hexagonal spots, labyrinths) and particles **do** trace field boundaries correctly. However, particle-field coupling destabilizes the system.
+
+| Iteration | Configuration | Result |
+|-----------|---------------|--------|
+| 65 | Initial test | Anti-clustering, V negative |
+| 66 | α-spot regime | NaN explosion |
+| 67 | γ-worm regime | V deeply negative |
+| 73 | V-clamping code mod | U still negative |
+| 74 | Reduced consumption | Still unstable |
+
+---
+
+## Exploration Gallery
+
+::: {.panel-tabset}
+
+### Iter 65
+*Initial Gray-Scott test*
+
+{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_065.mp4 >}}
+
+### Iter 66
+*α-spot regime (NaN)*
+
+{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_066.mp4 >}}
+
+### Iter 67
+*γ-worm regime*
+
+{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_067.mp4 >}}
+
+:::

@@ -1,0 +1,36 @@
+---
+title: "Field–Field Interactions"
+subtitle: "Reaction-diffusion dynamics"
+---
+
+## Overview
+
+The field–field interaction governs the evolution of concentration fields through reaction-diffusion PDEs. Two models have been explored:
+
+- [Brusselator](brusselator.qmd): Classic two-component system with cubic autocatalysis
+- [Gray-Scott](grayscott.qmd): Autocatalytic system with feed/kill dynamics
+
+## General Form
+
+$$
+\frac{\partial C_i}{\partial t} = D_i \nabla^2 C_i + R_i(C_1, C_2, \ldots)
+$$
+
+where $D_i$ is the diffusion coefficient and $R_i$ is the reaction term specific to each model.
+
+## Turing Instability
+
+Pattern formation requires differential diffusion rates and appropriate reaction kinetics. The general condition for Turing instability in a two-component system:
+
+1. **Homogeneous stability**: The uniform steady state must be stable without diffusion
+2. **Diffusion-driven instability**: Diffusion destabilizes certain spatial modes
+
+This requires an **activator** (short-range, slower diffusion) and an **inhibitor** (long-range, faster diffusion).
+
+## Implementation
+
+Field dynamics are computed on a discrete mesh using finite differences for the Laplacian. The mesh is coupled to particles through interpolation operators.
+
+```
+Mesh (field values) ←→ Particles (positions, velocities)
+```

@@ -1,0 +1,45 @@
+---
+title: "Particle–Field Interactions"
+subtitle: "Particles modify local concentrations"
+---
+
+## Overview
+
+Particles are not passive tracers—they actively modify the chemical fields through **consumption** and **production**. This creates bidirectional coupling and enables emergent feedback dynamics.
+
+## Equations
+
+Particles locally consume field 1 and produce (or consume) field 2:
+
+$$
+\frac{\partial C_1}{\partial t}\bigg|_{\text{particle}} = -\gamma_c \sum_{j=1}^{N_p} w(\|\mathbf{x} - \mathbf{x}_j\|)
+$$
+
+$$
+\frac{\partial C_2}{\partial t}\bigg|_{\text{particle}} = +\gamma_p \sum_{j=1}^{N_p} w(\|\mathbf{x} - \mathbf{x}_j\|)
+$$
+
+where $w(r) = \exp(-r^2 / 2r_{\text{inf}}^2)$ is a Gaussian influence kernel centered on each particle.
+
+## Parameters
+
+| Symbol | Description | Typical Value |
+|--------|-------------|---------------|
+| $\gamma_c$ | Consumption rate | 180 |
+| $\gamma_p$ | Production rate | -180 |
+| $r_{\text{inf}}$ | Influence radius | 0.05 |
+
+## Feedback Loop
+
+The particle–field coupling creates a feedback loop:
+
+1. Fields develop gradients (Turing patterns)
+2. Particles migrate along gradients (diffusiophoresis)
+3. Particles modify local concentrations (consumption/production)
+4. Modified fields change gradient landscape
+5. Repeat...
+
+::: {.callout-warning}
+## Coupling Challenge
+For Gray-Scott, particle consumption can overwhelm the slow $UV^2$ production, causing field instability. Brusselator's stronger reaction rates are more robust to particle feedback.
+:::

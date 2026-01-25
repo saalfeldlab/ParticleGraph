@@ -1,0 +1,15 @@
+
+## Iter 76: 2/10
+Node: id=76, parent=75
+Mode: exploit (UCB=1.525)
+Config: Du=0.2, Dv=0.1, F=0.035, k=0.06, time_scale=5.0, M1=-48, M2=+48, consumption=0, production=0
+Metrics: clustering=0.0501, C1_mean=-18.92, C2_mean=-1.27, pattern_growth=545.91
+Score: 2/10
+Visual: Perfect hexagonal Gray-Scott spot pattern - identical to iter 75. Particles show NO organization despite 3x mobility increase (M=±48 vs ±16). Uniform scatter across all 10 frames. GS patterns beautiful but particle-field coupling completely broken.
+Mutation: M1: -16 → -48, M2: +16 → +48
+Parent rule: Exploit node 75 (highest UCB=1.525)
+Observation: CRITICAL - Even 3x mobility had ZERO effect on clustering (dropped further from 0.0558 to 0.0501). This proves mobility magnitude alone isn't the issue. Root cause analysis: (1) Gray-Scott produces gradients in [0,1] range vs Brusselator [0,20], (2) PDE_D domain_scale=32 further reduces effective gradient by 32x, (3) Combined: need ~30-60x higher mobility to match Brusselator effective coupling. Metrics still show deeply negative fields but VISUAL shows correct positive patterns - likely metric computation bug.
+Literature: Gray-Scott U steady state ~1, V steady state ~0.05 (Pearson 1993); amplitude much smaller than Brusselator
+Next: parent=76, extreme mobility test M=±500 to definitively verify if coupling mechanism works
+
+---

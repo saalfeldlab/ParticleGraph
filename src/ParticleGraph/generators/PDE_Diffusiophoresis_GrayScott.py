@@ -166,14 +166,24 @@ class PDE_Diffusiophoresis_GrayScott(pyg.nn.MessagePassing):
         # Gray-Scott reaction terms (Pearson 1993)
         # dU/dt = Du*∇²U - U*V² + F*(1-U)
         # dV/dt = Dv*∇²V + U*V² - (F+k)*V
-        UV2 = U * V * V  # Autocatalytic reaction term
+
+        # Soft clamp V to non-negative before computing reactions
+        # This prevents runaway negative V from particle consumption while preserving gradients
+        # Physical justification: concentration cannot be negative
+        V_clamped = torch.clamp(V, min=1e-6)
+
+        UV2 = U * V_clamped * V_clamped  # Autocatalytic reaction term (uses clamped V)
 
         R_U = -UV2 + self.F * (1.0 - U)     # U reaction: consumed by reaction, fed from reservoir
-        R_V = UV2 - (self.F + self.k) * V   # V reaction: produced by reaction, removed by kill rate
+        R_V = UV2 - (self.F + self.k) * V_clamped   # V reaction: produced by reaction, removed by kill rate
+
+        # Additional stabilization: if V is negative, add strong restoration force toward 0
+        # This creates a "soft floor" that pulls negative V back to positive
+        V_restoration = torch.where(V < 0, -V * 10.0, torch.zeros_like(V))  # Strong push back to 0
 
         # Combine diffusion and reaction with time scaling
         dU = self.time_scale * (diff_U + R_U)
-        dV = self.time_scale * (diff_V + R_V)
+        dV = self.time_scale * (diff_V + R_V) + V_restoration
 
         # Combine derivatives
         d_C = torch.cat([dU, dV], dim=1)

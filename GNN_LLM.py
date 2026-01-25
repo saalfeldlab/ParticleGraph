@@ -721,7 +721,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Resume support: start_iteration parameter (default 1)
-    start_iteration = 64
+    start_iteration = 68
 
     if start_iteration > 1:
         print(f"\033[93mResuming from iteration {start_iteration}\033[0m")

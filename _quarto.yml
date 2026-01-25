@@ -1,0 +1,39 @@
+project:
+  type: website
+  render:
+    - "*.qmd"
+
+website:
+  title: "LLM-Guided Morphogenesis"
+  navbar:
+    left:
+      - href: index.qmd
+        text: Home
+      - text: Interactions
+        menu:
+          - href: field-field.qmd
+            text: Field–Field
+          - href: field-particle.qmd
+            text: Field–Particle
+          - href: particle-field.qmd
+            text: Particle–Field
+          - href: particle-particle.qmd
+            text: Particle–Particle
+      - text: Models
+        menu:
+          - href: brusselator.qmd
+            text: Brusselator
+          - href: grayscott.qmd
+            text: Gray-Scott
+    tools:
+      - icon: github
+        href: https://github.com/allierc/ParticleGraph
+  page-footer: "Copyright 2025, Cédric Allier"
+
+format:
+  html:
+    theme:
+      light: flatly
+      dark: darkly
+    toc: true
+    smooth-scroll: true

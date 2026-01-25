@@ -1,0 +1,53 @@
+---
+title: "Particle–Particle Interactions"
+subtitle: "Attraction and repulsion forces"
+---
+
+## Overview
+
+Particles interact directly through short-range forces, independent of the chemical fields. This follows the **PDE_A** model with configurable attraction and repulsion.
+
+## Force Law
+
+$$
+\mathbf{F}_{ij} = \left[ p_1 \exp\left( -\frac{d_{ij}^{2p_2}}{2\sigma^2} \right) - p_3 \exp\left( -\frac{d_{ij}^{2p_4}}{2\sigma^2} \right) \right] \hat{\mathbf{r}}_{ij}
+$$
+
+where:
+
+- $p_1, p_2$ control **attraction** (strength and range exponent)
+- $p_3, p_4$ control **repulsion** (strength and range exponent)
+- $\sigma$ is the interaction length scale
+- $d_{ij}$ is the inter-particle distance
+
+## Default Configuration
+
+For diffusiophoresis simulations, a simple repulsion-only model is typically used:
+
+$$
+\mathbf{F}_{ij} = -\alpha \exp\left( -\frac{5 d_{ij}}{r_{\text{rep}}} \right) \hat{\mathbf{r}}_{ij} \quad \text{if } d_{ij} < r_{\text{rep}}
+$$
+
+| Parameter | Description | Value |
+|-----------|-------------|-------|
+| $\alpha$ | Repulsion strength | 50 |
+| $r_{\text{rep}}$ | Repulsion range | 0.04 |
+| $\sigma$ | Kernel width | 0.005 |
+
+## Multi-Type Particles
+
+When `particle_params` is provided, each particle type can have distinct interaction parameters:
+
+```
+[M1, M2, consumption, production, ar_p1, ar_p2, ar_p3, ar_p4]
+```
+
+This enables heterogeneous systems where different particle types attract/repel each other differently.
+
+## Role in Pattern Formation
+
+Particle–particle repulsion:
+
+- Prevents particle overlap and clustering collapse
+- Maintains minimum spacing for stable structures
+- Balances against diffusiophoretic aggregation forces

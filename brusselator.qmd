@@ -1,0 +1,137 @@
+---
+title: "Brusselator Model"
+subtitle: "Blocks 1–8: 64 iterations of exploration"
+---
+
+## Field Dynamics
+
+The concentration fields $(C_1, C_2)$ evolve according to the Brusselator reaction-diffusion system:
+
+$$
+\frac{\partial C_1}{\partial t} = D_1 \nabla^2 C_1 + \text{Da}_c \left( A - (B+1)C_1 + C_1^2 C_2 \right) + \chi \nabla^2 C_2
+$$
+
+$$
+\frac{\partial C_2}{\partial t} = D_2 \nabla^2 C_2 + \text{Da}_c \left( B C_1 - C_1^2 C_2 \right)
+$$
+
+### Turing Analysis
+
+The homogeneous steady state is $(C_1^*, C_2^*) = (A, B/A)$.
+
+**Linear stability:** Perturbations $\delta C \propto e^{\lambda t + i\mathbf{k}\cdot\mathbf{x}}$ grow when:
+
+$$
+\lambda = \frac{1}{2}\left[ \text{tr}(\mathbf{J}_k) + \sqrt{\text{tr}(\mathbf{J}_k)^2 - 4\det(\mathbf{J}_k)} \right] > 0
+$$
+
+where $\mathbf{J}_k$ is the linearized Jacobian with diffusion:
+
+$$
+\mathbf{J}_k = \begin{pmatrix}
+B - 1 - D_1 k^2 & A^2 \\
+-B & -A^2 - D_2 k^2
+\end{pmatrix}
+$$
+
+**Turing instability condition:**
+$$
+B > 1 + A^2 \quad \text{and} \quad D_2/D_1 > \frac{(A + \sqrt{B-1})^2}{B - 1 - A^2}
+$$
+
+### Parameters
+
+| Symbol | Description | Optimal | Range |
+|--------|-------------|---------|-------|
+| $D_1$ | Activator diffusion | 0.015 | 0.01–0.5 |
+| $D_2$ | Inhibitor diffusion | 0.15 | 0.1–1.0 |
+| $\text{Da}_c$ | Damköhler number | 25 | 1–50 |
+| $A$ | Feed concentration | 1.5 | 0.5–5.0 |
+| $B$ | Reaction strength | 7.0 | 1.0–10.0 |
+| $\chi$ | Cross-diffusion | 0 | -0.1–0.1 |
+
+---
+
+## Particle Dynamics: Diffusiophoresis
+
+$$
+\mathbf{v}_i = M_1 \nabla C_1\big|_{\mathbf{x}_i} + M_2 \nabla C_2\big|_{\mathbf{x}_i} + \sqrt{\frac{2}{\text{Pe}}} \boldsymbol{\eta}(t)
+$$
+
+**Particle → Field feedback:**
+
+$$
+\frac{\partial C_1}{\partial t}\bigg|_{\text{particle}} = -\gamma_c \sum_{j=1}^{N_p} w(\|\mathbf{x} - \mathbf{x}_j\|)
+\quad , \quad
+\frac{\partial C_2}{\partial t}\bigg|_{\text{particle}} = +\gamma_p \sum_{j=1}^{N_p} w(\|\mathbf{x} - \mathbf{x}_j\|)
+$$
+
+| Symbol | Description | Optimal |
+|--------|-------------|---------|
+| $M_1, M_2$ | Mobility coefficients | ±16 |
+| $\gamma_c$ | Consumption rate | 180 |
+| $\gamma_p$ | Production rate | -180 |
+
+---
+
+## Key Discoveries
+
+::: {.callout-important}
+## Eigenmode Locking
+The 4-fold cruciform pattern is **geometry-locked** by the square domain + periodic boundary conditions. Breaking this lock requires modifying the wavelength via $D_1$, not noise or anisotropy.
+:::
+
+| Finding | Mechanism |
+|---------|-----------|
+| **Linear mobility is optimal** | Any nonlinearity disrupts boundary accumulation |
+| **$D_1$ controls mode selection** | $D_1 = 0.015$–$0.02$ selects higher-order modes |
+| **Stability limits** | $B \leq 7.0$, $\text{Da}_c \leq 30$ to avoid NaN |
+| **Best clustering: 0.485** | Achieved at iteration 51 |
+
+---
+
+## Exploration Gallery
+
+::: {.panel-tabset}
+
+### Block 1
+*Turing condition satisfaction*
+
+{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_001.mp4 >}}
+
+### Block 2
+*Cross-diffusion tests*
+
+{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_012.mp4 >}}
+
+### Block 3
+*Extended simulation, emergent asymmetry*
+
+{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_020.mp4 >}}
+
+### Block 4
+*Stability boundary exploration*
+
+{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_028.mp4 >}}
+
+### Block 5
+*Tensor anisotropy tests*
+
+{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_036.mp4 >}}
+
+### Block 6
+*D1 breakthrough*
+
+{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_048.mp4 >}}
+
+### Block 7
+*Best result (iter 51)*
+
+{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_051.mp4 >}}
+
+### Block 8
+*Mobility modifications*
+
+{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_064.mp4 >}}
+
+:::

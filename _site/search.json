@@ -1,0 +1,275 @@
+[
+  {
+    "objectID": "particle-particle.html",
+    "href": "particle-particle.html",
+    "title": "Particle–Particle Interactions",
+    "section": "",
+    "text": "Particles interact directly through short-range forces, independent of the chemical fields. This follows the PDE_A model with configurable attraction and repulsion."
+  },
+  {
+    "objectID": "particle-particle.html#overview",
+    "href": "particle-particle.html#overview",
+    "title": "Particle–Particle Interactions",
+    "section": "",
+    "text": "Particles interact directly through short-range forces, independent of the chemical fields. This follows the PDE_A model with configurable attraction and repulsion."
+  },
+  {
+    "objectID": "particle-particle.html#force-law",
+    "href": "particle-particle.html#force-law",
+    "title": "Particle–Particle Interactions",
+    "section": "Force Law",
+    "text": "Force Law\n\\[\n\\mathbf{F}_{ij} = \\left[ p_1 \\exp\\left( -\\frac{d_{ij}^{2p_2}}{2\\sigma^2} \\right) - p_3 \\exp\\left( -\\frac{d_{ij}^{2p_4}}{2\\sigma^2} \\right) \\right] \\hat{\\mathbf{r}}_{ij}\n\\]\nwhere:\n\n\\(p_1, p_2\\) control attraction (strength and range exponent)\n\\(p_3, p_4\\) control repulsion (strength and range exponent)\n\\(\\sigma\\) is the interaction length scale\n\\(d_{ij}\\) is the inter-particle distance"
+  },
+  {
+    "objectID": "particle-particle.html#default-configuration",
+    "href": "particle-particle.html#default-configuration",
+    "title": "Particle–Particle Interactions",
+    "section": "Default Configuration",
+    "text": "Default Configuration\nFor diffusiophoresis simulations, a simple repulsion-only model is typically used:\n\\[\n\\mathbf{F}_{ij} = -\\alpha \\exp\\left( -\\frac{5 d_{ij}}{r_{\\text{rep}}} \\right) \\hat{\\mathbf{r}}_{ij} \\quad \\text{if } d_{ij} &lt; r_{\\text{rep}}\n\\]\n\n\n\nParameter\nDescription\nValue\n\n\n\n\n\\(\\alpha\\)\nRepulsion strength\n50\n\n\n\\(r_{\\text{rep}}\\)\nRepulsion range\n0.04\n\n\n\\(\\sigma\\)\nKernel width\n0.005"
+  },
+  {
+    "objectID": "particle-particle.html#multi-type-particles",
+    "href": "particle-particle.html#multi-type-particles",
+    "title": "Particle–Particle Interactions",
+    "section": "Multi-Type Particles",
+    "text": "Multi-Type Particles\nWhen particle_params is provided, each particle type can have distinct interaction parameters:\n[M1, M2, consumption, production, ar_p1, ar_p2, ar_p3, ar_p4]\nThis enables heterogeneous systems where different particle types attract/repel each other differently."
+  },
+  {
+    "objectID": "particle-particle.html#role-in-pattern-formation",
+    "href": "particle-particle.html#role-in-pattern-formation",
+    "title": "Particle–Particle Interactions",
+    "section": "Role in Pattern Formation",
+    "text": "Role in Pattern Formation\nParticle–particle repulsion:\n\nPrevents particle overlap and clustering collapse\nMaintains minimum spacing for stable structures\nBalances against diffusiophoretic aggregation forces"
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "LLM-Guided Morphogenesis",
+    "section": "",
+    "text": "Understanding morphogenesis requires more than generating patterns; it requires understanding how interacting processes converge toward stable, functional form. This work presents a closed-loop experimental framework in which experiments, reasoning, and memory are tightly coupled, with a large language model (LLM) operating as an active scientific component rather than a passive interpreter.\nThe system combines reaction–diffusion chemistry, diffusiophoretic transport, and particle–field feedback to explore a rich landscape of emergent morphologies. Instead of treating particles or fields as primary objects, the framework treats interactions as fundamental, with structure arising from their mutual constraint. The LLM evaluates experimental outcomes, formulates mechanistic hypotheses, and directs subsequent experiments through structured exploration and persistent memory, enabling cumulative understanding across regimes rather than isolated optimization.\nA central challenge revealed by this exploration is that chemically driven systems tend to remain dynamic: patterns coarsen, drift, or collapse unless stability is imposed through damping or parameter tuning. Such interventions, while effective, obscure the underlying mechanisms of form stabilization. To address this limitation, the framework identifies mechanical admissibility as a promising next axis of constraint. In future work, elastic material dynamics—potentially implemented through a material point method (MPM)—will be applied to the particle component, introducing an independent mechanical law with its own stress, deformation, and equilibrium conditions, without modifying the chemical field implementation.\nIn this envisioned extension, stable geometries would emerge when chemical patterning and mechanical equilibrium become mutually compatible, halting motion without extinguishing interaction. By integrating an LLM-guided discovery loop with coupled chemical–mechanical dynamics, this work reframes morphogenesis as a problem of interaction consistency across physical laws, offering a principled route to stable form without artificial damping or control."
+  },
+  {
+    "objectID": "index.html#introduction",
+    "href": "index.html#introduction",
+    "title": "LLM-Guided Morphogenesis",
+    "section": "",
+    "text": "Understanding morphogenesis requires more than generating patterns; it requires understanding how interacting processes converge toward stable, functional form. This work presents a closed-loop experimental framework in which experiments, reasoning, and memory are tightly coupled, with a large language model (LLM) operating as an active scientific component rather than a passive interpreter.\nThe system combines reaction–diffusion chemistry, diffusiophoretic transport, and particle–field feedback to explore a rich landscape of emergent morphologies. Instead of treating particles or fields as primary objects, the framework treats interactions as fundamental, with structure arising from their mutual constraint. The LLM evaluates experimental outcomes, formulates mechanistic hypotheses, and directs subsequent experiments through structured exploration and persistent memory, enabling cumulative understanding across regimes rather than isolated optimization.\nA central challenge revealed by this exploration is that chemically driven systems tend to remain dynamic: patterns coarsen, drift, or collapse unless stability is imposed through damping or parameter tuning. Such interventions, while effective, obscure the underlying mechanisms of form stabilization. To address this limitation, the framework identifies mechanical admissibility as a promising next axis of constraint. In future work, elastic material dynamics—potentially implemented through a material point method (MPM)—will be applied to the particle component, introducing an independent mechanical law with its own stress, deformation, and equilibrium conditions, without modifying the chemical field implementation.\nIn this envisioned extension, stable geometries would emerge when chemical patterning and mechanical equilibrium become mutually compatible, halting motion without extinguishing interaction. By integrating an LLM-guided discovery loop with coupled chemical–mechanical dynamics, this work reframes morphogenesis as a problem of interaction consistency across physical laws, offering a principled route to stable form without artificial damping or control."
+  },
+  {
+    "objectID": "index.html#the-discovery-loop",
+    "href": "index.html#the-discovery-loop",
+    "title": "LLM-Guided Morphogenesis",
+    "section": "The Discovery Loop",
+    "text": "The Discovery Loop\n\n\n\n\n\nflowchart LR\n    A[Simulation] --&gt; B[Pattern Analysis]\n    B --&gt; C[LLM Evaluation]\n    C --&gt; D[Hypothesis Update]\n    D --&gt; E[Parameter Mutation]\n    E --&gt; A\n\n    C --&gt; F[(Memory)]\n    F --&gt; C\n\n    style A fill:#e1f5fe\n    style C fill:#fff3e0\n    style F fill:#f3e5f5\n\n\n\n\n\n\nThe exploration uses Upper Confidence Bound (UCB) tree search to balance exploitation of promising configurations with exploration of novel parameter regimes. Iterations are grouped into blocks of 8, with memory consolidation at block boundaries."
+  },
+  {
+    "objectID": "index.html#four-coupled-interactions",
+    "href": "index.html#four-coupled-interactions",
+    "title": "LLM-Guided Morphogenesis",
+    "section": "Four Coupled Interactions",
+    "text": "Four Coupled Interactions\n\n\n\nInteraction\nPhysics\nDescription\n\n\n\n\nField–Field\nReaction-diffusion PDE\nTuring patterns via activator-inhibitor dynamics\n\n\nField–Particle\nDiffusiophoresis\nField gradients drive particle motion\n\n\nParticle–Field\nConsumption/production\nParticles locally modify concentrations\n\n\nParticle–Particle\nAttraction-repulsion\nShort-range forces between particles"
+  },
+  {
+    "objectID": "index.html#reaction-diffusion-models",
+    "href": "index.html#reaction-diffusion-models",
+    "title": "LLM-Guided Morphogenesis",
+    "section": "Reaction-Diffusion Models",
+    "text": "Reaction-Diffusion Models\nTwo PDE models have been explored for the chemical patterning component:\n\n\n\n\n\n\nNoteBrusselator Model\n\n\n\nClassic two-component system with cubic autocatalysis. Explored in Blocks 1–8 (64 iterations). Best clustering: 0.485.\n\n\n\n\n\n\n\n\nTipGray-Scott Model\n\n\n\nAutocatalytic system with feed/kill dynamics. Currently being explored in Block 9+. Richer pattern morphologies but coupling challenges."
+  },
+  {
+    "objectID": "index.html#references",
+    "href": "index.html#references",
+    "title": "LLM-Guided Morphogenesis",
+    "section": "References",
+    "text": "References\n\nPrigogine, I., & Lefever, R. (1968). Symmetry breaking instabilities in dissipative systems. J. Chem. Phys., 48(4), 1695-1700.\nPearson, J. E. (1993). Complex patterns in a simple system. Science, 261(5118), 189-192.\nAnderson, J. L. (1989). Colloid transport by interfacial forces. Annu. Rev. Fluid Mech., 21(1), 61-99.\nTuring, A. M. (1952). The chemical basis of morphogenesis. Phil. Trans. R. Soc. Lond. B, 237(641), 37-72."
+  },
+  {
+    "objectID": "field-particle.html",
+    "href": "field-particle.html",
+    "title": "Field–Particle Interactions",
+    "section": "",
+    "text": "Particles move in response to chemical gradients—a phenomenon called diffusiophoresis. This couples the field dynamics to particle transport."
+  },
+  {
+    "objectID": "field-particle.html#overview",
+    "href": "field-particle.html#overview",
+    "title": "Field–Particle Interactions",
+    "section": "",
+    "text": "Particles move in response to chemical gradients—a phenomenon called diffusiophoresis. This couples the field dynamics to particle transport."
+  },
+  {
+    "objectID": "field-particle.html#velocity-law",
+    "href": "field-particle.html#velocity-law",
+    "title": "Field–Particle Interactions",
+    "section": "Velocity Law",
+    "text": "Velocity Law\n\\[\n\\mathbf{v}_i = M_1 \\nabla C_1\\big|_{\\mathbf{x}_i} + M_2 \\nabla C_2\\big|_{\\mathbf{x}_i} + \\sqrt{\\frac{2}{\\text{Pe}}} \\boldsymbol{\\eta}(t)\n\\]\nwhere:\n\n\\(M_1, M_2\\) are mobility coefficients (signed: positive = move up gradient, negative = move down)\n\\(\\text{Pe}\\) is the Péclet number controlling thermal noise strength\n\\(\\boldsymbol{\\eta}(t)\\) is white Gaussian noise (Brownian motion)"
+  },
+  {
+    "objectID": "field-particle.html#gradient-estimation",
+    "href": "field-particle.html#gradient-estimation",
+    "title": "Field–Particle Interactions",
+    "section": "Gradient Estimation",
+    "text": "Gradient Estimation\nLocal field gradients at particle positions are computed via weighted interpolation from nearby mesh nodes:\n\\[\n\\nabla C\\big|_{\\mathbf{x}_i} \\approx \\sum_{j \\in \\mathcal{N}_i} w_{ij} \\frac{C_j - C_i}{|\\mathbf{x}_j - \\mathbf{x}_i|} \\hat{\\mathbf{r}}_{ij}\n\\]\nwith Gaussian kernel \\(w_{ij} = \\exp(-|\\mathbf{x}_j - \\mathbf{x}_i|^2 / 2\\sigma^2)\\)."
+  },
+  {
+    "objectID": "field-particle.html#parameters",
+    "href": "field-particle.html#parameters",
+    "title": "Field–Particle Interactions",
+    "section": "Parameters",
+    "text": "Parameters\n\n\n\nSymbol\nDescription\nTypical Value\n\n\n\n\n\\(M_1\\)\nMobility for field 1\n±16\n\n\n\\(M_2\\)\nMobility for field 2\n∓16\n\n\nPe\nPéclet number\n200"
+  },
+  {
+    "objectID": "field-particle.html#key-finding",
+    "href": "field-particle.html#key-finding",
+    "title": "Field–Particle Interactions",
+    "section": "Key Finding",
+    "text": "Key Finding\n\n\n\n\n\n\nImportant\n\n\n\nLinear mobility is optimal. Any nonlinearity (saturation, boost) disrupts boundary accumulation. The simple \\(\\mathbf{v} \\propto \\nabla C\\) relationship works best."
+  },
+  {
+    "objectID": "brusselator.html",
+    "href": "brusselator.html",
+    "title": "Brusselator Model",
+    "section": "",
+    "text": "The concentration fields \\((C_1, C_2)\\) evolve according to the Brusselator reaction-diffusion system:\n\\[\n\\frac{\\partial C_1}{\\partial t} = D_1 \\nabla^2 C_1 + \\text{Da}_c \\left( A - (B+1)C_1 + C_1^2 C_2 \\right) + \\chi \\nabla^2 C_2\n\\]\n\\[\n\\frac{\\partial C_2}{\\partial t} = D_2 \\nabla^2 C_2 + \\text{Da}_c \\left( B C_1 - C_1^2 C_2 \\right)\n\\]\n\n\nThe homogeneous steady state is \\((C_1^*, C_2^*) = (A, B/A)\\).\nLinear stability: Perturbations \\(\\delta C \\propto e^{\\lambda t + i\\mathbf{k}\\cdot\\mathbf{x}}\\) grow when:\n\\[\n\\lambda = \\frac{1}{2}\\left[ \\text{tr}(\\mathbf{J}_k) + \\sqrt{\\text{tr}(\\mathbf{J}_k)^2 - 4\\det(\\mathbf{J}_k)} \\right] &gt; 0\n\\]\nwhere \\(\\mathbf{J}_k\\) is the linearized Jacobian with diffusion:\n\\[\n\\mathbf{J}_k = \\begin{pmatrix}\nB - 1 - D_1 k^2 & A^2 \\\\\n-B & -A^2 - D_2 k^2\n\\end{pmatrix}\n\\]\nTuring instability condition: \\[\nB &gt; 1 + A^2 \\quad \\text{and} \\quad D_2/D_1 &gt; \\frac{(A + \\sqrt{B-1})^2}{B - 1 - A^2}\n\\]\n\n\n\n\n\n\nSymbol\nDescription\nOptimal\nRange\n\n\n\n\n\\(D_1\\)\nActivator diffusion\n0.015\n0.01–0.5\n\n\n\\(D_2\\)\nInhibitor diffusion\n0.15\n0.1–1.0\n\n\n\\(\\text{Da}_c\\)\nDamköhler number\n25\n1–50\n\n\n\\(A\\)\nFeed concentration\n1.5\n0.5–5.0\n\n\n\\(B\\)\nReaction strength\n7.0\n1.0–10.0\n\n\n\\(\\chi\\)\nCross-diffusion\n0\n-0.1–0.1"
+  },
+  {
+    "objectID": "brusselator.html#field-dynamics",
+    "href": "brusselator.html#field-dynamics",
+    "title": "Brusselator Model",
+    "section": "",
+    "text": "The concentration fields \\((C_1, C_2)\\) evolve according to the Brusselator reaction-diffusion system:\n\\[\n\\frac{\\partial C_1}{\\partial t} = D_1 \\nabla^2 C_1 + \\text{Da}_c \\left( A - (B+1)C_1 + C_1^2 C_2 \\right) + \\chi \\nabla^2 C_2\n\\]\n\\[\n\\frac{\\partial C_2}{\\partial t} = D_2 \\nabla^2 C_2 + \\text{Da}_c \\left( B C_1 - C_1^2 C_2 \\right)\n\\]\n\n\nThe homogeneous steady state is \\((C_1^*, C_2^*) = (A, B/A)\\).\nLinear stability: Perturbations \\(\\delta C \\propto e^{\\lambda t + i\\mathbf{k}\\cdot\\mathbf{x}}\\) grow when:\n\\[\n\\lambda = \\frac{1}{2}\\left[ \\text{tr}(\\mathbf{J}_k) + \\sqrt{\\text{tr}(\\mathbf{J}_k)^2 - 4\\det(\\mathbf{J}_k)} \\right] &gt; 0\n\\]\nwhere \\(\\mathbf{J}_k\\) is the linearized Jacobian with diffusion:\n\\[\n\\mathbf{J}_k = \\begin{pmatrix}\nB - 1 - D_1 k^2 & A^2 \\\\\n-B & -A^2 - D_2 k^2\n\\end{pmatrix}\n\\]\nTuring instability condition: \\[\nB &gt; 1 + A^2 \\quad \\text{and} \\quad D_2/D_1 &gt; \\frac{(A + \\sqrt{B-1})^2}{B - 1 - A^2}\n\\]\n\n\n\n\n\n\nSymbol\nDescription\nOptimal\nRange\n\n\n\n\n\\(D_1\\)\nActivator diffusion\n0.015\n0.01–0.5\n\n\n\\(D_2\\)\nInhibitor diffusion\n0.15\n0.1–1.0\n\n\n\\(\\text{Da}_c\\)\nDamköhler number\n25\n1–50\n\n\n\\(A\\)\nFeed concentration\n1.5\n0.5–5.0\n\n\n\\(B\\)\nReaction strength\n7.0\n1.0–10.0\n\n\n\\(\\chi\\)\nCross-diffusion\n0\n-0.1–0.1"
+  },
+  {
+    "objectID": "brusselator.html#particle-dynamics-diffusiophoresis",
+    "href": "brusselator.html#particle-dynamics-diffusiophoresis",
+    "title": "Brusselator Model",
+    "section": "Particle Dynamics: Diffusiophoresis",
+    "text": "Particle Dynamics: Diffusiophoresis\n\\[\n\\mathbf{v}_i = M_1 \\nabla C_1\\big|_{\\mathbf{x}_i} + M_2 \\nabla C_2\\big|_{\\mathbf{x}_i} + \\sqrt{\\frac{2}{\\text{Pe}}} \\boldsymbol{\\eta}(t)\n\\]\nParticle → Field feedback:\n\\[\n\\frac{\\partial C_1}{\\partial t}\\bigg|_{\\text{particle}} = -\\gamma_c \\sum_{j=1}^{N_p} w(\\|\\mathbf{x} - \\mathbf{x}_j\\|)\n\\quad , \\quad\n\\frac{\\partial C_2}{\\partial t}\\bigg|_{\\text{particle}} = +\\gamma_p \\sum_{j=1}^{N_p} w(\\|\\mathbf{x} - \\mathbf{x}_j\\|)\n\\]\n\n\n\nSymbol\nDescription\nOptimal\n\n\n\n\n\\(M_1, M_2\\)\nMobility coefficients\n±16\n\n\n\\(\\gamma_c\\)\nConsumption rate\n180\n\n\n\\(\\gamma_p\\)\nProduction rate\n-180"
+  },
+  {
+    "objectID": "brusselator.html#key-discoveries",
+    "href": "brusselator.html#key-discoveries",
+    "title": "Brusselator Model",
+    "section": "Key Discoveries",
+    "text": "Key Discoveries\n\n\n\n\n\n\nImportantEigenmode Locking\n\n\n\nThe 4-fold cruciform pattern is geometry-locked by the square domain + periodic boundary conditions. Breaking this lock requires modifying the wavelength via \\(D_1\\), not noise or anisotropy.\n\n\n\n\n\n\n\n\n\nFinding\nMechanism\n\n\n\n\nLinear mobility is optimal\nAny nonlinearity disrupts boundary accumulation\n\n\n\\(D_1\\) controls mode selection\n\\(D_1 = 0.015\\)–\\(0.02\\) selects higher-order modes\n\n\nStability limits\n\\(B \\leq 7.0\\), \\(\\text{Da}_c \\leq 30\\) to avoid NaN\n\n\nBest clustering: 0.485\nAchieved at iteration 51"
+  },
+  {
+    "objectID": "brusselator.html#exploration-gallery",
+    "href": "brusselator.html#exploration-gallery",
+    "title": "Brusselator Model",
+    "section": "Exploration Gallery",
+    "text": "Exploration Gallery\n\nBlock 1Block 2Block 3Block 4Block 5Block 6Block 7Block 8\n\n\nTuring condition satisfaction\n\n\n\nCross-diffusion tests\n\n\n\nExtended simulation, emergent asymmetry\n\n\n\nStability boundary exploration\n\n\n\nTensor anisotropy tests\n\n\n\nD1 breakthrough\n\n\n\nBest result (iter 51)\n\n\n\nMobility modifications"
+  },
+  {
+    "objectID": "field-field.html",
+    "href": "field-field.html",
+    "title": "Field–Field Interactions",
+    "section": "",
+    "text": "The field–field interaction governs the evolution of concentration fields through reaction-diffusion PDEs. Two models have been explored:\n\nBrusselator: Classic two-component system with cubic autocatalysis\nGray-Scott: Autocatalytic system with feed/kill dynamics"
+  },
+  {
+    "objectID": "field-field.html#overview",
+    "href": "field-field.html#overview",
+    "title": "Field–Field Interactions",
+    "section": "",
+    "text": "The field–field interaction governs the evolution of concentration fields through reaction-diffusion PDEs. Two models have been explored:\n\nBrusselator: Classic two-component system with cubic autocatalysis\nGray-Scott: Autocatalytic system with feed/kill dynamics"
+  },
+  {
+    "objectID": "field-field.html#general-form",
+    "href": "field-field.html#general-form",
+    "title": "Field–Field Interactions",
+    "section": "General Form",
+    "text": "General Form\n\\[\n\\frac{\\partial C_i}{\\partial t} = D_i \\nabla^2 C_i + R_i(C_1, C_2, \\ldots)\n\\]\nwhere \\(D_i\\) is the diffusion coefficient and \\(R_i\\) is the reaction term specific to each model."
+  },
+  {
+    "objectID": "field-field.html#turing-instability",
+    "href": "field-field.html#turing-instability",
+    "title": "Field–Field Interactions",
+    "section": "Turing Instability",
+    "text": "Turing Instability\nPattern formation requires differential diffusion rates and appropriate reaction kinetics. The general condition for Turing instability in a two-component system:\n\nHomogeneous stability: The uniform steady state must be stable without diffusion\nDiffusion-driven instability: Diffusion destabilizes certain spatial modes\n\nThis requires an activator (short-range, slower diffusion) and an inhibitor (long-range, faster diffusion)."
+  },
+  {
+    "objectID": "field-field.html#implementation",
+    "href": "field-field.html#implementation",
+    "title": "Field–Field Interactions",
+    "section": "Implementation",
+    "text": "Implementation\nField dynamics are computed on a discrete mesh using finite differences for the Laplacian. The mesh is coupled to particles through interpolation operators.\nMesh (field values) ←→ Particles (positions, velocities)"
+  },
+  {
+    "objectID": "grayscott.html",
+    "href": "grayscott.html",
+    "title": "Gray-Scott Model",
+    "section": "",
+    "text": "The Gray-Scott model uses autocatalytic reaction with feed/kill dynamics:\n\\[\n\\frac{\\partial U}{\\partial t} = D_u \\nabla^2 U - UV^2 + F(1-U)\n\\]\n\\[\n\\frac{\\partial V}{\\partial t} = D_v \\nabla^2 V + UV^2 - (F+k)V\n\\]\nwhere:\n\n\\(U\\) is the “feed” species (replenished at rate \\(F\\))\n\\(V\\) is the “autocatalyst” (self-replicating via \\(UV^2\\))\n\\(F\\) is the feed rate\n\\(k\\) is the kill rate\n\n\n\n\n\n\nRegime\nF\nk\nPattern\n\n\n\n\nα (alpha)\n0.010\n0.047\nSpots\n\n\nβ (beta)\n0.026\n0.052\nReplicating spots\n\n\nγ (gamma)\n0.035\n0.060\nWorms/labyrinths\n\n\nδ (delta)\n0.028\n0.053\nMitosis\n\n\nε (epsilon)\n0.018\n0.055\nChaotic\n\n\nλ (lambda)\n0.040\n0.065\nStripes\n\n\n\n\n\n\n\n\n\nSymbol\nDescription\nCurrent\nRange\n\n\n\n\n\\(D_u\\)\nU diffusion\n0.20\n0.1–0.5\n\n\n\\(D_v\\)\nV diffusion\n0.10\n0.05–0.2\n\n\n\\(F\\)\nFeed rate\n0.035\n0.01–0.06\n\n\n\\(k\\)\nKill rate\n0.060\n0.04–0.07\n\n\ntime_scale\nDynamics speed\n5.0\n1–10"
+  },
+  {
+    "objectID": "grayscott.html#field-dynamics",
+    "href": "grayscott.html#field-dynamics",
+    "title": "Gray-Scott Model",
+    "section": "",
+    "text": "The Gray-Scott model uses autocatalytic reaction with feed/kill dynamics:\n\\[\n\\frac{\\partial U}{\\partial t} = D_u \\nabla^2 U - UV^2 + F(1-U)\n\\]\n\\[\n\\frac{\\partial V}{\\partial t} = D_v \\nabla^2 V + UV^2 - (F+k)V\n\\]\nwhere:\n\n\\(U\\) is the “feed” species (replenished at rate \\(F\\))\n\\(V\\) is the “autocatalyst” (self-replicating via \\(UV^2\\))\n\\(F\\) is the feed rate\n\\(k\\) is the kill rate\n\n\n\n\n\n\nRegime\nF\nk\nPattern\n\n\n\n\nα (alpha)\n0.010\n0.047\nSpots\n\n\nβ (beta)\n0.026\n0.052\nReplicating spots\n\n\nγ (gamma)\n0.035\n0.060\nWorms/labyrinths\n\n\nδ (delta)\n0.028\n0.053\nMitosis\n\n\nε (epsilon)\n0.018\n0.055\nChaotic\n\n\nλ (lambda)\n0.040\n0.065\nStripes\n\n\n\n\n\n\n\n\n\nSymbol\nDescription\nCurrent\nRange\n\n\n\n\n\\(D_u\\)\nU diffusion\n0.20\n0.1–0.5\n\n\n\\(D_v\\)\nV diffusion\n0.10\n0.05–0.2\n\n\n\\(F\\)\nFeed rate\n0.035\n0.01–0.06\n\n\n\\(k\\)\nKill rate\n0.060\n0.04–0.07\n\n\ntime_scale\nDynamics speed\n5.0\n1–10"
+  },
+  {
+    "objectID": "grayscott.html#particle-coupling",
+    "href": "grayscott.html#particle-coupling",
+    "title": "Gray-Scott Model",
+    "section": "Particle Coupling",
+    "text": "Particle Coupling\nSame diffusiophoretic dynamics as Brusselator, but with U and V fields:\n\\[\n\\mathbf{v}_i = M_1 \\nabla U\\big|_{\\mathbf{x}_i} + M_2 \\nabla V\\big|_{\\mathbf{x}_i} + \\sqrt{\\frac{2}{\\text{Pe}}} \\boldsymbol{\\eta}(t)\n\\]\n\n\n\n\n\n\nWarningCoupling Challenge\n\n\n\nGray-Scott’s \\(UV^2\\) production is slow compared to particle consumption rates tuned for Brusselator. V field goes negative, causing anti-clustering and eventual NaN.\nSolutions being tested: - V-clamping (concentration ≥ 0) - Inverted coupling (consume U instead of V) - Reduced consumption rates"
+  },
+  {
+    "objectID": "grayscott.html#current-status",
+    "href": "grayscott.html#current-status",
+    "title": "Gray-Scott Model",
+    "section": "Current Status",
+    "text": "Current Status\nBlock 9 showed Gray-Scott produces excellent U-field patterns (hexagonal spots, labyrinths) and particles do trace field boundaries correctly. However, particle-field coupling destabilizes the system.\n\n\n\nIteration\nConfiguration\nResult\n\n\n\n\n65\nInitial test\nAnti-clustering, V negative\n\n\n66\nα-spot regime\nNaN explosion\n\n\n67\nγ-worm regime\nV deeply negative\n\n\n73\nV-clamping code mod\nU still negative\n\n\n74\nReduced consumption\nStill unstable"
+  },
+  {
+    "objectID": "grayscott.html#exploration-gallery",
+    "href": "grayscott.html#exploration-gallery",
+    "title": "Gray-Scott Model",
+    "section": "Exploration Gallery",
+    "text": "Exploration Gallery\n\nIter 65Iter 66Iter 67\n\n\nInitial Gray-Scott test\n\n\n\nα-spot regime (NaN)\n\n\n\nγ-worm regime"
+  },
+  {
+    "objectID": "particle-field.html",
+    "href": "particle-field.html",
+    "title": "Particle–Field Interactions",
+    "section": "",
+    "text": "Particles are not passive tracers—they actively modify the chemical fields through consumption and production. This creates bidirectional coupling and enables emergent feedback dynamics."
+  },
+  {
+    "objectID": "particle-field.html#overview",
+    "href": "particle-field.html#overview",
+    "title": "Particle–Field Interactions",
+    "section": "",
+    "text": "Particles are not passive tracers—they actively modify the chemical fields through consumption and production. This creates bidirectional coupling and enables emergent feedback dynamics."
+  },
+  {
+    "objectID": "particle-field.html#equations",
+    "href": "particle-field.html#equations",
+    "title": "Particle–Field Interactions",
+    "section": "Equations",
+    "text": "Equations\nParticles locally consume field 1 and produce (or consume) field 2:\n\\[\n\\frac{\\partial C_1}{\\partial t}\\bigg|_{\\text{particle}} = -\\gamma_c \\sum_{j=1}^{N_p} w(\\|\\mathbf{x} - \\mathbf{x}_j\\|)\n\\]\n\\[\n\\frac{\\partial C_2}{\\partial t}\\bigg|_{\\text{particle}} = +\\gamma_p \\sum_{j=1}^{N_p} w(\\|\\mathbf{x} - \\mathbf{x}_j\\|)\n\\]\nwhere \\(w(r) = \\exp(-r^2 / 2r_{\\text{inf}}^2)\\) is a Gaussian influence kernel centered on each particle."
+  },
+  {
+    "objectID": "particle-field.html#parameters",
+    "href": "particle-field.html#parameters",
+    "title": "Particle–Field Interactions",
+    "section": "Parameters",
+    "text": "Parameters\n\n\n\nSymbol\nDescription\nTypical Value\n\n\n\n\n\\(\\gamma_c\\)\nConsumption rate\n180\n\n\n\\(\\gamma_p\\)\nProduction rate\n-180\n\n\n\\(r_{\\text{inf}}\\)\nInfluence radius\n0.05"
+  },
+  {
+    "objectID": "particle-field.html#feedback-loop",
+    "href": "particle-field.html#feedback-loop",
+    "title": "Particle–Field Interactions",
+    "section": "Feedback Loop",
+    "text": "Feedback Loop\nThe particle–field coupling creates a feedback loop:\n\nFields develop gradients (Turing patterns)\nParticles migrate along gradients (diffusiophoresis)\nParticles modify local concentrations (consumption/production)\nModified fields change gradient landscape\nRepeat…\n\n\n\n\n\n\n\nWarningCoupling Challenge\n\n\n\nFor Gray-Scott, particle consumption can overwhelm the slow \\(UV^2\\) production, causing field instability. Brusselator’s stronger reaction rates are more robust to particle feedback."
+  },
+  {
+    "objectID": "index.html#the-exploration-loop",
+    "href": "index.html#the-exploration-loop",
+    "title": "LLM-Guided Morphogenesis",
+    "section": "The Exploration Loop",
+    "text": "The Exploration Loop\n\n\n\n\n\nflowchart LR\n    A[Simulation] --&gt; B[Pattern Analysis]\n    B --&gt; C[LLM Evaluation]\n    C --&gt; D[Hypothesis Update]\n    D --&gt; E[Parameter Mutation]\n    E --&gt; A\n\n    C --&gt; F[(Memory)]\n    F --&gt; C\n\n    style A fill:#e1f5fe\n    style C fill:#fff3e0\n    style F fill:#f3e5f5\n\n\n\n\n\n\nThe exploration uses Upper Confidence Bound (UCB) tree search to balance exploitation of promising configurations with exploration of novel parameter regimes. Iterations are grouped into blocks of 8, with memory consolidation at block boundaries."
+  }
+]

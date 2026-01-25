@@ -11,25 +11,30 @@ simulation:
     - 1.6
     - 1.5
   params_mesh:
-  # Gray-Scott params: Row 0 = [Du, F, k, time_scale, unused, unused]
-  # Row 1 = [Dv, unused...]  Row 2 = [Pe, consumption, production, influence_radius, unused...]
-  # Iter 67: gamma-worm regime (F=0.035, k=0.06), time_scale=1.0 (minimal), standard diffusion
-  # Literature: Pearson 1993 gamma regime should produce worm/stripe structures
+  # Gray-Scott params: Row 0 = [Du, F, k, time_scale, unused, M1]
+  # Row 1 = [Dv, M2, unused...]  Row 2 = [Pe, consumption, production, influence_radius, unused...]
+  # Block 10, Iter 78: VERY EXTREME MOBILITY TEST
+  # Iter 77: M=±500 showed 63% clustering improvement (0.0501→0.0818) - coupling IS working
+  # CODE ANALYSIS: PDE_D domain_scale=32 divides all gradients
+  # For GS (amplitude ~1) vs Brusselator (~20), effective gradient is 20*32=640x weaker
+  # Test: M1=-2000, M2=+2000 (4x iter 77) to push toward required scaling
+  # If clustering improves proportionally: can calibrate; if saturates: code fix needed
+  # Literature: Need total scaling ~600-1000x for GS equivalent coupling
   - - 0.2
     - 0.035
     - 0.06
-    - 1.0
+    - 5.0
     - 0.0
-    - 0.0
+    - -2000.0
   - - 0.1
-    - 0.0
+    - 2000.0
     - 0.0
     - 0.0
     - 0.0
     - 0.0
   - - 1.0
-    - 180
-    - -180
+    - 0
+    - 0
     - 0.05
     - 0.0
     - 0.0

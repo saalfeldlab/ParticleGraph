@@ -1,0 +1,78 @@
+---
+title: "LLM-Guided Morphogenesis"
+subtitle: "Closed-loop discovery in coupled chemical-particle systems"
+author: "Cédric Allier"
+date: "2025-01-25"
+---
+
+## Introduction
+
+Understanding morphogenesis requires more than generating patterns; it requires understanding how interacting processes converge toward stable, functional form. This work presents a closed-loop experimental framework in which experiments, reasoning, and memory are tightly coupled, with a large language model (LLM) operating as an active scientific component rather than a passive interpreter.
+
+The system combines reaction–diffusion chemistry, diffusiophoretic transport, and particle–field feedback to explore a rich landscape of emergent morphologies. Instead of treating particles or fields as primary objects, the framework treats interactions as fundamental, with structure arising from their mutual constraint. The LLM evaluates experimental outcomes, formulates mechanistic hypotheses, and directs subsequent experiments through structured exploration and persistent memory, enabling cumulative understanding across regimes rather than isolated optimization.
+
+A central challenge revealed by this exploration is that chemically driven systems tend to remain dynamic: patterns coarsen, drift, or collapse unless stability is imposed through damping or parameter tuning. Such interventions, while effective, obscure the underlying mechanisms of form stabilization. To address this limitation, the framework identifies mechanical admissibility as a promising next axis of constraint. In future work, elastic material dynamics—potentially implemented through a material point method (MPM)—will be applied to the particle component, introducing an independent mechanical law with its own stress, deformation, and equilibrium conditions, without modifying the chemical field implementation.
+
+In this envisioned extension, stable geometries would emerge when chemical patterning and mechanical equilibrium become mutually compatible, halting motion without extinguishing interaction. By integrating an LLM-guided discovery loop with coupled chemical–mechanical dynamics, this work reframes morphogenesis as a problem of interaction consistency across physical laws, offering a principled route to stable form without artificial damping or control.
+
+---
+
+## The Exploration Loop
+
+```{mermaid}
+%%| fig-width: 8
+flowchart LR
+    A[Simulation] --> B[Pattern Analysis]
+    B --> C[LLM Evaluation]
+    C --> D[Hypothesis Update]
+    D --> E[Parameter Mutation]
+    E --> A
+
+    C --> F[(Memory)]
+    F --> C
+
+    style A fill:#e1f5fe
+    style C fill:#fff3e0
+    style F fill:#f3e5f5
+```
+
+The exploration uses **Upper Confidence Bound (UCB)** tree search to balance exploitation of promising configurations with exploration of novel parameter regimes. Iterations are grouped into blocks of 8, with memory consolidation at block boundaries.
+
+---
+
+## Four Coupled Interactions
+
+| Interaction | Physics | Description |
+|-------------|---------|-------------|
+| [**Field–Field**](field-field.qmd) | Reaction-diffusion PDE | Turing patterns via activator-inhibitor dynamics |
+| [**Field–Particle**](field-particle.qmd) | Diffusiophoresis | Field gradients drive particle motion |
+| [**Particle–Field**](particle-field.qmd) | Consumption/production | Particles locally modify concentrations |
+| [**Particle–Particle**](particle-particle.qmd) | Attraction-repulsion | Short-range forces between particles |
+
+---
+
+## Reaction-Diffusion Models
+
+Two PDE models have been explored for the chemical patterning component:
+
+::: {.callout-note}
+## [Brusselator Model](brusselator.qmd)
+Classic two-component system with cubic autocatalysis. Explored in **Blocks 1–8** (64 iterations). Best clustering: 0.485.
+:::
+
+::: {.callout-tip}
+## [Gray-Scott Model](grayscott.qmd)
+Autocatalytic system with feed/kill dynamics. Currently being explored in **Block 9+**. Richer pattern morphologies but coupling challenges.
+:::
+
+---
+
+## References
+
+1. Prigogine, I., & Lefever, R. (1968). Symmetry breaking instabilities in dissipative systems. *J. Chem. Phys.*, 48(4), 1695-1700.
+
+2. Pearson, J. E. (1993). Complex patterns in a simple system. *Science*, 261(5118), 189-192.
+
+3. Anderson, J. L. (1989). Colloid transport by interfacial forces. *Annu. Rev. Fluid Mech.*, 21(1), 61-99.
+
+4. Turing, A. M. (1952). The chemical basis of morphogenesis. *Phil. Trans. R. Soc. Lond. B*, 237(641), 37-72.

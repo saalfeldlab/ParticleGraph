@@ -1,0 +1,44 @@
+---
+title: "Field–Particle Interactions"
+subtitle: "Diffusiophoresis: gradients drive motion"
+---
+
+## Overview
+
+Particles move in response to chemical gradients—a phenomenon called **diffusiophoresis**. This couples the field dynamics to particle transport.
+
+## Velocity Law
+
+$$
+\mathbf{v}_i = M_1 \nabla C_1\big|_{\mathbf{x}_i} + M_2 \nabla C_2\big|_{\mathbf{x}_i} + \sqrt{\frac{2}{\text{Pe}}} \boldsymbol{\eta}(t)
+$$
+
+where:
+
+- $M_1, M_2$ are **mobility coefficients** (signed: positive = move up gradient, negative = move down)
+- $\text{Pe}$ is the Péclet number controlling thermal noise strength
+- $\boldsymbol{\eta}(t)$ is white Gaussian noise (Brownian motion)
+
+## Gradient Estimation
+
+Local field gradients at particle positions are computed via weighted interpolation from nearby mesh nodes:
+
+$$
+\nabla C\big|_{\mathbf{x}_i} \approx \sum_{j \in \mathcal{N}_i} w_{ij} \frac{C_j - C_i}{|\mathbf{x}_j - \mathbf{x}_i|} \hat{\mathbf{r}}_{ij}
+$$
+
+with Gaussian kernel $w_{ij} = \exp(-|\mathbf{x}_j - \mathbf{x}_i|^2 / 2\sigma^2)$.
+
+## Parameters
+
+| Symbol | Description | Typical Value |
+|--------|-------------|---------------|
+| $M_1$ | Mobility for field 1 | ±16 |
+| $M_2$ | Mobility for field 2 | ∓16 |
+| Pe | Péclet number | 200 |
+
+## Key Finding
+
+::: {.callout-important}
+**Linear mobility is optimal.** Any nonlinearity (saturation, boost) disrupts boundary accumulation. The simple $\mathbf{v} \propto \nabla C$ relationship works best.
+:::

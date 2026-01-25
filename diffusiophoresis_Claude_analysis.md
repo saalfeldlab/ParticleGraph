@@ -1,5 +1,213 @@
 # Pattern Exploration Log: diffusiophoresis
 
+## Iter 77: 2/10
+Node: id=77, parent=76
+Mode: exploit (UCB=1.614)
+Config: Du=0.2, Dv=0.1, F=0.035, k=0.06, time_scale=5.0, M1=-500, M2=+500, consumption=0, production=0
+Metrics: clustering=0.0818, C1_mean=-18.92, C2_mean=-1.26, pattern_growth=549.89
+Score: 2/10
+Visual: Excellent hexagonal Gray-Scott spot pattern - frame 1 random noise → frame 2 homogenization → frames 3-10 beautiful stable hexagonal spots. V-field shows clean complementary pattern. PARTICLES show slight improvement (clustering 0.0501→0.0818, +63%) but still essentially uniformly scattered. No boundary-tracing visible despite M=±500.
+Mutation: M1: -48 → -500, M2: +48 → +500
+Parent rule: Exploit node 76 (highest UCB=1.614), extreme mobility test
+Observation: 10x mobility increase (M=±48→±500) yielded only 63% clustering improvement. CODE ANALYSIS revealed root cause: PDE_D line 143 applies domain_scale=32 division to ALL gradients. For Gray-Scott (U~1) vs Brusselator (C1~20), effective gradient is 20*32=640x weaker. Need M~10000 OR remove domain_scale (code change at block end). Confirms coupling IS working but dramatically under-scaled for GS.
+Literature: domain_scale=32 is legacy from Brusselator physics; GS needs recalibration
+Next: parent=77, try M=±1500 (another 3x) to find threshold, OR prepare code fix for block end
+
+---
+
+## Iter 76: 2/10
+Node: id=76, parent=75
+Mode: exploit (UCB=1.525)
+Config: Du=0.2, Dv=0.1, F=0.035, k=0.06, time_scale=5.0, M1=-48, M2=+48, consumption=0, production=0
+Metrics: clustering=0.0501, C1_mean=-18.92, C2_mean=-1.27, pattern_growth=545.91
+Score: 2/10
+Visual: Perfect hexagonal Gray-Scott spot pattern - identical to iter 75. Particles show NO organization despite 3x mobility increase (M=±48 vs ±16). Uniform scatter across all 10 frames. GS patterns beautiful but particle-field coupling completely broken.
+Mutation: M1: -16 → -48, M2: +16 → +48
+Parent rule: Exploit node 75 (highest UCB=1.525)
+Observation: CRITICAL - Even 3x mobility had ZERO effect on clustering (dropped further from 0.0558 to 0.0501). This proves mobility magnitude alone isn't the issue. Root cause analysis: (1) Gray-Scott produces gradients in [0,1] range vs Brusselator [0,20], (2) PDE_D domain_scale=32 further reduces effective gradient by 32x, (3) Combined: need ~30-60x higher mobility to match Brusselator effective coupling. Metrics still show deeply negative fields but VISUAL shows correct positive patterns - likely metric computation bug.
+Literature: Gray-Scott U steady state ~1, V steady state ~0.05 (Pearson 1993); amplitude much smaller than Brusselator
+Next: parent=76, extreme mobility test M=±500 to definitively verify if coupling mechanism works
+
+---
+
+## Iter 75: 3/10
+Node: id=75, parent=74
+Mode/Strategy: exploit (zero coupling test)
+Config: Du=0.2, Dv=0.1, F=0.035, k=0.06, time_scale=5.0, M1=-16, M2=+16, consumption=0, production=0
+Score: 3/10
+Visual: CRITICAL TEST - Gray-Scott fields are STABLE and BEAUTIFUL with zero particle coupling. U-field develops perfect hexagonal spot pattern from random initial conditions (frames 1→3 transition). Spots are regular, well-spaced, stable through frame 10. V-field shows clean complementary pattern. HOWEVER, particles show ZERO organization - uniformly scattered throughout domain with no clustering or boundary tracing. This confirms the diagnosis.
+Metrics: C1_mean=-18.84, C2_mean=-1.25, clustering=0.0558 (lowest yet). Note: metrics report negative but visuals show valid patterns - may be initialization/logging artifact.
+Mutation: consumption: 5 → 0, production: -5 → 0
+Parent rule: Eliminate particle-field coupling to test pure GS stability
+Observation: KEY FINDING - Gray-Scott IS STABLE standalone, producing excellent hexagonal patterns. The problem is purely the COUPLING STRENGTH, not the GS model itself. With zero coupling, particles can still sense gradients (via M1/M2 mobility) but they don't affect fields. Yet particles show no organization - this suggests M1/M2 gradient-following is also broken or gradients are too weak. Next test: verify gradient magnitude and whether particles actually respond to it.
+Literature: Gray-Scott patterns confirmed valid (Pearson 1993 γ-regime), coupling stability is the limiting factor
+Next: parent=75, try very weak coupling (consumption=1) or check if mobility response is working
+
+---
+
+## Iter 74: 2/10
+Node: id=74, parent=73
+Mode/Strategy: exploit (config change within block)
+Config: Du=0.2, Dv=0.1, F=0.035, k=0.06, time_scale=5.0, M1=-16, M2=+16, consumption=5, production=-5
+Score: 2/10
+Visual: Beautiful hexagonal spot pattern emerges in U-field from initial noise. Pattern stabilizes by frame 5 with regular spacing. V-field shows complementary inverse pattern (high V where low U). However, particles remain nearly uniformly distributed - only faint groupings visible in late frames. No clear boundary tracing despite well-formed field gradients.
+Metrics: C1_mean=-18.91 (WORSE than iter 73!), C2_mean=-1.27, clustering=0.0652 (35% BELOW iter 73's 0.0923)
+Mutation: consumption: 18 → 5, production: -18 → -5
+Parent rule: Reduce consumption to let Gray-Scott dynamics dominate
+Observation: Reducing consumption from 18 to 5 made metrics WORSE, not better. Fields still deeply negative. This confirms that ANY non-zero particle consumption overwhelms Gray-Scott's slow F*(1-U) replenishment mechanism. V-clamping in forward() is cosmetic - it affects reaction calculations but stored field values still go negative. The fundamental issue: Gray-Scott's feed rate is linear while particle drain is also linear, but feed only works when U<1 (saturates), while drain has no floor.
+Literature: Gray-Scott feed term F*(1-U) approaches zero as U→1, but particle drain -consumption*particles continues regardless. Asymmetric dynamics cause runaway depletion.
+Next: parent=74, try consumption=0 to verify pure Gray-Scott stability, then consider inverted coupling strategy
+
+---
+
+## Iter 73: 3/10
+Node: id=73, parent=71
+Mode/Strategy: code-modification (V-clamping for Gray-Scott stability)
+Config: Du=0.2, Dv=0.1, F=0.035, k=0.06, time_scale=5.0, M1=-16, M2=+16, consumption=18, production=-18
+Code Change: Added V_clamped = torch.clamp(V, min=1e-6) and V_restoration force in forward()
+Score: 3/10
+Visual: U field shows EXCELLENT spot patterns (γ-regime). Spots stable throughout simulation. Particles show weak clustering, some correlation with field gradients but dispersed. Low organization compared to Brusselator baseline.
+Metrics: C1_mean=-18.79 (U STILL NEGATIVE!), C2_mean=-1.26, clustering=0.0923 (very low)
+Mutation: V-clamping code modification applied
+Parent rule: V-clamping to prevent negative concentrations
+Observation: V-clamping INSUFFICIENT. The clamp affects reaction computation but not stored field values. Particle consumption (18) still drives U negative. The soft clamp (1e-6) is too weak and restoration force (10x) inadequate. Need STRONGER intervention: either hard clamp on stored values in graph_data_generator, or switch to Option B (inverted coupling - consume U instead of V).
+Literature: Pearson 1993 - Gray-Scott requires positive concentrations; F*(1-U) only replenishes U, not V
+Next: parent=73, try STRONGER clamping or inverted coupling
+
+---
+
+## Iter 71: 2/10
+Node: id=71, parent=70
+Mode/Strategy: exploit (highest UCB)
+Config: Du=0.2, Dv=0.1, F=0.035, k=0.06, time_scale=5.0, M1=-16, M2=+16, consumption=18, production=-18
+Score: 2/10
+Visual: U field shows EXCELLENT spot/labyrinthine pattern - best GS pattern yet! Particles form beautiful web structure tracing concentration boundaries (frames 3-5). But particles then collapse to domain edges as V goes negative. V field shows complementary pattern but with edge accumulation (negative values).
+Metrics: C2_mean=-10.33 (improved 30% from -14.55), clustering=-0.4338
+Mutation: time_scale: 1.0 -> 5.0 (5x boost to GS dynamics)
+Parent rule: Boost GS reaction speed to sustain V against particle consumption
+Observation: time_scale increase HELPED - V less negative. Pattern quality excellent. Need further boost to reach positive V values.
+Literature: Pearson 1993 - Gray-Scott time scales significantly slower than Brusselator
+Next: parent=71 (continue time_scale increase while patterns are promising)
+
+---
+
+## Iter 72: 0/10
+Node: id=72, parent=71
+Mode/Strategy: exploit (continue time_scale boost)
+Config: Du=0.2, Dv=0.1, F=0.035, k=0.06, time_scale=10.0, M1=-16, M2=+16, consumption=18, production=-18
+Score: 0/10 - NaN EXPLOSION
+Visual: Frames 1-7 showed EXCELLENT U field spot/labyrinthine patterns and beautiful particle webs tracing boundaries. Frames 8-10 show complete white-out (NaN explosion).
+Metrics: ALL NaN - complete numerical collapse
+Mutation: time_scale: 5.0 -> 10.0 (double to sustain V)
+Parent rule: Continue time_scale increase that helped in iter 71
+Observation: time_scale=10.0 exceeded stability limit. Gray-Scott with particle coupling cannot be stabilized by time_scale alone - need code modification (V-clamping) or inverted coupling.
+Literature: Pearson 1993 - standard Gray-Scott is numerically sensitive near pattern formation boundaries
+Next: BLOCK END - code modification required
+
+---
+
+## Block 9 Summary (Iterations 65-72)
+
+**Goal**: Test Gray-Scott PDE variant (Pearson 1993) as alternative to Brusselator.
+
+**Key Results**:
+- Created `PDE_Diffusiophoresis_GrayScott.py` with proper PARAMS_DOC
+- γ-worm regime (F=0.035, k=0.06) produced EXCELLENT U field spot patterns
+- Particles formed beautiful web structures tracing concentration boundaries (frames 3-5 in iters 69-71)
+- **FATAL FLAW**: Particle consumption (even at 18) overwhelms Gray-Scott's slow UV² production
+- V field went deeply negative (-10 to -15) in ALL successful runs
+- time_scale=5.0 improved V by 30%, but time_scale=10.0 caused NaN
+
+**Critical Bug Fixed**: Iter 68 discovered mobilities M1/M2 were in wrong param slots (should be params_mesh[0,5] and params_mesh[1,1])
+
+**Block Statistics**:
+- Average score: 1.125/10
+- Best score: 2/10 (iters 65, 71)
+- NaN explosions: 2 (iters 66, 72)
+
+**Conclusion**: Gray-Scott shows promise (excellent patterns, correct particle behavior) but requires code modification to prevent V from going negative. Options: V-clamping or inverted coupling (consume U instead of V).
+
+---
+
+---
+
+## Iter 70: 1/10
+Node: id=70, parent=69
+Mode/Strategy: exploit (reduced particle coupling)
+Config: Du=0.2, Dv=0.1, F=0.035, k=0.06, time_scale=1.0, M1=-16, M2=+16, consumption=18, production=-18 (10x reduction)
+Score: 1/10 - 10x REDUCTION INSUFFICIENT, V STILL DEEPLY NEGATIVE
+Visual: U field shows EXCELLENT spot pattern emergence (frames 2-10) with high contrast! Particles form web-like network structure tracing gradient boundaries (frames 3-5) - promising morphology - but then evacuate interior and accumulate at edges (frames 6-10). V field remains deeply negative (-14.55) with severe boundary effects.
+Metrics: C1_mean=0.115, C2_mean=-14.55, clustering=-0.4573
+Literature: Pearson (1993) - Gray-Scott UV² reaction rate is ~0.1×V²×U for typical initial values; this is intrinsically slow
+Diagnosis:
+1. U field patterns are EXCELLENT - clear spot formation with good contrast
+2. Particle web structure is CORRECT behavior - they trace gradient boundaries
+3. Even 18 consumption overwhelms Gray-Scott's slow UV² production rate
+4. Reducing consumption further (to ~1) would make particles irrelevant to dynamics
+5. ALTERNATIVE: Boost Gray-Scott reaction dynamics via time_scale instead of reducing coupling
+Mutation: consumption: 180→18, production: -180→-18 (10x reduction applied)
+Parent rule: Reduce particle coupling to allow Gray-Scott dynamics to sustain V field
+Observation: 10x reduction insufficient. Strategy shift needed: boost GS dynamics rather than weaken coupling.
+Next: parent=70, increase time_scale 1.0→5.0 to strengthen Gray-Scott relative to particle drain
+
+---
+
+## Iter 69: 1/10
+Node: id=69, parent=68
+Mode/Strategy: exploit (mobility bug fix)
+Config: Du=0.2, Dv=0.1, F=0.035, k=0.06, time_scale=1.0, M1=-16, M2=+16, consumption=180, production=-180
+Score: 1/10 - MOBILITY FIX APPLIED BUT V STILL NEGATIVE
+Visual: U field shows GOOD spot pattern emergence (frames 3-10)! V field still deeply negative with boundary concentration. Particles form interesting web/network structure mid-simulation (frames 3-7) tracing gradient boundaries, but structure becomes diffuse by frame 10. Anti-clustering persists.
+Metrics: C1_mean=0.115, C2_mean=-14.49, clustering=-0.4449
+Literature: Gray-Scott (Pearson 1993) - V field should stay positive (it's an autocatalyst concentration)
+Diagnosis:
+1. Mobility fix WORKED - particles now respond to gradients (web structure visible in frames 3-7)
+2. V still going negative because particle consumption (180) drains V faster than UV² reaction produces it
+3. Gray-Scott has slower dynamics than Brusselator; consumption rates need 10x reduction
+4. Web-like particle structure is PROMISING - particles are tracing gradient boundaries
+Mutation: M1: 0→-16 (placed at params_mesh[0,5]), M2: 0→+16 (placed at params_mesh[1,1])
+Parent rule: Fix critical bug - mobilities were in wrong param slots for Gray-Scott config
+Observation: Particles now responding to gradients (web structure), but consumption/production destabilizes V field. Need to balance particle feedback with Gray-Scott's slower dynamics.
+Next: parent=69, REDUCE consumption/production 10x (180→18, -180→-18) to allow Gray-Scott dynamics to dominate
+
+---
+
+## Iter 68: 1/10
+Node: id=68, parent=67
+Mode/Strategy: exploit (diagnostic test)
+Config: Du=0.2, Dv=0.1, F=0.035, k=0.06, time_scale=1.0, consumption=0, production=0 (DISABLED)
+Score: 1/10
+Visual: U field shows emerging spots (frames 3-5), V field deeply negative with edge accumulation. Particles form web-like structures mid-sim then collapse. Severe anti-clustering.
+Metrics: C1_mean=0.115, C2_mean=-14.78, clustering=-0.4332
+Mutation: consumption: 180→0, production: -180→0 (particle-field coupling disabled)
+Parent rule: Disable coupling to isolate Gray-Scott dynamics from particle interference
+Literature: Pearson (1993) - test pure Gray-Scott without consumption/production interference
+Observation: **CRITICAL BUG FOUND** - V still negative with coupling disabled! Checked PDE_D.py: M1=params_mesh[0,5], M2=params_mesh[1,1]. In Gray-Scott config, these slots were 0! Particles had M1=M2=0 - couldn't respond to gradients at all! This explains anti-clustering (random diffusion).
+Next: parent=67, FIX: Set M1=-16 at params_mesh[0,5], M2=+16 at params_mesh[1,1], re-enable consumption/production
+
+---
+
+## Iter 67: 1/10
+Node: id=67, parent=66
+Mode/Strategy: exploit (fixing NaN from γ-worm regime test)
+Config: Du=0.2, Dv=0.1, F=0.035, k=0.06, time_scale=1.0 (γ-worm regime), M=±16, consumption=180, production=-180
+Score: 1/10 - V FIELD DEEPLY NEGATIVE, SEVERE ANTI-CLUSTERING
+Visual: U field shows emerging spot patterns (dark spots on purple/magenta background) - this is correct Gray-Scott behavior. V field shows problematic edge accumulation with yellow boundary ring, and clearly going negative. Particles are dispersed with weak web-like structure in middle frames but no clear clustering.
+Metrics: C1_mean=0.115, C2_mean=-14.28 (DEEPLY NEGATIVE!), clustering=-0.4311 (worst anti-clustering yet)
+Literature: Gray-Scott (Pearson 1993) requires U≈1, V≈0 with small V seeds; V should never go negative
+Diagnosis:
+1. U field behavior is CORRECT - spot pattern emergence is visible
+2. V field going deeply negative is UNPHYSICAL - particle production term may be the cause
+3. Production=-180 pulls V below zero; consumption=180 may deplete U incorrectly
+4. Particle-field coupling rates calibrated for Brusselator are incompatible with Gray-Scott
+5. Anti-clustering worsens because gradient field is corrupted
+Mutation: time_scale: 10→1, F: 0.02→0.035, k: 0.05→0.06, Du: 0.16→0.2, Dv: 0.08→0.1 (γ-worm regime)
+Parent rule: Node 66 had NaN explosion; try γ-worm regime with minimal time_scale
+Observation: Gray-Scott dynamics starting to work (U shows spots) but particle coupling is destabilizing V field. Need to isolate Gray-Scott from particle effects.
+Next: parent=67, DISABLE particle-field coupling (consumption=0, production=0) to test pure Gray-Scott pattern formation
+
+---
+
 ## Iter 66: 0/10
 Node: id=66, parent=65
 Mode/Strategy: exploit (fixing NaN explosion from parent)
