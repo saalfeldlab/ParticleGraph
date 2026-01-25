@@ -384,129 +384,60 @@ f = ar_p1 * exp(-d^(2*ar_p2) / (2σ²)) - ar_p3 * exp(-d^(2*ar_p4) / (2σ²))
 
 #### Step 5.3: Create PDE Variant (BLOCK END only)
 
-**When to create a variant:** Instead of modifying `PDE_Diffusiophoresis.py` directly, you can create a **new PDE variant file** to test fundamentally different reaction-diffusion models. This preserves the base Brusselator model and enables systematic comparison.
+**When to create a variant:** Create a new PDE file to test fundamentally different reaction-diffusion models while preserving the base Brusselator.
 
 **⚠️ REQUIREMENTS:**
 
-1. **ONLY at block boundaries** - Never during regular iterations within a block
-2. **MUST be grounded in established scientific literature** - Every variant must cite the source model
-3. **MUST include `PARAMS_DOC` class attribute** - Self-documenting parameter structure
+1. **ONLY at block boundaries** - Never during regular iterations
+2. **MUST cite scientific literature** - Every variant must reference source model
+3. **MUST include `PARAMS_DOC`** - Self-documenting parameter structure
+4. **MUST add compatibility attributes** - Add `self.A` and `self.B` in `__init__` (required by base class)
 
 **Naming convention:**
 
 | File Name | Config `mesh_model_name` |
 |-----------|--------------------------|
-| `PDE_Diffusiophoresis_1.py` | `Diffusiophoresis_Mesh_1` |
 | `PDE_Diffusiophoresis_GrayScott.py` | `Diffusiophoresis_Mesh_GrayScott` |
 | `PDE_Diffusiophoresis_FHN.py` | `Diffusiophoresis_Mesh_FHN` |
 
-**Creating a variant:**
+**Creating a variant (5 steps):**
 
-1. **Copy base file:**
-   ```bash
-   cp src/ParticleGraph/generators/PDE_Diffusiophoresis.py \
-      src/ParticleGraph/generators/PDE_Diffusiophoresis_GrayScott.py
-   ```
-
-2. **Rename class and add literature citation:**
+1. **Copy base file** and rename class to match filename
+2. **Add docstring with literature citation** (author, year, journal)
+3. **Add PARAMS_DOC** with model equations and parameter descriptions
+4. **Add compatibility attributes in `__init__`:**
    ```python
-   class PDE_Diffusiophoresis_GrayScott(pyg.nn.MessagePassing):
-       """
-       Gray-Scott reaction-diffusion model.
-
-       Literature: Pearson (1993) "Complex Patterns in a Simple System", Science 261:189-192
-       Pattern types: α (spots), β (stripes), γ (chaos), δ (mitosis), etc.
-
-       Equations:
-           dU/dt = Du * ∇²U - U*V² + F*(1-U)
-           dV/dt = Dv * ∇²V + U*V² - (F+k)*V
-       """
+   # Required for compatibility with base class expectations
+   self.A = torch.tensor(1.0, device=p.device)  # Initial U value
+   self.B = torch.tensor(0.0, device=p.device)  # Initial V value
    ```
+5. **Implement reaction equations** in `forward()`, update config
 
-3. **Add PARAMS_DOC (REQUIRED):**
-   ```python
-   PARAMS_DOC = {
-       "model_name": "Gray-Scott",
-       "description": "Two-component autocatalytic reaction system (Pearson 1993)",
-       "literature": "Pearson (1993) Science 261:189-192",
-       "equations": {
-           "dU/dt": "Du * ∇²U - U*V² + F*(1-U)",
-           "dV/dt": "Dv * ∇²V + U*V² - (F+k)*V"
-       },
-       "params_mesh": [
-           {
-               "row": 0,
-               "description": "U field parameters",
-               "slots": [
-                   {"index": 0, "name": "Du", "description": "Diffusion coefficient for U", "typical_range": [0.16, 0.24]},
-                   {"index": 1, "name": "F", "description": "Feed rate", "typical_range": [0.02, 0.08]},
-                   {"index": 2, "name": "k", "description": "Kill rate", "typical_range": [0.045, 0.07]}
-               ]
-           },
-           {
-               "row": 1,
-               "description": "V field parameters",
-               "slots": [
-                   {"index": 0, "name": "Dv", "description": "Diffusion coefficient for V", "typical_range": [0.08, 0.12]}
-               ]
-           }
-       ],
-       "pattern_regimes": {
-           "alpha": "F=0.01-0.02, k=0.045-0.05 → spots",
-           "gamma": "F=0.03-0.04, k=0.06-0.065 → chaos",
-           "lambda": "F=0.04, k=0.065 → stripes"
-       }
-   }
-   ```
+**Common errors and fixes:**
 
-4. **Implement the equations:**
-   ```python
-   def forward(self, data):
-       # ... extract C1 (=U), C2 (=V) ...
+| Error | Cause | Fix |
+|-------|-------|-----|
+| `NameError: mesh_model_name` | Using bare variable | Use `config.graph_model.mesh_model_name` |
+| `KeyError` in PyG | Class not registered | Ensure class name matches file suffix |
+| `AttributeError: no attribute 'A'` | Missing compatibility | Add `self.A`, `self.B` in `__init__` |
 
-       # Gray-Scott reaction terms (Pearson 1993)
-       R1 = -U * V * V + self.F * (1 - U)  # dU/dt reaction
-       R2 = U * V * V - (self.F + self.k) * V  # dV/dt reaction
+**Established models:**
 
-       dC1 = self.Du * laplacian_U + R1
-       dC2 = self.Dv * laplacian_V + R2
-       # ...
-   ```
+| Model | Key Params | Literature |
+|-------|------------|------------|
+| **Gray-Scott** | F, k | Pearson (1993) Science 261 |
+| **FitzHugh-Nagumo** | a, b, ε | FitzHugh (1961) Biophys J |
+| **Schnakenberg** | a, b, γ | Schnakenberg (1979) JTB |
 
-5. **Update config to use variant:**
-   ```yaml
-   graph_model:
-     mesh_model_name: Diffusiophoresis_Mesh_GrayScott  # Uses PDE_Diffusiophoresis_GrayScott.py
-
-   simulation:
-     params_mesh:
-       - [0.2, 0.04, 0.06, 0, 0, 0]  # Du, F, k, (unused slots)
-       - [0.1, 0, 0, 0, 0, 0]        # Dv
-       - [1.0, 0, 0, 0, 0, 0]        # Particle coupling params
-   ```
-
-**Established models to consider:**
-
-| Model | Key Parameters | Pattern Types | Literature |
-|-------|---------------|---------------|------------|
-| **Gray-Scott** | F (feed), k (kill) | spots, stripes, mitosis | Pearson (1993) Science 261 |
-| **FitzHugh-Nagumo** | a, b, ε, D ratio | spirals, waves, excitable | FitzHugh (1961) Biophys J |
-| **Schnakenberg** | a, b, γ | spots, stripes | Schnakenberg (1979) JTB |
-| **Gierer-Meinhardt** | ρ, μ, ν | spots, bands | Gierer & Meinhardt (1972) |
-| **Swift-Hohenberg** | r, g | hexagons, stripes | Swift & Hohenberg (1977) |
-
-**Log format for variant creation:**
-
+**Log format:**
 ```
-## Block N Summary + PDE Variant Creation
-
 ### Variant: PDE_Diffusiophoresis_GrayScott
-Literature: Pearson (1993) "Complex Patterns in a Simple System", Science 261:189-192
-Rationale: Block N showed Brusselator limited to spots; Gray-Scott has richer pattern space
-Created file: src/ParticleGraph/generators/PDE_Diffusiophoresis_GrayScott.py
-Config change: mesh_model_name: Diffusiophoresis_Mesh_GrayScott
-Initial params_mesh: [[0.2, 0.04, 0.06], [0.1]]
+Literature: Pearson (1993) Science 261:189-192
+Rationale: [why this model]
+Config: mesh_model_name: Diffusiophoresis_Mesh_GrayScott
 ```
+
+**Note:** New variants are auto-committed by GNN_LLM after creation.
 
 ---
 
