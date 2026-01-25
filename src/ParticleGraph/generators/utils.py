@@ -12,7 +12,66 @@ from scipy.spatial import cKDTree
 import subprocess
 import os
 import glob
+import importlib.util
+import re
 from ParticleGraph.models import PDE_Diffusiophoresis
+
+
+def load_pde_variant(variant_name, generators_path=None):
+    """
+    Dynamically load a PDE variant class from a file.
+
+    Parameters
+    ----------
+    variant_name : str
+        Name like 'Diffusiophoresis_Mesh_1' or 'Diffusiophoresis_Mesh_GrayScott'
+    generators_path : str, optional
+        Path to generators directory. If None, uses default location.
+
+    Returns
+    -------
+    class
+        The PDE class, or None if not found
+    """
+    if generators_path is None:
+        generators_path = os.path.dirname(os.path.abspath(__file__))
+
+    # Extract variant suffix: 'Diffusiophoresis_Mesh_1' -> '1', 'Diffusiophoresis_Mesh_GrayScott' -> 'GrayScott'
+    match = re.match(r'Diffusiophoresis_Mesh_(.+)', variant_name)
+    if not match:
+        return None
+
+    variant_suffix = match.group(1)
+
+    # Look for file: PDE_Diffusiophoresis_1.py, PDE_Diffusiophoresis_GrayScott.py, etc.
+    file_name = f"PDE_Diffusiophoresis_{variant_suffix}.py"
+    file_path = os.path.join(generators_path, file_name)
+
+    if not os.path.exists(file_path):
+        print(f"Warning: PDE variant file not found: {file_path}")
+        return None
+
+    # Dynamic import
+    module_name = f"PDE_Diffusiophoresis_{variant_suffix}"
+    spec = importlib.util.spec_from_file_location(module_name, file_path)
+    module = importlib.util.module_from_spec(spec)
+    # Register in sys.modules BEFORE exec_module so PyG's inspector can find it
+    import sys
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+
+    # Get the PDE class (expected name: PDE_Diffusiophoresis_{suffix})
+    class_name = f"PDE_Diffusiophoresis_{variant_suffix}"
+    if hasattr(module, class_name):
+        return getattr(module, class_name)
+
+    # Fallback: look for any class starting with PDE_Diffusiophoresis
+    for name in dir(module):
+        if name.startswith('PDE_Diffusiophoresis'):
+            return getattr(module, name)
+
+    print(f"Warning: No PDE class found in {file_path}")
+    return None
 
 def choose_model(config=[], W=[], device=[]):
     particle_model_name = config.graph_model.particle_model_name
@@ -194,7 +253,18 @@ def choose_mesh_model(config, X1_mesh, device):
                     c[n] = torch.tensor(config.simulation.diffusion_coefficients[n])
                 mesh_model = PDE_Laplacian(aggr_type=aggr_type, c=torch.squeeze(c), bc_dpos=bc_dpos)
             case _:
-                mesh_model = PDE_Z(device=device)
+                # Try dynamic loading for PDE variants (e.g., Diffusiophoresis_Mesh_1, Diffusiophoresis_Mesh_GrayScott)
+                if mesh_model_name.startswith('Diffusiophoresis_Mesh_'):
+                    pde_class = load_pde_variant(mesh_model_name)
+                    if pde_class is not None:
+                        params_mesh = config.simulation.params_mesh
+                        p = torch.tensor(params_mesh, dtype=torch.float32, device=device).squeeze()
+                        mesh_model = pde_class(aggr_type=aggr_type, bc_dpos=bc_dpos, p=p)
+                        print(f"Loaded PDE variant: {mesh_model_name}")
+                    else:
+                        raise ValueError(f"Failed to load PDE variant: {mesh_model_name}")
+                else:
+                    mesh_model = PDE_Z(device=device)
 
 
 
@@ -839,6 +909,25 @@ def init_mesh(config, device):
             s = torch.sum(node_value, dim=1)
             for k in range(2):
                 node_value[:, k] = node_value[:, k] / s
+        case _ if config.graph_model.mesh_model_name.startswith('Diffusiophoresis_Mesh_'):
+            # PDE variants (Gray-Scott, etc.) - initialize with small random perturbations
+            # Gray-Scott: U≈1 (substrate), V≈0 (autocatalyst) with localized seeds
+            if 'GrayScott' in config.graph_model.mesh_model_name:
+                # Initialize U=1, V=0 everywhere, then add localized seeds of V
+                node_value = torch.zeros((n_nodes, 2), device=device)
+                node_value[:, 0] = 1.0  # U = 1 (substrate at equilibrium)
+                node_value[:, 1] = 0.0  # V = 0 (no autocatalyst initially)
+                # Add random localized seeds of autocatalyst
+                n_seeds = max(1, n_nodes // 100)  # ~1% of nodes as seeds
+                seed_indices = torch.randperm(n_nodes)[:n_seeds]
+                node_value[seed_indices, 0] = 0.5  # Deplete U at seed locations
+                node_value[seed_indices, 1] = 0.25  # Add V at seed locations
+            else:
+                # Default for other variants: normalized random
+                node_value = torch.rand((n_nodes, 2), device=device)
+                s = torch.sum(node_value, dim=1)
+                for k in range(2):
+                    node_value[:, k] = node_value[:, k] / s
         case 'DiffMesh' | 'WaveMesh' | 'Particle_Mesh_A' | 'Particle_Mesh_B' | 'WaveSmoothParticle':
             node_value = torch.zeros((n_nodes, 2), device=device)
             node_value[:, 0] = torch.tensor(values / 255 * 5000, device=device)

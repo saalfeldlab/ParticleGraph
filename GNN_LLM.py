@@ -677,7 +677,7 @@ if __name__ == "__main__":
         base_config_name = 'diffusiophoresis'
         task_params = {'iterations': 64}
 
-    n_iterations = task_params.get('iterations', 64)
+    n_iterations = 1024
     llm_task_name = f'{base_config_name}_Claude'
     instruction_name = f'instruction_{base_config_name}'
 
@@ -700,7 +700,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Resume support: start_iteration parameter (default 1)
-    start_iteration = task_params.get('start', 1)
+    start_iteration = 64
 
     if start_iteration > 1:
         print(f"\033[93mResuming from iteration {start_iteration}\033[0m")
@@ -854,7 +854,7 @@ If you cannot fix it, say "CANNOT_FIX" and explain why."""
                     '-p', repair_prompt,
                     '--output-format', 'text',
                     '--max-turns', '10',
-                    '--allowedTools', 'Read', 'Edit'
+                    '--allowedTools', 'Read', 'Edit', 'Write'
                 ]
 
                 repair_result = subprocess.run(repair_cmd, cwd=root_dir, capture_output=True, text=True)
@@ -949,7 +949,7 @@ Code files you can modify (BLOCK END only - for next block):
             '-p', claude_prompt,
             '--output-format', 'text',
             '--max-turns', '100',
-            '--allowedTools', 'Read', 'Edit'
+            '--allowedTools', 'Read', 'Edit', 'Write'
         ]
 
         # Run Claude

@@ -43,9 +43,19 @@ class PDE_D(pyg.nn.MessagePassing):
         self.repulsion_strength = 50
         self.repulsion_range = 0.04
 
+        # Block 8 code change: Gradient boost for nonlinear mobility response
+        # p[2, 4] controls boost exponent: 0 = linear, >0 = superlinear response to gradients
+        # Hypothesis: Boosting response at steep gradients creates stronger boundary attraction
+        # (opposite of saturation which failed - try amplifying instead of limiting)
+        self.boost_exponent = p[2, 4] if p.shape[1] > 4 else 0.0
+
         # Report configuration
         print(f"Initialized PDE_D with parameters:")
         print(f"Mobility: M₁={self.M1.item()}, M₂={self.M2.item()}")
+        if hasattr(self, 'boost_exponent'):
+            boost_val = self.boost_exponent.item() if hasattr(self.boost_exponent, 'item') else self.boost_exponent
+            if boost_val > 0:
+                print(f"Gradient boost exponent: {boost_val:.3f} (0=linear, >0=superlinear)")
         print(f"Pe={self.Pe.item():.3f}, sigma={self.sigma}")
         print(f"Particle→Field: consumption={self.consumption_rate.item()}, production={self.production_rate.item()}, influence_radius={self.influence_radius.item():.3f}")
         if particle_params is not None:
@@ -142,8 +152,22 @@ class PDE_D(pyg.nn.MessagePassing):
                 M1 = self.M1  # Global fallback
                 M2 = self.M2
 
-            # Diffusiophoretic velocity
-            velocities = (M1 * grad_C1 + M2 * grad_C2) * dir_norm
+            # Diffusiophoretic velocity (raw linear response)
+            velocity_raw = (M1 * grad_C1 + M2 * grad_C2) * dir_norm
+
+            # Block 8: Apply gradient boost if enabled
+            # This amplifies response at steep gradients (pattern boundaries)
+            # Opposite of saturation which failed - enhances rather than limits
+            if hasattr(self, 'boost_exponent') and self.boost_exponent > 0:
+                # Compute gradient magnitude
+                grad_mag = torch.sqrt(grad_C1**2 + grad_C2**2 + 1e-8)
+                # Superlinear boost: multiply by grad_mag^exponent
+                # exponent=0.5: sqrt boost (mild), exponent=1.0: linear boost (stronger)
+                # This makes particles accelerate toward steep boundaries
+                boost_factor = 1.0 + (grad_mag ** self.boost_exponent)
+                velocities = velocity_raw * boost_factor
+            else:
+                velocities = velocity_raw
 
             return velocities
 

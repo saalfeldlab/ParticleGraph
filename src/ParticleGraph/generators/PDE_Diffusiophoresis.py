@@ -17,6 +17,44 @@ class PDE_Diffusiophoresis(pyg.nn.MessagePassing):
         The first derivative of two scalar fields C₁ and C₂
     """
 
+    # PARAMS_DOC: Self-documenting parameter structure for LLM-guided exploration
+    # This class attribute enables the LLM to understand and modify params_mesh correctly
+    PARAMS_DOC = {
+        "model_name": "Brusselator",
+        "description": "Two-component reaction-diffusion system with cubic autocatalysis",
+        "equations": {
+            "dC1/dt": "D1 * ∇²C₁ + Da_c * (A - (B+1)*C₁ + C₁²*C₂) + χ * ∇²C₂ + noise - damping*(C₁-A)",
+            "dC2/dt": "D2 * ∇²C₂ + Da_c * (B*C₁ - C₁²*C₂) - damping*(C₂-B/A)"
+        },
+        "params_mesh": [
+            {
+                "row": 0,
+                "description": "C₁ field parameters",
+                "slots": [
+                    {"index": 0, "name": "D1", "description": "Diffusion coefficient for C₁", "typical_range": [0.01, 0.5]},
+                    {"index": 1, "name": "Da_c", "description": "Damköhler number (reaction rate)", "typical_range": [1.0, 50.0]},
+                    {"index": 2, "name": "A", "description": "Brusselator parameter A (feed concentration)", "typical_range": [0.5, 5.0]},
+                    {"index": 3, "name": "B", "description": "Brusselator parameter B (reaction strength)", "typical_range": [1.0, 10.0]},
+                    {"index": 4, "name": "mu", "description": "Morphological parameter (unused)", "typical_range": [0.01, 0.1]},
+                    {"index": 5, "name": "chi", "description": "Cross-diffusion coefficient", "typical_range": [-0.1, 0.1]}
+                ]
+            },
+            {
+                "row": 1,
+                "description": "C₂ field parameters",
+                "slots": [
+                    {"index": 0, "name": "D2", "description": "Diffusion coefficient for C₂", "typical_range": [0.1, 1.0]},
+                    {"index": 5, "name": "noise_amplitude", "description": "Stochastic noise for symmetry breaking", "typical_range": [0.0, 0.01]}
+                ]
+            }
+        ],
+        "pattern_regimes": {
+            "spots": "B/A > 1 + A², small D1/D2 ratio",
+            "stripes": "B/A ≈ 1 + A², moderate D1/D2",
+            "labyrinth": "B/A < 1 + A², large domain"
+        }
+    }
+
     def __init__(self, aggr_type='add', bc_dpos=None, p=None):
         super(PDE_Diffusiophoresis, self).__init__(aggr='add')  # "add" aggregation
 
