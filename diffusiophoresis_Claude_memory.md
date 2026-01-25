@@ -5,7 +5,7 @@
 ### Pattern Principles
 - D2/D1 ratio controls pattern wavelength; ratio 1-16 all produce labyrinthine in current regime
 - Turing condition: B > 1+A² for instability (A=1.5 → B > 3.25)
-- A=1.5, B=5.0-7.0 optimal for multi-scale nested patterns (7-8/10)
+- A=1.5, B=7.0 optimal for multi-scale nested patterns (7-8/10)
 - Da_c=25 required for particle organization; lower Da_c causes anti-clustering
 - Particle organization correlates with field gradients - halos/traces form at concentration boundaries
 - Cross-diffusion χ breaks labyrinthine → cruciform, but cruciform is eigenmode-locked
@@ -14,7 +14,10 @@
 - **Sweet spot**: M=±16, consumption=180 - higher values cause diffusive mixing that degrades organization
 - **Particle density matters**: n_particles=9600 required for collective feedback; 6400 too sparse
 - **EIGENMODE LOCK**: 4-fold cruciform is GEOMETRY-locked (square domain + periodic BC), NOT diffusion-locked
-- **NEW - D1 CONTROLS EIGENMODE SELECTION**: D1=0.015-0.02 breaks cruciform lock by selecting higher-order modes with complex topology
+- **D1 CONTROLS EIGENMODE SELECTION**: D1=0.015-0.02 breaks cruciform lock by selecting higher-order modes with complex topology
+- **D2=0.15 OPTIMAL**: D2/D1 ratio of 10 provides sharpest useful gradients; ratio 6.7 (D2=0.1) overshoots causing oscillatory dynamics
+- **B=7.0 OPTIMAL**: B=6.5 weakens Turing instability, reducing gradient sharpness
+- **LINEAR MOBILITY OPTIMAL**: v ∝ ∇C is correct; any nonlinearity (saturation, boost) disrupts boundary accumulation
 
 ### Failed Configurations
 - Multi-type with extreme opposing mobilities (M=±20, consumption=±200) → NaN explosion
@@ -36,6 +39,10 @@
 - **Asymmetric M1/M2 ratio** - no topology change, just mild redistribution
 - **NOISE FAILED COMPREHENSIVELY** - amplitudes 0.01→1.0 all failed to break eigenmode, noise DEGRADES clustering
 - **D1=0.01 too low** - wavelength too fine, particles spread across many gradients, clustering drops
+- **D2=0.1 OVERSHOT** - D2/D1 ratio 6.7 too sharp, causes oscillatory dynamics not stable clustering
+- **B=6.5 WORSE** - shallower Turing reduces gradients, clustering dropped 51%
+- **Saturation mobility FAILED** - scale 2.0→0.0, all worse than linear
+- **Boost mobility CATASTROPHIC** - exponent 0.5 caused 62% clustering collapse
 
 ### Code Insights
 - Block 2: Added cross-diffusion term χ to Brusselator for advective coupling
@@ -45,89 +52,95 @@
 - Block 5: TRUE TENSOR ANISOTROPY (D1_x ≠ D1_y) also failed - eigenmode is geometry-locked
 - Block 6: Stochastic noise term added but FAILED to break symmetry across full amplitude range
 - **FUNDAMENTAL INSIGHT**: To break 4-fold symmetry, need to modify WAVELENGTH via D1, not noise/anisotropy
+- **Block 8**: Nonlinear mobility modifications (saturation + boost) BOTH FAILED - LINEAR v∝∇C is OPTIMAL
+
+### PDE Variants
+
+| Variant | Model | Literature | Status | Best Score |
+|---------|-------|------------|--------|------------|
+| Diffusiophoresis_Mesh | Brusselator | Prigogine (1968) | retired | 7/10 (iter 51) |
+| Diffusiophoresis_Mesh_GrayScott | Gray-Scott | Pearson (1993) | **ACTIVE** | - |
 
 ---
 
 ## Previous Block Summaries
 
-### Block 1 (Iterations 1-8)
-- Started at 5/10 (baseline spots), achieved 7/10 (labyrinthine)
-- Key discovery: A=1.5 unlocks labyrinthine by satisfying Turing condition
+### Block 1-6 Summary
+- Block 1: Achieved labyrinthine (7/10) by satisfying Turing condition (A=1.5)
+- Block 2: Cross-diffusion χ broke labyrinthine → cruciform; B=5-6 without χ achieved 8/10
+- Block 3: Position-dependent aniso FAILED; discovered EMERGENT ASYMMETRY at n_frames=4000 (iter 20: clustering=0.59)
+- Block 4: Confirmed iter 20's asymmetry is STOCHASTIC; stability limits B≤7.0, Da_c≤30
+- Block 5: Tensor anisotropy FAILED; multi-type particles FAILED (opposing mobilities → NaN)
+- Block 6: Noise FAILED comprehensively; **D1 BREAKTHROUGH** - D1=0.015-0.02 breaks cruciform lock
 
-### Block 2 (Iterations 9-16)
-- Added cross-diffusion χ term to Brusselator (code modification)
-- χ broke labyrinthine → cruciform pattern (4-fold symmetric)
-- **BEST RESULTS**: B=5.0-6.0 with χ=0 produced multi-scale nested patterns (8/10)
+### Block 7 (Iterations 49-56)
+**Goal**: Enhance clustering while maintaining complex labyrinthine topology from D1 breakthrough.
+**Key Results**: D2=0.15 optimal (clustering=0.485), parameter space exhausted
+**Block Statistics**: Average 5.75/10, Best 7/10 (iter 51)
 
-### Block 3 (Iterations 17-24)
-- Position-dependent aniso diffusion FAILED - cos(2πy) wavelength mismatch
-- B=7.0 adds internal complexity but cruciform 4-fold symmetry persists
-- **KEY FINDING**: Longer simulation (n_frames=4000) enables EMERGENT PARTICLE ASYMMETRY!
-- **BEST EVER**: Iter 20 achieved clustering=0.59 (RECORD), pos_std_y/x=1.34 (spontaneous symmetry breaking)
-
-### Block 4 (Iterations 25-32)
-- Tested ar_p1, sigma, B=8.0 (crash), Da_c=35 (crash), D1=0.04, n_nodes=22500
-- **KEY FINDING**: Iter 20's asymmetry is STOCHASTIC, not reproducible via parameters
-- **Stability limits confirmed**: B≤7.0, Da_c≤30 (25 optimal)
-
-### Block 5 (Iterations 33-40)
-- **CODE MOD**: Implemented true tensor anisotropy D1_x ≠ D1_y
-- **FAILED**: Tensor aniso ratios 0.5, 0.25, 0.1 all produce cruciform - eigenmode is geometry-locked
-- **FAILED**: Multi-type particles (same-sign mobilities → co-localize; opposing mobilities → NaN)
-- **Block average**: 4.4/10 (2 NaN explosions)
-
-### Block 6 (Iterations 41-48)
-- **CODE MOD**: Added stochastic noise term dC1 += noise_amplitude * torch.randn_like(C1)
-- **NOISE FAILED**: Amplitudes 0.01→0.05→0.3→1.0 ALL failed to break symmetry
-- **CRITICAL**: Noise DEGRADES clustering (disabling noise improved clustering 0.33→0.42)
-- **BREAKTHROUGH**: D1 reduction (0.05→0.02) BROKE cruciform lock!
-- **Mechanism**: Smaller D1 → shorter wavelength → higher-order eigenmodes with complex topology
-- **Optimal D1**: ~0.015-0.02 balances complexity vs clustering
-- **Block average**: 5.4/10 (improvement from 4.4/10)
+### Block 8 (Iterations 57-64)
+**Goal**: Test nonlinear mobility modifications to break clustering plateau.
+**Key Results**:
+- Saturation approach (scale 2.0→0.0): ALL WORSE than linear baseline
+- Boost approach (exponent=0.5): CATASTROPHIC collapse (clustering 0.1854, 62% below baseline)
+- Linear restored (iters 63-64): Recovered to 0.41-0.43
+- M=±18 test: Slight spreading, no improvement
+**Conclusion**: LINEAR MOBILITY IS OPTIMAL - any nonlinearity disrupts boundary accumulation
+**Block Statistics**: Average 5.375/10, Best 6/10
 
 ---
 
-## Current Block (Block 7)
+## Current Block (Block 9)
 
 ### Block Info
-- Starting iteration: 49
-- Iterations: 49-56
-- Focus: Build on D1 breakthrough - enhance clustering while maintaining labyrinthine topology
+- Starting iteration: 65
+- Iterations: 65-72
+- Focus: **Gray-Scott PDE variant** - fundamentally different reaction-diffusion model
 
 ### Hypothesis
-With D1=0.015-0.02 breaking the cruciform eigenmode lock, we can now enhance particle clustering by:
-1. Increasing particle-field coupling (M, consumption) - particles respond more strongly to field gradients
-2. Fine-tuning D2/D1 ratio - balance between field dynamics and particle response time
-3. Exploring intermediate Da_c values - faster reaction may enhance gradient sharpness
+8 blocks of Brusselator exploration exhausted parameter and code modification space:
+- Best clustering: 0.485 (iter 51) with D1=0.015, D2=0.15, Da_c=25, B=7.0
+- Mobility modifications failed; parameter space at limits
+- **Need different RD dynamics to exceed plateau**
 
-Literature: Diffusiophoretic accumulation scales with mobility × gradient strength (Prieve 2010). With more complex field topology, stronger mobility should create more coherent clustering at field boundaries.
+**Gray-Scott model** (Pearson 1993) offers richer pattern space:
+- Autocatalytic reaction: U + 2V → 3V (vs Brusselator's cubic terms)
+- Feed/kill parameters (F, k) directly control pattern morphology
+- Pattern types: α (spots), β (replicating), γ (worms), δ (mitosis), ε (chaos), λ (stripes)
+- Different gradient profiles may enable stronger particle aggregation
 
-### Code Modification Plan (Block 7)
-**Option A: Particle-field coupling enhancement**
-- Increase M from ±16 to ±20-24 with D1=0.015 baseline
-- Risk: Higher M previously caused diffusive mixing (at D1=0.05)
-- Hypothesis: With complex labyrinthine topology (D1=0.015), stronger M may create sharper clustering
+### PDE Variant Created
+**File**: `src/ParticleGraph/generators/PDE_Diffusiophoresis_GrayScott.py`
 
-**Option B: D2 adjustment for optimal D1/D2 ratio**
-- Currently D2=0.2, D1=0.015 → ratio D2/D1=13.3
-- Try D2=0.1 for ratio 6.7 → may sharpen C2 gradients
+**Gray-Scott equations**:
+```
+dU/dt = Du * ∇²U - U*V² + F*(1-U)
+dV/dt = Dv * ∇²V + U*V² - (F+k)*V
+```
 
-**Option C: Traveling wave regime**
-- Modify Brusselator to add advection term for traveling waves
-- dC1 += v · ∇C1 with constant velocity v
+**Initial parameters** (λ-stripe regime from Pearson 1993):
+- Du = 0.16, Dv = 0.08 (ratio 2:1, standard for Gray-Scott)
+- F = 0.040, k = 0.065 → stripes/labyrinths
+- time_scale = 50.0 (Gray-Scott dynamics are slower than Brusselator)
 
-**Selected approach for Block 7**: Start with parameter exploration (M, D2, Da_c) using D1=0.015 baseline before attempting code changes.
+### Config Changes
+- mesh_model_name: Diffusiophoresis_Mesh_GrayScott
+- params_mesh[0]: [Du=0.16, F=0.040, k=0.065, time_scale=50.0, 0, 0]
+- params_mesh[1]: [Dv=0.08, 0, 0, 0, 0, 0]
+- Keep particle params: M=±16, consumption=180 (optimal from Brusselator exploration)
 
 ### Iterations This Block
 
-**Iter 49: 5/10** - CRUCIFORM RETURNED with increased M=±20, consumption=±220
-- Config: D1=0.015, M=±20, consumption=±220
-- Clustering: 0.206 (DROPPED from 0.39)
-- Observation: Higher mobility DESTABILIZED complex labyrinthine → system relaxed to simpler 4-fold eigenmode
-- Action: Revert M=±16, consumption=180 to test D1=0.015 alone
+**Iter 65: 2/10** - Gray-Scott initial test FAILED
+- Config: Du=0.16, Dv=0.08, F=0.040, k=0.065, time_scale=50.0
+- Metrics: clustering=-0.2807 (ANTI-clustering!), C2_mean=-1.6968 (negative!)
+- Visual: Boundary accumulation only, no internal Turing structure
+- Diagnosis: time_scale=50 too aggressive for Gray-Scott
 
-### Emerging Observations
-- **HIGH MOBILITY IS HARMFUL** - M=±20 and consumption=220 caused pattern simplification
-- D1=0.015 alone may still be effective; need to test with original M/consumption values
-- The D1 breakthrough from block 6 requires LOWER mobility to maintain effect
+**Iter 66: 0/10** - NaN EXPLOSION
+- Config: Du=0.16, Dv=0.08, F=0.02, k=0.05, time_scale=10.0 (α-spot regime)
+- Metrics: ALL NaN - complete numerical collapse
+- Visual: Frames 1-5 boundary effects, frames 6-9 progressive instability, frame 10 white-out
+- Diagnosis: α-regime near instability boundary, time_scale=10 still too aggressive
+- Next: Try γ-worm regime (F=0.035, k=0.06), time_scale=1.0, Du=0.2, Dv=0.1
 

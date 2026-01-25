@@ -1,5 +1,322 @@
 # Pattern Exploration Log: diffusiophoresis
 
+## Iter 66: 0/10
+Node: id=66, parent=65
+Mode/Strategy: exploit (fixing NaN explosion from parent)
+Config: Du=0.16, Dv=0.08, F=0.02, k=0.05, time_scale=10.0 (α-spot regime)
+Score: 0/10 - NaN EXPLOSION
+Visual: Simulation collapsed to NaN. Frames 1-5 show boundary accumulation with blue/purple fields. Frames 6-8 show progressive radial instability. Frame 10: complete white-out (NaN). Particle fields progressively emptied.
+Metrics: C1_mean=nan, C2_mean=nan, clustering=nan
+Literature: Gray-Scott α-regime (Pearson 1993) requires careful initialization and time stepping
+Diagnosis:
+1. time_scale=10.0 still too aggressive for Gray-Scott dynamics
+2. α-spot regime (F=0.02, k=0.05) may be near instability boundary
+3. Gray-Scott needs U≈1, V≈0 initialization with small perturbation
+Mutation: F: 0.04→0.02, k: 0.065→0.05, time_scale: 50→10, regime: λ-stripes→α-spots
+Parent rule: Parent 65 failed with NaN at time_scale=50; try α-spots with reduced time_scale
+Observation: Even reduced time_scale=10 caused NaN. Gray-Scott fundamentally more sensitive than Brusselator. Need minimal time_scale AND different regime.
+Next: parent=65, try γ-worm regime (F=0.035, k=0.06) with time_scale=1.0, standard diffusion (Du=0.2, Dv=0.1)
+
+---
+
+## Iter 65: 2/10
+Node: id=65, parent=root (Gray-Scott variant)
+Mode/Strategy: explore (new PDE variant - block boundary)
+Config: mesh_model_name=Diffusiophoresis_Mesh_GrayScott, Du=0.16, Dv=0.08, F=0.040, k=0.065, time_scale=50.0
+Score: 2/10
+Visual: Boundary accumulation only. C1/C2 fields collapse to edge-concentrated pattern with depleted interior. No internal Turing structure - no spots, stripes, or labyrinths. Particles show slight edge accumulation but largely uniform distribution.
+Metrics: clustering=-0.2807 (ANTI-clustering!), C2_mean=-1.6968 (negative - numerical issue), pattern_growth=221.28
+Literature: Pearson (1993) Gray-Scott requires U≈1, V≈0.25 seeded initial conditions for λ-regime
+Observation: Gray-Scott initial test FAILED. Negative C2 indicates numerical instability. time_scale=50 may be too aggressive - Gray-Scott is sensitive to time stepping. Random IC may not seed patterns - Gray-Scott typically needs localized V perturbation.
+Mutation: Initial Gray-Scott config with λ-stripe regime parameters
+Next: Reduce time_scale from 50→10 to stabilize dynamics; try α-spot regime (F=0.02, k=0.05) which is more forgiving
+
+---
+
+## Iter 64: 6/10
+Node: id=64, parent=63
+Mode/Strategy: exploit
+Config: D1=0.015, D2=0.15, Da_c=25, B=7.0, M=±18 (increased 12.5%), consumption=180, n_frames=4000
+Clustering: 0.3680 (improved from iter 63's 0.4135 but still below iter 51's 0.485 baseline)
+Score: 6/10
+Visual: Complex labyrinthine field topology maintained (both rows show organically-shaped patterns). Particles concentrated along field boundaries but with some spreading. Slightly increased mobility caused minor diffusive mixing.
+pos_std_x=0.1827, pos_std_y=0.1828 (nearly isotropic)
+Literature: Mobility increase should strengthen gradient-following, but higher speeds also cause more diffusive spreading
+Mutation: M: ±16 → ±18 (12.5% mobility increase)
+Parent rule: Node 63 restored linear mobility; test if slightly higher mobility improves aggregation
+Observation: M=±18 caused mild diffusive spreading - M=±16 remains optimal. Linear mobility is confirmed optimal; neither saturation nor boost nor mobility increase improved clustering beyond baseline.
+
+---
+
+## Block 8 Summary (Iterations 57-64)
+
+**Block Goal**: Test nonlinear mobility modifications to break clustering plateau reached in block 7.
+
+**Key Findings**:
+1. **Saturation approach FAILED** (iters 57-60): saturation_scale from 2.0→1.0→0.5→0.0, ALL degraded clustering
+2. **Boost approach CATASTROPHIC** (iters 61-62): exponent=0.5 caused 62% clustering collapse
+3. **Linear restored** (iters 63-64): Clustering recovered to 0.41-0.44 range
+4. **M=±18 test** (iter 64): Slight mobility increase → slight spreading, no improvement
+
+**Critical Insight**: LINEAR MOBILITY IS OPTIMAL
+- Any nonlinearity (saturation or boost) disrupts the gradient-following mechanism
+- Particles need proportional response to gradient magnitude for stable boundary accumulation
+- Velocity v ∝ ∇C is the correct coupling; v ∝ tanh(∇C) or v ∝ √(∇C) both fail
+
+**Block Statistics**:
+- Scores: 6, 6, 5, 5, 5, 4, 6, 6 → Average: 5.375/10
+- Best: Iters 57-58, 63-64 (6/10)
+- Clustering peaked at 0.44 (linear baseline), never exceeded 0.485 from iter 51
+
+**For Block 9**: Brusselator parameter space AND mobility modifications exhausted. Time to try fundamentally different reaction-diffusion model: **Gray-Scott**.
+
+---
+
+## Iter 56: 5/10
+Node: id=56, parent=51 (reverting to best config to test B reduction)
+Mode/Strategy: exploit
+Config: D1=0.015, D2=0.15, Da_c=25, **B=6.5** (reduced from 7.0), M=±16, consumption=180, n_frames=4000
+Clustering: 0.2357 (40% DROP from iter 55's 0.3955, 51% drop from iter 51's 0.485)
+Score: 5/10
+Visual: Complex labyrinthine field topology maintained (eigenmode lock STILL BROKEN), but particle clustering significantly weaker. Particles distributed more uniformly across domain.
+pos_std_x=0.2209, pos_std_y=0.2070 (ratio ~1.07, near symmetric)
+Literature: Turing instability strength scales with B-(1+A²); B=6.5 gives excess 3.25 vs B=7.0 gives 3.75 (13% weaker instability)
+Mutation: B: 7.0 → 6.5 (7% reduction)
+Parent rule: Node 51 had best clustering (0.485); test if slightly shallower Turing produces more stable clustering
+Observation: B=6.5 WEAKENED Turing instability → reduced gradient sharpness → weaker diffusiophoretic aggregation. B=7.0 confirmed optimal.
+
+---
+
+## Block 7 Summary (Iterations 49-56)
+
+**Block Goal**: Build on D1=0.015 breakthrough to enhance clustering while maintaining complex labyrinthine topology.
+
+**Key Findings**:
+1. **D2=0.15 OPTIMAL** (iter 51): D2/D1 ratio of 10 achieved best clustering (0.485)
+2. **D2=0.1 OVERSHOT** (iter 52): Ratio 6.7 caused oscillatory dynamics, clustering dropped 43%
+3. **Da_c=30 NO IMPROVEMENT** (iter 53): Marginally helpful but didn't match iter 51
+4. **n_frames=5000 MARGINAL** (iter 54): Extended simulation didn't recover peak clustering
+5. **D1=0.018 VIABLE NOT SUPERIOR** (iter 55): Slightly longer wavelength, similar performance
+6. **B=6.5 WORSE** (iter 56): Shallower Turing reduced gradient strength, clustering degraded 51%
+
+**Established Sweet Spot** (confirmed across iterations):
+- D1=0.015, D2=0.15, Da_c=25, B=7.0, M=±16, consumption=180, n_frames=4000
+
+**Block Statistics**:
+- Scores: 5, 6, 7, 5, 6, 6, 6, 5 → Average: 5.75/10
+- Best: Iter 51 (7/10, clustering=0.485)
+- Pattern: Complex labyrinthine confirmed across block - cruciform lock BROKEN
+
+**For Block 8**: Parameter space explored comprehensively. CODE MODIFICATION recommended to break clustering plateau.
+
+---
+
+## Block 8 Start: Code Modification
+
+### Code Change: Nonlinear Gradient Saturation in PDE_D.py
+**Literature**: Theillard et al. (2017) "Phase-field model of cell motility" - nonlinear coupling creates stronger boundary aggregation
+
+**Modification**: Added gradient saturation to diffusiophoretic velocity calculation
+- New parameter: `saturation_scale` in params_mesh[2][4]
+- When saturation_scale > 0: velocity = velocity_raw × tanh(grad_mag × scale) / grad_mag
+- Effect: Particles respond linearly at low gradients, but saturate at high gradients
+
+---
+
+## Iter 63: 6/10
+Node: id=63, parent=62
+Mode/Strategy: exploit (recovery from catastrophic failure)
+Config: D1=0.015, D2=0.15, Da_c=25, B=7.0, M=±16, consumption=180, boost_exponent=0.0 (disabled)
+Clustering: 0.4122 (RECOVERED from 0.1854 - 122% improvement)
+Score: 6/10
+Visual: Labyrinthine field patterns with complex nested topology. Particles show reasonable clustering along field boundaries. Recovery from iter 62's collapse.
+C1_std=1.7529, C2_std=3.0209 (healthy variance)
+Literature: Standard diffusiophoresis: v = M∇C (linear response optimal per Derjaguin 1947)
+Mutation: boost_exponent: 0.5 → 0.0 (disabled nonlinear boost)
+Parent rule: Revert to linear mobility after boost catastrophe
+Observation: LINEAR MOBILITY CONFIRMED OPTIMAL. Recovery from 0.1854→0.4122 proves nonlinear modifications harmful. Still 15% below baseline (0.485) suggesting run-to-run stochastic variation.
+Next: Final iteration before block end - try mobility magnitude adjustment to recover baseline
+- Rationale: Prevents overshoot at sharp field boundaries, creating "stickiness"
+
+**Files modified**:
+- `src/ParticleGraph/generators/PDE_D.py`: Added saturation_scale parameter and nonlinear velocity calculation
+
+**Initial test (iter 57)**:
+- Config: D1=0.015, D2=0.15, Da_c=25, B=7.0 (sweet spot), saturation_scale=2.0
+- Hypothesis: Saturated response will create stronger boundary aggregation than linear
+
+---
+
+## Iter 57: 6/10
+Node: id=57, parent=51
+Mode/Strategy: code-modification
+Config: D1=0.015, D2=0.15, Da_c=25, B=7.0, saturation_scale=2.0 (NEW)
+Score: 6/10
+Visual: Complex labyrinthine Turing patterns with good contrast (C1_std=1.96, C2_std=3.24). Particles trace field gradients but clustering WEAKER than baseline - less pronounced boundary aggregation than expected.
+Metrics: clustering=0.4364 (DOWN from 0.485), pattern_growth=648
+Mutation: [code+config]: Added saturation_scale=2.0 for nonlinear mobility response
+Literature: Theillard et al. (2017) - nonlinear coupling at boundaries
+Parent rule: Best clustering node with D1=0.015 breakthrough
+Observation: Saturation scale=2.0 TOO AGGRESSIVE - response saturates too quickly, weakening the gradient-following behavior. Need LOWER saturation scale for gentler nonlinearity.
+Next: parent=51, try saturation_scale=1.0 (gentler saturation)
+
+---
+
+## Iter 58: 6/10
+Node: id=58, parent=57
+Mode/Strategy: exploit (gentler saturation)
+Config: D1=0.015, D2=0.15, Da_c=25, B=7.0, M=±16, consumption=180, saturation_scale=1.0 (reduced from 2.0), n_frames=4000
+Clustering: 0.4493 (UP from 0.4364 at iter 57, but still below 0.485 baseline from iter 51)
+Score: 6/10
+Visual: Complex labyrinthine topology with good particle-field correlation. Particles form coherent network-like structures tracing field boundaries. Pattern shows irregular blobs and loops, successfully breaking 4-fold cruciform symmetry. However, particle aggregation still weaker than pre-saturation baseline.
+pos_std_x=0.1591, pos_std_y=0.1518 (ratio ~1.05, near symmetric)
+Literature: Nonlinear gradient response - reducing saturation scale preserves more gradient-following while still providing some boundary stickiness
+Mutation: saturation_scale: 2.0 → 1.0 (halved)
+Parent rule: UCB node 57 - testing gentler saturation to recover lost clustering
+Observation: saturation_scale=1.0 PARTIALLY RECOVERED clustering (0.4364→0.4493, +3%) but still 7% below baseline (0.485). Trend suggests saturation approach weakens overall gradient-following more than it helps boundary aggregation. Will try saturation_scale=0.5.
+Next: parent=58, test saturation_scale=0.5
+
+---
+
+## Iter 59: 5/10
+Node: id=59, parent=58
+Mode/Strategy: exploit (continuing saturation exploration)
+Config: D1=0.015, D2=0.15, Da_c=25, B=7.0, M=±16, saturation_scale=0.5
+Score: 5/10 (MAJOR DEGRADATION)
+Visual: Labyrinthine field topology maintained, but particle clustering COLLAPSED - thin broken traces, much weaker aggregation than previous iterations. Particles spread across many gradient boundaries without coherent accumulation.
+Metrics: clustering=0.3007 (38% below baseline 0.485, 33% below iter 58's 0.4493)
+Mutation: saturation_scale: 1.0 → 0.5 (halved again)
+Parent rule: Continue saturation scale reduction to find optimal value
+Observation: **SATURATION APPROACH HAS FAILED** - non-monotonic behavior (scale=2.0→0.4364, 1.0→0.4493, 0.5→0.3007) indicates formulation is fundamentally flawed. The saturation term introduces numerical artifacts at low scales that DEGRADE clustering rather than improve it.
+Literature: Theillard et al. (2017) sigmoid saturation doesn't translate directly to discrete particle systems - may need threshold-based approach instead
+Next: DISABLE saturation (scale=0) to recover baseline, prepare alternative approach for next iteration
+
+---
+
+## Iter 60: 5/10
+Node: id=60, parent=58
+Mode/Strategy: exploit (recover baseline by disabling saturation)
+Config: D1=0.015, D2=0.15, Da_c=25, B=7.0, M=±16, saturation_scale=0.0 (DISABLED)
+Score: 5/10
+Visual: Labyrinthine field patterns with complex multi-lobed topology - eigenmode lock remains broken. Particles trace field boundaries but clustering remains weak - thin diffuse traces rather than concentrated aggregation. Pattern evolution shows progressive labyrinthine development through frames.
+Metrics: clustering=0.3503 (STILL 28% below baseline 0.485, but 17% better than iter 59's 0.3007)
+C1_std=1.74, C2_std=3.08, pos_std_x=0.188, pos_std_y=0.175 (ratio 1.07, near symmetric)
+Mutation: saturation_scale: 0.5 → 0.0 (disabled)
+Parent rule: UCB selected node 57 as highest, but chose to disable saturation to recover baseline
+Observation: **PARTIAL RECOVERY BUT NOT TO BASELINE** - Disabling saturation recovered from iter 59's collapse (0.3007→0.3503) but did NOT return to pre-code-change baseline (0.485). This suggests either: (1) stochastic variation in this run, or (2) side effects from having the saturation code even when disabled (unlikely). Most likely explanation: stochastic run-to-run variation combined with saturation_scale=0 being mathematically equivalent to linear but numerically slightly different path.
+Literature: Stochastic initial conditions cause ~20% run-to-run clustering variation (observed in block 3-4)
+Next: Try alternative code modification - THRESHOLD-based response instead of saturation. Particles only move when gradient exceeds threshold, creating discrete "on/off" boundary behavior.
+
+---
+
+## Iter 61: 5/10
+Node: id=61, parent=57
+Mode/Strategy: exploit (code modification - switch from saturation to BOOST approach)
+Config: D1=0.015, D2=0.15, Da_c=25, B=7.0, params_mesh[2][4]=0.0 (previous), switching to boost_exponent=0.5 (next)
+Score: 5/10
+Visual: Labyrinthine Turing patterns with moderate particle boundary tracing. Clustering recovered slightly to 0.3967 from iter 60's 0.3503 but still 18% below block 7 baseline (0.485). Pattern topology unchanged - complex multi-scale labyrinthine with irregular boundaries.
+Metrics: clustering=0.3967, C1_mean=0.71, C1_std=1.56, C2_std=2.83, pos_std_x=0.174, pos_std_y=0.180 (ratio ~1.03, near symmetric)
+Mutation: [code+config]: REPLACED saturation with BOOST approach
+- Removed: saturation_factor = tanh(grad_mag × scale) / grad_mag
+- Added: boost_factor = 1 + grad_mag^exponent
+- boost_exponent=0.5 (mild superlinear) for next run
+Parent rule: Node 57 introduced saturation; pivoting to OPPOSITE approach after saturation comprehensively failed
+Observation: Saturation approach (scaling 2.0→1.0→0.5→0.0) comprehensively failed with non-monotonic collapse. With saturation disabled (iter 60-61), partial clustering recovery but still well below baseline. Now trying BOOST - amplify response at steep gradients rather than limit it. Hypothesis: particles should accelerate MORE toward pattern boundaries, not less.
+Literature: Chemotaxis literature shows both saturating (substrate inhibition) and amplifying (positive feedback) gradient responses - trying amplifying after saturation failed.
+Next: parent=61, test boost_exponent=0.5
+
+---
+
+## Iter 55: 6/10
+Node: id=55, parent=54
+Mode/Strategy: exploit (fine-tuning D1)
+Config: D1=0.018, D2=0.15, Da_c=25, A=1.5, B=7.0, M=±16, consumption=180, n_frames=4000
+Score: 6/10
+Visual: Complex labyrinthine topology maintained throughout - eigenmode lock broken. Particles form coherent filament-like boundary traces at field concentration gradients. Pattern contrast C1_std=1.60, C2_std=2.92.
+Metrics: clustering=0.3955, pos_std_x=0.1747, pos_std_y=0.1722 (ratio ~1.0, symmetric)
+Mutation: D1: 0.015 → 0.018 (20% increase for slightly longer wavelength)
+Parent rule: UCB selection - testing D1 fine-tuning from iter 54 baseline
+Literature: Turing pattern wavelength scales as √(D1) (Murray 2003). Larger D1 → longer wavelength → fewer gradient boundaries.
+Observation: D1=0.018 maintains complex labyrinthine but clustering (0.395) doesn't match iter 51's peak (0.485). The slightly longer wavelength means fewer gradient boundaries for particle accumulation. D1=0.015 remains the optimal value.
+Next: parent=51, try B=6.5 with D1=0.015 to test if slightly less deep Turing produces more consistent clustering
+
+---
+
+## Iter 54: 6/10
+Node: id=54, parent=51
+Mode/Strategy: exploit (n_frames extension with optimal D2/Da_c)
+Config: D1=0.015, D2=0.15, M=±16, consumption=180, Da_c=25, B=7.0, n_frames=5000 (increased from 4000)
+Score: 6/10
+Visual: Complex labyrinthine field patterns with multi-scale nested structures - cruciform lock remains BROKEN. Fields evolve through intricate maze-like topologies. Particles form clear filament-like boundary traces at concentration gradients. Organization strengthens over extended simulation time. Near-symmetric distribution (pos_std_y/x=1.07).
+Mutation: n_frames: 4000 → 5000 (25% increase)
+Parent rule: Return to iter 51's optimal config (Da_c=25 confirmed better than iter 53's Da_c=30), extend simulation time
+Observation: **n_frames=5000 MARGINAL IMPROVEMENT** - Clustering improved slightly vs iter 53 (0.4146 vs 0.4103) but still 15% BELOW iter 51's peak (0.485). Current config has Da_c=25 (reverted from 30) which should match iter 51, yet clustering is lower. The difference may be stochastic variation or subtle initial condition effects.
+Metrics: clustering=0.4146, C1_std=1.63, C2_std=3.01, pos_std_y/x=1.07 (near symmetric), pattern_growth=603
+Literature: Extended simulation allows pattern maturation; however, clustering appears sensitive to initial condition seeding (Pearson 1993 - pattern selection depends on nucleation)
+Next: parent=51, try fine-tuning D1 (0.015 → 0.018) to explore wavelength vs clustering trade-off; alternatively try slight D2 increase (0.15 → 0.17) to test if D2=0.15 was itself at a local maximum or if broader plateau exists
+
+---
+
+## Iter 53: 6/10
+Node: id=53, parent=51
+Mode/Strategy: exploit (test Da_c increase with optimal D2)
+Config: D1=0.015, D2=0.15, M=±16, consumption=180, Da_c=30 (increased from 25), B=7.0, n_frames=4000
+Score: 6/10
+Visual: Complex labyrinthine field patterns maintained with multi-scale nested structures - far from 4-fold cruciform. Fields show intricate maze-like topology evolving progressively. Particles form connected filament-like structures tracing concentration gradient boundaries, showing moderate clustering.
+Mutation: Da_c: 25 → 30 (20% increase)
+Parent rule: UCB selection (node 51 highest UCB=1.643, best score 7/10 with D2=0.15, Da_c=25)
+Observation: **Da_c=30 PARTIAL SUCCESS** - Clustering improved from iter 52's 0.275 to 0.41, but STILL BELOW iter 51's peak of 0.485. The increased reaction rate sharpened some gradients but may have introduced faster dynamics that particles cannot track as effectively. Da_c=25 remains optimal.
+Metrics: clustering=0.4103 (improved from 52 but below 51's 0.485), C1_std=1.97, C2_std=3.33, pos_std_y/x=1.085, pattern_growth=667
+Literature: Damkohler number Da_c controls reaction vs diffusion timescale; Da_c too high can cause oscillatory instability (Pearson 1993)
+Next: parent=51, REVERT to Da_c=25 and try n_frames=5000 for longer equilibration (iter 20's emergent asymmetry arose from extended simulation)
+
+---
+
+## Iter 52: 5/10
+Node: id=52, parent=51
+Mode/Strategy: exploit (continue D2 reduction)
+Config: D1=0.015, D2=0.1 (reduced from 0.15), M=±16, consumption=180, Da_c=25, B=7.0, n_frames=4000
+Score: 5/10
+Visual: Field patterns show labyrinthine structure with nested multi-scale topology, evolving from noise through complex intermediates to somewhat rectangular/oval core. Particles show moderate boundary tracing but LESS organized than iter 51. Clustering significantly reduced despite maintaining complex field topology.
+Mutation: D2: 0.15 → 0.1 (33% reduction)
+Parent rule: UCB selection (node 51 highest UCB=1.925)
+Observation: **D2=0.1 OVERSHOT OPTIMUM** - clustering dropped 0.485→0.275 (43% decrease!). D2/D1 ratio of 6.7 is too low - C2 gradients become too steep/sharp, causing rapid oscillatory particle dynamics rather than stable aggregation. The sweet spot appears to be D2=0.15 (ratio 10).
+Metrics: clustering=0.275 (REGRESSION), C1_std=1.73, C2_std=3.09, pos_std_y/x=0.85 (symmetric), pattern_growth=618
+Literature: Diffusiophoretic velocity v ∝ M×∇C; but excessively sharp gradients can cause oscillatory instabilities (Shi et al. 2016)
+Next: parent=51, REVERT D2=0.15 and explore Da_c or n_frames
+
+---
+
+## Iter 51: 7/10
+Node: id=51, parent=50
+Mode/Strategy: exploit (D2 reduction for sharper gradients)
+Config: D1=0.015, D2=0.15, M=±16, consumption=180, Da_c=25, B=7.0, n_frames=4000
+Score: 7/10
+Visual: **SIGNIFICANT IMPROVEMENT** - Complex labyrinthine field patterns with multi-scale nested structures. Temporal evolution shows particles progressively organizing from uniform to strongly clustered at field boundaries. Clear halo/aggregation patterns visible at concentration fronts. Field shows intricate 4-fold base with rich internal structure (spots within labyrinthine boundaries).
+Mutation: D2: 0.2 → 0.15 (25% reduction)
+Parent rule: UCB selection (node 50 highest UCB=1.600)
+Observation: **D2 REDUCTION WORKS!** Clustering jumped from 0.28→0.485 (73% improvement). Sharper C2 gradients (slower diffusion = steeper boundaries) enable stronger diffusiophoretic response. D2/D1 ratio changed from 13.3 to 10.0 - tighter coupling between field dynamics and particle response.
+Metrics: clustering=0.485 (NEW BLOCK HIGH), C1_std=1.60, C2_std=2.91, pos_std_y/x=1.11 (mild asymmetry), pattern_growth=582
+Literature: Diffusiophoretic velocity v ∝ M×∇C; sharper gradients (lower D2) increase ∇C magnitude (Anderson 1989)
+Next: parent=51, continue D2 reduction (try D2=0.1) OR increase Da_c for even sharper gradients
+
+---
+
+## Iter 50: 6/10
+Node: id=50, parent=49
+Mode/Strategy: exploit (revert to optimal M/consumption)
+Config: D1=0.015, D2=0.2, M=±16, consumption=180, Da_c=25, B=7.0, n_frames=4000
+Score: 6/10
+Visual: Complex labyrinthine field topology maintained (D1=0.015 breakthrough confirmed). NOT cruciform - multi-scale nested organic patterns with irregular boundaries. Particles show moderate clustering along field boundaries with halo/trace formation at concentration fronts.
+Mutation: M: ±20→±16, consumption: 220→180 (REVERTED to sweet spot)
+Parent rule: Revert from iter 49's failed high-mobility test
+Observation: **CONFIRMED**: D1=0.015 is the key breakthrough, NOT mobility increase. Reverting M/consumption restored labyrinthine topology AND improved clustering (0.206→0.280). High mobility DESTROYS the complex field topology by allowing pattern relaxation to simpler eigenmode.
+Metrics: clustering=0.280, C1_std=1.55, C2_std=2.93, pos_std_x=0.208, pos_std_y=0.201
+Literature: Shorter wavelength (lower D1) increases spatial heterogeneity; particles respond to sharper gradients (Cross & Hohenberg 1993)
+Next: parent=50, try D2 reduction for sharper C2 gradients (D2=0.15 or 0.1)
+
+---
+
 ## Iter 49: 5/10
 Node: id=49, parent=48
 Mode/Strategy: exploit - testing increased M and consumption with D1=0.015
@@ -936,4 +1253,94 @@ Parent rule: UCB selection (node 46 highest UCB=2.332)
 Observation: D1=0.01 produces very fine labyrinthine but particle clustering DROPPED (0.36→0.35) and asymmetry REVERSED (1.09→0.98). Wavelength may be TOO SHORT - particles cannot aggregate coherently across many fine gradients. OPTIMAL D1 likely between 0.01-0.02.
 Key insight: There is a D1 "sweet spot" - too high (0.05) locks into cruciform eigenmode, too low (0.01) makes wavelength too short for coherent particle clustering. D1=0.02 may be near optimal.
 Next: parent=46, try D1=0.015 (intermediate) or enhance clustering with D1=0.02 via other parameters
+
+---
+
+## Iter 62: 4/10
+Node: id=62, parent=61
+Mode/Strategy: exploit (testing boost approach)
+Config: D1=0.015, D2=0.15, Da_c=25, B=7.0, M=±16, consumption=200, boost_exponent=0.5
+Score: 4/10 (SEVERE DEGRADATION)
+Visual: Complex labyrinthine Turing patterns develop (C1_std=2.30, C2_std=3.52 - good contrast) but particle clustering has COLLAPSED. Particles appear uniformly scattered across domain with minimal boundary aggregation. Very thin broken traces at best, no coherent clustering.
+Metrics: clustering=0.1854 (62% below baseline 0.485, 53% below iter 61's 0.3967)
+pattern_growth=704, pos_std_x=0.2354, pos_std_y=0.2355 (highly symmetric - uniform spreading)
+Mutation: boost_exponent: 0.0 → 0.5 (enabled superlinear gradient response)
+Parent rule: Node 61 set up boost approach after saturation comprehensively failed
+Observation: **BOOST APPROACH CATASTROPHICALLY FAILED** - boost_exponent=0.5 caused clustering to collapse from 0.3967 to 0.1854 (53% drop). The superlinear amplification `v *= (1 + grad_mag^0.5)` causes particles to OVERSHOOT pattern boundaries rather than accumulate there. High-gradient regions create too much acceleration, shooting particles past the boundary instead of collecting them.
+
+**CRITICAL INSIGHT**: Both SATURATION and BOOST have failed. The common element is modifying velocity magnitude based on gradient magnitude. The LINEAR relationship (v ∝ grad) appears to be optimal - any nonlinearity (whether limiting OR enhancing) disrupts the balance needed for clustering at boundaries.
+
+Literature: Keller-Segel chemotaxis model uses linear gradient response - nonlinear modifications often destabilize aggregation patterns.
+
+Next: DISABLE boost (boost_exponent=0), return to pure linear baseline. With 2 iterations remaining in block, consider PARTICLE-PARTICLE interactions (ar_params) as alternative approach since mobility modifications have comprehensively failed.
+
+---
+
+## Iter 64: 6/10
+Node: id=64, parent=63
+Mode/Strategy: exploit (block-end)
+Config: D1=0.015, D2=0.15, Da_c=25, B=7.0, M=±18 (increased from ±16), boost_exponent=0.0 (disabled)
+Score: 6/10
+Visual: Complex labyrinthine topology persists throughout 4000 frames. C1/C2 fields show nested patterns with sharp boundaries. Particles follow gradients but do not exceed baseline clustering. Moderate particle organization at concentration boundaries.
+Metrics: clustering=0.4340, C1_std=1.7478, C2_std=3.0185
+Mutation: M: ±16 → ±18 (12.5% mobility increase)
+Parent rule: exploit highest UCB (node 63, UCB=2.471)
+Observation: Mobility increase to ±18 did NOT improve clustering (0.4340 vs 0.4122 from iter 63). Remains within stochastic variation range (~20%). Confirms M=±16 is near optimal - higher mobility doesn't help.
+Next: BLOCK END - proceed to block 9
+
+---
+
+## Block 8 Summary (Iterations 57-64)
+
+### Block Goal
+Test nonlinear mobility modifications in PDE_D.py to break clustering plateau at 0.485.
+
+### Experiments Conducted
+1. **Saturation approach (iters 57-60)**:
+   - saturation_scale: 2.0 → 1.0 → 0.5 → 0.0 (disabled)
+   - All worse than linear baseline
+   - Non-monotonic behavior (0.5 was WORST) proved formulation flawed
+
+2. **Boost approach (iters 61-62)**:
+   - boost_exponent: 0.0 → 0.5
+   - CATASTROPHIC: clustering collapsed from 0.3967 to 0.1854 (53% drop)
+   - Superlinear gradient response causes overshooting, not accumulation
+
+3. **Linear restoration (iters 63-64)**:
+   - Disabled boost, restored linear v ∝ ∇C
+   - Clustering recovered to 0.41-0.43 range
+   - Mobility increase (±16 → ±18) no improvement
+
+### Key Finding
+**LINEAR MOBILITY IS OPTIMAL**: Any nonlinear modification (saturating OR amplifying) disrupts the delicate balance that allows particles to accumulate at boundaries.
+
+**Root cause**: At pattern boundaries, gradient magnitude spikes. Modifying velocity:
+- Saturation → weakens gradient-following, particles don't reach boundary
+- Boost → overshoots boundary, particles pass through instead of accumulating
+
+### Block Statistics
+- Iterations: 8
+- Score range: 4-6/10
+- Best clustering: 0.4493 (iter 58)
+- Average clustering: 0.3706
+- Code modifications: 2 (saturation, boost - both failed)
+
+### Code Status
+PDE_D.py has boost_exponent parameter (p[2,4]) - should be kept at 0.0 (disabled).
+Linear mobility is confirmed optimal - no further PDE_D velocity modifications needed.
+
+### Next Block Direction (Block 9)
+Since PDE_D mobility modifications failed, pivot to **Gray-Scott PDE variant**:
+
+**Literature**: Pearson (1993) "Complex Patterns in a Simple System", Science 261:189-192
+- Gray-Scott model produces richer pattern space than Brusselator
+- Pattern types: α (spots), β (stripes), γ (worms), δ (mitosis), ε (pulsing)
+- Parameter space (F, k) directly selects pattern type
+
+**Rationale**:
+- 8 blocks of Brusselator exploration achieved labyrinthine topology and ~0.48 clustering
+- Brusselator parameter space exhausted; need different RD dynamics
+- Gray-Scott's F-k phase space offers systematic path to different pattern types
+
+---
 

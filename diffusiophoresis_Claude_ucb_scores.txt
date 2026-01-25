@@ -1,3 +1,4 @@
-=== UCB Scores (Block 6, iters 49-56, N=1, c=1.414) ===
+=== UCB Scores (Block 8, iters 65-72, N=2, c=1.414) ===
 
-Node 49: UCB=1.207, parent=root, visits=1, Score=5/10, Mutation=M: ±16→±20, consumption: 180→220 (from iter 48 baseline)
+Node 66: UCB=1.000, parent=65, visits=1, Score=0/10, Mutation=F: 0.04→0.02, k: 0.065→0.05, time_scale: 50→10, regime: λ-stripes→α-spots
+Node 65: UCB=0.867, parent=root, visits=2, Score=2/10, Mutation=Initial Gray-Scott config with λ-stripe regime parameters

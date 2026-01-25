@@ -51,12 +51,14 @@ The prompt provides: `Block info: block {block_number}, iteration {iter_in_block
 
 ### Code Modification Rules
 
-| When                                  | Allowed Changes                         |
-| ------------------------------------- | --------------------------------------- |
-| Within block (iterations 1-8)         | Config parameters ONLY                  |
-| At block boundary (>>> BLOCK END <<<) | Config parameters OR code modifications |
+| When                                  | Allowed Changes                                       |
+| ------------------------------------- | ----------------------------------------------------- |
+| Within block (iterations 1-8)         | Config parameters ONLY                                |
+| At block boundary (>>> BLOCK END <<<) | Config parameters OR code modifications OR **PDE variant creation** |
 
-**IMPORTANT**: Code modifications are ONLY allowed at the end of a block when you see `>>> BLOCK END <<<` in the prompt. During regular iterations within a block, you can only modify config parameters.
+**IMPORTANT**: Code modifications and PDE variant creation are ONLY allowed at the end of a block when you see `>>> BLOCK END <<<` in the prompt. During regular iterations within a block, you can only modify config parameters.
+
+**PDE Variant Creation**: At block boundaries, you can create new PDE files (e.g., `PDE_Diffusiophoresis_GrayScott.py`) to test fundamentally different reaction-diffusion models. See [Step 5.3](#step-53-create-pde-variant-block-end-only) for requirements.
 
 ---
 
@@ -380,6 +382,132 @@ f = ar_p1 * exp(-d^(2*ar_p2) / (2σ²)) - ar_p3 * exp(-d^(2*ar_p4) / (2σ²))
 - Compare directly to parent (same config, code-only diff)
 - Never modify GNN_LLM.py
 
+#### Step 5.3: Create PDE Variant (BLOCK END only)
+
+**When to create a variant:** Instead of modifying `PDE_Diffusiophoresis.py` directly, you can create a **new PDE variant file** to test fundamentally different reaction-diffusion models. This preserves the base Brusselator model and enables systematic comparison.
+
+**⚠️ REQUIREMENTS:**
+
+1. **ONLY at block boundaries** - Never during regular iterations within a block
+2. **MUST be grounded in established scientific literature** - Every variant must cite the source model
+3. **MUST include `PARAMS_DOC` class attribute** - Self-documenting parameter structure
+
+**Naming convention:**
+
+| File Name | Config `mesh_model_name` |
+|-----------|--------------------------|
+| `PDE_Diffusiophoresis_1.py` | `Diffusiophoresis_Mesh_1` |
+| `PDE_Diffusiophoresis_GrayScott.py` | `Diffusiophoresis_Mesh_GrayScott` |
+| `PDE_Diffusiophoresis_FHN.py` | `Diffusiophoresis_Mesh_FHN` |
+
+**Creating a variant:**
+
+1. **Copy base file:**
+   ```bash
+   cp src/ParticleGraph/generators/PDE_Diffusiophoresis.py \
+      src/ParticleGraph/generators/PDE_Diffusiophoresis_GrayScott.py
+   ```
+
+2. **Rename class and add literature citation:**
+   ```python
+   class PDE_Diffusiophoresis_GrayScott(pyg.nn.MessagePassing):
+       """
+       Gray-Scott reaction-diffusion model.
+
+       Literature: Pearson (1993) "Complex Patterns in a Simple System", Science 261:189-192
+       Pattern types: α (spots), β (stripes), γ (chaos), δ (mitosis), etc.
+
+       Equations:
+           dU/dt = Du * ∇²U - U*V² + F*(1-U)
+           dV/dt = Dv * ∇²V + U*V² - (F+k)*V
+       """
+   ```
+
+3. **Add PARAMS_DOC (REQUIRED):**
+   ```python
+   PARAMS_DOC = {
+       "model_name": "Gray-Scott",
+       "description": "Two-component autocatalytic reaction system (Pearson 1993)",
+       "literature": "Pearson (1993) Science 261:189-192",
+       "equations": {
+           "dU/dt": "Du * ∇²U - U*V² + F*(1-U)",
+           "dV/dt": "Dv * ∇²V + U*V² - (F+k)*V"
+       },
+       "params_mesh": [
+           {
+               "row": 0,
+               "description": "U field parameters",
+               "slots": [
+                   {"index": 0, "name": "Du", "description": "Diffusion coefficient for U", "typical_range": [0.16, 0.24]},
+                   {"index": 1, "name": "F", "description": "Feed rate", "typical_range": [0.02, 0.08]},
+                   {"index": 2, "name": "k", "description": "Kill rate", "typical_range": [0.045, 0.07]}
+               ]
+           },
+           {
+               "row": 1,
+               "description": "V field parameters",
+               "slots": [
+                   {"index": 0, "name": "Dv", "description": "Diffusion coefficient for V", "typical_range": [0.08, 0.12]}
+               ]
+           }
+       ],
+       "pattern_regimes": {
+           "alpha": "F=0.01-0.02, k=0.045-0.05 → spots",
+           "gamma": "F=0.03-0.04, k=0.06-0.065 → chaos",
+           "lambda": "F=0.04, k=0.065 → stripes"
+       }
+   }
+   ```
+
+4. **Implement the equations:**
+   ```python
+   def forward(self, data):
+       # ... extract C1 (=U), C2 (=V) ...
+
+       # Gray-Scott reaction terms (Pearson 1993)
+       R1 = -U * V * V + self.F * (1 - U)  # dU/dt reaction
+       R2 = U * V * V - (self.F + self.k) * V  # dV/dt reaction
+
+       dC1 = self.Du * laplacian_U + R1
+       dC2 = self.Dv * laplacian_V + R2
+       # ...
+   ```
+
+5. **Update config to use variant:**
+   ```yaml
+   graph_model:
+     mesh_model_name: Diffusiophoresis_Mesh_GrayScott  # Uses PDE_Diffusiophoresis_GrayScott.py
+
+   simulation:
+     params_mesh:
+       - [0.2, 0.04, 0.06, 0, 0, 0]  # Du, F, k, (unused slots)
+       - [0.1, 0, 0, 0, 0, 0]        # Dv
+       - [1.0, 0, 0, 0, 0, 0]        # Particle coupling params
+   ```
+
+**Established models to consider:**
+
+| Model | Key Parameters | Pattern Types | Literature |
+|-------|---------------|---------------|------------|
+| **Gray-Scott** | F (feed), k (kill) | spots, stripes, mitosis | Pearson (1993) Science 261 |
+| **FitzHugh-Nagumo** | a, b, ε, D ratio | spirals, waves, excitable | FitzHugh (1961) Biophys J |
+| **Schnakenberg** | a, b, γ | spots, stripes | Schnakenberg (1979) JTB |
+| **Gierer-Meinhardt** | ρ, μ, ν | spots, bands | Gierer & Meinhardt (1972) |
+| **Swift-Hohenberg** | r, g | hexagons, stripes | Swift & Hohenberg (1977) |
+
+**Log format for variant creation:**
+
+```
+## Block N Summary + PDE Variant Creation
+
+### Variant: PDE_Diffusiophoresis_GrayScott
+Literature: Pearson (1993) "Complex Patterns in a Simple System", Science 261:189-192
+Rationale: Block N showed Brusselator limited to spots; Gray-Scott has richer pattern space
+Created file: src/ParticleGraph/generators/PDE_Diffusiophoresis_GrayScott.py
+Config change: mesh_model_name: Diffusiophoresis_Mesh_GrayScott
+Initial params_mesh: [[0.2, 0.04, 0.06], [0.1]]
+```
+
 ---
 
 ## Block Workflow (End of Block)
@@ -416,6 +544,13 @@ Add/modify rules based on block experience:
 
 [What code changes helped/hurt]
 
+### PDE Variants
+
+| Variant | Model | Literature | Status | Best Score |
+|---------|-------|------------|--------|------------|
+| Diffusiophoresis_Mesh | Brusselator | Prigogine (1968) | active | 5/10 |
+| Diffusiophoresis_Mesh_GrayScott | Gray-Scott | Pearson (1993) | testing | - |
+
 ---
 
 ## Previous Block Summary
@@ -429,6 +564,7 @@ Add/modify rules based on block experience:
 ### Block Info
 
 Parameters: ...
+mesh_model_name: [current variant]
 Iterations: M to M+8
 
 ### Hypothesis
