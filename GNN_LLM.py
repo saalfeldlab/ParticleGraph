@@ -113,16 +113,37 @@ def track_code_modifications(root_dir: str, iteration: int) -> list:
     if not is_git_repo(root_dir):
         return []
 
-    # Files that Claude can modify
+    # Base files that Claude can modify
     code_files = [
-        'src/ParticleGraph/generators/PDE_Diffusiophoresis.py',
         'src/ParticleGraph/generators/PDE_D.py',
         'src/ParticleGraph/generators/graph_data_generator.py',
+        'src/ParticleGraph/generators/utils.py',
     ]
 
-    modified = get_modified_code_files(root_dir, code_files)
-    results = []
+    # Add all PDE_Diffusiophoresis*.py files (base + variants)
+    generators_dir = Path(root_dir) / 'src/ParticleGraph/generators'
+    for pde_file in generators_dir.glob('PDE_Diffusiophoresis*.py'):
+        rel_path = str(pde_file.relative_to(root_dir))
+        if rel_path not in code_files:
+            code_files.append(rel_path)
 
+    # Check for modified tracked files
+    modified = get_modified_code_files(root_dir, code_files)
+
+    # Also check for untracked (new) files in generators directory
+    try:
+        result = subprocess.run(
+            ['git', 'ls-files', '--others', '--exclude-standard', 'src/ParticleGraph/generators/'],
+            cwd=root_dir, capture_output=True, text=True, timeout=5
+        )
+        if result.returncode == 0:
+            for line in result.stdout.strip().split('\n'):
+                if line and line.endswith('.py') and line not in modified:
+                    modified.append(line)
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+
+    results = []
     for file_path in modified:
         success, message = commit_code_modification(root_dir, file_path, iteration)
         results.append((file_path, success, message))
