@@ -322,11 +322,12 @@ def data_train_particle(config, erase, best_model, device):
                         model.a[run, n_particles:n_particles + n_ghosts] = model.a[
                             run, ghosts_particles.embedding_index].clone().detach()  # sample ghost embedding
 
+                # distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                # adj_t = (distance < max_radius**2) & (distance > min_radius**2)
+                # edges = adj_t.nonzero().t().contiguous()
+                # del distance, adj_t
 
-                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                adj_t = (distance < max_radius**2) & (distance > min_radius**2)
-                edges = adj_t.nonzero().t().contiguous()
-                del distance, adj_t
+                edge_index = edges_radius_blockwise( x, dimension, bc_dpos, min_radius, max_radius, block=4096)
 
                 if batch_ratio < 1:
                     ids = np.random.permutation(x.shape[0])[:int(x.shape[0] * batch_ratio)]

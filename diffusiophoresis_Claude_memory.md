@@ -135,3 +135,16 @@ Knowledge base: D1=0.015-0.02 breaks cruciform lock by selecting higher-order ei
 ### Iterations This Block
 (Block 11 starts next iteration)
 
+
+### Failed Code Modification (Iter 81)
+Error: rticleGraph/src/ParticleGraph/generators/graph_data_generator.py", line 91, in data_generate
+    data_generate_particle_field(
+  File "/groups/saalfeld/home/allierc/Graph/ParticleGraph/src/ParticleGraph/generators/graph_data_generator.py", line 964, in data_generate_particle_field
+    dataset_p_p = data.Data(x=x, edge_index=edge_index_pp)
+NameError: name 'edge_index_pp' is not defined. Did you mean: 'edge_index'?
+
+================================================================================
+
+
+**DO NOT retry this modification**
+

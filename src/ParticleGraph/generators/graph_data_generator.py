@@ -948,10 +948,10 @@ def data_generate_particle_field(
                         torch.cuda.synchronize()
                         t0 = time.perf_counter()
 
-                    # edge_index = edges_radius_blockwise( x, dimension, bc_dpos, min_radius, max_radius, block=2048)
+                    # edge_index_pp = edges_radius_blockwise( x, dimension, bc_dpos, min_radius, max_radius, block=2048)
 
                     pos = x[:, 1:1+dimension]
-                    edge_index = get_edges_with_cache(
+                    edge_index_pp = get_edges_with_cache(
                         pos=pos,
                         bc_dpos=bc_dpos,
                         cache=edge_cache,
@@ -962,7 +962,6 @@ def data_generate_particle_field(
                     )   
 
                     dataset_p_p = data.Data(x=x, edge_index=edge_index_pp)
-                    del distance, adj_t
 
                     if timer:
                         torch.cuda.synchronize()
