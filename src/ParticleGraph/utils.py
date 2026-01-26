@@ -24,6 +24,7 @@ from scipy import stats
 
 import warnings
 from collections import defaultdict
+import itertools
 
 warnings.filterwarnings('ignore')
 
@@ -2134,3 +2135,346 @@ def plot_interesting_causality_pairs(significant_pairs, filtered_time_series, tr
     print(f"all plots saved to graphs_data/{dataset_name}/causality_pair_*.png")
 
     return selected_pairs
+
+
+def edges_radius_blockwise(
+    x,
+    dimension,
+    bc_dpos,
+    min_radius,
+    max_radius,
+    block=1024,
+    include_self=False,
+):
+    """
+    Builds a bidirectional edge_index (both i->j and j->i) for pairs with
+    min_radius < dist(i,j) < max_radius, using blockwise computation to avoid OOM.
+    Uses j>i to compute each pair once, then mirrors.
+
+    Returns:
+        edge_index: LongTensor of shape [2, E] on the same device as x
+    """
+    pos = x[:, 1:dimension+1]
+    device = pos.device
+    N = pos.shape[0]
+    min2 = float(min_radius * min_radius)
+    max2 = float(max_radius * max_radius)
+
+    rows = []
+    cols = []
+
+    # Precompute global j indices once (saves a little overhead)
+    global_j = torch.arange(N, device=device)[None, :]  # [1, N]
+
+    for i0 in range(0, N, block):
+        i1 = min(i0 + block, N)
+        pi = pos[i0:i1]  # [B, D]
+
+        d = bc_dpos(pi[:, None, :] - pos[None, :, :])    # [B, N, D]
+        dist2 = (d * d).sum(dim=-1)                      # [B, N]
+
+        # radius rule
+        mask = (dist2 > min2) & (dist2 < max2)           # [B, N] bool
+
+        # keep only upper triangle: j > i
+        global_i = torch.arange(i0, i1, device=device)[:, None]  # [B, 1]
+        mask &= (global_j > global_i)
+
+        if include_self:
+            # (usually you don't want self-edges; if you do, enable this)
+            mask |= (global_j == global_i)
+
+        ii, jj = mask.nonzero(as_tuple=True)             # ii in [0,B), jj in [0,N)
+        rows.append(ii + i0)                             # global i
+        cols.append(jj)                                  # global j
+
+        # free big temporaries before next block
+        del d, dist2, mask, ii, jj
+
+    # unique (i<j) edges
+    row = torch.cat(rows, dim=0)
+    col = torch.cat(cols, dim=0)
+    edge_ij = torch.stack([row, col], dim=0).long()      # [2, E_half]
+
+    # mirror to get both directions
+    edge_index = torch.cat([edge_ij, edge_ij.flip(0)], dim=1).contiguous()  # [2, 2*E_half]
+    return edge_index
+
+
+
+
+def edges_radius_cell_list_bc(
+    pos: torch.Tensor,
+    bc_dpos,
+    min_radius: float,
+    max_radius: float,
+    block_dim: int = 3,
+    include_self: bool = False,
+):
+    """
+    Radius-based edge construction using cell lists with periodic BC
+    consistent with bc_dpos (e.g. shifted_periodic).
+
+    Args:
+        pos: [N, D] positions (D=2 or 3), assumed in [0,1)
+        bc_dpos: boundary displacement function (e.g. shifted_periodic)
+        min_radius, max_radius: cutoff radii
+        block_dim: spatial dimension (2 or 3)
+        include_self: include i->i edges
+
+    Returns:
+        edge_index: LongTensor [2, E] with both i->j and j->i
+    """
+    device = pos.device
+    N, D = pos.shape
+    assert D == block_dim
+
+    # --- cell size = cutoff ---
+    cell_size = max_radius
+    ncell = int(1.0 // cell_size)
+    ncell = max(ncell, 1)
+
+    # --- wrap positions to [0,1) for hashing ---
+    pos_cell = torch.remainder(pos, 1.0)
+
+    # --- integer cell coordinates ---
+    cell = torch.floor(pos_cell / cell_size).long()
+    cell = torch.clamp(cell, 0, ncell - 1)
+
+    # --- hash cell coords ---
+    if D == 3:
+        cell_id = cell[:, 0] + ncell * (cell[:, 1] + ncell * cell[:, 2])
+        offsets = list(itertools.product([-1, 0, 1], repeat=3))
+    else:  # D == 2
+        cell_id = cell[:, 0] + ncell * cell[:, 1]
+        offsets = list(itertools.product([-1, 0, 1], repeat=2))
+
+    # --- sort particles by cell ---
+    perm = torch.argsort(cell_id)
+    cell_id_sorted = cell_id[perm]
+
+    unique_ids, counts = torch.unique_consecutive(cell_id_sorted, return_counts=True)
+    starts = torch.cumsum(torch.cat([counts.new_zeros(1), counts[:-1]]), dim=0)
+    ends = starts + counts
+
+    cell_slices = {
+        int(cid): (int(s), int(e))
+        for cid, s, e in zip(unique_ids.tolist(), starts.tolist(), ends.tolist())
+    }
+
+    min2 = min_radius * min_radius
+    max2 = max_radius * max_radius
+
+    rows, cols = [], []
+
+    # --- loop over occupied cells ---
+    for cid, (s0, e0) in cell_slices.items():
+        idx0 = perm[s0:e0]
+        p0 = pos[idx0]
+
+        # decode cell coordinates
+        if D == 3:
+            z = cid // (ncell * ncell)
+            rem = cid - z * ncell * ncell
+            y = rem // ncell
+            x = rem - y * ncell
+            base = (x, y, z)
+        else:
+            y = cid // ncell
+            x = cid - y * ncell
+            base = (x, y)
+
+        for off in offsets:
+            neigh = tuple((base[d] + off[d]) % ncell for d in range(D))
+            if D == 3:
+                nid = neigh[0] + ncell * (neigh[1] + ncell * neigh[2])
+            else:
+                nid = neigh[0] + ncell * neigh[1]
+
+            if nid not in cell_slices or nid < cid:
+                continue
+
+            s1, e1 = cell_slices[nid]
+            idx1 = perm[s1:e1]
+            p1 = pos[idx1]
+
+            if nid == cid:
+                # same-cell: only i < j
+                d = bc_dpos(p0[:, None, :] - p0[None, :, :])
+                dist2 = (d * d).sum(-1)
+                mask = (dist2 > min2) & (dist2 < max2)
+                if not include_self:
+                    mask &= ~torch.eye(mask.shape[0], device=device, dtype=torch.bool)
+                mask &= torch.triu(torch.ones_like(mask, dtype=torch.bool), diagonal=1)
+
+                ii, jj = mask.nonzero(as_tuple=True)
+                rows.append(idx0[ii])
+                cols.append(idx0[jj])
+            else:
+                d = bc_dpos(p0[:, None, :] - p1[None, :, :])
+                dist2 = (d * d).sum(-1)
+                mask = (dist2 > min2) & (dist2 < max2)
+
+                ii, jj = mask.nonzero(as_tuple=True)
+                rows.append(idx0[ii])
+                cols.append(idx1[jj])
+
+    if not rows:
+        return torch.empty((2, 0), dtype=torch.long, device=device)
+
+    row = torch.cat(rows)
+    col = torch.cat(cols)
+
+    # mirror to get both directions
+    edge_half = torch.stack([row, col], dim=0)
+    edge_index = torch.cat([edge_half, edge_half.flip(0)], dim=1).contiguous()
+
+    return edge_index
+
+from dataclasses import dataclass
+
+@dataclass
+class NeighborCache:
+    pos_ref: torch.Tensor = None        # [N,D] positions at last rebuild (for displacement tracking)
+    edge_list: torch.Tensor = None      # [2,Elist] pairs within r_list (bidirectional if you want)
+    r_cut: float = None
+    r_skin: float = None
+    r_list: float = None
+
+def build_edge_list_blockwise(pos, bc_dpos, r_list, min_radius=0.0, block=2048):
+    # Use your existing edges_radius_blockwise_bidir idea, but with max_radius=r_list
+    # (assuming you already have a working blockwise builder)
+    # edge_list contains BOTH directions.
+    edge_list = edges_radius_blockwise(
+        x=torch.cat([torch.zeros((pos.shape[0],1), device=pos.device), pos], dim=1), # dummy to match your old signature if needed
+        dimension=pos.shape[1],
+        bc_dpos=bc_dpos,
+        min_radius=min_radius,
+        max_radius=r_list,
+        block=block
+    )
+    return edge_list
+
+def filter_edges_by_cutoff(pos, edge_list, bc_dpos, r_cut, min_radius=0.0):
+    src = edge_list[0]
+    dst = edge_list[1]
+    d = bc_dpos(pos[src] - pos[dst])
+    dist2 = (d*d).sum(dim=-1)
+    keep = (dist2 < r_cut*r_cut) & (dist2 > min_radius*min_radius)
+    return edge_list[:, keep].contiguous()
+
+def get_edges_with_cache(
+    pos: torch.Tensor,
+    bc_dpos,
+    cache: NeighborCache,
+    r_cut: float,
+    r_skin: float,
+    min_radius: float = 0.0,
+    block: int = 2048,
+):
+    # Initialize cache if needed or radii changed
+    if (cache.edge_list is None) or (cache.pos_ref is None) or (cache.r_cut != r_cut) or (cache.r_skin != r_skin):
+        cache.r_cut = float(r_cut)
+        cache.r_skin = float(r_skin)
+        cache.r_list = float(r_cut + r_skin)
+        cache.pos_ref = pos.detach().clone()
+        cache.edge_list = build_edge_list_blockwise(pos, bc_dpos, cache.r_list, min_radius=min_radius, block=block)
+
+    # Check max displacement since last rebuild
+    disp = bc_dpos(pos - cache.pos_ref)                  # [N,D]
+    max_disp = torch.sqrt((disp*disp).sum(dim=-1)).max() # scalar
+
+    if max_disp > (cache.r_skin * 0.5):
+        # Rebuild list
+        cache.pos_ref = pos.detach().clone()
+        cache.edge_list = build_edge_list_blockwise(pos, bc_dpos, cache.r_list, min_radius=min_radius, block=block)
+
+    # Always filter list to current cutoff
+    edge_index = filter_edges_by_cutoff(pos, cache.edge_list, bc_dpos, r_cut, min_radius=min_radius)
+    return edge_index
+
+
+def edges_radius_kdtree(
+    pos: torch.Tensor,
+    min_radius: float,
+    max_radius: float,
+    include_self: bool = False,
+) -> torch.Tensor:
+    """
+    Build bidirectional edges with KD-tree (CPU) for min_radius < ||pi-pj|| < max_radius.
+    Non-periodic.
+
+    pos: [N,D] torch tensor (CPU or GPU)
+    returns: edge_index [2,E] on same device as pos
+    """
+    # --- import SciPy KD-tree ---
+    try:
+        from scipy.spatial import cKDTree
+    except Exception as e:
+        raise ImportError("This function requires scipy (scipy.spatial.cKDTree).") from e
+
+    device = pos.device
+    pos_np = pos.detach().cpu().numpy()
+    tree = cKDTree(pos_np)
+
+    # query pairs within max_radius (unordered i<j)
+    pairs = tree.query_pairs(r=max_radius, output_type='ndarray')  # shape [M,2], i<j
+    if pairs.size == 0:
+        return torch.empty((2, 0), dtype=torch.long, device=device)
+
+    # filter by min_radius if needed
+    if min_radius > 0:
+        d = pos_np[pairs[:, 0]] - pos_np[pairs[:, 1]]
+        dist2 = np.einsum('ij,ij->i', d, d)
+        keep = dist2 > (min_radius * min_radius)
+        pairs = pairs[keep]
+        if pairs.size == 0:
+            return torch.empty((2, 0), dtype=torch.long, device=device)
+
+    # make bidirectional edges
+    i = torch.from_numpy(pairs[:, 0].astype(np.int64))
+    j = torch.from_numpy(pairs[:, 1].astype(np.int64))
+    edge_half = torch.stack([i, j], dim=0)
+    edge_index = torch.cat([edge_half, edge_half.flip(0)], dim=1)
+
+    if include_self:
+        n = pos_np.shape[0]
+        self_e = torch.arange(n, dtype=torch.long)
+        self_e = torch.stack([self_e, self_e], dim=0)
+        edge_index = torch.cat([edge_index, self_e], dim=1)
+
+    return edge_index.to(device).contiguous()
+
+def edges_radius_ckdtree_periodic_fast(pos, min_radius, max_radius, boxsize=1.0, include_self=False):
+    from scipy.spatial import cKDTree
+
+    device = pos.device
+    pos_np = pos.detach().cpu().numpy()
+
+    tree = cKDTree(pos_np, boxsize=boxsize)  # periodic
+    pairs = tree.query_pairs(r=max_radius, output_type="ndarray")  # i<j
+
+    if pairs.size == 0:
+        return torch.empty((2, 0), dtype=torch.long, device=device)
+
+    if min_radius > 0:
+        d = pos_np[pairs[:, 0]] - pos_np[pairs[:, 1]]
+        # minimum image in periodic box (same convention)
+        d -= np.round(d / boxsize) * boxsize
+        dist2 = np.einsum("ij,ij->i", d, d)
+        pairs = pairs[dist2 > (min_radius * min_radius)]
+        if pairs.size == 0:
+            return torch.empty((2, 0), dtype=torch.long, device=device)
+
+    i = torch.from_numpy(pairs[:, 0].astype(np.int64))
+    j = torch.from_numpy(pairs[:, 1].astype(np.int64))
+    edge_half = torch.stack([i, j], dim=0)
+    edge_index = torch.cat([edge_half, edge_half.flip(0)], dim=1)
+
+    if include_self:
+        n = pos_np.shape[0]
+        self_e = torch.arange(n, dtype=torch.long)
+        self_e = torch.stack([self_e, self_e], dim=0)
+        edge_index = torch.cat([edge_index, self_e], dim=1)
+
+    return edge_index.to(device).contiguous()
