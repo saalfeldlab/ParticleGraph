@@ -55,7 +55,7 @@ if __name__ == "__main__":
         best_model = None
         task = 'generate'  # 'generate', 'train', 'test'
 
-        config_list = ['arbitrary_3_3D']
+        config_list = ['arbitrary_3_1']
 
     for config_file_ in config_list:
         print(" ")

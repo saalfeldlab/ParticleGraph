@@ -377,25 +377,7 @@ def data_generate_particle(
                     torch.cuda.synchronize()
                     t0 = time.perf_counter()
 
-                # distance = torch.sum(
-                #     bc_dpos(x[:, None, 1 : dimension + 1] - x[None, :, 1 : dimension + 1])
-                #     ** 2,
-                #     dim=2,
-                # )
-                # adj_t = (distance < max_radius**2) & (distance > min_radius**2)
-                # edge_index = adj_t.nonzero().t().contiguous()
-                # del distance, adj_t
-
                 # edge_index = edges_radius_blockwise( x, dimension, bc_dpos, min_radius, max_radius, block=2048)
-
-                # pos = x[:, 1:1 + dimension]   # [N,2] or [N,3]
-                # edge_index = edges_radius_ckdtree_periodic_fast(
-                #     pos=pos,
-                #     min_radius=min_radius,
-                #     max_radius=max_radius,
-                #     boxsize=1.0,
-                #     include_self=False,
-                # )
 
                 pos = x[:, 1:1+dimension]
                 edge_index = get_edges_with_cache(
@@ -407,7 +389,6 @@ def data_generate_particle(
                     min_radius=min_radius,
                     block=2048
                 )   
-
 
                 if timer:
                     torch.cuda.synchronize()
@@ -895,6 +876,7 @@ def data_generate_particle_field(
         X1, V1, T1, H1, _, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
         X1_mesh, _, _, H1_mesh, _, _, _ = init_mesh(config, device=device)
         H1_mesh[mask_mesh == 0.0] = 0.0
+        edge_cache = NeighborCache()
 
 
         if "diffusiophoresis" in model_config.field_type:
@@ -965,13 +947,6 @@ def data_generate_particle_field(
                     if timer:
                         torch.cuda.synchronize()
                         t0 = time.perf_counter()
-
-                    # distance_pp = torch.sum(
-                    #     bc_dpos(x[:, None, 1:dimension+1] - x[None, :, 1:dimension+1])**2, 
-                    #     dim=2
-                    # )
-                    # adj_t = (distance_pp < max_radius**2) & (distance_pp > min_radius**2)
-                    # edge_index_pp = adj_t_pp.nonzero().t().contiguous()
 
                     # edge_index = edges_radius_blockwise( x, dimension, bc_dpos, min_radius, max_radius, block=2048)
 
@@ -1087,15 +1062,6 @@ def data_generate_particle_field(
                     if timer:
                         torch.cuda.synchronize()
                         t0 = time.perf_counter()
-
-                    # distance = torch.sum(
-                    #     bc_dpos(x[:, None, 1 : dimension + 1] - x[None, :, 1 : dimension + 1])
-                    #     ** 2,
-                    #     dim=2,
-                    # )
-                    # adj_t = (distance < max_radius**2) & (distance > min_radius**2)
-                    # edge_index = adj_t.nonzero().t().contiguous()
-                    # del distance, adj_t
 
                     # edge_index = edges_radius_blockwise( x, dimension, bc_dpos, min_radius, max_radius, block=4096)
 
