@@ -18,6 +18,7 @@ from matplotlib.collections import PatchCollection
 import tifffile
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from pathlib import Path
+import time
 import os
 
 # from fa2_modified import ForceAtlas2
@@ -48,6 +49,7 @@ def data_generate(
     best_model=None,
     device=None,
     bSave=True,
+    timer=False
 ):
     has_particle_field = (
         "PDE_ParticleField" in config.graph_model.particle_model_name
@@ -98,6 +100,7 @@ def data_generate(
             scenario="none",
             device=device,
             bSave=bSave,
+            timer=timer
         )
     elif has_mesh:
         data_generate_mesh(
@@ -196,6 +199,7 @@ def data_generate(
             scenario=scenario,
             device=device,
             bSave=bSave,
+            timer=timer
         )
 
     plt.style.use("default")
@@ -248,6 +252,7 @@ def data_generate_particle(
     scenario="none",
     device=None,
     bSave=True,
+    timer=False
 ):
     simulation_config = config.simulation
     training_config = config.training
@@ -365,23 +370,39 @@ def data_generate_particle(
             )  # can be different from frame to frame
 
             # compute connectivity rule
-
-            distance = torch.sum(
-                bc_dpos(x[:, None, 1 : dimension + 1] - x[None, :, 1 : dimension + 1])
-                ** 2,
-                dim=2,
-            )
-            adj_t = (
-                (distance < max_radius**2) & (distance > min_radius**2)
-            ).float() * 1
-            edge_index = adj_t.nonzero().t().contiguous()
-            edge_p_p_list.append(to_numpy(edge_index))
-
-            dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, field=[])
-
-            # model prediction
             with torch.no_grad():
+
+                if timer:
+                    torch.cuda.synchronize()
+                    t0 = time.perf_counter()
+                distance = torch.sum(
+                    bc_dpos(x[:, None, 1 : dimension + 1] - x[None, :, 1 : dimension + 1])
+                    ** 2,
+                    dim=2,
+                )
+                adj_t = (distance < max_radius**2) & (distance > min_radius**2)
+                edge_index = adj_t.nonzero().t().contiguous()
+                del distance, adj_t
+
+                if timer:
+                    torch.cuda.synchronize()
+                    t1 = time.perf_counter()
+                    print(
+                        f"[edge build] "
+                        f"N={x.shape[0]:6d}, "
+                        f"E={edge_index.shape[1]:8d}, "
+                        f"time={(t1 - t0)*1000:.2f} ms"
+        )
+                    
+                # edge_p_p_list.append(to_numpy(edge_index))
+
+                dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, field=[])
+
+                # model prediction
+
                 y = model(dataset)
+
+            
 
             if simulation_config.angular_sigma > 0:
                 phi = (
@@ -720,7 +741,7 @@ def data_generate_particle(
                 )
             # torch.save(y_list, f'graphs_data/{dataset_name}/y_list_{run}.pt')
             np.save(f"graphs_data/{dataset_name}/y_list_{run}.npy", y_list)
-            np.savez(f"graphs_data/{dataset_name}/edge_p_p_list_{run}", *edge_p_p_list)
+            # np.savez(f"graphs_data/{dataset_name}/edge_p_p_list_{run}", *edge_p_p_list)
 
             torch.save(model.p, f"graphs_data/{dataset_name}/model_p.pt")
 
@@ -747,6 +768,7 @@ def data_generate_particle_field(
     scenario="none",
     device=None,
     bSave=True,
+    timer=False
 ):
 
     simulation_config = config.simulation
@@ -915,76 +937,93 @@ def data_generate_particle_field(
 
             if "diffusiophoresis" in model_config.field_type:
 
-                # Particle-particle edges
-                distance_pp = torch.sum(
-                    bc_dpos(x[:, None, 1:dimension+1] - x[None, :, 1:dimension+1])**2, 
-                    dim=2
-                )
-                adj_t_pp = ((distance_pp < max_radius**2) & (distance_pp > min_radius**2)).float()
-                edge_index_pp = adj_t_pp.nonzero().t().contiguous()
-                dataset_p_p = data.Data(x=x, edge_index=edge_index_pp)
-                
-                x_particle_field = torch.cat((x_mesh, x), dim=0)
-
-                # Compute mesh→particle distances (only cross-terms to save memory)
-                # Shape: [n_nodes, n_particles]
-                distance_mp = torch.sum(
-                    bc_dpos(
-                        x_mesh[:, None, 1:dimension+1] -
-                        x[None, :, 1:dimension+1]
-                    )**2, dim=2
-                )
-
-                # Field→particle edges for interpolation (mesh nodes → particles)
-                adj_t_fp = ((distance_mp < (max_radius/2)**2) & (distance_mp > min_radius**2)).float()
-                edge_index_fp_local = adj_t_fp.nonzero().t().contiguous()
-                # Offset particle indices by n_nodes to match x_particle_field indexing
-                edge_index_fp = torch.stack([
-                    edge_index_fp_local[0],           # mesh indices stay the same
-                    edge_index_fp_local[1] + n_nodes  # particle indices offset by n_nodes
-                ], dim=0)
-                
-                # Interpolate fields to particles
-                dataset_interp = data.Data(
-                    x=x_particle_field,
-                    edge_index=edge_index_fp
-                )
-                interpolated_fields = model_p_f(dataset_interp, direction='interpolate')
-                
-                # Update particle fields
-                x[:, 6:8] = interpolated_fields[n_nodes:,:]
-                x_particle_field = torch.cat((x_mesh, x), dim=0)
-                
-                # Create dataset for diffusiophoretic velocities
-                dataset_f_p = data.Data(
-                    x=x_particle_field,
-                    edge_index=edge_index_fp
-                )
-                
-                # Particle→field edges (particles → mesh nodes)
-                # Reuse the same distance matrix (transposed logic)
-                adj_t_pf = ((distance_mp.T < (max_radius/2)**2) & (distance_mp.T > min_radius**2)).float()
-                edge_index_pf_local = adj_t_pf.nonzero().t().contiguous()
-                # Offset particle indices by n_nodes to match x_particle_field indexing
-                edge_index_pf = torch.stack([
-                    edge_index_pf_local[0] + n_nodes,  # particle indices offset by n_nodes
-                    edge_index_pf_local[1]             # mesh indices stay the same
-                ], dim=0)
-                
-                dataset_p_f = data.Data(
-                    x=x_particle_field,
-                    edge_index=edge_index_pf
-                )
-                
-                # Field-field dataset
-                dataset_mesh = data.Data(
-                    x=x_mesh,
-                    edge_index=mesh_data["edge_index"],
-                    edge_attr=mesh_data["edge_weight"],
-                    device=device,
-                )
-                
                 with torch.no_grad():
+                    # Particle-particle edges
+
+                    if timer:
+                        torch.cuda.synchronize()
+                        t0 = time.perf_counter()
+                    distance_pp = torch.sum(
+                        bc_dpos(x[:, None, 1:dimension+1] - x[None, :, 1:dimension+1])**2, 
+                        dim=2
+                    )
+                    adj_t = (distance_pp < max_radius**2) & (distance_pp > min_radius**2)
+                    edge_index_pp = adj_t_pp.nonzero().t().contiguous()
+                    dataset_p_p = data.Data(x=x, edge_index=edge_index_pp)
+                    del distance, adj_t
+
+                    if timer:
+                        torch.cuda.synchronize()
+                        t1 = time.perf_counter()
+                        print(
+                            f"[edge build] "
+                            f"N={x.shape[0]:6d}, "
+                            f"E={edge_index.shape[1]:8d}, "
+                            f"time={(t1 - t0)*1000:.2f} ms"
+        )
+                    
+                    
+                    x_particle_field = torch.cat((x_mesh, x), dim=0)
+
+                    # Compute mesh→particle distances (only cross-terms to save memory)
+                    # Shape: [n_nodes, n_particles]
+                    distance_mp = torch.sum(
+                        bc_dpos(
+                            x_mesh[:, None, 1:dimension+1] -
+                            x[None, :, 1:dimension+1]
+                        )**2, dim=2
+                    )
+
+                    # Field→particle edges for interpolation (mesh nodes → particles)
+                    adj_t_fp = ((distance_mp < (max_radius/2)**2) & (distance_mp > min_radius**2)).float()
+                    edge_index_fp_local = adj_t_fp.nonzero().t().contiguous()
+                    # Offset particle indices by n_nodes to match x_particle_field indexing
+                    edge_index_fp = torch.stack([
+                        edge_index_fp_local[0],           # mesh indices stay the same
+                        edge_index_fp_local[1] + n_nodes  # particle indices offset by n_nodes
+                    ], dim=0)
+                    
+                    # Interpolate fields to particles
+                    dataset_interp = data.Data(
+                        x=x_particle_field,
+                        edge_index=edge_index_fp
+                    )
+                    interpolated_fields = model_p_f(dataset_interp, direction='interpolate')
+                    
+                    # Update particle fields
+                    x[:, 6:8] = interpolated_fields[n_nodes:,:]
+                    x_particle_field = torch.cat((x_mesh, x), dim=0)
+                    
+                    # Create dataset for diffusiophoretic velocities
+                    dataset_f_p = data.Data(
+                        x=x_particle_field,
+                        edge_index=edge_index_fp
+                    )
+                    
+                    # Particle→field edges (particles → mesh nodes)
+                    # Reuse the same distance matrix (transposed logic)
+                    adj_t_pf = ((distance_mp.T < (max_radius/2)**2) & (distance_mp.T > min_radius**2)).float()
+                    edge_index_pf_local = adj_t_pf.nonzero().t().contiguous()
+                    # Offset particle indices by n_nodes to match x_particle_field indexing
+                    edge_index_pf = torch.stack([
+                        edge_index_pf_local[0] + n_nodes,  # particle indices offset by n_nodes
+                        edge_index_pf_local[1]             # mesh indices stay the same
+                    ], dim=0)
+                    
+                    dataset_p_f = data.Data(
+                        x=x_particle_field,
+                        edge_index=edge_index_pf
+                    )
+                    
+                    # Field-field dataset
+                    dataset_mesh = data.Data(
+                        x=x_mesh,
+                        edge_index=mesh_data["edge_index"],
+                        edge_attr=mesh_data["edge_weight"],
+                        device=device,
+                    )
+                
+
                     # Calculate particle-particle repulsion
                     y0 = model_p_f(dataset_p_p, direction='pp')
                     

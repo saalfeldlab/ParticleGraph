@@ -1,7 +1,0 @@
-=== UCB Scores (Block 9, iters 73-80, N=5, c=1.414) ===
-
-Node 77: UCB=1.781, parent=76, visits=1, Score=2/10, Mutation=M1: -48 → -500, M2: +48 → +500
-Node 76: UCB=1.254, parent=75, visits=2, Score=2/10, Mutation=M1: -16 → -48, M2: +16 → +48
-Node 75: UCB=1.090, parent=74, visits=3, Score=3/10, Mutation=consumption: 5 → 0, production: -5 → 0
-Node 74: UCB=0.832, parent=73, visits=4, Score=2/10, Mutation=consumption: 18 → 5, production: -18 → -5
-Node 73: UCB=0.827, parent=root, visits=5, Score=3/10, Mutation=V-clamping code modification applied

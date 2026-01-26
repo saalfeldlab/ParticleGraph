@@ -7,13 +7,14 @@ date: "2025-01-25"
 
 ## Introduction
 
-Understanding morphogenesis requires more than generating patterns; it requires understanding how interacting processes converge toward stable, functional form. This work presents a closed-loop experimental framework in which experiments, reasoning, and memory are tightly coupled, with a large language model (LLM) operating as an active scientific component rather than a passive interpreter.
+Understanding morphogenesis requires more than generating patterns; it requires understanding how interacting processes converge toward stable, functional forms. This work presents a **closed-loop experimental framework** in which experiments, reasoning, and long-term memory are tightly coupled, with a large language model (LLM) operating as an **active scientific agent**. Note, the LLM does not only explore parameter space; it is allowed, at controlled points, to **modify and replace the governing partial differential equations (PDEs)** that define the system dynamics. In this framework, PDEs are treated as *hypotheses*, not fixed truths.
 
-The system combines reaction–diffusion chemistry, diffusiophoretic transport, and particle–field feedback to explore a rich landscape of emergent morphologies. Instead of treating particles or fields as primary objects, the framework treats interactions as fundamental, with structure arising from their mutual constraint. The LLM evaluates experimental outcomes, formulates mechanistic hypotheses, and directs subsequent experiments through structured exploration and persistent memory, enabling cumulative understanding across regimes rather than isolated optimization.
+The system combines reaction–diffusion chemistry, diffusiophoretic particle transport, and particle–field feedback to explore a rich landscape of emergent morphologies. Rather than treating particles or fields as primary objects, the framework treats **interactions as fundamental**, with structure arising from their mutual constraint. The LLM evaluates simulation outcomes, formulates mechanistic hypotheses, and directs subsequent interventions through structured exploration and persistent memory, enabling cumulative understanding across regimes rather than isolated optimization.
 
-A central challenge revealed by this exploration is that chemically driven systems tend to remain dynamic: patterns coarsen, drift, or collapse unless stability is imposed through damping or parameter tuning. Such interventions, while effective, obscure the underlying mechanisms of form stabilization. To address this limitation, the framework identifies mechanical admissibility as a promising next axis of constraint. In future work, elastic material dynamics—potentially implemented through a material point method (MPM)—will be applied to the particle component, introducing an independent mechanical law with its own stress, deformation, and equilibrium conditions, without modifying the chemical field implementation.
+A key methodological insight motivating this work is that **LLM-guided discovery is fundamentally limited by the laws it is allowed to explore**. Early stages of the project revealed strong attractors imposed by the Brusselator reaction–diffusion model, which restricted accessible morphologies despite extensive parameter search. This limitation led to an explicit design choice: elevate *model-space exploration*—including PDE modification and variant creation.
 
-In this envisioned extension, stable geometries would emerge when chemical patterning and mechanical equilibrium become mutually compatible, halting motion without extinguishing interaction. By integrating an LLM-guided discovery loop with coupled chemical–mechanical dynamics, this work reframes morphogenesis as a problem of interaction consistency across physical laws, offering a principled route to stable form without artificial damping or control.
+The current results focus on diffusiophoresis coupled to classical reaction–diffusion systems. Future extensions will introduce additional physical constraints, such as elasticity via material point methods (MPM), to study how mechanical admissibility further restricts or stabilizes morphogenetic outcomes. Together, these elements position the framework as a general method for exploring not only patterns, but the **conditions under which stable form emerges**.
+
 
 ---
 
@@ -35,6 +36,27 @@ flowchart LR
     style C fill:#fff3e0
     style F fill:#f3e5f5
 ```
+
+The framework implements a **closed-loop exploration engine** composed of five interacting components:
+
+1. **Simulation Engine**  
+   A physics-based simulator executes coupled particle–field dynamics defined by a selected PDE model (e.g., reaction–diffusion chemistry coupled to diffusiophoresis). For a given model, parameters, and initialization, the simulator produces reproducible field and particle trajectories together with quantitative diagnostics.
+
+2. **Pattern and Metric Analysis**  
+   High-dimensional simulation outputs are compressed into montages, scalar metrics, and regime descriptors. These representations enable comparison across iterations and across different governing models.
+
+3. **LLM Evaluation**  
+   The LLM interprets results in the context of accumulated memory. Its role is not to optimize a single score, but to perform scientific operations: identify regimes, detect saturation or failure, generate mechanistic hypotheses, and assess whether observed limitations arise from parameter choices or from the structure of the governing laws.
+
+4. **Hypothesis and Memory Update**  
+   Observations, failed attempts, and validated principles are written into explicit long-term memory. This memory persists across experimental blocks and constrains future reasoning, enabling cumulative understanding rather than episodic trial-and-error.
+
+5. **Intervention Selection**  
+   Guided by Upper Confidence Bound (UCB) tree search, the LLM selects the next intervention. Interventions are stratified by scope:
+   - *Within blocks*: parameter mutations within a fixed model.
+   - *At block boundaries*: higher-impact actions, including modification of interaction terms, creation of new PDE variants, or replacement of the reaction–diffusion model itself.
+
+This separation ensures stability and reproducibility while enabling **controlled exploration of model space**. From a machine learning perspective, the system operates over a constrained hypothesis class of lawful transformations, combining black-box experimentation, symbolic model search, and continual learning with external memory. The objective is not performance optimization, but **epistemic progress**: discovering which laws admit morphogenesis, which do not, and why.
 
 The exploration uses **Upper Confidence Bound (UCB)** tree search to balance exploitation of promising configurations with exploration of novel parameter regimes. Iterations are grouped into blocks of 8, with memory consolidation at block boundaries.
 

@@ -324,8 +324,9 @@ def data_train_particle(config, erase, best_model, device):
 
 
                 distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                adj_t = ((distance < max_radius ** 2) & (distance >= min_radius ** 2)).float() * 1
+                adj_t = (distance < max_radius**2) & (distance > min_radius**2)
                 edges = adj_t.nonzero().t().contiguous()
+                del distance, adj_t
 
                 if batch_ratio < 1:
                     ids = np.random.permutation(x.shape[0])[:int(x.shape[0] * batch_ratio)]

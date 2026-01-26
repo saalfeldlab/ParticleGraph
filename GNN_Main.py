@@ -53,9 +53,9 @@ if __name__ == "__main__":
             best_model = None
     else:
         best_model = None
-        task = 'generate'  # 'generate', 'train', 'test'
+        task = 'train'  # 'generate', 'train', 'test'
 
-        config_list = ['arbitrary_3_3D']
+        config_list = ['arbitrary_3_1']
 
     for config_file_ in config_list:
         print(" ")
@@ -81,7 +81,8 @@ if __name__ == "__main__":
                 alpha=1,
                 erase=True,
                 bSave=True,
-                step=100
+                step=100,
+                timer=False
             )  
 
         # data and figures are generated into "ParticleGraph/graphs_data/signal/signal_N2_a37"

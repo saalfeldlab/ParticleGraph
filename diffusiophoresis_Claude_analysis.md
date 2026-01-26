@@ -1,5 +1,64 @@
 # Pattern Exploration Log: diffusiophoresis
 
+## Iter 80: 3/10
+Node: id=80, parent=79
+Mode/Strategy: exploit (mobility optimization, final block iteration)
+Config: mesh_model_name=Diffusiophoresis_Mesh_GrayScott, M1=-700, M2=+700, consumption=0, production=0, Du=0.2, Dv=0.1, F=0.035, k=0.06
+Score: 3/10
+Visual: Beautiful hexagonal Gray-Scott spots (excellent U field), particles uniformly scattered
+Metrics: clustering=0.0577, C1_mean=-18.76, C2_mean=-1.26, pattern_growth=549.5
+Mutation: M1: -1000 → -700, M2: +1000 → +700
+Parent rule: Optimal closer to M=500 than M=1000
+Literature: Gray-Scott spot dynamics (Pearson 1993)
+Observation: M=700 clustering (0.0577) improved from M=1000 (0.0277) but still below M=500 (0.0818). Confirms nonlinear mobility-clustering relationship with optimal near M=500. Gray-Scott coupling fundamentally limited by domain_scale=32 in PDE_D.
+
+### Block 10 Summary (Iterations 73-80)
+**Goal**: Fix Gray-Scott V-field instability via V-clamping and mobility optimization.
+**Key Results**:
+- V-clamping code mod helped stabilize but didn't solve fundamental issue
+- Zero-coupling test: GS patterns STABLE and BEAUTIFUL when uncoupled, particles unresponsive
+- Mobility sweep revealed nonlinear relationship: M=500→0.0818, M=1000→0.0277, M=2000→0.0084
+- **ROOT CAUSE IDENTIFIED**: PDE_D divides gradients by domain_scale=32; GS fields ~1 vs Brusselator ~20 = 20-30x weaker effective gradients
+**Conclusion**: Gray-Scott RETIRED - beautiful hexagonal patterns but fundamentally incompatible with current PDE_D architecture.
+**Block Statistics**: Average 2.375/10, Best 3/10
+
+### Block 11 Setup
+**Focus**: Return to Brusselator - pursue STRIPE patterns via D1/D2 ratio tuning
+**Literature**: Stripes vs spots depend on D1/D2 ratio (Ouyang & Swinney 1991, Cross & Hohenberg 1993): spots at D1/D2 << 1, stripes at D1/D2 ≈ 0.3-0.5
+**Approach**: Increase D1 from 0.015 to 0.05 (ratio 0.33) while maintaining established optimal params (B=7.0, Da_c=25)
+
+---
+
+## Iter 79: 3/10
+Node: id=79, parent=78
+Mode: exploit (UCB=1.932)
+Config: Du=0.2, Dv=0.1, F=0.035, k=0.06, time_scale=5.0, M1=-1000, M2=+1000, consumption=0, production=0
+Metrics: clustering=0.0277, C1_mean=-18.92, C2_mean=-1.27, pattern_growth=548.86
+Score: 3/10
+Visual: Beautiful Gray-Scott hexagonal spot pattern evolution - frames 1-2 noise/homogenization, frames 3-4 pattern emergence, frames 5-10 stable hexagonal lattice. Particles show slight improvement over iter 78 but still largely scattered. Faint accumulation visible around spots in late frames.
+Mutation: M1: -2000 → -1000, M2: +2000 → +1000
+Parent rule: Exploit node 78 (highest UCB=1.932), halve mobility to find optimal
+Observation: M=±1000 gives clustering=0.0277 - between M=2000 (0.0084) and M=500 (0.0818). Optimal mobility CLOSER TO M=500 than M=1000. Data points: M=500→0.0818, M=1000→0.0277, M=2000→0.0084. The relationship is nonlinear - not interpolating as expected. Next: try M=±700 to narrow down sweet spot.
+Literature: Chemotaxis optimal mobility theory - balance between response speed and stability
+Next: parent=79, try M=±700 to find optimal coupling (final iteration of block)
+
+---
+
+## Iter 78: 2/10
+Node: id=78, parent=77
+Mode: exploit (UCB=1.781)
+Config: Du=0.2, Dv=0.1, F=0.035, k=0.06, time_scale=5.0, M1=-2000, M2=+2000, consumption=0, production=0
+Metrics: clustering=0.0084, C1_mean=-18.87, C2_mean=-1.26, pattern_growth=538.73
+Score: 2/10
+Visual: Excellent hexagonal Gray-Scott spots (stable throughout). Particles show VISIBLE halo structures in early frames, but final clustering=0.0084 (90% DROP from iter 77!). Despite visual organization appearing stronger, particles oscillate/overshoot gradient peaks at this extreme mobility, causing time-averaged spreading.
+Mutation: M1: -500 → -2000, M2: +500 → +2000
+Parent rule: Exploit node 77 (highest UCB=1.781), extreme mobility test
+Observation: 4x mobility increase OVERSHOT optimal range. Clustering dropped 90% (0.0818→0.0084) despite visually appearing more organized. This indicates M=±2000 causes particles to oscillate past gradient boundaries rather than accumulating there. The "sweet spot" is somewhere between M=500 and M=2000. Try M=±1000 to find optimal coupling.
+Literature: Too-high mobility causes oscillatory instability in chemotactic systems (Keller-Segel theory)
+Next: parent=78, try M=±1000 (halve mobility) to find optimal coupling strength
+
+---
+
 ## Iter 77: 2/10
 Node: id=77, parent=76
 Mode: exploit (UCB=1.614)
