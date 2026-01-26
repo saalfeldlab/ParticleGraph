@@ -6,7 +6,7 @@ simulation:
   func_params: [['arbitrary', 0, 0], ['arbitrary', 1, 1], ['arbitrary', 2, 2]]
   min_radius: 0
   max_radius: 0.075
-  n_particles: 4800
+  n_particles: 30000
   n_particle_types: 3
   n_frames: 250
   sigma: 0.005
