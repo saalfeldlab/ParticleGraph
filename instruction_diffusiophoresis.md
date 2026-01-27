@@ -517,14 +517,11 @@ Add/modify rules based on block experience:
 ## Working Memory Structure
 
 ```markdown
-## Simulation Config
+## Regime Comparison
 
-| Parameter        | Value                    |
-| ---------------- | ------------------------ |
-| mesh_model_name  | Diffusiophoresis_Mesh    |
-| particle_model   | PDE_ParticleField_D      |
-| n_particle_types | 3                        |
-| n_particles      | 2000                     |
+| Regime | mesh_model | particle_model | n_types | n_particles | Best R² | Key Insight |
+| ------ | ---------- | -------------- | ------- | ----------- | ------- | ----------- |
+| Base   | Diffusiophoresis_Mesh | PDE_ParticleField_D | 3 | 2000 | - | baseline |
 
 ## Insights
 

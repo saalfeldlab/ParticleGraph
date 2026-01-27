@@ -767,7 +767,7 @@ if __name__ == "__main__":
         # Initialize reasoning log
         open(reasoning_path, 'w').close()
 
-        # Initialize memory with simulation config table
+        # Initialize memory with regime comparison table
         # Load config to get model names and simulation params
         init_config = ParticleGraphConfig.from_yaml(target_config)
         mesh_model = getattr(init_config.graph_model, 'mesh_model_name', '') or 'N/A'
@@ -777,13 +777,10 @@ if __name__ == "__main__":
 
         with open(memory_path, 'w') as f:
             f.write(f"# Working Memory: {base_config_name}\n\n")
-            f.write("## Simulation Config\n\n")
-            f.write("| Parameter        | Value                    |\n")
-            f.write("| ---------------- | ------------------------ |\n")
-            f.write(f"| mesh_model_name  | {mesh_model} |\n")
-            f.write(f"| particle_model   | {particle_model} |\n")
-            f.write(f"| n_particle_types | {n_types} |\n")
-            f.write(f"| n_particles      | {n_particles} |\n\n")
+            f.write("## Regime Comparison\n\n")
+            f.write("| Regime | mesh_model | particle_model | n_types | n_particles | Best R² | Key Insight |\n")
+            f.write("| ------ | ---------- | -------------- | ------- | ----------- | ------- | ----------- |\n")
+            f.write(f"| Base   | {mesh_model} | {particle_model} | {n_types} | {n_particles} | - | baseline |\n\n")
             f.write("## Insights\n\n")
             f.write("| Category    | Finding                                              |\n")
             f.write("| ----------- | ---------------------------------------------------- |\n")
