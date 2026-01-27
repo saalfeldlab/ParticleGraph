@@ -59,6 +59,7 @@ The prompt provides: `Block info: block {block_number}, iteration {iter_in_block
 **IMPORTANT**: Code modifications and PDE variant creation are ONLY allowed at the end of a block when you see `>>> BLOCK END <<<` in the prompt. During regular iterations within a block, you can only modify config parameters.
 
 **PDE Variant Creation**: At block boundaries, you can create:
+
 - **Field-field variants** (e.g., `PDE_Diffusiophoresis_GrayScott.py`) - See [Step 5.3](#step-53-create-pde-variant-block-end-only)
 - **Particle dynamics variants** (e.g., `PDE_D_Boids.py`) - See [Step 5.4](#step-54-create-pde_d-variant-block-end-only)
 
@@ -368,6 +369,8 @@ simulation:
 
 #### Step 5.3: Create PDE Variant (BLOCK END only)
 
+**Before creating a variant:** Check the PDE Variants table in Working Memory and existing files in `src/ParticleGraph/generators/` to avoid duplicating work. Only create a new variant if the desired physics isn't already implemented.
+
 **When to create a variant:** Create a new PDE file to test fundamentally different reaction-diffusion models while preserving the base Brusselator.
 
 **⚠️ REQUIREMENTS:**
@@ -426,6 +429,8 @@ Config: mesh_model_name: Diffusiophoresis_Mesh_GrayScott
 
 #### Step 5.4: Create PDE_D Variant (BLOCK END only)
 
+**Before creating a variant:** Check the PDE Variants table in Working Memory and existing `PDE_D_*.py` files in `src/ParticleGraph/generators/` to avoid duplicating work. Only create a new variant if the desired particle dynamics isn't already implemented.
+
 **When to create a variant:** Create a new PDE_D file to test fundamentally different particle dynamics (diffusiophoresis, boids, chemotaxis, etc.) while preserving the base PDE_D.
 
 **⚠️ REQUIREMENTS:**
@@ -437,10 +442,10 @@ Config: mesh_model_name: Diffusiophoresis_Mesh_GrayScott
 
 **Naming convention:**
 
-| File Name              | Config `particle_model_name`    |
-| ---------------------- | ------------------------------- |
-| `PDE_D_Boids.py`       | `PDE_ParticleField_D_Boids`     |
-| `PDE_D_Chemotaxis.py`  | `PDE_ParticleField_D_Chemotaxis`|
+| File Name             | Config `particle_model_name`     |
+| --------------------- | -------------------------------- |
+| `PDE_D_Boids.py`      | `PDE_ParticleField_D_Boids`      |
+| `PDE_D_Chemotaxis.py` | `PDE_ParticleField_D_Chemotaxis` |
 
 **Creating a variant (5 steps):**
 
@@ -465,19 +470,19 @@ Config: mesh_model_name: Diffusiophoresis_Mesh_GrayScott
 
 Each PDE_D variant reinterprets the same `params` tensor slots according to its own physics:
 
-| Variant | params[type][0:4] interpretation |
-|---------|----------------------------------|
-| PDE_D (base) | M1, M2, consumption, production |
-| PDE_D_Boids | alignment, cohesion, separation, vision_radius |
-| PDE_D_Chemotaxis | sensitivity, adaptation_rate, threshold, ... |
+| Variant          | params[type][0:4] interpretation               |
+| ---------------- | ---------------------------------------------- |
+| PDE_D (base)     | M1, M2, consumption, production                |
+| PDE_D_Boids      | alignment, cohesion, separation, vision_radius |
+| PDE_D_Chemotaxis | sensitivity, adaptation_rate, threshold, ...   |
 
 **Established models for particle dynamics:**
 
-| Model          | Key Behavior | Literature |
-| -------------- | ------------ | ---------- |
-| **Boids**      | Flocking (alignment, cohesion, separation) | Reynolds (1987) SIGGRAPH |
-| **Chemotaxis** | Gradient sensing with adaptation | Keller-Segel (1971) JTB |
-| **Active Matter** | Self-propelled particles | Vicsek (1995) PRL |
+| Model             | Key Behavior                               | Literature               |
+| ----------------- | ------------------------------------------ | ------------------------ |
+| **Boids**         | Flocking (alignment, cohesion, separation) | Reynolds (1987) SIGGRAPH |
+| **Chemotaxis**    | Gradient sensing with adaptation           | Keller-Segel (1971) JTB  |
+| **Active Matter** | Self-propelled particles                   | Vicsek (1995) PRL        |
 
 **Log format:**
 
@@ -512,7 +517,29 @@ Add/modify rules based on block experience:
 ## Working Memory Structure
 
 ```markdown
+## Simulation Config
+
+| Parameter        | Value                    |
+| ---------------- | ------------------------ |
+| mesh_model_name  | Diffusiophoresis_Mesh    |
+| particle_model   | PDE_ParticleField_D      |
+| n_particle_types | 3                        |
+| n_particles      | 2000                     |
+
+## Insights
+
+| Category    | Finding                                              |
+| ----------- | ---------------------------------------------------- |
+| Patterns    | [key pattern observations]                           |
+| Performance | [what configs work well]                             |
+| Failures    | [what to avoid]                                      |
+
+---
+
 ## Knowledge Base
+
+[established principles]
+[compare results with state of the art litterature]
 
 ### Pattern Principles
 

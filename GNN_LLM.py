@@ -390,7 +390,7 @@ def run_simulation(config_path: str, root_dir: str, config_name: str) -> tuple:
         '-u',  # Force unbuffered output for real-time streaming
         generate_script,
         '--config', config_path,
-        '--device', 'auto',
+        '--device', 'cuda:1',
         '--erase',
         '--step', '50'
     ]
@@ -727,7 +727,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Resume support: start_iteration parameter (default 1)
-    start_iteration = 154
+    start_iteration = 155
 
     if start_iteration > 1:
         print(f"\033[93mResuming from iteration {start_iteration}\033[0m")
@@ -767,9 +767,30 @@ if __name__ == "__main__":
         # Initialize reasoning log
         open(reasoning_path, 'w').close()
 
-        # Initialize memory
+        # Initialize memory with simulation config table
+        # Load config to get model names and simulation params
+        init_config = ParticleGraphConfig.from_yaml(target_config)
+        mesh_model = getattr(init_config.graph_model, 'mesh_model_name', '') or 'N/A'
+        particle_model = getattr(init_config.graph_model, 'particle_model_name', '') or 'N/A'
+        n_types = getattr(init_config.simulation, 'n_particle_types', 'N/A')
+        n_particles = getattr(init_config.simulation, 'n_particles', 'N/A')
+
         with open(memory_path, 'w') as f:
             f.write(f"# Working Memory: {base_config_name}\n\n")
+            f.write("## Simulation Config\n\n")
+            f.write("| Parameter        | Value                    |\n")
+            f.write("| ---------------- | ------------------------ |\n")
+            f.write(f"| mesh_model_name  | {mesh_model} |\n")
+            f.write(f"| particle_model   | {particle_model} |\n")
+            f.write(f"| n_particle_types | {n_types} |\n")
+            f.write(f"| n_particles      | {n_particles} |\n\n")
+            f.write("## Insights\n\n")
+            f.write("| Category    | Finding                                              |\n")
+            f.write("| ----------- | ---------------------------------------------------- |\n")
+            f.write("| Patterns    | [key pattern observations]                           |\n")
+            f.write("| Performance | [what configs work well]                             |\n")
+            f.write("| Failures    | [what to avoid]                                      |\n\n")
+            f.write("---\n\n")
             f.write("## Knowledge Base\n\n")
             f.write("### Pattern Principles\n\n")
             f.write("### Failed Configurations\n\n")
