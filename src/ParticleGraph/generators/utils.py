@@ -73,6 +73,71 @@ def load_pde_variant(variant_name, generators_path=None):
     print(f"Warning: No PDE class found in {file_path}")
     return None
 
+
+def load_pde_d_variant(variant_name, generators_path=None):
+    """
+    Dynamically load a PDE_D variant class from a file.
+
+    Parameters
+    ----------
+    variant_name : str
+        Name like 'PDE_ParticleField_D_Boids' or 'PDE_D_Chemotaxis'
+    generators_path : str, optional
+        Path to generators directory. If None, uses default location.
+
+    Returns
+    -------
+    class
+        The PDE_D variant class, or None if not found
+    """
+    if generators_path is None:
+        generators_path = os.path.dirname(os.path.abspath(__file__))
+
+    # Extract variant suffix from various naming patterns:
+    # 'PDE_ParticleField_D_Boids' -> 'Boids'
+    # 'PDE_Cell_D_Boids' -> 'Boids'
+    # 'PDE_D_Boids' -> 'Boids'
+    for pattern in [r'PDE_ParticleField_D_(.+)', r'PDE_Cell_D_(.+)', r'PDE_D_(.+)']:
+        match = re.match(pattern, variant_name)
+        if match:
+            variant_suffix = match.group(1)
+            break
+    else:
+        return None
+
+    # Look for file: PDE_D_Boids.py, etc.
+    file_name = f"PDE_D_{variant_suffix}.py"
+    file_path = os.path.join(generators_path, file_name)
+
+    if not os.path.exists(file_path):
+        print(f"Warning: PDE_D variant file not found: {file_path}")
+        return None
+
+    # Dynamic import
+    module_name = f"PDE_D_{variant_suffix}"
+    spec = importlib.util.spec_from_file_location(module_name, file_path)
+    module = importlib.util.module_from_spec(spec)
+    # Register in sys.modules BEFORE exec_module so PyG's inspector can find it
+    import sys
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+
+    # Get the PDE_D class (expected name: PDE_D_{suffix})
+    class_name = f"PDE_D_{variant_suffix}"
+    if hasattr(module, class_name):
+        print(f"Loaded PDE_D variant: {class_name} from {file_name}")
+        return getattr(module, class_name)
+
+    # Fallback: look for any class starting with PDE_D_
+    for name in dir(module):
+        if name.startswith('PDE_D_') and not name.startswith('PDE_D__'):
+            print(f"Loaded PDE_D variant: {name} from {file_name}")
+            return getattr(module, name)
+
+    print(f"Warning: No PDE_D class found in {file_path}")
+    return None
+
+
 def choose_model(config=[], W=[], device=[]):
     particle_model_name = config.graph_model.particle_model_name
     model_signal_name = config.graph_model.signal_model_name
@@ -118,6 +183,21 @@ def choose_model(config=[], W=[], device=[]):
             model = PDE_B_mass(aggr_type=aggr_type, p=p, final_mass = final_cell_mass, bc_dpos=bc_dpos)
         case 'PDE_B_bis':
             model = PDE_B_bis(aggr_type=aggr_type, p=p, bc_dpos=bc_dpos)
+        case _ if particle_model_name.startswith('PDE_D_') or particle_model_name.startswith('PDE_ParticleField_D_') or particle_model_name.startswith('PDE_Cell_D_'):
+            # PDE_D variant (e.g., PDE_D_Boids, PDE_ParticleField_D_Chemotaxis)
+            params_mesh = config.simulation.params_mesh
+            p_mesh = torch.tensor(params_mesh, dtype=torch.float32, device=device).squeeze()
+            if params is not None and params[0] != [-1] and len(params[0]) >= 4:
+                particle_params = torch.tensor(params, dtype=torch.float32, device=device)
+            else:
+                particle_params = None
+            sigma = config.simulation.sigma
+            pde_d_class = load_pde_d_variant(particle_model_name)
+            if pde_d_class is not None:
+                model = pde_d_class(aggr_type=aggr_type, p=p_mesh, particle_params=particle_params,
+                                    bc_dpos=bc_dpos, dimension=dimension, sigma=sigma)
+            else:
+                raise ValueError(f"Failed to load PDE_D variant: {particle_model_name}")
         case 'PDE_D' | 'PDE_ParticleField_D' | 'PDE_Cell_D' :
             params_mesh = config.simulation.params_mesh
             p_mesh = torch.tensor(params_mesh, dtype=torch.float32, device=device).squeeze()

@@ -127,6 +127,12 @@ def track_code_modifications(root_dir: str, iteration: int) -> list:
         if rel_path not in code_files:
             code_files.append(rel_path)
 
+    # Add all PDE_D_*.py variant files (e.g., PDE_D_Boids.py, PDE_D_Chemotaxis.py)
+    for pde_d_file in generators_dir.glob('PDE_D_*.py'):
+        rel_path = str(pde_d_file.relative_to(root_dir))
+        if rel_path not in code_files:
+            code_files.append(rel_path)
+
     # Check for modified tracked files
     modified = get_modified_code_files(root_dir, code_files)
 
@@ -721,7 +727,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Resume support: start_iteration parameter (default 1)
-    start_iteration = 81
+    start_iteration = 154
 
     if start_iteration > 1:
         print(f"\033[93mResuming from iteration {start_iteration}\033[0m")

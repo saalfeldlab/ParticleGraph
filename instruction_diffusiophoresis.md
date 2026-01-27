@@ -51,14 +51,16 @@ The prompt provides: `Block info: block {block_number}, iteration {iter_in_block
 
 ### Code Modification Rules
 
-| When                                  | Allowed Changes                                       |
-| ------------------------------------- | ----------------------------------------------------- |
-| Within block (iterations 1-8)         | Config parameters ONLY                                |
+| When                                  | Allowed Changes                                                     |
+| ------------------------------------- | ------------------------------------------------------------------- |
+| Within block (iterations 1-8)         | Config parameters ONLY                                              |
 | At block boundary (>>> BLOCK END <<<) | Config parameters OR code modifications OR **PDE variant creation** |
 
 **IMPORTANT**: Code modifications and PDE variant creation are ONLY allowed at the end of a block when you see `>>> BLOCK END <<<` in the prompt. During regular iterations within a block, you can only modify config parameters.
 
-**PDE Variant Creation**: At block boundaries, you can create new PDE files (e.g., `PDE_Diffusiophoresis_GrayScott.py`) to test fundamentally different reaction-diffusion models. See [Step 5.3](#step-53-create-pde-variant-block-end-only) for requirements.
+**PDE Variant Creation**: At block boundaries, you can create:
+- **Field-field variants** (e.g., `PDE_Diffusiophoresis_GrayScott.py`) - See [Step 5.3](#step-53-create-pde-variant-block-end-only)
+- **Particle dynamics variants** (e.g., `PDE_D_Boids.py`) - See [Step 5.4](#step-54-create-pde_d-variant-block-end-only)
 
 ---
 
@@ -150,8 +152,9 @@ Append to Full Log and Working Memory:
 ```
 ## Iter N: [score]/10
 Node: id=N, parent=P
-Mode/Strategy: [exploit/explore/boundary/code-modification]
+Mode/Strategy: [exploit/explore/boundary/code-modification/multi-type]
 Config: params_mesh=[...], n_frames=X, delta_t=Y, ...
+n_particle_types: [1/2/3]
 Score: [N]/10
 Visual: [description of patterns observed]
 Mutation: [param or code]: [old] -> [new]
@@ -169,13 +172,28 @@ Read `ucb_scores.txt`:
 
 **Strategies:**
 
-| Condition                 | Strategy            | Action                                     |
-| ------------------------- | ------------------- | ------------------------------------------ |
-| Default                   | **exploit**         | Highest UCB node, try mutation             |
-| 3+ consecutive score >= 7 | **failure-probe**   | Extreme parameter to find boundary         |
-| 4+ consecutive improving  | **explore**         | Branch to different parameter dimension    |
-| Low scores across block   | **code-change**     | Consider modifying PDE equations (iter 5+) |
-| Score = 10 found          | **robustness-test** | Re-run same config to verify               |
+| Condition                           | Strategy            | Action                                     |
+| ----------------------------------- | ------------------- | ------------------------------------------ |
+| Default                             | **exploit**         | Highest UCB node, try mutation             |
+| 3+ consecutive score >= 7           | **failure-probe**   | Extreme parameter to find boundary         |
+| 4+ consecutive improving            | **explore**         | Branch to different parameter dimension    |
+| Low scores across block             | **code-change**     | Consider modifying PDE equations (iter 5+) |
+| Score = 10 found                    | **robustness-test** | Re-run same config to verify               |
+| n_particle_types=1 over-represented | **multi-type**      | Switch to n_particle_types=2 or 3          |
+
+**IMPORTANT - Particle Type Diversity:**
+
+Maintain roughly equal exploration of different particle type counts:
+
+- ~33% of iterations should use `n_particle_types: 1`
+- ~33% of iterations should use `n_particle_types: 2`
+- ~33% of iterations should use `n_particle_types: 3`
+
+Multi-type configurations enable richer dynamics:
+
+- Different types can have opposing mobilities (one attracted, one repelled by gradients)
+- Cross-type attraction/repulsion creates phase separation or mixing
+- Multiple types can create predator-prey or symbiotic dynamics
 
 ### Step 5: Edit Config or Code
 
@@ -262,69 +280,6 @@ The ParticleGraph repo contains other motion models that can inspire code modifi
 
 These can be used as reference for adding particle-particle interactions beyond simple repulsion.
 
-**Configuring multiple particle types:**
-
-**Example 1: Arbitrary attraction/repulsion** (from `config/arbitrary/arbitrary_3.yaml`):
-
-```yaml
-description: "attraction-repulsion with 3 types particles"
-dataset: "arbitrary_3"
-
-simulation:
-  params:
-    [
-      [1.6233, 1.0413, 1.6012, 1.5615],
-      [1.7667, 1.8308, 1.0855, 1.9055],
-      [1.7226, 1.7850, 1.0584, 1.8579],
-    ]
-  func_params: [["arbitrary", 0, 0], ["arbitrary", 1, 1], ["arbitrary", 2, 2]]
-  min_radius: 0
-  max_radius: 0.075
-  n_particles: 4800
-  n_particle_types: 3
-  n_frames: 250
-  delta_t: 0.1
-  boundary: "periodic"
-
-graph_model:
-  particle_model_name: "PDE_A"
-  mesh_model_name: ""
-```
-
-**Example 2: Boids with multiple types** (from `config/boids/boids_16_256.yaml`):
-
-```yaml
-description: "Boids 16 different types"
-dataset: "boids_16_256"
-
-simulation:
-  # Each type has [alignment, cohesion, separation] parameters
-  params:
-    [
-      [27.6, 92.5, 48.2],
-      [32.0, 51.8, 29.8],
-      [23.6, 35.0, 13.5],
-      [3.3, 76.4, 13.0],
-    ]
-  min_radius: 0.001
-  max_radius: 0.04
-  n_particles: 1792
-  n_particle_types: 4 # Can be up to 16
-  n_frames: 8000
-  delta_t: 0.5
-  boundary: "periodic"
-
-graph_model:
-  particle_model_name: "PDE_B"
-  mesh_model_name: ""
-  prediction: "2nd_derivative" # Boids uses acceleration
-```
-
-Key differences:
-
-- **PDE_A** (arbitrary): distance-dependent attraction/repulsion forces
-- **PDE_B** (boids): alignment, cohesion, separation behaviors per type
-
 ### Multi-Type Particle Support in PDE_D
 
 `PDE_D.py` now supports multiple particle types with per-type parameters for diffusiophoresis and PDE_A-style attraction-repulsion.
@@ -367,13 +322,42 @@ f = ar_p1 * exp(-d^(2*ar_p2) / (2σ²)) - ar_p3 * exp(-d^(2*ar_p4) / (2σ²))
 **To enable multi-type:**
 
 1. Set `n_particle_types: N` in config
-2. Add N entries to `params:` list (one per type)
+2. Check N entries to `params:` list (one per type)
 3. Set `sigma:` for the interaction kernel width
 4. **Keep total particle count constant**: When changing `n_particle_types`, particles are distributed equally among types. The total `n_particles` should remain ~9600 to maintain simulation density. Example: 1 type = 9600 particles, 2 types = 9600 total (4800 each), 3 types = 9600 total (3200 each).
 
-**Backward compatibility:**
+**⚠️ DIVERSITY REQUIREMENT:**
 
-- With `n_particle_types: 1` or without per-type params, falls back to global parameters from `params_mesh`
+**You MUST test n_particle_types=2 and n_particle_types=3 as frequently as n_particle_types=1.**
+
+Track your particle type distribution and actively correct imbalances. If you notice most recent iterations used 1 type, your NEXT iteration should use 2 or 3 types.
+
+**Quick-start templates for multi-type configs:**
+
+**2 particle types (opposing responses):**
+
+```yaml
+simulation:
+  params:
+    - [-16, 16, 180, -180, 1.6, 1.0, 1.6, 1.5] # Type 0: attracted to C1 peaks
+    - [16, -16, -180, 180, 1.8, 1.0, 1.1, 1.9] # Type 1: repelled from C1 peaks
+  n_particle_types: 2
+  n_particles: 9600 # 4800 each type
+  sigma: 0.005
+```
+
+**3 particle types (complex ecosystem):**
+
+```yaml
+simulation:
+  params:
+    - [-16, 16, 180, -180, 1.6, 1.0, 1.6, 1.5] # Type 0: consumer
+    - [8, -8, -90, 90, 1.8, 1.8, 1.1, 1.9] # Type 1: producer
+    - [0, 0, 0, 0, 2.0, 1.0, 2.0, 1.0] # Type 2: neutral/interactor
+  n_particle_types: 3
+  n_particles: 9600 # 3200 each type
+  sigma: 0.005
+```
 
 **Safety rules:**
 
@@ -395,10 +379,10 @@ f = ar_p1 * exp(-d^(2*ar_p2) / (2σ²)) - ar_p3 * exp(-d^(2*ar_p4) / (2σ²))
 
 **Naming convention:**
 
-| File Name | Config `mesh_model_name` |
-|-----------|--------------------------|
+| File Name                           | Config `mesh_model_name`          |
+| ----------------------------------- | --------------------------------- |
 | `PDE_Diffusiophoresis_GrayScott.py` | `Diffusiophoresis_Mesh_GrayScott` |
-| `PDE_Diffusiophoresis_FHN.py` | `Diffusiophoresis_Mesh_FHN` |
+| `PDE_Diffusiophoresis_FHN.py`       | `Diffusiophoresis_Mesh_FHN`       |
 
 **Creating a variant (5 steps):**
 
@@ -415,21 +399,22 @@ f = ar_p1 * exp(-d^(2*ar_p2) / (2σ²)) - ar_p3 * exp(-d^(2*ar_p4) / (2σ²))
 
 **Common errors and fixes:**
 
-| Error | Cause | Fix |
-|-------|-------|-----|
-| `NameError: mesh_model_name` | Using bare variable | Use `config.graph_model.mesh_model_name` |
-| `KeyError` in PyG | Class not registered | Ensure class name matches file suffix |
-| `AttributeError: no attribute 'A'` | Missing compatibility | Add `self.A`, `self.B` in `__init__` |
+| Error                              | Cause                 | Fix                                      |
+| ---------------------------------- | --------------------- | ---------------------------------------- |
+| `NameError: mesh_model_name`       | Using bare variable   | Use `config.graph_model.mesh_model_name` |
+| `KeyError` in PyG                  | Class not registered  | Ensure class name matches file suffix    |
+| `AttributeError: no attribute 'A'` | Missing compatibility | Add `self.A`, `self.B` in `__init__`     |
 
 **Established models:**
 
-| Model | Key Params | Literature |
-|-------|------------|------------|
-| **Gray-Scott** | F, k | Pearson (1993) Science 261 |
-| **FitzHugh-Nagumo** | a, b, ε | FitzHugh (1961) Biophys J |
-| **Schnakenberg** | a, b, γ | Schnakenberg (1979) JTB |
+| Model               | Key Params | Literature                 |
+| ------------------- | ---------- | -------------------------- |
+| **Gray-Scott**      | F, k       | Pearson (1993) Science 261 |
+| **FitzHugh-Nagumo** | a, b, ε    | FitzHugh (1961) Biophys J  |
+| **Schnakenberg**    | a, b, γ    | Schnakenberg (1979) JTB    |
 
 **Log format:**
+
 ```
 ### Variant: PDE_Diffusiophoresis_GrayScott
 Literature: Pearson (1993) Science 261:189-192
@@ -438,6 +423,72 @@ Config: mesh_model_name: Diffusiophoresis_Mesh_GrayScott
 ```
 
 **Note:** New variants are auto-committed by GNN_LLM after creation.
+
+#### Step 5.4: Create PDE_D Variant (BLOCK END only)
+
+**When to create a variant:** Create a new PDE_D file to test fundamentally different particle dynamics (diffusiophoresis, boids, chemotaxis, etc.) while preserving the base PDE_D.
+
+**⚠️ REQUIREMENTS:**
+
+1. **ONLY at block boundaries** - Never during regular iterations
+2. **MUST cite scientific literature** - Every variant must reference source model
+3. **MUST include `PARAMS_DOC`** - Self-documenting parameter structure for `params` slots
+4. **MUST maintain same interface** - Same `__init__` signature and `forward(data, direction)` modes
+
+**Naming convention:**
+
+| File Name              | Config `particle_model_name`    |
+| ---------------------- | ------------------------------- |
+| `PDE_D_Boids.py`       | `PDE_ParticleField_D_Boids`     |
+| `PDE_D_Chemotaxis.py`  | `PDE_ParticleField_D_Chemotaxis`|
+
+**Creating a variant (5 steps):**
+
+1. **Copy base PDE_D.py** and rename class to match filename (e.g., `PDE_D_Boids`)
+2. **Add docstring with literature citation** (author, year, journal)
+3. **Add PARAMS_DOC** documenting how `params` slots are interpreted:
+   ```python
+   PARAMS_DOC = {
+       "model_name": "Boids",
+       "literature": "Reynolds (1987) SIGGRAPH 'Flocks, Herds, and Schools'",
+       "params": [
+           {"index": 0, "name": "alignment", "description": "Alignment strength", "typical_range": [0.1, 2.0]},
+           {"index": 1, "name": "cohesion", "description": "Cohesion strength", "typical_range": [0.1, 2.0]},
+           # ... etc
+       ]
+   }
+   ```
+4. **Implement particle dynamics** in `message()` for modes: `'fp'`, `'pf'`, `'pp'`
+5. **Update config** with new `particle_model_name` and appropriate `params` values
+
+**Parameter reinterpretation:**
+
+Each PDE_D variant reinterprets the same `params` tensor slots according to its own physics:
+
+| Variant | params[type][0:4] interpretation |
+|---------|----------------------------------|
+| PDE_D (base) | M1, M2, consumption, production |
+| PDE_D_Boids | alignment, cohesion, separation, vision_radius |
+| PDE_D_Chemotaxis | sensitivity, adaptation_rate, threshold, ... |
+
+**Established models for particle dynamics:**
+
+| Model          | Key Behavior | Literature |
+| -------------- | ------------ | ---------- |
+| **Boids**      | Flocking (alignment, cohesion, separation) | Reynolds (1987) SIGGRAPH |
+| **Chemotaxis** | Gradient sensing with adaptation | Keller-Segel (1971) JTB |
+| **Active Matter** | Self-propelled particles | Vicsek (1995) PRL |
+
+**Log format:**
+
+```
+### Variant: PDE_D_Boids
+Literature: Reynolds (1987) SIGGRAPH 'Flocks, Herds, and Schools'
+Rationale: [why this model for particle dynamics]
+Config: particle_model_name: PDE_ParticleField_D_Boids
+```
+
+**Note:** New PDE_D variants are auto-committed by GNN_LLM after creation.
 
 ---
 
@@ -477,10 +528,20 @@ Add/modify rules based on block experience:
 
 ### PDE Variants
 
-| Variant | Model | Literature | Status | Best Score |
-|---------|-------|------------|--------|------------|
-| Diffusiophoresis_Mesh | Brusselator | Prigogine (1968) | active | 5/10 |
-| Diffusiophoresis_Mesh_GrayScott | Gray-Scott | Pearson (1993) | testing | - |
+| Variant                         | Model       | Literature       | Status  | Best Score |
+| ------------------------------- | ----------- | ---------------- | ------- | ---------- |
+| Diffusiophoresis_Mesh           | Brusselator | Prigogine (1968) | active  | 5/10       |
+| Diffusiophoresis_Mesh_GrayScott | Gray-Scott  | Pearson (1993)   | testing | -          |
+
+### Particle Type Distribution (TRACK THIS!)
+
+| n_particle_types | Count | Target |
+| ---------------- | ----- | ------ |
+| 1                | X     | ~33%   |
+| 2                | Y     | ~33%   |
+| 3                | Z     | ~33%   |
+
+**Action needed if imbalanced:** If one type is under-represented, use it in next iteration!
 
 ---
 
