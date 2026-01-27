@@ -146,7 +146,10 @@ The montage shows 10 evenly-spaced frames (2 rows × 5 columns) from early to la
 
 ### Step 3: Write Outputs
 
-Append to Full Log and Working Memory:
+Append to Full Log (`{config}_analysis.md`) and **Current Block** sections of `{config}_memory.md`:
+
+- In memory.md: Insert iteration log in "Iterations This Block" section (BEFORE "Emerging Observations")
+- Update "Emerging Observations" at the END of the file with running notes
 
 **Log Format:**
 
@@ -535,12 +538,13 @@ Add/modify rules based on block experience:
 
 ## Knowledge Base
 
-[established principles]
-[compare results with state of the art litterature]
+### Established Principles
 
-### Pattern Principles
+[Confirmed findings across 3+ iterations - see Knowledge Base Guidelines]
 
-[What parameter ranges produce interesting patterns]
+### Open Questions
+
+[Tentative patterns needing more testing, contradictions to resolve]
 
 ### Failed Configurations
 
@@ -594,7 +598,36 @@ Iterations: M to M+8
 ### Emerging Observations
 
 [What's working/failing]
+**CRITICAL: This section must ALWAYS be at the END of memory file. When adding new iterations, insert them BEFORE this section.**
 ```
+
+---
+
+## Knowledge Base Guidelines
+
+### What to Add to Established Principles
+
+Examples:
+
+- ✓ "High diffusion_u with low production_v creates traveling waves" (causal, generalizable)
+- ✓ "n_particle_types=3 produces richer clustering than n_types=1" (experimental finding)
+- ✓ "consumption > 0.5 destabilizes patterns" (boundary condition)
+- ✗ "params_mesh=[1.0, 0.5, 0.1] worked in Block 4" (too specific)
+- ✗ "Block 3 got score 8" (not a principle)
+
+### Evidence Hierarchy
+
+| Level            | Criterion                              | Action                 |
+| ---------------- | -------------------------------------- | ---------------------- |
+| **Established**  | Consistent across 3+ iterations/blocks | Add to Principles      |
+| **Tentative**    | Observed 1-2 times                     | Add to Open Questions  |
+| **Contradicted** | Conflicting evidence                   | Note in Open Questions |
+
+### What to Add to Open Questions
+
+- Patterns needing more testing
+- Contradictions between blocks
+- Theoretical predictions not yet verified
 
 ---
 
