@@ -350,10 +350,16 @@ window.Quarto = {
   <li><a href="#field-dynamics" id="toc-field-dynamics" class="nav-link active" data-scroll-target="#field-dynamics">Field Dynamics</a>
   <ul class="collapse">
   <li><a href="#pattern-regimes-pearson-1993" id="toc-pattern-regimes-pearson-1993" class="nav-link" data-scroll-target="#pattern-regimes-pearson-1993">Pattern Regimes (Pearson 1993)</a></li>
-  <li><a href="#parameters" id="toc-parameters" class="nav-link" data-scroll-target="#parameters">Parameters</a></li>
+  <li><a href="#parameters-block-12" id="toc-parameters-block-12" class="nav-link" data-scroll-target="#parameters-block-12">Parameters (Block 12)</a></li>
   </ul></li>
   <li><a href="#particle-coupling" id="toc-particle-coupling" class="nav-link" data-scroll-target="#particle-coupling">Particle Coupling</a></li>
-  <li><a href="#current-status" id="toc-current-status" class="nav-link" data-scroll-target="#current-status">Current Status</a></li>
+  <li><a href="#current-status" id="toc-current-status" class="nav-link" data-scroll-target="#current-status">Current Status</a>
+  <ul class="collapse">
+  <li><a href="#block-12-progress" id="toc-block-12-progress" class="nav-link" data-scroll-target="#block-12-progress">Block 12 Progress</a></li>
+  <li><a href="#key-observations" id="toc-key-observations" class="nav-link" data-scroll-target="#key-observations">Key Observations</a></li>
+  <li><a href="#next-steps" id="toc-next-steps" class="nav-link" data-scroll-target="#next-steps">Next Steps</a></li>
+  <li><a href="#historical-iterations-blocks-911" id="toc-historical-iterations-blocks-911" class="nav-link" data-scroll-target="#historical-iterations-blocks-911">Historical Iterations (Blocks 9–11)</a></li>
+  </ul></li>
   <li><a href="#exploration-gallery" id="toc-exploration-gallery" class="nav-link" data-scroll-target="#exploration-gallery">Exploration Gallery</a></li>
   </ul>
 </nav>
@@ -365,7 +371,7 @@ window.Quarto = {
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
 <h1 class="title">Gray-Scott Model</h1>
-<p class="subtitle lead">Block 9+: Exploring richer pattern dynamics</p>
+<p class="subtitle lead">Block 12: Systematic F-k phase space exploration</p>
 </div>
 
 
@@ -449,8 +455,8 @@ window.Quarto = {
 </tbody>
 </table>
 </section>
-<section id="parameters" class="level3">
-<h3 class="anchored" data-anchor-id="parameters">Parameters</h3>
+<section id="parameters-block-12" class="level3">
+<h3 class="anchored" data-anchor-id="parameters-block-12">Parameters (Block 12)</h3>
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -470,7 +476,7 @@ window.Quarto = {
 <tr class="even">
 <td><span class="math inline">\(D_v\)</span></td>
 <td>V diffusion</td>
-<td>0.10</td>
+<td>0.05</td>
 <td>0.05–0.2</td>
 </tr>
 <tr class="odd">
@@ -482,17 +488,30 @@ window.Quarto = {
 <tr class="even">
 <td><span class="math inline">\(k\)</span></td>
 <td>Kill rate</td>
-<td>0.060</td>
+<td>0.063</td>
 <td>0.04–0.07</td>
 </tr>
 <tr class="odd">
 <td>time_scale</td>
 <td>Dynamics speed</td>
-<td>5.0</td>
-<td>1–10</td>
+<td>50</td>
+<td>1–100</td>
 </tr>
 </tbody>
 </table>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Block 12 Configuration
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Diffusion ratio <span class="math inline">\(D_u/D_v = 4\)</span> maintained. time_scale increased to 50 to match Brusselator dynamics speed. Exploring F-k parameter plane to locate stripe/worm regime.</p>
+</div>
+</div>
 <hr>
 </section>
 </section>
@@ -502,25 +521,76 @@ window.Quarto = {
 <p><span class="math display">\[
 \mathbf{v}_i = M_1 \nabla U\big|_{\mathbf{x}_i} + M_2 \nabla V\big|_{\mathbf{x}_i} + \sqrt{\frac{2}{\text{Pe}}} \boldsymbol{\eta}(t)
 \]</span></p>
-<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout callout-style-default callout-tip callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
 <div class="callout-title-container flex-fill">
-<span class="screen-reader-only">Warning</span>Coupling Challenge
+<span class="screen-reader-only">Tip</span>Coupling Stabilized (Block 12)
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>Gray-Scott’s <span class="math inline">\(UV^2\)</span> production is slow compared to particle consumption rates tuned for Brusselator. V field goes negative, causing anti-clustering and eventual NaN.</p>
-<p><strong>Solutions being tested:</strong> - V-clamping (concentration ≥ 0) - Inverted coupling (consume U instead of V) - Reduced consumption rates</p>
+<p>Earlier challenges with negative V fields and NaN explosions have been resolved. The system now produces stable Turing patterns with particles organizing at field boundaries.</p>
 </div>
 </div>
 <hr>
 </section>
 <section id="current-status" class="level2">
 <h2 class="anchored" data-anchor-id="current-status">Current Status</h2>
-<p>Block 9 showed Gray-Scott produces <strong>excellent</strong> U-field patterns (hexagonal spots, labyrinths) and particles <strong>do</strong> trace field boundaries correctly. However, particle-field coupling destabilizes the system.</p>
+<p><strong>Block 12</strong> (iterations 89–96) marks a fresh start with the Gray-Scott model. Following exhaustive Brusselator exploration (Blocks 1–11) that revealed strong labyrinthine attractors, the focus has shifted to Gray-Scott’s richer F-k phase space to achieve <strong>stripe/worm patterns</strong>.</p>
+<section id="block-12-progress" class="level3">
+<h3 class="anchored" data-anchor-id="block-12-progress">Block 12 Progress</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 34%">
+<col style="width: 9%">
+<col style="width: 9%">
+<col style="width: 21%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Iteration</th>
+<th>F</th>
+<th>k</th>
+<th>Score</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>89</td>
+<td>0.035</td>
+<td>0.060</td>
+<td>5/10</td>
+<td><strong>Spot patterns</strong> — hexagonal array, particles form voronoi network at boundaries</td>
+</tr>
+<tr class="even">
+<td>90</td>
+<td>0.035</td>
+<td>0.063</td>
+<td>5/10</td>
+<td><strong>Spot patterns</strong> — k increase did not induce stripe transition</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="key-observations" class="level3">
+<h3 class="anchored" data-anchor-id="key-observations">Key Observations</h3>
+<ul>
+<li>Gray-Scott produces <strong>clean, stable Turing patterns</strong> without NaN issues</li>
+<li>Spot regime is stable across k=0.060–0.063 at F=0.035</li>
+<li>Particles consistently organize at field boundaries (voronoi-like network)</li>
+<li>No stripe/worm transition observed yet — exploring alternative F values next</li>
+</ul>
+</section>
+<section id="next-steps" class="level3">
+<h3 class="anchored" data-anchor-id="next-steps">Next Steps</h3>
+<p>Per Pearson (1993) phase diagram, <strong>F=0.030 with k=0.060</strong> may favor worms/stripes over spots. This is the planned direction for iteration 91+.</p>
+</section>
+<section id="historical-iterations-blocks-911" class="level3">
+<h3 class="anchored" data-anchor-id="historical-iterations-blocks-911">Historical Iterations (Blocks 9–11)</h3>
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -559,22 +629,33 @@ window.Quarto = {
 </table>
 <hr>
 </section>
+</section>
 <section id="exploration-gallery" class="level2">
 <h2 class="anchored" data-anchor-id="exploration-gallery">Exploration Gallery</h2>
 <div class="tabset-margin-container"></div><div class="panel-tabset">
-<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-1-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-1" role="tab" aria-controls="tabset-1-1" aria-selected="true" href="">Iter 65</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-2" role="tab" aria-controls="tabset-1-2" aria-selected="false" href="">Iter 66</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-3-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-3" role="tab" aria-controls="tabset-1-3" aria-selected="false" href="">Iter 67</a></li></ul>
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-1-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-1" role="tab" aria-controls="tabset-1-1" aria-selected="true" href="">Iter 90 ⭐</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-2" role="tab" aria-controls="tabset-1-2" aria-selected="false" href="">Iter 89</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-3-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-3" role="tab" aria-controls="tabset-1-3" aria-selected="false" href="">Iter 67</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-4-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-4" role="tab" aria-controls="tabset-1-4" aria-selected="false" href="">Iter 66</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-5-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-5" role="tab" aria-controls="tabset-1-5" aria-selected="false" href="">Iter 65</a></li></ul>
 <div class="tab-content">
 <div id="tabset-1-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-1-1-tab">
-<p><em>Initial Gray-Scott test</em></p>
-<div class="quarto-video"><video id="video_shortcode_videojs_video1" class="video-js vjs-default-skin vjs-fluid" controls="" preload="auto" data-setup="{}" title=""><source src="graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_065.mp4"></video></div>
+<p><em>F=0.035, k=0.063 — Spot patterns persist</em></p>
+<div class="quarto-video"><video id="video_shortcode_videojs_video1" class="video-js vjs-default-skin vjs-fluid" controls="" preload="auto" data-setup="{}" title=""><source src="graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_090.mp4"></video></div>
+<p>Increasing k from 0.060 to 0.063 did not trigger the expected stripe transition. Hexagonal spot array remains stable. Particles organize into voronoi-like cellular network at spot boundaries — same qualitative behavior as iteration 89.</p>
 </div>
 <div id="tabset-1-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-2-tab">
-<p><em>α-spot regime (NaN)</em></p>
-<div class="quarto-video"><video id="video_shortcode_videojs_video2" class="video-js vjs-default-skin vjs-fluid" controls="" preload="auto" data-setup="{}" title=""><source src="graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_066.mp4"></video></div>
+<p><em>F=0.035, k=0.060 — First Block 12 test</em></p>
+<div class="quarto-video"><video id="video_shortcode_videojs_video2" class="video-js vjs-default-skin vjs-fluid" controls="" preload="auto" data-setup="{}" title=""><source src="graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_089.mp4"></video></div>
+<p>Gray-Scott model produces clean hexagonal spot patterns. Particles aggregate at field boundaries forming a voronoi-like network. This is the α (alpha) spot regime, not the γ (gamma) worm regime targeted.</p>
 </div>
 <div id="tabset-1-3" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-3-tab">
-<p><em>γ-worm regime</em></p>
+<p><em>γ-worm regime (historical)</em></p>
 <div class="quarto-video"><video id="video_shortcode_videojs_video3" class="video-js vjs-default-skin vjs-fluid" controls="" preload="auto" data-setup="{}" title=""><source src="graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_067.mp4"></video></div>
+</div>
+<div id="tabset-1-4" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-4-tab">
+<p><em>α-spot regime (NaN) (historical)</em></p>
+<div class="quarto-video"><video id="video_shortcode_videojs_video4" class="video-js vjs-default-skin vjs-fluid" controls="" preload="auto" data-setup="{}" title=""><source src="graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_066.mp4"></video></div>
+</div>
+<div id="tabset-1-5" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-5-tab">
+<p><em>Initial Gray-Scott test (historical)</em></p>
+<div class="quarto-video"><video id="video_shortcode_videojs_video5" class="video-js vjs-default-skin vjs-fluid" controls="" preload="auto" data-setup="{}" title=""><source src="graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_065.mp4"></video></div>
 </div>
 </div>
 </div>
@@ -1013,6 +1094,8 @@ window.Quarto = {
 <script>videojs(video_shortcode_videojs_video1);</script>
 <script>videojs(video_shortcode_videojs_video2);</script>
 <script>videojs(video_shortcode_videojs_video3);</script>
+<script>videojs(video_shortcode_videojs_video4);</script>
+<script>videojs(video_shortcode_videojs_video5);</script>
 
 
 

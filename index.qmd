@@ -2,7 +2,7 @@
 title: "LLM-Guided Morphogenesis"
 subtitle: "Closed-loop discovery in coupled chemical-particle systems"
 author: "Cédric Allier"
-date: "2025-01-25"
+date: "2026-01-26"
 ---
 
 ## Introduction
@@ -79,12 +79,12 @@ Two PDE models have been explored for the chemical patterning component:
 
 ::: {.callout-note}
 ## [Brusselator Model](brusselator.qmd)
-Classic two-component system with cubic autocatalysis. Explored in **Blocks 1–8** (64 iterations). Best clustering: 0.485.
+Classic two-component system with cubic autocatalysis. Explored in **Blocks 1–11** (88 iterations). Best clustering: 0.485. Exhaustive search revealed strong labyrinthine attractors — no stripe regime accessible.
 :::
 
 ::: {.callout-tip}
-## [Gray-Scott Model](grayscott.qmd)
-Autocatalytic system with feed/kill dynamics. Currently being explored in **Block 9+**. Richer pattern morphologies but coupling challenges.
+## [Gray-Scott Model](grayscott.qmd) ⭐ Active
+Autocatalytic system with feed/kill dynamics. Currently being explored in **Block 12** (iterations 89–96). Producing stable spot patterns; systematically exploring F-k plane for stripe/worm transition.
 :::
 
 ---

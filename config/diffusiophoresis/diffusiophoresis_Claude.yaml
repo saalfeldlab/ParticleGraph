@@ -2,51 +2,65 @@ description: LLM-guided pattern exploration
 dataset: diffusiophoresis_Claude
 simulation:
   params:
-  - - -16
-    - 16
-    - 180
-    - -180
+  # ITER 165: delta_t TEST - LAST unexplored parameter dimension
+  # Parent: Node 139 (8/10, BEST clustering=0.2119)
+  # Iter 164 result: M2=±48 achieved clustering=0.2117 (≈best) - M2 FULLY BRACKETED
+  # M2=±16 loses 26%, M2=±48 loses 0.1% - FLAT OPTIMUM above ±32
+  # Mutation: delta_t: 5E-4 → 2.5E-4 (HALVE timestep for finer dynamics)
+  # Literature: Numerical integration accuracy improves with smaller dt
+  # Hypothesis: Finer timestep may capture faster dynamics and improve clustering
+  # Risk: Slower effective simulation time - may not reach steady state
+  # [M1, M2, consumption, production, ar_p1, ar_p2, ar_p3, ar_p4]
+  # Type 0: RESTORE OPTIMAL M2=32 (was 48 last iter)
+  - - -32
+    - 32
+    - 15
+    - -15
     - 1.6
     - 1.0
     - 1.6
     - 1.5
+  # Type 1: RESTORE OPTIMAL M2=-32 (was -48 last iter)
+  - - 32
+    - -32
+    - -15
+    - 15
+    - 1.8
+    - 1.0
+    - 1.1
+    - 1.9
   params_mesh:
   # Brusselator params: Row 0 = [D1, Da_c, A, B, mu, chi]
-  # Row 1 = [D2, M2, unused, unused, unused, noise_amplitude]
+  # Row 1 = [D2, unused, unused, unused, unused, unused]
   # Row 2 = [Pe, consumption, production, influence_radius, boost_exponent, M1]
-  # Block 11, Iter 81: RETURN TO BRUSSELATOR - STRIPE REGIME TEST
-  # Literature: Stripes vs spots depend on D1/D2 ratio (Ouyang & Swinney 1991)
-  # - Spots: D1/D2 << 1 (previous: 0.015/0.15 = 0.1)
-  # - Stripes: D1/D2 ≈ 0.3-0.5
-  # Test: D1=0.05, D2=0.15 (ratio 0.33) to favor stripe formation
-  # Keep established optimal: B=7.0, Da_c=25, M=±16, consumption=180
+  # ALL BRUSSELATOR PARAMS AT OPTIMAL: D1=0.05, Da_c=20, A=2.0, B=7.0, D2=0.5
   - - 0.05
-    - 25.0
-    - 1.5
+    - 20
+    - 2.0
     - 7.0
-    - 0.04
     - 0.0
-  - - 0.15
-    - 16.0
+    - 0.0
+  - - 0.5
+    - 0.0
     - 0.0
     - 0.0
     - 0.0
     - 0.0
   - - 1.0
-    - 180
-    - -180
+    - 15
+    - -15
     - 0.05
     - 0.0
     - -16.0
   min_radius: 0
   max_radius: 0.2
   n_particles: 9600
-  n_particle_types: 1
+  n_particle_types: 2
   n_frames: 4000
-  n_nodes: 10000
+  n_nodes: 22500
   n_node_types: 1
   sigma: 0.005
-  delta_t: 5.0E-4
+  delta_t: 2.5E-4
   dpos_init: 0
   boundary: periodic
   node_value_map: input_data/pattern_Null.tif
@@ -71,7 +85,7 @@ plotting:
   - 0.03
 training:
   n_runs: 1
-  device: auto
+  device: 'cuda:0'
   n_epochs: 20
   batch_size: 8
   small_init_batch_size: false

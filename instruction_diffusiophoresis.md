@@ -2,17 +2,16 @@
 
 **Reference**: See for current context understanding: https://www.sciencedirect.com/science/article/abs/pii/S2590238525005569
 
-**Goal**: Explore the simulation/code space to discover parameter and code configurations that produce **biologically interesting patterns** in diffusiophoresis simulations. In this exploration be stimulated by discovering very complex even UNKOWN and UNSEEN patterns. Next try to understand the conditions in the simulated dynamics that lead to different topology.
+**Goal**: Explore the simulation/code space to discover parameter and code configurations that produce **biologically interesting patterns** in particle-field simulations.
+Understanding morphogenesis requires more than generating patterns; it requires understanding how interacting processes converge toward stable, functional forms. This work presents a **closed-loop experimental framework** in which experiments, reasoning, and long-term memory are tightly coupled, with a large language model (LLM) operating as an **active scientific agent**. Note, the LLM does not only explore parameter space; it is allowed, at controlled points, to **modify and replace the governing partial differential equations (PDEs)** that define the system dynamics. In this framework, PDEs are treated as _hypotheses_, not fixed truths.
+Rather than treating particles or fields as primary objects, the framework treats **interactions as fundamental**, with structure arising from their mutual constraint. The LLM evaluates simulation outcomes, formulates mechanistic hypotheses, and directs subsequent interventions through structured exploration and persistent memory, enabling cumulative understanding across regimes rather than isolated optimization.
 
-**Current status**: To date, we only observe **dot patterns**. A first milestone would be to achieve **stripe patterns** as a more complex Turing instability mode.
+Four Coupled Interactions, four PDEs:
 
-## What is "Biologically Interesting"?
-
-The diffusiophoresis simulation models:
-
-- **Brusselator reaction-diffusion** on a mesh (produces Turing patterns)
-- **Particles** that respond to concentration gradients (diffusiophoresis)
-- **Particle-field coupling** where particles affect and are affected by the chemical fields
+Field–Field Reaction-diffusion PDE Turing patterns via activator-inhibitor dynamics \
+Field–Particle Diffusiophoresis Field gradients drive particle motion \
+Particle–Field Consumption/production Particles locally modify concentrations \
+Particle–Particle Attraction-repulsion Short-range forces between particles
 
 Interesting patterns include:
 
@@ -49,23 +48,9 @@ Hypothesis: Increase B toward stripe-spot transition
 Each block = `n_iter_block` iterations (default: 8) exploring one configuration space.
 The prompt provides: `Block info: block {block_number}, iteration {iter_in_block}/{n_iter_block} within block`
 
-### Code Modification Rules
+## File Structure (CRITICAL)
 
-| When                                  | Allowed Changes                                                     |
-| ------------------------------------- | ------------------------------------------------------------------- |
-| Within block (iterations 1-8)         | Config parameters ONLY                                              |
-| At block boundary (>>> BLOCK END <<<) | Config parameters OR code modifications OR **PDE variant creation** |
-
-**IMPORTANT**: Code modifications and PDE variant creation are ONLY allowed at the end of a block when you see `>>> BLOCK END <<<` in the prompt. During regular iterations within a block, you can only modify config parameters.
-
-**PDE Variant Creation**: At block boundaries, you can create:
-
-- **Field-field variants** (e.g., `PDE_Diffusiophoresis_GrayScott.py`) - See [Step 5.3](#step-53-create-pde-variant-block-end-only)
-- **Particle dynamics variants** (e.g., `PDE_D_Boids.py`) - See [Step 5.4](#step-54-create-pde_d-variant-block-end-only)
-
----
-
-## File Structure
+You maintain TWO files:
 
 ### 1. Full Log (append-only record)
 
@@ -216,125 +201,17 @@ simulation:
   delta_t: 5.0E-4 # time step (1E-5 to 1E-3)
   n_particles: 9600 # particle count
   n_nodes: 10000 # mesh resolution - MUST BE PERFECT SQUARE
+  n_particle_types: 1 # int  1, 2, or 3
 ```
 
 **IMPORTANT: n_nodes must be a perfect square** (the mesh is n×n grid).
 Use only these values: `10000` (100×100), `22500` (150×150), `40000` (200×200), `62500` (250×250).
 Do NOT use values like 25000, 30000, etc. - simulation will crash.
 
-**Key Brusselator parameters (row 0 of params_mesh):**
-
-- `D1`: Diffusion coefficient for C1 (0.01-1.0)
-- `Da_c`: Damköhler number - reaction rate (1-100)
-- `A`, `B`: Brusselator parameters - control pattern type
-  - A affects equilibrium concentration
-  - B > 1 + A² triggers Turing instability
-
-**Particle-field coupling (row 2 of params_mesh):**
-
-- `Pe`: Péclet number - advection vs diffusion (0.01-10)
-- `consumption_rate`: how particles consume field
-- `production_rate`: how particles produce field
-
-#### Step 5.2: Modify Code (BLOCK END only)
-
-**Files you can modify:**
-
-| File                                                   | What to change                                                                                                       |
-| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
-| `src/ParticleGraph/generators/PDE_Diffusiophoresis.py` | Brusselator reaction equations (R1, R2), diffusion terms, damping, pattern formation dynamics                        |
-| `src/ParticleGraph/generators/PDE_D.py`                | Diffusiophoretic velocities (M1, M2 mobility), particle-particle repulsion, field gradients, particle→field feedback |
-| `src/ParticleGraph/generators/graph_data_generator.py` | `data_generate_particle_field()`: simulation loop, time stepping, boundary conditions, initialization                |
-
-**Example code modifications:**
-
-1. **Change reaction kinetics** (PDE_Diffusiophoresis.py):
-
-```python
-# Original Brusselator:
-R1 = self.Da_c * (self.A - (self.B+1)*C1 + C1*C1*C2)
-
-# Try Gray-Scott instead:
-R1 = -C1*C2*C2 + self.A*(1-C1)
-```
-
-2. **Change particle-field coupling** (PDE_D.py):
-
-```python
-# Original: linear mobility
-velocities = (self.M1 * grad_C1 + self.M2 * grad_C2) * dir_norm
-
-# Try nonlinear response:
-velocities = torch.tanh(self.M1 * grad_C1) * dir_norm
-```
-
-3. **Add damping or noise** (PDE_Diffusiophoresis.py):
-
-```python
-# Add stochastic term:
-dC1 = diff_C1 + R1 + 0.01 * torch.randn_like(C1)
-```
-
-**Reference models for particle motion:**
-
-The ParticleGraph repo contains other motion models that can inspire code modifications:
-
-- `src/ParticleGraph/generators/PDE_A.py` - Arbitrary attraction/repulsion between particles (distance-dependent forces)
-- `src/ParticleGraph/generators/PDE_B.py` - Boids model with different particle types (alignment, cohesion, separation)
-
-These can be used as reference for adding particle-particle interactions beyond simple repulsion.
-
-### Multi-Type Particle Support in PDE_D
-
-`PDE_D.py` now supports multiple particle types with per-type parameters for diffusiophoresis and PDE_A-style attraction-repulsion.
-
-**Per-type params layout (8 parameters per type):**
-
-```yaml
-simulation:
-  # [M1, M2, consumption, production, ar_p1, ar_p2, ar_p3, ar_p4]
-  params:
-    - [-16, 16, 180, -180, 1.6, 1.0, 1.6, 1.5] # Type 0
-    - [-8, 8, 90, -90, 1.8, 1.8, 1.1, 1.9] # Type 1
-    - [-4, 4, 45, -45, 1.7, 1.8, 1.1, 1.9] # Type 2
-  n_particle_types: 3
-  sigma: 0.005 # Used for attraction-repulsion kernel
-```
-
-**Parameter meanings:**
-| Parameter | Description |
-|-----------|-------------|
-| M1 | Mobility coefficient for C1 gradient (diffusiophoresis) |
-| M2 | Mobility coefficient for C2 gradient (diffusiophoresis) |
-| consumption | Rate at which particles consume C1 field |
-| production | Rate at which particles produce C2 field |
-| ar_p1 | Attraction strength (PDE_A formula) |
-| ar_p2 | Attraction exponent (PDE_A formula) |
-| ar_p3 | Repulsion strength (PDE_A formula) |
-| ar_p4 | Repulsion exponent (PDE_A formula) |
-
-**Attraction-repulsion formula (from PDE_A):**
-
-```
-f = ar_p1 * exp(-d^(2*ar_p2) / (2σ²)) - ar_p3 * exp(-d^(2*ar_p4) / (2σ²))
-```
-
-- First term: attraction (positive ar_p1 pulls particles together)
-- Second term: repulsion (ar_p3 pushes particles apart at short range)
-- Different types can have different interaction strengths
-
 **To enable multi-type:**
 
 1. Set `n_particle_types: N` in config
-2. Check N entries to `params:` list (one per type)
-3. Set `sigma:` for the interaction kernel width
-4. **Keep total particle count constant**: When changing `n_particle_types`, particles are distributed equally among types. The total `n_particles` should remain ~9600 to maintain simulation density. Example: 1 type = 9600 particles, 2 types = 9600 total (4800 each), 3 types = 9600 total (3200 each).
-
-**⚠️ DIVERSITY REQUIREMENT:**
-
-**You MUST test n_particle_types=2 and n_particle_types=3 as frequently as n_particle_types=1.**
-
-Track your particle type distribution and actively correct imbalances. If you notice most recent iterations used 1 type, your NEXT iteration should use 2 or 3 types.
+2. **Keep total particle count constant**: When changing `n_particle_types`, particles are distributed equally among types. The total `n_particles` should remain ~9600 to maintain simulation density. Example: 1 type = 9600 particles, 2 types = 9600 total (4800 each), 3 types = 9600 total (3200 each).
 
 **Quick-start templates for multi-type configs:**
 
@@ -368,13 +245,12 @@ simulation:
 - Make ONE change at a time
 - Document hypothesis for the change
 - Compare directly to parent (same config, code-only diff)
-- Never modify GNN_LLM.py
 
-#### Step 5.3: Create PDE Variant (BLOCK END only)
+#### Step 5.2: Modify Code, create PDE_Diffusiophoresis.py variant
 
+This code implement the **mesh_model** that governs the field-field interaction
+**IMPORTANT**: PDE variant creation are ONLY allowed at the end of a block when you see `>>> BLOCK END <<<` in the prompt. During regular iterations within a block, you can only modify config parameters.
 **Before creating a variant:** Check the PDE Variants table in Working Memory and existing files in `src/ParticleGraph/generators/` to avoid duplicating work. Only create a new variant if the desired physics isn't already implemented.
-
-**When to create a variant:** Create a new PDE file to test fundamentally different reaction-diffusion models while preserving the base Brusselator.
 
 **⚠️ REQUIREMENTS:**
 
@@ -430,11 +306,11 @@ Config: mesh_model_name: Diffusiophoresis_Mesh_GrayScott
 
 **Note:** New variants are auto-committed by GNN_LLM after creation.
 
-#### Step 5.4: Create PDE_D Variant (BLOCK END only)
+#### Step 5.3: Modify code, create PDE_D.py Variant
 
-**Before creating a variant:** Check the PDE Variants table in Working Memory and existing `PDE_D_*.py` files in `src/ParticleGraph/generators/` to avoid duplicating work. Only create a new variant if the desired particle dynamics isn't already implemented.
-
-**When to create a variant:** Create a new PDE_D file to test fundamentally different particle dynamics (diffusiophoresis, boids, chemotaxis, etc.) while preserving the base PDE_D.
+This code implement the **particle_model** that governs altogether the field-particle, particle-particle and the particle-field interactions
+**IMPORTANT**: PDE variant creation are ONLY allowed at the end of a block when you see `>>> BLOCK END <<<` in the prompt. During regular iterations within a block, you can only modify config parameters.
+**Before creating a variant:** Check the PDE Variants table in Working Memory and existing files in `src/ParticleGraph/generators/` to avoid duplicating work. Only create a new variant if the desired physics isn't already implemented.
 
 **⚠️ REQUIREMENTS:**
 
@@ -522,17 +398,17 @@ Add/modify rules based on block experience:
 ```markdown
 ## Regime Comparison
 
-| Regime | mesh_model | particle_model | n_types | n_particles | Best R² | Key Insight |
-| ------ | ---------- | -------------- | ------- | ----------- | ------- | ----------- |
-| Base   | Diffusiophoresis_Mesh | PDE_ParticleField_D | 3 | 2000 | - | baseline |
+| Regime | mesh_model            | particle_model      | n_types | n_particles | Best R² | Key Insight |
+| ------ | --------------------- | ------------------- | ------- | ----------- | ------- | ----------- |
+| Base   | Diffusiophoresis_Mesh | PDE_ParticleField_D | 3       | 2000        | -       | baseline    |
 
 ## Insights
 
-| Category    | Finding                                              |
-| ----------- | ---------------------------------------------------- |
-| Patterns    | [key pattern observations]                           |
-| Performance | [what configs work well]                             |
-| Failures    | [what to avoid]                                      |
+| Category    | Finding                    |
+| ----------- | -------------------------- |
+| Patterns    | [key pattern observations] |
+| Performance | [what configs work well]   |
+| Failures    | [what to avoid]            |
 
 ---
 

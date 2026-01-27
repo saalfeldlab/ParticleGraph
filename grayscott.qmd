@@ -1,6 +1,6 @@
 ---
 title: "Gray-Scott Model"
-subtitle: "Block 9+: Exploring richer pattern dynamics"
+subtitle: "Block 12: Systematic F-k phase space exploration"
 ---
 
 ## Field Dynamics
@@ -33,15 +33,20 @@ where:
 | ε (epsilon) | 0.018 | 0.055 | Chaotic |
 | λ (lambda) | 0.040 | 0.065 | Stripes |
 
-### Parameters
+### Parameters (Block 12)
 
 | Symbol | Description | Current | Range |
 |--------|-------------|---------|-------|
 | $D_u$ | U diffusion | 0.20 | 0.1–0.5 |
-| $D_v$ | V diffusion | 0.10 | 0.05–0.2 |
+| $D_v$ | V diffusion | 0.05 | 0.05–0.2 |
 | $F$ | Feed rate | 0.035 | 0.01–0.06 |
-| $k$ | Kill rate | 0.060 | 0.04–0.07 |
-| time_scale | Dynamics speed | 5.0 | 1–10 |
+| $k$ | Kill rate | 0.063 | 0.04–0.07 |
+| time_scale | Dynamics speed | 50 | 1–100 |
+
+::: {.callout-note}
+## Block 12 Configuration
+Diffusion ratio $D_u/D_v = 4$ maintained. time_scale increased to 50 to match Brusselator dynamics speed. Exploring F-k parameter plane to locate stripe/worm regime.
+:::
 
 ---
 
@@ -53,21 +58,36 @@ $$
 \mathbf{v}_i = M_1 \nabla U\big|_{\mathbf{x}_i} + M_2 \nabla V\big|_{\mathbf{x}_i} + \sqrt{\frac{2}{\text{Pe}}} \boldsymbol{\eta}(t)
 $$
 
-::: {.callout-warning}
-## Coupling Challenge
-Gray-Scott's $UV^2$ production is slow compared to particle consumption rates tuned for Brusselator. V field goes negative, causing anti-clustering and eventual NaN.
-
-**Solutions being tested:**
-- V-clamping (concentration ≥ 0)
-- Inverted coupling (consume U instead of V)
-- Reduced consumption rates
+::: {.callout-tip}
+## Coupling Stabilized (Block 12)
+Earlier challenges with negative V fields and NaN explosions have been resolved. The system now produces stable Turing patterns with particles organizing at field boundaries.
 :::
 
 ---
 
 ## Current Status
 
-Block 9 showed Gray-Scott produces **excellent** U-field patterns (hexagonal spots, labyrinths) and particles **do** trace field boundaries correctly. However, particle-field coupling destabilizes the system.
+**Block 12** (iterations 89–96) marks a fresh start with the Gray-Scott model. Following exhaustive Brusselator exploration (Blocks 1–11) that revealed strong labyrinthine attractors, the focus has shifted to Gray-Scott's richer F-k phase space to achieve **stripe/worm patterns**.
+
+### Block 12 Progress
+
+| Iteration | F | k | Score | Result |
+|-----------|---|---|-------|--------|
+| 89 | 0.035 | 0.060 | 5/10 | **Spot patterns** — hexagonal array, particles form voronoi network at boundaries |
+| 90 | 0.035 | 0.063 | 5/10 | **Spot patterns** — k increase did not induce stripe transition |
+
+### Key Observations
+
+- Gray-Scott produces **clean, stable Turing patterns** without NaN issues
+- Spot regime is stable across k=0.060–0.063 at F=0.035
+- Particles consistently organize at field boundaries (voronoi-like network)
+- No stripe/worm transition observed yet — exploring alternative F values next
+
+### Next Steps
+
+Per Pearson (1993) phase diagram, **F=0.030 with k=0.060** may favor worms/stripes over spots. This is the planned direction for iteration 91+.
+
+### Historical Iterations (Blocks 9–11)
 
 | Iteration | Configuration | Result |
 |-----------|---------------|--------|
@@ -83,19 +103,33 @@ Block 9 showed Gray-Scott produces **excellent** U-field patterns (hexagonal spo
 
 ::: {.panel-tabset}
 
-### Iter 65
-*Initial Gray-Scott test*
+### Iter 90 ⭐
+*F=0.035, k=0.063 — Spot patterns persist*
 
-{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_065.mp4 >}}
+{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_090.mp4 >}}
+
+Increasing k from 0.060 to 0.063 did not trigger the expected stripe transition. Hexagonal spot array remains stable. Particles organize into voronoi-like cellular network at spot boundaries — same qualitative behavior as iteration 89.
+
+### Iter 89
+*F=0.035, k=0.060 — First Block 12 test*
+
+{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_089.mp4 >}}
+
+Gray-Scott model produces clean hexagonal spot patterns. Particles aggregate at field boundaries forming a voronoi-like network. This is the α (alpha) spot regime, not the γ (gamma) worm regime targeted.
+
+### Iter 67
+*γ-worm regime (historical)*
+
+{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_067.mp4 >}}
 
 ### Iter 66
-*α-spot regime (NaN)*
+*α-spot regime (NaN) (historical)*
 
 {{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_066.mp4 >}}
 
-### Iter 67
-*γ-worm regime*
+### Iter 65
+*Initial Gray-Scott test (historical)*
 
-{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_067.mp4 >}}
+{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_065.mp4 >}}
 
 :::

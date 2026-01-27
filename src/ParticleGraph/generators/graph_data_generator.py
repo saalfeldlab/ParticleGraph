@@ -1407,7 +1407,7 @@ def data_generate_particle_field(
                         ax3.scatter(
                             to_numpy(x[index_particles[n], 1]),  # x coordinate
                             to_numpy(x[index_particles[n], 2]),  # y coordinate
-                            s=5,
+                            s=15,
                             color=cmap.color(n),
                             alpha=0.9,
                             edgecolors='none'
