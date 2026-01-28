@@ -874,6 +874,16 @@ def data_generate_particle_field(
 
         # initialize particle and mesh states
         X1, V1, T1, H1, _, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
+
+        # Shuffle particle types if requested (randomizes type assignment to avoid radial bands)
+        if simulation_config.shuffle_particle_types:
+            if run == 0:
+                shuffle_index = torch.randperm(n_particles, device=device)
+                T1 = T1[shuffle_index]
+                first_T1 = T1.clone().detach()
+            else:
+                T1 = first_T1.clone().detach()
+
         X1_mesh, _, _, H1_mesh, _, _, _ = init_mesh(config, device=device)
         H1_mesh[mask_mesh == 0.0] = 0.0
         edge_cache = NeighborCache()
