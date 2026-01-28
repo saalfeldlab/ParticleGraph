@@ -36,8 +36,10 @@ def load_pde_variant(variant_name, generators_path=None):
     if generators_path is None:
         generators_path = os.path.dirname(os.path.abspath(__file__))
 
-    # Extract variant suffix: 'Diffusiophoresis_Mesh_1' -> '1', 'Diffusiophoresis_Mesh_GrayScott' -> 'GrayScott'
+    # Extract variant suffix: 'Diffusiophoresis_Mesh_1' -> '1', 'Diffusiophoresis_Mesh_GrayScott' -> 'GrayScott', 'PDE_Diffusiophoresis_GrayScott' -> 'GrayScott'
     match = re.match(r'Diffusiophoresis_Mesh_(.+)', variant_name)
+    if not match:
+        match = re.match(r'PDE_Diffusiophoresis_(.+)', variant_name)
     if not match:
         return None
 
@@ -125,13 +127,13 @@ def load_pde_d_variant(variant_name, generators_path=None):
     # Get the PDE_D class (expected name: PDE_D_{suffix})
     class_name = f"PDE_D_{variant_suffix}"
     if hasattr(module, class_name):
-        print(f"Loaded PDE_D variant: {class_name} from {file_name}")
+        print(f"loaded PDE_D variant: {class_name} from {file_name}")
         return getattr(module, class_name)
 
     # Fallback: look for any class starting with PDE_D_
     for name in dir(module):
         if name.startswith('PDE_D_') and not name.startswith('PDE_D__'):
-            print(f"Loaded PDE_D variant: {name} from {file_name}")
+            print(f"loaded PDE_D variant: {name} from {file_name}")
             return getattr(module, name)
 
     print(f"Warning: No PDE_D class found in {file_path}")
@@ -333,8 +335,8 @@ def choose_mesh_model(config, X1_mesh, device):
                     c[n] = torch.tensor(config.simulation.diffusion_coefficients[n])
                 mesh_model = PDE_Laplacian(aggr_type=aggr_type, c=torch.squeeze(c), bc_dpos=bc_dpos)
             case _:
-                # Try dynamic loading for PDE variants (e.g., Diffusiophoresis_Mesh_1, Diffusiophoresis_Mesh_GrayScott)
-                if mesh_model_name.startswith('Diffusiophoresis_Mesh_'):
+                # Try dynamic loading for PDE variants (e.g., Diffusiophoresis_Mesh_1, Diffusiophoresis_Mesh_GrayScott, PDE_Diffusiophoresis_GrayScott)
+                if mesh_model_name.startswith('Diffusiophoresis_Mesh_') or mesh_model_name.startswith('PDE_Diffusiophoresis_'):
                     pde_class = load_pde_variant(mesh_model_name)
                     if pde_class is not None:
                         params_mesh = config.simulation.params_mesh
@@ -994,7 +996,7 @@ def init_mesh(config, device):
             s = torch.sum(node_value, dim=1)
             for k in range(2):
                 node_value[:, k] = node_value[:, k] / s
-        case _ if config.graph_model.mesh_model_name.startswith('Diffusiophoresis_Mesh_'):
+        case _ if config.graph_model.mesh_model_name.startswith('Diffusiophoresis_Mesh_') or config.graph_model.mesh_model_name.startswith('PDE_Diffusiophoresis'):
             # PDE variants (Gray-Scott, etc.) - initialize with small random perturbations
             # Gray-Scott: U≈1 (substrate), V≈0 (autocatalyst) with localized seeds
             if 'GrayScott' in config.graph_model.mesh_model_name:
