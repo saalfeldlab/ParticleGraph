@@ -44,6 +44,10 @@ When `particle_params` is provided, each particle type can have distinct interac
 
 This enables heterogeneous systems where different particle types attract/repel each other differently.
 
+## Force Visualization
+
+![Particle-particle interaction forces. Left: General attraction-repulsion model with configurable parameters. Right: Simple repulsion used in diffusiophoresis simulations.](assets/pp_interaction.png){.lightbox}
+
 ## Role in Pattern Formation
 
 Particle–particle repulsion:

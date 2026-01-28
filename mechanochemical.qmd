@@ -1,0 +1,473 @@
+---
+title: "Mechanochemical Morphogenesis"
+subtitle: "Coupling reaction-diffusion chemistry with continuum mechanics"
+---
+
+## Overview
+
+Morphogenesis in biological tissues arises from the **bidirectional coupling** between chemical signaling and mechanical deformation. Chemical patterns (Turing instabilities, morphogen gradients) drive tissue growth and folding, while mechanical stress feeds back to modulate diffusion, reaction rates, and cell behavior. This page describes a unified framework combining:
+
+- **Diffusiophoresis** (ParticleGraph): Particles respond to chemical gradients
+- **Material Point Method** (MPM_pytorch): Continuum mechanics with elasticity, plasticity, and stress
+
+::: {.callout-note}
+## Goal
+Develop a differentiable simulation framework where chemical patterning and mechanical admissibility **jointly constrain** morphogenetic outcomes — enabling discovery of forms that are both chemically stable and mechanically viable.
+:::
+
+---
+
+## Motivation: Why Both Chemisty and Mechanics?
+
+```{mermaid}
+%%| fig-width: 9
+flowchart LR
+    subgraph Chemistry["Chemical Patterning"]
+        RD[Reaction-Diffusion] --> TP[Turing Patterns]
+        TP --> MG[Morphogen Gradients]
+    end
+
+    subgraph Mechanics["Continuum Mechanics"]
+        DEF[Deformation] --> STR[Stress]
+        STR --> GRO[Growth/Folding]
+    end
+
+    MG -->|"Active stress<br>Chemotaxis"| DEF
+    STR -->|"Strain-dependent<br>diffusion/reaction"| RD
+
+    style Chemistry fill:#e3f2fd
+    style Mechanics fill:#fff3e0
+```
+
+### Limitations of Chemistry-Only Models
+
+Current diffusiophoresis simulations achieve rich pattern diversity but lack:
+
+- **Mechanical admissibility**: Patterns may be geometrically impossible under physical constraints
+- **Tissue-scale stress**: No bulk elastic or plastic response
+- **Growth dynamics**: Volume changes require material mechanics
+
+### Limitations of Mechanics-Only Models
+
+MPM simulations capture deformation but lack:
+
+- **Pattern formation**: No spontaneous symmetry breaking
+- **Chemical signaling**: No morphogen-driven differentiation
+- **Active forces**: Stress is passive, not chemically driven
+
+### The Unified Framework
+
+By coupling both, we can study:
+
+| Phenomenon | Chemistry | Mechanics | Coupling |
+|------------|-----------|-----------|----------|
+| **Tissue folding** | Morphogen gradients | Elastic buckling | Gradient → active stress |
+| **Wound healing** | Chemotaxis signals | Cell traction | Migration + deformation |
+| **Tumor invasion** | Chemokine gradients | ECM remodeling | Degradation + stress |
+| **Organoid growth** | Turing patterning | Elastic confinement | Pattern → growth tensor |
+
+---
+
+## State Variables
+
+Each particle carries the **union** of variables from both systems:
+
+### Position and Kinematics
+
+| Symbol | Variable | Source | Dimension | Description |
+|--------|----------|--------|-----------|-------------|
+| $\mathbf{x}_i$ | Position | Both | $d$ | Spatial location |
+| $\mathbf{v}_i$ | Velocity | Both | $d$ | Material velocity |
+| $\mathbf{C}_i$ | Affine velocity | MPM | $d \times d$ | Local velocity gradient (APIC) |
+
+### Deformation and Stress (from MPM)
+
+| Symbol | Variable | Dimension | Description |
+|--------|----------|-----------|-------------|
+| $\mathbf{F}_i$ | Deformation gradient | $d \times d$ | Total deformation from reference |
+| $J_i^p$ | Plastic Jacobian | $1$ | Accumulated plastic volume change |
+| $\boldsymbol{\sigma}_i$ | Cauchy stress | $d \times d$ | Current stress state |
+
+### Chemical Sensing (from Diffusiophoresis)
+
+| Symbol | Variable | Dimension | Description |
+|--------|----------|-----------|-------------|
+| $C_1(\mathbf{x}_i)$ | Activator concentration | $1$ | Sampled from mesh at particle position |
+| $C_2(\mathbf{x}_i)$ | Inhibitor concentration | $1$ | Sampled from mesh at particle position |
+| $\nabla C_k$ | Concentration gradient | $d$ | Drives diffusiophoretic velocity |
+
+### Learnable Embeddings
+
+| Symbol | Variable | Dimension | Description |
+|--------|----------|-----------|-------------|
+| $\mathbf{a}_i$ | Particle embedding | $n_{\text{emb}}$ | Learnable per-particle features (cell type) |
+| $\mathbf{e}_{ij}$ | Edge embedding | $n_{\text{emb}}$ | Learnable pairwise interaction (synaptic) |
+
+---
+
+## Coupled Governing Equations
+
+### 1. Chemical Field Evolution (Mesh)
+
+The reaction-diffusion PDE with **strain-dependent** modifications:
+
+$$
+\frac{\partial C_k}{\partial t} = D_k(\mathbf{F}) \nabla^2 C_k + R_k(C_1, C_2, \boldsymbol{\sigma}) + S_k^{\text{particles}}
+$$
+
+where:
+
+- $D_k(\mathbf{F})$: Diffusion coefficient, potentially strain-dependent
+- $R_k$: Reaction kinetics (Brusselator, Gray-Scott, FHN)
+- $S_k^{\text{particles}}$: Source/sink from particle consumption/production
+
+**Strain-dependent diffusion** (mechanochemical feedback):
+
+$$
+D_k(\mathbf{F}) = D_k^0 \left[ 1 + \alpha_D (J - 1) \right]
+$$
+
+where $J = \det(\mathbf{F})$ is the volume ratio. Stretched tissue ($J > 1$) has enhanced diffusion.
+
+### 2. Particle Velocity (Combined Forces)
+
+$$
+\mathbf{v}_i = \underbrace{\mathbf{v}_i^{\text{MPM}}}_{\text{grid interpolation}} + \underbrace{\sum_k M_k \nabla C_k}_{\text{diffusiophoresis}} + \underbrace{\mathbf{v}_i^{\text{active}}(\boldsymbol{\sigma})}_{\text{mechanotaxis}}
+$$
+
+**Mechanotaxis** (stress-driven migration):
+
+$$
+\mathbf{v}_i^{\text{active}} = \chi_\sigma \nabla \cdot \boldsymbol{\sigma}
+$$
+
+Cells migrate toward regions of high stress divergence (durotaxis).
+
+### 3. Deformation Gradient Update (MPM)
+
+$$
+\mathbf{F}_i^{n+1} = (\mathbf{I} + \Delta t \, \mathbf{C}_i^n) \mathbf{F}_i^n
+$$
+
+### 4. Constitutive Law with Active Stress
+
+The Cauchy stress includes a **chemically-driven active component**:
+
+$$
+\boldsymbol{\sigma} = \underbrace{\boldsymbol{\sigma}^{\text{elastic}}(\mathbf{F})}_{\text{Neo-Hookean}} + \underbrace{\boldsymbol{\sigma}^{\text{active}}(C_1, C_2)}_{\text{chemical coupling}}
+$$
+
+**Passive elastic stress** (Neo-Hookean):
+
+$$
+\boldsymbol{\sigma}^{\text{elastic}} = \frac{\mu}{J}(\mathbf{F}\mathbf{F}^T - \mathbf{I}) + \frac{\lambda}{J}(J - 1)\mathbf{I}
+$$
+
+**Active stress** (morphogen-driven contractility):
+
+$$
+\boldsymbol{\sigma}^{\text{active}} = \zeta(C_1) \, \mathbf{I}
+$$
+
+where $\zeta(C_1)$ is an activation function mapping local activator concentration to isotropic contractile stress.
+
+### 5. Momentum Transfer (P2G / G2P)
+
+Standard MPM transfers, but with chemically-modified forces:
+
+**P2G (Particle to Grid)**:
+
+$$
+(m\mathbf{v})_I = \sum_i w_{iI} \left[ m_i \mathbf{v}_i + m_i \mathbf{C}_i (\mathbf{x}_I - \mathbf{x}_i) - \frac{4\Delta t}{(\Delta x)^2} V_i \boldsymbol{\sigma}_i (\mathbf{x}_I - \mathbf{x}_i) \right]
+$$
+
+**G2P (Grid to Particle)**:
+
+$$
+\mathbf{v}_i^{n+1} = \sum_I w_{iI} \mathbf{v}_I^{n+1}
+$$
+
+---
+
+## Unified GNN Architecture
+
+```{mermaid}
+%%| fig-width: 10
+flowchart TB
+    subgraph Input["Input Features"]
+        X["Position x"]
+        V["Velocity v"]
+        F["Deformation F"]
+        C["Concentrations C₁, C₂"]
+        A["Particle embedding a"]
+    end
+
+    subgraph Edges["Edge Construction"]
+        DIST["Distance threshold"] --> ADJ["Adjacency"]
+        ADJ --> E["Edge embedding e_ij"]
+    end
+
+    subgraph Message["Message Passing (Synaptic)"]
+        PSI["ψ(Δx, e_ij, a_i, a_j, F_i, F_j, C_i, C_j)"]
+    end
+
+    subgraph Aggregation["Node Update"]
+        AGG["Σ messages"]
+        PHI["Φ(x, v, F, C, a, Σm)"]
+    end
+
+    subgraph Output["Predictions"]
+        DV["Δv (velocity update)"]
+        DF["ΔF (deformation update)"]
+        DS["Δσ (stress)"]
+    end
+
+    Input --> Edges
+    Edges --> Message
+    Input --> Message
+    Message --> Aggregation
+    Aggregation --> Output
+
+    style Input fill:#e8f5e9
+    style Edges fill:#fff3e0
+    style Message fill:#e3f2fd
+    style Output fill:#fce4ec
+```
+
+### Message Function (Edge-Centric)
+
+Following the MDCK calcium dynamics model, interactions are parameterized by **learnable edge embeddings**:
+
+$$
+m_{ij} = \psi\left( \Delta \mathbf{x}_{ij}, \mathbf{e}_{ij}, \mathbf{a}_i, \mathbf{a}_j, \mathbf{F}_i, \mathbf{F}_j, C_1^i, C_1^j \right)
+$$
+
+where:
+
+- $\psi$: MLP encoding pairwise interactions
+- $\mathbf{e}_{ij} \in \mathbb{R}^{n_{\text{emb}}}$: Learnable edge embedding
+- $\mathbf{a}_i, \mathbf{a}_j$: Particle (cell) embeddings
+
+### Update Function
+
+$$
+\frac{d\mathbf{y}_i}{dt} = \Phi\left( \mathbf{y}_i, \mathbf{a}_i, \sum_{j \in \mathcal{N}_i} m_{ij} \right)
+$$
+
+where $\mathbf{y}_i = [\mathbf{v}_i, \mathbf{F}_i, \boldsymbol{\sigma}_i]$ is the combined state vector.
+
+---
+
+## Edge Embeddings: The Synaptic Class
+
+A key architectural innovation is **learnable edge embeddings** $\mathbf{e}_{ij}$ that capture connection-specific properties between particles (cells).
+
+### Physical Interpretation
+
+| Domain | Edge Embedding Represents |
+|--------|---------------------------|
+| **Neural circuits** | Synaptic weight / efficacy |
+| **Calcium dynamics** | Gap junction conductance |
+| **Mechanical coupling** | Cell-cell adhesion strength |
+| **Chemical signaling** | Paracrine communication efficiency |
+
+### Why Edge Embeddings?
+
+Standard GNNs use node embeddings only, assuming interactions depend solely on node features. But biological systems exhibit **connection-specific** heterogeneity:
+
+1. **Asymmetric connections**: $\mathbf{e}_{ij} \neq \mathbf{e}_{ji}$ (directed signaling)
+2. **Learned impedance**: Edge embedding captures effective coupling strength
+3. **Structural plasticity**: Embeddings can encode tissue connectivity patterns
+
+### Connection to MDCK Results
+
+From the MDCK calcium dynamics analysis:
+
+- Cells have autonomous fixed points $F_i^* = -c_0/\alpha$
+- Network connectivity **suppresses** most cells below $F_i^*$
+- Leader-follower populations emerge from learned embeddings
+- Edge structure encodes functional specialization
+
+This same architecture extends to mechanochemical systems:
+
+$$
+\text{Ca}^{2+} \text{ dynamics} \xrightarrow{\text{generalize}} \text{Morphogen + Stress dynamics}
+$$
+
+---
+
+## Grid Unification
+
+Both diffusiophoresis and MPM use spatial grids. In the unified framework, a **single grid** serves both:
+
+```{mermaid}
+%%| fig-width: 8
+flowchart TB
+    subgraph Grid["Unified Grid"]
+        G["Regular grid nodes"]
+    end
+
+    subgraph Chemistry["Chemical Fields"]
+        C1["C₁ (activator)"]
+        C2["C₂ (inhibitor)"]
+    end
+
+    subgraph Mechanics["Mechanical Fields"]
+        MV["Grid momentum mv"]
+        M["Grid mass m"]
+    end
+
+    subgraph Particles["Material Points"]
+        P["Particles carry:<br>x, v, F, σ, C, a"]
+    end
+
+    Grid --> Chemistry
+    Grid --> Mechanics
+
+    Particles -->|"P2G"| Grid
+    Grid -->|"G2P"| Particles
+    Grid -->|"Sample C"| Particles
+    Particles -->|"Source/sink"| Grid
+
+    style Grid fill:#f5f5f5
+    style Chemistry fill:#e3f2fd
+    style Mechanics fill:#fff3e0
+    style Particles fill:#e8f5e9
+```
+
+### Grid Operations
+
+| Operation | Chemistry | Mechanics |
+|-----------|-----------|-----------|
+| **P2G** | Particle source terms $S_k$ | Mass + momentum scatter |
+| **Grid solve** | Diffusion + reaction | Momentum update + BC |
+| **G2P** | Concentration sampling | Velocity gather |
+
+### Spatial Coupling
+
+Chemical concentrations and mechanical fields live on the same grid, enabling:
+
+- Strain-dependent diffusion coefficients
+- Stress-dependent reaction rates
+- Consistent boundary conditions
+
+---
+
+## State of the Art
+
+### Mechanochemical Coupling in Morphogenesis
+
+| Reference | System | Contribution |
+|-----------|--------|--------------|
+| Shyer et al. (2017) | Gut villus | Mechanical buckling + Shh patterning |
+| Hannezo & Heisenberg (2019) | Tissue mechanics | Review of mechanochemical feedback |
+| Mercker et al. (2016) | Pattern formation | Curvature-dependent reaction-diffusion |
+| Recho et al. (2019) | Active gels | Chemomechanical instabilities |
+
+### Computational Frameworks
+
+| Framework | Chemistry | Mechanics | Coupling |
+|-----------|-----------|-----------|----------|
+| **FEniCS** | PDE solve | FEM elasticity | Manual |
+| **Chaste** | Cell signaling | Vertex/Voronoi | Explicit |
+| **PhysiCell** | Diffusion | Agent-based | Rule-based |
+| **This work** | Reaction-diffusion | MPM | Learnable GNN |
+
+### Key References
+
+1. **Turing (1952)**: Chemical basis of morphogenesis
+2. **Stomakhin et al. (2013)**: MPM for snow simulation
+3. **Sanchez et al. (2019)**: Graph networks for physics simulation
+4. **Howard et al. (2011)**: Turing patterns meet cell biology
+5. **Nelson (2016)**: Mechanical control of tissue morphogenesis
+
+---
+
+## Implementation Roadmap
+
+### Phase 1: Minimal Coupling (Current)
+
+- [x] Diffusiophoresis with reaction-diffusion (ParticleGraph)
+- [x] MPM with multiple materials (MPM_pytorch)
+- [ ] **Shared particle state**: Add F, σ to ParticleGraph particles
+
+### Phase 2: Unidirectional Coupling
+
+- [ ] **Chemistry → Mechanics**: Active stress from morphogen concentration
+- [ ] **Mechanics → Chemistry**: Strain-dependent diffusion
+- [ ] Unified grid for both systems
+
+### Phase 3: Bidirectional + Learning
+
+- [ ] Edge embeddings for mechanochemical interactions
+- [ ] Learnable constitutive laws (GNN replaces Neo-Hookean)
+- [ ] Inverse problem: Infer coupling parameters from data
+
+### Phase 4: Biological Applications
+
+- [ ] MDCK wound healing with mechanics
+- [ ] Organoid folding
+- [ ] Tumor spheroid invasion
+
+---
+
+## Summary
+
+```{mermaid}
+%%| fig-width: 10
+flowchart LR
+    subgraph ParticleGraph["ParticleGraph"]
+        PG1["Reaction-Diffusion"]
+        PG2["Diffusiophoresis"]
+        PG3["Particle embeddings"]
+    end
+
+    subgraph MPM["MPM_pytorch"]
+        MPM1["Deformation F, Stress σ"]
+        MPM2["P2G / G2P transfers"]
+        MPM3["Constitutive laws"]
+    end
+
+    subgraph Unified["Mechanochemical Framework"]
+        U1["Combined state variables"]
+        U2["Bidirectional coupling"]
+        U3["Edge embeddings (synaptic)"]
+        U4["Unified grid"]
+    end
+
+    ParticleGraph --> Unified
+    MPM --> Unified
+
+    Unified --> APP["Applications:<br>Morphogenesis<br>Wound healing<br>Organoids"]
+
+    style ParticleGraph fill:#e3f2fd
+    style MPM fill:#fff3e0
+    style Unified fill:#e8f5e9
+    style APP fill:#fce4ec
+```
+
+The mechanochemical framework unifies:
+
+1. **Chemical patterning** (Turing, morphogens) from ParticleGraph
+2. **Continuum mechanics** (elasticity, plasticity) from MPM_pytorch
+3. **Learnable interactions** via edge embeddings (synaptic class)
+
+This enables studying morphogenesis as a **constrained optimization** problem: forms must be both chemically stable and mechanically admissible.
+
+---
+
+## References
+
+1. Turing, A. M. (1952). The chemical basis of morphogenesis. *Phil. Trans. R. Soc. Lond. B*, 237(641), 37-72.
+
+2. Stomakhin, A., et al. (2013). A material point method for snow simulation. *ACM Trans. Graph.*, 32(4), 102.
+
+3. Hannezo, E., & Heisenberg, C. P. (2019). Mechanochemical feedback loops in development and disease. *Cell*, 178(1), 12-25.
+
+4. Shyer, A. E., et al. (2017). Emergent cellular self-organization and mechanosensation initiate follicle pattern in the avian skin. *Science*, 357(6353), 811-815.
+
+5. Mercker, M., et al. (2016). Beyond Turing: mechanochemical pattern formation in biological tissues. *Biology Direct*, 11(1), 22.
+
+6. Sanchez-Gonzalez, A., et al. (2020). Learning to simulate complex physics with graph networks. *ICML 2020*.
+
+7. Recho, P., et al. (2019). Theory of mechanochemical patterning in biphasic biological tissues. *PNAS*, 116(12), 5344-5349.

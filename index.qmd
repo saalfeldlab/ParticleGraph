@@ -2,7 +2,7 @@
 title: "LLM-Guided Morphogenesis"
 subtitle: "Closed-loop discovery in coupled chemical-particle systems"
 author: "Cédric Allier"
-date: "2026-01-26"
+date: "2026-01-28"
 ---
 
 ## Introduction
@@ -13,7 +13,7 @@ The system combines reaction–diffusion chemistry, diffusiophoretic particle tr
 
 A key methodological insight motivating this work is that **LLM-guided discovery is fundamentally limited by the laws it is allowed to explore**. Early stages of the project revealed strong attractors imposed by the Brusselator reaction–diffusion model, which restricted accessible morphologies despite extensive parameter search. This limitation led to an explicit design choice: elevate *model-space exploration*—including PDE modification and variant creation.
 
-The current results focus on diffusiophoresis coupled to classical reaction–diffusion systems. Future extensions will introduce additional physical constraints, such as elasticity via material point methods (MPM), to study how mechanical admissibility further restricts or stabilizes morphogenetic outcomes. Together, these elements position the framework as a general method for exploring not only patterns, but the **conditions under which stable form emerges**.
+The current results focus on diffusiophoresis coupled to classical reaction–diffusion systems. The framework now extends to include **mechanochemical coupling** via the Material Point Method (MPM), enabling study of how mechanical admissibility constrains morphogenetic outcomes. See the [Mechanochemical Morphogenesis](mechanochemical.qmd) section for the unified framework combining chemistry and continuum mechanics.
 
 
 ---
@@ -73,19 +73,67 @@ The exploration uses **Upper Confidence Bound (UCB)** tree search to balance exp
 
 ---
 
-## Reaction-Diffusion Models
-
-Two PDE models have been explored for the chemical patterning component:
-
-::: {.callout-note}
-## [Brusselator Model](brusselator.qmd)
-Classic two-component system with cubic autocatalysis. Explored in **Blocks 1–11** (88 iterations). Best clustering: 0.485. Exhaustive search revealed strong labyrinthine attractors — no stripe regime accessible.
-:::
+## Mechanochemical Extension
 
 ::: {.callout-tip}
-## [Gray-Scott Model](grayscott.qmd) ⭐ Active
-Autocatalytic system with feed/kill dynamics. Currently being explored in **Block 12** (iterations 89–96). Producing stable spot patterns; systematically exploring F-k plane for stripe/worm transition.
+## New: Coupling Chemistry with Mechanics
+The framework extends beyond pattern formation to include **continuum mechanics** via the Material Point Method (MPM). This enables studying morphogenesis under mechanical constraints.
+
+[**→ Mechanochemical Morphogenesis**](mechanochemical.qmd)
 :::
+
+```{mermaid}
+%%| fig-width: 8
+flowchart LR
+    subgraph Current["Current: Chemistry"]
+        RD["Reaction-Diffusion"]
+        DP["Diffusiophoresis"]
+    end
+
+    subgraph Extension["Extension: Mechanics"]
+        DEF["Deformation F"]
+        STR["Stress σ"]
+    end
+
+    subgraph Unified["Unified Framework"]
+        U["Mechanochemical<br>Morphogenesis"]
+    end
+
+    Current --> Unified
+    Extension --> Unified
+
+    style Current fill:#e3f2fd
+    style Extension fill:#fff3e0
+    style Unified fill:#e8f5e9
+```
+
+Key additions:
+
+- **Deformation gradient $\mathbf{F}$** and **stress $\boldsymbol{\sigma}$** per particle
+- **Active stress** driven by morphogen concentration
+- **Strain-dependent diffusion** for mechanochemical feedback
+- **Edge embeddings** for learnable cell-cell interactions (synaptic class)
+
+---
+
+## Reaction-Diffusion Models
+
+Three PDE models have been explored for the chemical patterning component, revealing a clear **trichotomy** in accessible morphologies:
+
+### [Brusselator](brusselator.qmd)
+Hexagonal Turing patterns with tight particle clusters
+
+[![](graphs_data/diffusiophoresis/diffusiophoresis_Claude/montage_iter_012.png){.lightbox}](brusselator.qmd)
+
+### [Gray-Scott](grayscott.qmd)
+Radial patterns only — no hexagonal symmetry breaking
+
+[![](graphs_data/diffusiophoresis/diffusiophoresis_Claude/montage_iter_014.png){.lightbox}](grayscott.qmd)
+
+### [FitzHugh-Nagumo](fhn.qmd)
+Hexagonal patterns with network particle structure
+
+[![](graphs_data/diffusiophoresis/diffusiophoresis_Claude/montage_iter_018.png){.lightbox}](fhn.qmd)
 
 ---
 

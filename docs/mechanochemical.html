@@ -1,0 +1,1626 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Mechanochemical Morphogenesis – LLM-Guided Morphogenesis</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-ed96de9b727972fe78a7b5d16c58bf87.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-dark-4d9afe2b8d18ee9fa5d0d57b5ed4214d.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-ed96de9b727972fe78a7b5d16c58bf87.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-508be24566865fa28f48dacc3ed5d9bc.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-dark-fc60ebf3756af1d7378dcf8f99431227.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="site_libs/bootstrap/bootstrap-508be24566865fa28f48dacc3ed5d9bc.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>html{ scroll-behavior: smooth; }</style>
+<script src="site_libs/quarto-diagram/mermaid.min.js"></script>
+<script src="site_libs/quarto-diagram/mermaid-init.js"></script>
+<link href="site_libs/quarto-diagram/mermaid.css" rel="stylesheet">
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="nav-fixed quarto-light"><script id="quarto-html-before-body" type="application/javascript">
+    const toggleBodyColorMode = (bsSheetEl) => {
+      const mode = bsSheetEl.getAttribute("data-mode");
+      const bodyEl = window.document.querySelector("body");
+      if (mode === "dark") {
+        bodyEl.classList.add("quarto-dark");
+        bodyEl.classList.remove("quarto-light");
+      } else {
+        bodyEl.classList.add("quarto-light");
+        bodyEl.classList.remove("quarto-dark");
+      }
+    }
+    const toggleBodyColorPrimary = () => {
+      const bsSheetEl = window.document.querySelector("link#quarto-bootstrap:not([rel=disabled-stylesheet])");
+      if (bsSheetEl) {
+        toggleBodyColorMode(bsSheetEl);
+      }
+    }
+    const setColorSchemeToggle = (alternate) => {
+      const toggles = window.document.querySelectorAll('.quarto-color-scheme-toggle');
+      for (let i=0; i < toggles.length; i++) {
+        const toggle = toggles[i];
+        if (toggle) {
+          if (alternate) {
+            toggle.classList.add("alternate");
+          } else {
+            toggle.classList.remove("alternate");
+          }
+        }
+      }
+    };
+    const toggleColorMode = (alternate) => {
+      // Switch the stylesheets
+      const primaryStylesheets = window.document.querySelectorAll('link.quarto-color-scheme:not(.quarto-color-alternate)');
+      const alternateStylesheets = window.document.querySelectorAll('link.quarto-color-scheme.quarto-color-alternate');
+      manageTransitions('#quarto-margin-sidebar .nav-link', false);
+      if (alternate) {
+        // note: dark is layered on light, we don't disable primary!
+        enableStylesheet(alternateStylesheets);
+        for (const sheetNode of alternateStylesheets) {
+          if (sheetNode.id === "quarto-bootstrap") {
+            toggleBodyColorMode(sheetNode);
+          }
+        }
+      } else {
+        disableStylesheet(alternateStylesheets);
+        enableStylesheet(primaryStylesheets)
+        toggleBodyColorPrimary();
+      }
+      manageTransitions('#quarto-margin-sidebar .nav-link', true);
+      // Switch the toggles
+      setColorSchemeToggle(alternate)
+      // Hack to workaround the fact that safari doesn't
+      // properly recolor the scrollbar when toggling (#1455)
+      if (navigator.userAgent.indexOf('Safari') > 0 && navigator.userAgent.indexOf('Chrome') == -1) {
+        manageTransitions("body", false);
+        window.scrollTo(0, 1);
+        setTimeout(() => {
+          window.scrollTo(0, 0);
+          manageTransitions("body", true);
+        }, 40);
+      }
+    }
+    const disableStylesheet = (stylesheets) => {
+      for (let i=0; i < stylesheets.length; i++) {
+        const stylesheet = stylesheets[i];
+        stylesheet.rel = 'disabled-stylesheet';
+      }
+    }
+    const enableStylesheet = (stylesheets) => {
+      for (let i=0; i < stylesheets.length; i++) {
+        const stylesheet = stylesheets[i];
+        if(stylesheet.rel !== 'stylesheet') { // for Chrome, which will still FOUC without this check
+          stylesheet.rel = 'stylesheet';
+        }
+      }
+    }
+    const manageTransitions = (selector, allowTransitions) => {
+      const els = window.document.querySelectorAll(selector);
+      for (let i=0; i < els.length; i++) {
+        const el = els[i];
+        if (allowTransitions) {
+          el.classList.remove('notransition');
+        } else {
+          el.classList.add('notransition');
+        }
+      }
+    }
+    const isFileUrl = () => {
+      return window.location.protocol === 'file:';
+    }
+    const hasAlternateSentinel = () => {
+      let styleSentinel = getColorSchemeSentinel();
+      if (styleSentinel !== null) {
+        return styleSentinel === "alternate";
+      } else {
+        return false;
+      }
+    }
+    const setStyleSentinel = (alternate) => {
+      const value = alternate ? "alternate" : "default";
+      if (!isFileUrl()) {
+        window.localStorage.setItem("quarto-color-scheme", value);
+      } else {
+        localAlternateSentinel = value;
+      }
+    }
+    const getColorSchemeSentinel = () => {
+      if (!isFileUrl()) {
+        const storageValue = window.localStorage.getItem("quarto-color-scheme");
+        return storageValue != null ? storageValue : localAlternateSentinel;
+      } else {
+        return localAlternateSentinel;
+      }
+    }
+    const toggleGiscusIfUsed = (isAlternate, darkModeDefault) => {
+      const baseTheme = document.querySelector('#giscus-base-theme')?.value ?? 'light';
+      const alternateTheme = document.querySelector('#giscus-alt-theme')?.value ?? 'dark';
+      let newTheme = '';
+      if(authorPrefersDark) {
+        newTheme = isAlternate ? baseTheme : alternateTheme;
+      } else {
+        newTheme = isAlternate ? alternateTheme : baseTheme;
+      }
+      const changeGiscusTheme = () => {
+        // From: https://github.com/giscus/giscus/issues/336
+        const sendMessage = (message) => {
+          const iframe = document.querySelector('iframe.giscus-frame');
+          if (!iframe) return;
+          iframe.contentWindow.postMessage({ giscus: message }, 'https://giscus.app');
+        }
+        sendMessage({
+          setConfig: {
+            theme: newTheme
+          }
+        });
+      }
+      const isGiscussLoaded = window.document.querySelector('iframe.giscus-frame') !== null;
+      if (isGiscussLoaded) {
+        changeGiscusTheme();
+      }
+    };
+    const authorPrefersDark = false;
+    const darkModeDefault = authorPrefersDark;
+      document.querySelector('link#quarto-text-highlighting-styles.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
+      document.querySelector('link#quarto-bootstrap.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
+    let localAlternateSentinel = darkModeDefault ? 'alternate' : 'default';
+    // Dark / light mode switch
+    window.quartoToggleColorScheme = () => {
+      // Read the current dark / light value
+      let toAlternate = !hasAlternateSentinel();
+      toggleColorMode(toAlternate);
+      setStyleSentinel(toAlternate);
+      toggleGiscusIfUsed(toAlternate, darkModeDefault);
+      window.dispatchEvent(new Event('resize'));
+    };
+    // Switch to dark mode if need be
+    if (hasAlternateSentinel()) {
+      toggleColorMode(true);
+    } else {
+      toggleColorMode(false);
+    }
+  </script>
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">LLM-Guided Morphogenesis</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="./index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-interactions" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Interactions</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-interactions">    
+        <li>
+    <a class="dropdown-item" href="./field-field.html">
+ <span class="dropdown-text">Field–Field</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./field-particle.html">
+ <span class="dropdown-text">Field–Particle</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./particle-field.html">
+ <span class="dropdown-text">Particle–Field</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./particle-particle.html">
+ <span class="dropdown-text">Particle–Particle</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-models" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Models</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-models">    
+        <li>
+    <a class="dropdown-item" href="./brusselator.html">
+ <span class="dropdown-text">Brusselator</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./grayscott.html">
+ <span class="dropdown-text">Gray-Scott</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./fhn.html">
+ <span class="dropdown-text">FitzHugh-Nagumo</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link active" href="./mechanochemical.html" aria-current="page"> 
+<span class="menu-text">Mechanochemical</span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+    <a href="https://github.com/allierc/ParticleGraph" title="" class="quarto-navigation-tool px-1" aria-label=""><i class="bi bi-github"></i></a>
+  <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
+  <li><a href="#motivation-why-both-chemisty-and-mechanics" id="toc-motivation-why-both-chemisty-and-mechanics" class="nav-link" data-scroll-target="#motivation-why-both-chemisty-and-mechanics">Motivation: Why Both Chemisty and Mechanics?</a>
+  <ul class="collapse">
+  <li><a href="#limitations-of-chemistry-only-models" id="toc-limitations-of-chemistry-only-models" class="nav-link" data-scroll-target="#limitations-of-chemistry-only-models">Limitations of Chemistry-Only Models</a></li>
+  <li><a href="#limitations-of-mechanics-only-models" id="toc-limitations-of-mechanics-only-models" class="nav-link" data-scroll-target="#limitations-of-mechanics-only-models">Limitations of Mechanics-Only Models</a></li>
+  <li><a href="#the-unified-framework" id="toc-the-unified-framework" class="nav-link" data-scroll-target="#the-unified-framework">The Unified Framework</a></li>
+  </ul></li>
+  <li><a href="#state-variables" id="toc-state-variables" class="nav-link" data-scroll-target="#state-variables">State Variables</a>
+  <ul class="collapse">
+  <li><a href="#position-and-kinematics" id="toc-position-and-kinematics" class="nav-link" data-scroll-target="#position-and-kinematics">Position and Kinematics</a></li>
+  <li><a href="#deformation-and-stress-from-mpm" id="toc-deformation-and-stress-from-mpm" class="nav-link" data-scroll-target="#deformation-and-stress-from-mpm">Deformation and Stress (from MPM)</a></li>
+  <li><a href="#chemical-sensing-from-diffusiophoresis" id="toc-chemical-sensing-from-diffusiophoresis" class="nav-link" data-scroll-target="#chemical-sensing-from-diffusiophoresis">Chemical Sensing (from Diffusiophoresis)</a></li>
+  <li><a href="#learnable-embeddings" id="toc-learnable-embeddings" class="nav-link" data-scroll-target="#learnable-embeddings">Learnable Embeddings</a></li>
+  </ul></li>
+  <li><a href="#coupled-governing-equations" id="toc-coupled-governing-equations" class="nav-link" data-scroll-target="#coupled-governing-equations">Coupled Governing Equations</a>
+  <ul class="collapse">
+  <li><a href="#chemical-field-evolution-mesh" id="toc-chemical-field-evolution-mesh" class="nav-link" data-scroll-target="#chemical-field-evolution-mesh">1. Chemical Field Evolution (Mesh)</a></li>
+  <li><a href="#particle-velocity-combined-forces" id="toc-particle-velocity-combined-forces" class="nav-link" data-scroll-target="#particle-velocity-combined-forces">2. Particle Velocity (Combined Forces)</a></li>
+  <li><a href="#deformation-gradient-update-mpm" id="toc-deformation-gradient-update-mpm" class="nav-link" data-scroll-target="#deformation-gradient-update-mpm">3. Deformation Gradient Update (MPM)</a></li>
+  <li><a href="#constitutive-law-with-active-stress" id="toc-constitutive-law-with-active-stress" class="nav-link" data-scroll-target="#constitutive-law-with-active-stress">4. Constitutive Law with Active Stress</a></li>
+  <li><a href="#momentum-transfer-p2g-g2p" id="toc-momentum-transfer-p2g-g2p" class="nav-link" data-scroll-target="#momentum-transfer-p2g-g2p">5. Momentum Transfer (P2G / G2P)</a></li>
+  </ul></li>
+  <li><a href="#unified-gnn-architecture" id="toc-unified-gnn-architecture" class="nav-link" data-scroll-target="#unified-gnn-architecture">Unified GNN Architecture</a>
+  <ul class="collapse">
+  <li><a href="#message-function-edge-centric" id="toc-message-function-edge-centric" class="nav-link" data-scroll-target="#message-function-edge-centric">Message Function (Edge-Centric)</a></li>
+  <li><a href="#update-function" id="toc-update-function" class="nav-link" data-scroll-target="#update-function">Update Function</a></li>
+  </ul></li>
+  <li><a href="#edge-embeddings-the-synaptic-class" id="toc-edge-embeddings-the-synaptic-class" class="nav-link" data-scroll-target="#edge-embeddings-the-synaptic-class">Edge Embeddings: The Synaptic Class</a>
+  <ul class="collapse">
+  <li><a href="#physical-interpretation" id="toc-physical-interpretation" class="nav-link" data-scroll-target="#physical-interpretation">Physical Interpretation</a></li>
+  <li><a href="#why-edge-embeddings" id="toc-why-edge-embeddings" class="nav-link" data-scroll-target="#why-edge-embeddings">Why Edge Embeddings?</a></li>
+  <li><a href="#connection-to-mdck-results" id="toc-connection-to-mdck-results" class="nav-link" data-scroll-target="#connection-to-mdck-results">Connection to MDCK Results</a></li>
+  </ul></li>
+  <li><a href="#grid-unification" id="toc-grid-unification" class="nav-link" data-scroll-target="#grid-unification">Grid Unification</a>
+  <ul class="collapse">
+  <li><a href="#grid-operations" id="toc-grid-operations" class="nav-link" data-scroll-target="#grid-operations">Grid Operations</a></li>
+  <li><a href="#spatial-coupling" id="toc-spatial-coupling" class="nav-link" data-scroll-target="#spatial-coupling">Spatial Coupling</a></li>
+  </ul></li>
+  <li><a href="#state-of-the-art" id="toc-state-of-the-art" class="nav-link" data-scroll-target="#state-of-the-art">State of the Art</a>
+  <ul class="collapse">
+  <li><a href="#mechanochemical-coupling-in-morphogenesis" id="toc-mechanochemical-coupling-in-morphogenesis" class="nav-link" data-scroll-target="#mechanochemical-coupling-in-morphogenesis">Mechanochemical Coupling in Morphogenesis</a></li>
+  <li><a href="#computational-frameworks" id="toc-computational-frameworks" class="nav-link" data-scroll-target="#computational-frameworks">Computational Frameworks</a></li>
+  <li><a href="#key-references" id="toc-key-references" class="nav-link" data-scroll-target="#key-references">Key References</a></li>
+  </ul></li>
+  <li><a href="#implementation-roadmap" id="toc-implementation-roadmap" class="nav-link" data-scroll-target="#implementation-roadmap">Implementation Roadmap</a>
+  <ul class="collapse">
+  <li><a href="#phase-1-minimal-coupling-current" id="toc-phase-1-minimal-coupling-current" class="nav-link" data-scroll-target="#phase-1-minimal-coupling-current">Phase 1: Minimal Coupling (Current)</a></li>
+  <li><a href="#phase-2-unidirectional-coupling" id="toc-phase-2-unidirectional-coupling" class="nav-link" data-scroll-target="#phase-2-unidirectional-coupling">Phase 2: Unidirectional Coupling</a></li>
+  <li><a href="#phase-3-bidirectional-learning" id="toc-phase-3-bidirectional-learning" class="nav-link" data-scroll-target="#phase-3-bidirectional-learning">Phase 3: Bidirectional + Learning</a></li>
+  <li><a href="#phase-4-biological-applications" id="toc-phase-4-biological-applications" class="nav-link" data-scroll-target="#phase-4-biological-applications">Phase 4: Biological Applications</a></li>
+  </ul></li>
+  <li><a href="#summary" id="toc-summary" class="nav-link" data-scroll-target="#summary">Summary</a></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Mechanochemical Morphogenesis</h1>
+<p class="subtitle lead">Coupling reaction-diffusion chemistry with continuum mechanics</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="overview" class="level2">
+<h2 class="anchored" data-anchor-id="overview">Overview</h2>
+<p>Morphogenesis in biological tissues arises from the <strong>bidirectional coupling</strong> between chemical signaling and mechanical deformation. Chemical patterns (Turing instabilities, morphogen gradients) drive tissue growth and folding, while mechanical stress feeds back to modulate diffusion, reaction rates, and cell behavior. This page describes a unified framework combining:</p>
+<ul>
+<li><strong>Diffusiophoresis</strong> (ParticleGraph): Particles respond to chemical gradients</li>
+<li><strong>Material Point Method</strong> (MPM_pytorch): Continuum mechanics with elasticity, plasticity, and stress</li>
+</ul>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Goal
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Develop a differentiable simulation framework where chemical patterning and mechanical admissibility <strong>jointly constrain</strong> morphogenetic outcomes — enabling discovery of forms that are both chemically stable and mechanically viable.</p>
+</div>
+</div>
+<hr>
+</section>
+<section id="motivation-why-both-chemisty-and-mechanics" class="level2">
+<h2 class="anchored" data-anchor-id="motivation-why-both-chemisty-and-mechanics">Motivation: Why Both Chemisty and Mechanics?</h2>
+<div class="cell" data-fig-width="9" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">flowchart LR
+    subgraph Chemistry["Chemical Patterning"]
+        RD[Reaction-Diffusion] --&gt; TP[Turing Patterns]
+        TP --&gt; MG[Morphogen Gradients]
+    end
+
+    subgraph Mechanics["Continuum Mechanics"]
+        DEF[Deformation] --&gt; STR[Stress]
+        STR --&gt; GRO[Growth/Folding]
+    end
+
+    MG --&gt;|"Active stress&lt;br&gt;Chemotaxis"| DEF
+    STR --&gt;|"Strain-dependent&lt;br&gt;diffusion/reaction"| RD
+
+    style Chemistry fill:#e3f2fd
+    style Mechanics fill:#fff3e0
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+<section id="limitations-of-chemistry-only-models" class="level3">
+<h3 class="anchored" data-anchor-id="limitations-of-chemistry-only-models">Limitations of Chemistry-Only Models</h3>
+<p>Current diffusiophoresis simulations achieve rich pattern diversity but lack:</p>
+<ul>
+<li><strong>Mechanical admissibility</strong>: Patterns may be geometrically impossible under physical constraints</li>
+<li><strong>Tissue-scale stress</strong>: No bulk elastic or plastic response</li>
+<li><strong>Growth dynamics</strong>: Volume changes require material mechanics</li>
+</ul>
+</section>
+<section id="limitations-of-mechanics-only-models" class="level3">
+<h3 class="anchored" data-anchor-id="limitations-of-mechanics-only-models">Limitations of Mechanics-Only Models</h3>
+<p>MPM simulations capture deformation but lack:</p>
+<ul>
+<li><strong>Pattern formation</strong>: No spontaneous symmetry breaking</li>
+<li><strong>Chemical signaling</strong>: No morphogen-driven differentiation</li>
+<li><strong>Active forces</strong>: Stress is passive, not chemically driven</li>
+</ul>
+</section>
+<section id="the-unified-framework" class="level3">
+<h3 class="anchored" data-anchor-id="the-unified-framework">The Unified Framework</h3>
+<p>By coupling both, we can study:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 27%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 22%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Phenomenon</th>
+<th>Chemistry</th>
+<th>Mechanics</th>
+<th>Coupling</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Tissue folding</strong></td>
+<td>Morphogen gradients</td>
+<td>Elastic buckling</td>
+<td>Gradient → active stress</td>
+</tr>
+<tr class="even">
+<td><strong>Wound healing</strong></td>
+<td>Chemotaxis signals</td>
+<td>Cell traction</td>
+<td>Migration + deformation</td>
+</tr>
+<tr class="odd">
+<td><strong>Tumor invasion</strong></td>
+<td>Chemokine gradients</td>
+<td>ECM remodeling</td>
+<td>Degradation + stress</td>
+</tr>
+<tr class="even">
+<td><strong>Organoid growth</strong></td>
+<td>Turing patterning</td>
+<td>Elastic confinement</td>
+<td>Pattern → growth tensor</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+</section>
+<section id="state-variables" class="level2">
+<h2 class="anchored" data-anchor-id="state-variables">State Variables</h2>
+<p>Each particle carries the <strong>union</strong> of variables from both systems:</p>
+<section id="position-and-kinematics" class="level3">
+<h3 class="anchored" data-anchor-id="position-and-kinematics">Position and Kinematics</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 16%">
+<col style="width: 20%">
+<col style="width: 16%">
+<col style="width: 22%">
+<col style="width: 26%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Symbol</th>
+<th>Variable</th>
+<th>Source</th>
+<th>Dimension</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(\mathbf{x}_i\)</span></td>
+<td>Position</td>
+<td>Both</td>
+<td><span class="math inline">\(d\)</span></td>
+<td>Spatial location</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\mathbf{v}_i\)</span></td>
+<td>Velocity</td>
+<td>Both</td>
+<td><span class="math inline">\(d\)</span></td>
+<td>Material velocity</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\mathbf{C}_i\)</span></td>
+<td>Affine velocity</td>
+<td>MPM</td>
+<td><span class="math inline">\(d \times d\)</span></td>
+<td>Local velocity gradient (APIC)</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="deformation-and-stress-from-mpm" class="level3">
+<h3 class="anchored" data-anchor-id="deformation-and-stress-from-mpm">Deformation and Stress (from MPM)</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 19%">
+<col style="width: 23%">
+<col style="width: 26%">
+<col style="width: 30%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Symbol</th>
+<th>Variable</th>
+<th>Dimension</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(\mathbf{F}_i\)</span></td>
+<td>Deformation gradient</td>
+<td><span class="math inline">\(d \times d\)</span></td>
+<td>Total deformation from reference</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(J_i^p\)</span></td>
+<td>Plastic Jacobian</td>
+<td><span class="math inline">\(1\)</span></td>
+<td>Accumulated plastic volume change</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\boldsymbol{\sigma}_i\)</span></td>
+<td>Cauchy stress</td>
+<td><span class="math inline">\(d \times d\)</span></td>
+<td>Current stress state</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="chemical-sensing-from-diffusiophoresis" class="level3">
+<h3 class="anchored" data-anchor-id="chemical-sensing-from-diffusiophoresis">Chemical Sensing (from Diffusiophoresis)</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 19%">
+<col style="width: 23%">
+<col style="width: 26%">
+<col style="width: 30%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Symbol</th>
+<th>Variable</th>
+<th>Dimension</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(C_1(\mathbf{x}_i)\)</span></td>
+<td>Activator concentration</td>
+<td><span class="math inline">\(1\)</span></td>
+<td>Sampled from mesh at particle position</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(C_2(\mathbf{x}_i)\)</span></td>
+<td>Inhibitor concentration</td>
+<td><span class="math inline">\(1\)</span></td>
+<td>Sampled from mesh at particle position</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\nabla C_k\)</span></td>
+<td>Concentration gradient</td>
+<td><span class="math inline">\(d\)</span></td>
+<td>Drives diffusiophoretic velocity</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="learnable-embeddings" class="level3">
+<h3 class="anchored" data-anchor-id="learnable-embeddings">Learnable Embeddings</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 19%">
+<col style="width: 23%">
+<col style="width: 26%">
+<col style="width: 30%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Symbol</th>
+<th>Variable</th>
+<th>Dimension</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(\mathbf{a}_i\)</span></td>
+<td>Particle embedding</td>
+<td><span class="math inline">\(n_{\text{emb}}\)</span></td>
+<td>Learnable per-particle features (cell type)</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\mathbf{e}_{ij}\)</span></td>
+<td>Edge embedding</td>
+<td><span class="math inline">\(n_{\text{emb}}\)</span></td>
+<td>Learnable pairwise interaction (synaptic)</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+</section>
+<section id="coupled-governing-equations" class="level2">
+<h2 class="anchored" data-anchor-id="coupled-governing-equations">Coupled Governing Equations</h2>
+<section id="chemical-field-evolution-mesh" class="level3">
+<h3 class="anchored" data-anchor-id="chemical-field-evolution-mesh">1. Chemical Field Evolution (Mesh)</h3>
+<p>The reaction-diffusion PDE with <strong>strain-dependent</strong> modifications:</p>
+<p><span class="math display">\[
+\frac{\partial C_k}{\partial t} = D_k(\mathbf{F}) \nabla^2 C_k + R_k(C_1, C_2, \boldsymbol{\sigma}) + S_k^{\text{particles}}
+\]</span></p>
+<p>where:</p>
+<ul>
+<li><span class="math inline">\(D_k(\mathbf{F})\)</span>: Diffusion coefficient, potentially strain-dependent</li>
+<li><span class="math inline">\(R_k\)</span>: Reaction kinetics (Brusselator, Gray-Scott, FHN)</li>
+<li><span class="math inline">\(S_k^{\text{particles}}\)</span>: Source/sink from particle consumption/production</li>
+</ul>
+<p><strong>Strain-dependent diffusion</strong> (mechanochemical feedback):</p>
+<p><span class="math display">\[
+D_k(\mathbf{F}) = D_k^0 \left[ 1 + \alpha_D (J - 1) \right]
+\]</span></p>
+<p>where <span class="math inline">\(J = \det(\mathbf{F})\)</span> is the volume ratio. Stretched tissue (<span class="math inline">\(J &gt; 1\)</span>) has enhanced diffusion.</p>
+</section>
+<section id="particle-velocity-combined-forces" class="level3">
+<h3 class="anchored" data-anchor-id="particle-velocity-combined-forces">2. Particle Velocity (Combined Forces)</h3>
+<p><span class="math display">\[
+\mathbf{v}_i = \underbrace{\mathbf{v}_i^{\text{MPM}}}_{\text{grid interpolation}} + \underbrace{\sum_k M_k \nabla C_k}_{\text{diffusiophoresis}} + \underbrace{\mathbf{v}_i^{\text{active}}(\boldsymbol{\sigma})}_{\text{mechanotaxis}}
+\]</span></p>
+<p><strong>Mechanotaxis</strong> (stress-driven migration):</p>
+<p><span class="math display">\[
+\mathbf{v}_i^{\text{active}} = \chi_\sigma \nabla \cdot \boldsymbol{\sigma}
+\]</span></p>
+<p>Cells migrate toward regions of high stress divergence (durotaxis).</p>
+</section>
+<section id="deformation-gradient-update-mpm" class="level3">
+<h3 class="anchored" data-anchor-id="deformation-gradient-update-mpm">3. Deformation Gradient Update (MPM)</h3>
+<p><span class="math display">\[
+\mathbf{F}_i^{n+1} = (\mathbf{I} + \Delta t \, \mathbf{C}_i^n) \mathbf{F}_i^n
+\]</span></p>
+</section>
+<section id="constitutive-law-with-active-stress" class="level3">
+<h3 class="anchored" data-anchor-id="constitutive-law-with-active-stress">4. Constitutive Law with Active Stress</h3>
+<p>The Cauchy stress includes a <strong>chemically-driven active component</strong>:</p>
+<p><span class="math display">\[
+\boldsymbol{\sigma} = \underbrace{\boldsymbol{\sigma}^{\text{elastic}}(\mathbf{F})}_{\text{Neo-Hookean}} + \underbrace{\boldsymbol{\sigma}^{\text{active}}(C_1, C_2)}_{\text{chemical coupling}}
+\]</span></p>
+<p><strong>Passive elastic stress</strong> (Neo-Hookean):</p>
+<p><span class="math display">\[
+\boldsymbol{\sigma}^{\text{elastic}} = \frac{\mu}{J}(\mathbf{F}\mathbf{F}^T - \mathbf{I}) + \frac{\lambda}{J}(J - 1)\mathbf{I}
+\]</span></p>
+<p><strong>Active stress</strong> (morphogen-driven contractility):</p>
+<p><span class="math display">\[
+\boldsymbol{\sigma}^{\text{active}} = \zeta(C_1) \, \mathbf{I}
+\]</span></p>
+<p>where <span class="math inline">\(\zeta(C_1)\)</span> is an activation function mapping local activator concentration to isotropic contractile stress.</p>
+</section>
+<section id="momentum-transfer-p2g-g2p" class="level3">
+<h3 class="anchored" data-anchor-id="momentum-transfer-p2g-g2p">5. Momentum Transfer (P2G / G2P)</h3>
+<p>Standard MPM transfers, but with chemically-modified forces:</p>
+<p><strong>P2G (Particle to Grid)</strong>:</p>
+<p><span class="math display">\[
+(m\mathbf{v})_I = \sum_i w_{iI} \left[ m_i \mathbf{v}_i + m_i \mathbf{C}_i (\mathbf{x}_I - \mathbf{x}_i) - \frac{4\Delta t}{(\Delta x)^2} V_i \boldsymbol{\sigma}_i (\mathbf{x}_I - \mathbf{x}_i) \right]
+\]</span></p>
+<p><strong>G2P (Grid to Particle)</strong>:</p>
+<p><span class="math display">\[
+\mathbf{v}_i^{n+1} = \sum_I w_{iI} \mathbf{v}_I^{n+1}
+\]</span></p>
+<hr>
+</section>
+</section>
+<section id="unified-gnn-architecture" class="level2">
+<h2 class="anchored" data-anchor-id="unified-gnn-architecture">Unified GNN Architecture</h2>
+<div class="cell" data-fig-width="10" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">flowchart TB
+    subgraph Input["Input Features"]
+        X["Position x"]
+        V["Velocity v"]
+        F["Deformation F"]
+        C["Concentrations C₁, C₂"]
+        A["Particle embedding a"]
+    end
+
+    subgraph Edges["Edge Construction"]
+        DIST["Distance threshold"] --&gt; ADJ["Adjacency"]
+        ADJ --&gt; E["Edge embedding e_ij"]
+    end
+
+    subgraph Message["Message Passing (Synaptic)"]
+        PSI["ψ(Δx, e_ij, a_i, a_j, F_i, F_j, C_i, C_j)"]
+    end
+
+    subgraph Aggregation["Node Update"]
+        AGG["Σ messages"]
+        PHI["Φ(x, v, F, C, a, Σm)"]
+    end
+
+    subgraph Output["Predictions"]
+        DV["Δv (velocity update)"]
+        DF["ΔF (deformation update)"]
+        DS["Δσ (stress)"]
+    end
+
+    Input --&gt; Edges
+    Edges --&gt; Message
+    Input --&gt; Message
+    Message --&gt; Aggregation
+    Aggregation --&gt; Output
+
+    style Input fill:#e8f5e9
+    style Edges fill:#fff3e0
+    style Message fill:#e3f2fd
+    style Output fill:#fce4ec
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+<section id="message-function-edge-centric" class="level3">
+<h3 class="anchored" data-anchor-id="message-function-edge-centric">Message Function (Edge-Centric)</h3>
+<p>Following the MDCK calcium dynamics model, interactions are parameterized by <strong>learnable edge embeddings</strong>:</p>
+<p><span class="math display">\[
+m_{ij} = \psi\left( \Delta \mathbf{x}_{ij}, \mathbf{e}_{ij}, \mathbf{a}_i, \mathbf{a}_j, \mathbf{F}_i, \mathbf{F}_j, C_1^i, C_1^j \right)
+\]</span></p>
+<p>where:</p>
+<ul>
+<li><span class="math inline">\(\psi\)</span>: MLP encoding pairwise interactions</li>
+<li><span class="math inline">\(\mathbf{e}_{ij} \in \mathbb{R}^{n_{\text{emb}}}\)</span>: Learnable edge embedding</li>
+<li><span class="math inline">\(\mathbf{a}_i, \mathbf{a}_j\)</span>: Particle (cell) embeddings</li>
+</ul>
+</section>
+<section id="update-function" class="level3">
+<h3 class="anchored" data-anchor-id="update-function">Update Function</h3>
+<p><span class="math display">\[
+\frac{d\mathbf{y}_i}{dt} = \Phi\left( \mathbf{y}_i, \mathbf{a}_i, \sum_{j \in \mathcal{N}_i} m_{ij} \right)
+\]</span></p>
+<p>where <span class="math inline">\(\mathbf{y}_i = [\mathbf{v}_i, \mathbf{F}_i, \boldsymbol{\sigma}_i]\)</span> is the combined state vector.</p>
+<hr>
+</section>
+</section>
+<section id="edge-embeddings-the-synaptic-class" class="level2">
+<h2 class="anchored" data-anchor-id="edge-embeddings-the-synaptic-class">Edge Embeddings: The Synaptic Class</h2>
+<p>A key architectural innovation is <strong>learnable edge embeddings</strong> <span class="math inline">\(\mathbf{e}_{ij}\)</span> that capture connection-specific properties between particles (cells).</p>
+<section id="physical-interpretation" class="level3">
+<h3 class="anchored" data-anchor-id="physical-interpretation">Physical Interpretation</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Domain</th>
+<th>Edge Embedding Represents</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Neural circuits</strong></td>
+<td>Synaptic weight / efficacy</td>
+</tr>
+<tr class="even">
+<td><strong>Calcium dynamics</strong></td>
+<td>Gap junction conductance</td>
+</tr>
+<tr class="odd">
+<td><strong>Mechanical coupling</strong></td>
+<td>Cell-cell adhesion strength</td>
+</tr>
+<tr class="even">
+<td><strong>Chemical signaling</strong></td>
+<td>Paracrine communication efficiency</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="why-edge-embeddings" class="level3">
+<h3 class="anchored" data-anchor-id="why-edge-embeddings">Why Edge Embeddings?</h3>
+<p>Standard GNNs use node embeddings only, assuming interactions depend solely on node features. But biological systems exhibit <strong>connection-specific</strong> heterogeneity:</p>
+<ol type="1">
+<li><strong>Asymmetric connections</strong>: <span class="math inline">\(\mathbf{e}_{ij} \neq \mathbf{e}_{ji}\)</span> (directed signaling)</li>
+<li><strong>Learned impedance</strong>: Edge embedding captures effective coupling strength</li>
+<li><strong>Structural plasticity</strong>: Embeddings can encode tissue connectivity patterns</li>
+</ol>
+</section>
+<section id="connection-to-mdck-results" class="level3">
+<h3 class="anchored" data-anchor-id="connection-to-mdck-results">Connection to MDCK Results</h3>
+<p>From the MDCK calcium dynamics analysis:</p>
+<ul>
+<li>Cells have autonomous fixed points <span class="math inline">\(F_i^* = -c_0/\alpha\)</span></li>
+<li>Network connectivity <strong>suppresses</strong> most cells below <span class="math inline">\(F_i^*\)</span></li>
+<li>Leader-follower populations emerge from learned embeddings</li>
+<li>Edge structure encodes functional specialization</li>
+</ul>
+<p>This same architecture extends to mechanochemical systems:</p>
+<p><span class="math display">\[
+\text{Ca}^{2+} \text{ dynamics} \xrightarrow{\text{generalize}} \text{Morphogen + Stress dynamics}
+\]</span></p>
+<hr>
+</section>
+</section>
+<section id="grid-unification" class="level2">
+<h2 class="anchored" data-anchor-id="grid-unification">Grid Unification</h2>
+<p>Both diffusiophoresis and MPM use spatial grids. In the unified framework, a <strong>single grid</strong> serves both:</p>
+<div class="cell" data-fig-width="8" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">flowchart TB
+    subgraph Grid["Unified Grid"]
+        G["Regular grid nodes"]
+    end
+
+    subgraph Chemistry["Chemical Fields"]
+        C1["C₁ (activator)"]
+        C2["C₂ (inhibitor)"]
+    end
+
+    subgraph Mechanics["Mechanical Fields"]
+        MV["Grid momentum mv"]
+        M["Grid mass m"]
+    end
+
+    subgraph Particles["Material Points"]
+        P["Particles carry:&lt;br&gt;x, v, F, σ, C, a"]
+    end
+
+    Grid --&gt; Chemistry
+    Grid --&gt; Mechanics
+
+    Particles --&gt;|"P2G"| Grid
+    Grid --&gt;|"G2P"| Particles
+    Grid --&gt;|"Sample C"| Particles
+    Particles --&gt;|"Source/sink"| Grid
+
+    style Grid fill:#f5f5f5
+    style Chemistry fill:#e3f2fd
+    style Mechanics fill:#fff3e0
+    style Particles fill:#e8f5e9
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+<section id="grid-operations" class="level3">
+<h3 class="anchored" data-anchor-id="grid-operations">Grid Operations</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Operation</th>
+<th>Chemistry</th>
+<th>Mechanics</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>P2G</strong></td>
+<td>Particle source terms <span class="math inline">\(S_k\)</span></td>
+<td>Mass + momentum scatter</td>
+</tr>
+<tr class="even">
+<td><strong>Grid solve</strong></td>
+<td>Diffusion + reaction</td>
+<td>Momentum update + BC</td>
+</tr>
+<tr class="odd">
+<td><strong>G2P</strong></td>
+<td>Concentration sampling</td>
+<td>Velocity gather</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="spatial-coupling" class="level3">
+<h3 class="anchored" data-anchor-id="spatial-coupling">Spatial Coupling</h3>
+<p>Chemical concentrations and mechanical fields live on the same grid, enabling:</p>
+<ul>
+<li>Strain-dependent diffusion coefficients</li>
+<li>Stress-dependent reaction rates</li>
+<li>Consistent boundary conditions</li>
+</ul>
+<hr>
+</section>
+</section>
+<section id="state-of-the-art" class="level2">
+<h2 class="anchored" data-anchor-id="state-of-the-art">State of the Art</h2>
+<section id="mechanochemical-coupling-in-morphogenesis" class="level3">
+<h3 class="anchored" data-anchor-id="mechanochemical-coupling-in-morphogenesis">Mechanochemical Coupling in Morphogenesis</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 24%">
+<col style="width: 42%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Reference</th>
+<th>System</th>
+<th>Contribution</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Shyer et al.&nbsp;(2017)</td>
+<td>Gut villus</td>
+<td>Mechanical buckling + Shh patterning</td>
+</tr>
+<tr class="even">
+<td>Hannezo &amp; Heisenberg (2019)</td>
+<td>Tissue mechanics</td>
+<td>Review of mechanochemical feedback</td>
+</tr>
+<tr class="odd">
+<td>Mercker et al.&nbsp;(2016)</td>
+<td>Pattern formation</td>
+<td>Curvature-dependent reaction-diffusion</td>
+</tr>
+<tr class="even">
+<td>Recho et al.&nbsp;(2019)</td>
+<td>Active gels</td>
+<td>Chemomechanical instabilities</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="computational-frameworks" class="level3">
+<h3 class="anchored" data-anchor-id="computational-frameworks">Computational Frameworks</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Framework</th>
+<th>Chemistry</th>
+<th>Mechanics</th>
+<th>Coupling</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>FEniCS</strong></td>
+<td>PDE solve</td>
+<td>FEM elasticity</td>
+<td>Manual</td>
+</tr>
+<tr class="even">
+<td><strong>Chaste</strong></td>
+<td>Cell signaling</td>
+<td>Vertex/Voronoi</td>
+<td>Explicit</td>
+</tr>
+<tr class="odd">
+<td><strong>PhysiCell</strong></td>
+<td>Diffusion</td>
+<td>Agent-based</td>
+<td>Rule-based</td>
+</tr>
+<tr class="even">
+<td><strong>This work</strong></td>
+<td>Reaction-diffusion</td>
+<td>MPM</td>
+<td>Learnable GNN</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="key-references" class="level3">
+<h3 class="anchored" data-anchor-id="key-references">Key References</h3>
+<ol type="1">
+<li><strong>Turing (1952)</strong>: Chemical basis of morphogenesis</li>
+<li><strong>Stomakhin et al.&nbsp;(2013)</strong>: MPM for snow simulation</li>
+<li><strong>Sanchez et al.&nbsp;(2019)</strong>: Graph networks for physics simulation</li>
+<li><strong>Howard et al.&nbsp;(2011)</strong>: Turing patterns meet cell biology</li>
+<li><strong>Nelson (2016)</strong>: Mechanical control of tissue morphogenesis</li>
+</ol>
+<hr>
+</section>
+</section>
+<section id="implementation-roadmap" class="level2">
+<h2 class="anchored" data-anchor-id="implementation-roadmap">Implementation Roadmap</h2>
+<section id="phase-1-minimal-coupling-current" class="level3">
+<h3 class="anchored" data-anchor-id="phase-1-minimal-coupling-current">Phase 1: Minimal Coupling (Current)</h3>
+<ul class="task-list">
+<li><label><input type="checkbox" checked="">Diffusiophoresis with reaction-diffusion (ParticleGraph)</label></li>
+<li><label><input type="checkbox" checked="">MPM with multiple materials (MPM_pytorch)</label></li>
+<li><label><input type="checkbox"><strong>Shared particle state</strong>: Add F, σ to ParticleGraph particles</label></li>
+</ul>
+</section>
+<section id="phase-2-unidirectional-coupling" class="level3">
+<h3 class="anchored" data-anchor-id="phase-2-unidirectional-coupling">Phase 2: Unidirectional Coupling</h3>
+<ul class="task-list">
+<li><label><input type="checkbox"><strong>Chemistry → Mechanics</strong>: Active stress from morphogen concentration</label></li>
+<li><label><input type="checkbox"><strong>Mechanics → Chemistry</strong>: Strain-dependent diffusion</label></li>
+<li><label><input type="checkbox">Unified grid for both systems</label></li>
+</ul>
+</section>
+<section id="phase-3-bidirectional-learning" class="level3">
+<h3 class="anchored" data-anchor-id="phase-3-bidirectional-learning">Phase 3: Bidirectional + Learning</h3>
+<ul class="task-list">
+<li><label><input type="checkbox">Edge embeddings for mechanochemical interactions</label></li>
+<li><label><input type="checkbox">Learnable constitutive laws (GNN replaces Neo-Hookean)</label></li>
+<li><label><input type="checkbox">Inverse problem: Infer coupling parameters from data</label></li>
+</ul>
+</section>
+<section id="phase-4-biological-applications" class="level3">
+<h3 class="anchored" data-anchor-id="phase-4-biological-applications">Phase 4: Biological Applications</h3>
+<ul class="task-list">
+<li><label><input type="checkbox">MDCK wound healing with mechanics</label></li>
+<li><label><input type="checkbox">Organoid folding</label></li>
+<li><label><input type="checkbox">Tumor spheroid invasion</label></li>
+</ul>
+<hr>
+</section>
+</section>
+<section id="summary" class="level2">
+<h2 class="anchored" data-anchor-id="summary">Summary</h2>
+<div class="cell" data-fig-width="10" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">flowchart LR
+    subgraph ParticleGraph["ParticleGraph"]
+        PG1["Reaction-Diffusion"]
+        PG2["Diffusiophoresis"]
+        PG3["Particle embeddings"]
+    end
+
+    subgraph MPM["MPM_pytorch"]
+        MPM1["Deformation F, Stress σ"]
+        MPM2["P2G / G2P transfers"]
+        MPM3["Constitutive laws"]
+    end
+
+    subgraph Unified["Mechanochemical Framework"]
+        U1["Combined state variables"]
+        U2["Bidirectional coupling"]
+        U3["Edge embeddings (synaptic)"]
+        U4["Unified grid"]
+    end
+
+    ParticleGraph --&gt; Unified
+    MPM --&gt; Unified
+
+    Unified --&gt; APP["Applications:&lt;br&gt;Morphogenesis&lt;br&gt;Wound healing&lt;br&gt;Organoids"]
+
+    style ParticleGraph fill:#e3f2fd
+    style MPM fill:#fff3e0
+    style Unified fill:#e8f5e9
+    style APP fill:#fce4ec
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+<p>The mechanochemical framework unifies:</p>
+<ol type="1">
+<li><strong>Chemical patterning</strong> (Turing, morphogens) from ParticleGraph</li>
+<li><strong>Continuum mechanics</strong> (elasticity, plasticity) from MPM_pytorch</li>
+<li><strong>Learnable interactions</strong> via edge embeddings (synaptic class)</li>
+</ol>
+<p>This enables studying morphogenesis as a <strong>constrained optimization</strong> problem: forms must be both chemically stable and mechanically admissible.</p>
+<hr>
+</section>
+<section id="references" class="level2">
+<h2 class="anchored" data-anchor-id="references">References</h2>
+<ol type="1">
+<li><p>Turing, A. M. (1952). The chemical basis of morphogenesis. <em>Phil. Trans. R. Soc. Lond. B</em>, 237(641), 37-72.</p></li>
+<li><p>Stomakhin, A., et al.&nbsp;(2013). A material point method for snow simulation. <em>ACM Trans. Graph.</em>, 32(4), 102.</p></li>
+<li><p>Hannezo, E., &amp; Heisenberg, C. P. (2019). Mechanochemical feedback loops in development and disease. <em>Cell</em>, 178(1), 12-25.</p></li>
+<li><p>Shyer, A. E., et al.&nbsp;(2017). Emergent cellular self-organization and mechanosensation initiate follicle pattern in the avian skin. <em>Science</em>, 357(6353), 811-815.</p></li>
+<li><p>Mercker, M., et al.&nbsp;(2016). Beyond Turing: mechanochemical pattern formation in biological tissues. <em>Biology Direct</em>, 11(1), 22.</p></li>
+<li><p>Sanchez-Gonzalez, A., et al.&nbsp;(2020). Learning to simulate complex physics with graph networks. <em>ICML 2020</em>.</p></li>
+<li><p>Recho, P., et al.&nbsp;(2019). Theory of mechanochemical patterning in biphasic biological tissues. <em>PNAS</em>, 116(12), 5344-5349.</p></li>
+</ol>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    // Ensure there is a toggle, if there isn't float one in the top right
+    if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
+      const a = window.document.createElement('a');
+      a.classList.add('top-right');
+      a.classList.add('quarto-color-scheme-toggle');
+      a.href = "";
+      a.onclick = function() { try { window.quartoToggleColorScheme(); } catch {} return false; };
+      const i = window.document.createElement("i");
+      i.classList.add('bi');
+      a.appendChild(i);
+      window.document.body.appendChild(a);
+    }
+    setColorSchemeToggle(hasAlternateSentinel())
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+      &nbsp;
+    </div>   
+    <div class="nav-footer-center">
+<p>Copyright 2025, Cédric Allier</p>
+</div>
+    <div class="nav-footer-right">
+      &nbsp;
+    </div>
+  </div>
+</footer>
+
+
+
+
+<script src="site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>

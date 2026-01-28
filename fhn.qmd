@@ -1,0 +1,141 @@
+---
+title: "FitzHugh-Nagumo Model"
+subtitle: "Excitable dynamics with network particle organization"
+---
+
+## Overview
+
+The **FitzHugh-Nagumo (FHN)** model is a simplified two-variable system originally developed to describe neuronal excitability. When coupled to diffusiophoresis, it produces qualitatively different dynamics compared to Brusselator and Gray-Scott systems.
+
+::: {.callout-tip}
+## Key Discovery
+FHN achieves **hexagonal mode** (~6-7 spots) regardless of particle types (1, 2, or 3). Particles form **network/filamentary structures** rather than tight clusters. Clustering is consistently lower than Brusselator.
+:::
+
+## Mathematical Formulation
+
+The FHN reaction-diffusion equations:
+
+$$
+\frac{\partial u}{\partial t} = D_u \nabla^2 u + u - \frac{u^3}{3} - v + I
+$$
+
+$$
+\frac{\partial v}{\partial t} = D_v \nabla^2 v + \epsilon(u + a - bv)
+$$
+
+Where:
+
+- $u$: Fast activator (excitation variable)
+- $v$: Slow inhibitor (recovery variable)
+- $D_u, D_v$: Diffusion coefficients
+- $a, b$: Nullcline parameters
+- $\epsilon$: Time-scale separation (small = slow inhibitor)
+- $I$: External current/stimulus
+
+## Parameter Documentation
+
+```
+Row 0 (u field): [Du, a, b, epsilon, I, time_scale]
+Row 1 (v field): [Dv, ...]
+Row 2 (coupling): [Pe, consumption, production, influence_radius, boost_exponent, M1]
+```
+
+### Regime Classification
+
+| Regime | Condition | Pattern Type |
+|--------|-----------|--------------|
+| Excitable | $a > 1 - b/3$ | Traveling waves, spirals |
+| Oscillatory | $a < 1 - b/3$ | Target patterns, bulk oscillation |
+| Turing | $D_v \gg D_u$ | Stationary stripes/spots |
+| Bistable | Large $\|a\|$ | Front propagation |
+
+## Exploration Results
+
+### Block 3 Findings (Iterations 17–19)
+
+| Metric | FHN | Brusselator | Gray-Scott |
+|--------|-----|-------------|------------|
+| Pattern Scale | ~6-7 spots | ~6 spots | Concentric |
+| Clustering | -0.2 to 0.3 | 0.6+ | 0.4 |
+| Symmetry Breaking | Hexagonal | Hexagonal | None (radial) |
+
+::: {.callout-important}
+## Particle-Type Independence Confirmed
+FHN hexagonal mode is **NOT** particle-type dependent: 1, 2, and 3 types all achieve ~6-7 hexagonal spots. The finer network in iter 17 may be stochastic variation.
+:::
+
+### Configuration
+
+```yaml
+mesh_model_name: PDE_Diffusiophoresis_FHN
+params_mesh:
+  - [0.5, 0.7, 0.8, 0.08, 0.0, 20.0]   # u: Du, a, b, epsilon, I, time_scale
+  - [0.0, 0, 0, 0, 0, 0]               # v: Dv (=0, slow inhibitor)
+  - [1.0, 180, -180, 0.05, 0, 0]       # Particle-field coupling
+n_particle_types: 2
+n_frames: 6000
+boundary: periodic
+```
+
+## Comparison: Three PDE Trichotomy
+
+The exploration revealed a clear trichotomy between the three reaction-diffusion models:
+
+```{mermaid}
+flowchart TD
+    A[Reaction-Diffusion Model] --> B[Brusselator]
+    A --> C[Gray-Scott]
+    A --> D[FitzHugh-Nagumo]
+
+    B --> B1[Hexagonal mode]
+    B --> B2[~6 large spots]
+    B --> B3[Tight clusters]
+
+    C --> C1[Radial only]
+    C --> C2[No symmetry breaking]
+    C --> C3[Moderate clustering]
+
+    D --> D1[Hexagonal mode]
+    D --> D2[~6-7 spots]
+    D --> D3[Network structure]
+
+    style B fill:#c8e6c9
+    style C fill:#ffcdd2
+    style D fill:#fff9c4
+```
+
+## Exploration Gallery
+
+::: {.panel-tabset}
+
+### Iter 17
+*FHN 2-type — fine network*
+
+{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_017.mp4 >}}
+
+First FHN test with 2 particle types. Produces ~30+ fine-scale spots with network/filamentary particle organization.
+
+### Iter 18 ⭐
+*FHN 3-type — hexagonal mode*
+
+{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_018.mp4 >}}
+
+Three particle types achieve hexagonal mode (~6-7 spots) with multi-layer particle organization within spots.
+
+:::
+
+## Key Insights
+
+1. **Hexagonal symmetry**: Like Brusselator, FHN achieves hexagonal mode (unlike Gray-Scott)
+2. **Network organization**: Particles form filamentary/networked structures instead of tight clusters
+3. **Particle-type independent**: 1, 2, or 3 particle types all achieve ~6-7 hexagonal spots
+4. **Lower clustering**: Clustering consistently lower than Brusselator (-0.2 to 0.3 vs 0.6+)
+
+## References
+
+1. FitzHugh, R. (1961). Impulses and physiological states in theoretical models of nerve membrane. *Biophys. J.*, 1(6), 445-466.
+
+2. Nagumo, J., Arimoto, S., & Yoshizawa, S. (1962). An active pulse transmission line simulating nerve axon. *Proc. IRE*, 50(10), 2061-2070.
+
+3. Ermakova, E. A., et al. (2009). On propagation of excitation waves in moving media: The FitzHugh-Nagumo model. *PLoS ONE*, 4(2), e4454.

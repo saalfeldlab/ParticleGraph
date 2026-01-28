@@ -1,6 +1,6 @@
 ---
 title: "Brusselator Model"
-subtitle: "Blocks 1–8: 64 iterations of exploration"
+subtitle: "Hexagonal Turing patterns with tight particle clusters"
 ---
 
 ## Field Dynamics
@@ -68,7 +68,7 @@ $$
 
 | Symbol | Description | Optimal |
 |--------|-------------|---------|
-| $M_1, M_2$ | Mobility coefficients | ±16 |
+| $M_1, M_2$ | Mobility coefficients | ±4 |
 | $\gamma_c$ | Consumption rate | 180 |
 | $\gamma_p$ | Production rate | -180 |
 
@@ -77,16 +77,21 @@ $$
 ## Key Discoveries
 
 ::: {.callout-important}
-## Eigenmode Locking
-The 4-fold cruciform pattern is **geometry-locked** by the square domain + periodic boundary conditions. Breaking this lock requires modifying the wavelength via $D_1$, not noise or anisotropy.
+## Mobility Sweet Spot
+**M1=±4, M2=±4** is the optimal mobility magnitude. M1=±16 causes particle escape (0% retention). The ±4 range maintains strong field-particle coupling while preventing particle loss.
+:::
+
+::: {.callout-tip}
+## Hexagonal Mode Selection
+Extended simulation (6000 frames) reveals **ring→hexagonal symmetry breaking**. The concentric ring pattern evolves into hexagonal Turing spots, proving it is a true attractor (shuffle-invariant).
 :::
 
 | Finding | Mechanism |
 |---------|-----------|
-| **Linear mobility is optimal** | Any nonlinearity disrupts boundary accumulation |
-| **$D_1$ controls mode selection** | $D_1 = 0.015$–$0.02$ selects higher-order modes |
-| **Stability limits** | $B \leq 7.0$, $\text{Da}_c \leq 30$ to avoid NaN |
-| **Best clustering: 0.485** | Achieved at iteration 51 |
+| **Hexagonal is particle-type-independent** | 1, 2, or 3 particle types all achieve identical hexagonal mode |
+| **~6 large spots** | Coarse spatial wavelength compared to FHN |
+| **Tight clustering (0.6+)** | Particles form dense aggregates at field peaks |
+| **Ring→hexagonal transition** | Occurs at 4000-6000 frames with extended simulation |
 
 ---
 
@@ -94,44 +99,16 @@ The 4-fold cruciform pattern is **geometry-locked** by the square domain + perio
 
 ::: {.panel-tabset}
 
-### Block 1
-*Turing condition satisfaction*
+### Iter 1
+*Initial Brusselator test*
 
 {{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_001.mp4 >}}
 
-### Block 2
-*Cross-diffusion tests*
+### Iter 12 ⭐
+*Hexagonal mode achieved*
 
 {{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_012.mp4 >}}
 
-### Block 3
-*Extended simulation, emergent asymmetry*
-
-{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_020.mp4 >}}
-
-### Block 4
-*Stability boundary exploration*
-
-{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_028.mp4 >}}
-
-### Block 5
-*Tensor anisotropy tests*
-
-{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_036.mp4 >}}
-
-### Block 6
-*D1 breakthrough*
-
-{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_048.mp4 >}}
-
-### Block 7
-*Best result (iter 51)*
-
-{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_051.mp4 >}}
-
-### Block 8
-*Mobility modifications*
-
-{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_064.mp4 >}}
+Multi-type configuration with opposing mobilities achieves hexagonal Turing pattern. Ring→hexagonal symmetry breaking confirmed.
 
 :::

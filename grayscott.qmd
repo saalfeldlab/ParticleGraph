@@ -1,6 +1,6 @@
 ---
 title: "Gray-Scott Model"
-subtitle: "Block 12: Systematic F-k phase space exploration"
+subtitle: "Radial patterns without hexagonal symmetry breaking"
 ---
 
 ## Field Dynamics
@@ -67,35 +67,18 @@ Earlier challenges with negative V fields and NaN explosions have been resolved.
 
 ## Current Status
 
-**Block 12** (iterations 89–96) marks a fresh start with the Gray-Scott model. Following exhaustive Brusselator exploration (Blocks 1–11) that revealed strong labyrinthine attractors, the focus has shifted to Gray-Scott's richer F-k phase space to achieve **stripe/worm patterns**.
-
-### Block 12 Progress
-
-| Iteration | F | k | Score | Result |
-|-----------|---|---|-------|--------|
-| 89 | 0.035 | 0.060 | 5/10 | **Spot patterns** — hexagonal array, particles form voronoi network at boundaries |
-| 90 | 0.035 | 0.063 | 5/10 | **Spot patterns** — k increase did not induce stripe transition |
+::: {.callout-warning}
+## Key Finding: No Hexagonal Symmetry Breaking
+Gray-Scott produces **radial/concentric patterns only**. Even with extended simulation (6000 frames), no hexagonal symmetry breaking occurs. This is a fundamental difference from Brusselator dynamics.
+:::
 
 ### Key Observations
 
-- Gray-Scott produces **clean, stable Turing patterns** without NaN issues
-- Spot regime is stable across k=0.060–0.063 at F=0.035
-- Particles consistently organize at field boundaries (voronoi-like network)
-- No stripe/worm transition observed yet — exploring alternative F values next
-
-### Next Steps
-
-Per Pearson (1993) phase diagram, **F=0.030 with k=0.060** may favor worms/stripes over spots. This is the planned direction for iteration 91+.
-
-### Historical Iterations (Blocks 9–11)
-
-| Iteration | Configuration | Result |
-|-----------|---------------|--------|
-| 65 | Initial test | Anti-clustering, V negative |
-| 66 | α-spot regime | NaN explosion |
-| 67 | γ-worm regime | V deeply negative |
-| 73 | V-clamping code mod | U still negative |
-| 74 | Reduced consumption | Still unstable |
+- Gray-Scott produces **concentric ring patterns**, NOT hexagonal spots
+- Qualitatively different from Brusselator — purely radial organization
+- Extended simulation does not induce symmetry breaking
+- Particles form voronoi-like network at field boundaries
+- Moderate clustering (0.4) vs Brusselator's tight clusters (0.6+)
 
 ---
 
@@ -103,33 +86,18 @@ Per Pearson (1993) phase diagram, **F=0.030 with k=0.060** may favor worms/strip
 
 ::: {.panel-tabset}
 
-### Iter 90 ⭐
-*F=0.035, k=0.063 — Spot patterns persist*
+### Iter 9
+*Gray-Scott 2-type test*
 
-{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_090.mp4 >}}
+{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_009.mp4 >}}
 
-Increasing k from 0.060 to 0.063 did not trigger the expected stripe transition. Hexagonal spot array remains stable. Particles organize into voronoi-like cellular network at spot boundaries — same qualitative behavior as iteration 89.
+First Gray-Scott test with 2 particle types. Produces concentric ring patterns with particles at field boundaries.
 
-### Iter 89
-*F=0.035, k=0.060 — First Block 12 test*
+### Iter 14 ⭐
+*Extended simulation (6000 frames)*
 
-{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_089.mp4 >}}
+{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_014.mp4 >}}
 
-Gray-Scott model produces clean hexagonal spot patterns. Particles aggregate at field boundaries forming a voronoi-like network. This is the α (alpha) spot regime, not the γ (gamma) worm regime targeted.
-
-### Iter 67
-*γ-worm regime (historical)*
-
-{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_067.mp4 >}}
-
-### Iter 66
-*α-spot regime (NaN) (historical)*
-
-{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_066.mp4 >}}
-
-### Iter 65
-*Initial Gray-Scott test (historical)*
-
-{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_065.mp4 >}}
+Extended simulation confirms Gray-Scott cannot achieve hexagonal mode. Radial organization persists — fundamental difference from Brusselator.
 
 :::

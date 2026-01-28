@@ -5,10 +5,11 @@ subtitle: "Reaction-diffusion dynamics"
 
 ## Overview
 
-The field–field interaction governs the evolution of concentration fields through reaction-diffusion PDEs. Two models have been explored:
+The field–field interaction governs the evolution of concentration fields through reaction-diffusion PDEs. Three models have been explored:
 
 - [Brusselator](brusselator.qmd): Classic two-component system with cubic autocatalysis
 - [Gray-Scott](grayscott.qmd): Autocatalytic system with feed/kill dynamics
+- [FitzHugh-Nagumo](fhn.qmd): Excitable two-variable system from neuroscience
 
 ## General Form
 

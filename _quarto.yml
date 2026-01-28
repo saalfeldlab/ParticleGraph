@@ -25,6 +25,10 @@ website:
             text: Brusselator
           - href: grayscott.qmd
             text: Gray-Scott
+          - href: fhn.qmd
+            text: FitzHugh-Nagumo
+      - href: mechanochemical.qmd
+        text: Mechanochemical
     tools:
       - icon: github
         href: https://github.com/allierc/ParticleGraph
