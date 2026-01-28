@@ -118,7 +118,7 @@ class PDE_Diffusiophoresis_FHN(pyg.nn.MessagePassing):
         self.coeff = p
 
         # Print initialized parameters for verification
-        print(f"Initialized PDE_Diffusiophoresis_FHN with parameters:")
+        print(f"initialized PDE_Diffusiophoresis_FHN with parameters:")
         print(f"u: Du={self.Du.item():.4f}, v: Dv={self.Dv.item():.4f}")
         print(f"a={self.a.item():.3f}, b={self.b.item():.3f}, epsilon={self.epsilon.item():.4f}, I={self.I.item():.3f}")
         print(f"time_scale={self.time_scale.item():.1f}")

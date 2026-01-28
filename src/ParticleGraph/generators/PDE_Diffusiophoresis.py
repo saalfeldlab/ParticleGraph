@@ -97,7 +97,7 @@ class PDE_Diffusiophoresis(pyg.nn.MessagePassing):
         self.coeff = p
 
         # Print initialized parameters for verification
-        print(f"Initialized PDE_Diffusiophoresis with parameters:")
+        print(f"initialized PDE_Diffusiophoresis with parameters:")
         print(f"C₁: D={self.D1.item():.3f}, C₂: D={self.D2.item():.3f}, Da_c={self.Da_c.item():.3f}, A={self.A.item():.3f}, B={self.B.item():.3f}, μ={self.mu.item():.3f}, χ={self.chi.item():.3f}, noise={self.noise_amplitude.item():.4f}")
     
     def forward(self, data):

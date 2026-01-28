@@ -36,7 +36,7 @@ simulation:
   sigma: 0.005
   delta_t: 0.0005
   dpos_init: 0
-  boundary: periodic
+  boundary: "no"
   node_value_map: input_data/pattern_Null.tif
   node_coeff_map: ""
 graph_model:

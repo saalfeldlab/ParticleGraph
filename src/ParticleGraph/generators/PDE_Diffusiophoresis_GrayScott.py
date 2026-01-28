@@ -103,7 +103,7 @@ class PDE_Diffusiophoresis_GrayScott(pyg.nn.MessagePassing):
         self.coeff = p
 
         # Print initialized parameters for verification
-        print(f"Initialized PDE_Diffusiophoresis_GrayScott with parameters:")
+        print(f"initialized PDE_Diffusiophoresis_GrayScott with parameters:")
         print(f"U: Du={self.Du.item():.4f}, V: Dv={self.Dv.item():.4f}")
         print(f"F={self.F.item():.4f}, k={self.k.item():.4f}, time_scale={self.time_scale.item():.1f}")
 

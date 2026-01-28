@@ -50,17 +50,17 @@ class PDE_D(pyg.nn.MessagePassing):
         self.boost_exponent = p[2, 4] if p.shape[1] > 4 else 0.0
 
         # Report configuration
-        print(f"Initialized PDE_D with parameters:")
-        print(f"Mobility: M₁={self.M1.item()}, M₂={self.M2.item()}")
+        print(f"initialized PDE_D with parameters:")
+        print(f"mobility: M₁={self.M1.item()}, M₂={self.M2.item()}")
         if hasattr(self, 'boost_exponent'):
             boost_val = self.boost_exponent.item() if hasattr(self.boost_exponent, 'item') else self.boost_exponent
             if boost_val > 0:
-                print(f"Gradient boost exponent: {boost_val:.3f} (0=linear, >0=superlinear)")
+                print(f"gradient boost exponent: {boost_val:.3f} (0=linear, >0=superlinear)")
         print(f"Pe={self.Pe.item():.3f}, sigma={self.sigma}")
-        print(f"Particle→Field: consumption={self.consumption_rate.item()}, production={self.production_rate.item()}, influence_radius={self.influence_radius.item():.3f}")
+        print(f"particle→Field: consumption={self.consumption_rate.item()}, production={self.production_rate.item()}, influence_radius={self.influence_radius.item():.3f}")
         if particle_params is not None:
-            print(f"Multi-type support: {particle_params.shape[0]} particle types")
-            print(f"Per-type params: [M1, M2, consumption, production, ar_p1, ar_p2, ar_p3, ar_p4]")
+            print(f"multi-type support: {particle_params.shape[0]} particle types")
+            print(f"per-type params: [M1, M2, consumption, production, ar_p1, ar_p2, ar_p3, ar_p4]")
     
     def forward(self, data, direction='fp'):
         """
@@ -80,10 +80,23 @@ class PDE_D(pyg.nn.MessagePassing):
         if direction == 'interpolate':
             # Step 1: Interpolate fields from mesh to particles
             result = self.propagate(edge_index, x=x, mode='interpolate', parameters=parameters)
+
+            # For out-of-box particles, return zero fields (no valid mesh data)
+            pos = x[:, 1:self.dimension+1]
+            in_box = ((pos >= 0) & (pos <= 1)).all(dim=1, keepdim=True)
+            result = result * in_box.float()
+
             return result
         elif direction == 'fp':
             # Step 2: Calculate diffusiophoretic velocities
             result = self.propagate(edge_index, x=x, mode='fp', parameters=parameters)
+
+            # Zero out velocities for particles outside [0,1] box
+            # These particles have no valid field data to interpolate from
+            pos = x[:, 1:self.dimension+1]
+            in_box = ((pos >= 0) & (pos <= 1)).all(dim=1, keepdim=True)
+            result = result * in_box.float()
+
             return result
         elif direction == 'pf':
             # Particle → Field effects

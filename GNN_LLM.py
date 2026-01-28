@@ -395,8 +395,9 @@ def run_simulation(config_path: str, root_dir: str, config_name: str) -> tuple:
         '--step', '50'
     ]
 
-    print(f"\033[90mcommand: {' '.join(cmd)}\033[0m")
-    print(f"\033[90mconfig: {config_path}\033[0m")
+    # print(f"\033[90mcommand: {' '.join(cmd)}\033[0m")
+    # print(f"\033[90mconfig: {config_path}\033[0m")
+    print("\033[93mrunning training in subprocess...\033[0m")
 
     # Stream output while capturing for error analysis
     env = os.environ.copy()
@@ -727,7 +728,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Resume support: start_iteration parameter (default 1)
-    start_iteration = 155
+    start_iteration = 1
 
     if start_iteration > 1:
         print(f"\033[93mResuming from iteration {start_iteration}\033[0m")

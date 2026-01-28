@@ -878,7 +878,6 @@ def data_generate_particle_field(
         H1_mesh[mask_mesh == 0.0] = 0.0
         edge_cache = NeighborCache()
 
-
         if "diffusiophoresis" in model_config.field_type:
             C1_0 = model_f_f.A  # 4.5
             C2_0 = model_f_f.B / model_f_f.A  # 2.44/4.5 ≈ 0.54
@@ -901,7 +900,11 @@ def data_generate_particle_field(
             memory_percentage_threshold=0.6,
         )
         time.sleep(1)
-        
+
+        # Track velocity over time for plateau metric
+        velocity_history = []
+        nan_detected = False  # Only print NaN warning once
+
         for it in range(simulation_config.start_frame, n_frames + 1):
             if ("siren" in model_config.field_type) & (it >= 0):   # evolving field
                 im = imread(
@@ -937,7 +940,6 @@ def data_generate_particle_field(
             )
 
             x_particle_field = torch.concatenate((x_mesh, x), dim=0)
-
 
             if "diffusiophoresis" in model_config.field_type:
 
@@ -1047,12 +1049,15 @@ def data_generate_particle_field(
                     Pe = model_p_f.Pe
                     diffusion_noise = 0.01 * torch.randn_like(y) * torch.sqrt(torch.tensor(delta_t, device=device)) / torch.sqrt(Pe)
                     y = y + diffusion_noise
-                    
+
+                    # Track velocity for plateau metric
+                    vel_mag = torch.norm(y, dim=1).mean().item()
+                    velocity_history.append(vel_mag)
+
                     # Field updates with particle feedback
                     y2 = model_f_f(dataset_mesh)
                     y3 = model_p_f(dataset_p_f, direction='pf')[:n_nodes]
                     y_mesh = y2 + y3  # Start with weak particle→field coupling
-
 
             else:
 
@@ -1117,6 +1122,10 @@ def data_generate_particle_field(
                     y1 = model_f_p(dataset_f_p, has_field=True)[n_nodes:]
                     y = y0 + y1
 
+                    # Track velocity for plateau metric
+                    vel_mag = torch.norm(y, dim=1).mean().item()
+                    velocity_history.append(vel_mag)
+
             # append list
             if (it >= 0) & bSave:
                 if has_particle_dropout:
@@ -1165,8 +1174,26 @@ def data_generate_particle_field(
                 else:
                     x_list.append(x.clone().detach())
                     y_list.append(y.clone().detach())
-                    if torch.isnan(x).any() | torch.isnan(y).any():
-                        print("nan")
+                    if not nan_detected and (torch.isnan(x).any() or torch.isnan(y).any()):
+                        nan_detected = True
+                        # Detailed NaN diagnostics
+                        nan_x_mask = torch.isnan(x).any(dim=1)
+                        nan_y_mask = torch.isnan(y).any(dim=1)
+                        n_nan_particles = nan_x_mask.sum().item()
+                        n_nan_vel = nan_y_mask.sum().item()
+                        print(f"\n=== NaN detected at frame {it} ===")
+                        print(f"  Particles with NaN state: {n_nan_particles}/{x.shape[0]}")
+                        print(f"  Particles with NaN velocity: {n_nan_vel}/{y.shape[0]}")
+                        if n_nan_particles > 0:
+                            nan_indices = torch.where(nan_x_mask)[0][:5]  # First 5
+                            for idx in nan_indices:
+                                pos = x[idx, 1:3]
+                                fields = x[idx, 6:8] if x.shape[1] > 7 else None
+                                print(f"  Particle {idx.item()}: pos=({pos[0].item():.4f}, {pos[1].item():.4f})", end="")
+                                if fields is not None:
+                                    print(f", C1={fields[0].item():.4f}, C2={fields[1].item():.4f}")
+                                else:
+                                    print()
 
                 if "diffusiophoresis" in model_config.field_type:
                     x_mesh_list.append(x_mesh.clone().detach())
@@ -1362,8 +1389,8 @@ def data_generate_particle_field(
                         dpi=170.7,
                     )
 
-
                 if "diffusiophoresis" in model_config.field_type:
+
                     # Create a figure with 4 subplots
                     fig = plt.figure(figsize=(16, 16))
                     
@@ -1654,6 +1681,40 @@ def data_generate_particle_field(
                     pos_std_y = particle_pos[:, 1].std().item()
                     clustering = (0.289 - pos_std_x) / 0.289
 
+                    # Calculate percentage of particles remaining in [0,1] box
+                    in_box = ((particle_pos[:, 0] >= 0) & (particle_pos[:, 0] <= 1) &
+                              (particle_pos[:, 1] >= 0) & (particle_pos[:, 1] <= 1))
+                    particles_in_box = in_box.sum().item()
+                    particles_in_box_pct = 100.0 * particles_in_box / particle_pos.shape[0]
+
+                    # Spatial Entropy (complexity metric)
+                    # Bin particles into NxN grid, compute Shannon entropy
+                    n_bins = 20
+                    in_box_pos = particle_pos[in_box]
+                    if len(in_box_pos) > 0:
+                        x_bins = torch.clamp((in_box_pos[:, 0] * n_bins).long(), 0, n_bins - 1)
+                        y_bins = torch.clamp((in_box_pos[:, 1] * n_bins).long(), 0, n_bins - 1)
+                        bin_indices = x_bins * n_bins + y_bins
+                        counts = torch.bincount(bin_indices, minlength=n_bins * n_bins).float()
+                        counts = counts / counts.sum()  # normalize to probabilities
+                        counts = counts[counts > 0]  # remove zeros for log
+                        entropy = -torch.sum(counts * torch.log(counts)).item()
+                        max_entropy = np.log(n_bins * n_bins)  # uniform distribution
+                        spatial_entropy = entropy / max_entropy  # normalized 0-1
+                    else:
+                        spatial_entropy = 0.0
+
+                    # Plateau metric from velocity history
+                    # Compare mean velocity in early vs final portion of simulation
+                    if len(velocity_history) >= 20:
+                        n_window = len(velocity_history) // 5  # 20% window
+                        early_vel = np.mean(velocity_history[:n_window])
+                        final_vel = np.mean(velocity_history[-n_window:])
+                        # Plateau score: 1 = fully converged (velocity dropped to 0), 0 = still moving
+                        plateau = 1.0 - min(1.0, final_vel / max(early_vel, 1e-8))
+                    else:
+                        plateau = 0.0
+
                     # Write analysis.log with simulation metrics
                     n_saved_frames = (n_frames - simulation_config.start_frame) // step + 1
                     analysis_log_path = f"./graphs_data/{dataset_name}/analysis.log"
@@ -1671,6 +1732,10 @@ def data_generate_particle_field(
                         analysis_file.write(f"clustering: {clustering:.4f}\n")
                         analysis_file.write(f"pos_std_x: {pos_std_x:.4f}\n")
                         analysis_file.write(f"pos_std_y: {pos_std_y:.4f}\n")
+                        analysis_file.write(f"particles_in_box: {particles_in_box}\n")
+                        analysis_file.write(f"particles_in_box_pct: {particles_in_box_pct:.2f}\n")
+                        analysis_file.write(f"spatial_entropy: {spatial_entropy:.4f}\n")
+                        analysis_file.write(f"plateau: {plateau:.4f}\n")
 
 
         print('data generated...')

@@ -30,19 +30,6 @@ Boring patterns:
 
 ---
 
-## State of the Art Reasoning
-
-**Ground your reasoning in scientific literature.** Include a brief "Literature:" line in log entries.
-
-### Example Log Entry
-
-```
-Literature: Gray-Scott mitosis regime (Pearson 1993)
-Hypothesis: Increase B toward stripe-spot transition
-```
-
----
-
 ## Iteration Loop Structure
 
 Each block = `n_iter_block` iterations (default: 8) exploring one configuration space.
@@ -83,51 +70,37 @@ Read `diffusiophoresis_Claude_memory.md` to recall:
 
 ### Step 2: Analyze Current Results
 
-**Visual Analysis (CRITICAL):**
+#### 2.1 **Visual Analysis (CRITICAL):**
 
-Examine the montage image showing 10 frames from the simulation.
-
-- **Montage location**: Provided in the prompt as `montage_path` (e.g., `graphs_data/{dataset_name}/montage_iter_XXX.png`)
-- **Individual frames**: `graphs_data/{dataset_name}/Fig/Fig_0_XXXXXX.png`
-- **Exploration archive**: `log/Claude_exploration/instruction_diffusiophoresis/activity/` contains montages from all iterations
-
-The montage shows 10 evenly-spaced frames (2 rows × 5 columns) from early to late simulation time.
+Examine the **Individual frames**: `graphs_data/{dataset_name}/Fig/Fig_0_XXXXXX.png`
 
 **2x2 Figure Layout (each frame):**
 
-- **Top row**: Field concentrations C1 (left) and C2 (right) - Turing patterns
-- **Bottom left**: Particle spatial organization - **PRIMARY FOCUS**
-- **Bottom right**: Velocity arrows - not important, can ignore
+- **Top row**: Field concentrations C1 (left) and C2 (right)
+- **Bottom left**: Particle spatial organization 
+
 
 **What to look for (in priority order):**
 
-1. **Particle spatial organization (bottom left)** - PRIMARY
-   - Clustering, aggregation, self-organization
-   - Correlation with field patterns
-   - Dynamic reorganization over time
-   - Multi-scale structures
-
+1. **Particlepatterns (bottom left)** - PRIMARY
 2. **Field patterns C1/C2 (top row)** - SECONDARY
-   - Turing patterns (spots, stripes, labyrinthine)
-   - Pattern wavelength and regularity
-   - Traveling waves, spirals
-   - Dynamic vs static behavior
 
 **Score the pattern 0-10:**
 
-| Score | Description                                                                              |
-| ----- | ---------------------------------------------------------------------------------------- |
-| 0-1   | Uniform/collapsed - no patterns, boring                                                  |
-| 2-3   | Minimal structure - weak gradients, little organization                                  |
-| 4-5   | Basic patterns - simple spots or stripes, predictable                                    |
-| 6-7   | Complex patterns - multiple scales, dynamic behavior                                     |
-| 8-9   | Rich dynamics - spirals, traveling waves, emergent clustering                            |
-| 10    | Exceptional - novel self-organization, multi-scale structure, scientifically interesting |
 
-**Metrics from `analysis.log`:**
+#### 2.2 **Metrics from `analysis.log`:**
 
-- Frame count, simulation parameters
-- Any computed metrics (field gradients, particle distributions)
+**Primary metrics (use these for scoring):**
+- `spatial_entropy`: **COMPLEXITY** - normalized entropy of particle spatial distribution (0-1). Values ~0.3-0.7 indicate structured patterns. Near 1 = uniform/boring, near 0 = collapsed to single point.
+- `plateau`: **STABILITY** - convergence score (0-1). Compares mean particle velocity in final 20% vs early 20% of simulation. Near 1 = velocity dropped (steady state), near 0 = still moving fast.
+- `particles_in_box_pct`: **CRITICAL** - percentage of particles remaining in [0,1] box. Low values indicate particle escape/instability.
+
+**Secondary metrics:**
+- `clustering`: particle clustering metric (0.289 - pos_std) / 0.289. Values near 0 = uniform, higher = clustered.
+- `pattern_growth`: change in field std over time. Positive = patterns developing.
+- `C1_std`, `C2_std`: field concentration variation. Higher = stronger Turing patterns.
+
+**Ideal pattern**: High `plateau` (stable) + moderate `spatial_entropy` (0.4-0.7, complex) + high `particles_in_box_pct` (>90%).
 
 ### Step 3: Write Outputs
 
@@ -136,7 +109,8 @@ Append to Full Log (`{config}_analysis.md`) and **Current Block** sections of `{
 - In memory.md: Insert iteration log in "Iterations This Block" section (BEFORE "Emerging Observations")
 - Update "Emerging Observations" at the END of the file with running notes
 
-**Log Format:**
+**Log Format {config}\_analysis.md:**
+This format is compulsory
 
 ```
 ## Iter N: [score]/10
@@ -144,10 +118,10 @@ Node: id=N, parent=P
 Mode/Strategy: [exploit/explore/boundary/code-modification/multi-type]
 Config: params_mesh=[...], n_frames=X, delta_t=Y, ...
 n_particle_types: [1/2/3]
+Metrics: entropy=[X.XX], plateau=[X.XX], in_box=[XX.X]%
 Score: [N]/10
 Visual: [description of patterns observed]
 Mutation: [param or code]: [old] -> [new]
-Parent rule: [one line]
 Observation: [what did this change reveal?]
 Next: parent=P
 ```
@@ -396,7 +370,7 @@ Add/modify rules based on block experience:
 ## Working Memory Structure
 
 ```markdown
-## Regime Comparison
+## Per-block Regime Comparison
 
 | Regime | mesh_model            | particle_model      | n_types | n_particles | Best R² | Key Insight |
 | ------ | --------------------- | ------------------- | ------- | ----------- | ------- | ----------- |

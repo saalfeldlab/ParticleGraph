@@ -370,6 +370,11 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
         pos = torch.rand(n_particles, dimension, device=device)
         if simulation_config.pos_init == 'square':
             pos = pos * 0.5 + 0.25
+    elif "diffusiophoresis" in model_config.field_type:
+        print('equidistant particles at center [0.5, 0.5] with radius 0.25')
+        xc, yc = get_equidistant_points(n_points=n_particles)
+        pos = torch.tensor(np.stack((xc, yc), axis=1), dtype=torch.float32, device=device)
+        pos = pos * 0.25 + 0.5  # Scale to radius 0.25, center at [0.5, 0.5]
     elif (simulation_config.boundary == 'periodic') | ('PDE_K' in config.graph_model.particle_model_name):
         pos = torch.rand(n_particles, dimension, device=device)
         if n_particles <= 10:
@@ -384,10 +389,10 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
                 pos = pos * 0.2 + 0.4
         elif n_particles<=500:
             pos = pos * 0.5 + 0.25
-    elif "diffusiophoresis" in model_config.field_type:
-        pos = torch.rand(n_particles, dimension, device=device) * 1.0
+
     else:
         pos = torch.randn(n_particles, dimension, device=device) * 0.5
+
     dpos = dpos_init * torch.randn((n_particles, dimension), device=device)
     dpos = torch.clamp(dpos, min=-torch.std(dpos), max=+torch.std(dpos))
     type = torch.zeros(int(n_particles / n_particle_types), device=device)
