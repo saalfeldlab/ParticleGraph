@@ -73,6 +73,14 @@ class PDE_D(pyg.nn.MessagePassing):
         if self.particle_params is not None:
             # Particle type is at index 1 + 2*dimension (after pos_x, pos_y)
             particle_type = x[:, 1 + 2*self.dimension].long()
+            max_type = particle_type.max().item()
+            n_param_rows = self.particle_params.shape[0]
+            if max_type >= n_param_rows:
+                raise ValueError(
+                    f"PDE_D: particle_params has {n_param_rows} rows but found "
+                    f"particle type {max_type}. Add {max_type + 1} rows to "
+                    f"simulation.params (one per particle type)."
+                )
             parameters = self.particle_params[to_numpy(particle_type), :]
         else:
             parameters = None
