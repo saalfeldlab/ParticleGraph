@@ -878,6 +878,7 @@ def data_generate_particle_field(
         # Shuffle particle types if requested (randomizes type assignment to avoid radial bands)
         if simulation_config.shuffle_particle_types:
             if run == 0:
+                print ('shuffle types...')
                 shuffle_index = torch.randperm(n_particles, device=device)
                 T1 = T1[shuffle_index]
                 first_T1 = T1.clone().detach()
@@ -937,6 +938,9 @@ def data_generate_particle_field(
                 ),
                 1,
             )
+
+            if it == simulation_config.start_frame:
+                index_particles = get_index_particles(x, n_particle_types, dimension)
 
             x_mesh = torch.concatenate(
                 (
