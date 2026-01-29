@@ -55,8 +55,7 @@ if __name__ == "__main__":
         best_model = None
         task = 'generate'  # 'generate', 'train', 'test'
 
-        config_list = ['arbitrary_3_1']
-
+        config_list = ['diffusiophoresis_test']
     for config_file_ in config_list:
         print(" ")
         config_root = os.path.dirname(os.path.abspath(__file__)) + "/config"

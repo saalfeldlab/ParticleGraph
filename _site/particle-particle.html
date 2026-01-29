@@ -45,6 +45,9 @@ ul.task-list li input[type="checkbox"] {
 <link href="site_libs/bootstrap/bootstrap-508be24566865fa28f48dacc3ed5d9bc.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
 <link href="site_libs/bootstrap/bootstrap-dark-fc60ebf3756af1d7378dcf8f99431227.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
 <link href="site_libs/bootstrap/bootstrap-508be24566865fa28f48dacc3ed5d9bc.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<script src="site_libs/quarto-contrib/glightbox/glightbox.min.js"></script>
+<link href="site_libs/quarto-contrib/glightbox/glightbox.min.css" rel="stylesheet">
+<link href="site_libs/quarto-contrib/glightbox/lightbox.css" rel="stylesheet">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -325,8 +328,20 @@ window.Quarto = {
     <a class="dropdown-item" href="./grayscott.html">
  <span class="dropdown-text">Gray-Scott</span></a>
   </li>  
+        <li>
+    <a class="dropdown-item" href="./fhn.html">
+ <span class="dropdown-text">FitzHugh-Nagumo</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./schnakenberg.html">
+ <span class="dropdown-text">Schnakenberg</span></a>
+  </li>  
     </ul>
   </li>
+  <li class="nav-item">
+    <a class="nav-link" href="./mechanochemical.html"> 
+<span class="menu-text">Mechanochemical</span></a>
+  </li>  
 </ul>
           </div> <!-- /navcollapse -->
             <div class="quarto-navbar-tools">
@@ -349,6 +364,7 @@ window.Quarto = {
   <li><a href="#force-law" id="toc-force-law" class="nav-link" data-scroll-target="#force-law">Force Law</a></li>
   <li><a href="#default-configuration" id="toc-default-configuration" class="nav-link" data-scroll-target="#default-configuration">Default Configuration</a></li>
   <li><a href="#multi-type-particles" id="toc-multi-type-particles" class="nav-link" data-scroll-target="#multi-type-particles">Multi-Type Particles</a></li>
+  <li><a href="#force-visualization" id="toc-force-visualization" class="nav-link" data-scroll-target="#force-visualization">Force Visualization</a></li>
   <li><a href="#role-in-pattern-formation" id="toc-role-in-pattern-formation" class="nav-link" data-scroll-target="#role-in-pattern-formation">Role in Pattern Formation</a></li>
   </ul>
 </nav>
@@ -432,6 +448,15 @@ window.Quarto = {
 <p>When <code>particle_params</code> is provided, each particle type can have distinct interaction parameters:</p>
 <pre><code>[M1, M2, consumption, production, ar_p1, ar_p2, ar_p3, ar_p4]</code></pre>
 <p>This enables heterogeneous systems where different particle types attract/repel each other differently.</p>
+</section>
+<section id="force-visualization" class="level2">
+<h2 class="anchored" data-anchor-id="force-visualization">Force Visualization</h2>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="assets/pp_interaction.png" class="lightbox" data-gallery="quarto-lightbox-gallery-1" title="Particle-particle interaction forces. Left: General attraction-repulsion model with configurable parameters. Right: Simple repulsion used in diffusiophoresis simulations."><img src="assets/pp_interaction.png" class="img-fluid figure-img" alt="Particle-particle interaction forces. Left: General attraction-repulsion model with configurable parameters. Right: Simple repulsion used in diffusiophoresis simulations."></a></p>
+<figcaption>Particle-particle interaction forces. Left: General attraction-repulsion model with configurable parameters. Right: Simple repulsion used in diffusiophoresis simulations.</figcaption>
+</figure>
+</div>
 </section>
 <section id="role-in-pattern-formation" class="level2">
 <h2 class="anchored" data-anchor-id="role-in-pattern-formation">Role in Pattern Formation</h2>
@@ -873,6 +898,38 @@ window.Quarto = {
     </div>
   </div>
 </footer>
+<script>var lightboxQuarto = GLightbox({"closeEffect":"zoom","descPosition":"bottom","loop":false,"openEffect":"zoom","selector":".lightbox"});
+(function() {
+  let previousOnload = window.onload;
+  window.onload = () => {
+    if (previousOnload) {
+      previousOnload();
+    }
+    lightboxQuarto.on('slide_before_load', (data) => {
+      const { slideIndex, slideNode, slideConfig, player, trigger } = data;
+      const href = trigger.getAttribute('href');
+      if (href !== null) {
+        const imgEl = window.document.querySelector(`a[href="${href}"] img`);
+        if (imgEl !== null) {
+          const srcAttr = imgEl.getAttribute("src");
+          if (srcAttr && srcAttr.startsWith("data:")) {
+            slideConfig.href = srcAttr;
+          }
+        }
+      } 
+    });
+  
+    lightboxQuarto.on('slide_after_load', (data) => {
+      const { slideIndex, slideNode, slideConfig, player, trigger } = data;
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(slideNode);
+      }
+    });
+  
+  };
+  
+})();
+          </script>
 
 
 

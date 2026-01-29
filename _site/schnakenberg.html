@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Gray-Scott Model – LLM-Guided Morphogenesis</title>
+<title>Schnakenberg Model – LLM-Guided Morphogenesis</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -45,8 +45,9 @@ ul.task-list li input[type="checkbox"] {
 <link href="site_libs/bootstrap/bootstrap-508be24566865fa28f48dacc3ed5d9bc.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
 <link href="site_libs/bootstrap/bootstrap-dark-fc60ebf3756af1d7378dcf8f99431227.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
 <link href="site_libs/bootstrap/bootstrap-508be24566865fa28f48dacc3ed5d9bc.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
-<script src="site_libs/quarto-contrib/videojs/video.min.js"></script>
-<link href="site_libs/quarto-contrib/videojs/video-js.css" rel="stylesheet">
+<script src="site_libs/quarto-contrib/glightbox/glightbox.min.js"></script>
+<link href="site_libs/quarto-contrib/glightbox/glightbox.min.css" rel="stylesheet">
+<link href="site_libs/quarto-contrib/glightbox/lightbox.css" rel="stylesheet">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -331,6 +332,10 @@ window.Quarto = {
     <a class="dropdown-item" href="./fhn.html">
  <span class="dropdown-text">FitzHugh-Nagumo</span></a>
   </li>  
+        <li>
+    <a class="dropdown-item" href="./schnakenberg.html">
+ <span class="dropdown-text">Schnakenberg</span></a>
+  </li>  
     </ul>
   </li>
   <li class="nav-item">
@@ -355,17 +360,20 @@ window.Quarto = {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#field-dynamics" id="toc-field-dynamics" class="nav-link active" data-scroll-target="#field-dynamics">Field Dynamics</a>
+  <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
+  <li><a href="#mathematical-formulation" id="toc-mathematical-formulation" class="nav-link" data-scroll-target="#mathematical-formulation">Mathematical Formulation</a>
   <ul class="collapse">
-  <li><a href="#pattern-regimes-pearson-1993" id="toc-pattern-regimes-pearson-1993" class="nav-link" data-scroll-target="#pattern-regimes-pearson-1993">Pattern Regimes (Pearson 1993)</a></li>
-  <li><a href="#parameters-block-12" id="toc-parameters-block-12" class="nav-link" data-scroll-target="#parameters-block-12">Parameters (Block 12)</a></li>
+  <li><a href="#turing-analysis" id="toc-turing-analysis" class="nav-link" data-scroll-target="#turing-analysis">Turing Analysis</a></li>
+  <li><a href="#parameters" id="toc-parameters" class="nav-link" data-scroll-target="#parameters">Parameters</a></li>
   </ul></li>
-  <li><a href="#particle-coupling" id="toc-particle-coupling" class="nav-link" data-scroll-target="#particle-coupling">Particle Coupling</a></li>
-  <li><a href="#current-status" id="toc-current-status" class="nav-link" data-scroll-target="#current-status">Current Status</a>
+  <li><a href="#exploration-results-block-6" id="toc-exploration-results-block-6" class="nav-link" data-scroll-target="#exploration-results-block-6">Exploration Results (Block 6)</a>
   <ul class="collapse">
+  <li><a href="#iterations-41-44" id="toc-iterations-41-44" class="nav-link" data-scroll-target="#iterations-41-44">Iterations 41-44</a></li>
   <li><a href="#key-observations" id="toc-key-observations" class="nav-link" data-scroll-target="#key-observations">Key Observations</a></li>
   </ul></li>
+  <li><a href="#comparison-four-model-hierarchy" id="toc-comparison-four-model-hierarchy" class="nav-link" data-scroll-target="#comparison-four-model-hierarchy">Comparison: Four-Model Hierarchy</a></li>
   <li><a href="#exploration-gallery" id="toc-exploration-gallery" class="nav-link" data-scroll-target="#exploration-gallery">Exploration Gallery</a></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
   </ul>
 </nav>
     </div>
@@ -375,8 +383,8 @@ window.Quarto = {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Gray-Scott Model</h1>
-<p class="subtitle lead">Radial patterns without hexagonal symmetry breaking</p>
+<h1 class="title">Schnakenberg Model</h1>
+<p class="subtitle lead">Radial-only patterns with genuine steady state</p>
 </div>
 
 
@@ -393,114 +401,127 @@ window.Quarto = {
 </header>
 
 
-<section id="field-dynamics" class="level2">
-<h2 class="anchored" data-anchor-id="field-dynamics">Field Dynamics</h2>
-<p>The Gray-Scott model uses autocatalytic reaction with feed/kill dynamics:</p>
-<p><span class="math display">\[
-\frac{\partial U}{\partial t} = D_u \nabla^2 U - UV^2 + F(1-U)
-\]</span></p>
-<p><span class="math display">\[
-\frac{\partial V}{\partial t} = D_v \nabla^2 V + UV^2 - (F+k)V
-\]</span></p>
-<p>where:</p>
-<ul>
-<li><span class="math inline">\(U\)</span> is the “feed” species (replenished at rate <span class="math inline">\(F\)</span>)</li>
-<li><span class="math inline">\(V\)</span> is the “autocatalyst” (self-replicating via <span class="math inline">\(UV^2\)</span>)</li>
-<li><span class="math inline">\(F\)</span> is the feed rate</li>
-<li><span class="math inline">\(k\)</span> is the kill rate</li>
-</ul>
-<section id="pattern-regimes-pearson-1993" class="level3">
-<h3 class="anchored" data-anchor-id="pattern-regimes-pearson-1993">Pattern Regimes (Pearson 1993)</h3>
-<table class="caption-top table">
-<thead>
-<tr class="header">
-<th>Regime</th>
-<th>F</th>
-<th>k</th>
-<th>Pattern</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>α (alpha)</td>
-<td>0.010</td>
-<td>0.047</td>
-<td>Spots</td>
-</tr>
-<tr class="even">
-<td>β (beta)</td>
-<td>0.026</td>
-<td>0.052</td>
-<td>Replicating spots</td>
-</tr>
-<tr class="odd">
-<td>γ (gamma)</td>
-<td>0.035</td>
-<td>0.060</td>
-<td>Worms/labyrinths</td>
-</tr>
-<tr class="even">
-<td>δ (delta)</td>
-<td>0.028</td>
-<td>0.053</td>
-<td>Mitosis</td>
-</tr>
-<tr class="odd">
-<td>ε (epsilon)</td>
-<td>0.018</td>
-<td>0.055</td>
-<td>Chaotic</td>
-</tr>
-<tr class="even">
-<td>λ (lambda)</td>
-<td>0.040</td>
-<td>0.065</td>
-<td>Stripes</td>
-</tr>
-</tbody>
-</table>
+<section id="overview" class="level2">
+<h2 class="anchored" data-anchor-id="overview">Overview</h2>
+<p>The <strong>Schnakenberg</strong> model is a minimal two-component activator-inhibitor system closely related to the Brusselator but with simpler kinetics. When coupled to diffusiophoresis, it produces <strong>radial/concentric patterns only</strong>, similar to Gray-Scott and fundamentally different from Brusselator and FHN.</p>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Warning</span>Key Finding: Radial Symmetry Only
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Schnakenberg produces <strong>concentric ring patterns</strong> regardless of gamma (200-1000) or multi-type configurations. No hexagonal symmetry breaking occurs. This confirms a clear dichotomy: cubic autocatalysis (Brusselator) or excitable dynamics (FHN) are required for hexagonal mode.</p>
+</div>
+</div>
 </section>
-<section id="parameters-block-12" class="level3">
-<h3 class="anchored" data-anchor-id="parameters-block-12">Parameters (Block 12)</h3>
+<section id="mathematical-formulation" class="level2">
+<h2 class="anchored" data-anchor-id="mathematical-formulation">Mathematical Formulation</h2>
+<p>The Schnakenberg reaction-diffusion system:</p>
+<p><span class="math display">\[
+\frac{\partial u}{\partial t} = D_u \nabla^2 u + \gamma(a - u + u^2 v)
+\]</span></p>
+<p><span class="math display">\[
+\frac{\partial v}{\partial t} = D_v \nabla^2 v + \gamma(b - u^2 v)
+\]</span></p>
+<p>Where:</p>
+<ul>
+<li><span class="math inline">\(u\)</span>: Activator concentration</li>
+<li><span class="math inline">\(v\)</span>: Inhibitor concentration</li>
+<li><span class="math inline">\(D_u, D_v\)</span>: Diffusion coefficients (<span class="math inline">\(D_v \gg D_u\)</span> for Turing instability)</li>
+<li><span class="math inline">\(a, b\)</span>: Kinetic parameters</li>
+<li><span class="math inline">\(\gamma\)</span>: Reaction rate scaling (Damkohler-like)</li>
+</ul>
+<section id="turing-analysis" class="level3">
+<h3 class="anchored" data-anchor-id="turing-analysis">Turing Analysis</h3>
+<p>The homogeneous steady state is: <span class="math display">\[
+u^* = a + b, \quad v^* = \frac{b}{(a+b)^2}
+\]</span></p>
+<p>Turing instability requires <span class="math inline">\(D_v/D_u\)</span> sufficiently large and <span class="math inline">\(\gamma\)</span> above a critical threshold.</p>
+</section>
+<section id="parameters" class="level3">
+<h3 class="anchored" data-anchor-id="parameters">Parameters</h3>
 <table class="caption-top table">
 <thead>
 <tr class="header">
 <th>Symbol</th>
 <th>Description</th>
-<th>Current</th>
-<th>Range</th>
+<th>Tested Range</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td><span class="math inline">\(D_u\)</span></td>
-<td>U diffusion</td>
-<td>0.20</td>
-<td>0.1–0.5</td>
+<td>Activator diffusion</td>
+<td>0.015</td>
 </tr>
 <tr class="even">
 <td><span class="math inline">\(D_v\)</span></td>
-<td>V diffusion</td>
-<td>0.05</td>
-<td>0.05–0.2</td>
+<td>Inhibitor diffusion</td>
+<td>0.15</td>
 </tr>
 <tr class="odd">
-<td><span class="math inline">\(F\)</span></td>
-<td>Feed rate</td>
-<td>0.035</td>
-<td>0.01–0.06</td>
+<td><span class="math inline">\(a\)</span></td>
+<td>Feed parameter</td>
+<td>0.1</td>
 </tr>
 <tr class="even">
-<td><span class="math inline">\(k\)</span></td>
-<td>Kill rate</td>
-<td>0.063</td>
-<td>0.04–0.07</td>
+<td><span class="math inline">\(b\)</span></td>
+<td>Feed parameter</td>
+<td>0.9</td>
 </tr>
 <tr class="odd">
-<td>time_scale</td>
-<td>Dynamics speed</td>
-<td>50</td>
-<td>1–100</td>
+<td><span class="math inline">\(\gamma\)</span></td>
+<td>Reaction rate</td>
+<td>200-1000</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+</section>
+<section id="exploration-results-block-6" class="level2">
+<h2 class="anchored" data-anchor-id="exploration-results-block-6">Exploration Results (Block 6)</h2>
+<section id="iterations-41-44" class="level3">
+<h3 class="anchored" data-anchor-id="iterations-41-44">Iterations 41-44</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Iter</th>
+<th>Config</th>
+<th>gamma</th>
+<th>n_types</th>
+<th>Score</th>
+<th>Pattern</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>41</td>
+<td>Base</td>
+<td>200</td>
+<td>1</td>
+<td>7/10</td>
+<td>Concentric rings</td>
+</tr>
+<tr class="even">
+<td>43</td>
+<td>Multi-type</td>
+<td>200</td>
+<td>2</td>
+<td>7/10</td>
+<td>Concentric rings</td>
+</tr>
+<tr class="odd">
+<td>44</td>
+<td>Multi-type</td>
+<td>200</td>
+<td>2</td>
+<td>7/10</td>
+<td>Concentric rings</td>
 </tr>
 </tbody>
 </table>
@@ -510,81 +531,97 @@ window.Quarto = {
 <i class="callout-icon"></i>
 </div>
 <div class="callout-title-container flex-fill">
-<span class="screen-reader-only">Note</span>Block 12 Configuration
+<span class="screen-reader-only">Note</span>Unique Property: Genuine Steady State
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>Diffusion ratio <span class="math inline">\(D_u/D_v = 4\)</span> maintained. time_scale increased to 50 to match Brusselator dynamics speed. Exploring F-k parameter plane to locate stripe/worm regime.</p>
+<p>Schnakenberg achieves a genuine plateau (0.62 at gamma=200), unlike all other tested models where patterns remain dynamic. This steady-state convergence is unique among the four PDE variants.</p>
 </div>
 </div>
-<hr>
 </section>
-</section>
-<section id="particle-coupling" class="level2">
-<h2 class="anchored" data-anchor-id="particle-coupling">Particle Coupling</h2>
-<p>Same diffusiophoretic dynamics as Brusselator, but with U and V fields:</p>
-<p><span class="math display">\[
-\mathbf{v}_i = M_1 \nabla U\big|_{\mathbf{x}_i} + M_2 \nabla V\big|_{\mathbf{x}_i} + \sqrt{\frac{2}{\text{Pe}}} \boldsymbol{\eta}(t)
-\]</span></p>
-<div class="callout callout-style-default callout-tip callout-titled">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-<span class="screen-reader-only">Tip</span>Coupling Stabilized (Block 12)
-</div>
-</div>
-<div class="callout-body-container callout-body">
-<p>Earlier challenges with negative V fields and NaN explosions have been resolved. The system now produces stable Turing patterns with particles organizing at field boundaries.</p>
-</div>
-</div>
-<hr>
-</section>
-<section id="current-status" class="level2">
-<h2 class="anchored" data-anchor-id="current-status">Current Status</h2>
-<div class="callout callout-style-default callout-warning callout-titled">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-<span class="screen-reader-only">Warning</span>Key Finding: No Hexagonal Symmetry Breaking
-</div>
-</div>
-<div class="callout-body-container callout-body">
-<p>Gray-Scott produces <strong>radial/concentric patterns only</strong>. Even with extended simulation (6000 frames), no hexagonal symmetry breaking occurs. This is a fundamental difference from Brusselator dynamics.</p>
-</div>
-</div>
 <section id="key-observations" class="level3">
 <h3 class="anchored" data-anchor-id="key-observations">Key Observations</h3>
 <ul>
-<li>Gray-Scott produces <strong>concentric ring patterns</strong>, NOT hexagonal spots</li>
-<li>Qualitatively different from Brusselator — purely radial organization</li>
-<li>Extended simulation does not induce symmetry breaking</li>
-<li>Particles form voronoi-like network at field boundaries</li>
-<li>Moderate clustering (0.4) vs Brusselator’s tight clusters (0.6+)</li>
+<li><strong>Radial patterns only</strong>: Concentric rings regardless of gamma, particle types, or initial conditions</li>
+<li><strong>No hexagonal breaking</strong>: Extended simulation confirms radial symmetry persists</li>
+<li><strong>Steady state</strong>: Plateau=0.62 (unique — Brusselator/FHN/Gray-Scott all have plateau~0)</li>
+<li><strong>Simple kinetics</strong>: Fewer parameters than Brusselator, but also fewer accessible morphologies</li>
 </ul>
 <hr>
 </section>
 </section>
+<section id="comparison-four-model-hierarchy" class="level2">
+<h2 class="anchored" data-anchor-id="comparison-four-model-hierarchy">Comparison: Four-Model Hierarchy</h2>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Model</th>
+<th>Symmetry Breaking</th>
+<th>Accessible Modes</th>
+<th>Steady State</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Brusselator</td>
+<td>Yes</td>
+<td>Hexagonal, Stripes, Labyrinth</td>
+<td>No (dynamic)</td>
+</tr>
+<tr class="even">
+<td>FitzHugh-Nagumo</td>
+<td>Yes</td>
+<td>Hexagonal, Square/Grid</td>
+<td>No (oscillatory)</td>
+</tr>
+<tr class="odd">
+<td>Schnakenberg</td>
+<td>No</td>
+<td>Radial only</td>
+<td>Yes (plateau=0.62)</td>
+</tr>
+<tr class="even">
+<td>Gray-Scott</td>
+<td>No</td>
+<td>Radial only</td>
+<td>No (dynamic)</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
 <section id="exploration-gallery" class="level2">
 <h2 class="anchored" data-anchor-id="exploration-gallery">Exploration Gallery</h2>
 <div class="tabset-margin-container"></div><div class="panel-tabset">
-<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-1-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-1" role="tab" aria-controls="tabset-1-1" aria-selected="true" href="">Iter 9</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-2" role="tab" aria-controls="tabset-1-2" aria-selected="false" href="">Iter 14 ⭐</a></li></ul>
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-1-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-1" role="tab" aria-controls="tabset-1-1" aria-selected="true" href="">Iter 41</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-2" role="tab" aria-controls="tabset-1-2" aria-selected="false" href="">Iter 43</a></li></ul>
 <div class="tab-content">
 <div id="tabset-1-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-1-1-tab">
-<p><em>Gray-Scott 2-type test</em></p>
-<div class="quarto-video"><video id="video_shortcode_videojs_video1" class="video-js vjs-default-skin vjs-fluid" controls="" preload="auto" data-setup="{}" title=""><source src="graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_009.mp4"></video></div>
-<p>First Gray-Scott test with 2 particle types. Produces concentric ring patterns with particles at field boundaries.</p>
+<p><em>Schnakenberg 1-type (gamma=200)</em></p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="graphs_data/diffusiophoresis/diffusiophoresis_Claude/montage_iter_041.png" class="lightbox" data-gallery="quarto-lightbox-gallery-1" title="Schnakenberg produces concentric ring patterns with genuine steady state convergence."><img src="graphs_data/diffusiophoresis/diffusiophoresis_Claude/montage_iter_041.png" class="img-fluid figure-img" alt="Schnakenberg produces concentric ring patterns with genuine steady state convergence."></a></p>
+<figcaption>Schnakenberg produces concentric ring patterns with genuine steady state convergence.</figcaption>
+</figure>
+</div>
 </div>
 <div id="tabset-1-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-2-tab">
-<p><em>Extended simulation (6000 frames)</em></p>
-<div class="quarto-video"><video id="video_shortcode_videojs_video2" class="video-js vjs-default-skin vjs-fluid" controls="" preload="auto" data-setup="{}" title=""><source src="graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_014.mp4"></video></div>
-<p>Extended simulation confirms Gray-Scott cannot achieve hexagonal mode. Radial organization persists — fundamental difference from Brusselator.</p>
+<p><em>Schnakenberg 2-type (gamma=200)</em></p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="graphs_data/diffusiophoresis/diffusiophoresis_Claude/montage_iter_043.png" class="lightbox" data-gallery="quarto-lightbox-gallery-2" title="Multi-type configuration still produces radial symmetry only. No hexagonal breaking."><img src="graphs_data/diffusiophoresis/diffusiophoresis_Claude/montage_iter_043.png" class="img-fluid figure-img" alt="Multi-type configuration still produces radial symmetry only. No hexagonal breaking."></a></p>
+<figcaption>Multi-type configuration still produces radial symmetry only. No hexagonal breaking.</figcaption>
+</figure>
 </div>
 </div>
 </div>
+</div>
+</section>
+<section id="references" class="level2">
+<h2 class="anchored" data-anchor-id="references">References</h2>
+<ol type="1">
+<li><p>Schnakenberg, J. (1979). Simple chemical reaction systems with limit cycle behaviour. <em>Journal of Theoretical Biology</em>, 81(3), 389-400.</p></li>
+<li><p>Murray, J. D. (2003). <em>Mathematical Biology II: Spatial Models and Biomedical Applications</em>. Springer.</p></li>
+</ol>
 
 
 </section>
@@ -1017,8 +1054,38 @@ window.Quarto = {
     </div>
   </div>
 </footer>
-<script>videojs(video_shortcode_videojs_video1);</script>
-<script>videojs(video_shortcode_videojs_video2);</script>
+<script>var lightboxQuarto = GLightbox({"closeEffect":"zoom","descPosition":"bottom","loop":false,"openEffect":"zoom","selector":".lightbox"});
+(function() {
+  let previousOnload = window.onload;
+  window.onload = () => {
+    if (previousOnload) {
+      previousOnload();
+    }
+    lightboxQuarto.on('slide_before_load', (data) => {
+      const { slideIndex, slideNode, slideConfig, player, trigger } = data;
+      const href = trigger.getAttribute('href');
+      if (href !== null) {
+        const imgEl = window.document.querySelector(`a[href="${href}"] img`);
+        if (imgEl !== null) {
+          const srcAttr = imgEl.getAttribute("src");
+          if (srcAttr && srcAttr.startsWith("data:")) {
+            slideConfig.href = srcAttr;
+          }
+        }
+      } 
+    });
+  
+    lightboxQuarto.on('slide_after_load', (data) => {
+      const { slideIndex, slideNode, slideConfig, player, trigger } = data;
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(slideNode);
+      }
+    });
+  
+  };
+  
+})();
+          </script>
 
 
 

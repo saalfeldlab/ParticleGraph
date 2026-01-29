@@ -33,12 +33,27 @@ with Gaussian kernel $w_{ij} = \exp(-|\mathbf{x}_j - \mathbf{x}_i|^2 / 2\sigma^2
 
 | Symbol | Description | Typical Value |
 |--------|-------------|---------------|
-| $M_1$ | Mobility for field 1 | ±16 |
-| $M_2$ | Mobility for field 2 | ∓16 |
+| $M_1$ | Mobility for field 1 | ±4 |
+| $M_2$ | Mobility for field 2 | ∓4 |
 | Pe | Péclet number | 200 |
+
+::: {.callout-warning}
+## Mobility Sweet Spot
+$|M| = 4$ is optimal. $|M| = 16$ causes particle escape (0% retention). The ±4 range balances field-particle coupling with particle containment.
+:::
 
 ## Key Finding
 
 ::: {.callout-important}
 **Linear mobility is optimal.** Any nonlinearity (saturation, boost) disrupts boundary accumulation. The simple $\mathbf{v} \propto \nabla C$ relationship works best.
 :::
+
+## Log-Sensing Variant (Block 8)
+
+A new particle model variant uses **logarithmic gradient sensing** (Weber-Fechner law):
+
+$$
+\mathbf{v}_i = M_1 \frac{\nabla C_1}{C_1 + C_0}\bigg|_{\mathbf{x}_i} + M_2 \frac{\nabla C_2}{C_2 + C_0}\bigg|_{\mathbf{x}_i}
+$$
+
+This creates concentration-dependent effective mobility ($M_{\text{eff}} \propto M / C$), producing self-limiting aggregation at high concentrations. Early results show LogSensing suppresses hexagonal symmetry breaking at standard mobility ($M=\pm 4$), requiring higher $M$ ($\pm 8$) to restore pattern formation.

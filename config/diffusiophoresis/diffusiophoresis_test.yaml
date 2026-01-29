@@ -1,42 +1,45 @@
 description: LLM-guided pattern exploration
-dataset: diffusiophoresis
+dataset: diffusiophoresis_test
 simulation:
-  # Per-type particle params: [M1, M2, consumption, production, ar_p1, ar_p2, ar_p3, ar_p4]
-  # ar_p1,ar_p2: attraction term; ar_p3,ar_p4: repulsion term (PDE_A formula)
   params:
     - [-16, 16, 180, -180, 1.6, 1.0, 1.6, 1.5] # Type 0: strong mobility
     - [-8, 8, 90, -90, 1.8, 1.8, 1.1, 1.9] # Type 1: medium mobility
     - [-4, 4, 45, -45, 1.7, 1.8, 1.1, 1.9] # Type 2: weak mobility
   params_mesh:
-    - - 0.05
+    # Brusselator STRIPE mode: A=3, B=10 (B/[1+A^2]=1.0, at Turing boundary)
+    # Da_c=15 (standard), D1=1.0
+    - - 1.0
       - 15.0
-      - 4.5
-      - 6.5
-      - 0.04
-      - -16
-    - - 0.8
-      - 16
-      - 0.0
-      - 0.0
-      - 0.0
-      - 0.0
+      - 3.0
+      - 10.0
+      - 1.0
+      - 0
+    # Row 1: [D2, unused, ...]
+    - - 8.0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+    # Row 2: Particle-field coupling [Pe, coup_in, coup_out, influence, ...]
     - - 1.0
       - 180
       - -180
       - 0.05
-      - 0.0
-      - 0.0
+      - 0
+      - 0
   min_radius: 0
   max_radius: 0.2
   n_particles: 9600
-  n_particle_types: 1
-  n_frames: 2000
+  n_particle_types: 2
+  n_frames: 6000
   n_nodes: 10000
   n_node_types: 1
   sigma: 0.005
   delta_t: 0.0005
   dpos_init: 0
-  boundary: "no"
+  boundary: "periodic"
+  shuffle_particle_types: True
   node_value_map: input_data/pattern_Null.tif
   node_coeff_map: ""
 graph_model:
@@ -59,7 +62,7 @@ plotting:
     - 0.03
 training:
   n_runs: 1
-  device: "cuda:1"
+  device: cuda:1
   n_epochs: 20
   batch_size: 8
   small_init_batch_size: false

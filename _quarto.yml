@@ -27,6 +27,8 @@ website:
             text: Gray-Scott
           - href: fhn.qmd
             text: FitzHugh-Nagumo
+          - href: schnakenberg.qmd
+            text: Schnakenberg
       - href: mechanochemical.qmd
         text: Mechanochemical
     tools:

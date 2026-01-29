@@ -369,6 +369,10 @@ window.Quarto = {
     <a class="dropdown-item" href="./fhn.html">
  <span class="dropdown-text">FitzHugh-Nagumo</span></a>
   </li>  
+        <li>
+    <a class="dropdown-item" href="./schnakenberg.html">
+ <span class="dropdown-text">Schnakenberg</span></a>
+  </li>  
     </ul>
   </li>
   <li class="nav-item">
@@ -404,7 +408,13 @@ window.Quarto = {
   <li><a href="#block-3-findings-iterations-1719" id="toc-block-3-findings-iterations-1719" class="nav-link" data-scroll-target="#block-3-findings-iterations-1719">Block 3 Findings (Iterations 17–19)</a></li>
   <li><a href="#configuration" id="toc-configuration" class="nav-link" data-scroll-target="#configuration">Configuration</a></li>
   </ul></li>
-  <li><a href="#comparison-three-pde-trichotomy" id="toc-comparison-three-pde-trichotomy" class="nav-link" data-scroll-target="#comparison-three-pde-trichotomy">Comparison: Three PDE Trichotomy</a></li>
+  <li><a href="#dv-symmetry-selector-block-6-discovery" id="toc-dv-symmetry-selector-block-6-discovery" class="nav-link" data-scroll-target="#dv-symmetry-selector-block-6-discovery">Dv Symmetry Selector (Block 6 Discovery)</a>
+  <ul class="collapse">
+  <li><a href="#square-mode-properties" id="toc-square-mode-properties" class="nav-link" data-scroll-target="#square-mode-properties">Square Mode Properties</a></li>
+  <li><a href="#square-mode-constraints" id="toc-square-mode-constraints" class="nav-link" data-scroll-target="#square-mode-constraints">Square Mode Constraints</a></li>
+  <li><a href="#robustness-hierarchy" id="toc-robustness-hierarchy" class="nav-link" data-scroll-target="#robustness-hierarchy">Robustness Hierarchy</a></li>
+  </ul></li>
+  <li><a href="#comparison-four-pde-models" id="toc-comparison-four-pde-models" class="nav-link" data-scroll-target="#comparison-four-pde-models">Comparison: Four PDE Models</a></li>
   <li><a href="#exploration-gallery" id="toc-exploration-gallery" class="nav-link" data-scroll-target="#exploration-gallery">Exploration Gallery</a></li>
   <li><a href="#key-insights" id="toc-key-insights" class="nav-link" data-scroll-target="#key-insights">Key Insights</a></li>
   <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
@@ -444,11 +454,12 @@ window.Quarto = {
 <i class="callout-icon"></i>
 </div>
 <div class="callout-title-container flex-fill">
-<span class="screen-reader-only">Tip</span>Key Discovery
+<span class="screen-reader-only">Tip</span>Key Discoveries
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>FHN achieves <strong>hexagonal mode</strong> (~6-7 spots) regardless of particle types (1, 2, or 3). Particles form <strong>network/filamentary structures</strong> rather than tight clusters. Clustering is consistently lower than Brusselator.</p>
+<p>FHN achieves <strong>hexagonal mode</strong> (~6-7 spots) regardless of particle types (1, 2, or 3). Particles form <strong>network/filamentary structures</strong> rather than tight clusters.</p>
+<p>Additionally, the inhibitor diffusion coefficient <span class="math inline">\(D_v\)</span> acts as a <strong>symmetry selector</strong>: <span class="math inline">\(D_v = 0\)</span> produces hexagonal spots, while <span class="math inline">\(D_v \geq 0.1\)</span> produces <strong>square/grid symmetry</strong> — a novel morphology not accessible to any other tested model.</p>
 </div>
 </div>
 </section>
@@ -571,9 +582,81 @@ Row 2 (coupling): [Pe, consumption, production, influence_radius, boost_exponent
 <span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="fu">boundary</span><span class="kw">:</span><span class="at"> periodic</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 </section>
-<section id="comparison-three-pde-trichotomy" class="level2">
-<h2 class="anchored" data-anchor-id="comparison-three-pde-trichotomy">Comparison: Three PDE Trichotomy</h2>
-<p>The exploration revealed a clear trichotomy between the three reaction-diffusion models:</p>
+<section id="dv-symmetry-selector-block-6-discovery" class="level2">
+<h2 class="anchored" data-anchor-id="dv-symmetry-selector-block-6-discovery">Dv Symmetry Selector (Block 6 Discovery)</h2>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Important</span>Breakthrough: Inhibitor Diffusion Controls Symmetry Class
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>The FHN parameter <span class="math inline">\(D_v\)</span> acts as a discrete symmetry selector:</p>
+<ul>
+<li><span class="math inline">\(D_v = 0\)</span>: <strong>Hexagonal</strong> spots (standard Turing)</li>
+<li><span class="math inline">\(D_v = 0.05\)</span>: Disordered transitional</li>
+<li><span class="math inline">\(D_v \geq 0.1\)</span>: <strong>Square/Grid</strong> symmetry (novel!)</li>
+</ul>
+</div>
+</div>
+<section id="square-mode-properties" class="level3">
+<h3 class="anchored" data-anchor-id="square-mode-properties">Square Mode Properties</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Property</th>
+<th>Hexagonal (<span class="math inline">\(D_v=0\)</span>)</th>
+<th>Square (<span class="math inline">\(D_v \geq 0.1\)</span>)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Symmetry</td>
+<td>6-fold</td>
+<td>4-fold</td>
+</tr>
+<tr class="even">
+<td>Clustering</td>
+<td>0.26-0.39</td>
+<td>~0.3</td>
+</tr>
+<tr class="odd">
+<td>Plateau</td>
+<td>0.00</td>
+<td>0.00 (intrinsically oscillatory)</td>
+</tr>
+<tr class="even">
+<td>Multi-type</td>
+<td>All types work</td>
+<td>Same-sign mobility only</td>
+</tr>
+<tr class="odd">
+<td>Opposing mobility</td>
+<td>Works</td>
+<td>Destroys square → hexagonal</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="square-mode-constraints" class="level3">
+<h3 class="anchored" data-anchor-id="square-mode-constraints">Square Mode Constraints</h3>
+<ul>
+<li><strong>Uniform mobility direction required</strong>: All particle types must have the same sign for <span class="math inline">\(M_1, M_2\)</span>. Opposing mobilities revert square → hexagonal</li>
+<li><strong>Intrinsically oscillatory</strong>: Plateau is always 0.00 regardless of feedback parameters; non-convergence is inherent to FHN square mode</li>
+<li><strong>Robust to particle count</strong>: <span class="math inline">\(D_v = 0.15\)</span> also produces square; not a narrow parameter island</li>
+</ul>
+</section>
+<section id="robustness-hierarchy" class="level3">
+<h3 class="anchored" data-anchor-id="robustness-hierarchy">Robustness Hierarchy</h3>
+<p>Hexagonal (survives multi-type, reversed feedback) &gt; Square (same-sign multi-type, fails opposing mobility) &gt; Stripe (1-type only, Brusselator)</p>
+<hr>
+</section>
+</section>
+<section id="comparison-four-pde-models" class="level2">
+<h2 class="anchored" data-anchor-id="comparison-four-pde-models">Comparison: Four PDE Models</h2>
 <div class="cell" data-layout-align="default">
 <div class="cell-output-display">
 <div>
@@ -583,22 +666,24 @@ Row 2 (coupling): [Pe, consumption, production, influence_radius, boost_exponent
     A[Reaction-Diffusion Model] --&gt; B[Brusselator]
     A --&gt; C[Gray-Scott]
     A --&gt; D[FitzHugh-Nagumo]
+    A --&gt; E[Schnakenberg]
 
-    B --&gt; B1[Hexagonal mode]
-    B --&gt; B2[~6 large spots]
-    B --&gt; B3[Tight clusters]
+    B --&gt; B1[Hexagonal + Stripes]
+    B --&gt; B2[Tight clusters]
 
     C --&gt; C1[Radial only]
-    C --&gt; C2[No symmetry breaking]
-    C --&gt; C3[Moderate clustering]
+    C --&gt; C2[Moderate clustering]
 
-    D --&gt; D1[Hexagonal mode]
-    D --&gt; D2[~6-7 spots]
-    D --&gt; D3[Network structure]
+    D --&gt; D1[Hexagonal + Square]
+    D --&gt; D2[Network structure]
+
+    E --&gt; E1[Radial only]
+    E --&gt; E2[Genuine steady state]
 
     style B fill:#c8e6c9
     style C fill:#ffcdd2
     style D fill:#fff9c4
+    style E fill:#e1bee7
 </pre>
 </div>
 <p></p></figure><p></p>
@@ -609,7 +694,7 @@ Row 2 (coupling): [Pe, consumption, production, influence_radius, boost_exponent
 <section id="exploration-gallery" class="level2">
 <h2 class="anchored" data-anchor-id="exploration-gallery">Exploration Gallery</h2>
 <div class="tabset-margin-container"></div><div class="panel-tabset">
-<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-1-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-1" role="tab" aria-controls="tabset-1-1" aria-selected="true" href="">Iter 17</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-2" role="tab" aria-controls="tabset-1-2" aria-selected="false" href="">Iter 18 ⭐</a></li></ul>
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-1-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-1" role="tab" aria-controls="tabset-1-1" aria-selected="true" href="">Iter 17</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-2" role="tab" aria-controls="tabset-1-2" aria-selected="false" href="">Iter 18 ⭐</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-3-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-3" role="tab" aria-controls="tabset-1-3" aria-selected="false" href="">Iter 45 ⭐</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-4-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-4" role="tab" aria-controls="tabset-1-4" aria-selected="false" href="">Iter 48</a></li></ul>
 <div class="tab-content">
 <div id="tabset-1-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-1-1-tab">
 <p><em>FHN 2-type — fine network</em></p>
@@ -621,16 +706,28 @@ Row 2 (coupling): [Pe, consumption, production, influence_radius, boost_exponent
 <div class="quarto-video"><video id="video_shortcode_videojs_video2" class="video-js vjs-default-skin vjs-fluid" controls="" preload="auto" data-setup="{}" title=""><source src="graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_018.mp4"></video></div>
 <p>Three particle types achieve hexagonal mode (~6-7 spots) with multi-layer particle organization within spots.</p>
 </div>
+<div id="tabset-1-3" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-3-tab">
+<p><em>FHN Square mode (Dv=0.1)</em></p>
+<div class="quarto-video"><video id="video_shortcode_videojs_video3" class="video-js vjs-default-skin vjs-fluid" controls="" preload="auto" data-setup="{}" title=""><source src="graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_045.mp4"></video></div>
+<p>Breakthrough: <span class="math inline">\(D_v = 0.1\)</span> produces <strong>square/grid symmetry</strong> — a morphology not accessible to Brusselator or Gray-Scott.</p>
+</div>
+<div id="tabset-1-4" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-4-tab">
+<p><em>FHN Square 3-type</em></p>
+<div class="quarto-video"><video id="video_shortcode_videojs_video4" class="video-js vjs-default-skin vjs-fluid" controls="" preload="auto" data-setup="{}" title=""><source src="graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_048.mp4"></video></div>
+<p>Square symmetry persists with 3 particle types when all have same-sign mobility.</p>
+</div>
 </div>
 </div>
 </section>
 <section id="key-insights" class="level2">
 <h2 class="anchored" data-anchor-id="key-insights">Key Insights</h2>
 <ol type="1">
-<li><strong>Hexagonal symmetry</strong>: Like Brusselator, FHN achieves hexagonal mode (unlike Gray-Scott)</li>
+<li><strong>Hexagonal symmetry</strong>: Like Brusselator, FHN achieves hexagonal mode (unlike Gray-Scott/Schnakenberg)</li>
+<li><strong>Square symmetry</strong>: <span class="math inline">\(D_v \geq 0.1\)</span> switches to 4-fold square/grid patterns — unique to FHN</li>
 <li><strong>Network organization</strong>: Particles form filamentary/networked structures instead of tight clusters</li>
-<li><strong>Particle-type independent</strong>: 1, 2, or 3 particle types all achieve ~6-7 hexagonal spots</li>
-<li><strong>Lower clustering</strong>: Clustering consistently lower than Brusselator (-0.2 to 0.3 vs 0.6+)</li>
+<li><strong>Particle-type independent</strong>: 1, 2, or 3 particle types all achieve hexagonal spots</li>
+<li><strong><span class="math inline">\(D_v\)</span> is a symmetry selector</strong>: Continuous parameter produces discrete symmetry transitions</li>
+<li><strong>Square mode constraints</strong>: Requires uniform mobility direction; opposing mobilities destroy square → hexagonal</li>
 </ol>
 </section>
 <section id="references" class="level2">
@@ -1074,6 +1171,8 @@ Row 2 (coupling): [Pe, consumption, production, influence_radius, boost_exponent
 </footer>
 <script>videojs(video_shortcode_videojs_video1);</script>
 <script>videojs(video_shortcode_videojs_video2);</script>
+<script>videojs(video_shortcode_videojs_video3);</script>
+<script>videojs(video_shortcode_videojs_video4);</script>
 
 
 

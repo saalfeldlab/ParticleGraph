@@ -13,21 +13,6 @@ Field–Particle Diffusiophoresis Field gradients drive particle motion \
 Particle–Field Consumption/production Particles locally modify concentrations \
 Particle–Particle Attraction-repulsion Short-range forces between particles
 
-Interesting patterns include:
-
-- Turing patterns (spots, stripes, labyrinthine)
-- Traveling waves, spirals
-- Particle clustering and self-organization
-- Dynamic pattern formation over time
-- Multi-scale structures
-
-Boring patterns:
-
-- Uniform/homogeneous fields
-- Static, unchanging states
-- Chaotic noise without structure
-- Immediate collapse to equilibrium
-
 ---
 
 ## Iteration Loop Structure
@@ -77,30 +62,44 @@ Examine the **Individual frames**: `graphs_data/{dataset_name}/Fig/Fig_0_XXXXXX.
 **2x2 Figure Layout (each frame):**
 
 - **Top row**: Field concentrations C1 (left) and C2 (right)
-- **Bottom left**: Particle spatial organization 
-
+- **Bottom left**: Particle spatial organization
 
 **What to look for (in priority order):**
 
-1. **Particlepatterns (bottom left)** - PRIMARY
+1. **Particle patterns (bottom left)** - PRIMARY
 2. **Field patterns C1/C2 (top row)** - SECONDARY
 
-**Score the pattern 0-10:**
+**Assess the pattern using these dimensions:**
 
+| Dimension | Categories |
+|-----------|------------|
+| **Symmetry** | `none` \| `radial` \| `hexagonal` \| `stripes` \| `other` |
+| **Particle organization** | `collapsed` \| `uniform` \| `clustered` \| `network` \| `segregated` |
+| **Stability** | `unstable` (NaN/escape) \| `transient` \| `stable` |
+| **Novelty** | `repeat` \| `variant` \| `novel` |
 
 #### 2.2 **Metrics from `analysis.log`:**
 
 **Primary metrics (use these for scoring):**
+
 - `spatial_entropy`: **COMPLEXITY** - normalized entropy of particle spatial distribution (0-1). Values ~0.3-0.7 indicate structured patterns. Near 1 = uniform/boring, near 0 = collapsed to single point.
 - `plateau`: **STABILITY** - convergence score (0-1). Compares mean particle velocity in final 20% vs early 20% of simulation. Near 1 = velocity dropped (steady state), near 0 = still moving fast.
 - `particles_in_box_pct`: **CRITICAL** - percentage of particles remaining in [0,1] box. Low values indicate particle escape/instability.
 
 **Secondary metrics:**
+
 - `clustering`: particle clustering metric (0.289 - pos_std) / 0.289. Values near 0 = uniform, higher = clustered.
 - `pattern_growth`: change in field std over time. Positive = patterns developing.
 - `C1_std`, `C2_std`: field concentration variation. Higher = stronger Turing patterns.
 
-**Ideal pattern**: High `plateau` (stable) + moderate `spatial_entropy` (0.4-0.7, complex) + high `particles_in_box_pct` (>90%).
+**Metric interpretation for assessment:**
+
+| Metric | Stability=stable | Particles=clustered | Particles=network |
+|--------|------------------|---------------------|-------------------|
+| plateau | > 0.5 | any | any |
+| clustering | any | > 0.4 | -0.2 to 0.3 |
+| particles_in_box | > 90% | > 90% | > 90% |
+| spatial_entropy | 0.3-0.8 | 0.5-0.8 | 0.7-0.9 |
 
 ### Step 3: Write Outputs
 
@@ -113,13 +112,17 @@ Append to Full Log (`{config}_analysis.md`) and **Current Block** sections of `{
 This format is compulsory
 
 ```
-## Iter N: [score]/10
+## Iter N
 Node: id=N, parent=P
 Mode/Strategy: [exploit/explore/boundary/code-modification/multi-type]
 Config: params_mesh=[...], n_frames=X, delta_t=Y, ...
 n_particle_types: [1/2/3]
-Metrics: entropy=[X.XX], plateau=[X.XX], in_box=[XX.X]%
-Score: [N]/10
+Metrics: entropy=[X.XX], plateau=[X.XX], in_box=[XX.X]%, clustering=[X.XX]
+Assessment:
+  - Symmetry: [none/radial/hexagonal/stripes/other]
+  - Particles: [collapsed/uniform/clustered/network/segregated]
+  - Stability: [unstable/transient/stable]
+  - Novelty: [repeat/variant/novel]
 Visual: [description of patterns observed]
 Mutation: [param or code]: [old] -> [new]
 Observation: [what did this change reveal?]
@@ -138,11 +141,14 @@ Read `ucb_scores.txt`:
 | Condition                           | Strategy            | Action                                     |
 | ----------------------------------- | ------------------- | ------------------------------------------ |
 | Default                             | **exploit**         | Highest UCB node, try mutation             |
-| 3+ consecutive score >= 7           | **failure-probe**   | Extreme parameter to find boundary         |
-| 4+ consecutive improving            | **explore**         | Branch to different parameter dimension    |
-| Low scores across block             | **code-change**     | Consider modifying PDE equations (iter 5+) |
-| Score = 10 found                    | **robustness-test** | Re-run same config to verify               |
+| 3+ consecutive `stable` + `hexagonal` | **boundary-probe** | Extreme parameter to find limits           |
+| 3+ consecutive same symmetry        | **explore**         | Branch to different parameter dimension    |
+| 3+ consecutive `unstable`           | **code-change**     | Consider modifying PDE equations (iter 5+) |
+| `novel` pattern found               | **robustness-test** | Re-run same config to verify               |
 | n_particle_types=1 over-represented | **multi-type**      | Switch to n_particle_types=2 or 3          |
+| n_particle_types uniform over-represented | **multi-type** | Switch to n_particle_types=2 or 3          |
+
+**Note:** `shuffle_particle_types` is not working — all runs show concentric radial type bands at initialization regardless of this setting. Always keep `shuffle_particle_types: false`.
 
 **IMPORTANT - Particle Type Diversity:**
 
@@ -160,6 +166,9 @@ Multi-type configurations enable richer dynamics:
 
 ### Step 5: Edit Config or Code
 
+**⚠️ Code modifications (Steps 5.2 and 5.3) are ONLY available when the prompt explicitly lists "Code files you can modify".**
+If no code file paths are provided in the prompt, you MUST only modify config parameters (Step 5.1). Do NOT attempt to create, edit, or write any `.py` files.
+
 #### Step 5.1: Edit Config (default)
 
 **Simulation Parameters (can change within block):**
@@ -176,7 +185,10 @@ simulation:
   n_particles: 9600 # particle count
   n_nodes: 10000 # mesh resolution - MUST BE PERFECT SQUARE
   n_particle_types: 1 # int  1, 2, or 3
+  shuffle_particle_types: false # not working — always keep false
 ```
+
+**shuffle_particle_types**: Not working. All runs produce concentric radial type bands regardless of this setting. Always keep `false`.
 
 **IMPORTANT: n_nodes must be a perfect square** (the mesh is n×n grid).
 Use only these values: `10000` (100×100), `22500` (150×150), `40000` (200×200), `62500` (250×250).
@@ -185,7 +197,8 @@ Do NOT use values like 25000, 30000, etc. - simulation will crash.
 **To enable multi-type:**
 
 1. Set `n_particle_types: N` in config
-2. **Keep total particle count constant**: When changing `n_particle_types`, particles are distributed equally among types. The total `n_particles` should remain ~9600 to maintain simulation density. Example: 1 type = 9600 particles, 2 types = 9600 total (4800 each), 3 types = 9600 total (3200 each).
+2. **`simulation.params` MUST have exactly N rows** (one per particle type). Mismatched row count causes a runtime crash in PDE_D.
+3. **Keep total particle count constant**: When changing `n_particle_types`, particles are distributed equally among types. The total `n_particles` should remain ~9600 to maintain simulation density. Example: 1 type = 9600 particles, 2 types = 9600 total (4800 each), 3 types = 9600 total (3200 each).
 
 **Quick-start templates for multi-type configs:**
 
@@ -214,11 +227,7 @@ simulation:
   sigma: 0.005
 ```
 
-**Safety rules:**
-
-- Make ONE change at a time
-- Document hypothesis for the change
-- Compare directly to parent (same config, code-only diff)
+- Make ONE change at a time to get causal understanding right
 
 #### Step 5.2: Modify Code, create PDE_Diffusiophoresis.py variant
 
@@ -253,13 +262,32 @@ This code implement the **mesh_model** that governs the field-field interaction
    ```
 5. **Implement reaction equations** in `forward()`, update config
 
+**⚠️ CRITICAL: Update `utils.py` init_mesh function**
+
+When creating a new mesh model variant, you MUST also update `src/ParticleGraph/generators/utils.py` to add a case for your new `mesh_model_name` in the `init_mesh()` function's match statement (~line 980).
+
+Example - if creating `PDE_Diffusiophoresis_GrayScott.py` with `mesh_model_name: PDE_Diffusiophoresis_GrayScott`:
+```python
+# In utils.py init_mesh() function, add a new case:
+case 'PDE_Diffusiophoresis_GrayScott':
+    # Gray-Scott initialization
+    node_value = torch.zeros((n_nodes, 2), device=device)
+    node_value[:, 0] = 1.0  # U = 1
+    node_value[:, 1] = 0.0  # V = 0
+    n_seeds = max(1, n_nodes // 100)
+    seed_indices = torch.randperm(n_nodes)[:n_seeds]
+    node_value[seed_indices, 0] = 0.5
+    node_value[seed_indices, 1] = 0.25
+```
+
 **Common errors and fixes:**
 
-| Error                              | Cause                 | Fix                                      |
-| ---------------------------------- | --------------------- | ---------------------------------------- |
-| `NameError: mesh_model_name`       | Using bare variable   | Use `config.graph_model.mesh_model_name` |
-| `KeyError` in PyG                  | Class not registered  | Ensure class name matches file suffix    |
-| `AttributeError: no attribute 'A'` | Missing compatibility | Add `self.A`, `self.B` in `__init__`     |
+| Error                                          | Cause                              | Fix                                            |
+| ---------------------------------------------- | ---------------------------------- | ---------------------------------------------- |
+| `UnboundLocalError: 'node_value'`              | Missing case in `init_mesh()`      | Add case for new mesh_model_name in `utils.py` |
+| `NameError: mesh_model_name`                   | Using bare variable                | Use `config.graph_model.mesh_model_name`       |
+| `KeyError` in PyG                              | Class not registered               | Ensure class name matches file suffix          |
+| `AttributeError: no attribute 'A'`             | Missing compatibility              | Add `self.A`, `self.B` in `__init__`           |
 
 **Established models:**
 
@@ -372,9 +400,9 @@ Add/modify rules based on block experience:
 ```markdown
 ## Per-block Regime Comparison
 
-| Regime | mesh_model            | particle_model      | n_types | n_particles | Best R² | Key Insight |
-| ------ | --------------------- | ------------------- | ------- | ----------- | ------- | ----------- |
-| Base   | Diffusiophoresis_Mesh | PDE_ParticleField_D | 3       | 2000        | -       | baseline    |
+| Regime | mesh_model            | particle_model      | n_types | Symmetry | Particles | Key Insight |
+| ------ | --------------------- | ------------------- | ------- | -------- | --------- | ----------- |
+| Base   | Diffusiophoresis_Mesh | PDE_ParticleField_D | 3       | radial   | clustered | baseline    |
 
 ## Insights
 
@@ -406,18 +434,12 @@ Add/modify rules based on block experience:
 
 ### PDE Variants
 
-| Variant                         | Model       | Literature       | Status  | Best Score |
-| ------------------------------- | ----------- | ---------------- | ------- | ---------- |
-| Diffusiophoresis_Mesh           | Brusselator | Prigogine (1968) | active  | 5/10       |
-| Diffusiophoresis_Mesh_GrayScott | Gray-Scott  | Pearson (1993)   | testing | -          |
+| Variant                         | Model       | Literature       | Status  | Best Symmetry | Best Particles |
+| ------------------------------- | ----------- | ---------------- | ------- | ------------- | -------------- |
+| Diffusiophoresis_Mesh           | Brusselator | Prigogine (1968) | active  | hexagonal     | clustered      |
+| Diffusiophoresis_Mesh_GrayScott | Gray-Scott  | Pearson (1993)   | tested  | radial        | network        |
+| PDE_Diffusiophoresis_FHN        | FHN         | FitzHugh (1961)  | active  | hexagonal     | network        |
 
-### Particle Type Distribution (TRACK THIS!)
-
-| n_particle_types | Count | Target |
-| ---------------- | ----- | ------ |
-| 1                | X     | ~33%   |
-| 2                | Y     | ~33%   |
-| 3                | Z     | ~33%   |
 
 **Action needed if imbalanced:** If one type is under-represented, use it in next iteration!
 
@@ -462,8 +484,9 @@ Examples:
 - ✓ "High diffusion_u with low production_v creates traveling waves" (causal, generalizable)
 - ✓ "n_particle_types=3 produces richer clustering than n_types=1" (experimental finding)
 - ✓ "consumption > 0.5 destabilizes patterns" (boundary condition)
+- ✓ "Brusselator achieves hexagonal symmetry, Gray-Scott stays radial" (model comparison)
 - ✗ "params_mesh=[1.0, 0.5, 0.1] worked in Block 4" (too specific)
-- ✗ "Block 3 got score 8" (not a principle)
+- ✗ "Iter 12 was good" (not a principle)
 
 ### Evidence Hierarchy
 

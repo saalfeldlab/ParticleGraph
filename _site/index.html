@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Cédric Allier">
-<meta name="dcterms.date" content="2026-01-26">
+<meta name="dcterms.date" content="2026-01-29">
 
 <title>LLM-Guided Morphogenesis</title>
 <style>
@@ -79,6 +79,35 @@ ul.task-list li input[type="checkbox"] {
 <script src="site_libs/quarto-diagram/mermaid-init.js"></script>
 <link href="site_libs/quarto-diagram/mermaid.css" rel="stylesheet">
 
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
 
 </head>
 
@@ -301,8 +330,20 @@ ul.task-list li input[type="checkbox"] {
     <a class="dropdown-item" href="./grayscott.html">
  <span class="dropdown-text">Gray-Scott</span></a>
   </li>  
+        <li>
+    <a class="dropdown-item" href="./fhn.html">
+ <span class="dropdown-text">FitzHugh-Nagumo</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./schnakenberg.html">
+ <span class="dropdown-text">Schnakenberg</span></a>
+  </li>  
     </ul>
   </li>
+  <li class="nav-item">
+    <a class="nav-link" href="./mechanochemical.html"> 
+<span class="menu-text">Mechanochemical</span></a>
+  </li>  
 </ul>
           </div> <!-- /navcollapse -->
             <div class="quarto-navbar-tools">
@@ -324,7 +365,14 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction">Introduction</a></li>
   <li><a href="#the-exploration-loop" id="toc-the-exploration-loop" class="nav-link" data-scroll-target="#the-exploration-loop">The Exploration Loop</a></li>
   <li><a href="#four-coupled-interactions" id="toc-four-coupled-interactions" class="nav-link" data-scroll-target="#four-coupled-interactions">Four Coupled Interactions</a></li>
-  <li><a href="#reaction-diffusion-models" id="toc-reaction-diffusion-models" class="nav-link" data-scroll-target="#reaction-diffusion-models">Reaction-Diffusion Models</a></li>
+  <li><a href="#mechanochemical-extension" id="toc-mechanochemical-extension" class="nav-link" data-scroll-target="#mechanochemical-extension">Mechanochemical Extension</a></li>
+  <li><a href="#reaction-diffusion-models" id="toc-reaction-diffusion-models" class="nav-link" data-scroll-target="#reaction-diffusion-models">Reaction-Diffusion Models</a>
+  <ul class="collapse">
+  <li><a href="#brusselator" id="toc-brusselator" class="nav-link" data-scroll-target="#brusselator">Brusselator</a></li>
+  <li><a href="#gray-scott" id="toc-gray-scott" class="nav-link" data-scroll-target="#gray-scott">Gray-Scott</a></li>
+  <li><a href="#fitzhugh-nagumo" id="toc-fitzhugh-nagumo" class="nav-link" data-scroll-target="#fitzhugh-nagumo">FitzHugh-Nagumo</a></li>
+  <li><a href="#schnakenberg" id="toc-schnakenberg" class="nav-link" data-scroll-target="#schnakenberg">Schnakenberg</a></li>
+  </ul></li>
   <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
   </ul>
 </nav>
@@ -353,7 +401,7 @@ ul.task-list li input[type="checkbox"] {
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">January 26, 2026</p>
+      <p class="date">January 29, 2026</p>
     </div>
   </div>
   
@@ -370,7 +418,7 @@ ul.task-list li input[type="checkbox"] {
 <p>Understanding morphogenesis requires more than generating patterns; it requires understanding how interacting processes converge toward stable, functional forms. This work presents a <strong>closed-loop experimental framework</strong> in which experiments, reasoning, and long-term memory are tightly coupled, with a large language model (LLM) operating as an <strong>active scientific agent</strong>. Note, the LLM does not only explore parameter space; it is allowed, at controlled points, to <strong>modify and replace the governing partial differential equations (PDEs)</strong> that define the system dynamics. In this framework, PDEs are treated as <em>hypotheses</em>, not fixed truths.</p>
 <p>The system combines reaction–diffusion chemistry, diffusiophoretic particle transport, and particle–field feedback to explore a rich landscape of emergent morphologies. Rather than treating particles or fields as primary objects, the framework treats <strong>interactions as fundamental</strong>, with structure arising from their mutual constraint. The LLM evaluates simulation outcomes, formulates mechanistic hypotheses, and directs subsequent interventions through structured exploration and persistent memory, enabling cumulative understanding across regimes rather than isolated optimization.</p>
 <p>A key methodological insight motivating this work is that <strong>LLM-guided discovery is fundamentally limited by the laws it is allowed to explore</strong>. Early stages of the project revealed strong attractors imposed by the Brusselator reaction–diffusion model, which restricted accessible morphologies despite extensive parameter search. This limitation led to an explicit design choice: elevate <em>model-space exploration</em>—including PDE modification and variant creation.</p>
-<p>The current results focus on diffusiophoresis coupled to classical reaction–diffusion systems. Future extensions will introduce additional physical constraints, such as elasticity via material point methods (MPM), to study how mechanical admissibility further restricts or stabilizes morphogenetic outcomes. Together, these elements position the framework as a general method for exploring not only patterns, but the <strong>conditions under which stable form emerges</strong>.</p>
+<p>The current results focus on diffusiophoresis coupled to classical reaction–diffusion systems. The framework now extends to include <strong>mechanochemical coupling</strong> via the Material Point Method (MPM), enabling study of how mechanical admissibility constrains morphogenetic outcomes. See the <a href="./mechanochemical.html">Mechanochemical Morphogenesis</a> section for the unified framework combining chemistry and continuum mechanics.</p>
 <hr>
 </section>
 <section id="the-exploration-loop" class="level2">
@@ -455,36 +503,87 @@ Guided by Upper Confidence Bound (UCB) tree search, the LLM selects the next int
 </table>
 <hr>
 </section>
-<section id="reaction-diffusion-models" class="level2">
-<h2 class="anchored" data-anchor-id="reaction-diffusion-models">Reaction-Diffusion Models</h2>
-<p>Two PDE models have been explored for the chemical patterning component:</p>
-<div class="callout callout-style-default callout-note callout-titled">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-<span class="screen-reader-only">Note</span><a href="./brusselator.html">Brusselator Model</a>
-</div>
-</div>
-<div class="callout-body-container callout-body">
-<p>Classic two-component system with cubic autocatalysis. Explored in <strong>Blocks 1–11</strong> (88 iterations). Best clustering: 0.485. Exhaustive search revealed strong labyrinthine attractors — no stripe regime accessible.</p>
-</div>
-</div>
+<section id="mechanochemical-extension" class="level2">
+<h2 class="anchored" data-anchor-id="mechanochemical-extension">Mechanochemical Extension</h2>
 <div class="callout callout-style-default callout-tip callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
 <div class="callout-title-container flex-fill">
-<span class="screen-reader-only">Tip</span><a href="./grayscott.html">Gray-Scott Model</a> ⭐ Active
+<span class="screen-reader-only">Tip</span>New: Coupling Chemistry with Mechanics
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>Autocatalytic system with feed/kill dynamics. Currently being explored in <strong>Block 12</strong> (iterations 89–96). Producing stable spot patterns; systematically exploring F-k plane for stripe/worm transition.</p>
+<p>The framework extends beyond pattern formation to include <strong>continuum mechanics</strong> via the Material Point Method (MPM). This enables studying morphogenesis under mechanical constraints.</p>
+<p><a href="./mechanochemical.html"><strong>→ Mechanochemical Morphogenesis</strong></a></p>
 </div>
 </div>
+<div class="cell" data-fig-width="8" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">flowchart LR
+    subgraph Current["Current: Chemistry"]
+        RD["Reaction-Diffusion"]
+        DP["Diffusiophoresis"]
+    end
+
+    subgraph Extension["Extension: Mechanics"]
+        DEF["Deformation F"]
+        STR["Stress σ"]
+    end
+
+    subgraph Unified["Unified Framework"]
+        U["Mechanochemical&lt;br&gt;Morphogenesis"]
+    end
+
+    Current --&gt; Unified
+    Extension --&gt; Unified
+
+    style Current fill:#e3f2fd
+    style Extension fill:#fff3e0
+    style Unified fill:#e8f5e9
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+<p>Key additions:</p>
+<ul>
+<li><strong>Deformation gradient <span class="math inline">\(\mathbf{F}\)</span></strong> and <strong>stress <span class="math inline">\(\boldsymbol{\sigma}\)</span></strong> per particle</li>
+<li><strong>Active stress</strong> driven by morphogen concentration</li>
+<li><strong>Strain-dependent diffusion</strong> for mechanochemical feedback</li>
+<li><strong>Edge embeddings</strong> for learnable cell-cell interactions (synaptic class)</li>
+</ul>
 <hr>
+</section>
+<section id="reaction-diffusion-models" class="level2">
+<h2 class="anchored" data-anchor-id="reaction-diffusion-models">Reaction-Diffusion Models</h2>
+<p>Four PDE models have been explored for the chemical patterning component, revealing a clear hierarchy of accessible morphologies:</p>
+<section id="brusselator" class="level3">
+<h3 class="anchored" data-anchor-id="brusselator"><a href="./brusselator.html">Brusselator</a></h3>
+<p>Hexagonal spots and stripe/labyrinth patterns with tight particle clusters</p>
+<p><a href="./brusselator.html"><img src="graphs_data/diffusiophoresis/diffusiophoresis_Claude/montage_iter_012.png" class="lightbox img-fluid"></a></p>
+</section>
+<section id="gray-scott" class="level3">
+<h3 class="anchored" data-anchor-id="gray-scott"><a href="./grayscott.html">Gray-Scott</a></h3>
+<p>Radial patterns only — no hexagonal symmetry breaking</p>
+<p><a href="./grayscott.html"><img src="graphs_data/diffusiophoresis/diffusiophoresis_Claude/montage_iter_014.png" class="lightbox img-fluid"></a></p>
+</section>
+<section id="fitzhugh-nagumo" class="level3">
+<h3 class="anchored" data-anchor-id="fitzhugh-nagumo"><a href="./fhn.html">FitzHugh-Nagumo</a></h3>
+<p>Hexagonal and square/grid patterns with network particle structure</p>
+<p><a href="./fhn.html"><img src="graphs_data/diffusiophoresis/diffusiophoresis_Claude/montage_iter_018.png" class="lightbox img-fluid"></a></p>
+</section>
+<section id="schnakenberg" class="level3">
+<h3 class="anchored" data-anchor-id="schnakenberg"><a href="./schnakenberg.html">Schnakenberg</a></h3>
+<p>Radial patterns with genuine steady state convergence</p>
+<p><a href="./schnakenberg.html"><img src="graphs_data/diffusiophoresis/diffusiophoresis_Claude/montage_iter_041.png" class="lightbox img-fluid"></a></p>
+<hr>
+</section>
 </section>
 <section id="references" class="level2">
 <h2 class="anchored" data-anchor-id="references">References</h2>

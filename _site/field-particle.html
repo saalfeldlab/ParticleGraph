@@ -325,8 +325,20 @@ window.Quarto = {
     <a class="dropdown-item" href="./grayscott.html">
  <span class="dropdown-text">Gray-Scott</span></a>
   </li>  
+        <li>
+    <a class="dropdown-item" href="./fhn.html">
+ <span class="dropdown-text">FitzHugh-Nagumo</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./schnakenberg.html">
+ <span class="dropdown-text">Schnakenberg</span></a>
+  </li>  
     </ul>
   </li>
+  <li class="nav-item">
+    <a class="nav-link" href="./mechanochemical.html"> 
+<span class="menu-text">Mechanochemical</span></a>
+  </li>  
 </ul>
           </div> <!-- /navcollapse -->
             <div class="quarto-navbar-tools">
@@ -350,6 +362,7 @@ window.Quarto = {
   <li><a href="#gradient-estimation" id="toc-gradient-estimation" class="nav-link" data-scroll-target="#gradient-estimation">Gradient Estimation</a></li>
   <li><a href="#parameters" id="toc-parameters" class="nav-link" data-scroll-target="#parameters">Parameters</a></li>
   <li><a href="#key-finding" id="toc-key-finding" class="nav-link" data-scroll-target="#key-finding">Key Finding</a></li>
+  <li><a href="#log-sensing-variant-block-8" id="toc-log-sensing-variant-block-8" class="nav-link" data-scroll-target="#log-sensing-variant-block-8">Log-Sensing Variant (Block 8)</a></li>
   </ul>
 </nav>
     </div>
@@ -415,12 +428,12 @@ window.Quarto = {
 <tr class="odd">
 <td><span class="math inline">\(M_1\)</span></td>
 <td>Mobility for field 1</td>
-<td>±16</td>
+<td>±4</td>
 </tr>
 <tr class="even">
 <td><span class="math inline">\(M_2\)</span></td>
 <td>Mobility for field 2</td>
-<td>∓16</td>
+<td>∓4</td>
 </tr>
 <tr class="odd">
 <td>Pe</td>
@@ -429,6 +442,19 @@ window.Quarto = {
 </tr>
 </tbody>
 </table>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Warning</span>Mobility Sweet Spot
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><span class="math inline">\(|M| = 4\)</span> is optimal. <span class="math inline">\(|M| = 16\)</span> causes particle escape (0% retention). The ±4 range balances field-particle coupling with particle containment.</p>
+</div>
+</div>
 </section>
 <section id="key-finding" class="level2">
 <h2 class="anchored" data-anchor-id="key-finding">Key Finding</h2>
@@ -445,6 +471,14 @@ Important
 <p><strong>Linear mobility is optimal.</strong> Any nonlinearity (saturation, boost) disrupts boundary accumulation. The simple <span class="math inline">\(\mathbf{v} \propto \nabla C\)</span> relationship works best.</p>
 </div>
 </div>
+</section>
+<section id="log-sensing-variant-block-8" class="level2">
+<h2 class="anchored" data-anchor-id="log-sensing-variant-block-8">Log-Sensing Variant (Block 8)</h2>
+<p>A new particle model variant uses <strong>logarithmic gradient sensing</strong> (Weber-Fechner law):</p>
+<p><span class="math display">\[
+\mathbf{v}_i = M_1 \frac{\nabla C_1}{C_1 + C_0}\bigg|_{\mathbf{x}_i} + M_2 \frac{\nabla C_2}{C_2 + C_0}\bigg|_{\mathbf{x}_i}
+\]</span></p>
+<p>This creates concentration-dependent effective mobility (<span class="math inline">\(M_{\text{eff}} \propto M / C\)</span>), producing self-limiting aggregation at high concentrations. Early results show LogSensing suppresses hexagonal symmetry breaking at standard mobility (<span class="math inline">\(M=\pm 4\)</span>), requiring higher <span class="math inline">\(M\)</span> (<span class="math inline">\(\pm 8\)</span>) to restore pattern formation.</p>
 
 
 </section>

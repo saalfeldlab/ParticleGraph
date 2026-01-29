@@ -1772,6 +1772,19 @@ def data_generate_particle_field_MPM(
     bSave=True,
     timer=False
 ):
+    # x tensor column layout (23 columns, dimension=2):
+    # Col   Var   Size  Description
+    #  0    N      1    particle ID
+    #  1-2  X      2    position (x, y)
+    #  3-4  V      2    velocity (vx, vy)
+    #  5    T      1    material type
+    #  6    M      1    mass
+    #  7-8  H      2    chemical field (2 chemicals)
+    #  9-12 C      4    velocity Jacobian (2x2 flattened)
+    # 13-16 F      4    deformation gradient (2x2 flattened)
+    #  17   Jp     1    volume deformation
+    # 18-21 S      4    stress (2x2 flattened)
+    #  22   ID     1    cell ID
 
     simulation_config = config.simulation
     training_config = config.training
@@ -1830,12 +1843,12 @@ def data_generate_particle_field_MPM(
         os.remove(f)
     copyfile(os.path.realpath(__file__), os.path.join(folder, "generation_code.py"))
 
-    X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
+    X_mesh, V_mesh, T_mesh, H_mesh, A_mesh, N_mesh, mesh_data = init_mesh(config, device=device)
     mask_mesh = mesh_data["mask"].squeeze()
 
     if "diffusiophoresis" in model_config.field_type:
         model_p_f, bc_pos, bc_dpos = choose_model(config=config, device=device)
-        model_f_f = choose_mesh_model(config, X1_mesh, device=device)
+        model_f_f = choose_mesh_model(config, X_mesh, device=device)
     else:
         model_p_p, bc_pos, bc_dpos = choose_model(config=config, device=device)
         model_f_p = model_p_p
@@ -1869,43 +1882,43 @@ def data_generate_particle_field_MPM(
         id_fig = 0
 
         # initialize particle and mesh states
-        X1, V1, T1, H1, _, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
+        X, V, T, H, _, N = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
 
         # MPM tensors (initialized to defaults)
-        M1 = torch.ones(n_particles, 1, device=device)       # mass = 1
-        C1_mpm = torch.zeros(n_particles, 4, device=device)  # velocity Jacobian
-        F1_mpm = torch.zeros(n_particles, 4, device=device)  # deformation gradient
-        Jp1 = torch.zeros(n_particles, 1, device=device)     # volume deformation
-        S1 = torch.zeros(n_particles, 4, device=device)      # stress
-        ID1 = torch.zeros(n_particles, 1, device=device)     # cell ID
+        M = torch.ones(n_particles, 1, device=device)       # mass = 1
+        C = torch.zeros(n_particles, 4, device=device)  # velocity Jacobian
+        F = torch.zeros(n_particles, 4, device=device)  # deformation gradient
+        Jp = torch.zeros(n_particles, 1, device=device)     # volume deformation
+        S = torch.zeros(n_particles, 4, device=device)      # stress
+        ID = torch.zeros(n_particles, 1, device=device)     # cell ID
 
         # Shuffle particle types if requested (randomizes type assignment to avoid radial bands)
         if simulation_config.shuffle_particle_types:
             if run == 0:
                 print ('shuffle types...')
                 shuffle_index = torch.randperm(n_particles, device=device)
-                T1 = T1[shuffle_index]
-                first_T1 = T1.clone().detach()
+                T = T[shuffle_index]
+                first_T = T.clone().detach()
             else:
-                T1 = first_T1.clone().detach()
+                T = first_T.clone().detach()
 
-        X1_mesh, _, _, H1_mesh, _, _, _ = init_mesh(config, device=device)
-        H1_mesh[mask_mesh == 0.0] = 0.0
+        X_mesh, _, _, H_mesh, _, _, _ = init_mesh(config, device=device)
+        H_mesh[mask_mesh == 0.0] = 0.0
         edge_cache = NeighborCache()
 
         if "diffusiophoresis" in model_config.field_type:
-            C1_0 = model_f_f.A  # 4.5
-            C2_0 = model_f_f.B / model_f_f.A  # 2.44/4.5 ≈ 0.54
+            H0_0 = model_f_f.A  # 4.5
+            H1_0 = model_f_f.B / model_f_f.A  # 2.44/4.5 ≈ 0.54
             # Add small random perturbations (±1% noise)
             noise_amplitude = 0.10
-            C1 = C1_0 + noise_amplitude * (2*torch.rand(n_nodes, 1, device=device) - 1) * C1_0
-            C2 = C2_0 + noise_amplitude * (2*torch.rand(n_nodes, 1, device=device) - 1) * C2_0
-            H1_mesh[:, 0:1] = C1
-            H1_mesh[:, 1:2] = C2
-            H1_mesh[mask_mesh == 0.0,0:1] = C1_0
-            H1_mesh[mask_mesh == 0.0,1:2] = C2_0
+            H0 = H0_0 + noise_amplitude * (2*torch.rand(n_nodes, 1, device=device) - 1) * H0_0
+            H1 = H1_0 + noise_amplitude * (2*torch.rand(n_nodes, 1, device=device) - 1) * H1_0
+            H_mesh[:, 0:1] = H0
+            H_mesh[:, 1:2] = H1
+            H_mesh[mask_mesh == 0.0,0:1] = H0_0
+            H_mesh[mask_mesh == 0.0,1:2] = H1_0
 
-        H1_mesh = torch.clamp(H1_mesh, min=0.0)
+        H_mesh = torch.clamp(H_mesh, min=0.0)
         torch.save(mesh_data, f"graphs_data/{dataset_name}/mesh_data_{run}.pt")
 
         check_and_clear_memory(
@@ -1928,23 +1941,23 @@ def data_generate_particle_field_MPM(
                 im = im[it].squeeze()
                 im = np.rot90(im, 3)
                 im = np.reshape(im, (n_nodes_per_axis * n_nodes_per_axis))
-                H1_mesh[:, 0:1] = torch.tensor(
+                H_mesh[:, 0:1] = torch.tensor(
                     im[:, None], dtype=torch.float32, device=device
                 )
 
             x = torch.concatenate(
                 (
-                    N1.clone().detach(),
-                    X1.clone().detach(),
-                    V1.clone().detach(),
-                    T1.clone().detach(),
-                    M1.clone().detach(),
-                    H1.clone().detach(),
-                    C1_mpm.clone().detach(),
-                    F1_mpm.clone().detach(),
-                    Jp1.clone().detach(),
-                    S1.clone().detach(),
-                    ID1.clone().detach(),
+                    N.clone().detach(),
+                    X.clone().detach(),
+                    V.clone().detach(),
+                    T.clone().detach(),
+                    M.clone().detach(),
+                    H.clone().detach(),
+                    C.clone().detach(),
+                    F.clone().detach(),
+                    Jp.clone().detach(),
+                    S.clone().detach(),
+                    ID.clone().detach(),
                 ),
                 1,
             )
@@ -1952,15 +1965,15 @@ def data_generate_particle_field_MPM(
             if it == simulation_config.start_frame:
                 index_particles = get_index_particles(x, n_particle_types, dimension)
 
-            n_mesh = N1_mesh.shape[0]
+            n_mesh = N_mesh.shape[0]
             x_mesh = torch.concatenate(
                 (
-                    N1_mesh.clone().detach(),
-                    X1_mesh.clone().detach(),
-                    V1_mesh.clone().detach(),
-                    T1_mesh.clone().detach(),
+                    N_mesh.clone().detach(),
+                    X_mesh.clone().detach(),
+                    V_mesh.clone().detach(),
+                    T_mesh.clone().detach(),
                     torch.zeros(n_mesh, 1, device=device),   # M (no mass for mesh)
-                    H1_mesh.clone().detach(),
+                    H_mesh.clone().detach(),
                     torch.zeros(n_mesh, 4, device=device),   # C
                     torch.zeros(n_mesh, 4, device=device),   # F
                     torch.zeros(n_mesh, 1, device=device),   # Jp
@@ -2222,7 +2235,7 @@ def data_generate_particle_field_MPM(
                                 fields = x[idx, 7:9] if x.shape[1] > 7 else None
                                 print(f"  Particle {idx.item()}: pos=({pos[0].item():.4f}, {pos[1].item():.4f})", end="")
                                 if fields is not None:
-                                    print(f", C1={fields[0].item():.4f}, C2={fields[1].item():.4f}")
+                                    print(f", H0={fields[0].item():.4f}, H1={fields[1].item():.4f}")
                                 else:
                                     print()
 
@@ -2235,39 +2248,39 @@ def data_generate_particle_field_MPM(
 
                 if "diffusiophoresis" in model_config.field_type:
                     # Mesh update
-                    H1_mesh[mask_mesh, :] += y_mesh[mask_mesh, :] * delta_t
+                    H_mesh[mask_mesh, :] += y_mesh[mask_mesh, :] * delta_t
 
-                    # H1_mesh = torch.clamp(H1_mesh, min=0.0)
-                    # field_sum = torch.sum(H1_mesh[:, 0:2], dim=1, keepdim=True)
+                    # H_mesh = torch.clamp(H_mesh, min=0.0)
+                    # field_sum = torch.sum(H_mesh[:, 0:2], dim=1, keepdim=True)
                     # field_sum = torch.clamp(field_sum, min=1e-6)  
-                    # H1_mesh[:, 0:2] = H1_mesh[:, 0:2] / field_sum    
+                    # H_mesh[:, 0:2] = H_mesh[:, 0:2] / field_sum    
 
                 if model_config.prediction == "2nd_derivative":
-                    V1 += y * delta_t
+                    V += y * delta_t
                 else:
-                    V1 = y
+                    V = y
 
                 if bounce:
-                    # V1 = V1 * 0.999
-                    X1 = X1 + V1 * delta_t
+                    # V = V * 0.999
+                    X = X + V * delta_t
                     gap = 0.005
                     bouncing_pos = torch.argwhere(
-                        (X1[:, 0] <= 0.1 + gap) | (X1[:, 0] >= 0.9 - gap)
+                        (X[:, 0] <= 0.1 + gap) | (X[:, 0] >= 0.9 - gap)
                     ).squeeze()
                     if bouncing_pos.numel() > 0:
-                        V1[bouncing_pos, 0] = -0.7 * bounce_coeff * V1[bouncing_pos, 0]
-                        X1[bouncing_pos, 0] += V1[bouncing_pos, 0] * delta_t * 10
+                        V[bouncing_pos, 0] = -0.7 * bounce_coeff * V[bouncing_pos, 0]
+                        X[bouncing_pos, 0] += V[bouncing_pos, 0] * delta_t * 10
                     bouncing_pos = torch.argwhere(
-                        (X1[:, 1] <= 0.1 + gap) | (X1[:, 1] >= 0.9 - gap)
+                        (X[:, 1] <= 0.1 + gap) | (X[:, 1] >= 0.9 - gap)
                     ).squeeze()
                     if bouncing_pos.numel() > 0:
-                        V1[bouncing_pos, 1] = -0.7 * bounce_coeff * V1[bouncing_pos, 1]
-                        X1[bouncing_pos, 1] += V1[bouncing_pos, 1] * delta_t * 10
+                        V[bouncing_pos, 1] = -0.7 * bounce_coeff * V[bouncing_pos, 1]
+                        X[bouncing_pos, 1] += V[bouncing_pos, 1] * delta_t * 10
                 else:
-                    X1 = bc_pos(X1 + V1 * delta_t)
+                    X = bc_pos(X + V * delta_t)
 
 
-                #     X1, V1 = handle_collisions(X1, V1, min_distance=0.01)            
+                #     X, V = handle_collisions(X, V, min_distance=0.01)            
             
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
 
@@ -2429,11 +2442,11 @@ def data_generate_particle_field_MPM(
                     ax1 = fig.add_subplot(2, 2, 1)
                     # Reshape field to grid for visualization (assuming square grid)
                     grid_size = int(np.sqrt(n_nodes))
-                    C1_field = to_numpy(x_mesh[:, 7].reshape(grid_size, grid_size))
+                    H0_field = to_numpy(x_mesh[:, 7].reshape(grid_size, grid_size))
                     # Use 2nd-98th percentile to avoid hot pixel distortion
-                    C1_vmin, C1_vmax = np.percentile(C1_field, [2, 98])
-                    im1 = ax1.imshow(C1_field, cmap='viridis', origin='lower', extent=[0, 1, 0, 1],
-                                    vmin=C1_vmin, vmax=C1_vmax)
+                    H0_vmin, H0_vmax = np.percentile(H0_field, [2, 98])
+                    im1 = ax1.imshow(H0_field, cmap='viridis', origin='lower', extent=[0, 1, 0, 1],
+                                    vmin=H0_vmin, vmax=H0_vmax)
                     ax1.set_axis_off()
                     ax1.set_title("C₁ field", fontsize=10)
                     # plt.colorbar(im1, ax=ax1)
@@ -2442,11 +2455,11 @@ def data_generate_particle_field_MPM(
 
                     # 2. C₂ field visualization (top right)
                     ax2 = fig.add_subplot(2, 2, 2)
-                    C2_field = to_numpy(x_mesh[:, 8].reshape(grid_size, grid_size))
+                    H1_field = to_numpy(x_mesh[:, 8].reshape(grid_size, grid_size))
                     # Use 2nd-98th percentile to avoid hot pixel distortion
-                    C2_vmin, C2_vmax = np.percentile(C2_field, [2, 98])
-                    im2 = ax2.imshow(C2_field, cmap='plasma', origin='lower', extent=[0, 1, 0, 1],
-                                    vmin=C2_vmin, vmax=C2_vmax)
+                    H1_vmin, H1_vmax = np.percentile(H1_field, [2, 98])
+                    im2 = ax2.imshow(H1_field, cmap='plasma', origin='lower', extent=[0, 1, 0, 1],
+                                    vmin=H1_vmin, vmax=H1_vmax)
                     ax2.set_axis_off()
                     ax2.set_title("C₂ field", fontsize=10)
                     # plt.colorbar(im2, ax=ax2)
@@ -2456,7 +2469,7 @@ def data_generate_particle_field_MPM(
                     # 3. Particles with fields (bottom left)
                     ax3 = fig.add_subplot(2, 2, 3)
                     # Plot field as background (combining both fields)
-                    combined_field = C1_field - C2_field  # Different fields usually have opposite effects
+                    combined_field = H0_field - H1_field  # Different fields usually have opposite effects
                     im3 = ax3.imshow(combined_field*0, cmap='bone', origin='lower', 
                                     extent=[0, 1, 0, 1], vmin=0, vmax=1)
                     
@@ -2483,11 +2496,11 @@ def data_generate_particle_field_MPM(
                     ax4.set_axis_off()
 
                     # Field metrics
-                    C1_mean = x_mesh[:, 7].mean().item()
-                    C1_std = x_mesh[:, 7].std().item()
-                    C2_mean = x_mesh[:, 8].mean().item()
-                    C2_std = x_mesh[:, 8].std().item()
-                    pattern_growth = C2_std / 0.005 if C2_std > 0 else 0
+                    H0_mean = x_mesh[:, 7].mean().item()
+                    H0_std = x_mesh[:, 7].std().item()
+                    H1_mean = x_mesh[:, 8].mean().item()
+                    H1_std = x_mesh[:, 8].std().item()
+                    pattern_growth = H1_std / 0.005 if H1_std > 0 else 0
 
                     # Particle velocity metrics
                     particle_vel0 = torch.norm(y0, dim=1)
@@ -2509,8 +2522,8 @@ def data_generate_particle_field_MPM(
 
                     # Display metrics as text (matching original print format)
                     metrics_text = (
-                        f"C1 μ={C1_mean:.3f}±{C1_std:.3f}\n"
-                        f"C2 μ={C2_mean:.3f}±{C2_std:.3f}\n"
+                        f"H0 μ={H0_mean:.3f}±{H0_std:.3f}\n"
+                        f"H1 μ={H1_mean:.3f}±{H1_std:.3f}\n"
                         f"pattern: {pattern_growth:.1f}x\n\n"
                         f"particles: vel={vel_mean1:.4f}\n"
                         f"  (max={vel_max1:.4f})\n"
@@ -2698,11 +2711,11 @@ def data_generate_particle_field_MPM(
             # Compute final metrics from last frame
             if len(x_mesh_list) > 0:
                 final_x_mesh = x_mesh_list[-1]
-                C1_mean = final_x_mesh[:, 7].mean().item()
-                C1_std = final_x_mesh[:, 7].std().item()
-                C2_mean = final_x_mesh[:, 8].mean().item()
-                C2_std = final_x_mesh[:, 8].std().item()
-                pattern_growth = C2_std / 0.005 if C2_std > 0 else 0
+                H0_mean = final_x_mesh[:, 7].mean().item()
+                H0_std = final_x_mesh[:, 7].std().item()
+                H1_mean = final_x_mesh[:, 8].mean().item()
+                H1_std = final_x_mesh[:, 8].std().item()
+                pattern_growth = H1_std / 0.005 if H1_std > 0 else 0
 
                 # Particle metrics from last frame
                 if len(x_list) > 0:
@@ -2755,10 +2768,10 @@ def data_generate_particle_field_MPM(
                         analysis_file.write(f"step: {step}\n")
                         analysis_file.write(f"n_particles: {n_particles}\n")
                         analysis_file.write(f"delta_t: {delta_t}\n")
-                        analysis_file.write(f"C1_mean: {C1_mean:.4f}\n")
-                        analysis_file.write(f"C1_std: {C1_std:.4f}\n")
-                        analysis_file.write(f"C2_mean: {C2_mean:.4f}\n")
-                        analysis_file.write(f"C2_std: {C2_std:.4f}\n")
+                        analysis_file.write(f"H0_mean: {H0_mean:.4f}\n")
+                        analysis_file.write(f"H0_std: {H0_std:.4f}\n")
+                        analysis_file.write(f"H1_mean: {H1_mean:.4f}\n")
+                        analysis_file.write(f"H1_std: {H1_std:.4f}\n")
                         analysis_file.write(f"pattern_growth: {pattern_growth:.2f}\n")
                         analysis_file.write(f"clustering: {clustering:.4f}\n")
                         analysis_file.write(f"pos_std_x: {pos_std_x:.4f}\n")

@@ -1,3 +1,0 @@
-=== UCB Scores (Block 0, iters 1-8, N=1, c=1.414) ===
-
-Node 1: UCB=1.207, parent=root, visits=1, Score=5/10, Mutation=None (baseline configuration)

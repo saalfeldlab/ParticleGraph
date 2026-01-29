@@ -381,7 +381,7 @@ def run_simulation(config_path: str, root_dir: str, config_name: str) -> tuple:
     Returns:
         tuple: (success: bool, error_traceback: str or None)
     """
-    print("\033[93mRunning simulation...\033[0m")
+    print("\033[93mrunning simulation...\033[0m")
 
     # Use the dedicated subprocess script for clean code reloading
     generate_script = os.path.join(root_dir, 'generate_subprocess.py')
@@ -701,7 +701,7 @@ if __name__ == "__main__":
                 key, value = arg.split('=', 1)
                 task_params[key] = int(value) if value.isdigit() else value
     else:
-        task = 'Claude'
+        task = 'Claude_code'
         base_config_name = 'diffusiophoresis'
         task_params = {'iterations': 64}
 
@@ -724,11 +724,11 @@ if __name__ == "__main__":
 
     # Check instruction file exists
     if not os.path.exists(instruction_path):
-        print(f"\033[91mInstruction file not found: {instruction_path}\033[0m")
+        print(f"\033[91minstruction file not found: {instruction_path}\033[0m")
         sys.exit(1)
 
     # Resume support: start_iteration parameter (default 1)
-    start_iteration = 1
+    start_iteration = 67
 
     if start_iteration > 1:
         print(f"\033[93mResuming from iteration {start_iteration}\033[0m")
@@ -775,7 +775,6 @@ if __name__ == "__main__":
         particle_model = getattr(init_config.graph_model, 'particle_model_name', '') or 'N/A'
         n_types = getattr(init_config.simulation, 'n_particle_types', 'N/A')
         n_particles = getattr(init_config.simulation, 'n_particles', 'N/A')
-
         with open(memory_path, 'w') as f:
             f.write(f"# Working Memory: {base_config_name}\n\n")
             f.write("## Regime Comparison\n\n")
@@ -814,8 +813,8 @@ if __name__ == "__main__":
     n_iter_block = config.claude.n_iter_block if config.claude else 8
     ucb_c = config.claude.ucb_c if config.claude else 1.414
 
-    # Track code modifications
-    code_changes_enabled = 'code' in task
+    # Track code modifications - always enabled
+    code_changes_enabled = True
     code_modified = False
 
     if code_changes_enabled:
@@ -844,6 +843,10 @@ if __name__ == "__main__":
         # GNN_Main.py adds prefix folder to dataset path (e.g., "diffusiophoresis/diffusiophoresis_Claude")
         dataset_name = f"{base_config_name}/{config.dataset}"
 
+        mesh_model = getattr(config.graph_model, 'mesh_model_name', '') or ''
+        particle_model = getattr(config.graph_model, 'particle_model_name', '') or ''
+        print(f"\033[92mTask: {task} | mesh: {mesh_model} | particle: {particle_model}\033[0m")
+
         # 1. Run simulation with error recovery
         max_repair_attempts = 10
         success = False
@@ -865,6 +868,7 @@ if __name__ == "__main__":
                 'src/ParticleGraph/generators/PDE_Diffusiophoresis.py',
                 'src/ParticleGraph/generators/PDE_D.py',
                 'src/ParticleGraph/generators/graph_data_generator.py',
+                'src/ParticleGraph/generators/utils.py',
             ]
             modified_code = get_modified_code_files(root_dir, code_files) if is_git_repo(root_dir) else []
 
@@ -921,7 +925,8 @@ If you cannot fix it, say "CANNOT_FIX" and explain why."""
             if is_git_repo(root_dir):
                 for file_path in ['src/ParticleGraph/generators/PDE_Diffusiophoresis.py',
                                   'src/ParticleGraph/generators/PDE_D.py',
-                                  'src/ParticleGraph/generators/graph_data_generator.py']:
+                                  'src/ParticleGraph/generators/graph_data_generator.py',
+                                  'src/ParticleGraph/generators/utils.py']:
                     try:
                         subprocess.run(['git', 'checkout', 'HEAD', '--', file_path],
                                       cwd=root_dir, capture_output=True, timeout=10)

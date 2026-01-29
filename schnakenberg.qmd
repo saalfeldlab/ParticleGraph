@@ -1,0 +1,111 @@
+---
+title: "Schnakenberg Model"
+subtitle: "Radial-only patterns with genuine steady state"
+---
+
+## Overview
+
+The **Schnakenberg** model is a minimal two-component activator-inhibitor system closely related to the Brusselator but with simpler kinetics. When coupled to diffusiophoresis, it produces **radial/concentric patterns only**, similar to Gray-Scott and fundamentally different from Brusselator and FHN.
+
+::: {.callout-warning}
+## Key Finding: Radial Symmetry Only
+Schnakenberg produces **concentric ring patterns** regardless of gamma (200-1000) or multi-type configurations. No hexagonal symmetry breaking occurs. This confirms a clear dichotomy: cubic autocatalysis (Brusselator) or excitable dynamics (FHN) are required for hexagonal mode.
+:::
+
+## Mathematical Formulation
+
+The Schnakenberg reaction-diffusion system:
+
+$$
+\frac{\partial u}{\partial t} = D_u \nabla^2 u + \gamma(a - u + u^2 v)
+$$
+
+$$
+\frac{\partial v}{\partial t} = D_v \nabla^2 v + \gamma(b - u^2 v)
+$$
+
+Where:
+
+- $u$: Activator concentration
+- $v$: Inhibitor concentration
+- $D_u, D_v$: Diffusion coefficients ($D_v \gg D_u$ for Turing instability)
+- $a, b$: Kinetic parameters
+- $\gamma$: Reaction rate scaling (Damkohler-like)
+
+### Turing Analysis
+
+The homogeneous steady state is:
+$$
+u^* = a + b, \quad v^* = \frac{b}{(a+b)^2}
+$$
+
+Turing instability requires $D_v/D_u$ sufficiently large and $\gamma$ above a critical threshold.
+
+### Parameters
+
+| Symbol | Description | Tested Range |
+|--------|-------------|-------------|
+| $D_u$ | Activator diffusion | 0.015 |
+| $D_v$ | Inhibitor diffusion | 0.15 |
+| $a$ | Feed parameter | 0.1 |
+| $b$ | Feed parameter | 0.9 |
+| $\gamma$ | Reaction rate | 200-1000 |
+
+---
+
+## Exploration Results (Block 6)
+
+### Iterations 41-44
+
+| Iter | Config | gamma | n_types | Score | Pattern |
+|------|--------|-------|---------|-------|---------|
+| 41 | Base | 200 | 1 | 7/10 | Concentric rings |
+| 43 | Multi-type | 200 | 2 | 7/10 | Concentric rings |
+| 44 | Multi-type | 200 | 2 | 7/10 | Concentric rings |
+
+::: {.callout-note}
+## Unique Property: Genuine Steady State
+Schnakenberg achieves a genuine plateau (0.62 at gamma=200), unlike all other tested models where patterns remain dynamic. This steady-state convergence is unique among the four PDE variants.
+:::
+
+### Key Observations
+
+- **Radial patterns only**: Concentric rings regardless of gamma, particle types, or initial conditions
+- **No hexagonal breaking**: Extended simulation confirms radial symmetry persists
+- **Steady state**: Plateau=0.62 (unique — Brusselator/FHN/Gray-Scott all have plateau~0)
+- **Simple kinetics**: Fewer parameters than Brusselator, but also fewer accessible morphologies
+
+---
+
+## Comparison: Four-Model Hierarchy
+
+| Model | Symmetry Breaking | Accessible Modes | Steady State |
+|-------|------------------|------------------|-------------|
+| Brusselator | Yes | Hexagonal, Stripes, Labyrinth | No (dynamic) |
+| FitzHugh-Nagumo | Yes | Hexagonal, Square/Grid | No (oscillatory) |
+| Schnakenberg | No | Radial only | Yes (plateau=0.62) |
+| Gray-Scott | No | Radial only | No (dynamic) |
+
+---
+
+## Exploration Gallery
+
+::: {.panel-tabset}
+
+### Iter 41
+*Schnakenberg 1-type (gamma=200)*
+
+![Schnakenberg produces concentric ring patterns with genuine steady state convergence.](graphs_data/diffusiophoresis/diffusiophoresis_Claude/montage_iter_041.png){.lightbox}
+
+### Iter 43
+*Schnakenberg 2-type (gamma=200)*
+
+![Multi-type configuration still produces radial symmetry only. No hexagonal breaking.](graphs_data/diffusiophoresis/diffusiophoresis_Claude/montage_iter_043.png){.lightbox}
+
+:::
+
+## References
+
+1. Schnakenberg, J. (1979). Simple chemical reaction systems with limit cycle behaviour. *Journal of Theoretical Biology*, 81(3), 389-400.
+
+2. Murray, J. D. (2003). *Mathematical Biology II: Spatial Models and Biomedical Applications*. Springer.

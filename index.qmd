@@ -2,7 +2,7 @@
 title: "LLM-Guided Morphogenesis"
 subtitle: "Closed-loop discovery in coupled chemical-particle systems"
 author: "Cédric Allier"
-date: "2026-01-28"
+date: "2026-01-29"
 ---
 
 ## Introduction
@@ -118,10 +118,10 @@ Key additions:
 
 ## Reaction-Diffusion Models
 
-Three PDE models have been explored for the chemical patterning component, revealing a clear **trichotomy** in accessible morphologies:
+Four PDE models have been explored for the chemical patterning component, revealing a clear hierarchy of accessible morphologies:
 
 ### [Brusselator](brusselator.qmd)
-Hexagonal Turing patterns with tight particle clusters
+Hexagonal spots and stripe/labyrinth patterns with tight particle clusters
 
 [![](graphs_data/diffusiophoresis/diffusiophoresis_Claude/montage_iter_012.png){.lightbox}](brusselator.qmd)
 
@@ -131,9 +131,14 @@ Radial patterns only — no hexagonal symmetry breaking
 [![](graphs_data/diffusiophoresis/diffusiophoresis_Claude/montage_iter_014.png){.lightbox}](grayscott.qmd)
 
 ### [FitzHugh-Nagumo](fhn.qmd)
-Hexagonal patterns with network particle structure
+Hexagonal and square/grid patterns with network particle structure
 
 [![](graphs_data/diffusiophoresis/diffusiophoresis_Claude/montage_iter_018.png){.lightbox}](fhn.qmd)
+
+### [Schnakenberg](schnakenberg.qmd)
+Radial patterns with genuine steady state convergence
+
+[![](graphs_data/diffusiophoresis/diffusiophoresis_Claude/montage_iter_041.png){.lightbox}](schnakenberg.qmd)
 
 ---
 

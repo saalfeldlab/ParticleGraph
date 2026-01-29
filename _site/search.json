@@ -1,59 +1,101 @@
 [
   {
-    "objectID": "particle-particle.html",
-    "href": "particle-particle.html",
-    "title": "Particle–Particle Interactions",
+    "objectID": "schnakenberg.html",
+    "href": "schnakenberg.html",
+    "title": "Schnakenberg Model",
     "section": "",
-    "text": "Particles interact directly through short-range forces, independent of the chemical fields. This follows the PDE_A model with configurable attraction and repulsion."
+    "text": "The Schnakenberg model is a minimal two-component activator-inhibitor system closely related to the Brusselator but with simpler kinetics. When coupled to diffusiophoresis, it produces radial/concentric patterns only, similar to Gray-Scott and fundamentally different from Brusselator and FHN.\n\n\n\n\n\n\nWarningKey Finding: Radial Symmetry Only\n\n\n\nSchnakenberg produces concentric ring patterns regardless of gamma (200-1000) or multi-type configurations. No hexagonal symmetry breaking occurs. This confirms a clear dichotomy: cubic autocatalysis (Brusselator) or excitable dynamics (FHN) are required for hexagonal mode."
   },
   {
-    "objectID": "particle-particle.html#overview",
-    "href": "particle-particle.html#overview",
-    "title": "Particle–Particle Interactions",
+    "objectID": "schnakenberg.html#overview",
+    "href": "schnakenberg.html#overview",
+    "title": "Schnakenberg Model",
     "section": "",
-    "text": "Particles interact directly through short-range forces, independent of the chemical fields. This follows the PDE_A model with configurable attraction and repulsion."
+    "text": "The Schnakenberg model is a minimal two-component activator-inhibitor system closely related to the Brusselator but with simpler kinetics. When coupled to diffusiophoresis, it produces radial/concentric patterns only, similar to Gray-Scott and fundamentally different from Brusselator and FHN.\n\n\n\n\n\n\nWarningKey Finding: Radial Symmetry Only\n\n\n\nSchnakenberg produces concentric ring patterns regardless of gamma (200-1000) or multi-type configurations. No hexagonal symmetry breaking occurs. This confirms a clear dichotomy: cubic autocatalysis (Brusselator) or excitable dynamics (FHN) are required for hexagonal mode."
   },
   {
-    "objectID": "particle-particle.html#force-law",
-    "href": "particle-particle.html#force-law",
-    "title": "Particle–Particle Interactions",
-    "section": "Force Law",
-    "text": "Force Law\n\\[\n\\mathbf{F}_{ij} = \\left[ p_1 \\exp\\left( -\\frac{d_{ij}^{2p_2}}{2\\sigma^2} \\right) - p_3 \\exp\\left( -\\frac{d_{ij}^{2p_4}}{2\\sigma^2} \\right) \\right] \\hat{\\mathbf{r}}_{ij}\n\\]\nwhere:\n\n\\(p_1, p_2\\) control attraction (strength and range exponent)\n\\(p_3, p_4\\) control repulsion (strength and range exponent)\n\\(\\sigma\\) is the interaction length scale\n\\(d_{ij}\\) is the inter-particle distance"
+    "objectID": "schnakenberg.html#mathematical-formulation",
+    "href": "schnakenberg.html#mathematical-formulation",
+    "title": "Schnakenberg Model",
+    "section": "Mathematical Formulation",
+    "text": "Mathematical Formulation\nThe Schnakenberg reaction-diffusion system:\n\\[\n\\frac{\\partial u}{\\partial t} = D_u \\nabla^2 u + \\gamma(a - u + u^2 v)\n\\]\n\\[\n\\frac{\\partial v}{\\partial t} = D_v \\nabla^2 v + \\gamma(b - u^2 v)\n\\]\nWhere:\n\n\\(u\\): Activator concentration\n\\(v\\): Inhibitor concentration\n\\(D_u, D_v\\): Diffusion coefficients (\\(D_v \\gg D_u\\) for Turing instability)\n\\(a, b\\): Kinetic parameters\n\\(\\gamma\\): Reaction rate scaling (Damkohler-like)\n\n\nTuring Analysis\nThe homogeneous steady state is: \\[\nu^* = a + b, \\quad v^* = \\frac{b}{(a+b)^2}\n\\]\nTuring instability requires \\(D_v/D_u\\) sufficiently large and \\(\\gamma\\) above a critical threshold.\n\n\nParameters\n\n\n\nSymbol\nDescription\nTested Range\n\n\n\n\n\\(D_u\\)\nActivator diffusion\n0.015\n\n\n\\(D_v\\)\nInhibitor diffusion\n0.15\n\n\n\\(a\\)\nFeed parameter\n0.1\n\n\n\\(b\\)\nFeed parameter\n0.9\n\n\n\\(\\gamma\\)\nReaction rate\n200-1000"
   },
   {
-    "objectID": "particle-particle.html#default-configuration",
-    "href": "particle-particle.html#default-configuration",
-    "title": "Particle–Particle Interactions",
-    "section": "Default Configuration",
-    "text": "Default Configuration\nFor diffusiophoresis simulations, a simple repulsion-only model is typically used:\n\\[\n\\mathbf{F}_{ij} = -\\alpha \\exp\\left( -\\frac{5 d_{ij}}{r_{\\text{rep}}} \\right) \\hat{\\mathbf{r}}_{ij} \\quad \\text{if } d_{ij} &lt; r_{\\text{rep}}\n\\]\n\n\n\nParameter\nDescription\nValue\n\n\n\n\n\\(\\alpha\\)\nRepulsion strength\n50\n\n\n\\(r_{\\text{rep}}\\)\nRepulsion range\n0.04\n\n\n\\(\\sigma\\)\nKernel width\n0.005"
+    "objectID": "schnakenberg.html#exploration-results-block-6",
+    "href": "schnakenberg.html#exploration-results-block-6",
+    "title": "Schnakenberg Model",
+    "section": "Exploration Results (Block 6)",
+    "text": "Exploration Results (Block 6)\n\nIterations 41-44\n\n\n\nIter\nConfig\ngamma\nn_types\nScore\nPattern\n\n\n\n\n41\nBase\n200\n1\n7/10\nConcentric rings\n\n\n43\nMulti-type\n200\n2\n7/10\nConcentric rings\n\n\n44\nMulti-type\n200\n2\n7/10\nConcentric rings\n\n\n\n\n\n\n\n\n\nNoteUnique Property: Genuine Steady State\n\n\n\nSchnakenberg achieves a genuine plateau (0.62 at gamma=200), unlike all other tested models where patterns remain dynamic. This steady-state convergence is unique among the four PDE variants.\n\n\n\n\nKey Observations\n\nRadial patterns only: Concentric rings regardless of gamma, particle types, or initial conditions\nNo hexagonal breaking: Extended simulation confirms radial symmetry persists\nSteady state: Plateau=0.62 (unique — Brusselator/FHN/Gray-Scott all have plateau~0)\nSimple kinetics: Fewer parameters than Brusselator, but also fewer accessible morphologies"
   },
   {
-    "objectID": "particle-particle.html#multi-type-particles",
-    "href": "particle-particle.html#multi-type-particles",
-    "title": "Particle–Particle Interactions",
-    "section": "Multi-Type Particles",
-    "text": "Multi-Type Particles\nWhen particle_params is provided, each particle type can have distinct interaction parameters:\n[M1, M2, consumption, production, ar_p1, ar_p2, ar_p3, ar_p4]\nThis enables heterogeneous systems where different particle types attract/repel each other differently."
+    "objectID": "schnakenberg.html#comparison-four-model-hierarchy",
+    "href": "schnakenberg.html#comparison-four-model-hierarchy",
+    "title": "Schnakenberg Model",
+    "section": "Comparison: Four-Model Hierarchy",
+    "text": "Comparison: Four-Model Hierarchy\n\n\n\nModel\nSymmetry Breaking\nAccessible Modes\nSteady State\n\n\n\n\nBrusselator\nYes\nHexagonal, Stripes, Labyrinth\nNo (dynamic)\n\n\nFitzHugh-Nagumo\nYes\nHexagonal, Square/Grid\nNo (oscillatory)\n\n\nSchnakenberg\nNo\nRadial only\nYes (plateau=0.62)\n\n\nGray-Scott\nNo\nRadial only\nNo (dynamic)"
   },
   {
-    "objectID": "particle-particle.html#role-in-pattern-formation",
-    "href": "particle-particle.html#role-in-pattern-formation",
-    "title": "Particle–Particle Interactions",
-    "section": "Role in Pattern Formation",
-    "text": "Role in Pattern Formation\nParticle–particle repulsion:\n\nPrevents particle overlap and clustering collapse\nMaintains minimum spacing for stable structures\nBalances against diffusiophoretic aggregation forces"
+    "objectID": "schnakenberg.html#exploration-gallery",
+    "href": "schnakenberg.html#exploration-gallery",
+    "title": "Schnakenberg Model",
+    "section": "Exploration Gallery",
+    "text": "Exploration Gallery\n\nIter 41Iter 43\n\n\nSchnakenberg 1-type (gamma=200)\n\n\n\nSchnakenberg produces concentric ring patterns with genuine steady state convergence.\n\n\n\n\nSchnakenberg 2-type (gamma=200)\n\n\n\nMulti-type configuration still produces radial symmetry only. No hexagonal breaking."
+  },
+  {
+    "objectID": "schnakenberg.html#references",
+    "href": "schnakenberg.html#references",
+    "title": "Schnakenberg Model",
+    "section": "References",
+    "text": "References\n\nSchnakenberg, J. (1979). Simple chemical reaction systems with limit cycle behaviour. Journal of Theoretical Biology, 81(3), 389-400.\nMurray, J. D. (2003). Mathematical Biology II: Spatial Models and Biomedical Applications. Springer."
+  },
+  {
+    "objectID": "particle-field.html",
+    "href": "particle-field.html",
+    "title": "Particle–Field Interactions",
+    "section": "",
+    "text": "Particles are not passive tracers—they actively modify the chemical fields through consumption and production. This creates bidirectional coupling and enables emergent feedback dynamics."
+  },
+  {
+    "objectID": "particle-field.html#overview",
+    "href": "particle-field.html#overview",
+    "title": "Particle–Field Interactions",
+    "section": "",
+    "text": "Particles are not passive tracers—they actively modify the chemical fields through consumption and production. This creates bidirectional coupling and enables emergent feedback dynamics."
+  },
+  {
+    "objectID": "particle-field.html#equations",
+    "href": "particle-field.html#equations",
+    "title": "Particle–Field Interactions",
+    "section": "Equations",
+    "text": "Equations\nParticles locally consume field 1 and produce (or consume) field 2:\n\\[\n\\frac{\\partial C_1}{\\partial t}\\bigg|_{\\text{particle}} = -\\gamma_c \\sum_{j=1}^{N_p} w(\\|\\mathbf{x} - \\mathbf{x}_j\\|)\n\\]\n\\[\n\\frac{\\partial C_2}{\\partial t}\\bigg|_{\\text{particle}} = +\\gamma_p \\sum_{j=1}^{N_p} w(\\|\\mathbf{x} - \\mathbf{x}_j\\|)\n\\]\nwhere \\(w(r) = \\exp(-r^2 / 2r_{\\text{inf}}^2)\\) is a Gaussian influence kernel centered on each particle."
+  },
+  {
+    "objectID": "particle-field.html#parameters",
+    "href": "particle-field.html#parameters",
+    "title": "Particle–Field Interactions",
+    "section": "Parameters",
+    "text": "Parameters\n\n\n\nSymbol\nDescription\nTypical Value\n\n\n\n\n\\(\\gamma_c\\)\nConsumption rate\n180\n\n\n\\(\\gamma_p\\)\nProduction rate\n-180\n\n\n\\(r_{\\text{inf}}\\)\nInfluence radius\n0.05"
+  },
+  {
+    "objectID": "particle-field.html#feedback-loop",
+    "href": "particle-field.html#feedback-loop",
+    "title": "Particle–Field Interactions",
+    "section": "Feedback Loop",
+    "text": "Feedback Loop\nThe particle–field coupling creates a feedback loop:\n\nFields develop gradients (Turing patterns)\nParticles migrate along gradients (diffusiophoresis)\nParticles modify local concentrations (consumption/production)\nModified fields change gradient landscape\nRepeat…\n\n\n\n\n\n\n\nWarningCoupling Challenge\n\n\n\nFor Gray-Scott, particle consumption can overwhelm the slow \\(UV^2\\) production, causing field instability. Brusselator’s stronger reaction rates are more robust to particle feedback."
   },
   {
     "objectID": "index.html",
     "href": "index.html",
     "title": "LLM-Guided Morphogenesis",
     "section": "",
-    "text": "Understanding morphogenesis requires more than generating patterns; it requires understanding how interacting processes converge toward stable, functional forms. This work presents a closed-loop experimental framework in which experiments, reasoning, and long-term memory are tightly coupled, with a large language model (LLM) operating as an active scientific agent. Note, the LLM does not only explore parameter space; it is allowed, at controlled points, to modify and replace the governing partial differential equations (PDEs) that define the system dynamics. In this framework, PDEs are treated as hypotheses, not fixed truths.\nThe system combines reaction–diffusion chemistry, diffusiophoretic particle transport, and particle–field feedback to explore a rich landscape of emergent morphologies. Rather than treating particles or fields as primary objects, the framework treats interactions as fundamental, with structure arising from their mutual constraint. The LLM evaluates simulation outcomes, formulates mechanistic hypotheses, and directs subsequent interventions through structured exploration and persistent memory, enabling cumulative understanding across regimes rather than isolated optimization.\nA key methodological insight motivating this work is that LLM-guided discovery is fundamentally limited by the laws it is allowed to explore. Early stages of the project revealed strong attractors imposed by the Brusselator reaction–diffusion model, which restricted accessible morphologies despite extensive parameter search. This limitation led to an explicit design choice: elevate model-space exploration—including PDE modification and variant creation.\nThe current results focus on diffusiophoresis coupled to classical reaction–diffusion systems. Future extensions will introduce additional physical constraints, such as elasticity via material point methods (MPM), to study how mechanical admissibility further restricts or stabilizes morphogenetic outcomes. Together, these elements position the framework as a general method for exploring not only patterns, but the conditions under which stable form emerges."
+    "text": "Understanding morphogenesis requires more than generating patterns; it requires understanding how interacting processes converge toward stable, functional forms. This work presents a closed-loop experimental framework in which experiments, reasoning, and long-term memory are tightly coupled, with a large language model (LLM) operating as an active scientific agent. Note, the LLM does not only explore parameter space; it is allowed, at controlled points, to modify and replace the governing partial differential equations (PDEs) that define the system dynamics. In this framework, PDEs are treated as hypotheses, not fixed truths.\nThe system combines reaction–diffusion chemistry, diffusiophoretic particle transport, and particle–field feedback to explore a rich landscape of emergent morphologies. Rather than treating particles or fields as primary objects, the framework treats interactions as fundamental, with structure arising from their mutual constraint. The LLM evaluates simulation outcomes, formulates mechanistic hypotheses, and directs subsequent interventions through structured exploration and persistent memory, enabling cumulative understanding across regimes rather than isolated optimization.\nA key methodological insight motivating this work is that LLM-guided discovery is fundamentally limited by the laws it is allowed to explore. Early stages of the project revealed strong attractors imposed by the Brusselator reaction–diffusion model, which restricted accessible morphologies despite extensive parameter search. This limitation led to an explicit design choice: elevate model-space exploration—including PDE modification and variant creation.\nThe current results focus on diffusiophoresis coupled to classical reaction–diffusion systems. The framework now extends to include mechanochemical coupling via the Material Point Method (MPM), enabling study of how mechanical admissibility constrains morphogenetic outcomes. See the Mechanochemical Morphogenesis section for the unified framework combining chemistry and continuum mechanics."
   },
   {
     "objectID": "index.html#introduction",
     "href": "index.html#introduction",
     "title": "LLM-Guided Morphogenesis",
     "section": "",
-    "text": "Understanding morphogenesis requires more than generating patterns; it requires understanding how interacting processes converge toward stable, functional forms. This work presents a closed-loop experimental framework in which experiments, reasoning, and long-term memory are tightly coupled, with a large language model (LLM) operating as an active scientific agent. Note, the LLM does not only explore parameter space; it is allowed, at controlled points, to modify and replace the governing partial differential equations (PDEs) that define the system dynamics. In this framework, PDEs are treated as hypotheses, not fixed truths.\nThe system combines reaction–diffusion chemistry, diffusiophoretic particle transport, and particle–field feedback to explore a rich landscape of emergent morphologies. Rather than treating particles or fields as primary objects, the framework treats interactions as fundamental, with structure arising from their mutual constraint. The LLM evaluates simulation outcomes, formulates mechanistic hypotheses, and directs subsequent interventions through structured exploration and persistent memory, enabling cumulative understanding across regimes rather than isolated optimization.\nA key methodological insight motivating this work is that LLM-guided discovery is fundamentally limited by the laws it is allowed to explore. Early stages of the project revealed strong attractors imposed by the Brusselator reaction–diffusion model, which restricted accessible morphologies despite extensive parameter search. This limitation led to an explicit design choice: elevate model-space exploration—including PDE modification and variant creation.\nThe current results focus on diffusiophoresis coupled to classical reaction–diffusion systems. Future extensions will introduce additional physical constraints, such as elasticity via material point methods (MPM), to study how mechanical admissibility further restricts or stabilizes morphogenetic outcomes. Together, these elements position the framework as a general method for exploring not only patterns, but the conditions under which stable form emerges."
+    "text": "Understanding morphogenesis requires more than generating patterns; it requires understanding how interacting processes converge toward stable, functional forms. This work presents a closed-loop experimental framework in which experiments, reasoning, and long-term memory are tightly coupled, with a large language model (LLM) operating as an active scientific agent. Note, the LLM does not only explore parameter space; it is allowed, at controlled points, to modify and replace the governing partial differential equations (PDEs) that define the system dynamics. In this framework, PDEs are treated as hypotheses, not fixed truths.\nThe system combines reaction–diffusion chemistry, diffusiophoretic particle transport, and particle–field feedback to explore a rich landscape of emergent morphologies. Rather than treating particles or fields as primary objects, the framework treats interactions as fundamental, with structure arising from their mutual constraint. The LLM evaluates simulation outcomes, formulates mechanistic hypotheses, and directs subsequent interventions through structured exploration and persistent memory, enabling cumulative understanding across regimes rather than isolated optimization.\nA key methodological insight motivating this work is that LLM-guided discovery is fundamentally limited by the laws it is allowed to explore. Early stages of the project revealed strong attractors imposed by the Brusselator reaction–diffusion model, which restricted accessible morphologies despite extensive parameter search. This limitation led to an explicit design choice: elevate model-space exploration—including PDE modification and variant creation.\nThe current results focus on diffusiophoresis coupled to classical reaction–diffusion systems. The framework now extends to include mechanochemical coupling via the Material Point Method (MPM), enabling study of how mechanical admissibility constrains morphogenetic outcomes. See the Mechanochemical Morphogenesis section for the unified framework combining chemistry and continuum mechanics."
   },
   {
     "objectID": "index.html#the-exploration-loop",
@@ -70,11 +112,18 @@
     "text": "Four Coupled Interactions\n\n\n\nInteraction\nPhysics\nDescription\n\n\n\n\nField–Field\nReaction-diffusion PDE\nTuring patterns via activator-inhibitor dynamics\n\n\nField–Particle\nDiffusiophoresis\nField gradients drive particle motion\n\n\nParticle–Field\nConsumption/production\nParticles locally modify concentrations\n\n\nParticle–Particle\nAttraction-repulsion\nShort-range forces between particles"
   },
   {
+    "objectID": "index.html#mechanochemical-extension",
+    "href": "index.html#mechanochemical-extension",
+    "title": "LLM-Guided Morphogenesis",
+    "section": "Mechanochemical Extension",
+    "text": "Mechanochemical Extension\n\n\n\n\n\n\nTipNew: Coupling Chemistry with Mechanics\n\n\n\nThe framework extends beyond pattern formation to include continuum mechanics via the Material Point Method (MPM). This enables studying morphogenesis under mechanical constraints.\n→ Mechanochemical Morphogenesis\n\n\n\n\n\n\n\nflowchart LR\n    subgraph Current[\"Current: Chemistry\"]\n        RD[\"Reaction-Diffusion\"]\n        DP[\"Diffusiophoresis\"]\n    end\n\n    subgraph Extension[\"Extension: Mechanics\"]\n        DEF[\"Deformation F\"]\n        STR[\"Stress σ\"]\n    end\n\n    subgraph Unified[\"Unified Framework\"]\n        U[\"Mechanochemical&lt;br&gt;Morphogenesis\"]\n    end\n\n    Current --&gt; Unified\n    Extension --&gt; Unified\n\n    style Current fill:#e3f2fd\n    style Extension fill:#fff3e0\n    style Unified fill:#e8f5e9\n\n\n\n\n\n\nKey additions:\n\nDeformation gradient \\(\\mathbf{F}\\) and stress \\(\\boldsymbol{\\sigma}\\) per particle\nActive stress driven by morphogen concentration\nStrain-dependent diffusion for mechanochemical feedback\nEdge embeddings for learnable cell-cell interactions (synaptic class)"
+  },
+  {
     "objectID": "index.html#reaction-diffusion-models",
     "href": "index.html#reaction-diffusion-models",
     "title": "LLM-Guided Morphogenesis",
     "section": "Reaction-Diffusion Models",
-    "text": "Reaction-Diffusion Models\nTwo PDE models have been explored for the chemical patterning component:\n\n\n\n\n\n\nNoteBrusselator Model\n\n\n\nClassic two-component system with cubic autocatalysis. Explored in Blocks 1–11 (88 iterations). Best clustering: 0.485. Exhaustive search revealed strong labyrinthine attractors — no stripe regime accessible.\n\n\n\n\n\n\n\n\nTipGray-Scott Model ⭐ Active\n\n\n\nAutocatalytic system with feed/kill dynamics. Currently being explored in Block 12 (iterations 89–96). Producing stable spot patterns; systematically exploring F-k plane for stripe/worm transition."
+    "text": "Reaction-Diffusion Models\nFour PDE models have been explored for the chemical patterning component, revealing a clear hierarchy of accessible morphologies:\n\nBrusselator\nHexagonal spots and stripe/labyrinth patterns with tight particle clusters\n\n\n\nGray-Scott\nRadial patterns only — no hexagonal symmetry breaking\n\n\n\nFitzHugh-Nagumo\nHexagonal and square/grid patterns with network particle structure\n\n\n\nSchnakenberg\nRadial patterns with genuine steady state convergence"
   },
   {
     "objectID": "index.html#references",
@@ -116,7 +165,7 @@
     "href": "field-particle.html#parameters",
     "title": "Field–Particle Interactions",
     "section": "Parameters",
-    "text": "Parameters\n\n\n\nSymbol\nDescription\nTypical Value\n\n\n\n\n\\(M_1\\)\nMobility for field 1\n±16\n\n\n\\(M_2\\)\nMobility for field 2\n∓16\n\n\nPe\nPéclet number\n200"
+    "text": "Parameters\n\n\n\nSymbol\nDescription\nTypical Value\n\n\n\n\n\\(M_1\\)\nMobility for field 1\n±4\n\n\n\\(M_2\\)\nMobility for field 2\n∓4\n\n\nPe\nPéclet number\n200\n\n\n\n\n\n\n\n\n\nWarningMobility Sweet Spot\n\n\n\n\\(|M| = 4\\) is optimal. \\(|M| = 16\\) causes particle escape (0% retention). The ±4 range balances field-particle coupling with particle containment."
   },
   {
     "objectID": "field-particle.html#key-finding",
@@ -124,6 +173,83 @@
     "title": "Field–Particle Interactions",
     "section": "Key Finding",
     "text": "Key Finding\n\n\n\n\n\n\nImportant\n\n\n\nLinear mobility is optimal. Any nonlinearity (saturation, boost) disrupts boundary accumulation. The simple \\(\\mathbf{v} \\propto \\nabla C\\) relationship works best."
+  },
+  {
+    "objectID": "field-particle.html#log-sensing-variant-block-8",
+    "href": "field-particle.html#log-sensing-variant-block-8",
+    "title": "Field–Particle Interactions",
+    "section": "Log-Sensing Variant (Block 8)",
+    "text": "Log-Sensing Variant (Block 8)\nA new particle model variant uses logarithmic gradient sensing (Weber-Fechner law):\n\\[\n\\mathbf{v}_i = M_1 \\frac{\\nabla C_1}{C_1 + C_0}\\bigg|_{\\mathbf{x}_i} + M_2 \\frac{\\nabla C_2}{C_2 + C_0}\\bigg|_{\\mathbf{x}_i}\n\\]\nThis creates concentration-dependent effective mobility (\\(M_{\\text{eff}} \\propto M / C\\)), producing self-limiting aggregation at high concentrations. Early results show LogSensing suppresses hexagonal symmetry breaking at standard mobility (\\(M=\\pm 4\\)), requiring higher \\(M\\) (\\(\\pm 8\\)) to restore pattern formation."
+  },
+  {
+    "objectID": "fhn.html",
+    "href": "fhn.html",
+    "title": "FitzHugh-Nagumo Model",
+    "section": "",
+    "text": "The FitzHugh-Nagumo (FHN) model is a simplified two-variable system originally developed to describe neuronal excitability. When coupled to diffusiophoresis, it produces qualitatively different dynamics compared to Brusselator and Gray-Scott systems.\n\n\n\n\n\n\nTipKey Discoveries\n\n\n\nFHN achieves hexagonal mode (~6-7 spots) regardless of particle types (1, 2, or 3). Particles form network/filamentary structures rather than tight clusters.\nAdditionally, the inhibitor diffusion coefficient \\(D_v\\) acts as a symmetry selector: \\(D_v = 0\\) produces hexagonal spots, while \\(D_v \\geq 0.1\\) produces square/grid symmetry — a novel morphology not accessible to any other tested model."
+  },
+  {
+    "objectID": "fhn.html#overview",
+    "href": "fhn.html#overview",
+    "title": "FitzHugh-Nagumo Model",
+    "section": "",
+    "text": "The FitzHugh-Nagumo (FHN) model is a simplified two-variable system originally developed to describe neuronal excitability. When coupled to diffusiophoresis, it produces qualitatively different dynamics compared to Brusselator and Gray-Scott systems.\n\n\n\n\n\n\nTipKey Discoveries\n\n\n\nFHN achieves hexagonal mode (~6-7 spots) regardless of particle types (1, 2, or 3). Particles form network/filamentary structures rather than tight clusters.\nAdditionally, the inhibitor diffusion coefficient \\(D_v\\) acts as a symmetry selector: \\(D_v = 0\\) produces hexagonal spots, while \\(D_v \\geq 0.1\\) produces square/grid symmetry — a novel morphology not accessible to any other tested model."
+  },
+  {
+    "objectID": "fhn.html#mathematical-formulation",
+    "href": "fhn.html#mathematical-formulation",
+    "title": "FitzHugh-Nagumo Model",
+    "section": "Mathematical Formulation",
+    "text": "Mathematical Formulation\nThe FHN reaction-diffusion equations:\n\\[\n\\frac{\\partial u}{\\partial t} = D_u \\nabla^2 u + u - \\frac{u^3}{3} - v + I\n\\]\n\\[\n\\frac{\\partial v}{\\partial t} = D_v \\nabla^2 v + \\epsilon(u + a - bv)\n\\]\nWhere:\n\n\\(u\\): Fast activator (excitation variable)\n\\(v\\): Slow inhibitor (recovery variable)\n\\(D_u, D_v\\): Diffusion coefficients\n\\(a, b\\): Nullcline parameters\n\\(\\epsilon\\): Time-scale separation (small = slow inhibitor)\n\\(I\\): External current/stimulus"
+  },
+  {
+    "objectID": "fhn.html#parameter-documentation",
+    "href": "fhn.html#parameter-documentation",
+    "title": "FitzHugh-Nagumo Model",
+    "section": "Parameter Documentation",
+    "text": "Parameter Documentation\nRow 0 (u field): [Du, a, b, epsilon, I, time_scale]\nRow 1 (v field): [Dv, ...]\nRow 2 (coupling): [Pe, consumption, production, influence_radius, boost_exponent, M1]\n\nRegime Classification\n\n\n\nRegime\nCondition\nPattern Type\n\n\n\n\nExcitable\n\\(a &gt; 1 - b/3\\)\nTraveling waves, spirals\n\n\nOscillatory\n\\(a &lt; 1 - b/3\\)\nTarget patterns, bulk oscillation\n\n\nTuring\n\\(D_v \\gg D_u\\)\nStationary stripes/spots\n\n\nBistable\nLarge \\(\\|a\\|\\)\nFront propagation"
+  },
+  {
+    "objectID": "fhn.html#exploration-results",
+    "href": "fhn.html#exploration-results",
+    "title": "FitzHugh-Nagumo Model",
+    "section": "Exploration Results",
+    "text": "Exploration Results\n\nBlock 3 Findings (Iterations 17–19)\n\n\n\nMetric\nFHN\nBrusselator\nGray-Scott\n\n\n\n\nPattern Scale\n~6-7 spots\n~6 spots\nConcentric\n\n\nClustering\n-0.2 to 0.3\n0.6+\n0.4\n\n\nSymmetry Breaking\nHexagonal\nHexagonal\nNone (radial)\n\n\n\n\n\n\n\n\n\nImportantParticle-Type Independence Confirmed\n\n\n\nFHN hexagonal mode is NOT particle-type dependent: 1, 2, and 3 types all achieve ~6-7 hexagonal spots. The finer network in iter 17 may be stochastic variation.\n\n\n\n\nConfiguration\nmesh_model_name: PDE_Diffusiophoresis_FHN\nparams_mesh:\n  - [0.5, 0.7, 0.8, 0.08, 0.0, 20.0]   # u: Du, a, b, epsilon, I, time_scale\n  - [0.0, 0, 0, 0, 0, 0]               # v: Dv (=0, slow inhibitor)\n  - [1.0, 180, -180, 0.05, 0, 0]       # Particle-field coupling\nn_particle_types: 2\nn_frames: 6000\nboundary: periodic"
+  },
+  {
+    "objectID": "fhn.html#dv-symmetry-selector-block-6-discovery",
+    "href": "fhn.html#dv-symmetry-selector-block-6-discovery",
+    "title": "FitzHugh-Nagumo Model",
+    "section": "Dv Symmetry Selector (Block 6 Discovery)",
+    "text": "Dv Symmetry Selector (Block 6 Discovery)\n\n\n\n\n\n\nImportantBreakthrough: Inhibitor Diffusion Controls Symmetry Class\n\n\n\nThe FHN parameter \\(D_v\\) acts as a discrete symmetry selector:\n\n\\(D_v = 0\\): Hexagonal spots (standard Turing)\n\\(D_v = 0.05\\): Disordered transitional\n\\(D_v \\geq 0.1\\): Square/Grid symmetry (novel!)\n\n\n\n\nSquare Mode Properties\n\n\n\nProperty\nHexagonal (\\(D_v=0\\))\nSquare (\\(D_v \\geq 0.1\\))\n\n\n\n\nSymmetry\n6-fold\n4-fold\n\n\nClustering\n0.26-0.39\n~0.3\n\n\nPlateau\n0.00\n0.00 (intrinsically oscillatory)\n\n\nMulti-type\nAll types work\nSame-sign mobility only\n\n\nOpposing mobility\nWorks\nDestroys square → hexagonal\n\n\n\n\n\nSquare Mode Constraints\n\nUniform mobility direction required: All particle types must have the same sign for \\(M_1, M_2\\). Opposing mobilities revert square → hexagonal\nIntrinsically oscillatory: Plateau is always 0.00 regardless of feedback parameters; non-convergence is inherent to FHN square mode\nRobust to particle count: \\(D_v = 0.15\\) also produces square; not a narrow parameter island\n\n\n\nRobustness Hierarchy\nHexagonal (survives multi-type, reversed feedback) &gt; Square (same-sign multi-type, fails opposing mobility) &gt; Stripe (1-type only, Brusselator)"
+  },
+  {
+    "objectID": "fhn.html#comparison-four-pde-models",
+    "href": "fhn.html#comparison-four-pde-models",
+    "title": "FitzHugh-Nagumo Model",
+    "section": "Comparison: Four PDE Models",
+    "text": "Comparison: Four PDE Models\n\n\n\n\n\nflowchart TD\n    A[Reaction-Diffusion Model] --&gt; B[Brusselator]\n    A --&gt; C[Gray-Scott]\n    A --&gt; D[FitzHugh-Nagumo]\n    A --&gt; E[Schnakenberg]\n\n    B --&gt; B1[Hexagonal + Stripes]\n    B --&gt; B2[Tight clusters]\n\n    C --&gt; C1[Radial only]\n    C --&gt; C2[Moderate clustering]\n\n    D --&gt; D1[Hexagonal + Square]\n    D --&gt; D2[Network structure]\n\n    E --&gt; E1[Radial only]\n    E --&gt; E2[Genuine steady state]\n\n    style B fill:#c8e6c9\n    style C fill:#ffcdd2\n    style D fill:#fff9c4\n    style E fill:#e1bee7"
+  },
+  {
+    "objectID": "fhn.html#exploration-gallery",
+    "href": "fhn.html#exploration-gallery",
+    "title": "FitzHugh-Nagumo Model",
+    "section": "Exploration Gallery",
+    "text": "Exploration Gallery\n\nIter 17Iter 18 ⭐Iter 45 ⭐Iter 48\n\n\nFHN 2-type — fine network\n\nFirst FHN test with 2 particle types. Produces ~30+ fine-scale spots with network/filamentary particle organization.\n\n\nFHN 3-type — hexagonal mode\n\nThree particle types achieve hexagonal mode (~6-7 spots) with multi-layer particle organization within spots.\n\n\nFHN Square mode (Dv=0.1)\n\nBreakthrough: \\(D_v = 0.1\\) produces square/grid symmetry — a morphology not accessible to Brusselator or Gray-Scott.\n\n\nFHN Square 3-type\n\nSquare symmetry persists with 3 particle types when all have same-sign mobility."
+  },
+  {
+    "objectID": "fhn.html#key-insights",
+    "href": "fhn.html#key-insights",
+    "title": "FitzHugh-Nagumo Model",
+    "section": "Key Insights",
+    "text": "Key Insights\n\nHexagonal symmetry: Like Brusselator, FHN achieves hexagonal mode (unlike Gray-Scott/Schnakenberg)\nSquare symmetry: \\(D_v \\geq 0.1\\) switches to 4-fold square/grid patterns — unique to FHN\nNetwork organization: Particles form filamentary/networked structures instead of tight clusters\nParticle-type independent: 1, 2, or 3 particle types all achieve hexagonal spots\n\\(D_v\\) is a symmetry selector: Continuous parameter produces discrete symmetry transitions\nSquare mode constraints: Requires uniform mobility direction; opposing mobilities destroy square → hexagonal"
+  },
+  {
+    "objectID": "fhn.html#references",
+    "href": "fhn.html#references",
+    "title": "FitzHugh-Nagumo Model",
+    "section": "References",
+    "text": "References\n\nFitzHugh, R. (1961). Impulses and physiological states in theoretical models of nerve membrane. Biophys. J., 1(6), 445-466.\nNagumo, J., Arimoto, S., & Yoshizawa, S. (1962). An active pulse transmission line simulating nerve axon. Proc. IRE, 50(10), 2061-2070.\nErmakova, E. A., et al. (2009). On propagation of excitation waves in moving media: The FitzHugh-Nagumo model. PLoS ONE, 4(2), e4454."
   },
   {
     "objectID": "brusselator.html",
@@ -144,35 +270,42 @@
     "href": "brusselator.html#particle-dynamics-diffusiophoresis",
     "title": "Brusselator Model",
     "section": "Particle Dynamics: Diffusiophoresis",
-    "text": "Particle Dynamics: Diffusiophoresis\n\\[\n\\mathbf{v}_i = M_1 \\nabla C_1\\big|_{\\mathbf{x}_i} + M_2 \\nabla C_2\\big|_{\\mathbf{x}_i} + \\sqrt{\\frac{2}{\\text{Pe}}} \\boldsymbol{\\eta}(t)\n\\]\nParticle → Field feedback:\n\\[\n\\frac{\\partial C_1}{\\partial t}\\bigg|_{\\text{particle}} = -\\gamma_c \\sum_{j=1}^{N_p} w(\\|\\mathbf{x} - \\mathbf{x}_j\\|)\n\\quad , \\quad\n\\frac{\\partial C_2}{\\partial t}\\bigg|_{\\text{particle}} = +\\gamma_p \\sum_{j=1}^{N_p} w(\\|\\mathbf{x} - \\mathbf{x}_j\\|)\n\\]\n\n\n\nSymbol\nDescription\nOptimal\n\n\n\n\n\\(M_1, M_2\\)\nMobility coefficients\n±16\n\n\n\\(\\gamma_c\\)\nConsumption rate\n180\n\n\n\\(\\gamma_p\\)\nProduction rate\n-180"
+    "text": "Particle Dynamics: Diffusiophoresis\n\\[\n\\mathbf{v}_i = M_1 \\nabla C_1\\big|_{\\mathbf{x}_i} + M_2 \\nabla C_2\\big|_{\\mathbf{x}_i} + \\sqrt{\\frac{2}{\\text{Pe}}} \\boldsymbol{\\eta}(t)\n\\]\nParticle → Field feedback:\n\\[\n\\frac{\\partial C_1}{\\partial t}\\bigg|_{\\text{particle}} = -\\gamma_c \\sum_{j=1}^{N_p} w(\\|\\mathbf{x} - \\mathbf{x}_j\\|)\n\\quad , \\quad\n\\frac{\\partial C_2}{\\partial t}\\bigg|_{\\text{particle}} = +\\gamma_p \\sum_{j=1}^{N_p} w(\\|\\mathbf{x} - \\mathbf{x}_j\\|)\n\\]\n\n\n\nSymbol\nDescription\nOptimal\n\n\n\n\n\\(M_1, M_2\\)\nMobility coefficients\n±4\n\n\n\\(\\gamma_c\\)\nConsumption rate\n180\n\n\n\\(\\gamma_p\\)\nProduction rate\n-180"
   },
   {
     "objectID": "brusselator.html#key-discoveries",
     "href": "brusselator.html#key-discoveries",
     "title": "Brusselator Model",
     "section": "Key Discoveries",
-    "text": "Key Discoveries\n\n\n\n\n\n\nImportantEigenmode Locking\n\n\n\nThe 4-fold cruciform pattern is geometry-locked by the square domain + periodic boundary conditions. Breaking this lock requires modifying the wavelength via \\(D_1\\), not noise or anisotropy.\n\n\n\n\n\n\n\n\n\nFinding\nMechanism\n\n\n\n\nLinear mobility is optimal\nAny nonlinearity disrupts boundary accumulation\n\n\n\\(D_1\\) controls mode selection\n\\(D_1 = 0.015\\)–\\(0.02\\) selects higher-order modes\n\n\nStability limits\n\\(B \\leq 7.0\\), \\(\\text{Da}_c \\leq 30\\) to avoid NaN\n\n\nBest clustering: 0.485\nAchieved at iteration 51"
+    "text": "Key Discoveries\n\n\n\n\n\n\nImportantMobility Sweet Spot\n\n\n\nM1=±4, M2=±4 is the optimal mobility magnitude. M1=±16 causes particle escape (0% retention). The ±4 range maintains strong field-particle coupling while preventing particle loss.\n\n\n\n\n\n\n\n\nTipHexagonal Mode Selection\n\n\n\nExtended simulation (6000 frames) reveals ring→hexagonal symmetry breaking. The concentric ring pattern evolves into hexagonal Turing spots.\n\n\n\n\n\n\n\n\n\nFinding\nMechanism\n\n\n\n\nHexagonal is particle-type-independent\n1, 2, or 3 particle types all achieve identical hexagonal mode\n\n\n~6 large spots\nCoarse spatial wavelength compared to FHN\n\n\nTight clustering (0.6+)\nParticles form dense aggregates at field peaks\n\n\nRing→hexagonal transition\nOccurs at 4000-6000 frames with extended simulation"
+  },
+  {
+    "objectID": "brusselator.html#stripelabyrinth-mode-block-4-discovery",
+    "href": "brusselator.html#stripelabyrinth-mode-block-4-discovery",
+    "title": "Brusselator Model",
+    "section": "Stripe/Labyrinth Mode (Block 4 Discovery)",
+    "text": "Stripe/Labyrinth Mode (Block 4 Discovery)\n\n\n\n\n\n\nImportantBreakthrough: Turing Boundary Controls Mode Selection\n\n\n\nAt the Turing instability boundary \\(B/(1+A^2) = 1\\), the system transitions from hexagonal spots to labyrinth/stripe patterns. This is controlled by the Brusselator parameters \\(A\\) and \\(B\\).\n\n\n\nTuring Bifurcation Map\n\n\n\n\n\n\n\n\nRegime\nCondition\nPattern\n\n\n\n\nSub-Turing\n\\(B/(1+A^2) &lt; 1\\)\nNo patterns (disordered)\n\n\nTuring boundary\n\\(B/(1+A^2) \\approx 1\\), low \\(A\\) (\\(\\leq 3\\))\nStripes/Labyrinth\n\n\nDeep Turing\n\\(B/(1+A^2) &gt; 1\\)\nHexagonal spots\n\n\nExtreme Turing\n\\(B \\geq 15\\)\nPixel-scale noise (unusable)\n\n\n\n\n\nKey Constraints\n\nStripe mode requires 1-type uniform particles: Multi-type configurations (even with identical parameters) destroy stripe organization\nLow A is critical: \\(B/(1+A^2) = 1\\) at \\(B=13, A=3.46\\) gives spots, NOT stripes. Low \\(A\\) (\\(\\leq 3\\)) is required alongside the ratio\nPractical limit: \\(B \\leq 13\\) for 100x100 mesh; \\(B=15\\) produces pixel-scale patterns too fine for particle organization\n\n\n\nStripe vs Hexagonal Parameters\n\n\n\nParameter\nHex Mode\nStripe Mode\n\n\n\n\n\\(A\\)\n4.5\n3.0\n\n\n\\(B\\)\n6.5\n10.0\n\n\n\\(B/(1+A^2)\\)\n0.29 (deep)\n1.0 (boundary)\n\n\nn_particle_types\n1-3\n1 only\n\n\n\n\n\nRobustness Hierarchy\nHexagonal (survives multi-type, reversed feedback) &gt; Stripe (1-type uniform only)"
   },
   {
     "objectID": "brusselator.html#exploration-gallery",
     "href": "brusselator.html#exploration-gallery",
     "title": "Brusselator Model",
     "section": "Exploration Gallery",
-    "text": "Exploration Gallery\n\nBlock 1Block 2Block 3Block 4Block 5Block 6Block 7Block 8\n\n\nTuring condition satisfaction\n\n\n\nCross-diffusion tests\n\n\n\nExtended simulation, emergent asymmetry\n\n\n\nStability boundary exploration\n\n\n\nTensor anisotropy tests\n\n\n\nD1 breakthrough\n\n\n\nBest result (iter 51)\n\n\n\nMobility modifications"
+    "text": "Exploration Gallery\n\nIter 1Iter 12 ⭐Iter 31 ⭐Iter 36\n\n\nInitial Brusselator test\n\n\n\nHexagonal mode achieved\n\nMulti-type configuration with opposing mobilities achieves hexagonal Turing pattern. Ring→hexagonal symmetry breaking confirmed.\n\n\nStripe/Labyrinth mode (A=3, B=10)\n\nBreakthrough: \\(B/(1+A^2) = 1\\) with low \\(A\\) produces labyrinth/stripe morphology instead of hexagonal spots.\n\n\nMixed mode (A=2.828, B=9)\n\nTransitional regime at \\(B=9\\) produces a mixed mode — neither pure hexagonal nor pure stripe."
   },
   {
     "objectID": "field-field.html",
     "href": "field-field.html",
     "title": "Field–Field Interactions",
     "section": "",
-    "text": "The field–field interaction governs the evolution of concentration fields through reaction-diffusion PDEs. Two models have been explored:\n\nBrusselator: Classic two-component system with cubic autocatalysis\nGray-Scott: Autocatalytic system with feed/kill dynamics"
+    "text": "The field–field interaction governs the evolution of concentration fields through reaction-diffusion PDEs. Four models have been explored:\n\nBrusselator: Classic two-component system with cubic autocatalysis (hexagonal + stripes)\nGray-Scott: Autocatalytic system with feed/kill dynamics (radial only)\nFitzHugh-Nagumo: Excitable two-variable system from neuroscience (hexagonal + square)\nSchnakenberg: Minimal activator-inhibitor system (radial only, genuine steady state)"
   },
   {
     "objectID": "field-field.html#overview",
     "href": "field-field.html#overview",
     "title": "Field–Field Interactions",
     "section": "",
-    "text": "The field–field interaction governs the evolution of concentration fields through reaction-diffusion PDEs. Two models have been explored:\n\nBrusselator: Classic two-component system with cubic autocatalysis\nGray-Scott: Autocatalytic system with feed/kill dynamics"
+    "text": "The field–field interaction governs the evolution of concentration fields through reaction-diffusion PDEs. Four models have been explored:\n\nBrusselator: Classic two-component system with cubic autocatalysis (hexagonal + stripes)\nGray-Scott: Autocatalytic system with feed/kill dynamics (radial only)\nFitzHugh-Nagumo: Excitable two-variable system from neuroscience (hexagonal + square)\nSchnakenberg: Minimal activator-inhibitor system (radial only, genuine steady state)"
   },
   {
     "objectID": "field-field.html#general-form",
@@ -221,48 +354,146 @@
     "href": "grayscott.html#current-status",
     "title": "Gray-Scott Model",
     "section": "Current Status",
-    "text": "Current Status\nBlock 12 (iterations 89–96) marks a fresh start with the Gray-Scott model. Following exhaustive Brusselator exploration (Blocks 1–11) that revealed strong labyrinthine attractors, the focus has shifted to Gray-Scott’s richer F-k phase space to achieve stripe/worm patterns.\n\nBlock 12 Progress\n\n\n\n\n\n\n\n\n\n\nIteration\nF\nk\nScore\nResult\n\n\n\n\n89\n0.035\n0.060\n5/10\nSpot patterns — hexagonal array, particles form voronoi network at boundaries\n\n\n90\n0.035\n0.063\n5/10\nSpot patterns — k increase did not induce stripe transition\n\n\n\n\n\nKey Observations\n\nGray-Scott produces clean, stable Turing patterns without NaN issues\nSpot regime is stable across k=0.060–0.063 at F=0.035\nParticles consistently organize at field boundaries (voronoi-like network)\nNo stripe/worm transition observed yet — exploring alternative F values next\n\n\n\nNext Steps\nPer Pearson (1993) phase diagram, F=0.030 with k=0.060 may favor worms/stripes over spots. This is the planned direction for iteration 91+.\n\n\nHistorical Iterations (Blocks 9–11)\n\n\n\nIteration\nConfiguration\nResult\n\n\n\n\n65\nInitial test\nAnti-clustering, V negative\n\n\n66\nα-spot regime\nNaN explosion\n\n\n67\nγ-worm regime\nV deeply negative\n\n\n73\nV-clamping code mod\nU still negative\n\n\n74\nReduced consumption\nStill unstable"
+    "text": "Current Status\n\n\n\n\n\n\nWarningKey Finding: No Hexagonal Symmetry Breaking\n\n\n\nGray-Scott produces radial/concentric patterns only. Even with extended simulation (6000 frames), no hexagonal symmetry breaking occurs. This is a fundamental difference from Brusselator dynamics.\n\n\n\nKey Observations\n\nGray-Scott produces concentric ring patterns, NOT hexagonal spots\nQualitatively different from Brusselator — purely radial organization\nExtended simulation does not induce symmetry breaking\nParticles form voronoi-like network at field boundaries\nModerate clustering (0.4) vs Brusselator’s tight clusters (0.6+)"
   },
   {
     "objectID": "grayscott.html#exploration-gallery",
     "href": "grayscott.html#exploration-gallery",
     "title": "Gray-Scott Model",
     "section": "Exploration Gallery",
-    "text": "Exploration Gallery\n\nIter 90 ⭐Iter 89Iter 67Iter 66Iter 65\n\n\nF=0.035, k=0.063 — Spot patterns persist\n\nIncreasing k from 0.060 to 0.063 did not trigger the expected stripe transition. Hexagonal spot array remains stable. Particles organize into voronoi-like cellular network at spot boundaries — same qualitative behavior as iteration 89.\n\n\nF=0.035, k=0.060 — First Block 12 test\n\nGray-Scott model produces clean hexagonal spot patterns. Particles aggregate at field boundaries forming a voronoi-like network. This is the α (alpha) spot regime, not the γ (gamma) worm regime targeted.\n\n\nγ-worm regime (historical)\n\n\n\nα-spot regime (NaN) (historical)\n\n\n\nInitial Gray-Scott test (historical)"
+    "text": "Exploration Gallery\n\nIter 9Iter 14 ⭐\n\n\nGray-Scott 2-type test\n\nFirst Gray-Scott test with 2 particle types. Produces concentric ring patterns with particles at field boundaries.\n\n\nExtended simulation (6000 frames)\n\nExtended simulation confirms Gray-Scott cannot achieve hexagonal mode. Radial organization persists — fundamental difference from Brusselator."
   },
   {
-    "objectID": "particle-field.html",
-    "href": "particle-field.html",
-    "title": "Particle–Field Interactions",
+    "objectID": "mechanochemical.html",
+    "href": "mechanochemical.html",
+    "title": "Mechanochemical Morphogenesis",
     "section": "",
-    "text": "Particles are not passive tracers—they actively modify the chemical fields through consumption and production. This creates bidirectional coupling and enables emergent feedback dynamics."
+    "text": "Morphogenesis in biological tissues arises from the bidirectional coupling between chemical signaling and mechanical deformation. Chemical patterns (Turing instabilities, morphogen gradients) drive tissue growth and folding, while mechanical stress feeds back to modulate diffusion, reaction rates, and cell behavior. This page describes a unified framework combining:\n\nDiffusiophoresis (ParticleGraph): Particles respond to chemical gradients\nMaterial Point Method (MPM_pytorch): Continuum mechanics with elasticity, plasticity, and stress\n\n\n\n\n\n\n\nNoteGoal\n\n\n\nDevelop a differentiable simulation framework where chemical patterning and mechanical admissibility jointly constrain morphogenetic outcomes — enabling discovery of forms that are both chemically stable and mechanically viable."
   },
   {
-    "objectID": "particle-field.html#overview",
-    "href": "particle-field.html#overview",
-    "title": "Particle–Field Interactions",
+    "objectID": "mechanochemical.html#overview",
+    "href": "mechanochemical.html#overview",
+    "title": "Mechanochemical Morphogenesis",
     "section": "",
-    "text": "Particles are not passive tracers—they actively modify the chemical fields through consumption and production. This creates bidirectional coupling and enables emergent feedback dynamics."
+    "text": "Morphogenesis in biological tissues arises from the bidirectional coupling between chemical signaling and mechanical deformation. Chemical patterns (Turing instabilities, morphogen gradients) drive tissue growth and folding, while mechanical stress feeds back to modulate diffusion, reaction rates, and cell behavior. This page describes a unified framework combining:\n\nDiffusiophoresis (ParticleGraph): Particles respond to chemical gradients\nMaterial Point Method (MPM_pytorch): Continuum mechanics with elasticity, plasticity, and stress\n\n\n\n\n\n\n\nNoteGoal\n\n\n\nDevelop a differentiable simulation framework where chemical patterning and mechanical admissibility jointly constrain morphogenetic outcomes — enabling discovery of forms that are both chemically stable and mechanically viable."
   },
   {
-    "objectID": "particle-field.html#equations",
-    "href": "particle-field.html#equations",
-    "title": "Particle–Field Interactions",
-    "section": "Equations",
-    "text": "Equations\nParticles locally consume field 1 and produce (or consume) field 2:\n\\[\n\\frac{\\partial C_1}{\\partial t}\\bigg|_{\\text{particle}} = -\\gamma_c \\sum_{j=1}^{N_p} w(\\|\\mathbf{x} - \\mathbf{x}_j\\|)\n\\]\n\\[\n\\frac{\\partial C_2}{\\partial t}\\bigg|_{\\text{particle}} = +\\gamma_p \\sum_{j=1}^{N_p} w(\\|\\mathbf{x} - \\mathbf{x}_j\\|)\n\\]\nwhere \\(w(r) = \\exp(-r^2 / 2r_{\\text{inf}}^2)\\) is a Gaussian influence kernel centered on each particle."
+    "objectID": "mechanochemical.html#motivation-why-both-chemisty-and-mechanics",
+    "href": "mechanochemical.html#motivation-why-both-chemisty-and-mechanics",
+    "title": "Mechanochemical Morphogenesis",
+    "section": "Motivation: Why Both Chemisty and Mechanics?",
+    "text": "Motivation: Why Both Chemisty and Mechanics?\n\n\n\n\n\nflowchart LR\n    subgraph Chemistry[\"Chemical Patterning\"]\n        RD[Reaction-Diffusion] --&gt; TP[Turing Patterns]\n        TP --&gt; MG[Morphogen Gradients]\n    end\n\n    subgraph Mechanics[\"Continuum Mechanics\"]\n        DEF[Deformation] --&gt; STR[Stress]\n        STR --&gt; GRO[Growth/Folding]\n    end\n\n    MG --&gt;|\"Active stress&lt;br&gt;Chemotaxis\"| DEF\n    STR --&gt;|\"Strain-dependent&lt;br&gt;diffusion/reaction\"| RD\n\n    style Chemistry fill:#e3f2fd\n    style Mechanics fill:#fff3e0\n\n\n\n\n\n\n\nLimitations of Chemistry-Only Models\nCurrent diffusiophoresis simulations achieve rich pattern diversity but lack:\n\nMechanical admissibility: Patterns may be geometrically impossible under physical constraints\nTissue-scale stress: No bulk elastic or plastic response\nGrowth dynamics: Volume changes require material mechanics\n\n\n\nLimitations of Mechanics-Only Models\nMPM simulations capture deformation but lack:\n\nPattern formation: No spontaneous symmetry breaking\nChemical signaling: No morphogen-driven differentiation\nActive forces: Stress is passive, not chemically driven\n\n\n\nThe Unified Framework\nBy coupling both, we can study:\n\n\n\n\n\n\n\n\n\nPhenomenon\nChemistry\nMechanics\nCoupling\n\n\n\n\nTissue folding\nMorphogen gradients\nElastic buckling\nGradient → active stress\n\n\nWound healing\nChemotaxis signals\nCell traction\nMigration + deformation\n\n\nTumor invasion\nChemokine gradients\nECM remodeling\nDegradation + stress\n\n\nOrganoid growth\nTuring patterning\nElastic confinement\nPattern → growth tensor"
   },
   {
-    "objectID": "particle-field.html#parameters",
-    "href": "particle-field.html#parameters",
-    "title": "Particle–Field Interactions",
-    "section": "Parameters",
-    "text": "Parameters\n\n\n\nSymbol\nDescription\nTypical Value\n\n\n\n\n\\(\\gamma_c\\)\nConsumption rate\n180\n\n\n\\(\\gamma_p\\)\nProduction rate\n-180\n\n\n\\(r_{\\text{inf}}\\)\nInfluence radius\n0.05"
+    "objectID": "mechanochemical.html#state-variables",
+    "href": "mechanochemical.html#state-variables",
+    "title": "Mechanochemical Morphogenesis",
+    "section": "State Variables",
+    "text": "State Variables\nEach particle carries the union of variables from both systems:\n\nPosition and Kinematics\n\n\n\n\n\n\n\n\n\n\nSymbol\nVariable\nSource\nDimension\nDescription\n\n\n\n\n\\(\\mathbf{x}_i\\)\nPosition\nBoth\n\\(d\\)\nSpatial location\n\n\n\\(\\mathbf{v}_i\\)\nVelocity\nBoth\n\\(d\\)\nMaterial velocity\n\n\n\\(\\mathbf{C}_i\\)\nAffine velocity\nMPM\n\\(d \\times d\\)\nLocal velocity gradient (APIC)\n\n\n\n\n\nDeformation and Stress (from MPM)\n\n\n\n\n\n\n\n\n\nSymbol\nVariable\nDimension\nDescription\n\n\n\n\n\\(\\mathbf{F}_i\\)\nDeformation gradient\n\\(d \\times d\\)\nTotal deformation from reference\n\n\n\\(J_i^p\\)\nPlastic Jacobian\n\\(1\\)\nAccumulated plastic volume change\n\n\n\\(\\boldsymbol{\\sigma}_i\\)\nCauchy stress\n\\(d \\times d\\)\nCurrent stress state\n\n\n\n\n\nChemical Sensing (from Diffusiophoresis)\n\n\n\n\n\n\n\n\n\nSymbol\nVariable\nDimension\nDescription\n\n\n\n\n\\(C_1(\\mathbf{x}_i)\\)\nActivator concentration\n\\(1\\)\nSampled from mesh at particle position\n\n\n\\(C_2(\\mathbf{x}_i)\\)\nInhibitor concentration\n\\(1\\)\nSampled from mesh at particle position\n\n\n\\(\\nabla C_k\\)\nConcentration gradient\n\\(d\\)\nDrives diffusiophoretic velocity\n\n\n\n\n\nLearnable Embeddings\n\n\n\n\n\n\n\n\n\nSymbol\nVariable\nDimension\nDescription\n\n\n\n\n\\(\\mathbf{a}_i\\)\nParticle embedding\n\\(n_{\\text{emb}}\\)\nLearnable per-particle features (cell type)\n\n\n\\(\\mathbf{e}_{ij}\\)\nEdge embedding\n\\(n_{\\text{emb}}\\)\nLearnable pairwise interaction (synaptic)"
   },
   {
-    "objectID": "particle-field.html#feedback-loop",
-    "href": "particle-field.html#feedback-loop",
-    "title": "Particle–Field Interactions",
-    "section": "Feedback Loop",
-    "text": "Feedback Loop\nThe particle–field coupling creates a feedback loop:\n\nFields develop gradients (Turing patterns)\nParticles migrate along gradients (diffusiophoresis)\nParticles modify local concentrations (consumption/production)\nModified fields change gradient landscape\nRepeat…\n\n\n\n\n\n\n\nWarningCoupling Challenge\n\n\n\nFor Gray-Scott, particle consumption can overwhelm the slow \\(UV^2\\) production, causing field instability. Brusselator’s stronger reaction rates are more robust to particle feedback."
+    "objectID": "mechanochemical.html#coupled-governing-equations",
+    "href": "mechanochemical.html#coupled-governing-equations",
+    "title": "Mechanochemical Morphogenesis",
+    "section": "Coupled Governing Equations",
+    "text": "Coupled Governing Equations\n\n1. Chemical Field Evolution (Mesh)\nThe reaction-diffusion PDE with strain-dependent modifications:\n\\[\n\\frac{\\partial C_k}{\\partial t} = D_k(\\mathbf{F}) \\nabla^2 C_k + R_k(C_1, C_2, \\boldsymbol{\\sigma}) + S_k^{\\text{particles}}\n\\]\nwhere:\n\n\\(D_k(\\mathbf{F})\\): Diffusion coefficient, potentially strain-dependent\n\\(R_k\\): Reaction kinetics (Brusselator, Gray-Scott, FHN)\n\\(S_k^{\\text{particles}}\\): Source/sink from particle consumption/production\n\nStrain-dependent diffusion (mechanochemical feedback):\n\\[\nD_k(\\mathbf{F}) = D_k^0 \\left[ 1 + \\alpha_D (J - 1) \\right]\n\\]\nwhere \\(J = \\det(\\mathbf{F})\\) is the volume ratio. Stretched tissue (\\(J &gt; 1\\)) has enhanced diffusion.\n\n\n2. Particle Velocity (Combined Forces)\n\\[\n\\mathbf{v}_i = \\underbrace{\\mathbf{v}_i^{\\text{MPM}}}_{\\text{grid interpolation}} + \\underbrace{\\sum_k M_k \\nabla C_k}_{\\text{diffusiophoresis}} + \\underbrace{\\mathbf{v}_i^{\\text{active}}(\\boldsymbol{\\sigma})}_{\\text{mechanotaxis}}\n\\]\nMechanotaxis (stress-driven migration):\n\\[\n\\mathbf{v}_i^{\\text{active}} = \\chi_\\sigma \\nabla \\cdot \\boldsymbol{\\sigma}\n\\]\nCells migrate toward regions of high stress divergence (durotaxis).\n\n\n3. Deformation Gradient Update (MPM)\n\\[\n\\mathbf{F}_i^{n+1} = (\\mathbf{I} + \\Delta t \\, \\mathbf{C}_i^n) \\mathbf{F}_i^n\n\\]\n\n\n4. Constitutive Law with Active Stress\nThe Cauchy stress includes a chemically-driven active component:\n\\[\n\\boldsymbol{\\sigma} = \\underbrace{\\boldsymbol{\\sigma}^{\\text{elastic}}(\\mathbf{F})}_{\\text{Neo-Hookean}} + \\underbrace{\\boldsymbol{\\sigma}^{\\text{active}}(C_1, C_2)}_{\\text{chemical coupling}}\n\\]\nPassive elastic stress (Neo-Hookean):\n\\[\n\\boldsymbol{\\sigma}^{\\text{elastic}} = \\frac{\\mu}{J}(\\mathbf{F}\\mathbf{F}^T - \\mathbf{I}) + \\frac{\\lambda}{J}(J - 1)\\mathbf{I}\n\\]\nActive stress (morphogen-driven contractility):\n\\[\n\\boldsymbol{\\sigma}^{\\text{active}} = \\zeta(C_1) \\, \\mathbf{I}\n\\]\nwhere \\(\\zeta(C_1)\\) is an activation function mapping local activator concentration to isotropic contractile stress.\n\n\n5. Momentum Transfer (P2G / G2P)\nStandard MPM transfers, but with chemically-modified forces:\nP2G (Particle to Grid):\n\\[\n(m\\mathbf{v})_I = \\sum_i w_{iI} \\left[ m_i \\mathbf{v}_i + m_i \\mathbf{C}_i (\\mathbf{x}_I - \\mathbf{x}_i) - \\frac{4\\Delta t}{(\\Delta x)^2} V_i \\boldsymbol{\\sigma}_i (\\mathbf{x}_I - \\mathbf{x}_i) \\right]\n\\]\nG2P (Grid to Particle):\n\\[\n\\mathbf{v}_i^{n+1} = \\sum_I w_{iI} \\mathbf{v}_I^{n+1}\n\\]"
+  },
+  {
+    "objectID": "mechanochemical.html#unified-gnn-architecture",
+    "href": "mechanochemical.html#unified-gnn-architecture",
+    "title": "Mechanochemical Morphogenesis",
+    "section": "Unified GNN Architecture",
+    "text": "Unified GNN Architecture\n\n\n\n\n\nflowchart TB\n    subgraph Input[\"Input Features\"]\n        X[\"Position x\"]\n        V[\"Velocity v\"]\n        F[\"Deformation F\"]\n        C[\"Concentrations C₁, C₂\"]\n        A[\"Particle embedding a\"]\n    end\n\n    subgraph Edges[\"Edge Construction\"]\n        DIST[\"Distance threshold\"] --&gt; ADJ[\"Adjacency\"]\n        ADJ --&gt; E[\"Edge embedding e_ij\"]\n    end\n\n    subgraph Message[\"Message Passing (Synaptic)\"]\n        PSI[\"ψ(Δx, e_ij, a_i, a_j, F_i, F_j, C_i, C_j)\"]\n    end\n\n    subgraph Aggregation[\"Node Update\"]\n        AGG[\"Σ messages\"]\n        PHI[\"Φ(x, v, F, C, a, Σm)\"]\n    end\n\n    subgraph Output[\"Predictions\"]\n        DV[\"Δv (velocity update)\"]\n        DF[\"ΔF (deformation update)\"]\n        DS[\"Δσ (stress)\"]\n    end\n\n    Input --&gt; Edges\n    Edges --&gt; Message\n    Input --&gt; Message\n    Message --&gt; Aggregation\n    Aggregation --&gt; Output\n\n    style Input fill:#e8f5e9\n    style Edges fill:#fff3e0\n    style Message fill:#e3f2fd\n    style Output fill:#fce4ec\n\n\n\n\n\n\n\nMessage Function (Edge-Centric)\nFollowing the MDCK calcium dynamics model, interactions are parameterized by learnable edge embeddings:\n\\[\nm_{ij} = \\psi\\left( \\Delta \\mathbf{x}_{ij}, \\mathbf{e}_{ij}, \\mathbf{a}_i, \\mathbf{a}_j, \\mathbf{F}_i, \\mathbf{F}_j, C_1^i, C_1^j \\right)\n\\]\nwhere:\n\n\\(\\psi\\): MLP encoding pairwise interactions\n\\(\\mathbf{e}_{ij} \\in \\mathbb{R}^{n_{\\text{emb}}}\\): Learnable edge embedding\n\\(\\mathbf{a}_i, \\mathbf{a}_j\\): Particle (cell) embeddings\n\n\n\nUpdate Function\n\\[\n\\frac{d\\mathbf{y}_i}{dt} = \\Phi\\left( \\mathbf{y}_i, \\mathbf{a}_i, \\sum_{j \\in \\mathcal{N}_i} m_{ij} \\right)\n\\]\nwhere \\(\\mathbf{y}_i = [\\mathbf{v}_i, \\mathbf{F}_i, \\boldsymbol{\\sigma}_i]\\) is the combined state vector."
+  },
+  {
+    "objectID": "mechanochemical.html#edge-embeddings-the-synaptic-class",
+    "href": "mechanochemical.html#edge-embeddings-the-synaptic-class",
+    "title": "Mechanochemical Morphogenesis",
+    "section": "Edge Embeddings: The Synaptic Class",
+    "text": "Edge Embeddings: The Synaptic Class\nA key architectural innovation is learnable edge embeddings \\(\\mathbf{e}_{ij}\\) that capture connection-specific properties between particles (cells).\n\nPhysical Interpretation\n\n\n\nDomain\nEdge Embedding Represents\n\n\n\n\nNeural circuits\nSynaptic weight / efficacy\n\n\nCalcium dynamics\nGap junction conductance\n\n\nMechanical coupling\nCell-cell adhesion strength\n\n\nChemical signaling\nParacrine communication efficiency\n\n\n\n\n\nWhy Edge Embeddings?\nStandard GNNs use node embeddings only, assuming interactions depend solely on node features. But biological systems exhibit connection-specific heterogeneity:\n\nAsymmetric connections: \\(\\mathbf{e}_{ij} \\neq \\mathbf{e}_{ji}\\) (directed signaling)\nLearned impedance: Edge embedding captures effective coupling strength\nStructural plasticity: Embeddings can encode tissue connectivity patterns\n\n\n\nConnection to MDCK Results\nFrom the MDCK calcium dynamics analysis:\n\nCells have autonomous fixed points \\(F_i^* = -c_0/\\alpha\\)\nNetwork connectivity suppresses most cells below \\(F_i^*\\)\nLeader-follower populations emerge from learned embeddings\nEdge structure encodes functional specialization\n\nThis same architecture extends to mechanochemical systems:\n\\[\n\\text{Ca}^{2+} \\text{ dynamics} \\xrightarrow{\\text{generalize}} \\text{Morphogen + Stress dynamics}\n\\]"
+  },
+  {
+    "objectID": "mechanochemical.html#grid-unification",
+    "href": "mechanochemical.html#grid-unification",
+    "title": "Mechanochemical Morphogenesis",
+    "section": "Grid Unification",
+    "text": "Grid Unification\nBoth diffusiophoresis and MPM use spatial grids. In the unified framework, a single grid serves both:\n\n\n\n\n\nflowchart TB\n    subgraph Grid[\"Unified Grid\"]\n        G[\"Regular grid nodes\"]\n    end\n\n    subgraph Chemistry[\"Chemical Fields\"]\n        C1[\"C₁ (activator)\"]\n        C2[\"C₂ (inhibitor)\"]\n    end\n\n    subgraph Mechanics[\"Mechanical Fields\"]\n        MV[\"Grid momentum mv\"]\n        M[\"Grid mass m\"]\n    end\n\n    subgraph Particles[\"Material Points\"]\n        P[\"Particles carry:&lt;br&gt;x, v, F, σ, C, a\"]\n    end\n\n    Grid --&gt; Chemistry\n    Grid --&gt; Mechanics\n\n    Particles --&gt;|\"P2G\"| Grid\n    Grid --&gt;|\"G2P\"| Particles\n    Grid --&gt;|\"Sample C\"| Particles\n    Particles --&gt;|\"Source/sink\"| Grid\n\n    style Grid fill:#f5f5f5\n    style Chemistry fill:#e3f2fd\n    style Mechanics fill:#fff3e0\n    style Particles fill:#e8f5e9\n\n\n\n\n\n\n\nGrid Operations\n\n\n\nOperation\nChemistry\nMechanics\n\n\n\n\nP2G\nParticle source terms \\(S_k\\)\nMass + momentum scatter\n\n\nGrid solve\nDiffusion + reaction\nMomentum update + BC\n\n\nG2P\nConcentration sampling\nVelocity gather\n\n\n\n\n\nSpatial Coupling\nChemical concentrations and mechanical fields live on the same grid, enabling:\n\nStrain-dependent diffusion coefficients\nStress-dependent reaction rates\nConsistent boundary conditions"
+  },
+  {
+    "objectID": "mechanochemical.html#state-of-the-art",
+    "href": "mechanochemical.html#state-of-the-art",
+    "title": "Mechanochemical Morphogenesis",
+    "section": "State of the Art",
+    "text": "State of the Art\n\nMechanochemical Coupling in Morphogenesis\n\n\n\n\n\n\n\n\nReference\nSystem\nContribution\n\n\n\n\nShyer et al. (2017)\nGut villus\nMechanical buckling + Shh patterning\n\n\nHannezo & Heisenberg (2019)\nTissue mechanics\nReview of mechanochemical feedback\n\n\nMercker et al. (2016)\nPattern formation\nCurvature-dependent reaction-diffusion\n\n\nRecho et al. (2019)\nActive gels\nChemomechanical instabilities\n\n\n\n\n\nComputational Frameworks\n\n\n\nFramework\nChemistry\nMechanics\nCoupling\n\n\n\n\nFEniCS\nPDE solve\nFEM elasticity\nManual\n\n\nChaste\nCell signaling\nVertex/Voronoi\nExplicit\n\n\nPhysiCell\nDiffusion\nAgent-based\nRule-based\n\n\nThis work\nReaction-diffusion\nMPM\nLearnable GNN\n\n\n\n\n\nKey References\n\nTuring (1952): Chemical basis of morphogenesis\nStomakhin et al. (2013): MPM for snow simulation\nSanchez et al. (2019): Graph networks for physics simulation\nHoward et al. (2011): Turing patterns meet cell biology\nNelson (2016): Mechanical control of tissue morphogenesis"
+  },
+  {
+    "objectID": "mechanochemical.html#implementation-roadmap",
+    "href": "mechanochemical.html#implementation-roadmap",
+    "title": "Mechanochemical Morphogenesis",
+    "section": "Implementation Roadmap",
+    "text": "Implementation Roadmap\n\nPhase 1: Minimal Coupling (Current)\n\nDiffusiophoresis with reaction-diffusion (ParticleGraph)\nMPM with multiple materials (MPM_pytorch)\nShared particle state: Add F, σ to ParticleGraph particles\n\n\n\nPhase 2: Unidirectional Coupling\n\nChemistry → Mechanics: Active stress from morphogen concentration\nMechanics → Chemistry: Strain-dependent diffusion\nUnified grid for both systems\n\n\n\nPhase 3: Bidirectional + Learning\n\nEdge embeddings for mechanochemical interactions\nLearnable constitutive laws (GNN replaces Neo-Hookean)\nInverse problem: Infer coupling parameters from data\n\n\n\nPhase 4: Biological Applications\n\nMDCK wound healing with mechanics\nOrganoid folding\nTumor spheroid invasion"
+  },
+  {
+    "objectID": "mechanochemical.html#summary",
+    "href": "mechanochemical.html#summary",
+    "title": "Mechanochemical Morphogenesis",
+    "section": "Summary",
+    "text": "Summary\n\n\n\n\n\nflowchart LR\n    subgraph ParticleGraph[\"ParticleGraph\"]\n        PG1[\"Reaction-Diffusion\"]\n        PG2[\"Diffusiophoresis\"]\n        PG3[\"Particle embeddings\"]\n    end\n\n    subgraph MPM[\"MPM_pytorch\"]\n        MPM1[\"Deformation F, Stress σ\"]\n        MPM2[\"P2G / G2P transfers\"]\n        MPM3[\"Constitutive laws\"]\n    end\n\n    subgraph Unified[\"Mechanochemical Framework\"]\n        U1[\"Combined state variables\"]\n        U2[\"Bidirectional coupling\"]\n        U3[\"Edge embeddings (synaptic)\"]\n        U4[\"Unified grid\"]\n    end\n\n    ParticleGraph --&gt; Unified\n    MPM --&gt; Unified\n\n    Unified --&gt; APP[\"Applications:&lt;br&gt;Morphogenesis&lt;br&gt;Wound healing&lt;br&gt;Organoids\"]\n\n    style ParticleGraph fill:#e3f2fd\n    style MPM fill:#fff3e0\n    style Unified fill:#e8f5e9\n    style APP fill:#fce4ec\n\n\n\n\n\n\nThe mechanochemical framework unifies:\n\nChemical patterning (Turing, morphogens) from ParticleGraph\nContinuum mechanics (elasticity, plasticity) from MPM_pytorch\nLearnable interactions via edge embeddings (synaptic class)\n\nThis enables studying morphogenesis as a constrained optimization problem: forms must be both chemically stable and mechanically admissible."
+  },
+  {
+    "objectID": "mechanochemical.html#references",
+    "href": "mechanochemical.html#references",
+    "title": "Mechanochemical Morphogenesis",
+    "section": "References",
+    "text": "References\n\nTuring, A. M. (1952). The chemical basis of morphogenesis. Phil. Trans. R. Soc. Lond. B, 237(641), 37-72.\nStomakhin, A., et al. (2013). A material point method for snow simulation. ACM Trans. Graph., 32(4), 102.\nHannezo, E., & Heisenberg, C. P. (2019). Mechanochemical feedback loops in development and disease. Cell, 178(1), 12-25.\nShyer, A. E., et al. (2017). Emergent cellular self-organization and mechanosensation initiate follicle pattern in the avian skin. Science, 357(6353), 811-815.\nMercker, M., et al. (2016). Beyond Turing: mechanochemical pattern formation in biological tissues. Biology Direct, 11(1), 22.\nSanchez-Gonzalez, A., et al. (2020). Learning to simulate complex physics with graph networks. ICML 2020.\nRecho, P., et al. (2019). Theory of mechanochemical patterning in biphasic biological tissues. PNAS, 116(12), 5344-5349."
+  },
+  {
+    "objectID": "particle-particle.html",
+    "href": "particle-particle.html",
+    "title": "Particle–Particle Interactions",
+    "section": "",
+    "text": "Particles interact directly through short-range forces, independent of the chemical fields. This follows the PDE_A model with configurable attraction and repulsion."
+  },
+  {
+    "objectID": "particle-particle.html#overview",
+    "href": "particle-particle.html#overview",
+    "title": "Particle–Particle Interactions",
+    "section": "",
+    "text": "Particles interact directly through short-range forces, independent of the chemical fields. This follows the PDE_A model with configurable attraction and repulsion."
+  },
+  {
+    "objectID": "particle-particle.html#force-law",
+    "href": "particle-particle.html#force-law",
+    "title": "Particle–Particle Interactions",
+    "section": "Force Law",
+    "text": "Force Law\n\\[\n\\mathbf{F}_{ij} = \\left[ p_1 \\exp\\left( -\\frac{d_{ij}^{2p_2}}{2\\sigma^2} \\right) - p_3 \\exp\\left( -\\frac{d_{ij}^{2p_4}}{2\\sigma^2} \\right) \\right] \\hat{\\mathbf{r}}_{ij}\n\\]\nwhere:\n\n\\(p_1, p_2\\) control attraction (strength and range exponent)\n\\(p_3, p_4\\) control repulsion (strength and range exponent)\n\\(\\sigma\\) is the interaction length scale\n\\(d_{ij}\\) is the inter-particle distance"
+  },
+  {
+    "objectID": "particle-particle.html#default-configuration",
+    "href": "particle-particle.html#default-configuration",
+    "title": "Particle–Particle Interactions",
+    "section": "Default Configuration",
+    "text": "Default Configuration\nFor diffusiophoresis simulations, a simple repulsion-only model is typically used:\n\\[\n\\mathbf{F}_{ij} = -\\alpha \\exp\\left( -\\frac{5 d_{ij}}{r_{\\text{rep}}} \\right) \\hat{\\mathbf{r}}_{ij} \\quad \\text{if } d_{ij} &lt; r_{\\text{rep}}\n\\]\n\n\n\nParameter\nDescription\nValue\n\n\n\n\n\\(\\alpha\\)\nRepulsion strength\n50\n\n\n\\(r_{\\text{rep}}\\)\nRepulsion range\n0.04\n\n\n\\(\\sigma\\)\nKernel width\n0.005"
+  },
+  {
+    "objectID": "particle-particle.html#multi-type-particles",
+    "href": "particle-particle.html#multi-type-particles",
+    "title": "Particle–Particle Interactions",
+    "section": "Multi-Type Particles",
+    "text": "Multi-Type Particles\nWhen particle_params is provided, each particle type can have distinct interaction parameters:\n[M1, M2, consumption, production, ar_p1, ar_p2, ar_p3, ar_p4]\nThis enables heterogeneous systems where different particle types attract/repel each other differently."
+  },
+  {
+    "objectID": "particle-particle.html#force-visualization",
+    "href": "particle-particle.html#force-visualization",
+    "title": "Particle–Particle Interactions",
+    "section": "Force Visualization",
+    "text": "Force Visualization\n\n\n\nParticle-particle interaction forces. Left: General attraction-repulsion model with configurable parameters. Right: Simple repulsion used in diffusiophoresis simulations."
+  },
+  {
+    "objectID": "particle-particle.html#role-in-pattern-formation",
+    "href": "particle-particle.html#role-in-pattern-formation",
+    "title": "Particle–Particle Interactions",
+    "section": "Role in Pattern Formation",
+    "text": "Role in Pattern Formation\nParticle–particle repulsion:\n\nPrevents particle overlap and clustering collapse\nMaintains minimum spacing for stable structures\nBalances against diffusiophoretic aggregation forces"
   }
 ]

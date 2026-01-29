@@ -8,8 +8,10 @@ subtitle: "Excitable dynamics with network particle organization"
 The **FitzHugh-Nagumo (FHN)** model is a simplified two-variable system originally developed to describe neuronal excitability. When coupled to diffusiophoresis, it produces qualitatively different dynamics compared to Brusselator and Gray-Scott systems.
 
 ::: {.callout-tip}
-## Key Discovery
-FHN achieves **hexagonal mode** (~6-7 spots) regardless of particle types (1, 2, or 3). Particles form **network/filamentary structures** rather than tight clusters. Clustering is consistently lower than Brusselator.
+## Key Discoveries
+FHN achieves **hexagonal mode** (~6-7 spots) regardless of particle types (1, 2, or 3). Particles form **network/filamentary structures** rather than tight clusters.
+
+Additionally, the inhibitor diffusion coefficient $D_v$ acts as a **symmetry selector**: $D_v = 0$ produces hexagonal spots, while $D_v \geq 0.1$ produces **square/grid symmetry** — a novel morphology not accessible to any other tested model.
 :::
 
 ## Mathematical Formulation
@@ -78,31 +80,64 @@ n_frames: 6000
 boundary: periodic
 ```
 
-## Comparison: Three PDE Trichotomy
+## Dv Symmetry Selector (Block 6 Discovery)
 
-The exploration revealed a clear trichotomy between the three reaction-diffusion models:
+::: {.callout-important}
+## Breakthrough: Inhibitor Diffusion Controls Symmetry Class
+The FHN parameter $D_v$ acts as a discrete symmetry selector:
+
+- $D_v = 0$: **Hexagonal** spots (standard Turing)
+- $D_v = 0.05$: Disordered transitional
+- $D_v \geq 0.1$: **Square/Grid** symmetry (novel!)
+:::
+
+### Square Mode Properties
+
+| Property | Hexagonal ($D_v=0$) | Square ($D_v \geq 0.1$) |
+|----------|---------------------|--------------------------|
+| Symmetry | 6-fold | 4-fold |
+| Clustering | 0.26-0.39 | ~0.3 |
+| Plateau | 0.00 | 0.00 (intrinsically oscillatory) |
+| Multi-type | All types work | Same-sign mobility only |
+| Opposing mobility | Works | Destroys square → hexagonal |
+
+### Square Mode Constraints
+
+- **Uniform mobility direction required**: All particle types must have the same sign for $M_1, M_2$. Opposing mobilities revert square → hexagonal
+- **Intrinsically oscillatory**: Plateau is always 0.00 regardless of feedback parameters; non-convergence is inherent to FHN square mode
+- **Robust to particle count**: $D_v = 0.15$ also produces square; not a narrow parameter island
+
+### Robustness Hierarchy
+
+Hexagonal (survives multi-type, reversed feedback) > Square (same-sign multi-type, fails opposing mobility) > Stripe (1-type only, Brusselator)
+
+---
+
+## Comparison: Four PDE Models
 
 ```{mermaid}
 flowchart TD
     A[Reaction-Diffusion Model] --> B[Brusselator]
     A --> C[Gray-Scott]
     A --> D[FitzHugh-Nagumo]
+    A --> E[Schnakenberg]
 
-    B --> B1[Hexagonal mode]
-    B --> B2[~6 large spots]
-    B --> B3[Tight clusters]
+    B --> B1[Hexagonal + Stripes]
+    B --> B2[Tight clusters]
 
     C --> C1[Radial only]
-    C --> C2[No symmetry breaking]
-    C --> C3[Moderate clustering]
+    C --> C2[Moderate clustering]
 
-    D --> D1[Hexagonal mode]
-    D --> D2[~6-7 spots]
-    D --> D3[Network structure]
+    D --> D1[Hexagonal + Square]
+    D --> D2[Network structure]
+
+    E --> E1[Radial only]
+    E --> E2[Genuine steady state]
 
     style B fill:#c8e6c9
     style C fill:#ffcdd2
     style D fill:#fff9c4
+    style E fill:#e1bee7
 ```
 
 ## Exploration Gallery
@@ -123,14 +158,30 @@ First FHN test with 2 particle types. Produces ~30+ fine-scale spots with networ
 
 Three particle types achieve hexagonal mode (~6-7 spots) with multi-layer particle organization within spots.
 
+### Iter 45 ⭐
+*FHN Square mode (Dv=0.1)*
+
+{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_045.mp4 >}}
+
+Breakthrough: $D_v = 0.1$ produces **square/grid symmetry** — a morphology not accessible to Brusselator or Gray-Scott.
+
+### Iter 48
+*FHN Square 3-type*
+
+{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_048.mp4 >}}
+
+Square symmetry persists with 3 particle types when all have same-sign mobility.
+
 :::
 
 ## Key Insights
 
-1. **Hexagonal symmetry**: Like Brusselator, FHN achieves hexagonal mode (unlike Gray-Scott)
-2. **Network organization**: Particles form filamentary/networked structures instead of tight clusters
-3. **Particle-type independent**: 1, 2, or 3 particle types all achieve ~6-7 hexagonal spots
-4. **Lower clustering**: Clustering consistently lower than Brusselator (-0.2 to 0.3 vs 0.6+)
+1. **Hexagonal symmetry**: Like Brusselator, FHN achieves hexagonal mode (unlike Gray-Scott/Schnakenberg)
+2. **Square symmetry**: $D_v \geq 0.1$ switches to 4-fold square/grid patterns — unique to FHN
+3. **Network organization**: Particles form filamentary/networked structures instead of tight clusters
+4. **Particle-type independent**: 1, 2, or 3 particle types all achieve hexagonal spots
+5. **$D_v$ is a symmetry selector**: Continuous parameter produces discrete symmetry transitions
+6. **Square mode constraints**: Requires uniform mobility direction; opposing mobilities destroy square → hexagonal
 
 ## References
 

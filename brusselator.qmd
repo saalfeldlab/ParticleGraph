@@ -83,7 +83,7 @@ $$
 
 ::: {.callout-tip}
 ## Hexagonal Mode Selection
-Extended simulation (6000 frames) reveals **ring→hexagonal symmetry breaking**. The concentric ring pattern evolves into hexagonal Turing spots, proving it is a true attractor (shuffle-invariant).
+Extended simulation (6000 frames) reveals **ring→hexagonal symmetry breaking**. The concentric ring pattern evolves into hexagonal Turing spots.
 :::
 
 | Finding | Mechanism |
@@ -92,6 +92,43 @@ Extended simulation (6000 frames) reveals **ring→hexagonal symmetry breaking**
 | **~6 large spots** | Coarse spatial wavelength compared to FHN |
 | **Tight clustering (0.6+)** | Particles form dense aggregates at field peaks |
 | **Ring→hexagonal transition** | Occurs at 4000-6000 frames with extended simulation |
+
+---
+
+## Stripe/Labyrinth Mode (Block 4 Discovery)
+
+::: {.callout-important}
+## Breakthrough: Turing Boundary Controls Mode Selection
+At the Turing instability boundary $B/(1+A^2) = 1$, the system transitions from hexagonal spots to **labyrinth/stripe patterns**. This is controlled by the Brusselator parameters $A$ and $B$.
+:::
+
+### Turing Bifurcation Map
+
+| Regime | Condition | Pattern |
+|--------|-----------|---------|
+| Sub-Turing | $B/(1+A^2) < 1$ | No patterns (disordered) |
+| Turing boundary | $B/(1+A^2) \approx 1$, low $A$ ($\leq 3$) | **Stripes/Labyrinth** |
+| Deep Turing | $B/(1+A^2) > 1$ | Hexagonal spots |
+| Extreme Turing | $B \geq 15$ | Pixel-scale noise (unusable) |
+
+### Key Constraints
+
+- **Stripe mode requires 1-type uniform particles**: Multi-type configurations (even with identical parameters) destroy stripe organization
+- **Low A is critical**: $B/(1+A^2) = 1$ at $B=13, A=3.46$ gives spots, NOT stripes. Low $A$ ($\leq 3$) is required alongside the ratio
+- **Practical limit**: $B \leq 13$ for 100x100 mesh; $B=15$ produces pixel-scale patterns too fine for particle organization
+
+### Stripe vs Hexagonal Parameters
+
+| Parameter | Hex Mode | Stripe Mode |
+|-----------|----------|-------------|
+| $A$ | 4.5 | 3.0 |
+| $B$ | 6.5 | 10.0 |
+| $B/(1+A^2)$ | 0.29 (deep) | 1.0 (boundary) |
+| n_particle_types | 1-3 | 1 only |
+
+### Robustness Hierarchy
+
+Hexagonal (survives multi-type, reversed feedback) > Stripe (1-type uniform only)
 
 ---
 
@@ -110,5 +147,19 @@ Extended simulation (6000 frames) reveals **ring→hexagonal symmetry breaking**
 {{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_012.mp4 >}}
 
 Multi-type configuration with opposing mobilities achieves hexagonal Turing pattern. Ring→hexagonal symmetry breaking confirmed.
+
+### Iter 31 ⭐
+*Stripe/Labyrinth mode (A=3, B=10)*
+
+{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_031.mp4 >}}
+
+Breakthrough: $B/(1+A^2) = 1$ with low $A$ produces labyrinth/stripe morphology instead of hexagonal spots.
+
+### Iter 36
+*Mixed mode (A=2.828, B=9)*
+
+{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_036.mp4 >}}
+
+Transitional regime at $B=9$ produces a mixed mode — neither pure hexagonal nor pure stripe.
 
 :::
