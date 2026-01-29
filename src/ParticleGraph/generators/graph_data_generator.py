@@ -1755,6 +1755,1023 @@ def data_generate_particle_field(
         print('data generated...')
 
 
+
+
+
+def data_generate_particle_field_MPM(
+    config,
+    visualize=True,
+    run_vizualized=0,
+    style="color",
+    erase=False,
+    step=1,
+    alpha=0.2,
+    ratio=1,
+    scenario="none",
+    device=None,
+    bSave=True,
+    timer=False
+):
+
+    simulation_config = config.simulation
+    training_config = config.training
+    model_config = config.graph_model
+
+    torch.random.fork_rng(devices=device)
+    torch.random.manual_seed(simulation_config.seed)
+
+    print(
+        f"generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}"
+    )
+
+    dimension = simulation_config.dimension
+    max_radius = simulation_config.max_radius
+    min_radius = simulation_config.min_radius
+    n_particle_types = simulation_config.n_particle_types
+    n_particles = simulation_config.n_particles
+    n_nodes = simulation_config.n_nodes
+    n_nodes_per_axis = int(np.sqrt(n_nodes))
+    delta_t = simulation_config.delta_t
+    n_frames = simulation_config.n_frames
+    has_particle_dropout = training_config.particle_dropout > 0
+    cmap = CustomColorMap(config=config)
+    dataset_name = config.dataset
+    bounce = simulation_config.bounce
+    bounce_coeff = simulation_config.bounce_coeff
+    speedlim = config.plotting.speedlim
+
+    # Create log directory
+    log_dir = f"./graphs_data/{dataset_name}/"
+    log_file = f"{log_dir}/generator.log"
+    os.makedirs(log_dir, exist_ok=True)
+    logging.basicConfig(
+        filename=log_file, format="%(asctime)s %(message)s", filemode="w"
+    )
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    logger.info(config)
+
+    folder = f"./graphs_data/{dataset_name}/"
+    if erase:
+        files = glob.glob(f"{folder}/Fig/*")
+        for f in files:
+            if (
+                (f[-14:] != "generated_data")
+                & (f != "p.pt")
+                & (f != "cycle_length.pt")
+                & (f != "model_config.json")
+                & (f != "generation_code.py")
+            ):
+                os.remove(f)
+    os.makedirs(folder, exist_ok=True)
+    os.makedirs(f"./graphs_data/{dataset_name}/Fig/", exist_ok=True)
+    files = glob.glob(f"./graphs_data/{dataset_name}/Fig/*")
+    for f in files:
+        os.remove(f)
+    copyfile(os.path.realpath(__file__), os.path.join(folder, "generation_code.py"))
+
+    X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
+    mask_mesh = mesh_data["mask"].squeeze()
+
+    if "diffusiophoresis" in model_config.field_type:
+        model_p_f, bc_pos, bc_dpos = choose_model(config=config, device=device)
+        model_f_f = choose_mesh_model(config, X1_mesh, device=device)
+    else:
+        model_p_p, bc_pos, bc_dpos = choose_model(config=config, device=device)
+        model_f_p = model_p_p
+
+    index_particles = []
+    for n in range(n_particle_types):
+        index_particles.append(
+            np.arange(
+                (n_particles // n_particle_types) * n,
+                (n_particles // n_particle_types) * (n + 1),
+            )
+        )
+    if has_particle_dropout:
+        draw = np.random.permutation(np.arange(n_particles))
+        cut = int(n_particles * (1 - training_config.particle_dropout))
+        particle_dropout_mask = draw[0:cut]
+        inv_particle_dropout_mask = draw[cut:]
+        x_removed_list = []
+    else:
+        particle_dropout_mask = np.arange(n_particles)
+
+    for run in range(config.training.n_runs):
+        n_particles = simulation_config.n_particles
+
+        x_list = []
+        y_list = []
+        x_mesh_list = []
+        y_mesh_list = []
+        edge_p_p_list = []
+        edge_f_p_list = []
+        id_fig = 0
+
+        # initialize particle and mesh states
+        X1, V1, T1, H1, _, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
+
+        # MPM tensors (initialized to defaults)
+        M1 = torch.ones(n_particles, 1, device=device)       # mass = 1
+        C1_mpm = torch.zeros(n_particles, 4, device=device)  # velocity Jacobian
+        F1_mpm = torch.zeros(n_particles, 4, device=device)  # deformation gradient
+        Jp1 = torch.zeros(n_particles, 1, device=device)     # volume deformation
+        S1 = torch.zeros(n_particles, 4, device=device)      # stress
+        ID1 = torch.zeros(n_particles, 1, device=device)     # cell ID
+
+        # Shuffle particle types if requested (randomizes type assignment to avoid radial bands)
+        if simulation_config.shuffle_particle_types:
+            if run == 0:
+                print ('shuffle types...')
+                shuffle_index = torch.randperm(n_particles, device=device)
+                T1 = T1[shuffle_index]
+                first_T1 = T1.clone().detach()
+            else:
+                T1 = first_T1.clone().detach()
+
+        X1_mesh, _, _, H1_mesh, _, _, _ = init_mesh(config, device=device)
+        H1_mesh[mask_mesh == 0.0] = 0.0
+        edge_cache = NeighborCache()
+
+        if "diffusiophoresis" in model_config.field_type:
+            C1_0 = model_f_f.A  # 4.5
+            C2_0 = model_f_f.B / model_f_f.A  # 2.44/4.5 ≈ 0.54
+            # Add small random perturbations (±1% noise)
+            noise_amplitude = 0.10
+            C1 = C1_0 + noise_amplitude * (2*torch.rand(n_nodes, 1, device=device) - 1) * C1_0
+            C2 = C2_0 + noise_amplitude * (2*torch.rand(n_nodes, 1, device=device) - 1) * C2_0
+            H1_mesh[:, 0:1] = C1
+            H1_mesh[:, 1:2] = C2
+            H1_mesh[mask_mesh == 0.0,0:1] = C1_0
+            H1_mesh[mask_mesh == 0.0,1:2] = C2_0
+
+        H1_mesh = torch.clamp(H1_mesh, min=0.0)
+        torch.save(mesh_data, f"graphs_data/{dataset_name}/mesh_data_{run}.pt")
+
+        check_and_clear_memory(
+            device=device,
+            iteration_number=0,
+            every_n_iterations=250,
+            memory_percentage_threshold=0.6,
+        )
+        time.sleep(1)
+
+        # Track velocity over time for plateau metric
+        velocity_history = []
+        nan_detected = False  # Only print NaN warning once
+
+        for it in range(simulation_config.start_frame, n_frames + 1):
+            if ("siren" in model_config.field_type) & (it >= 0):   # evolving field
+                im = imread(
+                    f"graphs_data/{simulation_config.node_value_map}"
+                )  # / 255 * 5000
+                im = im[it].squeeze()
+                im = np.rot90(im, 3)
+                im = np.reshape(im, (n_nodes_per_axis * n_nodes_per_axis))
+                H1_mesh[:, 0:1] = torch.tensor(
+                    im[:, None], dtype=torch.float32, device=device
+                )
+
+            x = torch.concatenate(
+                (
+                    N1.clone().detach(),
+                    X1.clone().detach(),
+                    V1.clone().detach(),
+                    T1.clone().detach(),
+                    M1.clone().detach(),
+                    H1.clone().detach(),
+                    C1_mpm.clone().detach(),
+                    F1_mpm.clone().detach(),
+                    Jp1.clone().detach(),
+                    S1.clone().detach(),
+                    ID1.clone().detach(),
+                ),
+                1,
+            )
+
+            if it == simulation_config.start_frame:
+                index_particles = get_index_particles(x, n_particle_types, dimension)
+
+            n_mesh = N1_mesh.shape[0]
+            x_mesh = torch.concatenate(
+                (
+                    N1_mesh.clone().detach(),
+                    X1_mesh.clone().detach(),
+                    V1_mesh.clone().detach(),
+                    T1_mesh.clone().detach(),
+                    torch.zeros(n_mesh, 1, device=device),   # M (no mass for mesh)
+                    H1_mesh.clone().detach(),
+                    torch.zeros(n_mesh, 4, device=device),   # C
+                    torch.zeros(n_mesh, 4, device=device),   # F
+                    torch.zeros(n_mesh, 1, device=device),   # Jp
+                    torch.zeros(n_mesh, 4, device=device),   # S
+                    torch.zeros(n_mesh, 1, device=device),   # ID
+                ),
+                1,
+            )
+
+            x_particle_field = torch.concatenate((x_mesh, x), dim=0)
+
+            if "diffusiophoresis" in model_config.field_type:
+
+                with torch.no_grad():
+                    # Particle-particle edges
+
+                    if timer:
+                        torch.cuda.synchronize()
+                        t0 = time.perf_counter()
+
+                    # edge_index_pp = edges_radius_blockwise( x, dimension, bc_dpos, min_radius, max_radius, block=2048)
+
+                    pos = x[:, 1:1+dimension]
+                    edge_index_pp = get_edges_with_cache(
+                        pos=pos,
+                        bc_dpos=bc_dpos,
+                        cache=edge_cache,
+                        r_cut=max_radius,
+                        r_skin=0.05,        # tune this
+                        min_radius=min_radius,
+                        block=2048
+                    )   
+
+                    dataset_p_p = data.Data(x=x, edge_index=edge_index_pp)
+
+                    if timer:
+                        torch.cuda.synchronize()
+                        t1 = time.perf_counter()
+                        print(
+                            f"[edge build] "
+                            f"N={x.shape[0]:6d}, "
+                            f"E={edge_index.shape[1]:8d}, "
+                            f"time={(t1 - t0)*1000:.2f} ms")
+                    
+                    
+                    x_particle_field = torch.cat((x_mesh, x), dim=0)
+
+                    # Compute mesh→particle distances (only cross-terms to save memory)
+                    # Shape: [n_nodes, n_particles]
+                    distance_mp = torch.sum(
+                        bc_dpos(
+                            x_mesh[:, None, 1:dimension+1] -
+                            x[None, :, 1:dimension+1]
+                        )**2, dim=2
+                    )
+
+                    # Field→particle edges for interpolation (mesh nodes → particles)
+                    adj_t_fp = ((distance_mp < (max_radius/2)**2) & (distance_mp > min_radius**2)).float()
+                    edge_index_fp_local = adj_t_fp.nonzero().t().contiguous()
+                    # Offset particle indices by n_nodes to match x_particle_field indexing
+                    edge_index_fp = torch.stack([
+                        edge_index_fp_local[0],           # mesh indices stay the same
+                        edge_index_fp_local[1] + n_nodes  # particle indices offset by n_nodes
+                    ], dim=0)
+                    
+                    # Interpolate fields to particles
+                    dataset_interp = data.Data(
+                        x=x_particle_field,
+                        edge_index=edge_index_fp
+                    )
+                    interpolated_fields = model_p_f(dataset_interp, direction='interpolate')
+                    
+                    # Update particle fields
+                    x[:, 7:9] = interpolated_fields[n_nodes:,:]
+                    x_particle_field = torch.cat((x_mesh, x), dim=0)
+                    
+                    # Create dataset for diffusiophoretic velocities
+                    dataset_f_p = data.Data(
+                        x=x_particle_field,
+                        edge_index=edge_index_fp
+                    )
+                    
+                    # Particle→field edges (particles → mesh nodes)
+                    # Reuse the same distance matrix (transposed logic)
+                    adj_t_pf = ((distance_mp.T < (max_radius/2)**2) & (distance_mp.T > min_radius**2)).float()
+                    edge_index_pf_local = adj_t_pf.nonzero().t().contiguous()
+                    # Offset particle indices by n_nodes to match x_particle_field indexing
+                    edge_index_pf = torch.stack([
+                        edge_index_pf_local[0] + n_nodes,  # particle indices offset by n_nodes
+                        edge_index_pf_local[1]             # mesh indices stay the same
+                    ], dim=0)
+                    
+                    dataset_p_f = data.Data(
+                        x=x_particle_field,
+                        edge_index=edge_index_pf
+                    )
+                    
+                    # Field-field dataset
+                    dataset_mesh = data.Data(
+                        x=x_mesh,
+                        edge_index=mesh_data["edge_index"],
+                        edge_attr=mesh_data["edge_weight"],
+                        device=device,
+                    )
+                
+
+                    # Calculate particle-particle repulsion
+                    y0 = model_p_f(dataset_p_p, direction='pp')
+                    
+                    # Calculate diffusiophoretic velocities  
+                    y1 = model_p_f(dataset_f_p, direction='fp')[n_nodes:]
+                    
+                    # Start with just diffusiophoresis to test
+                    y = y0 + y1  # Small repulsion, full diffusiophoresis
+                    
+                    # Add small Brownian noise
+                    Pe = model_p_f.Pe
+                    diffusion_noise = 0.01 * torch.randn_like(y) * torch.sqrt(torch.tensor(delta_t, device=device)) / torch.sqrt(Pe)
+                    y = y + diffusion_noise
+
+                    # Track velocity for plateau metric
+                    vel_mag = torch.norm(y, dim=1).mean().item()
+                    velocity_history.append(vel_mag)
+
+                    # Field updates with particle feedback
+                    y2 = model_f_f(dataset_mesh)
+                    y3 = model_p_f(dataset_p_f, direction='pf')[:n_nodes]
+                    y_mesh = y2 + y3  # Start with weak particle→field coupling
+
+            else:
+
+                with torch.no_grad():
+
+                    if timer:
+                        torch.cuda.synchronize()
+                        t0 = time.perf_counter()
+
+                    # edge_index = edges_radius_blockwise( x, dimension, bc_dpos, min_radius, max_radius, block=4096)
+
+                    pos = x[:, 1:1+dimension]
+                    edge_index = get_edges_with_cache(
+                        pos=pos,
+                        bc_dpos=bc_dpos,
+                        cache=edge_cache,
+                        r_cut=max_radius,
+                        r_skin=0.05,        # tune this
+                        min_radius=min_radius,
+                        block=2048
+                    )   
+
+                    if timer:
+                        torch.cuda.synchronize()
+                        t1 = time.perf_counter()
+                        print(
+                            f"[edge build] "
+                            f"N={x.shape[0]:6d}, "
+                            f"E={edge_index.shape[1]:8d}, "
+                            f"time={(t1 - t0)*1000:.2f} ms")
+
+                    dataset_p_p = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
+                    if not (has_particle_dropout):
+                        edge_p_p_list.append(edge_index)
+
+                    distance = torch.sum(
+                        bc_dpos(
+                            x_particle_field[:, None, 1 : dimension + 1]
+                            - x_particle_field[None, :, 1 : dimension + 1]
+                        )
+                        ** 2,
+                        dim=2,
+                    )
+                    adj_t = (
+                        (distance < (max_radius / 2) ** 2) & (distance > min_radius**2)
+                    ).float() * 1
+                    edge_index = adj_t.nonzero().t().contiguous()
+                    pos = torch.argwhere(
+                        (edge_index[1, :] >= n_nodes) & (edge_index[0, :] < n_nodes)
+                    )
+                    pos = to_numpy(pos[:, 0])
+                    edge_index = edge_index[:, pos]
+                    dataset_f_p = data.Data(
+                        x=x_particle_field,
+                        pos=x_particle_field[:, 1:3],
+                        edge_index=edge_index,
+                    )
+                    if not (has_particle_dropout):
+                        edge_f_p_list.append(edge_index)
+
+                    y0 = model_p_p(dataset_p_p, has_field=False)
+                    y1 = model_f_p(dataset_f_p, has_field=True)[n_nodes:]
+                    y = y0 + y1
+
+                    # Track velocity for plateau metric
+                    vel_mag = torch.norm(y, dim=1).mean().item()
+                    velocity_history.append(vel_mag)
+
+            # append list
+            if (it >= 0) & bSave:
+                if has_particle_dropout:
+                    x_ = x[inv_particle_dropout_mask].clone().detach()
+                    x_[:, 0] = torch.arange(len(x_), device=device)
+                    x_removed_list.append(x[inv_particle_dropout_mask].clone().detach())
+                    x_ = x[particle_dropout_mask].clone().detach()
+                    x_[:, 0] = torch.arange(len(x_), device=device)
+                    x_list.append(x_)
+                    y_list.append(y[particle_dropout_mask].clone().detach())
+
+                    distance = torch.sum(
+                        bc_dpos(
+                            x_[:, None, 1 : dimension + 1]
+                            - x_[None, :, 1 : dimension + 1]
+                        )
+                        ** 2,
+                        dim=2,
+                    )
+                    adj_t = (
+                        (distance < max_radius**2) & (distance > min_radius**2)
+                    ).float() * 1
+                    edge_index = adj_t.nonzero().t().contiguous()
+                    edge_p_p_list.append(edge_index)
+
+                    x_particle_field = torch.concatenate((x_mesh, x_), dim=0)
+
+                    distance = torch.sum(
+                        bc_dpos(
+                            x_particle_field[:, None, 1 : dimension + 1]
+                            - x_particle_field[None, :, 1 : dimension + 1]
+                        )
+                        ** 2,
+                        dim=2,
+                    )
+                    adj_t = (
+                        (distance < (max_radius / 2) ** 2) & (distance > min_radius**2)
+                    ).float() * 1
+                    edge_index = adj_t.nonzero().t().contiguous()
+                    pos = torch.argwhere(
+                        (edge_index[1, :] >= n_nodes) & (edge_index[0, :] < n_nodes)
+                    )
+                    pos = to_numpy(pos[:, 0])
+                    edge_index = edge_index[:, pos]
+                    edge_f_p_list.append(edge_index)
+                else:
+                    x_list.append(x.clone().detach())
+                    y_list.append(y.clone().detach())
+                    if not nan_detected and (torch.isnan(x).any() or torch.isnan(y).any()):
+                        nan_detected = True
+                        # Detailed NaN diagnostics
+                        nan_x_mask = torch.isnan(x).any(dim=1)
+                        nan_y_mask = torch.isnan(y).any(dim=1)
+                        n_nan_particles = nan_x_mask.sum().item()
+                        n_nan_vel = nan_y_mask.sum().item()
+                        print(f"\n=== NaN detected at frame {it} ===")
+                        print(f"  Particles with NaN state: {n_nan_particles}/{x.shape[0]}")
+                        print(f"  Particles with NaN velocity: {n_nan_vel}/{y.shape[0]}")
+                        if n_nan_particles > 0:
+                            nan_indices = torch.where(nan_x_mask)[0][:5]  # First 5
+                            for idx in nan_indices:
+                                pos = x[idx, 1:3]
+                                fields = x[idx, 7:9] if x.shape[1] > 7 else None
+                                print(f"  Particle {idx.item()}: pos=({pos[0].item():.4f}, {pos[1].item():.4f})", end="")
+                                if fields is not None:
+                                    print(f", C1={fields[0].item():.4f}, C2={fields[1].item():.4f}")
+                                else:
+                                    print()
+
+                if "diffusiophoresis" in model_config.field_type:
+                    x_mesh_list.append(x_mesh.clone().detach())
+                    y_mesh_list.append(y_mesh.clone().detach())
+                    
+            # Particle and mesh update
+            with torch.no_grad():
+
+                if "diffusiophoresis" in model_config.field_type:
+                    # Mesh update
+                    H1_mesh[mask_mesh, :] += y_mesh[mask_mesh, :] * delta_t
+
+                    # H1_mesh = torch.clamp(H1_mesh, min=0.0)
+                    # field_sum = torch.sum(H1_mesh[:, 0:2], dim=1, keepdim=True)
+                    # field_sum = torch.clamp(field_sum, min=1e-6)  
+                    # H1_mesh[:, 0:2] = H1_mesh[:, 0:2] / field_sum    
+
+                if model_config.prediction == "2nd_derivative":
+                    V1 += y * delta_t
+                else:
+                    V1 = y
+
+                if bounce:
+                    # V1 = V1 * 0.999
+                    X1 = X1 + V1 * delta_t
+                    gap = 0.005
+                    bouncing_pos = torch.argwhere(
+                        (X1[:, 0] <= 0.1 + gap) | (X1[:, 0] >= 0.9 - gap)
+                    ).squeeze()
+                    if bouncing_pos.numel() > 0:
+                        V1[bouncing_pos, 0] = -0.7 * bounce_coeff * V1[bouncing_pos, 0]
+                        X1[bouncing_pos, 0] += V1[bouncing_pos, 0] * delta_t * 10
+                    bouncing_pos = torch.argwhere(
+                        (X1[:, 1] <= 0.1 + gap) | (X1[:, 1] >= 0.9 - gap)
+                    ).squeeze()
+                    if bouncing_pos.numel() > 0:
+                        V1[bouncing_pos, 1] = -0.7 * bounce_coeff * V1[bouncing_pos, 1]
+                        X1[bouncing_pos, 1] += V1[bouncing_pos, 1] * delta_t * 10
+                else:
+                    X1 = bc_pos(X1 + V1 * delta_t)
+
+
+                #     X1, V1 = handle_collisions(X1, V1, min_distance=0.01)            
+            
+            if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
+
+                num = f"{id_fig:06}"
+                id_fig += 1
+
+                if "black" in style:
+                    plt.style.use("dark_background")
+
+                if "latex" in style:
+                    plt.rcParams["text.usetex"] = True
+                    rc("font", **{"family": "serif", "serif": ["Palatino"]})
+
+                if "graph" in style:
+                    fig = plt.figure(figsize=(10, 10))
+
+                    if model_config.mesh_model_name == "RD_Mesh":
+                        H1_IM = torch.reshape(x_mesh[:, 7:10], (100, 100, 3))
+                        plt.imshow(to_numpy(H1_IM), vmin=0, vmax=1)
+                    elif (model_config.mesh_model_name == "Wave_Mesh") | (
+                        model_config.mesh_model_name == "DiffMesh"
+                    ):
+                        pts = x_mesh[:, 1:3].detach().cpu().numpy()
+                        tri = Delaunay(pts)
+                        colors = torch.sum(x_mesh[tri.simplices, 6], dim=1) / 3.0
+                        if model_config.mesh_model_name == "WaveMesh":
+                            plt.tripcolor(
+                                pts[:, 0],
+                                pts[:, 1],
+                                tri.simplices.copy(),
+                                facecolors=colors.detach().cpu().numpy(),
+                                edgecolors="k",
+                                vmin=-2500,
+                                vmax=2500,
+                            )
+                        else:
+                            plt.tripcolor(
+                                pts[:, 0],
+                                pts[:, 1],
+                                tri.simplices.copy(),
+                                facecolors=colors.detach().cpu().numpy(),
+                                edgecolors="k",
+                                vmin=0,
+                                vmax=5000,
+                            )
+                        plt.xlim([0, 1])
+                        plt.ylim([0, 1])
+                    elif model_config.particle_model_name == "PDE_G":
+                        for n in range(n_particle_types):
+                            plt.scatter(
+                                x[index_particles[n], 1].detach().cpu().numpy(),
+                                x[index_particles[n], 2].detach().cpu().numpy(),
+                                s=40,
+                                color=cmap.color(n),
+                            )
+                    elif model_config.particle_model_name == "PDE_E":
+                        for n in range(n_particle_types):
+                            g = 40
+                            if simulation_config.params[n][0] <= 0:
+                                plt.scatter(
+                                    x[index_particles[n], 1].detach().cpu().numpy(),
+                                    x[index_particles[n], 2].detach().cpu().numpy(),
+                                    s=g,
+                                    c=cmap.color(n),
+                                )
+                            else:
+                                plt.scatter(
+                                    x[index_particles[n], 1].detach().cpu().numpy(),
+                                    x[index_particles[n], 2].detach().cpu().numpy(),
+                                    s=g,
+                                    c=cmap.color(n),
+                                )
+                    else:
+                        for n in range(n_particle_types):
+                            plt.scatter(
+                                x[index_particles[n], 1].detach().cpu().numpy(),
+                                x[index_particles[n], 2].detach().cpu().numpy(),
+                                s=25,
+                                color=cmap.color(n),
+                                alpha=0.5,
+                            )
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(
+                        f"graphs_data/{dataset_name}/Fig/Fig_g_color_{it}.tif", dpi=300
+                    )
+                    plt.close()
+
+                if "bw" in style:
+                    plt.rcParams["text.usetex"] = False
+                    plt.rc("font", family="sans-serif")
+                    plt.rc("text", usetex=False)
+                    matplotlib.rcParams["savefig.pad_inches"] = 0
+
+                    plt.style.use("dark_background")
+
+                    fig, ax = fig_init(formatx="%.1f", formaty="%.1f")
+                    # plt.xlabel(r'$x$', fontsize=48)
+                    # plt.ylabel(r'$y$', fontsize=48)
+                    for n in range(n_particle_types):
+                        plt.scatter(
+                            to_numpy(x[index_particles[n], 2]),
+                            to_numpy(x[index_particles[n], 1]),
+                            color=cmap.color(n),
+                            s=20,
+                        )
+                    plt.xlim([0, 1])
+                    plt.ylim([0, 1])
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(
+                        f"graphs_data/{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=170.7
+                    )
+                    plt.close()
+
+                    if model_config.prediction == "2nd_derivative":
+                        V0_ = y0 * delta_t
+                        V1_ = y1 * delta_t
+                    else:
+                        V0_ = y0
+                        V1_ = y1
+                    fig = plt.figure(figsize=(12, 12))
+                    type_list = to_numpy(get_type_list(x, dimension))
+                    plt.scatter(
+                        to_numpy(x_mesh[0:n_nodes, 2]),
+                        to_numpy(x_mesh[0:n_nodes, 1]),
+                        c=to_numpy(x_mesh[0:n_nodes, 7]),
+                        cmap="grey",
+                        s=5,
+                    )
+                    plt.xlim([0, 1])
+                    plt.ylim([0, 1])
+                    for n in range(n_particles):
+                        plt.arrow(
+                            x=to_numpy(x[n, 2]),
+                            y=to_numpy(x[n, 1]),
+                            dx=to_numpy(V1_[n, 1]) * 4.25,
+                            dy=to_numpy(V1_[n, 0]) * 4.25,
+                            color=cmap.color(type_list[n].astype(int)),
+                            head_width=0.004,
+                            length_includes_head=True,
+                        )
+                        plt.xticks([])
+                        plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(
+                        f"graphs_data/{dataset_name}/Fig/Arrow_{run}_{it}.jpg",
+                        dpi=170.7,
+                    )
+
+                if "diffusiophoresis" in model_config.field_type:
+
+                    # Create a figure with 4 subplots
+                    fig = plt.figure(figsize=(16, 16))
+                    
+                    # 1. C₁ field visualization (top left)
+                    ax1 = fig.add_subplot(2, 2, 1)
+                    # Reshape field to grid for visualization (assuming square grid)
+                    grid_size = int(np.sqrt(n_nodes))
+                    C1_field = to_numpy(x_mesh[:, 7].reshape(grid_size, grid_size))
+                    # Use 2nd-98th percentile to avoid hot pixel distortion
+                    C1_vmin, C1_vmax = np.percentile(C1_field, [2, 98])
+                    im1 = ax1.imshow(C1_field, cmap='viridis', origin='lower', extent=[0, 1, 0, 1],
+                                    vmin=C1_vmin, vmax=C1_vmax)
+                    ax1.set_axis_off()
+                    ax1.set_title("C₁ field", fontsize=10)
+                    # plt.colorbar(im1, ax=ax1)
+                    ax1.set_xticks([])
+                    ax1.set_yticks([])
+
+                    # 2. C₂ field visualization (top right)
+                    ax2 = fig.add_subplot(2, 2, 2)
+                    C2_field = to_numpy(x_mesh[:, 8].reshape(grid_size, grid_size))
+                    # Use 2nd-98th percentile to avoid hot pixel distortion
+                    C2_vmin, C2_vmax = np.percentile(C2_field, [2, 98])
+                    im2 = ax2.imshow(C2_field, cmap='plasma', origin='lower', extent=[0, 1, 0, 1],
+                                    vmin=C2_vmin, vmax=C2_vmax)
+                    ax2.set_axis_off()
+                    ax2.set_title("C₂ field", fontsize=10)
+                    # plt.colorbar(im2, ax=ax2)
+                    ax2.set_xticks([])
+                    ax2.set_yticks([])
+                    
+                    # 3. Particles with fields (bottom left)
+                    ax3 = fig.add_subplot(2, 2, 3)
+                    # Plot field as background (combining both fields)
+                    combined_field = C1_field - C2_field  # Different fields usually have opposite effects
+                    im3 = ax3.imshow(combined_field*0, cmap='bone', origin='lower', 
+                                    extent=[0, 1, 0, 1], vmin=0, vmax=1)
+                    
+                    # Overlay particles
+                    for n in range(n_particle_types):
+                        ax3.scatter(
+                            to_numpy(x[index_particles[n], 1]),  # x coordinate
+                            to_numpy(x[index_particles[n], 2]),  # y coordinate
+                            s=15,
+                            color=cmap.color(n),
+                            alpha=0.9,
+                            edgecolors='none'
+                        )
+                    ax3.set_title(f"particles (n_types={n_particle_types})", fontsize=10)
+                    # plt.colorbar(im3, ax=ax3)
+                    ax3.set_axis_off()
+                    ax3.set_xlim([0, 1])
+                    ax3.set_ylim([0, 1])
+                    ax3.set_xticks([])
+                    ax3.set_yticks([])
+                    
+                    # 4. Metrics panel (bottom right)
+                    ax4 = fig.add_subplot(2, 2, 4)
+                    ax4.set_axis_off()
+
+                    # Field metrics
+                    C1_mean = x_mesh[:, 7].mean().item()
+                    C1_std = x_mesh[:, 7].std().item()
+                    C2_mean = x_mesh[:, 8].mean().item()
+                    C2_std = x_mesh[:, 8].std().item()
+                    pattern_growth = C2_std / 0.005 if C2_std > 0 else 0
+
+                    # Particle velocity metrics
+                    particle_vel0 = torch.norm(y0, dim=1)
+                    vel_mean0 = particle_vel0.mean().item()
+                    vel_max0 = particle_vel0.max().item()
+                    particle_vel1 = torch.norm(y1, dim=1)
+                    vel_mean1 = particle_vel1.mean().item()
+                    vel_max1 = particle_vel1.max().item()
+
+                    # Particle clustering
+                    particle_pos = x[:n_particles, 1:3]
+                    pos_std_x = particle_pos[:, 0].std().item()
+                    pos_std_y = particle_pos[:, 1].std().item()
+                    clustering = (0.289 - pos_std_x) / 0.289  # 0.289 is std for uniform distribution
+
+                    # Diffusiophoresis magnitudes
+                    diffusio_mag1 = torch.norm(y2, dim=1).mean().item()
+                    diffusio_mag2 = torch.norm(y3, dim=1).mean().item()
+
+                    # Display metrics as text (matching original print format)
+                    metrics_text = (
+                        f"C1 μ={C1_mean:.3f}±{C1_std:.3f}\n"
+                        f"C2 μ={C2_mean:.3f}±{C2_std:.3f}\n"
+                        f"pattern: {pattern_growth:.1f}x\n\n"
+                        f"particles: vel={vel_mean1:.4f}\n"
+                        f"  (max={vel_max1:.4f})\n"
+                        f"clustering={clustering:.3f}\n\n"
+                        f"repulsion: vel={vel_mean0:.4f}\n"
+                        f"  (max={vel_max0:.4f})\n\n"
+                        f"diffusion: {diffusio_mag1:.4f} + {diffusio_mag2:.4f}"
+                    )
+                    ax4.text(0.02, 0.95, metrics_text, fontsize=10, verticalalignment='top',
+                            fontfamily='monospace', transform=ax4.transAxes)
+                    ax4.set_title("metrics", fontsize=10)
+
+                    # # Original velocity arrows code (commented out):
+                    # grad_x = np.gradient(combined_field, axis=1)
+                    # grad_y = np.gradient(combined_field, axis=0)
+                    # grad_mag = np.sqrt(grad_x**2 + grad_y**2)
+                    # im4 = ax4.imshow(grad_mag*0, cmap='bone', origin='lower',
+                    #                 extent=[0, 1, 0, 1], vmin=0, vmax=1)
+                    # if model_config.prediction == "2nd_derivative":
+                    #     V1_ = y1 * delta_t
+                    # else:
+                    #     V1_ = y1
+                    # type_list = to_numpy(get_type_list(x, dimension))
+                    # for n in range(0, n_particles, 4):
+                    #     ax4.arrow(
+                    #         x=to_numpy(x[n, 1]), y=to_numpy(x[n, 2]),
+                    #         dx=to_numpy(V1_[n, 0]* delta_t), dy=to_numpy(V1_[n, 1]* delta_t),
+                    #         color=cmap.color(type_list[n].astype(int)),
+                    #         head_width=0.005, length_includes_head=True,
+                    #     )
+                    
+                    plt.tight_layout()
+                    plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.png", dpi=200)
+                    plt.close()
+
+
+                else:
+
+
+
+                    
+                    # matplotlib.use("Qt5Agg")
+                    matplotlib.rcParams["savefig.pad_inches"] = 0
+                    fig = plt.figure(figsize=(12, 12))
+                    ax = fig.add_subplot(1, 1, 1)
+                    # ax.xaxis.get_major_formatter()._usetex = False
+                    # ax.yaxis.get_major_formatter()._usetex = False
+                    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+                    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+                    ax.xaxis.set_major_formatter(FormatStrFormatter("%.1f"))
+                    ax.yaxis.set_major_formatter(FormatStrFormatter("%.1f"))
+                    ax.tick_params(axis="both", which="major", pad=15)
+                    # if (has_mesh | (simulation_config.boundary == 'periodic')):
+                    #     ax = plt.axes([0, 0, 1, 1], frameon=False)
+                    # else:
+                    #     ax = plt.axes([-2, -2, 2, 2], frameon=False)
+                    # ax.get_xaxis().set_visible(False)
+                    # ax.get_yaxis().set_visible(False)
+                    # plt.autoscale(tight=True)
+                    s_p = 20
+                    for n in range(n_particle_types):
+                        plt.scatter(
+                            to_numpy(x[index_particles[n], 2]),
+                            to_numpy(x[index_particles[n], 1]),
+                            s=s_p,
+                            color=cmap.color(n),
+                        )
+                    plt.xlim([0, 1])
+                    plt.ylim([0, 1])
+                    # plt.xlim([-2,2])
+                    # plt.ylim([-2,2])
+                    if "latex" in style:
+                        plt.xlabel(r"$x$", fontsize=78)
+                        plt.ylabel(r"$y$", fontsize=78)
+                        plt.xticks(fontsize=48.0)
+                        plt.yticks(fontsize=48.0)
+                    elif "frame" in style:
+                        plt.xlabel("x", fontsize=78)
+                        plt.ylabel("y", fontsize=78)
+                        plt.xticks(fontsize=48.0)
+                        plt.yticks(fontsize=48.0)
+                    else:
+                        plt.xticks([])
+                        plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(
+                        f"graphs_data/{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=170.7
+                    )
+                    plt.close()
+
+                    matplotlib.rcParams["savefig.pad_inches"] = 0
+
+                    if model_config.prediction == "2nd_derivative":
+                        V0_ = y0 * delta_t
+                        V1_ = y1 * delta_t
+                    else:
+                        V0_ = y0
+                        V1_ = y1
+                    fig = plt.figure(figsize=(12, 12))
+                    ax = fig.add_subplot(1, 1, 1)
+                    type_list = to_numpy(get_type_list(x, dimension))
+                    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+                    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+                    ax.xaxis.set_major_formatter(FormatStrFormatter("%.1f"))
+                    ax.yaxis.set_major_formatter(FormatStrFormatter("%.1f"))
+                    ax.tick_params(axis="both", which="major", pad=15)
+                    plt.scatter(
+                        to_numpy(x_mesh[0:n_nodes, 2]),
+                        to_numpy(x_mesh[0:n_nodes, 1]),
+                        c=to_numpy(x_mesh[0:n_nodes, 7]),
+                        cmap="grey",
+                        s=5,
+                    )
+                    plt.xlim([0, 1])
+                    plt.ylim([0, 1])
+                    for n in range(n_particles):
+                        plt.arrow(
+                            x=to_numpy(x[n, 2]),
+                            y=to_numpy(x[n, 1]),
+                            dx=to_numpy(V1_[n, 1]) * 4.25,
+                            dy=to_numpy(V1_[n, 0]) * 4.25,
+                            color=cmap.color(type_list[n].astype(int)),
+                            head_width=0.004,
+                            length_includes_head=True,
+                        )
+                    # plt.xlim([-2,2])
+                    # plt.ylim([-2,2])
+                    if "latex" in style:
+                        plt.xlabel(r"$x$", fontsize=78)
+                        plt.ylabel(r"$y$", fontsize=78)
+                        plt.xticks(fontsize=48.0)
+                        plt.yticks(fontsize=48.0)
+                    elif "frame" in style:
+                        plt.xlabel("x", fontsize=78)
+                        plt.ylabel("y", fontsize=78)
+                        plt.xticks(fontsize=48.0)
+                        plt.yticks(fontsize=48.0)
+                    else:
+                        plt.xticks([])
+                        plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(
+                        f"graphs_data/{dataset_name}/Fig/Arrow_{run}_{num}.png",
+                        dpi=170.7,
+                    )
+                    plt.close()
+
+        if bSave:
+            x_list_ = np.array(to_numpy(torch.stack(x_list)))
+            y_list_ = np.array(to_numpy(torch.stack(y_list)))
+            np.save(f"graphs_data/{dataset_name}/x_list_{run}.npy", x_list_)
+            if has_particle_dropout:
+                torch.save(
+                    x_removed_list,
+                    f"graphs_data/{dataset_name}/x_removed_list_{run}.pt",
+                )
+                np.save(
+                    f"graphs_data/{dataset_name}/particle_dropout_mask.npy",
+                    particle_dropout_mask,
+                )
+                np.save(
+                    f"graphs_data/{dataset_name}/inv_particle_dropout_mask.npy",
+                    inv_particle_dropout_mask,
+                )
+            np.save(f"graphs_data/{dataset_name}/y_list_{run}.npy", y_list_)
+            del x_list_, y_list_
+
+            torch.save(x_mesh_list, f"graphs_data/{dataset_name}/x_mesh_list_{run}.pt")
+            torch.save(y_mesh_list, f"graphs_data/{dataset_name}/y_mesh_list_{run}.pt")
+            torch.save(
+                edge_p_p_list, f"graphs_data/{dataset_name}/edge_p_p_list{run}.pt"
+            )
+            torch.save(
+                edge_f_p_list, f"graphs_data/{dataset_name}/edge_f_p_list{run}.pt"
+            )
+
+            # torch.save(model_p_p.p, f'graphs_data/{dataset_name}/model_p.pt')
+
+        if run ==0:
+            dataset_name_ = dataset_name.split('/')[-1]
+            generate_compressed_video_mp4(output_dir=f"./graphs_data/{dataset_name}", run=run, config_indices=dataset_name_, framerate=6)
+
+        # Write metrics to log file (use provided or create local)
+        if run == 0:
+            # Compute final metrics from last frame
+            if len(x_mesh_list) > 0:
+                final_x_mesh = x_mesh_list[-1]
+                C1_mean = final_x_mesh[:, 7].mean().item()
+                C1_std = final_x_mesh[:, 7].std().item()
+                C2_mean = final_x_mesh[:, 8].mean().item()
+                C2_std = final_x_mesh[:, 8].std().item()
+                pattern_growth = C2_std / 0.005 if C2_std > 0 else 0
+
+                # Particle metrics from last frame
+                if len(x_list) > 0:
+                    final_x = x_list[-1]
+                    particle_pos = final_x[:, 1:3]
+                    pos_std_x = particle_pos[:, 0].std().item()
+                    pos_std_y = particle_pos[:, 1].std().item()
+                    clustering = (0.289 - pos_std_x) / 0.289
+
+                    # Calculate percentage of particles remaining in [0,1] box
+                    in_box = ((particle_pos[:, 0] >= 0) & (particle_pos[:, 0] <= 1) &
+                              (particle_pos[:, 1] >= 0) & (particle_pos[:, 1] <= 1))
+                    particles_in_box = in_box.sum().item()
+                    particles_in_box_pct = 100.0 * particles_in_box / particle_pos.shape[0]
+
+                    # Spatial Entropy (complexity metric)
+                    # Bin particles into NxN grid, compute Shannon entropy
+                    n_bins = 20
+                    in_box_pos = particle_pos[in_box]
+                    if len(in_box_pos) > 0:
+                        x_bins = torch.clamp((in_box_pos[:, 0] * n_bins).long(), 0, n_bins - 1)
+                        y_bins = torch.clamp((in_box_pos[:, 1] * n_bins).long(), 0, n_bins - 1)
+                        bin_indices = x_bins * n_bins + y_bins
+                        counts = torch.bincount(bin_indices, minlength=n_bins * n_bins).float()
+                        counts = counts / counts.sum()  # normalize to probabilities
+                        counts = counts[counts > 0]  # remove zeros for log
+                        entropy = -torch.sum(counts * torch.log(counts)).item()
+                        max_entropy = np.log(n_bins * n_bins)  # uniform distribution
+                        spatial_entropy = entropy / max_entropy  # normalized 0-1
+                    else:
+                        spatial_entropy = 0.0
+
+                    # Plateau metric from velocity history
+                    # Compare mean velocity in early vs final portion of simulation
+                    if len(velocity_history) >= 20:
+                        n_window = len(velocity_history) // 5  # 20% window
+                        early_vel = np.mean(velocity_history[:n_window])
+                        final_vel = np.mean(velocity_history[-n_window:])
+                        # Plateau score: 1 = fully converged (velocity dropped to 0), 0 = still moving
+                        plateau = 1.0 - min(1.0, final_vel / max(early_vel, 1e-8))
+                    else:
+                        plateau = 0.0
+
+                    # Write analysis.log with simulation metrics
+                    n_saved_frames = (n_frames - simulation_config.start_frame) // step + 1
+                    analysis_log_path = f"./graphs_data/{dataset_name}/analysis.log"
+                    with open(analysis_log_path, 'w') as analysis_file:
+                        analysis_file.write(f"n_frames: {n_frames}\n")
+                        analysis_file.write(f"n_saved_frames: {n_saved_frames}\n")
+                        analysis_file.write(f"step: {step}\n")
+                        analysis_file.write(f"n_particles: {n_particles}\n")
+                        analysis_file.write(f"delta_t: {delta_t}\n")
+                        analysis_file.write(f"C1_mean: {C1_mean:.4f}\n")
+                        analysis_file.write(f"C1_std: {C1_std:.4f}\n")
+                        analysis_file.write(f"C2_mean: {C2_mean:.4f}\n")
+                        analysis_file.write(f"C2_std: {C2_std:.4f}\n")
+                        analysis_file.write(f"pattern_growth: {pattern_growth:.2f}\n")
+                        analysis_file.write(f"clustering: {clustering:.4f}\n")
+                        analysis_file.write(f"pos_std_x: {pos_std_x:.4f}\n")
+                        analysis_file.write(f"pos_std_y: {pos_std_y:.4f}\n")
+                        analysis_file.write(f"particles_in_box: {particles_in_box}\n")
+                        analysis_file.write(f"particles_in_box_pct: {particles_in_box_pct:.2f}\n")
+                        analysis_file.write(f"spatial_entropy: {spatial_entropy:.4f}\n")
+                        analysis_file.write(f"plateau: {plateau:.4f}\n")
+
+
+        print('data generated...')
+
+
 def data_generate_cell(
     config,
     visualize=True,
