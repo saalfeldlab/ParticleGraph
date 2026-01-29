@@ -1009,6 +1009,16 @@ def init_mesh(config, device):
                 seed_indices = torch.randperm(n_nodes)[:n_seeds]
                 node_value[seed_indices, 0] = 0.5  # Deplete U at seed locations
                 node_value[seed_indices, 1] = 0.25  # Add V at seed locations
+            elif 'Schnakenberg' in config.graph_model.mesh_model_name:
+                # Schnakenberg: initialize near steady state u*=a+b, v*=b/(a+b)^2
+                # with small random perturbations to break symmetry
+                a_param = config.simulation.params_mesh[0][2]
+                b_param = config.simulation.params_mesh[0][3]
+                u_star = a_param + b_param
+                v_star = b_param / (u_star ** 2)
+                node_value = torch.zeros((n_nodes, 2), device=device)
+                node_value[:, 0] = u_star + 0.01 * torch.randn(n_nodes, device=device)
+                node_value[:, 1] = v_star + 0.01 * torch.randn(n_nodes, device=device)
             else:
                 # Default for other variants: normalized random
                 node_value = torch.rand((n_nodes, 2), device=device)
