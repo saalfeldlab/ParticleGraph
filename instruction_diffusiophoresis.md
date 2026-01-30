@@ -138,15 +138,16 @@ Read `ucb_scores.txt`:
 
 **Strategies:**
 
-| Condition                           | Strategy            | Action                                     |
-| ----------------------------------- | ------------------- | ------------------------------------------ |
-| Default                             | **exploit**         | Highest UCB node, try mutation             |
-| 3+ consecutive `stable` + `hexagonal` | **boundary-probe** | Extreme parameter to find limits           |
-| 3+ consecutive same symmetry        | **explore**         | Branch to different parameter dimension    |
-| 3+ consecutive `unstable`           | **code-change**     | Consider modifying PDE equations (iter 5+) |
-| `novel` pattern found               | **robustness-test** | Re-run same config to verify               |
-| n_particle_types=1 over-represented | **multi-type**      | Switch to n_particle_types=2 or 3          |
-| n_particle_types uniform over-represented | **multi-type** | Switch to n_particle_types=2 or 3          |
+| Condition                                                    | Strategy            | Action                                                                        |
+| ------------------------------------------------------------ | ------------------- | ----------------------------------------------------------------------------- |
+| Default                                                      | **exploit**         | Highest UCB node, try mutation                                                |
+| 3+ consecutive `stable` + `hexagonal`                        | **failure-probe**   | Extreme parameter to find boundary                                            |
+| n_iter_block/4 consecutive successes                         | **explore**         | Select outside recent chain, branch to different parameter dimension          |
+| 2+ distant nodes with good metrics                           | **recombine**       | Merge params from both nodes                                                  |
+| 4+ consecutive partial with improving trend                  | **scale-up**        | Increase n_frames or data_augmentation_loop to break plateau                  |
+| 4+ consecutive converged with same param dimension           | **forced-branch**   | Select 2nd highest UCB node (not recent chain), switch param dimension        |
+| `novel` pattern found                                        | **robustness-test** | Re-run same config to verify                                                  |
+| 3+ consecutive `unstable` (iter 5+)                          | **code-change**     | Consider modifying PDE equations                                              |
 
 **Note:** `shuffle_particle_types` is not working — all runs show concentric radial type bands at initialization regardless of this setting. Always keep `shuffle_particle_types: false`.
 
