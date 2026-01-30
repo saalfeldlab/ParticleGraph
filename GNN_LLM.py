@@ -464,6 +464,8 @@ def setup_exploration_dirs(root_dir: str, instruction_name: str) -> dict:
     dirs = {
         'base': exploration_dir,
         'activity': f"{exploration_dir}/activity",
+        'montage': f"{exploration_dir}/montage",
+        'video': f"{exploration_dir}/video",
         'config': f"{exploration_dir}/config",
         'tree': f"{exploration_dir}/tree",
         'memory': f"{exploration_dir}/memory",
@@ -484,14 +486,14 @@ def save_exploration_artifacts(dirs: dict, iteration: int, block_number: int,
         config_dst = f"{dirs['config']}/iter_{iteration:03d}_block_{block_number:02d}.yaml"
         shutil.copy2(config_path, config_dst)
 
-    # Save montage to activity
+    # Save montage to montage folder
     if os.path.exists(montage_path):
-        montage_dst = f"{dirs['activity']}/montage_iter_{iteration:03d}.png"
+        montage_dst = f"{dirs['montage']}/montage_iter_{iteration:03d}.png"
         shutil.copy2(montage_path, montage_dst)
 
-    # Save video to activity
+    # Save video to video folder
     if video_path and os.path.exists(video_path):
-        video_dst = f"{dirs['activity']}/video_iter_{iteration:03d}.mp4"
+        video_dst = f"{dirs['video']}/video_iter_{iteration:03d}.mp4"
         shutil.copy2(video_path, video_dst)
 
 
@@ -707,6 +709,8 @@ def detect_last_iteration(analysis_path):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="LLM-guided pattern exploration")
     parser.add_argument("-o", "--option", nargs="+", help="task and config options")
+    parser.add_argument("--fresh", action="store_true", default=True, help="start from iteration 1 (default)")
+    parser.add_argument("--resume", action="store_true", help="auto-resume from last completed iteration")
     args = parser.parse_args()
 
     # Parse arguments
@@ -745,11 +749,16 @@ if __name__ == "__main__":
         print(f"\033[91minstruction file not found: {instruction_path}\033[0m")
         sys.exit(1)
 
-    # Auto-resume: detect last completed iteration from analysis.md
-    start_iteration = detect_last_iteration(analysis_path)
-
-    if start_iteration > 1:
-        print(f"\033[93mResuming from iteration {start_iteration}\033[0m")
+    # Auto-resume or fresh start
+    if args.resume:
+        start_iteration = detect_last_iteration(analysis_path)
+        if start_iteration > 1:
+            print(f"\033[93mResuming from iteration {start_iteration}\033[0m")
+        else:
+            print(f"\033[93mNo previous iterations found, starting fresh\033[0m")
+    else:
+        start_iteration = 1
+        print(f"\033[93mFresh start\033[0m")
 
     # Copy base config to Claude config (only on fresh start)
     if start_iteration == 1:

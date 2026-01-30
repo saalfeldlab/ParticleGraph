@@ -149,7 +149,7 @@ Read `ucb_scores.txt`:
 | `novel` pattern found                                        | **robustness-test** | Re-run same config to verify                                                  |
 | 3+ consecutive `unstable` (iter 5+)                          | **code-change**     | Consider modifying PDE equations                                              |
 
-**Note:** `shuffle_particle_types` is not working — all runs show concentric radial type bands at initialization regardless of this setting. Always keep `shuffle_particle_types: false`.
+**`shuffle_particle_types` rule:** At each block boundary, **toggle** this setting: if it was `false`, set it to `true`; if it was `true`, set it to `false`. Never set it to `true` within a block — only change it at block transitions.
 
 **IMPORTANT - Particle Type Diversity:**
 
@@ -186,10 +186,10 @@ simulation:
   n_particles: 9600 # particle count
   n_nodes: 10000 # mesh resolution - MUST BE PERFECT SQUARE
   n_particle_types: 1 # int  1, 2, or 3
-  shuffle_particle_types: false # not working — always keep false
+  shuffle_particle_types: false # toggle at block boundaries: false→true→false→...
 ```
 
-**shuffle_particle_types**: Not working. All runs produce concentric radial type bands regardless of this setting. Always keep `false`.
+**shuffle_particle_types**: Toggle at each block boundary (false→true→false→...). Do NOT change within a block.
 
 **IMPORTANT: n_nodes must be a perfect square** (the mesh is n×n grid).
 Use only these values: `10000` (100×100), `22500` (150×150), `40000` (200×200), `62500` (250×250).

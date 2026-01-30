@@ -1376,3 +1376,485 @@ Mutation: mesh params A=4.5→3.0, B=6.5→10.0 (stripe regime), gradient_bias=0
 Observation: **ActiveMatter completely destroys stripe mode.** Self-propulsion prevents particles from passively following field stripe gradients. Instead, particles aggregate into a ring/shell structure — likely driven by self-propulsion + gradient-biased heading creating a circulation that concentrates particles at a boundary. The checkerboard noise in C1 suggests the Turing boundary condition (B/[1+A^2]=1.0) combined with particle feedback produces pixel-scale instability rather than clean stripes. This confirms that stripes are the MOST fragile symmetry mode — they fail with multi-type, reversed feedback, AND active matter. Higher pattern_growth (431.7 vs 115 in iter 65) suggests the stripe-regime field dynamics amplify more strongly but into noise rather than organized patterns.
 Next: parent=65
 
+## Iter 68: 7/10 - ActiveMatter + FHN hex (Dv=0) → BOUNDARY NETWORK (novel organization)
+Node: id=68, parent=65
+Mode/Strategy: exploit — ActiveMatter + FHN hex mode (Dv=0), 1-type. Direct comparison with iter 65 (ActiveMatter + Brusselator hex).
+Config: params=[0.5, 0.3, 0.5, 0.1, 1.6, 1.0, 1.6, 1.5], params_mesh=[[0.5, 0.7, 0.8, 0.08, 0.0, 20], [0.0, 0, 0, 0, 0, 0], [1.0, 180, -180, 0.05, 0, 0]]
+n_particle_types: 1
+particle_model: PDE_ParticleField_D_ActiveMatter, mesh_model: PDE_Diffusiophoresis_FHN
+Metrics: entropy=0.79, plateau=0.036, in_box=100%, clustering=-0.13
+  C1_std=10.15, C2_std=1.81, pattern_growth=361.3
+Assessment:
+  - Symmetry: none (irregular large patches)
+  - Particles: network (filamentary boundary-tracing)
+  - Stability: transient (plateau=0.036, higher than prior ActiveMatter runs)
+  - Novelty: variant (boundary-network distinct from Brusselator ActiveMatter results)
+Visual: Particles form **thin filamentary networks tracing boundaries between large C1 field domains**. Unlike Brusselator+ActiveMatter (tight spot clusters), FHN+ActiveMatter produces connected edge networks. C1 field develops large irregular patches (coarser than standard FHN fine spots). C2 field anti-correlated as expected. The boundary-network morphology resembles cell-wall patterns (cf. iter 64 with LogSensing 2-type) but achieved here via active matter with 1-type. Temporal evolution: uniform → radial → develops into large irregular domains with particles outlining the interfaces. Negative clustering (-0.13) indicates anti-clustering — particles are spread into thin filaments rather than concentrated into clumps.
+Mutation: mesh_model: Diffusiophoresis_Mesh → PDE_Diffusiophoresis_FHN, params_mesh changed from Brusselator to FHN
+Observation: **FHN + ActiveMatter produces qualitatively different particle organization than Brusselator + ActiveMatter.** Brusselator gives disordered spots (clustering=0.52); FHN gives boundary networks (clustering=-0.13). This is consistent with the established FHN-vs-Brusselator dichotomy (FHN=dispersed, Brusselator=clustered) but amplified by active matter. The boundary-network organization is biologically interesting — resembles cell membranes or tissue boundaries. Higher plateau (0.036 vs 0.005-0.01) suggests FHN partially tames active matter persistent motion. Very high C1_std (10.15 vs 1.49 for iter 65) indicates FHN generates much stronger field patterns with ActiveMatter than Brusselator does. Still no new SYMMETRY class but the network ORGANIZATION is distinct.
+Next: parent=65
+
+## Iter 69: 7/10 - ActiveMatter + FHN SQUARE (Dv=0.1) → boundary network (square destroyed)
+Node: id=69, parent=65
+Mode/Strategy: exploit — ActiveMatter + FHN SQUARE mode (Dv=0.1), 1-type. Tests whether active matter disrupts square symmetry.
+Config: params=[0.5, 0.3, 0.5, 0.1, 1.6, 1.0, 1.6, 1.5], params_mesh=[[0.5, 0.7, 0.8, 0.08, 0.0, 20], [0.1, 0, 0, 0, 0, 0], [1.0, 180, -180, 0.05, 0, 0]]
+n_particle_types: 1
+particle_model: PDE_ParticleField_D_ActiveMatter, mesh_model: PDE_Diffusiophoresis_FHN
+Metrics: entropy=0.77, plateau=0.033, in_box=100%, clustering=-0.089
+  C1_std=10.14, C2_std=1.65, pattern_growth=329.5
+Assessment:
+  - Symmetry: none (irregular large domains, no square lattice)
+  - Particles: network (thin boundary-tracing filaments)
+  - Stability: transient (plateau=0.033, persistently moving)
+  - Novelty: repeat (same boundary-network as iter 68 FHN+ActiveMatter Dv=0)
+Visual: Despite using FHN Dv=0.1 (the established square-symmetry regime), ActiveMatter completely destroys the regular square lattice. C1 field shows ~3-5 large irregular domains instead of the expected ~20-30 regular square cells. C2 field similarly coarse and irregular. Particles form **thin boundary networks** tracing domain walls — identical morphology to iter 68 (FHN Dv=0 + ActiveMatter). At frame 40, fragmentary boundary network with interior features. By frame 80, more coherent but rectangular boundaries aligned to box edges (not intrinsic symmetry). By frame 120, boundaries continue reshaping without convergence. Negative clustering (-0.089) confirms anti-clustering/network organization. The key observation: Dv=0 and Dv=0.1 produce indistinguishable results with ActiveMatter — the self-propulsion overwhelms the Dv-dependent symmetry selection mechanism.
+Mutation: params_mesh row 1: [0.0, 0, 0, 0, 0, 0] → [0.1, 0, 0, 0, 0, 0] (Dv=0→0.1, hex→square regime)
+Observation: **ActiveMatter erases FHN Dv symmetry selection.** Without ActiveMatter, FHN Dv=0 → hexagonal, Dv=0.1 → square. With ActiveMatter, BOTH give identical boundary-network morphology. The self-propulsion velocity (v0=0.5) overwhelms the gradient-driven motion that encodes symmetry information. This confirms the ActiveMatter verdict: it disrupts ALL symmetry classes (hex, stripe, square) by breaking the gradient-following mechanism essential for lattice formation. Metrics nearly identical to iter 68 (entropy 0.77 vs 0.79, clustering -0.089 vs -0.13, plateau 0.033 vs 0.036). ActiveMatter exploration complete — pivoting to remaining open questions (large FHN Dv).
+Next: parent=45
+
+## Iter 70: 7/10 - FHN Dv=0.3 (large Dv) + standard diffusiophoresis → COARSE BOUNDARY NETWORK
+Node: id=70, parent=51
+Mode/Strategy: explore — FHN Dv=0.3 (beyond established square regime) with standard PDE_ParticleField_D, 1-type. Probing whether square symmetry persists or transitions at very large Dv.
+Config: params=[[-4, 4, 180, -180, 1.6, 1.0, 1.6, 1.5]], params_mesh=[[0.5, 0.7, 0.8, 0.08, 0.0, 20], [0.3, 0, 0, 0, 0, 0], [1.0, 180, -180, 0.05, 0, 0]]
+n_particle_types: 1
+particle_model: PDE_ParticleField_D, mesh_model: PDE_Diffusiophoresis_FHN
+Metrics: entropy=0.68, plateau=0.00, in_box=100%, clustering=0.13
+  C1_std=8.00, C2_std=1.56, pattern_growth=312.1
+Assessment:
+  - Symmetry: none (large irregular domains, no lattice)
+  - Particles: network (thin boundary-tracing filaments, sparse)
+  - Stability: unstable (plateau=0.00, permanently rearranging)
+  - Novelty: variant (coarse-domain boundary network, distinct from square and hex)
+Visual: Dv=0.3 dramatically increases Turing wavelength compared to Dv=0.1 square. C1 field develops only 3-5 very large irregular domains (vs ~20-30 square cells at Dv=0.1). C2 field anti-correlated, similarly coarse. Particles form **thin filamentary networks** tracing domain boundaries. At frame 20, concentric rings still visible (radial phase). By frame 40, ring structure breaks into large-scale boundary network with interior features — ring+boundary morphology with a central rosette shape. By frame 80, particles compressed into rectangular boundary shell aligned to box edges with few interior filaments. By frame 100-120, open irregular boundary filaments with scattered particles, continuously evolving. Clustering=0.13 (low but positive — some local accumulation along boundaries). plateau=0.00 — never reaches steady state; domains continuously merge and reshape. C1_std=8.0 (slightly lower than Dv=0.1 at ~10), indicating less sharp field contrast with higher diffusion.
+Mutation: params_mesh row 1: [0.1, 0, 0, 0, 0, 0] → [0.3, 0, 0, 0, 0, 0] (Dv=0.1→0.3, tripled v-diffusion)
+Observation: **FHN Dv=0.3 EXITS the square regime into coarse-domain boundary network.** The Turing wavelength scales with sqrt(Dv), so tripling Dv from 0.1→0.3 increases wavelength by ~1.7×, meaning only 3-5 domains fit in the unit box (vs ~20-30 at Dv=0.1). This completely destroys the lattice structure — too few domains for any regular symmetry. Particles track domain walls as thin filaments but the pattern never stabilizes (plateau=0.00 vs 0.00 for Dv=0.1 square, both oscillatory). This establishes a clear phase diagram: FHN Dv=0 → hexagonal (many small spots), Dv=0.05 → disordered transitional, Dv=0.1-0.15 → square (intermediate domains), Dv=0.3 → coarse boundary network (few large domains). The square regime is bounded: Dv ∈ [0.1, ~0.2]. Beyond Dv≈0.2, too few Turing cells remain for lattice order. Lower entropy (0.68 vs 0.77) confirms less structured spatial distribution. **Dv controls a continuous transition from fine hex → square → coarse network as wavelength increases.**
+Next: parent=51
+
+## Iter 71: 6/10 - FHN Dv=0.1 square + 3-type same-sign → BOUNDARY NETWORK (square destroyed)
+Node: id=71, parent=51
+Mode/Strategy: multi-type — 3-type same-sign with differential consumption on FHN Dv=0.1 (expected square)
+Config: FHN params [Du=0.5, a=0.7, b=0.8, eps=0.08, I=0, ts=20], Dv=0.1, M1=-4/M2=4 all types, consumption=220/180/140, n_particle_types=3, n_frames=6000
+n_particle_types: 3
+Metrics: entropy=0.64, plateau=0.00, in_box=100%, clustering=-0.017, C1_std=20.15, pattern_growth=498.2
+Assessment:
+  - Symmetry: none (expected square, got coarse boundary network)
+  - Particles: network (thin filaments along domain walls)
+  - Stability: unstable (plateau=0.00, never settles)
+  - Novelty: variant (boundary network seen before at Dv=0.3; but here caused by different mechanism)
+Visual: Initial 3-type concentric rings (blue core, orange mid, green outer) → radial breaking → particles migrate to field domain boundaries forming thin filaments. Only 3-5 large irregular field domains (NOT the ~20 regular square cells expected). Green (type 2, lowest consumption=140) dominates filaments; orange (type 0, highest=220) and blue (type 1, middle=180) are sparse scattered dots. C1 field shows large blobs, not square lattice. C2 field shows complementary large-scale structure. Final state: boundary network with type-segregated particle distribution where low-consumption type dominates.
+Mutation: n_particle_types: 1→3 + differential consumption (220/180/140) on FHN Dv=0.1 square config
+Observation: **Differential consumption with 3-type DESTROYS FHN square symmetry.** The consumption heterogeneity across concentric initial type bands creates asymmetric field depletion, breaking the radial→square transition and instead producing radial→coarse boundary network. Total consumption is the same as uniform 180×9600, so it's the SPATIAL HETEROGENEITY not total amount that disrupts the Turing instability. Green (lowest consumption=140) survives at boundaries because it depletes fields least, maintaining gradient-driven motion. High-consumption types rapidly deplete local fields and lose gradient drive. **3-type square likely requires IDENTICAL params** (no differential consumption), unlike 2-type where moderate differential consumption preserved square (iter 52/64). Key insight: Square symmetry is more fragile to consumption heterogeneity than hexagonal symmetry (which survives multi-type with any params). C1_std=20.15 is very high (2× the Dv=0.1 square value of ~10), indicating field destabilization by heterogeneous consumption.
+Next: parent=51
+
+## Iter 72: 6/10 - FHN Dv=0.1 square + 3-type IDENTICAL params → COARSE BOUNDARY NETWORK (square destroyed)
+Node: id=72, parent=51
+Mode/Strategy: multi-type — test whether square survives 3 particle types when ALL params are identical (no consumption heterogeneity)
+Config: FHN Du=0.5, a=0.7, b=0.8, eps=0.08, I=0.0, time_scale=20, Dv=0.1. 3 particle types ALL with M1=-4, M2=4, consumption=180, production=-180, identical ar_p. Pe=1.0, n_particles=9600, n_frames=6000, delta_t=5e-4, n_nodes=10000.
+n_particle_types: 3 (identical params)
+Metrics: entropy=[0.70], plateau=[0.00], in_box=[100.0]%, clustering=[0.014]
+Assessment:
+  - Symmetry: none (expected square, got coarse boundary network with 3-5 large irregular domains)
+  - Particles: network (thin filaments tracing domain walls, all 3 types mixed)
+  - Stability: unstable (plateau=0.00, oscillatory as expected for FHN)
+  - Novelty: variant (same boundary network as Dv=0.3/iter70, but different mechanism)
+Visual: Initial 3-type concentric rings → radial breaking → particles migrate to field domain boundaries forming thin mixed-type filaments. Only 3-5 large irregular field domains instead of ~20 regular square cells. All three particle types are visible on the filaments (green, orange, blue all present), confirming no type segregation with identical params. C1 field shows 3-5 large irregular blobs, C2 shows complementary structure. By frame 80, particles form clear boundary outline with interior void. By frame 120, boundary network becomes sparser with particles concentrated on field domain walls.
+Mutation: n_particle_types: 1→3 with ALL params IDENTICAL (consumption=180, production=-180 for all) on FHN Dv=0.1 square config
+Observation: **3-type IDENTICAL params STILL destroys FHN square symmetry.** Even without any consumption heterogeneity, the mere SPATIAL heterogeneity from concentric initial type bands disrupts the uniform Turing instability needed for square. The initial radial type distribution (blue core, orange mid, green outer) creates radial density variation during the radial→pattern transition, biasing toward large irregular domains. Clustering=0.014 (near zero) confirms dispersed boundary network, not clustered spots. C1_std=9.38 matches Dv=0.3 coarse network (8.0) rather than Dv=0.1 square (~10). Key insight: **Square symmetry REQUIRES single particle type.** It is NOT sufficient to make multi-type params identical — the initial spatial distribution of types (concentric bands) breaks the translational symmetry needed for square lattice formation. This is in contrast to hexagonal symmetry which is robust to multi-type at any configuration. **Square fragility is about SPATIAL HOMOGENEITY, not parameter homogeneity.**
+Next: parent=root (block end)
+
+---
+
+## Block 9 Summary (Iters 65-72)
+
+**Theme**: Active matter self-propulsion (Vicsek model) + continued FHN/Brusselator exploration.
+
+**Key findings**:
+1. **ActiveMatter verdict (5 iters, 65-69)**: Self-propelled particles DISRUPT all symmetry classes (hex, stripe, square). No new symmetry produced. FHN-Brusselator dichotomy persists (Brusselator=tight clusters, FHN=dispersed network). Persistent motion (plateau≈0) + irregular morphology = signature.
+2. **FHN Dv phase diagram completed (iter 70)**: Dv=0→hex, Dv=0.05→disordered, Dv=0.1-0.15→square, Dv≥0.3→coarse boundary network. Square bounded: Dv ∈ [0.1, ~0.2].
+3. **Square requires SINGLE particle type (iters 71-72)**: Neither differential consumption (iter 71) NOR identical-params 3-type (iter 72) preserves square. The spatial heterogeneity from concentric initial bands is enough to break square. This is fundamentally different from hexagonal, which survives ALL multi-type configs.
+
+**Score average**: (7+7+6+7+7+7+6+6)/8 = 6.6/10 (lowest block average — ActiveMatter mostly failed to improve patterns).
+
+**Implications for next block**: ActiveMatter explored and closed. Need new direction.
+
+## Iter 73
+Node: id=73, parent=root
+Mode/Strategy: explore — NEW Gierer-Meinhardt mesh model, 1-type baseline
+Config: params_mesh=[[0.01, 0.1, 0.02, 0.01, 0.1, 20], [0.5, 0.02, 0, 0, 0, 0], [1.0, 180, -180, 0.05, 0, 0]], n_frames=6000, delta_t=5E-4, n_particles=9600, n_particle_types=1
+mesh_model_name: PDE_Diffusiophoresis_GM, particle_model_name: PDE_ParticleField_D
+n_particle_types: 1
+Metrics: entropy=0.643, plateau=0.00, in_box=100.0%, clustering=0.063
+Assessment:
+  - Symmetry: radial (with emerging hexagonal spots)
+  - Particles: network (loose chains/clusters connecting field spikes)
+  - Stability: unstable (plateau=0.00, high particle velocities vel=14.8 at end)
+  - Novelty: variant (GM spots are sharper/spike-like vs Brusselator smooth spots, but overall organization similar to early Brusselator before hex breaking)
+Visual: C1 shows sharp spike-like spots with strong radial organization from initial seed. Ring of ~20 spots around center plus outer spots. C2 shows dominant ring structure with bright spots. Particles form loose networks connecting spike locations — NOT tight clusters (clustering=0.06). Pattern grows explosively (3461x). C1 goes NEGATIVE (mean=-22.5) suggesting possible numerical issues. High particle velocity (vel=14.8) indicates ongoing dynamics at frame 99.
+Mutation: mesh_model: Diffusiophoresis_Mesh -> PDE_Diffusiophoresis_GM (new model); params_mesh redesigned for GM
+Observation: GM produces sharp spike-like field patterns (expected from a^2/h nonlinearity) but particles don't cluster tightly around them — they form loose networks instead. The negative C1 values and zero plateau suggest the GM dynamics are too vigorous or parameters need tuning. The Da/Dh ratio (0.01/0.5 = 0.02) gives strong Turing instability. The time_scale=20 may be too aggressive. The radial bias from initialization hasn't fully broken — compare with Brusselator which fully breaks to hex by 6000 frames. Key finding: GM spots are morphologically different from Brusselator spots (sharper, spike-like), but particle organization is WEAKER (clustering 0.06 vs Brusselator 0.45-0.53).
+Next: parent=73
+
+## Iter 74
+Node: id=74, parent=73
+Mode/Strategy: exploit — GM with reduced time_scale (20→5) + 2-type opposing mobilities
+Config: params_mesh=[[0.01, 0.1, 0.02, 0.01, 0.2, 5], [0.5, 0.02, 0, 0, 0, 0], [1.0, 180, -180, 0.05, 0, 0]], n_frames=6000, delta_t=5E-4, n_particles=9600, n_particle_types=2
+mesh_model_name: PDE_Diffusiophoresis_GM, particle_model_name: PDE_ParticleField_D
+n_particle_types: 2
+Metrics: entropy=0.851, plateau=0.00, in_box=100.0%, clustering=0.335
+Assessment:
+  - Symmetry: radial (with emerging hexagonal spots interior)
+  - Particles: segregated (2-type radial phase separation: orange=shell, blue=interior network)
+  - Stability: unstable (plateau=0.00, growing velocities, boundary artifacts in late frames)
+  - Novelty: variant (type-segregation similar to Brusselator 2-type but with GM's sharper spots)
+Visual: Two changes from iter 73 — reduced time_scale (20→5) and 2-type opposing mobilities. C1 shows emerging hexagonal-like dark spots within a central domain, still with radial bias. C2 complementary pattern. Particles show clear 2-type phase separation: orange (type 0, M1=-4,M2=4) forms outer ring/shell, blue (type 1, M1=4,M2=-4) concentrates in interior forming network connecting spot locations. By frame 60, clustering=0.433 (good), but by frame 120 the system destabilizes with particles spreading outward and field boundary artifacts (yellow edge bleeding). C1 still goes negative (mean=-17.7). Pattern growth explosive (2758x).
+Mutation: time_scale: 20 -> 5 (slower GM dynamics); kappa: 0.1 -> 0.2 (stronger saturation); n_particle_types: 1 -> 2 (opposing mobilities)
+Observation: Reduced time_scale significantly improved particle-field coupling (clustering 0.063→0.335). The 2-type opposing mobility creates clear radial type segregation as expected. However, the system remains fundamentally unstable — plateau=0.00, velocities increasing over time, and boundary artifacts appear in late frames. Negative C1 values persist despite kappa increase. The GM model's self-regulating a²/h mechanism doesn't fully prevent runaway dynamics at these parameter values. Two key issues: (1) negative concentrations (unphysical), (2) growing domain with boundary artifacts. The pattern is interesting (type-segregated network within ring) but morphologically similar to Brusselator 2-type results. GM needs further parameter tuning for stability, or the model may need different Da/Dh ratios.
+Next: parent=73
+
+## Iter 75
+Node: id=75, parent=73
+Mode/Strategy: exploit — GM stability fix: broader patterns (Da 0.01→0.05), stronger decay (mu_a 0.02→0.05), max saturation (kappa 0.2→0.5), slower dynamics (time_scale 5→2), weaker coupling (consumption 180→90). 1-type to isolate stability question.
+Config: params_mesh=[[0.05, 0.1, 0.05, 0.01, 0.5, 2], [0.5, 0.02, 0, 0, 0, 0], [1.0, 90, -90, 0.05, 0, 0]], n_frames=6000, delta_t=5E-4, n_particles=9600, n_particle_types=1
+mesh_model_name: PDE_Diffusiophoresis_GM, particle_model_name: PDE_ParticleField_D
+n_particle_types: 1
+Metrics: entropy=0.708, plateau=0.00, in_box=100.0%, clustering=0.452
+Assessment:
+  - Symmetry: other (irregular foam/network, not hexagonal or radial)
+  - Particles: network (foam-like walls around voids, degrading over time)
+  - Stability: unstable (plateau=0.00, accelerating velocities 0.05→1.35, pattern degrading in late frames)
+  - Novelty: variant (foam-like network morphology differs from Brusselator hex clusters, but unstable)
+Visual: GM with stabilization parameters produces a distinct "foam-like" network morphology. C1 develops large irregular amoeboid spots (not sharp spikes like iter 73, due to higher Da=0.05). C2 anti-correlated with clear deep-blue minima. Particles form a beautiful foam/honeycomb network by frame 60 (clustering=0.540) — walls surrounding void spaces corresponding to field spot locations. However, the network progressively degrades: by frame 80, particles form thin filaments with large voids; by frame 100-120, the filaments break and particles disperse outward. C1 mean goes -1.1→-2.7→-4.0→-5.95 (still negative, worsening). Pattern growth=1672x. Velocity accelerates throughout (0.05→0.33→0.76→1.35).
+Mutation: Da: 0.01 -> 0.05 (smoother patterns); mu_a: 0.02 -> 0.05 (faster decay); kappa: 0.2 -> 0.5 (max saturation); time_scale: 5 -> 2 (slower); consumption: 180 -> 90 (weaker coupling); n_particle_types: 2 -> 1 (isolate stability)
+Observation: The five-parameter stabilization improved clustering (0.335→0.452) and produced a visually interesting foam-like network morphology that's qualitatively different from Brusselator hexagonal clusters. The foam structure (particles = walls, voids = field spots) is a network type not seen with other models. However, GM REMAINS fundamentally unstable — plateau=0.00 in all 3 iterations (73-75) regardless of parameter adjustments. Negative C1 persists and worsens over time. The foam network degrades into thin filaments then disperses. Key insight: GM's a²/h nonlinearity produces inherently different morphology (foam networks vs tight clusters) but the lack of stability may be fundamental to the GM formulation in this code. Three consecutive unstable results suggest either (a) a code-level issue with GM implementation or (b) GM needs radically different parameters. Given 3 consecutive unstable results, consider pivoting away from GM for iter 76.
+Next: parent=root
+
+## Iter 76: 7/10 - High-res Brusselator (150×150) + 3-type ecosystem → finer hex spots but slow convergence
+Node: id=76, parent=root
+Mode/Strategy: explore — Pivot from GM (3 consecutive unstable). Test higher mesh resolution (22500 nodes = 150×150) with proven Brusselator 3-type config. Addresses open question about resolution AND balances particle type distribution.
+Config: Brusselator mesh (D1=0.05, Da_c=15, A=4.5, B=6.5), D2=1.0, PDE_D standard, 3-type ecosystem (Type 0: M1=-4/M2=4/cons=180/prod=-180; Type 1: M1=4/M2=-4/cons=-90/prod=90; Type 2: M1=0/M2=0/cons=0/prod=0), n_nodes=22500 (150×150), 6000 frames, delta_t=5E-4
+n_particle_types: 3
+Metrics: entropy=0.741, plateau=0.035, in_box=100.0%, clustering=0.485
+Assessment:
+  - Symmetry: radial (emerging hexagonal spots but not fully broken radial symmetry)
+  - Particles: clustered (Type 0 orange forms network walls, Type 2 green stays as passive ring, Type 1 blue at center)
+  - Stability: transient (plateau=0.035, pattern still evolving/rotating, not converged in 6000 frames)
+  - Novelty: repeat (same Brusselator hexagonal morphology as 100×100, just finer resolution)
+Visual: 150×150 mesh resolves ~7-8 C1 dark spots in quasi-hexagonal arrangement within larger circular structure, vs ~5-6 at 100×100. C2 shows complementary bright spots. Particles show strong 3-type radial segregation: orange (Type 0, M1=-4) dominates outer region and forms walls/networks around field spot voids; green ring (Type 2, neutral M=0) acts as passive barrier at fixed radius; blue core (Type 1, M1=4) stays at center. C1_mean=3.87±0.81, C2_mean=1.69±0.47. Pattern growth=94x. Mid-simulation (frame 30) shows emerging hex with 8 spots; late frames (90-120) show pattern rotation and drift with ~6-7 spots, suggesting ongoing dynamics not converging. The neutral Type 2 (zero mobility, zero consumption) adds no interesting dynamics — just sits as inert barrier.
+Mutation: n_nodes: 10000 -> 22500 (100×100 -> 150×150 mesh); n_particle_types: 1 -> 3 (with neutral Type 2)
+Observation: Higher resolution (150×150) does NOT unlock qualitatively new patterns. It provides finer spatial detail (more spots fit in domain) but at the cost of much slower convergence — plateau drops from typical 0.3-0.5 at 100×100 to just 0.035. This suggests the system needs proportionally longer simulations at higher resolution. The 3-type config with a neutral type (M=0, cons=0) is uninteresting: the neutral type acts as an inert barrier, not participating in pattern formation. Effective dynamics are 2-type (attracted + repelled) with a passive ring. For multi-type to be interesting, ALL types need nonzero coupling. Key result: **Higher resolution = same physics, finer details, slower convergence. Not worth the cost unless targeting specific wavelength questions.**
+Next: parent=root
+
+## Iter 77: 7/10 - FHN oscillatory regime (I=0.4) + 2-type opposing → hex spots, NO traveling waves, unstable
+Node: id=77, parent=root
+Mode/Strategy: explore — FHN oscillatory regime (I=0.4 external current pushes past Hopf bifurcation). Tests whether oscillatory dynamics produce traveling waves or spiral waves. 2-type opposing mobilities for particle type balance. Dv=0 (hex baseline) to isolate effect of I alone.
+Config: FHN mesh (Du=0.05, a=0.7, b=0.8, epsilon=0.08, I=0.4, time_scale=50), Dv=0.0, PDE_D standard, 2-type opposing (Type 0: M1=-4/M2=4/cons=180/prod=-180; Type 1: M1=4/M2=-4/cons=-90/prod=90), n_nodes=10000 (100×100), 6000 frames, delta_t=5E-4
+n_particle_types: 2
+Metrics: entropy=0.690, plateau=0.000, in_box=100.0%, clustering=0.267
+Assessment:
+  - Symmetry: hexagonal (standard FHN hex spots, ~15-20 spots)
+  - Particles: segregated (orange=spot clusters, blue=filamentary chains between spots)
+  - Stability: unstable (plateau=0.00, velocities remain high ~60, no convergence)
+  - Novelty: variant (filamentary blue type chains are morphologically interesting)
+Visual: C1 field develops strong hexagonal Turing spots (~15-20 bright spots) by frame 60+. C2 shows complementary dark spots with merging/amoeboid boundaries. NO traveling waves or spirals despite I=0.4 oscillatory regime. Particle dynamics: Type 0 (orange, M1=-4) concentrates at C1 peaks forming small clusters at spot locations. Type 1 (blue, M1=4) forms elongated filamentary chains/networks connecting between spots — resembling a cytoskeletal network. This blue filament morphology is distinct from prior 2-type hex results where both types form compact clusters. C1_mean grows explosively (2→113, 735x growth). Velocities never plateau (vel=59 at final frame). System oscillates continuously — I=0.4 prevents settling.
+Mutation: mesh_model: Brusselator → FHN; I: 0 → 0.4 (oscillatory regime); n_particle_types: varies → 2
+Observation: **FHN oscillatory regime (I=0.4) does NOT produce traveling waves.** Instead, it creates standard hexagonal Turing spots but with permanent instability (plateau=0.00). The external current I=0.4 prevents the system from reaching steady state — particles continue oscillating indefinitely. The blue type forming filamentary chains between spots is a visually interesting variant of phase separation, but the lack of convergence limits pattern quality. Key insight: **Turing patterns dominate over oscillatory dynamics in the coupled particle-field system** — particle coupling pins the pattern spatially, preventing wave propagation even in the oscillatory regime. This answers the open question about FHN oscillatory regime.
+Next: parent=root
+
+## Iter 78: 6/10 - Brusselator ASYMMETRIC DIFFUSION (D1=0.2, 4× standard) → elongated blobs, collapsed particles
+Node: id=78, parent=root
+Mode/Strategy: explore — test asymmetric diffusion (D1=0.2 vs standard 0.05) to change Turing wavelength
+Config: Brusselator (D1=0.2, Da_c=15, A=4.5, B=6.5), PDE_D standard, M1=-4/M2=4, 1-type, 6000 frames, n_nodes=10000
+n_particle_types: 1
+Metrics: entropy=[0.37], plateau=[0.00], in_box=[100.0]%, clustering=[0.80]
+Assessment:
+  - Symmetry: other (elongated/anisotropic blobs — mixed spot-stripe character)
+  - Particles: collapsed (single dense central cluster, sparse scatter elsewhere)
+  - Stability: unstable (plateau=0.00, velocities growing, max=263)
+  - Novelty: variant (field morphology is novel — elongated worm-like spots — but particle organization degraded)
+Visual: D1=0.2 (4× standard) produces LARGER Turing features as expected from wavelength scaling λ∝√(D1/D2). Fields show ~15-20 elongated blob-like spots that are noticeably bigger, more irregular, and more anisotropic than standard D1=0.05 hexagonal spots. Some are worm-shaped (proto-stripe character), others round. Pattern breaks radial symmetry by frame 40 into an irregular arrangement. However, particles COLLAPSE: by frame 80, most particles are in a single dense central cluster with only sparse scatter at other spots. Clustering=0.804 (highest this block) but this reflects collapse, not distributed clustering. Spatial entropy=0.374 is LOW (concentrated). C1_std=1.51, C2_std=1.12 — strong field variation. C1_mean=3.56 (healthy, no negative concentrations). Pattern growth=224x.
+Mutation: D1: 0.05 -> 0.2 (4× increase in activator diffusion)
+Observation: **High D1 changes Turing wavelength but causes particle collapse.** The 4× increase in D1 produces larger, more elongated features (as predicted by λ∝√D1), creating worm-like blobs with mixed spot-stripe character. This is morphologically interesting for fields. BUT particles collapse to center rather than distributing across spots. Hypothesis: larger pattern wavelength = fewer spots = stronger competition for particles = winner-take-all collapse. The standard D1=0.05 gives ~5-6 closely spaced spots that particles distribute among; D1=0.2 gives wider spacing and particles funnel into the nearest/strongest spot. **Asymmetric diffusion answers open question: it DOES change morphology (elongated features) but DEGRADES particle organization (collapse).** Intermediate D1 (e.g., 0.1) might preserve elongated character while preventing collapse.
+Next: parent=root
+
+## Iter 79: 2/10 - Extreme feedback asymmetry → NaN EXPLOSION (total system collapse)
+Node: id=79, parent=root
+Mode/Strategy: explore — 3-type extreme feedback asymmetry with proven Brusselator hex
+Config: Brusselator (D1=0.05, Da_c=15, A=4.5, B=6.5), PDE_D standard, 3-type (Type 0: M1=-4/M2=4/cons=360/prod=-180; Type 1: M1=4/M2=-4/cons=90/prod=-360; Type 2: M1=-4/M2=4/cons=180/prod=-90), n_nodes=10000, 6000 frames
+n_particle_types: 3
+Metrics: entropy=[0.00], plateau=[0.00], in_box=[0.0]%, clustering=[NaN]
+Assessment:
+  - Symmetry: none (NaN collapse)
+  - Particles: collapsed (0% in box — escaped/NaN)
+  - Stability: unstable (NaN explosion ~frame 15-20)
+  - Novelty: repeat (failure mode)
+Visual: Early frames (1-10) show normal 3-type concentric rings with emerging Brusselator spots + satellite blobs. By frame 10, max velocity=59.5 (dangerously high). By frame 20, complete NaN explosion — all fields blank, all particles gone. Consumption=360 (2x standard) created runaway positive feedback destroying the system.
+Mutation: consumption: [180,180,180] -> [360,90,180] (extreme asymmetry); production: [-180,-180,-180] -> [-180,-360,-90] (extreme asymmetry)
+Observation: Extreme feedback asymmetry (consumption=360, production=-360) causes NaN explosion. Net chemical depletion/accumulation from asymmetric rates steepens gradients beyond stability. The +/-180 standard values are near the upper limit. Answers open question: extreme feedback asymmetry does NOT create new morphologies — it destroys stability.
+Next: parent=root (proven hex config for block end)
+
+## Iter 80: 6/10 - 2-type moderate differential consumption → unstable dispersed hex
+Node: id=80, parent=root
+Mode/Strategy: explore — 2-type moderate differential consumption within proven Brusselator hex
+Config: Brusselator (D1=0.05, Da_c=15, A=4.5, B=6.5), PDE_D standard, 2-type (Type 0: M1=-4/M2=4/cons=240/prod=-120; Type 1: M1=4/M2=-4/cons=120/prod=-240), n_nodes=10000, 6000 frames
+n_particle_types: 2
+Metrics: entropy=[0.89], plateau=[0.00], in_box=[100.0]%, clustering=[0.08]
+Assessment:
+  - Symmetry: hexagonal (7-8 spots visible in fields)
+  - Particles: segregated (blue=spot centers, orange=shell/matrix) but very loose
+  - Stability: unstable (plateau=0.00, max velocity increasing to 118)
+  - Novelty: variant (weaker than standard opposing mobility)
+Visual: C1 field shows clean hexagonal spots (7-8 dark regions) that develop by frame 20 and persist through frame 120. C2 field shows complementary bright rings at spot boundaries. Particles show 2-type phase separation: blue (Type 1, repelled from C1) concentrates at spot centers forming small ring clusters, orange (Type 0, attracted to C1) forms a broad shell/matrix. However, particle organization is MUCH weaker than standard 2-type configs — clustering drops from 0.422 (frame 20) to 0.082 (final). Velocity keeps increasing (max=118 at end), indicating ongoing instability. The differential consumption (240 vs 120) weakens the field pattern through asymmetric depletion, which degrades particle organization.
+Mutation: consumption: [180,180] -> [240,120]; production: [-180,-180] -> [-120,-240]
+Observation: Moderate differential consumption weakens particle organization rather than enhancing it. Higher per-type consumption rates (even within supposed stability limits) push plateau to 0 and dramatically reduce clustering (0.08 vs 0.4+ for standard). The asymmetry creates a net chemical imbalance that destabilizes the field-particle feedback loop. Standard symmetric consumption (180 each) is superior. Confirms: consumption/production asymmetry is a dead end for pattern enrichment — symmetric rates are optimal for stability.
+Next: parent=root (block end — code modification)
+
+---
+
+## Block 10 Summary (Iters 73-80)
+
+**Focus**: New Gierer-Meinhardt mesh model, higher mesh resolution, FHN oscillatory regime, Brusselator parameter space edges.
+
+**Key Findings**:
+1. **Gierer-Meinhardt (GM) model failed**: 3 consecutive unstable results (iters 73-75). Foam-like network morphology is unique but fundamentally unstable (plateau=0 always). Negative C1 concentrations persist despite all stabilization attempts (time_scale reduction, increased damping/diffusion).
+2. **Higher mesh resolution (150×150) answered**: Same physics, finer detail, much slower convergence. Not worth the computational cost.
+3. **FHN oscillatory regime (I=0.4) answered**: Does NOT produce traveling waves. Turing patterns dominate over oscillatory dynamics; particle coupling pins patterns spatially. Results in permanently unstable hex spots.
+4. **Asymmetric diffusion (D1=0.2) answered**: Creates elongated worm-like Turing features (larger wavelength) but particles collapse to a single dense central cluster due to winner-take-all competition.
+5. **Extreme feedback asymmetry answered**: consumption=360/production=-360 causes NaN explosion. ±180 is the practical stability ceiling.
+6. **Moderate differential consumption answered**: Weaker than symmetric consumption. Asymmetric depletion destabilizes the feedback loop.
+
+**Score Summary**: 73=7/10, 74=7/10, 75=7/10, 76=7/10, 77=7/10, 78=6/10, 79=1/10, 80=6/10. Average=6.0/10.
+
+**New Established Principles**:
+- GM model produces foam-like networks but is fundamentally unstable (3/3 iters)
+- Higher mesh resolution (150×150) does not unlock new patterns; same physics, slower convergence
+- FHN oscillatory regime = destabilized hex, not traveling waves
+- Asymmetric D1/D2 changes feature size, not mode selection; degrades particle organization
+- Consumption/production asymmetry (per-type) is a dead end; symmetric rates are optimal
+
+**Direction for Block 11**: All mesh models and parameter explorations have been exhausted for new symmetry classes. The remaining frontier is **new PDE_D particle dynamics**. Consider a variant with **density-dependent mobility** — particles that sense and respond to local particle density, not just field gradients. This could create new self-organization through particle-particle feedback mediated by fields.
+
+## Iter 81
+Node: id=81, parent=root
+Mode/Strategy: code-modification — NEW PDE_D_DensityDependent variant baseline test
+Config: params_mesh=[[0.05,15,4.5,6.5,0.02,0], [1.0,0,0,0,0,0], [1.0,180,-180,0.05,0,0]], n_frames=6000, delta_t=5E-4
+n_particle_types: 1
+particle_model: PDE_ParticleField_D_DensityDependent
+mesh_model: Diffusiophoresis_Mesh (Brusselator)
+Metrics: entropy=[0.79], plateau=[0.19], in_box=[100.0]%, clustering=[0.53]
+Assessment:
+  - Symmetry: radial
+  - Particles: collapsed (single large disk)
+  - Stability: transient (plateau=0.19, still moving)
+  - Novelty: variant (density-dependent suppresses hex → radial disk)
+Visual: C1 field shows smooth radial gradient (low center, high periphery). C2 complementary. Particles form a single dense circular disk filling ~40% of domain. Disk edge shows lattice-like shell packing. Interior uniformly filled. No hexagonal symmetry breaking occurs — density-dependent mobility traps particles in aggregate where Hill function suppresses motility. Disk slowly expands over simulation but never fragments.
+Mutation: particle_model: PDE_ParticleField_D -> PDE_ParticleField_D_DensityDependent (defaults: rho_0=15, hill_n=2)
+Observation: **Density-dependent mobility SUPPRESSES Turing-driven particle pattern formation.** The Hill function creates a motility trap: once particles aggregate, local density exceeds rho_0=15, mobility drops, particles can't redistribute to follow field gradients. The normally-reliable Brusselator hex config (A=4.5, B=6.5, M=±4) produces only a single radial blob. Clustering=0.53 (high) but reflects one big aggregate, not multiple clusters. Entropy=0.79 is moderate (disk covers significant area). Key question: is rho_0=15 too low? Higher rho_0 might allow hex formation while still limiting extreme aggregation.
+Next: parent=81
+
+## Iter 82
+Node: id=82, parent=81
+Mode/Strategy: exploit — DensityDependent + Brusselator hex, 2-type opposing mobilities
+Config: params=[[-4,4,180,-180,1.6,1.0,1.6,1.5],[4,-4,180,-180,1.6,1.0,1.6,1.5]], params_mesh=[[0.05,15,4.5,6.5,0.02,0],[1.0,0,0,0,0,0],[1.0,180,-180,0.05,0,0]], n_frames=6000, delta_t=5E-4
+n_particle_types: 2
+particle_model: PDE_ParticleField_D_DensityDependent
+mesh_model: Diffusiophoresis_Mesh (Brusselator)
+DensityDependent params: rho_0=15 (default), hill_n=2 (default)
+Metrics: entropy=[0.82], plateau=[0.00], in_box=[100.0]%, clustering=[0.50]
+Assessment:
+  - Symmetry: radial (with angular modulation at boundary)
+  - Particles: clustered (phase-separated concentric + scalloped boundary)
+  - Stability: unstable (plateau=0.00, still evolving)
+  - Novelty: variant (scalloped ring = partial symmetry breaking)
+Visual: 2-type particles form classic phase separation: Type 0 (blue) dense inner disk, Type 1 (orange) outer ring. Key difference from standard 2-type: the boundary between types develops SCALLOPED modulation. ~20 periodic bumps/protrusions emerge along the ring boundary in late frames (100+). Fields show corresponding spot-like perturbations arranged in a ring at the gradient boundary. This is PARTIAL Turing symmetry breaking — angular modulation at intermediate density (near rho_0) while dense core stays frozen. Interior disk remains smooth and circular. Pattern still evolving at frame 120 (plateau=0.00).
+Mutation: n_particle_types: 1 -> 2 (opposing mobilities +/-4), maintaining DensityDependent with rho_0=15
+Observation: **2-type opposing mobility partially rescues symmetry breaking under DensityDependent.** The phase separation creates a gradient boundary zone where density is intermediate (~rho_0), allowing Turing perturbations to manifest as angular modulation. Dense regions (core and outer ring) remain trapped. This produces a novel "scalloped ring" morphology — not seen with standard PDE_D (which produces full hex). Plateau=0.00 indicates ongoing evolution; longer simulation might show more breaking. The key insight: density-dependent mobility creates SPATIAL HETEROGENEITY in pattern-forming capacity — patterns emerge only where density is near rho_0.
+Next: parent=82
+
+## Iter 83: 6/10 - DensityDependent + FHN hex, 1-type, rho_0=50 → CONCENTRIC RINGS (radial)
+Node: id=83, parent=82
+Mode/Strategy: explore — DensityDependent + FHN mesh, 1-type. rho_0 raised 15→50.
+Config: params=[-4,4,180,-180,1.6,1.0,1.6,1.5], params_mesh FHN [Du=0.5,a=0.7,b=0.8,eps=0.08,I=0,ts=20] Dv=0, n_frames=6000, delta_t=5e-4, n_particles=9600, n_particle_types=1
+particle_model: PDE_ParticleField_D_DensityDependent
+mesh_model: PDE_Diffusiophoresis_FHN
+DensityDependent params: rho_0=50, hill_n=2
+n_particle_types: 1
+Metrics: entropy=[0.81], plateau=[0.00], in_box=[100.0]%, clustering=[0.21]
+Assessment:
+  - Symmetry: radial (concentric rings)
+  - Particles: clustered (concentric multi-ring + dense core)
+  - Stability: unstable (plateau=0.00, still evolving)
+  - Novelty: repeat (radial disk, same qualitative outcome as iter 81)
+Visual: Particles form concentric rings with a dense central disk. FHN fields develop strong concentric Turing rings (C1: bright center + ring modulation, C2: complementary dark center + rings). By late frames (70-99), C2 field shows angular modulation at outer rings (dark lobes at corners suggesting early 4-fold breaking), but particles remain locked in radial ring mode. Dense core becomes slightly more diffuse internally at late times while outer rings sharpen. Some particles redistribute to box edges. Clustering=0.21 (low, FHN-typical dispersed). The ring structure is more "open" than iter 81's single blob — rho_0=50 allows more spatial spread — but fundamentally still radial, not hexagonal.
+Mutation: mesh_model: Brusselator→FHN (Dv=0 hex regime), rho_0: 15→50
+Observation: **FHN + DensityDependent (rho_0=50) still produces radial rings, NOT hexagonal.** Raising rho_0 from 15→50 weakened the motility trap enough to allow multi-ring formation (vs single blob at rho_0=15), but the density-dependent mobility still prevents the azimuthal instability needed for hexagonal symmetry breaking. FHN Dv=0 normally produces hex with standard PDE_D, so DensityDependent is the suppressor. Key comparison: iter 81 (Brusselator+DD rho_0=15)=single disk, iter 82 (Brusselator+DD 2-type)=scalloped ring, iter 83 (FHN+DD rho_0=50 1-type)=concentric rings. Pattern: DensityDependent ALWAYS produces radial symmetry regardless of mesh model or rho_0. The Hill function motility suppression creates an isotropic density feedback that locks radial symmetry. Need much higher rho_0 (>>50) or different approach.
+Next: parent=82
+
+## Iter 84: 6/10 - DensityDependent + Brusselator hex, 3-type, rho_0=200 (near-disabled) → RADIAL with angular modulation
+Node: id=84, parent=82
+Mode/Strategy: explore — test rho_0=200 (near-disabled density-dependence) with 3-type complex ecosystem
+Config: params=[[-4,4,180,-180,1.6,1.0,1.6,1.5],[4,-4,-180,180,1.8,1.8,1.1,1.9],[0,0,0,0,2.0,1.0,2.0,1.0]], params_mesh=[[0.5,15,4.5,6.5,1,0],[1,0,0,0,0,0],[1,180,-180,0.05,200,2]], n_frames=6000, delta_t=5e-4, particle_model=DensityDependent, mesh_model=Brusselator
+n_particle_types: 3
+Metrics: entropy=[0.74], plateau=[0.00], in_box=[100.0]%, clustering=[0.52]
+Assessment:
+  - Symmetry: radial (dominant, with emerging angular modulation)
+  - Particles: clustered (concentric 3-type rings with late angular perturbation)
+  - Stability: transient (plateau=0.00, still evolving)
+  - Novelty: variant (angular modulation within radial is partially new)
+Visual: Three particle types form concentric radial bands: blue (type-0) compact core, orange (type-1) middle ring, green (type-2) outer ring. Fields (C1, C2) develop smooth concentric rings early. By frame 60, angular perturbations emerge in ring structure. By frame 90, distinct blob-like features appear embedded in C1 ring valleys (dark spots) and C2 (bright spots). By frame 120, hybrid pattern: concentric rings with embedded azimuthal spots, outer ring boundary shows scalloped/beaded decoration. Orange particles develop angular modulation — some scatter outward along preferred directions forming star-like/rosette pattern. Blue core compactifies. Green outer ring remains relatively smooth. The type-2 (neutral: M1=0, M2=0) particles are field-inert, forming a passive outer boundary.
+Mutation: n_particle_types: 1→3 (complex ecosystem template), rho_0: 50→200
+Observation: **rho_0=200 (near-disabled) + 3-type still produces radial.** Even with very high rho_0 that effectively disables the Hill function (few particles have 200 neighbors within interaction radius), the DensityDependent code path still anchors radial symmetry. Late angular modulation in fields begins propagating to particles but cannot overcome radial bias. This confirms the radial lock is NOT just from rho_0 being too low — the DensityDependent code itself (or the interaction between density-counting and gradient calculation) introduces isotropic bias. 4/4 DensityDependent iterations are radial. However, the 3-type config here shows slightly more angular structure than 1-type (cf. iter 81), possibly because opposing-mobility type-1 particles create local field perturbations that partially break radial symmetry. The type-2 neutral particles (M=0) are inert bystanders. Conclusion: DensityDependent is a confirmed radial lock regardless of rho_0 or particle type count. Time to pivot away.
+Next: parent=root (pivot strategy)
+
+## Iter 85: 8/10 - Brusselator Da_c=5 (slow dynamics) + 2-type opposing → COARSE NETWORK (novel!)
+Node: id=85, parent=root
+Mode/Strategy: explore — PIVOT from DensityDependent (4/4 dead end). Test lower Da_c=5 (was 15) with standard PDE_D. First time exploring slow Turing reaction kinetics.
+Config: params=[[-4,4,180,-180,1.6,1.0,1.6,1.5],[4,-4,-180,180,1.8,1.8,1.1,1.9]], params_mesh=[[0.5,5,4.5,6.5,1,0],[1,0,0,0,0,0],[1,180,-180,0.05,0,0]], n_frames=6000, delta_t=5e-4, particle_model=PDE_ParticleField_D, mesh_model=Diffusiophoresis_Mesh
+n_particle_types: 2
+Metrics: entropy=[0.85], plateau=[0.00], in_box=[100.0]%, clustering=[0.05]
+Assessment:
+  - Symmetry: none (irregular network, no periodic lattice)
+  - Particles: network (type-0 blue filaments, type-1 orange interstices)
+  - Stability: transient (plateau=0.00, still evolving at frame 120)
+  - Novelty: novel (coarse irregular network distinct from hex/stripe/square/radial)
+Visual: Blue (type-0) particles form an interconnected NETWORK of filaments/boundaries resembling a Voronoi-like cellular skeleton. Orange (type-1) particles fill the interstices as scattered clusters. Fields: C1 shows large irregular blobs (much coarser than Da_c=15 hex spots, ~5-8 features instead of 20-30). C2 shows complementary dark spots. Pattern wavelength ~3-4× larger than standard hex. Temporal: Frame 10 shows initial concentric rings. Frame 40 shows irregular blob breakup and network emergence. Frame 60-90 network is established but continues coarsening. Frame 120 network persists but boundaries shift — still dynamically evolving.
+Mutation: Da_c: 15→5 (3× slower Turing reaction), particle_model: DensityDependent→PDE_ParticleField_D (standard)
+Observation: **Lower Da_c=5 produces a NOVEL coarse network morphology.** The 3× slower reaction dynamics fundamentally change pattern selection. Instead of ~25 hexagonal spots (Da_c=15), only ~5-8 large irregular blobs form, with particles organizing into network filaments rather than spot clusters. Blue type-0 (negative M1=-4, attracted to C1 minima) traces out a connected skeleton structure reminiscent of foam/Voronoi cells. This is visually distinct from ALL previous patterns (hex, stripe, square, radial, foam). The coarser wavelength comes from slower instability growth: Da_c=5 means the Turing instability develops 3× more slowly, favoring fewer, larger features. Key difference from GM foam (iter 73-75): this network is composed of TYPE-SEGREGATED filaments (blue=skeleton, orange=fill), while GM foam showed all particles in network strands. The clustering=0.049 (very low, near-uniform) confirms network organization. Plateau=0.00 suggests continued evolution — may need more frames or different Da_c to stabilize. This opens a new parameter axis for exploration: Da_c as a wavelength/mode selector. Next: test intermediate Da_c values (Da_c=8-10) or extend frames to see if network stabilizes.
+Next: parent=85
+
+## Iter 86: 2/10 - Da_c=5 + 1-type robustness test → NaN CRASH (particle collapse)
+Node: id=86, parent=85
+Mode/Strategy: robustness-test — test whether Da_c=5 network morphology is intrinsic to slow Turing or requires 2-type opposing mobility
+Config: params=[[-4,4,180,-180,1.6,1.0,1.6,1.5]], params_mesh=[[0.5,5,4.5,6.5,1,0],[1,0,0,0,0,0],[1,180,-180,0.05,0,0]], n_frames=6000, delta_t=5e-4, particle_model=PDE_ParticleField_D, mesh_model=Diffusiophoresis_Mesh
+n_particle_types: 1
+Metrics: entropy=[0.00], plateau=[0.00], in_box=[0.0]%, clustering=[NaN]
+Assessment:
+  - Symmetry: none (simulation crashed)
+  - Particles: collapsed (runaway aggregation → NaN explosion)
+  - Stability: unstable (NaN by frame ~25)
+  - Novelty: repeat (collapse failure mode seen before)
+Visual: Frame 1: initial particle disk, noisy fields. Frame 3: fields developing large C1 depression, particles still in disk (clustering=0.571). Frame 5: field pattern growing (76× pattern), particles contracting. Frame 10: strong radial field pattern, particles collapsed into smaller dense cluster (clustering=0.625). Frame 20: severe collapse — particles squeezed into tiny dense clump with scattered escapees. Max particle velocity=28.66 (runaway). Diffusion=31.09. Frame 30: complete NaN explosion — fields blank, all particles escaped/NaN, all metrics=0/NaN.
+Mutation: n_particle_types: 2→1 (removed opposing mobility)
+Observation: **Da_c=5 network REQUIRES 2-type opposing mobility.** With 1-type, all 9600 particles have same-sign mobility (M1=-4, M2=4), creating unidirectional convergence toward C1 minima. At standard Da_c=15, field patterns develop fast enough to distribute particles into multiple hex clusters. At Da_c=5, the 3× slower Turing instability cannot fragment the initial aggregate before positive feedback (more particles → more consumption → deeper C1 well → stronger gradient → more particles) drives runaway collapse. By frame 20, particle velocities exceed 28 and the simulation diverges. This explains WHY iter 85 worked: opposing mobilities (type-0 attracted to C1 minima, type-1 repelled) create mutual competition that prevents any single location from accumulating all particles. Conclusion: Da_c=5 is below the 1-type stability threshold — the reaction-diffusion field cannot develop complex patterns before particle aggregation runaway. The "slow Turing network" is a 2-type cooperative phenomenon.
+Next: parent=85
+
+## Iter 87: 8/10 - Brusselator Da_c=10 + 2-type opposing → MIXED LABYRINTHINE + SPOTS (intermediate morphology)
+Node: id=87, parent=85
+Mode/Strategy: exploit — map Da_c transition from coarse network (Da_c=5) to hexagonal (Da_c=15). Test Da_c=10 as intermediate.
+Config: params_mesh=[D1=0.5, Da_c=10, A=4.5, B=6.5, mu=1], D2=1.0, Pe=1.0, consumption=180, production=-180. PDE_ParticleField_D + Diffusiophoresis_Mesh. n_particle_types=2 (opposing: M1=-4/+4, M2=+4/-4). n_frames=6000, delta_t=5e-4, n_nodes=10000.
+n_particle_types: 2
+Metrics: entropy=[0.69], plateau=[0.46], in_box=[100.0]%, clustering=[0.12]
+Assessment:
+  - Symmetry: other (mixed labyrinthine bands + peripheral spots)
+  - Particles: network (elongated curvilinear bands with type segregation)
+  - Stability: stable (plateau=0.46 — best in block)
+  - Novelty: variant (intermediate between Da_c=5 network and Da_c=15 hex)
+Visual: Frame 20: Spiral/concentric ring stage — blue type-0 forms inner spiral arms, orange type-1 traces outer rings. Fields show strong concentric Turing pattern with spiral modulation. Frame 60: Transition to irregular blob morphology — C1 field shows large dark patches (low concentration) with emerging spots on periphery. Blue particles concentrate in elongated curvilinear bands at C1 peaks. Orange dispersed more uniformly. Frame 90: Evolved into mixed mode — elongated blobs + scattered peripheral spots. Blue in thick curvilinear bands (neither rings nor hex). Orange at boundaries. Distinctly BETWEEN Da_c=5 network and Da_c=15 hex. Frame 120: Final state ~5-8 large irregular elongated features (approaching labyrinthine/stripe) with additional peripheral spots. Blue type-0 in thick irregular bands, orange type-1 at boundaries. Fields show coarse mixed spot+stripe morphology. Feature wavelength ~2× standard hex, ~0.5× Da_c=5 network.
+Mutation: params_mesh Da_c: 5→10 (intermediate Turing speed, 2× faster than iter 85, 2× slower than standard)
+Observation: **Da_c=10 IS a genuine intermediate morphology** — confirms Da_c is a CONTINUOUS wavelength/mode selector, not a binary switch. Key findings: (1) Features scale ~inversely with Da_c: Da_c=5→very coarse network, Da_c=10→intermediate bands+spots, Da_c=15→fine hex spots. (2) **Plateau=0.46** is the highest stability in this block (vs 0.00 for Da_c=5 and all DensityDependent). Intermediate Turing speed promotes convergence — fast enough to fragment particles before runaway, slow enough to reach steady state. (3) Morphology is "mixed labyrinthine" — elongated irregular bands reminiscent of stripe mode but without the ordering. Could represent a Turing mixed mode at this Da_c. (4) Type segregation pattern preserved: blue=band interior, orange=boundary. Same cooperative 2-type architecture as Da_c=5. (5) C1_std=1.24 and C2_std=0.74 confirm robust field pattern development. Da_c transition map: Da_c=5 (coarse network, plateau=0), Da_c=10 (mixed labyrinthine, plateau=0.46), Da_c=15 (hexagonal spots, plateau varies). This maps a new dimension of pattern control.
+Next: parent=85
+
+## Iter 88: 6/10 - Brusselator Da_c=5 + 3-type ecosystem → CONCENTRIC SEGREGATED RINGS (type-layered radial)
+Node: id=88, parent=85
+Mode/Strategy: multi-type — test Da_c=5 coarse network with 3-type ecosystem (addresses type balance).
+Config: params_mesh=[D1=0.5, Da_c=5, A=4.5, B=6.5, mu=1], D2=1.0, Pe=1.0, consumption=180, production=-180. PDE_ParticleField_D + Diffusiophoresis_Mesh. n_particle_types=3 (Type 0: M1=-4/M2=4, Type 1: M1=4/M2=-4, Type 2: M1=0/M2=0 neutral). n_frames=6000, delta_t=5e-4, n_nodes=10000.
+n_particle_types: 3
+Metrics: entropy=[0.79], plateau=[0.00], in_box=[100.0]%, clustering=[0.37]
+Assessment:
+  - Symmetry: radial (concentric type-segregated layers with angular modulation)
+  - Particles: segregated (3 distinct concentric layers: blue core, green ring, orange periphery)
+  - Stability: transient (plateau=0.00, still evolving at frame 120)
+  - Novelty: variant (combines 3-type layering with Da_c=5 coarse features)
+Visual: Frame 30: Three-layer concentric structure forming — blue (type 0, attracted to C1 peaks) clusters centrally, green (type 2, neutral M=0) forms a prominent thick ring at its initialization radius, orange (type 1, repelled from C1 peaks) spreads to periphery with scattered clusters. C1/C2 fields show coarse (~5 spots) central depletion with emerging surrounding pattern. Frame 60: Blue particles develop internal sub-structure (irregular network within central region). Green ring stable and prominent — acts as passive barrier between type 0 and type 1. Orange scattered with some clustering at field spots. C1 shows distinct coarse spots (Da_c=5 wavelength) in exterior region. Frame 90: Blue central network becomes more pronounced — elongated connections visible within green shell. Orange has diffused further into periphery with ~6-8 clusters aligned with C1 spots. Green ring slightly thinner, still prominent. Frame 120: Blue forms messy internal network within green-bounded domain. Orange particles at boundary and periphery with field-guided clustering. Green ring clearly the dominant structural feature. Field patterns (5-8 coarse spots) visible but particles mostly follow type-driven layering rather than field-guided organization.
+Mutation: n_particle_types: 2->3, params: added Type 2 (M1=0, M2=0, neutral). Da_c=5 preserved from iter 85.
+Observation: **3-type at Da_c=5 produces type-layered radial, NOT the 2-type coarse network.** Key findings: (1) Neutral type 2 (M1=0, M2=0) acts as a passive spatial barrier — particles initialized in the middle ring stay there, creating a "cell wall" that constrains type 0 to interior and type 1 to exterior. (2) This prevents the type-cooperative network formation that made Da_c=5 + 2-type interesting (iter 85). (3) Clustering=0.37 is intermediate — not strong clusters, not a network. Reflects mixed organization. (4) Plateau=0.00 confirms Da_c=5 still doesn't stabilize (consistent with iter 85). (5) The neutral type breaks the opposing-mobility cooperation that made Da_c=5 network novel. (6) Entropy=0.79 is good (dispersed) but patterns are mostly type-driven rather than field-driven. (7) Confirmed: Da_c=5 coarse network is a 2-TYPE COOPERATIVE phenomenon — 3-type disrupts it (consistent with established principle that multi-type disrupts non-hexagonal modes).
+Next: parent=85 (block end)
+
+### Block 11 Summary (Iters 81-88)
+**Focus**: PDE_D_DensityDependent particle model + Da_c exploration
+**Score range**: 6-8/10 (avg 6.9)
+
+**Key findings**:
+1. **DensityDependent = DEAD END** (iters 81-84): Hill-function density-dependent mobility locks ALL patterns into radial symmetry regardless of mesh model, rho_0 value, or particle type count. Even near-disabled (rho_0=200) still radial. The density-counting code path introduces isotropic bias. 4/4 iterations confirm failure. Added to Failed Configurations.
+2. **BREAKTHROUGH: Da_c is a continuous wavelength/mode selector** (iters 85-88): Reducing Da_c from 15->5 produces fundamentally different morphologies. Da_c=5->coarse network (novel, 5-8 large blobs, Voronoi-like), Da_c=10->mixed labyrinthine bands+spots, Da_c=15->standard hexagonal. This is a genuinely new parameter axis not previously explored.
+3. **Da_c=5 requires 2-type opposing mobility** (iter 86): 1-type at Da_c=5 causes NaN crash (slow Turing can't fragment particles before runaway). 3-type breaks cooperative network into radial layers (iter 88).
+4. **Da_c=10 has best stability (plateau=0.46)** (iter 87): Intermediate Turing speed provides optimal convergence. Both too slow (Da_c=5, plateau=0) and too fast (Da_c=15) are less stable in 2-type configs.
+5. **DensityDependent code variant added to Failed list**: No useful regime found in any combination with Brusselator, FHN, 1/2/3 types.
+
+**Particle type balance this block**: 1-type: 3 iters (81, 83, 86); 2-type: 3 iters (82, 85, 87); 3-type: 2 iters (84, 88). Slightly 3-type under-represented.
+
+---
+
+## Block 12: Anisotropic mobility + cross-model wavelength control (Iters 89-96)
+
+## Iter 89: 8/10 - PDE_D_Anisotropic alpha=0.25 + Brusselator hex → ORIENTED STRIPES (NOVEL!)
+Node: id=89, parent=root
+Mode/Strategy: code-modification — test new PDE_D_Anisotropic with Brusselator hex, 1-type
+Config: params_mesh=[[0.5,15,4.5,6.5,1,0],[1,0,0,0,0,0],[1,180,-180,0.05,0.25,0]], n_frames=6000, delta_t=5e-4, n_particles=9600, n_nodes=10000
+n_particle_types: 1
+particle_model_name: PDE_ParticleField_D_Anisotropic
+mesh_model_name: Diffusiophoresis_Mesh
+Metrics: entropy=[0.61], plateau=[0.00], in_box=[100.0]%, clustering=[0.55]
+C1_std=1.43, C2_std=0.96, pattern_growth=191.35, pos_std_x=0.130, pos_std_y=0.261
+Assessment:
+  - Symmetry: stripes (horizontally oriented, mixed with elongated spots)
+  - Particles: clustered (along horizontal linear structures)
+  - Stability: transient (plateau=0.00, still dynamic)
+  - Novelty: novel — ANISOTROPY-INDUCED ORIENTED STRIPES from hex regime!
+Visual: Brusselator field (Da_c=15, A=4.5, B=6.5 — normally hex) produces horizontally-oriented elongated features with alpha=0.25. Particles align along horizontal linear structures. pos_std_y/pos_std_x = 2.0, confirming directional bias. Field features are a mix of short horizontal bars and elongated spots rather than standard circular hex spots.
+Mutation: code: PDE_D (isotropic) -> PDE_D_Anisotropic (alpha=0.25, weaker x-response)
+Observation: **BREAKTHROUGH** — Anisotropic mobility selects stripe-like orientation from WITHIN the hexagonal regime (B/[1+A^2]=0.34, deep in hex territory). This is mechanistically different from Turing-boundary stripes (A=3, B=10). Particles with weaker x-response preferentially move in y, but this creates horizontal trapping: particles quickly traverse vertical gradients but accumulate at horizontal features where the remaining x-gradient they can't efficiently follow holds them. The 2:1 pos_std_y/pos_std_x ratio quantifies the anisotropy. Plateau=0 suggests dynamic oscillation (spots merging/splitting horizontally). New symmetry-breaking mechanism discovered!
+Next: parent=89, test alpha=0.25 + 2-type opposing to see if anisotropic stripes survive multi-type (unlike Turing stripes which fail multi-type)
+
+## Iter 90: 8/10 - PDE_D_Anisotropic alpha=0.25 + Brusselator hex, 2-type opposing → ORIENTED ELONGATED CLUSTERS WITH TYPE SEGREGATION
+Node: id=90, parent=89
+Mode/Strategy: exploit — test anisotropic stripes with 2-type opposing mobility
+Config: params=[[-4,4,180,-180,1.6,1.0,1.6,1.5],[4,-4,-180,180,1.6,1.0,1.6,1.5]], params_mesh=[[0.5,15,4.5,6.5,1,0],[1,0,0,0,0,0],[1,180,-180,0.05,0.25,0]], n_frames=6000, delta_t=5e-4, n_particles=9600, n_nodes=10000
+n_particle_types: 2
+particle_model_name: PDE_ParticleField_D_Anisotropic
+mesh_model_name: Diffusiophoresis_Mesh
+Metrics: entropy=[0.83], plateau=[0.00], in_box=[100.0]%, clustering=[0.46]
+C1_std=0.81, C2_std=0.46, pattern_growth=92.70, pos_std_x=0.155, pos_std_y=0.307
+Assessment:
+  - Symmetry: stripes (horizontally oriented elongated clusters)
+  - Particles: segregated (type 0=orange boundary shells, type 1=blue interior cores)
+  - Stability: transient (plateau=0.00, still dynamic)
+  - Novelty: variant — anisotropic orientation preserved with 2-type, plus type-boundary segregation
+Visual: Brusselator fields show horizontally elongated dark spots/bars in C1, bright elongated features in C2. Particles show clear 2-type phase separation: orange (type 0, M1=-4, attracted to C1 low-concentration zones) forms boundary shells around elongated clusters, while blue (type 1, M1=4, attracted to C1 high-concentration valleys) fills cluster interiors. ~8-10 elongated clusters arranged irregularly with clear horizontal preferred orientation. Resembles biological tissue with cell-type boundary/interior organization. pos_std_y/pos_std_x = 1.98, confirming 2:1 anisotropy ratio preserved from iter 89.
+Mutation: n_particle_types: 1 -> 2 (opposing mobility), same alpha=0.25
+Observation: **KEY FINDING** — Anisotropic stripes SURVIVE 2-type opposing mobility! This contrasts sharply with Turing stripes (A=3, B=10) which are destroyed by multi-type (principle #11). The anisotropy mechanism is fundamentally different from Turing-boundary stripe selection: it works by preferential trapping rather than bifurcation parameter tuning. The 2-type version adds type-boundary segregation (shell/core morphology) on top of the anisotropic orientation. Entropy increased (0.61→0.83) as 2-type creates richer spatial distribution. Clustering slightly decreased (0.55→0.46) as type segregation spreads particles more evenly around clusters. C1_std dropped (1.43→0.81) — opposing consumption/production partially cancel field gradients. Pattern growth decreased (191→93) for same reason. The pos_std anisotropy ratio is maintained at ~2:1. This establishes that anisotropic mobility is a MORE ROBUST symmetry-breaking mechanism than Turing-boundary stripes.
+Next: parent=89, test FHN time_scale=10 with 2-type (explore FHN wavelength control, switch to new axis per block plan)
+
+## Iter 91: 7/10 - FHN time_scale=10 (slow) + 2-type opposing → COARSE HEXAGONAL (wavelength control confirmed)
+Node: id=91, parent=root
+Mode/Strategy: explore — test FHN time_scale as wavelength selector (analog of Brusselator Da_c)
+Config: params=[[-4,4,180,-180,1.6,1.0,1.6,1.5],[4,-4,-180,180,1.6,1.0,1.6,1.5]], params_mesh=[[0.05,0.5,1.0,0.1,0.0,10],[0,0,0,0,0,0],[1,180,-180,0.05,0,0]], n_frames=6000, delta_t=5e-4, n_particles=9600, n_nodes=10000
+n_particle_types: 2
+particle_model_name: PDE_ParticleField_D
+mesh_model_name: PDE_Diffusiophoresis_FHN
+Metrics: entropy=[0.76], plateau=[0.00], in_box=[100.0]%, clustering=[0.17]
+C1_std=147.56, C2_std=10.88, pattern_growth=2176.77, pos_std_x=0.239, pos_std_y=0.229
+Assessment:
+  - Symmetry: hexagonal (coarse, ~15-20 spots vs ~30 at time_scale=50)
+  - Particles: network (blue chains) + clustered (orange at C1 peaks) — dual organization
+  - Stability: transient (plateau=0.00, FHN intrinsically oscillatory)
+  - Novelty: variant — coarser FHN hex confirms time_scale wavelength control
+Visual: FHN fields show ~15-20 well-separated bright C1 spots with complementary C2 dark spots. Spots are clearly LARGER and FEWER than standard FHN (time_scale=50 gives ~30 finer spots). 2-type particles: orange (type 0, M1=-4) clusters at C1 peaks, blue (type 1, M1=4) forms thin network/chains in interstitial regions between spots. Field amplitudes are much higher than Brusselator (C1_mean=89.7, C1_std=147.6 vs Brusselator C1_std~1-2) — FHN operates in a different amplitude regime. Late frames show continued particle motion (vel=39.3) despite quasi-stable field pattern.
+Mutation: mesh_model: Brusselator -> FHN, time_scale: 50 -> 10, particle_model: Anisotropic -> standard PDE_D
+Observation: **FHN time_scale IS a wavelength selector** — time_scale=10 (5x slower than default 50) produces ~2x coarser hexagonal spots. Feature wavelength scales with sqrt(time_scale) approximately. However, unlike Brusselator Da_c which transitions between DIFFERENT symmetry classes (network→labyrinthine→hex), FHN time_scale so far only changes spot SIZE while staying hexagonal. Clustering=0.17 is very low (vs Brusselator hex ~0.5, standard FHN hex ~0.3), suggesting the coarse spots are less effective at concentrating particles. This answers the open question about FHN wavelength control: YES, time_scale controls wavelength, but appears to stay within hex symmetry class. Need to test more extreme values (time_scale=3-5) to see if symmetry transition occurs.
+Next: parent=89, test Anisotropic + FHN, 1-type (per block plan iter 92)
+
+## Iter 92: 7/10 - Anisotropic + FHN, 1-type → NETWORK WITH PERIPHERAL LOBES (anisotropy washed out)
+Node: id=92, parent=89
+Mode/Strategy: exploit — test Anisotropic PDE_D with FHN mesh model (does anisotropy break FHN hex like it broke Brusselator hex?)
+Config: FHN Du=0.05, a=0.5, b=1.0, eps=0.1, time_scale=50, Dv=0, PDE_ParticleField_D_Anisotropic alpha=0.25, n_particle_types=1, n_frames=6000
+n_particle_types: 1
+Metrics: entropy=[0.90], plateau=[0.00], in_box=[100.0]%, clustering=[0.25]
+Assessment:
+  - Symmetry: other (quasi-radial with distorted peripheral lobes)
+  - Particles: network (central mass + network tendrils extending to field peaks)
+  - Stability: transient (plateau=0.00, actively evolving peripheral structures)
+  - Novelty: variant (network-lobe morphology is somewhat different but not a new symmetry class)
+Visual: Early frames show clear elliptical particle disc (taller than wide, consistent with alpha=0.25). Mid-simulation (frame 50) — elliptical core with clustering=0.51. Late simulation (frames 80-99) — FHN field develops large-scale peripheral concentration lobes, particles extend network tendrils from central mass toward these lobes. Final pattern is a central rounded mass with 4-6 irregular peripheral extensions — "amoeboid" or "brain coral" morphology. C1 field shows large central teal region (low C1) surrounded by irregular yellow/green/purple peripheral features. pos_std ratio is only 1.05:1 (nearly isotropic!) compared to Brusselator's 2:1. The FHN field dynamics dominate over the anisotropic mobility bias.
+Mutation: mesh_model: Brusselator -> FHN (keeping Anisotropic PDE_D alpha=0.25)
+Observation: **Anisotropy is mesh-model-selective**: alpha=0.25 creates strong 2:1 orientation ratio with Brusselator (large features susceptible to directional bias) but nearly isotropic 1.05:1 with FHN (many small features average out directional bias). This parallels LogSensing's mesh-model selectivity — particle dynamics modifications interact differently with different field models. FHN's finer spatial scale (~30 small spots vs Brusselator's ~10 large spots) means individual particles experience gradient directions that average out, nullifying the anisotropy at the population level. The resulting morphology is a hybrid: FHN-typical network organization but with larger-scale "lobe" structures at the periphery that may reflect the anisotropy distorting the radial initial condition breakup. Clustering=0.25 is typical FHN (lower than Brusselator). Entropy=0.90 is very high, indicating broad distribution. Score 7/10 — informative negative result (anisotropy doesn't transfer to FHN), plus moderate network-lobe morphology.
+Next: parent=87, Da_c=7 fine-mapping of labyrinthine regime (per block plan iter 93)
