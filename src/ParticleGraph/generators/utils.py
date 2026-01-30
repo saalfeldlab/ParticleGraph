@@ -1144,7 +1144,22 @@ def init_mesh(config, device):
         edge_index_mesh = torch.cat([edge_index_mesh, periodic_edge_index], dim=1)
         edge_weight_mesh = torch.cat([edge_weight_mesh, periodic_weights])
 
+        # CRITICAL: Update diagonal (self-loop) entries to maintain row-sum = 0.
+        # Each new off-diagonal edge with weight w (negative) added to node i
+        # requires the diagonal entry L(i,i) to be updated by -w (positive).
+        # Without this correction, the Laplacian rows don't sum to 0, causing
+        # unbounded mass injection and NaN divergence (confirmed iters 13-14).
+        diagonal_correction = torch.zeros(n_nodes, dtype=torch.float32, device=device)
+        periodic_src_tensor = torch.tensor(periodic_src, dtype=torch.long, device=device)
+        diagonal_correction.scatter_add_(0, periodic_src_tensor, -periodic_weights)
+
+        # Find and update existing self-loop weights
+        self_loop_mask = edge_index_mesh[0] == edge_index_mesh[1]
+        self_loop_nodes = edge_index_mesh[0, self_loop_mask]
+        edge_weight_mesh[self_loop_mask] += diagonal_correction[self_loop_nodes]
+
         print(f"Added {len(periodic_src)} periodic Laplacian edges (weight={typical_weight:.4f})")
+        print(f"Updated {self_loop_mask.sum().item()} diagonal entries (max correction={diagonal_correction.abs().max().item():.4f})")
 
     mesh_data = {'mesh_pos': pos_3d, 'face': face, 'edge_index': edge_index_mesh, 'edge_weight': edge_weight_mesh,
                  'mask': mask_mesh, 'size': mesh_size}
