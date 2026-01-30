@@ -837,6 +837,12 @@ def data_generate_particle_field(
     X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
     mask_mesh = mesh_data["mask"].squeeze()
 
+    # For periodic boundary: disable Dirichlet mask so ALL mesh nodes participate in field updates.
+    # Without this, boundary nodes are held at fixed values, creating edge-gradient artifacts
+    # that overwhelm intrinsic Turing pattern formation across the domain.
+    if hasattr(simulation_config, 'boundary') and simulation_config.boundary == 'periodic':
+        mask_mesh = torch.ones_like(mask_mesh, dtype=torch.bool)
+
     if "diffusiophoresis" in model_config.field_type:
         model_p_f, bc_pos, bc_dpos = choose_model(config=config, device=device)
         model_f_f = choose_mesh_model(config, X1_mesh, device=device)
