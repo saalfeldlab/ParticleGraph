@@ -686,6 +686,24 @@ def plot_ucb_tree(nodes: list, output_path: str, title: str = "UCB Exploration T
     plt.close()
 
 
+def detect_last_iteration(analysis_path):
+    """Detect the last completed iteration from analysis.md.
+
+    Scans for '## Iter N:' entries written by Claude after each iteration.
+    Returns the next iteration to run (1-indexed), or 1 if nothing found.
+    """
+    found_iters = set()
+    if os.path.exists(analysis_path):
+        with open(analysis_path, 'r') as f:
+            for line in f:
+                match = re.match(r'^##+ Iter (\d+):', line)
+                if match:
+                    found_iters.add(int(match.group(1)))
+    if not found_iters:
+        return 1
+    return max(found_iters) + 1
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="LLM-guided pattern exploration")
     parser.add_argument("-o", "--option", nargs="+", help="task and config options")
@@ -727,8 +745,8 @@ if __name__ == "__main__":
         print(f"\033[91minstruction file not found: {instruction_path}\033[0m")
         sys.exit(1)
 
-    # Resume support: start_iteration parameter (default 1)
-    start_iteration = 67
+    # Auto-resume: detect last completed iteration from analysis.md
+    start_iteration = detect_last_iteration(analysis_path)
 
     if start_iteration > 1:
         print(f"\033[93mResuming from iteration {start_iteration}\033[0m")
