@@ -1019,6 +1019,21 @@ def init_mesh(config, device):
                 node_value = torch.zeros((n_nodes, 2), device=device)
                 node_value[:, 0] = u_star + 0.01 * torch.randn(n_nodes, device=device)
                 node_value[:, 1] = v_star + 0.01 * torch.randn(n_nodes, device=device)
+            elif 'GM' in config.graph_model.mesh_model_name:
+                # Gierer-Meinhardt: initialize near homogeneous steady state
+                # Steady state: a* = sigma_a/mu_a, h* = rho*(sigma_a/mu_a)^2/mu_h
+                # with small random perturbations for symmetry breaking
+                # params_mesh[0]: [Da, rho, mu_a, sigma_a, kappa, time_scale]
+                # params_mesh[1]: [Dh, mu_h, sigma_h, ...]
+                rho_param = config.simulation.params_mesh[0][1]
+                mu_a_param = config.simulation.params_mesh[0][2]
+                sigma_a_param = config.simulation.params_mesh[0][3]
+                mu_h_param = config.simulation.params_mesh[1][1]
+                a_star = sigma_a_param / max(mu_a_param, 1e-6)
+                h_star = rho_param * a_star**2 / max(mu_h_param, 1e-6)
+                node_value = torch.zeros((n_nodes, 2), device=device)
+                node_value[:, 0] = max(a_star, 0.1) + 0.01 * torch.randn(n_nodes, device=device)
+                node_value[:, 1] = max(h_star, 0.1) + 0.01 * torch.randn(n_nodes, device=device)
             else:
                 # Default for other variants: normalized random
                 node_value = torch.rand((n_nodes, 2), device=device)
