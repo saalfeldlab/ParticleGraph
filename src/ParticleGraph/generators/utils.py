@@ -1104,6 +1104,48 @@ def init_mesh(config, device):
     pos_3d = torch.cat((x_mesh[:, 1:3], torch.ones((x_mesh.shape[0], 1), device=device)), dim=1)
     edge_index_mesh, edge_weight_mesh = get_mesh_laplacian(pos=pos_3d, face=face, normalization="None")
     edge_weight_mesh = edge_weight_mesh.to(dtype=torch.float32)
+
+    # Add periodic wrap-around edges when boundary='periodic'
+    # This connects left↔right and top↔bottom mesh boundary nodes so the Laplacian
+    # treats the domain as a torus, enabling seamless Turing pattern formation.
+    if hasattr(config.simulation, 'boundary') and config.simulation.boundary == 'periodic':
+        # Estimate typical interior Laplacian edge weight from existing edges
+        # Use median of negative weights (off-diagonal Laplacian entries)
+        neg_weights = edge_weight_mesh[edge_weight_mesh < 0]
+        if len(neg_weights) > 0:
+            typical_weight = neg_weights.median().item()
+        else:
+            typical_weight = -1.0 / (mesh_size ** 2)
+
+        # Node indices on a regular n×n grid: node(i,j) = i * n + j
+        # where i is row (y-axis), j is column (x-axis)
+        n = n_nodes_per_axis
+        periodic_src = []
+        periodic_dst = []
+
+        # Left↔Right: connect column 0 to column n-1 (same row)
+        for i in range(n):
+            left_node = i * n + 0          # column 0
+            right_node = i * n + (n - 1)   # column n-1
+            periodic_src.extend([left_node, right_node])
+            periodic_dst.extend([right_node, left_node])
+
+        # Top↔Bottom: connect row 0 to row n-1 (same column)
+        for j in range(n):
+            top_node = 0 * n + j            # row 0
+            bottom_node = (n - 1) * n + j   # row n-1
+            periodic_src.extend([top_node, bottom_node])
+            periodic_dst.extend([bottom_node, top_node])
+
+        periodic_edge_index = torch.tensor([periodic_src, periodic_dst], dtype=torch.long, device=device)
+        periodic_weights = torch.full((len(periodic_src),), typical_weight, dtype=torch.float32, device=device)
+
+        # Append periodic edges to existing Laplacian
+        edge_index_mesh = torch.cat([edge_index_mesh, periodic_edge_index], dim=1)
+        edge_weight_mesh = torch.cat([edge_weight_mesh, periodic_weights])
+
+        print(f"Added {len(periodic_src)} periodic Laplacian edges (weight={typical_weight:.4f})")
+
     mesh_data = {'mesh_pos': pos_3d, 'face': face, 'edge_index': edge_index_mesh, 'edge_weight': edge_weight_mesh,
                  'mask': mask_mesh, 'size': mesh_size}
 
