@@ -4,147 +4,76 @@ import torch_geometric.utils as pyg_utils
 from ParticleGraph.utils import to_numpy
 
 class PDE_D(pyg.nn.MessagePassing):
+    """Particle model for diffusiophoresis with PDE_A-style attraction-repulsion.
+
+    Receives p=params_mesh (shared, 3 rows x N columns) and optionally
+    particle_params from simulation.params (one row per particle type).
+
+    See PARAMS_DOC for the complete parameter layout.
     """
-    Computes interactions between particles and fields, and between particles.
-    Implements diffusiophoresis with PDE_A-style attraction-repulsion.
 
-    Supports multiple particle types when particle_params is provided.
-    Per-type params layout: [M1, M2, consumption, production, ar_p1, ar_p2, ar_p3, ar_p4]
-      - M1, M2: Mobility coefficients for diffusiophoresis
-      - consumption, production: Particle effects on fields
-      - ar_p1, ar_p2: Attraction term parameters (p1*exp(-d^(2*p2)/(2σ²)))
-      - ar_p3, ar_p4: Repulsion term parameters (p3*exp(-d^(2*p4)/(2σ²)))
-
-    Block 9 code change: Cross-type differential adhesion
-    Literature: Steinberg (1963) Science 141:401-408 "Reconstruction of tissues by
-    dissociated cells"; Foty & Steinberg (2005) Dev Biol 278:255-263
-    When n_particle_types > 1, pp interactions are type-dependent:
-      - Same-type pairs use params as-is (attraction + repulsion from ar_p1-p4)
-      - Cross-type pairs SWAP attraction/repulsion: what attracts same-type REPELS
-        cross-type and vice versa. This creates differential adhesion — cells of the
-        same type stick together, cells of different types push apart.
-    Controlled by p[2, 5] (cross_type_factor):
-      0.0 = no cross-type modification (backward compatible, default)
-      >0  = cross-type interactions are scaled by -cross_type_factor
-            (negative = inverted attraction/repulsion for cross-type pairs)
-
-    Block 10 code change: Michaelis-Menten concentration-dependent consumption/production
-    Literature: Michaelis & Menten (1913) Biochem Z 49:333-369 "Die Kinetik der
-    Invertinwirkung"; Johnson & Goody (2011) Biochemistry 50:8264-8269 (modern review)
-    Standard enzyme kinetics: rate = Vmax * [S] / (Km + [S])
-    Applied to particle-field coupling: consumption/production rates become dependent
-    on the local field concentration rather than being constant.
-    Controlled by p[1, 2] (mm_Km):
-      0.0 = constant rate (backward compatible, default)
-      >0  = Michaelis-Menten kinetics: effective_rate = base_rate * |C1| / (Km + |C1|)
-            At low |C1| << Km: rate ≈ base_rate * |C1| / Km (linear, weak)
-            At high |C1| >> Km: rate ≈ base_rate (saturated, full strength)
-            This creates nonlinear feedback: particles consume/produce more where
-            field concentrations are strong, less where they are weak.
-
-    Block 11 code change: Gradient-amplified mobility (durotaxis)
-    Literature: Lo et al. (2000) Biophys J 79:144-152 "Cell movement is guided by
-    the rigidity of the substrate"; Isenberg et al. (2009) Biophys J 97:1313-1322
-    Cells migrate faster in regions of steep chemical/mechanical gradients. Here,
-    the local field gradient magnitude acts as a "stiffness" signal that modulates
-    particle mobility — particles at pattern boundaries (steep gradients) respond
-    more strongly than particles in flat-field regions.
-    Controlled by p[1, 3] (grad_amp_alpha):
-      0.0 = constant mobility (backward compatible, default)
-      >0  = gradient-amplified: M_effective = M * (1 + alpha * clamp(|grad_C1|, max=1.0))
-            This creates selective concentration at pattern edges rather than
-            broad peak/valley occupation.
-    Block 12 fix: Added gradient clamping (max_grad=1.0) to prevent boundary mesh
-    mask artifacts (|grad| ~ 5-20) from catastrophically amplifying mobility. Interior
-    FHN pattern gradients are typically |grad| ~ 0.1-1.0, so clamping at 1.0 preserves
-    the intended physics while neutralizing boundary artifacts. Iter 43 showed alpha=2.0
-    without clamping caused 72.60% retention (catastrophic boundary escape).
-
-    Block 13 code change: Chiral diffusiophoresis (gradient-perpendicular drift)
-    Literature: Löwen (2016) Eur Phys J Special Topics 225:2319-2331 "Chirality in
-    microswimmer motion: From circle swimmers to active turbulence";
-    Friedrich & Jülicher (2007) PNAS 104:13256 "Chemotaxis of sperm cells"
-    Many biological cells (sperm, bacteria, leukocytes) exhibit chiral migration:
-    instead of climbing gradients directly, they spiral along them. The velocity
-    has both a parallel (up/down gradient) and perpendicular component.
-    v = M * grad_C * (cos(theta) * parallel + sin(theta) * perpendicular)
-    where theta = arctan(chirality) controls the spiral angle.
-    Controlled by p[1, 4] (chirality):
-      0.0 = pure gradient-parallel motion (backward compatible, default)
-      >0  = CCW spiral: v += chirality * (M * grad_C rotated 90° CCW)
-      <0  = CW spiral: same but rotated 90° CW
-    This adds a perpendicular drift to the standard diffusiophoretic velocity,
-    creating spiral/helical trajectories along field contours. Should produce
-    qualitatively different particle organization: instead of collecting at
-    peaks/valleys, particles orbit around them.
-
-    Block 14 code change: Field-modulated particle-particle adhesion
-    Literature: Hynes (2002) Cell 110:673-687 "Integrins: bidirectional, allosteric
-    signaling machines"; Schwartz & Ginsberg (2002) Nat Cell Biol 4:E65-E68
-    "Networks and crosstalk: integrin signaling spreads"
-    Cell-cell adhesion strength is regulated by local growth factor concentration.
-    In high-signal regions (Turing peaks), integrins/cadherins are upregulated,
-    cells form stronger adhesions → tighter clusters. In low-signal regions
-    (between spots), adhesion is weak → cells remain dispersed.
-    Controlled by p[2, 6] (pp_field_mod):
-      0.0 = constant pp forces (backward compatible, default)
-      >0  = field-modulated: f_eff = f * (1 + alpha * C1_norm)
-            where C1_norm = clamp(C1_local / C1_ref, 0, 2)
-            This creates differential compaction: dense cores at pattern peaks,
-            loose periphery between spots → enhanced morphological contrast.
-
-    Block 15 code change: Density-dependent mobility (contact inhibition of locomotion)
-    Literature: Mayor & Carmona-Fontaine (2010) Trends Cell Biol 20:319-328 "Keeping
-    in touch with contact inhibition of locomotion"; Stramer & Mayor (2017) Nat Rev
-    Mol Cell Biol 18:43-55 "Mechanisms and in vivo functions of contact inhibition
-    of locomotion"
-    Contact inhibition of locomotion (CIL) is a widespread biological phenomenon:
-    when cells contact other cells, they reduce their motility and change direction.
-    In dense clusters, cells become essentially immobile, while isolated cells
-    migrate freely. This creates sharp cluster boundaries — cells at the edge
-    can still move (few neighbors) but interior cells are trapped (many neighbors).
-    Implementation: During 'pp' aggregation, count the number of neighbors per
-    particle. During 'fp' velocity computation, scale velocity by:
-      v_eff = v / (1 + beta * n_neighbors)
-    where beta controls the strength of density-dependent slowdown.
-    Controlled by p[1, 5] (ddm_beta):
-      0.0 = constant mobility (backward compatible, default)
-      >0  = density-dependent: particles with more pp neighbors move slower
-            beta=0.1: mild slowdown (10 neighbors → 50% speed)
-            beta=0.3: strong slowdown (10 neighbors → 25% speed)
-    Effect: Creates sharper cluster boundaries — interior particles are immobilized,
-    edge particles can still respond to gradients. Should produce more compact,
-    well-defined aggregates with crisp boundaries rather than diffuse clusters.
-
-    Block 16 code change: Velocity alignment (Vicsek-style collective motion)
-    Literature: Vicsek et al. (1995) Phys Rev Lett 75:1226-1229 "Novel type of
-    phase transition in a system of self-driven particles"; Chaté et al. (2008)
-    Phys Rev E 77:046113 "Modeling collective motion: variations on the Vicsek model"
-    All previous PDE_D features modified INDIVIDUAL particle responses to fields
-    (modulate speed, force strength, sensing). None introduced ACTIVE COORDINATION
-    between particles about DIRECTION of motion. The Vicsek model is the canonical
-    framework for collective motion: each particle adjusts its velocity direction
-    to align with the average direction of its neighbors. This creates coherent
-    flows, streams, and flocking behavior that is orthogonal to gradient-following.
-    Implementation: During 'pp' message computation, in addition to attraction-
-    repulsion forces, compute a velocity alignment force:
-      f_align = alignment * normalize(v_neighbor - v_self) * weight(distance) * sigma
-    This is added to the pp force output. The alignment force is weighted by
-    distance (closer neighbors have stronger influence).
-    Block 17 fix: Normalized velocity difference to unit direction and scaled by
-    sigma to match pp force magnitude. Raw velocity differences caused force
-    blow-up (Block 10: all 8 iterations crashed). Added hard clamp [-0.1, 0.1].
-    Controlled by p[2, 7] (alignment_strength):
-      0.0 = no alignment (backward compatible, default)
-      >0  = Vicsek-style alignment: particles match neighbor velocities
-            0.1: weak alignment (subtle coordination)
-            0.5: moderate alignment (visible streams)
-            1.0: strong alignment (flocking dominates)
-    Effect: Creates coherent particle streams flowing along Turing pattern contours,
-    organized invasion fronts, or vortex/swirl patterns within Turing spots. This
-    is fundamentally different from all previous features because it introduces
-    INTER-PARTICLE INFORMATION TRANSFER about direction, not just position.
-    """
+    # PARAMS_DOC: Self-documenting parameter structure for LLM-guided exploration.
+    # CRITICAL: All rows of params_mesh must have the SAME number of columns.
+    # If you add columns to one row (e.g. row 2 index 7), you MUST pad the other
+    # rows to the same width. torch.tensor() requires a rectangular array.
+    PARAMS_DOC = {
+        "model_name": "PDE_D",
+        "description": "Particle dynamics: diffusiophoresis + attraction-repulsion + optional features",
+        "params_mesh": [
+            {
+                "row": 0,
+                "description": "C1 field parameters (shared with mesh model PDE_Diffusiophoresis)",
+                "slots": [
+                    {"index": 0, "name": "D1", "description": "Diffusion coeff for C1 (used by mesh model)", "typical_range": [0.01, 0.5]},
+                    {"index": 1, "name": "Da_c", "description": "Damkohler number (used by mesh model)", "typical_range": [1.0, 50.0]},
+                    {"index": 2, "name": "A", "description": "Brusselator param A (used by mesh model)", "typical_range": [0.5, 5.0]},
+                    {"index": 3, "name": "B", "description": "Brusselator param B (used by mesh model)", "typical_range": [1.0, 10.0]},
+                    {"index": 4, "name": "mu", "description": "Morphological parameter (used by mesh model)", "typical_range": [0.01, 0.1]},
+                    {"index": 5, "name": "M1", "description": "Mobility coefficient for C1 gradients", "typical_range": [-16, 16]}
+                ]
+            },
+            {
+                "row": 1,
+                "description": "C2 field parameters + particle feature controls",
+                "slots": [
+                    {"index": 0, "name": "D2", "description": "Diffusion coeff for C2 (used by mesh model)", "typical_range": [0.1, 1.0]},
+                    {"index": 1, "name": "M2", "description": "Mobility coefficient for C2 gradients", "typical_range": [-16, 16]},
+                    {"index": 2, "name": "mm_Km", "description": "Michaelis-Menten half-saturation (0=constant rate)", "typical_range": [0.0, 0.5]},
+                    {"index": 3, "name": "grad_amp_alpha", "description": "Durotaxis gradient amplification (0=off)", "typical_range": [0.0, 2.0]},
+                    {"index": 4, "name": "chirality", "description": "Chiral drift fraction (0=straight, >0=CCW, <0=CW)", "typical_range": [-0.3, 0.3]},
+                    {"index": 5, "name": "ddm_beta", "description": "Density-dependent mobility / contact inhibition (0=off)", "typical_range": [0.0, 1.0]}
+                ]
+            },
+            {
+                "row": 2,
+                "description": "Particle-field coupling + particle-particle feature controls",
+                "slots": [
+                    {"index": 0, "name": "Pe", "description": "Peclet number", "typical_range": [0.5, 2.0]},
+                    {"index": 1, "name": "consumption", "description": "Particle consumption rate of C1", "typical_range": [10, 200]},
+                    {"index": 2, "name": "production", "description": "Particle production rate of C2", "typical_range": [-200, -10]},
+                    {"index": 3, "name": "influence_radius", "description": "Gaussian influence radius for pf coupling", "typical_range": [0.01, 0.1]},
+                    {"index": 4, "name": "log_sensing_K", "description": "Weber-Fechner half-saturation (0=linear sensing)", "typical_range": [0.0, 2.0]},
+                    {"index": 5, "name": "cross_type_factor", "description": "Cross-type adhesion inversion (0=off, >0=Steinberg sorting)", "typical_range": [0.0, 0.5]},
+                    {"index": 6, "name": "pp_field_mod", "description": "Field-modulated pp adhesion (0=off)", "typical_range": [0.0, 1.0]},
+                    {"index": 7, "name": "alignment_strength", "description": "Vicsek velocity alignment (0=off)", "typical_range": [0.0, 1.0]}
+                ]
+            }
+        ],
+        "particle_params": {
+            "description": "Per-type params from simulation.params (one row per n_particle_types)",
+            "slots": [
+                {"index": 0, "name": "M1", "description": "Per-type mobility for C1 (overrides params_mesh[0][5])"},
+                {"index": 1, "name": "M2", "description": "Per-type mobility for C2 (overrides params_mesh[1][1])"},
+                {"index": 2, "name": "consumption", "description": "Per-type consumption rate"},
+                {"index": 3, "name": "production", "description": "Per-type production rate"},
+                {"index": 4, "name": "ar_p1", "description": "Attraction strength: p1*exp(-d^(2*p2)/(2*sigma^2))"},
+                {"index": 5, "name": "ar_p2", "description": "Attraction exponent"},
+                {"index": 6, "name": "ar_p3", "description": "Repulsion strength: p3*exp(-d^(2*p4)/(2*sigma^2))"},
+                {"index": 7, "name": "ar_p4", "description": "Repulsion exponent"}
+            ]
+        },
+        "width_constraint": "ALL rows of params_mesh MUST have the same number of columns. Default is 6. If enabling features at indices 6-7, pad ALL rows to 8."
+    }
 
     def __init__(self, aggr_type='mean', p=None, particle_params=None, bc_dpos=None, dimension=2, sigma=0.005):
         super(PDE_D, self).__init__(aggr=aggr_type)
