@@ -27,6 +27,20 @@ class PDE_D(pyg.nn.MessagePassing):
       0.0 = no cross-type modification (backward compatible, default)
       >0  = cross-type interactions are scaled by -cross_type_factor
             (negative = inverted attraction/repulsion for cross-type pairs)
+
+    Block 10 code change: Michaelis-Menten concentration-dependent consumption/production
+    Literature: Michaelis & Menten (1913) Biochem Z 49:333-369 "Die Kinetik der
+    Invertinwirkung"; Johnson & Goody (2011) Biochemistry 50:8264-8269 (modern review)
+    Standard enzyme kinetics: rate = Vmax * [S] / (Km + [S])
+    Applied to particle-field coupling: consumption/production rates become dependent
+    on the local field concentration rather than being constant.
+    Controlled by p[1, 2] (mm_Km):
+      0.0 = constant rate (backward compatible, default)
+      >0  = Michaelis-Menten kinetics: effective_rate = base_rate * |C1| / (Km + |C1|)
+            At low |C1| << Km: rate ≈ base_rate * |C1| / Km (linear, weak)
+            At high |C1| >> Km: rate ≈ base_rate (saturated, full strength)
+            This creates nonlinear feedback: particles consume/produce more where
+            field concentrations are strong, less where they are weak.
     """
 
     def __init__(self, aggr_type='mean', p=None, particle_params=None, bc_dpos=None, dimension=2, sigma=0.005):
@@ -77,6 +91,16 @@ class PDE_D(pyg.nn.MessagePassing):
         # Effect: Same-type particles attract, cross-type particles repel → cell sorting
         self.cross_type_factor = p[2, 5] if p.shape[1] > 5 else 0.0
 
+        # Block 10 code change: Michaelis-Menten concentration-dependent feedback
+        # p[1, 2] controls Km (half-saturation constant):
+        #   0.0 = constant consumption/production rates (backward compatible, default)
+        #   >0  = Michaelis-Menten: effective_rate = base_rate * |C1| / (Km + |C1|)
+        # Literature: Michaelis & Menten (1913) Biochem Z 49:333-369
+        # Effect: Consumption/production depends on local field concentration
+        #   Creates nonlinear feedback — particles affect fields more at concentration peaks
+        #   Could produce sharper pattern boundaries or oscillatory coupling dynamics
+        self.mm_Km = p[1, 2] if p.shape[1] > 2 else 0.0
+
         # Report configuration
         print(f"initialized PDE_D with parameters:")
         print(f"mobility: M₁={self.M1.item()}, M₂={self.M2.item()}")
@@ -94,6 +118,12 @@ class PDE_D(pyg.nn.MessagePassing):
                 print(f"cross-type differential adhesion: factor={ctf_val:.2f} (Steinberg sorting)")
             else:
                 print(f"cross-type adhesion: off (factor=0)")
+        if hasattr(self, 'mm_Km'):
+            mm_val = self.mm_Km.item() if hasattr(self.mm_Km, 'item') else self.mm_Km
+            if mm_val > 0:
+                print(f"Michaelis-Menten feedback: Km={mm_val:.3f} (rate = base * |C1|/(Km+|C1|))")
+            else:
+                print(f"consumption/production: constant rate (Km=0)")
         if particle_params is not None:
             print(f"multi-type support: {particle_params.shape[0]} particle types")
             print(f"per-type params: [M1, M2, consumption, production, ar_p1, ar_p2, ar_p3, ar_p4]")
@@ -247,6 +277,18 @@ class PDE_D(pyg.nn.MessagePassing):
             else:
                 consumption = self.consumption_rate
                 production = self.production_rate
+
+            # Block 10: Michaelis-Menten concentration-dependent modulation
+            # When mm_Km > 0, scale consumption/production by local field concentration
+            # rate_effective = base_rate * |C1| / (Km + |C1|)
+            # This makes particle-field coupling stronger at high concentrations
+            # and weaker at low concentrations — nonlinear feedback
+            if hasattr(self, 'mm_Km') and self.mm_Km > 0:
+                # x_i contains particle features; field values at indices 6:8
+                C1_local = torch.abs(x_i[:, 6]) + 1e-6  # Local C1 at particle position
+                mm_factor = C1_local / (self.mm_Km + C1_local)  # Michaelis-Menten factor [0, 1)
+                consumption = consumption * mm_factor
+                production = production * mm_factor
 
             # Create field updates [C₁, C₂]
             field_updates = torch.zeros((pos_i.size(0), 2), device=pos_i.device)
