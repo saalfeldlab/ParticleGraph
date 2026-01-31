@@ -1531,9 +1531,10 @@ def data_generate_particle_field(
                             V = griddata((px, py), vy, (grid_x, grid_y), method='linear', fill_value=0)
                             speed = np.sqrt(U**2 + V**2)
 
-                            # Streamlines colored by speed
-                            lw = 3.0 * speed / (speed.max() + 1e-10)
-                            ax4.streamplot(gx, gy, U, V, color=speed, cmap='inferno',
+                            # White streamlines with fixed velocity scale for cross-frame comparison
+                            vel_max = 0.1
+                            lw = 3.0 * np.clip(speed / vel_max, 0, 1)
+                            ax4.streamplot(gx, gy, U, V, color='white',
                                           linewidth=lw, density=1.5, arrowsize=1.2,
                                           arrowstyle='->')
                     except Exception:
