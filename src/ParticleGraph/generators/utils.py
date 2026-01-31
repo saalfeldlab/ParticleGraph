@@ -1038,6 +1038,25 @@ def init_mesh(config, device):
                 node_value = torch.zeros((n_nodes, 2), device=device)
                 node_value[:, 0] = max(a_star, 0.1) + 0.01 * torch.randn(n_nodes, device=device)
                 node_value[:, 1] = max(h_star, 0.1) + 0.01 * torch.randn(n_nodes, device=device)
+            elif 'FHN' in config.graph_model.mesh_model_name:
+                # FitzHugh-Nagumo: initialize near resting state with localized perturbations
+                # FHN resting state: u* ≈ intersection of u-nullcline and v-nullcline
+                # For standard params (a=0.75, b=1.0): u* ≈ -1.2, v* ≈ (u*+a)/b ≈ -0.45
+                # Use random init near resting state + localized excitation seeds
+                # Literature: Ermakova et al. (2009) PLoS ONE 4:e4454
+                a_param = config.simulation.params_mesh[0][1]  # a parameter
+                b_param = config.simulation.params_mesh[0][2]  # b parameter
+                # Approximate resting state (leftmost intersection of nullclines)
+                u_rest = -1.2  # Approximate for typical a, b values
+                v_rest = (u_rest + a_param) / max(b_param, 0.1)
+                node_value = torch.zeros((n_nodes, 2), device=device)
+                node_value[:, 0] = u_rest + 0.01 * torch.randn(n_nodes, device=device)  # u near rest
+                node_value[:, 1] = v_rest + 0.01 * torch.randn(n_nodes, device=device)  # v near rest
+                # Add localized excitation seeds (push u above threshold to trigger waves)
+                n_seeds = max(3, n_nodes // 200)  # ~0.5% of nodes as seeds
+                seed_indices = torch.randperm(n_nodes)[:n_seeds]
+                node_value[seed_indices, 0] = 1.5  # Excited state (well above threshold)
+                node_value[seed_indices, 1] = v_rest  # v unchanged at seeds
             else:
                 # Default for other variants: normalized random
                 node_value = torch.rand((n_nodes, 2), device=device)
