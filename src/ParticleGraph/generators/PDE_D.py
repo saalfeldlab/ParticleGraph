@@ -51,9 +51,14 @@ class PDE_D(pyg.nn.MessagePassing):
     more strongly than particles in flat-field regions.
     Controlled by p[1, 3] (grad_amp_alpha):
       0.0 = constant mobility (backward compatible, default)
-      >0  = gradient-amplified: M_effective = M * (1 + alpha * |grad_C1|)
+      >0  = gradient-amplified: M_effective = M * (1 + alpha * clamp(|grad_C1|, max=1.0))
             This creates selective concentration at pattern edges rather than
             broad peak/valley occupation.
+    Block 12 fix: Added gradient clamping (max_grad=1.0) to prevent boundary mesh
+    mask artifacts (|grad| ~ 5-20) from catastrophically amplifying mobility. Interior
+    FHN pattern gradients are typically |grad| ~ 0.1-1.0, so clamping at 1.0 preserves
+    the intended physics while neutralizing boundary artifacts. Iter 43 showed alpha=2.0
+    without clamping caused 72.60% retention (catastrophic boundary escape).
     """
 
     def __init__(self, aggr_type='mean', p=None, particle_params=None, bc_dpos=None, dimension=2, sigma=0.005):
@@ -118,16 +123,12 @@ class PDE_D(pyg.nn.MessagePassing):
         # p[1, 3] controls gradient amplification strength (alpha):
         #   0.0 = standard constant mobility (backward compatible, default)
         #   >0  = mobility scales with local gradient magnitude:
-        #         M_effective = M * (1 + alpha * |grad_C1|)
+        #         M_effective = M * (1 + alpha * clamp(|grad_C1|, max=1.0))
         # Literature: Lo et al. (2000) Biophys J 79:144-152 "Cell movement is guided
         #   by the rigidity of the substrate"; Isenberg et al. (2009) Biophys J 97:1313-1322
-        # Biological motivation: Cells migrate faster in regions of steep mechanical/chemical
-        #   gradients (durotaxis/haptotaxis). Here, field gradient magnitude serves as the
-        #   "stiffness" signal — particles respond more strongly at pattern boundaries
-        #   (where gradients are steep) and less in flat-field regions.
-        # Effect: Selective concentration of particles at pattern edges. Should create
-        #   sharper particle-pattern boundaries and potentially ring-like structures
-        #   around Turing spots/stripes rather than broad occupation of peaks/valleys.
+        # Block 12 fix: gradient clamped at max_grad=1.0 to prevent boundary mask
+        #   artifacts (|grad|~5-20) from catastrophic amplification (iter 43: 72.60% retention).
+        #   Interior FHN gradients ~0.1-1.0 are preserved.
         self.grad_amp_alpha = p[1, 3] if p.shape[1] > 3 else 0.0
 
         # Report configuration
@@ -156,7 +157,7 @@ class PDE_D(pyg.nn.MessagePassing):
         if hasattr(self, 'grad_amp_alpha'):
             ga_val = self.grad_amp_alpha.item() if hasattr(self.grad_amp_alpha, 'item') else self.grad_amp_alpha
             if ga_val > 0:
-                print(f"gradient-amplified mobility (durotaxis): alpha={ga_val:.3f} (M_eff = M*(1+alpha*|gradC|))")
+                print(f"gradient-amplified mobility (durotaxis): alpha={ga_val:.3f} (M_eff = M*(1+alpha*clamp(|gradC|,max=1.0)))")
             else:
                 print(f"gradient amplification: off (alpha=0)")
         if particle_params is not None:
@@ -300,14 +301,19 @@ class PDE_D(pyg.nn.MessagePassing):
             # Lo et al. (2000): cells migrate faster on stiffer substrates
             # Here, gradient magnitude serves as "stiffness" — particles respond
             # more strongly at pattern boundaries where gradients are steep.
-            # M_effective = M * (1 + alpha * |grad_C1|)
+            # M_effective = M * (1 + alpha * clamp(|grad_C1|, max=1.0))
             # When alpha=0: no change (backward compatible)
             # When alpha>0: amplifies velocity at high-gradient regions
+            # Block 12 fix: clamp grad_mag at 1.0 to prevent boundary mask artifacts
+            # (|grad|~5-20) from catastrophic amplification. Interior FHN pattern
+            # gradients are typically 0.1-1.0, so clamping preserves intended physics.
             if hasattr(self, 'grad_amp_alpha') and self.grad_amp_alpha > 0:
                 # Compute local gradient magnitude from C1 gradient
                 grad_mag = torch.abs(grad_C1)  # |dC1/dr| per edge
-                # Amplification factor: 1 + alpha * |grad_C1|
-                amp_factor = 1.0 + self.grad_amp_alpha * grad_mag
+                # Clamp to prevent boundary mask artifacts from dominating
+                grad_mag_clamped = torch.clamp(grad_mag, max=1.0)
+                # Amplification factor: 1 + alpha * clamped_grad
+                amp_factor = 1.0 + self.grad_amp_alpha * grad_mag_clamped
                 velocity_raw = velocity_raw * amp_factor
 
             velocities = velocity_raw
