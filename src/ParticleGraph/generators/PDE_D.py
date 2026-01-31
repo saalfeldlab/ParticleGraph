@@ -43,19 +43,27 @@ class PDE_D(pyg.nn.MessagePassing):
         self.repulsion_strength = 50
         self.repulsion_range = 0.04
 
-        # Block 8 code change: Gradient boost for nonlinear mobility response
-        # p[2, 4] controls boost exponent: 0 = linear, >0 = superlinear response to gradients
-        # Hypothesis: Boosting response at steep gradients creates stronger boundary attraction
-        # (opposite of saturation which failed - try amplifying instead of limiting)
-        self.boost_exponent = p[2, 4] if p.shape[1] > 4 else 0.0
+        # Block 8 code change: Logarithmic gradient sensing (Weber-Fechner law)
+        # p[2, 4] controls sensing mode:
+        #   0.0 = linear sensing (v = M * grad_C, default, backward compatible)
+        #   >0  = logarithmic sensing with half-saturation K = p[2,4]
+        #         v = M * grad_C / (K + |C|)
+        # Literature: Keller & Segel (1971) J Theor Biol 30:225-234
+        #   Logarithmic chemotactic sensitivity: chi(C) = chi_0 / C
+        #   Biological cells sense relative, not absolute, concentration differences
+        # Effect: Compresses dynamic range — particles respond equally to weak and strong gradients
+        #   This should create more uniform filaments instead of dense point clusters
+        self.log_sensing_K = p[2, 4] if p.shape[1] > 4 else 0.0
 
         # Report configuration
         print(f"initialized PDE_D with parameters:")
         print(f"mobility: M₁={self.M1.item()}, M₂={self.M2.item()}")
-        if hasattr(self, 'boost_exponent'):
-            boost_val = self.boost_exponent.item() if hasattr(self.boost_exponent, 'item') else self.boost_exponent
-            if boost_val > 0:
-                print(f"gradient boost exponent: {boost_val:.3f} (0=linear, >0=superlinear)")
+        if hasattr(self, 'log_sensing_K'):
+            K_val = self.log_sensing_K.item() if hasattr(self.log_sensing_K, 'item') else self.log_sensing_K
+            if K_val > 0:
+                print(f"logarithmic sensing: K={K_val:.3f} (Weber-Fechner: v = M*grad_C/(K+|C|))")
+            else:
+                print(f"sensing mode: linear (K=0)")
         print(f"Pe={self.Pe.item():.3f}, sigma={self.sigma}")
         print(f"particle→Field: consumption={self.consumption_rate.item()}, production={self.production_rate.item()}, influence_radius={self.influence_radius.item():.3f}")
         if particle_params is not None:
@@ -173,22 +181,29 @@ class PDE_D(pyg.nn.MessagePassing):
                 M1 = self.M1  # Global fallback
                 M2 = self.M2
 
-            # Diffusiophoretic velocity (raw linear response)
-            velocity_raw = (M1 * grad_C1 + M2 * grad_C2) * dir_norm
-
-            # Block 8: Apply gradient boost if enabled
-            # This amplifies response at steep gradients (pattern boundaries)
-            # Opposite of saturation which failed - enhances rather than limits
-            if hasattr(self, 'boost_exponent') and self.boost_exponent > 0:
-                # Compute gradient magnitude
-                grad_mag = torch.sqrt(grad_C1**2 + grad_C2**2 + 1e-8)
-                # Superlinear boost: multiply by grad_mag^exponent
-                # exponent=0.5: sqrt boost (mild), exponent=1.0: linear boost (stronger)
-                # This makes particles accelerate toward steep boundaries
-                boost_factor = 1.0 + (grad_mag ** self.boost_exponent)
-                velocities = velocity_raw * boost_factor
+            # Block 8: Logarithmic gradient sensing (Weber-Fechner law)
+            # Keller & Segel (1971): chi(C) = chi_0 / C gives logarithmic response
+            # Implementation: v = M * grad_C / (K + |C|) where K = half-saturation
+            # When K=0: linear sensing (v = M * grad_C), backward compatible
+            # When K>0: logarithmic sensing, compresses dynamic range
+            #   - At low |C| << K: v ≈ M * grad_C / K (attenuated, avoids singularity)
+            #   - At high |C| >> K: v ≈ M * grad_C / |C| (logarithmic, relative sensing)
+            # Effect: Particles respond to relative gradients, not absolute — should create
+            #   more uniform filaments instead of dense clusters at concentration peaks
+            if hasattr(self, 'log_sensing_K') and self.log_sensing_K > 0:
+                # Get local field concentrations for Weber-Fechner denominator
+                C1_local = torch.abs(fields_i[:, 0:1]) + 1e-6  # Avoid division by zero
+                C2_local = torch.abs(fields_i[:, 1:2]) + 1e-6
+                K = self.log_sensing_K
+                # Logarithmic sensitivity: scale gradient by 1/(K + |C|)
+                log_grad_C1 = grad_C1 / (K + C1_local)
+                log_grad_C2 = grad_C2 / (K + C2_local)
+                velocity_raw = (M1 * log_grad_C1 + M2 * log_grad_C2) * dir_norm
             else:
-                velocities = velocity_raw
+                # Linear sensing (default, backward compatible)
+                velocity_raw = (M1 * grad_C1 + M2 * grad_C2) * dir_norm
+
+            velocities = velocity_raw
 
             return velocities
 
