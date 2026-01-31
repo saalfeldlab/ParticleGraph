@@ -173,50 +173,38 @@ Hexagonal (deep Turing, most robust) > Labyrinthine ($B/A \approx 1.8$ + NLD) > 
 
 ## Exploration Gallery
 
-### Iter 3 (5/10) --- Iter 12 (7/10) --- Iter 14 (8/10)
+### Iter 3 (5/10)
 
-::: {layout-ncol=3}
-![Iter 3](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_003.png){.lightbox group="bruss"}
+![Strong radial Turing patterns develop in C1/C2 fields with clear ring/spot structures. Two particle types show spatial segregation: orange particles cluster at concentration maxima while blue particles spread to interstitial regions. Late frames show increasing complexity with multiple nested ring structures.](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_003.png){.lightbox group="bruss"}
 
-![Iter 12](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_012.png){.lightbox group="bruss"}
+### Iter 12 (7/10)
 
-![Iter 14](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_014.png){.lightbox group="bruss"}
-:::
+![2-type with same-sign mobilities (both attracted to C1 peaks). Fields develop vigorous Turing patterns with ring structures breaking into regular spot arrays. Both types cluster at C1 hotspots but with differential strength: orange forms tight inner cores, blue forms looser outer halos. Late frames show star-like co-localized core-shell micro-clusters at each Turing spot.](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_012.png){.lightbox group="bruss"}
 
-**Iter 3** --- Strong radial Turing patterns develop in C1/C2 fields with clear ring/spot structures. Two particle types show spatial segregation: orange particles cluster at concentration maxima while blue particles spread to interstitial regions. Late frames show increasing complexity with multiple nested ring structures.
+### Iter 14 (8/10)
 
-**Iter 12** --- 2-type with same-sign mobilities (both attracted to C1 peaks). Fields develop vigorous Turing patterns with ring structures breaking into regular spot arrays (pattern_growth=242). Both types cluster at C1 hotspots but with differential strength: orange forms tight inner cores, blue forms looser outer halos. Late frames show star-like co-localized core-shell micro-clusters at each Turing spot.
+![C1/C2 fields develop elaborate multi-lobed flower/yin-yang patterns with asymmetric branching. Three particle types create tissue-like architecture: blue forms innermost core clusters, orange occupies intermediate zones forming branch arms, green creates outermost boundary layer. Cross-type adhesion sharpens inter-type boundaries into discrete layered domains. Late frames show a distinctive flower/mandala morphology with 3--5 branching arms and clear type stratification within each arm.](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_014.png){.lightbox group="bruss"}
 
-**Iter 14** --- C1/C2 fields develop elaborate multi-lobed flower/yin-yang patterns with asymmetric branching. Three particle types create tissue-like architecture: blue forms innermost core clusters, orange occupies intermediate zones forming branch arms, green creates outermost boundary layer. Cross-type adhesion (p[2,5]=0.3) sharpens inter-type boundaries into discrete layered domains. Late frames show a distinctive flower/mandala morphology with 3--5 branching arms and clear type stratification within each arm.
+### Iter 31 (6/10)
 
-### Iter 31 (6/10) --- Iter 36 (5/10) --- Iter 45 (8/10)
+![Fields develop clean concentric ring patterns (bullseye). Two particle types form remarkably clean annular bands --- blue inner core, orange outer ring --- that remain stable throughout. No hexagonal breakup or satellite spots emerge. Weber-Fechner sensing compresses the dynamic range enough to suppress hexagonal instability while maintaining radial structure.](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_031.png){.lightbox group="bruss"}
 
-::: {layout-ncol=3}
-![Iter 31](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_031.png){.lightbox group="bruss"}
+### Iter 36 (5/10)
 
-![Iter 36](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_036.png){.lightbox group="bruss"}
+![Fields develop the strongest Turing patterns in this batch with multiple spots across the domain. Both types cluster at the same spot centers --- blue surrounded by orange --- forming co-localized core-shell micro-clusters. Same-sign mobilities produce co-localization rather than segregation.](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_036.png){.lightbox group="bruss"}
 
-![Iter 45](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_045.png){.lightbox group="bruss"}
-:::
+### Iter 45 (8/10)
 
-**Iter 31** --- Fields develop clean concentric ring patterns (bullseye). Two particle types form remarkably clean annular bands --- blue inner core, orange outer ring --- that remain stable throughout. No hexagonal breakup or satellite spots emerge. Weber-Fechner sensing (K=0.3) compresses the dynamic range enough to suppress hexagonal instability while maintaining radial structure.
+![Hexagonal Turing spots develop in both fields at 150x150 mesh resolution. Particles self-organize into elaborate flower/mandala with radial arms and type-specific petal sorting. 3-type segregation creates concentric core-ring evolving into multi-armed rosette with radial spokes. Higher resolution enables more elaborate petal structure.](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_045.png){.lightbox group="bruss"}
 
-**Iter 36** --- Fields develop the strongest Turing patterns in this batch (C1_std=2.08, pattern_growth=189) with multiple spots across the domain. Both types cluster at the same spot centers --- blue surrounded by orange --- forming co-localized core-shell micro-clusters. Same-sign mobilities produce co-localization rather than segregation.
+### Iter 83 (7/10)
 
-**Iter 45** --- Hexagonal Turing spots develop in both fields at 150x150 mesh resolution. Particles self-organize into elaborate flower/mandala with radial arms and type-specific petal sorting. 3-type segregation creates concentric core-ring evolving into multi-armed rosette with radial spokes. Higher resolution enables more elaborate petal structure.
+![Fields show labyrinthine/vermiform Turing patterns (not hexagonal spots). The hex-to-labyrinth transition produces very strong field development with interconnected ridges rather than isolated spots. Particles form scattered clusters tracking field maxima along labyrinthine ridges.](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_083.png){.lightbox group="bruss"}
 
-### Iter 83 (7/10) --- Iter 85 (7/10) --- Iter 87 (7/10)
+### Iter 85 (7/10)
 
-::: {layout-ncol=3}
-![Iter 83](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_083.png){.lightbox group="bruss"}
+![Fields develop from noise through concentric rings into labyrinthine multi-lobed flower/mandala with 3-type segregation. Particle rows show 3-layer stratified flower (blue core, orange intermediate, green outer) with elaborate branching lobes that trace labyrinthine field topology. More dispersed branching than compact flower morphologies --- the labyrinthine field creates wider-spaced branches.](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_085.png){.lightbox group="bruss"}
 
-![Iter 85](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_085.png){.lightbox group="bruss"}
+### Iter 87 (7/10)
 
-![Iter 87](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_087.png){.lightbox group="bruss"}
-:::
-
-**Iter 83** --- Fields show labyrinthine/vermiform Turing patterns (not hexagonal spots). The combination of A=3.0/B=5.5 (B/A=1.83) with NLD $\delta$=2.0 triggers a hex-to-labyrinth transition. $C_1^{\text{std}}$=1.93 and pattern_growth=272 indicate very strong field development with interconnected ridges rather than isolated spots. Particles form scattered clusters tracking field maxima along labyrinthine ridges.
-
-**Iter 85** --- Fields develop from noise through concentric rings into labyrinthine multi-lobed flower/mandala with 3-type segregation (pattern_growth=160). Particle rows show 3-layer stratified flower (blue core, orange intermediate, green outer) with elaborate branching lobes that trace labyrinthine field topology. More dispersed branching than compact flower morphologies --- the labyrinthine field creates wider-spaced branches.
-
-**Iter 87** --- Dramatically strong patterns: pattern_growth=294 is the strongest ever recorded. Fields show fragmented labyrinthine topology with many small-scale features at B/A=2.5. Particles form scattered elongated vermiform/worm-like clusters that trace the field topology --- a qualitatively new morphology of filamentary particle chains weaving through the domain.
+![Dramatically strong patterns with fragmented labyrinthine topology and many small-scale features. Particles form scattered elongated vermiform/worm-like clusters that trace the field topology --- a qualitatively new morphology of filamentary particle chains weaving through the domain.](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_087.png){.lightbox group="bruss"}

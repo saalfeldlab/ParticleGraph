@@ -142,29 +142,21 @@ flowchart TD
 
 ## Exploration Gallery
 
-### Iter 17 (7/10) --- Iter 18 (5/10)
+### Iter 17 (7/10)
 
-::: {layout-ncol=2}
-![Iter 17](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_017.png){.lightbox group="fhn"}
+![C1/C2 fields evolve from noise through concentric rings into multi-lobed flower/mandala structure with 4--5 branching arms. Three particle types stratify --- blue core, orange intermediate, green outer shell. Late frames show elaborate branching with crescent/yin-yang sub-structures at dispersed Turing spots. Boundaries between types are slightly sharper than parent due to stronger adhesion.](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_017.png){.lightbox group="fhn"}
 
-![Iter 18](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_018.png){.lightbox group="fhn"}
-:::
+### Iter 18 (5/10)
 
-**Iter 17** --- C1/C2 fields evolve from noise through concentric rings into multi-lobed flower/mandala structure with 4--5 branching arms. Three particle types stratify --- blue core, orange intermediate, green outer shell. Late frames show elaborate branching with crescent/yin-yang sub-structures at dispersed Turing spots. Boundaries between types are slightly sharper than parent due to stronger adhesion (0.5 vs 0.3).
+![Fields develop smooth concentric ring patterns that maintain circular symmetry throughout --- no flower/labyrinthine breakup. Particles form extremely compact concentric bullseye disc (blue core, orange ring, green outer ring) that barely changes shape across all frames. Late frames show tiny satellite spots beginning to appear at edges, but main pattern stays as smooth layered disc. Flow field shows uniform radial convergence/divergence.](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_018.png){.lightbox group="fhn"}
 
-**Iter 18** --- Fields develop smooth concentric ring patterns that maintain circular symmetry throughout --- no flower/labyrinthine breakup. Particles form extremely compact concentric bullseye disc (blue core, orange ring, green outer ring) that barely changes shape across all frames. Late frames show tiny satellite spots beginning to appear at edges, but main pattern stays as smooth layered disc. Flow field shows uniform radial convergence/divergence.
+### Iter 45 (8/10)
 
-### Iter 45 (8/10) --- Iter 48 (4/10)
+![Hexagonal Turing spots develop in both fields at 150x150 resolution. Particles self-organize into elaborate flower/mandala with radial arms and type-specific petal sorting. 3-type segregation creates concentric core-ring evolving into multi-armed rosette with radial spokes.](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_045.png){.lightbox group="fhn"}
 
-::: {layout-ncol=2}
-![Iter 45](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_045.png){.lightbox group="fhn"}
+### Iter 48 (4/10)
 
-![Iter 48](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_048.png){.lightbox group="fhn"}
-:::
-
-**Iter 45** --- Hexagonal Turing spots develop in both fields at 150x150 resolution. Particles self-organize into elaborate flower/mandala with radial arms and type-specific petal sorting. 3-type segregation creates concentric core-ring evolving into multi-armed rosette with radial spokes.
-
-**Iter 48** --- Fields show expanding rings with increasingly extreme contrast (C1_std=16.15). Particles initially form concentric rings but scatter outward in later frames. 96% retention indicates significant particle escape. Pattern_growth=1000 is the highest ever recorded --- fields are diverging.
+![Fields show expanding rings with increasingly extreme contrast. Particles initially form concentric rings but scatter outward in later frames. 96% retention indicates significant particle escape. Fields are diverging with the highest pattern growth ever recorded.](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_048.png){.lightbox group="fhn"}
 
 ## Key Insights
 

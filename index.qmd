@@ -121,22 +121,18 @@ Key additions:
 Four PDE models have been explored for the chemical patterning component, revealing a clear hierarchy of accessible morphologies:
 
 ### [Brusselator](brusselator.qmd)
-Hexagonal spots, stripe/labyrinth, and vermiform filaments with tight particle clusters
 
 [![](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_012.png){.lightbox}](brusselator.qmd)
 
 ### [Gray-Scott](grayscott.qmd)
-Radial patterns only — no hexagonal symmetry breaking
 
 [![](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_014.png){.lightbox}](grayscott.qmd)
 
 ### [FitzHugh-Nagumo](fhn.qmd)
-Hexagonal and square/grid patterns with network particle structure
 
 [![](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_018.png){.lightbox}](fhn.qmd)
 
 ### [Schnakenberg](schnakenberg.qmd)
-Radial patterns with genuine steady state convergence
 
 [![](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_041.png){.lightbox}](schnakenberg.qmd)
 

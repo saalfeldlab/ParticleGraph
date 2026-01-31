@@ -84,14 +84,10 @@ Gray-Scott produces **radial/concentric patterns only**. Even with extended simu
 
 ## Exploration Gallery
 
-### Iter 9 (7/10) --- Iter 14 (8/10)
+### Iter 9 (7/10)
 
-::: {layout-ncol=2}
-![Iter 9](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_009.png){.lightbox group="gs"}
+![C1/C2 fields develop nested ring structures that evolve into multi-lobed flower-like asymmetric patterns. Three particle types stratify --- blue core, orange intermediate, green outer shell. Late frames show patterns breaking into elaborate multi-lobed structures with finer granularity than parent. Bottom panels show branching green/orange clusters dispersing outward with dendritic morphology.](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_009.png){.lightbox group="gs"}
 
-![Iter 14](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_014.png){.lightbox group="gs"}
-:::
+### Iter 14 (8/10)
 
-**Iter 9** --- C1/C2 fields develop nested ring structures that evolve into multi-lobed flower-like asymmetric patterns. Three particle types stratify --- blue core, orange intermediate, green outer shell. Late frames show patterns breaking into elaborate multi-lobed structures with finer granularity than parent. Bottom panels show branching green/orange clusters dispersing outward with dendritic morphology.
-
-**Iter 14** --- C1/C2 fields develop elaborate multi-lobed flower/yin-yang patterns with asymmetric branching. Three particle types create tissue-like architecture: blue forms innermost core clusters, orange occupies intermediate zones forming branch arms, green creates outermost boundary layer. Cross-type adhesion sharpens inter-type boundaries into discrete layered domains. Late frames show a distinctive flower/mandala morphology with 3--5 branching arms and clear type stratification.
+![C1/C2 fields develop elaborate multi-lobed flower/yin-yang patterns with asymmetric branching. Three particle types create tissue-like architecture: blue forms innermost core clusters, orange occupies intermediate zones forming branch arms, green creates outermost boundary layer. Cross-type adhesion sharpens inter-type boundaries into discrete layered domains. Late frames show a distinctive flower/mandala morphology with 3--5 branching arms and clear type stratification.](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_014.png){.lightbox group="gs"}
