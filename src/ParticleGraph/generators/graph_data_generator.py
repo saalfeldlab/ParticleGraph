@@ -1064,11 +1064,31 @@ def data_generate_particle_field(
                     
                     # Start with just diffusiophoresis to test
                     y = y0 + y1  # Small repulsion, full diffusiophoresis
-                    
+
                     # Add small Brownian noise
                     Pe = model_p_f.Pe
                     diffusion_noise = 0.01 * torch.randn_like(y) * torch.sqrt(torch.tensor(delta_t, device=device)) / torch.sqrt(Pe)
                     y = y + diffusion_noise
+
+                    # Soft boundary repulsion: push particles back when near [0,1] box edges.
+                    # Prevents escape without periodic BC or hard walls.
+                    # Exponential repulsion activates within a margin of each boundary.
+                    # Groot & Warren, J. Chem. Phys. 107, 1997 (soft wall potentials in DPD)
+                    if not bounce and hasattr(simulation_config, 'boundary') and simulation_config.boundary == 'no':
+                        margin = 0.05
+                        wall_strength = 50.0
+                        pos_pred = X1 + y * delta_t
+                        wall_force = torch.zeros_like(y)
+                        for dim_idx in range(dimension):
+                            dist_low = pos_pred[:, dim_idx]
+                            near_low = dist_low < margin
+                            if near_low.any():
+                                wall_force[near_low, dim_idx] += wall_strength * torch.exp(-dist_low[near_low] / (margin / 3))
+                            dist_high = 1.0 - pos_pred[:, dim_idx]
+                            near_high = dist_high < margin
+                            if near_high.any():
+                                wall_force[near_high, dim_idx] -= wall_strength * torch.exp(-dist_high[near_high] / (margin / 3))
+                        y = y + wall_force
 
                     # Track velocity for plateau metric
                     vel_mag = torch.norm(y, dim=1).mean().item()
@@ -2094,11 +2114,31 @@ def data_generate_particle_field_MPM(
                     
                     # Start with just diffusiophoresis to test
                     y = y0 + y1  # Small repulsion, full diffusiophoresis
-                    
+
                     # Add small Brownian noise
                     Pe = model_p_f.Pe
                     diffusion_noise = 0.01 * torch.randn_like(y) * torch.sqrt(torch.tensor(delta_t, device=device)) / torch.sqrt(Pe)
                     y = y + diffusion_noise
+
+                    # Soft boundary repulsion: push particles back when near [0,1] box edges.
+                    # Prevents escape without periodic BC or hard walls.
+                    # Exponential repulsion activates within a margin of each boundary.
+                    # Groot & Warren, J. Chem. Phys. 107, 1997 (soft wall potentials in DPD)
+                    if not bounce and hasattr(simulation_config, 'boundary') and simulation_config.boundary == 'no':
+                        margin = 0.05
+                        wall_strength = 50.0
+                        pos_pred = X1 + y * delta_t
+                        wall_force = torch.zeros_like(y)
+                        for dim_idx in range(dimension):
+                            dist_low = pos_pred[:, dim_idx]
+                            near_low = dist_low < margin
+                            if near_low.any():
+                                wall_force[near_low, dim_idx] += wall_strength * torch.exp(-dist_low[near_low] / (margin / 3))
+                            dist_high = 1.0 - pos_pred[:, dim_idx]
+                            near_high = dist_high < margin
+                            if near_high.any():
+                                wall_force[near_high, dim_idx] -= wall_strength * torch.exp(-dist_high[near_high] / (margin / 3))
+                        y = y + wall_force
 
                     # Track velocity for plateau metric
                     vel_mag = torch.norm(y, dim=1).mean().item()
