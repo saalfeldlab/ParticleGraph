@@ -59,6 +59,24 @@ class PDE_D(pyg.nn.MessagePassing):
     FHN pattern gradients are typically |grad| ~ 0.1-1.0, so clamping at 1.0 preserves
     the intended physics while neutralizing boundary artifacts. Iter 43 showed alpha=2.0
     without clamping caused 72.60% retention (catastrophic boundary escape).
+
+    Block 13 code change: Chiral diffusiophoresis (gradient-perpendicular drift)
+    Literature: Löwen (2016) Eur Phys J Special Topics 225:2319-2331 "Chirality in
+    microswimmer motion: From circle swimmers to active turbulence";
+    Friedrich & Jülicher (2007) PNAS 104:13256 "Chemotaxis of sperm cells"
+    Many biological cells (sperm, bacteria, leukocytes) exhibit chiral migration:
+    instead of climbing gradients directly, they spiral along them. The velocity
+    has both a parallel (up/down gradient) and perpendicular component.
+    v = M * grad_C * (cos(theta) * parallel + sin(theta) * perpendicular)
+    where theta = arctan(chirality) controls the spiral angle.
+    Controlled by p[1, 4] (chirality):
+      0.0 = pure gradient-parallel motion (backward compatible, default)
+      >0  = CCW spiral: v += chirality * (M * grad_C rotated 90° CCW)
+      <0  = CW spiral: same but rotated 90° CW
+    This adds a perpendicular drift to the standard diffusiophoretic velocity,
+    creating spiral/helical trajectories along field contours. Should produce
+    qualitatively different particle organization: instead of collecting at
+    peaks/valleys, particles orbit around them.
     """
 
     def __init__(self, aggr_type='mean', p=None, particle_params=None, bc_dpos=None, dimension=2, sigma=0.005):
@@ -131,6 +149,19 @@ class PDE_D(pyg.nn.MessagePassing):
         #   Interior FHN gradients ~0.1-1.0 are preserved.
         self.grad_amp_alpha = p[1, 3] if p.shape[1] > 3 else 0.0
 
+        # Block 13 code change: Chiral diffusiophoresis (gradient-perpendicular drift)
+        # p[1, 4] controls chirality (perpendicular drift fraction):
+        #   0.0 = pure gradient-parallel motion (backward compatible, default)
+        #   >0  = CCW spiral: adds perpendicular component rotated 90° CCW
+        #   <0  = CW spiral: perpendicular component rotated 90° CW
+        # Literature: Löwen (2016) Eur Phys J Special Topics 225:2319-2331;
+        #   Friedrich & Jülicher (2007) PNAS 104:13256
+        # Effect: v_total = v_parallel + chirality * v_perpendicular
+        #   where v_perpendicular = (-vy, vx) rotation of the gradient-parallel velocity
+        #   Creates spiral trajectories around concentration features rather than
+        #   direct ascent/descent. Particles orbit peaks/valleys instead of collecting there.
+        self.chirality = p[1, 4] if p.shape[1] > 4 else 0.0
+
         # Report configuration
         print(f"initialized PDE_D with parameters:")
         print(f"mobility: M₁={self.M1.item()}, M₂={self.M2.item()}")
@@ -160,6 +191,12 @@ class PDE_D(pyg.nn.MessagePassing):
                 print(f"gradient-amplified mobility (durotaxis): alpha={ga_val:.3f} (M_eff = M*(1+alpha*clamp(|gradC|,max=1.0)))")
             else:
                 print(f"gradient amplification: off (alpha=0)")
+        if hasattr(self, 'chirality'):
+            ch_val = self.chirality.item() if hasattr(self.chirality, 'item') else self.chirality
+            if ch_val != 0:
+                print(f"chiral diffusiophoresis: chirality={ch_val:.3f} ({'CCW' if ch_val > 0 else 'CW'} spiral, Löwen 2016)")
+            else:
+                print(f"chiral drift: off (chirality=0)")
         if particle_params is not None:
             print(f"multi-type support: {particle_params.shape[0]} particle types")
             print(f"per-type params: [M1, M2, consumption, production, ar_p1, ar_p2, ar_p3, ar_p4]")
@@ -315,6 +352,21 @@ class PDE_D(pyg.nn.MessagePassing):
                 # Amplification factor: 1 + alpha * clamped_grad
                 amp_factor = 1.0 + self.grad_amp_alpha * grad_mag_clamped
                 velocity_raw = velocity_raw * amp_factor
+
+            # Block 13: Chiral diffusiophoresis (gradient-perpendicular drift)
+            # Löwen (2016): chirality creates spiral trajectories along gradients
+            # Friedrich & Jülicher (2007): sperm chemotaxis has perpendicular component
+            # v_total = v_parallel + chirality * rotate_90(v_parallel)
+            # rotate_90_CCW(vx, vy) = (-vy, vx) in 2D
+            # When chirality=0: no change (backward compatible)
+            # When chirality>0: particles spiral CCW around concentration features
+            # When chirality<0: particles spiral CW
+            if hasattr(self, 'chirality') and self.chirality != 0:
+                # velocity_raw has shape [n_edges, 2] for 2D
+                v_perp = torch.zeros_like(velocity_raw)
+                v_perp[:, 0] = -velocity_raw[:, 1]  # -vy
+                v_perp[:, 1] = velocity_raw[:, 0]   # +vx
+                velocity_raw = velocity_raw + self.chirality * v_perp
 
             velocities = velocity_raw
 
