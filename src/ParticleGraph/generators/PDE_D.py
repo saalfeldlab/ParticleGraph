@@ -115,6 +115,32 @@ class PDE_D(pyg.nn.MessagePassing):
     Effect: Creates sharper cluster boundaries — interior particles are immobilized,
     edge particles can still respond to gradients. Should produce more compact,
     well-defined aggregates with crisp boundaries rather than diffuse clusters.
+
+    Block 16 code change: Velocity alignment (Vicsek-style collective motion)
+    Literature: Vicsek et al. (1995) Phys Rev Lett 75:1226-1229 "Novel type of
+    phase transition in a system of self-driven particles"; Chaté et al. (2008)
+    Phys Rev E 77:046113 "Modeling collective motion: variations on the Vicsek model"
+    All previous PDE_D features modified INDIVIDUAL particle responses to fields
+    (modulate speed, force strength, sensing). None introduced ACTIVE COORDINATION
+    between particles about DIRECTION of motion. The Vicsek model is the canonical
+    framework for collective motion: each particle adjusts its velocity direction
+    to align with the average direction of its neighbors. This creates coherent
+    flows, streams, and flocking behavior that is orthogonal to gradient-following.
+    Implementation: During 'pp' message computation, in addition to attraction-
+    repulsion forces, compute a velocity alignment force:
+      f_align = alignment * (v_neighbor - v_self) * weight(distance)
+    This is added to the pp force output. The alignment force is weighted by
+    distance (closer neighbors have stronger influence).
+    Controlled by p[2, 7] (alignment_strength):
+      0.0 = no alignment (backward compatible, default)
+      >0  = Vicsek-style alignment: particles match neighbor velocities
+            0.1: weak alignment (subtle coordination)
+            0.5: moderate alignment (visible streams)
+            1.0: strong alignment (flocking dominates)
+    Effect: Creates coherent particle streams flowing along Turing pattern contours,
+    organized invasion fronts, or vortex/swirl patterns within Turing spots. This
+    is fundamentally different from all previous features because it introduces
+    INTER-PARTICLE INFORMATION TRANSFER about direction, not just position.
     """
 
     def __init__(self, aggr_type='mean', p=None, particle_params=None, bc_dpos=None, dimension=2, sigma=0.005):
@@ -231,6 +257,19 @@ class PDE_D(pyg.nn.MessagePassing):
         # Storage for neighbor count computed during 'pp' pass, used in 'fp' pass
         self._neighbor_count = None
 
+        # Block 16 code change: Velocity alignment (Vicsek-style collective motion)
+        # p[2, 7] controls alignment strength:
+        #   0.0 = no alignment (backward compatible, default)
+        #   >0  = f_align = alignment * (v_neighbor - v_self) * weight(distance)
+        #         Added to pp forces. Creates coherent flows/streams/flocking.
+        # Literature: Vicsek et al. (1995) Phys Rev Lett 75:1226-1229;
+        #   Chaté et al. (2008) Phys Rev E 77:046113
+        # Effect: Inter-particle velocity coordination → streaming/flocking
+        if p.shape[0] > 2 and p.shape[1] > 7:
+            self.alignment_strength = p[2, 7]
+        else:
+            self.alignment_strength = 0.0
+
         # Report configuration
         print(f"initialized PDE_D with parameters:")
         print(f"mobility: M₁={self.M1.item()}, M₂={self.M2.item()}")
@@ -278,6 +317,12 @@ class PDE_D(pyg.nn.MessagePassing):
                 print(f"density-dependent mobility (CIL): beta={ddm_val:.3f} (v_eff = v/(1+beta*n_neighbors), Mayor 2010)")
             else:
                 print(f"density-dependent mobility: off (beta=0)")
+        if hasattr(self, 'alignment_strength'):
+            align_val = self.alignment_strength.item() if hasattr(self.alignment_strength, 'item') else self.alignment_strength
+            if align_val > 0:
+                print(f"velocity alignment (Vicsek): strength={align_val:.3f} (f_align = alpha*(v_j-v_i)*w(d), Vicsek 1995)")
+            else:
+                print(f"velocity alignment: off (strength=0)")
         if particle_params is not None:
             print(f"multi-type support: {particle_params.shape[0]} particle types")
             print(f"per-type params: [M1, M2, consumption, production, ar_p1, ar_p2, ar_p3, ar_p4]")
@@ -563,6 +608,21 @@ class PDE_D(pyg.nn.MessagePassing):
 
                 # Apply force in direction of neighbor (attraction positive, repulsion negative)
                 forces = f[:, None] * d_pos / dist_safe.unsqueeze(1)
+
+                # Block 16: Velocity alignment (Vicsek 1995, Chaté 2008)
+                # Add alignment force: each particle is pushed toward matching its
+                # neighbors' velocities. f_align = alpha * (v_j - v_i) * weight(d)
+                # This creates coherent streaming/flocking alongside the attraction-repulsion.
+                # Velocity is stored at x[:, 3:5] (vx, vy) for 2D.
+                if hasattr(self, 'alignment_strength') and self.alignment_strength > 0:
+                    vel_i = x_i[:, self.dimension+1:2*self.dimension+1]  # v_self [vx, vy]
+                    vel_j = x_j[:, self.dimension+1:2*self.dimension+1]  # v_neighbor [vx, vy]
+                    # Distance-weighted alignment: closer neighbors have more influence
+                    align_weight = torch.exp(-dist / 0.04).unsqueeze(1)  # Same scale as pp range
+                    # Velocity difference force: push toward neighbor's velocity
+                    f_align = self.alignment_strength * (vel_j - vel_i) * align_weight
+                    forces = forces + f_align
+
             else:
                 # Fallback: simple exponential repulsion (backward compatible)
                 forces = torch.zeros_like(pos_i)
