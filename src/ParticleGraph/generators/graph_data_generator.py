@@ -896,18 +896,32 @@ def data_generate_particle_field(
         edge_cache = NeighborCache()
 
         if "diffusiophoresis" in model_config.field_type:
-            C1_0 = model_f_f.A  # 4.5
-            C2_0 = model_f_f.B / model_f_f.A  # 2.44/4.5 ≈ 0.54
-            # Add small random perturbations (±1% noise)
-            noise_amplitude = 0.10
-            C1 = C1_0 + noise_amplitude * (2*torch.rand(n_nodes, 1, device=device) - 1) * C1_0
-            C2 = C2_0 + noise_amplitude * (2*torch.rand(n_nodes, 1, device=device) - 1) * C2_0
-            H1_mesh[:, 0:1] = C1
-            H1_mesh[:, 1:2] = C2
-            H1_mesh[mask_mesh == 0.0,0:1] = C1_0
-            H1_mesh[mask_mesh == 0.0,1:2] = C2_0
+            if 'FHN' in model_config.mesh_model_name:
+                # FitzHugh-Nagumo: u rests near -1.2, v near -0.45
+                # Use resting state with random perturbations + localized excitation seeds
+                a_param = config.simulation.params_mesh[0][1]
+                b_param = config.simulation.params_mesh[0][2]
+                u_rest = -1.2
+                v_rest = (u_rest + a_param) / max(b_param, 0.1)
+                H1_mesh[:, 0] = u_rest + 0.05 * torch.randn(n_nodes, device=device)
+                H1_mesh[:, 1] = v_rest + 0.05 * torch.randn(n_nodes, device=device)
+                n_seeds = max(3, n_nodes // 200)
+                seed_indices = torch.randperm(n_nodes, device=device)[:n_seeds]
+                H1_mesh[seed_indices, 0] = 1.5  # Excited state
+            else:
+                C1_0 = model_f_f.A  # 4.5
+                C2_0 = model_f_f.B / model_f_f.A  # 2.44/4.5 ≈ 0.54
+                # Add small random perturbations (±1% noise)
+                noise_amplitude = 0.10
+                C1 = C1_0 + noise_amplitude * (2*torch.rand(n_nodes, 1, device=device) - 1) * C1_0
+                C2 = C2_0 + noise_amplitude * (2*torch.rand(n_nodes, 1, device=device) - 1) * C2_0
+                H1_mesh[:, 0:1] = C1
+                H1_mesh[:, 1:2] = C2
+                H1_mesh[mask_mesh == 0.0,0:1] = C1_0
+                H1_mesh[mask_mesh == 0.0,1:2] = C2_0
 
-        H1_mesh = torch.clamp(H1_mesh, min=0.0)
+        if 'FHN' not in model_config.mesh_model_name:
+            H1_mesh = torch.clamp(H1_mesh, min=0.0)
         torch.save(mesh_data, f"graphs_data/{dataset_name}/mesh_data_{run}.pt")
 
         check_and_clear_memory(
@@ -1933,18 +1947,31 @@ def data_generate_particle_field_MPM(
         edge_cache = NeighborCache()
 
         if "diffusiophoresis" in model_config.field_type:
-            H0_0 = model_f_f.A  # 4.5
-            H1_0 = model_f_f.B / model_f_f.A  # 2.44/4.5 ≈ 0.54
-            # Add small random perturbations (±1% noise)
-            noise_amplitude = 0.10
-            H0 = H0_0 + noise_amplitude * (2*torch.rand(n_nodes, 1, device=device) - 1) * H0_0
-            H1 = H1_0 + noise_amplitude * (2*torch.rand(n_nodes, 1, device=device) - 1) * H1_0
-            H_mesh[:, 0:1] = H0
-            H_mesh[:, 1:2] = H1
-            H_mesh[mask_mesh == 0.0,0:1] = H0_0
-            H_mesh[mask_mesh == 0.0,1:2] = H1_0
+            if 'FHN' in model_config.mesh_model_name:
+                # FitzHugh-Nagumo: u rests near -1.2, v near -0.45
+                a_param = config.simulation.params_mesh[0][1]
+                b_param = config.simulation.params_mesh[0][2]
+                u_rest = -1.2
+                v_rest = (u_rest + a_param) / max(b_param, 0.1)
+                H_mesh[:, 0] = u_rest + 0.05 * torch.randn(n_nodes, device=device)
+                H_mesh[:, 1] = v_rest + 0.05 * torch.randn(n_nodes, device=device)
+                n_seeds = max(3, n_nodes // 200)
+                seed_indices = torch.randperm(n_nodes, device=device)[:n_seeds]
+                H_mesh[seed_indices, 0] = 1.5  # Excited state
+            else:
+                H0_0 = model_f_f.A  # 4.5
+                H1_0 = model_f_f.B / model_f_f.A  # 2.44/4.5 ≈ 0.54
+                # Add small random perturbations (±1% noise)
+                noise_amplitude = 0.10
+                H0 = H0_0 + noise_amplitude * (2*torch.rand(n_nodes, 1, device=device) - 1) * H0_0
+                H1 = H1_0 + noise_amplitude * (2*torch.rand(n_nodes, 1, device=device) - 1) * H1_0
+                H_mesh[:, 0:1] = H0
+                H_mesh[:, 1:2] = H1
+                H_mesh[mask_mesh == 0.0,0:1] = H0_0
+                H_mesh[mask_mesh == 0.0,1:2] = H1_0
 
-        H_mesh = torch.clamp(H_mesh, min=0.0)
+        if 'FHN' not in model_config.mesh_model_name:
+            H_mesh = torch.clamp(H_mesh, min=0.0)
         torch.save(mesh_data, f"graphs_data/{dataset_name}/mesh_data_{run}.pt")
 
         check_and_clear_memory(
