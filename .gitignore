@@ -198,3 +198,7 @@ cython_debug/
 
 /.quarto/
 **/*.quarto_ipynb
+
+# Allow docs/ (Quarto rendered site for GitHub Pages)
+!docs/
+!docs/**

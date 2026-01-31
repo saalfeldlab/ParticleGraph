@@ -1,0 +1,2082 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>LLM-Guided Exploration – LLM-Guided Morphogenesis</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-ed96de9b727972fe78a7b5d16c58bf87.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-dark-4d9afe2b8d18ee9fa5d0d57b5ed4214d.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-ed96de9b727972fe78a7b5d16c58bf87.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-508be24566865fa28f48dacc3ed5d9bc.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-dark-fc60ebf3756af1d7378dcf8f99431227.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="site_libs/bootstrap/bootstrap-508be24566865fa28f48dacc3ed5d9bc.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<script src="site_libs/quarto-contrib/videojs/video.min.js"></script>
+<link href="site_libs/quarto-contrib/videojs/video-js.css" rel="stylesheet">
+<script src="site_libs/quarto-contrib/glightbox/glightbox.min.js"></script>
+<link href="site_libs/quarto-contrib/glightbox/glightbox.min.css" rel="stylesheet">
+<link href="site_libs/quarto-contrib/glightbox/lightbox.css" rel="stylesheet">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>html{ scroll-behavior: smooth; }</style>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="nav-fixed quarto-light"><script id="quarto-html-before-body" type="application/javascript">
+    const toggleBodyColorMode = (bsSheetEl) => {
+      const mode = bsSheetEl.getAttribute("data-mode");
+      const bodyEl = window.document.querySelector("body");
+      if (mode === "dark") {
+        bodyEl.classList.add("quarto-dark");
+        bodyEl.classList.remove("quarto-light");
+      } else {
+        bodyEl.classList.add("quarto-light");
+        bodyEl.classList.remove("quarto-dark");
+      }
+    }
+    const toggleBodyColorPrimary = () => {
+      const bsSheetEl = window.document.querySelector("link#quarto-bootstrap:not([rel=disabled-stylesheet])");
+      if (bsSheetEl) {
+        toggleBodyColorMode(bsSheetEl);
+      }
+    }
+    const setColorSchemeToggle = (alternate) => {
+      const toggles = window.document.querySelectorAll('.quarto-color-scheme-toggle');
+      for (let i=0; i < toggles.length; i++) {
+        const toggle = toggles[i];
+        if (toggle) {
+          if (alternate) {
+            toggle.classList.add("alternate");
+          } else {
+            toggle.classList.remove("alternate");
+          }
+        }
+      }
+    };
+    const toggleColorMode = (alternate) => {
+      // Switch the stylesheets
+      const primaryStylesheets = window.document.querySelectorAll('link.quarto-color-scheme:not(.quarto-color-alternate)');
+      const alternateStylesheets = window.document.querySelectorAll('link.quarto-color-scheme.quarto-color-alternate');
+      manageTransitions('#quarto-margin-sidebar .nav-link', false);
+      if (alternate) {
+        // note: dark is layered on light, we don't disable primary!
+        enableStylesheet(alternateStylesheets);
+        for (const sheetNode of alternateStylesheets) {
+          if (sheetNode.id === "quarto-bootstrap") {
+            toggleBodyColorMode(sheetNode);
+          }
+        }
+      } else {
+        disableStylesheet(alternateStylesheets);
+        enableStylesheet(primaryStylesheets)
+        toggleBodyColorPrimary();
+      }
+      manageTransitions('#quarto-margin-sidebar .nav-link', true);
+      // Switch the toggles
+      setColorSchemeToggle(alternate)
+      // Hack to workaround the fact that safari doesn't
+      // properly recolor the scrollbar when toggling (#1455)
+      if (navigator.userAgent.indexOf('Safari') > 0 && navigator.userAgent.indexOf('Chrome') == -1) {
+        manageTransitions("body", false);
+        window.scrollTo(0, 1);
+        setTimeout(() => {
+          window.scrollTo(0, 0);
+          manageTransitions("body", true);
+        }, 40);
+      }
+    }
+    const disableStylesheet = (stylesheets) => {
+      for (let i=0; i < stylesheets.length; i++) {
+        const stylesheet = stylesheets[i];
+        stylesheet.rel = 'disabled-stylesheet';
+      }
+    }
+    const enableStylesheet = (stylesheets) => {
+      for (let i=0; i < stylesheets.length; i++) {
+        const stylesheet = stylesheets[i];
+        if(stylesheet.rel !== 'stylesheet') { // for Chrome, which will still FOUC without this check
+          stylesheet.rel = 'stylesheet';
+        }
+      }
+    }
+    const manageTransitions = (selector, allowTransitions) => {
+      const els = window.document.querySelectorAll(selector);
+      for (let i=0; i < els.length; i++) {
+        const el = els[i];
+        if (allowTransitions) {
+          el.classList.remove('notransition');
+        } else {
+          el.classList.add('notransition');
+        }
+      }
+    }
+    const isFileUrl = () => {
+      return window.location.protocol === 'file:';
+    }
+    const hasAlternateSentinel = () => {
+      let styleSentinel = getColorSchemeSentinel();
+      if (styleSentinel !== null) {
+        return styleSentinel === "alternate";
+      } else {
+        return false;
+      }
+    }
+    const setStyleSentinel = (alternate) => {
+      const value = alternate ? "alternate" : "default";
+      if (!isFileUrl()) {
+        window.localStorage.setItem("quarto-color-scheme", value);
+      } else {
+        localAlternateSentinel = value;
+      }
+    }
+    const getColorSchemeSentinel = () => {
+      if (!isFileUrl()) {
+        const storageValue = window.localStorage.getItem("quarto-color-scheme");
+        return storageValue != null ? storageValue : localAlternateSentinel;
+      } else {
+        return localAlternateSentinel;
+      }
+    }
+    const toggleGiscusIfUsed = (isAlternate, darkModeDefault) => {
+      const baseTheme = document.querySelector('#giscus-base-theme')?.value ?? 'light';
+      const alternateTheme = document.querySelector('#giscus-alt-theme')?.value ?? 'dark';
+      let newTheme = '';
+      if(authorPrefersDark) {
+        newTheme = isAlternate ? baseTheme : alternateTheme;
+      } else {
+        newTheme = isAlternate ? alternateTheme : baseTheme;
+      }
+      const changeGiscusTheme = () => {
+        // From: https://github.com/giscus/giscus/issues/336
+        const sendMessage = (message) => {
+          const iframe = document.querySelector('iframe.giscus-frame');
+          if (!iframe) return;
+          iframe.contentWindow.postMessage({ giscus: message }, 'https://giscus.app');
+        }
+        sendMessage({
+          setConfig: {
+            theme: newTheme
+          }
+        });
+      }
+      const isGiscussLoaded = window.document.querySelector('iframe.giscus-frame') !== null;
+      if (isGiscussLoaded) {
+        changeGiscusTheme();
+      }
+    };
+    const authorPrefersDark = false;
+    const darkModeDefault = authorPrefersDark;
+      document.querySelector('link#quarto-text-highlighting-styles.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
+      document.querySelector('link#quarto-bootstrap.quarto-color-scheme-extra').rel = 'disabled-stylesheet';
+    let localAlternateSentinel = darkModeDefault ? 'alternate' : 'default';
+    // Dark / light mode switch
+    window.quartoToggleColorScheme = () => {
+      // Read the current dark / light value
+      let toAlternate = !hasAlternateSentinel();
+      toggleColorMode(toAlternate);
+      setStyleSentinel(toAlternate);
+      toggleGiscusIfUsed(toAlternate, darkModeDefault);
+      window.dispatchEvent(new Event('resize'));
+    };
+    // Switch to dark mode if need be
+    if (hasAlternateSentinel()) {
+      toggleColorMode(true);
+    } else {
+      toggleColorMode(false);
+    }
+  </script>
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">LLM-Guided Morphogenesis</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="./index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-interactions" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Interactions</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-interactions">    
+        <li>
+    <a class="dropdown-item" href="./field-field.html">
+ <span class="dropdown-text">Field–Field</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./field-particle.html">
+ <span class="dropdown-text">Field–Particle</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./particle-field.html">
+ <span class="dropdown-text">Particle–Field</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./particle-particle.html">
+ <span class="dropdown-text">Particle–Particle</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-models" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Models</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-models">    
+        <li>
+    <a class="dropdown-item" href="./brusselator.html">
+ <span class="dropdown-text">Brusselator</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./grayscott.html">
+ <span class="dropdown-text">Gray-Scott</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./fhn.html">
+ <span class="dropdown-text">FitzHugh-Nagumo</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./schnakenberg.html">
+ <span class="dropdown-text">Schnakenberg</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link active" href="./llm-exploration.html" aria-current="page"> 
+<span class="menu-text">Exploration</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./mechanochemical.html"> 
+<span class="menu-text">Mechanochemical</span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+    <a href="https://github.com/allierc/ParticleGraph" title="" class="quarto-navigation-tool px-1" aria-label=""><i class="bi bi-github"></i></a>
+  <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
+  <li><a href="#best-morphologies" id="toc-best-morphologies" class="nav-link" data-scroll-target="#best-morphologies">Best Morphologies</a>
+  <ul class="collapse">
+  <li><a href="#iter14" id="toc-iter14" class="nav-link" data-scroll-target="#iter14">Iter 14 — 3-Type Flower/Mandala (8/10)</a></li>
+  <li><a href="#iter45" id="toc-iter45" class="nav-link" data-scroll-target="#iter45">Iter 45 — Flower/Mandala Rediscovery (8/10)</a></li>
+  <li><a href="#iter53" id="toc-iter53" class="nav-link" data-scroll-target="#iter53">Iter 53 — Extended Simulation (8/10)</a></li>
+  <li><a href="#iter23" id="toc-iter23" class="nav-link" data-scroll-target="#iter23">Iter 23 — Hexagonal Core-Ring Array (7/10, Best 2-type)</a></li>
+  <li><a href="#iter39" id="toc-iter39" class="nav-link" data-scroll-target="#iter39">Iter 39 — Dispersed Spot Array (7/10, Best 1-type)</a></li>
+  <li><a href="#iter46" id="toc-iter46" class="nav-link" data-scroll-target="#iter46">Iter 46 — FHN Concentric Rings (7/10, Best non-Brusselator)</a></li>
+  <li><a href="#iter83" id="toc-iter83" class="nav-link" data-scroll-target="#iter83">Iter 83 — Labyrinthine Turing (7/10, NLD Breakthrough)</a></li>
+  <li><a href="#iter87" id="toc-iter87" class="nav-link" data-scroll-target="#iter87">Iter 87 — Vermiform Filaments (7/10, Novel Morphology)</a></li>
+  <li><a href="#iter85" id="toc-iter85" class="nav-link" data-scroll-target="#iter85">Iter 85 — Branching Tissue on Labyrinthine Scaffold (7/10)</a></li>
+  </ul></li>
+  <li><a href="#regime-comparison" id="toc-regime-comparison" class="nav-link" data-scroll-target="#regime-comparison">Regime Comparison</a></li>
+  <li><a href="#established-principles" id="toc-established-principles" class="nav-link" data-scroll-target="#established-principles">Established Principles</a></li>
+  <li><a href="#exploration-gallery" id="toc-exploration-gallery" class="nav-link" data-scroll-target="#exploration-gallery">Exploration Gallery</a>
+  <ul class="collapse">
+  <li><a href="#block-1-iters-18-initial-exploration" id="toc-block-1-iters-18-initial-exploration" class="nav-link" data-scroll-target="#block-1-iters-18-initial-exploration">Block 1 (Iters 1–8) — Initial Exploration</a></li>
+  <li><a href="#block-2-iters-916-cross-type-adhesion-breakthrough" id="toc-block-2-iters-916-cross-type-adhesion-breakthrough" class="nav-link" data-scroll-target="#block-2-iters-916-cross-type-adhesion-breakthrough">Block 2 (Iters 9–16) — Cross-Type Adhesion Breakthrough</a></li>
+  <li><a href="#block-3-iters-1724-regime-diversification" id="toc-block-3-iters-1724-regime-diversification" class="nav-link" data-scroll-target="#block-3-iters-1724-regime-diversification">Block 3 (Iters 17–24) — Regime Diversification</a></li>
+  <li><a href="#block-4-iters-2532-coupling-geometry" id="toc-block-4-iters-2532-coupling-geometry" class="nav-link" data-scroll-target="#block-4-iters-2532-coupling-geometry">Block 4 (Iters 25–32) — Coupling Geometry</a></li>
+  <li><a href="#block-5-iters-3340-pde-model-survey" id="toc-block-5-iters-3340-pde-model-survey" class="nav-link" data-scroll-target="#block-5-iters-3340-pde-model-survey">Block 5 (Iters 33–40) — PDE Model Survey</a></li>
+  <li><a href="#block-6-iters-4148-non-brusselator-models" id="toc-block-6-iters-4148-non-brusselator-models" class="nav-link" data-scroll-target="#block-6-iters-4148-non-brusselator-models">Block 6 (Iters 41–48) — Non-Brusselator Models</a></li>
+  <li><a href="#block-7-iters-4956-resolution-and-duration-tests" id="toc-block-7-iters-4956-resolution-and-duration-tests" class="nav-link" data-scroll-target="#block-7-iters-4956-resolution-and-duration-tests">Block 7 (Iters 49–56) — Resolution and Duration Tests</a></li>
+  <li><a href="#block-8-iters-5764-feature-testing" id="toc-block-8-iters-5764-feature-testing" class="nav-link" data-scroll-target="#block-8-iters-5764-feature-testing">Block 8 (Iters 57–64) — Feature Testing</a></li>
+  <li><a href="#block-9-iters-6572-density-dependent-mobility" id="toc-block-9-iters-6572-density-dependent-mobility" class="nav-link" data-scroll-target="#block-9-iters-6572-density-dependent-mobility">Block 9 (Iters 65–72) — Density-Dependent Mobility</a></li>
+  <li><a href="#block-10-iters-7380-velocity-alignment-weber-fechner-dead-end" id="toc-block-10-iters-7380-velocity-alignment-weber-fechner-dead-end" class="nav-link" data-scroll-target="#block-10-iters-7380-velocity-alignment-weber-fechner-dead-end">Block 10 (Iters 73–80) — Velocity Alignment + Weber-Fechner Dead End</a></li>
+  <li><a href="#block-11-iters-8188-nonlinear-diffusion-labyrinthine-breakthrough" id="toc-block-11-iters-8188-nonlinear-diffusion-labyrinthine-breakthrough" class="nav-link" data-scroll-target="#block-11-iters-8188-nonlinear-diffusion-labyrinthine-breakthrough">Block 11 (Iters 81–88) — Nonlinear Diffusion: Labyrinthine Breakthrough</a></li>
+  </ul></li>
+  <li><a href="#ucb-exploration-trees" id="toc-ucb-exploration-trees" class="nav-link" data-scroll-target="#ucb-exploration-trees">UCB Exploration Trees</a></li>
+  <li><a href="#score-progression" id="toc-score-progression" class="nav-link" data-scroll-target="#score-progression">Score Progression</a></li>
+  <li><a href="#pde-models-tested" id="toc-pde-models-tested" class="nav-link" data-scroll-target="#pde-models-tested">PDE Models Tested</a></li>
+  <li><a href="#code-features-explored" id="toc-code-features-explored" class="nav-link" data-scroll-target="#code-features-explored">Code Features Explored</a></li>
+  <li><a href="#pde-level-modifications" id="toc-pde-level-modifications" class="nav-link" data-scroll-target="#pde-level-modifications">PDE-Level Modifications</a>
+  <ul class="collapse">
+  <li><a href="#nld-parameter-map" id="toc-nld-parameter-map" class="nav-link" data-scroll-target="#nld-parameter-map">NLD Parameter Map</a></li>
+  </ul></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">LLM-Guided Exploration</h1>
+<p class="subtitle lead">Parallel UCB tree search across diffusiophoresis parameter space</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="overview" class="level2">
+<h2 class="anchored" data-anchor-id="overview">Overview</h2>
+<p>This page presents the results of an autonomous <strong>parallel exploration loop</strong> in which an LLM (Claude) navigates the parameter space of coupled reaction–diffusion and diffusiophoresis systems. The exploration runs 4 simulations per batch using Upper Confidence Bound (UCB) tree search, with structured memory accumulating principles across blocks of 8 iterations.</p>
+<p>Over <strong>88 iterations</strong> (11 complete blocks) the LLM explored:</p>
+<ul>
+<li><strong>5 PDE mesh models</strong>: Brusselator, Gray-Scott, FitzHugh-Nagumo, Schnakenberg, Gierer-Meinhardt</li>
+<li><strong>1 code-level PDE modification</strong>: Nonlinear diffusion (NLD) in Brusselator — concentration-dependent <span class="math inline">\(D_1(C_1)\)</span></li>
+<li><strong>8 code-level particle features</strong>: Weber-Fechner sensing, cross-type adhesion, Michaelis-Menten kinetics, durotaxis, chirality, density-dependent mobility, field-modulated pp adhesion, velocity alignment</li>
+<li><strong>3 particle-type regimes</strong>: 1-type, 2-type, and 3-type configurations</li>
+<li><strong>Mesh resolutions</strong>: 100x100, 150x150, 200x200</li>
+</ul>
+<p>Each montage shows a simulation’s temporal evolution across 10 snapshots (left to right). Row 1: chemical field C1. Row 2: particles with velocity arrows. Row 3: C1/C2 fields with particle overlays. Row 4: particle flow field.</p>
+<hr>
+</section>
+<section id="best-morphologies" class="level2">
+<h2 class="anchored" data-anchor-id="best-morphologies">Best Morphologies</h2>
+<section id="iter14" class="level3">
+<h3 class="anchored" data-anchor-id="iter14">Iter 14 — 3-Type Flower/Mandala (8/10)</h3>
+<p>3-type opposing mobility with cross-type adhesion (p[2,5]=0.3). The C1 field evolves from random noise through concentric rings into a multi-spot Turing array with strong contrast. Three particle types stratify into distinct spatial layers: blue consumers form inner cores, orange producers occupy intermediate zones, green weak-consumers create the outermost boundary. The cross-type adhesion sharpens inter-type boundaries, creating discrete layered domains. Late frames show Turing spots distributed across the domain with elaborate 3-type segregation at each spot.</p>
+<div class="quarto-layout-panel" data-layout-ncol="1">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 100.0%;justify-content: center;">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_014.png" class="lightbox" data-gallery="quarto-lightbox-gallery-1"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_014.png" class="img-fluid"></a></p>
+</div>
+</div>
+</div>
+<div class="quarto-video"><video id="video_shortcode_videojs_video1" class="video-js vjs-default-skin vjs-fluid" controls="" preload="auto" data-setup="{}" title=""><source src="log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_014.mp4"></video></div>
+</section>
+<section id="iter45" class="level3">
+<h3 class="anchored" data-anchor-id="iter45">Iter 45 — Flower/Mandala Rediscovery (8/10)</h3>
+<p>Independent rediscovery of the Iter 14 regime at 150x150 mesh with A=5.5, B=7.5. The field develops from noise into concentric rings that break into multiple Turing spots. Particles show the same 3-type stratification: blue cores budding off satellite clusters with orange and green layering around each. Late frames show a central flower-like structure with peripheral spot clusters, each containing segregated type layers.</p>
+<div class="quarto-layout-panel" data-layout-ncol="1">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 100.0%;justify-content: center;">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_045.png" class="lightbox" data-gallery="quarto-lightbox-gallery-2"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_045.png" class="img-fluid"></a></p>
+</div>
+</div>
+</div>
+<div class="quarto-video"><video id="video_shortcode_videojs_video2" class="video-js vjs-default-skin vjs-fluid" controls="" preload="auto" data-setup="{}" title=""><source src="log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_045.mp4"></video></div>
+</section>
+<section id="iter53" class="level3">
+<h3 class="anchored" data-anchor-id="iter53">Iter 53 — Extended Simulation (8/10)</h3>
+<p>Same 3-type opposing Brusselator regime as Iter 14/45 but with n_frames=4000 (double length). The longer simulation allows the Turing instability to develop further: C1_std=2.10 is the highest field contrast ever recorded. Fields evolve from rings through multi-spot breakup into a mature dispersed array. The 3-type particles form elongated curved clusters spread across the domain. The extra 2000 frames produce sharper Turing spots with more elaborate inter-spot flow patterns visible in the velocity arrows.</p>
+<div class="quarto-layout-panel" data-layout-ncol="1">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 100.0%;justify-content: center;">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_053.png" class="lightbox" data-gallery="quarto-lightbox-gallery-3"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_053.png" class="img-fluid"></a></p>
+</div>
+</div>
+</div>
+</section>
+<section id="iter23" class="level3">
+<h3 class="anchored" data-anchor-id="iter23">Iter 23 — Hexagonal Core-Ring Array (7/10, Best 2-type)</h3>
+<p>2-type opposing mobility with A=5.5/B=7.5 and adhesion (p[2,5]=0.3). The C1 field develops swirl-like intermediate patterns that resolve into ~5–7 bright spots in quasi-hexagonal arrangement. Starting from a compact orange/blue disc, the two particle types separate into core-ring units at each field spot: orange consumer cores surrounded by blue producer rings. High entropy (0.821) reflects excellent spatial coverage across all hexagonal nodes. This is qualitatively different from the 3-type flower regime — discrete, well-separated spots rather than branching lobes.</p>
+<div class="quarto-layout-panel" data-layout-ncol="1">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 100.0%;justify-content: center;">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_023.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_023.png" class="img-fluid"></a></p>
+</div>
+</div>
+</div>
+<div class="quarto-video"><video id="video_shortcode_videojs_video3" class="video-js vjs-default-skin vjs-fluid" controls="" preload="auto" data-setup="{}" title=""><source src="log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_023.mp4"></video></div>
+</section>
+<section id="iter39" class="level3">
+<h3 class="anchored" data-anchor-id="iter39">Iter 39 — Dispersed Spot Array (7/10, Best 1-type)</h3>
+<p>1-type at 150x150 mesh with A=5.5, B=7.5 and |M1|=8. The C1 field develops from rings into a fully dispersed Turing spot array covering the entire domain. Particles start as a compact blue disc, expand through a dendritic network phase, then break into scattered cluster groups that track individual Turing spots. Late frames show well-separated blue particle clusters filling the domain. No type segregation is possible with 1-type, but the dispersed spatial coverage produces the highest 1-type score.</p>
+<div class="quarto-layout-panel" data-layout-ncol="1">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 100.0%;justify-content: center;">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_039.png" class="lightbox" data-gallery="quarto-lightbox-gallery-5"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_039.png" class="img-fluid"></a></p>
+</div>
+</div>
+</div>
+<div class="quarto-video"><video id="video_shortcode_videojs_video4" class="video-js vjs-default-skin vjs-fluid" controls="" preload="auto" data-setup="{}" title=""><source src="log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_039.mp4"></video></div>
+</section>
+<section id="iter46" class="level3">
+<h3 class="anchored" data-anchor-id="iter46">Iter 46 — FHN Concentric Rings (7/10, Best non-Brusselator)</h3>
+<p>FitzHugh-Nagumo PDE with 3-type opposing mobility. The field develops into elaborate concentric ring structures rather than spots. Three particle types organize into concentric type-segregated bands: green rings of dots interspersed with yellow dots arranged in ring patterns at increasing radii from center. The concentric ring morphology is fundamentally different from Brusselator’s spot arrays — the only non-Brusselator configuration reaching 7/10.</p>
+<div class="quarto-layout-panel" data-layout-ncol="1">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 100.0%;justify-content: center;">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_046.png" class="lightbox" data-gallery="quarto-lightbox-gallery-6"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_046.png" class="img-fluid"></a></p>
+</div>
+</div>
+</div>
+<div class="quarto-video"><video id="video_shortcode_videojs_video5" class="video-js vjs-default-skin vjs-fluid" controls="" preload="auto" data-setup="{}" title=""><source src="log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_046.mp4"></video></div>
+</section>
+<section id="iter83" class="level3">
+<h3 class="anchored" data-anchor-id="iter83">Iter 83 — Labyrinthine Turing (7/10, NLD Breakthrough)</h3>
+<p>First non-hexagonal, non-radial stable Turing pattern in 83 iterations. Nonlinear diffusion (NLD <span class="math inline">\(\delta=2.0\)</span>) combined with high B/A ratio (<span class="math inline">\(A=3.0, B=5.5\)</span>) shifts pattern selection from hexagonal spots to <strong>labyrinthine/stripe morphology</strong>. The C1 field develops dramatically strong patterns (<span class="math inline">\(C_1^{\text{std}}=1.93\)</span>, pattern_growth=272) with interconnected ridges rather than isolated spots. Particles form scattered clusters tracking field maxima along labyrinthine ridges.</p>
+<div class="quarto-layout-panel" data-layout-ncol="1">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 100.0%;justify-content: center;">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_083.png" class="lightbox" data-gallery="quarto-lightbox-gallery-7"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_083.png" class="img-fluid"></a></p>
+</div>
+</div>
+</div>
+<div class="quarto-video"><video id="video_shortcode_videojs_video6" class="video-js vjs-default-skin vjs-fluid" controls="" preload="auto" data-setup="{}" title=""><source src="log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_083.mp4"></video></div>
+</section>
+<section id="iter87" class="level3">
+<h3 class="anchored" data-anchor-id="iter87">Iter 87 — Vermiform Filaments (7/10, Novel Morphology)</h3>
+<p>Pushing deeper into the stripe regime (<span class="math inline">\(A=2.0, B=5.0\)</span>, <span class="math inline">\(B/A=2.5\)</span>) with NLD <span class="math inline">\(\delta=2.0\)</span> produces the <strong>strongest field patterns ever recorded</strong> (pattern_growth=294, nearly 2<span class="math inline">\(\times\)</span> previous maximum). The extreme B/A ratio creates fragmented labyrinthine fields with many small-scale features. Particles form elongated <strong>vermiform/worm-like filamentary chains</strong> tracing the field topology — a qualitatively new morphology distinct from clusters, networks, or rings.</p>
+<div class="quarto-layout-panel" data-layout-ncol="1">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 100.0%;justify-content: center;">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_087.png" class="lightbox" data-gallery="quarto-lightbox-gallery-8"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_087.png" class="img-fluid"></a></p>
+</div>
+</div>
+</div>
+<div class="quarto-video"><video id="video_shortcode_videojs_video7" class="video-js vjs-default-skin vjs-fluid" controls="" preload="auto" data-setup="{}" title=""><source src="log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_087.mp4"></video></div>
+</section>
+<section id="iter85" class="level3">
+<h3 class="anchored" data-anchor-id="iter85">Iter 85 — Branching Tissue on Labyrinthine Scaffold (7/10)</h3>
+<p>3-type opposing particles on the labyrinthine regime (<span class="math inline">\(A=3.0/B=5.5\)</span> + NLD <span class="math inline">\(\delta=2.0\)</span>) produce a <strong>novel hybrid morphology</strong> combining labyrinthine field topology with Iter 14-style tissue stratification. Three particle types form layered branches along labyrinthine ridges rather than compact flower structures. Pattern_growth=160 is the highest for any 3-type run. The branching tissue morphology is more biologically reminiscent than the compact flower.</p>
+<div class="quarto-layout-panel" data-layout-ncol="1">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 100.0%;justify-content: center;">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_085.png" class="lightbox" data-gallery="quarto-lightbox-gallery-9"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_085.png" class="img-fluid"></a></p>
+</div>
+</div>
+</div>
+<div class="quarto-video"><video id="video_shortcode_videojs_video8" class="video-js vjs-default-skin vjs-fluid" controls="" preload="auto" data-setup="{}" title=""><source src="log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_085.mp4"></video></div>
+<hr>
+</section>
+</section>
+<section id="regime-comparison" class="level2">
+<h2 class="anchored" data-anchor-id="regime-comparison">Regime Comparison</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 16%">
+<col style="width: 18%">
+<col style="width: 14%">
+<col style="width: 24%">
+<col style="width: 26%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Regime</th>
+<th>n_types</th>
+<th>Model</th>
+<th style="text-align: center;">Best Score</th>
+<th>Key Finding</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>3-type opposing</td>
+<td>3</td>
+<td>Brusselator</td>
+<td style="text-align: center;"><strong>8/10</strong></td>
+<td>Multi-spot flower/mandala with 3-layer type segregation (Iters 14, 45, 53)</td>
+</tr>
+<tr class="even">
+<td>2-type opposing</td>
+<td>2</td>
+<td>Brusselator</td>
+<td style="text-align: center;">7/10</td>
+<td>Hexagonal core-ring spot array (Iter 23)</td>
+</tr>
+<tr class="odd">
+<td>1-type</td>
+<td>1</td>
+<td>Brusselator</td>
+<td style="text-align: center;">7/10</td>
+<td>Dispersed Turing spot array at 150x150 (Iter 39)</td>
+</tr>
+<tr class="even">
+<td>1-type NLD labyrinthine</td>
+<td>1</td>
+<td>Brusselator + NLD</td>
+<td style="text-align: center;">7/10</td>
+<td><strong>Labyrinthine</strong> Turing patterns — first non-hexagonal stable mode (Iter 83)</td>
+</tr>
+<tr class="odd">
+<td>1-type NLD vermiform</td>
+<td>1</td>
+<td>Brusselator + NLD</td>
+<td style="text-align: center;">7/10</td>
+<td><strong>Vermiform</strong> filamentary chains, strongest fields ever (Iter 87)</td>
+</tr>
+<tr class="even">
+<td>3-type NLD labyrinthine</td>
+<td>3</td>
+<td>Brusselator + NLD</td>
+<td style="text-align: center;">7/10</td>
+<td>Branching tissue on labyrinthine scaffold (Iter 85)</td>
+</tr>
+<tr class="odd">
+<td>2-type same-sign</td>
+<td>2</td>
+<td>Brusselator</td>
+<td style="text-align: center;">7/10</td>
+<td>Co-localized core-shell clusters at Turing spots (Iter 12)</td>
+</tr>
+<tr class="even">
+<td>3-type same-sign</td>
+<td>3</td>
+<td>Brusselator</td>
+<td style="text-align: center;">6/10</td>
+<td>Nested co-localization, less complex (Iters 16, 24)</td>
+</tr>
+<tr class="odd">
+<td>FHN 3-type</td>
+<td>3</td>
+<td>FitzHugh-Nagumo</td>
+<td style="text-align: center;">7/10</td>
+<td>Concentric type-segregated ring bands (Iter 46)</td>
+</tr>
+<tr class="even">
+<td>Gray-Scott</td>
+<td>2–3</td>
+<td>Gray-Scott</td>
+<td style="text-align: center;">6/10</td>
+<td>Radial concentric rings at all coupling strengths (Iters 33–40)</td>
+</tr>
+<tr class="odd">
+<td>Schnakenberg</td>
+<td>2</td>
+<td>Schnakenberg</td>
+<td style="text-align: center;">5/10</td>
+<td>Radial concentric only (Iter 51)</td>
+</tr>
+<tr class="even">
+<td>Gierer-Meinhardt</td>
+<td>2</td>
+<td>GM</td>
+<td style="text-align: center;">5/10</td>
+<td>Radial after stabilization (Iter 47)</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="established-principles" class="level2">
+<h2 class="anchored" data-anchor-id="established-principles">Established Principles</h2>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Important</span>Key Discovery
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><strong>Brusselator is the only PDE model producing non-radial morphologies</strong> when coupled to diffusiophoretic particles. All four alternative models (Gray-Scott, FHN, Schnakenberg, Gierer-Meinhardt) produce only radial/concentric patterns. Adding <strong>nonlinear diffusion (NLD)</strong> to the Brusselator further extends its repertoire to labyrinthine and vermiform patterns.</p>
+</div>
+</div>
+<p>The LLM accumulated <strong>20 validated principles</strong> across 88 iterations:</p>
+<ol type="1">
+<li><strong>Moderate coupling is a hard stability limit</strong>: |M1| <span class="math inline">\(\leq\)</span> 12 (Brusselator hexagonal), |M1| <span class="math inline">\(\leq\)</span> 8 (Brusselator labyrinthine), |M1| <span class="math inline">\(\leq\)</span> 10 (FHN). Exceeding causes particle escape and field blow-up.</li>
+<li><strong>D1 <span class="math inline">\(\geq\)</span> 0.05 required</strong> — lower values cause numerical crash (Iters 1, 2).</li>
+<li><strong>Mobility sign determines pattern type</strong>: opposing-sign <span class="math inline">\(\to\)</span> spatial segregation; same-sign <span class="math inline">\(\to\)</span> co-localization at shared Turing spots.</li>
+<li><strong>Cross-type adhesion (p[2,5]=0.3) is the only particle-level feature that improved scores</strong> (7 <span class="math inline">\(\to\)</span> 8/10). Effective only on opposing-sign configs where type boundaries exist.</li>
+<li><strong>150x150 mesh is optimal</strong> for 9600 particles. 200x200 degrades all configs; 100x100 is equivalent when patterns collapse to single center.</li>
+<li><strong>Consumer must be the strongest mover</strong> (consumer-dominant asymmetry). Reversing to producer-dominant drops 8/10 <span class="math inline">\(\to\)</span> 4/10 (Iter 52).</li>
+<li><strong>Higher particle count doesn’t break ceilings</strong>: 14400 particles same 7/10 as 9600 (Iter 62).</li>
+<li><strong>A=5.5/B=7.5 produces more numerous, smaller Turing spots</strong>: key for 1-type and 2-type hexagonal patterns.</li>
+<li><strong>Plateau=0 is universal</strong>: all models under continuous injection drive non-equilibrium dynamics across all 88 iterations.</li>
+<li><strong>Chirality suppresses patterns</strong>: 0.3+ suppresses strongly; 0.1 is neutral but adds no spiral features.</li>
+</ol>
+<p><strong>Principles 11–20 (Blocks 9–11):</strong></p>
+<ol start="11" type="1">
+<li><strong>Weber-Fechner suppresses hexagonal at ANY K&gt;0</strong>: even K=0.15 forces radial/bullseye. No useful regime.</li>
+<li><strong>Velocity alignment is cosmetic</strong>: adds visible streaming but never improves scores across 1-, 2-, and 3-type configs.</li>
+<li><strong>DDM is neutral or harmful</strong>: density-dependent mobility traps particles at the first concentration peak (Iters 65–72).</li>
+<li><strong>All 8 PDE_D particle features exhausted</strong>: only cross-type adhesion helped. Strategy shifted to PDE mesh modification.</li>
+<li><strong>NLD <span class="math inline">\(\delta=2.0\)</span> + high B/A ratio <span class="math inline">\(\to\)</span> labyrinthine Turing</strong>: <span class="math inline">\(A=3.0/B=5.5\)</span> (<span class="math inline">\(B/A=1.83\)</span>) breaks hexagonal symmetry into labyrinthine/vermiform (Iter 83).</li>
+<li><strong>NLD <span class="math inline">\(\delta=3.0\)</span> over-damps hexagonal</strong>: stronger NLD weakens field contrast at <span class="math inline">\(A=5.5/B=7.5\)</span>. <span class="math inline">\(\delta=2.0\)</span> is optimal.</li>
+<li><strong>NLD is incompatible with strong coupling (|<span class="math inline">\(\chi\)</span>|=16)</strong>: NLD at <span class="math inline">\(\delta \geq 1.0\)</span> with <span class="math inline">\(\chi=-16\)</span> causes blowup. NLD requires moderate coupling (<span class="math inline">\(\chi=-8\)</span>).</li>
+<li><strong>Iter 14’s 8/10 is time-limited</strong>: <span class="math inline">\(\chi=-16\)</span> regime blows up at 4000 frames (Iter 84). The best score is marginally unstable.</li>
+<li><strong>Labyrinthine regime has tighter coupling limit</strong>: |<span class="math inline">\(\chi\)</span>| <span class="math inline">\(\leq\)</span> 8 (vs hexagonal |<span class="math inline">\(\chi\)</span>| <span class="math inline">\(\leq\)</span> 12).</li>
+<li><strong><span class="math inline">\(B/A=2.5\)</span> + NLD <span class="math inline">\(\to\)</span> vermiform filaments</strong>: strongest fields ever observed (pattern_growth=294, Iter 87).</li>
+</ol>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Negative Results
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Seven out of eight PDE_D code features were tested and found neutral or harmful: Weber-Fechner sensing, Michaelis-Menten kinetics, chirality, durotaxis, density-dependent mobility, field-modulated pp adhesion, and velocity alignment. Only cross-type adhesion improved morphological scores. This exhaustive search motivated the shift from particle-level to PDE-level modifications (nonlinear diffusion).</p>
+</div>
+</div>
+<hr>
+</section>
+<section id="exploration-gallery" class="level2">
+<h2 class="anchored" data-anchor-id="exploration-gallery">Exploration Gallery</h2>
+<section id="block-1-iters-18-initial-exploration" class="level3">
+<h3 class="anchored" data-anchor-id="block-1-iters-18-initial-exploration">Block 1 (Iters 1–8) — Initial Exploration</h3>
+<p>Iters 1–2 crashed (D1 too low). First successful runs established that 2-type opposing mobilities produce spatial segregation (Iter 3: labyrinthine patterns) and 3-type moderate coupling creates tissue-like stratification (Iter 8: best of block at 7/10).</p>
+<div class="quarto-layout-panel" data-layout-ncol="4">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_003.png" class="lightbox" data-gallery="block1" title="Iter 3 (5/10) — 2-type opposing, labyrinthine segregation"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_003.png" class="img-fluid figure-img" alt="Iter 3 (5/10) — 2-type opposing, labyrinthine segregation"></a></p>
+<figcaption>Iter 3 (5/10) — 2-type opposing, labyrinthine segregation</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_005.png" class="lightbox" data-gallery="block1" title="Iter 5 (6/10) — 2-type 4000 frames, branching network"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_005.png" class="img-fluid figure-img" alt="Iter 5 (6/10) — 2-type 4000 frames, branching network"></a></p>
+<figcaption>Iter 5 (6/10) — 2-type 4000 frames, branching network</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_007.png" class="lightbox" data-gallery="block1" title="Iter 7 (0/10) — 1-type base params, total escape"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_007.png" class="img-fluid figure-img" alt="Iter 7 (0/10) — 1-type base params, total escape"></a></p>
+<figcaption>Iter 7 (0/10) — 1-type base params, total escape</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_008.png" class="lightbox" data-gallery="block1" title="Iter 8 (7/10) — 3-type moderate, tissue stratification"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_008.png" class="img-fluid figure-img" alt="Iter 8 (7/10) — 3-type moderate, tissue stratification"></a></p>
+<figcaption>Iter 8 (7/10) — 3-type moderate, tissue stratification</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="block-2-iters-916-cross-type-adhesion-breakthrough" class="level3">
+<h3 class="anchored" data-anchor-id="block-2-iters-916-cross-type-adhesion-breakthrough">Block 2 (Iters 9–16) — Cross-Type Adhesion Breakthrough</h3>
+<p>Iter 14 achieved the global best (8/10) by adding cross-type adhesion to the 3-type opposing regime. Same-sign 2-type (Iter 12) produced novel core-shell micro-clusters at Turing spots.</p>
+<div class="quarto-layout-panel" data-layout-ncol="4">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_009.png" class="lightbox" data-gallery="block2" title="Iter 9 (7/10) — 3-type, stronger Turing drive"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_009.png" class="img-fluid figure-img" alt="Iter 9 (7/10) — 3-type, stronger Turing drive"></a></p>
+<figcaption>Iter 9 (7/10) — 3-type, stronger Turing drive</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_012.png" class="lightbox" data-gallery="block2" title="Iter 12 (7/10) — 2-type same-sign, core-shell spots"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_012.png" class="img-fluid figure-img" alt="Iter 12 (7/10) — 2-type same-sign, core-shell spots"></a></p>
+<figcaption>Iter 12 (7/10) — 2-type same-sign, core-shell spots</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_014.png" class="lightbox" data-gallery="block2" title="Iter 14 (8/10) — 3-type + adhesion, flower/mandala"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_014.png" class="img-fluid figure-img" alt="Iter 14 (8/10) — 3-type + adhesion, flower/mandala"></a></p>
+<figcaption>Iter 14 (8/10) — 3-type + adhesion, flower/mandala</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_016.png" class="lightbox" data-gallery="block2" title="Iter 16 (6/10) — 3-type same-sign, co-localized spots"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_016.png" class="img-fluid figure-img" alt="Iter 16 (6/10) — 3-type same-sign, co-localized spots"></a></p>
+<figcaption>Iter 16 (6/10) — 3-type same-sign, co-localized spots</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="block-3-iters-1724-regime-diversification" class="level3">
+<h3 class="anchored" data-anchor-id="block-3-iters-1724-regime-diversification">Block 3 (Iters 17–24) — Regime Diversification</h3>
+<p>Tested Weber-Fechner sensing (kills Turing breakup at K=2.0), Michaelis-Menten (neutral), and higher A/B Brusselator. Iter 23 discovered the hexagonal core-ring regime for 2-type, achieving best-in-class 2-type score of 7/10.</p>
+<div class="quarto-layout-panel" data-layout-ncol="4">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_018.png" class="lightbox" data-gallery="block3" title="Iter 18 (5/10) — Weber-Fechner K=2.0, compact bullseye"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_018.png" class="img-fluid figure-img" alt="Iter 18 (5/10) — Weber-Fechner K=2.0, compact bullseye"></a></p>
+<figcaption>Iter 18 (5/10) — Weber-Fechner K=2.0, compact bullseye</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_021.png" class="lightbox" data-gallery="block3" title="Iter 21 (7/10) — 3-type + A=5.5/B=7.5, flower variant"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_021.png" class="img-fluid figure-img" alt="Iter 21 (7/10) — 3-type + A=5.5/B=7.5, flower variant"></a></p>
+<figcaption>Iter 21 (7/10) — 3-type + A=5.5/B=7.5, flower variant</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_023.png" class="lightbox" data-gallery="block3" title="Iter 23 (7/10) — 2-type hexagonal core-ring array"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_023.png" class="img-fluid figure-img" alt="Iter 23 (7/10) — 2-type hexagonal core-ring array"></a></p>
+<figcaption>Iter 23 (7/10) — 2-type hexagonal core-ring array</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_024.png" class="lightbox" data-gallery="block3" title="Iter 24 (6/10) — 3-type same-sign + adhesion"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_024.png" class="img-fluid figure-img" alt="Iter 24 (6/10) — 3-type same-sign + adhesion"></a></p>
+<figcaption>Iter 24 (6/10) — 3-type same-sign + adhesion</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="block-4-iters-2532-coupling-geometry" class="level3">
+<h3 class="anchored" data-anchor-id="block-4-iters-2532-coupling-geometry">Block 4 (Iters 25–32) — Coupling Geometry</h3>
+<p>Chirality at 0.5 suppresses pattern elaboration (Iter 25). Weber-Fechner even at K=0.3 converts hexagonal to concentric bullseye (Iter 31). Consumer-dominant asymmetry confirmed critical: swapping to producer-dominant drops to 6/10 (Iter 28). Pushing |M1|=14 causes total blow-up (Iter 32).</p>
+<div class="quarto-layout-panel" data-layout-ncol="4">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_025.png" class="lightbox" data-gallery="block4" title="Iter 25 (5/10) — chirality suppresses, compact flower"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_025.png" class="img-fluid figure-img" alt="Iter 25 (5/10) — chirality suppresses, compact flower"></a></p>
+<figcaption>Iter 25 (5/10) — chirality suppresses, compact flower</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_026.png" class="lightbox" data-gallery="block4" title="Iter 26 (7/10) — 3-type in Iter 23’s A/B regime"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_026.png" class="img-fluid figure-img" alt="Iter 26 (7/10) — 3-type in Iter 23’s A/B regime"></a></p>
+<figcaption>Iter 26 (7/10) — 3-type in Iter 23’s A/B regime</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_031.png" class="lightbox" data-gallery="block4" title="Iter 31 (6/10) — W-F K=0.3, concentric bullseye"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_031.png" class="img-fluid figure-img" alt="Iter 31 (6/10) — W-F K=0.3, concentric bullseye"></a></p>
+<figcaption>Iter 31 (6/10) — W-F K=0.3, concentric bullseye</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_032.png" class="lightbox" data-gallery="block4" title="Iter 32 (1/10) — |M1|=14, total blow-up"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_032.png" class="img-fluid figure-img" alt="Iter 32 (1/10) — |M1|=14, total blow-up"></a></p>
+<figcaption>Iter 32 (1/10) — |M1|=14, total blow-up</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="block-5-iters-3340-pde-model-survey" class="level3">
+<h3 class="anchored" data-anchor-id="block-5-iters-3340-pde-model-survey">Block 5 (Iters 33–40) — PDE Model Survey</h3>
+<p>Tested Gray-Scott (produces only radial concentric rings, not spots), durotaxis (neutral on 1-type). Iter 39 found the 1-type sweet spot at A=5.5/B=7.5 + 150x150 mesh with dispersed Turing spots.</p>
+<div class="quarto-layout-panel" data-layout-ncol="4">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_033.png" class="lightbox" data-gallery="block5" title="Iter 33 (5/10) — Gray-Scott, radial rings only"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_033.png" class="img-fluid figure-img" alt="Iter 33 (5/10) — Gray-Scott, radial rings only"></a></p>
+<figcaption>Iter 33 (5/10) — Gray-Scott, radial rings only</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_035.png" class="lightbox" data-gallery="block5" title="Iter 35 (6/10) — 1-type + durotaxis, neutral effect"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_035.png" class="img-fluid figure-img" alt="Iter 35 (6/10) — 1-type + durotaxis, neutral effect"></a></p>
+<figcaption>Iter 35 (6/10) — 1-type + durotaxis, neutral effect</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_037.png" class="lightbox" data-gallery="block5" title="Iter 37 (7/10) — 3-type Brusselator exploit"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_037.png" class="img-fluid figure-img" alt="Iter 37 (7/10) — 3-type Brusselator exploit"></a></p>
+<figcaption>Iter 37 (7/10) — 3-type Brusselator exploit</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_039.png" class="lightbox" data-gallery="block5" title="Iter 39 (7/10) — 1-type dispersed spot array"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_039.png" class="img-fluid figure-img" alt="Iter 39 (7/10) — 1-type dispersed spot array"></a></p>
+<figcaption>Iter 39 (7/10) — 1-type dispersed spot array</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="block-6-iters-4148-non-brusselator-models" class="level3">
+<h3 class="anchored" data-anchor-id="block-6-iters-4148-non-brusselator-models">Block 6 (Iters 41–48) — Non-Brusselator Models</h3>
+<p>FHN (Iter 46) achieved 7/10 with concentric ring bands — the only non-Brusselator model reaching that score. Gierer-Meinhardt (Iter 47) stabilized but produced only radial patterns at 5/10. Iter 45 independently rediscovered the 8/10 flower/mandala regime.</p>
+<div class="quarto-layout-panel" data-layout-ncol="4">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_042.png" class="lightbox" data-gallery="block6" title="Iter 42 (1/10) — Gray-Scott 2-type, single center"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_042.png" class="img-fluid figure-img" alt="Iter 42 (1/10) — Gray-Scott 2-type, single center"></a></p>
+<figcaption>Iter 42 (1/10) — Gray-Scott 2-type, single center</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_045.png" class="lightbox" data-gallery="block6" title="Iter 45 (8/10) — flower/mandala rediscovery"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_045.png" class="img-fluid figure-img" alt="Iter 45 (8/10) — flower/mandala rediscovery"></a></p>
+<figcaption>Iter 45 (8/10) — flower/mandala rediscovery</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_046.png" class="lightbox" data-gallery="block6" title="Iter 46 (7/10) — FHN concentric ring bands"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_046.png" class="img-fluid figure-img" alt="Iter 46 (7/10) — FHN concentric ring bands"></a></p>
+<figcaption>Iter 46 (7/10) — FHN concentric ring bands</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_047.png" class="lightbox" data-gallery="block6" title="Iter 47 (5/10) — Gierer-Meinhardt, radial"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_047.png" class="img-fluid figure-img" alt="Iter 47 (5/10) — Gierer-Meinhardt, radial"></a></p>
+<figcaption>Iter 47 (5/10) — Gierer-Meinhardt, radial</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="block-7-iters-4956-resolution-and-duration-tests" class="level3">
+<h3 class="anchored" data-anchor-id="block-7-iters-4956-resolution-and-duration-tests">Block 7 (Iters 49–56) — Resolution and Duration Tests</h3>
+<p>200x200 mesh confirmed as a dead end for all type counts at 9600 particles (Iters 49, 54, 55: all 6/10). n_frames=4000 ties the 8/10 ceiling but doesn’t break it (Iter 53). Producer-dominant 3-type drops to 4/10 (Iter 52).</p>
+<div class="quarto-layout-panel" data-layout-ncol="4">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_049.png" class="lightbox" data-gallery="block7" title="Iter 49 (6/10) — 1-type at 200x200, weaker spots"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_049.png" class="img-fluid figure-img" alt="Iter 49 (6/10) — 1-type at 200x200, weaker spots"></a></p>
+<figcaption>Iter 49 (6/10) — 1-type at 200x200, weaker spots</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_052.png" class="lightbox" data-gallery="block7" title="Iter 52 (4/10) — producer-dominant, simple rings"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_052.png" class="img-fluid figure-img" alt="Iter 52 (4/10) — producer-dominant, simple rings"></a></p>
+<figcaption>Iter 52 (4/10) — producer-dominant, simple rings</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_053.png" class="lightbox" data-gallery="block7" title="Iter 53 (8/10) — 4000 frames, extended flower"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_053.png" class="img-fluid figure-img" alt="Iter 53 (8/10) — 4000 frames, extended flower"></a></p>
+<figcaption>Iter 53 (8/10) — 4000 frames, extended flower</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_056.png" class="lightbox" data-gallery="block7" title="Iter 56 (7/10) — A=7.0/B=10.0 on 3-type"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_056.png" class="img-fluid figure-img" alt="Iter 56 (7/10) — A=7.0/B=10.0 on 3-type"></a></p>
+<figcaption>Iter 56 (7/10) — A=7.0/B=10.0 on 3-type</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="block-8-iters-5764-feature-testing" class="level3">
+<h3 class="anchored" data-anchor-id="block-8-iters-5764-feature-testing">Block 8 (Iters 57–64) — Feature Testing</h3>
+<p>Field-modulated pp adhesion (p[2,6]=0.5) is neutral on both 3-type (Iter 61: 7/10) and 2-type (Iter 63: 6/10). 14400 particles produce denser spots but same 7/10 ceiling for 1-type (Iter 62). Chirality=0.1 is neutral (Iter 64: 7/10).</p>
+<div class="quarto-layout-panel" data-layout-ncol="4">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_061.png" class="lightbox" data-gallery="block8" title="Iter 61 (7/10) — pp_field_mod, neutral on 3-type"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_061.png" class="img-fluid figure-img" alt="Iter 61 (7/10) — pp_field_mod, neutral on 3-type"></a></p>
+<figcaption>Iter 61 (7/10) — pp_field_mod, neutral on 3-type</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_062.png" class="lightbox" data-gallery="block8" title="Iter 62 (7/10) — 14400 particles, denser spots"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_062.png" class="img-fluid figure-img" alt="Iter 62 (7/10) — 14400 particles, denser spots"></a></p>
+<figcaption>Iter 62 (7/10) — 14400 particles, denser spots</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_063.png" class="lightbox" data-gallery="block8" title="Iter 63 (6/10) — pp_field_mod on 2-type, hexagonal"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_063.png" class="img-fluid figure-img" alt="Iter 63 (6/10) — pp_field_mod on 2-type, hexagonal"></a></p>
+<figcaption>Iter 63 (6/10) — pp_field_mod on 2-type, hexagonal</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_064.png" class="lightbox" data-gallery="block8" title="Iter 64 (7/10) — chirality=0.1, neutral"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_064.png" class="img-fluid figure-img" alt="Iter 64 (7/10) — chirality=0.1, neutral"></a></p>
+<figcaption>Iter 64 (7/10) — chirality=0.1, neutral</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="block-9-iters-6572-density-dependent-mobility" class="level3">
+<h3 class="anchored" data-anchor-id="block-9-iters-6572-density-dependent-mobility">Block 9 (Iters 65–72) — Density-Dependent Mobility</h3>
+<p>DDM (contact inhibition of locomotion) is completely neutral on multi-type across its entire range [0.15–1.0] and actively harmful on 1-type (Iter 67: particles collapse to single disc at 4/10). DDM forces single-center radial morphology by trapping particles at the first concentration peak.</p>
+<div class="quarto-layout-panel" data-layout-ncol="4">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_065.png" class="lightbox" data-gallery="block9" title="Iter 65 (6/10) — DDM=0.15, single radial bullseye"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_065.png" class="img-fluid figure-img" alt="Iter 65 (6/10) — DDM=0.15, single radial bullseye"></a></p>
+<figcaption>Iter 65 (6/10) — DDM=0.15, single radial bullseye</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_067.png" class="lightbox" data-gallery="block9" title="Iter 67 (4/10) — DDM=0.2 on 1-type, collapsed disc"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_067.png" class="img-fluid figure-img" alt="Iter 67 (4/10) — DDM=0.2 on 1-type, collapsed disc"></a></p>
+<figcaption>Iter 67 (4/10) — DDM=0.2 on 1-type, collapsed disc</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_070.png" class="lightbox" data-gallery="block9" title="Iter 70 (7/10) — DDM=0.5 on 2-type, concentric rings"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_070.png" class="img-fluid figure-img" alt="Iter 70 (7/10) — DDM=0.5 on 2-type, concentric rings"></a></p>
+<figcaption>Iter 70 (7/10) — DDM=0.5 on 2-type, concentric rings</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_072.png" class="lightbox" data-gallery="block9" title="Iter 72 (7/10) — 100x100 mesh + DDM"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_072.png" class="img-fluid figure-img" alt="Iter 72 (7/10) — 100x100 mesh + DDM"></a></p>
+<figcaption>Iter 72 (7/10) — 100x100 mesh + DDM</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="block-10-iters-7380-velocity-alignment-weber-fechner-dead-end" class="level3">
+<h3 class="anchored" data-anchor-id="block-10-iters-7380-velocity-alignment-weber-fechner-dead-end">Block 10 (Iters 73–80) — Velocity Alignment + Weber-Fechner Dead End</h3>
+<p>Velocity alignment (normalized + clamped) adds visible streaming within and between spots but is cosmetic — doesn’t improve scores across any type configuration. Alignment hurts 2-type (Iter 74: 6/10 vs parent 23: 7/10). Weber-Fechner confirmed as a dead end even at minimal K=0.15 (Iter 80: 5/10). All 8 PDE_D particle features exhaustively tested; only cross-type adhesion helped.</p>
+<div class="quarto-layout-panel" data-layout-ncol="4">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_073.png" class="lightbox" data-gallery="block10" title="Iter 73 (7/10) — alignment=1.0, streaming visible"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_073.png" class="img-fluid figure-img" alt="Iter 73 (7/10) — alignment=1.0, streaming visible"></a></p>
+<figcaption>Iter 73 (7/10) — alignment=1.0, streaming visible</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_074.png" class="lightbox" data-gallery="block10" title="Iter 74 (6/10) — 2-type + alignment, concentric rings"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_074.png" class="img-fluid figure-img" alt="Iter 74 (6/10) — 2-type + alignment, concentric rings"></a></p>
+<figcaption>Iter 74 (6/10) — 2-type + alignment, concentric rings</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_077.png" class="lightbox" data-gallery="block10" title="Iter 77 (7/10) — alignment=0.5, cosmetic streaming"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_077.png" class="img-fluid figure-img" alt="Iter 77 (7/10) — alignment=0.5, cosmetic streaming"></a></p>
+<figcaption>Iter 77 (7/10) — alignment=0.5, cosmetic streaming</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_080.png" class="lightbox" data-gallery="block10" title="Iter 80 (5/10) — W-F K=0.15, bullseye forced"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_080.png" class="img-fluid figure-img" alt="Iter 80 (5/10) — W-F K=0.15, bullseye forced"></a></p>
+<figcaption>Iter 80 (5/10) — W-F K=0.15, bullseye forced</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="block-11-iters-8188-nonlinear-diffusion-labyrinthine-breakthrough" class="level3">
+<h3 class="anchored" data-anchor-id="block-11-iters-8188-nonlinear-diffusion-labyrinthine-breakthrough">Block 11 (Iters 81–88) — Nonlinear Diffusion: Labyrinthine Breakthrough</h3>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Important</span>Code-Level PDE Modification
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>After exhausting all 8 particle-level features (80 iterations), the LLM modified the Brusselator PDE itself: <strong>nonlinear diffusion</strong> <span class="math inline">\(D_1(C_1) = D_1^0 [1 + \delta(C_1 - A)^2/A^2]\)</span> makes the activator diffusion concentration-dependent (Gambino et al.&nbsp;2013). This breaks single-wavelength lock and enables multi-scale patterns.</p>
+</div>
+</div>
+<p>NLD <span class="math inline">\(\delta=2.0\)</span> at <span class="math inline">\(A=3.0/B=5.5\)</span> produced the first <strong>labyrinthine Turing patterns</strong> in 83 iterations (Iter 83). <span class="math inline">\(B/A=2.5\)</span> pushed further into <strong>vermiform filamentary chains</strong> with the strongest fields ever (Iter 87: pattern_growth=294). 3-type on labyrinthine creates branching tissue (Iter 85). NLD at <span class="math inline">\(\delta=3.0\)</span> over-damps hexagonal (Iter 86: 6/10). Iter 14 confirmed as time-limited (Iter 84: blows up at 4000 frames).</p>
+<div class="quarto-layout-panel" data-layout-ncol="4">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_081.png" class="lightbox" data-gallery="block11" title="Iter 81 (1/10) — NLD + strong coupling, blowup"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_081.png" class="img-fluid figure-img" alt="Iter 81 (1/10) — NLD + strong coupling, blowup"></a></p>
+<figcaption>Iter 81 (1/10) — NLD + strong coupling, blowup</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_083.png" class="lightbox" data-gallery="block11" title="Iter 83 (7/10) — LABYRINTHINE Turing (NLD breakthrough)"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_083.png" class="img-fluid figure-img" alt="Iter 83 (7/10) — LABYRINTHINE Turing (NLD breakthrough)"></a></p>
+<figcaption>Iter 83 (7/10) — LABYRINTHINE Turing (NLD breakthrough)</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_085.png" class="lightbox" data-gallery="block11" title="Iter 85 (7/10) — 3-type tissue on labyrinthine scaffold"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_085.png" class="img-fluid figure-img" alt="Iter 85 (7/10) — 3-type tissue on labyrinthine scaffold"></a></p>
+<figcaption>Iter 85 (7/10) — 3-type tissue on labyrinthine scaffold</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 25.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_087.png" class="lightbox" data-gallery="block11" title="Iter 87 (7/10) — VERMIFORM filaments (strongest fields)"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_087.png" class="img-fluid figure-img" alt="Iter 87 (7/10) — VERMIFORM filaments (strongest fields)"></a></p>
+<figcaption>Iter 87 (7/10) — VERMIFORM filaments (strongest fields)</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<hr>
+</section>
+</section>
+<section id="ucb-exploration-trees" class="level2">
+<h2 class="anchored" data-anchor-id="ucb-exploration-trees">UCB Exploration Trees</h2>
+<p>The UCB tree visualizes the search strategy: each node is an iteration, edges connect parent-child mutations, and node color reflects the score. The tree grows across blocks as the LLM explores and exploits different parameter regions.</p>
+<div class="quarto-layout-panel" data-layout-ncol="2">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/tree/ucb_tree_iter_008.png" class="lightbox" data-gallery="trees" title="Block 1 (Iter 8)"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/tree/ucb_tree_iter_008.png" class="img-fluid figure-img" alt="Block 1 (Iter 8)"></a></p>
+<figcaption>Block 1 (Iter 8)</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/tree/ucb_tree_iter_016.png" class="lightbox" data-gallery="trees" title="Block 2 (Iter 16)"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/tree/ucb_tree_iter_016.png" class="img-fluid figure-img" alt="Block 2 (Iter 16)"></a></p>
+<figcaption>Block 2 (Iter 16)</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<div class="quarto-layout-panel" data-layout-ncol="2">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/tree/ucb_tree_iter_024.png" class="lightbox" data-gallery="trees" title="Block 3 (Iter 24)"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/tree/ucb_tree_iter_024.png" class="img-fluid figure-img" alt="Block 3 (Iter 24)"></a></p>
+<figcaption>Block 3 (Iter 24)</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/tree/ucb_tree_iter_032.png" class="lightbox" data-gallery="trees" title="Block 4 (Iter 32)"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/tree/ucb_tree_iter_032.png" class="img-fluid figure-img" alt="Block 4 (Iter 32)"></a></p>
+<figcaption>Block 4 (Iter 32)</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<div class="quarto-layout-panel" data-layout-ncol="2">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/tree/ucb_tree_iter_040.png" class="lightbox" data-gallery="trees" title="Block 5 (Iter 40)"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/tree/ucb_tree_iter_040.png" class="img-fluid figure-img" alt="Block 5 (Iter 40)"></a></p>
+<figcaption>Block 5 (Iter 40)</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/tree/ucb_tree_iter_048.png" class="lightbox" data-gallery="trees" title="Block 6 (Iter 48)"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/tree/ucb_tree_iter_048.png" class="img-fluid figure-img" alt="Block 6 (Iter 48)"></a></p>
+<figcaption>Block 6 (Iter 48)</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<div class="quarto-layout-panel" data-layout-ncol="2">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/tree/ucb_tree_iter_056.png" class="lightbox" data-gallery="trees" title="Block 7 (Iter 56)"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/tree/ucb_tree_iter_056.png" class="img-fluid figure-img" alt="Block 7 (Iter 56)"></a></p>
+<figcaption>Block 7 (Iter 56)</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/tree/ucb_tree_iter_064.png" class="lightbox" data-gallery="trees" title="Block 8 (Iter 64)"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/tree/ucb_tree_iter_064.png" class="img-fluid figure-img" alt="Block 8 (Iter 64)"></a></p>
+<figcaption>Block 8 (Iter 64)</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<div class="quarto-layout-panel" data-layout-ncol="2">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/tree/ucb_tree_iter_072.png" class="lightbox" data-gallery="trees" title="Block 9 (Iter 72)"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/tree/ucb_tree_iter_072.png" class="img-fluid figure-img" alt="Block 9 (Iter 72)"></a></p>
+<figcaption>Block 9 (Iter 72)</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/tree/ucb_tree_iter_080.png" class="lightbox" data-gallery="trees" title="Block 10 (Iter 80)"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/tree/ucb_tree_iter_080.png" class="img-fluid figure-img" alt="Block 10 (Iter 80)"></a></p>
+<figcaption>Block 10 (Iter 80)</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<hr>
+</section>
+<section id="score-progression" class="level2">
+<h2 class="anchored" data-anchor-id="score-progression">Score Progression</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 17%">
+<col style="width: 17%">
+<col style="width: 22%">
+<col style="width: 15%">
+<col style="width: 27%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: center;">Block</th>
+<th style="text-align: center;">Iters</th>
+<th style="text-align: center;">Average</th>
+<th style="text-align: center;">Best</th>
+<th>Key Event</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">1–8</td>
+<td style="text-align: center;">4.4</td>
+<td style="text-align: center;">7 (Iter 8)</td>
+<td>3-type tissue stratification discovered</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">2</td>
+<td style="text-align: center;">9–16</td>
+<td style="text-align: center;">6.1</td>
+<td style="text-align: center;"><strong>8</strong> (Iter 14)</td>
+<td>Cross-type adhesion breakthrough</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">3</td>
+<td style="text-align: center;">17–24</td>
+<td style="text-align: center;">6.4</td>
+<td style="text-align: center;">7 (Iter 23)</td>
+<td>Hexagonal 2-type regime discovered</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">4</td>
+<td style="text-align: center;">25–32</td>
+<td style="text-align: center;">5.5</td>
+<td style="text-align: center;">7 (Iters 26, 29, 30)</td>
+<td>Consumer-dominant asymmetry confirmed</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">5</td>
+<td style="text-align: center;">33–40</td>
+<td style="text-align: center;">5.6</td>
+<td style="text-align: center;">7 (Iters 37, 39)</td>
+<td>Gray-Scott fails; 1-type sweet spot found</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">6</td>
+<td style="text-align: center;">41–48</td>
+<td style="text-align: center;">5.3</td>
+<td style="text-align: center;"><strong>8</strong> (Iter 45)</td>
+<td>Flower/mandala rediscovered; FHN 7/10</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">7</td>
+<td style="text-align: center;">49–56</td>
+<td style="text-align: center;">5.75</td>
+<td style="text-align: center;"><strong>8</strong> (Iter 53)</td>
+<td>200x200 dead end confirmed</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">8</td>
+<td style="text-align: center;">57–64</td>
+<td style="text-align: center;">6.75</td>
+<td style="text-align: center;">7 (Iters 61, 62, 64)</td>
+<td>pp_field_mod neutral; particle count ceiling</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">9</td>
+<td style="text-align: center;">65–72</td>
+<td style="text-align: center;">6.25</td>
+<td style="text-align: center;">7 (Iters 70, 72)</td>
+<td>DDM failed across full range</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">73–80</td>
+<td style="text-align: center;">6.5</td>
+<td style="text-align: center;">7 (Iters 73, 76–79)</td>
+<td>Alignment cosmetic; all 8 PDE_D features exhausted</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">11</td>
+<td style="text-align: center;">81–88</td>
+<td style="text-align: center;">5.1</td>
+<td style="text-align: center;">7 (Iters 82, 83, 85, 87)</td>
+<td><strong>NLD labyrinthine + vermiform breakthrough</strong></td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="pde-models-tested" class="level2">
+<h2 class="anchored" data-anchor-id="pde-models-tested">PDE Models Tested</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 13%">
+<col style="width: 21%">
+<col style="width: 50%">
+<col style="width: 15%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Model</th>
+<th>Literature</th>
+<th>Morphology with particles</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Brusselator</strong></td>
+<td>Prigogine &amp; Lefever (1968)</td>
+<td>Multi-spot hexagonal arrays, flower/mandala</td>
+<td><strong>Best</strong> (8/10)</td>
+</tr>
+<tr class="even">
+<td><strong>Brusselator + NLD</strong></td>
+<td>Gambino et al.&nbsp;(2013)</td>
+<td>Labyrinthine, vermiform filaments</td>
+<td><strong>Novel</strong> (7/10)</td>
+</tr>
+<tr class="odd">
+<td>Gray-Scott</td>
+<td>Pearson (1993)</td>
+<td>Radial concentric rings only</td>
+<td>Radial-locked</td>
+</tr>
+<tr class="even">
+<td>FitzHugh-Nagumo</td>
+<td>FitzHugh (1961)</td>
+<td>Concentric type-segregated ring bands</td>
+<td>7/10 max</td>
+</tr>
+<tr class="odd">
+<td>Schnakenberg</td>
+<td>Schnakenberg (1979)</td>
+<td>Radial concentric</td>
+<td>5/10 max</td>
+</tr>
+<tr class="even">
+<td>Gierer-Meinhardt</td>
+<td>Gierer &amp; Meinhardt (1972)</td>
+<td>Radial after stabilization</td>
+<td>5/10 max</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="code-features-explored" class="level2">
+<h2 class="anchored" data-anchor-id="code-features-explored">Code Features Explored</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 21%">
+<col style="width: 26%">
+<col style="width: 19%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Feature</th>
+<th>Parameter</th>
+<th>Effect</th>
+<th style="text-align: center;">Score Impact</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Cross-type adhesion</td>
+<td>p[2,5]=0.3</td>
+<td>Sharpens inter-type boundaries in opposing-sign configs</td>
+<td style="text-align: center;"><strong>+1</strong> (7 <span class="math inline">\(\to\)</span> 8)</td>
+</tr>
+<tr class="even">
+<td>Weber-Fechner</td>
+<td>p[2,4]</td>
+<td>K=0.3 converts hexagonal to bullseye; K=2.0 kills all patterns</td>
+<td style="text-align: center;">Harmful</td>
+</tr>
+<tr class="odd">
+<td>Michaelis-Menten</td>
+<td>p[1,2]</td>
+<td>Km=0.2–0.5 near-neutral on both consumer and producer types</td>
+<td style="text-align: center;">Neutral</td>
+</tr>
+<tr class="even">
+<td>Durotaxis</td>
+<td>p[1,3]</td>
+<td>0.5 neutral for 1-type</td>
+<td style="text-align: center;">Neutral</td>
+</tr>
+<tr class="odd">
+<td>Chirality</td>
+<td>p[1,4]</td>
+<td>0.3–0.5 suppresses pattern elaboration; 0.1 neutral</td>
+<td style="text-align: center;">Harmful</td>
+</tr>
+<tr class="even">
+<td>pp field modulation</td>
+<td>p[2,6]</td>
+<td>0.5 neither helps nor hurts on any type configuration</td>
+<td style="text-align: center;">Neutral</td>
+</tr>
+<tr class="odd">
+<td>Density-dependent mobility</td>
+<td>p[1,5]</td>
+<td>Neutral on multi-type; harmful on 1-type (traps at first peak)</td>
+<td style="text-align: center;">Neutral/Harmful</td>
+</tr>
+<tr class="even">
+<td>Velocity alignment</td>
+<td>p[2,7]</td>
+<td>Adds visible streaming; cosmetic only, doesn’t improve scores</td>
+<td style="text-align: center;">Neutral</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="pde-level-modifications" class="level2">
+<h2 class="anchored" data-anchor-id="pde-level-modifications">PDE-Level Modifications</h2>
+<p>After exhausting all particle-level features (Blocks 1–10), the exploration shifted to modifying the governing PDEs themselves.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 31%">
+<col style="width: 15%">
+<col style="width: 27%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Modification</th>
+<th>Implementation</th>
+<th>Effect</th>
+<th style="text-align: center;">Score Impact</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Nonlinear diffusion (NLD)</strong></td>
+<td><span class="math inline">\(D_1(C_1) = D_1^0[1 + \delta(C_1-A)^2/A^2]\)</span></td>
+<td>Breaks hexagonal wavelength lock; enables labyrinthine + vermiform</td>
+<td style="text-align: center;"><strong>Novel morphologies</strong> (7/10)</td>
+</tr>
+</tbody>
+</table>
+<section id="nld-parameter-map" class="level3">
+<h3 class="anchored" data-anchor-id="nld-parameter-map">NLD Parameter Map</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 7%">
+<col style="width: 7%">
+<col style="width: 12%">
+<col style="width: 30%">
+<col style="width: 22%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Regime</th>
+<th>A</th>
+<th>B</th>
+<th>B/A</th>
+<th>NLD <span class="math inline">\(\delta\)</span></th>
+<th>Pattern</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Hexagonal (baseline)</td>
+<td>5.5</td>
+<td>7.5</td>
+<td>1.36</td>
+<td>0</td>
+<td>Hexagonal spots</td>
+</tr>
+<tr class="even">
+<td>Hexagonal + NLD</td>
+<td>5.5</td>
+<td>7.5</td>
+<td>1.36</td>
+<td>2.0</td>
+<td>Hexagonal (slightly larger spots)</td>
+</tr>
+<tr class="odd">
+<td><strong>Labyrinthine</strong></td>
+<td>3.0</td>
+<td>5.5</td>
+<td>1.83</td>
+<td>2.0</td>
+<td>Labyrinthine ridges</td>
+</tr>
+<tr class="even">
+<td><strong>Vermiform</strong></td>
+<td>2.0</td>
+<td>5.0</td>
+<td>2.50</td>
+<td>2.0</td>
+<td>Filamentary worm-like chains</td>
+</tr>
+<tr class="odd">
+<td>Over-damped</td>
+<td>5.5</td>
+<td>7.5</td>
+<td>1.36</td>
+<td>3.0</td>
+<td>Weak hexagonal (reduced contrast)</td>
+</tr>
+</tbody>
+</table>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    // Ensure there is a toggle, if there isn't float one in the top right
+    if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
+      const a = window.document.createElement('a');
+      a.classList.add('top-right');
+      a.classList.add('quarto-color-scheme-toggle');
+      a.href = "";
+      a.onclick = function() { try { window.quartoToggleColorScheme(); } catch {} return false; };
+      const i = window.document.createElement("i");
+      i.classList.add('bi');
+      a.appendChild(i);
+      window.document.body.appendChild(a);
+    }
+    setColorSchemeToggle(hasAlternateSentinel())
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+      &nbsp;
+    </div>   
+    <div class="nav-footer-center">
+<p>Copyright 2025, Cédric Allier</p>
+</div>
+    <div class="nav-footer-right">
+      &nbsp;
+    </div>
+  </div>
+</footer>
+<script>videojs(video_shortcode_videojs_video1);</script>
+<script>videojs(video_shortcode_videojs_video2);</script>
+<script>videojs(video_shortcode_videojs_video3);</script>
+<script>videojs(video_shortcode_videojs_video4);</script>
+<script>videojs(video_shortcode_videojs_video5);</script>
+<script>videojs(video_shortcode_videojs_video6);</script>
+<script>videojs(video_shortcode_videojs_video7);</script>
+<script>videojs(video_shortcode_videojs_video8);</script>
+<script>var lightboxQuarto = GLightbox({"closeEffect":"zoom","descPosition":"bottom","loop":false,"openEffect":"zoom","selector":".lightbox"});
+(function() {
+  let previousOnload = window.onload;
+  window.onload = () => {
+    if (previousOnload) {
+      previousOnload();
+    }
+    lightboxQuarto.on('slide_before_load', (data) => {
+      const { slideIndex, slideNode, slideConfig, player, trigger } = data;
+      const href = trigger.getAttribute('href');
+      if (href !== null) {
+        const imgEl = window.document.querySelector(`a[href="${href}"] img`);
+        if (imgEl !== null) {
+          const srcAttr = imgEl.getAttribute("src");
+          if (srcAttr && srcAttr.startsWith("data:")) {
+            slideConfig.href = srcAttr;
+          }
+        }
+      } 
+    });
+  
+    lightboxQuarto.on('slide_after_load', (data) => {
+      const { slideIndex, slideNode, slideConfig, player, trigger } = data;
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(slideNode);
+      }
+    });
+  
+  };
+  
+})();
+          </script>
+
+
+
+
+<script src="site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>
