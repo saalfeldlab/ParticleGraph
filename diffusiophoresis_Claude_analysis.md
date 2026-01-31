@@ -1980,3 +1980,915 @@ Type 2: [-4, 4, 40, -40, 2.0, 1.0, 2.0, 1.0] (weak consumer)
 Mutation: chirality: 0.0→0.1. Testing principle: "Chirality suppresses pattern elaboration at all tested values (0.3-0.5)". Very low chirality (0.1 vs 0.3+) may add subtle spiral features without overwhelming gradient-following. This is an UNTESTED regime from Open Questions.
 Observation: Awaiting results. If chirality=0.1 adds spiral features while maintaining hexagonal structure, it would revise principle #10 and open a new morphological class.
 Next: parent=53
+
+---
+
+## Batch 16 Results (Iterations 61-64)
+
+## Iter 61: 7/10
+Node: id=61, parent=53
+Mode/Strategy: exploit (3-type Brusselator 150x150 + NEW field-modulated pp adhesion)
+Score: 7/10
+Config: D1=0.05, Da_c=15.0, A=5.5, B=7.5, chi=-8, D2=0.8, M2=8, consumption=100, production=-100, p[2,5]=0.3 (cross-type adhesion), p[2,6]=0.5 (pp_field_mod)
+n_particle_types: 3, shuffle_particle_types: false, n_particles: 9600 (3200 each), n_frames: 2000, n_nodes: 22500
+Type 0: [-10, 10, 100, -100, 1.6, 1.0, 1.6, 1.5] (strong consumer)
+Type 1: [8, -8, -60, 60, 1.8, 1.8, 1.1, 1.9] (moderate producer)
+Type 2: [-4, 4, 40, -40, 2.0, 1.0, 2.0, 1.0] (weak consumer)
+Metrics: entropy=[0.62], plateau=[0.00], in_box=[99.97]%, clustering=[NaN], C1_std=[1.54], C2_std=[0.84], pattern_growth=[167.64]
+Assessment:
+  - Symmetry: other (flower/mandala with branching lobes)
+  - Particles: segregated (3-layer tissue stratification)
+  - Stability: transient (plateau=0.00, excellent retention)
+  - Novelty: variant (Iter 53/45 parent with pp_field_mod)
+Visual: C1/C2 fields develop noise → concentric rings → multi-lobed flower/mandala structure matching Iter 14/45/53 pattern. Three types stratify — green core, orange intermediate, blue outer ring — with branching lobes and elaborate sub-structure. Late frames show satellite spot clusters at periphery. Flow fields show complex radial+tangential patterns. The pp_field_mod=0.5 (field-modulated pp adhesion) does NOT produce a visible qualitative change from the parent configs without this feature.
+Mutation: pp_field_mod: 0.0→0.5 (NEW code feature). Field-modulated pp adhesion.
+Observation: The first test of pp_field_mod=0.5 on the best 3-type config produces 7/10 — same tier as numerous Iter 14/45 variants. Field-modulated adhesion does NOT break the 8/10 ceiling. The differential compaction idea (tighter clusters at Turing peaks, looser between) either doesn't create visible morphological change at alpha=0.5, or the effect is masked by the existing cross-type adhesion (p[2,5]=0.3). Entropy (0.62) and C1_std (1.54) are within normal range. The new code feature is NEUTRAL rather than harmful but doesn't add morphological contrast.
+Next: parent=53
+
+## Iter 62: 7/10
+Node: id=62, parent=39
+Mode/Strategy: explore (1-type with INCREASED particle count — 14400 particles at 150x150)
+Score: 7/10
+Config: D1=0.05, Da_c=15.0, A=5.5, B=7.5, chi=-8, D2=0.8, M2=8, consumption=80, production=-80
+n_particle_types: 1, shuffle_particle_types: true, n_particles: 14400, n_frames: 2000, n_nodes: 22500
+Type 0: [-8, 8, 80, -80, 1.6, 1.0, 1.6, 1.5]
+Metrics: entropy=[0.52], plateau=[0.00], in_box=[99.93]%, clustering=[NaN], C1_std=[1.89], C2_std=[1.01], pattern_growth=[202.71]
+Assessment:
+  - Symmetry: hexagonal (dispersed multi-spot array)
+  - Particles: clustered (dense spots across domain)
+  - Stability: transient (plateau=0.00, excellent retention)
+  - Novelty: variant (denser version of Iter 39)
+Visual: Fields develop strong Turing spots with high contrast (C1_std=1.89, pattern_growth=202.71 — both high for 1-type). Particles form dispersed multi-spot array with noticeably denser spots than Iter 39. Spots well-separated with hexagonal-like spacing. Late frames show stable spot distribution filling domain. 14400 particles creates denser occupancy per Turing spot.
+Mutation: n_particles: 9600→14400 (50% increase in particle count)
+Observation: 14400 particles at 150x150 produces 7/10 — ties Iter 39 (9600 particles). Higher density produces higher field contrast (C1_std=1.89, pattern_growth=203) but LOWER entropy (0.52 vs 0.63). Extra particles concentrate more at spots rather than spreading evenly. For 1-type, higher particle count doesn't break the 7/10 ceiling — bottleneck is morphological complexity (no segregation), not density.
+Next: parent=39
+
+## Iter 63: 6/10
+Node: id=63, parent=23
+Mode/Strategy: explore (2-type opposing 150x150 + field-modulated pp + adhesion)
+Score: 6/10
+Config: D1=0.05, Da_c=15.0, A=5.5, B=7.5, chi=-8, D2=0.8, M2=8, consumption=80, production=-80, p[2,5]=0.3 (adhesion), p[2,6]=0.5 (pp_field_mod)
+n_particle_types: 2, shuffle_particle_types: false, n_particles: 9600 (4800 each), n_frames: 2000, n_nodes: 22500
+Type 0: [-8, 8, 80, -80, 1.6, 1.0, 1.6, 1.5] (consumer)
+Type 1: [8, -8, -80, 80, 1.8, 1.0, 1.1, 1.9] (producer)
+Metrics: entropy=[0.78], plateau=[0.00], in_box=[99.99]%, clustering=[NaN], C1_std=[0.52], C2_std=[0.28], pattern_growth=[55.54]
+Assessment:
+  - Symmetry: hexagonal (regular ~7-spot array with core-ring segregation)
+  - Particles: segregated (orange cores + blue rings at each hexagonal node)
+  - Stability: stable (excellent retention, low dynamics)
+  - Novelty: variant (similar to Iter 23 with weaker fields)
+Visual: C1/C2 fields develop hexagonal pattern but with LOW contrast (C1_std=0.52, pattern_growth=55.5). Particles form regular hexagonal array of ~7-8 spots with clear 2-type core-ring segregation. Structure is clean and regular but field contrast is weak. pp_field_mod has no visible enhancement. High entropy (0.78) reflects good spatial distribution.
+Mutation: pp_field_mod: 0.0→0.5 (NEW) on 2-type opposing + adhesion
+Observation: pp_field_mod=0.5 on 2-type REGRESSES from Iter 23 (7/10 → 6/10). Field contrast very weak (C1_std=0.52 vs 0.59 in Iter 23). Config uses chi=-8/M2=8 vs Iter 23's chi=-10/M2=10 — the reduced coupling likely contributed more than pp_field_mod. pp_field_mod confirmed NEUTRAL at best.
+Next: parent=23
+
+## Iter 64: 7/10
+Node: id=64, parent=53
+Mode/Strategy: principle-test (testing principle #10: "Chirality suppresses pattern elaboration at 0.3-0.5")
+Score: 7/10
+Config: D1=0.05, Da_c=15.0, A=5.5, B=7.5, chi=-8, D2=0.8, M2=8, consumption=100, production=-100, p[1,4]=0.1 (chirality), p[2,5]=0.3 (adhesion)
+n_particle_types: 3, shuffle_particle_types: false, n_particles: 9600 (3200 each), n_frames: 2000, n_nodes: 22500
+Type 0: [-10, 10, 100, -100, 1.6, 1.0, 1.6, 1.5] (strong consumer)
+Type 1: [8, -8, -60, 60, 1.8, 1.8, 1.1, 1.9] (moderate producer)
+Type 2: [-4, 4, 40, -40, 2.0, 1.0, 2.0, 1.0] (weak consumer)
+Metrics: entropy=[0.59], plateau=[0.00], in_box=[99.99]%, clustering=[0.61], C1_std=[0.90], C2_std=[0.45], pattern_growth=[90.04]
+Assessment:
+  - Symmetry: other (flower/mandala with lobes)
+  - Particles: segregated (3-layer tissue stratification)
+  - Stability: transient (plateau=0.00, excellent retention)
+  - Novelty: variant (chirality=0.1 version of Iter 53/45)
+Visual: Fields develop flower/mandala pattern nearly identical to parent. Three types stratify in standard green-core/orange-mid/blue-outer pattern with branching lobes. C1_std=0.90 notably lower than Iter 61's 1.54 (no chirality). Clustering=0.61. No obvious spiral features visible — chirality=0.1 too subtle for visible rotation.
+Mutation: chirality: 0.0→0.1. Testing principle: "Chirality suppresses pattern elaboration at all tested values (0.3-0.5)"
+Observation: **Principle #10 REFINED.** Chirality=0.1 produces 7/10 (same tier as without chirality) — does NOT suppress pattern elaboration at this low value. However, also does NOT add visible spiral features. C1_std drops (0.90 vs 1.54 at chirality=0) suggesting subtle reduction in gradient-following efficiency. Updated: chirality 0.3+ suppresses strongly, 0.1 is NEUTRAL (no benefit, mild field dampening). No chirality "sweet spot" exists in this system.
+Next: parent=53
+
+---
+
+## Block 8 Summary (Iters 57-64)
+
+**Best this block:** None broke 8/10 ceiling. Multiple at 7/10 (Iters 61, 62, 64).
+**Block average (batch 16):** 6.75/10 (61:7, 62:7, 63:6, 64:7)
+
+**Key findings:**
+1. **pp_field_mod (field-modulated pp adhesion) is NEUTRAL** (Iters 61, 63) — new Block 14 code feature neither improves nor damages morphology. Only cross-type adhesion (p[2,5]) remains the sole score-improving code feature.
+2. **14400 particles doesn't break 1-type ceiling** (Iter 62) — denser spots with higher C1_std (1.89) and pattern_growth (203) but LOWER entropy (0.52). Bottleneck is morphological complexity, not particle density.
+3. **Chirality 0.1 is neutral-to-mildly-negative** (Iter 64) — doesn't suppress patterns (unlike 0.3+) but creates no spiral features. C1_std drops. No chirality "sweet spot" exists.
+4. **The 8/10 ceiling persists after 64 iterations** — Iter 14/45/53 remain tied as global best. All parameter perturbations, resolution changes, PDE model swaps, and code feature additions have failed to break it.
+
+**Principles confirmed/updated:**
+- #10 Chirality: REFINED — 0.1 is neutral (not harmful like 0.3+), but no spiral features either
+- NEW: pp_field_mod is neutral — added to Code Insights as non-improving feature
+
+**Particle type distribution this block (batch 16):** 1-type: 1, 2-type: 1, 3-type: 2
+
+**Strategy for Block 9:** Parameter space and simple code features are exhausted. The only path forward is fundamentally different particle dynamics via a new PDE_D variant with density-dependent mobility or neighbor-alignment interactions (Vicsek 1995) that could break the morphological lock.
+
+---
+
+## Block 9 Code Modification
+
+### Feature: Density-dependent mobility / Contact inhibition of locomotion (PDE_D.py)
+Literature: Mayor & Carmona-Fontaine (2010) Trends Cell Biol 20:319-328 "Keeping in touch with contact inhibition of locomotion"; Stramer & Mayor (2017) Nat Rev Mol Cell Biol 18:43-55
+Rationale: After 64 iterations, all parameter tweaks and existing code features (6 features tested) have failed to break the 8/10 ceiling. The key insight: all existing features modify either force magnitude or gradient response, but none change the FUNDAMENTAL relationship between particle density and mobility. In biology, contact inhibition of locomotion (CIL) is universal — cells slow down when surrounded by neighbors. This creates sharp boundaries: interior cells are immobilized, edge cells respond to gradients. Unlike pp_field_mod (which scaled force by field), DDM scales VELOCITY by local particle density — a fundamentally different lever.
+Implementation: `p[1, 5]` (ddm_beta): 0.0 = off (backward compatible), >0 = v_eff = v / (1 + beta * n_neighbors). Neighbor count computed during 'pp' pass via scatter_add, stored and applied during subsequent 'fp' pass.
+Config change: Set `params_mesh[1][5]` to beta value (e.g., 0.1-0.3).
+
+## Batch 17 Plan (Iters 65-68)
+
+### Slot 0 (Iter 65): exploit, parent=53
+Node: id=65, parent=53
+Mode/Strategy: exploit (3-type Brusselator 150x150 + NEW density-dependent mobility)
+Config: Brusselator A=5.5, B=7.5, D1=0.05, D2=0.8, Da_c=15, chi=-8; 150x150 mesh; 3-type consumer-dominant + adhesion + ddm_beta=0.15
+n_particle_types: 3, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Type 0: [-10, 10, 100, -100, 1.6, 1.0, 1.6, 1.5] (strong consumer)
+Type 1: [8, -8, -60, 60, 1.8, 1.8, 1.1, 1.9] (moderate producer)
+Type 2: [-4, 4, 40, -40, 2.0, 1.0, 2.0, 1.0] (weak consumer)
+Mutation: ddm_beta: 0.0→0.15 (NEW code feature). Density-dependent mobility: particles with ~7 pp neighbors → 50% speed. Should create sharper cluster boundaries.
+Observation: Awaiting results. First test of DDM on best 3-type config. Moderate beta=0.15 is conservative to avoid over-immobilization.
+Next: parent=53
+
+### Slot 1 (Iter 66): exploit, parent=23
+Node: id=66, parent=23
+Mode/Strategy: exploit (2-type opposing 150x150 + DDM + adhesion — best 2-type + new feature)
+Config: Brusselator A=5.5, B=7.5, D1=0.05, D2=0.8, Da_c=15, chi=-10; 150x150 mesh; 2-type opposing + adhesion=0.3 + ddm_beta=0.15
+n_particle_types: 2, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Type 0: [-10, 10, 100, -100, 1.6, 1.0, 1.6, 1.5] (consumer)
+Type 1: [8, -8, -60, 60, 1.8, 1.0, 1.1, 1.9] (producer)
+Mutation: ddm_beta: 0.0→0.15 (NEW). Uses Iter 23's proven chi=-10/M2=10 regime (NOT the weaker chi=-8 that hurt Iter 63). Addresses 2-type under-representation.
+Observation: Awaiting results. 2-type hexagonal core-ring + CIL should produce sharper core-ring boundaries.
+Next: parent=23
+
+### Slot 2 (Iter 67): explore, parent=39
+Node: id=67, parent=39
+Mode/Strategy: explore (1-type 150x150 + DDM — does CIL improve 1-type dispersed spots?)
+Config: Brusselator A=5.5, B=7.5, D1=0.05, D2=0.8, Da_c=15, chi=-8; 150x150 mesh; 1-type + ddm_beta=0.2
+n_particle_types: 1, shuffle_particle_types: true, n_particles: 9600, n_frames: 2000
+Type 0: [-8, 8, 80, -80, 1.6, 1.0, 1.6, 1.5]
+Mutation: ddm_beta: 0.0→0.2 (NEW). Slightly higher beta for 1-type since all particles co-localize (more neighbors per spot). Addresses 1-type under-representation.
+Observation: Awaiting results. If DDM sharpens spot boundaries in 1-type (currently fuzzy edges), could improve from 7→8/10.
+Next: parent=39
+
+### Slot 3 (Iter 68): principle-test, parent=45
+Node: id=68, parent=45
+Mode/Strategy: principle-test (testing principle #8: "Iter 14 is robust — consumer must be strongest mover")
+Config: Brusselator A=5.5, B=7.5, D1=0.05, D2=0.8, Da_c=15, chi=-8; 150x150 mesh; 3-type SYMMETRIC mobilities + adhesion + ddm_beta=0.15
+n_particle_types: 3, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Type 0: [-8, 8, 80, -80, 1.6, 1.0, 1.6, 1.5] (consumer — WEAKER than Iter 14)
+Type 1: [8, -8, -80, 80, 1.8, 1.8, 1.1, 1.9] (producer — EQUAL strength)
+Type 2: [-4, 4, 40, -40, 2.0, 1.0, 2.0, 1.0] (weak consumer)
+Mutation: Type 0 M1: -10→-8, consumption: 100→80; Type 1 consumption: -60→-80. Testing principle: "Consumer must be strongest mover (|M_consumer|>|M_producer|)". With DDM, equal-strength types might produce DIFFERENT morphology because CIL creates density-dependent asymmetry even with symmetric parameters.
+Observation: Awaiting results. DDM might break the consumer-dominant requirement by creating emergent asymmetry from density effects.
+
+---
+
+## Batch 17 Results — Block 9, iters 1-4/8
+
+### Slot 0 (Iter 65): 6/10
+Node: id=65, parent=14
+Mode/Strategy: exploit (3-type Brusselator + DDM beta=0.15)
+Score: 6/10
+Config: Brusselator A=5.5, B=7.5, D1=0.05, D2=0.8, Da_c=15, chi=-8; 150x150 mesh; 3-type, ddm_beta=0.15, cross_type=0.3, consumption=100
+n_particle_types: 3, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Metrics: entropy=0.736, plateau=0.287, in_box=100.0%, clustering=0.566, C1_std=0.351, C2_std=0.097, pattern_growth=19.36
+Assessment:
+  - Symmetry: radial
+  - Particles: clustered (concentric rings)
+  - Stability: transient (plateau=0.29)
+  - Novelty: repeat
+Visual: Single radial bullseye in both C1/C2 fields. Particles form 3-type concentric colored rings (blue core, orange ring, green outer ring) that develop and stabilize over time. No hexagonal multi-spot array — pure radial single-center morphology. DDM at 0.15 did NOT produce visibly sharper boundaries compared to previous non-DDM 3-type runs.
+Mutation: Added ddm_beta=0.15 to Iter 14 baseline (3-type opposing, consumption=100, cross_type=0.3)
+Observation: DDM at beta=0.15 produces no visible improvement on the 3-type Iter 14 baseline. The concentric ring pattern is indistinguishable from standard runs. The density-dependent slowdown at this strength is too weak to reshape morphology — particles still follow gradients to the same single-center attractor. Entropy 0.736 and clustering 0.566 are typical for single-center 3-type configs.
+Next: parent=14
+
+### Slot 1 (Iter 66): 6/10
+Node: id=66, parent=23
+Mode/Strategy: exploit (2-type Brusselator + DDM beta=0.15, stronger chi)
+Score: 6/10
+Config: Brusselator A=5.5, B=7.5, D1=0.05, D2=0.8, Da_c=15, chi=-10; 150x150 mesh; 2-type, ddm_beta=0.15, cross_type=0.3, consumption=100
+n_particle_types: 2, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Metrics: entropy=0.784, plateau=0.525, in_box=100.0%, clustering=0.545, C1_std=0.369, C2_std=0.100, pattern_growth=19.99
+Assessment:
+  - Symmetry: radial
+  - Particles: clustered (concentric rings, 2-type)
+  - Stability: stable (plateau=0.53, best in batch)
+  - Novelty: repeat
+Visual: Single radial bullseye in fields with more developed concentric ring structure. Particles form 2-type concentric rings (blue core + orange ring). The fields show slightly more concentric banding than Slot 0. DDM+chi=-10 produces highest plateau (0.53) in this batch, suggesting better convergence, but morphology remains radial.
+Mutation: Added ddm_beta=0.15 to Iter 23 baseline (2-type opposing, chi=-10, cross_type=0.3)
+Observation: Best stability in batch (plateau=0.53) but no hexagonal structure. The 2-type Iter 23 baseline produced hexagonal core-ring arrays without DDM — the DDM addition here did NOT reproduce that. The key difference may be that chi=-10 (vs chi=-8 in Iter 23) pushed toward single-center collapse. DDM doesn't counteract the radial attractor.
+Next: parent=23
+
+### Slot 2 (Iter 67): 4/10
+Node: id=67, parent=39
+Mode/Strategy: explore (1-type + DDM beta=0.2)
+Score: 4/10
+Config: Brusselator A=5.5, B=7.5, D1=0.05, D2=0.8, Da_c=15, chi=-8; 150x150 mesh; 1-type, ddm_beta=0.2, consumption=80
+n_particle_types: 1, shuffle_particle_types: true, n_particles: 9600, n_frames: 2000
+Metrics: entropy=0.771, plateau=0.072, in_box=100.0%, clustering=0.550, C1_std=0.280, C2_std=0.073, pattern_growth=14.55
+Assessment:
+  - Symmetry: radial
+  - Particles: collapsed (single disc)
+  - Stability: transient (plateau=0.07, very low)
+  - Novelty: repeat (worse than parent)
+Visual: Single radial bullseye in fields. Particles collapse into a single large blue disc centered on the field feature — no internal structure, no spot array. This is significantly worse than Iter 39 (which produced dispersed spot array at 7/10). DDM at beta=0.2 with 1-type caused particles to aggregate into a single blob instead of distributing across multiple Turing spots.
+Mutation: Added ddm_beta=0.2 to Iter 39 baseline (1-type, A=5.5/B=7.5, consumption=80). No cross-type adhesion (1-type).
+Observation: DDM HURTS 1-type morphology. The density-dependent slowdown traps particles at the first concentration peak they encounter, preventing the "hop between spots" dynamics that created the dispersed array in Iter 39. With DDM, once particles accumulate at a spot, they slow down and can't escape to populate other spots. This is the opposite of the intended "sharper boundary" effect — it creates a single massive cluster instead. DDM beta=0.2 is harmful for 1-type.
+Next: parent=39
+
+### Slot 3 (Iter 68): 6/10
+Node: id=68, parent=45
+Mode/Strategy: principle-test (testing principle #8: "Consumer must be strongest mover")
+Score: 6/10
+Config: Brusselator A=5.5, B=7.5, D1=0.05, D2=0.8, Da_c=15, chi=-8; 150x150 mesh; 3-type symmetric + ddm_beta=0.15, cross_type=0.3, consumption=80
+n_particle_types: 3, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Metrics: entropy=0.736, plateau=0.291, in_box=100.0%, clustering=0.566, C1_std=0.280, C2_std=0.075, pattern_growth=14.90
+Assessment:
+  - Symmetry: radial
+  - Particles: clustered (concentric rings)
+  - Stability: transient (plateau=0.29)
+  - Novelty: repeat
+Visual: Nearly identical to Iter 65 — 3-type concentric colored rings with single radial center. Type segregation is clear (blue core, orange/green rings) but no hexagonal structure. Indistinguishable from Iter 65 despite reduced consumer dominance (|M_consumer|=8 vs Iter 65's 10).
+Mutation: Type 0 M1: -10→-8, consumption: 100→80; Type 1 consumption: -60→-80. Testing principle: "Consumer must be strongest mover (|M_consumer|>|M_producer|)". With DDM, equal-strength types might produce DIFFERENT morphology because CIL creates density-dependent asymmetry even with symmetric parameters.
+Observation: Principle #8 CONFIRMED even with DDM. Reducing consumer dominance (equal |M|=8) + DDM produces same 6/10 concentric rings, not the 8/10 flower/mandala of Iter 14/45. DDM does NOT create emergent asymmetry that substitutes for explicit consumer-dominant parameter design. The principle holds: consumer must be the strongest mover for best morphology.
+Next: parent=45
+
+---
+
+## Batch 18 — Block 9, iters 5-8/8 (Planned mutations)
+
+### Slot 0 (Iter 69): exploit, parent=14
+Node: id=69, parent=14
+Mode/Strategy: exploit (3-type consumer-dominant + STRONG DDM beta=0.5)
+Config: Brusselator A=5.5, B=7.5, D1=0.05, D2=0.8, Da_c=15, chi=-8; 150x150 mesh; 3-type, ddm_beta=0.5, cross_type=0.3, consumption=100
+n_particle_types: 3, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Type 0: [-10, 10, 100, -100, 1.6, 1.0, 1.6, 1.5] (consumer)
+Type 1: [8, -8, -60, 60, 1.8, 1.8, 1.1, 1.9] (producer)
+Type 2: [-4, 4, 40, -40, 2.0, 1.0, 2.0, 1.0] (weak)
+Mutation: ddm_beta: 0.15→0.5 (3.3x increase). Low DDM was neutral — strong CIL should immobilize interior particles and create sharp boundary between cluster core and edge.
+Observation: Awaiting results. If DDM=0.5 still produces same concentric rings, DDM is fundamentally neutral across its range.
+Next: parent=14
+
+### Slot 1 (Iter 70): exploit, parent=23
+Node: id=70, parent=23
+Mode/Strategy: exploit (2-type + STRONG DDM beta=0.5, exact Iter 23 chi=-8)
+Config: Brusselator A=5.5, B=7.5, D1=0.05, D2=0.8, Da_c=15, chi=-8; 150x150 mesh; 2-type, ddm_beta=0.5, cross_type=0.3, consumption=100
+n_particle_types: 2, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Type 0: [-10, 10, 100, -100, 1.6, 1.0, 1.6, 1.5]
+Type 1: [8, -8, -60, 60, 1.8, 1.0, 1.1, 1.9]
+Mutation: ddm_beta: 0.15→0.5, chi: -10→-8 (back to Iter 23 value). Iter 66 used chi=-10 which may have caused single-center collapse. Restoring chi=-8 + strong DDM.
+Observation: Awaiting results. Iter 23 produced hexagonal at chi=-8 without DDM — adding strong DDM might sharpen the hexagonal spots.
+Next: parent=23
+
+### Slot 2 (Iter 71): explore, parent=14
+Node: id=71, parent=14
+Mode/Strategy: explore (3-type + VERY STRONG DDM beta=1.0 + Da_c=20)
+Config: Brusselator A=5.5, B=7.5, D1=0.05, D2=0.8, Da_c=20, chi=-8; 150x150 mesh; 3-type, ddm_beta=1.0, cross_type=0.3, consumption=100
+n_particle_types: 3, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Type 0: [-10, 10, 100, -100, 1.6, 1.0, 1.6, 1.5]
+Type 1: [8, -8, -60, 60, 1.8, 1.8, 1.1, 1.9]
+Type 2: [-4, 4, 40, -40, 2.0, 1.0, 2.0, 1.0]
+Mutation: ddm_beta: 0.15→1.0 (6.7x), Da_c: 15→20 (faster Turing dynamics). Race condition hypothesis: faster pattern formation might distribute particles across multiple spots before DDM trapping kicks in.
+Observation: Awaiting results. This is an extreme DDM test — if 10 neighbors → 1/(1+10)=9% velocity, particles are virtually immobilized in clusters.
+Next: parent=14
+
+### Slot 3 (Iter 72): principle-test, parent=23
+Node: id=72, parent=23
+Mode/Strategy: principle-test (testing principle #16: "150x150 mesh is OPTIMAL for 9600 particles")
+Config: Brusselator A=5.5, B=7.5, D1=0.05, D2=0.8, Da_c=15, chi=-8; 100x100 mesh (10000 nodes); 2-type, ddm_beta=0.5, cross_type=0.3, consumption=100
+n_particle_types: 2, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Type 0: [-10, 10, 100, -100, 1.6, 1.0, 1.6, 1.5]
+Type 1: [8, -8, -60, 60, 1.8, 1.0, 1.1, 1.9]
+Mutation: n_nodes: 22500→10000 (150x150→100x100). Testing principle: "150x150 mesh is OPTIMAL for 9600 particles". With DDM, the particle-mesh coupling changes — DDM might favor coarser mesh where density gradients are stronger. Also tests if DDM+100x100 can recover the Iter 23 hexagonal pattern.
+Observation: Awaiting results. Previous 100x100 runs (before DDM) scored 5-7/10. DDM may change the resolution sensitivity.
+Next: parent=23
+
+---
+
+## Batch 18 Results — Block 9, iters 5-8/8
+
+### Slot 0 (Iter 69): 6/10
+Node: id=69, parent=14
+Mode/Strategy: exploit (3-type consumer-dominant + STRONG DDM beta=0.5)
+Score: 6/10
+Config: Brusselator A=5.5, B=7.5, D1=0.05, D2=0.8, Da_c=15, chi=-8; 150x150 mesh; 3-type, ddm_beta=0.5, cross_type=0.3, consumption=100
+n_particle_types: 3, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Metrics: entropy=0.736, plateau=0.296, in_box=100.0%, clustering=0.566, C1_std=0.350, C2_std=0.097, pattern_growth=19.35
+Assessment:
+  - Symmetry: radial
+  - Particles: clustered (concentric rings)
+  - Stability: transient (plateau=0.30)
+  - Novelty: repeat
+Visual: Single radial concentric pattern. C1/C2 fields develop single large bullseye feature. Three particle types form distinct color-coded rings (blue core, green middle, orange outer). Stable through all time frames with consistent concentric ring structure. No hexagonal breakup, no multi-spot array. Essentially identical to Iter 65 (DDM=0.15) — the 3.3x DDM increase had no visible effect on morphology.
+Mutation: ddm_beta: 0.15→0.5. Testing strong contact inhibition of locomotion on 3-type consumer-dominant.
+Observation: DDM beta=0.5 produces IDENTICAL morphology to DDM beta=0.15 (Iter 65). The stronger CIL did not sharpen boundaries, create multi-center patterns, or break symmetry. Metrics are nearly identical (entropy 0.736 vs 0.736, clustering 0.566 vs 0.566). DDM is fundamentally neutral on 3-type across the entire range 0.15-0.5. The radial concentric ring morphology is dominated by the gradient-following dynamics, not by density-dependent mobility.
+Next: parent=14
+
+### Slot 1 (Iter 70): 7/10
+Node: id=70, parent=23
+Mode/Strategy: exploit (2-type + STRONG DDM beta=0.5, chi=-8)
+Score: 7/10
+Config: Brusselator A=5.5, B=7.5, D1=0.05, D2=0.8, Da_c=15, chi=-8; 150x150 mesh; 2-type, ddm_beta=0.5, cross_type=0.3, consumption=100
+n_particle_types: 2, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Metrics: entropy=0.783, plateau=0.524, in_box=100.0%, clustering=0.545, C1_std=0.370, C2_std=0.100, pattern_growth=20.03
+Assessment:
+  - Symmetry: radial (concentric multi-ring)
+  - Particles: segregated (2-type concentric rings)
+  - Stability: transient (plateau=0.52 — best in block!)
+  - Novelty: variant
+Visual: Single radial center with multiple concentric rings. C1/C2 fields show stronger multi-ring structure than Iter 69 (3-type). Two particle types segregate into alternating concentric rings — blue core, orange shell. The field pattern (rows 1 and 3) shows more elaborate ring sub-structure than Iter 69. Plateau=0.52 is the highest in block 9, suggesting 2-type DDM reaches partial equilibrium. No hexagonal breakup; single center persists.
+Mutation: ddm_beta: 0.15→0.5, chi: -10→-8 (restoring Iter 23 value). Testing strong DDM on 2-type to sharpen hexagonal spots.
+Observation: 2-type DDM=0.5 at chi=-8 produces BETTER metrics than 3-type DDM=0.5 (entropy 0.783 vs 0.736, plateau 0.524 vs 0.296). But still single-center radial, NOT hexagonal like original Iter 23. The DDM trapping effect converts Iter 23's distributed hexagonal pattern into a single concentrated radial. DDM is actively harmful for 2-type hexagonal morphology — it prevents particles from spreading to multiple Turing spots. However, the high plateau (0.52) is notable — DDM helps 2-type converge, just to the wrong morphology.
+Next: parent=23
+
+### Slot 2 (Iter 71): 6/10
+Node: id=71, parent=14
+Mode/Strategy: explore (3-type + VERY STRONG DDM beta=1.0 + Da_c=20)
+Score: 6/10
+Config: Brusselator A=5.5, B=7.5, D1=0.05, D2=0.8, Da_c=20, chi=-8; 150x150 mesh; 3-type, ddm_beta=1.0, cross_type=0.3, consumption=100
+n_particle_types: 3, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Metrics: entropy=0.736, plateau=0.298, in_box=100.0%, clustering=0.566, C1_std=0.263, C2_std=0.069, pattern_growth=13.86
+Assessment:
+  - Symmetry: radial
+  - Particles: clustered (concentric rings)
+  - Stability: transient (plateau=0.30)
+  - Novelty: repeat
+Visual: Virtually identical to Iter 69 — single radial concentric rings with 3-type color segregation. No visible difference from DDM=0.5. C1_std=0.263 is LOWER than Iter 69 (0.350), suggesting DDM=1.0 + Da_c=20 actually DAMPENED field contrast. The "race condition" hypothesis (faster Turing + DDM) failed — the Turing pattern still converges to single center regardless of Turing speed.
+Mutation: ddm_beta: 0.15→1.0, Da_c: 15→20. Extreme DDM + faster Turing dynamics.
+Observation: DDM=1.0 is fundamentally identical to DDM=0.5 and DDM=0.15 for 3-type. The entire DDM range [0.15, 1.0] produces the same concentric rings at 6/10. Higher Da_c (20 vs 15) didn't help — actually reduced C1_std (0.263 vs 0.350). DDM is COMPLETELY NEUTRAL across its full range for multi-type configs. The mechanism explanation: multi-type particles already slow down via inter-type collisions; adding DDM on top doesn't change the equilibrium configuration. DDM only matters for 1-type where it's HARMFUL (Iter 67).
+Next: parent=14
+
+### Slot 3 (Iter 72): 7/10
+Node: id=72, parent=23
+Mode/Strategy: principle-test (testing principle #16: "150x150 mesh is OPTIMAL for 9600 particles")
+Score: 7/10
+Config: Brusselator A=5.5, B=7.5, D1=0.05, D2=0.8, Da_c=15, chi=-8; 100x100 mesh (10000 nodes); 2-type, ddm_beta=0.5, cross_type=0.3, consumption=100
+n_particle_types: 2, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Metrics: entropy=0.783, plateau=0.524, in_box=100.0%, clustering=0.545, C1_std=0.369, C2_std=0.100, pattern_growth=19.94
+Assessment:
+  - Symmetry: radial (concentric multi-ring)
+  - Particles: segregated (2-type concentric rings)
+  - Stability: transient (plateau=0.52)
+  - Novelty: repeat
+Visual: Nearly identical to Iter 70 (150x150). Single radial center with 2-type concentric rings. C1/C2 fields show same multi-ring structure. Metrics are virtually identical to Iter 70 (entropy 0.783 vs 0.783, plateau 0.524 vs 0.524, clustering 0.545 vs 0.545). The 100x100 mesh produces the SAME morphology as 150x150 when DDM is active.
+Mutation: n_nodes: 22500→10000 (150x150→100x100). Testing principle: "150x150 mesh is OPTIMAL for 9600 particles". With DDM active, coarser mesh might favor different dynamics.
+Observation: Principle #16 CONFIRMED WITH DDM CAVEAT. With DDM active, 100x100 and 150x150 produce identical results (7/10 both). This doesn't contradict the principle because DDM collapses everything to single-center radial regardless of mesh resolution — the resolution difference only matters when particles can distribute across multiple Turing spots (which DDM prevents). The principle holds for non-DDM configs: 150x150 remains optimal for hexagonal multi-spot patterns. DDM simply masks the resolution effect by forcing single-center morphology.
+Next: parent=23
+
+---
+
+## Block 9 Summary (Iters 65-72)
+
+**Best this block:** 7/10 (Iters 70, 72 — 2-type DDM concentric rings)
+**Block average:** 6.25/10 (65: 6, 66: 6, 67: 4, 68: 6, 69: 6, 70: 7, 71: 6, 72: 7)
+
+**Key findings — DDM (density-dependent mobility / contact inhibition) is a FAILED code feature:**
+1. **DDM beta=0.15 is NEUTRAL on multi-type** (Iters 65, 66, 68): Same concentric rings as non-DDM baselines.
+2. **DDM beta=0.2 is HARMFUL for 1-type** (Iter 67): Traps particles → single collapsed disc instead of dispersed spots.
+3. **DDM beta=0.5 is NEUTRAL on multi-type** (Iters 69, 70, 72): Same radial morphology as beta=0.15. No improvement at 3x strength.
+4. **DDM beta=1.0 is NEUTRAL on multi-type** (Iter 71): Even extreme CIL doesn't change the concentric ring pattern. Full range [0.15-1.0] exhausted.
+5. **DDM + Da_c=20 race condition failed** (Iter 71): Faster Turing + extreme DDM → same radial rings with lower field contrast.
+6. **DDM PREVENTS hexagonal breakup** (Iters 70, 72 vs Iter 23): Original Iter 23 produced hexagonal at chi=-8 without DDM; with DDM, same params produce single-center radial. DDM traps particles at first peak, preventing multi-spot distribution.
+7. **100x100 mesh = 150x150 mesh with DDM** (Iter 72 vs 70): Resolution becomes irrelevant when DDM forces single-center.
+8. **Principle #8 confirmed** (Iter 68): Consumer-dominant asymmetry required even with DDM.
+9. **Principle #16 confirmed with caveat** (Iter 72): 150x150 optimal only matters when particles can distribute (non-DDM).
+
+**Conclusion: DDM is the 7th code feature to fail.** All 7 PDE_D features tested (Weber-Fechner, Michaelis-Menten, durotaxis, chirality, field-modulated pp, cross-type adhesion exceptions, DDM) — only cross-type adhesion p[2,5]=0.3 meaningfully improved scores (7→8/10). The 8/10 ceiling is impervious to incremental PDE_D modifications.
+
+**Cumulative particle type distribution:** 1-type: ~14, 2-type: ~18, 3-type: ~40.
+
+**Strategy for Block 10:** 72 iterations exhausted: parameter space, resolution, particle count, simulation length, 7 PDE_D features, 5 PDE mesh models. The ONLY remaining lever is to change the fundamental PDE structure — either a new mesh PDE variant with different pattern formation physics, or a new PDE_D variant with fundamentally different particle dynamics (alignment/flocking à la Vicsek/Boids, or active matter self-propulsion).
+
+---
+
+## Block 10 (Iters 73-80) — FIXED VELOCITY ALIGNMENT (Block 17 code fix)
+
+Previous Block 10 attempt was a total loss (alignment crashes + infrastructure failures). Code fix applied: normalize velocity difference to unit direction, scale by sigma, clamp [-0.1, 0.1]. Re-running Block 10 with fixed alignment code.
+
+### Slot 0 (Iter 73): 7/10
+Node: id=73, parent=14
+Mode/Strategy: exploit (3-type opposing + alignment=1.0, parent=Iter14 best)
+Score: 7/10
+Config: Brusselator A=5.5, B=7.5, D1=0.05, D2=0.8, Da_c=15, M1=-8; 150x150 mesh; 3-type opposing, alignment=1.0, cross_type=0.3, consumption=100
+n_particle_types: 3, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Metrics: entropy=0.601, plateau=0.000, in_box=99.97%, clustering=NaN, C1_std=1.557, C2_std=0.877, pattern_growth=175.49
+Assessment:
+  - Symmetry: hexagonal (multi-spot array)
+  - Particles: clustered (flower/mandala with velocity streams)
+  - Stability: transient (plateau=0.0)
+  - Novelty: variant (alignment adds visible velocity streaming to Iter 14 morphology)
+Visual: Striking hexagonal multi-spot Turing field (C1_std=1.557 very high, pattern_growth=175). Particle panel shows 3-type flower/mandala morphology similar to Iter 14 baseline, but with visible velocity arrows showing streaming/flocking within and between spots. The velocity alignment creates coherent flow patterns around concentration features — particles orbit and stream rather than just sitting at peaks. However, the overall spot arrangement and type segregation remain similar to the unaligned Iter 14 (8/10), and entropy=0.601 is LOWER than Iter 14's typical 0.65-0.70 range.
+Mutation: alignment: 0→1.0 (full Vicsek alignment, Block 17 normalized+clamped). From Iter 14 (3-type opposing 8/10 parent).
+Observation: Alignment=1.0 with Block 17 fix WORKS — no crash! The mechanism adds visible velocity streaming to the existing flower/mandala morphology. However, the overall pattern quality is NOT improved: entropy dropped (0.601 vs ~0.65-0.70 for Iter 14), and clustering=NaN suggests some particles may be at extreme positions. The alignment creates more coherent flows but tighter/less spread clusters, which reduces spatial entropy. Score 7/10 — alignment is cosmetically interesting but doesn't break the 8/10 ceiling.
+Next: parent=14
+
+### Slot 1 (Iter 74): 6/10
+Node: id=74, parent=23
+Mode/Strategy: exploit (2-type opposing + alignment=1.0, parent=Iter23 best 2-type)
+Score: 6/10
+Config: Brusselator A=5.5, B=7.5, D1=0.05, D2=0.8, Da_c=15, M1=-10; 150x150 mesh; 2-type opposing, alignment=1.0, cross_type=0.3, consumption=100
+n_particle_types: 2, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Metrics: entropy=0.779, plateau=0.000, in_box=99.89%, clustering=NaN, C1_std=0.682, C2_std=0.340, pattern_growth=68.04
+Assessment:
+  - Symmetry: radial (concentric rings)
+  - Particles: segregated (2-type concentric rings)
+  - Stability: transient (plateau=0.0)
+  - Novelty: repeat
+Visual: Concentric 2-type ring structure — NOT the hexagonal pattern of Iter 23 (7/10). C1_std=0.682 is much lower than Iter 73's 1.557, indicating weaker Turing instability. The field shows some multi-ring concentric structure but particles remain in 2-type concentric rings without breaking into distributed spots. Alignment didn't help the 2-type case; it may even have suppressed the hexagonal breakup that Iter 23 achieved.
+Mutation: alignment: 0→1.0, M1: -8→-10. From Iter 23 (2-type opposing 7/10 parent).
+Observation: Alignment=1.0 on 2-type DECREASED quality from parent (7/10→6/10). The stronger M1=-10 combined with alignment forces appears to trap particles in concentric rings instead of allowing hexagonal distribution. The alignment mechanism coordinates velocity WITHIN clusters but doesn't help distribute particles ACROSS multiple spots — in fact, the coherent flows may stabilize the single-center configuration.
+Next: parent=23
+
+### Slot 2 (Iter 75): 6/10
+Node: id=75, parent=14
+Mode/Strategy: explore (3-type + weak alignment=0.1, chirality=0.1 combined)
+Score: 6/10
+Config: Brusselator A=5.5, B=7.5, D1=0.05, D2=0.8, Da_c=15, M1=-8; 150x150 mesh; 3-type opposing, alignment=0.1, chirality=0.1, cross_type=0.3, consumption=100
+n_particle_types: 3, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Metrics: entropy=0.667, plateau=0.000, in_box=100.0%, clustering=0.616, C1_std=0.422, C2_std=0.178, pattern_growth=35.55
+Assessment:
+  - Symmetry: radial (single center)
+  - Particles: clustered (concentric 3-type rings)
+  - Stability: transient (plateau=0.0)
+  - Novelty: repeat
+Visual: Single radial center with 3-type concentric rings. Weak field contrast (C1_std=0.422, much lower than Iter 73's 1.557). The combination of weak alignment (0.1) + chirality (0.1) produced WEAKER Turing patterns than either pure alignment=1.0 (Iter 73) or baseline (Iter 14). Particles form tight concentric rings at a single center. No hexagonal breakup, no multi-spot distribution.
+Mutation: alignment: 0→0.1, chirality: 0→0.1. Combined weak alignment + chirality from Iter 14 parent.
+Observation: Weak alignment (0.1) + chirality (0.1) is WORSE than strong alignment (1.0). The combination suppresses Turing instability (C1_std dropped to 0.422 from Iter 73's 1.557). Chirality was already known to be neutral-to-harmful (Principle #10), and adding it to weak alignment makes things worse. The perpendicular drift disrupts the alignment mechanism's coherent flows without adding enough rotation to create a new morphology.
+Next: parent=14
+
+### Slot 3 (Iter 76): 7/10
+Node: id=76, parent=39
+Mode/Strategy: principle-test (testing principle #5: "1-type sweet spot is |M1|=8, consumption=80, A=5.5/B=7.5 at 150x150")
+Score: 7/10
+Config: Brusselator A=5.5, B=7.5, D1=0.05, D2=0.8, Da_c=15, M1=-8; 150x150 mesh; 1-type, sigma=0.008, no alignment (p[2,7] absent), consumption=80
+n_particle_types: 1, shuffle_particle_types: true, n_particles: 9600, n_frames: 2000
+Metrics: entropy=0.504, plateau=0.000, in_box=99.91%, clustering=NaN, C1_std=1.690, C2_std=0.893, pattern_growth=178.62
+Assessment:
+  - Symmetry: hexagonal (dispersed multi-spot array)
+  - Particles: clustered (distributed across many Turing spots)
+  - Stability: transient (plateau=0.0)
+  - Novelty: variant (sigma=0.008 tested for first time with working sim)
+Visual: Excellent dispersed hexagonal multi-spot array — one of the best 1-type patterns seen. C1_std=1.690 is the highest field contrast observed in this block. Particles are distributed across many Turing spots covering a wide spatial area. The field shows ~25-30 spots with particles tracking concentration peaks. The wider pp interaction radius (sigma=0.008 vs 0.005) may contribute to broader particle distribution. However, entropy=0.504 is relatively low (particles concentrated in spots rather than spread), and clustering=NaN suggests positional distribution issues.
+Mutation: sigma: 0.005→0.008. Testing principle: "1-type sweet spot is |M1|=8, consumption=80, A=5.5/B=7.5 at 150x150" — tests whether wider pp radius changes the established optimal.
+Observation: sigma=0.008 reproduces the dispersed multi-spot 1-type array (7/10), matching the established sweet spot (Principle #5). The wider pp radius doesn't break the 7/10 ceiling but produces comparably good patterns with very high field contrast (C1_std=1.690). Principle #5 CONFIRMED — the sweet spot parameters remain robust across sigma values [0.005, 0.008]. Sigma is not a critical lever for 1-type quality.
+Next: parent=39
+
+## Batch Iters 77-80 — Planned Mutations
+
+### Slot 0 (Iter 77): Planned
+Node: id=77, parent=14
+Mode/Strategy: exploit (3-type opposing + MODERATE alignment=0.5)
+Config: Brusselator A=5.5, B=7.5, D1=0.05, D2=0.8, Da_c=15, M1=-8; 150x150 mesh; 3-type opposing, alignment=0.5, cross_type=0.3, consumption=100
+n_particle_types: 3, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Mutation: alignment: 1.0→0.5 (moderate from Iter 73). Test whether 0.5 preserves streaming while restoring entropy.
+Next: parent=14
+
+### Slot 1 (Iter 78): Planned
+Node: id=78, parent=23
+Mode/Strategy: exploit (2-type opposing baseline re-confirm, NO alignment)
+Config: Brusselator A=5.5, B=7.5, D1=0.05, D2=0.8, Da_c=15, M1=-8/+8; 150x150 mesh; 2-type opposing, cross_type=0.3, consumption=80, NO alignment
+n_particle_types: 2, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Mutation: alignment: 1.0→0, M1: -10→-8, consumption: 100→80. Restore Iter 23 baseline to verify 7/10 is reproducible without alignment.
+Next: parent=23
+
+### Slot 2 (Iter 79): Planned
+Node: id=79, parent=39
+Mode/Strategy: explore (1-type + alignment=0.5, untested combo)
+Config: Brusselator A=5.5, B=7.5, D1=0.05, D2=0.8, Da_c=15, M1=-8; 150x150 mesh; 1-type, alignment=0.5, consumption=80
+n_particle_types: 1, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Mutation: alignment: 0→0.5. Test whether alignment creates streaming/flocking in 1-type dispersed spots.
+Next: parent=39
+
+### Slot 3 (Iter 80): Planned
+Node: id=80, parent=23
+Mode/Strategy: principle-test (testing principle #12: "Weber-Fechner K=0.3 → bullseye, K=2.0 → kills patterns")
+Config: Brusselator A=5.5, B=7.5, D1=0.05, D2=0.8, Da_c=15, M1=-8/+8; 150x150 mesh; 2-type opposing, W-F K=0.15, cross_type=0.3, consumption=80
+n_particle_types: 2, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Mutation: W-F K: 0→0.15. Testing principle: "Weber-Fechner K=0.3 → bullseye, K=2.0 → kills patterns" — tests whether K=0.15 (half the bullseye threshold) gives a transitional regime.
+Next: parent=23
+
+---
+
+## Batch 20 Results (Block 10, Iters 77-80)
+
+## Iter 77: 7/10
+Node: id=77, parent=14
+Mode/Strategy: exploit (3-type opposing + moderate alignment=0.5)
+Score: 7/10
+Config: D1=0.05, Da_c=15.0, A=5.5, B=7.5, chi=-8, D2=0.8, M2=8; 150x150 mesh; 3-type opposing, alignment=0.5, cross_type=0.3
+n_particle_types: 3, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Type 0: [-10, 10, 100, -100, 1.6, 1.0, 1.6, 1.5] (consumer)
+Type 1: [8, -8, -60, 60, 1.8, 1.8, 1.1, 1.9] (producer)
+Type 2: [-4, 4, 40, -40, 2.0, 1.0, 2.0, 1.0] (weak)
+Metrics: entropy=[0.60], plateau=[0.00], in_box=[99.96]%, clustering=[NaN], C1_std=1.409, C2_std=0.785, pattern_growth=157.0
+Assessment:
+  - Symmetry: other (flower/mandala with velocity streaming)
+  - Particles: segregated (3-type layered)
+  - Stability: transient (plateau=0.00, excellent retention)
+  - Novelty: variant (alignment=0.5 version of Iter 14's mandala)
+Visual: Fields develop strong Turing patterns (C1_std=1.409). Particles form 3-type flower/mandala with velocity streaming visible in flow-field frames. Central core with radiating lobes — similar to Iter 14 but with visible particle streams between spots. Late frames show multi-spot array with satellite budding. Flow field shows organized radial streams connecting spots.
+Mutation: alignment: 1.0→0.5 (moderate alignment, from Iter 73 which used 1.0)
+Observation: Alignment=0.5 produces the same 7/10 as alignment=1.0 (Iter 73). Entropy=0.601 same as Iter 73. Alignment at ANY strength (0.5 or 1.0) is purely cosmetic on 3-type opposing Brusselator.
+Next: parent=14
+
+## Iter 78: 7/10
+Node: id=78, parent=23
+Mode/Strategy: exploit (2-type opposing baseline re-confirm, no alignment)
+Score: 7/10
+Config: D1=0.05, Da_c=15.0, A=5.5, B=7.5, chi=-8, D2=0.8, M2=8; 150x150 mesh; 2-type opposing, cross_type=0.3, consumption=80
+n_particle_types: 2, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Type 0: [-8, 8, 80, -80, 1.6, 1.0, 1.6, 1.5] (consumer)
+Type 1: [8, -8, -80, 80, 1.8, 1.0, 1.1, 1.9] (producer)
+Metrics: entropy=[0.77], plateau=[0.00], in_box=[99.96]%, clustering=[NaN], C1_std=0.467, C2_std=0.230, pattern_growth=46.1
+Assessment:
+  - Symmetry: hexagonal (well-spaced spot array)
+  - Particles: clustered (hexagonal core-ring spots)
+  - Stability: transient (plateau=0.00, excellent retention)
+  - Novelty: variant (Iter 23 re-confirmation with adhesion)
+Visual: Beautiful hexagonal multi-spot array. Particles form clear core-ring structures at each Turing spot. 8-10 spots in near-hexagonal arrangement. Weak field patterns (C1_std=0.467) but superior particle organization (entropy=0.77).
+Mutation: alignment: 1.0→0, M1: -10→-8, consumption: 100→80. Restored Iter 23 baseline without alignment.
+Observation: 2-type opposing at standard coupling reproduces 7/10 hexagonal core-ring array. Entropy=0.77 highest this batch. 2-type distributes particles more evenly than 3-type but with weaker field contrast.
+Next: parent=23
+
+## Iter 79: 7/10
+Node: id=79, parent=39
+Mode/Strategy: explore (1-type + alignment=0.5, untested combo)
+Score: 7/10
+Config: D1=0.05, Da_c=15.0, A=5.5, B=7.5, chi=-8, D2=0.8, M2=8; 150x150 mesh; 1-type, alignment=0.5, consumption=80
+n_particle_types: 1, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Metrics: entropy=[0.48], plateau=[0.00], in_box=[99.92]%, clustering=[NaN], C1_std=1.770, C2_std=0.918, pattern_growth=183.6
+Assessment:
+  - Symmetry: hexagonal (dispersed multi-spot)
+  - Particles: clustered (dispersed spots with streaming)
+  - Stability: transient (plateau=0.00, excellent retention)
+  - Novelty: variant (alignment adds streaming to 1-type dispersed spots)
+Visual: Dispersed multi-spot pattern. Tight clusters at Turing peaks with velocity streaming between. Highest C1_std this batch (1.770) but lower entropy (0.484). Flow streams connect spots.
+Mutation: alignment: 0→0.5 (testing alignment on 1-type for first time)
+Observation: Alignment=0.5 on 1-type produces 7/10, matching baseline Iter 39. Alignment tightens clusters but doesn't alter pattern structure. COSMETIC across all type configs (1-, 2-, 3-type).
+Next: parent=39
+
+## Iter 80: 5/10
+Node: id=80, parent=23
+Mode/Strategy: principle-test (testing principle #12: "Weber-Fechner K=0.3→bullseye")
+Score: 5/10
+Config: D1=0.05, Da_c=15.0, A=5.5, B=7.5, chi=-8, D2=0.8, M2=8; 150x150 mesh; 2-type opposing, W-F K=0.15, cross_type=0.3, consumption=80
+n_particle_types: 2, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Metrics: entropy=[0.80], plateau=[0.00], in_box=[100.00]%, clustering=[0.505], C1_std=0.348, C2_std=0.129, pattern_growth=25.8
+Assessment:
+  - Symmetry: radial (concentric bullseye rings)
+  - Particles: segregated (concentric type rings)
+  - Stability: transient (plateau=0.00, 100% retention)
+  - Novelty: repeat (another radial/bullseye)
+Visual: Smooth concentric rings in C1/C2. Particles form concentric 2-type bullseye. No hexagonal breakup. C1_std=0.348 very low — Turing suppressed.
+Mutation: W-F K: 0→0.15. Testing principle: "Weber-Fechner K=0.3 → bullseye, K=2.0 → kills patterns"
+Observation: **PRINCIPLE #12 STRENGTHENED.** K=0.15 already produces full bullseye. Transition occurs at LOWER K than expected. Weber-Fechner has NO useful regime — any K>0 forces radial. Updated: "W-F at ANY positive K (tested 0.15-2.0) suppresses hexagonal."
+Next: parent=23
+
+---
+
+>>> BLOCK 10 END SUMMARY <<<
+
+Block 10 tested velocity alignment (post-Block 17 fix) across all type configurations plus sigma variation and Weber-Fechner. 8 iterations (73-80), scores: 7,6,6,7,7,7,7,5. Average: 6.5/10.
+
+**Key findings:**
+1. Velocity alignment (0.1-1.0) is COSMETIC across all configs — adds streaming, never improves scores
+2. Alignment HURTS 2-type (6/10 vs 7/10) and combined weak features (6/10)
+3. sigma=0.008 NEUTRAL for 1-type (7/10 same as 0.005)
+4. Weber-Fechner has NO useful regime — K=0.15 already forces bullseye (5/10)
+5. 8/10 ceiling UNBROKEN through 80 iterations, all 8 PDE_D features, 5 PDE mesh models
+
+**All PDE_D code features exhaustively tested:** W-F, M-M, chirality, durotaxis, pp_field_mod, DDM, alignment — only cross-type adhesion helped.
+
+---
+
+## Block 11 — Code Change: Nonlinear Diffusion in PDE_Diffusiophoresis.py
+
+### Variant: Brusselator + Nonlinear Diffusion (NLD)
+Literature: Gambino, Lombardo & Sammartino (2013) Nonlinear Analysis: RWA 14:1095-1112
+Also: Biktashev & Tsyganov (2009) Proc R Soc A 465:3561-3580
+Rationale: After exhausting all 8 PDE_D particle features (80 iters), the bottleneck is the mesh model. Standard Brusselator with constant D1 always selects the same hexagonal wavelength. Nonlinear diffusion D1(C1) = D1 * (1 + delta*(C1-A)^2/A^2) makes diffusion concentration-dependent, which can break single-wavelength lock and create multi-scale or labyrinthine patterns.
+Config: params_mesh[1][3] = nld_delta (0=off, backward compatible)
+Implementation: Added to PDE_Diffusiophoresis.py forward() with clamp(deviation^2, max=4.0) for numerical safety.
+
+---
+
+## Block 11 — Batch 21 Plan (Iters 81-84)
+
+### Slot 0 (Iter 81): exploit, parent=14
+Node: id=81, parent=14
+Mode/Strategy: exploit (3-type opposing + NLD delta=1.0)
+Config: Brusselator A=4.5, B=6.5, D1=0.05, D2=0.8, Da_c=15, chi=-16, NLD delta=1.0; 150x150 mesh; 3-type opposing + adhesion p[2,5]=0.3
+n_particle_types: 3, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Type 0: [-12, 12, 100, -100, 1.6, 1.0, 1.6, 1.5] (consumer)
+Type 1: [8, -8, -60, 60, 1.8, 1.8, 1.1, 1.9] (producer)
+Type 2: [-4, 4, 40, -40, 2.0, 1.0, 2.0, 1.0] (weak)
+Mutation: NLD delta: 0→1.0 (moderate nonlinear diffusion on GLOBAL BEST config)
+Observation: Awaiting results. Tests if concentration-dependent diffusion changes Turing wavelength selection on the best config.
+Next: parent=14
+
+### Slot 1 (Iter 82): exploit, parent=23
+Node: id=82, parent=23
+Mode/Strategy: exploit (2-type opposing + NLD delta=2.0)
+Config: Brusselator A=5.5, B=7.5, D1=0.05, D2=0.8, Da_c=15, chi=-8, NLD delta=2.0; 150x150 mesh; 2-type opposing + adhesion p[2,5]=0.3
+n_particle_types: 2, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Type 0: [-8, 8, 80, -80, 1.6, 1.0, 1.6, 1.5] (consumer)
+Type 1: [8, -8, -80, 80, 1.8, 1.0, 1.1, 1.9] (producer)
+Mutation: NLD delta: 0→2.0 (stronger nonlinear diffusion on 2-type hexagonal config)
+Observation: Awaiting results. Stronger NLD on the hexagonal 2-type should more aggressively alter pattern selection.
+Next: parent=23
+
+### Slot 2 (Iter 83): explore, parent=39
+Node: id=83, parent=39
+Mode/Strategy: explore (1-type + NLD delta=2.0 + new A/B regime)
+Config: Brusselator A=3.0, B=5.5, D1=0.05, D2=0.8, Da_c=15, chi=-8, NLD delta=2.0; 150x150 mesh; 1-type
+n_particle_types: 1, shuffle_particle_types: true, n_particles: 9600, n_frames: 2000
+Type 0: [-8, 8, 80, -80, 1.6, 1.0, 1.6, 1.5]
+Mutation: A: 5.5→3.0, B: 7.5→5.5, NLD delta: 0→2.0. New Brusselator regime (B/A=1.83 vs 1.36) with NLD.
+Observation: Awaiting results. Higher B/A ratio strengthens Turing instability. Combined with NLD, may produce different pattern morphology (stripes/labyrinth instead of hexagonal spots).
+Next: parent=39
+
+### Slot 3 (Iter 84): principle-test, parent=14
+Node: id=84, parent=14
+Mode/Strategy: principle-test (testing principle #8: "Iter 14 is robust local optimum")
+Config: EXACT Iter 14 params but n_frames=4000 (doubled simulation time). No NLD.
+n_particle_types: 3, shuffle_particle_types: false, n_particles: 9600, n_frames: 4000
+Mutation: n_frames: 2000→4000. Testing principle: "Iter 14 is robust local optimum with 30+ perturbations scoring ≤7/10" — tests whether the 8/10 ceiling is time-limited (pattern may still be evolving at 2000 frames).
+Observation: Awaiting results. If longer sim produces >8/10, the constraint was temporal, not structural.
+Next: parent=14
+
+---
+
+## Iter 81: 1/10
+Node: id=81, parent=14
+Mode/Strategy: exploit (3-type opposing + NLD delta=1.0)
+Score: 1/10
+Config: Brusselator A=4.5, B=6.5, D1=0.05, D2=0.8, Da_c=15, chi=-16, NLD delta=1.0; 150x150 mesh; 3-type opposing + adhesion p[2,5]=0.3
+n_particle_types: 3, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Metrics: entropy=[0.00], plateau=[0.00], in_box=[0.0]%, clustering=[NaN]
+Assessment:
+  - Symmetry: none
+  - Particles: collapsed (all escaped)
+  - Stability: unstable (NaN blowup)
+  - Novelty: repeat (failure mode)
+Visual: Early frames show concentric ring formation (3-type layered), then complete blowup — all particles escape box. Fields go NaN. The combination of NLD delta=1.0 with the stronger coupling (chi=-16, consumption=100) and lower A/B (4.5/6.5) was too aggressive.
+Mutation: NLD delta: 0→1.0 on Iter 14 config (A=4.5, B=6.5, chi=-16)
+Observation: NLD delta=1.0 is UNSTABLE with the Iter 14 parameter set. The higher coupling (|chi|=16, consumption=100) combined with nonlinear diffusion causes runaway. Need weaker coupling or lower delta.
+Next: parent=14
+
+## Iter 82: 7/10
+Node: id=82, parent=23
+Mode/Strategy: exploit (2-type opposing + NLD delta=2.0)
+Score: 7/10
+Config: Brusselator A=5.5, B=7.5, D1=0.05, D2=0.8, Da_c=15, chi=-8, NLD delta=2.0; 150x150 mesh; 2-type opposing + adhesion p[2,5]=0.3
+n_particle_types: 2, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Metrics: entropy=[0.81], plateau=[0.00], in_box=[99.5]%, clustering=[NaN]
+Assessment:
+  - Symmetry: hexagonal
+  - Particles: clustered
+  - Stability: stable (99.5% in box)
+  - Novelty: variant (NLD-modified hexagonal)
+Visual: Clear hexagonal multi-spot Turing pattern with 2-type particle segregation. Fields show well-defined C1/C2 spots. Particles form core-ring structures around field maxima. Pattern is similar to Iter 23 baseline but spots appear slightly larger/more diffuse — NLD delta=2.0 at chi=-8 is STABLE and produces recognizable hexagonal morphology. No labyrinthine transition observed.
+Mutation: NLD delta: 0→2.0 on Iter 23 config (A=5.5, B=7.5, chi=-8)
+Observation: NLD delta=2.0 is STABLE at moderate coupling (chi=-8). Pattern remains hexagonal — NLD at this strength doesn't trigger hex→labyrinth transition at A=5.5/B=7.5. Spots slightly larger. Score matches parent (7/10). The moderate coupling regime tolerates NLD well.
+Next: parent=23
+
+## Iter 83: 7/10
+Node: id=83, parent=39
+Mode/Strategy: explore (1-type + NLD delta=2.0 + new A/B regime)
+Score: 7/10
+Config: Brusselator A=3.0, B=5.5, D1=0.05, D2=0.8, Da_c=15, chi=-8, NLD delta=2.0; 150x150 mesh; 1-type
+n_particle_types: 1, shuffle_particle_types: true, n_particles: 9600, n_frames: 2000
+Metrics: entropy=[0.49], plateau=[0.00], in_box=[99.7]%, clustering=[NaN]
+Assessment:
+  - Symmetry: other (labyrinthine-like)
+  - Particles: clustered
+  - Stability: stable (99.7% in box)
+  - Novelty: novel (labyrinthine field + scattered particle clusters)
+Visual: NOVEL PATTERN TYPE. Fields show labyrinthine/vermiform Turing patterns (NOT hexagonal spots) — the combination of A=3.0/B=5.5 (B/A=1.83) with NLD delta=2.0 successfully triggered the hex→labyrinth transition! C1_std=1.93 and pattern_growth=272 indicate very strong field pattern development. Particles form scattered clusters tracking field maxima. Lower entropy (0.49) reflects particle clustering into fewer, denser aggregates rather than dispersed spots.
+Mutation: A: 5.5→3.0, B: 7.5→5.5, NLD delta: 0→2.0
+Observation: BREAKTHROUGH — labyrinthine Turing patterns achieved! The combination of high B/A ratio (1.83) and NLD delta=2.0 causes the pattern selection to shift from hexagonal spots to labyrinthine/stripe morphology. This is the FIRST non-hexagonal, non-radial stable Turing pattern observed in 83 iterations. Entropy is moderate (0.49) because particles cluster densely. Worth exploring: can we get more dispersed particle placement on these labyrinthine patterns?
+Next: parent=83
+
+## Iter 84: 1/10
+Node: id=84, parent=14
+Mode/Strategy: principle-test (testing principle #8: "Iter 14 is robust local optimum")
+Score: 1/10
+Config: EXACT Iter 14 params, n_frames=4000 (doubled sim time). No NLD. A=4.5, B=6.5, chi=-16; 150x150; 3-type opposing + adhesion
+n_particle_types: 3, shuffle_particle_types: false, n_particles: 9600, n_frames: 4000
+Metrics: entropy=[0.00], plateau=[1.00], in_box=[0.0]%, clustering=[NaN]
+Assessment:
+  - Symmetry: none
+  - Particles: collapsed (all escaped)
+  - Stability: unstable (NaN at extended time)
+  - Novelty: repeat (failure mode)
+Visual: First ~5 frames identical to Iter 14 (concentric ring then hexagonal flower). Then around frame 5, pattern degrades and particles escape. By mid-simulation all particles gone. plateau=1.0 indicates velocity dropped (because no particles left).
+Mutation: n_frames: 2000→4000. Testing principle: "Iter 14 is robust local optimum with 30+ perturbations scoring ≤7/10" — tests whether the 8/10 ceiling is time-limited.
+Observation: PRINCIPLE CHALLENGED. Iter 14's 8/10 pattern is NOT long-term stable — it diverges at 4000 frames. The "robust optimum" is actually time-limited. The coupling strengths (chi=-16, consumption=100) are at the instability boundary. At 2000 frames the pattern looks great but continues evolving until it blows up. This means the A=4.5/B=6.5 + chi=-16 regime is MARGINALLY UNSTABLE — needs either weaker coupling or shorter sim to stay in the sweet spot.
+Next: parent=14
+
+---
+
+## Block 11 — Batch 22 Plan (Iters 85-88)
+
+### Slot 0 (Iter 85): exploit, parent=83
+Node: id=85, parent=83
+Mode/Strategy: exploit (3-type opposing on labyrinthine regime)
+Config: Brusselator A=3.0, B=5.5, D1=0.05, D2=0.8, Da_c=15, chi=-8, NLD delta=2.0; 150x150 mesh; 3-type opposing + adhesion p[2,5]=0.3
+n_particle_types: 3, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Type 0: [-8, 8, 80, -80, 1.6, 1.0, 1.6, 1.5] (consumer)
+Type 1: [8, -8, -80, 80, 1.8, 1.0, 1.1, 1.9] (producer)
+Type 2: [-4, 4, 40, -40, 2.0, 1.0, 2.0, 1.0] (weak)
+Mutation: n_particle_types: 1→3 on Iter 83 labyrinthine config (A=3.0/B=5.5, NLD delta=2.0, chi=-8)
+Observation: Awaiting results. Tests if multi-type opposing particles create novel tissue morphology on labyrinthine fields.
+Next: parent=83
+
+### Slot 1 (Iter 86): exploit, parent=82
+Node: id=86, parent=82
+Mode/Strategy: exploit (2-type + stronger NLD delta=3.0)
+Config: Brusselator A=5.5, B=7.5, D1=0.05, D2=0.8, Da_c=15, chi=-8, NLD delta=3.0; 150x150 mesh; 2-type opposing + adhesion p[2,5]=0.3
+n_particle_types: 2, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Type 0: [-8, 8, 80, -80, 1.6, 1.0, 1.6, 1.5] (consumer)
+Type 1: [8, -8, -80, 80, 1.8, 1.0, 1.1, 1.9] (producer)
+Mutation: NLD delta: 2.0→3.0 on Iter 82 config (A=5.5/B=7.5, chi=-8)
+Observation: Awaiting results. Stronger NLD may push the A=5.5/B=7.5 regime from hexagonal into labyrinthine transition.
+Next: parent=82
+
+### Slot 2 (Iter 87): explore, parent=83
+Node: id=87, parent=83
+Mode/Strategy: explore (1-type + higher B/A ratio A=2.0/B=5.0)
+Config: Brusselator A=2.0, B=5.0, D1=0.05, D2=0.8, Da_c=15, chi=-8, NLD delta=2.0; 150x150 mesh; 1-type
+n_particle_types: 1, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Type 0: [-8, 8, 80, -80, 1.6, 1.0, 1.6, 1.5]
+Mutation: A: 3.0→2.0, B: 5.5→5.0 (B/A=2.5 vs 1.83). Deeper into stripe regime.
+Observation: Awaiting results. Higher B/A may produce full stripes rather than mixed labyrinthine.
+Next: parent=83
+
+### Slot 3 (Iter 88): principle-test, parent=83
+Node: id=88, parent=83
+Mode/Strategy: principle-test (testing principle #1: "Moderate coupling hard limit |M1|<=12 for Brusselator")
+Config: Brusselator A=3.0, B=5.5, D1=0.05, D2=0.8, Da_c=15, chi=-10, NLD delta=2.0; 150x150 mesh; 3-type opposing + adhesion p[2,5]=0.3
+n_particle_types: 3, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Type 0: [-10, 10, 100, -100, 1.6, 1.0, 1.6, 1.5] (consumer, stronger)
+Type 1: [8, -8, -80, 80, 1.8, 1.0, 1.1, 1.9] (producer)
+Type 2: [-4, 4, 40, -40, 2.0, 1.0, 2.0, 1.0] (weak)
+Mutation: chi: -8→-10, consumption: 80→100 on labyrinthine regime. Testing principle: "Moderate coupling is a UNIVERSAL HARD stability limit: |M1|<=12 and consumption<=120 for Brusselator" — tests if the labyrinthine regime tolerates stronger coupling.
+Observation: Awaiting results.
+Next: parent=83
+
+---
+
+## Batch 22 Results (Iterations 85-88) — BLOCK 11 END
+
+## Iter 85: 7/10
+Node: id=85, parent=83
+Mode/Strategy: exploit (3-type opposing on labyrinthine regime)
+Score: 7/10
+Config: D1=0.05, Da_c=15.0, A=3.0, B=5.5, chi=-8, D2=0.8, M2=8, NLD delta=2.0, consumption=80, production=-80, p[2,5]=0.3 (cross-type adhesion)
+n_particle_types: 3, shuffle_particle_types: false, n_particles: 9600 (3200 each), n_frames: 2000
+Type 0: [-8, 8, 80, -80, 1.6, 1.0, 1.6, 1.5] (consumer)
+Type 1: [8, -8, -80, 80, 1.8, 1.0, 1.1, 1.9] (producer)
+Type 2: [-4, 4, 40, -40, 2.0, 1.0, 2.0, 1.0] (weak)
+Metrics: entropy=0.6709, plateau=0.00, in_box=99.94%, clustering=NaN, C1_std=1.055, C2_std=0.799, pattern_growth=159.88
+Assessment:
+  - Symmetry: other (labyrinthine flower/mandala with branching lobes)
+  - Particles: segregated (3-layer tissue on labyrinthine background)
+  - Stability: transient (plateau=0.00, excellent retention)
+  - Novelty: variant (3-type tissue on labyrinthine fields — combines Iter 83 and Iter 14)
+Visual: Fields develop from noise → concentric rings → labyrinthine multi-lobed flower/mandala with 3-type segregation. Strong pattern_growth=160 exceeds Iter 14's 130. Particle rows show beautiful 3-layer stratified flower (blue core, orange intermediate, green outer) with elaborate branching lobes that trace labyrinthine field topology. Late frames show complex branching morphology more dispersed than Iter 14's compact flower — the labyrinthine field creates wider-spaced branches. Type segregation is clear with cross-type adhesion maintaining sharp boundaries.
+Mutation: n_particle_types: 1→3, added opposing params + adhesion on Iter 83's labyrinthine config (A=3.0/B=5.5 + NLD delta=2.0)
+Observation: 3-type opposing on the labyrinthine regime (A=3.0/B=5.5 + NLD delta=2.0) produces a NOVEL HYBRID morphology combining Iter 83's labyrinthine field topology with Iter 14-style tissue stratification. Pattern_growth=160 is the highest for any 3-type run. Entropy 0.67 (lower than Iter 14's 0.76 but higher than Iter 83's 0.49) reflects the tissue being spread across labyrinthine branches rather than a compact flower. C1_std=1.05 is lower than Iter 83's 1.93 — the 3-type particle feedback dampens field amplitude while creating richer particle morphology. This is a promising regime — matches 7/10 but with qualitatively different (more biologically interesting?) branching.
+Next: parent=85
+
+## Iter 86: 6/10
+Node: id=86, parent=82
+Mode/Strategy: exploit (2-type + stronger NLD delta=3.0 on hexagonal regime)
+Score: 6/10
+Config: D1=0.05, Da_c=15.0, A=5.5, B=7.5, chi=-8, D2=0.8, M2=8, NLD delta=3.0, consumption=80, production=-80, p[2,5]=0.3 (cross-type adhesion)
+n_particle_types: 2, shuffle_particle_types: false, n_particles: 9600 (4800 each), n_frames: 2000
+Type 0: [-8, 8, 80, -80, 1.6, 1.0, 1.6, 1.5] (consumer)
+Type 1: [8, -8, -80, 80, 1.8, 1.0, 1.1, 1.9] (producer)
+Metrics: entropy=0.8383, plateau=0.00, in_box=99.15%, clustering=NaN, C1_std=0.489, C2_std=0.238, pattern_growth=47.54
+Assessment:
+  - Symmetry: hexagonal (regular multi-spot array)
+  - Particles: segregated (core-ring clusters at each spot)
+  - Stability: transient (plateau=0.00, good retention)
+  - Novelty: repeat (similar to Iter 82 but weaker fields)
+Visual: Fields develop clean hexagonal spot arrays. Two-type particles form core-ring clusters at each Turing spot. Very high entropy (0.84) indicates excellent spatial coverage. However, C1_std=0.49 is notably lower than Iter 82's C1_std=presumably higher — stronger NLD (delta=3.0 vs 2.0) WEAKENS field pattern contrast. The hexagonal array is regular and well-organized but with reduced amplitude. Late frames maintain stable hexagonal but with lower field-particle coupling strength.
+Mutation: NLD delta: 2.0→3.0 on Iter 82 config (A=5.5/B=7.5, chi=-8)
+Observation: NLD delta=3.0 on A=5.5/B=7.5 WEAKENS field patterns — C1_std drops (0.49 vs higher at delta=2.0), pattern_growth=47.5 is lower than typical hexagonal (60-80). The stronger nonlinear diffusion over-smooths concentration peaks, reducing Turing contrast. High entropy (0.84) from even distribution but low field amplitude. NLD delta=2.0 appears optimal for A=5.5/B=7.5; delta=3.0 over-damps. The hexagonal→labyrinthine transition only works at high B/A ratio (A=3.0/B=5.5), not by increasing NLD alone.
+Next: parent=82
+
+## Iter 87: 7/10
+Node: id=87, parent=83
+Mode/Strategy: explore (1-type + deeper stripe regime A=2.0/B=5.0, B/A=2.5)
+Score: 7/10
+Config: D1=0.05, Da_c=15.0, A=2.0, B=5.0, chi=-8, D2=0.8, M2=8, NLD delta=2.0, consumption=80, production=-80
+n_particle_types: 1, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Type 0: [-8, 8, 80, -80, 1.6, 1.0, 1.6, 1.5]
+Metrics: entropy=0.6056, plateau=0.00, in_box=99.92%, clustering=NaN, C1_std=1.720, C2_std=1.472, pattern_growth=294.39
+Assessment:
+  - Symmetry: other (fragmented labyrinthine/vermiform)
+  - Particles: network (filamentary chains tracing field topology)
+  - Stability: transient (plateau=0.00, excellent retention)
+  - Novelty: novel (STRONGEST field patterns ever + vermiform filaments)
+Visual: Fields develop dramatically strong patterns — C1_std=1.72 and C2_std=1.47 are among the highest ever seen, and pattern_growth=294 is BY FAR the strongest recorded (previous max: ~170). The field patterns show fragmented/chaotic labyrinthine topology with many small-scale features at B/A=2.5. Particles form scattered elongated vermiform/worm-like clusters that trace the field pattern topology — a qualitatively NEW morphology of filamentary particle chains. Blue particle filaments weave through the domain, unlike any prior pattern (not clustered, not hexagonal, not flower). The extreme B/A ratio creates a regime of intense pattern formation with novel particle organization.
+Mutation: A: 3.0→2.0, B: 5.5→5.0 (B/A=2.5 vs 1.83 in Iter 83). Pushing deeper into stripe regime.
+Observation: B/A=2.5 + NLD delta=2.0 creates the MOST INTENSE field patterns in 87 iterations (pattern_growth=294, nearly 2x the previous high). The extreme B/A ratio pushes the Brusselator deep into the pattern-forming regime where the Turing instability is very strong. This produces FRAGMENTED LABYRINTHINE fields with small wavelength features that particles trace as vermiform/filamentary chains — a QUALITATIVELY NEW particle organization type (not clustered, not networked, but filamentary). C2_std=1.47 is the highest ever for the inhibitor field. Entropy is moderate (0.61) because filaments cover the domain unevenly. This represents a new regime worth exploring with multi-type particles and different NLD strengths.
+Next: parent=87
+
+## Iter 88: 5/10
+Node: id=88, parent=83
+Mode/Strategy: principle-test (testing principle #1: "Moderate coupling hard limit |M1|<=12 for Brusselator")
+Score: 5/10
+Config: D1=0.05, Da_c=15.0, A=3.0, B=5.5, chi=-10, D2=0.8, M2=10, NLD delta=2.0, consumption=100, production=-100, p[2,5]=0.3 (cross-type adhesion)
+n_particle_types: 3, shuffle_particle_types: false, n_particles: 9600 (3200 each), n_frames: 2000
+Type 0: [-10, 10, 100, -100, 1.6, 1.0, 1.6, 1.5] (consumer, stronger)
+Type 1: [8, -8, -80, 80, 1.8, 1.0, 1.1, 1.9] (producer)
+Type 2: [-4, 4, 40, -40, 2.0, 1.0, 2.0, 1.0] (weak)
+Metrics: entropy=0.6057, plateau=0.00, in_box=99.79%, clustering=NaN, C1_std=1.668, C2_std=1.090, pattern_growth=217.94
+Assessment:
+  - Symmetry: other (fragmented labyrinthine with scattered clusters)
+  - Particles: segregated (3-type but less coherent organization)
+  - Stability: transient (plateau=0.00, good retention)
+  - Novelty: variant (degraded Iter 85 from stronger coupling)
+Visual: Fields develop strong labyrinthine patterns (C1_std=1.67, pattern_growth=218 — very strong). 3-type particles form scattered elongated clusters with type segregation visible but less coherent than Iter 85. Late frames show fragmented tissue masses with 3-type color bands but reduced morphological organization compared to Iter 85 (chi=-8). The stronger coupling (chi=-10 + consumption=100 vs chi=-8 + consumption=80) creates more vigorous dynamics but at the cost of pattern coherence — particles move too fast for stable tissue organization.
+Mutation: chi: -8→-10, consumption: 80→100 on labyrinthine regime. Testing principle: "Moderate coupling is a UNIVERSAL HARD stability limit: |M1|<=12 and consumption<=120 for Brusselator" — tests if the labyrinthine regime tolerates stronger coupling.
+Observation: PRINCIPLE PARTIALLY CONFIRMED for labyrinthine regime. At chi=-10 + consumption=100, the labyrinthine regime (A=3.0/B=5.5 + NLD delta=2.0) doesn't blow up (99.79% retention) but degrades morphological quality — score drops from 7/10 (Iter 85 at chi=-8/consumption=80) to 5/10. The stronger coupling pushes particles faster than the labyrinthine field can organize them, producing fragmented rather than coherent tissue. The stability limit for the LABYRINTHINE regime appears to be |chi|~8, consumption~80, which is LOWER than the hexagonal regime limit of |chi|~12. The labyrinthine regime's finer-scale features are more sensitive to coupling strength. The principle remains valid but the LABYRINTHINE-SPECIFIC threshold is tighter: |chi|<=8 + consumption<=80.
+Next: parent=83
+
+---
+
+## Block 11 Summary
+
+**Block 11 (Iters 81-88): NONLINEAR DIFFUSION — LABYRINTHINE BREAKTHROUGH**
+- Scores: 1, 7, 7, 1, 7, 6, 7, 5 → Average: 5.1/10, Best: 7/10 (Iters 82, 83, 85, 87)
+- **KEY FINDING**: Nonlinear diffusion (Gambino 2013) at A=3.0/B=5.5 + NLD delta=2.0 produces the FIRST labyrinthine Turing patterns in 83 iterations
+- **NOVEL MORPHOLOGY**: B/A=2.5 + NLD → vermiform/filamentary particle chains (Iter 87), the strongest field patterns ever (pattern_growth=294)
+- 3-type on labyrinthine = promising hybrid (Iter 85, 7/10) — branching tissue on labyrinthine scaffold
+- NLD delta=3.0 OVER-DAMPS hexagonal (Iter 86, 6/10) — delta=2.0 is optimal for A=5.5/B=7.5
+- Labyrinthine regime has TIGHTER coupling limit: |chi|<=8 (vs hexagonal |chi|<=12)
+- Iter 14's chi=-16 regime CONFIRMED time-limited (blows up at 4000 frames, Iter 84)
+- **No 8/10 ceiling broken**, but discovered two qualitatively new pattern types (labyrinthine + vermiform)
+
+---
+
+## Block 12 — Code Change: Substrate Inhibition (Haldane 1930)
+
+### Code Modification: PDE_Diffusiophoresis.py
+- Added substrate inhibition parameter K_sat at params_mesh[1][4]
+- Standard Brusselator: autocatalysis = C1²*C2
+- Modified: autocatalysis = C1²*C2 / (1 + K_sat*C1²)
+- When K_sat=0: standard Brusselator (backward compatible)
+- When K_sat>0: autocatalytic term saturates at high C1, preventing concentration blow-up
+- Literature: Haldane (1930) "Enzymes"; Szili & Toth (1993) J Chem Soc Faraday Trans 89:43
+- Rationale: The labyrinthine regime (A=3.0/B=5.5 + NLD) has a tight coupling limit (|chi|<=8) because strong coupling causes concentration blow-up. Substrate inhibition bounds the autocatalysis, potentially allowing stronger coupling on labyrinthine backgrounds — which is needed for flower/mandala morphology (requires chi≥-12).
+
+---
+
+## Batch 23 — Block 12 Planned Mutations (Iterations 89-92)
+
+### Slot 0 (Iter 89): exploit, parent=85
+Node: id=89, parent=85
+Mode/Strategy: exploit (3-type labyrinthine + K_sat=0.1 + stronger coupling chi=-10)
+Config: Brusselator A=3.0, B=5.5, D1=0.05, D2=0.8, Da_c=15, chi=-10, NLD delta=2.0, K_sat=0.1; 150x150 mesh; 3-type opposing + adhesion p[2,5]=0.3
+n_particle_types: 3, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Type 0: [-10, 10, 100, -100, 1.6, 1.0, 1.6, 1.5] (consumer, stronger)
+Type 1: [8, -8, -80, 80, 1.8, 1.0, 1.1, 1.9] (producer)
+Type 2: [-4, 4, 40, -40, 2.0, 1.0, 2.0, 1.0] (weak)
+Mutation: K_sat: 0→0.1, chi: -8→-10, consumption: 80→100. Substrate inhibition should stabilize stronger coupling in labyrinthine regime.
+Observation: Awaiting results. Tests whether substrate inhibition allows labyrinthine regime to support flower/mandala-level coupling strengths.
+Next: parent=85
+
+### Slot 1 (Iter 90): exploit, parent=87
+Node: id=90, parent=87
+Mode/Strategy: exploit (3-type opposing on vermiform regime A=2.0/B=5.0)
+Config: Brusselator A=2.0, B=5.0, D1=0.05, D2=0.8, Da_c=15, chi=-8, NLD delta=2.0; 150x150 mesh; 3-type opposing + adhesion p[2,5]=0.3
+n_particle_types: 3, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Type 0: [-8, 8, 80, -80, 1.6, 1.0, 1.6, 1.5] (consumer)
+Type 1: [8, -8, -80, 80, 1.8, 1.0, 1.1, 1.9] (producer)
+Type 2: [-4, 4, 40, -40, 2.0, 1.0, 2.0, 1.0] (weak)
+Mutation: n_particle_types: 1→3, added opposing params + adhesion on Iter 87's vermiform config (A=2.0/B=5.0 + NLD delta=2.0)
+Observation: Awaiting results. Tests if 3-type opposing on the strongest-field regime creates novel vermiform tissue morphology.
+Next: parent=87
+
+### Slot 2 (Iter 91): explore, parent=83
+Node: id=91, parent=83
+Mode/Strategy: explore (2-type on intermediate A=2.5/B=5.5, B/A=2.2)
+Config: Brusselator A=2.5, B=5.5, D1=0.05, D2=0.8, Da_c=15, chi=-8, NLD delta=2.0; 150x150 mesh; 2-type opposing + adhesion p[2,5]=0.3
+n_particle_types: 2, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Type 0: [-8, 8, 80, -80, 1.6, 1.0, 1.6, 1.5] (consumer)
+Type 1: [8, -8, -80, 80, 1.8, 1.0, 1.1, 1.9] (producer)
+Mutation: A: 3.0→2.5, n_particle_types: 1→2 + adhesion. Intermediate B/A=2.2 to bridge labyrinthine and vermiform regimes with 2-type core-shell filaments.
+Observation: Awaiting results. Tests if intermediate B/A produces a regime that is more organized than vermiform (A=2.0) but more complex than labyrinthine (A=3.0).
+Next: parent=83
+
+### Slot 3 (Iter 92): principle-test, parent=83
+Node: id=92, parent=83
+Mode/Strategy: principle-test (testing principle #17: "NLD delta=2.0 + high B/A → labyrinthine")
+Config: Brusselator A=3.0, B=5.5, D1=0.05, D2=0.8, Da_c=15, chi=-8, NLD delta=1.0; 150x150 mesh; 1-type
+n_particle_types: 1, shuffle_particle_types: false, n_particles: 9600, n_frames: 2000
+Type 0: [-8, 8, 80, -80, 1.6, 1.0, 1.6, 1.5]
+Mutation: NLD delta: 2.0→1.0. Testing principle: "NLD delta=2.0 + high B/A ratio → labyrinthine Turing patterns" — tests if lower NLD still produces labyrinthine at A=3.0/B=5.5 or reverts to hexagonal.
+Observation: Awaiting results. If labyrinthine persists at delta=1.0, the principle needs refinement (lower delta threshold). If hexagonal returns, delta=2.0 is truly required.
+Next: parent=83
+
+---
+

@@ -147,28 +147,28 @@ flowchart TD
 ### Iter 17
 *FHN 2-type — fine network*
 
-{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_017.mp4 >}}
+{{< video log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_017.mp4 >}}
 
 First FHN test with 2 particle types. Produces ~30+ fine-scale spots with network/filamentary particle organization.
 
 ### Iter 18 ⭐
 *FHN 3-type — hexagonal mode*
 
-{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_018.mp4 >}}
+{{< video log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_018.mp4 >}}
 
 Three particle types achieve hexagonal mode (~6-7 spots) with multi-layer particle organization within spots.
 
 ### Iter 45 ⭐
 *FHN Square mode (Dv=0.1)*
 
-{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_045.mp4 >}}
+{{< video log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_045.mp4 >}}
 
 Breakthrough: $D_v = 0.1$ produces **square/grid symmetry** — a morphology not accessible to Brusselator or Gray-Scott.
 
 ### Iter 48
 *FHN Square 3-type*
 
-{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_048.mp4 >}}
+{{< video log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_048.mp4 >}}
 
 Square symmetry persists with 3 particle types when all have same-sign mobility.
 

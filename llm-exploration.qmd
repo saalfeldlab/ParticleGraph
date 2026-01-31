@@ -1,0 +1,434 @@
+---
+title: "LLM-Guided Exploration"
+subtitle: "Parallel UCB tree search across diffusiophoresis parameter space"
+---
+
+## Overview
+
+This page presents the results of an autonomous **parallel exploration loop** in which an LLM (Claude) navigates the parameter space of coupled reaction--diffusion and diffusiophoresis systems. The exploration runs 4 simulations per batch using Upper Confidence Bound (UCB) tree search, with structured memory accumulating principles across blocks of 8 iterations.
+
+Over **88 iterations** (11 complete blocks) the LLM explored:
+
+- **5 PDE mesh models**: Brusselator, Gray-Scott, FitzHugh-Nagumo, Schnakenberg, Gierer-Meinhardt
+- **1 code-level PDE modification**: Nonlinear diffusion (NLD) in Brusselator --- concentration-dependent $D_1(C_1)$
+- **8 code-level particle features**: Weber-Fechner sensing, cross-type adhesion, Michaelis-Menten kinetics, durotaxis, chirality, density-dependent mobility, field-modulated pp adhesion, velocity alignment
+- **3 particle-type regimes**: 1-type, 2-type, and 3-type configurations
+- **Mesh resolutions**: 100x100, 150x150, 200x200
+
+Each montage shows a simulation's temporal evolution across 10 snapshots (left to right). Row 1: chemical field C1. Row 2: particles with velocity arrows. Row 3: C1/C2 fields with particle overlays. Row 4: particle flow field.
+
+---
+
+## Best Morphologies
+
+### Iter 14 --- 3-Type Flower/Mandala (8/10) {#iter14}
+
+3-type opposing mobility with cross-type adhesion (p[2,5]=0.3). The C1 field evolves from random noise through concentric rings into a multi-spot Turing array with strong contrast. Three particle types stratify into distinct spatial layers: blue consumers form inner cores, orange producers occupy intermediate zones, green weak-consumers create the outermost boundary. The cross-type adhesion sharpens inter-type boundaries, creating discrete layered domains. Late frames show Turing spots distributed across the domain with elaborate 3-type segregation at each spot.
+
+::: {layout-ncol=1}
+![](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_014.png){.lightbox width="100%"}
+:::
+
+{{< video log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_014.mp4 >}}
+
+### Iter 45 --- Flower/Mandala Rediscovery (8/10) {#iter45}
+
+Independent rediscovery of the Iter 14 regime at 150x150 mesh with A=5.5, B=7.5. The field develops from noise into concentric rings that break into multiple Turing spots. Particles show the same 3-type stratification: blue cores budding off satellite clusters with orange and green layering around each. Late frames show a central flower-like structure with peripheral spot clusters, each containing segregated type layers.
+
+::: {layout-ncol=1}
+![](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_045.png){.lightbox width="100%"}
+:::
+
+{{< video log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_045.mp4 >}}
+
+### Iter 53 --- Extended Simulation (8/10) {#iter53}
+
+Same 3-type opposing Brusselator regime as Iter 14/45 but with n_frames=4000 (double length). The longer simulation allows the Turing instability to develop further: C1_std=2.10 is the highest field contrast ever recorded. Fields evolve from rings through multi-spot breakup into a mature dispersed array. The 3-type particles form elongated curved clusters spread across the domain. The extra 2000 frames produce sharper Turing spots with more elaborate inter-spot flow patterns visible in the velocity arrows.
+
+::: {layout-ncol=1}
+![](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_053.png){.lightbox width="100%"}
+:::
+
+### Iter 23 --- Hexagonal Core-Ring Array (7/10, Best 2-type) {#iter23}
+
+2-type opposing mobility with A=5.5/B=7.5 and adhesion (p[2,5]=0.3). The C1 field develops swirl-like intermediate patterns that resolve into ~5--7 bright spots in quasi-hexagonal arrangement. Starting from a compact orange/blue disc, the two particle types separate into core-ring units at each field spot: orange consumer cores surrounded by blue producer rings. High entropy (0.821) reflects excellent spatial coverage across all hexagonal nodes. This is qualitatively different from the 3-type flower regime --- discrete, well-separated spots rather than branching lobes.
+
+::: {layout-ncol=1}
+![](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_023.png){.lightbox width="100%"}
+:::
+
+{{< video log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_023.mp4 >}}
+
+### Iter 39 --- Dispersed Spot Array (7/10, Best 1-type) {#iter39}
+
+1-type at 150x150 mesh with A=5.5, B=7.5 and |M1|=8. The C1 field develops from rings into a fully dispersed Turing spot array covering the entire domain. Particles start as a compact blue disc, expand through a dendritic network phase, then break into scattered cluster groups that track individual Turing spots. Late frames show well-separated blue particle clusters filling the domain. No type segregation is possible with 1-type, but the dispersed spatial coverage produces the highest 1-type score.
+
+::: {layout-ncol=1}
+![](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_039.png){.lightbox width="100%"}
+:::
+
+{{< video log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_039.mp4 >}}
+
+### Iter 46 --- FHN Concentric Rings (7/10, Best non-Brusselator) {#iter46}
+
+FitzHugh-Nagumo PDE with 3-type opposing mobility. The field develops into elaborate concentric ring structures rather than spots. Three particle types organize into concentric type-segregated bands: green rings of dots interspersed with yellow dots arranged in ring patterns at increasing radii from center. The concentric ring morphology is fundamentally different from Brusselator's spot arrays --- the only non-Brusselator configuration reaching 7/10.
+
+::: {layout-ncol=1}
+![](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_046.png){.lightbox width="100%"}
+:::
+
+{{< video log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_046.mp4 >}}
+
+### Iter 83 --- Labyrinthine Turing (7/10, NLD Breakthrough) {#iter83}
+
+First non-hexagonal, non-radial stable Turing pattern in 83 iterations. Nonlinear diffusion (NLD $\delta=2.0$) combined with high B/A ratio ($A=3.0, B=5.5$) shifts pattern selection from hexagonal spots to **labyrinthine/stripe morphology**. The C1 field develops dramatically strong patterns ($C_1^{\text{std}}=1.93$, pattern\_growth=272) with interconnected ridges rather than isolated spots. Particles form scattered clusters tracking field maxima along labyrinthine ridges.
+
+::: {layout-ncol=1}
+![](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_083.png){.lightbox width="100%"}
+:::
+
+{{< video log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_083.mp4 >}}
+
+### Iter 87 --- Vermiform Filaments (7/10, Novel Morphology) {#iter87}
+
+Pushing deeper into the stripe regime ($A=2.0, B=5.0$, $B/A=2.5$) with NLD $\delta=2.0$ produces the **strongest field patterns ever recorded** (pattern\_growth=294, nearly 2$\times$ previous maximum). The extreme B/A ratio creates fragmented labyrinthine fields with many small-scale features. Particles form elongated **vermiform/worm-like filamentary chains** tracing the field topology --- a qualitatively new morphology distinct from clusters, networks, or rings.
+
+::: {layout-ncol=1}
+![](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_087.png){.lightbox width="100%"}
+:::
+
+{{< video log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_087.mp4 >}}
+
+### Iter 85 --- Branching Tissue on Labyrinthine Scaffold (7/10) {#iter85}
+
+3-type opposing particles on the labyrinthine regime ($A=3.0/B=5.5$ + NLD $\delta=2.0$) produce a **novel hybrid morphology** combining labyrinthine field topology with Iter 14-style tissue stratification. Three particle types form layered branches along labyrinthine ridges rather than compact flower structures. Pattern\_growth=160 is the highest for any 3-type run. The branching tissue morphology is more biologically reminiscent than the compact flower.
+
+::: {layout-ncol=1}
+![](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_085.png){.lightbox width="100%"}
+:::
+
+{{< video log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_085.mp4 >}}
+
+---
+
+## Regime Comparison
+
+| Regime | n_types | Model | Best Score | Key Finding |
+|--------|---------|-------|:----------:|-------------|
+| 3-type opposing | 3 | Brusselator | **8/10** | Multi-spot flower/mandala with 3-layer type segregation (Iters 14, 45, 53) |
+| 2-type opposing | 2 | Brusselator | 7/10 | Hexagonal core-ring spot array (Iter 23) |
+| 1-type | 1 | Brusselator | 7/10 | Dispersed Turing spot array at 150x150 (Iter 39) |
+| 1-type NLD labyrinthine | 1 | Brusselator + NLD | 7/10 | **Labyrinthine** Turing patterns --- first non-hexagonal stable mode (Iter 83) |
+| 1-type NLD vermiform | 1 | Brusselator + NLD | 7/10 | **Vermiform** filamentary chains, strongest fields ever (Iter 87) |
+| 3-type NLD labyrinthine | 3 | Brusselator + NLD | 7/10 | Branching tissue on labyrinthine scaffold (Iter 85) |
+| 2-type same-sign | 2 | Brusselator | 7/10 | Co-localized core-shell clusters at Turing spots (Iter 12) |
+| 3-type same-sign | 3 | Brusselator | 6/10 | Nested co-localization, less complex (Iters 16, 24) |
+| FHN 3-type | 3 | FitzHugh-Nagumo | 7/10 | Concentric type-segregated ring bands (Iter 46) |
+| Gray-Scott | 2--3 | Gray-Scott | 6/10 | Radial concentric rings at all coupling strengths (Iters 33--40) |
+| Schnakenberg | 2 | Schnakenberg | 5/10 | Radial concentric only (Iter 51) |
+| Gierer-Meinhardt | 2 | GM | 5/10 | Radial after stabilization (Iter 47) |
+
+---
+
+## Established Principles
+
+::: {.callout-important}
+## Key Discovery
+**Brusselator is the only PDE model producing non-radial morphologies** when coupled to diffusiophoretic particles. All four alternative models (Gray-Scott, FHN, Schnakenberg, Gierer-Meinhardt) produce only radial/concentric patterns. Adding **nonlinear diffusion (NLD)** to the Brusselator further extends its repertoire to labyrinthine and vermiform patterns.
+:::
+
+The LLM accumulated **20 validated principles** across 88 iterations:
+
+1. **Moderate coupling is a hard stability limit**: |M1| $\leq$ 12 (Brusselator hexagonal), |M1| $\leq$ 8 (Brusselator labyrinthine), |M1| $\leq$ 10 (FHN). Exceeding causes particle escape and field blow-up.
+2. **D1 $\geq$ 0.05 required** --- lower values cause numerical crash (Iters 1, 2).
+3. **Mobility sign determines pattern type**: opposing-sign $\to$ spatial segregation; same-sign $\to$ co-localization at shared Turing spots.
+4. **Cross-type adhesion (p[2,5]=0.3) is the only particle-level feature that improved scores** (7 $\to$ 8/10). Effective only on opposing-sign configs where type boundaries exist.
+5. **150x150 mesh is optimal** for 9600 particles. 200x200 degrades all configs; 100x100 is equivalent when patterns collapse to single center.
+6. **Consumer must be the strongest mover** (consumer-dominant asymmetry). Reversing to producer-dominant drops 8/10 $\to$ 4/10 (Iter 52).
+7. **Higher particle count doesn't break ceilings**: 14400 particles same 7/10 as 9600 (Iter 62).
+8. **A=5.5/B=7.5 produces more numerous, smaller Turing spots**: key for 1-type and 2-type hexagonal patterns.
+9. **Plateau=0 is universal**: all models under continuous injection drive non-equilibrium dynamics across all 88 iterations.
+10. **Chirality suppresses patterns**: 0.3+ suppresses strongly; 0.1 is neutral but adds no spiral features.
+
+**Principles 11--20 (Blocks 9--11):**
+
+11. **Weber-Fechner suppresses hexagonal at ANY K>0**: even K=0.15 forces radial/bullseye. No useful regime.
+12. **Velocity alignment is cosmetic**: adds visible streaming but never improves scores across 1-, 2-, and 3-type configs.
+13. **DDM is neutral or harmful**: density-dependent mobility traps particles at the first concentration peak (Iters 65--72).
+14. **All 8 PDE_D particle features exhausted**: only cross-type adhesion helped. Strategy shifted to PDE mesh modification.
+15. **NLD $\delta=2.0$ + high B/A ratio $\to$ labyrinthine Turing**: $A=3.0/B=5.5$ ($B/A=1.83$) breaks hexagonal symmetry into labyrinthine/vermiform (Iter 83).
+16. **NLD $\delta=3.0$ over-damps hexagonal**: stronger NLD weakens field contrast at $A=5.5/B=7.5$. $\delta=2.0$ is optimal.
+17. **NLD is incompatible with strong coupling (|$\chi$|=16)**: NLD at $\delta \geq 1.0$ with $\chi=-16$ causes blowup. NLD requires moderate coupling ($\chi=-8$).
+18. **Iter 14's 8/10 is time-limited**: $\chi=-16$ regime blows up at 4000 frames (Iter 84). The best score is marginally unstable.
+19. **Labyrinthine regime has tighter coupling limit**: |$\chi$| $\leq$ 8 (vs hexagonal |$\chi$| $\leq$ 12).
+20. **$B/A=2.5$ + NLD $\to$ vermiform filaments**: strongest fields ever observed (pattern\_growth=294, Iter 87).
+
+::: {.callout-note}
+## Negative Results
+Seven out of eight PDE_D code features were tested and found neutral or harmful: Weber-Fechner sensing, Michaelis-Menten kinetics, chirality, durotaxis, density-dependent mobility, field-modulated pp adhesion, and velocity alignment. Only cross-type adhesion improved morphological scores. This exhaustive search motivated the shift from particle-level to PDE-level modifications (nonlinear diffusion).
+:::
+
+---
+
+## Exploration Gallery
+
+### Block 1 (Iters 1--8) --- Initial Exploration
+
+Iters 1--2 crashed (D1 too low). First successful runs established that 2-type opposing mobilities produce spatial segregation (Iter 3: labyrinthine patterns) and 3-type moderate coupling creates tissue-like stratification (Iter 8: best of block at 7/10).
+
+::: {layout-ncol=4}
+![Iter 3 (5/10) --- 2-type opposing, labyrinthine segregation](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_003.png){.lightbox group="block1"}
+
+![Iter 5 (6/10) --- 2-type 4000 frames, branching network](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_005.png){.lightbox group="block1"}
+
+![Iter 7 (0/10) --- 1-type base params, total escape](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_007.png){.lightbox group="block1"}
+
+![Iter 8 (7/10) --- 3-type moderate, tissue stratification](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_008.png){.lightbox group="block1"}
+:::
+
+### Block 2 (Iters 9--16) --- Cross-Type Adhesion Breakthrough
+
+Iter 14 achieved the global best (8/10) by adding cross-type adhesion to the 3-type opposing regime. Same-sign 2-type (Iter 12) produced novel core-shell micro-clusters at Turing spots.
+
+::: {layout-ncol=4}
+![Iter 9 (7/10) --- 3-type, stronger Turing drive](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_009.png){.lightbox group="block2"}
+
+![Iter 12 (7/10) --- 2-type same-sign, core-shell spots](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_012.png){.lightbox group="block2"}
+
+![Iter 14 (8/10) --- 3-type + adhesion, flower/mandala](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_014.png){.lightbox group="block2"}
+
+![Iter 16 (6/10) --- 3-type same-sign, co-localized spots](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_016.png){.lightbox group="block2"}
+:::
+
+### Block 3 (Iters 17--24) --- Regime Diversification
+
+Tested Weber-Fechner sensing (kills Turing breakup at K=2.0), Michaelis-Menten (neutral), and higher A/B Brusselator. Iter 23 discovered the hexagonal core-ring regime for 2-type, achieving best-in-class 2-type score of 7/10.
+
+::: {layout-ncol=4}
+![Iter 18 (5/10) --- Weber-Fechner K=2.0, compact bullseye](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_018.png){.lightbox group="block3"}
+
+![Iter 21 (7/10) --- 3-type + A=5.5/B=7.5, flower variant](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_021.png){.lightbox group="block3"}
+
+![Iter 23 (7/10) --- 2-type hexagonal core-ring array](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_023.png){.lightbox group="block3"}
+
+![Iter 24 (6/10) --- 3-type same-sign + adhesion](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_024.png){.lightbox group="block3"}
+:::
+
+### Block 4 (Iters 25--32) --- Coupling Geometry
+
+Chirality at 0.5 suppresses pattern elaboration (Iter 25). Weber-Fechner even at K=0.3 converts hexagonal to concentric bullseye (Iter 31). Consumer-dominant asymmetry confirmed critical: swapping to producer-dominant drops to 6/10 (Iter 28). Pushing |M1|=14 causes total blow-up (Iter 32).
+
+::: {layout-ncol=4}
+![Iter 25 (5/10) --- chirality suppresses, compact flower](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_025.png){.lightbox group="block4"}
+
+![Iter 26 (7/10) --- 3-type in Iter 23's A/B regime](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_026.png){.lightbox group="block4"}
+
+![Iter 31 (6/10) --- W-F K=0.3, concentric bullseye](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_031.png){.lightbox group="block4"}
+
+![Iter 32 (1/10) --- |M1|=14, total blow-up](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_032.png){.lightbox group="block4"}
+:::
+
+### Block 5 (Iters 33--40) --- PDE Model Survey
+
+Tested Gray-Scott (produces only radial concentric rings, not spots), durotaxis (neutral on 1-type). Iter 39 found the 1-type sweet spot at A=5.5/B=7.5 + 150x150 mesh with dispersed Turing spots.
+
+::: {layout-ncol=4}
+![Iter 33 (5/10) --- Gray-Scott, radial rings only](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_033.png){.lightbox group="block5"}
+
+![Iter 35 (6/10) --- 1-type + durotaxis, neutral effect](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_035.png){.lightbox group="block5"}
+
+![Iter 37 (7/10) --- 3-type Brusselator exploit](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_037.png){.lightbox group="block5"}
+
+![Iter 39 (7/10) --- 1-type dispersed spot array](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_039.png){.lightbox group="block5"}
+:::
+
+### Block 6 (Iters 41--48) --- Non-Brusselator Models
+
+FHN (Iter 46) achieved 7/10 with concentric ring bands --- the only non-Brusselator model reaching that score. Gierer-Meinhardt (Iter 47) stabilized but produced only radial patterns at 5/10. Iter 45 independently rediscovered the 8/10 flower/mandala regime.
+
+::: {layout-ncol=4}
+![Iter 42 (1/10) --- Gray-Scott 2-type, single center](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_042.png){.lightbox group="block6"}
+
+![Iter 45 (8/10) --- flower/mandala rediscovery](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_045.png){.lightbox group="block6"}
+
+![Iter 46 (7/10) --- FHN concentric ring bands](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_046.png){.lightbox group="block6"}
+
+![Iter 47 (5/10) --- Gierer-Meinhardt, radial](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_047.png){.lightbox group="block6"}
+:::
+
+### Block 7 (Iters 49--56) --- Resolution and Duration Tests
+
+200x200 mesh confirmed as a dead end for all type counts at 9600 particles (Iters 49, 54, 55: all 6/10). n_frames=4000 ties the 8/10 ceiling but doesn't break it (Iter 53). Producer-dominant 3-type drops to 4/10 (Iter 52).
+
+::: {layout-ncol=4}
+![Iter 49 (6/10) --- 1-type at 200x200, weaker spots](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_049.png){.lightbox group="block7"}
+
+![Iter 52 (4/10) --- producer-dominant, simple rings](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_052.png){.lightbox group="block7"}
+
+![Iter 53 (8/10) --- 4000 frames, extended flower](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_053.png){.lightbox group="block7"}
+
+![Iter 56 (7/10) --- A=7.0/B=10.0 on 3-type](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_056.png){.lightbox group="block7"}
+:::
+
+### Block 8 (Iters 57--64) --- Feature Testing
+
+Field-modulated pp adhesion (p[2,6]=0.5) is neutral on both 3-type (Iter 61: 7/10) and 2-type (Iter 63: 6/10). 14400 particles produce denser spots but same 7/10 ceiling for 1-type (Iter 62). Chirality=0.1 is neutral (Iter 64: 7/10).
+
+::: {layout-ncol=4}
+![Iter 61 (7/10) --- pp_field_mod, neutral on 3-type](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_061.png){.lightbox group="block8"}
+
+![Iter 62 (7/10) --- 14400 particles, denser spots](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_062.png){.lightbox group="block8"}
+
+![Iter 63 (6/10) --- pp_field_mod on 2-type, hexagonal](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_063.png){.lightbox group="block8"}
+
+![Iter 64 (7/10) --- chirality=0.1, neutral](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_064.png){.lightbox group="block8"}
+:::
+
+### Block 9 (Iters 65--72) --- Density-Dependent Mobility
+
+DDM (contact inhibition of locomotion) is completely neutral on multi-type across its entire range [0.15--1.0] and actively harmful on 1-type (Iter 67: particles collapse to single disc at 4/10). DDM forces single-center radial morphology by trapping particles at the first concentration peak.
+
+::: {layout-ncol=4}
+![Iter 65 (6/10) --- DDM=0.15, single radial bullseye](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_065.png){.lightbox group="block9"}
+
+![Iter 67 (4/10) --- DDM=0.2 on 1-type, collapsed disc](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_067.png){.lightbox group="block9"}
+
+![Iter 70 (7/10) --- DDM=0.5 on 2-type, concentric rings](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_070.png){.lightbox group="block9"}
+
+![Iter 72 (7/10) --- 100x100 mesh + DDM](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_072.png){.lightbox group="block9"}
+:::
+
+### Block 10 (Iters 73--80) --- Velocity Alignment + Weber-Fechner Dead End
+
+Velocity alignment (normalized + clamped) adds visible streaming within and between spots but is cosmetic --- doesn't improve scores across any type configuration. Alignment hurts 2-type (Iter 74: 6/10 vs parent 23: 7/10). Weber-Fechner confirmed as a dead end even at minimal K=0.15 (Iter 80: 5/10). All 8 PDE_D particle features exhaustively tested; only cross-type adhesion helped.
+
+::: {layout-ncol=4}
+![Iter 73 (7/10) --- alignment=1.0, streaming visible](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_073.png){.lightbox group="block10"}
+
+![Iter 74 (6/10) --- 2-type + alignment, concentric rings](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_074.png){.lightbox group="block10"}
+
+![Iter 77 (7/10) --- alignment=0.5, cosmetic streaming](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_077.png){.lightbox group="block10"}
+
+![Iter 80 (5/10) --- W-F K=0.15, bullseye forced](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_080.png){.lightbox group="block10"}
+:::
+
+### Block 11 (Iters 81--88) --- Nonlinear Diffusion: Labyrinthine Breakthrough
+
+::: {.callout-important}
+## Code-Level PDE Modification
+After exhausting all 8 particle-level features (80 iterations), the LLM modified the Brusselator PDE itself: **nonlinear diffusion** $D_1(C_1) = D_1^0 [1 + \delta(C_1 - A)^2/A^2]$ makes the activator diffusion concentration-dependent (Gambino et al. 2013). This breaks single-wavelength lock and enables multi-scale patterns.
+:::
+
+NLD $\delta=2.0$ at $A=3.0/B=5.5$ produced the first **labyrinthine Turing patterns** in 83 iterations (Iter 83). $B/A=2.5$ pushed further into **vermiform filamentary chains** with the strongest fields ever (Iter 87: pattern\_growth=294). 3-type on labyrinthine creates branching tissue (Iter 85). NLD at $\delta=3.0$ over-damps hexagonal (Iter 86: 6/10). Iter 14 confirmed as time-limited (Iter 84: blows up at 4000 frames).
+
+::: {layout-ncol=4}
+![Iter 81 (1/10) --- NLD + strong coupling, blowup](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_081.png){.lightbox group="block11"}
+
+![Iter 83 (7/10) --- LABYRINTHINE Turing (NLD breakthrough)](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_083.png){.lightbox group="block11"}
+
+![Iter 85 (7/10) --- 3-type tissue on labyrinthine scaffold](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_085.png){.lightbox group="block11"}
+
+![Iter 87 (7/10) --- VERMIFORM filaments (strongest fields)](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_087.png){.lightbox group="block11"}
+:::
+
+---
+
+## UCB Exploration Trees
+
+The UCB tree visualizes the search strategy: each node is an iteration, edges connect parent-child mutations, and node color reflects the score. The tree grows across blocks as the LLM explores and exploits different parameter regions.
+
+::: {layout-ncol=2}
+![Block 1 (Iter 8)](log/Claude_exploration/instruction_diffusiophoresis_parallel/tree/ucb_tree_iter_008.png){.lightbox group="trees"}
+
+![Block 2 (Iter 16)](log/Claude_exploration/instruction_diffusiophoresis_parallel/tree/ucb_tree_iter_016.png){.lightbox group="trees"}
+:::
+
+::: {layout-ncol=2}
+![Block 3 (Iter 24)](log/Claude_exploration/instruction_diffusiophoresis_parallel/tree/ucb_tree_iter_024.png){.lightbox group="trees"}
+
+![Block 4 (Iter 32)](log/Claude_exploration/instruction_diffusiophoresis_parallel/tree/ucb_tree_iter_032.png){.lightbox group="trees"}
+:::
+
+::: {layout-ncol=2}
+![Block 5 (Iter 40)](log/Claude_exploration/instruction_diffusiophoresis_parallel/tree/ucb_tree_iter_040.png){.lightbox group="trees"}
+
+![Block 6 (Iter 48)](log/Claude_exploration/instruction_diffusiophoresis_parallel/tree/ucb_tree_iter_048.png){.lightbox group="trees"}
+:::
+
+::: {layout-ncol=2}
+![Block 7 (Iter 56)](log/Claude_exploration/instruction_diffusiophoresis_parallel/tree/ucb_tree_iter_056.png){.lightbox group="trees"}
+
+![Block 8 (Iter 64)](log/Claude_exploration/instruction_diffusiophoresis_parallel/tree/ucb_tree_iter_064.png){.lightbox group="trees"}
+:::
+
+::: {layout-ncol=2}
+![Block 9 (Iter 72)](log/Claude_exploration/instruction_diffusiophoresis_parallel/tree/ucb_tree_iter_072.png){.lightbox group="trees"}
+
+![Block 10 (Iter 80)](log/Claude_exploration/instruction_diffusiophoresis_parallel/tree/ucb_tree_iter_080.png){.lightbox group="trees"}
+:::
+
+---
+
+## Score Progression
+
+| Block | Iters | Average | Best | Key Event |
+|:-----:|:-----:|:-------:|:----:|-----------|
+| 1 | 1--8 | 4.4 | 7 (Iter 8) | 3-type tissue stratification discovered |
+| 2 | 9--16 | 6.1 | **8** (Iter 14) | Cross-type adhesion breakthrough |
+| 3 | 17--24 | 6.4 | 7 (Iter 23) | Hexagonal 2-type regime discovered |
+| 4 | 25--32 | 5.5 | 7 (Iters 26, 29, 30) | Consumer-dominant asymmetry confirmed |
+| 5 | 33--40 | 5.6 | 7 (Iters 37, 39) | Gray-Scott fails; 1-type sweet spot found |
+| 6 | 41--48 | 5.3 | **8** (Iter 45) | Flower/mandala rediscovered; FHN 7/10 |
+| 7 | 49--56 | 5.75 | **8** (Iter 53) | 200x200 dead end confirmed |
+| 8 | 57--64 | 6.75 | 7 (Iters 61, 62, 64) | pp_field_mod neutral; particle count ceiling |
+| 9 | 65--72 | 6.25 | 7 (Iters 70, 72) | DDM failed across full range |
+| 10 | 73--80 | 6.5 | 7 (Iters 73, 76--79) | Alignment cosmetic; all 8 PDE_D features exhausted |
+| 11 | 81--88 | 5.1 | 7 (Iters 82, 83, 85, 87) | **NLD labyrinthine + vermiform breakthrough** |
+
+---
+
+## PDE Models Tested
+
+| Model | Literature | Morphology with particles | Status |
+|-------|-----------|--------------------------|--------|
+| **Brusselator** | Prigogine & Lefever (1968) | Multi-spot hexagonal arrays, flower/mandala | **Best** (8/10) |
+| **Brusselator + NLD** | Gambino et al. (2013) | Labyrinthine, vermiform filaments | **Novel** (7/10) |
+| Gray-Scott | Pearson (1993) | Radial concentric rings only | Radial-locked |
+| FitzHugh-Nagumo | FitzHugh (1961) | Concentric type-segregated ring bands | 7/10 max |
+| Schnakenberg | Schnakenberg (1979) | Radial concentric | 5/10 max |
+| Gierer-Meinhardt | Gierer & Meinhardt (1972) | Radial after stabilization | 5/10 max |
+
+---
+
+## Code Features Explored
+
+| Feature | Parameter | Effect | Score Impact |
+|---------|-----------|--------|:------------:|
+| Cross-type adhesion | p[2,5]=0.3 | Sharpens inter-type boundaries in opposing-sign configs | **+1** (7 $\to$ 8) |
+| Weber-Fechner | p[2,4] | K=0.3 converts hexagonal to bullseye; K=2.0 kills all patterns | Harmful |
+| Michaelis-Menten | p[1,2] | Km=0.2--0.5 near-neutral on both consumer and producer types | Neutral |
+| Durotaxis | p[1,3] | 0.5 neutral for 1-type | Neutral |
+| Chirality | p[1,4] | 0.3--0.5 suppresses pattern elaboration; 0.1 neutral | Harmful |
+| pp field modulation | p[2,6] | 0.5 neither helps nor hurts on any type configuration | Neutral |
+| Density-dependent mobility | p[1,5] | Neutral on multi-type; harmful on 1-type (traps at first peak) | Neutral/Harmful |
+| Velocity alignment | p[2,7] | Adds visible streaming; cosmetic only, doesn't improve scores | Neutral |
+
+---
+
+## PDE-Level Modifications
+
+After exhausting all particle-level features (Blocks 1--10), the exploration shifted to modifying the governing PDEs themselves.
+
+| Modification | Implementation | Effect | Score Impact |
+|-------------|----------------|--------|:------------:|
+| **Nonlinear diffusion (NLD)** | $D_1(C_1) = D_1^0[1 + \delta(C_1-A)^2/A^2]$ | Breaks hexagonal wavelength lock; enables labyrinthine + vermiform | **Novel morphologies** (7/10) |
+
+### NLD Parameter Map
+
+| Regime | A | B | B/A | NLD $\delta$ | Pattern |
+|--------|---|---|-----|------------|---------|
+| Hexagonal (baseline) | 5.5 | 7.5 | 1.36 | 0 | Hexagonal spots |
+| Hexagonal + NLD | 5.5 | 7.5 | 1.36 | 2.0 | Hexagonal (slightly larger spots) |
+| **Labyrinthine** | 3.0 | 5.5 | 1.83 | 2.0 | Labyrinthine ridges |
+| **Vermiform** | 2.0 | 5.0 | 2.50 | 2.0 | Filamentary worm-like chains |
+| Over-damped | 5.5 | 7.5 | 1.36 | 3.0 | Weak hexagonal (reduced contrast) |

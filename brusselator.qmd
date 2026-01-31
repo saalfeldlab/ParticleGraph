@@ -132,34 +132,94 @@ Hexagonal (survives multi-type, reversed feedback) > Stripe (1-type uniform only
 
 ---
 
+## Nonlinear Diffusion: Labyrinthine and Vermiform Modes (Block 11)
+
+::: {.callout-important}
+## Breakthrough: PDE Modification Unlocks New Morphologies
+After exhausting all 8 particle-level code features (80 iterations), the LLM modified the Brusselator PDE itself: **concentration-dependent diffusion** breaks single-wavelength lock and produces qualitatively new pattern types inaccessible to any parameter tuning.
+:::
+
+### Nonlinear Diffusion (NLD)
+
+The activator diffusion becomes concentration-dependent (Gambino et al. 2013):
+
+$$
+D_1(C_1) = D_1^0 \left[ 1 + \delta \frac{(C_1 - A)^2}{A^2} \right]
+$$
+
+where $\delta$ controls the nonlinearity strength. At concentration peaks ($C_1 \gg A$), diffusion increases, spreading the activator and breaking the fixed Turing wavelength.
+
+### NLD Pattern Selection
+
+| B/A Ratio | NLD $\delta$ | Pattern | Best Example |
+|:---------:|:----------:|---------|:------------:|
+| 1.36 ($A$=5.5, $B$=7.5) | 2.0 | Hexagonal (slightly larger spots) | Iter 82 (7/10) |
+| **1.83** ($A$=3.0, $B$=5.5) | **2.0** | **Labyrinthine** ridges | **Iter 83** (7/10) |
+| **2.50** ($A$=2.0, $B$=5.0) | **2.0** | **Vermiform** filamentary chains | **Iter 87** (7/10) |
+| 1.36 ($A$=5.5, $B$=7.5) | 3.0 | Over-damped hexagonal | Iter 86 (6/10) |
+
+### Key Constraints
+
+- **NLD requires moderate coupling**: |$\chi$| $\leq$ 8 and consumption $\leq$ 80. Stronger coupling ($\chi=-16$) with NLD $\delta \geq 1.0$ causes blowup (Iter 81)
+- **High B/A ratio required**: NLD alone at $A=5.5/B=7.5$ does not trigger labyrinthine transition --- the B/A ratio must be $\geq 1.8$
+- **$\delta=2.0$ is optimal**: $\delta=3.0$ over-damps fields (Iter 86). $\delta=1.0$ is insufficient for labyrinthine at moderate coupling
+- **Vermiform = strongest fields ever**: Iter 87 achieved pattern\_growth=294, nearly $2\times$ the previous maximum
+
+### Mode Hierarchy (Complete)
+
+Hexagonal (deep Turing, most robust) > Labyrinthine ($B/A \approx 1.8$ + NLD) > Vermiform ($B/A \approx 2.5$ + NLD) > Stripe ($B/(1+A^2) = 1$, 1-type only)
+
+---
+
 ## Exploration Gallery
 
 ::: {.panel-tabset}
 
-### Iter 1
-*Initial Brusselator test*
+### Iter 3
+*Initial Brusselator test — 2-type opposing, labyrinthine segregation*
 
-{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_001.mp4 >}}
+{{< video log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_003.mp4 >}}
 
 ### Iter 12 ⭐
 *Hexagonal mode achieved*
 
-{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_012.mp4 >}}
+{{< video log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_012.mp4 >}}
 
 Multi-type configuration with opposing mobilities achieves hexagonal Turing pattern. Ring→hexagonal symmetry breaking confirmed.
 
 ### Iter 31 ⭐
 *Stripe/Labyrinth mode (A=3, B=10)*
 
-{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_031.mp4 >}}
+{{< video log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_031.mp4 >}}
 
 Breakthrough: $B/(1+A^2) = 1$ with low $A$ produces labyrinth/stripe morphology instead of hexagonal spots.
 
 ### Iter 36
 *Mixed mode (A=2.828, B=9)*
 
-{{< video graphs_data/diffusiophoresis/diffusiophoresis_Claude/video_iter_036.mp4 >}}
+{{< video log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_036.mp4 >}}
 
 Transitional regime at $B=9$ produces a mixed mode — neither pure hexagonal nor pure stripe.
+
+### Iter 83
+*Labyrinthine Turing (A=3.0, B=5.5, NLD $\delta$=2.0)*
+
+{{< video log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_083.mp4 >}}
+
+NLD + high B/A ratio breaks hexagonal into labyrinthine ridges. $C_1^{\text{std}}=1.93$, pattern\_growth=272.
+
+### Iter 87
+*Vermiform filaments (A=2.0, B=5.0, NLD $\delta$=2.0)*
+
+{{< video log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_087.mp4 >}}
+
+Strongest fields ever (pattern\_growth=294). Particles form elongated worm-like filamentary chains tracing fragmented labyrinthine topology.
+
+### Iter 85
+*3-type tissue on labyrinthine scaffold (A=3.0, B=5.5, NLD $\delta$=2.0)*
+
+{{< video log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_085.mp4 >}}
+
+3-type opposing on labyrinthine regime produces branching tissue morphology — hybrid of Iter 83's field topology with Iter 14-style tissue stratification.
 
 :::

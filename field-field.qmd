@@ -7,7 +7,7 @@ subtitle: "Reaction-diffusion dynamics"
 
 The field–field interaction governs the evolution of concentration fields through reaction-diffusion PDEs. Four models have been explored:
 
-- [Brusselator](brusselator.qmd): Classic two-component system with cubic autocatalysis (hexagonal + stripes)
+- [Brusselator](brusselator.qmd): Classic two-component system with cubic autocatalysis (hexagonal + stripes + labyrinthine/vermiform via nonlinear diffusion)
 - [Gray-Scott](grayscott.qmd): Autocatalytic system with feed/kill dynamics (radial only)
 - [FitzHugh-Nagumo](fhn.qmd): Excitable two-variable system from neuroscience (hexagonal + square)
 - [Schnakenberg](schnakenberg.qmd): Minimal activator-inhibitor system (radial only, genuine steady state)

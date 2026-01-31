@@ -2,7 +2,7 @@
 title: "LLM-Guided Morphogenesis"
 subtitle: "Closed-loop discovery in coupled chemical-particle systems"
 author: "Cédric Allier"
-date: "2026-01-29"
+date: "2026-01-31"
 ---
 
 ## Introduction
@@ -11,7 +11,7 @@ Understanding morphogenesis requires more than generating patterns; it requires 
 
 The system combines reaction–diffusion chemistry, diffusiophoretic particle transport, and particle–field feedback to explore a rich landscape of emergent morphologies. Rather than treating particles or fields as primary objects, the framework treats **interactions as fundamental**, with structure arising from their mutual constraint. The LLM evaluates simulation outcomes, formulates mechanistic hypotheses, and directs subsequent interventions through structured exploration and persistent memory, enabling cumulative understanding across regimes rather than isolated optimization.
 
-A key methodological insight motivating this work is that **LLM-guided discovery is fundamentally limited by the laws it is allowed to explore**. Early stages of the project revealed strong attractors imposed by the Brusselator reaction–diffusion model, which restricted accessible morphologies despite extensive parameter search. This limitation led to an explicit design choice: elevate *model-space exploration*—including PDE modification and variant creation.
+A key methodological insight motivating this work is that **LLM-guided discovery is fundamentally limited by the laws it is allowed to explore**. Early stages of the project revealed strong attractors imposed by the Brusselator reaction–diffusion model, which restricted accessible morphologies despite extensive parameter search. This limitation led to an explicit design choice: elevate *model-space exploration*—including PDE modification and variant creation. After 80 iterations exhausting all particle-level features, the LLM modified the Brusselator PDE itself by introducing **nonlinear diffusion** (concentration-dependent $D_1$), unlocking qualitatively new labyrinthine and vermiform pattern types inaccessible to any parameter tuning of the standard model.
 
 The current results focus on diffusiophoresis coupled to classical reaction–diffusion systems. The framework now extends to include **mechanochemical coupling** via the Material Point Method (MPM), enabling study of how mechanical admissibility constrains morphogenetic outcomes. See the [Mechanochemical Morphogenesis](mechanochemical.qmd) section for the unified framework combining chemistry and continuum mechanics.
 
@@ -121,24 +121,24 @@ Key additions:
 Four PDE models have been explored for the chemical patterning component, revealing a clear hierarchy of accessible morphologies:
 
 ### [Brusselator](brusselator.qmd)
-Hexagonal spots and stripe/labyrinth patterns with tight particle clusters
+Hexagonal spots, stripe/labyrinth, and vermiform filaments with tight particle clusters
 
-[![](graphs_data/diffusiophoresis/diffusiophoresis_Claude/montage_iter_012.png){.lightbox}](brusselator.qmd)
+[![](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_012.png){.lightbox}](brusselator.qmd)
 
 ### [Gray-Scott](grayscott.qmd)
 Radial patterns only — no hexagonal symmetry breaking
 
-[![](graphs_data/diffusiophoresis/diffusiophoresis_Claude/montage_iter_014.png){.lightbox}](grayscott.qmd)
+[![](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_014.png){.lightbox}](grayscott.qmd)
 
 ### [FitzHugh-Nagumo](fhn.qmd)
 Hexagonal and square/grid patterns with network particle structure
 
-[![](graphs_data/diffusiophoresis/diffusiophoresis_Claude/montage_iter_018.png){.lightbox}](fhn.qmd)
+[![](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_018.png){.lightbox}](fhn.qmd)
 
 ### [Schnakenberg](schnakenberg.qmd)
 Radial patterns with genuine steady state convergence
 
-[![](graphs_data/diffusiophoresis/diffusiophoresis_Claude/montage_iter_041.png){.lightbox}](schnakenberg.qmd)
+[![](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_041.png){.lightbox}](schnakenberg.qmd)
 
 ---
 

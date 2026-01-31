@@ -4,14 +4,14 @@
     "href": "schnakenberg.html",
     "title": "Schnakenberg Model",
     "section": "",
-    "text": "The Schnakenberg model is a minimal two-component activator-inhibitor system closely related to the Brusselator but with simpler kinetics. When coupled to diffusiophoresis, it produces radial/concentric patterns only, similar to Gray-Scott and fundamentally different from Brusselator and FHN.\n\n\n\n\n\n\nWarningKey Finding: Radial Symmetry Only\n\n\n\nSchnakenberg produces concentric ring patterns regardless of gamma (200-1000) or multi-type configurations. No hexagonal symmetry breaking occurs. This confirms a clear dichotomy: cubic autocatalysis (Brusselator) or excitable dynamics (FHN) are required for hexagonal mode."
+    "text": "The Schnakenberg model is a minimal two-component activator-inhibitor system closely related to the Brusselator but with simpler kinetics. When coupled to diffusiophoresis, it produces radial/concentric patterns only, similar to Gray-Scott and fundamentally different from Brusselator and FHN.\n\n\n\n\n\n\nKey Finding: Radial Symmetry Only\n\n\n\nSchnakenberg produces concentric ring patterns regardless of gamma (200-1000) or multi-type configurations. No hexagonal symmetry breaking occurs. This confirms a clear dichotomy: cubic autocatalysis (Brusselator) or excitable dynamics (FHN) are required for hexagonal mode."
   },
   {
     "objectID": "schnakenberg.html#overview",
     "href": "schnakenberg.html#overview",
     "title": "Schnakenberg Model",
     "section": "",
-    "text": "The Schnakenberg model is a minimal two-component activator-inhibitor system closely related to the Brusselator but with simpler kinetics. When coupled to diffusiophoresis, it produces radial/concentric patterns only, similar to Gray-Scott and fundamentally different from Brusselator and FHN.\n\n\n\n\n\n\nWarningKey Finding: Radial Symmetry Only\n\n\n\nSchnakenberg produces concentric ring patterns regardless of gamma (200-1000) or multi-type configurations. No hexagonal symmetry breaking occurs. This confirms a clear dichotomy: cubic autocatalysis (Brusselator) or excitable dynamics (FHN) are required for hexagonal mode."
+    "text": "The Schnakenberg model is a minimal two-component activator-inhibitor system closely related to the Brusselator but with simpler kinetics. When coupled to diffusiophoresis, it produces radial/concentric patterns only, similar to Gray-Scott and fundamentally different from Brusselator and FHN.\n\n\n\n\n\n\nKey Finding: Radial Symmetry Only\n\n\n\nSchnakenberg produces concentric ring patterns regardless of gamma (200-1000) or multi-type configurations. No hexagonal symmetry breaking occurs. This confirms a clear dichotomy: cubic autocatalysis (Brusselator) or excitable dynamics (FHN) are required for hexagonal mode."
   },
   {
     "objectID": "schnakenberg.html#mathematical-formulation",
@@ -25,7 +25,7 @@
     "href": "schnakenberg.html#exploration-results-block-6",
     "title": "Schnakenberg Model",
     "section": "Exploration Results (Block 6)",
-    "text": "Exploration Results (Block 6)\n\nIterations 41-44\n\n\n\nIter\nConfig\ngamma\nn_types\nScore\nPattern\n\n\n\n\n41\nBase\n200\n1\n7/10\nConcentric rings\n\n\n43\nMulti-type\n200\n2\n7/10\nConcentric rings\n\n\n44\nMulti-type\n200\n2\n7/10\nConcentric rings\n\n\n\n\n\n\n\n\n\nNoteUnique Property: Genuine Steady State\n\n\n\nSchnakenberg achieves a genuine plateau (0.62 at gamma=200), unlike all other tested models where patterns remain dynamic. This steady-state convergence is unique among the four PDE variants.\n\n\n\n\nKey Observations\n\nRadial patterns only: Concentric rings regardless of gamma, particle types, or initial conditions\nNo hexagonal breaking: Extended simulation confirms radial symmetry persists\nSteady state: Plateau=0.62 (unique — Brusselator/FHN/Gray-Scott all have plateau~0)\nSimple kinetics: Fewer parameters than Brusselator, but also fewer accessible morphologies"
+    "text": "Exploration Results (Block 6)\n\nIterations 41-44\n\n\n\nIter\nConfig\ngamma\nn_types\nScore\nPattern\n\n\n\n\n41\nBase\n200\n1\n7/10\nConcentric rings\n\n\n43\nMulti-type\n200\n2\n7/10\nConcentric rings\n\n\n44\nMulti-type\n200\n2\n7/10\nConcentric rings\n\n\n\n\n\n\n\n\n\nUnique Property: Genuine Steady State\n\n\n\nSchnakenberg achieves a genuine plateau (0.62 at gamma=200), unlike all other tested models where patterns remain dynamic. This steady-state convergence is unique among the four PDE variants.\n\n\n\n\nKey Observations\n\nRadial patterns only: Concentric rings regardless of gamma, particle types, or initial conditions\nNo hexagonal breaking: Extended simulation confirms radial symmetry persists\nSteady state: Plateau=0.62 (unique — Brusselator/FHN/Gray-Scott all have plateau~0)\nSimple kinetics: Fewer parameters than Brusselator, but also fewer accessible morphologies"
   },
   {
     "objectID": "schnakenberg.html#comparison-four-model-hierarchy",
@@ -81,7 +81,322 @@
     "href": "particle-field.html#feedback-loop",
     "title": "Particle–Field Interactions",
     "section": "Feedback Loop",
-    "text": "Feedback Loop\nThe particle–field coupling creates a feedback loop:\n\nFields develop gradients (Turing patterns)\nParticles migrate along gradients (diffusiophoresis)\nParticles modify local concentrations (consumption/production)\nModified fields change gradient landscape\nRepeat…\n\n\n\n\n\n\n\nWarningCoupling Challenge\n\n\n\nFor Gray-Scott, particle consumption can overwhelm the slow \\(UV^2\\) production, causing field instability. Brusselator’s stronger reaction rates are more robust to particle feedback."
+    "text": "Feedback Loop\nThe particle–field coupling creates a feedback loop:\n\nFields develop gradients (Turing patterns)\nParticles migrate along gradients (diffusiophoresis)\nParticles modify local concentrations (consumption/production)\nModified fields change gradient landscape\nRepeat…\n\n\n\n\n\n\n\nCoupling Challenge\n\n\n\nFor Gray-Scott, particle consumption can overwhelm the slow \\(UV^2\\) production, causing field instability. Brusselator’s stronger reaction rates are more robust to particle feedback."
+  },
+  {
+    "objectID": "llm-exploration.html",
+    "href": "llm-exploration.html",
+    "title": "LLM-Guided Exploration",
+    "section": "",
+    "text": "This page presents the results of an autonomous parallel exploration loop in which an LLM (Claude) navigates the parameter space of coupled reaction–diffusion and diffusiophoresis systems. The exploration runs 4 simulations per batch using Upper Confidence Bound (UCB) tree search, with structured memory accumulating principles across blocks of 8 iterations.\nOver 88 iterations (11 complete blocks) the LLM explored:\n\n5 PDE mesh models: Brusselator, Gray-Scott, FitzHugh-Nagumo, Schnakenberg, Gierer-Meinhardt\n1 code-level PDE modification: Nonlinear diffusion (NLD) in Brusselator — concentration-dependent \\(D_1(C_1)\\)\n8 code-level particle features: Weber-Fechner sensing, cross-type adhesion, Michaelis-Menten kinetics, durotaxis, chirality, density-dependent mobility, field-modulated pp adhesion, velocity alignment\n3 particle-type regimes: 1-type, 2-type, and 3-type configurations\nMesh resolutions: 100x100, 150x150, 200x200\n\nEach montage shows a simulation’s temporal evolution across 10 snapshots (left to right). Row 1: chemical field C1. Row 2: particles with velocity arrows. Row 3: C1/C2 fields with particle overlays. Row 4: particle flow field."
+  },
+  {
+    "objectID": "llm-exploration.html#overview",
+    "href": "llm-exploration.html#overview",
+    "title": "LLM-Guided Exploration",
+    "section": "",
+    "text": "This page presents the results of an autonomous parallel exploration loop in which an LLM (Claude) navigates the parameter space of coupled reaction–diffusion and diffusiophoresis systems. The exploration runs 4 simulations per batch using Upper Confidence Bound (UCB) tree search, with structured memory accumulating principles across blocks of 8 iterations.\nOver 88 iterations (11 complete blocks) the LLM explored:\n\n5 PDE mesh models: Brusselator, Gray-Scott, FitzHugh-Nagumo, Schnakenberg, Gierer-Meinhardt\n1 code-level PDE modification: Nonlinear diffusion (NLD) in Brusselator — concentration-dependent \\(D_1(C_1)\\)\n8 code-level particle features: Weber-Fechner sensing, cross-type adhesion, Michaelis-Menten kinetics, durotaxis, chirality, density-dependent mobility, field-modulated pp adhesion, velocity alignment\n3 particle-type regimes: 1-type, 2-type, and 3-type configurations\nMesh resolutions: 100x100, 150x150, 200x200\n\nEach montage shows a simulation’s temporal evolution across 10 snapshots (left to right). Row 1: chemical field C1. Row 2: particles with velocity arrows. Row 3: C1/C2 fields with particle overlays. Row 4: particle flow field."
+  },
+  {
+    "objectID": "llm-exploration.html#best-morphologies",
+    "href": "llm-exploration.html#best-morphologies",
+    "title": "LLM-Guided Exploration",
+    "section": "Best Morphologies",
+    "text": "Best Morphologies\n\nIter 14 — 3-Type Flower/Mandala (8/10)\n3-type opposing mobility with cross-type adhesion (p[2,5]=0.3). The C1 field evolves from random noise through concentric rings into a multi-spot Turing array with strong contrast. Three particle types stratify into distinct spatial layers: blue consumers form inner cores, orange producers occupy intermediate zones, green weak-consumers create the outermost boundary. The cross-type adhesion sharpens inter-type boundaries, creating discrete layered domains. Late frames show Turing spots distributed across the domain with elaborate 3-type segregation at each spot.\n\n\n\n\n\n\n\n\n\n\n\n\n\nIter 45 — Flower/Mandala Rediscovery (8/10)\nIndependent rediscovery of the Iter 14 regime at 150x150 mesh with A=5.5, B=7.5. The field develops from noise into concentric rings that break into multiple Turing spots. Particles show the same 3-type stratification: blue cores budding off satellite clusters with orange and green layering around each. Late frames show a central flower-like structure with peripheral spot clusters, each containing segregated type layers.\n\n\n\n\n\n\n\n\n\n\n\n\n\nIter 53 — Extended Simulation (8/10)\nSame 3-type opposing Brusselator regime as Iter 14/45 but with n_frames=4000 (double length). The longer simulation allows the Turing instability to develop further: C1_std=2.10 is the highest field contrast ever recorded. Fields evolve from rings through multi-spot breakup into a mature dispersed array. The 3-type particles form elongated curved clusters spread across the domain. The extra 2000 frames produce sharper Turing spots with more elaborate inter-spot flow patterns visible in the velocity arrows.\n\n\n\n\n\n\n\n\n\n\n\n\nIter 23 — Hexagonal Core-Ring Array (7/10, Best 2-type)\n2-type opposing mobility with A=5.5/B=7.5 and adhesion (p[2,5]=0.3). The C1 field develops swirl-like intermediate patterns that resolve into ~5–7 bright spots in quasi-hexagonal arrangement. Starting from a compact orange/blue disc, the two particle types separate into core-ring units at each field spot: orange consumer cores surrounded by blue producer rings. High entropy (0.821) reflects excellent spatial coverage across all hexagonal nodes. This is qualitatively different from the 3-type flower regime — discrete, well-separated spots rather than branching lobes.\n\n\n\n\n\n\n\n\n\n\n\n\n\nIter 39 — Dispersed Spot Array (7/10, Best 1-type)\n1-type at 150x150 mesh with A=5.5, B=7.5 and |M1|=8. The C1 field develops from rings into a fully dispersed Turing spot array covering the entire domain. Particles start as a compact blue disc, expand through a dendritic network phase, then break into scattered cluster groups that track individual Turing spots. Late frames show well-separated blue particle clusters filling the domain. No type segregation is possible with 1-type, but the dispersed spatial coverage produces the highest 1-type score.\n\n\n\n\n\n\n\n\n\n\n\n\n\nIter 46 — FHN Concentric Rings (7/10, Best non-Brusselator)\nFitzHugh-Nagumo PDE with 3-type opposing mobility. The field develops into elaborate concentric ring structures rather than spots. Three particle types organize into concentric type-segregated bands: green rings of dots interspersed with yellow dots arranged in ring patterns at increasing radii from center. The concentric ring morphology is fundamentally different from Brusselator’s spot arrays — the only non-Brusselator configuration reaching 7/10.\n\n\n\n\n\n\n\n\n\n\n\n\n\nIter 83 — Labyrinthine Turing (7/10, NLD Breakthrough)\nFirst non-hexagonal, non-radial stable Turing pattern in 83 iterations. Nonlinear diffusion (NLD \\(\\delta=2.0\\)) combined with high B/A ratio (\\(A=3.0, B=5.5\\)) shifts pattern selection from hexagonal spots to labyrinthine/stripe morphology. The C1 field develops dramatically strong patterns (\\(C_1^{\\text{std}}=1.93\\), pattern_growth=272) with interconnected ridges rather than isolated spots. Particles form scattered clusters tracking field maxima along labyrinthine ridges.\n\n\n\n\n\n\n\n\n\n\n\n\n\nIter 87 — Vermiform Filaments (7/10, Novel Morphology)\nPushing deeper into the stripe regime (\\(A=2.0, B=5.0\\), \\(B/A=2.5\\)) with NLD \\(\\delta=2.0\\) produces the strongest field patterns ever recorded (pattern_growth=294, nearly 2\\(\\times\\) previous maximum). The extreme B/A ratio creates fragmented labyrinthine fields with many small-scale features. Particles form elongated vermiform/worm-like filamentary chains tracing the field topology — a qualitatively new morphology distinct from clusters, networks, or rings.\n\n\n\n\n\n\n\n\n\n\n\n\n\nIter 85 — Branching Tissue on Labyrinthine Scaffold (7/10)\n3-type opposing particles on the labyrinthine regime (\\(A=3.0/B=5.5\\) + NLD \\(\\delta=2.0\\)) produce a novel hybrid morphology combining labyrinthine field topology with Iter 14-style tissue stratification. Three particle types form layered branches along labyrinthine ridges rather than compact flower structures. Pattern_growth=160 is the highest for any 3-type run. The branching tissue morphology is more biologically reminiscent than the compact flower."
+  },
+  {
+    "objectID": "llm-exploration.html#regime-comparison",
+    "href": "llm-exploration.html#regime-comparison",
+    "title": "LLM-Guided Exploration",
+    "section": "Regime Comparison",
+    "text": "Regime Comparison\n\n\n\n\n\n\n\n\n\n\nRegime\nn_types\nModel\nBest Score\nKey Finding\n\n\n\n\n3-type opposing\n3\nBrusselator\n8/10\nMulti-spot flower/mandala with 3-layer type segregation (Iters 14, 45, 53)\n\n\n2-type opposing\n2\nBrusselator\n7/10\nHexagonal core-ring spot array (Iter 23)\n\n\n1-type\n1\nBrusselator\n7/10\nDispersed Turing spot array at 150x150 (Iter 39)\n\n\n1-type NLD labyrinthine\n1\nBrusselator + NLD\n7/10\nLabyrinthine Turing patterns — first non-hexagonal stable mode (Iter 83)\n\n\n1-type NLD vermiform\n1\nBrusselator + NLD\n7/10\nVermiform filamentary chains, strongest fields ever (Iter 87)\n\n\n3-type NLD labyrinthine\n3\nBrusselator + NLD\n7/10\nBranching tissue on labyrinthine scaffold (Iter 85)\n\n\n2-type same-sign\n2\nBrusselator\n7/10\nCo-localized core-shell clusters at Turing spots (Iter 12)\n\n\n3-type same-sign\n3\nBrusselator\n6/10\nNested co-localization, less complex (Iters 16, 24)\n\n\nFHN 3-type\n3\nFitzHugh-Nagumo\n7/10\nConcentric type-segregated ring bands (Iter 46)\n\n\nGray-Scott\n2–3\nGray-Scott\n6/10\nRadial concentric rings at all coupling strengths (Iters 33–40)\n\n\nSchnakenberg\n2\nSchnakenberg\n5/10\nRadial concentric only (Iter 51)\n\n\nGierer-Meinhardt\n2\nGM\n5/10\nRadial after stabilization (Iter 47)"
+  },
+  {
+    "objectID": "llm-exploration.html#established-principles",
+    "href": "llm-exploration.html#established-principles",
+    "title": "LLM-Guided Exploration",
+    "section": "Established Principles",
+    "text": "Established Principles\n\n\n\n\n\n\nKey Discovery\n\n\n\nBrusselator is the only PDE model producing non-radial morphologies when coupled to diffusiophoretic particles. All four alternative models (Gray-Scott, FHN, Schnakenberg, Gierer-Meinhardt) produce only radial/concentric patterns. Adding nonlinear diffusion (NLD) to the Brusselator further extends its repertoire to labyrinthine and vermiform patterns.\n\n\nThe LLM accumulated 20 validated principles across 88 iterations:\n\nModerate coupling is a hard stability limit: |M1| \\(\\leq\\) 12 (Brusselator hexagonal), |M1| \\(\\leq\\) 8 (Brusselator labyrinthine), |M1| \\(\\leq\\) 10 (FHN). Exceeding causes particle escape and field blow-up.\nD1 \\(\\geq\\) 0.05 required — lower values cause numerical crash (Iters 1, 2).\nMobility sign determines pattern type: opposing-sign \\(\\to\\) spatial segregation; same-sign \\(\\to\\) co-localization at shared Turing spots.\nCross-type adhesion (p[2,5]=0.3) is the only particle-level feature that improved scores (7 \\(\\to\\) 8/10). Effective only on opposing-sign configs where type boundaries exist.\n150x150 mesh is optimal for 9600 particles. 200x200 degrades all configs; 100x100 is equivalent when patterns collapse to single center.\nConsumer must be the strongest mover (consumer-dominant asymmetry). Reversing to producer-dominant drops 8/10 \\(\\to\\) 4/10 (Iter 52).\nHigher particle count doesn’t break ceilings: 14400 particles same 7/10 as 9600 (Iter 62).\nA=5.5/B=7.5 produces more numerous, smaller Turing spots: key for 1-type and 2-type hexagonal patterns.\nPlateau=0 is universal: all models under continuous injection drive non-equilibrium dynamics across all 88 iterations.\nChirality suppresses patterns: 0.3+ suppresses strongly; 0.1 is neutral but adds no spiral features.\n\nPrinciples 11–20 (Blocks 9–11):\n\nWeber-Fechner suppresses hexagonal at ANY K&gt;0: even K=0.15 forces radial/bullseye. No useful regime.\nVelocity alignment is cosmetic: adds visible streaming but never improves scores across 1-, 2-, and 3-type configs.\nDDM is neutral or harmful: density-dependent mobility traps particles at the first concentration peak (Iters 65–72).\nAll 8 PDE_D particle features exhausted: only cross-type adhesion helped. Strategy shifted to PDE mesh modification.\nNLD \\(\\delta=2.0\\) + high B/A ratio \\(\\to\\) labyrinthine Turing: \\(A=3.0/B=5.5\\) (\\(B/A=1.83\\)) breaks hexagonal symmetry into labyrinthine/vermiform (Iter 83).\nNLD \\(\\delta=3.0\\) over-damps hexagonal: stronger NLD weakens field contrast at \\(A=5.5/B=7.5\\). \\(\\delta=2.0\\) is optimal.\nNLD is incompatible with strong coupling (|\\(\\chi\\)|=16): NLD at \\(\\delta \\geq 1.0\\) with \\(\\chi=-16\\) causes blowup. NLD requires moderate coupling (\\(\\chi=-8\\)).\nIter 14’s 8/10 is time-limited: \\(\\chi=-16\\) regime blows up at 4000 frames (Iter 84). The best score is marginally unstable.\nLabyrinthine regime has tighter coupling limit: |\\(\\chi\\)| \\(\\leq\\) 8 (vs hexagonal |\\(\\chi\\)| \\(\\leq\\) 12).\n\\(B/A=2.5\\) + NLD \\(\\to\\) vermiform filaments: strongest fields ever observed (pattern_growth=294, Iter 87).\n\n\n\n\n\n\n\nNegative Results\n\n\n\nSeven out of eight PDE_D code features were tested and found neutral or harmful: Weber-Fechner sensing, Michaelis-Menten kinetics, chirality, durotaxis, density-dependent mobility, field-modulated pp adhesion, and velocity alignment. Only cross-type adhesion improved morphological scores. This exhaustive search motivated the shift from particle-level to PDE-level modifications (nonlinear diffusion)."
+  },
+  {
+    "objectID": "llm-exploration.html#exploration-gallery",
+    "href": "llm-exploration.html#exploration-gallery",
+    "title": "LLM-Guided Exploration",
+    "section": "Exploration Gallery",
+    "text": "Exploration Gallery\n\nBlock 1 (Iters 1–8) — Initial Exploration\nIters 1–2 crashed (D1 too low). First successful runs established that 2-type opposing mobilities produce spatial segregation (Iter 3: labyrinthine patterns) and 3-type moderate coupling creates tissue-like stratification (Iter 8: best of block at 7/10).\n\n\n\n\n\n\n\n\n\nIter 3 (5/10) — 2-type opposing, labyrinthine segregation\n\n\n\n\n\n\n\nIter 5 (6/10) — 2-type 4000 frames, branching network\n\n\n\n\n\n\n\nIter 7 (0/10) — 1-type base params, total escape\n\n\n\n\n\n\n\nIter 8 (7/10) — 3-type moderate, tissue stratification\n\n\n\n\n\n\n\nBlock 2 (Iters 9–16) — Cross-Type Adhesion Breakthrough\nIter 14 achieved the global best (8/10) by adding cross-type adhesion to the 3-type opposing regime. Same-sign 2-type (Iter 12) produced novel core-shell micro-clusters at Turing spots.\n\n\n\n\n\n\n\n\n\nIter 9 (7/10) — 3-type, stronger Turing drive\n\n\n\n\n\n\n\nIter 12 (7/10) — 2-type same-sign, core-shell spots\n\n\n\n\n\n\n\nIter 14 (8/10) — 3-type + adhesion, flower/mandala\n\n\n\n\n\n\n\nIter 16 (6/10) — 3-type same-sign, co-localized spots\n\n\n\n\n\n\n\nBlock 3 (Iters 17–24) — Regime Diversification\nTested Weber-Fechner sensing (kills Turing breakup at K=2.0), Michaelis-Menten (neutral), and higher A/B Brusselator. Iter 23 discovered the hexagonal core-ring regime for 2-type, achieving best-in-class 2-type score of 7/10.\n\n\n\n\n\n\n\n\n\nIter 18 (5/10) — Weber-Fechner K=2.0, compact bullseye\n\n\n\n\n\n\n\nIter 21 (7/10) — 3-type + A=5.5/B=7.5, flower variant\n\n\n\n\n\n\n\nIter 23 (7/10) — 2-type hexagonal core-ring array\n\n\n\n\n\n\n\nIter 24 (6/10) — 3-type same-sign + adhesion\n\n\n\n\n\n\n\nBlock 4 (Iters 25–32) — Coupling Geometry\nChirality at 0.5 suppresses pattern elaboration (Iter 25). Weber-Fechner even at K=0.3 converts hexagonal to concentric bullseye (Iter 31). Consumer-dominant asymmetry confirmed critical: swapping to producer-dominant drops to 6/10 (Iter 28). Pushing |M1|=14 causes total blow-up (Iter 32).\n\n\n\n\n\n\n\n\n\nIter 25 (5/10) — chirality suppresses, compact flower\n\n\n\n\n\n\n\nIter 26 (7/10) — 3-type in Iter 23’s A/B regime\n\n\n\n\n\n\n\nIter 31 (6/10) — W-F K=0.3, concentric bullseye\n\n\n\n\n\n\n\nIter 32 (1/10) — |M1|=14, total blow-up\n\n\n\n\n\n\n\nBlock 5 (Iters 33–40) — PDE Model Survey\nTested Gray-Scott (produces only radial concentric rings, not spots), durotaxis (neutral on 1-type). Iter 39 found the 1-type sweet spot at A=5.5/B=7.5 + 150x150 mesh with dispersed Turing spots.\n\n\n\n\n\n\n\n\n\nIter 33 (5/10) — Gray-Scott, radial rings only\n\n\n\n\n\n\n\nIter 35 (6/10) — 1-type + durotaxis, neutral effect\n\n\n\n\n\n\n\nIter 37 (7/10) — 3-type Brusselator exploit\n\n\n\n\n\n\n\nIter 39 (7/10) — 1-type dispersed spot array\n\n\n\n\n\n\n\nBlock 6 (Iters 41–48) — Non-Brusselator Models\nFHN (Iter 46) achieved 7/10 with concentric ring bands — the only non-Brusselator model reaching that score. Gierer-Meinhardt (Iter 47) stabilized but produced only radial patterns at 5/10. Iter 45 independently rediscovered the 8/10 flower/mandala regime.\n\n\n\n\n\n\n\n\n\nIter 42 (1/10) — Gray-Scott 2-type, single center\n\n\n\n\n\n\n\nIter 45 (8/10) — flower/mandala rediscovery\n\n\n\n\n\n\n\nIter 46 (7/10) — FHN concentric ring bands\n\n\n\n\n\n\n\nIter 47 (5/10) — Gierer-Meinhardt, radial\n\n\n\n\n\n\n\nBlock 7 (Iters 49–56) — Resolution and Duration Tests\n200x200 mesh confirmed as a dead end for all type counts at 9600 particles (Iters 49, 54, 55: all 6/10). n_frames=4000 ties the 8/10 ceiling but doesn’t break it (Iter 53). Producer-dominant 3-type drops to 4/10 (Iter 52).\n\n\n\n\n\n\n\n\n\nIter 49 (6/10) — 1-type at 200x200, weaker spots\n\n\n\n\n\n\n\nIter 52 (4/10) — producer-dominant, simple rings\n\n\n\n\n\n\n\nIter 53 (8/10) — 4000 frames, extended flower\n\n\n\n\n\n\n\nIter 56 (7/10) — A=7.0/B=10.0 on 3-type\n\n\n\n\n\n\n\nBlock 8 (Iters 57–64) — Feature Testing\nField-modulated pp adhesion (p[2,6]=0.5) is neutral on both 3-type (Iter 61: 7/10) and 2-type (Iter 63: 6/10). 14400 particles produce denser spots but same 7/10 ceiling for 1-type (Iter 62). Chirality=0.1 is neutral (Iter 64: 7/10).\n\n\n\n\n\n\n\n\n\nIter 61 (7/10) — pp_field_mod, neutral on 3-type\n\n\n\n\n\n\n\nIter 62 (7/10) — 14400 particles, denser spots\n\n\n\n\n\n\n\nIter 63 (6/10) — pp_field_mod on 2-type, hexagonal\n\n\n\n\n\n\n\nIter 64 (7/10) — chirality=0.1, neutral\n\n\n\n\n\n\n\nBlock 9 (Iters 65–72) — Density-Dependent Mobility\nDDM (contact inhibition of locomotion) is completely neutral on multi-type across its entire range [0.15–1.0] and actively harmful on 1-type (Iter 67: particles collapse to single disc at 4/10). DDM forces single-center radial morphology by trapping particles at the first concentration peak.\n\n\n\n\n\n\n\n\n\nIter 65 (6/10) — DDM=0.15, single radial bullseye\n\n\n\n\n\n\n\nIter 67 (4/10) — DDM=0.2 on 1-type, collapsed disc\n\n\n\n\n\n\n\nIter 70 (7/10) — DDM=0.5 on 2-type, concentric rings\n\n\n\n\n\n\n\nIter 72 (7/10) — 100x100 mesh + DDM\n\n\n\n\n\n\n\nBlock 10 (Iters 73–80) — Velocity Alignment + Weber-Fechner Dead End\nVelocity alignment (normalized + clamped) adds visible streaming within and between spots but is cosmetic — doesn’t improve scores across any type configuration. Alignment hurts 2-type (Iter 74: 6/10 vs parent 23: 7/10). Weber-Fechner confirmed as a dead end even at minimal K=0.15 (Iter 80: 5/10). All 8 PDE_D particle features exhaustively tested; only cross-type adhesion helped.\n\n\n\n\n\n\n\n\n\nIter 73 (7/10) — alignment=1.0, streaming visible\n\n\n\n\n\n\n\nIter 74 (6/10) — 2-type + alignment, concentric rings\n\n\n\n\n\n\n\nIter 77 (7/10) — alignment=0.5, cosmetic streaming\n\n\n\n\n\n\n\nIter 80 (5/10) — W-F K=0.15, bullseye forced\n\n\n\n\n\n\n\nBlock 11 (Iters 81–88) — Nonlinear Diffusion: Labyrinthine Breakthrough\n\n\n\n\n\n\nCode-Level PDE Modification\n\n\n\nAfter exhausting all 8 particle-level features (80 iterations), the LLM modified the Brusselator PDE itself: nonlinear diffusion \\(D_1(C_1) = D_1^0 [1 + \\delta(C_1 - A)^2/A^2]\\) makes the activator diffusion concentration-dependent (Gambino et al. 2013). This breaks single-wavelength lock and enables multi-scale patterns.\n\n\nNLD \\(\\delta=2.0\\) at \\(A=3.0/B=5.5\\) produced the first labyrinthine Turing patterns in 83 iterations (Iter 83). \\(B/A=2.5\\) pushed further into vermiform filamentary chains with the strongest fields ever (Iter 87: pattern_growth=294). 3-type on labyrinthine creates branching tissue (Iter 85). NLD at \\(\\delta=3.0\\) over-damps hexagonal (Iter 86: 6/10). Iter 14 confirmed as time-limited (Iter 84: blows up at 4000 frames).\n\n\n\n\n\n\n\n\n\nIter 81 (1/10) — NLD + strong coupling, blowup\n\n\n\n\n\n\n\nIter 83 (7/10) — LABYRINTHINE Turing (NLD breakthrough)\n\n\n\n\n\n\n\nIter 85 (7/10) — 3-type tissue on labyrinthine scaffold\n\n\n\n\n\n\n\nIter 87 (7/10) — VERMIFORM filaments (strongest fields)"
+  },
+  {
+    "objectID": "llm-exploration.html#ucb-exploration-trees",
+    "href": "llm-exploration.html#ucb-exploration-trees",
+    "title": "LLM-Guided Exploration",
+    "section": "UCB Exploration Trees",
+    "text": "UCB Exploration Trees\nThe UCB tree visualizes the search strategy: each node is an iteration, edges connect parent-child mutations, and node color reflects the score. The tree grows across blocks as the LLM explores and exploits different parameter regions.\n\n\n\n\n\n\n\n\n\nBlock 1 (Iter 8)\n\n\n\n\n\n\n\nBlock 2 (Iter 16)\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nBlock 3 (Iter 24)\n\n\n\n\n\n\n\nBlock 4 (Iter 32)\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nBlock 5 (Iter 40)\n\n\n\n\n\n\n\nBlock 6 (Iter 48)\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nBlock 7 (Iter 56)\n\n\n\n\n\n\n\nBlock 8 (Iter 64)\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nBlock 9 (Iter 72)\n\n\n\n\n\n\n\nBlock 10 (Iter 80)"
+  },
+  {
+    "objectID": "llm-exploration.html#score-progression",
+    "href": "llm-exploration.html#score-progression",
+    "title": "LLM-Guided Exploration",
+    "section": "Score Progression",
+    "text": "Score Progression\n\n\n\n\n\n\n\n\n\n\nBlock\nIters\nAverage\nBest\nKey Event\n\n\n\n\n1\n1–8\n4.4\n7 (Iter 8)\n3-type tissue stratification discovered\n\n\n2\n9–16\n6.1\n8 (Iter 14)\nCross-type adhesion breakthrough\n\n\n3\n17–24\n6.4\n7 (Iter 23)\nHexagonal 2-type regime discovered\n\n\n4\n25–32\n5.5\n7 (Iters 26, 29, 30)\nConsumer-dominant asymmetry confirmed\n\n\n5\n33–40\n5.6\n7 (Iters 37, 39)\nGray-Scott fails; 1-type sweet spot found\n\n\n6\n41–48\n5.3\n8 (Iter 45)\nFlower/mandala rediscovered; FHN 7/10\n\n\n7\n49–56\n5.75\n8 (Iter 53)\n200x200 dead end confirmed\n\n\n8\n57–64\n6.75\n7 (Iters 61, 62, 64)\npp_field_mod neutral; particle count ceiling\n\n\n9\n65–72\n6.25\n7 (Iters 70, 72)\nDDM failed across full range\n\n\n10\n73–80\n6.5\n7 (Iters 73, 76–79)\nAlignment cosmetic; all 8 PDE_D features exhausted\n\n\n11\n81–88\n5.1\n7 (Iters 82, 83, 85, 87)\nNLD labyrinthine + vermiform breakthrough"
+  },
+  {
+    "objectID": "llm-exploration.html#pde-models-tested",
+    "href": "llm-exploration.html#pde-models-tested",
+    "title": "LLM-Guided Exploration",
+    "section": "PDE Models Tested",
+    "text": "PDE Models Tested\n\n\n\n\n\n\n\n\n\nModel\nLiterature\nMorphology with particles\nStatus\n\n\n\n\nBrusselator\nPrigogine & Lefever (1968)\nMulti-spot hexagonal arrays, flower/mandala\nBest (8/10)\n\n\nBrusselator + NLD\nGambino et al. (2013)\nLabyrinthine, vermiform filaments\nNovel (7/10)\n\n\nGray-Scott\nPearson (1993)\nRadial concentric rings only\nRadial-locked\n\n\nFitzHugh-Nagumo\nFitzHugh (1961)\nConcentric type-segregated ring bands\n7/10 max\n\n\nSchnakenberg\nSchnakenberg (1979)\nRadial concentric\n5/10 max\n\n\nGierer-Meinhardt\nGierer & Meinhardt (1972)\nRadial after stabilization\n5/10 max"
+  },
+  {
+    "objectID": "llm-exploration.html#code-features-explored",
+    "href": "llm-exploration.html#code-features-explored",
+    "title": "LLM-Guided Exploration",
+    "section": "Code Features Explored",
+    "text": "Code Features Explored\n\n\n\n\n\n\n\n\n\nFeature\nParameter\nEffect\nScore Impact\n\n\n\n\nCross-type adhesion\np[2,5]=0.3\nSharpens inter-type boundaries in opposing-sign configs\n+1 (7 \\(\\to\\) 8)\n\n\nWeber-Fechner\np[2,4]\nK=0.3 converts hexagonal to bullseye; K=2.0 kills all patterns\nHarmful\n\n\nMichaelis-Menten\np[1,2]\nKm=0.2–0.5 near-neutral on both consumer and producer types\nNeutral\n\n\nDurotaxis\np[1,3]\n0.5 neutral for 1-type\nNeutral\n\n\nChirality\np[1,4]\n0.3–0.5 suppresses pattern elaboration; 0.1 neutral\nHarmful\n\n\npp field modulation\np[2,6]\n0.5 neither helps nor hurts on any type configuration\nNeutral\n\n\nDensity-dependent mobility\np[1,5]\nNeutral on multi-type; harmful on 1-type (traps at first peak)\nNeutral/Harmful\n\n\nVelocity alignment\np[2,7]\nAdds visible streaming; cosmetic only, doesn’t improve scores\nNeutral"
+  },
+  {
+    "objectID": "llm-exploration.html#pde-level-modifications",
+    "href": "llm-exploration.html#pde-level-modifications",
+    "title": "LLM-Guided Exploration",
+    "section": "PDE-Level Modifications",
+    "text": "PDE-Level Modifications\nAfter exhausting all particle-level features (Blocks 1–10), the exploration shifted to modifying the governing PDEs themselves.\n\n\n\n\n\n\n\n\n\nModification\nImplementation\nEffect\nScore Impact\n\n\n\n\nNonlinear diffusion (NLD)\n\\(D_1(C_1) = D_1^0[1 + \\delta(C_1-A)^2/A^2]\\)\nBreaks hexagonal wavelength lock; enables labyrinthine + vermiform\nNovel morphologies (7/10)\n\n\n\n\nNLD Parameter Map\n\n\n\n\n\n\n\n\n\n\n\nRegime\nA\nB\nB/A\nNLD \\(\\delta\\)\nPattern\n\n\n\n\nHexagonal (baseline)\n5.5\n7.5\n1.36\n0\nHexagonal spots\n\n\nHexagonal + NLD\n5.5\n7.5\n1.36\n2.0\nHexagonal (slightly larger spots)\n\n\nLabyrinthine\n3.0\n5.5\n1.83\n2.0\nLabyrinthine ridges\n\n\nVermiform\n2.0\n5.0\n2.50\n2.0\nFilamentary worm-like chains\n\n\nOver-damped\n5.5\n7.5\n1.36\n3.0\nWeak hexagonal (reduced contrast)"
+  },
+  {
+    "objectID": "grayscott.html",
+    "href": "grayscott.html",
+    "title": "Gray-Scott Model",
+    "section": "",
+    "text": "The Gray-Scott model uses autocatalytic reaction with feed/kill dynamics:\n\\[\n\\frac{\\partial U}{\\partial t} = D_u \\nabla^2 U - UV^2 + F(1-U)\n\\]\n\\[\n\\frac{\\partial V}{\\partial t} = D_v \\nabla^2 V + UV^2 - (F+k)V\n\\]\nwhere:\n\n\\(U\\) is the “feed” species (replenished at rate \\(F\\))\n\\(V\\) is the “autocatalyst” (self-replicating via \\(UV^2\\))\n\\(F\\) is the feed rate\n\\(k\\) is the kill rate\n\n\n\n\n\n\nRegime\nF\nk\nPattern\n\n\n\n\nα (alpha)\n0.010\n0.047\nSpots\n\n\nβ (beta)\n0.026\n0.052\nReplicating spots\n\n\nγ (gamma)\n0.035\n0.060\nWorms/labyrinths\n\n\nδ (delta)\n0.028\n0.053\nMitosis\n\n\nε (epsilon)\n0.018\n0.055\nChaotic\n\n\nλ (lambda)\n0.040\n0.065\nStripes\n\n\n\n\n\n\n\n\n\nSymbol\nDescription\nCurrent\nRange\n\n\n\n\n\\(D_u\\)\nU diffusion\n0.20\n0.1–0.5\n\n\n\\(D_v\\)\nV diffusion\n0.05\n0.05–0.2\n\n\n\\(F\\)\nFeed rate\n0.035\n0.01–0.06\n\n\n\\(k\\)\nKill rate\n0.063\n0.04–0.07\n\n\ntime_scale\nDynamics speed\n50\n1–100\n\n\n\n\n\n\n\n\n\nNoteBlock 12 Configuration\n\n\n\nDiffusion ratio \\(D_u/D_v = 4\\) maintained. time_scale increased to 50 to match Brusselator dynamics speed. Exploring F-k parameter plane to locate stripe/worm regime."
+  },
+  {
+    "objectID": "grayscott.html#field-dynamics",
+    "href": "grayscott.html#field-dynamics",
+    "title": "Gray-Scott Model",
+    "section": "",
+    "text": "The Gray-Scott model uses autocatalytic reaction with feed/kill dynamics:\n\\[\n\\frac{\\partial U}{\\partial t} = D_u \\nabla^2 U - UV^2 + F(1-U)\n\\]\n\\[\n\\frac{\\partial V}{\\partial t} = D_v \\nabla^2 V + UV^2 - (F+k)V\n\\]\nwhere:\n\n\\(U\\) is the “feed” species (replenished at rate \\(F\\))\n\\(V\\) is the “autocatalyst” (self-replicating via \\(UV^2\\))\n\\(F\\) is the feed rate\n\\(k\\) is the kill rate\n\n\n\n\n\n\nRegime\nF\nk\nPattern\n\n\n\n\nα (alpha)\n0.010\n0.047\nSpots\n\n\nβ (beta)\n0.026\n0.052\nReplicating spots\n\n\nγ (gamma)\n0.035\n0.060\nWorms/labyrinths\n\n\nδ (delta)\n0.028\n0.053\nMitosis\n\n\nε (epsilon)\n0.018\n0.055\nChaotic\n\n\nλ (lambda)\n0.040\n0.065\nStripes\n\n\n\n\n\n\n\n\n\nSymbol\nDescription\nCurrent\nRange\n\n\n\n\n\\(D_u\\)\nU diffusion\n0.20\n0.1–0.5\n\n\n\\(D_v\\)\nV diffusion\n0.05\n0.05–0.2\n\n\n\\(F\\)\nFeed rate\n0.035\n0.01–0.06\n\n\n\\(k\\)\nKill rate\n0.063\n0.04–0.07\n\n\ntime_scale\nDynamics speed\n50\n1–100\n\n\n\n\n\n\n\n\n\nNoteBlock 12 Configuration\n\n\n\nDiffusion ratio \\(D_u/D_v = 4\\) maintained. time_scale increased to 50 to match Brusselator dynamics speed. Exploring F-k parameter plane to locate stripe/worm regime."
+  },
+  {
+    "objectID": "grayscott.html#particle-coupling",
+    "href": "grayscott.html#particle-coupling",
+    "title": "Gray-Scott Model",
+    "section": "Particle Coupling",
+    "text": "Particle Coupling\nSame diffusiophoretic dynamics as Brusselator, but with U and V fields:\n\\[\n\\mathbf{v}_i = M_1 \\nabla U\\big|_{\\mathbf{x}_i} + M_2 \\nabla V\\big|_{\\mathbf{x}_i} + \\sqrt{\\frac{2}{\\text{Pe}}} \\boldsymbol{\\eta}(t)\n\\]\n\n\n\n\n\n\nTipCoupling Stabilized (Block 12)\n\n\n\nEarlier challenges with negative V fields and NaN explosions have been resolved. The system now produces stable Turing patterns with particles organizing at field boundaries."
+  },
+  {
+    "objectID": "grayscott.html#current-status",
+    "href": "grayscott.html#current-status",
+    "title": "Gray-Scott Model",
+    "section": "Current Status",
+    "text": "Current Status\n\n\n\n\n\n\nWarningKey Finding: No Hexagonal Symmetry Breaking\n\n\n\nGray-Scott produces radial/concentric patterns only. Even with extended simulation (6000 frames), no hexagonal symmetry breaking occurs. This is a fundamental difference from Brusselator dynamics.\n\n\n\nKey Observations\n\nGray-Scott produces concentric ring patterns, NOT hexagonal spots\nQualitatively different from Brusselator — purely radial organization\nExtended simulation does not induce symmetry breaking\nParticles form voronoi-like network at field boundaries\nModerate clustering (0.4) vs Brusselator’s tight clusters (0.6+)"
+  },
+  {
+    "objectID": "grayscott.html#exploration-gallery",
+    "href": "grayscott.html#exploration-gallery",
+    "title": "Gray-Scott Model",
+    "section": "Exploration Gallery",
+    "text": "Exploration Gallery\n\nIter 9Iter 14 ⭐\n\n\nGray-Scott 2-type test\n\nFirst Gray-Scott test with 2 particle types. Produces concentric ring patterns with particles at field boundaries.\n\n\nExtended simulation (6000 frames)\n\nExtended simulation confirms Gray-Scott cannot achieve hexagonal mode. Radial organization persists — fundamental difference from Brusselator."
+  },
+  {
+    "objectID": "field-field.html",
+    "href": "field-field.html",
+    "title": "Field–Field Interactions",
+    "section": "",
+    "text": "The field–field interaction governs the evolution of concentration fields through reaction-diffusion PDEs. Four models have been explored:\n\nBrusselator: Classic two-component system with cubic autocatalysis (hexagonal + stripes + labyrinthine/vermiform via nonlinear diffusion)\nGray-Scott: Autocatalytic system with feed/kill dynamics (radial only)\nFitzHugh-Nagumo: Excitable two-variable system from neuroscience (hexagonal + square)\nSchnakenberg: Minimal activator-inhibitor system (radial only, genuine steady state)"
+  },
+  {
+    "objectID": "field-field.html#overview",
+    "href": "field-field.html#overview",
+    "title": "Field–Field Interactions",
+    "section": "",
+    "text": "The field–field interaction governs the evolution of concentration fields through reaction-diffusion PDEs. Four models have been explored:\n\nBrusselator: Classic two-component system with cubic autocatalysis (hexagonal + stripes + labyrinthine/vermiform via nonlinear diffusion)\nGray-Scott: Autocatalytic system with feed/kill dynamics (radial only)\nFitzHugh-Nagumo: Excitable two-variable system from neuroscience (hexagonal + square)\nSchnakenberg: Minimal activator-inhibitor system (radial only, genuine steady state)"
+  },
+  {
+    "objectID": "field-field.html#general-form",
+    "href": "field-field.html#general-form",
+    "title": "Field–Field Interactions",
+    "section": "General Form",
+    "text": "General Form\n\\[\n\\frac{\\partial C_i}{\\partial t} = D_i \\nabla^2 C_i + R_i(C_1, C_2, \\ldots)\n\\]\nwhere \\(D_i\\) is the diffusion coefficient and \\(R_i\\) is the reaction term specific to each model."
+  },
+  {
+    "objectID": "field-field.html#turing-instability",
+    "href": "field-field.html#turing-instability",
+    "title": "Field–Field Interactions",
+    "section": "Turing Instability",
+    "text": "Turing Instability\nPattern formation requires differential diffusion rates and appropriate reaction kinetics. The general condition for Turing instability in a two-component system:\n\nHomogeneous stability: The uniform steady state must be stable without diffusion\nDiffusion-driven instability: Diffusion destabilizes certain spatial modes\n\nThis requires an activator (short-range, slower diffusion) and an inhibitor (long-range, faster diffusion)."
+  },
+  {
+    "objectID": "field-field.html#implementation",
+    "href": "field-field.html#implementation",
+    "title": "Field–Field Interactions",
+    "section": "Implementation",
+    "text": "Implementation\nField dynamics are computed on a discrete mesh using finite differences for the Laplacian. The mesh is coupled to particles through interpolation operators.\nMesh (field values) ←→ Particles (positions, velocities)"
+  },
+  {
+    "objectID": "brusselator.html",
+    "href": "brusselator.html",
+    "title": "Brusselator Model",
+    "section": "",
+    "text": "The concentration fields \\((C_1, C_2)\\) evolve according to the Brusselator reaction-diffusion system:\n\\[\n\\frac{\\partial C_1}{\\partial t} = D_1 \\nabla^2 C_1 + \\text{Da}_c \\left( A - (B+1)C_1 + C_1^2 C_2 \\right) + \\chi \\nabla^2 C_2\n\\]\n\\[\n\\frac{\\partial C_2}{\\partial t} = D_2 \\nabla^2 C_2 + \\text{Da}_c \\left( B C_1 - C_1^2 C_2 \\right)\n\\]\n\n\nThe homogeneous steady state is \\((C_1^*, C_2^*) = (A, B/A)\\).\nLinear stability: Perturbations \\(\\delta C \\propto e^{\\lambda t + i\\mathbf{k}\\cdot\\mathbf{x}}\\) grow when:\n\\[\n\\lambda = \\frac{1}{2}\\left[ \\text{tr}(\\mathbf{J}_k) + \\sqrt{\\text{tr}(\\mathbf{J}_k)^2 - 4\\det(\\mathbf{J}_k)} \\right] &gt; 0\n\\]\nwhere \\(\\mathbf{J}_k\\) is the linearized Jacobian with diffusion:\n\\[\n\\mathbf{J}_k = \\begin{pmatrix}\nB - 1 - D_1 k^2 & A^2 \\\\\n-B & -A^2 - D_2 k^2\n\\end{pmatrix}\n\\]\nTuring instability condition: \\[\nB &gt; 1 + A^2 \\quad \\text{and} \\quad D_2/D_1 &gt; \\frac{(A + \\sqrt{B-1})^2}{B - 1 - A^2}\n\\]\n\n\n\n\n\n\nSymbol\nDescription\nOptimal\nRange\n\n\n\n\n\\(D_1\\)\nActivator diffusion\n0.015\n0.01–0.5\n\n\n\\(D_2\\)\nInhibitor diffusion\n0.15\n0.1–1.0\n\n\n\\(\\text{Da}_c\\)\nDamköhler number\n25\n1–50\n\n\n\\(A\\)\nFeed concentration\n1.5\n0.5–5.0\n\n\n\\(B\\)\nReaction strength\n7.0\n1.0–10.0\n\n\n\\(\\chi\\)\nCross-diffusion\n0\n-0.1–0.1"
+  },
+  {
+    "objectID": "brusselator.html#field-dynamics",
+    "href": "brusselator.html#field-dynamics",
+    "title": "Brusselator Model",
+    "section": "",
+    "text": "The concentration fields \\((C_1, C_2)\\) evolve according to the Brusselator reaction-diffusion system:\n\\[\n\\frac{\\partial C_1}{\\partial t} = D_1 \\nabla^2 C_1 + \\text{Da}_c \\left( A - (B+1)C_1 + C_1^2 C_2 \\right) + \\chi \\nabla^2 C_2\n\\]\n\\[\n\\frac{\\partial C_2}{\\partial t} = D_2 \\nabla^2 C_2 + \\text{Da}_c \\left( B C_1 - C_1^2 C_2 \\right)\n\\]\n\n\nThe homogeneous steady state is \\((C_1^*, C_2^*) = (A, B/A)\\).\nLinear stability: Perturbations \\(\\delta C \\propto e^{\\lambda t + i\\mathbf{k}\\cdot\\mathbf{x}}\\) grow when:\n\\[\n\\lambda = \\frac{1}{2}\\left[ \\text{tr}(\\mathbf{J}_k) + \\sqrt{\\text{tr}(\\mathbf{J}_k)^2 - 4\\det(\\mathbf{J}_k)} \\right] &gt; 0\n\\]\nwhere \\(\\mathbf{J}_k\\) is the linearized Jacobian with diffusion:\n\\[\n\\mathbf{J}_k = \\begin{pmatrix}\nB - 1 - D_1 k^2 & A^2 \\\\\n-B & -A^2 - D_2 k^2\n\\end{pmatrix}\n\\]\nTuring instability condition: \\[\nB &gt; 1 + A^2 \\quad \\text{and} \\quad D_2/D_1 &gt; \\frac{(A + \\sqrt{B-1})^2}{B - 1 - A^2}\n\\]\n\n\n\n\n\n\nSymbol\nDescription\nOptimal\nRange\n\n\n\n\n\\(D_1\\)\nActivator diffusion\n0.015\n0.01–0.5\n\n\n\\(D_2\\)\nInhibitor diffusion\n0.15\n0.1–1.0\n\n\n\\(\\text{Da}_c\\)\nDamköhler number\n25\n1–50\n\n\n\\(A\\)\nFeed concentration\n1.5\n0.5–5.0\n\n\n\\(B\\)\nReaction strength\n7.0\n1.0–10.0\n\n\n\\(\\chi\\)\nCross-diffusion\n0\n-0.1–0.1"
+  },
+  {
+    "objectID": "brusselator.html#particle-dynamics-diffusiophoresis",
+    "href": "brusselator.html#particle-dynamics-diffusiophoresis",
+    "title": "Brusselator Model",
+    "section": "Particle Dynamics: Diffusiophoresis",
+    "text": "Particle Dynamics: Diffusiophoresis\n\\[\n\\mathbf{v}_i = M_1 \\nabla C_1\\big|_{\\mathbf{x}_i} + M_2 \\nabla C_2\\big|_{\\mathbf{x}_i} + \\sqrt{\\frac{2}{\\text{Pe}}} \\boldsymbol{\\eta}(t)\n\\]\nParticle → Field feedback:\n\\[\n\\frac{\\partial C_1}{\\partial t}\\bigg|_{\\text{particle}} = -\\gamma_c \\sum_{j=1}^{N_p} w(\\|\\mathbf{x} - \\mathbf{x}_j\\|)\n\\quad , \\quad\n\\frac{\\partial C_2}{\\partial t}\\bigg|_{\\text{particle}} = +\\gamma_p \\sum_{j=1}^{N_p} w(\\|\\mathbf{x} - \\mathbf{x}_j\\|)\n\\]\n\n\n\nSymbol\nDescription\nOptimal\n\n\n\n\n\\(M_1, M_2\\)\nMobility coefficients\n±4\n\n\n\\(\\gamma_c\\)\nConsumption rate\n180\n\n\n\\(\\gamma_p\\)\nProduction rate\n-180"
+  },
+  {
+    "objectID": "brusselator.html#key-discoveries",
+    "href": "brusselator.html#key-discoveries",
+    "title": "Brusselator Model",
+    "section": "Key Discoveries",
+    "text": "Key Discoveries\n\n\n\n\n\n\nImportantMobility Sweet Spot\n\n\n\nM1=±4, M2=±4 is the optimal mobility magnitude. M1=±16 causes particle escape (0% retention). The ±4 range maintains strong field-particle coupling while preventing particle loss.\n\n\n\n\n\n\n\n\nTipHexagonal Mode Selection\n\n\n\nExtended simulation (6000 frames) reveals ring→hexagonal symmetry breaking. The concentric ring pattern evolves into hexagonal Turing spots.\n\n\n\n\n\n\n\n\n\nFinding\nMechanism\n\n\n\n\nHexagonal is particle-type-independent\n1, 2, or 3 particle types all achieve identical hexagonal mode\n\n\n~6 large spots\nCoarse spatial wavelength compared to FHN\n\n\nTight clustering (0.6+)\nParticles form dense aggregates at field peaks\n\n\nRing→hexagonal transition\nOccurs at 4000-6000 frames with extended simulation"
+  },
+  {
+    "objectID": "brusselator.html#stripelabyrinth-mode-block-4-discovery",
+    "href": "brusselator.html#stripelabyrinth-mode-block-4-discovery",
+    "title": "Brusselator Model",
+    "section": "Stripe/Labyrinth Mode (Block 4 Discovery)",
+    "text": "Stripe/Labyrinth Mode (Block 4 Discovery)\n\n\n\n\n\n\nImportantBreakthrough: Turing Boundary Controls Mode Selection\n\n\n\nAt the Turing instability boundary \\(B/(1+A^2) = 1\\), the system transitions from hexagonal spots to labyrinth/stripe patterns. This is controlled by the Brusselator parameters \\(A\\) and \\(B\\).\n\n\n\nTuring Bifurcation Map\n\n\n\n\n\n\n\n\nRegime\nCondition\nPattern\n\n\n\n\nSub-Turing\n\\(B/(1+A^2) &lt; 1\\)\nNo patterns (disordered)\n\n\nTuring boundary\n\\(B/(1+A^2) \\approx 1\\), low \\(A\\) (\\(\\leq 3\\))\nStripes/Labyrinth\n\n\nDeep Turing\n\\(B/(1+A^2) &gt; 1\\)\nHexagonal spots\n\n\nExtreme Turing\n\\(B \\geq 15\\)\nPixel-scale noise (unusable)\n\n\n\n\n\nKey Constraints\n\nStripe mode requires 1-type uniform particles: Multi-type configurations (even with identical parameters) destroy stripe organization\nLow A is critical: \\(B/(1+A^2) = 1\\) at \\(B=13, A=3.46\\) gives spots, NOT stripes. Low \\(A\\) (\\(\\leq 3\\)) is required alongside the ratio\nPractical limit: \\(B \\leq 13\\) for 100x100 mesh; \\(B=15\\) produces pixel-scale patterns too fine for particle organization\n\n\n\nStripe vs Hexagonal Parameters\n\n\n\nParameter\nHex Mode\nStripe Mode\n\n\n\n\n\\(A\\)\n4.5\n3.0\n\n\n\\(B\\)\n6.5\n10.0\n\n\n\\(B/(1+A^2)\\)\n0.29 (deep)\n1.0 (boundary)\n\n\nn_particle_types\n1-3\n1 only\n\n\n\n\n\nRobustness Hierarchy\nHexagonal (survives multi-type, reversed feedback) &gt; Stripe (1-type uniform only)"
+  },
+  {
+    "objectID": "brusselator.html#nonlinear-diffusion-labyrinthine-and-vermiform-modes-block-11",
+    "href": "brusselator.html#nonlinear-diffusion-labyrinthine-and-vermiform-modes-block-11",
+    "title": "Brusselator Model",
+    "section": "Nonlinear Diffusion: Labyrinthine and Vermiform Modes (Block 11)",
+    "text": "Nonlinear Diffusion: Labyrinthine and Vermiform Modes (Block 11)\n\n\n\n\n\n\nBreakthrough: PDE Modification Unlocks New Morphologies\n\n\n\nAfter exhausting all 8 particle-level code features (80 iterations), the LLM modified the Brusselator PDE itself: concentration-dependent diffusion breaks single-wavelength lock and produces qualitatively new pattern types inaccessible to any parameter tuning.\n\n\n\nNonlinear Diffusion (NLD)\nThe activator diffusion becomes concentration-dependent (Gambino et al. 2013):\n\\[\nD_1(C_1) = D_1^0 \\left[ 1 + \\delta \\frac{(C_1 - A)^2}{A^2} \\right]\n\\]\nwhere \\(\\delta\\) controls the nonlinearity strength. At concentration peaks (\\(C_1 \\gg A\\)), diffusion increases, spreading the activator and breaking the fixed Turing wavelength.\n\n\nNLD Pattern Selection\n\n\n\n\n\n\n\n\n\nB/A Ratio\nNLD \\(\\delta\\)\nPattern\nBest Example\n\n\n\n\n1.36 (\\(A\\)=5.5, \\(B\\)=7.5)\n2.0\nHexagonal (slightly larger spots)\nIter 82 (7/10)\n\n\n1.83 (\\(A\\)=3.0, \\(B\\)=5.5)\n2.0\nLabyrinthine ridges\nIter 83 (7/10)\n\n\n2.50 (\\(A\\)=2.0, \\(B\\)=5.0)\n2.0\nVermiform filamentary chains\nIter 87 (7/10)\n\n\n1.36 (\\(A\\)=5.5, \\(B\\)=7.5)\n3.0\nOver-damped hexagonal\nIter 86 (6/10)\n\n\n\n\n\nKey Constraints\n\nNLD requires moderate coupling: |\\(\\chi\\)| \\(\\leq\\) 8 and consumption \\(\\leq\\) 80. Stronger coupling (\\(\\chi=-16\\)) with NLD \\(\\delta \\geq 1.0\\) causes blowup (Iter 81)\nHigh B/A ratio required: NLD alone at \\(A=5.5/B=7.5\\) does not trigger labyrinthine transition — the B/A ratio must be \\(\\geq 1.8\\)\n\\(\\delta=2.0\\) is optimal: \\(\\delta=3.0\\) over-damps fields (Iter 86). \\(\\delta=1.0\\) is insufficient for labyrinthine at moderate coupling\nVermiform = strongest fields ever: Iter 87 achieved pattern_growth=294, nearly \\(2\\times\\) the previous maximum\n\n\n\nMode Hierarchy (Complete)\nHexagonal (deep Turing, most robust) &gt; Labyrinthine (\\(B/A \\approx 1.8\\) + NLD) &gt; Vermiform (\\(B/A \\approx 2.5\\) + NLD) &gt; Stripe (\\(B/(1+A^2) = 1\\), 1-type only)"
+  },
+  {
+    "objectID": "brusselator.html#exploration-gallery",
+    "href": "brusselator.html#exploration-gallery",
+    "title": "Brusselator Model",
+    "section": "Exploration Gallery",
+    "text": "Exploration Gallery\n\nIter 3Iter 12 ⭐Iter 31 ⭐Iter 36\n\n\nInitial Brusselator test — 2-type opposing, labyrinthine segregation\n\n\n\nHexagonal mode achieved\n\nMulti-type configuration with opposing mobilities achieves hexagonal Turing pattern. Ring→hexagonal symmetry breaking confirmed.\n\n\nStripe/Labyrinth mode (A=3, B=10)\n\nBreakthrough: \\(B/(1+A^2) = 1\\) with low \\(A\\) produces labyrinth/stripe morphology instead of hexagonal spots.\n\n\nMixed mode (A=2.828, B=9)\n\nTransitional regime at \\(B=9\\) produces a mixed mode — neither pure hexagonal nor pure stripe."
+  },
+  {
+    "objectID": "fhn.html",
+    "href": "fhn.html",
+    "title": "FitzHugh-Nagumo Model",
+    "section": "",
+    "text": "The FitzHugh-Nagumo (FHN) model is a simplified two-variable system originally developed to describe neuronal excitability. When coupled to diffusiophoresis, it produces qualitatively different dynamics compared to Brusselator and Gray-Scott systems.\n\n\n\n\n\n\nKey Discoveries\n\n\n\nFHN achieves hexagonal mode (~6-7 spots) regardless of particle types (1, 2, or 3). Particles form network/filamentary structures rather than tight clusters.\nAdditionally, the inhibitor diffusion coefficient \\(D_v\\) acts as a symmetry selector: \\(D_v = 0\\) produces hexagonal spots, while \\(D_v \\geq 0.1\\) produces square/grid symmetry — a novel morphology not accessible to any other tested model."
+  },
+  {
+    "objectID": "fhn.html#overview",
+    "href": "fhn.html#overview",
+    "title": "FitzHugh-Nagumo Model",
+    "section": "",
+    "text": "The FitzHugh-Nagumo (FHN) model is a simplified two-variable system originally developed to describe neuronal excitability. When coupled to diffusiophoresis, it produces qualitatively different dynamics compared to Brusselator and Gray-Scott systems.\n\n\n\n\n\n\nKey Discoveries\n\n\n\nFHN achieves hexagonal mode (~6-7 spots) regardless of particle types (1, 2, or 3). Particles form network/filamentary structures rather than tight clusters.\nAdditionally, the inhibitor diffusion coefficient \\(D_v\\) acts as a symmetry selector: \\(D_v = 0\\) produces hexagonal spots, while \\(D_v \\geq 0.1\\) produces square/grid symmetry — a novel morphology not accessible to any other tested model."
+  },
+  {
+    "objectID": "fhn.html#mathematical-formulation",
+    "href": "fhn.html#mathematical-formulation",
+    "title": "FitzHugh-Nagumo Model",
+    "section": "Mathematical Formulation",
+    "text": "Mathematical Formulation\nThe FHN reaction-diffusion equations:\n\\[\n\\frac{\\partial u}{\\partial t} = D_u \\nabla^2 u + u - \\frac{u^3}{3} - v + I\n\\]\n\\[\n\\frac{\\partial v}{\\partial t} = D_v \\nabla^2 v + \\epsilon(u + a - bv)\n\\]\nWhere:\n\n\\(u\\): Fast activator (excitation variable)\n\\(v\\): Slow inhibitor (recovery variable)\n\\(D_u, D_v\\): Diffusion coefficients\n\\(a, b\\): Nullcline parameters\n\\(\\epsilon\\): Time-scale separation (small = slow inhibitor)\n\\(I\\): External current/stimulus"
+  },
+  {
+    "objectID": "fhn.html#parameter-documentation",
+    "href": "fhn.html#parameter-documentation",
+    "title": "FitzHugh-Nagumo Model",
+    "section": "Parameter Documentation",
+    "text": "Parameter Documentation\nRow 0 (u field): [Du, a, b, epsilon, I, time_scale]\nRow 1 (v field): [Dv, ...]\nRow 2 (coupling): [Pe, consumption, production, influence_radius, boost_exponent, M1]\n\nRegime Classification\n\n\n\nRegime\nCondition\nPattern Type\n\n\n\n\nExcitable\n\\(a &gt; 1 - b/3\\)\nTraveling waves, spirals\n\n\nOscillatory\n\\(a &lt; 1 - b/3\\)\nTarget patterns, bulk oscillation\n\n\nTuring\n\\(D_v \\gg D_u\\)\nStationary stripes/spots\n\n\nBistable\nLarge \\(\\|a\\|\\)\nFront propagation"
+  },
+  {
+    "objectID": "fhn.html#exploration-results",
+    "href": "fhn.html#exploration-results",
+    "title": "FitzHugh-Nagumo Model",
+    "section": "Exploration Results",
+    "text": "Exploration Results\n\nBlock 3 Findings (Iterations 17–19)\n\n\n\nMetric\nFHN\nBrusselator\nGray-Scott\n\n\n\n\nPattern Scale\n~6-7 spots\n~6 spots\nConcentric\n\n\nClustering\n-0.2 to 0.3\n0.6+\n0.4\n\n\nSymmetry Breaking\nHexagonal\nHexagonal\nNone (radial)\n\n\n\n\n\n\n\n\n\nParticle-Type Independence Confirmed\n\n\n\nFHN hexagonal mode is NOT particle-type dependent: 1, 2, and 3 types all achieve ~6-7 hexagonal spots. The finer network in iter 17 may be stochastic variation.\n\n\n\n\nConfiguration\nmesh_model_name: PDE_Diffusiophoresis_FHN\nparams_mesh:\n  - [0.5, 0.7, 0.8, 0.08, 0.0, 20.0]   # u: Du, a, b, epsilon, I, time_scale\n  - [0.0, 0, 0, 0, 0, 0]               # v: Dv (=0, slow inhibitor)\n  - [1.0, 180, -180, 0.05, 0, 0]       # Particle-field coupling\nn_particle_types: 2\nn_frames: 6000\nboundary: periodic"
+  },
+  {
+    "objectID": "fhn.html#dv-symmetry-selector-block-6-discovery",
+    "href": "fhn.html#dv-symmetry-selector-block-6-discovery",
+    "title": "FitzHugh-Nagumo Model",
+    "section": "Dv Symmetry Selector (Block 6 Discovery)",
+    "text": "Dv Symmetry Selector (Block 6 Discovery)\n\n\n\n\n\n\nBreakthrough: Inhibitor Diffusion Controls Symmetry Class\n\n\n\nThe FHN parameter \\(D_v\\) acts as a discrete symmetry selector:\n\n\\(D_v = 0\\): Hexagonal spots (standard Turing)\n\\(D_v = 0.05\\): Disordered transitional\n\\(D_v \\geq 0.1\\): Square/Grid symmetry (novel!)\n\n\n\n\nSquare Mode Properties\n\n\n\nProperty\nHexagonal (\\(D_v=0\\))\nSquare (\\(D_v \\geq 0.1\\))\n\n\n\n\nSymmetry\n6-fold\n4-fold\n\n\nClustering\n0.26-0.39\n~0.3\n\n\nPlateau\n0.00\n0.00 (intrinsically oscillatory)\n\n\nMulti-type\nAll types work\nSame-sign mobility only\n\n\nOpposing mobility\nWorks\nDestroys square → hexagonal\n\n\n\n\n\nSquare Mode Constraints\n\nUniform mobility direction required: All particle types must have the same sign for \\(M_1, M_2\\). Opposing mobilities revert square → hexagonal\nIntrinsically oscillatory: Plateau is always 0.00 regardless of feedback parameters; non-convergence is inherent to FHN square mode\nRobust to particle count: \\(D_v = 0.15\\) also produces square; not a narrow parameter island\n\n\n\nRobustness Hierarchy\nHexagonal (survives multi-type, reversed feedback) &gt; Square (same-sign multi-type, fails opposing mobility) &gt; Stripe (1-type only, Brusselator)"
+  },
+  {
+    "objectID": "fhn.html#comparison-four-pde-models",
+    "href": "fhn.html#comparison-four-pde-models",
+    "title": "FitzHugh-Nagumo Model",
+    "section": "Comparison: Four PDE Models",
+    "text": "Comparison: Four PDE Models\n\n\n\n\n\nflowchart TD\n    A[Reaction-Diffusion Model] --&gt; B[Brusselator]\n    A --&gt; C[Gray-Scott]\n    A --&gt; D[FitzHugh-Nagumo]\n    A --&gt; E[Schnakenberg]\n\n    B --&gt; B1[Hexagonal + Stripes]\n    B --&gt; B2[Tight clusters]\n\n    C --&gt; C1[Radial only]\n    C --&gt; C2[Moderate clustering]\n\n    D --&gt; D1[Hexagonal + Square]\n    D --&gt; D2[Network structure]\n\n    E --&gt; E1[Radial only]\n    E --&gt; E2[Genuine steady state]\n\n    style B fill:#c8e6c9\n    style C fill:#ffcdd2\n    style D fill:#fff9c4\n    style E fill:#e1bee7"
+  },
+  {
+    "objectID": "fhn.html#exploration-gallery",
+    "href": "fhn.html#exploration-gallery",
+    "title": "FitzHugh-Nagumo Model",
+    "section": "Exploration Gallery",
+    "text": "Exploration Gallery\n\nIter 17Iter 18 ⭐Iter 45 ⭐Iter 48\n\n\nFHN 2-type — fine network\n\nFirst FHN test with 2 particle types. Produces ~30+ fine-scale spots with network/filamentary particle organization.\n\n\nFHN 3-type — hexagonal mode\n\nThree particle types achieve hexagonal mode (~6-7 spots) with multi-layer particle organization within spots.\n\n\nFHN Square mode (Dv=0.1)\n\nBreakthrough: \\(D_v = 0.1\\) produces square/grid symmetry — a morphology not accessible to Brusselator or Gray-Scott.\n\n\nFHN Square 3-type\n\nSquare symmetry persists with 3 particle types when all have same-sign mobility."
+  },
+  {
+    "objectID": "fhn.html#key-insights",
+    "href": "fhn.html#key-insights",
+    "title": "FitzHugh-Nagumo Model",
+    "section": "Key Insights",
+    "text": "Key Insights\n\nHexagonal symmetry: Like Brusselator, FHN achieves hexagonal mode (unlike Gray-Scott/Schnakenberg)\nSquare symmetry: \\(D_v \\geq 0.1\\) switches to 4-fold square/grid patterns — unique to FHN\nNetwork organization: Particles form filamentary/networked structures instead of tight clusters\nParticle-type independent: 1, 2, or 3 particle types all achieve hexagonal spots\n\\(D_v\\) is a symmetry selector: Continuous parameter produces discrete symmetry transitions\nSquare mode constraints: Requires uniform mobility direction; opposing mobilities destroy square → hexagonal"
+  },
+  {
+    "objectID": "fhn.html#references",
+    "href": "fhn.html#references",
+    "title": "FitzHugh-Nagumo Model",
+    "section": "References",
+    "text": "References\n\nFitzHugh, R. (1961). Impulses and physiological states in theoretical models of nerve membrane. Biophys. J., 1(6), 445-466.\nNagumo, J., Arimoto, S., & Yoshizawa, S. (1962). An active pulse transmission line simulating nerve axon. Proc. IRE, 50(10), 2061-2070.\nErmakova, E. A., et al. (2009). On propagation of excitation waves in moving media: The FitzHugh-Nagumo model. PLoS ONE, 4(2), e4454."
+  },
+  {
+    "objectID": "field-particle.html",
+    "href": "field-particle.html",
+    "title": "Field–Particle Interactions",
+    "section": "",
+    "text": "Particles move in response to chemical gradients—a phenomenon called diffusiophoresis. This couples the field dynamics to particle transport."
+  },
+  {
+    "objectID": "field-particle.html#overview",
+    "href": "field-particle.html#overview",
+    "title": "Field–Particle Interactions",
+    "section": "",
+    "text": "Particles move in response to chemical gradients—a phenomenon called diffusiophoresis. This couples the field dynamics to particle transport."
+  },
+  {
+    "objectID": "field-particle.html#velocity-law",
+    "href": "field-particle.html#velocity-law",
+    "title": "Field–Particle Interactions",
+    "section": "Velocity Law",
+    "text": "Velocity Law\n\\[\n\\mathbf{v}_i = M_1 \\nabla C_1\\big|_{\\mathbf{x}_i} + M_2 \\nabla C_2\\big|_{\\mathbf{x}_i} + \\sqrt{\\frac{2}{\\text{Pe}}} \\boldsymbol{\\eta}(t)\n\\]\nwhere:\n\n\\(M_1, M_2\\) are mobility coefficients (signed: positive = move up gradient, negative = move down)\n\\(\\text{Pe}\\) is the Péclet number controlling thermal noise strength\n\\(\\boldsymbol{\\eta}(t)\\) is white Gaussian noise (Brownian motion)"
+  },
+  {
+    "objectID": "field-particle.html#gradient-estimation",
+    "href": "field-particle.html#gradient-estimation",
+    "title": "Field–Particle Interactions",
+    "section": "Gradient Estimation",
+    "text": "Gradient Estimation\nLocal field gradients at particle positions are computed via weighted interpolation from nearby mesh nodes:\n\\[\n\\nabla C\\big|_{\\mathbf{x}_i} \\approx \\sum_{j \\in \\mathcal{N}_i} w_{ij} \\frac{C_j - C_i}{|\\mathbf{x}_j - \\mathbf{x}_i|} \\hat{\\mathbf{r}}_{ij}\n\\]\nwith Gaussian kernel \\(w_{ij} = \\exp(-|\\mathbf{x}_j - \\mathbf{x}_i|^2 / 2\\sigma^2)\\)."
+  },
+  {
+    "objectID": "field-particle.html#parameters",
+    "href": "field-particle.html#parameters",
+    "title": "Field–Particle Interactions",
+    "section": "Parameters",
+    "text": "Parameters\n\n\n\nSymbol\nDescription\nTypical Value\n\n\n\n\n\\(M_1\\)\nMobility for field 1\n±4\n\n\n\\(M_2\\)\nMobility for field 2\n∓4\n\n\nPe\nPéclet number\n200\n\n\n\n\n\n\n\n\n\nMobility Sweet Spot\n\n\n\n\\(|M| = 4\\) is optimal. \\(|M| = 16\\) causes particle escape (0% retention). The ±4 range balances field-particle coupling with particle containment."
+  },
+  {
+    "objectID": "field-particle.html#key-finding",
+    "href": "field-particle.html#key-finding",
+    "title": "Field–Particle Interactions",
+    "section": "Key Finding",
+    "text": "Key Finding\n\n\n\n\n\n\nImportant\n\n\n\nLinear mobility is optimal. Any nonlinearity (saturation, boost) disrupts boundary accumulation. The simple \\(\\mathbf{v} \\propto \\nabla C\\) relationship works best."
+  },
+  {
+    "objectID": "field-particle.html#log-sensing-variant-block-8",
+    "href": "field-particle.html#log-sensing-variant-block-8",
+    "title": "Field–Particle Interactions",
+    "section": "Log-Sensing Variant (Block 8)",
+    "text": "Log-Sensing Variant (Block 8)\nA new particle model variant uses logarithmic gradient sensing (Weber-Fechner law):\n\\[\n\\mathbf{v}_i = M_1 \\frac{\\nabla C_1}{C_1 + C_0}\\bigg|_{\\mathbf{x}_i} + M_2 \\frac{\\nabla C_2}{C_2 + C_0}\\bigg|_{\\mathbf{x}_i}\n\\]\nThis creates concentration-dependent effective mobility (\\(M_{\\text{eff}} \\propto M / C\\)), producing self-limiting aggregation at high concentrations. Early results show LogSensing suppresses hexagonal symmetry breaking at standard mobility (\\(M=\\pm 4\\)), requiring higher \\(M\\) (\\(\\pm 8\\)) to restore pattern formation."
   },
   {
     "objectID": "index.html",
@@ -133,249 +448,18 @@
     "text": "References\n\nPrigogine, I., & Lefever, R. (1968). Symmetry breaking instabilities in dissipative systems. J. Chem. Phys., 48(4), 1695-1700.\nPearson, J. E. (1993). Complex patterns in a simple system. Science, 261(5118), 189-192.\nAnderson, J. L. (1989). Colloid transport by interfacial forces. Annu. Rev. Fluid Mech., 21(1), 61-99.\nTuring, A. M. (1952). The chemical basis of morphogenesis. Phil. Trans. R. Soc. Lond. B, 237(641), 37-72."
   },
   {
-    "objectID": "field-particle.html",
-    "href": "field-particle.html",
-    "title": "Field–Particle Interactions",
-    "section": "",
-    "text": "Particles move in response to chemical gradients—a phenomenon called diffusiophoresis. This couples the field dynamics to particle transport."
-  },
-  {
-    "objectID": "field-particle.html#overview",
-    "href": "field-particle.html#overview",
-    "title": "Field–Particle Interactions",
-    "section": "",
-    "text": "Particles move in response to chemical gradients—a phenomenon called diffusiophoresis. This couples the field dynamics to particle transport."
-  },
-  {
-    "objectID": "field-particle.html#velocity-law",
-    "href": "field-particle.html#velocity-law",
-    "title": "Field–Particle Interactions",
-    "section": "Velocity Law",
-    "text": "Velocity Law\n\\[\n\\mathbf{v}_i = M_1 \\nabla C_1\\big|_{\\mathbf{x}_i} + M_2 \\nabla C_2\\big|_{\\mathbf{x}_i} + \\sqrt{\\frac{2}{\\text{Pe}}} \\boldsymbol{\\eta}(t)\n\\]\nwhere:\n\n\\(M_1, M_2\\) are mobility coefficients (signed: positive = move up gradient, negative = move down)\n\\(\\text{Pe}\\) is the Péclet number controlling thermal noise strength\n\\(\\boldsymbol{\\eta}(t)\\) is white Gaussian noise (Brownian motion)"
-  },
-  {
-    "objectID": "field-particle.html#gradient-estimation",
-    "href": "field-particle.html#gradient-estimation",
-    "title": "Field–Particle Interactions",
-    "section": "Gradient Estimation",
-    "text": "Gradient Estimation\nLocal field gradients at particle positions are computed via weighted interpolation from nearby mesh nodes:\n\\[\n\\nabla C\\big|_{\\mathbf{x}_i} \\approx \\sum_{j \\in \\mathcal{N}_i} w_{ij} \\frac{C_j - C_i}{|\\mathbf{x}_j - \\mathbf{x}_i|} \\hat{\\mathbf{r}}_{ij}\n\\]\nwith Gaussian kernel \\(w_{ij} = \\exp(-|\\mathbf{x}_j - \\mathbf{x}_i|^2 / 2\\sigma^2)\\)."
-  },
-  {
-    "objectID": "field-particle.html#parameters",
-    "href": "field-particle.html#parameters",
-    "title": "Field–Particle Interactions",
-    "section": "Parameters",
-    "text": "Parameters\n\n\n\nSymbol\nDescription\nTypical Value\n\n\n\n\n\\(M_1\\)\nMobility for field 1\n±4\n\n\n\\(M_2\\)\nMobility for field 2\n∓4\n\n\nPe\nPéclet number\n200\n\n\n\n\n\n\n\n\n\nWarningMobility Sweet Spot\n\n\n\n\\(|M| = 4\\) is optimal. \\(|M| = 16\\) causes particle escape (0% retention). The ±4 range balances field-particle coupling with particle containment."
-  },
-  {
-    "objectID": "field-particle.html#key-finding",
-    "href": "field-particle.html#key-finding",
-    "title": "Field–Particle Interactions",
-    "section": "Key Finding",
-    "text": "Key Finding\n\n\n\n\n\n\nImportant\n\n\n\nLinear mobility is optimal. Any nonlinearity (saturation, boost) disrupts boundary accumulation. The simple \\(\\mathbf{v} \\propto \\nabla C\\) relationship works best."
-  },
-  {
-    "objectID": "field-particle.html#log-sensing-variant-block-8",
-    "href": "field-particle.html#log-sensing-variant-block-8",
-    "title": "Field–Particle Interactions",
-    "section": "Log-Sensing Variant (Block 8)",
-    "text": "Log-Sensing Variant (Block 8)\nA new particle model variant uses logarithmic gradient sensing (Weber-Fechner law):\n\\[\n\\mathbf{v}_i = M_1 \\frac{\\nabla C_1}{C_1 + C_0}\\bigg|_{\\mathbf{x}_i} + M_2 \\frac{\\nabla C_2}{C_2 + C_0}\\bigg|_{\\mathbf{x}_i}\n\\]\nThis creates concentration-dependent effective mobility (\\(M_{\\text{eff}} \\propto M / C\\)), producing self-limiting aggregation at high concentrations. Early results show LogSensing suppresses hexagonal symmetry breaking at standard mobility (\\(M=\\pm 4\\)), requiring higher \\(M\\) (\\(\\pm 8\\)) to restore pattern formation."
-  },
-  {
-    "objectID": "fhn.html",
-    "href": "fhn.html",
-    "title": "FitzHugh-Nagumo Model",
-    "section": "",
-    "text": "The FitzHugh-Nagumo (FHN) model is a simplified two-variable system originally developed to describe neuronal excitability. When coupled to diffusiophoresis, it produces qualitatively different dynamics compared to Brusselator and Gray-Scott systems.\n\n\n\n\n\n\nTipKey Discoveries\n\n\n\nFHN achieves hexagonal mode (~6-7 spots) regardless of particle types (1, 2, or 3). Particles form network/filamentary structures rather than tight clusters.\nAdditionally, the inhibitor diffusion coefficient \\(D_v\\) acts as a symmetry selector: \\(D_v = 0\\) produces hexagonal spots, while \\(D_v \\geq 0.1\\) produces square/grid symmetry — a novel morphology not accessible to any other tested model."
-  },
-  {
-    "objectID": "fhn.html#overview",
-    "href": "fhn.html#overview",
-    "title": "FitzHugh-Nagumo Model",
-    "section": "",
-    "text": "The FitzHugh-Nagumo (FHN) model is a simplified two-variable system originally developed to describe neuronal excitability. When coupled to diffusiophoresis, it produces qualitatively different dynamics compared to Brusselator and Gray-Scott systems.\n\n\n\n\n\n\nTipKey Discoveries\n\n\n\nFHN achieves hexagonal mode (~6-7 spots) regardless of particle types (1, 2, or 3). Particles form network/filamentary structures rather than tight clusters.\nAdditionally, the inhibitor diffusion coefficient \\(D_v\\) acts as a symmetry selector: \\(D_v = 0\\) produces hexagonal spots, while \\(D_v \\geq 0.1\\) produces square/grid symmetry — a novel morphology not accessible to any other tested model."
-  },
-  {
-    "objectID": "fhn.html#mathematical-formulation",
-    "href": "fhn.html#mathematical-formulation",
-    "title": "FitzHugh-Nagumo Model",
-    "section": "Mathematical Formulation",
-    "text": "Mathematical Formulation\nThe FHN reaction-diffusion equations:\n\\[\n\\frac{\\partial u}{\\partial t} = D_u \\nabla^2 u + u - \\frac{u^3}{3} - v + I\n\\]\n\\[\n\\frac{\\partial v}{\\partial t} = D_v \\nabla^2 v + \\epsilon(u + a - bv)\n\\]\nWhere:\n\n\\(u\\): Fast activator (excitation variable)\n\\(v\\): Slow inhibitor (recovery variable)\n\\(D_u, D_v\\): Diffusion coefficients\n\\(a, b\\): Nullcline parameters\n\\(\\epsilon\\): Time-scale separation (small = slow inhibitor)\n\\(I\\): External current/stimulus"
-  },
-  {
-    "objectID": "fhn.html#parameter-documentation",
-    "href": "fhn.html#parameter-documentation",
-    "title": "FitzHugh-Nagumo Model",
-    "section": "Parameter Documentation",
-    "text": "Parameter Documentation\nRow 0 (u field): [Du, a, b, epsilon, I, time_scale]\nRow 1 (v field): [Dv, ...]\nRow 2 (coupling): [Pe, consumption, production, influence_radius, boost_exponent, M1]\n\nRegime Classification\n\n\n\nRegime\nCondition\nPattern Type\n\n\n\n\nExcitable\n\\(a &gt; 1 - b/3\\)\nTraveling waves, spirals\n\n\nOscillatory\n\\(a &lt; 1 - b/3\\)\nTarget patterns, bulk oscillation\n\n\nTuring\n\\(D_v \\gg D_u\\)\nStationary stripes/spots\n\n\nBistable\nLarge \\(\\|a\\|\\)\nFront propagation"
-  },
-  {
-    "objectID": "fhn.html#exploration-results",
-    "href": "fhn.html#exploration-results",
-    "title": "FitzHugh-Nagumo Model",
-    "section": "Exploration Results",
-    "text": "Exploration Results\n\nBlock 3 Findings (Iterations 17–19)\n\n\n\nMetric\nFHN\nBrusselator\nGray-Scott\n\n\n\n\nPattern Scale\n~6-7 spots\n~6 spots\nConcentric\n\n\nClustering\n-0.2 to 0.3\n0.6+\n0.4\n\n\nSymmetry Breaking\nHexagonal\nHexagonal\nNone (radial)\n\n\n\n\n\n\n\n\n\nImportantParticle-Type Independence Confirmed\n\n\n\nFHN hexagonal mode is NOT particle-type dependent: 1, 2, and 3 types all achieve ~6-7 hexagonal spots. The finer network in iter 17 may be stochastic variation.\n\n\n\n\nConfiguration\nmesh_model_name: PDE_Diffusiophoresis_FHN\nparams_mesh:\n  - [0.5, 0.7, 0.8, 0.08, 0.0, 20.0]   # u: Du, a, b, epsilon, I, time_scale\n  - [0.0, 0, 0, 0, 0, 0]               # v: Dv (=0, slow inhibitor)\n  - [1.0, 180, -180, 0.05, 0, 0]       # Particle-field coupling\nn_particle_types: 2\nn_frames: 6000\nboundary: periodic"
-  },
-  {
-    "objectID": "fhn.html#dv-symmetry-selector-block-6-discovery",
-    "href": "fhn.html#dv-symmetry-selector-block-6-discovery",
-    "title": "FitzHugh-Nagumo Model",
-    "section": "Dv Symmetry Selector (Block 6 Discovery)",
-    "text": "Dv Symmetry Selector (Block 6 Discovery)\n\n\n\n\n\n\nImportantBreakthrough: Inhibitor Diffusion Controls Symmetry Class\n\n\n\nThe FHN parameter \\(D_v\\) acts as a discrete symmetry selector:\n\n\\(D_v = 0\\): Hexagonal spots (standard Turing)\n\\(D_v = 0.05\\): Disordered transitional\n\\(D_v \\geq 0.1\\): Square/Grid symmetry (novel!)\n\n\n\n\nSquare Mode Properties\n\n\n\nProperty\nHexagonal (\\(D_v=0\\))\nSquare (\\(D_v \\geq 0.1\\))\n\n\n\n\nSymmetry\n6-fold\n4-fold\n\n\nClustering\n0.26-0.39\n~0.3\n\n\nPlateau\n0.00\n0.00 (intrinsically oscillatory)\n\n\nMulti-type\nAll types work\nSame-sign mobility only\n\n\nOpposing mobility\nWorks\nDestroys square → hexagonal\n\n\n\n\n\nSquare Mode Constraints\n\nUniform mobility direction required: All particle types must have the same sign for \\(M_1, M_2\\). Opposing mobilities revert square → hexagonal\nIntrinsically oscillatory: Plateau is always 0.00 regardless of feedback parameters; non-convergence is inherent to FHN square mode\nRobust to particle count: \\(D_v = 0.15\\) also produces square; not a narrow parameter island\n\n\n\nRobustness Hierarchy\nHexagonal (survives multi-type, reversed feedback) &gt; Square (same-sign multi-type, fails opposing mobility) &gt; Stripe (1-type only, Brusselator)"
-  },
-  {
-    "objectID": "fhn.html#comparison-four-pde-models",
-    "href": "fhn.html#comparison-four-pde-models",
-    "title": "FitzHugh-Nagumo Model",
-    "section": "Comparison: Four PDE Models",
-    "text": "Comparison: Four PDE Models\n\n\n\n\n\nflowchart TD\n    A[Reaction-Diffusion Model] --&gt; B[Brusselator]\n    A --&gt; C[Gray-Scott]\n    A --&gt; D[FitzHugh-Nagumo]\n    A --&gt; E[Schnakenberg]\n\n    B --&gt; B1[Hexagonal + Stripes]\n    B --&gt; B2[Tight clusters]\n\n    C --&gt; C1[Radial only]\n    C --&gt; C2[Moderate clustering]\n\n    D --&gt; D1[Hexagonal + Square]\n    D --&gt; D2[Network structure]\n\n    E --&gt; E1[Radial only]\n    E --&gt; E2[Genuine steady state]\n\n    style B fill:#c8e6c9\n    style C fill:#ffcdd2\n    style D fill:#fff9c4\n    style E fill:#e1bee7"
-  },
-  {
-    "objectID": "fhn.html#exploration-gallery",
-    "href": "fhn.html#exploration-gallery",
-    "title": "FitzHugh-Nagumo Model",
-    "section": "Exploration Gallery",
-    "text": "Exploration Gallery\n\nIter 17Iter 18 ⭐Iter 45 ⭐Iter 48\n\n\nFHN 2-type — fine network\n\nFirst FHN test with 2 particle types. Produces ~30+ fine-scale spots with network/filamentary particle organization.\n\n\nFHN 3-type — hexagonal mode\n\nThree particle types achieve hexagonal mode (~6-7 spots) with multi-layer particle organization within spots.\n\n\nFHN Square mode (Dv=0.1)\n\nBreakthrough: \\(D_v = 0.1\\) produces square/grid symmetry — a morphology not accessible to Brusselator or Gray-Scott.\n\n\nFHN Square 3-type\n\nSquare symmetry persists with 3 particle types when all have same-sign mobility."
-  },
-  {
-    "objectID": "fhn.html#key-insights",
-    "href": "fhn.html#key-insights",
-    "title": "FitzHugh-Nagumo Model",
-    "section": "Key Insights",
-    "text": "Key Insights\n\nHexagonal symmetry: Like Brusselator, FHN achieves hexagonal mode (unlike Gray-Scott/Schnakenberg)\nSquare symmetry: \\(D_v \\geq 0.1\\) switches to 4-fold square/grid patterns — unique to FHN\nNetwork organization: Particles form filamentary/networked structures instead of tight clusters\nParticle-type independent: 1, 2, or 3 particle types all achieve hexagonal spots\n\\(D_v\\) is a symmetry selector: Continuous parameter produces discrete symmetry transitions\nSquare mode constraints: Requires uniform mobility direction; opposing mobilities destroy square → hexagonal"
-  },
-  {
-    "objectID": "fhn.html#references",
-    "href": "fhn.html#references",
-    "title": "FitzHugh-Nagumo Model",
-    "section": "References",
-    "text": "References\n\nFitzHugh, R. (1961). Impulses and physiological states in theoretical models of nerve membrane. Biophys. J., 1(6), 445-466.\nNagumo, J., Arimoto, S., & Yoshizawa, S. (1962). An active pulse transmission line simulating nerve axon. Proc. IRE, 50(10), 2061-2070.\nErmakova, E. A., et al. (2009). On propagation of excitation waves in moving media: The FitzHugh-Nagumo model. PLoS ONE, 4(2), e4454."
-  },
-  {
-    "objectID": "brusselator.html",
-    "href": "brusselator.html",
-    "title": "Brusselator Model",
-    "section": "",
-    "text": "The concentration fields \\((C_1, C_2)\\) evolve according to the Brusselator reaction-diffusion system:\n\\[\n\\frac{\\partial C_1}{\\partial t} = D_1 \\nabla^2 C_1 + \\text{Da}_c \\left( A - (B+1)C_1 + C_1^2 C_2 \\right) + \\chi \\nabla^2 C_2\n\\]\n\\[\n\\frac{\\partial C_2}{\\partial t} = D_2 \\nabla^2 C_2 + \\text{Da}_c \\left( B C_1 - C_1^2 C_2 \\right)\n\\]\n\n\nThe homogeneous steady state is \\((C_1^*, C_2^*) = (A, B/A)\\).\nLinear stability: Perturbations \\(\\delta C \\propto e^{\\lambda t + i\\mathbf{k}\\cdot\\mathbf{x}}\\) grow when:\n\\[\n\\lambda = \\frac{1}{2}\\left[ \\text{tr}(\\mathbf{J}_k) + \\sqrt{\\text{tr}(\\mathbf{J}_k)^2 - 4\\det(\\mathbf{J}_k)} \\right] &gt; 0\n\\]\nwhere \\(\\mathbf{J}_k\\) is the linearized Jacobian with diffusion:\n\\[\n\\mathbf{J}_k = \\begin{pmatrix}\nB - 1 - D_1 k^2 & A^2 \\\\\n-B & -A^2 - D_2 k^2\n\\end{pmatrix}\n\\]\nTuring instability condition: \\[\nB &gt; 1 + A^2 \\quad \\text{and} \\quad D_2/D_1 &gt; \\frac{(A + \\sqrt{B-1})^2}{B - 1 - A^2}\n\\]\n\n\n\n\n\n\nSymbol\nDescription\nOptimal\nRange\n\n\n\n\n\\(D_1\\)\nActivator diffusion\n0.015\n0.01–0.5\n\n\n\\(D_2\\)\nInhibitor diffusion\n0.15\n0.1–1.0\n\n\n\\(\\text{Da}_c\\)\nDamköhler number\n25\n1–50\n\n\n\\(A\\)\nFeed concentration\n1.5\n0.5–5.0\n\n\n\\(B\\)\nReaction strength\n7.0\n1.0–10.0\n\n\n\\(\\chi\\)\nCross-diffusion\n0\n-0.1–0.1"
-  },
-  {
-    "objectID": "brusselator.html#field-dynamics",
-    "href": "brusselator.html#field-dynamics",
-    "title": "Brusselator Model",
-    "section": "",
-    "text": "The concentration fields \\((C_1, C_2)\\) evolve according to the Brusselator reaction-diffusion system:\n\\[\n\\frac{\\partial C_1}{\\partial t} = D_1 \\nabla^2 C_1 + \\text{Da}_c \\left( A - (B+1)C_1 + C_1^2 C_2 \\right) + \\chi \\nabla^2 C_2\n\\]\n\\[\n\\frac{\\partial C_2}{\\partial t} = D_2 \\nabla^2 C_2 + \\text{Da}_c \\left( B C_1 - C_1^2 C_2 \\right)\n\\]\n\n\nThe homogeneous steady state is \\((C_1^*, C_2^*) = (A, B/A)\\).\nLinear stability: Perturbations \\(\\delta C \\propto e^{\\lambda t + i\\mathbf{k}\\cdot\\mathbf{x}}\\) grow when:\n\\[\n\\lambda = \\frac{1}{2}\\left[ \\text{tr}(\\mathbf{J}_k) + \\sqrt{\\text{tr}(\\mathbf{J}_k)^2 - 4\\det(\\mathbf{J}_k)} \\right] &gt; 0\n\\]\nwhere \\(\\mathbf{J}_k\\) is the linearized Jacobian with diffusion:\n\\[\n\\mathbf{J}_k = \\begin{pmatrix}\nB - 1 - D_1 k^2 & A^2 \\\\\n-B & -A^2 - D_2 k^2\n\\end{pmatrix}\n\\]\nTuring instability condition: \\[\nB &gt; 1 + A^2 \\quad \\text{and} \\quad D_2/D_1 &gt; \\frac{(A + \\sqrt{B-1})^2}{B - 1 - A^2}\n\\]\n\n\n\n\n\n\nSymbol\nDescription\nOptimal\nRange\n\n\n\n\n\\(D_1\\)\nActivator diffusion\n0.015\n0.01–0.5\n\n\n\\(D_2\\)\nInhibitor diffusion\n0.15\n0.1–1.0\n\n\n\\(\\text{Da}_c\\)\nDamköhler number\n25\n1–50\n\n\n\\(A\\)\nFeed concentration\n1.5\n0.5–5.0\n\n\n\\(B\\)\nReaction strength\n7.0\n1.0–10.0\n\n\n\\(\\chi\\)\nCross-diffusion\n0\n-0.1–0.1"
-  },
-  {
-    "objectID": "brusselator.html#particle-dynamics-diffusiophoresis",
-    "href": "brusselator.html#particle-dynamics-diffusiophoresis",
-    "title": "Brusselator Model",
-    "section": "Particle Dynamics: Diffusiophoresis",
-    "text": "Particle Dynamics: Diffusiophoresis\n\\[\n\\mathbf{v}_i = M_1 \\nabla C_1\\big|_{\\mathbf{x}_i} + M_2 \\nabla C_2\\big|_{\\mathbf{x}_i} + \\sqrt{\\frac{2}{\\text{Pe}}} \\boldsymbol{\\eta}(t)\n\\]\nParticle → Field feedback:\n\\[\n\\frac{\\partial C_1}{\\partial t}\\bigg|_{\\text{particle}} = -\\gamma_c \\sum_{j=1}^{N_p} w(\\|\\mathbf{x} - \\mathbf{x}_j\\|)\n\\quad , \\quad\n\\frac{\\partial C_2}{\\partial t}\\bigg|_{\\text{particle}} = +\\gamma_p \\sum_{j=1}^{N_p} w(\\|\\mathbf{x} - \\mathbf{x}_j\\|)\n\\]\n\n\n\nSymbol\nDescription\nOptimal\n\n\n\n\n\\(M_1, M_2\\)\nMobility coefficients\n±4\n\n\n\\(\\gamma_c\\)\nConsumption rate\n180\n\n\n\\(\\gamma_p\\)\nProduction rate\n-180"
-  },
-  {
-    "objectID": "brusselator.html#key-discoveries",
-    "href": "brusselator.html#key-discoveries",
-    "title": "Brusselator Model",
-    "section": "Key Discoveries",
-    "text": "Key Discoveries\n\n\n\n\n\n\nImportantMobility Sweet Spot\n\n\n\nM1=±4, M2=±4 is the optimal mobility magnitude. M1=±16 causes particle escape (0% retention). The ±4 range maintains strong field-particle coupling while preventing particle loss.\n\n\n\n\n\n\n\n\nTipHexagonal Mode Selection\n\n\n\nExtended simulation (6000 frames) reveals ring→hexagonal symmetry breaking. The concentric ring pattern evolves into hexagonal Turing spots.\n\n\n\n\n\n\n\n\n\nFinding\nMechanism\n\n\n\n\nHexagonal is particle-type-independent\n1, 2, or 3 particle types all achieve identical hexagonal mode\n\n\n~6 large spots\nCoarse spatial wavelength compared to FHN\n\n\nTight clustering (0.6+)\nParticles form dense aggregates at field peaks\n\n\nRing→hexagonal transition\nOccurs at 4000-6000 frames with extended simulation"
-  },
-  {
-    "objectID": "brusselator.html#stripelabyrinth-mode-block-4-discovery",
-    "href": "brusselator.html#stripelabyrinth-mode-block-4-discovery",
-    "title": "Brusselator Model",
-    "section": "Stripe/Labyrinth Mode (Block 4 Discovery)",
-    "text": "Stripe/Labyrinth Mode (Block 4 Discovery)\n\n\n\n\n\n\nImportantBreakthrough: Turing Boundary Controls Mode Selection\n\n\n\nAt the Turing instability boundary \\(B/(1+A^2) = 1\\), the system transitions from hexagonal spots to labyrinth/stripe patterns. This is controlled by the Brusselator parameters \\(A\\) and \\(B\\).\n\n\n\nTuring Bifurcation Map\n\n\n\n\n\n\n\n\nRegime\nCondition\nPattern\n\n\n\n\nSub-Turing\n\\(B/(1+A^2) &lt; 1\\)\nNo patterns (disordered)\n\n\nTuring boundary\n\\(B/(1+A^2) \\approx 1\\), low \\(A\\) (\\(\\leq 3\\))\nStripes/Labyrinth\n\n\nDeep Turing\n\\(B/(1+A^2) &gt; 1\\)\nHexagonal spots\n\n\nExtreme Turing\n\\(B \\geq 15\\)\nPixel-scale noise (unusable)\n\n\n\n\n\nKey Constraints\n\nStripe mode requires 1-type uniform particles: Multi-type configurations (even with identical parameters) destroy stripe organization\nLow A is critical: \\(B/(1+A^2) = 1\\) at \\(B=13, A=3.46\\) gives spots, NOT stripes. Low \\(A\\) (\\(\\leq 3\\)) is required alongside the ratio\nPractical limit: \\(B \\leq 13\\) for 100x100 mesh; \\(B=15\\) produces pixel-scale patterns too fine for particle organization\n\n\n\nStripe vs Hexagonal Parameters\n\n\n\nParameter\nHex Mode\nStripe Mode\n\n\n\n\n\\(A\\)\n4.5\n3.0\n\n\n\\(B\\)\n6.5\n10.0\n\n\n\\(B/(1+A^2)\\)\n0.29 (deep)\n1.0 (boundary)\n\n\nn_particle_types\n1-3\n1 only\n\n\n\n\n\nRobustness Hierarchy\nHexagonal (survives multi-type, reversed feedback) &gt; Stripe (1-type uniform only)"
-  },
-  {
-    "objectID": "brusselator.html#exploration-gallery",
-    "href": "brusselator.html#exploration-gallery",
-    "title": "Brusselator Model",
-    "section": "Exploration Gallery",
-    "text": "Exploration Gallery\n\nIter 1Iter 12 ⭐Iter 31 ⭐Iter 36\n\n\nInitial Brusselator test\n\n\n\nHexagonal mode achieved\n\nMulti-type configuration with opposing mobilities achieves hexagonal Turing pattern. Ring→hexagonal symmetry breaking confirmed.\n\n\nStripe/Labyrinth mode (A=3, B=10)\n\nBreakthrough: \\(B/(1+A^2) = 1\\) with low \\(A\\) produces labyrinth/stripe morphology instead of hexagonal spots.\n\n\nMixed mode (A=2.828, B=9)\n\nTransitional regime at \\(B=9\\) produces a mixed mode — neither pure hexagonal nor pure stripe."
-  },
-  {
-    "objectID": "field-field.html",
-    "href": "field-field.html",
-    "title": "Field–Field Interactions",
-    "section": "",
-    "text": "The field–field interaction governs the evolution of concentration fields through reaction-diffusion PDEs. Four models have been explored:\n\nBrusselator: Classic two-component system with cubic autocatalysis (hexagonal + stripes)\nGray-Scott: Autocatalytic system with feed/kill dynamics (radial only)\nFitzHugh-Nagumo: Excitable two-variable system from neuroscience (hexagonal + square)\nSchnakenberg: Minimal activator-inhibitor system (radial only, genuine steady state)"
-  },
-  {
-    "objectID": "field-field.html#overview",
-    "href": "field-field.html#overview",
-    "title": "Field–Field Interactions",
-    "section": "",
-    "text": "The field–field interaction governs the evolution of concentration fields through reaction-diffusion PDEs. Four models have been explored:\n\nBrusselator: Classic two-component system with cubic autocatalysis (hexagonal + stripes)\nGray-Scott: Autocatalytic system with feed/kill dynamics (radial only)\nFitzHugh-Nagumo: Excitable two-variable system from neuroscience (hexagonal + square)\nSchnakenberg: Minimal activator-inhibitor system (radial only, genuine steady state)"
-  },
-  {
-    "objectID": "field-field.html#general-form",
-    "href": "field-field.html#general-form",
-    "title": "Field–Field Interactions",
-    "section": "General Form",
-    "text": "General Form\n\\[\n\\frac{\\partial C_i}{\\partial t} = D_i \\nabla^2 C_i + R_i(C_1, C_2, \\ldots)\n\\]\nwhere \\(D_i\\) is the diffusion coefficient and \\(R_i\\) is the reaction term specific to each model."
-  },
-  {
-    "objectID": "field-field.html#turing-instability",
-    "href": "field-field.html#turing-instability",
-    "title": "Field–Field Interactions",
-    "section": "Turing Instability",
-    "text": "Turing Instability\nPattern formation requires differential diffusion rates and appropriate reaction kinetics. The general condition for Turing instability in a two-component system:\n\nHomogeneous stability: The uniform steady state must be stable without diffusion\nDiffusion-driven instability: Diffusion destabilizes certain spatial modes\n\nThis requires an activator (short-range, slower diffusion) and an inhibitor (long-range, faster diffusion)."
-  },
-  {
-    "objectID": "field-field.html#implementation",
-    "href": "field-field.html#implementation",
-    "title": "Field–Field Interactions",
-    "section": "Implementation",
-    "text": "Implementation\nField dynamics are computed on a discrete mesh using finite differences for the Laplacian. The mesh is coupled to particles through interpolation operators.\nMesh (field values) ←→ Particles (positions, velocities)"
-  },
-  {
-    "objectID": "grayscott.html",
-    "href": "grayscott.html",
-    "title": "Gray-Scott Model",
-    "section": "",
-    "text": "The Gray-Scott model uses autocatalytic reaction with feed/kill dynamics:\n\\[\n\\frac{\\partial U}{\\partial t} = D_u \\nabla^2 U - UV^2 + F(1-U)\n\\]\n\\[\n\\frac{\\partial V}{\\partial t} = D_v \\nabla^2 V + UV^2 - (F+k)V\n\\]\nwhere:\n\n\\(U\\) is the “feed” species (replenished at rate \\(F\\))\n\\(V\\) is the “autocatalyst” (self-replicating via \\(UV^2\\))\n\\(F\\) is the feed rate\n\\(k\\) is the kill rate\n\n\n\n\n\n\nRegime\nF\nk\nPattern\n\n\n\n\nα (alpha)\n0.010\n0.047\nSpots\n\n\nβ (beta)\n0.026\n0.052\nReplicating spots\n\n\nγ (gamma)\n0.035\n0.060\nWorms/labyrinths\n\n\nδ (delta)\n0.028\n0.053\nMitosis\n\n\nε (epsilon)\n0.018\n0.055\nChaotic\n\n\nλ (lambda)\n0.040\n0.065\nStripes\n\n\n\n\n\n\n\n\n\nSymbol\nDescription\nCurrent\nRange\n\n\n\n\n\\(D_u\\)\nU diffusion\n0.20\n0.1–0.5\n\n\n\\(D_v\\)\nV diffusion\n0.05\n0.05–0.2\n\n\n\\(F\\)\nFeed rate\n0.035\n0.01–0.06\n\n\n\\(k\\)\nKill rate\n0.063\n0.04–0.07\n\n\ntime_scale\nDynamics speed\n50\n1–100\n\n\n\n\n\n\n\n\n\nNoteBlock 12 Configuration\n\n\n\nDiffusion ratio \\(D_u/D_v = 4\\) maintained. time_scale increased to 50 to match Brusselator dynamics speed. Exploring F-k parameter plane to locate stripe/worm regime."
-  },
-  {
-    "objectID": "grayscott.html#field-dynamics",
-    "href": "grayscott.html#field-dynamics",
-    "title": "Gray-Scott Model",
-    "section": "",
-    "text": "The Gray-Scott model uses autocatalytic reaction with feed/kill dynamics:\n\\[\n\\frac{\\partial U}{\\partial t} = D_u \\nabla^2 U - UV^2 + F(1-U)\n\\]\n\\[\n\\frac{\\partial V}{\\partial t} = D_v \\nabla^2 V + UV^2 - (F+k)V\n\\]\nwhere:\n\n\\(U\\) is the “feed” species (replenished at rate \\(F\\))\n\\(V\\) is the “autocatalyst” (self-replicating via \\(UV^2\\))\n\\(F\\) is the feed rate\n\\(k\\) is the kill rate\n\n\n\n\n\n\nRegime\nF\nk\nPattern\n\n\n\n\nα (alpha)\n0.010\n0.047\nSpots\n\n\nβ (beta)\n0.026\n0.052\nReplicating spots\n\n\nγ (gamma)\n0.035\n0.060\nWorms/labyrinths\n\n\nδ (delta)\n0.028\n0.053\nMitosis\n\n\nε (epsilon)\n0.018\n0.055\nChaotic\n\n\nλ (lambda)\n0.040\n0.065\nStripes\n\n\n\n\n\n\n\n\n\nSymbol\nDescription\nCurrent\nRange\n\n\n\n\n\\(D_u\\)\nU diffusion\n0.20\n0.1–0.5\n\n\n\\(D_v\\)\nV diffusion\n0.05\n0.05–0.2\n\n\n\\(F\\)\nFeed rate\n0.035\n0.01–0.06\n\n\n\\(k\\)\nKill rate\n0.063\n0.04–0.07\n\n\ntime_scale\nDynamics speed\n50\n1–100\n\n\n\n\n\n\n\n\n\nNoteBlock 12 Configuration\n\n\n\nDiffusion ratio \\(D_u/D_v = 4\\) maintained. time_scale increased to 50 to match Brusselator dynamics speed. Exploring F-k parameter plane to locate stripe/worm regime."
-  },
-  {
-    "objectID": "grayscott.html#particle-coupling",
-    "href": "grayscott.html#particle-coupling",
-    "title": "Gray-Scott Model",
-    "section": "Particle Coupling",
-    "text": "Particle Coupling\nSame diffusiophoretic dynamics as Brusselator, but with U and V fields:\n\\[\n\\mathbf{v}_i = M_1 \\nabla U\\big|_{\\mathbf{x}_i} + M_2 \\nabla V\\big|_{\\mathbf{x}_i} + \\sqrt{\\frac{2}{\\text{Pe}}} \\boldsymbol{\\eta}(t)\n\\]\n\n\n\n\n\n\nTipCoupling Stabilized (Block 12)\n\n\n\nEarlier challenges with negative V fields and NaN explosions have been resolved. The system now produces stable Turing patterns with particles organizing at field boundaries."
-  },
-  {
-    "objectID": "grayscott.html#current-status",
-    "href": "grayscott.html#current-status",
-    "title": "Gray-Scott Model",
-    "section": "Current Status",
-    "text": "Current Status\n\n\n\n\n\n\nWarningKey Finding: No Hexagonal Symmetry Breaking\n\n\n\nGray-Scott produces radial/concentric patterns only. Even with extended simulation (6000 frames), no hexagonal symmetry breaking occurs. This is a fundamental difference from Brusselator dynamics.\n\n\n\nKey Observations\n\nGray-Scott produces concentric ring patterns, NOT hexagonal spots\nQualitatively different from Brusselator — purely radial organization\nExtended simulation does not induce symmetry breaking\nParticles form voronoi-like network at field boundaries\nModerate clustering (0.4) vs Brusselator’s tight clusters (0.6+)"
-  },
-  {
-    "objectID": "grayscott.html#exploration-gallery",
-    "href": "grayscott.html#exploration-gallery",
-    "title": "Gray-Scott Model",
-    "section": "Exploration Gallery",
-    "text": "Exploration Gallery\n\nIter 9Iter 14 ⭐\n\n\nGray-Scott 2-type test\n\nFirst Gray-Scott test with 2 particle types. Produces concentric ring patterns with particles at field boundaries.\n\n\nExtended simulation (6000 frames)\n\nExtended simulation confirms Gray-Scott cannot achieve hexagonal mode. Radial organization persists — fundamental difference from Brusselator."
-  },
-  {
     "objectID": "mechanochemical.html",
     "href": "mechanochemical.html",
     "title": "Mechanochemical Morphogenesis",
     "section": "",
-    "text": "Morphogenesis in biological tissues arises from the bidirectional coupling between chemical signaling and mechanical deformation. Chemical patterns (Turing instabilities, morphogen gradients) drive tissue growth and folding, while mechanical stress feeds back to modulate diffusion, reaction rates, and cell behavior. This page describes a unified framework combining:\n\nDiffusiophoresis (ParticleGraph): Particles respond to chemical gradients\nMaterial Point Method (MPM_pytorch): Continuum mechanics with elasticity, plasticity, and stress\n\n\n\n\n\n\n\nNoteGoal\n\n\n\nDevelop a differentiable simulation framework where chemical patterning and mechanical admissibility jointly constrain morphogenetic outcomes — enabling discovery of forms that are both chemically stable and mechanically viable."
+    "text": "Morphogenesis in biological tissues arises from the bidirectional coupling between chemical signaling and mechanical deformation. Chemical patterns (Turing instabilities, morphogen gradients) drive tissue growth and folding, while mechanical stress feeds back to modulate diffusion, reaction rates, and cell behavior. This page describes a unified framework combining:\n\nDiffusiophoresis (ParticleGraph): Particles respond to chemical gradients\nMaterial Point Method (MPM_pytorch): Continuum mechanics with elasticity, plasticity, and stress\n\n\n\n\n\n\n\nGoal\n\n\n\nDevelop a differentiable simulation framework where chemical patterning and mechanical admissibility jointly constrain morphogenetic outcomes — enabling discovery of forms that are both chemically stable and mechanically viable."
   },
   {
     "objectID": "mechanochemical.html#overview",
     "href": "mechanochemical.html#overview",
     "title": "Mechanochemical Morphogenesis",
     "section": "",
-    "text": "Morphogenesis in biological tissues arises from the bidirectional coupling between chemical signaling and mechanical deformation. Chemical patterns (Turing instabilities, morphogen gradients) drive tissue growth and folding, while mechanical stress feeds back to modulate diffusion, reaction rates, and cell behavior. This page describes a unified framework combining:\n\nDiffusiophoresis (ParticleGraph): Particles respond to chemical gradients\nMaterial Point Method (MPM_pytorch): Continuum mechanics with elasticity, plasticity, and stress\n\n\n\n\n\n\n\nNoteGoal\n\n\n\nDevelop a differentiable simulation framework where chemical patterning and mechanical admissibility jointly constrain morphogenetic outcomes — enabling discovery of forms that are both chemically stable and mechanically viable."
+    "text": "Morphogenesis in biological tissues arises from the bidirectional coupling between chemical signaling and mechanical deformation. Chemical patterns (Turing instabilities, morphogen gradients) drive tissue growth and folding, while mechanical stress feeds back to modulate diffusion, reaction rates, and cell behavior. This page describes a unified framework combining:\n\nDiffusiophoresis (ParticleGraph): Particles respond to chemical gradients\nMaterial Point Method (MPM_pytorch): Continuum mechanics with elasticity, plasticity, and stress\n\n\n\n\n\n\n\nGoal\n\n\n\nDevelop a differentiable simulation framework where chemical patterning and mechanical admissibility jointly constrain morphogenetic outcomes — enabling discovery of forms that are both chemically stable and mechanically viable."
   },
   {
     "objectID": "mechanochemical.html#motivation-why-both-chemisty-and-mechanics",

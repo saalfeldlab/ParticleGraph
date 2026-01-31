@@ -10,15 +10,35 @@ simulation:
     - 1.0
     - 1.6
     - 1.5
+  - - 8
+    - -8
+    - -80
+    - 80
+    - 1.8
+    - 1.0
+    - 1.1
+    - 1.9
+  - - -4
+    - 4
+    - 40
+    - -40
+    - 2.0
+    - 1.0
+    - 2.0
+    - 1.0
   params_mesh:
   - - 0.05
     - 15.0
-    - 5.5
-    - 7.5
+    - 2.0
+    - 5.0
     - 0.04
     - -8
+    - 0.0
+    - 0.0
   - - 0.8
     - 8
+    - 0.0
+    - 2.0
     - 0.0
     - 0.0
     - 0.0
@@ -28,11 +48,13 @@ simulation:
     - -80
     - 0.05
     - 0.0
+    - 0.3
+    - 0.0
     - 0.0
   min_radius: 0
   max_radius: 0.2
-  n_particles: 14400
-  n_particle_types: 1
+  n_particles: 9600
+  n_particle_types: 3
   n_frames: 2000
   n_nodes: 22500
   n_node_types: 1
@@ -42,7 +64,7 @@ simulation:
   boundary: 'no'
   node_value_map: input_data/pattern_Null.tif
   node_coeff_map: ''
-  shuffle_particle_types: true
+  shuffle_particle_types: false
 graph_model:
   field_type: diffusiophoresis
   particle_model_name: PDE_ParticleField_D

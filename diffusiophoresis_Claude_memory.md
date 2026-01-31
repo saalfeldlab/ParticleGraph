@@ -4,164 +4,152 @@
 
 | Regime | mesh_model | particle_model | n_types | n_particles | Best Score | Key Insight |
 | ------ | ---------- | -------------- | ------- | ----------- | ---------- | ----------- |
-| 1-type weak | Diffusiophoresis_Mesh | PDE_ParticleField_D | 1 | 9600 | 7/10 | A=5.5,B=7.5 + M1=-8 + 150x150 mesh → sharp dispersed spot array (Iter 39, NEW BEST) |
+| 1-type weak | Diffusiophoresis_Mesh | PDE_ParticleField_D | 1 | 9600 | 7/10 | A=5.5,B=7.5 + M1=-8 + 150x150 mesh → sharp dispersed spot array (Iter 39) |
+| 1-type high-density | Diffusiophoresis_Mesh | PDE_ParticleField_D | 1 | 14400 | 7/10 | 14400 particles → denser spots but lower entropy, no quality gain (Iter 62) |
 | 2-type opposing | Diffusiophoresis_Mesh | PDE_ParticleField_D | 2 | 9600 | 7/10 | A=5.5/B=7.5 + opposing + adhesion → hexagonal core-ring array (Iter 23) |
 | 2-type same-sign | Diffusiophoresis_Mesh | PDE_ParticleField_D | 2 | 9600 | 7/10 | same-sign moderate coupling → core-shell micro-clusters (Iter 12) |
-| 2-type W-F bullseye | Diffusiophoresis_Mesh | PDE_ParticleField_D | 2 | 9600 | 6/10 | Weber-Fechner K=0.3 → concentric bullseye (Iter 31) |
-| 3-type opposing | Diffusiophoresis_Mesh | PDE_ParticleField_D | 3 | 9600 | 8/10 | opposing + cross-type adhesion → flower/mandala tissue morphology (Iters 14 & 45, BEST) |
+| 3-type opposing | Diffusiophoresis_Mesh | PDE_ParticleField_D | 3 | 9600 | 8/10 | opposing + cross-type adhesion → flower/mandala tissue morphology (Iters 14 & 45, BEST but TIME-LIMITED) |
 | 3-type same-sign | Diffusiophoresis_Mesh | PDE_ParticleField_D | 3 | 9600 | 6/10 | same-sign → nested co-localization, less complex (Iters 16, 24) |
-| GS any-type | Diffusiophoresis_Mesh_GrayScott | PDE_ParticleField_D | 2-3 | 9600 | 6/10 | GS + particles → radial-locked concentric rings at ANY coupling strength (Iters 33-34-38-40) |
-| FHN 1-type | PDE_Diffusiophoresis_FHN | PDE_ParticleField_D | 1 | 9600 | 6/10 | FHN 1-type → radial at 150x150 (Iter 50); network at 100x100 was low-res artifact (Iter 44) |
-| FHN 3-type | PDE_Diffusiophoresis_FHN | PDE_ParticleField_D | 3 | 9600 | 7/10 | FHN + 3-type opposing → concentric type-segregated rings (Iter 46, NEW) |
-| GM 2-type | PDE_Diffusiophoresis_GM | PDE_ParticleField_D | 2 | 9600 | 5/10 | Stabilized (100% retention) with rho=0.05, mu=0.05, kappa=0.2; radial morphology (Iter 47) |
-| Schnakenberg 2-type | PDE_Diffusiophoresis_Schnakenberg | PDE_ParticleField_D | 2 | 9600 | 5/10 | Schnakenberg gamma=60 + weak coupling → radial concentric (Iter 51); gamma=200 blew up (Iter 42) |
+| GS any-type | Diffusiophoresis_Mesh_GrayScott | PDE_ParticleField_D | 2-3 | 9600 | 6/10 | GS + particles → radial-locked at ANY coupling (Iters 33-40) |
+| FHN 3-type | PDE_Diffusiophoresis_FHN | PDE_ParticleField_D | 3 | 9600 | 7/10 | FHN + 3-type opposing → concentric type-segregated rings (Iter 46) |
+| GM 2-type | PDE_Diffusiophoresis_GM | PDE_ParticleField_D | 2 | 9600 | 5/10 | Stabilized; radial morphology (Iter 47) |
+| Schnakenberg 2-type | PDE_Diffusiophoresis_Schnakenberg | PDE_ParticleField_D | 2 | 9600 | 5/10 | gamma=60 → radial concentric (Iter 51) |
+| 1-type NLD labyrinth | Diffusiophoresis_Mesh (+NLD) | PDE_ParticleField_D | 1 | 9600 | 7/10 | A=3.0/B=5.5 + NLD delta=2.0 → LABYRINTHINE Turing (Iter 83, NOVEL) |
+| 3-type NLD labyrinth | Diffusiophoresis_Mesh (+NLD) | PDE_ParticleField_D | 3 | 9600 | 7/10 | A=3.0/B=5.5 + NLD + 3-type → branching tissue on labyrinthine scaffold (Iter 85) |
+| 1-type NLD vermiform | Diffusiophoresis_Mesh (+NLD) | PDE_ParticleField_D | 1 | 9600 | 7/10 | A=2.0/B=5.0 + NLD → VERMIFORM filamentary chains, strongest fields ever (Iter 87, NOVEL) |
 
 ## Knowledge Base
 
 ### Established Principles
 
-1. **Moderate coupling is a UNIVERSAL HARD stability limit**: |M1| <= 10 and consumption <= 100 for FHN; |M1| <= 12 and consumption <= 120 for Brusselator. FHN is MORE sensitive — |M1|=12 causes borderline blow-up (96% retention, C1_std=16). (UPGRADED: Iters 4,7,32 Brusselator; Iter 48 FHN confirmed model-specific tightening)
-2. **D1 >= 0.05 required**: D1 < 0.05 causes numerical crash at 100x100 mesh with delta_t=5E-4. (Evidence: Iters 1, 2 crashed)
-3. **Mobility sign determines pattern type, not stability**: Opposing-sign → spatial segregation. Same-sign → co-localized core-shell. Confirmed at 2-type AND 3-type, AND across Brusselator, GS, and FHN. (UPGRADED: Evidence now includes FHN Iter 46)
-4. **Plateau=0 is universal**: All PDE models (Brusselator, GS, FHN, GM) under continuous injection drive non-equilibrium dynamics. (UPGRADED: 48 iterations, 5 PDE models)
-5. **1-type sweet spot is |M1|=8, consumption=80, A=5.5/B=7.5**: Higher mesh resolution (150x150) enhances this further → 7/10 (Iter 39). (Evidence: Iters 11,15,19,39)
-6. **Cross-type adhesion enhances OPPOSING-SIGN morphology specifically**: p[2,5]=0.3 sharpens inter-type boundaries in segregated configs. Negligible on same-sign (Iter 24: 6→6). Optimal ~0.3. (Evidence: Iters 10,14,17,23,24,45,46)
+1. **Moderate coupling is a UNIVERSAL HARD stability limit**: |M1| <= 10 and consumption <= 100 for FHN; |M1| <= 12 and consumption <= 120 for Brusselator hexagonal; **|M1| <= 8 and consumption <= 80 for Brusselator labyrinthine** (tighter limit). (Evidence: Iters 4,7,32,48,81,88)
+2. **D1 >= 0.05 required**: D1 < 0.05 causes numerical crash. (Evidence: Iters 1, 2)
+3. **Mobility sign determines pattern type, not stability**: Opposing-sign → segregation. Same-sign → co-localized. Across Brusselator, GS, FHN. (Evidence: Iters 3,8,10,14,23,46)
+4. **Plateau=0 is universal**: All models under continuous injection drive non-equilibrium dynamics. (88 iterations, 5 PDE models).
+5. **1-type sweet spot is |M1|=8, consumption=80, A=5.5/B=7.5 at 150x150**: Robust across sigma [0.005, 0.008] and particle counts [9600, 14400]. (Iters 11,15,19,39,62,76)
+6. **Cross-type adhesion enhances OPPOSING-SIGN morphology specifically**: p[2,5]=0.3 sharpens boundaries. Negligible on same-sign. (Evidence: Iters 10,14,17,23,24,45,46,85)
 7. **Opposing-sign 3-type beats same-sign 3-type**: Opposing → 7-8/10; same-sign → 6/10. (Evidence: Iters 8/9/14/21/22/45/46 vs 16/24)
-8. **Iter 14 is a robust local optimum with CONSUMER-DOMINANT asymmetry**: 14+ perturbations scored ≤7/10. Iter 45 (150x150) ties at 8/10 but doesn't surpass. Consumer must be strongest mover (|M_consumer|>|M_producer|). (Evidence: Iters 17,18,20,21,22,25,28,29,30,37,45)
-9. **A=5.5/B=7.5 produces more/smaller Turing spots**: Key lever for 1-type and 2-type, not for 3-type. (Evidence: Iters 19, 23, 39 vs 15, 10)
-10. **Chirality suppresses pattern elaboration at all tested values (0.3-0.5)**: Spiral drift overwhelms gradient-following. (Evidence: Iters 25, 27)
-11. **Iter 23's hexagonal regime is 2-type specific**: 3-type in same params → hybrid but not >Iter 14/23. (Evidence: Iters 26, 29)
-12. **Weber-Fechner affects symmetry selection, not just strength**: K=0.3 → bullseye, K=2.0 → kills patterns. (Evidence: Iters 18, 31)
-13. **Michaelis-Menten is a secondary lever**: Km=0.2-0.5 produces near-Iter-14 quality. (Evidence: Iters 22, 30)
-14. **Gray-Scott is fundamentally radial-locked with particles**: Any coupling strength and GS regime produces concentric rings. (UPGRADED: 4 iterations — Iters 33,34,38,40)
-15. **Durotaxis p[1,3]=0.5 is neutral for 1-type**: Doesn't change dispersed spot array morphology. (Evidence: Iter 35)
-16. **150x150 mesh (22500 nodes) is the OPTIMAL resolution for 9600 particles**: Finer mesh resolves more Turing modes but 200x200 (40000 nodes) DEGRADES all configs because particle density per Turing spot is too low. 1-type: 150x150=7/10 (Iter 39), 200x200=6/10 (Iter 49). 3-type: 150x150=8/10 (Iter 45), 200x200=6/10 (Iter 54). 2-type: 200x200=6/10 (Iter 55). (UPGRADED: Evidence: Iters 39,41,45,49,54,55)
-17. **FHN is radial-locked at ALL particle counts and resolutions**: 1-type at 100x100 appeared to produce dispersed network (Iter 44, 6/10) but 1-type at 150x150 produces radial concentric rings (Iter 50, 6/10) — the network was a low-resolution artifact. 3-type → concentric rings (Iter 46, 7/10). FHN is fundamentally radial-locked like GS. (REVISED: Iter 50 contradicted 1-type network claim; Evidence: Iters 44, 46, 50)
-18. **Non-Brusselator PDE models are radial-locked with particles**: ALL tested alternatives (GS, FHN, Schnakenberg, GM) produce radial/concentric morphology when combined with particles at all resolutions and particle counts. Only Brusselator achieves hexagonal symmetry-breaking with multi-spot arrays. This is because Brusselator's Turing instability creates MULTIPLE independent spots, while other models create single expanding wavefronts or weaker patterns. (UPGRADED: 5 non-Brusselator models tested; Evidence: GS Iters 33-40; FHN Iters 44,46,48,50; Schnakenberg Iter 51; GM Iter 47)
+8. **Iter 14 is a TIME-LIMITED local optimum with CONSUMER-DOMINANT asymmetry**: 30+ perturbations scored ≤7/10, and config BLOWS UP at 4000 frames (Iter 84). The chi=-16 regime is marginally unstable. (CONFIRMED DOWNGRADED: Iters 84, 81)
+9. **A=5.5/B=7.5 produces more/smaller Turing spots**: Key for 1-type and 2-type, not 3-type. (Evidence: Iters 19, 23, 39, 56)
+10. **Chirality has NO sweet spot**: 0.3+ suppresses patterns strongly. 0.1 is neutral. (Evidence: Iters 25, 27, 64, 75)
+11. **Iter 23's hexagonal regime is 2-type specific**: 3-type in same params → not superior. (Evidence: Iters 26, 29)
+12. **Weber-Fechner suppresses hexagonal at ANY K>0**: K=0.15 already forces radial/bullseye. NO useful regime. (Iters 18, 31, 80)
+13. **Michaelis-Menten is a secondary lever**: Km=0.2-0.5 near-neutral. (Evidence: Iters 22, 30)
+14. **Gray-Scott is fundamentally radial-locked with particles**. (Evidence: Iters 33,34,38,40)
+15. **150x150 mesh (22500 nodes) is OPTIMAL for 9600 particles**: 200x200 degrades all configs. (Evidence: Iters 39,41,45,49,54,55,72)
+16. **Non-Brusselator PDE models are radial-locked with particles**: ALL alternatives (GS, FHN, Schnakenberg, GM) produce radial morphology. Only Brusselator achieves hexagonal multi-spot arrays. (Evidence: 12+ iterations across 4 non-Brusselator models)
+17. **NLD delta=2.0 + high B/A ratio → labyrinthine Turing patterns**: A=3.0/B=5.5 (B/A=1.83) + NLD delta=2.0 breaks hexagonal symmetry into labyrinthine/vermiform. A=2.0/B=5.0 (B/A=2.5) pushes further into fragmented vermiform. (NEW: Evidence: Iters 83, 85, 87)
+18. **NLD delta=3.0 OVER-DAMPS hexagonal at A=5.5/B=7.5**: Higher NLD weakens field contrast. delta=2.0 is optimal for hexagonal regime. (NEW: Evidence: Iter 86)
+19. **NLD is INCOMPATIBLE with strong coupling (chi=-16)**: NLD delta=1.0+ at chi=-16/consumption=100 → blowup. NLD requires moderate coupling (chi=-8). (NEW: Evidence: Iters 81, 84)
+20. **ALL 8 PDE_D particle features exhausted**: W-F, M-M, chirality, durotaxis, pp_field_mod, DDM, alignment, sigma — only adhesion worked. (Evidence: 80 iterations, Blocks 1-10)
 
 ### Open Questions
 
-- Would very low chirality (p[1,4]=0.1) on 3-type add subtle spiral features? (0.3+ too strong)
-- Would very low Weber-Fechner (K=0.1-0.15) give a transitional regime between hexagonal and bullseye?
-- Would durotaxis on MULTI-TYPE (2 or 3-type) create boundary-sensing effects? (1-type was neutral)
-- Can GM at higher resolution (150x150) produce multi-spot breakup instead of single radial pattern?
 - Would ASYMMETRIC diffusion (D1 anisotropic) create stripe selection in Brusselator?
-- Would increasing n_particles to 14400+ at 150x150 increase particle density per spot and break 8/10?
-- Would a new PDE_D variant with alignment/flocking (Vicsek/Boids) break radial lock for non-Brusselator models?
-- Would concentration-dependent particle-particle interaction (attraction scales with local C1) create emergent sorting?
-- ~~Can Schnakenberg work at gamma=50-80?~~ YES, gamma=60 stable but radial (Iter 51)
-- ~~Would FHN 150x150 break radial lock?~~ NO, radial at all resolutions (Iter 50)
-- ~~Would Brusselator 200x200 improve patterns?~~ NO, dead end for ALL types at 9600 particles (Iters 49,54,55)
-- ~~Can n_frames=4000 break the 8/10 ceiling?~~ NO, ties at 8/10 with stronger fields but same morphology tier (Iter 53)
+- Would durotaxis on MULTI-TYPE (2 or 3-type) create boundary-sensing effects? (1-type was neutral)
+- Would NLD at LOWER delta (0.5-1.0) at A=3.0/B=5.5 still produce labyrinthine, or is delta=2.0 required?
+- Is the labyrinthine regime (A=3.0/B=5.5 + NLD) more TIME-STABLE than the hexagonal regime (A=4.5/B=6.5)?
+- Can 2-type opposing particles on the labyrinthine regime (A=3.0/B=5.5 + NLD) create core-shell vermiform filaments?
+- Can 3-type on vermiform regime (A=2.0/B=5.0 + NLD) create novel tissue morphology?
+- Would A=2.5/B=5.5 (B/A=2.2, intermediate) bridge labyrinthine and vermiform regimes?
+- Would CROSS-DIFFUSION (chi parameter in mesh model, not mobility) + NLD create coupled multi-scale patterns?
+- Can we find a TRULY TIME-STABLE 8/10 pattern using the labyrinthine regime at moderate coupling?
 
 ### Failed Configurations
 
-- D1=0.03 + Da_c=20.0 (n_types=1): crash (Iter 1)
-- D1=0.01 + Da_c=10.0 (n_types=1): crash (Iter 2)
-- 3-type with M1=-24, consumption=250: all escape (Iter 4)
-- 1-type with base params M1=-16, consumption=180: all escape (Iter 7)
-- 3-type M1=-14, consumption=140: total blow-up, NaN (Iter 32)
-- **Avoid D1 < 0.05** — crashes at current resolution
-- **Avoid |M1| > 12 or consumption > 120 (Brusselator)** — HARD stability limit
-- **Avoid |M1| > 10 or consumption > 100 (FHN)** — FHN is more sensitive than Brusselator (Iter 48: 96% retention, fields blowing up)
-- **Avoid 1-type with |M1| >= 10** — likely unstable
-- **Avoid Weber-Fechner K >= 2.0** — kills Turing breakup entirely (Iter 18)
-- **Avoid chirality p[1,4] >= 0.3** — suppresses pattern elaboration (Iters 25, 27)
-- **Gray-Scott + particles at ANY coupling strength** → radial-locked (Iters 33,34,38,40)
-- **Schnakenberg gamma=200 + |M1|=10** → total blow-up (Iter 42). gamma=60 + |M1|=4 works (Iter 51, 5/10) but radial-locked
-- **GM (Da=0.01, rho=0.1, mu_a=0.02, kappa=0)** → fields diverge (Iter 43). Need rho<=0.05, mu>=0.05, kappa>=0.2
+- D1=0.03/0.01 + high Da_c → crash (Iters 1, 2)
+- 3-type with M1=-24, consumption=250 → all escape (Iter 4)
+- 1-type with |M1|=16, consumption=180 → all escape (Iter 7)
+- 3-type M1=-14, consumption=140 → NaN blow-up (Iter 32)
+- **Avoid D1 < 0.05, |M1| > 12 (Brusselator hex), |M1| > 8 (Brusselator labyrinthine), |M1| > 10 (FHN)**
+- **Avoid Weber-Fechner K > 0, chirality >= 0.3**
+- **Gray-Scott, Schnakenberg gamma=200, GM without stabilization** → all fail or radial-locked
+- **200x200 mesh at 9600 particles** → dead end (Iters 49,54,55)
+- **pp_field_mod** → neutral (Iters 61, 63)
+- **DDM** → neutral on multi-type, harmful on 1-type (Iters 65-72)
+- **Velocity alignment** → cosmetic (Iters 73-79). HURTS 2-type.
+- **NLD delta=1.0 + chi=-16** → blowup (Iter 81). NLD incompatible with strong coupling.
+- **Iter 14 at 4000 frames** → blowup (Iter 84). chi=-16 regime is marginally unstable.
+- **NLD delta=3.0 at A=5.5/B=7.5** → over-damps fields (Iter 86, 6/10)
+- **chi=-10 + consumption=100 on labyrinthine** → degrades coherence (Iter 88, 5/10)
 
 ### Code Insights
 
-- PDE_D.py features: Weber-Fechner (p[2,4]), cross-type adhesion (p[2,5]), Michaelis-Menten (p[1,2]), durotaxis (p[1,3]), chirality (p[1,4]), **field-modulated pp adhesion (p[2,6], NEW Block 14)** — all backward-compatible
-- PDE_Diffusiophoresis.py: parameterized damping via params_mesh[1][2]; chi cross-diffusion; noise amplitude
-- Cross-type adhesion p[2,5]=0.3 is the ONLY code feature that meaningfully improved scores (7→8/10)
-- All other PDE_D features (W-F, M-M, chirality, damping, durotaxis) either hurt or were neutral
-- **Brusselator parameter space thoroughly exhausted** — 40+ iterations, Iter 14/45 tied at 8/10
-- **Gray-Scott tested and FAILED** — fundamentally incompatible with particle coupling
-- **FHN works but radial-locked with multi-type** — 1-type network is novel (6/10), 3-type is radial (7/10)
-- **GM stabilized** — rho=0.05, mu=0.05, kappa=0.2 works; morphology is simple radial (5/10)
-- **Schnakenberg stable at gamma=60** — but radial-locked like all non-Brusselator models (Iter 51, 5/10)
-- **n_frames=4000 doesn't break ceiling** — Iter 53 ties at 8/10, higher C1_std (2.10) but same morphology tier
-- **200x200 mesh is a DEAD END** — all types at 9600 particles degrade (Iters 49,54,55 all 6/10)
-- **A=7/B=10 doesn't improve 3-type** — 7/10 vs 8/10 at A=5.5/B=7.5 (Iter 56). Marginally more escape.
+- PDE_D.py features: W-F (p[2,4]), adhesion (p[2,5]), M-M (p[1,2]), durotaxis (p[1,3]), chirality (p[1,4]), pp_field_mod (p[2,6]), DDM (p[1,5]), alignment (p[2,7]) — all backward-compatible
+- Cross-type adhesion p[2,5]=0.3 is the ONLY PDE_D feature that improved scores (7→8/10)
+- **ALL 8 PDE_D features tested**: only adhesion worked
+- **Block 11 code change: NLD in Brusselator** — D1(C1) = D1_base*(1+delta*(C1-A)^2/A^2). Enabled labyrinthine and vermiform patterns.
+- Brusselator is the ONLY mesh model producing non-radial patterns; NLD extends it to labyrinthine/vermiform
+- **Next code lever for Block 12**: Consider CUBIC autocatalysis modification, substrate inhibition, or time-delayed feedback in Brusselator to find new pattern regimes
 
 ### PDE Variants
 
-| Variant | Model | Literature | Status | Best Symmetry | Best Particles |
-| ------- | ----- | ---------- | ------ | ------------- | -------------- |
-| Diffusiophoresis_Mesh | Brusselator | Prigogine (1968) | active (BEST) | flower/mandala | segregated 3-type (Iters 14,45: 8/10) |
-| Diffusiophoresis_Mesh_GrayScott | Gray-Scott | Pearson (1993) | FAILED | radial (concentric rings) | radial-locked at all couplings |
-| PDE_Diffusiophoresis_FHN | FHN | FitzHugh (1961) | active (radial-locked) | concentric rings (all types) | 7/10 radial (Iter 46), 6/10 radial (Iter 50) |
-| PDE_Diffusiophoresis_Schnakenberg | Schnakenberg | Schnakenberg (1979) | STABLE (gamma=60) | radial (concentric rings) | 5/10 radial 2-type (Iter 51) |
-| PDE_Diffusiophoresis_GM | Gierer-Meinhardt | Gierer & Meinhardt (1972) | STABILIZED | radial w/ folding | 5/10 radial (Iter 47) |
+| Variant | Model | Literature | Status | Best Score |
+| ------- | ----- | ---------- | ------ | ---------- |
+| Diffusiophoresis_Mesh | Brusselator | Prigogine (1968) | active (BEST) | 8/10 (Iters 14,45,53) but TIME-LIMITED |
+| Diffusiophoresis_Mesh (+ NLD) | Brusselator + nonlinear diffusion | Gambino et al. (2013) | active (PROMISING) | 7/10 (Iters 83, 85, 87 — labyrinthine+vermiform) |
+| Diffusiophoresis_Mesh_GrayScott | Gray-Scott | Pearson (1993) | FAILED | 6/10 radial-locked |
+| PDE_Diffusiophoresis_FHN | FHN | FitzHugh (1961) | radial-locked | 7/10 (Iter 46) |
+| PDE_Diffusiophoresis_Schnakenberg | Schnakenberg | Schnakenberg (1979) | radial-locked | 5/10 (Iter 51) |
+| PDE_Diffusiophoresis_GM | Gierer-Meinhardt | Gierer & Meinhardt (1972) | radial-locked | 5/10 (Iter 47) |
 
 ---
 
 ## Previous Block Summaries
 
-### Block 1 (Iters 1-8)
-- **Best: Iter 8 (3-type moderate coupling, 7/10)** — tissue-like stratification
-- 1-type all failed, 2-type (5-6/10) reliable, 3-type best with moderate coupling
-- Average: 4.4/10
+### Blocks 1-7 (Iters 1-56)
+- **Global best: Iter 14/45/53 (3-type opposing Brusselator 150x150, 8/10)** — flower/mandala tissue morphology
+- **Best 2-type: Iter 23 (7/10)** — hexagonal core-ring array
+- **Best 1-type: Iter 39 (7/10)** — dispersed spot array at 150x150
+- 56 iterations across 5 PDE mesh models, 6 PDE_D code features, resolutions 100x100 to 200x200
+- Brusselator is the only model producing hexagonal patterns; all others radial-locked
+- Cross-type adhesion p[2,5]=0.3 is the only code feature that improved scores
 
-### Block 2 (Iters 9-16)
-- **Best: Iter 14 (3-type opposing + adhesion, 8/10)** — NEW OVERALL BEST, flower/mandala morphology
-- Cross-type adhesion is the key enhancer (7→8/10 for 3-type)
-- Average: 6.1/10
+### Block 8 (Iters 57-64)
+- No 8/10 ceiling broken. Best: 7/10 (Iters 61, 62, 64).
+- pp_field_mod=0.5 NEUTRAL. 14400 particles same 7/10. Chirality=0.1 neutral.
 
-### Block 3 (Iters 17-24)
-- **Iter 14 remains global best at 8/10** — four variants ≤7/10
-- **NEW BEST 2-type: Iter 23 (7/10)** — hexagonal core-ring array
-- Average: 6.4/10
+### Block 9 (Iters 65-72) — DDM FAILED
+- **No 8/10 ceiling broken.** Best: 7/10 (Iters 70, 72). Average: 6.25/10.
+- DDM tested across full range [0.15-1.0]: NEUTRAL on multi-type, HARMFUL on 1-type.
 
-### Block 4 (Iters 25-32)
-- **Iter 14 still unbeatable** — 10+ perturbations all ≤7/10 or failed
-- Chirality, W-F, M-M secondary levers or detrimental. Brusselator parameter space exhausted.
-- Average: 5.5/10
+### Block 10 (Iters 73-80) — ALIGNMENT COSMETIC + W-F DEAD END
+- **No 8/10 ceiling broken.** Scores: 7,6,6,7,7,7,7,5. Average: 6.5/10.
+- All 8 PDE_D features exhaustively tested. Only adhesion helped. Strategy shift to mesh model.
 
-### Block 5 (Iters 33-40)
-- **Best: Iter 37, Iter 39 (7/10 each)** — Iter 39 is NEW BEST 1-type (150x150 mesh spots)
-- Gray-Scott tested comprehensively (4 iters) and FAILED — radial-locked at all coupling strengths
-- Higher mesh resolution (150x150) confirmed beneficial for 1-type patterns
-- Average: 6.0/10
-
-### Block 6 (Iters 41-48)
-- **Best: Iter 45 (3-type Brusselator 150x150, 8/10)** — ties Iter 14. Iter 46 (FHN 3-type, 7/10) is second best.
-- Tested 4 new PDE models: FHN (stable, novel network 1-type + radial 3-type), GM (stabilized with decay/saturation, radial 5/10), Schnakenberg (blew up at gamma=200). All non-Brusselator models are radial-locked with multi-type particles.
-- FHN's 1-type network morphology (Iter 44, 6/10) is a genuinely new class. FHN 3-type (Iter 46, 7/10) competitive but radial.
-- Principle #1 confirmed universal — FHN even more sensitive to coupling than Brusselator (Iter 48: 96% retention at |M1|=12).
-- 150x150 mesh confirmed beneficial for all configs (principle #16 upgraded).
-- Average: 6.0/10
-
-Particle type distribution (cumulative): 1-type: 12, 2-type: 15, 3-type: 29. **Still 3-type heavy — Block 8 should include more 1-type and 2-type.**
-
-### Block 7 (Iters 49-56)
-- **Best: Iter 53 (3-type Brusselator 150x150 + n_frames=4000, 8/10)** — ties Iter 14/45 but doesn't break ceiling. C1_std=2.10 (highest ever) but same morphology tier.
-- 200x200 mesh confirmed DEAD END for all types at 9600 particles (Iters 49,54,55 all 6/10).
-- FHN 1-type network was low-res artifact (Iter 50). Schnakenberg stable at gamma=60 but radial (Iter 51).
-- Consumer-dominant asymmetry strongly confirmed (Iter 52: 4/10). A=7/B=10 doesn't help 3-type (Iter 56: 7/10).
-- Average: 5.75/10
+### Block 11 (Iters 81-88) — NLD: LABYRINTHINE BREAKTHROUGH
+- Scores: 1, 7, 7, 1, 7, 6, 7, 5 → Average: 5.1/10, Best: 7/10 (Iters 82, 83, 85, 87)
+- **NLD + high B/A ratio → LABYRINTHINE Turing (Iter 83, NOVEL)**: First non-hexagonal Brusselator pattern in 83 iters
+- **B/A=2.5 + NLD → VERMIFORM filaments (Iter 87, NOVEL)**: Strongest fields ever (pattern_growth=294)
+- 3-type on labyrinthine produces branching tissue (Iter 85, 7/10) — promising hybrid
+- NLD delta=3.0 over-damps hexagonal (Iter 86, 6/10). delta=2.0 optimal.
+- Labyrinthine has tighter coupling limit: |chi|<=8 (vs hexagonal |chi|<=12)
+- Iter 14 confirmed TIME-LIMITED (blows up at 4000 frames). No 8/10 ceiling broken but 2 novel pattern types.
 
 ---
 
-## Current Block (Block 8)
+## Current Block (Block 12)
 
 ### Block Info
 
-Parameters: Focus on NEW interaction physics to break 8/10 ceiling. Code modifications allowed at block boundary.
-mesh_model_name: Brusselator (only model that produces hexagonal patterns)
-Iterations: 57-64 (parallel, 4 slots per batch)
-Starting from: Iter 14/45/53 (3-type Brusselator 150x150, 8/10)
+Parameters: Brusselator + NLD, exploring labyrinthine+vermiform regime in depth
+mesh_model_name: Diffusiophoresis_Mesh (with NLD toggle via params_mesh[1][3])
+Iterations: 89-96 (parallel, 4 slots per batch)
+Starting from: Iter 85 (3-type labyrinthine 7/10), Iter 87 (1-type vermiform 7/10), Iter 83 (1-type labyrinthine 7/10)
+Code modification: Consider substrate inhibition or saturation kinetics in Brusselator reaction terms
 
 ### Hypothesis
 
-After 56 iterations, the 8/10 ceiling is EXTREMELY robust. All parameter-space explorations (resolution, simulation length, A/B values, coupling strengths, PDE models) have been exhausted without breaking it. The remaining levers are: (1) New particle interaction physics via code modifications — concentration-dependent pp forces, alignment/flocking, or density-dependent mobility, (2) Higher particle density (n_particles=14400 at 150x150), (3) Untested parameter combinations like very low chirality or durotaxis on multi-type. Block 8 strategy: Create a new PDE_D variant with concentration-dependent particle interactions (particles interact more strongly in high-C1 regions) + test higher particle counts + explore remaining parameter combos.
+The labyrinthine (Iter 83/85, A=3.0/B=5.5) and vermiform (Iter 87, A=2.0/B=5.0) regimes are the most significant discoveries since Iter 14. They produce qualitatively NEW pattern types that no parameter tuning on standard Brusselator achieved. Key priorities:
+1. Can multi-type particles on labyrinthine/vermiform fields break the 8/10 ceiling?
+2. What B/A ratio and NLD delta give the richest patterns?
+3. Is a code modification (substrate inhibition/saturation) needed to get beyond 7/10 in these regimes?
+4. Test intermediate A values (A=2.5) to bridge labyrinthine and vermiform.
 
 ### Iterations This Block
 
-(empty — new block)
+(Block 12 starts at Iter 89)
 
 ### Emerging Observations
 
-(empty — new block)
+(To be filled as Block 12 progresses)

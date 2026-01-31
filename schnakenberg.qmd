@@ -95,12 +95,12 @@ Schnakenberg achieves a genuine plateau (0.62 at gamma=200), unlike all other te
 ### Iter 41
 *Schnakenberg 1-type (gamma=200)*
 
-![Schnakenberg produces concentric ring patterns with genuine steady state convergence.](graphs_data/diffusiophoresis/diffusiophoresis_Claude/montage_iter_041.png){.lightbox}
+![Schnakenberg produces concentric ring patterns with genuine steady state convergence.](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_041.png){.lightbox}
 
 ### Iter 43
 *Schnakenberg 2-type (gamma=200)*
 
-![Multi-type configuration still produces radial symmetry only. No hexagonal breaking.](graphs_data/diffusiophoresis/diffusiophoresis_Claude/montage_iter_043.png){.lightbox}
+![Multi-type configuration still produces radial symmetry only. No hexagonal breaking.](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_043.png){.lightbox}
 
 :::
 

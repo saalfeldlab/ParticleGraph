@@ -2,53 +2,43 @@ description: LLM-guided pattern exploration (parallel)
 dataset: diffusiophoresis_Claude_03
 simulation:
   params:
-  - - -10
-    - 10
-    - 100
-    - -100
+  - - -8
+    - 8
+    - 80
+    - -80
     - 1.6
     - 1.0
     - 1.6
     - 1.5
-  - - 8
-    - -8
-    - -60
-    - 60
-    - 1.8
-    - 1.8
-    - 1.1
-    - 1.9
-  - - -4
-    - 4
-    - 40
-    - -40
-    - 2.0
-    - 1.0
-    - 2.0
-    - 1.0
   params_mesh:
   - - 0.05
     - 15.0
+    - 3.0
     - 5.5
-    - 7.5
     - 0.04
     - -8
+    - 0.0
+    - 0.0
   - - 0.8
     - 8
     - 0.0
+    - 1.0
     - 0.0
-    - 0.1
+    - 0.0
+    - 0.0
     - 0.0
   - - 1.0
-    - 100
-    - -100
+    - 80
+    - -80
     - 0.05
     - 0.0
-    - 0.3
+    - 0.0
+    - 0.0
+    - 0.0
   min_radius: 0
   max_radius: 0.2
   n_particles: 9600
-  n_particle_types: 3
+  n_particle_types: 1
   n_frames: 2000
   n_nodes: 22500
   n_node_types: 1
