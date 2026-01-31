@@ -1532,7 +1532,7 @@ def data_generate_particle_field(
                             speed = np.sqrt(U**2 + V**2)
 
                             # White streamlines with fixed velocity scale for cross-frame comparison
-                            vel_max = 0.1
+                            vel_max = 0.25
                             lw = 3.0 * np.clip(speed / vel_max, 0, 1)
                             ax4.streamplot(gx, gy, U, V, color='white',
                                           linewidth=lw, density=1.5, arrowsize=1.2,
