@@ -44,6 +44,7 @@ class PDE_Diffusiophoresis(pyg.nn.MessagePassing):
                 "description": "C₂ field parameters",
                 "slots": [
                     {"index": 0, "name": "D2", "description": "Diffusion coefficient for C₂", "typical_range": [0.1, 1.0]},
+                    {"index": 2, "name": "damping", "description": "Damping coefficient toward steady state (0=use default 0.005)", "typical_range": [0.0, 0.1]},
                     {"index": 5, "name": "noise_amplitude", "description": "Stochastic noise for symmetry breaking", "typical_range": [0.0, 0.01]}
                 ]
             }
@@ -93,12 +94,26 @@ class PDE_Diffusiophoresis(pyg.nn.MessagePassing):
         # C2 parameters
         self.D2 = p[1, 0]       # Diffusion coefficient for C₂
 
+        # Block 3 code change: Parameterized damping coefficient
+        # Literature: Cross & Hohenberg (1993) Rev Mod Phys 65:851 — pattern selection
+        # in reaction-diffusion systems; damping toward homogeneous steady state controls
+        # the balance between pattern-forming instability and relaxation.
+        # params_mesh[1][2] controls damping:
+        #   0.0 = use default damping of 0.005 (backward compatible)
+        #   >0  = use specified damping value
+        # Higher damping stabilizes patterns faster but may suppress weak instabilities.
+        # Lower damping allows stronger deviations but may delay or prevent convergence.
+        if p[1].size(0) > 2 and p[1, 2] > 0:
+            self.damping = p[1, 2]
+        else:
+            self.damping = torch.tensor(0.005, device=p.device)  # Default
+
         # Store coefficient for later use
         self.coeff = p
 
         # Print initialized parameters for verification
         print(f"initialized PDE_Diffusiophoresis with parameters:")
-        print(f"C₁: D={self.D1.item():.3f}, C₂: D={self.D2.item():.3f}, Da_c={self.Da_c.item():.3f}, A={self.A.item():.3f}, B={self.B.item():.3f}, μ={self.mu.item():.3f}, χ={self.chi.item():.3f}, noise={self.noise_amplitude.item():.4f}")
+        print(f"C₁: D={self.D1.item():.3f}, C₂: D={self.D2.item():.3f}, Da_c={self.Da_c.item():.3f}, A={self.A.item():.3f}, B={self.B.item():.3f}, μ={self.mu.item():.3f}, χ={self.chi.item():.3f}, noise={self.noise_amplitude.item():.4f}, damping={self.damping.item():.4f}")
     
     def forward(self, data):
         """
@@ -153,9 +168,8 @@ class PDE_Diffusiophoresis(pyg.nn.MessagePassing):
         else:
             noise_C1 = 0.0
 
-        damping = 0.005
-        dC1 = diff_C1 + R1 + cross_diff_C1 + noise_C1 - damping * (C1 - self.A)
-        dC2 = diff_C2 + R2 - damping * (C2 - self.B/self.A)
+        dC1 = diff_C1 + R1 + cross_diff_C1 + noise_C1 - self.damping * (C1 - self.A)
+        dC2 = diff_C2 + R2 - self.damping * (C2 - self.B/self.A)
 
         # Combine derivatives
         d_C = torch.cat([dC1, dC2], dim=1)
