@@ -23,8 +23,9 @@ class PDE_Diffusiophoresis(pyg.nn.MessagePassing):
         "model_name": "Brusselator",
         "description": "Two-component reaction-diffusion system with cubic autocatalysis",
         "equations": {
-            "dC1/dt": "D1_eff * ∇²C₁ + Da_c * (A - (B+1)*C₁ + C₁²*C₂) + χ * ∇²C₂ + noise - damping*(C₁-A)",
-            "dC2/dt": "D2 * ∇²C₂ + Da_c * (B*C₁ - C₁²*C₂) - damping*(C₂-B/A)",
+            "dC1/dt": "D1_eff * ∇²C₁ + Da_c * (A - (B+1)*C₁ + C₁²*C₂/S) + χ * ∇²C₂ + noise - damping*(C₁-A)",
+            "dC2/dt": "D2 * ∇²C₂ + Da_c * (B*C₁ - C₁²*C₂/S) - damping*(C₂-B/A)",
+            "S": "(1 + K_sat * C₁²)  [substrate inhibition, K_sat=0 → standard Brusselator]",
             "D1_eff": "D1 * (1 + nld_delta * (C₁-A)²/A²)  [nonlinear diffusion, 0=standard]"
         },
         "params_mesh": [
@@ -47,6 +48,7 @@ class PDE_Diffusiophoresis(pyg.nn.MessagePassing):
                     {"index": 0, "name": "D2", "description": "Diffusion coefficient for C₂", "typical_range": [0.1, 1.0]},
                     {"index": 2, "name": "damping", "description": "Damping coefficient toward steady state (0=use default 0.005)", "typical_range": [0.0, 0.1]},
                     {"index": 3, "name": "nld_delta", "description": "Nonlinear diffusion strength (0=constant D1, >0=concentration-dependent)", "typical_range": [0.0, 5.0]},
+                    {"index": 4, "name": "K_sat", "description": "Substrate inhibition (0=standard Brusselator, >0=autocatalysis saturates at high C1)", "typical_range": [0.0, 0.5]},
                     {"index": 5, "name": "noise_amplitude", "description": "Stochastic noise for symmetry breaking", "typical_range": [0.0, 0.01]}
                 ]
             }
@@ -129,6 +131,24 @@ class PDE_Diffusiophoresis(pyg.nn.MessagePassing):
         else:
             self.nld_delta = torch.tensor(0.0, device=p.device)
 
+        # Block 12 code change: Substrate inhibition (bounded autocatalysis)
+        # params_mesh[1][4] controls K_sat:
+        #   0.0 = standard Brusselator autocatalysis C1²*C2 (backward compatible, default)
+        #   >0  = saturating autocatalysis: C1²*C2 / (1 + K_sat*C1²)
+        # Literature: Haldane (1930) "Enzymes" — substrate inhibition kinetics;
+        #   Szili & Toth (1993) J Chem Soc Faraday Trans 89:43 — modified Brusselator
+        #   with bounded reaction rates for stable finite-amplitude patterns.
+        # Effect: At high C1, the autocatalytic term C1²*C2 saturates instead of growing
+        #   quadratically. This prevents concentration blow-up and stabilizes patterns at
+        #   finite amplitude. Key prediction: should allow STRONGER coupling (higher chi,
+        #   consumption) in the labyrinthine regime without instability, potentially
+        #   enabling the flower/mandala morphology (which needs chi≥-12) on labyrinthine
+        #   field backgrounds.
+        if p[1].size(0) > 4:
+            self.K_sat = p[1, 4]
+        else:
+            self.K_sat = torch.tensor(0.0, device=p.device)
+
         # Store coefficient for later use
         self.coeff = p
 
@@ -138,6 +158,9 @@ class PDE_Diffusiophoresis(pyg.nn.MessagePassing):
         nld_val = self.nld_delta.item() if hasattr(self.nld_delta, 'item') else self.nld_delta
         if nld_val > 0:
             print(f"nonlinear diffusion: delta={nld_val:.3f} (D1_eff = D1*(1+delta*(C1-A)^2/A^2), Gambino 2013)")
+        ksat_val = self.K_sat.item() if hasattr(self.K_sat, 'item') else self.K_sat
+        if ksat_val > 0:
+            print(f"substrate inhibition: K_sat={ksat_val:.3f} (autocatalysis = C1²C2/(1+K_sat*C1²), Haldane 1930)")
     
     def forward(self, data):
         """
@@ -189,8 +212,15 @@ class PDE_Diffusiophoresis(pyg.nn.MessagePassing):
         self.laplacian_C2 = laplacian_C2
 
         # Compute reaction terms (Brusselator model)
-        R1 = self.Da_c * (self.A - (self.B+1)*C1 + C1*C1*C2)
-        R2 = self.Da_c * (self.B*C1 - C1*C1*C2)
+        # Block 12: Substrate inhibition — autocatalytic term saturates at high C1
+        # Standard: C1²*C2. Modified: C1²*C2 / (1 + K_sat*C1²)
+        # When K_sat=0: standard Brusselator (backward compatible)
+        # When K_sat>0: bounded autocatalysis prevents concentration blow-up
+        autocatalysis = C1 * C1 * C2
+        if hasattr(self, 'K_sat') and self.K_sat > 0:
+            autocatalysis = autocatalysis / (1.0 + self.K_sat * C1 * C1)
+        R1 = self.Da_c * (self.A - (self.B + 1) * C1 + autocatalysis)
+        R2 = self.Da_c * (self.B * C1 - autocatalysis)
 
         # Cross-diffusion: C1 diffuses in response to C2 Laplacian
         # Positive χ: C1 accumulates where C2 is high (chemotaxis-like)
