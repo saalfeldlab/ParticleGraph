@@ -29,7 +29,8 @@ class PDE_D(pyg.nn.MessagePassing):
                     {"index": 2, "name": "A", "description": "Brusselator param A (used by mesh model)", "typical_range": [0.5, 5.0]},
                     {"index": 3, "name": "B", "description": "Brusselator param B (used by mesh model)", "typical_range": [1.0, 10.0]},
                     {"index": 4, "name": "mu", "description": "Morphological parameter (used by mesh model)", "typical_range": [0.01, 0.1]},
-                    {"index": 5, "name": "M1", "description": "Mobility coefficient for C1 gradients", "typical_range": [-16, 16]}
+                    {"index": 5, "name": "M1", "description": "Mobility coefficient for C1 gradients", "typical_range": [-16, 16]},
+                    {"index": 6, "name": "fdm_alpha", "description": "Field-dependent mobility strength (0=off, >0=faster at peaks, <0=slower at peaks)", "typical_range": [-2.0, 2.0]}
                 ]
             },
             {
@@ -202,6 +203,37 @@ class PDE_D(pyg.nn.MessagePassing):
         else:
             self.alignment_strength = 0.0
 
+        # Block 13 code change: Field-dependent mobility (FDM)
+        # p[0, 6] controls fdm_alpha (field-dependent mobility strength):
+        #   0.0 = constant mobility (backward compatible, default)
+        #   >0  = M_eff = M * (1 + fdm_alpha * clamp((C1-A)^2/A^2, max=4.0))
+        #         Particles move FASTER at field peaks/troughs (far from steady state)
+        #         and SLOWER near the Brusselator steady state (C1 ≈ A)
+        #   <0  = M_eff = M / (1 + |fdm_alpha| * clamp((C1-A)^2/A^2, max=4.0))
+        #         Particles move SLOWER at field peaks/troughs and FASTER near steady state
+        # Literature: Hillen & Painter (2009) J Math Biol 58:183-217
+        #   "A user's guide to PDE models for chemotaxis" — concentration-dependent
+        #   chemotactic sensitivity chi(C) is standard in Keller-Segel family models.
+        #   Also: Painter & Hillen (2002) Can Appl Math Q 10:501-543 — volume-filling
+        #   chemotaxis where cells move slower in crowded (high-concentration) regions.
+        # Rationale: The 7/10 ceiling (96 iterations, Blocks 1-12) is a COUPLING
+        #   bottleneck: particles respond uniformly to gradients. FDM creates nonlinear
+        #   coupling where accumulation dynamics depend on local field state, enabling
+        #   multi-scale organization (tight clusters at peaks, dispersed at boundaries).
+        # Effect: With positive alpha, particles accumulate more strongly at Turing peaks
+        #   (where C1 >> A) because their mobility is amplified there. This creates
+        #   positive feedback: peaks attract particles faster → particles consume C1 →
+        #   pattern reorganizes. With negative alpha, particles are more mobile near
+        #   steady state and immobilized at peaks → smeared distributions.
+        if p.shape[1] > 6:
+            self.fdm_alpha = p[0, 6]
+        else:
+            self.fdm_alpha = 0.0
+
+        # Brusselator parameter A for FDM normalization
+        # Stored from mesh params row 0, index 2
+        self.A_ref = p[0, 2]
+
         # Report configuration
         print(f"initialized PDE_D with parameters:")
         print(f"mobility: M₁={self.M1.item()}, M₂={self.M2.item()}")
@@ -255,6 +287,12 @@ class PDE_D(pyg.nn.MessagePassing):
                 print(f"velocity alignment (Vicsek): strength={align_val:.3f} (f_align = alpha*(v_j-v_i)*w(d), Vicsek 1995)")
             else:
                 print(f"velocity alignment: off (strength=0)")
+        if hasattr(self, 'fdm_alpha'):
+            fdm_val = self.fdm_alpha.item() if hasattr(self.fdm_alpha, 'item') else self.fdm_alpha
+            if fdm_val != 0:
+                print(f"field-dependent mobility (FDM): alpha={fdm_val:.3f} (M_eff = M*(1+alpha*clamp((C1-A)^2/A^2,max=4)), Hillen & Painter 2009)")
+            else:
+                print(f"field-dependent mobility: off (alpha=0)")
         if particle_params is not None:
             print(f"multi-type support: {particle_params.shape[0]} particle types")
             print(f"per-type params: [M1, M2, consumption, production, ar_p1, ar_p2, ar_p3, ar_p4]")
@@ -450,6 +488,28 @@ class PDE_D(pyg.nn.MessagePassing):
                 v_perp[:, 0] = -velocity_raw[:, 1]  # -vy
                 v_perp[:, 1] = velocity_raw[:, 0]   # +vx
                 velocity_raw = velocity_raw + self.chirality * v_perp
+
+            # Block 13: Field-dependent mobility (FDM)
+            # Hillen & Painter (2009): concentration-dependent chemotactic sensitivity
+            # M_eff depends on local C1 value relative to Brusselator steady state A.
+            # Positive alpha: particles move faster at peaks/troughs (far from A)
+            # Negative alpha: particles move slower at peaks/troughs (immobilized at features)
+            # Uses (C1 - A)^2 / A^2 as dimensionless deviation, clamped for stability.
+            if hasattr(self, 'fdm_alpha') and self.fdm_alpha != 0:
+                C1_local = fields_i[:, 0:1]  # Local C1 at particle position
+                A_ref = self.A_ref
+                # Dimensionless squared deviation from steady state
+                deviation_sq = (C1_local - A_ref) ** 2 / (A_ref ** 2 + 1e-6)
+                deviation_sq = torch.clamp(deviation_sq, max=4.0)
+
+                if self.fdm_alpha > 0:
+                    # Positive: amplify mobility at peaks/troughs
+                    fdm_factor = 1.0 + self.fdm_alpha * deviation_sq
+                else:
+                    # Negative: suppress mobility at peaks/troughs
+                    fdm_factor = 1.0 / (1.0 + torch.abs(self.fdm_alpha) * deviation_sq)
+
+                velocity_raw = velocity_raw * fdm_factor
 
             velocities = velocity_raw
 
