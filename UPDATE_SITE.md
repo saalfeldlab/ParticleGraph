@@ -74,6 +74,8 @@ Reference them in the model pages using:
 
 ### 4. Render the Site
 
+**Manual step** — the user renders the site, do NOT run `quarto render` from Claude/LLM.
+
 ```bash
 quarto render
 ```

@@ -108,7 +108,7 @@ def submit_cluster_job(slot, config_path, log_dir, root_dir):
     # Submit WITHOUT -K so it returns immediately
     ssh_cmd = (
         f"ssh allierc@login1 \"cd {CLUSTER_ROOT_DIR} && "
-        f"bsub -n 8 -gpu 'num=1' -q gpu_h100 -W 6000 'bash {cluster_script}'\""
+        f"bsub -n 8 -gpu 'num=1' -q gpu_a100 -W 6000 'bash {cluster_script}'\""
     )
     print(f"\033[96m  slot {slot}: submitting via SSH\033[0m")
     result = subprocess.run(ssh_cmd, shell=True, capture_output=True, text=True)
@@ -768,8 +768,8 @@ if __name__ == "__main__":
     else:
         print(f"\033[93mpreserving shared files (resuming from iter {start_iteration})\033[0m")
 
-    # Cluster mode detection
-    cluster_enabled = 'cluster' in task
+    # Cluster mode enabled by default (use 'local' in task to disable)
+    cluster_enabled = 'local' not in task
 
     # Code tracking
     code_changes_enabled = True

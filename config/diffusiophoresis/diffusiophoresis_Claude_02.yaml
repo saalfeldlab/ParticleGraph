@@ -1,56 +1,51 @@
-description: LLM-guided pattern exploration
-dataset: diffusiophoresis_Claude
+description: LLM-guided pattern exploration (parallel)
+dataset: diffusiophoresis_Claude_02
 simulation:
   params:
-  - - -16
-    - 16
-    - 180
-    - -180
+  - - -8
+    - 8
+    - 80
+    - -80
     - 1.6
     - 1.0
     - 1.6
     - 1.5
-  - - -8
-    - 8
-    - 90
-    - -90
+  - - 8
+    - -8
+    - -80
+    - 80
     - 1.8
-    - 1.8
-    - 1.1
-    - 1.9
-  - - -4
-    - 4
-    - 45
-    - -45
-    - 1.7
-    - 1.8
+    - 1.0
     - 1.1
     - 1.9
   params_mesh:
   - - 0.05
     - 15.0
-    - 4.5
-    - 6.5
+    - 5.5
+    - 7.5
     - 0.04
-    - -16
+    - -8
+    - 0.0
   - - 0.8
-    - 16
+    - 8
+    - 0.0
     - 0.0
     - 0.0
     - 0.0
     - 0.0
   - - 1.0
-    - 180
-    - -180
+    - 80
+    - -80
     - 0.05
     - 0.0
-    - 0.0
+    - 0.3
+    - 0.5
   min_radius: 0
   max_radius: 0.2
   n_particles: 9600
-  n_particle_types: 1
+  n_particle_types: 2
   n_frames: 2000
-  n_nodes: 10000
+  n_nodes: 22500
   n_node_types: 1
   sigma: 0.005
   delta_t: 0.0005
@@ -58,6 +53,7 @@ simulation:
   boundary: 'no'
   node_value_map: input_data/pattern_Null.tif
   node_coeff_map: ''
+  shuffle_particle_types: false
 graph_model:
   field_type: diffusiophoresis
   particle_model_name: PDE_ParticleField_D
@@ -88,5 +84,5 @@ training:
   data_augmentation_loop: 100
   fix_cluster_embedding: true
 claude:
-  n_iter_block: 4
+  n_iter_block: 8
   ucb_c: 1.414

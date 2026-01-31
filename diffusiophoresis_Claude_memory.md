@@ -1,275 +1,167 @@
-# Working Memory: diffusiophoresis
+# Working Memory: diffusiophoresis (parallel)
 
 ## Regime Comparison
 
 | Regime | mesh_model | particle_model | n_types | n_particles | Best Score | Key Insight |
 | ------ | ---------- | -------------- | ------- | ----------- | ---------- | ----------- |
-| Base   | Diffusiophoresis_Mesh | PDE_ParticleField_D | 1 | 9600 | 9/10 | M1=-4, M2=4 gives ring->hexagonal patterns |
-| Multi-2  | Diffusiophoresis_Mesh | PDE_ParticleField_D | 2 | 9600 | 9/10 | Opposing mobilities -> phase separation + hexagonal mode |
-| Multi-3  | Diffusiophoresis_Mesh | PDE_ParticleField_D | 3 | 9600 | 9/10 | Tri-layer concentric rings (germ layer analog) |
-| GrayScott-2 | PDE_Diffusiophoresis_GrayScott | PDE_ParticleField_D | 2 | 9600 | 7/10 | Concentric rings (no hexagonal breaking), high entropy |
-| FHN-2 | PDE_Diffusiophoresis_FHN | PDE_ParticleField_D | 2 | 9600 | 8/10 | Finer scale (~30 spots), network organization |
-| FHN-3 | PDE_Diffusiophoresis_FHN | PDE_ParticleField_D | 3 | 9600 | 9/10 | Hexagonal with multi-layer spots |
-| FHN-Dv | PDE_Diffusiophoresis_FHN | PDE_ParticleField_D | 1 | 9600 | 9/10 | **Dv=0.1-0.15 -> SQUARE/GRID symmetry (novel!)** |
-| Stripes | Diffusiophoresis_Mesh | PDE_ParticleField_D | 1 | 9600 | 9/10 | **A=3, B=10 (B/[1+A^2]=1) -> LABYRINTH** |
-| Mixed | Diffusiophoresis_Mesh | PDE_ParticleField_D | 2 | 9600 | 8/10 | **A=2.828, B=9 -> transitional mixed mode** |
-| LogSens-FHN | PDE_Diffusiophoresis_FHN | PDE_ParticleField_D_LogSensing | 1 | 9600 | 8/10 | **LogSensing+FHN Dv=0 -> SQUARE (effective Dv>0)** |
-| LogSens-FHN-Dv | PDE_Diffusiophoresis_FHN | PDE_ParticleField_D_LogSensing | 2 | 9600 | 8/10 | **Dv=0.2+LogSensing -> sharpest square + cell wall** |
-| GM | PDE_Diffusiophoresis_GM | PDE_ParticleField_D | 1 | 9600 | 7/10 | Foam-like network, always unstable (plateau=0) |
-| Da_c=5-2type | Diffusiophoresis_Mesh | PDE_ParticleField_D | 2 | 9600 | 7/10 | **Da_c=5 -> COARSE NETWORK (Voronoi-like, novel!)** |
-| Da_c=10-2type | Diffusiophoresis_Mesh | PDE_ParticleField_D | 2 | 9600 | 8/10 | **Da_c=10 -> MIXED LABYRINTHINE (plateau=0.46)** |
-| Anisotropic | Diffusiophoresis_Mesh | PDE_ParticleField_D_Anisotropic | 1 | 9600 | 8/10 | **alpha=0.25 -> ORIENTED STRIPES from hex regime (novel!)** |
-
-## Insights
-
-| Category    | Finding                                              |
-| ----------- | ---------------------------------------------------- |
-| Patterns    | Brusselator params (Da_c=15, A=4.5, B=6.5) -> hexagonal; (A=3, B=10) -> stripes |
-| Performance | M1=-4, M2=4 achieves 100% particle retention with strong coupling |
-| Symmetry    | **B/[1+A^2]=1 + B=10,A=3 -> stripes; B=13,A=3.46 -> spots (A matters!); B/[1+A^2]>1 -> hexagonal** |
-| Multi-type  | Opposing mobilities (+/-4) create spontaneous phase separation |
-| Gray-Scott  | F=0.035-0.04, k=0.06-0.065 produce concentric rings, NOT hexagonal |
-| Failures    | M1=-16, M2=16 causes particle escape (0% in box)     |
-| FHN vs Brus | Brusselator=tight clusters (0.45-0.53), FHN=dispersed (0.26-0.39) |
-| Robustness  | **Hex survives ALL perturbations. Stripe=1-type-only (fails multi-type & reversed). Square=1-type-only** |
-| Transition  | **B=9 at Turing boundary produces MIXED mode (not pure hex or stripe)** |
-| FHN-Dv     | **FHN Dv>=0.1 -> SQUARE/GRID symmetry; Dv=0.05 -> disordered transitional; Dv=0 -> hexagonal** |
-| Square req | **Square requires SINGLE particle type (spatial homogeneity). Even identical-param multi-type fails** |
-| Deep-Turing | **B=15 with B/[1+A^2]=0.71 -> pixel-scale noise. B<=13 practical limit for 100x100 mesh** |
-| Stripe req  | **Stripes need 1-type uniform particles + low A (<=3). Multi-type (even identical) destroys stripes** |
-| LogSensing  | **LogSensing Brusselator-incompatible (3 failures), FHN-compatible (transforms hex->square)** |
-| LogSens mech | **LogSensing acts as effective Dv>0 via concentration-dependent mobility. Additive with FHN Dv.** |
-| Cell wall   | **2-type same-sign + diff consumption -> boundary/interior type segregation (iter 64)** |
-| ActiveMatter | **Self-propulsion disrupts ALL symmetry classes. No new patterns.** |
-| GM model | **Foam-like network morphology (unique!), but fundamentally unstable (plateau=0).** |
-| Da_c axis | **Da_c is a CONTINUOUS wavelength/mode selector: 5->coarse network, 10->mixed labyrinthine, 15->hex spots. Requires 2-type at low Da_c.** |
-
----
+| 1-type weak | Diffusiophoresis_Mesh | PDE_ParticleField_D | 1 | 9600 | 7/10 | A=5.5,B=7.5 + M1=-8 + 150x150 mesh → sharp dispersed spot array (Iter 39, NEW BEST) |
+| 2-type opposing | Diffusiophoresis_Mesh | PDE_ParticleField_D | 2 | 9600 | 7/10 | A=5.5/B=7.5 + opposing + adhesion → hexagonal core-ring array (Iter 23) |
+| 2-type same-sign | Diffusiophoresis_Mesh | PDE_ParticleField_D | 2 | 9600 | 7/10 | same-sign moderate coupling → core-shell micro-clusters (Iter 12) |
+| 2-type W-F bullseye | Diffusiophoresis_Mesh | PDE_ParticleField_D | 2 | 9600 | 6/10 | Weber-Fechner K=0.3 → concentric bullseye (Iter 31) |
+| 3-type opposing | Diffusiophoresis_Mesh | PDE_ParticleField_D | 3 | 9600 | 8/10 | opposing + cross-type adhesion → flower/mandala tissue morphology (Iters 14 & 45, BEST) |
+| 3-type same-sign | Diffusiophoresis_Mesh | PDE_ParticleField_D | 3 | 9600 | 6/10 | same-sign → nested co-localization, less complex (Iters 16, 24) |
+| GS any-type | Diffusiophoresis_Mesh_GrayScott | PDE_ParticleField_D | 2-3 | 9600 | 6/10 | GS + particles → radial-locked concentric rings at ANY coupling strength (Iters 33-34-38-40) |
+| FHN 1-type | PDE_Diffusiophoresis_FHN | PDE_ParticleField_D | 1 | 9600 | 6/10 | FHN 1-type → radial at 150x150 (Iter 50); network at 100x100 was low-res artifact (Iter 44) |
+| FHN 3-type | PDE_Diffusiophoresis_FHN | PDE_ParticleField_D | 3 | 9600 | 7/10 | FHN + 3-type opposing → concentric type-segregated rings (Iter 46, NEW) |
+| GM 2-type | PDE_Diffusiophoresis_GM | PDE_ParticleField_D | 2 | 9600 | 5/10 | Stabilized (100% retention) with rho=0.05, mu=0.05, kappa=0.2; radial morphology (Iter 47) |
+| Schnakenberg 2-type | PDE_Diffusiophoresis_Schnakenberg | PDE_ParticleField_D | 2 | 9600 | 5/10 | Schnakenberg gamma=60 + weak coupling → radial concentric (Iter 51); gamma=200 blew up (Iter 42) |
 
 ## Knowledge Base
 
 ### Established Principles
-1. **Mobility sweet spot**: M1=+/-4, M2=+/-4 prevents escape while preserving field-particle coupling (confirmed 88 iterations)
-2. **Opposing mobilities -> phase separation**: Type A (M1=-4, M2=4) vs Type B (M1=4, M2=-4) creates spontaneous spatial segregation (confirmed 12+ iterations)
-3. **Extended simulation reveals mode selection**: Ring->hexagonal symmetry breaking occurs at 4000-6000 frames (confirmed 12+ iterations)
-4. **100% particle retention**: All configs with M1=+/-4 or +/-8 achieve 100% particles_in_box (confirmed all iterations since iter 2)
-5. **Mode selection is particle-type-independent for HEXAGONAL**: 1-type, 2-type, AND 3-type all achieve identical hex patterns when field dynamics are fixed (confirmed 15+ iterations)
-6. **Brusselator vs Gray-Scott dichotomy**: Brusselator achieves hexagonal symmetry breaking; Gray-Scott stays purely radial (confirmed iter 14)
-7. **Brusselator vs FHN dichotomy**: Both achieve hexagonal, but Brusselator=tight clusters (0.45-0.53), FHN=dispersed/network (0.26-0.39) (confirmed iters 17-24)
-8. **ar_p particle-particle params have minimal effect**: Doubling ar_p (1.6->3.0) did not improve clustering metric (confirmed iter 23)
-9. **Turing boundary controls mode selection**: B/[1+A^2]=1.0 (at boundary) -> stripes/labyrinth; B/[1+A^2]>1 (deep unstable) -> hexagonal spots (confirmed iters 31-40)
-10. **Sub-Turing = NO patterns**: B/[1+A^2]<1 produces disordered/noisy fields with no particle organization (confirmed iter 34)
-11. **Stripe mode requires BOTH low A (<=3) AND 1-type uniform particles**: Multi-type (even identical) destroys stripes (confirmed iters 49, 54-55)
-12. **Schnakenberg = radial symmetry only**: Like Gray-Scott (confirmed iters 41, 43, 44)
-13. **FHN Dv is a symmetry selector with bounded square regime**: Dv=0 -> hexagonal spots, Dv=0.05 -> disordered, Dv=0.1-0.2 -> SQUARE/GRID, Dv>=0.3 -> coarse boundary network. Square requires 1-type (confirmed iters 45-53, 70-72)
-14. **FHN square is intrinsically oscillatory**: All FHN Dv>=0.1 configs plateau=0.00 regardless of feedback (confirmed iters 51-53, 60-64)
-15. **Deep-Turing is noise**: B=15 produces pixel-scale patterns too fine for particle organization. B<=13 practical limit for 100x100 mesh (confirmed iter 56)
-16. **Robustness hierarchy**: Hexagonal (survives multi-type, reversed feedback, shuffling) > Square (1-type only; fails opposing mobility, multi-type even identical) > Stripe (1-type uniform + low A only)
-17. **LogSensing is mesh-model selective**: Brusselator-incompatible, FHN-compatible and transformative (confirmed iters 57-64)
-18. **LogSensing acts as effective Dv**: Concentration-dependent mobility creates implicit v-diffusion (confirmed iters 60-64)
-19. **Differential consumption -> type-boundary segregation**: "Cell wall" morphology (confirmed iter 64)
-20. **ActiveMatter disrupts ALL patterns**: No new symmetry classes (confirmed iters 65-69)
-21. **Square requires SPATIAL homogeneity**: Even identical-param multi-type fails (confirmed iter 72)
-22. **GM model = unstable foam**: Unique morphology but fundamentally unstable (confirmed iters 73-75)
-23. **Higher mesh resolution = no new patterns**: Not worth computational cost (confirmed iter 76)
-24. **Consumption/production asymmetry is a dead end**: Moderate asymmetry destabilizes; extreme causes NaN (confirmed iters 79-80)
-25. **Da_c is a continuous wavelength/mode selector**: Da_c=5->coarse network (2-type only), Da_c=10->mixed labyrinthine (plateau=0.46), Da_c=15->hex spots. Feature wavelength scales inversely with Da_c (confirmed iters 85-88)
-26. **Low Da_c requires 2-type opposing mobility**: Da_c=5 + 1-type causes NaN crash (slow Turing can't fragment before runaway). 3-type neutral disrupts cooperative network (confirmed iters 86, 88)
-27. **DensityDependent mobility = dead end**: Hill function density-dependent mobility locks ALL patterns into radial symmetry. Code path creates isotropic bias even when near-disabled (rho_0=200) (confirmed 4/4 iters 81-84)
+
+1. **Moderate coupling is a UNIVERSAL HARD stability limit**: |M1| <= 10 and consumption <= 100 for FHN; |M1| <= 12 and consumption <= 120 for Brusselator. FHN is MORE sensitive — |M1|=12 causes borderline blow-up (96% retention, C1_std=16). (UPGRADED: Iters 4,7,32 Brusselator; Iter 48 FHN confirmed model-specific tightening)
+2. **D1 >= 0.05 required**: D1 < 0.05 causes numerical crash at 100x100 mesh with delta_t=5E-4. (Evidence: Iters 1, 2 crashed)
+3. **Mobility sign determines pattern type, not stability**: Opposing-sign → spatial segregation. Same-sign → co-localized core-shell. Confirmed at 2-type AND 3-type, AND across Brusselator, GS, and FHN. (UPGRADED: Evidence now includes FHN Iter 46)
+4. **Plateau=0 is universal**: All PDE models (Brusselator, GS, FHN, GM) under continuous injection drive non-equilibrium dynamics. (UPGRADED: 48 iterations, 5 PDE models)
+5. **1-type sweet spot is |M1|=8, consumption=80, A=5.5/B=7.5**: Higher mesh resolution (150x150) enhances this further → 7/10 (Iter 39). (Evidence: Iters 11,15,19,39)
+6. **Cross-type adhesion enhances OPPOSING-SIGN morphology specifically**: p[2,5]=0.3 sharpens inter-type boundaries in segregated configs. Negligible on same-sign (Iter 24: 6→6). Optimal ~0.3. (Evidence: Iters 10,14,17,23,24,45,46)
+7. **Opposing-sign 3-type beats same-sign 3-type**: Opposing → 7-8/10; same-sign → 6/10. (Evidence: Iters 8/9/14/21/22/45/46 vs 16/24)
+8. **Iter 14 is a robust local optimum with CONSUMER-DOMINANT asymmetry**: 14+ perturbations scored ≤7/10. Iter 45 (150x150) ties at 8/10 but doesn't surpass. Consumer must be strongest mover (|M_consumer|>|M_producer|). (Evidence: Iters 17,18,20,21,22,25,28,29,30,37,45)
+9. **A=5.5/B=7.5 produces more/smaller Turing spots**: Key lever for 1-type and 2-type, not for 3-type. (Evidence: Iters 19, 23, 39 vs 15, 10)
+10. **Chirality suppresses pattern elaboration at all tested values (0.3-0.5)**: Spiral drift overwhelms gradient-following. (Evidence: Iters 25, 27)
+11. **Iter 23's hexagonal regime is 2-type specific**: 3-type in same params → hybrid but not >Iter 14/23. (Evidence: Iters 26, 29)
+12. **Weber-Fechner affects symmetry selection, not just strength**: K=0.3 → bullseye, K=2.0 → kills patterns. (Evidence: Iters 18, 31)
+13. **Michaelis-Menten is a secondary lever**: Km=0.2-0.5 produces near-Iter-14 quality. (Evidence: Iters 22, 30)
+14. **Gray-Scott is fundamentally radial-locked with particles**: Any coupling strength and GS regime produces concentric rings. (UPGRADED: 4 iterations — Iters 33,34,38,40)
+15. **Durotaxis p[1,3]=0.5 is neutral for 1-type**: Doesn't change dispersed spot array morphology. (Evidence: Iter 35)
+16. **150x150 mesh (22500 nodes) is the OPTIMAL resolution for 9600 particles**: Finer mesh resolves more Turing modes but 200x200 (40000 nodes) DEGRADES all configs because particle density per Turing spot is too low. 1-type: 150x150=7/10 (Iter 39), 200x200=6/10 (Iter 49). 3-type: 150x150=8/10 (Iter 45), 200x200=6/10 (Iter 54). 2-type: 200x200=6/10 (Iter 55). (UPGRADED: Evidence: Iters 39,41,45,49,54,55)
+17. **FHN is radial-locked at ALL particle counts and resolutions**: 1-type at 100x100 appeared to produce dispersed network (Iter 44, 6/10) but 1-type at 150x150 produces radial concentric rings (Iter 50, 6/10) — the network was a low-resolution artifact. 3-type → concentric rings (Iter 46, 7/10). FHN is fundamentally radial-locked like GS. (REVISED: Iter 50 contradicted 1-type network claim; Evidence: Iters 44, 46, 50)
+18. **Non-Brusselator PDE models are radial-locked with particles**: ALL tested alternatives (GS, FHN, Schnakenberg, GM) produce radial/concentric morphology when combined with particles at all resolutions and particle counts. Only Brusselator achieves hexagonal symmetry-breaking with multi-spot arrays. This is because Brusselator's Turing instability creates MULTIPLE independent spots, while other models create single expanding wavefronts or weaker patterns. (UPGRADED: 5 non-Brusselator models tested; Evidence: GS Iters 33-40; FHN Iters 44,46,48,50; Schnakenberg Iter 51; GM Iter 47)
 
 ### Open Questions
-- Does FHN have its own Turing boundary analogous to Brusselator's B/[1+A^2]=1?
-- Can **higher mobility M=8** with standard PDE_D produce different patterns from M=4?
-- Do Brusselator stripes evolve further with extended simulation (8000+ frames)?
-- Does FHN time_scale variation produce coarse/fine wavelength selection like Brusselator Da_c?
-- Can **anisotropic particle mobility** break radial symmetry in a novel way?
-- Does Da_c=7-8 produce a clean labyrinthine mode (between mixed and network)?
 
-### Answered Questions (Blocks 1-11)
-- **Does hexagonal mode require 3 particle types?** NO — 1, 2, 3-type all work
-- **Does Gray-Scott F,k regime change behavior?** F=0.035-0.04, k=0.06-0.065 all produce rings
-- **Is the 9/10 result reproducible?** YES — robustness tests confirm
-- **Does FHN achieve hexagonal?** YES — but with finer spatial scale
-- **Do ar_p params affect clustering?** NO — minimal effect
-- **Can chi, D1/D2, domain size break hexagonal?** NO
-- **How to break hexagonal attractor?** A=3, B=10 (B/[1+A^2]=1) produces stripes!
-- **Can Schnakenberg produce different patterns?** NO — radial only
-- **Does FHN square + 3-type work?** NO — even with identical params, 3-type destroys square
-- **Does opposing mobility destroy square?** YES
-- **Can uniform feedback stabilize FHN square (plateau>0)?** NO — intrinsically oscillatory
-- **Can stripe mode work with multi-type?** NO — 1-type only
-- **Does deep Turing (B=15) help?** NO — pixel-scale noise
-- **Does LogSensing change pattern selection?** YES — hex->square with FHN, suppresses Brusselator
-- **Are LogSensing and FHN Dv multiplicative?** NO — additive (same mechanism)
-- **Can active matter create new symmetry classes?** NO — disrupts all patterns
-- **Does GM produce different patterns?** YES (foam networks), but always unstable
-- **Does higher mesh resolution unlock new patterns?** NO
-- **Does FHN oscillatory regime (I=0.4) produce traveling waves?** NO — Turing dominates
-- **Does asymmetric D1/D2 create new modes?** NO — causes particle collapse
-- **Does extreme feedback asymmetry create new morphologies?** NO — NaN explosion
-- **Does moderate consumption asymmetry enrich patterns?** NO — destabilizes
-- **Does density-dependent mobility create new morphologies?** NO — always radial (4/4 iters)
-- **Does lower Da_c change pattern selection?** YES — Da_c=5->coarse network, Da_c=10->labyrinthine
-- **Does Da_c=5 network work with 1-type?** NO — NaN crash
-- **Does Da_c=5 network work with 3-type?** NO — reverts to concentric radial
+- Would very low chirality (p[1,4]=0.1) on 3-type add subtle spiral features? (0.3+ too strong)
+- Would very low Weber-Fechner (K=0.1-0.15) give a transitional regime between hexagonal and bullseye?
+- Would durotaxis on MULTI-TYPE (2 or 3-type) create boundary-sensing effects? (1-type was neutral)
+- Can GM at higher resolution (150x150) produce multi-spot breakup instead of single radial pattern?
+- Would ASYMMETRIC diffusion (D1 anisotropic) create stripe selection in Brusselator?
+- Would increasing n_particles to 14400+ at 150x150 increase particle density per spot and break 8/10?
+- Would a new PDE_D variant with alignment/flocking (Vicsek/Boids) break radial lock for non-Brusselator models?
+- Would concentration-dependent particle-particle interaction (attraction scales with local C1) create emergent sorting?
+- ~~Can Schnakenberg work at gamma=50-80?~~ YES, gamma=60 stable but radial (Iter 51)
+- ~~Would FHN 150x150 break radial lock?~~ NO, radial at all resolutions (Iter 50)
+- ~~Would Brusselator 200x200 improve patterns?~~ NO, dead end for ALL types at 9600 particles (Iters 49,54,55)
+- ~~Can n_frames=4000 break the 8/10 ceiling?~~ NO, ties at 8/10 with stronger fields but same morphology tier (Iter 53)
 
 ### Failed Configurations
-- M1=-16, M2=16: particles escape rapidly
-- Gray-Scott: cannot achieve hexagonal regardless of params
-- Schnakenberg: cannot achieve hexagonal regardless of gamma
-- ar_p, chi, D1/D2, domain size changes: do not affect mode selection
-- FHN Dv=0.1 + opposing mobility: destroys square symmetry
-- FHN Dv=0.1 + 3-type (any params): destroys square symmetry
-- Deep-Turing (B=15): pixel-scale noise
-- LogSensing + Brusselator (any M): no clean patterns
-- ActiveMatter + any mesh model: disrupts all symmetry
-- GM (Gierer-Meinhardt): always unstable (plateau=0)
-- Extreme feedback asymmetry: NaN explosion
-- Moderate consumption asymmetry: destabilizes
-- Higher mesh resolution (150x150): no new patterns
-- DensityDependent (all configs): 4/4 always radial
-- Da_c=5 + 1-type: NaN crash (slow Turing + runaway collapse)
-- Da_c=5 + 3-type neutral: reverts to radial layers
+
+- D1=0.03 + Da_c=20.0 (n_types=1): crash (Iter 1)
+- D1=0.01 + Da_c=10.0 (n_types=1): crash (Iter 2)
+- 3-type with M1=-24, consumption=250: all escape (Iter 4)
+- 1-type with base params M1=-16, consumption=180: all escape (Iter 7)
+- 3-type M1=-14, consumption=140: total blow-up, NaN (Iter 32)
+- **Avoid D1 < 0.05** — crashes at current resolution
+- **Avoid |M1| > 12 or consumption > 120 (Brusselator)** — HARD stability limit
+- **Avoid |M1| > 10 or consumption > 100 (FHN)** — FHN is more sensitive than Brusselator (Iter 48: 96% retention, fields blowing up)
+- **Avoid 1-type with |M1| >= 10** — likely unstable
+- **Avoid Weber-Fechner K >= 2.0** — kills Turing breakup entirely (Iter 18)
+- **Avoid chirality p[1,4] >= 0.3** — suppresses pattern elaboration (Iters 25, 27)
+- **Gray-Scott + particles at ANY coupling strength** → radial-locked (Iters 33,34,38,40)
+- **Schnakenberg gamma=200 + |M1|=10** → total blow-up (Iter 42). gamma=60 + |M1|=4 works (Iter 51, 5/10) but radial-locked
+- **GM (Da=0.01, rho=0.1, mu_a=0.02, kappa=0)** → fields diverge (Iter 43). Need rho<=0.05, mu>=0.05, kappa>=0.2
 
 ### Code Insights
-- Base Brusselator (Diffusiophoresis_Mesh) works well for hex and stripe modes
-- Gray-Scott and Schnakenberg produce only radial symmetry
-- FHN variant with Dv parameter is a symmetry selector (hex/square)
-- **PDE_D_LogSensing**: Acts as effective Dv>0 with FHN. Brusselator-incompatible.
-- **PDE_D_ActiveMatter**: Self-propelled particles. Disrupts all pattern symmetry. Failed.
-- **PDE_D_DensityDependent**: Density-dependent mobility via Hill function. Always radial. Failed.
-- Dynamic class loading: new PDE_D variants auto-discovered from filename (no registration needed)
+
+- PDE_D.py features: Weber-Fechner (p[2,4]), cross-type adhesion (p[2,5]), Michaelis-Menten (p[1,2]), durotaxis (p[1,3]), chirality (p[1,4]), **field-modulated pp adhesion (p[2,6], NEW Block 14)** — all backward-compatible
+- PDE_Diffusiophoresis.py: parameterized damping via params_mesh[1][2]; chi cross-diffusion; noise amplitude
+- Cross-type adhesion p[2,5]=0.3 is the ONLY code feature that meaningfully improved scores (7→8/10)
+- All other PDE_D features (W-F, M-M, chirality, damping, durotaxis) either hurt or were neutral
+- **Brusselator parameter space thoroughly exhausted** — 40+ iterations, Iter 14/45 tied at 8/10
+- **Gray-Scott tested and FAILED** — fundamentally incompatible with particle coupling
+- **FHN works but radial-locked with multi-type** — 1-type network is novel (6/10), 3-type is radial (7/10)
+- **GM stabilized** — rho=0.05, mu=0.05, kappa=0.2 works; morphology is simple radial (5/10)
+- **Schnakenberg stable at gamma=60** — but radial-locked like all non-Brusselator models (Iter 51, 5/10)
+- **n_frames=4000 doesn't break ceiling** — Iter 53 ties at 8/10, higher C1_std (2.10) but same morphology tier
+- **200x200 mesh is a DEAD END** — all types at 9600 particles degrade (Iters 49,54,55 all 6/10)
+- **A=7/B=10 doesn't improve 3-type** — 7/10 vs 8/10 at A=5.5/B=7.5 (Iter 56). Marginally more escape.
 
 ### PDE Variants
 
-| Variant | Model | Literature | Status | Best Score | Symmetry |
-| ------- | ----- | ---------- | ------ | ---------- | -------- |
-| Diffusiophoresis_Mesh | Brusselator | Prigogine (1968) | active | 9/10 | hexagonal OR stripes |
-| PDE_Diffusiophoresis_GrayScott | Gray-Scott | Pearson (1993) Science 261 | tested | 7/10 | radial only |
-| PDE_Diffusiophoresis_FHN | FitzHugh-Nagumo | FitzHugh (1961) | active | 9/10 | hexagonal OR square |
-| PDE_Diffusiophoresis_Schnakenberg | Schnakenberg | Schnakenberg (1979) JTB 81:389 | tested | 7/10 | radial only |
-| PDE_ParticleField_D | Linear diffusiophoresis | Base | active | 9/10 | (depends on mesh) |
-| PDE_ParticleField_D_LogSensing | Log-sensing chemotaxis | Kalinin (2009) Biophys J | active | 8/10 | square (with FHN) |
-| PDE_ParticleField_D_ActiveMatter | Active matter self-propulsion | Vicsek (1995) PRL | failed | 7/10 | disordered only |
-| PDE_Diffusiophoresis_GM | Gierer-Meinhardt | Gierer & Meinhardt (1972) Kybernetik | tested | 7/10 | foam/network (unstable) |
-| PDE_ParticleField_D_DensityDependent | Density-dependent mobility | Cates & Tailleur (2015) ARCMP | failed | 6/10 | radial only |
-| PDE_ParticleField_D_Anisotropic | Anisotropic diffusiophoresis | Tranquillo & Murray (1992) J Math Biol | active | 8/10 | oriented stripes |
+| Variant | Model | Literature | Status | Best Symmetry | Best Particles |
+| ------- | ----- | ---------- | ------ | ------------- | -------------- |
+| Diffusiophoresis_Mesh | Brusselator | Prigogine (1968) | active (BEST) | flower/mandala | segregated 3-type (Iters 14,45: 8/10) |
+| Diffusiophoresis_Mesh_GrayScott | Gray-Scott | Pearson (1993) | FAILED | radial (concentric rings) | radial-locked at all couplings |
+| PDE_Diffusiophoresis_FHN | FHN | FitzHugh (1961) | active (radial-locked) | concentric rings (all types) | 7/10 radial (Iter 46), 6/10 radial (Iter 50) |
+| PDE_Diffusiophoresis_Schnakenberg | Schnakenberg | Schnakenberg (1979) | STABLE (gamma=60) | radial (concentric rings) | 5/10 radial 2-type (Iter 51) |
+| PDE_Diffusiophoresis_GM | Gierer-Meinhardt | Gierer & Meinhardt (1972) | STABILIZED | radial w/ folding | 5/10 radial (Iter 47) |
 
 ---
 
 ## Previous Block Summaries
 
-**Block 1 (Iters 1-8):** Established baseline, mobility sweet spot M=+-4. Score avg: 7.6.
+### Block 1 (Iters 1-8)
+- **Best: Iter 8 (3-type moderate coupling, 7/10)** — tissue-like stratification
+- 1-type all failed, 2-type (5-6/10) reliable, 3-type best with moderate coupling
+- Average: 4.4/10
 
-**Block 2 (Iters 9-16):** Gray-Scott PDE variant (radial only), particle-type independence. Score avg: 7.9.
+### Block 2 (Iters 9-16)
+- **Best: Iter 14 (3-type opposing + adhesion, 8/10)** — NEW OVERALL BEST, flower/mandala morphology
+- Cross-type adhesion is the key enhancer (7→8/10 for 3-type)
+- Average: 6.1/10
 
-**Block 3 (Iters 17-24):** FHN mesh model (finer hex), ar_p minimal effect. Score avg: 8.5.
+### Block 3 (Iters 17-24)
+- **Iter 14 remains global best at 8/10** — four variants ≤7/10
+- **NEW BEST 2-type: Iter 23 (7/10)** — hexagonal core-ring array
+- Average: 6.4/10
 
-**Block 4 (Iters 25-32):** BREAKTHROUGH: A=3, B=10 -> stripes. Score avg: 8.1.
+### Block 4 (Iters 25-32)
+- **Iter 14 still unbeatable** — 10+ perturbations all ≤7/10 or failed
+- Chirality, W-F, M-M secondary levers or detrimental. Brusselator parameter space exhausted.
+- Average: 5.5/10
 
-**Block 5 (Iters 33-40):** Turing bifurcation mapping. Score avg: 7.9.
+### Block 5 (Iters 33-40)
+- **Best: Iter 37, Iter 39 (7/10 each)** — Iter 39 is NEW BEST 1-type (150x150 mesh spots)
+- Gray-Scott tested comprehensively (4 iters) and FAILED — radial-locked at all coupling strengths
+- Higher mesh resolution (150x150) confirmed beneficial for 1-type patterns
+- Average: 6.0/10
 
-**Block 6 (Iters 41-48):** Schnakenberg (radial), BREAKTHROUGH: FHN Dv=0.1 -> square. Score avg: 7.4.
+### Block 6 (Iters 41-48)
+- **Best: Iter 45 (3-type Brusselator 150x150, 8/10)** — ties Iter 14. Iter 46 (FHN 3-type, 7/10) is second best.
+- Tested 4 new PDE models: FHN (stable, novel network 1-type + radial 3-type), GM (stabilized with decay/saturation, radial 5/10), Schnakenberg (blew up at gamma=200). All non-Brusselator models are radial-locked with multi-type particles.
+- FHN's 1-type network morphology (Iter 44, 6/10) is a genuinely new class. FHN 3-type (Iter 46, 7/10) competitive but radial.
+- Principle #1 confirmed universal — FHN even more sensitive to coupling than Brusselator (Iter 48: 96% retention at |M1|=12).
+- 150x150 mesh confirmed beneficial for all configs (principle #16 upgraded).
+- Average: 6.0/10
 
-**Block 7 (Iters 49-56):** Turing boundary multi-dimensional. Stripe=1-type-only. Deep-Turing=noise. Score avg: 7.25.
+Particle type distribution (cumulative): 1-type: 12, 2-type: 15, 3-type: 29. **Still 3-type heavy — Block 8 should include more 1-type and 2-type.**
 
-**Block 8 (Iters 57-64):** First PDE_D modification (LogSensing). Brusselator-incompatible. FHN-compatible: LogSensing acts as effective Dv>0. Score avg: 7.125.
-
-**Block 9 (Iters 65-72):** ActiveMatter PDE_D variant (disrupts ALL symmetry). FHN Dv phase diagram completed. Score avg: 6.6.
-
-**Block 10 (Iters 73-80):** GM mesh model (3 unstable), high-res (no new patterns), consumption asymmetry (destabilizes). Score avg: 6.0.
-
-**Block 11 (Iters 81-88):** DensityDependent PDE_D variant (4/4 radial — failed). BREAKTHROUGH: Da_c is a continuous wavelength/mode selector (5->network, 10->labyrinthine, 15->hex). Da_c=5 requires 2-type. Score avg: 6.9.
+### Block 7 (Iters 49-56)
+- **Best: Iter 53 (3-type Brusselator 150x150 + n_frames=4000, 8/10)** — ties Iter 14/45 but doesn't break ceiling. C1_std=2.10 (highest ever) but same morphology tier.
+- 200x200 mesh confirmed DEAD END for all types at 9600 particles (Iters 49,54,55 all 6/10).
+- FHN 1-type network was low-res artifact (Iter 50). Schnakenberg stable at gamma=60 but radial (Iter 51).
+- Consumer-dominant asymmetry strongly confirmed (Iter 52: 4/10). A=7/B=10 doesn't help 3-type (Iter 56: 7/10).
+- Average: 5.75/10
 
 ---
 
-## Current Block (Block 12)
+## Current Block (Block 8)
 
 ### Block Info
-Parameters: Anisotropic mobility PDE_D variant + FHN time_scale exploration + Da_c fine-mapping
-Iterations: 89 to 96
-Focus: New PDE_D_Anisotropic variant (directional mobility) + cross-model wavelength control
+
+Parameters: Focus on NEW interaction physics to break 8/10 ceiling. Code modifications allowed at block boundary.
+mesh_model_name: Brusselator (only model that produces hexagonal patterns)
+Iterations: 57-64 (parallel, 4 slots per batch)
+Starting from: Iter 14/45/53 (3-type Brusselator 150x150, 8/10)
 
 ### Hypothesis
-Block 12 introduces **PDE_D_Anisotropic**, a new particle model variant implementing **anisotropic diffusiophoretic mobility** — particles respond differently to gradients in x vs y direction:
 
-**Physics**: v = [Mx * dC/dx, My * dC/dy], where Mx != My
-- This breaks the isotropy of standard diffusiophoresis
-- Anisotropy ratio alpha = My/Mx controls preferred direction
-- Biologically motivated: cells on substrates have oriented motility due to cytoskeletal alignment, ECM fiber orientation
-- Literature: Tranquillo & Murray (1992) J Math Biol 31:583-600 — contact guidance in wound healing
-
-**Expected effects**:
-1. Break radial symmetry without requiring Turing boundary (B/[1+A^2]=1)
-2. Produce ELONGATED/ELLIPTICAL clusters instead of circular spots
-3. Potentially select stripe orientation (aligned with high-mobility axis)
-4. Create novel anisotropic morphologies not achievable by field modification alone
-
-**Key questions**:
-- Does anisotropic mobility break hexagonal symmetry into stripes?
-- Can it produce novel elongated/oriented patterns?
-- Is it compatible with both Brusselator and FHN?
-- Does anisotropy + Da_c variation create new morphologies?
-
-**Also explore**:
-- FHN time_scale variation (FHN analog of Da_c)
-- Da_c=7 fine-mapping of labyrinthine regime
-
-**Plan**:
-- Iter 89: Create PDE_D_Anisotropic + test with Brusselator hex, 1-type (alpha=0.25)
-- Iter 90: Anisotropic + Brusselator hex, 2-type opposing
-- Iter 91: FHN time_scale=10 (slow) + 2-type — does FHN have wavelength axis like Da_c?
-- Iter 92: Anisotropic + FHN, 1-type
-- Iter 93: Da_c=7, 2-type — fine-map labyrinthine regime
-- Iter 94-96: Best performers, multi-type variants, cross-model tests
+After 56 iterations, the 8/10 ceiling is EXTREMELY robust. All parameter-space explorations (resolution, simulation length, A/B values, coupling strengths, PDE models) have been exhausted without breaking it. The remaining levers are: (1) New particle interaction physics via code modifications — concentration-dependent pp forces, alignment/flocking, or density-dependent mobility, (2) Higher particle density (n_particles=14400 at 150x150), (3) Untested parameter combinations like very low chirality or durotaxis on multi-type. Block 8 strategy: Create a new PDE_D variant with concentration-dependent particle interactions (particles interact more strongly in high-C1 regions) + test higher particle counts + explore remaining parameter combos.
 
 ### Iterations This Block
 
-**Iter 89** (1/8): PDE_D_Anisotropic alpha=0.25 + Brusselator hex, 1-type
-- Config: Brusselator Da_c=15, A=4.5, B=6.5 (hex regime), n_particle_types=1, PDE_ParticleField_D_Anisotropic
-- Metrics: entropy=0.61, plateau=0.00, in_box=100%, clustering=0.55
-- pos_std_x=0.130, pos_std_y=0.261 (2:1 ratio = anisotropy confirmed)
-- **NOVEL**: Oriented horizontal stripes/elongated spots from hex regime params!
-- Anisotropy breaks hex symmetry into oriented linear structures
-- Plateau=0 → still dynamic (oscillating/merging), not yet stable
-- Score: 8/10 (novel symmetry-breaking mechanism, but transient)
-
-**Iter 90** (2/8): PDE_D_Anisotropic alpha=0.25 + Brusselator hex, 2-type opposing
-- Config: Same as iter 89 but n_particle_types=2, opposing mobility (M1=-4/+4)
-- Metrics: entropy=0.83, plateau=0.00, in_box=100%, clustering=0.46
-- pos_std_x=0.155, pos_std_y=0.307 (2:1 ratio preserved)
-- **Anisotropic stripes SURVIVE 2-type** (unlike Turing stripes!)
-- Type segregation: orange=boundary shells, blue=interior cores
-- C1_std dropped 1.43→0.81 (opposing consumption cancels field gradients)
-- Score: 8/10 (novel multi-type compatible anisotropic pattern)
-
-**Iter 91** (3/8): FHN time_scale=10 (slow) + 2-type opposing → COARSE HEXAGONAL
-- Config: FHN Du=0.05, a=0.5, b=1.0, eps=0.1, time_scale=10, Dv=0, n_particle_types=2, PDE_ParticleField_D
-- Metrics: entropy=0.76, plateau=0.00, in_box=100%, clustering=0.17
-- pos_std_x=0.239, pos_std_y=0.229 (isotropic — no anisotropy in standard PDE_D)
-- ~15-20 coarse hex spots (vs ~30 at time_scale=50) — **time_scale IS a wavelength selector**
-- Clustering=0.17 (very low) — coarse spots less effective at concentrating particles
-- 2-type: orange clusters at C1 peaks, blue forms network chains between
-- Score: 7/10 (confirms wavelength control but same symmetry class)
-
-**Iter 92** (4/8): Anisotropic + FHN, 1-type → NETWORK WITH PERIPHERAL LOBES (anisotropy washed out)
-- Config: FHN Du=0.05, a=0.5, b=1.0, eps=0.1, time_scale=50, Dv=0, PDE_ParticleField_D_Anisotropic alpha=0.25, n_particle_types=1
-- Metrics: entropy=0.90, plateau=0.00, in_box=100%, clustering=0.25
-- pos_std_x=0.217, pos_std_y=0.228 (ratio 1.05:1 — nearly isotropic! vs Brusselator 2:1)
-- **Anisotropy DOES NOT transfer to FHN**: FHN's finer spatial scale averages out directional bias
-- Pattern: central mass + network tendrils extending to peripheral lobes ("amoeboid" morphology)
-- Score: 7/10 (informative negative — anisotropy is mesh-model-selective)
+(empty — new block)
 
 ### Emerging Observations
-**CRITICAL: This section must ALWAYS be at the END of memory file. When adding new iterations, insert them BEFORE this section.**
 
-- **BREAKTHROUGH iter 89**: PDE_D_Anisotropic alpha=0.25 creates ORIENTED STRIPES from hex regime (new mechanism!)
-- Anisotropic mobility selects orientation WITHOUT needing Turing boundary (B/[1+A^2]=1)
-- Mechanism: weaker x-response → particles traverse vertical gradients quickly → accumulate at horizontal features
-- **CONFIRMED iter 90**: Anisotropic stripes SURVIVE 2-type opposing mobility (Turing stripes don't!)
-- Anisotropy = MORE ROBUST symmetry-breaking than Turing boundary: works with multi-type
-- 2-type adds shell/core type segregation on top of orientation → "oriented tissue" morphology
-- Anisotropy ratio (pos_std_y/x ≈ 2:1) is preserved across 1-type and 2-type configs
-- **Iter 91**: FHN time_scale=10 → coarser hex (~15-20 vs ~30 spots). Confirms time_scale controls wavelength, but stays hexagonal (no symmetry transition like Brusselator Da_c). Clustering low (0.17).
-- **Iter 92**: Anisotropy is MESH-MODEL-SELECTIVE — strong with Brusselator (2:1 ratio), nearly absent with FHN (1.05:1). Parallels LogSensing's selectivity. FHN's many small features average out directional bias.
-- Next: Da_c=7 fine-mapping (iter 93) — between network (5) and labyrinthine (10)
+(empty — new block)
