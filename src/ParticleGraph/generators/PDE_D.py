@@ -41,6 +41,19 @@ class PDE_D(pyg.nn.MessagePassing):
             At high |C1| >> Km: rate ≈ base_rate (saturated, full strength)
             This creates nonlinear feedback: particles consume/produce more where
             field concentrations are strong, less where they are weak.
+
+    Block 11 code change: Gradient-amplified mobility (durotaxis)
+    Literature: Lo et al. (2000) Biophys J 79:144-152 "Cell movement is guided by
+    the rigidity of the substrate"; Isenberg et al. (2009) Biophys J 97:1313-1322
+    Cells migrate faster in regions of steep chemical/mechanical gradients. Here,
+    the local field gradient magnitude acts as a "stiffness" signal that modulates
+    particle mobility — particles at pattern boundaries (steep gradients) respond
+    more strongly than particles in flat-field regions.
+    Controlled by p[1, 3] (grad_amp_alpha):
+      0.0 = constant mobility (backward compatible, default)
+      >0  = gradient-amplified: M_effective = M * (1 + alpha * |grad_C1|)
+            This creates selective concentration at pattern edges rather than
+            broad peak/valley occupation.
     """
 
     def __init__(self, aggr_type='mean', p=None, particle_params=None, bc_dpos=None, dimension=2, sigma=0.005):
@@ -101,6 +114,22 @@ class PDE_D(pyg.nn.MessagePassing):
         #   Could produce sharper pattern boundaries or oscillatory coupling dynamics
         self.mm_Km = p[1, 2] if p.shape[1] > 2 else 0.0
 
+        # Block 11 code change: Gradient-amplified mobility (durotaxis)
+        # p[1, 3] controls gradient amplification strength (alpha):
+        #   0.0 = standard constant mobility (backward compatible, default)
+        #   >0  = mobility scales with local gradient magnitude:
+        #         M_effective = M * (1 + alpha * |grad_C1|)
+        # Literature: Lo et al. (2000) Biophys J 79:144-152 "Cell movement is guided
+        #   by the rigidity of the substrate"; Isenberg et al. (2009) Biophys J 97:1313-1322
+        # Biological motivation: Cells migrate faster in regions of steep mechanical/chemical
+        #   gradients (durotaxis/haptotaxis). Here, field gradient magnitude serves as the
+        #   "stiffness" signal — particles respond more strongly at pattern boundaries
+        #   (where gradients are steep) and less in flat-field regions.
+        # Effect: Selective concentration of particles at pattern edges. Should create
+        #   sharper particle-pattern boundaries and potentially ring-like structures
+        #   around Turing spots/stripes rather than broad occupation of peaks/valleys.
+        self.grad_amp_alpha = p[1, 3] if p.shape[1] > 3 else 0.0
+
         # Report configuration
         print(f"initialized PDE_D with parameters:")
         print(f"mobility: M₁={self.M1.item()}, M₂={self.M2.item()}")
@@ -124,6 +153,12 @@ class PDE_D(pyg.nn.MessagePassing):
                 print(f"Michaelis-Menten feedback: Km={mm_val:.3f} (rate = base * |C1|/(Km+|C1|))")
             else:
                 print(f"consumption/production: constant rate (Km=0)")
+        if hasattr(self, 'grad_amp_alpha'):
+            ga_val = self.grad_amp_alpha.item() if hasattr(self.grad_amp_alpha, 'item') else self.grad_amp_alpha
+            if ga_val > 0:
+                print(f"gradient-amplified mobility (durotaxis): alpha={ga_val:.3f} (M_eff = M*(1+alpha*|gradC|))")
+            else:
+                print(f"gradient amplification: off (alpha=0)")
         if particle_params is not None:
             print(f"multi-type support: {particle_params.shape[0]} particle types")
             print(f"per-type params: [M1, M2, consumption, production, ar_p1, ar_p2, ar_p3, ar_p4]")
@@ -260,6 +295,20 @@ class PDE_D(pyg.nn.MessagePassing):
             else:
                 # Linear sensing (default, backward compatible)
                 velocity_raw = (M1 * grad_C1 + M2 * grad_C2) * dir_norm
+
+            # Block 11: Gradient-amplified mobility (durotaxis)
+            # Lo et al. (2000): cells migrate faster on stiffer substrates
+            # Here, gradient magnitude serves as "stiffness" — particles respond
+            # more strongly at pattern boundaries where gradients are steep.
+            # M_effective = M * (1 + alpha * |grad_C1|)
+            # When alpha=0: no change (backward compatible)
+            # When alpha>0: amplifies velocity at high-gradient regions
+            if hasattr(self, 'grad_amp_alpha') and self.grad_amp_alpha > 0:
+                # Compute local gradient magnitude from C1 gradient
+                grad_mag = torch.abs(grad_C1)  # |dC1/dr| per edge
+                # Amplification factor: 1 + alpha * |grad_C1|
+                amp_factor = 1.0 + self.grad_amp_alpha * grad_mag
+                velocity_raw = velocity_raw * amp_factor
 
             velocities = velocity_raw
 
