@@ -173,53 +173,50 @@ Hexagonal (deep Turing, most robust) > Labyrinthine ($B/A \approx 1.8$ + NLD) > 
 
 ## Exploration Gallery
 
-::: {.panel-tabset}
+### Iter 3 (5/10) --- Iter 12 (7/10) --- Iter 14 (8/10)
 
-### Iter 3
-*Initial Brusselator test — 2-type opposing, labyrinthine segregation*
+::: {layout-ncol=3}
+![Iter 3](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_003.png){.lightbox group="bruss"}
 
-{{< video log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_003.mp4 >}}
+![Iter 12](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_012.png){.lightbox group="bruss"}
 
-### Iter 12 ⭐
-*Hexagonal mode achieved*
-
-{{< video log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_012.mp4 >}}
-
-Multi-type configuration with opposing mobilities achieves hexagonal Turing pattern. Ring→hexagonal symmetry breaking confirmed.
-
-### Iter 31 ⭐
-*Stripe/Labyrinth mode (A=3, B=10)*
-
-{{< video log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_031.mp4 >}}
-
-Breakthrough: $B/(1+A^2) = 1$ with low $A$ produces labyrinth/stripe morphology instead of hexagonal spots.
-
-### Iter 36
-*Mixed mode (A=2.828, B=9)*
-
-{{< video log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_036.mp4 >}}
-
-Transitional regime at $B=9$ produces a mixed mode — neither pure hexagonal nor pure stripe.
-
-### Iter 83
-*Labyrinthine Turing (A=3.0, B=5.5, NLD $\delta$=2.0)*
-
-{{< video log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_083.mp4 >}}
-
-NLD + high B/A ratio breaks hexagonal into labyrinthine ridges. $C_1^{\text{std}}=1.93$, pattern\_growth=272.
-
-### Iter 87
-*Vermiform filaments (A=2.0, B=5.0, NLD $\delta$=2.0)*
-
-{{< video log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_087.mp4 >}}
-
-Strongest fields ever (pattern\_growth=294). Particles form elongated worm-like filamentary chains tracing fragmented labyrinthine topology.
-
-### Iter 85
-*3-type tissue on labyrinthine scaffold (A=3.0, B=5.5, NLD $\delta$=2.0)*
-
-{{< video log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_085.mp4 >}}
-
-3-type opposing on labyrinthine regime produces branching tissue morphology — hybrid of Iter 83's field topology with Iter 14-style tissue stratification.
-
+![Iter 14](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_014.png){.lightbox group="bruss"}
 :::
+
+**Iter 3** --- Strong radial Turing patterns develop in C1/C2 fields with clear ring/spot structures. Two particle types show spatial segregation: orange particles cluster at concentration maxima while blue particles spread to interstitial regions. Late frames show increasing complexity with multiple nested ring structures.
+
+**Iter 12** --- 2-type with same-sign mobilities (both attracted to C1 peaks). Fields develop vigorous Turing patterns with ring structures breaking into regular spot arrays (pattern_growth=242). Both types cluster at C1 hotspots but with differential strength: orange forms tight inner cores, blue forms looser outer halos. Late frames show star-like co-localized core-shell micro-clusters at each Turing spot.
+
+**Iter 14** --- C1/C2 fields develop elaborate multi-lobed flower/yin-yang patterns with asymmetric branching. Three particle types create tissue-like architecture: blue forms innermost core clusters, orange occupies intermediate zones forming branch arms, green creates outermost boundary layer. Cross-type adhesion (p[2,5]=0.3) sharpens inter-type boundaries into discrete layered domains. Late frames show a distinctive flower/mandala morphology with 3--5 branching arms and clear type stratification within each arm.
+
+### Iter 31 (6/10) --- Iter 36 (5/10) --- Iter 45 (8/10)
+
+::: {layout-ncol=3}
+![Iter 31](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_031.png){.lightbox group="bruss"}
+
+![Iter 36](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_036.png){.lightbox group="bruss"}
+
+![Iter 45](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_045.png){.lightbox group="bruss"}
+:::
+
+**Iter 31** --- Fields develop clean concentric ring patterns (bullseye). Two particle types form remarkably clean annular bands --- blue inner core, orange outer ring --- that remain stable throughout. No hexagonal breakup or satellite spots emerge. Weber-Fechner sensing (K=0.3) compresses the dynamic range enough to suppress hexagonal instability while maintaining radial structure.
+
+**Iter 36** --- Fields develop the strongest Turing patterns in this batch (C1_std=2.08, pattern_growth=189) with multiple spots across the domain. Both types cluster at the same spot centers --- blue surrounded by orange --- forming co-localized core-shell micro-clusters. Same-sign mobilities produce co-localization rather than segregation.
+
+**Iter 45** --- Hexagonal Turing spots develop in both fields at 150x150 mesh resolution. Particles self-organize into elaborate flower/mandala with radial arms and type-specific petal sorting. 3-type segregation creates concentric core-ring evolving into multi-armed rosette with radial spokes. Higher resolution enables more elaborate petal structure.
+
+### Iter 83 (7/10) --- Iter 85 (7/10) --- Iter 87 (7/10)
+
+::: {layout-ncol=3}
+![Iter 83](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_083.png){.lightbox group="bruss"}
+
+![Iter 85](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_085.png){.lightbox group="bruss"}
+
+![Iter 87](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_087.png){.lightbox group="bruss"}
+:::
+
+**Iter 83** --- Fields show labyrinthine/vermiform Turing patterns (not hexagonal spots). The combination of A=3.0/B=5.5 (B/A=1.83) with NLD $\delta$=2.0 triggers a hex-to-labyrinth transition. $C_1^{\text{std}}$=1.93 and pattern_growth=272 indicate very strong field development with interconnected ridges rather than isolated spots. Particles form scattered clusters tracking field maxima along labyrinthine ridges.
+
+**Iter 85** --- Fields develop from noise through concentric rings into labyrinthine multi-lobed flower/mandala with 3-type segregation (pattern_growth=160). Particle rows show 3-layer stratified flower (blue core, orange intermediate, green outer) with elaborate branching lobes that trace labyrinthine field topology. More dispersed branching than compact flower morphologies --- the labyrinthine field creates wider-spaced branches.
+
+**Iter 87** --- Dramatically strong patterns: pattern_growth=294 is the strongest ever recorded. Fields show fragmented labyrinthine topology with many small-scale features at B/A=2.5. Particles form scattered elongated vermiform/worm-like clusters that trace the field topology --- a qualitatively new morphology of filamentary particle chains weaving through the domain.

@@ -75,8 +75,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="site_libs/bootstrap/bootstrap-f3c2ea88cadbcfb37ba28ffa2c97cfc1.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
 <link href="site_libs/bootstrap/bootstrap-dark-ae2d0dcda2edce4ab590422bb373b64f.min.css" rel="prefetch" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<script src="site_libs/quarto-contrib/videojs/video.min.js"></script>
-<link href="site_libs/quarto-contrib/videojs/video-js.css" rel="stylesheet">
+<script src="site_libs/quarto-contrib/glightbox/glightbox.min.js"></script>
+<link href="site_libs/quarto-contrib/glightbox/glightbox.min.css" rel="stylesheet">
+<link href="site_libs/quarto-contrib/glightbox/lightbox.css" rel="stylesheet">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -252,7 +253,11 @@ window.Quarto = {
   <li><a href="#robustness-hierarchy" id="toc-robustness-hierarchy" class="nav-link" data-scroll-target="#robustness-hierarchy">Robustness Hierarchy</a></li>
   </ul></li>
   <li><a href="#comparison-four-pde-models" id="toc-comparison-four-pde-models" class="nav-link" data-scroll-target="#comparison-four-pde-models">Comparison: Four PDE Models</a></li>
-  <li><a href="#exploration-gallery" id="toc-exploration-gallery" class="nav-link" data-scroll-target="#exploration-gallery">Exploration Gallery</a></li>
+  <li><a href="#exploration-gallery" id="toc-exploration-gallery" class="nav-link" data-scroll-target="#exploration-gallery">Exploration Gallery</a>
+  <ul class="collapse">
+  <li><a href="#iter-17-710-iter-18-510" id="toc-iter-17-710-iter-18-510" class="nav-link" data-scroll-target="#iter-17-710-iter-18-510">Iter 17 (7/10) — Iter 18 (5/10)</a></li>
+  <li><a href="#iter-45-810-iter-48-410" id="toc-iter-45-810-iter-48-410" class="nav-link" data-scroll-target="#iter-45-810-iter-48-410">Iter 45 (8/10) — Iter 48 (4/10)</a></li>
+  </ul></li>
   <li><a href="#key-insights" id="toc-key-insights" class="nav-link" data-scroll-target="#key-insights">Key Insights</a></li>
   <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
   </ul>
@@ -529,31 +534,62 @@ Breakthrough: Inhibitor Diffusion Controls Symmetry Class
 </section>
 <section id="exploration-gallery" class="level2">
 <h2 class="anchored" data-anchor-id="exploration-gallery">Exploration Gallery</h2>
-<div class="tabset-margin-container"></div><div class="panel-tabset">
-<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-1-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-1" role="tab" aria-controls="tabset-1-1" aria-selected="true">Iter 17</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-2" role="tab" aria-controls="tabset-1-2" aria-selected="false">Iter 18 ⭐</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-3-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-3" role="tab" aria-controls="tabset-1-3" aria-selected="false">Iter 45 ⭐</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-4-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-4" role="tab" aria-controls="tabset-1-4" aria-selected="false">Iter 48</a></li></ul>
-<div class="tab-content">
-<div id="tabset-1-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-1-1-tab">
-<p><em>FHN 2-type — fine network</em></p>
-<div class="quarto-video"><video id="video_shortcode_videojs_video1" class="video-js vjs-default-skin vjs-fluid" controls="" preload="auto" data-setup="{}" title=""><source src="log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_017.mp4"></video></div>
-<p>First FHN test with 2 particle types. Produces ~30+ fine-scale spots with network/filamentary particle organization.</p>
+<section id="iter-17-710-iter-18-510" class="level3">
+<h3 class="anchored" data-anchor-id="iter-17-710-iter-18-510">Iter 17 (7/10) — Iter 18 (5/10)</h3>
+<div>
+
 </div>
-<div id="tabset-1-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-2-tab">
-<p><em>FHN 3-type — hexagonal mode</em></p>
-<div class="quarto-video"><video id="video_shortcode_videojs_video2" class="video-js vjs-default-skin vjs-fluid" controls="" preload="auto" data-setup="{}" title=""><source src="log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_018.mp4"></video></div>
-<p>Three particle types achieve hexagonal mode (~6-7 spots) with multi-layer particle organization within spots.</p>
-</div>
-<div id="tabset-1-3" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-3-tab">
-<p><em>FHN Square mode (Dv=0.1)</em></p>
-<div class="quarto-video"><video id="video_shortcode_videojs_video3" class="video-js vjs-default-skin vjs-fluid" controls="" preload="auto" data-setup="{}" title=""><source src="log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_045.mp4"></video></div>
-<p>Breakthrough: <span class="math inline">\(D_v = 0.1\)</span> produces <strong>square/grid symmetry</strong> — a morphology not accessible to Brusselator or Gray-Scott.</p>
-</div>
-<div id="tabset-1-4" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-4-tab">
-<p><em>FHN Square 3-type</em></p>
-<div class="quarto-video"><video id="video_shortcode_videojs_video4" class="video-js vjs-default-skin vjs-fluid" controls="" preload="auto" data-setup="{}" title=""><source src="log/Claude_exploration/instruction_diffusiophoresis_parallel/video/video_iter_048.mp4"></video></div>
-<p>Square symmetry persists with 3 particle types when all have same-sign mobility.</p>
+<div class="quarto-layout-panel" data-layout-ncol="2">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_017.png" class="lightbox" data-gallery="fhn" title="Iter 17"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_017.png" class="img-fluid figure-img" alt="Iter 17"></a></p>
+<figcaption>Iter 17</figcaption>
+</figure>
 </div>
 </div>
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_018.png" class="lightbox" data-gallery="fhn" title="Iter 18"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_018.png" class="img-fluid figure-img" alt="Iter 18"></a></p>
+<figcaption>Iter 18</figcaption>
+</figure>
 </div>
+</div>
+</div>
+</div>
+<p><strong>Iter 17</strong> — C1/C2 fields evolve from noise through concentric rings into multi-lobed flower/mandala structure with 4–5 branching arms. Three particle types stratify — blue core, orange intermediate, green outer shell. Late frames show elaborate branching with crescent/yin-yang sub-structures at dispersed Turing spots. Boundaries between types are slightly sharper than parent due to stronger adhesion (0.5 vs 0.3).</p>
+<p><strong>Iter 18</strong> — Fields develop smooth concentric ring patterns that maintain circular symmetry throughout — no flower/labyrinthine breakup. Particles form extremely compact concentric bullseye disc (blue core, orange ring, green outer ring) that barely changes shape across all frames. Late frames show tiny satellite spots beginning to appear at edges, but main pattern stays as smooth layered disc. Flow field shows uniform radial convergence/divergence.</p>
+</section>
+<section id="iter-45-810-iter-48-410" class="level3">
+<h3 class="anchored" data-anchor-id="iter-45-810-iter-48-410">Iter 45 (8/10) — Iter 48 (4/10)</h3>
+<div>
+
+</div>
+<div class="quarto-layout-panel" data-layout-ncol="2">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_045.png" class="lightbox" data-gallery="fhn" title="Iter 45"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_045.png" class="img-fluid figure-img" alt="Iter 45"></a></p>
+<figcaption>Iter 45</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_048.png" class="lightbox" data-gallery="fhn" title="Iter 48"><img src="log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_048.png" class="img-fluid figure-img" alt="Iter 48"></a></p>
+<figcaption>Iter 48</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<p><strong>Iter 45</strong> — Hexagonal Turing spots develop in both fields at 150x150 resolution. Particles self-organize into elaborate flower/mandala with radial arms and type-specific petal sorting. 3-type segregation creates concentric core-ring evolving into multi-armed rosette with radial spokes.</p>
+<p><strong>Iter 48</strong> — Fields show expanding rings with increasingly extreme contrast (C1_std=16.15). Particles initially form concentric rings but scatter outward in later frames. 96% retention indicates significant particle escape. Pattern_growth=1000 is the highest ever recorded — fields are diverging.</p>
+</section>
 </section>
 <section id="key-insights" class="level2">
 <h2 class="anchored" data-anchor-id="key-insights">Key Insights</h2>
@@ -1153,10 +1189,38 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
     </div>
   </div>
 </footer>
-<script>videojs(video_shortcode_videojs_video1);</script>
-<script>videojs(video_shortcode_videojs_video2);</script>
-<script>videojs(video_shortcode_videojs_video3);</script>
-<script>videojs(video_shortcode_videojs_video4);</script>
+<script>var lightboxQuarto = GLightbox({"closeEffect":"zoom","descPosition":"bottom","loop":false,"openEffect":"zoom","selector":".lightbox"});
+(function() {
+  let previousOnload = window.onload;
+  window.onload = () => {
+    if (previousOnload) {
+      previousOnload();
+    }
+    lightboxQuarto.on('slide_before_load', (data) => {
+      const { slideIndex, slideNode, slideConfig, player, trigger } = data;
+      const href = trigger.getAttribute('href');
+      if (href !== null) {
+        const imgEl = window.document.querySelector(`a[href="${href}"] img`);
+        if (imgEl !== null) {
+          const srcAttr = imgEl.getAttribute("src");
+          if (srcAttr && srcAttr.startsWith("data:")) {
+            slideConfig.href = srcAttr;
+          }
+        }
+      } 
+    });
+  
+    lightboxQuarto.on('slide_after_load', (data) => {
+      const { slideIndex, slideNode, slideConfig, player, trigger } = data;
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(slideNode);
+      }
+    });
+  
+  };
+  
+})();
+          </script>
 
 
 

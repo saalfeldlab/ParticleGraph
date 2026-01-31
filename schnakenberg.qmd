@@ -90,19 +90,17 @@ Schnakenberg achieves a genuine plateau (0.62 at gamma=200), unlike all other te
 
 ## Exploration Gallery
 
-::: {.panel-tabset}
+### Iter 41 (7/10) --- Iter 43 (4/10)
 
-### Iter 41
-*Schnakenberg 1-type (gamma=200)*
+::: {layout-ncol=2}
+![Iter 41](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_041.png){.lightbox group="schnak"}
 
-![Schnakenberg produces concentric ring patterns with genuine steady state convergence.](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_041.png){.lightbox}
-
-### Iter 43
-*Schnakenberg 2-type (gamma=200)*
-
-![Multi-type configuration still produces radial symmetry only. No hexagonal breaking.](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_043.png){.lightbox}
-
+![Iter 43](log/Claude_exploration/instruction_diffusiophoresis_parallel/montage/montage_iter_043.png){.lightbox group="schnak"}
 :::
+
+**Iter 41** --- Early frames show standard 2-type concentric rings (blue core, orange ring). By mid-simulation, the circular symmetry breaks into a multi-lobed rosette with clear flower-like morphology. Late frames show an elaborate multi-armed structure with 6+ lobes, each showing blue-orange type segregation. The 150x150 mesh provides finer Turing pattern resolution that enables richer symmetry-breaking. C1/C2 fields show multi-ring Turing patterns that develop azimuthal modulation.
+
+**Iter 43** --- Initially forms clean 2-type concentric rings (blue core, orange ring). Mid-simulation develops interesting internal complexity --- spiral-like folds and asymmetric lobes within the concentric structure. By late frames, field concentrations diverge (C2 reaches extreme values). Particles show progressive dispersal with radial spoke-like patterns in the final frames. The morphology before divergence showed qualitatively different folding/spiral dynamics.
 
 ## References
 
