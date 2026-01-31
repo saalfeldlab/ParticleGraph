@@ -23,8 +23,9 @@ class PDE_Diffusiophoresis(pyg.nn.MessagePassing):
         "model_name": "Brusselator",
         "description": "Two-component reaction-diffusion system with cubic autocatalysis",
         "equations": {
-            "dC1/dt": "D1 * ∇²C₁ + Da_c * (A - (B+1)*C₁ + C₁²*C₂) + χ * ∇²C₂ + noise - damping*(C₁-A)",
-            "dC2/dt": "D2 * ∇²C₂ + Da_c * (B*C₁ - C₁²*C₂) - damping*(C₂-B/A)"
+            "dC1/dt": "D1_eff * ∇²C₁ + Da_c * (A - (B+1)*C₁ + C₁²*C₂) + χ * ∇²C₂ + noise - damping*(C₁-A)",
+            "dC2/dt": "D2 * ∇²C₂ + Da_c * (B*C₁ - C₁²*C₂) - damping*(C₂-B/A)",
+            "D1_eff": "D1 * (1 + nld_delta * (C₁-A)²/A²)  [nonlinear diffusion, 0=standard]"
         },
         "params_mesh": [
             {
@@ -41,10 +42,11 @@ class PDE_Diffusiophoresis(pyg.nn.MessagePassing):
             },
             {
                 "row": 1,
-                "description": "C₂ field parameters",
+                "description": "C₂ field parameters + mesh model feature controls",
                 "slots": [
                     {"index": 0, "name": "D2", "description": "Diffusion coefficient for C₂", "typical_range": [0.1, 1.0]},
                     {"index": 2, "name": "damping", "description": "Damping coefficient toward steady state (0=use default 0.005)", "typical_range": [0.0, 0.1]},
+                    {"index": 3, "name": "nld_delta", "description": "Nonlinear diffusion strength (0=constant D1, >0=concentration-dependent)", "typical_range": [0.0, 5.0]},
                     {"index": 5, "name": "noise_amplitude", "description": "Stochastic noise for symmetry breaking", "typical_range": [0.0, 0.01]}
                 ]
             }
@@ -108,12 +110,34 @@ class PDE_Diffusiophoresis(pyg.nn.MessagePassing):
         else:
             self.damping = torch.tensor(0.005, device=p.device)  # Default
 
+        # Block 11 code change: Nonlinear (concentration-dependent) diffusion
+        # params_mesh[1][3] controls nld_delta:
+        #   0.0 = constant D1 (backward compatible, default)
+        #   >0  = D1_eff = D1 * (1 + delta * (C1-A)^2 / A^2)
+        # Literature: Gambino, Lombardo & Sammartino (2013) Nonlinear Analysis: RWA 14:1095-1112
+        #   "Turing instability and traveling fronts for a nonlinear reaction-diffusion system
+        #    with cross-diffusion"
+        # Also: Biktashev & Tsyganov (2009) Proc R Soc A 465:3561-3580
+        # Effect: Diffusion coefficient depends on local concentration. At C1 peaks (C1 >> A)
+        #   and troughs (C1 << A), diffusion is enhanced. Near steady state (C1 ≈ A), D1 is
+        #   unchanged. This creates multi-scale Turing patterns: sharper spot boundaries
+        #   (enhanced diffusion at peaks smooths gradients less) and potential transitions
+        #   from hexagonal spots to labyrinthine/stripe patterns. Concentration-dependent
+        #   diffusion breaks the constant-wavelength assumption of standard Turing analysis.
+        if p[1].size(0) > 3:
+            self.nld_delta = p[1, 3]
+        else:
+            self.nld_delta = torch.tensor(0.0, device=p.device)
+
         # Store coefficient for later use
         self.coeff = p
 
         # Print initialized parameters for verification
         print(f"initialized PDE_Diffusiophoresis with parameters:")
         print(f"C₁: D={self.D1.item():.3f}, C₂: D={self.D2.item():.3f}, Da_c={self.Da_c.item():.3f}, A={self.A.item():.3f}, B={self.B.item():.3f}, μ={self.mu.item():.3f}, χ={self.chi.item():.3f}, noise={self.noise_amplitude.item():.4f}, damping={self.damping.item():.4f}")
+        nld_val = self.nld_delta.item() if hasattr(self.nld_delta, 'item') else self.nld_delta
+        if nld_val > 0:
+            print(f"nonlinear diffusion: delta={nld_val:.3f} (D1_eff = D1*(1+delta*(C1-A)^2/A^2), Gambino 2013)")
     
     def forward(self, data):
         """
@@ -141,7 +165,20 @@ class PDE_Diffusiophoresis(pyg.nn.MessagePassing):
 
         # Isotropic diffusion - standard Laplacian
         laplacian_C1 = self.propagate(edge_index, u=C1, edge_attr=edge_attr, D_ratio=None)
-        diff_C1 = self.D1 * laplacian_C1
+
+        # Block 11: Nonlinear diffusion (Gambino et al. 2013)
+        # D1_eff = D1 * (1 + nld_delta * (C1 - A)^2 / A^2)
+        # When nld_delta=0: standard constant diffusion (backward compatible)
+        # When nld_delta>0: diffusion is enhanced at concentration peaks/troughs (far from A)
+        # Clamped to [D1, D1*(1+nld_delta*4)] to prevent numerical instability
+        if hasattr(self, 'nld_delta') and self.nld_delta > 0:
+            deviation_sq = (C1 - self.A) ** 2 / (self.A ** 2 + 1e-6)
+            # Clamp deviation to avoid extreme diffusion at very high/low C1
+            deviation_sq = torch.clamp(deviation_sq, max=4.0)
+            D1_eff = self.D1 * (1.0 + self.nld_delta * deviation_sq)
+            diff_C1 = D1_eff * laplacian_C1
+        else:
+            diff_C1 = self.D1 * laplacian_C1
 
         # C2 diffusion
         laplacian_C2 = self.propagate(edge_index, u=C2, edge_attr=edge_attr, D_ratio=None)
