@@ -92,6 +92,29 @@ class PDE_D(pyg.nn.MessagePassing):
             where C1_norm = clamp(C1_local / C1_ref, 0, 2)
             This creates differential compaction: dense cores at pattern peaks,
             loose periphery between spots → enhanced morphological contrast.
+
+    Block 15 code change: Density-dependent mobility (contact inhibition of locomotion)
+    Literature: Mayor & Carmona-Fontaine (2010) Trends Cell Biol 20:319-328 "Keeping
+    in touch with contact inhibition of locomotion"; Stramer & Mayor (2017) Nat Rev
+    Mol Cell Biol 18:43-55 "Mechanisms and in vivo functions of contact inhibition
+    of locomotion"
+    Contact inhibition of locomotion (CIL) is a widespread biological phenomenon:
+    when cells contact other cells, they reduce their motility and change direction.
+    In dense clusters, cells become essentially immobile, while isolated cells
+    migrate freely. This creates sharp cluster boundaries — cells at the edge
+    can still move (few neighbors) but interior cells are trapped (many neighbors).
+    Implementation: During 'pp' aggregation, count the number of neighbors per
+    particle. During 'fp' velocity computation, scale velocity by:
+      v_eff = v / (1 + beta * n_neighbors)
+    where beta controls the strength of density-dependent slowdown.
+    Controlled by p[1, 5] (ddm_beta):
+      0.0 = constant mobility (backward compatible, default)
+      >0  = density-dependent: particles with more pp neighbors move slower
+            beta=0.1: mild slowdown (10 neighbors → 50% speed)
+            beta=0.3: strong slowdown (10 neighbors → 25% speed)
+    Effect: Creates sharper cluster boundaries — interior particles are immobilized,
+    edge particles can still respond to gradients. Should produce more compact,
+    well-defined aggregates with crisp boundaries rather than diffuse clusters.
     """
 
     def __init__(self, aggr_type='mean', p=None, particle_params=None, bc_dpos=None, dimension=2, sigma=0.005):
@@ -196,6 +219,18 @@ class PDE_D(pyg.nn.MessagePassing):
         else:
             self.pp_field_mod = 0.0
 
+        # Block 15 code change: Density-dependent mobility (contact inhibition)
+        # p[1, 5] controls density-dependent slowdown strength (beta):
+        #   0.0 = constant mobility (backward compatible, default)
+        #   >0  = v_eff = v / (1 + beta * n_neighbors)
+        #         Particles with many pp neighbors move slower
+        # Literature: Mayor & Carmona-Fontaine (2010) Trends Cell Biol 20:319-328;
+        #   Stramer & Mayor (2017) Nat Rev Mol Cell Biol 18:43-55
+        # Effect: Sharp cluster boundaries — interior immobilized, edge cells free
+        self.ddm_beta = p[1, 5] if p.shape[1] > 5 else 0.0
+        # Storage for neighbor count computed during 'pp' pass, used in 'fp' pass
+        self._neighbor_count = None
+
         # Report configuration
         print(f"initialized PDE_D with parameters:")
         print(f"mobility: M₁={self.M1.item()}, M₂={self.M2.item()}")
@@ -237,6 +272,12 @@ class PDE_D(pyg.nn.MessagePassing):
                 print(f"field-modulated pp adhesion: alpha={ppfm_val:.3f} (f_eff = f*(1+alpha*C1_norm), Hynes 2002)")
             else:
                 print(f"field-modulated pp: off (alpha=0)")
+        if hasattr(self, 'ddm_beta'):
+            ddm_val = self.ddm_beta.item() if hasattr(self.ddm_beta, 'item') else self.ddm_beta
+            if ddm_val > 0:
+                print(f"density-dependent mobility (CIL): beta={ddm_val:.3f} (v_eff = v/(1+beta*n_neighbors), Mayor 2010)")
+            else:
+                print(f"density-dependent mobility: off (beta=0)")
         if particle_params is not None:
             print(f"multi-type support: {particle_params.shape[0]} particle types")
             print(f"per-type params: [M1, M2, consumption, production, ar_p1, ar_p2, ar_p3, ar_p4]")
@@ -284,6 +325,21 @@ class PDE_D(pyg.nn.MessagePassing):
             in_box = ((pos >= 0) & (pos <= 1)).all(dim=1, keepdim=True)
             result = result * in_box.float()
 
+            # Block 15: Density-dependent mobility (contact inhibition)
+            # Scale velocity by 1/(1 + beta * n_neighbors)
+            # Uses neighbor count computed during prior 'pp' pass
+            if hasattr(self, 'ddm_beta') and self.ddm_beta > 0 and self._neighbor_count is not None:
+                # _neighbor_count has size [n_particles_in_pp_graph]
+                # result has size [n_nodes + n_particles] (fp graph includes mesh nodes)
+                # Only particles (indices >= n_nodes) should be scaled
+                n_result = result.shape[0]
+                n_neighbors = self._neighbor_count.shape[0]
+                if n_neighbors <= n_result:
+                    # Create scaling factor: 1/(1 + beta * count)
+                    scale = 1.0 / (1.0 + self.ddm_beta * self._neighbor_count)
+                    # Apply to the LAST n_neighbors entries (particles are after mesh nodes)
+                    result[-n_neighbors:] = result[-n_neighbors:] * scale.unsqueeze(1)
+
             return result
         elif direction == 'pf':
             # Particle → Field effects
@@ -292,6 +348,16 @@ class PDE_D(pyg.nn.MessagePassing):
         else:  # direction == 'pp'
             # Particle → Particle repulsion
             result = self.propagate(edge_index, x=x, mode='pp', parameters=parameters)
+
+            # Block 15: Count pp neighbors for density-dependent mobility
+            # Store neighbor count per particle for use in subsequent 'fp' call
+            if hasattr(self, 'ddm_beta') and self.ddm_beta > 0:
+                n_particles = x.shape[0]
+                # Count incoming edges per node (= number of pp neighbors)
+                neighbor_count = torch.zeros(n_particles, device=x.device)
+                neighbor_count.scatter_add_(0, edge_index[0], torch.ones(edge_index.shape[1], device=x.device))
+                self._neighbor_count = neighbor_count
+
             return result
     
     def message(self, edge_index_i, edge_index_j, x_i, x_j, mode=None, parameters_i=None):
