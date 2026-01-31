@@ -128,9 +128,12 @@ class PDE_D(pyg.nn.MessagePassing):
     flows, streams, and flocking behavior that is orthogonal to gradient-following.
     Implementation: During 'pp' message computation, in addition to attraction-
     repulsion forces, compute a velocity alignment force:
-      f_align = alignment * (v_neighbor - v_self) * weight(distance)
+      f_align = alignment * normalize(v_neighbor - v_self) * weight(distance) * sigma
     This is added to the pp force output. The alignment force is weighted by
     distance (closer neighbors have stronger influence).
+    Block 17 fix: Normalized velocity difference to unit direction and scaled by
+    sigma to match pp force magnitude. Raw velocity differences caused force
+    blow-up (Block 10: all 8 iterations crashed). Added hard clamp [-0.1, 0.1].
     Controlled by p[2, 7] (alignment_strength):
       0.0 = no alignment (backward compatible, default)
       >0  = Vicsek-style alignment: particles match neighbor velocities
@@ -611,16 +614,24 @@ class PDE_D(pyg.nn.MessagePassing):
 
                 # Block 16: Velocity alignment (Vicsek 1995, Chaté 2008)
                 # Add alignment force: each particle is pushed toward matching its
-                # neighbors' velocities. f_align = alpha * (v_j - v_i) * weight(d)
-                # This creates coherent streaming/flocking alongside the attraction-repulsion.
+                # neighbors' velocities. Uses NORMALIZED velocity difference to avoid
+                # force scale mismatch (pp forces are O(sigma) but velocities can be
+                # O(100+) from diffusiophoresis). Block 17 fix: normalize + clamp.
                 # Velocity is stored at x[:, 3:5] (vx, vy) for 2D.
                 if hasattr(self, 'alignment_strength') and self.alignment_strength > 0:
                     vel_i = x_i[:, self.dimension+1:2*self.dimension+1]  # v_self [vx, vy]
                     vel_j = x_j[:, self.dimension+1:2*self.dimension+1]  # v_neighbor [vx, vy]
                     # Distance-weighted alignment: closer neighbors have more influence
                     align_weight = torch.exp(-dist / 0.04).unsqueeze(1)  # Same scale as pp range
-                    # Velocity difference force: push toward neighbor's velocity
-                    f_align = self.alignment_strength * (vel_j - vel_i) * align_weight
+                    # Normalize velocity difference to unit direction, then scale
+                    # to pp-compatible magnitude (sigma-based)
+                    vel_diff = vel_j - vel_i
+                    vel_diff_mag = torch.norm(vel_diff, dim=1, keepdim=True).clamp(min=1e-6)
+                    vel_diff_dir = vel_diff / vel_diff_mag  # Unit direction of alignment
+                    # Scale alignment force to match pp force scale (~sigma)
+                    f_align = self.alignment_strength * vel_diff_dir * align_weight * self.sigma
+                    # Hard clamp for numerical safety
+                    f_align = torch.clamp(f_align, min=-0.1, max=0.1)
                     forces = forces + f_align
 
             else:
