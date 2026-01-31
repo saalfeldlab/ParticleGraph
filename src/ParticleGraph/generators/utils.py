@@ -53,8 +53,8 @@ def load_pde_variant(variant_name, generators_path=None):
         print(f"Warning: PDE variant file not found: {file_path}")
         return None
 
-    # Dynamic import
-    module_name = f"PDE_Diffusiophoresis_{variant_suffix}"
+    # Dynamic import — use fully-qualified module name so PyG's inspector resolves correctly
+    module_name = f"ParticleGraph.generators.PDE_Diffusiophoresis_{variant_suffix}"
     spec = importlib.util.spec_from_file_location(module_name, file_path)
     module = importlib.util.module_from_spec(spec)
     # Register in sys.modules BEFORE exec_module so PyG's inspector can find it
@@ -115,8 +115,8 @@ def load_pde_d_variant(variant_name, generators_path=None):
         print(f"Warning: PDE_D variant file not found: {file_path}")
         return None
 
-    # Dynamic import
-    module_name = f"PDE_D_{variant_suffix}"
+    # Dynamic import — use fully-qualified module name so PyG's inspector resolves correctly
+    module_name = f"ParticleGraph.generators.PDE_D_{variant_suffix}"
     spec = importlib.util.spec_from_file_location(module_name, file_path)
     module = importlib.util.module_from_spec(spec)
     # Register in sys.modules BEFORE exec_module so PyG's inspector can find it

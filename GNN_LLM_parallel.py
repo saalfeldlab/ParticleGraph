@@ -97,6 +97,11 @@ def submit_cluster_job(slot, config_path, log_dir, root_dir):
 
     cluster_cmd = f"python generate_subprocess.py --config '{cluster_config_path}' --device cuda --erase --step 50"
 
+    # Cluster-side log paths for capturing stdout/stderr
+    cluster_log_dir = log_dir.replace(root_dir, CLUSTER_ROOT_DIR)
+    cluster_stdout = f"{cluster_log_dir}/cluster_sim_{slot:02d}.out"
+    cluster_stderr = f"{cluster_log_dir}/cluster_sim_{slot:02d}.err"
+
     with open(cluster_script_path, 'w') as f:
         f.write("#!/bin/bash\n")
         f.write(f"cd {CLUSTER_ROOT_DIR}\n")
@@ -105,10 +110,12 @@ def submit_cluster_job(slot, config_path, log_dir, root_dir):
 
     cluster_script = cluster_script_path.replace(root_dir, CLUSTER_ROOT_DIR)
 
-    # Submit WITHOUT -K so it returns immediately
+    # Submit WITHOUT -K so it returns immediately; capture stdout/stderr to files
     ssh_cmd = (
         f"ssh allierc@login1 \"cd {CLUSTER_ROOT_DIR} && "
-        f"bsub -n 8 -gpu 'num=1' -q gpu_a100 -W 6000 'bash {cluster_script}'\""
+        f"bsub -n 8 -gpu 'num=1' -q gpu_a100 -W 6000 "
+        f"-o '{cluster_stdout}' -e '{cluster_stderr}' "
+        f"'bash {cluster_script}'\""
     )
     print(f"\033[96m  slot {slot}: submitting via SSH\033[0m")
     result = subprocess.run(ssh_cmd, shell=True, capture_output=True, text=True)
@@ -125,7 +132,7 @@ def submit_cluster_job(slot, config_path, log_dir, root_dir):
         return None
 
 
-def wait_for_cluster_jobs(job_ids, poll_interval=60):
+def wait_for_cluster_jobs(job_ids, log_dir=None, poll_interval=60):
     """Poll bjobs via SSH until all jobs finish.
 
     Returns: dict {slot: bool} — True if DONE, False if EXIT/failed
@@ -149,6 +156,20 @@ def wait_for_cluster_jobs(job_ids, poll_interval=60):
                         results[slot] = False
                         del pending[slot]
                         print(f"\033[91m  slot {slot} (job {jid}): FAILED (EXIT)\033[0m")
+                        # Try to read error log for diagnosis
+                        if log_dir:
+                            err_file = f"{log_dir}/cluster_sim_{slot:02d}.err"
+                            if os.path.exists(err_file):
+                                try:
+                                    with open(err_file, 'r') as ef:
+                                        err_content = ef.read().strip()
+                                    if err_content:
+                                        print(f"\033[91m  --- slot {slot} error log ---\033[0m")
+                                        for eline in err_content.splitlines()[-30:]:
+                                            print(f"\033[91m    {eline}\033[0m")
+                                        print(f"\033[91m  --- end error log ---\033[0m")
+                                except Exception:
+                                    pass
 
             if slot in pending and jid not in out.stdout:
                 results[slot] = True
@@ -418,7 +439,10 @@ def compute_ucb_scores(analysis_path, ucb_path, c=1.414,
     for node_id, node in nodes.items():
         prev_iter = node_id - 1
         if prev_iter in next_parent_map:
-            node['parent'] = next_parent_map[prev_iter]
+            new_parent = next_parent_map[prev_iter]
+            if new_parent == node_id:
+                continue
+            node['parent'] = new_parent
 
     if current_log_path and current_iteration and os.path.exists(current_log_path):
         with open(current_log_path, 'r') as f:
@@ -881,7 +905,7 @@ Write the planned mutations to the working memory file."""
             # Wait for all submitted jobs
             if job_ids:
                 print(f"\n\033[93mPHASE 1b: Waiting for {len(job_ids)} cluster jobs\033[0m")
-                cluster_results = wait_for_cluster_jobs(job_ids, poll_interval=60)
+                cluster_results = wait_for_cluster_jobs(job_ids, log_dir=exploration_dir, poll_interval=60)
                 job_results.update(cluster_results)
 
         else:
