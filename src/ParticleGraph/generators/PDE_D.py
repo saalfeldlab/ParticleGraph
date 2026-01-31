@@ -14,6 +14,19 @@ class PDE_D(pyg.nn.MessagePassing):
       - consumption, production: Particle effects on fields
       - ar_p1, ar_p2: Attraction term parameters (p1*exp(-d^(2*p2)/(2σ²)))
       - ar_p3, ar_p4: Repulsion term parameters (p3*exp(-d^(2*p4)/(2σ²)))
+
+    Block 9 code change: Cross-type differential adhesion
+    Literature: Steinberg (1963) Science 141:401-408 "Reconstruction of tissues by
+    dissociated cells"; Foty & Steinberg (2005) Dev Biol 278:255-263
+    When n_particle_types > 1, pp interactions are type-dependent:
+      - Same-type pairs use params as-is (attraction + repulsion from ar_p1-p4)
+      - Cross-type pairs SWAP attraction/repulsion: what attracts same-type REPELS
+        cross-type and vice versa. This creates differential adhesion — cells of the
+        same type stick together, cells of different types push apart.
+    Controlled by p[2, 5] (cross_type_factor):
+      0.0 = no cross-type modification (backward compatible, default)
+      >0  = cross-type interactions are scaled by -cross_type_factor
+            (negative = inverted attraction/repulsion for cross-type pairs)
     """
 
     def __init__(self, aggr_type='mean', p=None, particle_params=None, bc_dpos=None, dimension=2, sigma=0.005):
@@ -55,6 +68,15 @@ class PDE_D(pyg.nn.MessagePassing):
         #   This should create more uniform filaments instead of dense point clusters
         self.log_sensing_K = p[2, 4] if p.shape[1] > 4 else 0.0
 
+        # Block 9 code change: Cross-type differential adhesion factor
+        # p[2, 5] controls cross-type pp interaction modification:
+        #   0.0 = no modification (backward compatible, default)
+        #   >0  = cross-type force = -cross_type_factor * same-type force
+        #         This inverts attraction→repulsion for cross-type pairs
+        # Literature: Steinberg (1963) Science 141:401-408
+        # Effect: Same-type particles attract, cross-type particles repel → cell sorting
+        self.cross_type_factor = p[2, 5] if p.shape[1] > 5 else 0.0
+
         # Report configuration
         print(f"initialized PDE_D with parameters:")
         print(f"mobility: M₁={self.M1.item()}, M₂={self.M2.item()}")
@@ -66,6 +88,12 @@ class PDE_D(pyg.nn.MessagePassing):
                 print(f"sensing mode: linear (K=0)")
         print(f"Pe={self.Pe.item():.3f}, sigma={self.sigma}")
         print(f"particle→Field: consumption={self.consumption_rate.item()}, production={self.production_rate.item()}, influence_radius={self.influence_radius.item():.3f}")
+        if hasattr(self, 'cross_type_factor'):
+            ctf_val = self.cross_type_factor.item() if hasattr(self.cross_type_factor, 'item') else self.cross_type_factor
+            if ctf_val > 0:
+                print(f"cross-type differential adhesion: factor={ctf_val:.2f} (Steinberg sorting)")
+            else:
+                print(f"cross-type adhesion: off (factor=0)")
         if particle_params is not None:
             print(f"multi-type support: {particle_params.shape[0]} particle types")
             print(f"per-type params: [M1, M2, consumption, production, ar_p1, ar_p2, ar_p3, ar_p4]")
@@ -230,6 +258,12 @@ class PDE_D(pyg.nn.MessagePassing):
         else:  # mode == 'pp'
             # Particle → Particle: PDE_A-style attraction-repulsion
             # Formula: f = (p1 * exp(-d^(2*p2) / (2σ²)) - p3 * exp(-d^(2*p4) / (2σ²))) * direction
+            #
+            # Block 9: Cross-type differential adhesion (Steinberg 1963)
+            # When cross_type_factor > 0 and particles are different types:
+            #   force = -cross_type_factor * same_type_force
+            # This inverts the force for cross-type pairs: what attracts same-type
+            # repels cross-type, creating spontaneous cell sorting.
 
             if parameters_i is not None:
                 # Per-type attraction-repulsion parameters
@@ -241,6 +275,17 @@ class PDE_D(pyg.nn.MessagePassing):
                 # PDE_A formula: attraction - repulsion
                 f = (p1 * torch.exp(-dist ** (2 * p2) / (2 * self.sigma ** 2))
                      - p3 * torch.exp(-dist ** (2 * p4) / (2 * self.sigma ** 2)))
+
+                # Cross-type differential adhesion
+                # Check if sender and receiver are different types
+                if hasattr(self, 'cross_type_factor') and self.cross_type_factor > 0:
+                    type_i = x_i[:, 1 + 2*self.dimension].long()
+                    type_j = x_j[:, 1 + 2*self.dimension].long()
+                    cross_type = (type_i != type_j).float()
+                    # Invert force for cross-type pairs:
+                    # same_type: f unchanged; cross_type: f * (-cross_type_factor)
+                    modifier = 1.0 - cross_type * (1.0 + self.cross_type_factor)
+                    f = f * modifier
 
                 # Apply force in direction of neighbor (attraction positive, repulsion negative)
                 forces = f[:, None] * d_pos / dist_safe.unsqueeze(1)
