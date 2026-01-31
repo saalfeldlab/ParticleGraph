@@ -466,6 +466,7 @@ def setup_exploration_dirs(root_dir: str, instruction_name: str) -> dict:
         'activity': f"{exploration_dir}/activity",
         'montage': f"{exploration_dir}/montage",
         'video': f"{exploration_dir}/video",
+        'figure': f"{exploration_dir}/figure",
         'config': f"{exploration_dir}/config",
         'tree': f"{exploration_dir}/tree",
         'memory': f"{exploration_dir}/memory",
@@ -479,7 +480,8 @@ def setup_exploration_dirs(root_dir: str, instruction_name: str) -> dict:
 
 def save_exploration_artifacts(dirs: dict, iteration: int, block_number: int,
                                 config_path: str, montage_path: str,
-                                video_path: str = None) -> None:
+                                video_path: str = None,
+                                fig_dir: str = None) -> None:
     """Save iteration artifacts to exploration directories."""
     # Save config snapshot
     if os.path.exists(config_path):
@@ -495,6 +497,13 @@ def save_exploration_artifacts(dirs: dict, iteration: int, block_number: int,
     if video_path and os.path.exists(video_path):
         video_dst = f"{dirs['video']}/video_iter_{iteration:03d}.mp4"
         shutil.copy2(video_path, video_dst)
+
+    # Save last 2x2 figure panel to figure folder
+    if fig_dir and os.path.exists(fig_dir):
+        png_files = sorted(Path(fig_dir).glob("Fig_0_*.png"))
+        if png_files:
+            figure_dst = f"{dirs['figure']}/figure_iter_{iteration:03d}.png"
+            shutil.copy2(str(png_files[-1]), figure_dst)
 
 
 def parse_ucb_scores_file(filepath: str) -> list:
@@ -758,10 +767,18 @@ if __name__ == "__main__":
             print(f"\033[93mNo previous iterations found, starting fresh\033[0m")
     else:
         start_iteration = 1
+        if os.path.exists(analysis_path):
+            print(f"\033[91mWARNING: Fresh start will erase existing results in:\033[0m")
+            print(f"\033[91m  {analysis_path}\033[0m")
+            print(f"\033[91m  {memory_path}\033[0m")
+            answer = input("\033[91mContinue? (y/n): \033[0m").strip().lower()
+            if answer != 'y':
+                print("Aborted.")
+                sys.exit(0)
         print(f"\033[93mFresh start\033[0m")
 
-    # Copy base config to Claude config (only on fresh start)
-    if start_iteration == 1:
+    # Copy base config to Claude config (only on fresh start, not --resume)
+    if start_iteration == 1 and not args.resume:
         if os.path.exists(source_config):
             shutil.copy2(source_config, target_config)
             print(f"\033[93mCopied {source_config} -> {target_config}\033[0m")
@@ -772,10 +789,6 @@ if __name__ == "__main__":
 
             config_data['dataset'] = llm_task_name
             config_data['description'] = 'LLM-guided pattern exploration'
-            config_data['claude'] = {
-                'n_iter_block': 8,
-                'ucb_c': 1.414
-            }
 
             with open(target_config, 'w') as f:
                 yaml.dump(config_data, f, default_flow_style=False, sort_keys=False)
@@ -838,6 +851,8 @@ if __name__ == "__main__":
     # Load config to get n_iter_block
     config = ParticleGraphConfig.from_yaml(target_config)
     n_iter_block = config.claude.n_iter_block if config.claude else 8
+    print(f'n_iter_block: {n_iter_block}')
+
     ucb_c = config.claude.ucb_c if config.claude else 1.414
 
     # Track code modifications - always enabled
@@ -1083,7 +1098,8 @@ Code files you can modify (BLOCK END only - for next block):
             block_number=block_number,
             config_path=target_config,
             montage_path=montage_path,
-            video_path=video_path
+            video_path=video_path,
+            fig_dir=fig_dir
         )
 
         # 9. Recompute UCB and generate tree visualization

@@ -1480,15 +1480,15 @@ def data_generate_particle_field(
                     ax3 = fig.add_subplot(2, 2, 3)
                     # Plot field as background (combining both fields)
                     combined_field = C1_field - C2_field  # Different fields usually have opposite effects
-                    im3 = ax3.imshow(combined_field*0, cmap='bone', origin='lower', 
+                    im3 = ax3.imshow(combined_field*0, cmap='bone', origin='lower',
                                     extent=[0, 1, 0, 1], vmin=0, vmax=1)
-                    
+
                     # Overlay particles
                     for n in range(n_particle_types):
                         ax3.scatter(
                             to_numpy(x[index_particles[n], 1]),  # x coordinate
                             to_numpy(x[index_particles[n], 2]),  # y coordinate
-                            s=15,
+                            s=20,
                             color=cmap.color(n),
                             alpha=0.9,
                             edgecolors='none'
@@ -1501,69 +1501,49 @@ def data_generate_particle_field(
                     ax3.set_xticks([])
                     ax3.set_yticks([])
                     
-                    # 4. Metrics panel (bottom right)
+                    # 4. Flow field streamplot (bottom right)
                     ax4 = fig.add_subplot(2, 2, 4)
-                    ax4.set_axis_off()
+                    ax4.set_facecolor('black')
 
-                    # Field metrics
-                    C1_mean = x_mesh[:, 6].mean().item()
-                    C1_std = x_mesh[:, 6].std().item()
-                    C2_mean = x_mesh[:, 7].mean().item()
-                    C2_std = x_mesh[:, 7].std().item()
-                    pattern_growth = C2_std / 0.005 if C2_std > 0 else 0
+                    try:
+                        from scipy.interpolate import griddata
 
-                    # Particle velocity metrics
-                    particle_vel0 = torch.norm(y0, dim=1)
-                    vel_mean0 = particle_vel0.mean().item()
-                    vel_max0 = particle_vel0.max().item()
-                    particle_vel1 = torch.norm(y1, dim=1)
-                    vel_mean1 = particle_vel1.mean().item()
-                    vel_max1 = particle_vel1.max().item()
+                        px = to_numpy(x[:n_particles, 1])
+                        py = to_numpy(x[:n_particles, 2])
+                        vx = to_numpy(y[:n_particles, 0])
+                        vy = to_numpy(y[:n_particles, 1])
 
-                    # Particle clustering
-                    particle_pos = x[:n_particles, 1:3]
-                    pos_std_x = particle_pos[:, 0].std().item()
-                    pos_std_y = particle_pos[:, 1].std().item()
-                    clustering = (0.289 - pos_std_x) / 0.289  # 0.289 is std for uniform distribution
+                        # Filter NaN particles
+                        valid = np.isfinite(px) & np.isfinite(py) & np.isfinite(vx) & np.isfinite(vy)
+                        px, py, vx, vy = px[valid], py[valid], vx[valid], vy[valid]
 
-                    # Diffusiophoresis magnitudes
-                    diffusio_mag1 = torch.norm(y2, dim=1).mean().item()
-                    diffusio_mag2 = torch.norm(y3, dim=1).mean().item()
+                        if len(px) > 10:
+                            # Build grid covering actual particle extent
+                            margin = 0.05
+                            x_lo, x_hi = px.min() - margin, px.max() + margin
+                            y_lo, y_hi = py.min() - margin, py.max() + margin
+                            n_grid = 40
+                            gx = np.linspace(x_lo, x_hi, n_grid)
+                            gy = np.linspace(y_lo, y_hi, n_grid)
+                            grid_x, grid_y = np.meshgrid(gx, gy)
 
-                    # Display metrics as text (matching original print format)
-                    metrics_text = (
-                        f"C1 μ={C1_mean:.3f}±{C1_std:.3f}\n"
-                        f"C2 μ={C2_mean:.3f}±{C2_std:.3f}\n"
-                        f"pattern: {pattern_growth:.1f}x\n\n"
-                        f"particles: vel={vel_mean1:.4f}\n"
-                        f"  (max={vel_max1:.4f})\n"
-                        f"clustering={clustering:.3f}\n\n"
-                        f"repulsion: vel={vel_mean0:.4f}\n"
-                        f"  (max={vel_max0:.4f})\n\n"
-                        f"diffusion: {diffusio_mag1:.4f} + {diffusio_mag2:.4f}"
-                    )
-                    ax4.text(0.02, 0.95, metrics_text, fontsize=10, verticalalignment='top',
-                            fontfamily='monospace', transform=ax4.transAxes)
-                    ax4.set_title("metrics", fontsize=10)
+                            U = griddata((px, py), vx, (grid_x, grid_y), method='linear', fill_value=0)
+                            V = griddata((px, py), vy, (grid_x, grid_y), method='linear', fill_value=0)
+                            speed = np.sqrt(U**2 + V**2)
 
-                    # # Original velocity arrows code (commented out):
-                    # grad_x = np.gradient(combined_field, axis=1)
-                    # grad_y = np.gradient(combined_field, axis=0)
-                    # grad_mag = np.sqrt(grad_x**2 + grad_y**2)
-                    # im4 = ax4.imshow(grad_mag*0, cmap='bone', origin='lower',
-                    #                 extent=[0, 1, 0, 1], vmin=0, vmax=1)
-                    # if model_config.prediction == "2nd_derivative":
-                    #     V1_ = y1 * delta_t
-                    # else:
-                    #     V1_ = y1
-                    # type_list = to_numpy(get_type_list(x, dimension))
-                    # for n in range(0, n_particles, 4):
-                    #     ax4.arrow(
-                    #         x=to_numpy(x[n, 1]), y=to_numpy(x[n, 2]),
-                    #         dx=to_numpy(V1_[n, 0]* delta_t), dy=to_numpy(V1_[n, 1]* delta_t),
-                    #         color=cmap.color(type_list[n].astype(int)),
-                    #         head_width=0.005, length_includes_head=True,
-                    #     )
+                            # Streamlines colored by speed
+                            lw = 3.0 * speed / (speed.max() + 1e-10)
+                            ax4.streamplot(gx, gy, U, V, color=speed, cmap='inferno',
+                                          linewidth=lw, density=1.5, arrowsize=1.2,
+                                          arrowstyle='->')
+                    except Exception:
+                        pass  # Skip streamplot on failure
+
+                    ax4.set_xlim([0, 1])
+                    ax4.set_ylim([0, 1])
+                    ax4.set_xticks([])
+                    ax4.set_yticks([])
+                    ax4.set_title("flow field", fontsize=10)
                     
                     plt.tight_layout()
                     plt.savefig(f"graphs_data/{dataset_name}/Fig/Fig_{run}_{num}.png", dpi=200)
