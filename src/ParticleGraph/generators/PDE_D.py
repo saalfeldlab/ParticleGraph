@@ -30,7 +30,8 @@ class PDE_D(pyg.nn.MessagePassing):
                     {"index": 3, "name": "B", "description": "Brusselator param B (used by mesh model)", "typical_range": [1.0, 10.0]},
                     {"index": 4, "name": "mu", "description": "Morphological parameter (used by mesh model)", "typical_range": [0.01, 0.1]},
                     {"index": 5, "name": "M1", "description": "Mobility coefficient for C1 gradients", "typical_range": [-16, 16]},
-                    {"index": 6, "name": "fdm_alpha", "description": "Field-dependent mobility strength (0=off, >0=faster at peaks, <0=slower at peaks)", "typical_range": [-2.0, 2.0]}
+                    {"index": 6, "name": "fdm_alpha", "description": "Field-dependent mobility strength (0=off, >0=faster at peaks, <0=slower at peaks)", "typical_range": [-2.0, 2.0]},
+                    {"index": 7, "name": "gdp_gamma", "description": "Gradient-dependent production strength (0=off, >0=particles at steep gradients consume/produce more)", "typical_range": [0.0, 2.0]}
                 ]
             },
             {
@@ -234,6 +235,34 @@ class PDE_D(pyg.nn.MessagePassing):
         # Stored from mesh params row 0, index 2
         self.A_ref = p[0, 2]
 
+        # Block 14 code change: Gradient-dependent production (GDP)
+        # p[0, 7] controls gdp_gamma (gradient-dependent production/consumption strength):
+        #   0.0 = constant production/consumption rates (backward compatible, default)
+        #   >0  = rate_eff = rate * (1 + gdp_gamma * clamp(|grad_C1_local|, max=1.0))
+        #         Particles at pattern BOUNDARIES (steep gradients) consume/produce MORE
+        #         than particles at pattern CENTERS (flat gradients, near peaks/troughs).
+        # Literature: Meinhardt (1982) "Models of Biological Pattern Formation" — gradient-
+        #   dependent production rates create edge-selective feedback in morphogen systems.
+        #   Also: Kondo & Miura (2010) Science 329:1616 — reaction-diffusion patterns are
+        #   stabilized when reaction rates depend on spatial context (gradient information).
+        # Rationale: The 7/10 ceiling (104 iterations, Blocks 1-13) persists because
+        #   particle back-reaction (consumption/production) is spatially uniform. GDP makes
+        #   particles at pattern boundaries produce/consume more, creating edge-selective
+        #   feedback that sharpens morphological features. Combined with FDM (mobility
+        #   control) and multi-type opposing (segregation), GDP adds a third dimension
+        #   of spatial control: WHERE particles have their strongest effect on fields.
+        # Effect: Particles at steep gradient boundaries become production/consumption
+        #   hotspots, reinforcing boundary regions. Particles at flat peaks/troughs have
+        #   weaker back-reaction. This creates differential feedback: boundaries are
+        #   reinforced, centers are relatively unaffected → sharper, more complex features.
+        if p.shape[1] > 7:
+            self.gdp_gamma = p[0, 7]
+        else:
+            self.gdp_gamma = 0.0
+
+        # Storage for local gradient magnitude, computed during 'fp' pass for use in 'pf' pass
+        self._local_grad_mag = None
+
         # Report configuration
         print(f"initialized PDE_D with parameters:")
         print(f"mobility: M₁={self.M1.item()}, M₂={self.M2.item()}")
@@ -293,6 +322,12 @@ class PDE_D(pyg.nn.MessagePassing):
                 print(f"field-dependent mobility (FDM): alpha={fdm_val:.3f} (M_eff = M*(1+alpha*clamp((C1-A)^2/A^2,max=4)), Hillen & Painter 2009)")
             else:
                 print(f"field-dependent mobility: off (alpha=0)")
+        if hasattr(self, 'gdp_gamma'):
+            gdp_val = self.gdp_gamma.item() if hasattr(self.gdp_gamma, 'item') else self.gdp_gamma
+            if gdp_val > 0:
+                print(f"gradient-dependent production (GDP): gamma={gdp_val:.3f} (rate_eff = rate*(1+gamma*clamp(|gradC1|,max=1)), Meinhardt 1982)")
+            else:
+                print(f"gradient-dependent production: off (gamma=0)")
         if particle_params is not None:
             print(f"multi-type support: {particle_params.shape[0]} particle types")
             print(f"per-type params: [M1, M2, consumption, production, ar_p1, ar_p2, ar_p3, ar_p4]")
@@ -539,6 +574,23 @@ class PDE_D(pyg.nn.MessagePassing):
                 mm_factor = C1_local / (self.mm_Km + C1_local)  # Michaelis-Menten factor [0, 1)
                 consumption = consumption * mm_factor
                 production = production * mm_factor
+
+            # Block 14: Gradient-dependent production (GDP)
+            # Meinhardt (1982): gradient-dependent rates create edge-selective feedback
+            # When gdp_gamma > 0, scale consumption/production by local gradient magnitude:
+            #   rate_eff = rate * (1 + gdp_gamma * clamp(|dC1/dr|, max=1.0))
+            # Particles at pattern boundaries (steep gradients) have amplified rates.
+            # Particles at pattern centers (flat, near peak/trough) have baseline rates.
+            # Uses the C1 field difference along the pf edge as gradient proxy.
+            if hasattr(self, 'gdp_gamma') and self.gdp_gamma > 0:
+                # Compute local gradient magnitude from field difference along this edge
+                C1_i = x_i[:, 6]  # C1 at particle position
+                C1_j = x_j[:, 6]  # C1 at mesh node
+                dC1_dr = torch.abs(C1_j - C1_i) / (dist_safe * 32.0)  # Scaled gradient estimate
+                grad_mag_clamped = torch.clamp(dC1_dr, max=1.0)
+                gdp_factor = 1.0 + self.gdp_gamma * grad_mag_clamped
+                consumption = consumption * gdp_factor
+                production = production * gdp_factor
 
             # Create field updates [C₁, C₂]
             field_updates = torch.zeros((pos_i.size(0), 2), device=pos_i.device)
