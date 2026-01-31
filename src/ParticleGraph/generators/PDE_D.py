@@ -77,6 +77,21 @@ class PDE_D(pyg.nn.MessagePassing):
     creating spiral/helical trajectories along field contours. Should produce
     qualitatively different particle organization: instead of collecting at
     peaks/valleys, particles orbit around them.
+
+    Block 14 code change: Field-modulated particle-particle adhesion
+    Literature: Hynes (2002) Cell 110:673-687 "Integrins: bidirectional, allosteric
+    signaling machines"; Schwartz & Ginsberg (2002) Nat Cell Biol 4:E65-E68
+    "Networks and crosstalk: integrin signaling spreads"
+    Cell-cell adhesion strength is regulated by local growth factor concentration.
+    In high-signal regions (Turing peaks), integrins/cadherins are upregulated,
+    cells form stronger adhesions → tighter clusters. In low-signal regions
+    (between spots), adhesion is weak → cells remain dispersed.
+    Controlled by p[2, 6] (pp_field_mod):
+      0.0 = constant pp forces (backward compatible, default)
+      >0  = field-modulated: f_eff = f * (1 + alpha * C1_norm)
+            where C1_norm = clamp(C1_local / C1_ref, 0, 2)
+            This creates differential compaction: dense cores at pattern peaks,
+            loose periphery between spots → enhanced morphological contrast.
     """
 
     def __init__(self, aggr_type='mean', p=None, particle_params=None, bc_dpos=None, dimension=2, sigma=0.005):
@@ -162,6 +177,25 @@ class PDE_D(pyg.nn.MessagePassing):
         #   direct ascent/descent. Particles orbit peaks/valleys instead of collecting there.
         self.chirality = p[1, 4] if p.shape[1] > 4 else 0.0
 
+        # Block 14 code change: Field-modulated particle-particle adhesion
+        # p[2, 6] controls concentration-dependent pp force scaling:
+        #   0.0 = constant pp forces (backward compatible, default)
+        #   >0  = pp force scales with local field: f_eff = f * (1 + alpha * C1_norm)
+        #         where C1_norm = clamp(C1_local / C1_ref, 0, 2), C1_ref = A (Brusselator steady state)
+        # Literature: Hynes (2002) Cell 110:673-687 "Integrins: bidirectional,
+        #   allosteric signaling machines"; Schwartz & Ginsberg (2002) Nat Cell Biol
+        #   4:E65-E68 "Networks and crosstalk: integrin signaling spreads"
+        # Biological motivation: cell-cell adhesion (integrin/cadherin) is regulated by
+        #   local growth factor concentration. In high-signal regions, cells form stronger
+        #   adhesions; in low-signal regions, cells are more loosely associated.
+        # Effect: Particles cluster TIGHTER at Turing spot peaks (high C1) and remain
+        #   more dispersed between spots. Creates differential compaction that should
+        #   enhance morphological complexity at pattern boundaries.
+        if p.shape[0] > 2 and p.shape[1] > 6:
+            self.pp_field_mod = p[2, 6]
+        else:
+            self.pp_field_mod = 0.0
+
         # Report configuration
         print(f"initialized PDE_D with parameters:")
         print(f"mobility: M₁={self.M1.item()}, M₂={self.M2.item()}")
@@ -197,6 +231,12 @@ class PDE_D(pyg.nn.MessagePassing):
                 print(f"chiral diffusiophoresis: chirality={ch_val:.3f} ({'CCW' if ch_val > 0 else 'CW'} spiral, Löwen 2016)")
             else:
                 print(f"chiral drift: off (chirality=0)")
+        if hasattr(self, 'pp_field_mod'):
+            ppfm_val = self.pp_field_mod.item() if hasattr(self.pp_field_mod, 'item') else self.pp_field_mod
+            if ppfm_val > 0:
+                print(f"field-modulated pp adhesion: alpha={ppfm_val:.3f} (f_eff = f*(1+alpha*C1_norm), Hynes 2002)")
+            else:
+                print(f"field-modulated pp: off (alpha=0)")
         if particle_params is not None:
             print(f"multi-type support: {particle_params.shape[0]} particle types")
             print(f"per-type params: [M1, M2, consumption, production, ar_p1, ar_p2, ar_p3, ar_p4]")
@@ -435,6 +475,25 @@ class PDE_D(pyg.nn.MessagePassing):
                     # same_type: f unchanged; cross_type: f * (-cross_type_factor)
                     modifier = 1.0 - cross_type * (1.0 + self.cross_type_factor)
                     f = f * modifier
+
+                # Block 14: Field-modulated pp adhesion (Hynes 2002, Schwartz & Ginsberg 2002)
+                # When pp_field_mod > 0, scale pp force by local field concentration:
+                # f_eff = f * (1 + alpha * C1_norm)
+                # where C1_norm = clamp(C1_local / C1_ref, 0, 2)
+                # C1_ref = A (Brusselator steady state) normalizes so modulation ~1x at steady state
+                # At Turing peaks (C1 > A): stronger adhesion → tighter clusters
+                # At Turing troughs (C1 < A): weaker adhesion → more dispersed
+                # This creates differential compaction: pattern peaks become dense cores,
+                # inter-spot regions remain loose → enhanced morphological contrast
+                if hasattr(self, 'pp_field_mod') and self.pp_field_mod > 0:
+                    # Get local C1 concentration at particle i position
+                    C1_local = x_i[:, 6]  # Field C1 interpolated to particle position
+                    # Normalize by Brusselator steady state (A ~ 4-6 typically)
+                    C1_ref = torch.clamp(torch.abs(C1_local).mean(), min=1.0)
+                    C1_norm = torch.clamp(C1_local / C1_ref, min=0.0, max=2.0)
+                    # Modulate force: stronger at peaks, weaker at troughs
+                    field_factor = 1.0 + self.pp_field_mod * C1_norm
+                    f = f * field_factor
 
                 # Apply force in direction of neighbor (attraction positive, repulsion negative)
                 forces = f[:, None] * d_pos / dist_safe.unsqueeze(1)
