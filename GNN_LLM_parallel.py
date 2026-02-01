@@ -908,6 +908,102 @@ Write the planned mutations to the working memory file."""
                 cluster_results = wait_for_cluster_jobs(job_ids, log_dir=exploration_dir, poll_interval=60)
                 job_results.update(cluster_results)
 
+            # Check for generation errors — attempt auto-repair instead of stopping
+            for slot_idx in range(n_slots):
+                if job_results.get(slot_idx) == False:
+                    err_file = f"{exploration_dir}/cluster_sim_{slot_idx:02d}.err"
+                    if not os.path.exists(err_file):
+                        continue
+                    try:
+                        with open(err_file, 'r') as ef:
+                            err_content = ef.read()
+                    except Exception:
+                        continue
+                    if 'GENERATION SUBPROCESS ERROR' not in err_content:
+                        continue
+
+                    print(f"\033[91m  slot {slot_idx}: GENERATION ERROR detected — attempting auto-repair\033[0m")
+
+                    code_files = [
+                        'src/ParticleGraph/generators/PDE_Diffusiophoresis.py',
+                        'src/ParticleGraph/generators/PDE_D.py',
+                        'src/ParticleGraph/generators/graph_data_generator.py',
+                    ]
+                    generators_dir = Path(root_dir) / 'src/ParticleGraph/generators'
+                    for pde_d_file in generators_dir.glob('PDE_D_*.py'):
+                        rel_path = str(pde_d_file.relative_to(root_dir))
+                        if rel_path not in code_files:
+                            code_files.append(rel_path)
+                    code_files.append('src/ParticleGraph/generators/utils.py')
+                    # Include per-slot config file (LLM always modifies configs)
+                    slot_config_rel = os.path.relpath(config_paths[slot_idx], root_dir)
+                    code_files.append(slot_config_rel)
+                    modified_code = get_modified_code_files(root_dir, code_files) if is_git_repo(root_dir) else [slot_config_rel]
+
+                    if not modified_code:
+                        print(f"\033[93m  slot {slot_idx}: no modified files to repair — skipping\033[0m")
+                        continue
+
+                    max_repair_attempts = 3
+                    repaired = False
+                    for attempt in range(max_repair_attempts):
+                        print(f"\033[93m  slot {slot_idx}: repair attempt {attempt + 1}/{max_repair_attempts}\033[0m")
+                        repair_prompt = f"""SIMULATION CRASHED - Please fix the code error.
+
+Error traceback:
+```
+{err_content[-3000:]}
+```
+
+Modified files: {chr(10).join(f'- {root_dir}/{f}' for f in modified_code)}
+
+Fix the bug. Do NOT make other changes."""
+
+                        repair_cmd = [
+                            'claude', '-p', repair_prompt,
+                            '--output-format', 'text', '--max-turns', '10',
+                            '--allowedTools', 'Read', 'Edit', 'Write'
+                        ]
+                        repair_result = subprocess.run(repair_cmd, cwd=root_dir, capture_output=True, text=True)
+                        if 'CANNOT_FIX' in repair_result.stdout:
+                            print(f"\033[91m  slot {slot_idx}: Claude cannot fix — stopping repair\033[0m")
+                            break
+
+                        # Resubmit repaired slot to cluster
+                        print(f"\033[96m  slot {slot_idx}: resubmitting after repair\033[0m")
+                        jid = submit_cluster_job(
+                            slot=slot_idx,
+                            config_path=config_paths[slot_idx],
+                            log_dir=exploration_dir,
+                            root_dir=root_dir
+                        )
+                        if jid:
+                            retry_results = wait_for_cluster_jobs(
+                                {slot_idx: jid}, log_dir=exploration_dir, poll_interval=60
+                            )
+                            if retry_results.get(slot_idx):
+                                job_results[slot_idx] = True
+                                repaired = True
+                                print(f"\033[92m  slot {slot_idx}: repair successful!\033[0m")
+                                break
+                            # Reload error for next attempt
+                            try:
+                                with open(err_file, 'r') as ef:
+                                    err_content = ef.read()
+                            except Exception:
+                                pass
+
+                    if not repaired:
+                        print(f"\033[91m  slot {slot_idx}: repair failed after {max_repair_attempts} attempts — skipping\033[0m")
+                        if is_git_repo(root_dir):
+                            rollback_files = list(code_files)
+                            for fp in rollback_files:
+                                try:
+                                    subprocess.run(['git', 'checkout', 'HEAD', '--', fp],
+                                                  cwd=root_dir, capture_output=True, timeout=10)
+                                except Exception:
+                                    pass
+
         else:
             # --- Local mode: run 4 simulations sequentially with error recovery ---
             print(f"\n\033[93mPHASE 1: Running {n_slots} simulations locally\033[0m")
@@ -936,7 +1032,15 @@ Write the planned mutations to the working memory file."""
                         'src/ParticleGraph/generators/PDE_D.py',
                         'src/ParticleGraph/generators/graph_data_generator.py',
                     ]
-                    modified_code = get_modified_code_files(root_dir, code_files) if is_git_repo(root_dir) else []
+                    generators_dir = Path(root_dir) / 'src/ParticleGraph/generators'
+                    for pde_d_file in generators_dir.glob('PDE_D_*.py'):
+                        rel_path = str(pde_d_file.relative_to(root_dir))
+                        if rel_path not in code_files:
+                            code_files.append(rel_path)
+                    # Include per-slot config file (LLM always modifies configs)
+                    slot_config_rel = os.path.relpath(config_paths[slot_idx], root_dir)
+                    code_files.append(slot_config_rel)
+                    modified_code = get_modified_code_files(root_dir, code_files) if is_git_repo(root_dir) else [slot_config_rel]
 
                     if not modified_code and attempt == 0:
                         break
@@ -965,9 +1069,8 @@ Fix the bug. Do NOT make other changes."""
 
                 if not success:
                     if is_git_repo(root_dir):
-                        for fp in ['src/ParticleGraph/generators/PDE_Diffusiophoresis.py',
-                                   'src/ParticleGraph/generators/PDE_D.py',
-                                   'src/ParticleGraph/generators/graph_data_generator.py']:
+                        rollback_files = list(code_files)
+                        for fp in rollback_files:
                             try:
                                 subprocess.run(['git', 'checkout', 'HEAD', '--', fp],
                                               cwd=root_dir, capture_output=True, timeout=10)
@@ -1123,8 +1226,9 @@ IMPORTANT: Do NOT change the 'dataset' field in any config — it must stay as-i
             claude_prompt += f"""
 
 Code files you can modify (BLOCK END only - for next block):
-- {root_dir}/src/ParticleGraph/generators/PDE_Diffusiophoresis.py
-- {root_dir}/src/ParticleGraph/generators/PDE_D.py
+- {root_dir}/src/ParticleGraph/generators/PDE_Diffusiophoresis*.py (mesh model variants)
+- {root_dir}/src/ParticleGraph/generators/PDE_D.py (base particle model - minimal, prefer creating variants)
+- {root_dir}/src/ParticleGraph/generators/PDE_D_*.py (particle model variants - create new or modify existing)
 - {root_dir}/src/ParticleGraph/generators/graph_data_generator.py"""
 
         print("\033[93mClaude analysis...\033[0m")

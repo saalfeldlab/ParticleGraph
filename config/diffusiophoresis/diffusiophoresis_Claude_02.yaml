@@ -2,45 +2,39 @@ description: LLM-guided pattern exploration (parallel)
 dataset: diffusiophoresis_Claude_02
 simulation:
   params:
-  - - -8
-    - 8
-    - 80
-    - -80
+  - - -10
+    - 10
+    - 100
+    - -100
     - 1.6
     - 1.0
     - 1.6
     - 1.5
-  - - 8
-    - -8
-    - -80
-    - 80
+  - - 10
+    - -10
+    - -100
+    - 100
     - 1.8
     - 1.0
     - 1.1
     - 1.9
   params_mesh:
   - - 0.05
-    - 15.0
-    - 2.5
-    - 5.5
+    - 10.0
+    - 4.5
+    - 6.5
     - 0.04
-    - -8
-    - 0.0
-    - 0.0
+    - -10
   - - 0.8
-    - 8
-    - 0.0
-    - 2.0
-    - 0.0
+    - 10
+    - 1.0
     - 0.0
     - 0.0
     - 0.0
   - - 1.0
-    - 80
-    - -80
+    - 100
+    - -100
     - 0.05
-    - 0.0
-    - 0.3
     - 0.0
     - 0.0
   min_radius: 0
@@ -48,18 +42,18 @@ simulation:
   n_particles: 9600
   n_particle_types: 2
   n_frames: 2000
-  n_nodes: 22500
+  n_nodes: 10000
   n_node_types: 1
   sigma: 0.005
   delta_t: 0.0005
   dpos_init: 0
   boundary: 'no'
+  shuffle_particle_types: false
   node_value_map: input_data/pattern_Null.tif
   node_coeff_map: ''
-  shuffle_particle_types: false
 graph_model:
   field_type: diffusiophoresis
-  particle_model_name: PDE_ParticleField_D
+  particle_model_name: PDE_ParticleField_D_MichaelisMenten
   mesh_model_name: Diffusiophoresis_Mesh
   prediction: first_derivative
   input_size: 5
