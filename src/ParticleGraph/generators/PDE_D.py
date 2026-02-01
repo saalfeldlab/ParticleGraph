@@ -55,7 +55,7 @@ class PDE_D(pyg.nn.MessagePassing):
                     {"index": 2, "name": "production", "description": "Particle production rate of C2", "typical_range": [-200, -10]},
                     {"index": 3, "name": "influence_radius", "description": "Gaussian influence radius for pf coupling", "typical_range": [0.01, 0.1]},
                     {"index": 4, "name": "log_sensing_K", "description": "Weber-Fechner half-saturation (0=linear sensing)", "typical_range": [0.0, 2.0]},
-                    {"index": 5, "name": "cross_type_factor", "description": "Cross-type adhesion inversion (0=off, >0=Steinberg sorting)", "typical_range": [0.0, 0.5]},
+                    {"index": 5, "name": "cross_type_factor", "description": "Cross-type adhesion inversion (0=off, >0=Steinberg sorting). ALSO: per-type CTC threshold spread when ctc_threshold>0 (0.3=±30% spread between types)", "typical_range": [0.0, 0.5]},
                     {"index": 6, "name": "pp_field_mod", "description": "Field-modulated pp adhesion (0=off)", "typical_range": [0.0, 1.0]},
                     {"index": 7, "name": "alignment_strength", "description": "Vicsek velocity alignment (0=off)", "typical_range": [0.0, 1.0]}
                 ]
@@ -330,6 +330,14 @@ class PDE_D(pyg.nn.MessagePassing):
             if ctc_val > 0:
                 T_val = ctc_val * self.A_ref.item()
                 print(f"concentration-threshold coupling (CTC): threshold={ctc_val:.3f} (T={T_val:.2f}, reversal at C1=T*A, Wolpert 1969)")
+                ctf_for_ctc = self.cross_type_factor.item() if hasattr(self.cross_type_factor, 'item') else self.cross_type_factor
+                if ctf_for_ctc > 0 and particle_params is not None:
+                    n_types = particle_params.shape[0]
+                    mean_idx = (n_types - 1) / 2.0
+                    for t in range(n_types):
+                        t_offset = ctf_for_ctc * (t - mean_idx)
+                        t_val = T_val * (1.0 + t_offset)
+                        print(f"  Type {t}: CTC threshold = {t_val:.2f} (offset={t_offset:+.2f})")
             else:
                 print(f"concentration-threshold coupling: off (threshold=0)")
         if particle_params is not None:
@@ -560,11 +568,37 @@ class PDE_D(pyg.nn.MessagePassing):
             #   Above T (C1 > T): sign_factor < 0, gradient-reversed (repelled from peaks)
             #   At C1 = T: sign_factor = 0, zero net mobility (attractor isoline)
             # Result: particles accumulate at the C1=T contour, forming RING structures
+            #
+            # Block 18 code change: Per-type CTC thresholds
+            # When cross_type_factor > 0 AND ctc_threshold > 0 AND multi-type,
+            # each particle type gets a different threshold:
+            #   T_type = base_T * (1 + cross_type_factor * (type_idx - mean_idx))
+            # This creates NESTED RING structures — different types attracted to different
+            # C1 concentration isolines around each Turing spot.
+            # Literature: Dessaud et al. (2008) Development 135:2489 — different cell types
+            #   respond to different Shh concentration thresholds in the neural tube,
+            #   creating stratified domains (p0, p1, p2, pMN, etc.)
+            # cross_type_factor controls spread: 0.0 = same threshold (backward compatible),
+            #   0.3 = ±30% spread, 0.5 = ±50% spread between types.
             if hasattr(self, 'ctc_threshold') and self.ctc_threshold > 0:
                 C1_local = fields_i[:, 0:1]  # Local C1 at particle position
                 A_ref = self.A_ref
-                T = self.ctc_threshold * A_ref  # Threshold concentration
+                base_T = self.ctc_threshold * A_ref  # Base threshold concentration
                 steepness = 3.0  # Controls sharpness of transition
+
+                # Per-type thresholds when multi-type + cross_type_factor > 0
+                if (parameters_i is not None and
+                        hasattr(self, 'cross_type_factor') and self.cross_type_factor > 0):
+                    # Get particle type indices
+                    type_i = x_i[:, 1 + 2*self.dimension].long()
+                    n_types = type_i.max().item() + 1
+                    mean_idx = (n_types - 1) / 2.0  # Center index (0.5 for 2-type, 1.0 for 3-type)
+                    # Per-type threshold offset: type 0 gets lower T, higher types get higher T
+                    type_offset = self.cross_type_factor * (type_i.float() - mean_idx)
+                    T = base_T * (1.0 + type_offset.unsqueeze(1))  # [n_edges, 1]
+                else:
+                    T = base_T  # Global threshold (backward compatible)
+
                 # Smooth sign switch: +1 below T, -1 above T, 0 at T
                 sign_factor = -torch.tanh(steepness * (C1_local - T) / (A_ref + 1e-6))
                 velocity_raw = velocity_raw * sign_factor
