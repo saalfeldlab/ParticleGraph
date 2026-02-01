@@ -31,7 +31,7 @@ class PDE_D(pyg.nn.MessagePassing):
                     {"index": 4, "name": "mu", "description": "Morphological parameter (used by mesh model)", "typical_range": [0.01, 0.1]},
                     {"index": 5, "name": "M1", "description": "Mobility coefficient for C1 gradients", "typical_range": [-16, 16]},
                     {"index": 6, "name": "fdm_alpha", "description": "Field-dependent mobility strength (0=off, >0=faster at peaks, <0=slower at peaks)", "typical_range": [-2.0, 2.0]},
-                    {"index": 7, "name": "bpm_alpha", "description": "Boundary-preferring mobility (0=off, >0=particles slow/reverse at peaks, accumulate at boundaries)", "typical_range": [0.0, 0.5]}
+                    {"index": 7, "name": "ctc_threshold", "description": "Concentration-threshold coupling (0=off, >0=bistable: attracted below T*A, repelled above T*A)", "typical_range": [0.0, 3.0]}
                 ]
             },
             {
@@ -235,32 +235,36 @@ class PDE_D(pyg.nn.MessagePassing):
         # Stored from mesh params row 0, index 2
         self.A_ref = p[0, 2]
 
-        # Block 15 code change: Boundary-preferring mobility (BPM)
-        # p[0, 7] controls bpm_alpha (boundary-preferring mobility strength):
+        # Block 16 code change: Concentration-threshold coupling (CTC)
+        # p[0, 7] controls ctc_threshold:
         #   0.0 = standard gradient-following mobility (backward compatible, default)
-        #   >0  = mobility modulated by local field deviation from steady state:
-        #         modulation = 1 - bpm_alpha * clamp((C1 - A)^2 / A^2, max=4.0)
-        #         At C1 ≈ A (boundaries): modulation ≈ 1.0, full mobility
-        #         At C1 far from A (peaks/troughs): modulation decreases, even REVERSES
-        # Literature: Rauzi & Lenne (2011) Curr Opin Cell Biol 23:698 — cells sense local
-        #   curvature and accumulate at tissue boundaries rather than morphogen peaks.
-        #   Also: Theveneau & Mayor (2012) WIREs Dev Biol 1:435 — contact inhibition of
-        #   locomotion creates boundary-seeking behavior in neural crest cells.
-        # Rationale: The 7/10 ceiling (112 iterations, Blocks 1-14) persists because
-        #   gradient-following causes particles to pile up at concentration PEAKS. BPM makes
-        #   particles accumulate at pattern BOUNDARIES (C1 ≈ A) rather than PEAKS
-        #   (C1 >> A). At boundaries, gradient-following is unmodified. At peaks, the
-        #   mobility sign can reverse, pushing particles AWAY from concentration maxima.
-        #   This creates boundary-tracking chains and distributed edge morphology instead
-        #   of dense peak clusters. Combined with FDM and multi-type opposing, BPM adds
-        #   a new dimension: WHERE particles accumulate (boundaries vs. peaks).
-        # Effect: bpm_alpha=0.3: mild peak avoidance, still collects at moderate C1.
-        #   bpm_alpha=0.5: sign reversal at C1 > 2A, strong boundary accumulation.
-        #   bpm_alpha=0.25: critical threshold where mobility=0 at C1=3A (neutrality).
+        #   >0  = BISTABLE coupling with threshold T = ctc_threshold * A:
+        #         Below threshold (C1 < T): standard gradient-following (attracted to peaks)
+        #         Above threshold (C1 > T): REVERSED gradient-following (repelled from peaks)
+        #         Smooth transition: sign_factor = -tanh(steepness * (C1 - T) / A)
+        #         steepness=3.0 controls sharpness of the switch
+        # Literature: Wolpert (1969) J Theor Biol 25:1 — "Positional information and the
+        #   spatial pattern of cellular differentiation" (French flag model). Cells interpret
+        #   morphogen concentrations via thresholds, creating sharp domain boundaries.
+        #   Meinhardt & Gierer (1974) J Cell Sci 15:321 — threshold-dependent response
+        #   to morphogen gradients. Dessaud et al. (2008) Development 135:2489 — graded
+        #   Sonic Hedgehog signaling interpreted via concentration thresholds in neural tube.
+        # Rationale: 120 iterations (Blocks 1-15) showed ALL gradient-modifying mechanisms
+        #   (FDM, GDP, BPM, K_sat) failed because v = M * ∇C is MONOTONIC — particles
+        #   always move in one direction along gradients. CTC introduces BISTABILITY:
+        #   particles are attracted toward a specific C1 isoline (C1 = T*A) from BOTH sides.
+        #   Below T*A: attracted up. Above T*A: repelled down. This creates a NEW ATTRACTOR
+        #   — the C1=T*A contour — where particles accumulate in RING-SHAPED structures.
+        #   With multi-type particles having different thresholds, nested rings form.
+        # Effect: ctc_threshold=1.0: reversal at C1=A (Brusselator steady state, between
+        #   peaks and troughs). ctc_threshold=1.5: reversal at C1=1.5*A (near mid-peak).
+        #   ctc_threshold=2.0: reversal at C1=2*A (near peak, wide attraction basin).
+        # Previous: BPM (Block 15) — replaced because BPM was a stability mechanism
+        #   equivalent to FDM; it didn't break the 7/10 ceiling.
         if p.shape[1] > 7:
-            self.bpm_alpha = p[0, 7]
+            self.ctc_threshold = p[0, 7]
         else:
-            self.bpm_alpha = 0.0
+            self.ctc_threshold = 0.0
 
         # Report configuration
         print(f"initialized PDE_D with parameters:")
@@ -321,12 +325,13 @@ class PDE_D(pyg.nn.MessagePassing):
                 print(f"field-dependent mobility (FDM): alpha={fdm_val:.3f} (M_eff = M*(1+alpha*clamp((C1-A)^2/A^2,max=4)), Hillen & Painter 2009)")
             else:
                 print(f"field-dependent mobility: off (alpha=0)")
-        if hasattr(self, 'bpm_alpha'):
-            bpm_val = self.bpm_alpha.item() if hasattr(self.bpm_alpha, 'item') else self.bpm_alpha
-            if bpm_val > 0:
-                print(f"boundary-preferring mobility (BPM): alpha={bpm_val:.3f} (mod = 1-alpha*clamp((C1-A)^2/A^2,max=4), Rauzi & Lenne 2011)")
+        if hasattr(self, 'ctc_threshold'):
+            ctc_val = self.ctc_threshold.item() if hasattr(self.ctc_threshold, 'item') else self.ctc_threshold
+            if ctc_val > 0:
+                T_val = ctc_val * self.A_ref.item()
+                print(f"concentration-threshold coupling (CTC): threshold={ctc_val:.3f} (T={T_val:.2f}, reversal at C1=T*A, Wolpert 1969)")
             else:
-                print(f"boundary-preferring mobility: off (alpha=0)")
+                print(f"concentration-threshold coupling: off (threshold=0)")
         if particle_params is not None:
             print(f"multi-type support: {particle_params.shape[0]} particle types")
             print(f"per-type params: [M1, M2, consumption, production, ar_p1, ar_p2, ar_p3, ar_p4]")
@@ -545,23 +550,24 @@ class PDE_D(pyg.nn.MessagePassing):
 
                 velocity_raw = velocity_raw * fdm_factor
 
-            # Block 15: Boundary-preferring mobility (BPM)
-            # Rauzi & Lenne (2011): cells accumulate at tissue boundaries, not peaks
-            # Theveneau & Mayor (2012): contact inhibition creates boundary-seeking
-            # Modulation: mod = 1 - bpm_alpha * clamp((C1 - A)^2 / A^2, max=4.0)
-            # At C1 ≈ A (pattern boundaries): mod ≈ 1.0, full gradient-following
-            # At C1 >> A or C1 << A (peaks/troughs): mod < 1 or even negative
-            # Sign reversal at deviation^2 > 1/bpm_alpha creates peak REPULSION
-            # This fundamentally changes WHERE particles accumulate: boundaries, not peaks
-            if hasattr(self, 'bpm_alpha') and self.bpm_alpha > 0:
+            # Block 16: Concentration-threshold coupling (CTC)
+            # Wolpert (1969): French flag model — cells interpret morphogen via thresholds
+            # Meinhardt & Gierer (1974): threshold-dependent morphogen response
+            # Dessaud et al. (2008): graded Shh interpreted via thresholds in neural tube
+            # Implementation: sign_factor = -tanh(steepness * (C1 - T) / A)
+            #   where T = ctc_threshold * A and steepness=3.0
+            #   Below T (C1 < T): sign_factor > 0, gradient-following (attracted to peaks)
+            #   Above T (C1 > T): sign_factor < 0, gradient-reversed (repelled from peaks)
+            #   At C1 = T: sign_factor = 0, zero net mobility (attractor isoline)
+            # Result: particles accumulate at the C1=T contour, forming RING structures
+            if hasattr(self, 'ctc_threshold') and self.ctc_threshold > 0:
                 C1_local = fields_i[:, 0:1]  # Local C1 at particle position
                 A_ref = self.A_ref
-                # Dimensionless squared deviation from steady state
-                deviation_sq = (C1_local - A_ref) ** 2 / (A_ref ** 2 + 1e-6)
-                deviation_sq = torch.clamp(deviation_sq, max=4.0)
-                # Modulation factor: 1 at boundaries, decreasing at peaks/troughs
-                bpm_mod = 1.0 - self.bpm_alpha * deviation_sq
-                velocity_raw = velocity_raw * bpm_mod
+                T = self.ctc_threshold * A_ref  # Threshold concentration
+                steepness = 3.0  # Controls sharpness of transition
+                # Smooth sign switch: +1 below T, -1 above T, 0 at T
+                sign_factor = -torch.tanh(steepness * (C1_local - T) / (A_ref + 1e-6))
+                velocity_raw = velocity_raw * sign_factor
 
             velocities = velocity_raw
 
