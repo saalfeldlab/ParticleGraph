@@ -53,14 +53,22 @@ def load_pde_variant(variant_name, generators_path=None):
         print(f"Warning: PDE variant file not found: {file_path}")
         return None
 
-    # Dynamic import — use fully-qualified module name so PyG's inspector resolves correctly
+    # Use standard import machinery — required for PyG's JIT propagate compilation.
     module_name = f"ParticleGraph.generators.PDE_Diffusiophoresis_{variant_suffix}"
-    spec = importlib.util.spec_from_file_location(module_name, file_path)
-    module = importlib.util.module_from_spec(spec)
-    # Register in sys.modules BEFORE exec_module so PyG's inspector can find it
     import sys
-    sys.modules[module_name] = module
-    spec.loader.exec_module(module)
+    import importlib
+    importlib.invalidate_caches()
+
+    if module_name in sys.modules:
+        module = importlib.reload(sys.modules[module_name])
+    else:
+        try:
+            module = importlib.import_module(module_name)
+        except ImportError:
+            spec = importlib.util.spec_from_file_location(module_name, file_path)
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[module_name] = module
+            spec.loader.exec_module(module)
 
     # Get the PDE class (expected name: PDE_Diffusiophoresis_{suffix})
     class_name = f"PDE_Diffusiophoresis_{variant_suffix}"
@@ -115,14 +123,26 @@ def load_pde_d_variant(variant_name, generators_path=None):
         print(f"Warning: PDE_D variant file not found: {file_path}")
         return None
 
-    # Dynamic import — use fully-qualified module name so PyG's inspector resolves correctly
+    # Use standard import machinery — required for PyG's JIT propagate compilation.
+    # spec_from_file_location creates an incomplete module spec that breaks PyG's
+    # Jinja-based propagate module generation (AttributeError on _propagate).
     module_name = f"ParticleGraph.generators.PDE_D_{variant_suffix}"
-    spec = importlib.util.spec_from_file_location(module_name, file_path)
-    module = importlib.util.module_from_spec(spec)
-    # Register in sys.modules BEFORE exec_module so PyG's inspector can find it
     import sys
-    sys.modules[module_name] = module
-    spec.loader.exec_module(module)
+    import importlib
+    importlib.invalidate_caches()  # Handle recently-created files
+
+    if module_name in sys.modules:
+        # Reload to pick up any modifications (e.g., LLM-edited files)
+        module = importlib.reload(sys.modules[module_name])
+    else:
+        try:
+            module = importlib.import_module(module_name)
+        except ImportError:
+            # Fallback: file-based import for files outside standard package structure
+            spec = importlib.util.spec_from_file_location(module_name, file_path)
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[module_name] = module
+            spec.loader.exec_module(module)
 
     # Get the PDE_D class (expected name: PDE_D_{suffix})
     class_name = f"PDE_D_{variant_suffix}"
