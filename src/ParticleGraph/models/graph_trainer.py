@@ -1292,7 +1292,7 @@ def data_train_cell_activity(config, erase, best_model, device):
                 plt.xlabel(r'$a_{i0}$', fontsize=48)
                 plt.ylabel(r'$a_{i1}$', fontsize=48)
                 
-                stats_text = f'$\mu$={model.a.mean():.3f}\n$\sigma$={model.a.std():.3f}\n$\|grad\|$={model.a.grad.norm():.3f}'
+                stats_text = f'$\\mu$={model.a.mean():.3f}\n$\\sigma$={model.a.std():.3f}\n$\\|grad\\|$={model.a.grad.norm():.3f}'
                 plt.text(0.02, 0.98, stats_text, transform=ax.transAxes, 
                         fontsize=24, verticalalignment='top')
                 
@@ -1323,7 +1323,7 @@ def data_train_cell_activity(config, erase, best_model, device):
                 plt.scatter(to_numpy(model.edges_embedding[:, 0]), to_numpy(model.edges_embedding[:, 1]), s=10, color='r', alpha=0.05, edgecolor='none')
                 plt.xlabel(r'$e_{ij,0}$', fontsize=48)
                 plt.ylabel(r'$e_{ij,1}$', fontsize=48)
-                stats_text = f'$\mu$={model.edges_embedding.mean():.3f}\n$\sigma$={model.edges_embedding.std():.3f}\n$\|grad\|$={model.edges_embedding.grad.norm():.3f}'
+                stats_text = f'$\\mu$={model.edges_embedding.mean():.3f}\n$\\sigma$={model.edges_embedding.std():.3f}\n$\\|grad\\|$={model.edges_embedding.grad.norm():.3f}'
                 plt.text(0.02, 0.98, stats_text, transform=ax.transAxes, 
                         fontsize=24, verticalalignment='top')
                 plt.tight_layout()
